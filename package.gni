@@ -23,15 +23,30 @@ declare_args() {
 #     If true, the package is stored in a Fuchsia Archive rather than directly
 #     in the system boot image.
 #
-#     Cannot be used with the drivers parameter because the system is not yet
+#     Cannot be used with the |drivers| parameter because the system is not yet
 #     sophisticated enough to load drivers out of archives.
+#
+#     This argument will eventually be replaced with the |system_image|
+#     argument.
+#
+#     Defaults to false.
+#
+#   system_image (bool, optional)
+#     If true, the package is stored in the system boot image rather than in a
+#     Fuchsia Archive.
+#
+#     If this package uses the |drivers| parameter, the system_image must be set
+#     to true because we are not yet sophisticated enough to load drivers out of
+#     archives.
+#
+#     Defaults to false.
 #
 #   meta (optional)
 #     List of scopes defining the metadata entries in the package. A metadata
 #     entry is typically a source file and is placed in the "meta/" directory of
 #     the assembled package.
 #
-#     Requires |archive| to be true.
+#     Requires |archive| to be true or |system_image| to be false.
 #
 #     Entries in a scope in the meta list:
 #
@@ -44,6 +59,13 @@ declare_args() {
 #
 #       dest (path, required)
 #         Location the resource will be placed within "meta/"
+#
+#   binary (optional)
+#     The path to the the primary binary for the package, relative to
+#     $root_build_dir. The binary will be placed in the assembled package at
+#     "bin/app" and will be executed by default when running the package.
+#
+#     Requires |archive| to be true or |system_image| to be false.
 #
 #   binaries (optional)
 #     List of scopes defining the binaries in the package. A binary is typically
@@ -85,6 +107,8 @@ declare_args() {
 #     produced by the build system and is placed in the "driver" directory
 #     of the assembled package.
 #
+#     Requires |archive| to be false (or missing) or |system_image| to be true.
+#
 #     Entries in a scope in the drivers list:
 #
 #       name (string, required)
@@ -116,11 +140,11 @@ declare_args() {
 #         well as other programs.
 #
 #   resources (optional)
-#      List of scopes defining the resources in the package. A resource is a
-#      data file that may be produced by the build system, checked in to a
-#      source repository, or produced by another system that runs before the
-#      build. Resources are placed in the "data/" directory of the assembled
-#      package.
+#     List of scopes defining the resources in the package. A resource is a
+#     data file that may be produced by the build system, checked in to a
+#     source repository, or produced by another system that runs before the
+#     build. Resources are placed in the "data/" directory of the assembled
+#     package.
 #
 #     Entries in a scope in the resources list:
 #
@@ -138,6 +162,8 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
       app = false
+      # TODO(abarth): Remove |archive| and set the default for |system_image| to
+      # false once all non-archived packages set |system_image| to true.
       archive = false
       binaries = []
       drivers = []
@@ -153,6 +179,10 @@ template("package") {
     shared_toolchain_out_dir = get_label_info("//lib($shlib_toolchain)",
                                               "root_out_dir")
     not_needed(["shared_toolchain_out_dir"])
+
+    if (defined(pkg.system_image)) {
+      assert(pkg.system_image == !pkg.archive)
+    }
 
     assert(pkg.drivers == [] || !pkg.archive)
 
@@ -178,6 +208,12 @@ template("package") {
         sources += [ entry.path ]
         dest = "meta/${entry.dest}"
         package_manifest_contents += [ "$dest=$source" ]
+      }
+      if (defined(pkg.binary)) {
+        assert(pkg.archive, "Binary requires the package to be archived. Consider using 'binaries' for non-archived packages.")
+        source = rebase_path("$root_build_dir/${pkg.binary}")
+        sources += [ "$root_build_dir/${pkg.binary}" ]
+        package_manifest_contents += [ "bin/app=$source" ]
       }
       foreach(binary, pkg.binaries) {
         # Binary paths are relative to the root of the build dir.
