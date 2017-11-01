@@ -493,6 +493,7 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                       fbl::StringPiece pathStr, fbl::StringPiece* pathout) {
     zx_status_t r;
     const char* path = pathStr.data();
+    size_t new_len = pathStr.length();
 
     for (;;) {
         while (path[0] == '/') {
@@ -502,12 +503,15 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
         if (path[0] == 0) {
             // convert empty initial path of final path segment to "."
             path = ".";
+            new_len = 1;
+        } else {
+            new_len = pathStr.length() - (path - pathStr.data());
         }
 #ifdef __Fuchsia__
         if (vn->IsRemote()) {
             // remote filesystem mount, caller must resolve
             *out = fbl::move(vn);
-            pathout->set(path, pathStr.length() - (path - pathStr.data()));
+            pathout->set(path, new_len);
             return ZX_OK;
         }
 #endif
@@ -536,7 +540,12 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
         } else {
             // final path segment, we're done here
             *out = vn;
-            pathout->set(path, pathStr.length() - (path - pathStr.data()));
+
+            if (pathStr.length() > 0) {
+                new_len = pathStr.length() - (path - pathStr.data());
+            }
+
+            pathout->set(path, new_len);
             return ZX_OK;
         }
     }
