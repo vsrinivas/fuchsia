@@ -10,9 +10,8 @@ import (
 	"strings"
 
 	"app/context"
-
 	"fidl/bindings"
-
+	"netstack/link/eth"
 	"syscall/zx"
 	"syscall/zx/mxerror"
 
@@ -24,7 +23,10 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
-type netstackImpl struct{}
+type netstackImpl struct {
+	listener *nsfidl.NotificationListener_Proxy
+	stub     *bindings.Stub
+}
 
 func toNetAddress(addr tcpip.Address) net_address.NetAddress {
 	out := net_address.NetAddress{Family: net_address.NetAddressFamily_Unspecified}
@@ -48,6 +50,48 @@ func toSubnets(addrs []tcpip.Address) []net_address.Subnet {
 		out[i] = net_address.Subnet{Addr: toNetAddress(addrs[i]), PrefixLen: 64}
 	}
 	return out
+}
+
+func getInterfaces() (out []nsfidl.NetInterface) {
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+
+	index := uint32(0)
+	for nicid, ifs := range ns.ifStates {
+		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
+		broadaddr := []byte(ifs.nic.Addr)
+		for i := range broadaddr {
+			broadaddr[i] |= ^ifs.nic.Netmask[i]
+		}
+
+		var flags uint32
+		if ifs.state == eth.StateStarted {
+			flags |= nsfidl.NetInterfaceFlagUp
+		}
+
+		outif := nsfidl.NetInterface{
+			Id:        uint32(nicid),
+			Flags:     flags,
+			Name:      fmt.Sprintf("en%d", nicid),
+			Addr:      toNetAddress(ifs.nic.Addr),
+			Netmask:   toNetAddress(tcpip.Address(ifs.nic.Netmask)),
+			Broadaddr: toNetAddress(tcpip.Address(broadaddr)),
+			Hwaddr:    []uint8(ifs.nic.Mac[:]),
+			Ipv6addrs: toSubnets(ifs.nic.Ipv6addrs),
+		}
+
+		out = append(out, outif)
+		index++
+	}
+	return out
+}
+
+func (ni *netstackImpl) RegisterListener(listener *nsfidl.NotificationListener_Pointer) (err error) {
+	if listener != nil {
+		lp := nsfidl.NewProxyForNotificationListener(*listener, bindings.GetAsyncWaiter())
+		ni.listener = lp
+	}
+	return nil
 }
 
 func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protocol) (port uint16, err error) {
@@ -86,33 +130,7 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) (out []net_address.
 }
 
 func (ni *netstackImpl) GetInterfaces() (out []nsfidl.NetInterface, err error) {
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-
-	index := uint32(0)
-	for nicid, ifs := range ns.ifStates {
-		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
-		broadaddr := []byte(ifs.nic.Addr)
-		for i := range broadaddr {
-			broadaddr[i] |= ^ifs.nic.Netmask[i]
-		}
-
-		// TODO: set flags based on actual link status. NET-134
-		outif := nsfidl.NetInterface{
-			Id:        uint32(nicid),
-			Flags:     nsfidl.NetInterfaceFlagUp,
-			Name:      fmt.Sprintf("en%d", nicid),
-			Addr:      toNetAddress(ifs.nic.Addr),
-			Netmask:   toNetAddress(tcpip.Address(ifs.nic.Netmask)),
-			Broadaddr: toNetAddress(tcpip.Address(broadaddr)),
-			Hwaddr:    []uint8(ifs.nic.Mac[:]),
-			Ipv6addrs: toSubnets(ifs.nic.Ipv6addrs),
-		}
-
-		out = append(out, outif)
-		index++
-	}
-	return out, nil
+	return getInterfaces(), nil
 }
 
 func (ni *netstackImpl) GetNodeName() (out string, err error) {
@@ -172,33 +190,67 @@ func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, 
 	return ifState.statsEP.Stats, nil
 }
 
+func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {
+	if ni.listener != nil {
+		ni.listener.OnInterfacesChanged(interfaces)
+	}
+}
+
 type netstackDelegate struct {
-	stubs []*bindings.Stub
+	clients []*netstackImpl
+}
+
+func remove(clients []*netstackImpl, client *netstackImpl) []*netstackImpl {
+	for i, s := range clients {
+		if s == client {
+			clients[len(clients)-1], clients[i] = clients[i], clients[len(clients)-1]
+			break
+		}
+	}
+	return clients
 }
 
 func (delegate *netstackDelegate) Bind(request nsfidl.Netstack_Request) {
-	stub := request.NewStub(&netstackImpl{}, bindings.GetAsyncWaiter())
-	delegate.stubs = append(delegate.stubs, stub)
+	client := &netstackImpl{}
+	client.stub = request.NewStub(client, bindings.GetAsyncWaiter())
+	delegate.clients = append(delegate.clients, client)
 	go func() {
 		for {
-			if err := stub.ServeRequest(); err != nil {
+			if err := client.stub.ServeRequest(); err != nil {
 				if mxerror.Status(err) != zx.ErrPeerClosed {
 					log.Println(err)
 				}
 				break
 			}
 		}
+		delegate.clients = remove(delegate.clients, client)
 	}()
 }
 
 func (delegate *netstackDelegate) Quit() {
-	for _, stub := range delegate.stubs {
-		stub.Close()
+	for _, client := range delegate.clients {
+		client.stub.Close()
 	}
 }
 
+var netstackService *netstackDelegate
+
 // AddNetstackService registers the NetstackService with the application context,
 // allowing it to respond to FIDL queries.
-func AddNetstackService(ctx *context.Context) {
-	ctx.OutgoingService.AddService(&nsfidl.Netstack_ServiceBinder{&netstackDelegate{}})
+func AddNetstackService(ctx *context.Context) error {
+	if netstackService != nil {
+		return fmt.Errorf("AddNetworkService must be called only once")
+	}
+	netstackService = &netstackDelegate{}
+	ctx.OutgoingService.AddService(&nsfidl.Netstack_ServiceBinder{netstackService})
+	return nil
+}
+
+func OnInterfacesChanged() {
+	if netstackService != nil && netstackService.clients != nil {
+		interfaces := getInterfaces()
+		for _, client := range netstackService.clients {
+			client.onInterfacesChanged(interfaces)
+		}
+	}
 }

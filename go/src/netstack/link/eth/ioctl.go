@@ -41,6 +41,7 @@ const (
 	ioctlOpTXListenStart = 5 // IOCTL_ETHERNET_TX_LISTEN_START, IOCTL_KIND_DEFAULT
 	ioctlOpTXListenStop  = 6 // IOCTL_ETHERNET_TX_LISTEN_STOP,  IOCTL_KIND_DEFAULT
 	ioctlOpSetClientName = 7 // IOCTL_ETHERNET_SET_CLIENT_NAME, IOCTL_KIND_DEFAULT
+	ioctlOpGetStatus     = 8 // IOCTL_ETHERNET_GET_STATUS,      IOCTL_KIND_DEFAULT
 )
 
 func IoctlGetInfo(m fdio.FDIO) (info EthInfo, err error) {
@@ -115,4 +116,18 @@ func IoctlTXListenStart(m fdio.FDIO) error {
 		return fmt.Errorf("IOCTL_ETHERNET_TX_LISTEN_START: %v", err)
 	}
 	return nil
+}
+
+func IoctlGetStatus(m fdio.FDIO) (status uint32, err error) {
+	num := fdio.IoctlNum(fdio.IoctlKindDefault, ioctlFamilyETH, ioctlOpGetStatus)
+	res := make([]byte, 4)
+	_, err = m.Ioctl(num, nil, res)
+	if err != nil {
+		return 0, fmt.Errorf("IOCTL_ETHERNET_GET_STATUS: %v", err)
+	}
+	if len(res) != 4 {
+		return 0, fmt.Errorf("IOCTL_ETHERNET_GET_STATUS: bad length: %d", len(res))
+	}
+	status = binary.LittleEndian.Uint32(res)
+	return status, nil
 }

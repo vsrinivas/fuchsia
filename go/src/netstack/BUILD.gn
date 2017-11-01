@@ -9,9 +9,9 @@ import("//packages/package.gni")
 package("netstack") {
   deps = [
     ":netstack_bin",
-    "//garnet/go/src/netstack/getaddrtest",
     "//garnet/go/src/netstack/ifconfig",
     "//garnet/go/src/netstack/ifinfo",
+    "//garnet/go/src/netstack/netstack_service_test",
     "//garnet/go/src/netstack/netstat",
     "//garnet/public/lib/netstack/fidl",
   ]
@@ -27,10 +27,10 @@ package("netstack") {
       name = "ifinfo"
     },
     {
-      name = "netstat"
+      name = "netstack_service_test"
     },
     {
-      name = "getaddrtest"
+      name = "netstat"
     },
   ]
 }

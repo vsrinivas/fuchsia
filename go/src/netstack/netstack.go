@@ -46,6 +46,7 @@ type ifState struct {
 	cancel context.CancelFunc
 	eth    *eth.Client
 	dhcp   *dhcp.Client
+	state  eth.State
 
 	// guarded by ns.mu
 	// NIC is defined in //garnet/go/src/netstack/netiface/netiface.go
@@ -81,12 +82,19 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 	ifs.ns.dispatcher.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
+
+	OnInterfacesChanged()
 }
 
 func (ifs *ifState) stateChange(s eth.State) {
-	if s != eth.StateStopped {
-		return
+	if s == eth.StateClosed {
+		ifs.stop()
 	}
+	ifs.state = s
+	OnInterfacesChanged()
+}
+
+func (ifs *ifState) stop() {
 	log.Printf("NIC %d: stopped", ifs.nic.ID)
 	if ifs.cancel != nil {
 		ifs.cancel()
@@ -174,6 +182,7 @@ func (ns *netstack) addLoopback() error {
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    nic,
+		state:  eth.StateStarted,
 	}
 	ifs.statsEP.Nic = ifs.nic
 
@@ -214,6 +223,7 @@ func (ns *netstack) addEth(path string) error {
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    &netiface.NIC{},
+		state:  eth.StateUnknown,
 	}
 	ifs.statsEP.Nic = ifs.nic
 

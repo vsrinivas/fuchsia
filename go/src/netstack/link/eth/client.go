@@ -42,12 +42,15 @@ package eth
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"syscall"
 	"syscall/zx"
 	"unsafe"
 )
+
+const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
@@ -169,7 +172,7 @@ func (c *Client) Close() {
 }
 
 func (c *Client) closeLocked() {
-	if c.state == StateStopped {
+	if c.state == StateClosed {
 		return
 	}
 
@@ -183,7 +186,7 @@ func (c *Client) closeLocked() {
 	c.sendbuf = c.sendbuf[:0]
 	c.f.Close()
 	c.arena.freeAll(c)
-	c.changeStateLocked(StateStopped)
+	c.changeStateLocked(StateClosed)
 }
 
 // AllocForSend returns a Buffer to be passed to Send.
@@ -339,9 +342,29 @@ func (c *Client) WaitSend() error {
 // WaitRecv blocks until it is possible to receive a buffer,
 // or the client is closed.
 func (c *Client) WaitRecv() {
-	obs, err := c.rx.WaitOne(zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
-	if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
-		c.Close()
+	for {
+		obs, err := c.rx.WaitOne(zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|ZXSIO_ETH_SIGNAL_STATUS, zx.TimensecInfinite)
+		if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
+			c.Close()
+		} else if obs&ZXSIO_ETH_SIGNAL_STATUS != 0 {
+			m := syscall.FDIOForFD(int(c.f.Fd()))
+			status, err := IoctlGetStatus(m)
+
+			c.mu.Lock()
+			switch status {
+			case 0:
+				c.changeStateLocked(StateDown)
+			case 1:
+				c.changeStateLocked(StateStarted)
+			default:
+				log.Printf("Unknown eth status=%d, %v", status, err)
+			}
+			c.mu.Unlock()
+
+			continue
+		}
+
+		break
 	}
 }
 
@@ -357,7 +380,8 @@ type State int
 const (
 	StateUnknown = State(iota)
 	StateStarted
-	StateStopped
+	StateDown
+	StateClosed
 )
 
 func (s State) String() string {
@@ -366,7 +390,9 @@ func (s State) String() string {
 		return "eth unknown state"
 	case StateStarted:
 		return "eth started"
-	case StateStopped:
+	case StateDown:
+		return "eth down"
+	case StateClosed:
 		return "eth stopped"
 	default:
 		return fmt.Sprintf("eth bad state(%d)", int(s))

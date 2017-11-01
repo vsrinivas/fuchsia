@@ -46,7 +46,9 @@ func main() {
 	}
 	log.Print("socket dispatcher started")
 
-	AddNetstackService(ctx)
+	if err := AddNetstackService(ctx); err != nil {
+		log.Fatal(err)
+	}
 	ctx.Serve()
 
 	arena, err := eth.NewArena()
