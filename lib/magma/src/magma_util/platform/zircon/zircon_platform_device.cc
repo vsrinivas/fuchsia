@@ -42,7 +42,7 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformDevice::RegisterInterrupt(unsig
     zx_handle_t interrupt_handle;
     zx_status_t status = pdev_map_interrupt(&pdev_, index, &interrupt_handle);
     if (status != ZX_OK)
-        DRETP(nullptr, "register interrupt failed");
+        return DRETP(nullptr, "register interrupt failed");
 
     return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
 }
