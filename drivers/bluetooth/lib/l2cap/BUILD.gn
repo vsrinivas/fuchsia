@@ -43,6 +43,8 @@ source_set("testing") {
   deps = [
     ":l2cap",
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]

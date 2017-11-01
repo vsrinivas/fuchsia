@@ -18,13 +18,6 @@ std::unique_ptr<Channel> FakeChannelTest::CreateFakeChannel(
   return fake_chan;
 }
 
-void FakeChannelTest::RunMessageLoop(int64_t timeout_seconds) {
-  message_loop_.task_runner()->PostDelayedTask(
-      [this] { message_loop_.QuitNow(); },
-      fxl::TimeDelta::FromSeconds(timeout_seconds));
-  message_loop_.Run();
-}
-
 bool FakeChannelTest::ReceiveAndExpect(
     const common::ByteBuffer& packet,
     const common::ByteBuffer& expected_response) {
