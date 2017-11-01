@@ -994,6 +994,7 @@ class StoryControllerImpl::StartCall : Operation<> {
       return;
     }
 
+    story_controller_impl_->track_root_module_state_ = true;
     story_controller_impl_->StartStoryShell(std::move(request_));
 
     // Start *all* the root modules, not just the first one, with their
