@@ -85,8 +85,8 @@ zx_status_t SparseContainer::Report() const {
         return ZX_ERR_IO;
     }
 
-    printf("Slice size is %lu\n", image_.slice_size);
-    printf("Found %lu partitions\n", image_.partition_count);
+    printf("Slice size is %" PRIu64 "\n", image_.slice_size);
+    printf("Found %" PRIu64 " partitions\n", image_.partition_count);
 
     for (unsigned i = 0; i < image_.partition_count; i++) {
 
@@ -94,7 +94,8 @@ zx_status_t SparseContainer::Report() const {
                partitions_[i].descriptor.extent_count);
 
         for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
-            printf("Found partition %u extent %u of length %lu with %lu slices (from %lu)\n", i, j,
+            printf("Found partition %u extent %u of length %" PRIu64 " with %"
+                   PRIu64 " slices (from %" PRIu64 ")\n", i, j,
                    partitions_[i].extents[j].extent_length,
                    partitions_[i].extents[j].slice_count,
                    partitions_[i].extents[j].slice_start);

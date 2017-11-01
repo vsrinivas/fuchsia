@@ -98,7 +98,7 @@ zx_status_t FvmContainer::Init() {
     valid_ = true;
 
     printf("fvm_init: Success\n");
-    printf("fvm_init: Slice Count: %lu, size: %lu\n", sb->pslice_count, sb->slice_size);
+    printf("fvm_init: Slice Count: %" PRIu64 ", size: %" PRIu64 "\n", sb->pslice_count, sb->slice_size);
     printf("fvm_init: Vpart offset: %zu, length: %zu\n",
            fvm::kVPartTableOffset, fvm::kVPartTableLength);
     printf("fvm_init: Atable offset: %zu, length: %zu\n",
@@ -123,10 +123,10 @@ zx_status_t FvmContainer::Report() const {
 
     fvm::fvm_t* sb = static_cast<fvm::fvm_t*>((void*)metadata_.get());
 
-    printf("Total size is %lu\n", disk_size_);
-    printf("Metadata size is %lu\n", metadata_size_);
-    printf("Slice size is %lu\n", sb->slice_size);
-    printf("Slice count is %lu\n", sb->pslice_count);
+    printf("Total size is %" PRIu64 "\n", disk_size_);
+    printf("Metadata size is %" PRIu64 "\n", metadata_size_);
+    printf("Slice size is %" PRIu64 "\n", sb->slice_size);
+    printf("Slice count is %" PRIu64 "\n", sb->pslice_count);
 
     uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
     uintptr_t offset = static_cast<uintptr_t>(fvm::kVPartTableOffset +

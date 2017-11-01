@@ -36,7 +36,7 @@ BlobfsFormat::~BlobfsFormat() {
 
 zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     memcpy(&fvm_blk_, &blk_, BlockSize());
-    printf("fvm_info has block count %lu\n", fvm_info_.block_count);
+    printf("fvm_info has block count %" PRIu64 "\n", fvm_info_.block_count);
     fvm_info_.slice_size = slice_size;
 
     if (fvm_info_.slice_size % BlockSize()) {
@@ -52,13 +52,13 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
     fvm_info_.vslice_count = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices +
                              fvm_info_.dat_slices;
 
-    printf("Blobfs: slice_size is %lu, kBlocksPerSlice is %lu\n", fvm_info_.slice_size,
+    printf("Blobfs: slice_size is %" PRIu64 ", kBlocksPerSlice is %" PRIu64 "\n", fvm_info_.slice_size,
            kBlocksPerSlice);
-    printf("Blobfs: abm_blocks: %lu, abm_slices: %u\n", BlockMapBlocks(info_),
+    printf("Blobfs: abm_blocks: %" PRIu64 ", abm_slices: %u\n", BlockMapBlocks(info_),
            fvm_info_.abm_slices);
-    printf("Blobfs: ino_blocks: %lu, ino_slices: %u\n", NodeMapBlocks(info_),
+    printf("Blobfs: ino_blocks: %" PRIu64 ", ino_slices: %u\n", NodeMapBlocks(info_),
            fvm_info_.ino_slices);
-    printf("Blobfs: dat_blocks: %lu, dat_slices: %u\n", DataBlocks(info_),
+    printf("Blobfs: dat_blocks: %" PRIu64 ", dat_slices: %u\n", DataBlocks(info_),
            fvm_info_.dat_slices);
 
     fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
