@@ -75,8 +75,8 @@ struct KeyEntry {
 } __PACKED;
 
 struct IvEivEntry {
-    uint32_t iv;
-    uint32_t eiv;
+    uint8_t iv[4];
+    uint8_t eiv[4];
 } __PACKED;
 
 // KeyMode cipher definitions differ from IEEE's cipher suite types.

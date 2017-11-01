@@ -133,7 +133,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len, KeyMode mode);
     zx_status_t WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len, KeyMode mode);
     zx_status_t WriteSharedKeyMode(uint8_t skey, KeyMode mode);
-    zx_status_t ResetIvEiv(uint8_t wcid);
+    zx_status_t ResetIvEiv(uint8_t wcid, uint8_t key_id, KeyMode mode);
     zx_status_t WriteWcid(uint8_t wcid, const uint8_t mac[]);
     zx_status_t WriteWcidAttribute(uint8_t bss_idx, uint8_t wcid, KeyMode mode, KeyType type);
     // resets all security aspects for a given WCID and shared key as well as their keys.

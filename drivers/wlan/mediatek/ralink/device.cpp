@@ -3342,7 +3342,7 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
     uint8_t zero_addr[6] = {};
     WriteWcid(wcid, zero_addr);
     WriteWcidAttribute(0, wcid, KeyMode::kNone, KeyType::kSharedKey);
-    ResetIvEiv(wcid);
+    ResetIvEiv(wcid, 0, KeyMode::kNone);
 
     switch (key_type) {
     case WLAN_KEY_TYPE_PAIRWISE: {
@@ -3359,8 +3359,21 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
     return ZX_OK;
 }
 
-zx_status_t Device::ResetIvEiv(uint8_t wcid) {
-    IvEivEntry ivEntry = { .iv = 1 };
+zx_status_t Device::ResetIvEiv(uint8_t wcid, uint8_t key_id, KeyMode mode) {
+    IvEivEntry ivEntry = {};
+    switch (mode) {
+    case KeyMode::kNone:
+        break;
+    case KeyMode::kTkip:
+        // IEEE Std.802.11-2016, 12.5.2.2
+        // fallthrough
+    case KeyMode::kAes:
+        // IEEE Std.802.11-2016, 12.5.3.2
+        ivEntry.iv[3] = 0x20 | key_id << 6;
+        break;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     size_t out_len;
     uint16_t index = IV_EIV_BASE + wcid * sizeof(ivEntry);
@@ -3425,7 +3438,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         status = WriteWcidAttribute(bss_idx, wcid, keyMode, KeyType::kPairwiseKey);
         if (status != ZX_OK) { break; }
 
-        status = ResetIvEiv(wcid);
+        status = ResetIvEiv(wcid, 0, keyMode);
         if (status != ZX_OK) { break; }
 
         reset.cancel();
@@ -3457,7 +3470,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         status = WriteWcidAttribute(bss_idx, wcid, keyMode, KeyType::kSharedKey);
         if (status != ZX_OK) { break; }
 
-        status = ResetIvEiv(wcid);
+        status = ResetIvEiv(wcid, key_idx, keyMode);
         if (status != ZX_OK) { break; }
 
         reset.cancel();
