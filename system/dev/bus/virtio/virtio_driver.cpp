@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include "block.h"
+#include "console.h"
 #include "device.h"
 #include "rng.h"
 #include "ethernet.h"
@@ -64,6 +65,11 @@ extern "C" zx_status_t virtio_bind(void* ctx, zx_device_t* device, void** cookie
     case 0x1042:
         LTRACEF("found block device\n");
         vd.reset(new virtio::BlockDevice(device));
+        break;
+    case 0x1003:
+    case 0x1043:
+        LTRACEF("found console device\n");
+        vd.reset(new virtio::ConsoleDevice(device));
         break;
     case 0x1050:
         LTRACEF("found gpu device\n");

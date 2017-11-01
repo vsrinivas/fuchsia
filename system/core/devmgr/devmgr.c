@@ -314,10 +314,14 @@ static int console_starter(void* arg) {
     if (term != NULL)
         term -= sizeof("TERM=") - 1;
 
+    const char* device = getenv("console.path");
+    if (!device)
+        device = "/dev/misc/console";
+
     const char* envp[] = { term ? term : NULL, NULL, };
     for (unsigned n = 0; n < 30; n++) {
         int fd;
-        if ((fd = open("/dev/misc/console", O_RDWR)) >= 0) {
+        if ((fd = open(device, O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
                           countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0, NULL);
             break;

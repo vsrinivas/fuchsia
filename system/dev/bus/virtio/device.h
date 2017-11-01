@@ -48,7 +48,11 @@ protected:
 
     void Reset();
     void StatusAcknowledgeDriver();
+    zx_status_t StatusFeaturesOK();
     void StatusDriverOK();
+
+    bool IsFeatureSupported(size_t bit);
+    void AcknowledgeFeature(size_t bit);
 
     static int IrqThreadEntry(void* arg);
     void IrqWorker();

@@ -307,6 +307,11 @@ Set the system nodename, as used by `bootserver`, `loglistener`, and the
 human-readable nodename from its MAC address.  This cmdline is honored by
 GigaBoot and Zircon.
 
+## console.path=\<path>
+
+Specify console device path. If not specified device manager will open
+`/dev/misc/console`. Only has effect if kernel.shell=false.
+
 # Additional Gigaboot Commandline Options
 
 ## bootloader.timeout=\<num>

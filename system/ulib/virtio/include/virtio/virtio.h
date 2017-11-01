@@ -55,6 +55,8 @@
 #define VIRTIO_PCI_CAP_DEVICE_CFG                   4
 #define VIRTIO_PCI_CAP_PCI_CFG                      5
 
+#define VIRTIO_F_VERSION_1                          32
+
 __BEGIN_CDECLS
 
 typedef struct virtio_pci_legacy_config {

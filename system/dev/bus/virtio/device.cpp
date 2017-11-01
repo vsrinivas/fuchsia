@@ -423,8 +423,10 @@ void Device::RingKick(uint16_t ring_index) {
 void Device::Reset() {
     if (!mmio_regs_.common_config) {
         WriteConfigBar<uint8_t>(VIRTIO_PCI_DEVICE_STATUS, 0);
+        while (ReadConfigBar<uint8_t>(VIRTIO_PCI_DEVICE_STATUS));
     } else {
         mmio_regs_.common_config->device_status = 0;
+        while (mmio_regs_.common_config->device_status);
     }
 }
 
@@ -436,6 +438,50 @@ void Device::StatusAcknowledgeDriver() {
     } else {
         mmio_regs_.common_config->device_status |= VIRTIO_STATUS_ACKNOWLEDGE | VIRTIO_STATUS_DRIVER;
     }
+}
+
+bool Device::IsFeatureSupported(size_t bit) {
+    assert(mmio_regs_.common_config);
+    size_t word_size = 8 * sizeof(mmio_regs_.common_config->device_feature);
+    uint32_t word = static_cast<uint32_t>(bit / word_size);
+    size_t offs = bit % word_size;
+
+    mmio_regs_.common_config->device_feature_select = word;
+    return (mmio_regs_.common_config->device_feature >> offs) & 1;
+}
+
+void Device::AcknowledgeFeature(size_t bit) {
+    assert(mmio_regs_.common_config);
+    size_t word_size = 8 * sizeof(mmio_regs_.common_config->driver_feature);
+    uint32_t word = static_cast<uint32_t>(bit / word_size);
+    size_t offs = bit % word_size;
+
+    mmio_regs_.common_config->driver_feature_select = word;
+    mmio_regs_.common_config->driver_feature |= static_cast<uint32_t>(1) << offs;
+}
+
+zx_status_t Device::StatusFeaturesOK() {
+    zx_status_t status = ZX_OK;
+
+    if (!mmio_regs_.common_config) {
+        uint8_t val = ReadConfigBar<uint8_t>(VIRTIO_PCI_DEVICE_STATUS);
+        val |= VIRTIO_STATUS_FEATURES_OK;
+        WriteConfigBar(VIRTIO_PCI_DEVICE_STATUS, val);
+
+        // See Virtual IO Device Version 1.0, 3.1.1 Driver Requirements: Device Initialization
+        // after feature negotations has completed we are supposed to re-read status
+        val = ReadConfigBar<uint8_t>(VIRTIO_PCI_DEVICE_STATUS);
+        if ((val & VIRTIO_STATUS_FEATURES_OK) == 0)
+            status = ZX_ERR_NOT_SUPPORTED;
+    } else {
+        mmio_regs_.common_config->device_status |= VIRTIO_STATUS_FEATURES_OK;
+
+        // See the commen above, we are supposed to check status after setting FEATURES_OK bit
+        if ((mmio_regs_.common_config->device_status & VIRTIO_STATUS_FEATURES_OK) == 0)
+            status = ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return status;
 }
 
 void Device::StatusDriverOK() {
