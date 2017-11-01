@@ -30,9 +30,13 @@ msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection)
     return context.release();
 }
 
-void msd_context_destroy(struct msd_context_t* ctx)
+void msd_context_destroy(msd_context_t* ctx)
 {
-    delete static_cast<MsdArmContext*>(ctx);
+    auto context = static_cast<MsdArmContext*>(ctx);
+    auto connection = context->connection().lock();
+    if (connection)
+        connection->MarkDestroyed();
+    delete context;
 }
 
 void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
@@ -243,6 +247,20 @@ void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode 
     data.atom_number = atom->atom_number();
 
     send_callback_(return_channel_, &data, sizeof(data));
+}
+
+void MsdArmConnection::MarkDestroyed()
+{
+    std::lock_guard<std::mutex> lock(channel_lock_);
+    if (!return_channel_)
+        return;
+    struct magma_arm_mali_status data = {};
+    data.result_code = kArmMaliResultTerminated;
+
+    send_callback_(return_channel_, &data, sizeof(data));
+
+    // Don't send any completion messages after termination.
+    return_channel_ = 0;
 }
 
 void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,

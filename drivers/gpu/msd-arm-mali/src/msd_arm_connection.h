@@ -43,6 +43,7 @@ public:
 
     void SetNotificationChannel(msd_channel_send_callback_t send_callback, msd_channel_t channel);
     void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status);
+    void MarkDestroyed();
 
     AddressSpaceObserver* GetAddressSpaceObserver() override
     {

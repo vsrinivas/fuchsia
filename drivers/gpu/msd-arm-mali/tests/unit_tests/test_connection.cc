@@ -123,6 +123,30 @@ public:
 
         EXPECT_EQ(20u, g_status.result_code);
     }
+
+    void DestructionNotification()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        connection->SetNotificationChannel(&TestSendCallback, 100);
+        connection->MarkDestroyed();
+
+        EXPECT_EQ(sizeof(g_status), g_test_data_size);
+        EXPECT_EQ(100u, g_test_channel);
+
+        EXPECT_EQ(0u, g_status.data.data[0]);
+        EXPECT_EQ(0u, g_status.data.data[1]);
+        EXPECT_EQ(0u, g_status.atom_number);
+        EXPECT_EQ(kArmMaliResultTerminated, g_status.result_code);
+
+        // Shouldn't do anything.
+        MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8});
+        connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(10));
+        EXPECT_EQ(kArmMaliResultTerminated, g_status.result_code);
+
+        connection->SetNotificationChannel(nullptr, 0);
+    }
 };
 
 TEST(TestConnection, MapUnmap)
@@ -135,4 +159,10 @@ TEST(TestConnection, Notification)
 {
     TestConnection test;
     test.Notification();
+}
+
+TEST(TestConnection, DestructionNotification)
+{
+    TestConnection test;
+    test.DestructionNotification();
 }
