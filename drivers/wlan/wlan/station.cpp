@@ -593,6 +593,10 @@ zx_status_t Station::HandleEth(const Packet* packet) {
     std::memset(hdr, 0, sizeof(DataFrameHeader));
     hdr->fc.set_type(kData);
     hdr->fc.set_to_ds(1);
+    // Ensure all outgoing data frames are protected when RSNA is established.
+    if (!bss_->rsn.is_null() && controlled_port_ == PortState::kOpen) {
+        hdr->fc.set_protected_frame(1);
+    }
 
     hdr->addr1 = MacAddr(bss_->bssid.data());
     hdr->addr2 = eth->src;
