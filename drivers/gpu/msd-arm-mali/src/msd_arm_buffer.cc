@@ -15,14 +15,12 @@ MsdArmBuffer::MsdArmBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
 
 MsdArmBuffer::~MsdArmBuffer()
 {
-    std::unordered_set<GpuMapping*> mappings;
-    // Make a copy, as removing each GpuMapping will call into RemoveMapping,
-    // which modifies gpu_mappings_.
-    mappings = gpu_mappings_;
-    for (auto mapping : mappings) {
+    size_t mapping_count = gpu_mappings_.size();
+    for (auto mapping : gpu_mappings_)
         mapping->Remove();
-    }
-    DASSERT(gpu_mappings_.empty());
+    // The weak pointer to this should already have been invalidated, so
+    // Remove() shouldn't be able to modify gpu_mappings_.
+    DASSERT(gpu_mappings_.size() == mapping_count);
 }
 
 std::unique_ptr<MsdArmBuffer> MsdArmBuffer::Import(uint32_t handle)

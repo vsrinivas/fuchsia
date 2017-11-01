@@ -15,13 +15,8 @@ GpuMapping::GpuMapping(uint64_t addr, uint64_t size, uint64_t flags, Owner* owne
 GpuMapping::~GpuMapping()
 {
     auto buffer = buffer_.lock();
-    DASSERT(buffer);
-    buffer->RemoveMapping(this);
+    if (buffer)
+        buffer->RemoveMapping(this);
 }
 
-MsdArmBuffer* GpuMapping::buffer() const
-{
-    auto buffer = buffer_.lock();
-    DASSERT(buffer);
-    return buffer.get();
-}
+std::weak_ptr<MsdArmBuffer> GpuMapping::buffer() const { return buffer_; }

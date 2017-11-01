@@ -31,7 +31,7 @@ public:
     uint64_t size() const { return size_; }
     uint64_t flags() const { return flags_; }
 
-    MsdArmBuffer* buffer() const;
+    std::weak_ptr<MsdArmBuffer> buffer() const;
     void Remove() { owner_->RemoveMapping(addr_); }
 
 private:

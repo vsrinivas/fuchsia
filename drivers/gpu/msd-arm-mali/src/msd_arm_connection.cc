@@ -87,7 +87,9 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
         if (it->second->gpu_va() + it->second->size() > gpu_va)
             return DRETF(false, "Mapping overlaps existing mapping");
     }
-    if (!mapping->buffer()->platform_buffer()->PinPages(0, page_count))
+    auto buffer = mapping->buffer().lock();
+    DASSERT(buffer);
+    if (!buffer->platform_buffer()->PinPages(0, page_count))
         return DRETF(false, "Pages can't be pinned");
 
     uint64_t access_flags = 0;
@@ -102,9 +104,9 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
         ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE))
         return DRETF(false, "Unsupported map flags %lx\n", mapping->flags());
 
-    if (!address_space_->Insert(gpu_va, mapping->buffer()->platform_buffer(), 0, mapping->size(),
+    if (!address_space_->Insert(gpu_va, buffer->platform_buffer(), 0, mapping->size(),
                                 access_flags)) {
-        mapping->buffer()->platform_buffer()->UnpinPages(start_page, page_count);
+        buffer->platform_buffer()->UnpinPages(start_page, page_count);
         return DRETF(false, "Pages can't be inserted into address space");
     }
 
@@ -121,7 +123,8 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
     address_space_->Clear(it->second->gpu_va(), it->second->size());
 
     uint64_t page_count = magma::round_up(it->second->size(), PAGE_SIZE) >> PAGE_SHIFT;
-    if (!it->second->buffer()->platform_buffer()->UnpinPages(0, page_count))
+    auto buffer = it->second->buffer().lock();
+    if (buffer && !buffer->platform_buffer()->UnpinPages(0, page_count))
         DLOG("Unable to unpin pages");
     gpu_mappings_.erase(gpu_va);
     return true;
