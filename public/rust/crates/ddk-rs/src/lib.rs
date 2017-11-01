@@ -110,7 +110,9 @@ pub fn add_device(device_ops: Box<DeviceOps>, parent: Option<&Device>, flags: Ad
     let mut device_add_args: ddk_sys::device_add_args_t = ddk_sys::device_add_args_t::new();
     // TODO(stange): See if it's necessary to double Box device_ops.
     device_add_args.ctx = Box::into_raw(Box::new(device_ops)) as *mut u8;
-    device_add_args.name = CString::new(device_name).unwrap().as_ptr();
+    // Bind the CString to a local variable to ensure it lives long enough for the call below.
+    let name_cstring = CString::new(device_name).unwrap();
+    device_add_args.name = name_cstring.as_ptr();
     device_add_args.flags = flags;
     unsafe {
         device_add_args.ops = &mut DEVICE_OPS;
