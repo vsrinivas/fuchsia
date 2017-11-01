@@ -8,8 +8,10 @@
 
 #include <utility>
 
+#include <trace-provider/provider.h>
 #include <trace-reader/reader.h>
 
+#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
@@ -129,6 +131,9 @@ void ChromiumExporter::Stop() {
 
 void ChromiumExporter::ExportRecord(const trace::Record& record) {
   switch (record.type()) {
+    case trace::RecordType::kMetadata:
+      ExportMetadata(record.GetMetadata());
+      break;
     case trace::RecordType::kInitialization:
       // Compute scale factor for ticks to microseconds.
       // Microseconds is the unit for the "ts" field.
@@ -359,6 +364,25 @@ void ChromiumExporter::ExportLog(const trace::Record::Log& log) {
   writer_.String(log.message.c_str(), log.message.size());
   writer_.EndObject();
   writer_.EndObject();
+}
+
+void ChromiumExporter::ExportMetadata(const trace::Record::Metadata& metadata) {
+  switch (metadata.type()) {
+    case trace::MetadataType::kProviderInfo:
+    case trace::MetadataType::kProviderSection:
+      // These are handled elsewhere.
+      break;
+    case trace::MetadataType::kProviderEvent: {
+      const auto& event = metadata.content.GetProviderEvent();
+      const auto& id = event.id;
+      if (event.event == trace::ProviderEventType::kBufferOverflow) {
+        // TODO(dje): Need to get provider name.
+        FXL_LOG(WARNING) << "#" << id << " buffer overflowed,"
+                         << " records were likely dropped";
+      }
+      break;
+    }
+  }
 }
 
 void ChromiumExporter::ExportContextSwitch(

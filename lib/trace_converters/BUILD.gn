@@ -17,6 +17,7 @@ source_set("chromium") {
   deps = [
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
+    "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/trace-reader",
   ]
 }

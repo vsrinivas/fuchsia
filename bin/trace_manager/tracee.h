@@ -72,6 +72,7 @@ class Tracee : private fsl::MessageLoopHandler {
   void OnHandleError(zx_handle_t handle, zx_status_t error) override;
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
+  TransferStatus WriteProviderBufferOverflowEvent(const zx::socket& socket) const;
 
   TraceProviderBundle* bundle_;
   State state_ = State::kReady;
@@ -81,6 +82,7 @@ class Tracee : private fsl::MessageLoopHandler {
   fxl::Closure started_callback_;
   fxl::Closure stopped_callback_;
   fsl::MessageLoop::HandlerKey fence_handler_key_{};
+  bool buffer_overflow_ = false;
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Tracee);

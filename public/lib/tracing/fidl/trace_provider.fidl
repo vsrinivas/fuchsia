@@ -31,6 +31,10 @@ interface TraceProvider {
   // #include <trace-provider/provider.h> to get TRACE_PROVIDER_SIGNAL_STARTED.
   // To indicate failure to start close |fence|.
   //
+  // If the provider drops a record because its buffer is full it must call
+  // zx_object_signal_peer() on |fence| passing
+  // TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW.
+  //
   // TODO(jeffbrown): Implement half-full signal and streaming protocol.
   Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories);
 

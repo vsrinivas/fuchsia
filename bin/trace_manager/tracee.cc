@@ -115,7 +115,9 @@ bool Tracee::Start(size_t buffer_size,
   stopped_callback_ = std::move(stopped_callback);
   fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(),
-      TRACE_PROVIDER_SIGNAL_STARTED | ZX_EPAIR_PEER_CLOSED);
+      (TRACE_PROVIDER_SIGNAL_STARTED |
+       TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
+       ZX_EPAIR_PEER_CLOSED));
   TransitionToState(State::kStartPending);
   return true;
 }
@@ -138,13 +140,20 @@ void Tracee::OnHandleReady(zx_handle_t handle,
                            uint64_t count) {
   FXL_VLOG(2) << *bundle_ << ": pending=0x" << std::hex << pending;
   FXL_DCHECK(pending & (TRACE_PROVIDER_SIGNAL_STARTED |
+                        TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
                         ZX_EPAIR_PEER_CLOSED));
   FXL_DCHECK(state_ == State::kStartPending ||
              state_ == State::kStarted ||
              state_ == State::kStopping);
+
+  // Handle this before BUFFER_OVERFLOW so that if they arrive together we'll
+  // have first transitioned to state kStarted before processing
+  // BUFFER_OVERFLOW.
   if (pending & TRACE_PROVIDER_SIGNAL_STARTED) {
-    // Clear the signal before invoking the callback: We could get back to
-    // back notifications.
+    // Clear the signal before invoking the callback:
+    // a) It remains set until we do so,
+    // b) Clear it before the call back in case we get back to back
+    //    notifications.
     zx_object_signal(handle, TRACE_PROVIDER_SIGNAL_STARTED, 0u);
     // The provider should only be signalling us when it has finished startup.
     if (state_ == State::kStartPending) {
@@ -155,6 +164,20 @@ void Tracee::OnHandleReady(zx_handle_t handle,
     } else {
       FXL_LOG(WARNING) << *bundle_
                        << ": Received TRACE_PROVIDER_SIGNAL_STARTED in state "
+                       << state_;
+    }
+  }
+
+  if (pending & TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW) {
+    // The signal remains set until we clear it.
+    zx_object_signal(handle, TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW, 0u);
+    if (state_ == State::kStarted || state_ == State::kStopping) {
+      FXL_LOG(WARNING) << *bundle_
+                       << ": Records got dropped, probably due to buffer overflow";
+      buffer_overflow_ = true;
+    } else {
+      FXL_LOG(WARNING) << *bundle_
+                       << ": Received TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW in state "
                        << state_;
     }
   }
@@ -190,6 +213,16 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     FXL_LOG(ERROR) << *bundle_
                    << ": Failed to write provider info record to trace.";
     return transfer_status;
+  }
+
+  if (buffer_overflow_) {
+    // If we can't write the provider event record, it's not the end of the
+    // world.
+    if (WriteProviderBufferOverflowEvent(socket) != TransferStatus::kComplete) {
+      FXL_LOG(ERROR) << *bundle_
+                     << ": Failed to write provider event (buffer overflow)"
+                        " record to trace.";
+    }
   }
 
   std::vector<uint8_t> buffer(buffer_vmo_size_);
@@ -238,6 +271,23 @@ Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
       trace::ProviderInfoMetadataRecordFields::NameLength::Make(
           bundle_->label.size());
   memcpy(&record[1], bundle_->label.c_str(), bundle_->label.size());
+  return WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
+                             trace::WordsToBytes(num_words), socket);
+}
+
+Tracee::TransferStatus Tracee::WriteProviderBufferOverflowEvent(
+    const zx::socket& socket) const {
+  size_t num_words = 1u;
+  std::vector<uint64_t> record(num_words);
+  record[0] =
+      trace::ProviderEventMetadataRecordFields::Type::Make(
+          trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+      trace::ProviderEventMetadataRecordFields::RecordSize::Make(num_words) |
+      trace::ProviderEventMetadataRecordFields::MetadataType::Make(
+          trace::ToUnderlyingType(trace::MetadataType::kProviderEvent)) |
+      trace::ProviderEventMetadataRecordFields::Id::Make(bundle_->id) |
+      trace::ProviderEventMetadataRecordFields::Event::Make(
+          trace::ToUnderlyingType(trace::ProviderEventType::kBufferOverflow));
   return WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words), socket);
 }

@@ -31,6 +31,7 @@ class ChromiumExporter {
   void ExportEvent(const trace::Record::Event& event);
   void ExportKernelObject(const trace::Record::KernelObject& kernel_object);
   void ExportLog(const trace::Record::Log& log);
+  void ExportMetadata(const trace::Record::Metadata& metadata);
   void ExportContextSwitch(const trace::Record::ContextSwitch& context_switch);
 
   std::ofstream file_out_;
