@@ -23,7 +23,11 @@ package("magma-test-build-only") {
     }
   }
   if (build_msd_arm_mali) {
-    deps += [ "//garnet/drivers/gpu/msd-arm-mali:tests" ]
+    deps += [
+      ":magma_tests",
+      "//garnet/drivers/gpu/msd-arm-mali:tests",
+      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
+    ]
   }
 }
 
@@ -34,11 +38,9 @@ package("magma-test") {
   deps = []
   tests = []
 
-  if (have_libvulkan) {
-    deps += [
-      ":autorun",
-      ":tests",
-    ]
+  # Tests that only depend on the msd.
+  if (build_msd_arm_mali || build_intel_gen) {
+    deps += [ ":magma_tests" ]
 
     tests += [
       {
@@ -48,7 +50,14 @@ package("magma-test") {
       {
         name = "magma_abi_conformance_tests"
       },
+    ]
+  }
 
+  # Tests that depend on libvulkan existing.
+  if (have_libvulkan) {
+    deps += [ ":tests" ]
+
+    tests += [
       {
         name = "magma_memcpy"
       },
@@ -84,6 +93,10 @@ package("magma-test") {
         },
 
         {
+          name = "magma_integration_tests"
+        },
+
+        {
           name = "mesa_unit_tests"
         },
 
@@ -102,10 +115,6 @@ package("magma-test") {
         {
           name = "state_pool_no_free"
         },
-
-        {
-          name = "magma_integration_tests"
-        },
       ]
 
       binaries = [ {
@@ -113,25 +122,43 @@ package("magma-test") {
             dest = "magma_autorun"
           } ]
     }
+
+    if (have_prebuilt_libvulkan_arm || build_libvulkan_arm_mali) {
+      deps += [ "//garnet/drivers/gpu/msd-arm-mali/tests/integration" ]
+      tests += [ {
+            name = "magma_arm_integration_tests"
+          } ]
+    }
   }
 
   if (build_msd_arm_mali) {
     deps += [
+      ":autorun_mali",
       "//garnet/drivers/gpu/msd-arm-mali:tests",
-      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
     ]
-    tests += [
-      {
-        name = "msd_arm_mali_nonhardware_tests"
-      },
-      {
-        name = "magma_arm_integration_tests"
-      },
+    tests += [ {
+          name = "msd_arm_mali_nonhardware_tests"
+        } ]
+
+    binaries = [ {
+          name = "autorun_mali"
+          dest = "magma_autorun_mali"
+        } ]
+  }
+}
+
+if (build_msd_arm_mali) {
+  copy("autorun_mali") {
+    sources = [
+      "//garnet/lib/magma/scripts/autorun_mali",
+    ]
+    outputs = [
+      "$root_out_dir/autorun_mali",
     ]
   }
 }
 
-if (have_libvulkan) {
+if (build_intel_gen) {
   copy("autorun") {
     sources = [
       "$magma_build_root/scripts/autorun",
@@ -140,16 +167,30 @@ if (have_libvulkan) {
       "$root_out_dir/autorun",
     ]
   }
+}
 
+if (build_msd_arm_mali || build_intel_gen) {
+  group("magma_tests") {
+    testonly = true
+
+    public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+    public_deps = [
+      "unit_tests:magma_abi_conformance_tests",
+      "unit_tests:magma_sys_unit_tests",
+    ]
+  }
+}
+
+if (have_libvulkan) {
   group("tests") {
     testonly = true
 
     public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
     public_deps = [
+      ":magma_tests",
       "benchmark",
-      "unit_tests:magma_abi_conformance_tests",
-      "unit_tests:magma_sys_unit_tests",
       "vkcube",
       "vkext",
       "vkloop",
