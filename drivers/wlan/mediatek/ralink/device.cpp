@@ -49,6 +49,9 @@ constexpr char kFirmwareFile[] = "rt2870.bin";
 
 constexpr int kMaxBusyReads = 20;
 
+// TODO(hahnr): Use bcast_mac from MacAddr once it was moved to common/.
+const uint8_t kBcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 // The <cstdlib> overloads confuse the compiler for <cstdint> types.
 template <typename T> constexpr T abs(T t) {
     return t < 0 ? -t : t;
@@ -3139,7 +3142,9 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     packet->tx_info.set_tx_pkt_length(txwi_len + len + align_pad_len);
 
     // TODO(tkilbourn): set these more appropriately
-    packet->tx_info.set_wiv(1);
+    auto frame = reinterpret_cast<const uint8_t*>(data);
+    uint8_t wiv = !RequiresProtection(frame, len);
+    packet->tx_info.set_wiv(wiv);
     packet->tx_info.set_qsel(2);
 
     Txwi0& txwi0 = packet->txwi0;
@@ -3160,11 +3165,12 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
     // txwi0.set_phy_mode(PhyMode::kHtMixMode);
 
+    auto wcid = LookupTxWcid(frame, len);
     Txwi1& txwi1 = packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);
     txwi1.set_ba_win_size(0);
-    txwi1.set_wcid(0);
+    txwi1.set_wcid(wcid);
     txwi1.set_mpdu_total_byte_count(len);
     txwi1.set_tx_packet_id(10);
 
@@ -3173,8 +3179,6 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
 
     Txwi3& txwi3 = packet->txwi3;
     txwi3.set_eiv(0);
-
-    // TODO(hahnr): Configure WCID when sending packets.
 
     // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
     // consider them when determining the start of the payload.
@@ -3188,6 +3192,28 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     // Send the whole thing
     req->header.length = req_len;
     usb_request_queue(&usb_, req);
+}
+
+bool Device::RequiresProtection(const uint8_t* frame, size_t len) {
+    // TODO(hahnr): Derive frame protection requirement from wlan_tx_info_t once available.
+    uint16_t fc = reinterpret_cast<const uint16_t*>(frame)[0];
+    return fc & (1 << 14);
+}
+
+// Looks up the WCID for addr1 in the frame. If no WCID was found, 255 is returned.
+// Note: This method must be evolved once multiple BSS are supported or the STA runs in AP mode and
+// uses hardware encryption.
+uint8_t Device::LookupTxWcid(const uint8_t* frame, size_t len) {
+    if (RequiresProtection(frame, len)) {
+        auto addr1 = frame + 4; // 4 = FC + Duration fields
+        // TODO(hahnr): Replace addresses and constants with MacAddr once it was moved to common/.
+        if (memcmp(addr1, kBcastAddr, 6) == 0) {
+            return kWcidBcastAddr;
+        } else if (memcmp(addr1, bssid_, 6) == 0) {
+            return kWcidBssid;
+        }
+    }
+    return kWcidUnknown;
 }
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
@@ -3230,6 +3256,8 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     CHECK_WRITE(BSSID_DW0, status);
     status = WriteRegister(bss1);
     CHECK_WRITE(BSSID_DW1, status);
+
+    memcpy(bssid_, mac, 6);
 
     return ZX_OK;
 }
@@ -3422,7 +3450,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
     case WLAN_KEY_TYPE_PAIRWISE: {
         // The driver doesn't support multiple BSS yet. Always use bss index 0.
         uint8_t bss_idx = 0;
-        uint8_t wcid = 1;
+        uint8_t wcid = kWcidBssid;
 
         // Reset everything on failure.
         auto reset = fbl::MakeAutoCall([&]() {
@@ -3449,7 +3477,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         uint8_t bss_idx = 0;
         uint8_t key_idx = key_config->key_idx;
         uint8_t skey = DeriveSharedKeyIndex(bss_idx, key_idx);
-        uint8_t wcid = 0;
+        uint8_t wcid = kWcidBcastAddr;
 
         // Reset everything on failure.
         auto reset = fbl::MakeAutoCall([&]() {
@@ -3462,9 +3490,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         status = WriteSharedKeyMode(skey, keyMode);
         if (status != ZX_OK) { break; }
 
-        // TODO(hahnr): Use bcast_mac from MacAddr once it was moved to common/.
-        uint8_t bcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-        status = WriteWcid(wcid, bcast_addr);
+        status = WriteWcid(wcid, kBcastAddr);
         if (status != ZX_OK) { break; }
 
         status = WriteWcidAttribute(bss_idx, wcid, keyMode, KeyType::kSharedKey);
