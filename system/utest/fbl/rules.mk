@@ -29,6 +29,7 @@ fbl_common_tests := \
     $(LOCAL_DIR)/type_support_tests.cpp \
     $(LOCAL_DIR)/unique_free_ptr_tests.cpp \
     $(LOCAL_DIR)/unique_ptr_tests.cpp \
+    $(LOCAL_DIR)/unique_fd_tests.cpp \
     $(LOCAL_DIR)/vector_tests.cpp \
 
 fbl_device_tests := $(fbl_common_tests)
