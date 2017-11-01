@@ -244,12 +244,22 @@ public:
         ProviderId id;
     };
 
+    // Provider event event data.
+    struct ProviderEvent {
+        ProviderId id;
+        ProviderEventType event;
+    };
+
     explicit MetadataContent(ProviderInfo provider_info)
         : type_(MetadataType::kProviderInfo), provider_info_(fbl::move(provider_info)) {}
 
     explicit MetadataContent(ProviderSection provider_section)
         : type_(MetadataType::kProviderSection),
           provider_section_(fbl::move(provider_section)) {}
+
+    explicit MetadataContent(ProviderEvent provider_event)
+        : type_(MetadataType::kProviderEvent),
+          provider_event_(fbl::move(provider_event)) {}
 
     const ProviderInfo& GetProviderInfo() const {
         ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
@@ -259,6 +269,11 @@ public:
     const ProviderSection& GetProviderSection() const {
         ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderSection);
         return provider_section_;
+    }
+
+    const ProviderEvent& GetProviderEvent() const {
+        ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderEvent);
+        return provider_event_;
     }
 
     MetadataContent(MetadataContent&& other)
@@ -284,6 +299,7 @@ private:
     union {
         ProviderInfo provider_info_;
         ProviderSection provider_section_;
+        ProviderEvent provider_event_;
     };
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MetadataContent);

@@ -97,6 +97,11 @@ struct ProviderSectionMetadataRecordFields : MetadataRecordFields {
     using Id = Field<20, 51>;
 };
 
+struct ProviderEventMetadataRecordFields : MetadataRecordFields {
+    using Id = Field<20, 51>;
+    using Event = Field<52, 55>;
+};
+
 using InitializationRecordFields = RecordFields;
 
 struct StringRecordFields : RecordFields {

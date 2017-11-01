@@ -52,11 +52,16 @@ public:
     virtual void TraceStopped(async_t* async,
                               zx_status_t disposition, size_t buffer_bytes_written) {}
 
+    // Called by the trace engine to indicate a record got dropped because
+    // the buffer was full.
+    virtual void BufferOverflow() {}
+
 private:
     static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
     static void CallTraceStarted(trace_handler_t* handler);
     static void CallTraceStopped(trace_handler_t* handler, async_t* async,
                                  zx_status_t disposition, size_t buffer_bytes_written);
+    static void CallBufferOverflow(trace_handler_t* handler);
 
     static const trace_handler_ops_t kOps;
 };

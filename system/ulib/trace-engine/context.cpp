@@ -949,10 +949,16 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
                           fbl::memory_order_relaxed);
 
     // Mark the end point if not already marked.
-    if (unlikely(ptr != buffer_end_)) {
-        buffer_full_mark_.store(reinterpret_cast<uintptr_t>(ptr),
-                                fbl::memory_order_relaxed);
+    uintptr_t expected_mark = 0u;
+    if (buffer_full_mark_.compare_exchange_strong(&expected_mark,
+                                                  reinterpret_cast<uintptr_t>(ptr),
+                                                  fbl::memory_order_relaxed,
+                                                  fbl::memory_order_relaxed)) {
+        // Notify the trace manager so it can notify the user that a record
+        // (likely) got dropped.
+        handler_->ops->buffer_overflow(handler_);
     }
+
     return nullptr;
 }
 

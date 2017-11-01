@@ -99,5 +99,11 @@ void TraceHandlerImpl::TraceStopped(async_t* async, zx_status_t disposition,
     delete this;
 }
 
+void TraceHandlerImpl::BufferOverflow() {
+    auto status = fence_.signal_peer(0u, TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW);
+    ZX_DEBUG_ASSERT(status == ZX_OK ||
+                    status == ZX_ERR_PEER_CLOSED);
+}
+
 } // namespace internal
 } // namespace trace

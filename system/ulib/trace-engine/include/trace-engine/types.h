@@ -338,6 +338,12 @@ enum class RecordType {
 enum class MetadataType {
     kProviderInfo = 1,
     kProviderSection = 2,
+    kProviderEvent = 3,
+};
+
+// Enumerates all provider events.
+enum class ProviderEventType {
+    kBufferOverflow = 0,
 };
 
 // Enumerates all known argument types.

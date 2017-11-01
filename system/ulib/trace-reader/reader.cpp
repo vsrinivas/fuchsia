@@ -120,6 +120,25 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
             Record::Metadata{MetadataContent(MetadataContent::ProviderSection{id})}));
         break;
     }
+    case MetadataType::kProviderEvent: {
+        auto id =
+            ProviderEventMetadataRecordFields::Id::Get<ProviderId>(header);
+        auto event = ProviderEventMetadataRecordFields::Event::Get<ProviderEventType>(header);
+        switch (event) {
+        case ProviderEventType::kBufferOverflow:
+            record_consumer_(Record(
+                Record::Metadata{MetadataContent(
+                    MetadataContent::ProviderEvent{id, event})}));
+            break;
+        default:
+            // Ignore unknown event types for forward compatibility.
+            ReportError(fbl::StringPrintf(
+                "Skipping provider event of unknown type %u",
+                static_cast<unsigned>(event)));
+            break;
+        }
+        break;
+    }
     default: {
         // Ignore unknown metadata types for forward compatibility.
         ReportError(fbl::StringPrintf(

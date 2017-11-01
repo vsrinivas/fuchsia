@@ -194,6 +194,9 @@ void MetadataContent::Destroy() {
     case MetadataType::kProviderSection:
         provider_section_.~ProviderSection();
         break;
+    case MetadataType::kProviderEvent:
+        provider_event_.~ProviderEvent();
+        break;
     }
 }
 
@@ -206,6 +209,9 @@ void MetadataContent::MoveFrom(MetadataContent&& other) {
     case MetadataType::kProviderSection:
         new (&provider_section_) ProviderSection(fbl::move(other.provider_section_));
         break;
+    case MetadataType::kProviderEvent:
+        new (&provider_event_) ProviderEvent(fbl::move(other.provider_event_));
+        break;
     }
 }
 
@@ -217,6 +223,21 @@ fbl::String MetadataContent::ToString() const {
     case MetadataType::kProviderSection:
         return fbl::StringPrintf("ProviderSection(id: %" PRId32 ")",
                                   provider_section_.id);
+    case MetadataType::kProviderEvent: {
+        fbl::String name;
+        ProviderEventType type = provider_event_.event;
+        switch (type) {
+        case ProviderEventType::kBufferOverflow:
+            name = "buffer overflow";
+            break;
+        default:
+            name = fbl::StringPrintf("unknown(%u)",
+                                     static_cast<unsigned>(type));
+            break;
+        }
+        return fbl::StringPrintf("ProviderEvent(id: %" PRId32 ", %s)",
+                                 provider_event_.id, name.c_str());
+    }
     }
     ZX_ASSERT(false);
 }

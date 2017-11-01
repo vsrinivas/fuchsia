@@ -67,6 +67,12 @@ struct trace_handler_ops {
     // Called on an asynchronous dispatch thread.
     void (*trace_stopped)(trace_handler_t* handler, async_t* async,
                           zx_status_t disposition, size_t buffer_bytes_written);
+
+    // Called by the trace engine after an attempt to allocate space
+    // for a new record has failed because the buffer is full.
+    //
+    // Called by instrumentation on any thread.  Must be thread-safe.
+    void (*buffer_overflow)(trace_handler_t* handler);
 };
 
 // Asynchronously starts the trace engine.

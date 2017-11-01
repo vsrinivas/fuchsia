@@ -262,7 +262,7 @@ same provider.
 _header word_
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
-- `[16 .. 19]`: metadata type
+- `[16 .. 19]`: metadata type (1)
 - `[20 .. 51]`: provider id (token used to identify the provider in the trace)
 - `[52 .. 59]`: name length in bytes
 - `[60 .. 63]`: reserved (must be zero)
@@ -290,9 +290,32 @@ whenever it encounters a new **Provider Section Metadata** record.
 _header word_
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
-- `[16 .. 19]`: metadata type
+- `[16 .. 19]`: metadata type (2)
 - `[20 .. 51]`: provider id (token used to identify the provider in the trace)
 - `[52 .. 63]`: reserved (must be zero)
+
+#### Provider Event Metadata (metadata type = 3)
+
+This metadata provides running notification of events that the provider
+wants to report.
+This record may appear anywhere in the output, and does not delimit what
+came before it or what comes after it.
+
+##### Format
+
+_header word_
+- `[0 .. 3]`: record type (0)
+- `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
+- `[16 .. 19]`: metadata type (3)
+- `[20 .. 51]`: provider id (token used to identify the provider in the trace)
+- `[52 .. 55]`: the event id
+- `[56 .. 63]`: reserved (must be zero)
+
+##### Events
+
+The following events are defined.
+
+- `0`: a buffer filled up, records were likely dropped
 
 ### Initialization Record (record type = 1)
 
