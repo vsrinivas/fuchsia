@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tarfile
 
-CURRENT_VERSION_LINUX64='912e117fbb3a752d61c8320d9df934ddc4dec600'
+CURRENT_VERSION_LINUX64='e94fd938c8eb14b40a6d9ba55aa44fa27cf0e906'
 
 BUCKET_PREFIX="https://storage.googleapis.com/fuchsia-build/" \
               "cobalt/report_client"
