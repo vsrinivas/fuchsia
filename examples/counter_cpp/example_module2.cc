@@ -123,6 +123,8 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
     modular::LinkPtr link;
     module_context_->GetLink(nullptr, link.NewRequest());
     store_.Initialize(std::move(link));
+
+    module_context_->Ready();
   }
 
   // |Lifecycle|

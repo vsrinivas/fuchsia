@@ -172,6 +172,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
                          FXL_CHECK(result == 8);
                          FXL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
                        }));
+
+    module_context_->Ready();
   }
 
   // |Lifecycle|
