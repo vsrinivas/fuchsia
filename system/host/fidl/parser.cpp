@@ -6,33 +6,33 @@
 
 namespace fidl {
 
-#define TOKEN_PRIMITIVE_TYPE_CASES \
-    case Token::Kind::Bool:        \
-    case Token::Kind::Int8:        \
-    case Token::Kind::Int16:       \
-    case Token::Kind::Int32:       \
-    case Token::Kind::Int64:       \
-    case Token::Kind::Uint8:       \
-    case Token::Kind::Uint16:      \
-    case Token::Kind::Uint32:      \
-    case Token::Kind::Uint64:      \
-    case Token::Kind::Float32:     \
+#define TOKEN_PRIMITIVE_TYPE_CASES                                                                 \
+    case Token::Kind::Bool:                                                                        \
+    case Token::Kind::Int8:                                                                        \
+    case Token::Kind::Int16:                                                                       \
+    case Token::Kind::Int32:                                                                       \
+    case Token::Kind::Int64:                                                                       \
+    case Token::Kind::Uint8:                                                                       \
+    case Token::Kind::Uint16:                                                                      \
+    case Token::Kind::Uint32:                                                                      \
+    case Token::Kind::Uint64:                                                                      \
+    case Token::Kind::Float32:                                                                     \
     case Token::Kind::Float64
 
-#define TOKEN_TYPE_CASES          \
-    TOKEN_PRIMITIVE_TYPE_CASES:   \
-    case Token::Kind::Identifier: \
-    case Token::Kind::Array:      \
-    case Token::Kind::Vector:     \
-    case Token::Kind::String:     \
-    case Token::Kind::Handle:     \
+#define TOKEN_TYPE_CASES                                                                           \
+    TOKEN_PRIMITIVE_TYPE_CASES:                                                                    \
+    case Token::Kind::Identifier:                                                                  \
+    case Token::Kind::Array:                                                                       \
+    case Token::Kind::Vector:                                                                      \
+    case Token::Kind::String:                                                                      \
+    case Token::Kind::Handle:                                                                      \
     case Token::Kind::Request
 
-#define TOKEN_LITERAL_CASES           \
-    case Token::Kind::Default:        \
-    case Token::Kind::True:           \
-    case Token::Kind::False:          \
-    case Token::Kind::NumericLiteral: \
+#define TOKEN_LITERAL_CASES                                                                        \
+    case Token::Kind::Default:                                                                     \
+    case Token::Kind::True:                                                                        \
+    case Token::Kind::False:                                                                       \
+    case Token::Kind::NumericLiteral:                                                              \
     case Token::Kind::StringLiteral
 
 namespace {
@@ -232,7 +232,8 @@ std::unique_ptr<VectorType> Parser::ParseVectorType() {
         nullability = Nullability::Nullable;
     }
 
-    return std::make_unique<VectorType>(std::move(element_type), std::move(maybe_element_count), nullability);
+    return std::make_unique<VectorType>(std::move(element_type), std::move(maybe_element_count),
+                                        nullability);
 }
 
 std::unique_ptr<StringType> Parser::ParseStringType() {
@@ -493,8 +494,7 @@ std::unique_ptr<ConstDeclaration> Parser::ParseConstDeclaration() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<ConstDeclaration>(std::move(type),
-                                              std::move(identifier),
+    return std::make_unique<ConstDeclaration>(std::move(type), std::move(identifier),
                                               std::move(constant));
 }
 
@@ -514,7 +514,8 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
             auto compound_identifier = ParseCompoundIdentifier();
             if (!Ok())
                 return Fail();
-            member_value = std::make_unique<EnumMemberValueIdentifier>(std::move(compound_identifier));
+            member_value =
+                std::make_unique<EnumMemberValueIdentifier>(std::move(compound_identifier));
             break;
         }
 
@@ -531,8 +532,7 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
         }
     }
 
-    return std::make_unique<EnumMember>(std::move(identifier),
-                                        std::move(member_value));
+    return std::make_unique<EnumMember>(std::move(identifier), std::move(member_value));
 }
 
 std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
@@ -578,8 +578,7 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
     if (!Ok())
         Fail();
 
-    return std::make_unique<EnumDeclaration>(std::move(identifier),
-                                             std::move(subtype),
+    return std::make_unique<EnumDeclaration>(std::move(identifier), std::move(subtype),
                                              std::move(members));
 }
 
@@ -591,8 +590,7 @@ std::unique_ptr<Parameter> Parser::ParseParameter() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<Parameter>(std::move(type),
-                                       std::move(identifier));
+    return std::make_unique<Parameter>(std::move(type), std::move(identifier));
 }
 
 std::unique_ptr<ParameterList> Parser::ParseParameterList() {
@@ -661,8 +659,7 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
             return Fail();
     }
 
-    return std::make_unique<InterfaceMemberMethod>(std::move(ordinal),
-                                                   std::move(identifier),
+    return std::make_unique<InterfaceMemberMethod>(std::move(ordinal), std::move(identifier),
                                                    std::move(parameter_list),
                                                    std::move(maybe_response));
 }
@@ -712,8 +709,7 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
     if (!Ok())
         Fail();
 
-    return std::make_unique<InterfaceDeclaration>(std::move(identifier),
-                                                  std::move(const_members),
+    return std::make_unique<InterfaceDeclaration>(std::move(identifier), std::move(const_members),
                                                   std::move(enum_members),
                                                   std::move(method_members));
 }
@@ -735,8 +731,7 @@ std::unique_ptr<StructMember> Parser::ParseStructMember() {
             return Fail();
     }
 
-    return std::make_unique<StructMember>(std::move(type),
-                                          std::move(identifier),
+    return std::make_unique<StructMember>(std::move(type), std::move(identifier),
                                           std::move(maybe_default_value));
 }
 
@@ -785,10 +780,8 @@ std::unique_ptr<StructDeclaration> Parser::ParseStructDeclaration() {
     if (!Ok())
         Fail();
 
-    return std::make_unique<StructDeclaration>(std::move(identifier),
-                                               std::move(const_members),
-                                               std::move(enum_members),
-                                               std::move(members));
+    return std::make_unique<StructDeclaration>(std::move(identifier), std::move(const_members),
+                                               std::move(enum_members), std::move(members));
 }
 
 std::unique_ptr<UnionMember> Parser::ParseUnionMember() {
@@ -799,8 +792,7 @@ std::unique_ptr<UnionMember> Parser::ParseUnionMember() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<UnionMember>(std::move(type),
-                                         std::move(identifier));
+    return std::make_unique<UnionMember>(std::move(type), std::move(identifier));
 }
 
 std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
@@ -848,10 +840,8 @@ std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
     if (!Ok())
         Fail();
 
-    return std::make_unique<UnionDeclaration>(std::move(identifier),
-                                              std::move(const_members),
-                                              std::move(enum_members),
-                                              std::move(members));
+    return std::make_unique<UnionDeclaration>(std::move(identifier), std::move(const_members),
+                                              std::move(enum_members), std::move(members));
 }
 
 std::unique_ptr<File> Parser::ParseFile() {
@@ -923,13 +913,10 @@ std::unique_ptr<File> Parser::ParseFile() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<File>(std::move(identifier),
-                                  std::move(using_list),
-                                  std::move(const_declaration_list),
-                                  std::move(enum_declaration_list),
-                                  std::move(interface_declaration_list),
-                                  std::move(struct_declaration_list),
-                                  std::move(union_declaration_list));
+    return std::make_unique<File>(
+        std::move(identifier), std::move(using_list), std::move(const_declaration_list),
+        std::move(enum_declaration_list), std::move(interface_declaration_list),
+        std::move(struct_declaration_list), std::move(union_declaration_list));
 }
 
 } // namespace fidl

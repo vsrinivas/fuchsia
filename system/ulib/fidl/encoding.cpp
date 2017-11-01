@@ -24,9 +24,8 @@ static_assert(offsetof(fidl_vector_t, data) == 8u, "");
 
 class FidlEncoder {
 public:
-    FidlEncoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                zx_handle_t* handles, uint32_t max_handles,
-                uint32_t* actual_handles_out, const char** error_msg_out)
+    FidlEncoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes, zx_handle_t* handles,
+                uint32_t max_handles, uint32_t* actual_handles_out, const char** error_msg_out)
         : type_(type), bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
           handles_(handles), max_handles_(max_handles), actual_handles_out_(actual_handles_out),
           error_msg_out_(error_msg_out) {}
@@ -41,8 +40,7 @@ private:
         return ZX_ERR_INVALID_ARGS;
     }
 
-    template <typename T>
-    T* TypedAt(uint32_t offset) const {
+    template <typename T> T* TypedAt(uint32_t offset) const {
         return reinterpret_cast<T*>(bytes_ + offset);
     }
 
@@ -135,7 +133,9 @@ private:
             union_state.type_count = coded_union->type_count;
         }
 
-        Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size, uint32_t offset) : offset(offset) {
+        Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size,
+              uint32_t offset)
+            : offset(offset) {
             state = kStateArray;
             array_state.element = element;
             array_state.array_size = array_size;
@@ -354,8 +354,8 @@ zx_status_t FidlEncoder::EncodeMessage() {
                 Pop();
                 continue;
             }
-            if (!ClaimOutOfLineStorage(frame->union_pointer_state.union_type->size,
-                                       *union_ptr_ptr, &frame->offset)) {
+            if (!ClaimOutOfLineStorage(frame->union_pointer_state.union_type->size, *union_ptr_ptr,
+                                       &frame->offset)) {
                 return WithError("messange wanted to store too large of a nullable union");
             }
             *union_ptr_ptr = reinterpret_cast<fidl_union_tag_t*>(FIDL_ALLOC_PRESENT);
@@ -392,7 +392,8 @@ zx_status_t FidlEncoder::EncodeMessage() {
             if (size > bound) {
                 return WithError("message tried to encode too large of a bounded string");
             }
-            if (!ClaimOutOfLineStorage(static_cast<uint32_t>(size), string_ptr->data, &frame->offset)) {
+            if (!ClaimOutOfLineStorage(static_cast<uint32_t>(size), string_ptr->data,
+                                       &frame->offset)) {
                 return WithError("encoding a string with incorrectly placed data");
             }
             string_ptr->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
@@ -428,16 +429,15 @@ zx_status_t FidlEncoder::EncodeMessage() {
             if (vector_ptr->count > frame->vector_state.max_count) {
                 return WithError("message tried to encode too large of a bounded vector");
             }
-            uint32_t size = static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
+            uint32_t size =
+                static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
             if (!ClaimOutOfLineStorage(size, vector_ptr->data, &frame->offset)) {
                 return WithError("message wanted to store too large of a vector");
             }
             vector_ptr->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
             // Continue to encoding the vector elements as an array.
-            *frame = Frame(frame->vector_state.element,
-                           size,
-                           static_cast<uint32_t>(vector_ptr->count),
-                           frame->offset);
+            *frame = Frame(frame->vector_state.element, size,
+                           static_cast<uint32_t>(vector_ptr->count), frame->offset);
             continue;
         }
         case Frame::kStateDone: {
@@ -453,13 +453,10 @@ zx_status_t FidlEncoder::EncodeMessage() {
 
 } // namespace
 
-zx_status_t fidl_encode(const fidl_type_t* type,
-                        void* bytes,
-                        uint32_t num_bytes,
-                        zx_handle_t* handles,
-                        uint32_t max_handles,
-                        uint32_t* actual_handles_out,
+zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        zx_handle_t* handles, uint32_t max_handles, uint32_t* actual_handles_out,
                         const char** error_msg_out) {
-    FidlEncoder encoder(type, bytes, num_bytes, handles, max_handles, actual_handles_out, error_msg_out);
+    FidlEncoder encoder(type, bytes, num_bytes, handles, max_handles, actual_handles_out,
+                        error_msg_out);
     return encoder.EncodeMessage();
 }

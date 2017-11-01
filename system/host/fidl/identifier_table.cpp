@@ -13,7 +13,8 @@ IdentifierTable::IdentifierTable() {
     };
 }
 
-Token IdentifierTable::MakeIdentifier(StringView source_data, uint32_t offset, bool escaped_identifier) const {
+Token IdentifierTable::MakeIdentifier(StringView source_data, uint32_t offset,
+                                      bool escaped_identifier) const {
     auto kind = Token::Kind::Identifier;
     if (!escaped_identifier) {
         auto lookup = keyword_table_.find(source_data);

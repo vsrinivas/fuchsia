@@ -18,8 +18,7 @@ enum struct Nullability {
 };
 
 struct Identifier {
-    Identifier(Token identifier)
-        : identifier(identifier) {}
+    Identifier(Token identifier) : identifier(identifier) {}
 
     Token identifier;
 };
@@ -36,27 +35,22 @@ struct Literal {
 };
 
 struct StringLiteral : public Literal {
-    StringLiteral(Token literal)
-        : literal(literal) {}
+    StringLiteral(Token literal) : literal(literal) {}
 
     Token literal;
 };
 
 struct NumericLiteral : public Literal {
-    NumericLiteral(Token literal)
-        : literal(literal) {}
+    NumericLiteral(Token literal) : literal(literal) {}
 
     Token literal;
 };
 
-struct TrueLiteral : public Literal {
-};
+struct TrueLiteral : public Literal {};
 
-struct FalseLiteral : public Literal {
-};
+struct FalseLiteral : public Literal {};
 
-struct DefaultLiteral : public Literal {
-};
+struct DefaultLiteral : public Literal {};
 
 struct Constant {
     virtual ~Constant() {}
@@ -70,8 +64,7 @@ struct IdentifierConstant : Constant {
 };
 
 struct LiteralConstant : Constant {
-    LiteralConstant(std::unique_ptr<Literal> literal)
-        : literal(std::move(literal)) {}
+    LiteralConstant(std::unique_ptr<Literal> literal) : literal(std::move(literal)) {}
 
     std::unique_ptr<Literal> literal;
 };
@@ -81,22 +74,18 @@ struct Type {
 };
 
 struct ArrayType : public Type {
-    ArrayType(std::unique_ptr<Type> element_type,
-              std::unique_ptr<Constant> element_count)
-        : element_type(std::move(element_type)),
-          element_count(std::move(element_count)) {}
+    ArrayType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> element_count)
+        : element_type(std::move(element_type)), element_count(std::move(element_count)) {}
 
     std::unique_ptr<Type> element_type;
     std::unique_ptr<Constant> element_count;
 };
 
 struct VectorType : public Type {
-    VectorType(std::unique_ptr<Type> element_type,
-               std::unique_ptr<Constant> maybe_element_count,
+    VectorType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
                Nullability nullability)
         : element_type(std::move(element_type)),
-          maybe_element_count(std::move(maybe_element_count)),
-          nullability(nullability) {}
+          maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
     std::unique_ptr<Constant> maybe_element_count;
@@ -104,10 +93,8 @@ struct VectorType : public Type {
 };
 
 struct StringType : public Type {
-    StringType(std::unique_ptr<Constant> maybe_element_count,
-               Nullability nullability)
-        : maybe_element_count(std::move(maybe_element_count)),
-          nullability(nullability) {}
+    StringType(std::unique_ptr<Constant> maybe_element_count, Nullability nullability)
+        : maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Constant> maybe_element_count;
     Nullability nullability;
@@ -138,28 +125,23 @@ struct HandleType : public Type {
     };
 
     HandleType(Subtype subtype, Nullability nullability)
-        : subtype(subtype),
-          nullability(nullability) {}
+        : subtype(subtype), nullability(nullability) {}
 
     Subtype subtype;
     Nullability nullability;
 };
 
 struct RequestType : public Type {
-    RequestType(std::unique_ptr<CompoundIdentifier> subtype,
-                Nullability nullability)
-        : subtype(std::move(subtype)),
-          nullability(nullability) {}
+    RequestType(std::unique_ptr<CompoundIdentifier> subtype, Nullability nullability)
+        : subtype(std::move(subtype)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> subtype;
     Nullability nullability;
 };
 
 struct IdentifierType : public Type {
-    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier,
-                   Nullability nullability)
-        : identifier(std::move(identifier)),
-          nullability(nullability) {}
+    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, Nullability nullability)
+        : identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
     Nullability nullability;
@@ -180,29 +162,23 @@ struct PrimitiveType : public Type {
         Float64,
     };
 
-    PrimitiveType(TypeKind type_kind)
-        : type_kind(type_kind) {}
+    PrimitiveType(TypeKind type_kind) : type_kind(type_kind) {}
 
     TypeKind type_kind;
 };
 
 struct Using {
-    Using(std::unique_ptr<CompoundIdentifier> using_path,
-          std::unique_ptr<Identifier> maybe_alias)
-        : using_path(std::move(using_path)),
-          maybe_alias(std::move(maybe_alias)) {}
+    Using(std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias)
+        : using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)) {}
 
     std::unique_ptr<CompoundIdentifier> using_path;
     std::unique_ptr<Identifier> maybe_alias;
 };
 
 struct ConstDeclaration {
-    ConstDeclaration(std::unique_ptr<Type> type,
-                     std::unique_ptr<Identifier> identifier,
+    ConstDeclaration(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
                      std::unique_ptr<Constant> constant)
-        : type(std::move(type)),
-          identifier(std::move(identifier)),
-          constant(std::move(constant)) {}
+        : type(std::move(type)), identifier(std::move(identifier)), constant(std::move(constant)) {}
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
@@ -221,17 +197,14 @@ struct EnumMemberValueIdentifier : public EnumMemberValue {
 };
 
 struct EnumMemberValueNumeric : public EnumMemberValue {
-    EnumMemberValueNumeric(std::unique_ptr<NumericLiteral> literal)
-        : literal(std::move(literal)) {}
+    EnumMemberValueNumeric(std::unique_ptr<NumericLiteral> literal) : literal(std::move(literal)) {}
 
     std::unique_ptr<NumericLiteral> literal;
 };
 
 struct EnumMember {
-    EnumMember(std::unique_ptr<Identifier> identifier,
-               std::unique_ptr<EnumMemberValue> maybe_value)
-        : identifier(std::move(identifier)),
-          maybe_value(std::move(maybe_value)) {}
+    EnumMember(std::unique_ptr<Identifier> identifier, std::unique_ptr<EnumMemberValue> maybe_value)
+        : identifier(std::move(identifier)), maybe_value(std::move(maybe_value)) {}
 
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<EnumMemberValue> maybe_value;
@@ -241,8 +214,7 @@ struct EnumDeclaration {
     EnumDeclaration(std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<PrimitiveType> maybe_subtype,
                     std::vector<std::unique_ptr<EnumMember>> members)
-        : identifier(std::move(identifier)),
-          maybe_subtype(std::move(maybe_subtype)),
+        : identifier(std::move(identifier)), maybe_subtype(std::move(maybe_subtype)),
           members(std::move(members)) {}
 
     std::unique_ptr<Identifier> identifier;
@@ -251,10 +223,8 @@ struct EnumDeclaration {
 };
 
 struct Parameter {
-    Parameter(std::unique_ptr<Type> type,
-              std::unique_ptr<Identifier> identifier)
-        : type(std::move(type)),
-          identifier(std::move(identifier)) {}
+    Parameter(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
+        : type(std::move(type)), identifier(std::move(identifier)) {}
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
@@ -272,10 +242,8 @@ struct InterfaceMemberMethod {
                           std::unique_ptr<Identifier> identifier,
                           std::unique_ptr<ParameterList> parameter_list,
                           std::unique_ptr<ParameterList> maybe_response)
-        : ordinal(std::move(ordinal)),
-          identifier(std::move(identifier)),
-          parameter_list(std::move(parameter_list)),
-          maybe_response(std::move(maybe_response)) {}
+        : ordinal(std::move(ordinal)), identifier(std::move(identifier)),
+          parameter_list(std::move(parameter_list)), maybe_response(std::move(maybe_response)) {}
 
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
@@ -288,10 +256,8 @@ struct InterfaceDeclaration {
                          std::vector<std::unique_ptr<ConstDeclaration>> const_members,
                          std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
                          std::vector<std::unique_ptr<InterfaceMemberMethod>> method_members)
-        : identifier(std::move(identifier)),
-          const_members(std::move(const_members)),
-          enum_members(std::move(enum_members)),
-          method_members(std::move(method_members)) {}
+        : identifier(std::move(identifier)), const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)), method_members(std::move(method_members)) {}
 
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
@@ -300,11 +266,9 @@ struct InterfaceDeclaration {
 };
 
 struct StructMember {
-    StructMember(std::unique_ptr<Type> type,
-                 std::unique_ptr<Identifier> identifier,
+    StructMember(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
                  std::unique_ptr<Constant> maybe_default_value)
-        : type(std::move(type)),
-          identifier(std::move(identifier)),
+        : type(std::move(type)), identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)) {}
 
     std::unique_ptr<Type> type;
@@ -317,10 +281,8 @@ struct StructDeclaration {
                       std::vector<std::unique_ptr<ConstDeclaration>> const_members,
                       std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
                       std::vector<std::unique_ptr<StructMember>> members)
-        : identifier(std::move(identifier)),
-          const_members(std::move(const_members)),
-          enum_members(std::move(enum_members)),
-          members(std::move(members)) {}
+        : identifier(std::move(identifier)), const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)), members(std::move(members)) {}
 
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
@@ -329,10 +291,8 @@ struct StructDeclaration {
 };
 
 struct UnionMember {
-    UnionMember(std::unique_ptr<Type> type,
-                std::unique_ptr<Identifier> identifier)
-        : type(std::move(type)),
-          identifier(std::move(identifier)) {}
+    UnionMember(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier)
+        : type(std::move(type)), identifier(std::move(identifier)) {}
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
@@ -343,10 +303,8 @@ struct UnionDeclaration {
                      std::vector<std::unique_ptr<ConstDeclaration>> const_members,
                      std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
                      std::vector<std::unique_ptr<UnionMember>> members)
-        : identifier(std::move(identifier)),
-          const_members(std::move(const_members)),
-          enum_members(std::move(enum_members)),
-          members(std::move(members)) {}
+        : identifier(std::move(identifier)), const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)), members(std::move(members)) {}
 
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
@@ -362,8 +320,7 @@ struct File {
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
          std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
-        : identifier(std::move(identifier)),
-          using_list(std::move(using_list)),
+        : identifier(std::move(identifier)), using_list(std::move(using_list)),
           const_declaration_list(std::move(const_declaration_list)),
           enum_declaration_list(std::move(enum_declaration_list)),
           interface_declaration_list(std::move(interface_declaration_list)),

@@ -9,8 +9,10 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/abi_tests.cpp \
     $(LOCAL_DIR)/decoding_tests.cpp \
     $(LOCAL_DIR)/encoding_tests.cpp \
+    $(LOCAL_DIR)/fidl_coded_types.cpp \
     $(LOCAL_DIR)/main.c \
 
 MODULE_NAME := fidl-test

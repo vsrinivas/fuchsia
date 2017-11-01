@@ -26,9 +26,7 @@ struct FidlField {
     const fidl_type* type;
     uint32_t offset;
 
-    constexpr FidlField(const fidl_type* type, uint32_t offset)
-        : type(type),
-          offset(offset) {}
+    constexpr FidlField(const fidl_type* type, uint32_t offset) : type(type), offset(offset) {}
 };
 
 enum FidlTypeTag : uint32_t {
@@ -50,12 +48,8 @@ struct FidlCodedStruct {
     const uint32_t field_count;
     const uint32_t size;
 
-    constexpr FidlCodedStruct(const FidlField* fields,
-                              uint32_t field_count,
-                              uint32_t size)
-        : fields(fields),
-          field_count(field_count),
-          size(size) {}
+    constexpr FidlCodedStruct(const FidlField* fields, uint32_t field_count, uint32_t size)
+        : fields(fields), field_count(field_count), size(size) {}
 };
 
 struct FidlCodedStructPointer {
@@ -74,12 +68,8 @@ struct FidlCodedUnion {
     const uint32_t type_count;
     const uint32_t size;
 
-    constexpr FidlCodedUnion(const fidl_type* const* types,
-                             uint32_t type_count,
-                             uint32_t size)
-        : types(types),
-          type_count(type_count),
-          size(size) {}
+    constexpr FidlCodedUnion(const fidl_type* const* types, uint32_t type_count, uint32_t size)
+        : types(types), type_count(type_count), size(size) {}
 };
 
 struct FidlCodedUnionPointer {
@@ -96,12 +86,8 @@ struct FidlCodedArray {
     const uint32_t array_size;
     const uint32_t element_size;
 
-    constexpr FidlCodedArray(const fidl_type* element,
-                             uint32_t array_size,
-                             uint32_t element_size)
-        : element(element),
-          array_size(array_size),
-          element_size(element_size) {}
+    constexpr FidlCodedArray(const fidl_type* element, uint32_t array_size, uint32_t element_size)
+        : element(element), array_size(array_size), element_size(element_size) {}
 };
 
 struct FidlCodedHandle {
@@ -110,10 +96,8 @@ struct FidlCodedHandle {
     const uint32_t handle_subtype;
     const bool nullable;
 
-    constexpr FidlCodedHandle(uint32_t handle_subtype,
-                              bool nullable)
-        : handle_subtype(handle_subtype),
-          nullable(nullable) {}
+    constexpr FidlCodedHandle(uint32_t handle_subtype, bool nullable)
+        : handle_subtype(handle_subtype), nullable(nullable) {}
 
     static_assert(ZX_OBJ_TYPE_LAST <= UINT32_MAX, "");
 };
@@ -123,8 +107,7 @@ struct FidlCodedString {
     const bool nullable;
 
     constexpr FidlCodedString(uint32_t max_size, bool nullable)
-        : max_size(max_size),
-          nullable(nullable) {}
+        : max_size(max_size), nullable(nullable) {}
 };
 
 // Note that |max_count * element_size| is guaranteed to fit into a
@@ -135,14 +118,9 @@ struct FidlCodedVector {
     const uint32_t element_size;
     const bool nullable;
 
-    constexpr FidlCodedVector(const fidl_type* element,
-                              uint32_t max_count,
-                              uint32_t element_size,
+    constexpr FidlCodedVector(const fidl_type* element, uint32_t max_count, uint32_t element_size,
                               bool nullable)
-        : element(element),
-          max_count(max_count),
-          element_size(element_size),
-          nullable(nullable) {}
+        : element(element), max_count(max_count), element_size(element_size), nullable(nullable) {}
 };
 
 } // namespace fidl
@@ -161,34 +139,26 @@ struct fidl_type {
     };
 
     constexpr fidl_type(fidl::FidlCodedStruct coded_struct)
-        : type_tag(fidl::kFidlTypeStruct),
-          coded_struct(coded_struct) {}
+        : type_tag(fidl::kFidlTypeStruct), coded_struct(coded_struct) {}
 
     constexpr fidl_type(fidl::FidlCodedStructPointer coded_struct_pointer)
-        : type_tag(fidl::kFidlTypeStructPointer),
-          coded_struct_pointer(coded_struct_pointer) {}
+        : type_tag(fidl::kFidlTypeStructPointer), coded_struct_pointer(coded_struct_pointer) {}
 
     constexpr fidl_type(fidl::FidlCodedUnion coded_union)
-        : type_tag(fidl::kFidlTypeUnion),
-          coded_union(coded_union) {}
+        : type_tag(fidl::kFidlTypeUnion), coded_union(coded_union) {}
 
     constexpr fidl_type(fidl::FidlCodedUnionPointer coded_union_pointer)
-        : type_tag(fidl::kFidlTypeUnionPointer),
-          coded_union_pointer(coded_union_pointer) {}
+        : type_tag(fidl::kFidlTypeUnionPointer), coded_union_pointer(coded_union_pointer) {}
 
     constexpr fidl_type(fidl::FidlCodedHandle coded_handle)
-        : type_tag(fidl::kFidlTypeHandle),
-          coded_handle(coded_handle) {}
+        : type_tag(fidl::kFidlTypeHandle), coded_handle(coded_handle) {}
 
     constexpr fidl_type(fidl::FidlCodedString coded_string)
-        : type_tag(fidl::kFidlTypeString),
-          coded_string(coded_string) {}
+        : type_tag(fidl::kFidlTypeString), coded_string(coded_string) {}
 
     constexpr fidl_type(fidl::FidlCodedArray coded_array)
-        : type_tag(fidl::kFidlTypeArray),
-          coded_array(coded_array) {}
+        : type_tag(fidl::kFidlTypeArray), coded_array(coded_array) {}
 
     constexpr fidl_type(fidl::FidlCodedVector coded_vector)
-        : type_tag(fidl::kFidlTypeVector),
-          coded_vector(coded_vector) {}
+        : type_tag(fidl::kFidlTypeVector), coded_vector(coded_vector) {}
 };

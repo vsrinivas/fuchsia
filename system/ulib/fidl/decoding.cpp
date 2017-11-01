@@ -25,11 +25,9 @@ static_assert(offsetof(fidl_vector_t, data) == 8u, "");
 class FidlDecoder {
 public:
     FidlDecoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                const zx_handle_t* handles, uint32_t num_handles,
-                const char** error_msg_out)
+                const zx_handle_t* handles, uint32_t num_handles, const char** error_msg_out)
         : type_(type), bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
-          handles_(handles), num_handles_(num_handles),
-          error_msg_out_(error_msg_out) {}
+          handles_(handles), num_handles_(num_handles), error_msg_out_(error_msg_out) {}
 
     zx_status_t DecodeMessage();
 
@@ -41,8 +39,7 @@ private:
         return ZX_ERR_INVALID_ARGS;
     }
 
-    template <typename T>
-    T* TypedAt(uint32_t offset) const {
+    template <typename T> T* TypedAt(uint32_t offset) const {
         return reinterpret_cast<T*>(bytes_ + offset);
     }
 
@@ -134,7 +131,9 @@ private:
             union_state.type_count = coded_union->type_count;
         }
 
-        Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size, uint32_t offset) : offset(offset) {
+        Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size,
+              uint32_t offset)
+            : offset(offset) {
             state = kStateArray;
             array_state.element = element;
             array_state.array_size = array_size;
@@ -449,16 +448,15 @@ zx_status_t FidlDecoder::DecodeMessage() {
             if (vector_ptr->count > frame->vector_state.max_count) {
                 return WithError("message tried to decode too large of a bounded vector");
             }
-            uint32_t size = static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
+            uint32_t size =
+                static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
             if (!ClaimOutOfLineStorage(size, &frame->offset)) {
                 return WithError("message wanted to store too large of a vector");
             }
             vector_ptr->data = TypedAt<void>(frame->offset);
             // Continue by decoding the vector elements as an array.
-            *frame = Frame(frame->vector_state.element,
-                           size,
-                           static_cast<uint32_t>(vector_ptr->count),
-                           frame->offset);
+            *frame = Frame(frame->vector_state.element, size,
+                           static_cast<uint32_t>(vector_ptr->count), frame->offset);
             continue;
         }
         case Frame::kStateDone: {
@@ -473,11 +471,8 @@ zx_status_t FidlDecoder::DecodeMessage() {
 
 } // namespace
 
-zx_status_t fidl_decode(const fidl_type_t* type,
-                        void* bytes,
-                        uint32_t num_bytes,
-                        const zx_handle_t* handles,
-                        uint32_t num_handles,
+zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out) {
     FidlDecoder decoder(type, bytes, num_bytes, handles, num_handles, error_msg_out);
     return decoder.DecodeMessage();

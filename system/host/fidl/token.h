@@ -25,13 +25,12 @@ public:
     Token(StringView data, uint32_t offset, Kind kind)
         : data_(data), offset_(offset), kind_(kind) {}
 
-    Token()
-        : Token(StringView(), 0u, Token::Kind::NotAToken) {}
+    Token() : Token(StringView(), 0u, Token::Kind::NotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {
-#define TOKEN(Name)               \
-    case fidl::Token::Kind::Name: \
+#define TOKEN(Name)                                                                                \
+    case fidl::Token::Kind::Name:                                                                  \
         return #Name;
 #include "token_definitions.h"
         }

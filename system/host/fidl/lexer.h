@@ -21,8 +21,7 @@ public:
     // The Lexer assumes the final character is 0. This substantially
     // simplifies advancing to the next character.
     Lexer(StringView data, IdentifierTable* identifier_table)
-        : data_(data),
-          identifier_table_(identifier_table) {
+        : data_(data), identifier_table_(identifier_table) {
         assert(data[data.size() - 1] == 0);
         current_ = data_.data();
         token_start_ = current_;

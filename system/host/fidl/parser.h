@@ -13,27 +13,16 @@ namespace fidl {
 
 class Parser {
 public:
-    explicit Parser(Lexer* lexer)
-        : lexer_(lexer) {
-        last_token_ = Lex();
-    }
+    explicit Parser(Lexer* lexer) : lexer_(lexer) { last_token_ = Lex(); }
 
-    std::unique_ptr<File> Parse() {
-        return ParseFile();
-    }
+    std::unique_ptr<File> Parse() { return ParseFile(); }
 
-    bool Ok() const {
-        return ok_;
-    }
+    bool Ok() const { return ok_; }
 
 private:
-    Token Lex() {
-        return lexer_->LexNoComments();
-    }
+    Token Lex() { return lexer_->LexNoComments(); }
 
-    Token::Kind Peek() {
-        return last_token_.kind();
-    }
+    Token::Kind Peek() { return last_token_.kind(); }
 
     Token Consume() {
         auto token = last_token_;

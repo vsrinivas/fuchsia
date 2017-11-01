@@ -13,15 +13,11 @@ namespace fidl {
 
 class StringView {
 public:
-    constexpr StringView()
-        : data_(nullptr), size_(0u) {}
+    constexpr StringView() : data_(nullptr), size_(0u) {}
     StringView(const StringView& view) = default;
-    constexpr StringView(const std::string& string)
-        : StringView(string.data(), string.size()) {}
-    constexpr StringView(const char* data, size_t size)
-        : data_(data), size_(size) {}
-    StringView(const char* string)
-        : data_(string), size_(strlen(string)) {}
+    constexpr StringView(const std::string& string) : StringView(string.data(), string.size()) {}
+    constexpr StringView(const char* data, size_t size) : data_(data), size_(size) {}
+    StringView(const char* string) : data_(string), size_(strlen(string)) {}
 
     StringView& operator=(const StringView& view) = default;
 
@@ -36,9 +32,7 @@ public:
         return !memcmp(data(), other.data(), size());
     }
 
-    bool operator!=(StringView other) const {
-        return !(*this == other);
-    }
+    bool operator!=(StringView other) const { return !(*this == other); }
 
     bool operator<(StringView other) const {
         if (size() < other.size())

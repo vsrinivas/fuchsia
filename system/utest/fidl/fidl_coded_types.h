@@ -1,0 +1,52 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <fidl/coding.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+extern const fidl_type_t nonnullable_handle_message_type;
+extern const fidl_type_t multiple_nonnullable_handles_message_type;
+extern const fidl_type_t nullable_handle_message_type;
+extern const fidl_type_t multiple_nullable_handles_message_type;
+
+extern const fidl_type_t array_of_nonnullable_handles_message_type;
+extern const fidl_type_t array_of_nullable_handles_message_type;
+extern const fidl_type_t array_of_array_of_nonnullable_handles_message_type;
+extern const fidl_type_t out_of_line_array_of_nonnullable_handles_message_type;
+
+extern const fidl_type_t unbounded_nonnullable_string_message_type;
+extern const fidl_type_t unbounded_nullable_string_message_type;
+extern const fidl_type_t bounded_32_nonnullable_string_message_type;
+extern const fidl_type_t bounded_32_nullable_string_message_type;
+extern const fidl_type_t multiple_nonnullable_strings_message_type;
+extern const fidl_type_t multiple_nullable_strings_message_type;
+extern const fidl_type_t multiple_short_nonnullable_strings_message_type;
+extern const fidl_type_t multiple_short_nullable_strings_message_type;
+
+extern const fidl_type_t unbounded_nonnullable_vector_of_handles_message_type;
+extern const fidl_type_t unbounded_nullable_vector_of_handles_message_type;
+extern const fidl_type_t bounded_32_nonnullable_vector_of_handles_message_type;
+extern const fidl_type_t bounded_32_nullable_vector_of_handles_message_type;
+extern const fidl_type_t multiple_nonnullable_vectors_of_handles_message_type;
+extern const fidl_type_t multiple_nullable_vectors_of_handles_message_type;
+
+extern const fidl_type_t nonnullable_handle_union_message_type;
+extern const fidl_type_t array_of_nonnullable_handles_union_message_type;
+extern const fidl_type_t nonnullable_handle_union_ptr_message_type;
+extern const fidl_type_t array_of_nonnullable_handles_union_ptr_message_type;
+
+extern const fidl_type_t nested_structs_message_type;
+extern const fidl_type_t nested_struct_ptrs_message_type;
+
+extern const fidl_type_t maybe_recurse_type;
+extern const fidl_type_t recursion_message_type;
+
+#if defined(__cplusplus)
+}
+#endif
