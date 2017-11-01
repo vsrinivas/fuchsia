@@ -289,7 +289,7 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Rights, Signals, Vmo};
+    use {DurationNum, Rights, Vmo};
     use std::thread;
 
     #[test]
@@ -386,27 +386,28 @@ mod tests {
         // Create a pair of channels
         let (p1, p2) = Channel::create().unwrap();
 
+        // create an mpsc channel for communicating the call data for later assertion
+        let (tx, rx) = ::std::sync::mpsc::channel();
+
         // Start a new thread to respond to the call.
-        let server = thread::spawn(move || {
-            assert_eq!(p2.wait_handle(Signals::CHANNEL_READABLE, five_hundred_ms.after_now()),
-                Ok(Signals::CHANNEL_READABLE | Signals::CHANNEL_WRITABLE));
+        thread::spawn(move || {
             let mut buf = MessageBuf::new();
-            assert_eq!(p2.read(&mut buf), Ok(()));
-            assert_eq!(buf.bytes(), b"txidcall");
-            assert_eq!(buf.n_handles(), 0);
-            let mut empty = vec![];
-            assert_eq!(p2.write(b"txidresponse", &mut empty), Ok(()));
+            // if either the read or the write fail, this thread will panic,
+            // resulting in tx being dropped, which will be noticed by the rx.
+            p2.read(&mut buf).expect("callee read error");
+            p2.write(b"txidresponse", &mut vec![]).expect("callee write error");
+            tx.send(buf).expect("callee mpsc send error");
         });
 
         // Make the call.
-        let mut empty = vec![];
         let mut buf = MessageBuf::new();
         buf.ensure_capacity_bytes(12);
-        assert_eq!(p1.call(five_hundred_ms.after_now(), b"txidcall", &mut empty, &mut buf),
-            Ok(()));
+        assert!(p1.call(five_hundred_ms.after_now(), b"txidcall", &mut vec![], &mut buf).is_ok());
         assert_eq!(buf.bytes(), b"txidresponse");
         assert_eq!(buf.n_handles(), 0);
 
-        assert!(server.join().is_ok());
+        let sbuf = rx.recv().expect("mpsc channel recv error");
+        assert_eq!(sbuf.bytes(), b"txidcall");
+        assert_eq!(sbuf.n_handles(), 0);
     }
 }
