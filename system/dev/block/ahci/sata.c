@@ -296,7 +296,7 @@ static void sata_block_txn(sata_device_t* dev, uint32_t opcode, zx_handle_t vmo,
         dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
         return;
     }
-    if ((dev_offset >= dev->capacity) || (length >= (dev->capacity - dev_offset))) {
+    if ((dev_offset >= dev->capacity) || (length > (dev->capacity - dev_offset))) {
         dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
         return;
     }
