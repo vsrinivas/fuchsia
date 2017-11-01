@@ -133,3 +133,16 @@ executable("passfdtest") {
     "launchpad",
   ]
 }
+
+executable("gethostbyname_test") {
+  testonly = true
+
+  sources = [
+    "gethostbyname_test.c",
+  ]
+
+  libs = [
+    "fdio",
+    "zircon",
+  ]
+}
