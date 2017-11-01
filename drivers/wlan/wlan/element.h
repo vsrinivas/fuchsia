@@ -10,9 +10,10 @@
 #include <zircon/types.h>
 
 #include "element_id.h"
-#include "garnet/drivers/wlan/common/bitfield.h"
 #include "logging.h"
-#include "macaddr.h"
+
+#include "garnet/drivers/wlan/common/bitfield.h"
+#include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <cstdint>
 #include <unordered_map>
@@ -597,12 +598,12 @@ struct HtOperation : public Element<TimElement, element_id::kHtOperation> {
 
 // IEEE Std 802.11-2016, 9.4.2.126
 struct GcrGroupAddressElement {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const MacAddr& addr);
-    static const size_t kMinLen = kMacAddrLen;
-    static const size_t kMaxLen = kMacAddrLen;
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, const common::MacAddr& addr);
+    static const size_t kMinLen = common::kMacAddrLen;
+    static const size_t kMaxLen = common::kMacAddrLen;
 
     ElementHeader hdr;
-    MacAddr gcr_group_addr;
+    common::MacAddr gcr_group_addr;
 } __PACKED;
 
 }  // namespace wlan

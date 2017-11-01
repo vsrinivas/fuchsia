@@ -204,9 +204,9 @@ zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n", hdr->fc.val(), hdr->duration,
              hdr->sc.seq(), hdr->sc.frag());
 
-    const MacAddr& dst = hdr->addr1;
-    const MacAddr& src = hdr->addr2;
-    const MacAddr& bssid = hdr->addr3;
+    const common::MacAddr& dst = hdr->addr1;
+    const common::MacAddr& src = hdr->addr2;
+    const common::MacAddr& bssid = hdr->addr3;
 
     debughdr("dest: %s source: %s bssid: %s\n", MACSTR(dst), MACSTR(src), MACSTR(bssid));
 
@@ -276,7 +276,7 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         ObjectId timer_id;
         timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
         timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-        timer_id.set_mac(MacAddr(req->selected_bss->bssid.data()).ToU64());
+        timer_id.set_mac(common::MacAddr(req->selected_bss->bssid.data()).ToU64());
         status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
         if (status != ZX_OK) {
             errorf("could not create station timer: %d\n", status);

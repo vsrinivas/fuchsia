@@ -228,8 +228,8 @@ BSSDescriptionPtr Bss::ToFidl() {
     auto fidl_ptr = BSSDescription::New();
     auto fidl = fidl_ptr.get();
 
-    fidl->bssid = fidl::Array<uint8_t>::New(kMacAddrLen);
-    std::memcpy(fidl->bssid.data(), bssid_.byte, kMacAddrLen);
+    fidl->bssid = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    std::memcpy(fidl->bssid.data(), bssid_.byte, common::kMacAddrLen);
 
     fidl->bss_type = GetBssType();
     fidl->ssid = SsidToFidlString();
@@ -289,20 +289,20 @@ std::string Bss::SupportedRatesToString() const {
     return "NOT_IMPLEMENTED";
 }
 
-bool BssMap::HasKey(const MacAddr& bssid) const {
+bool BssMap::HasKey(const common::MacAddr& bssid) const {
     auto iter = map_.find(bssid.ToU64());
     return (iter != map_.end());
 }
 
-Bss* BssMap::Lookup(const MacAddr& bssid) const {
+Bss* BssMap::Lookup(const common::MacAddr& bssid) const {
     if (!HasKey(bssid)) return nullptr;
     auto iter = map_.find(bssid.ToU64());
     return (iter->second);
 }
 
 // Update if exists, or Insert first then update.
-zx_status_t BssMap::Upsert(const MacAddr& bssid, const Beacon* beacon, size_t bcn_len,
-                           const wlan_rx_info_t* rx_info) {
+zx_status_t BssMap::Upsert(const common::MacAddr& bssid, const Beacon* beacon,
+                           size_t bcn_len, const wlan_rx_info_t* rx_info) {
     if (IsFull()) {
         Prune();
         if (IsFull()) return ZX_ERR_NO_RESOURCES;
@@ -367,7 +367,7 @@ zx_status_t BssMap::Prune() {
     return ZX_OK;
 }
 
-zx_status_t BssMap::Insert(const MacAddr& bssid, Bss* bss) {
+zx_status_t BssMap::Insert(const common::MacAddr& bssid, Bss* bss) {
     if (HasKey(bssid)) {
         debugbss("[BssMap] Duplicate insert declined for BSSID %s\n", bssid.ToString().c_str());
         return ZX_ERR_INVALID_ARGS;

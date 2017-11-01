@@ -13,6 +13,7 @@
 #include <string>
 
 namespace wlan {
+namespace common {
 
 // This macro provides memory safe C-style string.
 #define MACSTR(mac_addr) (mac_addr).ToString().c_str()
@@ -118,4 +119,5 @@ struct MacAddrHasher {
 extern const MacAddr kZeroMac;
 extern const MacAddr kBcastMac;
 
+}  // namespace common
 }  // namespace wlan

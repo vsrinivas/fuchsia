@@ -6,15 +6,15 @@
 
 #include "action_frame.h"
 #include "element.h"
-#include "macaddr.h"
+
+#include "garnet/drivers/wlan/common/bitfield.h"
+#include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <fbl/type_support.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <cstdint>
-
-#include "garnet/drivers/wlan/common/bitfield.h"
 
 namespace wlan {
 
@@ -340,9 +340,9 @@ class FrameControl : public common::BitField<uint16_t> {
 struct MgmtFrameHeader {
     FrameControl fc;
     uint16_t duration;
-    MacAddr addr1;
-    MacAddr addr2;
-    MacAddr addr3;
+    common::MacAddr addr1;
+    common::MacAddr addr2;
+    common::MacAddr addr3;
     SequenceControl sc;
 
     // Use accessors for optional field.
@@ -478,9 +478,9 @@ struct Disassociation {
 struct DataFrameHeader {
     FrameControl fc;
     uint16_t duration;
-    MacAddr addr1;
-    MacAddr addr2;
-    MacAddr addr3;
+    common::MacAddr addr1;
+    common::MacAddr addr2;
+    common::MacAddr addr3;
     SequenceControl sc;
 
     // Use accessors for optional fields.
@@ -493,25 +493,25 @@ struct DataFrameHeader {
 
     uint16_t len() {
         uint16_t hdr_len = sizeof(DataFrameHeader);
-        if (HasAddr4()) hdr_len += kMacAddrLen;
+        if (HasAddr4()) hdr_len += common::kMacAddrLen;
         if (HasQosCtrl()) hdr_len += kQosCtrlLen;
         if (fc.HasHtCtrl()) hdr_len += kHtCtrlLen;
 
         return hdr_len;
     }
 
-    MacAddr* addr4() {
+    common::MacAddr* addr4() {
         if (!HasAddr4()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
 
-        return reinterpret_cast<MacAddr*>(raw() + offset);
+        return reinterpret_cast<common::MacAddr*>(raw() + offset);
     }
 
     // TODO(porce): Cast to QoSControl struct.
     uint8_t* qos_ctrl() {
         if (!HasQosCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
-        if (HasAddr4()) { offset += kMacAddrLen; }
+        if (HasAddr4()) { offset += common::kMacAddrLen; }
 
         return raw() + offset;
     }
@@ -519,7 +519,7 @@ struct DataFrameHeader {
     HtControl* ht_ctrl() {
         if (!fc.HasHtCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
-        if (HasAddr4()) { offset += kMacAddrLen; }
+        if (HasAddr4()) { offset += common::kMacAddrLen; }
         if (HasQosCtrl()) { offset += kQosCtrlLen; }
 
         return reinterpret_cast<HtControl*>(raw() + offset);
@@ -533,8 +533,8 @@ struct DataFrameHeader {
 struct PsPollFrame {
     FrameControl fc;
     uint16_t aid;
-    MacAddr bssid;
-    MacAddr ta;
+    common::MacAddr bssid;
+    common::MacAddr ta;
 } __PACKED;
 
 // IEEE Std 802.2, 1998 Edition, 3.2
@@ -558,8 +558,8 @@ static_assert(kDataPayloadHeader == 32, "check the data payload header size");
 
 // IEEE Std 802.3-2015, 3.1.1
 struct EthernetII {
-    MacAddr dest;
-    MacAddr src;
+    common::MacAddr dest;
+    common::MacAddr src;
     uint16_t ether_type;
     uint8_t payload[];
 } __PACKED;

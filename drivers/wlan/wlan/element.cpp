@@ -212,7 +212,8 @@ bool HtOperation::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t prima
     return true;
 }
 
-bool GcrGroupAddressElement::Create(uint8_t* buf, size_t len, size_t* actual, const MacAddr& addr) {
+bool GcrGroupAddressElement::Create(uint8_t* buf, size_t len, size_t* actual,
+                                    const common::MacAddr& addr) {
     size_t elem_size = sizeof(GcrGroupAddressElement);
     if (elem_size > len) { return false; }
     auto elem = reinterpret_cast<GcrGroupAddressElement*>(buf);

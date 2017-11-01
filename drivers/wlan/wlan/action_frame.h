@@ -5,15 +5,15 @@
 #pragma once
 
 #include "element.h"
-#include "macaddr.h"
+
+#include "garnet/drivers/wlan/common/bitfield.h"
+#include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <fbl/type_support.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <cstdint>
-
-#include "garnet/drivers/wlan/common/bitfield.h"
 
 namespace wlan {
 

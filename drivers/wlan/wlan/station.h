@@ -6,15 +6,15 @@
 
 #include "device_interface.h"
 #include "mac_frame.h"
-#include "macaddr.h"
+
+#include "garnet/drivers/wlan/common/macaddr.h"
+#include "garnet/drivers/wlan/common/moving_average.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
-
-#include "garnet/drivers/wlan/common/moving_average.h"
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
-#include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
 namespace wlan {
 
@@ -43,7 +43,7 @@ class Station {
 
     void Reset();
 
-    const MacAddr* bssid() const {
+    const common::MacAddr* bssid() const {
         // TODO(porce): Distinguish cases
         // (1) if no Bss Descriptor came down from SME.
         // (2) if bssid_ is uninitlized.
@@ -90,15 +90,16 @@ class Station {
    private:
     zx_status_t SendJoinResponse();
     zx_status_t SendAuthResponse(AuthenticateResultCodes code);
-    zx_status_t SendDeauthResponse(const MacAddr& peer_sta_addr);
+    zx_status_t SendDeauthResponse(const common::MacAddr& peer_sta_addr);
     zx_status_t SendDeauthIndication(uint16_t code);
     zx_status_t SendAssocResponse(AssociateResultCodes code);
     zx_status_t SendDisassociateIndication(uint16_t code);
 
     zx_status_t SendSignalReportIndication(uint8_t rssi);
     zx_status_t SendEapolResponse(EapolResultCodes result_code);
-    zx_status_t SendEapolIndication(const EapolFrame* eapol, const MacAddr& src,
-                                    const MacAddr& dst);
+    zx_status_t SendEapolIndication(const EapolFrame* eapol,
+                                    const common::MacAddr& src,
+                                    const common::MacAddr& dst);
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
@@ -112,7 +113,7 @@ class Station {
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
     BSSDescriptionPtr bss_;
-    MacAddr bssid_;
+    common::MacAddr bssid_;
     uint16_t last_seq_ = kMaxSequenceNumber;
 
     WlanState state_ = WlanState::kUnjoined;

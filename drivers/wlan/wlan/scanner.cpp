@@ -156,8 +156,8 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
 
-    MacAddr bssid(hdr->addr3);
-    MacAddr src_addr(hdr->addr2);
+    common::MacAddr bssid(hdr->addr3);
+    common::MacAddr src_addr(hdr->addr2);
 
     if (bssid != src_addr) {
         // Undefined situation. Investigate if roaming needs this or this is a plain dark art.
@@ -263,7 +263,7 @@ zx_status_t Scanner::SendProbeRequest() {
     fbl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    const MacAddr& mymac = device_->GetState()->address();
+    const common::MacAddr& mymac = device_->GetState()->address();
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), probe_len));
     packet->clear();
@@ -272,9 +272,9 @@ zx_status_t Scanner::SendProbeRequest() {
     hdr->fc.set_type(kManagement);
     hdr->fc.set_subtype(kProbeRequest);
 
-    hdr->addr1 = kBcastMac;
+    hdr->addr1 = common::kBcastMac;
     hdr->addr2 = mymac;
-    hdr->addr3 = MacAddr(req_->bssid.data());
+    hdr->addr3 = common::MacAddr(req_->bssid.data());
 
     // TODO(hahnr): keep reference to last sequence #?
     uint16_t seq = device_->GetState()->next_seq();

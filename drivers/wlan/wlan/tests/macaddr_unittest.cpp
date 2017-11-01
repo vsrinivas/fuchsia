@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "macaddr.h"
 #include <gtest/gtest.h>
 
+#include "garnet/drivers/wlan/common/macaddr.h"
+
 namespace wlan {
+namespace common {
 namespace {
 
 class MacAddrTest : public ::testing::Test {
@@ -87,4 +89,5 @@ TEST_F(MacAddrTest, Conversion) {
 }
 
 }  // namespace
+}  // namespace common
 }  // namespace wlan

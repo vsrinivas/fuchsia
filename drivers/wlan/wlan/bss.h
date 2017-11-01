@@ -15,7 +15,8 @@
 #include "enum.h"
 #include "logging.h"
 #include "mac_frame.h"
-#include "macaddr.h"
+
+#include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <unordered_map>
 
@@ -26,7 +27,7 @@ typedef uint32_t BeaconHash;
 
 class Bss {
    public:
-    Bss(const MacAddr& bssid) : bssid_(bssid) {
+    Bss(const common::MacAddr& bssid) : bssid_(bssid) {
         memset(&cap_, 0, sizeof(cap_));
         supported_rates_.reserve(SupportedRatesElement::kMaxLen);
     }
@@ -56,7 +57,7 @@ class Bss {
 
     BSSDescriptionPtr ToFidl();
     fidl::String SsidToFidlString();
-    const MacAddr& bssid() { return bssid_; }
+    const common::MacAddr& bssid() { return bssid_; }
     zx_time_t ts_refreshed() { return ts_refreshed_; }
 
    private:
@@ -74,7 +75,7 @@ class Bss {
     // TODO(porce): Move Beacon method into Beacon class.
     uint32_t GetBeaconSignature(const Beacon* beacon, size_t len) const;
 
-    MacAddr bssid_;              // From Addr3 of Mgmt Header.
+    common::MacAddr bssid_;      // From Addr3 of Mgmt Header.
     zx_time_t ts_refreshed_{0};  // Last time of Bss object update.
 
     // TODO(porce): Don't trust instantaneous values. Keep history.
@@ -117,9 +118,9 @@ class BssMap {
     BssMap() {}
     ~BssMap() { Reset(); }
 
-    bool HasKey(const MacAddr& bssid) const;
-    Bss* Lookup(const MacAddr& bssid) const;
-    zx_status_t Upsert(const MacAddr& bssid, const Beacon* beacon, size_t bcn_len,
+    bool HasKey(const common::MacAddr& bssid) const;
+    Bss* Lookup(const common::MacAddr& bssid) const;
+    zx_status_t Upsert(const common::MacAddr& bssid, const Beacon* beacon, size_t bcn_len,
                        const wlan_rx_info_t* rx_info);
     void Reset();
 
@@ -132,7 +133,7 @@ class BssMap {
    private:
     bool IsFull() const;
     zx_status_t Prune();
-    zx_status_t Insert(const MacAddr& bssid, Bss* bss);
+    zx_status_t Insert(const common::MacAddr& bssid, Bss* bss);
 
     const size_t kMaxEntries = 20;  // Limited by zx.Channel buffer size.
     static constexpr zx_time_t kExpiry = ZX_SEC(60);
