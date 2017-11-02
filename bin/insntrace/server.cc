@@ -242,12 +242,11 @@ void IptServer::OnThreadStarting(Process* process,
 
 void IptServer::OnThreadExiting(Process* process,
                                 Thread* thread,
-                                const zx_excp_type_t type,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, thread, type, context);
+  PrintException(stdout, thread, ZX_EXCP_THREAD_EXITING, context);
 
   // Dump any collected trace.
   if (config_.mode == IPT_MODE_THREADS) {
@@ -264,7 +263,6 @@ void IptServer::OnThreadExiting(Process* process,
 }
 
 void IptServer::OnProcessExit(Process* process,
-                              const zx_excp_type_t type,
                               const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 

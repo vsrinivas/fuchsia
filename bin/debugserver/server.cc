@@ -386,7 +386,6 @@ void RspServer::OnThreadStarting(Process* process,
 
 void RspServer::OnThreadExiting(Process* process,
                                 Thread* thread,
-                                const zx_excp_type_t type,
                                 const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
@@ -405,7 +404,6 @@ void RspServer::OnThreadExiting(Process* process,
 }
 
 void RspServer::OnProcessExit(Process* process,
-                              const zx_excp_type_t type,
                               const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Process " << process->GetName() << " exited";

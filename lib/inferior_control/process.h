@@ -48,13 +48,11 @@ class Process final {
     virtual void OnThreadExiting(
         Process* process,
         Thread* thread,
-        const zx_excp_type_t type,
         const zx_exception_context_t& context) = 0;
 
     // Called when |process| has exited.
     virtual void OnProcessExit(
         Process* process,
-        const zx_excp_type_t type,
         const zx_exception_context_t& context) = 0;
 
     // Called when the kernel reports an architectural exception.
