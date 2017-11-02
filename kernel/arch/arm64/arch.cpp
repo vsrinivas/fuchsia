@@ -320,11 +320,6 @@ void arch_idle(void)
     __asm__ volatile("wfi");
 }
 
-void arch_chain_load(void *entry, ulong arg0, ulong arg1, ulong arg2, ulong arg3)
-{
-    PANIC_UNIMPLEMENTED;
-}
-
 /* switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to the top of the kernel stack */
 void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
     thread_t *ct = get_current_thread();

@@ -30,7 +30,6 @@ static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_reset(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_chain(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags);
@@ -55,7 +54,6 @@ STATIC_COMMAND("stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 STATIC_COMMAND("mtest", "simple memory test", &cmd_memtest)
 #endif
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
-STATIC_COMMAND("chain", "chain load another binary", &cmd_chain)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
 STATIC_COMMAND_END(mem);
@@ -280,19 +278,6 @@ static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags)
             printf("error at %p\n", &ptr[i]);
     }
     printf("done\n");
-
-    return 0;
-}
-
-static int cmd_chain(int argc, const cmd_args *argv, uint32_t flags)
-{
-    if (argc < 2) {
-        printf("not enough arguments\n");
-        printf("%s <address>\n", argv[0].str);
-        return -1;
-    }
-
-    arch_chain_load(argv[1].p, 0, 0, 0, 0);
 
     return 0;
 }
