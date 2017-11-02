@@ -109,7 +109,7 @@ void UserRunnerImpl::Initialize(
   account_ = std::move(account);
   user_scope_ = std::make_unique<Scope>(
       application_context_->environment(),
-      std::string(kUserScopeLabelPrefix) + GetAccountId(account));
+      std::string(kUserScopeLabelPrefix) + GetAccountId(account_));
   user_shell_ = std::make_unique<AppClient<UserShell>>(
       user_scope_->GetLauncher(), user_shell.Clone());
   user_shell_->SetAppErrorHandler([this] {
@@ -156,7 +156,7 @@ void UserRunnerImpl::Initialize(
   // Setup MessageQueueManager.
 
   std::string message_queue_path = kMessageQueuePath;
-  message_queue_path.append(GetAccountId(account));
+  message_queue_path.append(GetAccountId(account_));
   if (!files::CreateDirectory(message_queue_path)) {
     FXL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
