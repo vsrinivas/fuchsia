@@ -33,8 +33,6 @@ executable("bin") {
 }
 
 package("trace_manager") {
-  archive = true
-
   deps = [
     ":bin",
   ]

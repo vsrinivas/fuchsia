@@ -46,8 +46,6 @@ package("mozart_tests") {
 }
 
 package("root_presenter") {
-  archive = true
-
   deps = [
     "root_presenter",
   ]
@@ -66,8 +64,6 @@ package("root_presenter") {
 }
 
 package("ime_service") {
-  archive = true
-
   deps = [
     "ime",
   ]
@@ -76,8 +72,6 @@ package("ime_service") {
 }
 
 package("view_manager") {
-  archive = true
-
   deps = [
     "view_manager",
   ]

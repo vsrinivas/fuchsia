@@ -32,8 +32,6 @@ package("hello_scene_manager") {
 }
 
 package("jank_view") {
-  archive = true
-
   deps = [
     "jank",
   ]
@@ -42,8 +40,6 @@ package("jank_view") {
 }
 
 package("noodles_view") {
-  archive = true
-
   deps = [
     "noodles",
   ]
@@ -52,8 +48,6 @@ package("noodles_view") {
 }
 
 package("paint_view") {
-  archive = true
-
   deps = [
     "//garnet/examples/ui/paint",
   ]
@@ -80,8 +74,6 @@ package("shadertoy") {
 }
 
 package("shapes_view") {
-  archive = true
-
   deps = [
     "shapes",
   ]
@@ -108,8 +100,6 @@ package("sketchy") {
 }
 
 package("spinning_square_view") {
-  archive = true
-
   deps = [
     "spinning_square",
   ]
@@ -118,8 +108,6 @@ package("spinning_square_view") {
 }
 
 package("tile_view") {
-  archive = true
-
   deps = [
     "tile",
   ]

@@ -30,8 +30,6 @@ executable("bin") {
 }
 
 package("ktrace_provider") {
-  archive = true
-
   deps = [
     ":bin",
   ]

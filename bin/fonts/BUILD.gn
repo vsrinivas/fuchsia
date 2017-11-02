@@ -23,8 +23,6 @@ executable("font_server") {
 }
 
 package("fonts") {
-  archive = true
-
   deps = [
     ":font_server",
   ]
