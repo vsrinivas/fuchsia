@@ -13,10 +13,12 @@ Fuchsia to prevent `device_runner` and Armadillo from starting by default. Use
 fset and rebuild as shown below:
 
 ``` sh
-source fuchsia/scripts/env.sh
-fset x86-64 --packages packages/gn/boot_test_modular
-fbuild
+fx set x86-64 --packages packages/gn/boot_test_modular
+fx full-build
 ```
+
+(If `fx` is not in your `PATH`, you should add `.jiri_root/bin` to your
+`PATH`.)
 
 ## Running
 
