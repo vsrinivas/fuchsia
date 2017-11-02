@@ -32,15 +32,14 @@ static void next_pc(GuestState* state) {
     state->system_state.elr_el2 += 4;
 }
 
-static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr, GuestPhysicalAddressSpace* gpas,
-                                     uint pf_flags) {
-    pf_flags |= VMM_PF_FLAG_HW_FAULT;
+static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr, GuestPhysicalAddressSpace* gpas) {
+    uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
     return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 
-static zx_status_t handle_instruction_abort(uint32_t iss, GuestState* guest_state,
+static zx_status_t handle_instruction_abort(GuestState* guest_state,
                                             GuestPhysicalAddressSpace* gpas) {
-    return handle_page_fault(guest_state->hpfar_el2, gpas, VMM_PF_FLAG_INSTRUCTION);
+    return handle_page_fault(guest_state->hpfar_el2, gpas);
 }
 
 static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
@@ -54,7 +53,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
         DataAbort data_abort(iss);
         if (data_abort.valid)
             return ZX_ERR_NOT_SUPPORTED;
-        return handle_page_fault(guest_paddr, gpas, data_abort.write ? VMM_PF_FLAG_WRITE : 0);
+        return handle_page_fault(guest_paddr, gpas);
     }
     case ZX_OK:
         break;
@@ -98,7 +97,7 @@ zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* g
     switch (syndrome.ec) {
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
-        return handle_instruction_abort(syndrome.iss, guest_state, gpas);
+        return handle_instruction_abort(guest_state, gpas);
     case ExceptionClass::DATA_ABORT:
         LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
         return handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
