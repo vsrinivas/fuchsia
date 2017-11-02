@@ -14,18 +14,6 @@
 #     If true, changes the default location of binaries from
 #     |"bin/" + binary.name| to |"apps/" + binary.name|.
 #
-#   archive (bool, optional)
-#     If true, the package is stored in a Fuchsia Archive rather than directly
-#     in the system boot image.
-#
-#     Cannot be used with the |drivers| parameter because the system is not yet
-#     sophisticated enough to load drivers out of archives.
-#
-#     This argument will eventually be replaced with the |system_image|
-#     argument.
-#
-#     Defaults to false.
-#
 #   system_image (bool, optional)
 #     If true, the package is stored in the system boot image rather than in a
 #     Fuchsia Archive.
@@ -41,7 +29,7 @@
 #     entry is typically a source file and is placed in the "meta/" directory of
 #     the assembled package.
 #
-#     Requires |archive| to be true or |system_image| to be false.
+#     Requires |system_image| to be false.
 #
 #     Entries in a scope in the meta list:
 #
@@ -60,7 +48,7 @@
 #     $root_build_dir. The binary will be placed in the assembled package at
 #     "bin/app" and will be executed by default when running the package.
 #
-#     Requires |archive| to be true or |system_image| to be false.
+#     Requires |system_image| to be false.
 #
 #   binaries (optional)
 #     List of scopes defining the binaries in the package. A binary is typically
@@ -102,7 +90,7 @@
 #     produced by the build system and is placed in the "driver" directory
 #     of the assembled package.
 #
-#     Requires |archive| to be false (or missing) or |system_image| to be true.
+#     Requires |system_image| to be true.
 #
 #     Entries in a scope in the drivers list:
 #
@@ -157,9 +145,6 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
       app = false
-      # TODO(abarth): Remove |archive| and set the default for |system_image| to
-      # false once all non-archived packages set |system_image| to true.
-      archive = false
       system_image = false
       binaries = []
       drivers = []
@@ -176,8 +161,7 @@ template("package") {
                                               "root_out_dir")
     not_needed(["shared_toolchain_out_dir"])
 
-    assert(pkg.system_image == !pkg.archive)
-    assert(pkg.drivers == [] || !pkg.archive)
+    assert(pkg.drivers == [] || pkg.system_image)
 
     mkfs_target = target_name + "_mkfs"
 
@@ -196,14 +180,14 @@ template("package") {
       sources = []
 
       foreach(entry, pkg.meta) {
-        assert(pkg.archive, "Metadata requires the package to be archived.")
+        assert(!pkg.system_image, "Metadata cannot be used in system packages.")
         source = entry.path
         sources += [ entry.path ]
         dest = "meta/${entry.dest}"
         package_manifest_contents += [ "$dest=$source" ]
       }
       if (defined(pkg.binary)) {
-        assert(pkg.archive, "Binary requires the package to be archived. Consider using 'binaries' for non-archived packages.")
+        assert(!pkg.system_image, "Binary requires the package to be archived. Consider using 'binaries' for system packages.")
         source = rebase_path("$root_build_dir/${pkg.binary}")
         sources += [ "$root_build_dir/${pkg.binary}" ]
         package_manifest_contents += [ "bin/app=$source" ]
@@ -290,7 +274,18 @@ template("package") {
       system_manifest = "$pkg_out_dir/system_manifest"
       archive_manifest = "$pkg_out_dir/archive_manifest"
 
-      if (pkg.archive) {
+      if (pkg.system_image) {
+        write_file(system_manifest, package_manifest_contents)
+        write_file(archive_manifest, [])
+
+        # We have to do something in our action
+        script = "/usr/bin/touch"
+        output = "$pkg_out_dir/.stamp"
+        outputs = [
+          output,
+        ]
+        args = [ rebase_path(output) ]
+      } else {
         assert(boot_manifest_contents == [])
         assert(package_manifest_contents != [])
 
@@ -316,17 +311,6 @@ template("package") {
 
         write_file(system_manifest,
                    [ "pkgs/${pkg.package_name}=" + rebase_path(output) ])
-      } else {
-        write_file(system_manifest, package_manifest_contents)
-        write_file(archive_manifest, [])
-
-        # We have to do something in our action
-        script = "/usr/bin/touch"
-        output = "$pkg_out_dir/.stamp"
-        outputs = [
-          output,
-        ]
-        args = [ rebase_path(output) ]
       }
     }
     group(target_name) {
