@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
@@ -19,11 +20,16 @@
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
+#include <lk/init.h>
+#include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
+
+#define DEBUG_LOOK_FOR_MISSING_IPI 1
+#define MISSING_IPI_TIMEOUT ZX_SEC(1)
 
 /* a global state structure, aligned on cpu cache line to minimize aliasing */
 struct mp_state mp __CPU_ALIGN = {
@@ -60,12 +66,30 @@ void mp_reschedule(mp_ipi_target_t target, cpu_mask_t mask, uint flags) {
         mask &= mp.active_cpus;
         mask &= ~cpu_num_to_mask(local_cpu);
 
+        /* this is generally a bad state, though this may be too aggressive */
+        DEBUG_ASSERT(mask != 0);
+
         /* mask out cpus that are currently running realtime code */
         if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
             mask &= ~mp.realtime_cpus;
         }
 
         LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
+
+        /* DEBUG: add code to try to detect a failed IPI */
+        if (DEBUG_LOOK_FOR_MISSING_IPI) {
+            cpu_mask_t active = mask;
+            zx_time_t now = current_time();
+
+            /* store the current timestamp on the target cpu's percpu structure */
+            while (active) {
+                cpu_num_t cpu = lowest_cpu_set(active);
+                int64_t zero = 0;
+                atomic_cmpxchg_64((int64_t *)&percpu[cpu].ipi_timestamp, &zero, now);
+
+                active &= ~cpu_num_to_mask(cpu);
+            }
+        }
 
         arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
         break;
@@ -400,6 +424,16 @@ enum handler_return mp_mbx_reschedule_irq(void) {
 
     CPU_STATS_INC(reschedule_ipis);
 
+    /* DEBUG: try to detect a really delayed IPI */
+    if (DEBUG_LOOK_FOR_MISSING_IPI) {
+        zx_time_t now = current_time();
+        zx_time_t stamp = atomic_swap_64((int64_t *)&percpu[cpu].ipi_timestamp, 0);
+
+        if (stamp != 0 && now > stamp && now - stamp > MISSING_IPI_TIMEOUT) {
+            panic("super delayed IPI on cpu %u: now %" PRIu64 " stamp %" PRIu64 "\n", cpu, now, stamp);
+        }
+    }
+
     return (mp.active_cpus & cpu_num_to_mask(cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
@@ -421,3 +455,30 @@ __WEAK zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
 __WEAK zx_status_t platform_mp_cpu_unplug(uint cpu_id) {
     return arch_mp_cpu_unplug(cpu_id);
 }
+
+#if DEBUG_LOOK_FOR_MISSING_IPI
+static enum handler_return missing_ipi_detector_timer(timer_t* t, zx_time_t now, void* arg) {
+    timer_set_oneshot(t, now + MISSING_IPI_TIMEOUT / 2, &missing_ipi_detector_timer, NULL);
+
+    cpu_mask_t active = mp_get_active_mask();
+    while (active) {
+        cpu_num_t cpu = lowest_cpu_set(active);
+        zx_time_t stamp = atomic_load_64((int64_t *)&percpu[cpu].ipi_timestamp);
+        if (stamp != 0 && now > stamp && now - stamp > MISSING_IPI_TIMEOUT) {
+            panic("super delayed IPI on cpu %u: now %" PRIu64 " stamp %" PRIu64 ", found in timer\n", cpu, now, stamp);
+        }
+
+        active &= ~cpu_num_to_mask(cpu);
+    }
+
+    return INT_NO_RESCHEDULE;
+}
+
+static void missing_ipi_detector_init(uint level) {
+    static timer_t timer = TIMER_INITIAL_VALUE(timer);
+
+    timer_set_oneshot(&timer, current_time() + MISSING_IPI_TIMEOUT / 2, &missing_ipi_detector_timer, NULL);
+}
+
+LK_INIT_HOOK(missing_ipi_detector, missing_ipi_detector_init, LK_INIT_LEVEL_THREADING);
+#endif

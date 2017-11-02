@@ -26,6 +26,10 @@ struct percpu {
     struct list_node run_queue[NUM_PRIORITIES];
     uint32_t run_queue_bitmap;
 
+    /* timestamp of the last reschedule IPI sent to this cpu */
+    /* 0 means no pending IPI */
+    zx_time_t ipi_timestamp;
+
     /* thread/cpu level statistics */
     struct cpu_stats stats;
 
