@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define _ALL_SOURCE  // for O_ADMIN
-
 #include "garnet/bin/appmgr/root_environment_host.h"
 
 #include <errno.h>

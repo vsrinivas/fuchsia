@@ -46,6 +46,8 @@ source_set("lib") {
     "//zircon/system/ulib/zx",
   ]
 
+  defines = [ "_ALL_SOURCE=1" ]
+
   libs = [ "launchpad" ]
 }
 
