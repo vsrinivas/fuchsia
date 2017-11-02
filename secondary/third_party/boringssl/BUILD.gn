@@ -21,6 +21,7 @@ group("boringssl") {
 ##########################
 if (is_fuchsia) {
   package("bssl") {
+    system_image = true
     deps = [
       ":crypto",
       ":ssl",
@@ -43,6 +44,7 @@ if (is_fuchsia) {
 ################
 if (is_fuchsia) {
   package("libcrypto") {
+    system_image = true
     deps = [
       ":crypto",
     ]
@@ -64,6 +66,7 @@ shared_library("crypto") {
 #############
 if (is_fuchsia) {
   package("libssl") {
+    system_image = true
     deps = [
       ":ssl",
     ]
@@ -91,6 +94,7 @@ shared_library("ssl") {
 if (is_fuchsia) {
   package("boringssl_tests") {
     testonly = true
+    system_image = true
     deps = [
       "crypto:crypto_test",
       "ssl:ssl_test",
