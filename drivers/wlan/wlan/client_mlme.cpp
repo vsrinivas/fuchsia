@@ -231,199 +231,200 @@ zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
             debugf("Rxed Mgmt frame (type: %d) but not handled\n", hdr->fc.subtype());
         }
         break;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Mlme::HandleEthPacket(const Packet* packet) {
+    debugfn();
+    return IsStaValid() ? sta_->HandleEth(packet) : ZX_OK;
+}
+
+zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
+    debugfn();
+    const uint8_t* p = packet->data();
+    auto h = FromBytes<ServiceHeader>(p, packet->len());
+    if (h == nullptr) {
+        errorf("short service packet len=%zu\n", packet->len());
         return ZX_OK;
     }
+    debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n", h->txn_id, h->flags,
+             h->ordinal);
 
-    zx_status_t Mlme::HandleEthPacket(const Packet* packet) {
-        debugfn();
-        return IsStaValid() ? sta_->HandleEth(packet) : ZX_OK;
-    }
-
-    zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
-        debugfn();
-        const uint8_t* p = packet->data();
-        auto h = FromBytes<ServiceHeader>(p, packet->len());
-        if (h == nullptr) {
-            errorf("short service packet len=%zu\n", packet->len());
-            return ZX_OK;
-        }
-        debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n", h->txn_id, h->flags,
-                 h->ordinal);
-
-        zx_status_t status = ZX_OK;
-        switch (static_cast<Method>(h->ordinal)) {
-        case Method::SCAN_request: {
-            ScanRequestPtr req;
-            status = DeserializeServiceMsg(*packet, Method::SCAN_request, &req);
-            if (status != ZX_OK) {
-                errorf("could not deserialize ScanRequest: %d\n", status);
-                break;
-            }
-
-            status = scanner_->Start(std::move(req));
+    zx_status_t status = ZX_OK;
+    switch (static_cast<Method>(h->ordinal)) {
+    case Method::SCAN_request: {
+        ScanRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::SCAN_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize ScanRequest: %d\n", status);
             break;
         }
-        case Method::JOIN_request: {
-            JoinRequestPtr req;
-            status = DeserializeServiceMsg(*packet, Method::JOIN_request, &req);
-            if (status != ZX_OK) {
-                errorf("could not deserialize JoinRequest: %d\n", status);
-                break;
-            }
 
-            fbl::unique_ptr<Timer> timer;
-            ObjectId timer_id;
-            timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-            timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-            timer_id.set_mac(MacAddr(req->selected_bss->bssid.data()).ToU64());
-            status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-            if (status != ZX_OK) {
-                errorf("could not create station timer: %d\n", status);
-                return status;
-            }
-            sta_.reset(new Station(device_, std::move(timer)));
-            status = sta_->Join(std::move(req));
+        status = scanner_->Start(std::move(req));
+        break;
+    }
+    case Method::JOIN_request: {
+        JoinRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::JOIN_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize JoinRequest: %d\n", status);
             break;
         }
-        case Method::AUTHENTICATE_request: {
-            // TODO(tkilbourn): send error response back to service is !IsStaValid
-            AuthenticateRequestPtr req;
-            status = DeserializeServiceMsg(*packet, Method::AUTHENTICATE_request, &req);
-            if (status != ZX_OK) {
-                errorf("could not deserialize AuthenticateRequest: %d\n", status);
-                break;
-            }
 
-            if (IsStaValid()) { status = sta_->Authenticate(std::move(req)); }
+        fbl::unique_ptr<Timer> timer;
+        ObjectId timer_id;
+        timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+        timer_id.set_target(to_enum_type(ObjectTarget::kStation));
+        timer_id.set_mac(MacAddr(req->selected_bss->bssid.data()).ToU64());
+        status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+        if (status != ZX_OK) {
+            errorf("could not create station timer: %d\n", status);
+            return status;
+        }
+        sta_.reset(new Station(device_, std::move(timer)));
+        status = sta_->Join(std::move(req));
+        break;
+    }
+    case Method::AUTHENTICATE_request: {
+        // TODO(tkilbourn): send error response back to service is !IsStaValid
+        AuthenticateRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::AUTHENTICATE_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize AuthenticateRequest: %d\n", status);
             break;
         }
-        case Method::ASSOCIATE_request: {
-            // TODO(tkilbourn): send error response back to service is !IsStaValid
-            AssociateRequestPtr req;
-            status = DeserializeServiceMsg(*packet, Method::ASSOCIATE_request, &req);
-            if (status != ZX_OK) {
-                errorf("could not deserialize AssociateRequest: %d\n", status);
-                break;
-            }
 
-            if (IsStaValid()) { status = sta_->Associate(std::move(req)); }
+        if (IsStaValid()) { status = sta_->Authenticate(std::move(req)); }
+        break;
+    }
+    case Method::ASSOCIATE_request: {
+        // TODO(tkilbourn): send error response back to service is !IsStaValid
+        AssociateRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::ASSOCIATE_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize AssociateRequest: %d\n", status);
             break;
         }
-        case Method::EAPOL_request: {
-            EapolRequestPtr req;
-            status = DeserializeServiceMsg(*packet, Method::EAPOL_request, &req);
-            if (status != ZX_OK) {
-                errorf("could not deserialize EapolRequest: %d\n", status);
-                break;
-            }
 
-            if (IsStaValid()) { status = sta_->SendEapolRequest(std::move(req)); }
+        if (IsStaValid()) { status = sta_->Associate(std::move(req)); }
+        break;
+    }
+    case Method::EAPOL_request: {
+        EapolRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::EAPOL_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize EapolRequest: %d\n", status);
             break;
         }
-        case Method::SETKEYS_request: {
-            SetKeysRequestPtr req;
-            status = DeserializeServiceMsg(*packet, Method::SETKEYS_request, &req);
-            if (status != ZX_OK) {
-                errorf("could not deserialize SetKeysRequest: %d\n", status);
-                break;
-            }
 
-            if (IsStaValid()) { status = sta_->SetKeys(std::move(req)); }
+        if (IsStaValid()) { status = sta_->SendEapolRequest(std::move(req)); }
+        break;
+    }
+    case Method::SETKEYS_request: {
+        SetKeysRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::SETKEYS_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize SetKeysRequest: %d\n", status);
             break;
         }
-        default:
-            warnf("unknown MLME method %u\n", h->ordinal);
-            status = ZX_ERR_NOT_SUPPORTED;
-        }
 
-        return status;
+        if (IsStaValid()) { status = sta_->SetKeys(std::move(req)); }
+        break;
+    }
+    default:
+        warnf("unknown MLME method %u\n", h->ordinal);
+        status = ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t Mlme::HandleBeacon(const Packet* packet) {
-        debugfn();
+    return status;
+}
 
-        if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
+zx_status_t Mlme::HandleBeacon(const Packet* packet) {
+    debugfn();
 
-        if (IsStaValid()) {
-            auto hdr = packet->field<MgmtFrameHeader>(0);
-            if (*sta_->bssid() == hdr->addr3) { sta_->HandleBeacon(packet); }
-        }
+    if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
 
-        return ZX_OK;
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleBeacon(packet); }
     }
 
-    zx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
-        debugfn();
+    return ZX_OK;
+}
 
-        if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
+zx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
+    debugfn();
 
-        return ZX_OK;
+    if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
+
+    return ZX_OK;
+}
+
+zx_status_t Mlme::HandleAuthentication(const Packet* packet) {
+    debugfn();
+
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleAuthentication(packet); }
     }
+    return ZX_OK;
+}
 
-    zx_status_t Mlme::HandleAuthentication(const Packet* packet) {
-        debugfn();
+zx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
+    debugfn();
 
-        if (IsStaValid()) {
-            auto hdr = packet->field<MgmtFrameHeader>(0);
-            if (*sta_->bssid() == hdr->addr3) { sta_->HandleAuthentication(packet); }
-        }
-        return ZX_OK;
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleDeauthentication(packet); }
     }
+    return ZX_OK;
+}
 
-    zx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
-        debugfn();
+zx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
+    debugfn();
 
-        if (IsStaValid()) {
-            auto hdr = packet->field<MgmtFrameHeader>(0);
-            if (*sta_->bssid() == hdr->addr3) { sta_->HandleDeauthentication(packet); }
-        }
-        return ZX_OK;
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleAssociationResponse(packet); }
     }
+    return ZX_OK;
+}
 
-    zx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
-        debugfn();
+zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
+    debugfn();
 
-        if (IsStaValid()) {
-            auto hdr = packet->field<MgmtFrameHeader>(0);
-            if (*sta_->bssid() == hdr->addr3) { sta_->HandleAssociationResponse(packet); }
-        }
-        return ZX_OK;
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleDisassociation(packet); }
     }
+    return ZX_OK;
+}
 
-    zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
-        debugfn();
-
-        if (IsStaValid()) {
-            auto hdr = packet->field<MgmtFrameHeader>(0);
-            if (*sta_->bssid() == hdr->addr3) { sta_->HandleDisassociation(packet); }
-        }
-        return ZX_OK;
+zx_status_t Mlme::HandleAction(const Packet* packet) {
+    debugfn();
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) { sta_->HandleAction(packet); }
     }
+    return ZX_OK;
+}
 
-    zx_status_t Mlme::HandleAction(const Packet* packet) {
-        debugfn();
-        if (IsStaValid()) {
-            auto hdr = packet->field<MgmtFrameHeader>(0);
-            if (*sta_->bssid() == hdr->addr3) { sta_->HandleAction(packet); }
-        }
-        return ZX_OK;
-    }
+bool Mlme::IsStaValid() const {
+    // TODO(porce): Redefine the notion of the station validity.
+    return sta_ != nullptr && sta_->bssid() != nullptr;
+}
 
-    bool Mlme::IsStaValid() const {
-        // TODO(porce): Redefine the notion of the station validity.
-        return sta_ != nullptr && sta_->bssid() != nullptr;
-    }
+zx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
+    debugfn();
+    if (IsStaValid()) { sta_->PreChannelChange(chan); }
+    return ZX_OK;
+}
 
-    zx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
-        debugfn();
-        if (IsStaValid()) { sta_->PreChannelChange(chan); }
-        return ZX_OK;
-    }
-
-    zx_status_t Mlme::PostChannelChange() {
-        debugfn();
-        if (IsStaValid()) { sta_->PostChannelChange(); }
-        return ZX_OK;
-    }
+zx_status_t Mlme::PostChannelChange() {
+    debugfn();
+    if (IsStaValid()) { sta_->PostChannelChange(); }
+    return ZX_OK;
+}
 
 }  // namespace wlan
