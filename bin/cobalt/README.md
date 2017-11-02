@@ -175,9 +175,8 @@ FIDL service.
 For example:
 
 ```
-$ source scripts/env.sh && envprompt
-$ fset x86-64 --modules default,cobalt_client
-$ fbuild
+$ fx set x86-64
+$ fx full-build
 ```
 
 ### Running the test app:
@@ -185,7 +184,7 @@ $ fbuild
 Start Fuchsia. For example:
 
 ```
-$ frun -m 3000  -k -n
+$ fx run -m 3000 -k -n
 ```
 
 From within Fuchsia:

@@ -71,27 +71,26 @@ class FuchsiaToolsTest(unittest.TestCase):
   def test_netaddr(self):
     tools = FuchsiaTools(self.ENV)
     self.assertEqual(
-        tools.netaddr('friend'),
-        ['out/build-zircon/tools/netaddr', '--fuchsia', 'friend'])
+        tools.netaddr('friend')[1:],
+        ['netaddr', '--fuchsia', 'friend'])
 
   def test_netls(self):
     tools = FuchsiaTools(self.ENV)
-    self.assertEqual(tools.netls()[0], 'out/build-zircon/tools/netls')
+    self.assertEqual(tools.netls()[1], 'netls')
 
   # TODO(jimbe) This test should test the contents of the batch file
   def test_sftp(self):
     tools = FuchsiaTools(self.ENV)
     tuple = tools.sftp('server', [('file', '/x')])
     tuple[1].close()
-    tuple[0][4] = 'batch';
+    tuple[0][3] = 'batch';
     self.assertEqual(
-        tuple[0],
-        ['sftp', '-F', 'build/ssh-keys/ssh_config', '-b', 'batch', 'server'])
+        tuple[0][1:],
+        ['sftp', '-b', 'batch', 'server'])
 
   def test_missing_out_dir(self):
     tools = FuchsiaTools({})
-    with self.assertRaisesRegexp(MissingEnvironmentVariable, 'FUCHSIA_OUT_DIR'):
-      tools.netls()
+    tools.netls()
 
   def test_missing_build_dir(self):
     tools = FuchsiaTools({})

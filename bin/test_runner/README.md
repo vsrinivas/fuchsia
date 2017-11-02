@@ -19,14 +19,11 @@ integration tests).
   `./package/gn/gen.py -p boot_test_modular`. Alternatively, you can run
   `test_runner` from the shell.
 
-- The `FUCHSIA_` environment variables used below are set by sourcing
-  `//scripts/env.sh`.
-
 *** note
 **QEMU**: `test_runner` doesn't currently work with the default networking
 setup (TO-292). The workaround is to pass the following flags to QEMU: `-device
 e1000,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8342-:8342` and then run
-`run_test --server 127.0.0.1 <other arguments>`.
+`fx exec run_test --server 127.0.0.1 <other arguments>`.
 ***
 
 #### Running the tests
@@ -39,7 +36,7 @@ works for both QEMU and for real hardware, but not for the
 Run a test using `//garnet/bin/test_runner/run_test`. For example:
 
 ```sh
-$ $FUCHSIA_DIR/garnet/bin/test_runner/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
+$ fx exec garnet/bin/test_runner/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
@@ -50,7 +47,7 @@ You can also run a series of tests by supplying a JSON file describing the
 tests to run:
 
 ```sh
-$ $FUCHSIA_DIR/garnet/bin/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
+$ fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json
 ```
 
 #### Selecting between multiple devices
@@ -60,13 +57,13 @@ If you have more than one device, you can select a particular device with
 or you can view all connected devices with the netls command, like this:
 
 ```sh
-$FUCHSIA_OUT_DIR/build-zircon/tools/netls
+fx netls
 ```
 
 Pass the device name to the `run_test` tool:
 
 ```sh
-$FUCHSIA_DIR/garnet/bin/test_runner/run_test --server rain-detour-glaze-donut ...
+fx exec garnet/bin/test_runner/run_test --server rain-detour-glaze-donut ...
 ```
 
 #### Fuchsia test infrastructure
@@ -87,7 +84,7 @@ You can control the testing configuration by passing `run_test` the name of a
 JSON file with the `--test_file` parameter. For example:
 
 ```
-$FUCHSIA_DIR/garnet/bin/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
+fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json
 ```
 
 You can select a particular test to run by passing `run_test` the --test_name
@@ -95,7 +92,7 @@ parameter in addition to the name of a JSON file with the `--test_file`
 parameter. For example:
 
 ```
-$FUCHSIA_DIR/garnet/bin/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json --test_name=parent_child
+fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json --test_name=parent_child
 ```
 
 The JSON file looks similar to this:

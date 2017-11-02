@@ -7,6 +7,10 @@ import os
 import tempfile
 
 
+FUCHSIA_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))))))
+
+
 class Color(object):
   PURPLE = '\033[95m'
   CYAN = '\033[96m'
@@ -109,15 +113,15 @@ class FuchsiaTools(object):
   def __init__(self, env):
     self.env = env
 
+  @property
+  def _fx(self):
+    return os.path.join(FUCHSIA_DIR, 'scripts', 'fx')
+
   def _get_env(self, name):
     try:
       return self.env[name]
     except KeyError:
       raise MissingEnvironmentVariable(name)
-
-  @property
-  def fuchsia_out_dir(self):
-    return self._get_env('FUCHSIA_OUT_DIR')
 
   @property
   def fuchsia_build_dir(self):
@@ -126,8 +130,6 @@ class FuchsiaTools(object):
   # Returns tuple of (command, batch_file_handle)
   # You should close batch_file_handle after you call sftp
   def sftp(self, server, file_pairs):
-    ssh_config = os.path.join(self.fuchsia_build_dir, 'ssh-keys/ssh_config')
-
     f = tempfile.NamedTemporaryFile()
     for pair in file_pairs:
       local_path = os.path.join(self.fuchsia_build_dir, pair[0])
@@ -136,9 +138,8 @@ class FuchsiaTools(object):
     f.flush()
 
     command = [
+        self._fx,
         'sftp',
-        '-F',
-        ssh_config,
         '-b',
         f.name, server
     ]
@@ -146,9 +147,9 @@ class FuchsiaTools(object):
     return (command, f)
 
   def netaddr(self, device):
-    path = os.path.join(self.fuchsia_out_dir, 'build-zircon/tools/netaddr')
     command = [
-      path,
+      self._fx,
+      'netaddr',
       '--fuchsia',
       device,
     ]
@@ -156,9 +157,9 @@ class FuchsiaTools(object):
     return command
 
   def netls(self):
-    path = os.path.join(self.fuchsia_out_dir, 'build-zircon/tools/netls')
     command = [
-      path,
+      self._fx,
+      'netls',
       '--timeout=500',
       '--nowait',
     ]
