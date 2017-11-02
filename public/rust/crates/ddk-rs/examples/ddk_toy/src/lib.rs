@@ -54,7 +54,6 @@ impl ddk::DeviceOps for SimpleDevice {
 
 // TODO: move this somewhere else to isolate usage of ddk_sys
 //       OR figure out how to provide hooks so that ddk_sys calls like this can be wrapped
-#[no_mangle]
 pub extern fn simple_bind(mut _ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, mut _out_cookie: *mut *mut u8) -> sys::zx_status_t {
     let simple = Box::new(SimpleDevice::new());
     match ddk::add_device(simple, Some(&ddk::Device::wrap(parent)), ddk::DEVICE_ADD_NON_BINDABLE) {
@@ -66,7 +65,6 @@ pub extern fn simple_bind(mut _ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, 
     }
 }
 
-#[no_mangle]
 pub extern fn simple_unbind(_ctx: *mut u8, _parent: *mut ddk_sys::zx_device_t, cookie: *mut u8) {
     let device: Box<Box<ddk::Device>>;
     unsafe {
@@ -74,3 +72,10 @@ pub extern fn simple_unbind(_ctx: *mut u8, _parent: *mut ddk_sys::zx_device_t, c
     }
     ddk::remove_device(**device);
 }
+
+#[no_mangle]
+pub static DRIVER_OPS_DDK_TOY: zx_driver_ops_t = zx_driver_ops_t {
+  bind: Some(simple_bind),
+  unbind: Some(simple_unbind),
+  ..ddk_sys::DEFAULT_DRIVER_OPS
+};

@@ -253,20 +253,20 @@ extern fn ddk_resume(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
 }
 
 static mut DEVICE_OPS: ddk_sys::zx_protocol_device_t = ddk_sys::zx_protocol_device_t {
-        version: ddk_sys::DEVICE_OPS_VERSION,
-        get_protocol: Some(ddk_get_protocol),
-        open: Some(ddk_open),
-        open_at: Some(ddk_open_at),
-        close: Some(ddk_close),
-        unbind: Some(ddk_unbind),
-        release: Some(ddk_release),
-        read: Some(ddk_read),
-        write: Some(ddk_write),
-        iotxn_queue: Some(ddk_iotxn_queue),
-        get_size: Some(ddk_get_size),
-        ioctl: Some(ddk_ioctl),
-        suspend: Some(ddk_suspend),
-        resume: Some(ddk_resume),
+    get_protocol: Some(ddk_get_protocol),
+    open: Some(ddk_open),
+    open_at: Some(ddk_open_at),
+    close: Some(ddk_close),
+    unbind: Some(ddk_unbind),
+    release: Some(ddk_release),
+    read: Some(ddk_read),
+    write: Some(ddk_write),
+    iotxn_queue: Some(ddk_iotxn_queue),
+    get_size: Some(ddk_get_size),
+    ioctl: Some(ddk_ioctl),
+    suspend: Some(ddk_suspend),
+    resume: Some(ddk_resume),
+    ..ddk_sys::DEFAULT_PROTOCOL_DEVICE
 };
 
 // Copied from fuchsia-zircon, as we don't want to make it part of the public API.
