@@ -173,6 +173,17 @@ public:
         return *this;
     }
 
+    // Assigns this string from the contents of a string-like object.
+    // Allocates heap memory only if the length of |value| is non-zero.
+    //
+    // Works with various string types including fbl::String, fbl::StringView,
+    // std::string, and std::string_view.
+    template <typename T, typename = typename enable_if<is_string_like<T>::value>::type>
+    String& operator=(const T& value) {
+        Set(GetStringData(value), GetStringLength(value));
+        return *this;
+    }
+
     // Assigns this string from the contents of a null-terminated C string.
     // Allocates heap memory only if |data| is non-empty.
     // |data| must not be null.

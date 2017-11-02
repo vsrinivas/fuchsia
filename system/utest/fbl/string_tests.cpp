@@ -777,6 +777,11 @@ struct OverloadedFakeString {
     void length();
 };
 
+struct EmptyString {
+    const char* data() const { return nullptr; }
+    size_t length() const { return 0u; }
+};
+
 bool conversion_from_string_like_object() {
     BEGIN_TEST;
 
@@ -792,6 +797,43 @@ bool conversion_from_string_like_object() {
         fbl::String p(str);
         EXPECT_CSTR_EQ(kFakeStringData, p.data());
         EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    {
+        EmptyString str;
+        fbl::String p(str);
+        EXPECT_CSTR_EQ("", p.data());
+        EXPECT_EQ(0u, p.length());
+    }
+
+    END_TEST;
+}
+
+bool assignment_from_string_like_object() {
+    BEGIN_TEST;
+
+    {
+        SimpleFakeString str;
+        fbl::String p;
+        p = str;
+        EXPECT_CSTR_EQ(kFakeStringData, p.data());
+        EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    {
+        OverloadedFakeString str;
+        fbl::String p;
+        p = str;
+        EXPECT_CSTR_EQ(kFakeStringData, p.data());
+        EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    {
+        EmptyString str;
+        fbl::String p("abc");
+        p = str;
+        EXPECT_CSTR_EQ("", p.data());
+        EXPECT_EQ(0u, p.length());
     }
 
     END_TEST;
@@ -811,4 +853,5 @@ RUN_TEST(to_string_piece_test)
 RUN_TEST(swap_test)
 RUN_TEST(ref_count_test)
 RUN_TEST(conversion_from_string_like_object)
+RUN_TEST(assignment_from_string_like_object)
 END_TEST_CASE(string_tests)

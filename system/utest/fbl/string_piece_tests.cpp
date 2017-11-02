@@ -236,6 +236,11 @@ struct OverloadedFakeString {
     void length();
 };
 
+struct EmptyString {
+    const char* data() const { return nullptr; }
+    size_t length() const { return 0u; }
+};
+
 bool conversion_from_string_like_object() {
     BEGIN_TEST;
 
@@ -253,6 +258,43 @@ bool conversion_from_string_like_object() {
         EXPECT_EQ(kFakeStringLength, p.length());
     }
 
+    {
+        EmptyString str;
+        fbl::StringPiece p(str);
+        EXPECT_NULL(p.data());
+        EXPECT_EQ(0u, p.length());
+    }
+
+    END_TEST;
+}
+
+bool assignment_from_string_like_object() {
+    BEGIN_TEST;
+
+    {
+        SimpleFakeString str;
+        fbl::StringPiece p;
+        p = str;
+        EXPECT_EQ(kFakeStringData, p.data());
+        EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    {
+        OverloadedFakeString str;
+        fbl::StringPiece p;
+        p = str;
+        EXPECT_EQ(kFakeStringData, p.data());
+        EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    {
+        EmptyString str;
+        fbl::StringPiece p("abc");
+        p = str;
+        EXPECT_NULL(p.data());
+        EXPECT_EQ(0u, p.length());
+    }
+
     END_TEST;
 }
 
@@ -265,4 +307,5 @@ RUN_TEST(copy_move_and_assignment_test)
 RUN_TEST(set_clear_test)
 RUN_TEST(compare_test)
 RUN_TEST(conversion_from_string_like_object)
+RUN_TEST(assignment_from_string_like_object)
 END_TEST_CASE(string_piece_tests)

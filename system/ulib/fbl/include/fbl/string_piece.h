@@ -72,6 +72,12 @@ public:
     constexpr StringPiece& operator=(const StringPiece& other) = default;
     constexpr StringPiece& operator=(StringPiece&& other) = default;
 
+    template <typename T, typename = typename enable_if<is_string_like<T>::value>::type>
+    constexpr StringPiece& operator=(const T& value) {
+        set(GetStringData(value), GetStringLength(value));
+        return *this;
+    }
+
     void set(const char* data) {
         data_ = data;
         length_ = data != nullptr ? constexpr_strlen(data) : 0u;
