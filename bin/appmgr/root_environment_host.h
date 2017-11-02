@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <fs/vfs.h>
+
 #include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/app/fidl/application_environment_host.fidl.h"
@@ -20,7 +22,8 @@ namespace app {
 class RootEnvironmentHost : public ApplicationEnvironmentHost,
                             public ServiceProvider {
  public:
-  explicit RootEnvironmentHost(std::vector<std::string> application_path);
+  explicit RootEnvironmentHost(std::vector<std::string> application_path,
+                               fs::Vfs* vfs);
   ~RootEnvironmentHost() override;
 
   JobHolder* job_holder() const { return root_job_.get(); }
@@ -43,6 +46,8 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
 
   std::vector<std::string> path_;
   std::unique_ptr<JobHolder> root_job_;
+
+  fs::Vfs* const vfs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RootEnvironmentHost);
 };

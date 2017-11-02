@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <fs/vfs.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 
 #include "garnet/bin/appmgr/config.h"
 #include "garnet/bin/appmgr/root_environment_host.h"
@@ -43,17 +45,10 @@ int main(int argc, char** argv) {
     initial_apps.push_back(std::move(launch_info));
   }
 
-  // TODO(jeffbrown): If there's already a running instance of
-  // appmgr, it might be nice to pass the request over to
-  // it instead of starting a whole new instance.  Alternately, we could create
-  // a separate command-line program to act as an interface for modifying
-  // configuration, starting / stopping applications, listing what's running,
-  // printing debugging information, etc.  Having multiple instances of
-  // application manager running is not what we want, in general.
-
   fsl::MessageLoop message_loop;
+  fs::ManagedVfs vfs(message_loop.async());
 
-  app::RootEnvironmentHost root(config.TakePath());
+  app::RootEnvironmentHost root(config.TakePath(), &vfs);
 
   if (!initial_apps.empty()) {
     message_loop.task_runner()->PostTask([&root, &initial_apps] {

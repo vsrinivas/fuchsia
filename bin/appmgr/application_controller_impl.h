@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 #define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
+#include <fs/pseudo-dir.h>
 #include <zx/process.h>
 
 #include "garnet/bin/appmgr/application_namespace.h"
@@ -27,11 +28,14 @@ class ApplicationControllerImpl : public ApplicationController,
       JobHolder* job_holder,
       std::unique_ptr<archive::FileSystem> fs,
       zx::process process,
-      std::string path,
-      fxl::RefPtr<ApplicationNamespace> application_namespace);
+      std::string url,
+      std::string label,
+      fxl::RefPtr<ApplicationNamespace> application_namespace,
+      zx::channel service_dir_channel);
   ~ApplicationControllerImpl() override;
 
-  const std::string& path() const { return path_; }
+  const std::string& label() const { return label_; }
+  const fbl::RefPtr<fs::PseudoDir>& info_dir() const { return info_dir_; }
 
   // |ApplicationController| implementation:
   void Kill() override;
@@ -50,8 +54,9 @@ class ApplicationControllerImpl : public ApplicationController,
   JobHolder* job_holder_;
   std::unique_ptr<archive::FileSystem> fs_;
   zx::process process_;
-  std::string path_;
+  std::string label_;
   std::vector<WaitCallback> wait_callbacks_;
+  fbl::RefPtr<fs::PseudoDir> info_dir_;
 
   fxl::RefPtr<ApplicationNamespace> application_namespace_;
 

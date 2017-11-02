@@ -4,10 +4,16 @@
 
 #include "garnet/bin/appmgr/application_controller_impl.h"
 
+#include <fbl/string_printf.h>
+#include <fs/pseudo-file.h>
+#include <fs/remote-dir.h>
+
+#include <cinttypes>
 #include <utility>
 
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/bin/appmgr/job_holder.h"
+#include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 
@@ -18,19 +24,41 @@ ApplicationControllerImpl::ApplicationControllerImpl(
     JobHolder* job_holder,
     std::unique_ptr<archive::FileSystem> fs,
     zx::process process,
-    std::string path,
-    fxl::RefPtr<ApplicationNamespace> application_namespace)
+    std::string url,
+    std::string label,
+    fxl::RefPtr<ApplicationNamespace> application_namespace,
+    zx::channel service_dir_channel)
     : binding_(this),
       job_holder_(job_holder),
       fs_(std::move(fs)),
       process_(std::move(process)),
-      path_(std::move(path)),
+      label_(std::move(label)),
       application_namespace_(std::move(application_namespace)) {
   termination_handler_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, process_.get(), ZX_TASK_TERMINATED);
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
     binding_.set_connection_error_handler([this] { Kill(); });
+  }
+
+  info_dir_ = fbl::AdoptRef(new fs::PseudoDir());
+  if (service_dir_channel) {
+    zx_koid_t process_koid = fsl::GetKoid(process_.get());
+    info_dir_->AddEntry("process", fbl::AdoptRef(new fs::UnbufferedPseudoFile(
+                                       [process_koid](fbl::String* output) {
+                                         *output = fbl::StringPrintf(
+                                             "%" PRIu64, process_koid);
+                                         return ZX_OK;
+                                       })));
+    info_dir_->AddEntry(
+        "url",
+        fbl::AdoptRef(new fs::UnbufferedPseudoFile([url](fbl::String* output) {
+          *output = url;
+          return ZX_OK;
+        })));
+    info_dir_->AddEntry(
+        "svc",
+        fbl::AdoptRef(new fs::RemoteDir(fbl::move(service_dir_channel))));
   }
 }
 

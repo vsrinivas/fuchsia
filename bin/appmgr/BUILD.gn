@@ -42,6 +42,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/zx",
   ]
 

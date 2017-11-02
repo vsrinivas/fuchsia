@@ -39,6 +39,7 @@ constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
 constexpr char kRuntimePath[] = "meta/runtime";
 constexpr char kSandboxPath[] = "meta/sandbox";
+constexpr char kInfoDirPath[] = "/info_experimental";
 
 enum class LaunchType {
   kProcess,
@@ -137,8 +138,8 @@ zx::process CreateProcess(const zx::job& job,
                           ApplicationLaunchInfoPtr launch_info,
                           fdio_flat_namespace_t* flat) {
   return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON,
-                GetArgv(launch_info), flat, TakeAppServices(launch_info),
+                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
+                flat, TakeAppServices(launch_info),
                 std::move(launch_info->service_request),
                 std::move(package->data));
 }
@@ -176,16 +177,43 @@ LaunchType Classify(const zx::vmo& data, std::string* runner) {
   return LaunchType::kProcess;
 }
 
+zx::channel BindServiceDirectory(ApplicationLaunchInfo* launch_info) {
+  zx::channel server, client;
+  zx_status_t status = zx::channel::create(0u, &server, &client);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create channel for service directory: status="
+                   << status;
+    return zx::channel();
+  }
+
+  if (launch_info->service_request) {
+    // The client also wants the exported services, so we'll attach its channel
+    // to a clone of the actual service directory.
+    status = fdio_service_clone_to(client.get(),
+                                   launch_info->service_request.release());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to clone the service directory channel: status="
+                     << status;
+      return zx::channel();
+    }
+  }
+  launch_info->service_request = fbl::move(server);
+  return client;
+}
+
 }  // namespace
 
 uint32_t JobHolder::next_numbered_label_ = 1u;
 
 JobHolder::JobHolder(JobHolder* parent,
+                     fs::Vfs* vfs,
                      fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
                      const fidl::String& label)
     : parent_(parent),
+      vfs_(vfs),
       default_namespace_(
-          fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)) {
+          fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)),
+      info_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
   host_.Bind(std::move(host));
 
   // parent_ is null if this is the root application environment. if so, we
@@ -222,9 +250,10 @@ void JobHolder::CreateNestedJob(
     const fidl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<JobHolder>(this, std::move(host), label));
+      std::make_unique<JobHolder>(this, vfs_, std::move(host), label));
   JobHolder* child = controller->job_holder();
   child->AddBinding(std::move(environment));
+  info_dir_->AddEntry(child->label(), child->info_dir());
   children_.emplace(child, std::move(controller));
 
   PublishServicesForFirstNestedEnvironment(
@@ -293,6 +322,7 @@ std::unique_ptr<ApplicationEnvironmentControllerImpl> JobHolder::ExtractChild(
     return nullptr;
   }
   auto controller = std::move(it->second);
+  info_dir_->RemoveEntry(child->label());
   children_.erase(it);
   return controller;
 }
@@ -304,6 +334,7 @@ std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
     return nullptr;
   }
   auto application = std::move(it->second);
+  info_dir_->RemoveEntry(application->label());
   applications_.erase(it);
   return application;
 }
@@ -327,6 +358,7 @@ void JobHolder::CreateApplicationWithRunner(
   builder.AddRoot();
   builder.AddServices(std::move(svc));
   builder.AddDev();
+  AddInfoDir(&builder);
 
   // Add the custom namespace.
   // Note that this must be the last |builder| step adding entries to the
@@ -361,6 +393,7 @@ void JobHolder::CreateApplicationWithProcess(
   builder.AddRoot();
   builder.AddServices(std::move(svc));
   builder.AddDev();
+  AddInfoDir(&builder);
 
   // Add the custom namespace.
   // Note that this must be the last |builder| step adding entries to the
@@ -369,14 +402,17 @@ void JobHolder::CreateApplicationWithProcess(
   builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
+  zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
   zx::process process = CreateProcess(job_for_child_, std::move(package),
                                       std::move(launch_info), builder.Build());
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url,
-        std::move(application_namespace));
+        GetLabelFromURL(url), std::move(application_namespace),
+        std::move(service_dir_channel));
     ApplicationControllerImpl* key = application.get();
+    info_dir_->AddEntry(application->label(), application->info_dir());
     applications_.emplace(key, std::move(application));
   }
 }
@@ -400,6 +436,7 @@ void JobHolder::CreateApplicationFromArchive(
   NamespaceBuilder builder;
   builder.AddPackage(std::move(pkg));
   builder.AddServices(std::move(svc));
+  AddInfoDir(&builder);
 
   std::string sandbox_data;
   if (file_system->GetFileAsString(kSandboxPath, &sandbox_data)) {
@@ -457,6 +494,7 @@ void JobHolder::CreateApplicationFromArchive(
                              std::move(controller));
   } else {
     const std::string url = launch_info->url;  // Keep a copy before moving it.
+    zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
     zx::process process = CreateSandboxedProcess(
         job_for_child_, file_system->GetFileAsVMO(kAppPath),
         std::move(launch_info), builder.Build());
@@ -464,8 +502,10 @@ void JobHolder::CreateApplicationFromArchive(
     if (process) {
       auto application = std::make_unique<ApplicationControllerImpl>(
           std::move(controller), this, std::move(file_system),
-          std::move(process), url, std::move(application_namespace));
+          std::move(process), url, GetLabelFromURL(url),
+          std::move(application_namespace), fbl::move(service_dir_channel));
       ApplicationControllerImpl* key = application.get();
+      info_dir_->AddEntry(application->label(), application->info_dir());
       applications_.emplace(key, std::move(application));
     }
   }
@@ -500,6 +540,20 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   }
 
   return result.first->second.get();
+}
+
+void JobHolder::AddInfoDir(NamespaceBuilder* builder) {
+  zx::channel server, client;
+  zx_status_t status = zx::channel::create(0u, &server, &client);
+  if (status == ZX_OK) {
+    status = vfs_->ServeDirectory(info_dir_, fbl::move(server));
+    if (status == ZX_OK) {
+      builder->AddDirectoryIfNotPresent(kInfoDirPath, fbl::move(client));
+      return;
+    }
+  }
+
+  FXL_LOG(ERROR) << "Failed to serve info directory: status=" << status;
 }
 
 }  // namespace app

@@ -10,6 +10,9 @@
 #include <string>
 #include <unordered_map>
 
+#include <fs/pseudo-dir.h>
+#include <fs/vfs.h>
+
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_namespace.h"
@@ -24,15 +27,20 @@
 
 namespace app {
 
+class NamespaceBuilder;
+
 class JobHolder {
  public:
   JobHolder(JobHolder* parent,
+            fs::Vfs* vfs,
             fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
             const fidl::String& label);
   ~JobHolder();
 
   JobHolder* parent() const { return parent_; }
   const std::string& label() const { return label_; }
+
+  const fbl::RefPtr<fs::PseudoDir>& info_dir() const { return info_dir_; }
 
   void CreateNestedJob(
       fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
@@ -84,7 +92,14 @@ class JobHolder {
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
 
-  JobHolder* parent_;
+  // TODO(ZX-1036): For scaffolding purposes, we make the information available
+  // to all applications started within the scope of the job.  Once we have
+  // the means to do so, we should lock this down to prevent undesirable
+  // information leakage.
+  void AddInfoDir(NamespaceBuilder* builder);
+
+  JobHolder* const parent_;
+  fs::Vfs* const vfs_;
   ApplicationEnvironmentHostPtr host_;
   ApplicationLoaderPtr loader_;
   std::string label_;
@@ -93,6 +108,10 @@ class JobHolder {
   zx::job job_for_child_;
 
   fxl::RefPtr<ApplicationNamespace> default_namespace_;
+
+  // A pseudo-directory which describes the components within the scope of
+  // this job.
+  fbl::RefPtr<fs::PseudoDir> info_dir_;
 
   std::unordered_map<JobHolder*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>
