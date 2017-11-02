@@ -715,16 +715,16 @@ void Process::OnException(const zx_port_packet_t& packet,
       delegate_->OnThreadStarting(this, thread, context);
       break;
     case ZX_EXCP_THREAD_EXITING:
+      FXL_DCHECK(thread);
       FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
                   << thread->GetName();
-      FXL_DCHECK(thread);
       thread->OnException(type, context);
       delegate_->OnThreadExiting(this, thread, context);
       break;
     case ZX_EXCP_POLICY_ERROR:
+      FXL_DCHECK(thread);
       FXL_VLOG(1) << "Received ZX_EXCP_POLICY_ERROR exception for thread "
                   << thread->GetName();
-      FXL_DCHECK(thread);
       thread->OnException(type, context);
       delegate_->OnSyntheticException(this, thread, type, context);
       break;
