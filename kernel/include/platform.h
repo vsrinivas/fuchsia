@@ -120,4 +120,12 @@ size_t platform_stow_crashlog(void* log, size_t len);
 size_t platform_recover_crashlog(size_t len, void* cookie,
                                  void (*func)(const void* data, size_t off, size_t len, void* cookie));
 
+// Called just before initiating a system suspend to give the platform layer a
+// chance to save state.  Must be called with interrupts disabled.
+void platform_suspend(void);
+
+// Called immediately after resuming from a system suspend to let the platform layer
+// reinitialize arch components.  Must be called with interrupts disabled.
+void platform_resume(void);
+
 __END_CDECLS
