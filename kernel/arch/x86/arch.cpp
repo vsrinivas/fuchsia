@@ -27,6 +27,7 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/perf_mon.h>
 #include <arch/x86/proc_trace.h>
+#include <arch/x86/tsc.h>
 #include <arch/mmu.h>
 #include <lib/console.h>
 #include <lk/init.h>
@@ -96,6 +97,23 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
 
     x86_uspace_entry(arg1, arg2, sp, entry_point, flags);
     __UNREACHABLE;
+}
+
+void arch_suspend(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    apic_io_save();
+    x86_tsc_store_adjustment();
+}
+
+void arch_resume(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    x86_init_percpu(0);
+    x86_mmu_percpu_init();
+    x86_pat_sync(cpu_num_to_mask(0));
+
+    apic_local_init();
+    apic_io_restore();
 }
 
 [[noreturn, gnu::noinline]] static void finish_secondary_entry(
