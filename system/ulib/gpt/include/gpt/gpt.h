@@ -133,6 +133,13 @@ void gpt_device_get_header_guid(gpt_device_t* dev,
 // return true if partition# idx has been locally modified
 int gpt_get_diffs(gpt_device_t* dev, int idx, unsigned* diffs);
 
+// get the size, in blocks of the space reserved by the GPT. This includes the
+// space for the MBR block, GPT header, and partition table entries.
+uint32_t gpt_device_get_size_blocks(uint32_t block_sz);
+
+// print out the GPT
+void print_table(gpt_device_t* device);
+
 #define GPT_DIFF_TYPE    (0x01u)
 #define GPT_DIFF_GUID    (0x02u)
 #define GPT_DIFF_FIRST   (0x04u)

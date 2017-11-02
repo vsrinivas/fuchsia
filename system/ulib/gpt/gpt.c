@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include "gpt/gpt.h"
 
@@ -96,6 +97,20 @@ char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
     return dst;
 }
 
+static void print_array(gpt_partition_t** a, int c) {
+    char GUID[GPT_GUID_STRLEN];
+    char name[GPT_NAME_LEN / 2 + 1];
+
+    for (int i = 0; i < c; ++i) {
+        uint8_to_guid_string(GUID, a[i]->type);
+        memset(name, 0, GPT_NAME_LEN / 2 + 1);
+        utf16_to_cstring(name, (const uint16_t*)a[i]->name, GPT_NAME_LEN / 2);
+
+        printf("Name: %s \n  Start: %lu -- End: %lu \nType: %s\n",
+               name, a[i]->first, a[i]->last, GUID);
+    }
+}
+
 static void partition_init(gpt_partition_t* part, const char* name, uint8_t* type, uint8_t* guid,
                            uint64_t first, uint64_t last, uint64_t flags) {
     memcpy(part->type, type, sizeof(part->type));
@@ -104,6 +119,19 @@ static void partition_init(gpt_partition_t* part, const char* name, uint8_t* typ
     part->last = last;
     part->flags = flags;
     cstring_to_utf16((uint16_t*)part->name, name, sizeof(part->name) / sizeof(uint16_t));
+}
+
+static uint32_t GPT_RESERVED = 16 * 1024;
+
+uint32_t gpt_device_get_size_blocks(uint32_t block_sz) {
+    return ((uint32_t) howmany(GPT_RESERVED, block_sz)) + 2;
+}
+
+void print_table(gpt_device_t* device) {
+    int count = 0;
+    for (; device->partitions[count] != NULL; ++count)
+        ;
+    print_array(device->partitions, count);
 }
 
 bool gpt_is_sys_guid(uint8_t* guid, ssize_t len) {
