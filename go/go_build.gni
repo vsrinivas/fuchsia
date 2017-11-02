@@ -72,6 +72,8 @@ template("go_build") {
       rebase_path("//."),
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
+      "--zircon-build-dir",
+      rebase_path("//out/build-zircon/build-${zircon_project}"),
       "--depfile",
       rebase_path(depfile),
       "--current-cpu",
