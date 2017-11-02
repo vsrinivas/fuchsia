@@ -7,7 +7,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 function usage {
   cat <<END
-usage: fx set x86-64|aarch64|rpi3|odroidc2|hikey960
+usage: fx set x86-64|aarch64|gauss|hikey960|odroidc2
               [--release] [--packages p1,p2,...]
               [--build-dir DIR]
               [--goma|--no-goma] [--no-ensure-goma]
@@ -58,17 +58,17 @@ function main {
       arch=aarch64
       zircon_project=zircon-qemu-arm64
       ;;
-    rpi3)
+    gauss)
       arch=aarch64
-      zircon_project=zircon-rpi3-arm64
-      ;;
-    odroidc2)
-      arch=aarch64
-      zircon_project=zircon-odroidc2-arm64
+      zircon_project=zircon-gauss-arm64
       ;;
     hikey960)
       arch=aarch64
       zircon_project=zircon-hikey960-arm64
+      ;;
+    odroidc2)
+      arch=aarch64
+      zircon_project=zircon-odroidc2-arm64
       ;;
     *)
       usage

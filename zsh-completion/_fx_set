@@ -16,7 +16,7 @@ local -a archs
 archs=(
   'x86-64:64 bit Intel'
   'aarch64:64 bit ARM'
-  'rpi3:Raspberry Pi 3 ARM'
+  'gauss:Gauss ARM'
   'odroidc2:ODROID-C2'
   'hikey960:HiKey 960'
 )
