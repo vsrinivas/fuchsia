@@ -229,11 +229,8 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
             return ZX_ERR_BAD_STATE;
 
         if (observed) {
-            if (port_packet->InContainer()) {
-                port_packet->packet.signal.observed |= observed;
-                // |count| is deliberately left as is.
+            if (port_packet->InContainer())
                 return ZX_OK;
-            }
             port_packet->packet.signal.observed = observed;
             port_packet->packet.signal.count = count;
         }
