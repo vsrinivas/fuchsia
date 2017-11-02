@@ -75,7 +75,7 @@ function main {
       return 1
   esac
 
-  local gen_args="${gen_args} --target_cpu ${arch}"
+  local gen_args="${gen_args} --target_cpu ${arch} --zircon_project ${zircon_project}"
   shift
 
   local variant=debug
