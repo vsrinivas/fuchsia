@@ -549,6 +549,20 @@ zx_status_t xhci_queue_start_root_hubs(xhci_t* xhci) {
     return xhci_queue_command(xhci, START_ROOT_HUBS, 0, 0, USB_SPEED_UNDEFINED);
 }
 
+static zx_status_t xhci_update_input_context(xhci_t* xhci, uint32_t slot_id, int ep_index) {
+    zx_paddr_t icc_phys = xhci->input_context_phys;
+#if XHCI_USE_CACHE_OPS
+    // flush icc and sc
+    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN, 0,
+                       2 * xhci->context_size);
+    // flush epc
+    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN,
+                       (ep_index + 2) * xhci->context_size, xhci->context_size);
+#endif
+
+    return xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys, (slot_id << TRB_SLOT_ID_START));
+}
+
 zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep_desc,
                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
     if (xhci_is_root_hub(xhci, slot_id)) {
@@ -570,7 +584,6 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
     mtx_lock(&xhci->input_context_lock);
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
-    zx_paddr_t icc_phys = xhci->input_context_phys;
     xhci_slot_context_t* sc = (xhci_slot_context_t*)&xhci->input_context[1 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
 
@@ -645,36 +658,33 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
         XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS,
                         index + 1);
+
+        status = xhci_update_input_context(xhci, slot_id, index);
+        mtx_unlock(&xhci->input_context_lock);
+
+        // xhci_stop_endpoint() will handle the !enable case
+        if (status == ZX_OK) {
+            ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
+            if (!ep->transfer_state) {
+                status = ZX_ERR_NO_MEMORY;
+            } else {
+                ep->state = EP_STATE_RUNNING;
+            }
+        }
+        mtx_unlock(&ep->lock);
+        return status;
+
     } else {
+        // xhci_stop_endpoint will try to acquire the endpoint lock.
+        // It also needs to wait for the TRB_CMD_STOP_ENDPOINT completion, which may never
+        // complete if another xhci event is waiting for the same endpoint lock.
+        mtx_unlock(&ep->lock);
         xhci_stop_endpoint(xhci, slot_id, index, EP_STATE_DISABLED, ZX_ERR_BAD_STATE);
         XHCI_WRITE32(&icc->drop_context_flags, XHCI_ICC_EP_FLAG(index));
+        zx_status_t status = xhci_update_input_context(xhci, slot_id, index);
+        mtx_unlock(&xhci->input_context_lock);
+        return status;
     }
-
-#if XHCI_USE_CACHE_OPS
-    // flush icc and sc
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN, 0,
-                       2 * xhci->context_size);
-    // flush epc
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN,
-                       (index + 2) * xhci->context_size, xhci->context_size);
-#endif
-
-    zx_status_t status = xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
-                                           (slot_id << TRB_SLOT_ID_START));
-    mtx_unlock(&xhci->input_context_lock);
-
-    // xhci_stop_endpoint() will handle the !enable case
-    if (status == ZX_OK && enable) {
-        ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
-        if (!ep->transfer_state) {
-            status = ZX_ERR_NO_MEMORY;
-        } else {
-            ep->state = EP_STATE_RUNNING;
-        }
-    }
-    mtx_unlock(&ep->lock);
-
-    return status;
 }
 
 zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
