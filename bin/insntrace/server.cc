@@ -217,7 +217,7 @@ void IptServer::OnThreadStarting(Process* process,
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, process, thread, ZX_EXCP_THREAD_STARTING, context);
+  PrintException(stdout, thread, ZX_EXCP_THREAD_STARTING, context);
 
   switch (process->state()) {
   case Process::State::kStarting:
@@ -247,7 +247,7 @@ void IptServer::OnThreadExiting(Process* process,
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, process, thread, type, context);
+  PrintException(stdout, thread, type, context);
 
   // Dump any collected trace.
   if (config_.mode == IPT_MODE_THREADS) {
@@ -268,7 +268,8 @@ void IptServer::OnProcessExit(Process* process,
                               const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 
-  PrintException(stdout, process, nullptr, type, context);
+  printf("Process %s is gone, rc %d\n",
+         process->GetName().c_str(), process->ExitCode());
 
   // If the process is gone, unset current thread, and exit main loop.
   SetCurrentThread(nullptr);
@@ -284,7 +285,7 @@ void IptServer::OnArchitecturalException(Process* process,
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FXL_DCHECK(process == current_process());
 
-  PrintException(stdout, process, thread, type, context);
+  PrintException(stdout, thread, type, context);
 
   // This is generally a segv or some such. Not much we can do.
   QuitMessageLoop(true);

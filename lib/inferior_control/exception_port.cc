@@ -242,8 +242,7 @@ void ExceptionPort::Worker() {
   }
 }
 
-void PrintException(FILE* out, Process* process, Thread* thread,
-                    zx_excp_type_t type,
+void PrintException(FILE* out, Thread* thread, zx_excp_type_t type,
                     const zx_exception_context_t& context) {
   if (ZX_EXCP_IS_ARCH(type)) {
     fprintf(out, "Thread %s received exception %s\n",
