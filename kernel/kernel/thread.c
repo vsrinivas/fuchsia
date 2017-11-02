@@ -137,10 +137,10 @@ thread_t* thread_create_etc(
 
     /* create the stack */
     if (!stack) {
-#if THREAD_STACK_BOUNDS_CHECK
-        stack_size += THREAD_STACK_PADDING_SIZE;
-        flags |= THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK;
-#endif
+        if (THREAD_STACK_BOUNDS_CHECK) {
+            stack_size += THREAD_STACK_PADDING_SIZE;
+            flags |= THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK;
+        }
         t->stack = malloc(stack_size);
         if (!t->stack) {
             if (flags & THREAD_FLAG_FREE_STRUCT)
@@ -148,9 +148,9 @@ thread_t* thread_create_etc(
             return NULL;
         }
         flags |= THREAD_FLAG_FREE_STACK;
-#if THREAD_STACK_BOUNDS_CHECK
-        memset(t->stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
-#endif
+        if (THREAD_STACK_BOUNDS_CHECK) {
+            memset(t->stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
+        }
     } else {
         t->stack = stack;
     }
@@ -166,9 +166,9 @@ thread_t* thread_create_etc(
                 free(t);
             return NULL;
         }
-#if THREAD_STACK_BOUNDS_CHECK
-        memset(t->unsafe_stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
-#endif
+        if (THREAD_STACK_BOUNDS_CHECK) {
+            memset(t->unsafe_stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
+        }
     } else {
         DEBUG_ASSERT(stack);
         t->unsafe_stack = unsafe_stack;

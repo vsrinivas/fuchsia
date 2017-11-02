@@ -22,12 +22,11 @@
 __BEGIN_CDECLS
 
 /* debug-enable runtime checks */
-#if LK_DEBUGLEVEL > 1
-#define THREAD_STACK_BOUNDS_CHECK 1
+#define THREAD_STACK_BOUNDS_CHECK (LK_DEBUGLEVEL > 2)
 #ifndef THREAD_STACK_PADDING_SIZE
 #define THREAD_STACK_PADDING_SIZE 256
 #endif
-#endif
+
 #define STACK_DEBUG_BYTE (0x99)
 #define STACK_DEBUG_WORD (0x99999999)
 

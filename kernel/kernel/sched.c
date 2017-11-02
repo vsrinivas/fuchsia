@@ -697,9 +697,9 @@ void sched_resched_internal(void) {
                          oldthread->flags, newthread, newthread->name,
                          newthread->base_priority, newthread->priority_boost, newthread->flags);
 
-#if THREAD_STACK_BOUNDS_CHECK
     /* check that the old thread has not blown its stack just before pushing its context */
-    if (oldthread->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) {
+    if (THREAD_STACK_BOUNDS_CHECK &&
+        unlikely(oldthread->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK)) {
         static_assert((THREAD_STACK_PADDING_SIZE % sizeof(uint32_t)) == 0, "");
         uint32_t* s = (uint32_t*)oldthread->stack;
         for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
@@ -721,7 +721,6 @@ void sched_resched_internal(void) {
         }
 #endif
     }
-#endif
 
     /* see if we need to swap mmu context */
     if (newthread->aspace != oldthread->aspace) {
