@@ -1002,11 +1002,15 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     auto acquire_fence_set =
         std::make_unique<FenceSetListener>(std::move(acquire_fences));
     // TODO: Consider calling ScheduleSessionUpdate immediately if
-    // acquire_fence_set is already ready (which is the case if there are zero
-    // acquire fences).
-    acquire_fence_set->WaitReadyAsync([this, presentation_time] {
-      engine_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
-    });
+    // acquire_fence_set is already ready (which is the case if there are
+    // zero acquire fences).
+
+    acquire_fence_set->WaitReadyAsync(
+        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
+          if (weak)
+            weak->engine_->ScheduleSessionUpdate(presentation_time,
+                                                 SessionPtr(weak.get()));
+        });
 
     scheduled_updates_.push(Update{presentation_time, std::move(ops),
                                    std::move(acquire_fence_set),
