@@ -8,6 +8,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/strings/split_string.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/user/config.h"
 #include "peridot/bin/user/user_intelligence_provider_impl.h"
@@ -47,7 +48,7 @@ const char kConfigSchema[] = R"SCHEMA(
     "kronk": { "type": "string" },
     "mi_dashboard": { "type": "boolean" }
   },
-  "required": [ "startup_agents", "mi_dashboard" ],
+  "required": [ "startup_agents" ],
   "extra_properties": false
 }
 )SCHEMA";
@@ -56,7 +57,7 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
   // Load the config datafile to a string.
   std::string data;
   if (!files::ReadFileToString(path, &data)) {
-    FXL_LOG(FATAL) << "Missing config file: " << path;
+    FXL_LOG(WARNING) << "Missing config file: " << path;
     return false;
   }
 
@@ -92,12 +93,9 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
     out->kronk = config_doc["kronk"].GetString();
   }
 
-  out->mi_dashboard = config_doc["mi_dashboard"].GetBool();
-#ifdef DEPRECATED_NO_MI_DASHBOARD
-  // TODO(thatguy): Remove this once references to it in Modular tests
-  // have been removed.
-  out->mi_dashboard = false;
-#endif
+  if (config_doc.HasMember("mi_dashboard")) {
+    out->mi_dashboard = config_doc["mi_dashboard"].GetBool();
+  }
 
   for (const auto& agent : config_doc["startup_agents"].GetArray()) {
     out->startup_agents.push_back(agent.GetString());
@@ -109,10 +107,13 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 }  // namespace
 }  // namespace maxwell
 
-const char kDefaultConfigPath[] = "/system/data/maxwell/default_config.json";
-const char kUsage[] = R"USAGE(%s --config=<file>
+const char kDefaultConfigPaths[] =
+    "/system/data/maxwell/default_config.json,"
+    "/system/data/maxwell/second_config.json";
+const char kUsage[] = R"USAGE(%s --config=<files>
 
-<file> = path to a JSON configuration file with the following format:
+<files> = comma-separated list of paths to JSON configuration files
+with the following format:
 
 {
   "startup_agents": [
@@ -130,11 +131,31 @@ int main(int argc, const char** argv) {
     printf(kUsage, argv[0]);
     return 0;
   }
-  const std::string config_path =
-      command_line.GetOptionValueWithDefault("config", kDefaultConfigPath);
+  const std::string config_paths =
+      command_line.GetOptionValueWithDefault("config", kDefaultConfigPaths);
+  std::vector<std::string> config_paths_list = fxl::SplitStringCopy(
+      config_paths, ",", fxl::kTrimWhitespace, fxl::kSplitWantAll);
 
   maxwell::Config config;
-  if (!maxwell::LoadAndValidateConfig(config_path, &config)) {
+  if (config_paths_list.size() > 0) {
+    // the first listed config file must exist and be valid
+    if (!maxwell::LoadAndValidateConfig(config_paths_list[0], &config)) {
+      FXL_LOG(FATAL) << "First config file missing or failed to load: "
+                     << config_paths_list[0];
+      return 1;
+    }
+
+    // Startup agents from all config files will be merged.  mi_dashboard and
+    // other global settings will be superseded by later files.
+    for (size_t i = 1; i < config_paths_list.size(); i++) {
+      auto const& path = config_paths_list[i];
+      if (files::IsFile(path) &&
+          !maxwell::LoadAndValidateConfig(path, &config)) {
+        FXL_LOG(WARNING) << "Config file failed to load: " << path;
+      }
+    }
+  } else {
+    FXL_LOG(FATAL) << "No config files specified.";
     return 1;
   }
 

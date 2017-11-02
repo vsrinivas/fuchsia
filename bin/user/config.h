@@ -19,7 +19,7 @@ struct Config {
   std::string kronk;
 
   // Set to true if the MI Dashboard should be started.
-  bool mi_dashboard;
+  bool mi_dashboard = false;
 };
 
 std::ostream& operator<<(std::ostream& out, const Config& config);

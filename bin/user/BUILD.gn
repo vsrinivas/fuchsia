@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # DEPRECATED: The below variables are deprecated.
-  # Instead use a config json as described in README.md.
-
-  # set to true to bypass mi_dashboard launch.
-  deprecated_no_mi_dashboard = false
-}
-
 source_set("user") {
   deps = [
     ":maxwell_main",
@@ -67,12 +59,6 @@ source_set("user_intelligence_provider") {
     "//peridot/public/lib/user_intelligence/fidl",
     "//peridot/public/lib/user_intelligence/fidl:scope",
   ]
-
-  defines = []
-
-  if (deprecated_no_mi_dashboard) {
-    defines += [ "DEPRECATED_NO_MI_DASHBOARD" ]
-  }
 }
 
 source_set("intelligence_services") {
