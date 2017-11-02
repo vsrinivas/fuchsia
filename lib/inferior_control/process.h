@@ -61,6 +61,15 @@ class Process final {
         Thread* thread,
         const zx_excp_type_t type,
         const zx_exception_context_t& context) = 0;
+
+    // Called when |thread| has gets a synthetic exception
+    // (e.g., ZX_EXCP_POLICY_ERROR) that is akin to an architectural
+    // exception: the program got an error and by default crashes.
+    virtual void OnSyntheticException(
+        Process* process,
+        Thread* thread,
+        const zx_excp_type_t type,
+        const zx_exception_context_t& context) = 0;
   };
 
   explicit Process(Server* server,

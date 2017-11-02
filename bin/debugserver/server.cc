@@ -420,10 +420,30 @@ void RspServer::OnArchitecturalException(
     Thread* thread,
     const zx_excp_type_t type,
     const zx_exception_context_t& context) {
+  ExceptionHelper(process, thread, type, context);
+}
+
+void RspServer::OnSyntheticException(
+    Process* process, Thread* thread, zx_excp_type_t type,
+    const zx_exception_context_t& context) {
+  // These are basically equivalent to architectural exceptions
+  // for our purposes. Handle them the same way.
+  ExceptionHelper(process, thread, type, context);
+}
+
+void RspServer::ExceptionHelper(
+    Process* process, Thread* thread, zx_excp_type_t type,
+    const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
-  FXL_VLOG(1) << "Architectural Exception: "
-              << util::ExceptionToString(type, context);
+
+  if (ZX_EXCP_IS_ARCH(type)) {
+    FXL_VLOG(1) << "Architectural Exception: "
+                << util::ExceptionToString(type, context);
+  } else {
+    FXL_VLOG(1) << "Synthetic Exception: "
+                << util::ExceptionToString(type, context);
+  }
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FXL_DCHECK(process == current_process());
@@ -447,7 +467,6 @@ void RspServer::OnArchitecturalException(
     std::array<int, 3> regnos{{arch::GetFPRegisterNumber(),
                                arch::GetSPRegisterNumber(),
                                arch::GetPCRegisterNumber()}};
-
     for (int regno : regnos) {
       FXL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
       std::string regval = thread->registers()->GetRegisterAsString(regno);

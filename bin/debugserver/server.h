@@ -138,6 +138,12 @@ class RspServer final : public Server {
                                 Thread* thread,
                                 const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
+  void OnSyntheticException(Process* process, Thread* thread,
+                            zx_excp_type_t type,
+                            const zx_exception_context_t& context) override;
+  void ExceptionHelper(
+      Process* process, Thread* thread, zx_excp_type_t type,
+      const zx_exception_context_t& context);
 
   // TCP port number that we will listen on.
   uint16_t port_;

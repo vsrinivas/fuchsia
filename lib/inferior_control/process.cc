@@ -726,7 +726,7 @@ void Process::OnException(const zx_port_packet_t& packet,
                   << thread->GetName();
       FXL_DCHECK(thread);
       thread->OnException(type, context);
-      // TODO(dje): process synthetic exception
+      delegate_->OnSyntheticException(this, thread, type, context);
       break;
     default:
       FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;

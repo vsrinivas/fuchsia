@@ -117,6 +117,9 @@ class IptServer final : public Server {
                                 Thread* thread,
                                 const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
+  void OnSyntheticException(Process* process, Thread* thread,
+                            zx_excp_type_t type,
+                            const zx_exception_context_t& context) override;
 
   IptConfig config_;
 

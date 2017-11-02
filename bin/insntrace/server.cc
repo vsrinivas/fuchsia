@@ -289,4 +289,16 @@ void IptServer::OnArchitecturalException(Process* process,
   QuitMessageLoop(true);
 }
 
+void IptServer::OnSyntheticException(Process* process, Thread* thread,
+                                     zx_excp_type_t type,
+                                     const zx_exception_context_t& context) {
+  FXL_DCHECK(process);
+  FXL_DCHECK(thread);
+
+  PrintException(stdout, thread, type, context);
+
+  // Program is crashing.
+  QuitMessageLoop(true);
+}
+
 }  // namespace debugserver
