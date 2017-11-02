@@ -160,6 +160,7 @@ template("package") {
       # TODO(abarth): Remove |archive| and set the default for |system_image| to
       # false once all non-archived packages set |system_image| to true.
       archive = false
+      system_image = false
       binaries = []
       drivers = []
       libraries = []
@@ -175,10 +176,7 @@ template("package") {
                                               "root_out_dir")
     not_needed(["shared_toolchain_out_dir"])
 
-    if (defined(pkg.system_image)) {
-      assert(pkg.system_image == !pkg.archive)
-    }
-
+    assert(pkg.system_image == !pkg.archive)
     assert(pkg.drivers == [] || !pkg.archive)
 
     mkfs_target = target_name + "_mkfs"
