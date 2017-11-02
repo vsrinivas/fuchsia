@@ -900,3 +900,14 @@ void platform_init(void)
 
     platform_init_smp();
 }
+
+void platform_suspend(void)
+{
+    platform_prep_suspend_timer();
+}
+
+void platform_resume(void)
+{
+    platform_resume_debug();
+    platform_resume_timer();
+}

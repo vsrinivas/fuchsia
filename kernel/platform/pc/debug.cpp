@@ -95,6 +95,19 @@ void platform_debug_start_uart_timer(void)
     }
 }
 
+static void init_uart(void) {
+    /* configure the uart */
+    int divisor = 115200 / uart_baud_rate;
+
+    /* get basic config done so that tx functions */
+    uart_write(1, 0); // mask all irqs
+    uart_write(3, 0x80); // set up to load divisor latch
+    uart_write(0, static_cast<uint8_t>(divisor)); // lsb
+    uart_write(1, static_cast<uint8_t>(divisor >> 8)); // msb
+    uart_write(3, 3); // 8N1
+    uart_write(2, 0xc7); // enable FIFO, clear, 14-byte threshold
+}
+
 void platform_init_debug_early(void)
 {
     switch (bootloader.uart.type) {
@@ -108,16 +121,7 @@ void platform_init_debug_early(void)
         break;
     }
 
-    /* configure the uart */
-    int divisor = 115200 / uart_baud_rate;
-
-    /* get basic config done so that tx functions */
-    uart_write(1, 0); // mask all irqs
-    uart_write(3, 0x80); // set up to load divisor latch
-    uart_write(0, static_cast<uint8_t>(divisor)); // lsb
-    uart_write(1, static_cast<uint8_t>(divisor >> 8)); // msb
-    uart_write(3, 3); // 8N1
-    uart_write(2, 0xc7); // enable FIFO, clear, 14-byte threshold
+    init_uart();
 
     output_enabled = true;
 }
@@ -141,6 +145,10 @@ void platform_init_debug(void)
         const uint8_t mcr = uart_read(4);
         uart_write(4, mcr | 0x8);
     }
+}
+
+void platform_resume_debug(void) {
+    init_uart();
 }
 
 static void debug_uart_putc(char c)

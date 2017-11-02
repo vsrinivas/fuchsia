@@ -16,8 +16,8 @@
 
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
-#include <arch/x86/timer_freq.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/timer_freq.h>
 #include <lib/fixed_point.h>
 #include <lk/init.h>
 #include <fbl/algorithm.h>
@@ -592,4 +592,30 @@ void platform_stop_timer(void)
     /* Enable interrupt mode that will stop the decreasing counter of the PIT */
     //outp(I8253_CONTROL_REG, 0x30);
     apic_timer_stop();
+}
+
+static uint64_t saved_hpet_val;
+void platform_prep_suspend_timer(void)
+{
+    if (hpet_is_present()) {
+        saved_hpet_val = hpet_get_value();
+    }
+}
+
+void platform_resume_timer(void)
+{
+    switch (wall_clock) {
+        case CLOCK_HPET:
+            hpet_set_value(saved_hpet_val);
+            hpet_enable();
+            break;
+        case CLOCK_PIT: {
+            set_pit_frequency(1000); // ~1ms granularity
+
+            uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
+            unmask_interrupt(irq);
+            break;
+        }
+        default: break;
+    }
 }
