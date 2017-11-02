@@ -17,3 +17,4 @@ Modifications:
 - Modified source/components/tables/tbxfload.c to check AcpiGbl_DsdtIndex
 - Modified AcpiHwLegacySleep to extract out a subfunction AcpiHwLegacySleepFinal (needed
   for Zircon suspend-to-RAM support).
+- Made AcpiHwSetFirmwareWakingVector an exported function

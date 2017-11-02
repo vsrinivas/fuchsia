@@ -51,14 +51,6 @@
 
 /* Local prototypes */
 
-#if (!ACPI_REDUCED_HARDWARE)
-static ACPI_STATUS
-AcpiHwSetFirmwareWakingVector (
-    ACPI_TABLE_FACS         *Facs,
-    ACPI_PHYSICAL_ADDRESS   PhysicalAddress,
-    ACPI_PHYSICAL_ADDRESS   PhysicalAddress64);
-#endif
-
 static ACPI_STATUS
 AcpiHwSleepDispatch (
     UINT8                   SleepState,
@@ -105,7 +97,7 @@ static ACPI_SLEEP_FUNCTIONS         AcpiSleepDispatch[] =
  *
  ******************************************************************************/
 
-static ACPI_STATUS
+ACPI_STATUS
 AcpiHwSetFirmwareWakingVector (
     ACPI_TABLE_FACS         *Facs,
     ACPI_PHYSICAL_ADDRESS   PhysicalAddress,

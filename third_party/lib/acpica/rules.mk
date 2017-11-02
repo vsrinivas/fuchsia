@@ -20,6 +20,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/hardware/hwsleep.c \
 	$(LOCAL_DIR)/source/components/hardware/hwvalid.c \
 	$(LOCAL_DIR)/source/components/hardware/hwxface.c \
+	$(LOCAL_DIR)/source/components/hardware/hwxfsleep.c \
 	$(LOCAL_DIR)/source/components/tables/tbdata.c \
 	$(LOCAL_DIR)/source/components/tables/tbfadt.c \
 	$(LOCAL_DIR)/source/components/tables/tbfind.c \
