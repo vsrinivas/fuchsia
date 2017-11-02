@@ -23,21 +23,21 @@ zx_status_t SparseContainer::Create(const char* path, size_t slice_size,
 
 SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
     : Container(slice_size) {
-    fd_ = open(path, O_CREAT | O_RDWR, 0666);
+    fd_.reset(open(path, O_CREAT | O_RDWR, 0666));
 
-    if (fd_ < 0) {
+    if (!fd_) {
         printf("Failed to open sparse data path\n");
         exit(-1);
     }
 
     struct stat s;
-    if (fstat(fd_, &s) < 0) {
+    if (fstat(fd_.get(), &s) < 0) {
         printf("Failed to stat %s\n", path);
         exit(-1);
     }
 
     if (s.st_size > 0) {
-        if (read(fd_, &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
+        if (read(fd_.get(), &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
             fprintf(stderr, "SparseContainer: Failed to read the sparse header\n");
             exit(-1);
         }
@@ -45,7 +45,8 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
         for (unsigned i = 0; i < image_.partition_count; i++) {
             partition_info_t partition;
             partitions_.push_back(fbl::move(partition));
-            if (read(fd_, &partitions_[i].descriptor, sizeof(fvm::partition_descriptor_t)) != sizeof(fvm::partition_descriptor_t)) {
+            if (read(fd_.get(), &partitions_[i].descriptor, sizeof(fvm::partition_descriptor_t)) !=
+                    sizeof(fvm::partition_descriptor_t)) {
                 fprintf(stderr, "SparseContainer: Failed to read partition %u\n", i);
                 exit(-1);
             }
@@ -53,7 +54,8 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
             for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
                 fvm::extent_descriptor_t extent;
                 partitions_[i].extents.push_back(extent);
-                if (read(fd_, &partitions_[i].extents[j], sizeof(fvm::extent_descriptor_t)) != sizeof(fvm::extent_descriptor_t)) {
+                if (read(fd_.get(), &partitions_[i].extents[j], sizeof(fvm::extent_descriptor_t)) !=
+                        sizeof(fvm::extent_descriptor_t)) {
                     fprintf(stderr, "SparseContainer: Failed to read extent\n");
                     exit(-1);
                 }
@@ -64,9 +66,7 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
     }
 }
 
-SparseContainer::~SparseContainer() {
-    close(fd_);
-}
+SparseContainer::~SparseContainer() = default;
 
 zx_status_t SparseContainer::Init() {
     image_.magic = fvm::kSparseFormatMagic;
@@ -113,13 +113,13 @@ zx_status_t SparseContainer::Commit() {
     // Recalculate and verify header length
     uint64_t header_length = 0;
 
-    if (lseek(fd_, 0, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
         printf("Seek reset failed\n");
         return ZX_ERR_IO;
     }
 
     header_length += sizeof(fvm::sparse_image_t);
-    if (write(fd_, &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
+    if (write(fd_.get(), &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
         printf("Write sparse image header failed\n");
         return ZX_ERR_IO;
     }
@@ -128,7 +128,8 @@ zx_status_t SparseContainer::Commit() {
         fvm::partition_descriptor_t partition = partitions_[i].descriptor;
 
         header_length += sizeof(fvm::partition_descriptor_t);
-        if (write(fd_, &partition, sizeof(fvm::partition_descriptor_t)) != sizeof(fvm::partition_descriptor_t)) {
+        if (write(fd_.get(), &partition, sizeof(fvm::partition_descriptor_t)) !=
+                sizeof(fvm::partition_descriptor_t)) {
             printf("Write partition failed\n");
             return ZX_ERR_IO;
         }
@@ -136,7 +137,8 @@ zx_status_t SparseContainer::Commit() {
         for (unsigned j = 0; j < partition.extent_count; j++) {
             fvm::extent_descriptor_t extent = partitions_[i].extents[j];
             header_length += sizeof(fvm::extent_descriptor_t);
-            if (write(fd_, &extent, sizeof(fvm::extent_descriptor_t)) != sizeof(fvm::extent_descriptor_t)) {
+            if (write(fd_.get(), &extent, sizeof(fvm::extent_descriptor_t)) !=
+                    sizeof(fvm::extent_descriptor_t)) {
                 printf("Write extent failed\n");
                 return ZX_ERR_IO;
             }
@@ -168,7 +170,7 @@ zx_status_t SparseContainer::Commit() {
                     return ZX_ERR_IO;
                 }
 
-                if (write(fd_, format->Data(), format->BlockSize()) !=
+                if (write(fd_.get(), format->Data(), format->BlockSize()) !=
                     format->BlockSize()) {
                     fprintf(stderr, "Failed to write data to sparse file\n");
                     return ZX_ERR_IO;

@@ -7,8 +7,8 @@
 static constexpr char kBlobstoreName[] = "blobstore";
 static constexpr uint8_t kBlobstoreType[] = GUID_BLOBFS_VALUE;
 
-BlobfsFormat::BlobfsFormat(int fd, const char* type)
-    : Format(), fd_(fd) {
+BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
+    : Format(), fd_(fbl::move(fd)) {
     if (!strcmp(type, kBlobstoreName)) {
         memcpy(type_, kBlobstoreType, sizeof(kBlobstoreType));
     } else {
@@ -16,12 +16,12 @@ BlobfsFormat::BlobfsFormat(int fd, const char* type)
         exit(-1);
     }
 
-    if (blobstore::readblk(fd_, 0, reinterpret_cast<void*>(blk_)) < 0) {
+    if (blobstore::readblk(fd_.get(), 0, reinterpret_cast<void*>(blk_)) < 0) {
         fprintf(stderr, "blobstore: could not read info block\n");
         exit(-1);
     }
 
-    if (blobstore::blobstore_get_blockcount(fd_, &blocks_) != ZX_OK) {
+    if (blobstore::blobstore_get_blockcount(fd_.get(), &blocks_) != ZX_OK) {
         fprintf(stderr, "blobstore: cannot find end of underlying device\n");
         exit(-1);
     } else if (blobstore::blobstore_check_info(&info_, blocks_) != ZX_OK) {
@@ -30,9 +30,7 @@ BlobfsFormat::BlobfsFormat(int fd, const char* type)
     }
 }
 
-BlobfsFormat::~BlobfsFormat() {
-    close(fd_);
-}
+BlobfsFormat::~BlobfsFormat() = default;
 
 zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     memcpy(&fvm_blk_, &blk_, BlockSize());
@@ -120,7 +118,7 @@ zx_status_t BlobfsFormat::FillBlock(size_t block_offset) {
     // If we are reading the super block, make sure it is the fvm version and not the original
     if (block_offset == 0) {
         memcpy(datablk, fvm_blk_, BlockSize());
-    } else if (blobstore::readblk(fd_, block_offset, datablk) != ZX_OK) {
+    } else if (blobstore::readblk(fd_.get(), block_offset, datablk) != ZX_OK) {
         fprintf(stderr, "blobstore: could not read block\n");
         return ZX_ERR_INTERNAL;
     }

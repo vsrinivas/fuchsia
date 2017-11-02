@@ -87,15 +87,14 @@ int status_to_errno(zx_status_t status) {
 fbl::RefPtr<fs::Vnode> fake_root = nullptr;
 
 int emu_mkfs(const char* path) {
-    int fd = open(path, O_RDWR);
-
-    if (fd < 0) {
+    fbl::unique_fd fd(open(path, O_RDWR));
+    if (!fd) {
         fprintf(stderr, "error: could not open path %s\n", path);
         return -1;
     }
 
     struct stat s;
-    if (fstat(fd, &s) < 0) {
+    if (fstat(fd.get(), &s) < 0) {
         fprintf(stderr, "error: minfs could not find end of file/device\n");
         return -1;
     }
@@ -103,7 +102,7 @@ int emu_mkfs(const char* path) {
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fd, (uint32_t) size) < 0) {
+    if (minfs::Bcache::Create(&bc, fbl::move(fd), (uint32_t) size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }
@@ -112,14 +111,14 @@ int emu_mkfs(const char* path) {
 }
 
 int emu_mount(const char* path) {
-    int fd = open(path, O_RDWR);
-    if (fd < 0) {
+    fbl::unique_fd fd(open(path, O_RDWR));
+    if (!fd) {
         fprintf(stderr, "error: could not open path %s\n", path);
         return -1;
     }
 
     struct stat s;
-    if (fstat(fd, &s) < 0) {
+    if (fstat(fd.get(), &s) < 0) {
         fprintf(stderr, "error: minfs could not find end of file/device\n");
         return 0;
     }
@@ -127,7 +126,7 @@ int emu_mount(const char* path) {
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fd, (uint32_t) size) < 0) {
+    if (minfs::Bcache::Create(&bc, fbl::move(fd), (uint32_t) size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

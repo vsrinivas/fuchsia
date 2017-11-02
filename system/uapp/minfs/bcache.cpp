@@ -24,11 +24,11 @@ zx_status_t Bcache::Readblk(blk_t bno, void* data) {
     off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
-    if (lseek(fd_, off, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
         return ZX_ERR_IO;
     }
-    if (read(fd_, data, kMinfsBlockSize) != kMinfsBlockSize) {
+    if (read(fd_.get(), data, kMinfsBlockSize) != kMinfsBlockSize) {
         FS_TRACE_ERROR("minfs: cannot read block %u\n", bno);
         return ZX_ERR_IO;
     }
@@ -39,11 +39,11 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
     off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
-    if (lseek(fd_, off, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
         return ZX_ERR_IO;
     }
-    if (write(fd_, data, kMinfsBlockSize) != kMinfsBlockSize) {
+    if (write(fd_.get(), data, kMinfsBlockSize) != kMinfsBlockSize) {
         FS_TRACE_ERROR("minfs: cannot write block %u\n", bno);
         return ZX_ERR_IO;
     }
@@ -51,12 +51,12 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
 }
 
 int Bcache::Sync() {
-    return fsync(fd_);
+    return fsync(fd_.get());
 }
 
-zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax) {
+zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax));
+    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(fbl::move(fd), blockmax));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -65,7 +65,7 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockm
     zx_handle_t fifo;
     ssize_t r;
 
-    if ((r = ioctl_block_get_fifos(fd, &fifo)) < 0) {
+    if ((r = ioctl_block_get_fifos(bc->fd_.get(), &fifo)) < 0) {
         return static_cast<zx_status_t>(r);
     } else if (bc->TxnId() == TXNID_INVALID) {
         zx_handle_close(fifo);
@@ -83,7 +83,7 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockm
 
 #ifdef __Fuchsia__
 ssize_t Bcache::GetDevicePath(char* out, size_t out_len) {
-    return ioctl_device_get_topo_path(fd_, out, out_len);
+    return ioctl_device_get_topo_path(fd_.get(), out, out_len);
 }
 
 zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
@@ -92,7 +92,7 @@ zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
     if (status != ZX_OK) {
         return status;
     }
-    ssize_t r = ioctl_block_attach_vmo(fd_, &xfer_vmo, out);
+    ssize_t r = ioctl_block_attach_vmo(fd_.get(), &xfer_vmo, out);
     if (r < 0) {
         zx_handle_close(xfer_vmo);
         return static_cast<zx_status_t>(r);
@@ -101,18 +101,17 @@ zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
 }
 #endif
 
-Bcache::Bcache(int fd, uint32_t blockmax) :
-    fd_(fd), blockmax_(blockmax) {}
+Bcache::Bcache(fbl::unique_fd fd, uint32_t blockmax) :
+    fd_(fbl::move(fd)), blockmax_(blockmax) {}
 
 Bcache::~Bcache() {
 #ifdef __Fuchsia__
     if (fifo_client_ != nullptr) {
         FreeTxnId();
-        ioctl_block_fifo_close(fd_);
+        ioctl_block_fifo_close(fd_.get());
         block_fifo_release_client(fifo_client_);
     }
 #endif
-    close(fd_);
 }
 
 #ifndef __Fuchsia__

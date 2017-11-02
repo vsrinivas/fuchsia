@@ -2,29 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/unique_fd.h>
+
 #include "container.h"
 
 zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* container) {
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) {
+    fbl::unique_fd fd(open(path, O_RDONLY));
+    if (!fd) {
         printf("Unable to open path %s\n", path);
         return -1;
     }
 
     uint8_t data[HEADER_SIZE];
-    if (lseek(fd, 0, SEEK_SET) < 0) {
+    if (lseek(fd.get(), 0, SEEK_SET) < 0) {
         printf("Error seeking block device\n");
-        close(fd);
         return -1;
     }
 
-    if (read(fd, data, sizeof(data)) != sizeof(data)) {
+    if (read(fd.get(), data, sizeof(data)) != sizeof(data)) {
         fprintf(stderr, "Error reading block device\n");
-        close(fd);
         return -1;
     }
-
-    close(fd);
 
     fbl::AllocChecker ac;
 

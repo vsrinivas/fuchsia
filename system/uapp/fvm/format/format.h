@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <time.h>
 
 #include <blobstore/blobstore.h>
-#include <fcntl.h>
+#include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
 #include <minfs/minfs.h>
@@ -79,7 +80,7 @@ protected:
 
 class MinfsFormat final : public Format {
 public:
-    MinfsFormat(int fd, const char* type);
+    MinfsFormat(fbl::unique_fd fd, const char* type);
     zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index) final;
     zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
     zx_status_t FillBlock(size_t block_offset) final;
@@ -108,7 +109,7 @@ private:
 
 class BlobfsFormat final : public Format {
 public:
-    BlobfsFormat(int fd, const char* type);
+    BlobfsFormat(fbl::unique_fd fd, const char* type);
     ~BlobfsFormat();
     zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index) final;
     zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
@@ -121,7 +122,7 @@ public:
     uint8_t datablk[blobstore::kBlobstoreBlockSize];
 
 private:
-    int fd_;
+    fbl::unique_fd fd_;
     uint64_t blocks_;
 
     // Input superblock

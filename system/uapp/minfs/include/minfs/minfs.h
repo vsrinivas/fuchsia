@@ -12,6 +12,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_free_ptr.h>
 
 #include <zircon/misc/fnv1hash.h>
@@ -198,7 +199,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
 
-    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax);
+    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax);
 
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)
@@ -217,7 +218,7 @@ public:
     }
 
     zx_status_t FVMQuery(fvm_info_t* info) {
-        ssize_t r = ioctl_block_fvm_query(fd_, info);
+        ssize_t r = ioctl_block_fvm_query(fd_.get(), info);
         if (r < 0) {
             return static_cast<zx_status_t>(r);
         }
@@ -225,7 +226,7 @@ public:
     }
 
     zx_status_t FVMVsliceQuery(const query_request_t* request, query_response_t* response) {
-        ssize_t r = ioctl_block_fvm_vslice_query(fd_, request, response);
+        ssize_t r = ioctl_block_fvm_vslice_query(fd_.get(), request, response);
         if (r != sizeof(query_response_t)) {
             return r < 0 ? static_cast<zx_status_t>(r) : ZX_ERR_BAD_STATE;
         }
@@ -233,7 +234,7 @@ public:
     }
 
     zx_status_t FVMExtend(const extend_request_t* request) {
-        ssize_t r = ioctl_block_fvm_extend(fd_, request);
+        ssize_t r = ioctl_block_fvm_extend(fd_.get(), request);
         if (r < 0) {
             return static_cast<zx_status_t>(r);
         }
@@ -241,7 +242,7 @@ public:
     }
 
     zx_status_t FVMShrink(const extend_request_t* request) {
-        ssize_t r = ioctl_block_fvm_shrink(fd_, request);
+        ssize_t r = ioctl_block_fvm_shrink(fd_.get(), request);
         if (r < 0) {
             return static_cast<zx_status_t>(r);
         }
@@ -251,12 +252,12 @@ public:
     // Acquires a Thread-local TxnId that can be used for sending messages
     // over the block I/O FIFO.
     txnid_t TxnId() const {
-        ZX_DEBUG_ASSERT(fd_ > 0);
+        ZX_DEBUG_ASSERT(fd_);
         thread_local txnid_t txnid_ = TXNID_INVALID;
         if (txnid_ != TXNID_INVALID) {
             return txnid_;
         }
-        if (ioctl_block_alloc_txn(fd_, &txnid_) < 0) {
+        if (ioctl_block_alloc_txn(fd_.get(), &txnid_) < 0) {
             return TXNID_INVALID;
         }
         return txnid_;
@@ -269,7 +270,7 @@ public:
         if (tid == TXNID_INVALID) {
             return;
         }
-        ioctl_block_free_txn(fd_, &tid);
+        ioctl_block_free_txn(fd_.get(), &tid);
     }
 
 #endif
@@ -279,12 +280,12 @@ public:
     ~Bcache();
 
 private:
-    Bcache(int fd, uint32_t blockmax);
+    Bcache(fbl::unique_fd fd, uint32_t blockmax);
 
 #ifdef __Fuchsia__
     fifo_client_t* fifo_client_{}; // Fast path to interact with block device
 #endif
-    int fd_ = -1;
+    fbl::unique_fd fd_{};
     uint32_t blockmax_{};
 };
 

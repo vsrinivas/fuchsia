@@ -24,13 +24,14 @@ zx_status_t FvmContainer::Create(const char* path, size_t slice_size,
 FvmContainer::FvmContainer(const char* path, size_t slice_size)
     : Container(slice_size), valid_(false),
       vpart_hint_(1), pslice_hint_(1) {
-    if ((fd_ = open(path, O_RDWR, 0644)) < 0) {
+    fd_.reset(open(path, O_RDWR, 0644));
+    if (!fd_) {
         printf("Failed to open path %s\n", path);
         exit(-1);
     }
 
     struct stat s;
-    if (fstat(fd_, &s) < 0) {
+    if (fstat(fd_.get(), &s) < 0) {
         printf("Failed to stat %s\n", path);
         exit(-1);
     }
@@ -47,7 +48,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
         exit(-1);
     }
 
-    if (lseek(fd_, 0, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
         printf("Seek reset failed\n");
         exit(-1);
     }
@@ -55,7 +56,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
     // Clear entire primary copy of metadata
     memset(metadata_.get(), 0, metadata_size_);
 
-    ssize_t rd = read(fd_, metadata_.get(), metadata_size_ * 2);
+    ssize_t rd = read(fd_.get(), metadata_.get(), metadata_size_ * 2);
     if (rd != static_cast<ssize_t>(metadata_size_ * 2)) {
         printf("Metadata read failed: expected %ld, actual %ld\n", metadata_size_, rd);
         exit(-1);
@@ -74,9 +75,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
     }
 }
 
-FvmContainer::~FvmContainer() {
-    close(fd_);
-}
+FvmContainer::~FvmContainer() = default;
 
 zx_status_t FvmContainer::Init() {
     // Superblock
@@ -147,17 +146,17 @@ zx_status_t FvmContainer::Commit() {
 
     fvm_update_hash(metadata_.get(), metadata_size_);
 
-    if (lseek(fd_, 0, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
         printf("Error seeking disk\n");
         return ZX_ERR_IO;
     }
 
-    if (write(fd_, metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
+    if (write(fd_.get(), metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
         printf("Error writing metadata to disk\n");
         return ZX_ERR_IO;
     }
 
-    if (write(fd_, metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
+    if (write(fd_.get(), metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
         printf("Error writing metadata to disk\n");
         return ZX_ERR_IO;
     }
@@ -318,12 +317,12 @@ zx_status_t FvmContainer::WriteData(uint32_t vpart, uint32_t pslice, void* data,
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    if (lseek(fd_, fvm::SliceStart(disk_size_, slice_size_, pslice) + block_offset * block_size,
-              SEEK_SET) < 0) {
+    if (lseek(fd_.get(), fvm::SliceStart(disk_size_, slice_size_, pslice) +
+                block_offset * block_size, SEEK_SET) < 0) {
         return ZX_ERR_BAD_STATE;
     }
 
-    ssize_t r = write(fd_, data, block_size);
+    ssize_t r = write(fd_.get(), data, block_size);
     if (r != block_size) {
         printf("Failed to write data to FVM\n");
         return ZX_ERR_BAD_STATE;

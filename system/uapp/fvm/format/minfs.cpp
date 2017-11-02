@@ -10,7 +10,7 @@ static constexpr char kSystemTypeName[] = "system";
 static constexpr uint8_t kDataType[] = GUID_DATA_VALUE;
 static constexpr uint8_t kSystemType[] = GUID_SYSTEM_VALUE;
 
-MinfsFormat::MinfsFormat(int fd, const char* type)
+MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
     : Format() {
     if (!strcmp(type, kDataTypeName)) {
         memcpy(type_, kDataType, sizeof(kDataType));
@@ -23,7 +23,7 @@ MinfsFormat::MinfsFormat(int fd, const char* type)
 
     struct stat s;
 
-    if (fstat(fd, &s) < 0) {
+    if (fstat(fd.get(), &s) < 0) {
         fprintf(stderr, "error: minfs could not find end of file/device\n");
         exit(-1);
     } else if (s.st_size == 0) {
@@ -33,7 +33,7 @@ MinfsFormat::MinfsFormat(int fd, const char* type)
 
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
-    if (minfs::Bcache::Create(&bc_, fd, (uint32_t)size) < 0) {
+    if (minfs::Bcache::Create(&bc_, fbl::move(fd), (uint32_t)size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         exit(-1);
     }

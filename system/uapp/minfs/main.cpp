@@ -316,9 +316,9 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    int fd;
+    fbl::unique_fd fd;
 #ifdef __Fuchsia__
-    fd = FS_FD_BLOCKDEVICE;
+    fd.reset(FS_FD_BLOCKDEVICE);
 #else
     uint32_t flags = O_RDWR;
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
@@ -330,13 +330,14 @@ int main(int argc, char** argv) {
     fprintf(stderr, "minfs: unknown command: %s\n", cmd);
     return usage();
 found:
-    if ((fd = open(fn, flags, 0644)) < 0) {
+    fd.reset(open(fn, flags, 0644));
+    if (!fd) {
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
     }
 #endif
     if (size == 0) {
-        size = get_size(fd);
+        size = get_size(fd.get());
         if (size == 0) {
             fprintf(stderr, "minfs: failed to access block device\n");
             return usage();
@@ -345,7 +346,7 @@ found:
     size /= minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fd, (uint32_t)size) < 0) {
+    if (minfs::Bcache::Create(&bc, fbl::move(fd), (uint32_t)size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

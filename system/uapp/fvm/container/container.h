@@ -5,6 +5,7 @@
 #include <fcntl.h>
 
 #include <fbl/vector.h>
+#include <fbl/unique_fd.h>
 #include <fvm/fvm-sparse.h>
 
 #include "../format/format.h"
@@ -39,7 +40,7 @@ public:
     virtual zx_status_t AddPartition(const char* path, const char* type_name) = 0;
 
 protected:
-    int fd_;
+    fbl::unique_fd fd_;
     bool dirty_;
     size_t slice_size_;
 };
