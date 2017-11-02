@@ -39,7 +39,7 @@ under fuchsia. In order to start `test_runner`, you can:
   workstation, do:
 
 ```
-./packages/gn/gen.py -p packages/gn/boot_test_modular
+fx set --packages packages/gn/boot_test_modular
 
 ```
 
@@ -55,8 +55,8 @@ are all run together by the test runner as specified by the [modular_tests.json]
 configuration file:
 
 ```
-$FUCHSIA_DIR/garnet/bin/test_runner/run_test \
-  --test_file=$FUCHSIA_DIR/peridot/tests/modular_tests.json --sync
+fx exec garnet/bin/test_runner/run_test \
+  --test_file=peridot/tests/modular_tests.json --sync
 ```
 
 The option `--sync` is optional and causes required binaries that have changed
