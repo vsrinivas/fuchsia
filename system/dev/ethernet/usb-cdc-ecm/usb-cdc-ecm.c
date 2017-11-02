@@ -63,6 +63,7 @@ typedef struct {
     list_node_t tx_txn_bufs;        // list of usb_request_t
     list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
     uint64_t tx_drop_notice_ticks;
+    bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
 
     // Receive context
     ecm_endpoint_t rx_endpoint;
@@ -72,6 +73,18 @@ typedef struct {
 static void ecm_unbind(void* cookie) {
     zxlogf(TRACE, "%s: unbinding\n", module_name);
     ecm_ctx_t* ctx = cookie;
+
+    mtx_lock(&ctx->tx_mutex);
+    ctx->unbound = true;
+    if (ctx->ethmac_ifc) {
+        ethmac_netbuf_t* netbuf;
+        while ((netbuf = list_remove_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node)) !=
+               NULL) {
+            ctx->ethmac_ifc->complete_tx(ctx->ethmac_cookie, netbuf, ZX_ERR_PEER_CLOSED);
+        }
+    }
+    mtx_unlock(&ctx->tx_mutex);
+
     device_remove(ctx->zxdev);
 }
 
@@ -83,13 +96,6 @@ static void ecm_free(ecm_ctx_t* ctx) {
     usb_request_t* txn;
     while ((txn = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node)) != NULL) {
         usb_request_release(txn);
-    }
-    if (ctx->ethmac_ifc) {
-        ethmac_netbuf_t* netbuf;
-        while ((netbuf = list_remove_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node)) !=
-               NULL) {
-            ctx->ethmac_ifc->complete_tx(ctx->ethmac_cookie, netbuf, ZX_ERR_PEER_CLOSED);
-        }
     }
     usb_request_release(ctx->int_txn_buf);
     mtx_destroy(&ctx->ethmac_mutex);
@@ -317,6 +323,7 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
 static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
     ecm_ctx_t* ctx = cookie;
     size_t length = netbuf->len;
+    zx_status_t status;
 
     if (length > ctx->mtu || length == 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -326,11 +333,14 @@ static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf
             module_name, length, ctx->tx_endpoint.addr);
 
     mtx_lock(&ctx->tx_mutex);
-
-    zx_status_t status = send_locked(ctx, netbuf);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-        // No buffers available, queue it up
-        list_add_tail(&ctx->tx_pending_infos, &netbuf->node);
+    if (ctx->unbound) {
+        status = ZX_ERR_IO_NOT_PRESENT;
+    } else {
+        status = send_locked(ctx, netbuf);
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            // No buffers available, queue it up
+            list_add_tail(&ctx->tx_pending_infos, &netbuf->node);
+        }
     }
 
     mtx_unlock(&ctx->tx_mutex);
