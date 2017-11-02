@@ -6,7 +6,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +23,9 @@
 
 #include <fdio/watcher.h>
 
+// defined in report.cpp
+void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);
+
 #define DEV_INPUT "/dev/class/input"
 
 static bool verbose = false;
@@ -35,6 +37,7 @@ void usage(void) {
     printf("    read [<devpath> [num reads]]\n");
     printf("    get <devpath> <in|out|feature> <id>\n");
     printf("    set <devpath> <in|out|feature> <id> [0xXX *]\n");
+    printf("    parse <devpath>\n");
 }
 
 typedef struct input_args {
@@ -155,7 +158,10 @@ static ssize_t get_report_desc(int fd, const char* name, size_t report_desc_len)
     }
     mtx_lock(&print_lock);
     printf("hid: %s report descriptor:\n", name);
-    print_hex(buf.get(), report_desc_len);
+    if (verbose) {
+        print_hex(buf.get(), report_desc_len);
+    }
+    print_report_descriptor(buf.get(), report_desc_len);
     mtx_unlock(&print_lock);
     return rc;
 }
@@ -238,18 +244,23 @@ static ssize_t get_max_report_len(int fd, const char* name, input_report_size_t*
     } while (0)
 
 static ssize_t hid_status(int fd, const char* name, input_report_size_t* max_report_len) {
-    size_t report_desc_len;
     size_t num_reports;
 
     TRY(get_hid_protocol(fd, name));
-    TRY(get_report_desc_len(fd, name, &report_desc_len));
-    TRY(get_report_desc(fd, name, report_desc_len));
     TRY(get_num_reports(fd, name, &num_reports));
     TRY(get_report_ids(fd, name, num_reports));
     TRY(get_max_report_len(fd, name, max_report_len));
-
     return ZX_OK;
 }
+
+static ssize_t parse_rpt_descriptor(int fd, const char* name) {
+    size_t report_desc_len;
+    TRY(get_report_desc_len(fd, "", &report_desc_len));
+    TRY(get_report_desc(fd, "", report_desc_len));
+    return ZX_OK;
+}
+
+#undef TRY
 
 static int hid_input_thread(void* arg) {
     input_args_t* args = (input_args_t*)arg;
@@ -284,8 +295,6 @@ static int hid_input_thread(void* arg) {
     delete args;
     return ZX_OK;
 }
-
-#undef TRY
 
 static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -516,6 +525,26 @@ finished:
     return static_cast<int>(rc);
 }
 
+int parse(int argc, const char** argv) {
+    argc--;
+    argv++;
+    if (argc < 1) {
+        usage();
+        return 0;
+    }
+
+    int fd = open(argv[0], O_RDWR);
+    if (fd < 0) {
+        printf("could not open %s: %d\n", argv[0], errno);
+        return -1;
+    }
+
+    ssize_t rc = parse_rpt_descriptor(fd, argv[0]);
+    close(fd);
+
+    return static_cast<int>(rc);
+}
+
 int main(int argc, const char** argv) {
     if (argc < 2) {
         usage();
@@ -542,6 +571,10 @@ int main(int argc, const char** argv) {
 
     if (!strcmp("set", argv[0])) {
         return set_report(argc, argv);
+    }
+
+    if (!strcmp("parse", argv[0])) {
+        return parse(argc, argv);
     }
 
     usage();
