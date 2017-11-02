@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/devshell/lib/vars.sh
+if [[ -n "${ZSH_VERSION}" ]]; then
+  source "$(cd "$(dirname "${(%):-%x}")" && pwd)"/devshell/lib/vars.sh
+else
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/devshell/lib/vars.sh
+fi
 
 # __patched_path <old-regex> <new-component>
 # Prints a new path value based on the current $PATH, removing path components
