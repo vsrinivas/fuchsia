@@ -56,7 +56,6 @@
 // guarantee where the additional redirections will be.
 #define IO_APIC_NUM_REDIRECTIONS 120
 
-
 #define LOCAL_TRACE 0
 
 // Struct for tracking all we need to know about each IO APIC
@@ -69,6 +68,9 @@ struct io_apic {
     uint8_t version;
     // The index of the last redirection entry
     uint8_t max_redirection_entry;
+
+    // Pre-allocated space for suspend/resume bookkeeping
+    uint64_t saved_rtes[IO_APIC_NUM_REDIRECTIONS];
 };
 
 // General register accessors
@@ -453,6 +455,35 @@ uint32_t apic_io_isa_to_global(uint8_t isa_irq)
         return isa_overrides[isa_irq].global_irq;
     }
     return isa_irq;
+}
+
+void apic_io_save(void)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    spin_lock(&lock);
+    for (uint32_t i = 0; i < num_io_apics; ++i) {
+        struct io_apic *apic = &io_apics[i];
+        for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
+            uint32_t global_irq = apic->desc.global_irq_base + j;
+            uint64_t reg = apic_io_read_redirection_entry(apic, global_irq);
+            apic->saved_rtes[j] = reg;
+        }
+    }
+    spin_unlock(&lock);
+}
+
+void apic_io_restore(void)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    spin_lock(&lock);
+    for (uint32_t i = 0; i < num_io_apics; ++i) {
+        struct io_apic *apic = &io_apics[i];
+        for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
+            uint32_t global_irq = apic->desc.global_irq_base + j;
+            apic_io_write_redirection_entry(apic, global_irq, apic->saved_rtes[j]);
+        }
+    }
+    spin_unlock(&lock);
 }
 
 void apic_io_debug(void)
