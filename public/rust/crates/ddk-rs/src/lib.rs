@@ -26,6 +26,7 @@ impl Driver {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Device {
     device: *mut ddk_sys::zx_device_t,
 }
@@ -51,12 +52,10 @@ pub trait DeviceOps {
         Status::OK
     }
 
-    fn unbind(&mut self) -> Status {
-        Status::OK
+    fn unbind(&mut self, _device: &mut Device) {
     }
 
-    fn release(&mut self) -> Status {
-        Status::NOT_SUPPORTED
+    fn release(&mut self) {
     }
 
     fn read(&mut self, _buf: &mut [u8], _offset: u64) -> Result<usize, Status> {
@@ -84,6 +83,11 @@ pub trait DeviceOps {
     }
 }
 
+struct DeviceAndOps {
+    device: Device,
+    ops: Box<DeviceOps>,
+}
+
 pub type AddDeviceFlags = ddk_sys::device_add_flags_t;
 
 pub use ddk_sys::{
@@ -108,26 +112,43 @@ pub fn add_device(device_ops: Box<DeviceOps>, parent: Option<&Device>, flags: Ad
     };
 
     let mut device_add_args: ddk_sys::device_add_args_t = ddk_sys::device_add_args_t::new();
-    // TODO(stange): See if it's necessary to double Box device_ops.
-    device_add_args.ctx = Box::into_raw(Box::new(device_ops)) as *mut u8;
+
+    // Create the Device with a null pointer initially; device_add_from_driver below will fill it
+    // in.
+    let device = Device::wrap(std::ptr::null_mut());
+    let device_and_ops = DeviceAndOps { device: device, ops: device_ops };
+    device_add_args.ctx = Box::into_raw(Box::new(device_and_ops)) as *mut u8;
+    let mut context: Box<DeviceAndOps> = unsafe {
+        Box::from_raw(device_add_args.ctx as *mut DeviceAndOps)
+    };
+
     // Bind the CString to a local variable to ensure it lives long enough for the call below.
     let name_cstring = CString::new(device_name).unwrap();
     device_add_args.name = name_cstring.as_ptr();
     device_add_args.flags = flags;
+
     unsafe {
         device_add_args.ops = &mut DEVICE_OPS;
-        let mut ddk_device: *mut ddk_sys::zx_device_t = std::ptr::null_mut();
-        let ret = ddk_sys::device_add_from_driver(ddk_sys::__zircon_driver_rec__.driver, raw_parent, &mut device_add_args, &mut ddk_device);
-        match ret {
-            sys::ZX_OK => Ok(Device::wrap(ddk_device)),
-            _ => Err(Status::from_raw(ret)),
+        let status = ddk_sys::device_add_from_driver(ddk_sys::__zircon_driver_rec__.driver, raw_parent,
+            &mut device_add_args, &mut context.device.device);
+        match status {
+            sys::ZX_OK => {
+                // Take a copy of the Device, which should now contain a valid zx_device_t*.
+                let device = context.device.clone();
+                // Make sure the context doesn't get freed by Rust yet.
+                let _ = Box::into_raw(context);
+                Ok(device)
+            },
+            // Note that in this error case the context will be freed, as there shouldn't be any
+            // callbacks with it.
+            _ => Err(Status::from_raw(status)),
         }
     }
 }
 
-// Should be called after unbind() has been called on the device and the driver is
-// ready remove the device.
-pub fn remove_device(device: Device) -> Status {
+// Should be called after unbind() has been called on the device and the driver is ready to remove
+// the device. Beware that the underlying call may free the zx_device_t.
+pub fn remove_device(device: &mut Device) -> Status {
     unsafe {
         Status::from_raw(ddk_sys::device_remove(device.device))
     }
@@ -151,43 +172,46 @@ fn open_result(ret: Result<Option<Device>, Status>, dev_out: *mut *mut ddk_sys::
 }
 
 extern fn ddk_open(ctx: *mut u8, dev_out: *mut *mut ddk_sys::zx_device_t, flags: u32) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    let ret = device.open(flags);
-    let _ = Box::into_raw(device);
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    let ret = context.ops.open(flags);
+    let _ = Box::into_raw(context);
     open_result(ret, dev_out)
 }
 
 extern fn ddk_open_at(ctx: *mut u8, dev_out: *mut *mut ddk_sys::zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
     let path = unsafe { CStr::from_ptr(path).to_str().unwrap() };
-    let ret = device.open_at(path, flags);
-    let _ = Box::into_raw(device);
+    let ret = context.ops.open_at(path, flags);
+    let _ = Box::into_raw(context);
     open_result(ret, dev_out)
 }
 
 extern fn ddk_close(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    let ret = device.close(flags);
-    let _ = Box::into_raw(device);
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    let ret = context.ops.close(flags);
+    let _ = Box::into_raw(context);
     ret.into_raw()
 }
 
 extern fn ddk_unbind(ctx: *mut u8) {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    device.unbind();
-    let _ = Box::into_raw(device);
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    {
+        let unboxed = &mut *context;
+        unboxed.ops.unbind(&mut unboxed.device);
+    }
+    let _ = Box::into_raw(context);
 }
 
 extern fn ddk_release(ctx: *mut u8) {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    device.release();
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    context.ops.release();
     // Don't Box::into_raw the device so it can be freed by Rust
 }
 
 extern fn ddk_read(ctx: *mut u8, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
     let rust_buf = unsafe { slice::from_raw_parts_mut(buf, count) };
-    let ret = match device.read(rust_buf, off) {
+    let ret = match context.ops.read(rust_buf, off) {
         Ok(r) => {
                 unsafe { *actual = r };
                 sys::ZX_OK
@@ -195,21 +219,21 @@ extern fn ddk_read(ctx: *mut u8, buf: *mut u8, count: usize, off: sys::zx_off_t,
         // TODO(qwandor): Investigate adding a to_raw method for Status.
         Err(status) => status.into_raw()
     };
-    let _ = Box::into_raw(device);
+    let _ = Box::into_raw(context);
     ret
 }
 
 extern fn ddk_write(ctx: *mut u8, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
     let rust_buf = unsafe { slice::from_raw_parts(buf, count) };
-    let ret = match device.write(rust_buf, off) {
+    let ret = match context.ops.write(rust_buf, off) {
         Ok(r) => {
                 unsafe { *actual = r };
                 sys::ZX_OK
             },
         Err(status) => status.into_raw()
     };
-    let _ = Box::into_raw(device);
+    let _ = Box::into_raw(context);
     ret
 }
 
@@ -217,38 +241,38 @@ extern fn ddk_iotxn_queue(ctx: *mut u8, txn: *mut ddk_sys::iotxn_t) {
 }
 
 extern fn ddk_get_size(ctx: *mut u8) -> u64 {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    let size = device.get_size();
-    let _ = Box::into_raw(device);
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    let size = context.ops.get_size();
+    let _ = Box::into_raw(context);
     size
 }
 
 extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
     let rust_in_buf = unsafe { slice::from_raw_parts(in_buf, in_len) };
     let rust_out_buf = unsafe { slice::from_raw_parts_mut(out_buf, out_len) };
-    let status = match device.ioctl(op, rust_in_buf, rust_out_buf) {
+    let status = match context.ops.ioctl(op, rust_in_buf, rust_out_buf) {
         Ok(bytes_written) => {
             unsafe { *out_actual = bytes_written };
             sys::ZX_OK
         }
         Err(status) => status.into_raw()
     };
-    let _ = Box::into_raw(device);
+    let _ = Box::into_raw(context);
     status
 }
 
 extern fn ddk_suspend(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    let status = device.suspend(flags);
-    let _ = Box::into_raw(device);
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    let status = context.ops.suspend(flags);
+    let _ = Box::into_raw(context);
     status.into_raw()
 }
 
 extern fn ddk_resume(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
-    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
-    let status = device.resume(flags);
-    let _ = Box::into_raw(device);
+    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+    let status = context.ops.resume(flags);
+    let _ = Box::into_raw(context);
     status.into_raw()
 }
 

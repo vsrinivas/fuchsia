@@ -63,6 +63,16 @@ impl DeviceOps for MicroOrb {
     fn name(&self) -> String {
         return String::from("microorb")
     }
+
+    fn unbind(&mut self, device: &mut Device) {
+        println!("DeviceOps::unbind called");
+        ddk::remove_device(device);
+        println!("remove_device returned");
+    }
+
+    fn release(&mut self) {
+        println!("DeviceOps::release called");
+    }
 }
 
 impl MicroOrb {
