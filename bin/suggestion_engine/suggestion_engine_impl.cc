@@ -390,6 +390,8 @@ void SuggestionEngineImpl::NotifyInteraction(
     } else {
       RemoveProposal(suggestion->prototype->source_url, proposal->id);
     }
+
+    Validate();
   } else {
     FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "
                      << suggestion_uuid;
