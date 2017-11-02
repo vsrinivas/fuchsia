@@ -721,6 +721,13 @@ void Process::OnException(const zx_port_packet_t& packet,
       thread->OnException(type, context);
       delegate_->OnThreadExiting(this, thread, type, context);
       break;
+    case ZX_EXCP_POLICY_ERROR:
+      FXL_VLOG(1) << "Received ZX_EXCP_POLICY_ERROR exception for thread "
+                  << thread->GetName();
+      FXL_DCHECK(thread);
+      thread->OnException(type, context);
+      // TODO(dje): process synthetic exception
+      break;
     default:
       FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;
       break;

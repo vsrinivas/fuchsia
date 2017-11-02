@@ -251,12 +251,16 @@ void PrintException(FILE* out, Thread* thread, zx_excp_type_t type,
     zx_vaddr_t pc = thread->registers()->GetPC();
     fprintf(out, "PC 0x%" PRIxPTR "\n", pc);
   } else {
+    const char* thread_name = thread->GetDebugName().c_str();
     switch (type) {
     case ZX_EXCP_THREAD_STARTING:
-      fprintf(out, "Thread %s is starting\n", thread->GetDebugName().c_str());
+      fprintf(out, "Thread %s is starting\n", thread_name);
       break;
     case ZX_EXCP_THREAD_EXITING:
-      fprintf(out, "Thread %s is exiting\n", thread->GetDebugName().c_str());
+      fprintf(out, "Thread %s is exiting\n", thread_name);
+      break;
+    case ZX_EXCP_POLICY_ERROR:
+      fprintf(out, "Thread %s got policy error\n", thread_name);
       break;
     default:
       fprintf(out, "Unknown exception %u\n", type);
