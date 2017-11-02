@@ -714,17 +714,6 @@ void Process::OnException(const zx_port_packet_t& packet,
       thread->OnException(type, context);
       delegate_->OnThreadStarting(this, thread, context);
       break;
-    case ZX_EXCP_GONE:
-      FXL_VLOG(1) << "Received ZX_EXCP_GONE exception for process "
-                  << GetName();
-      set_state(Process::State::kGone);
-      delegate_->OnProcessExit(this, type, context);
-      if (!Detach()) {
-        // This is not a fatal error, just log it.
-        FXL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
-        Clear();
-      }
-      break;
     case ZX_EXCP_THREAD_EXITING:
       FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
                   << thread->GetName();

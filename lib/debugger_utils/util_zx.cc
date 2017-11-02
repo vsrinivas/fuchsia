@@ -34,7 +34,6 @@ const char* ExceptionName(zx_excp_type_t type) {
     CASE_TO_STR(ZX_EXCP_HW_BREAKPOINT);
     CASE_TO_STR(ZX_EXCP_THREAD_STARTING);
     CASE_TO_STR(ZX_EXCP_THREAD_EXITING);
-    CASE_TO_STR(ZX_EXCP_GONE);
     default:
       return "UNKNOWN";
   }

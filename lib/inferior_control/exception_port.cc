@@ -259,13 +259,6 @@ void PrintException(FILE* out, Process* process, Thread* thread,
     case ZX_EXCP_THREAD_EXITING:
       fprintf(out, "Thread %s is exiting\n", thread->GetDebugName().c_str());
       break;
-    case ZX_EXCP_GONE:
-      if (thread)
-        fprintf(out, "Thread %s is gone\n", thread->GetDebugName().c_str());
-      else
-        fprintf(out, "Process %s is gone, rc %d\n",
-                process->GetName().c_str(), process->ExitCode());
-      break;
     default:
       fprintf(out, "Unknown exception %u\n", type);
       break;
