@@ -20,6 +20,8 @@ rust_binary("ledger_example") {
 }
 
 package("ledger-rs") {
+  system_image = true
+
   deps = [
     ":ledger_example",
   ]

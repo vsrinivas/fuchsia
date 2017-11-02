@@ -5,6 +5,8 @@
 import("//packages/package.gni")
 
 package("modular_examples") {
+  system_image = true
+
   deps = [
     "counter_cpp",
     "hello_world_cpp",
