@@ -21,7 +21,7 @@ public:
     };
     JobScheduler(Owner* owner, uint32_t job_slots);
 
-    void EnqueueAtom(std::unique_ptr<MsdArmAtom> atom);
+    void EnqueueAtom(std::shared_ptr<MsdArmAtom> atom);
     void TryToSchedule();
 
     void CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection,
@@ -34,13 +34,17 @@ public:
     size_t GetAtomListSize();
 
 private:
+    MsdArmAtom* executing_atom() const { return executing_atom_.get(); }
+
     Owner* owner_;
 
     uint32_t job_slots_;
 
-    bool running_ = false;
-    std::list<std::unique_ptr<MsdArmAtom>> atoms_;
+    std::shared_ptr<MsdArmAtom> executing_atom_;
+    std::list<std::shared_ptr<MsdArmAtom>> atoms_;
     std::vector<std::function<void()>> finished_callbacks_;
+
+    friend class TestJobScheduler;
 
     DISALLOW_COPY_AND_ASSIGN(JobScheduler);
 };

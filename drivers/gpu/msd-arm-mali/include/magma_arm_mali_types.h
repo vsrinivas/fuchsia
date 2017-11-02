@@ -35,6 +35,9 @@ struct magma_arm_mali_atom {
     struct magma_arm_mali_user_data data;
     uint32_t core_requirements; // a set of AtomCoreRequirements.
     uint8_t atom_number;
+
+    // The atom numbers of the atoms this depends on. 0 means no dependency.
+    uint8_t dependencies[2];
 } __attribute__((packed));
 
 struct magma_arm_mali_status {

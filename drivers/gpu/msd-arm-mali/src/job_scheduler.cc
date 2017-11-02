@@ -4,23 +4,35 @@
 
 #include "job_scheduler.h"
 
+#include "magma_util/dlog.h"
+
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots) : owner_(owner), job_slots_(job_slots)
 {
 }
 
-void JobScheduler::EnqueueAtom(std::unique_ptr<MsdArmAtom> atom)
+void JobScheduler::EnqueueAtom(std::shared_ptr<MsdArmAtom> atom)
 {
     atoms_.push_back(std::move(atom));
 }
 
 void JobScheduler::TryToSchedule()
 {
-    if (running_)
+    if (executing_atom_)
         return;
     if (atoms_.empty())
         return;
-    running_ = true;
-    owner_->RunAtom(atoms_.front().get());
+    for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
+        if ((*it)->AreDependenciesFinished()) {
+            executing_atom_ = *it;
+            atoms_.erase(it);
+            break;
+        } else {
+            DLOG("Skipping atom %lx due to dependency", (*it)->gpu_address());
+        }
+    }
+
+    if (executing_atom_)
+        owner_->RunAtom(executing_atom_.get());
 }
 
 void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection,
@@ -31,9 +43,8 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
         finished();
         return;
     }
+
     auto it = atoms_.begin();
-    if (running_)
-        it++;
     while (it != atoms_.end()) {
         if ((*it)->connection().lock() == connection)
             it = atoms_.erase(it);
@@ -41,7 +52,7 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
             ++it;
     }
 
-    if (atoms_.empty() || atoms_.front()->connection().lock() != connection) {
+    if (!executing_atom_ || executing_atom_->connection().lock() != connection) {
         finished();
         return;
     }
@@ -52,11 +63,9 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
 void JobScheduler::JobCompleted(uint64_t slot)
 {
     // Ignore slot, because only one job can be running at a time.
-    DASSERT(running_);
-    DASSERT(!atoms_.empty());
-    running_ = false;
-    owner_->AtomCompleted(atoms_.front().get());
-    atoms_.pop_front();
+    DASSERT(executing_atom_);
+    owner_->AtomCompleted(executing_atom_.get());
+    executing_atom_.reset();
     for (auto x : finished_callbacks_) {
         x();
     }

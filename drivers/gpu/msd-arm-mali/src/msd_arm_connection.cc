@@ -4,16 +4,18 @@
 
 #include "msd_arm_connection.h"
 
+#include <limits>
+#include <vector>
+
 #include "address_space.h"
 #include "gpu_mapping.h"
+#include "lib/fxl/arraysize.h"
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_context.h"
 #include "msd_arm_device.h"
 #include "platform_semaphore.h"
-
-#include <vector>
 
 void msd_connection_close(msd_connection_t* connection)
 {
@@ -43,7 +45,6 @@ void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_
 
 void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
 {
-
     uint8_t atom_number = atom->atom_number;
     uint32_t slot = atom->core_requirements & kAtomCoreRequirementFragmentShader ? 0 : 1;
     if (slot == 0 && (atom->core_requirements &
@@ -54,8 +55,27 @@ void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
     magma_arm_mali_user_data user_data;
     user_data.data[0] = atom->data.data[0];
     user_data.data[1] = atom->data.data[1];
-    auto msd_atom = std::make_unique<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
+    auto msd_atom = std::make_shared<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
                                                  atom_number, user_data);
+
+    {
+        // Hold lock for using outstanding_atoms_.
+        std::lock_guard<std::mutex> lock(channel_lock_);
+
+        MsdArmAtom::DependencyList dependencies;
+        for (size_t i = 0; i < arraysize(atom->dependencies); i++) {
+            uint8_t dependency = atom->dependencies[i];
+            if (dependency)
+                dependencies.push_back(outstanding_atoms_[dependency]);
+        }
+        msd_atom->set_dependencies(dependencies);
+
+        static_assert(arraysize(outstanding_atoms_) - 1 ==
+                          std::numeric_limits<decltype(magma_arm_mali_atom::atom_number)>::max(),
+                      "outstanding_atoms_ size is incorrect");
+
+        outstanding_atoms_[atom_number] = msd_atom;
+    }
     owner_->ScheduleAtom(std::move(msd_atom));
 }
 
@@ -206,6 +226,7 @@ void MsdArmConnection::SetNotificationChannel(msd_channel_send_callback_t send_c
 void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status)
 {
     std::lock_guard<std::mutex> lock(channel_lock_);
+    outstanding_atoms_[atom->atom_number()].reset();
     // It may already have been destroyed on the main thread.
     if (!return_channel_)
         return;

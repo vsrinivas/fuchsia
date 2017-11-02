@@ -56,7 +56,7 @@ protected:
 
 class MsdArmDevice::ScheduleAtomRequest : public DeviceRequest {
 public:
-    ScheduleAtomRequest(std::unique_ptr<MsdArmAtom> atom) : atom_(std::move(atom)) {}
+    ScheduleAtomRequest(std::shared_ptr<MsdArmAtom> atom) : atom_(std::move(atom)) {}
 
 protected:
     magma::Status Process(MsdArmDevice* device) override
@@ -64,7 +64,7 @@ protected:
         return device->ProcessScheduleAtom(std::move(atom_));
     }
 
-    std::unique_ptr<MsdArmAtom> atom_;
+    std::shared_ptr<MsdArmAtom> atom_;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -387,7 +387,7 @@ void MsdArmDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, 
     device_request_semaphore_->Signal();
 }
 
-void MsdArmDevice::ScheduleAtom(std::unique_ptr<MsdArmAtom> atom)
+void MsdArmDevice::ScheduleAtom(std::shared_ptr<MsdArmAtom> atom)
 {
     EnqueueDeviceRequest(std::make_unique<ScheduleAtomRequest>(std::move(atom)));
 }
@@ -477,7 +477,7 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog()
     return MAGMA_STATUS_OK;
 }
 
-magma::Status MsdArmDevice::ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom)
+magma::Status MsdArmDevice::ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom)
 {
     scheduler_->EnqueueAtom(std::move(atom));
     scheduler_->TryToSchedule();
@@ -487,6 +487,7 @@ magma::Status MsdArmDevice::ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom
 void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io)
 {
     DASSERT(atom->slot() < 2u);
+    DASSERT(atom->AreDependenciesFinished());
 
     if (!atom->gpu_address()) {
         // Dependency-only jobs have a 0 gpu address, so skip them.
@@ -520,7 +521,9 @@ void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, registe
 
 void MsdArmDevice::AtomCompleted(MsdArmAtom* atom)
 {
+    DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
     address_manager_->AtomFinished(register_io_.get(), atom);
+    atom->set_finished();
     auto connection = atom->connection().lock();
     if (connection)
         connection->SendNotificationData(atom, kArmMaliResultSuccess);

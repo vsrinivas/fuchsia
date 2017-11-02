@@ -18,6 +18,7 @@ source_set("src") {
     "gpu_mapping.h",
     "job_scheduler.cc",
     "job_scheduler.h",
+    "msd_arm_atom.cc",
     "msd_arm_atom.h",
     "msd_arm_buffer.cc",
     "msd_arm_buffer.h",

@@ -78,7 +78,7 @@ public:
     void DumpStatusToLog();
 
     // MsdArmConnection::Owner implementation.
-    void ScheduleAtom(std::unique_ptr<MsdArmAtom> atom) override;
+    void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -117,7 +117,7 @@ private:
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
-    magma::Status ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom);
+    magma::Status ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom);
 
     void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
 

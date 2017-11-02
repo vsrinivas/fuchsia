@@ -21,72 +21,138 @@ public:
 private:
     std::vector<MsdArmAtom*> run_list_;
 };
-
-TEST(JobScheduler, RunBasic)
-{
-    TestOwner owner;
-    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
-    EXPECT_EQ(0u, owner.run_list().size());
-    JobScheduler scheduler(&owner, 1);
-    auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
-    MsdArmAtom* atom1_ptr = atom1.get();
-    scheduler.EnqueueAtom(std::move(atom1));
-    EXPECT_EQ(0u, owner.run_list().size());
-
-    auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
-    MsdArmAtom* atom2_ptr = atom2.get();
-    scheduler.EnqueueAtom(std::move(atom2));
-    EXPECT_EQ(0u, owner.run_list().size());
-
-    scheduler.TryToSchedule();
-    EXPECT_EQ(1u, owner.run_list().size());
-    EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
-    scheduler.JobCompleted(0);
-    EXPECT_EQ(2u, owner.run_list().size());
-    EXPECT_EQ(atom2_ptr, owner.run_list()[1]);
-    scheduler.JobCompleted(0);
 }
 
-TEST(JobScheduler, CancelJob)
-{
-    TestOwner owner;
-    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
-    JobScheduler scheduler(&owner, 1);
+class TestJobScheduler {
+public:
+    void TestRunBasic()
+    {
+        TestOwner owner;
+        std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
+        EXPECT_EQ(0u, owner.run_list().size());
+        JobScheduler scheduler(&owner, 1);
+        auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        MsdArmAtom* atom1_ptr = atom1.get();
+        scheduler.EnqueueAtom(std::move(atom1));
+        EXPECT_EQ(0u, owner.run_list().size());
 
-    auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
-    scheduler.EnqueueAtom(std::move(atom1));
+        auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        MsdArmAtom* atom2_ptr = atom2.get();
+        scheduler.EnqueueAtom(std::move(atom2));
+        EXPECT_EQ(0u, owner.run_list().size());
 
-    auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
-    scheduler.EnqueueAtom(std::move(atom2));
+        scheduler.TryToSchedule();
+        EXPECT_EQ(1u, owner.run_list().size());
+        EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
+        scheduler.JobCompleted(0);
+        EXPECT_EQ(2u, owner.run_list().size());
+        EXPECT_EQ(atom2_ptr, owner.run_list()[1]);
+        scheduler.JobCompleted(0);
+    }
 
-    // Neither is scheduled, so they should be canceled immediately.
-    bool canceled = false;
-    scheduler.CancelAtomsForConnection(connection, [&canceled]() { canceled = true; });
-    EXPECT_TRUE(canceled);
-    EXPECT_EQ(0u, owner.run_list().size());
-    EXPECT_EQ(0u, scheduler.GetAtomListSize());
+    void TestCancelJob()
+    {
+        TestOwner owner;
+        std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
+        JobScheduler scheduler(&owner, 1);
 
-    atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
-    MsdArmAtom* atom1_ptr = atom1.get();
-    scheduler.EnqueueAtom(std::move(atom1));
+        auto atom1 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        scheduler.EnqueueAtom(std::move(atom1));
 
-    atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
-    scheduler.EnqueueAtom(std::move(atom2));
-    scheduler.TryToSchedule();
+        auto atom2 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        scheduler.EnqueueAtom(std::move(atom2));
 
-    EXPECT_EQ(1u, owner.run_list().size());
-    EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
+        // Neither is scheduled, so they should be canceled immediately.
+        bool canceled = false;
+        scheduler.CancelAtomsForConnection(connection, [&canceled]() { canceled = true; });
+        EXPECT_TRUE(canceled);
+        EXPECT_EQ(0u, owner.run_list().size());
+        EXPECT_EQ(0u, scheduler.GetAtomListSize());
 
-    canceled = false;
-    scheduler.CancelAtomsForConnection(connection, [&canceled]() { canceled = true; });
-    EXPECT_FALSE(canceled);
-    EXPECT_EQ(1u, scheduler.GetAtomListSize());
-    scheduler.JobCompleted(0);
-    EXPECT_TRUE(canceled);
+        atom1 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        MsdArmAtom* atom1_ptr = atom1.get();
+        scheduler.EnqueueAtom(atom1);
 
-    // The second atom should have been thrown away, and the first should be
-    // removed due to completion.
-    EXPECT_EQ(1u, owner.run_list().size());
-    EXPECT_EQ(0u, scheduler.GetAtomListSize());
-}
-}
+        atom2 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        scheduler.EnqueueAtom(atom2);
+        scheduler.TryToSchedule();
+
+        EXPECT_EQ(1u, owner.run_list().size());
+        EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
+
+        canceled = false;
+        scheduler.CancelAtomsForConnection(connection, [&canceled]() { canceled = true; });
+        EXPECT_FALSE(canceled);
+        EXPECT_EQ(0u, scheduler.GetAtomListSize());
+        EXPECT_EQ(atom1.get(), scheduler.executing_atom());
+        scheduler.JobCompleted(0);
+        EXPECT_TRUE(canceled);
+
+        // The second atom should have been thrown away, and the first should be
+        // removed due to completion.
+        EXPECT_EQ(1u, owner.run_list().size());
+        EXPECT_EQ(0u, scheduler.GetAtomListSize());
+    }
+
+    void TestJobDependencies()
+    {
+        TestOwner owner;
+        std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
+        JobScheduler scheduler(&owner, 1);
+
+        auto unqueued_atom1 =
+            std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+
+        auto unqueued_atom2 =
+            std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+
+        auto atom2 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        atom2->set_dependencies({unqueued_atom1});
+        scheduler.EnqueueAtom(atom2);
+
+        auto atom3 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        scheduler.EnqueueAtom(atom3);
+
+        auto atom4 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        atom4->set_dependencies({atom3, unqueued_atom2});
+        scheduler.EnqueueAtom(atom4);
+
+        EXPECT_EQ(3u, scheduler.GetAtomListSize());
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+
+        scheduler.TryToSchedule();
+
+        // atom3 is the only one with no dependencies.
+        EXPECT_EQ(atom3.get(), scheduler.executing_atom());
+        EXPECT_EQ(2u, scheduler.GetAtomListSize());
+
+        scheduler.JobCompleted(0);
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+        EXPECT_EQ(2u, scheduler.GetAtomListSize());
+
+        atom3->set_finished();
+        scheduler.TryToSchedule();
+
+        // one dependency of atom2 isn't finished yet
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+        EXPECT_EQ(2u, scheduler.GetAtomListSize());
+
+        unqueued_atom2->set_finished();
+        scheduler.TryToSchedule();
+
+        EXPECT_EQ(atom4.get(), scheduler.executing_atom());
+        EXPECT_EQ(1u, scheduler.GetAtomListSize());
+
+        unqueued_atom1.reset();
+
+        scheduler.JobCompleted(0);
+        EXPECT_EQ(atom2.get(), scheduler.executing_atom());
+        EXPECT_EQ(0u, scheduler.GetAtomListSize());
+    }
+};
+
+TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
+
+TEST(JobScheduler, CancelJob) { TestJobScheduler().TestCancelJob(); }
+
+TEST(JobScheduler, JobDependencies) { TestJobScheduler().TestJobDependencies(); }

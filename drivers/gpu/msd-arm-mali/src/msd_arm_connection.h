@@ -23,7 +23,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
 public:
     class Owner {
     public:
-        virtual void ScheduleAtom(std::unique_ptr<MsdArmAtom> atom) = 0;
+        virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
     };
 
     static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
@@ -58,6 +58,7 @@ private:
     std::mutex channel_lock_;
     msd_channel_send_callback_t send_callback_;
     msd_channel_t return_channel_ = {};
+    std::weak_ptr<MsdArmAtom> outstanding_atoms_[256] = {};
 };
 
 class MsdArmAbiConnection : public msd_connection_t {
