@@ -11,7 +11,7 @@ ProposalHintRankingFeature::ProposalHintRankingFeature() = default;
 ProposalHintRankingFeature::~ProposalHintRankingFeature() = default;
 
 double ProposalHintRankingFeature::ComputeFeatureInternal(
-    const QueryContext& query_context,
+    const UserInput& query,
     const RankedSuggestion& suggestion) {
   return suggestion.prototype->proposal->confidence;
 }

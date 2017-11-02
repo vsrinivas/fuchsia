@@ -11,25 +11,22 @@ QueryMatchRankingFeature::QueryMatchRankingFeature() = default;
 QueryMatchRankingFeature::~QueryMatchRankingFeature() = default;
 
 double QueryMatchRankingFeature::ComputeFeatureInternal(
-    const QueryContext& query_context,
+    const UserInput& query,
     const RankedSuggestion& suggestion) {
-  if (query_context.type == QueryType::TEXT ||
-      query_context.type == QueryType::SPEECH) {
-    std::string text = suggestion.prototype->proposal->display->headline;
-    std::string query = query_context.query;
+  std::string text = suggestion.prototype->proposal->display->headline;
+  std::string norm_query = query.text;
 
-    std::transform(text.begin(), text.end(), text.begin(), ::tolower);
-    std::transform(query.begin(), query.end(), query.begin(), ::tolower);
+  std::transform(text.begin(), text.end(), text.begin(), ::tolower);
+  std::transform(norm_query.begin(), norm_query.end(), norm_query.begin(),
+                 ::tolower);
 
-    // TODO(jwnichols): replace with a score based on Longest Common Substring
-    auto pos = text.find(query);
-    if (pos == std::string::npos)
-      return kMinConfidence;
-
-    return static_cast<double>(query.size()) / static_cast<double>(text.size());
-  } else {
+  // TODO(jwnichols): replace with a score based on Longest Common Substring
+  auto pos = text.find(norm_query);
+  if (pos == std::string::npos)
     return kMinConfidence;
-  }
+
+  return static_cast<double>(norm_query.size()) /
+         static_cast<double>(text.size());
 }
 
 }  // namespace maxwell

@@ -13,6 +13,6 @@
     "agents/usage_log.dartx",
     "weather_agent"
   ],
-  "kronk": "https://storage.googleapis.com/maxwell-agents/kronk",
+  "kronk": "https://storage.googleapis.com/maxwell-agents/kronk-2017.11.08.10.55",
   "mi_dashboard": true
 }

@@ -117,7 +117,7 @@ class AskProposinator : public Proposinator, public QueryHandler {
     query_callback_(std::move(response));
   }
 
-  fidl::String query() const { return query_ ? query_->get_text() : NULL; }
+  fidl::String query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(
       const std::string& id,
@@ -292,7 +292,8 @@ class AskTest : public virtual SuggestionEngineTest {
   void Query(const std::string& query, int count = 10) {
     CloseAndResetListener();
     auto input = UserInput::New();
-    input->set_text(query);
+    input->type = InputType::TEXT;
+    input->text = query;
     suggestion_provider()->Query(listener_binding_.NewBinding(),
                                  std::move(input), count);
   }

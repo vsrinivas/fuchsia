@@ -6,6 +6,9 @@ executable("suggestion_engine") {
   sources = [
     "proposal_publisher_impl.cc",
     "proposal_publisher_impl.h",
+    "query_handler_record.h",
+    "query_processor.cc",
+    "query_processor.h",
     "suggestion_engine_impl.cc",
     "suggestion_engine_impl.h",
   ]
@@ -78,7 +81,6 @@ source_set("interfaces") {
 
 source_set("ranking") {
   sources = [
-    "query_context.h",
     "ranking_feature.cc",
     "ranking_feature.h",
     "ranking_features/kronk_ranking_feature.cc",

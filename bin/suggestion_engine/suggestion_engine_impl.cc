@@ -25,13 +25,6 @@ namespace maxwell {
 
 namespace {
 
-// Minimum delay from the time an ask initiation is received to wait before
-// selecting the best voice/audio/media response available among those received
-// from the ask handlers triggered for that ask. The actual delay may be longer
-// if a longer time elapses before any response contains a media response.
-constexpr fxl::TimeDelta kAskMediaResponseDelay =
-    fxl::TimeDelta::FromMilliseconds(100);
-
 // If media fails more than 5x over one second, stop trying to restart it.
 constexpr modular::RateLimitedRetry::Threshold kMediaRetryLimit = {
     5, fxl::TimeDelta::FromSeconds(1)};
@@ -44,7 +37,6 @@ SuggestionEngineImpl::SuggestionEngineImpl()
       ask_dirty_(false),
       next_suggestions_(new RankedSuggestions(&next_channel_)),
       next_dirty_(false),
-      ask_has_media_response_ptr_factory_(&ask_has_media_response_),
       media_service_retry_(kMediaRetryLimit) {
   app_context_->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
@@ -139,34 +131,32 @@ void SuggestionEngineImpl::Query(
     UserInputPtr input,
     int count) {
   // TODO(jwnichols): I'm not sure this is correct or should be here
-  speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
+  speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
     listener->OnStatusChanged(SpeechStatus::PROCESSING);
   });
 
   // Process:
   //   1. Close out and clean up any existing query process
-  //   2. Normalize the query (e.g., lowercase text)
-  //   3. Update the context engine with the new query
-  //   4. Set up the ask variables in suggestion engine
-  //   5. Get suggestions from each of the QueryHandlers
-  //   6. Rank the suggestions as received
-  //   7. Send "done" to SuggestionListener
+  //   2. Update the context engine with the new query
+  //   3. Set up the ask variables in suggestion engine
+  //   4. Get suggestions from each of the QueryHandlers
+  //   5. Rank the suggestions as received
+  //   6. Send "done" to SuggestionListener
 
   // Step 1
   CleanUpPreviousQuery();
 
   // Step 2
-  std::string query = input->get_text();
-  std::transform(query.begin(), query.end(), query.begin(), ::tolower);
-
-  // Step 3
+  std::string query = input->text;
   if (!query.empty()) {
     std::string formattedQuery;
     modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
   }
 
-  // Step 4
+  // Step 3
+  // TODO(rosswang/jwnichols): move the subscriber and ask channel into the
+  // query processor
   std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
       std::make_unique<WindowedSuggestionSubscriber>(
           ask_suggestions_, std::move(listener), count);
@@ -177,87 +167,8 @@ void SuggestionEngineImpl::Query(
 
   ask_channel_.AddSubscriber(std::move(subscriber));
 
-  if (query_handlers_.size() == 0) {
-    return debug_.OnAskStart(query, ask_suggestions_);
-  }
-
-  // TODO(jwnichols): Can this media stuff move elsewhere?
-  // Mark any outstanding media responses as stale (see below)
-  ask_has_media_response_ptr_factory_.InvalidateWeakPtrs();
-  ask_has_media_response_ = false;
-  auto has_media_response = ask_has_media_response_ptr_factory_.GetWeakPtr();
-  fxl::TimePoint ask_time_point = fxl::TimePoint::Now();
-
-  // Step 5
-  auto remainingHandlers = std::make_shared<size_t>(query_handlers_.size());
-  for (const auto& ask : query_handlers_) {
-    ask.first->OnQuery(
-        input.Clone(),
-        // TODO(rosswang): Large number of captures, substantial lambda;
-        // consider replacing with an object.
-        [this, remainingHandlers, query, url = ask.second, has_media_response,
-         ask_time_point](QueryResponsePtr response) {
-          // TODO(rosswang): defer selection of "I don't know" responses
-          if (has_media_response && !*has_media_response &&
-              response->media_response) {
-            *has_media_response = true;
-            // TODO(rosswang): Never delay for voice queries.
-            fxl::TimeDelta media_delay =
-                kAskMediaResponseDelay -
-                (fxl::TimePoint::Now() - ask_time_point);
-
-            if (media_delay < fxl::TimeDelta::Zero()) {
-              media_delay = fxl::TimeDelta::Zero();
-            }
-
-            fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                fxl::MakeCopyable([this, has_media_response,
-                                   natural_language_response =
-                                       response->natural_language_response,
-                                   media_response = std::move(
-                                       response->media_response)]() mutable {
-                  // make sure we're still the active query
-                  if (has_media_response) {
-                    // TODO(rosswang): allow falling back on this without a
-                    // spoken response (will be easier once we factor out a
-                    // class for Ask flows, but it remains to be seen whether
-                    // that still makes sense after the Ask refactor; it
-                    // probably will though)
-                    speech_listeners_.ForAllPtrs(
-                        [=](FeedbackListener* listener) {
-                          listener->OnTextResponse(natural_language_response);
-                        });
-
-                    PlayMediaResponse(std::move(media_response));
-                  }
-                }),
-                media_delay);
-          }
-
-          // Step 6: Ranking currently happens as proposals are added
-          // TODO(jwnichols): Making ranking happen more explicitly
-          // (e.g., after a group of proposals has been added, instead of
-          // for each one)
-          for (auto& proposal : response->proposals) {
-            AddAskProposal(url, std::move(proposal));
-          }
-          // TODO(jwnichols): Assemble the appropriate QueryContext struct
-          ask_suggestions_->Rank({TEXT, query});
-          // Rank includes an invalidate dispatch
-          ask_dirty_ = false;
-          (*remainingHandlers)--;
-          if ((*remainingHandlers) == 0) {
-            debug_.OnAskStart(query, ask_suggestions_);
-            ask_channel_.DispatchOnProcessingChange(false);
-            if (has_media_response && !*has_media_response) {
-              // there was no media response for this query
-              speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
-                listener->OnStatusChanged(SpeechStatus::IDLE);
-              });
-            }
-          }
-        });
-  }
+  // Steps 4 - 6
+  active_query_ = std::make_unique<QueryProcessor>(this, std::move(input));
 }
 
 void SuggestionEngineImpl::Validate() {
@@ -278,7 +189,7 @@ void SuggestionEngineImpl::PrimeSpeechCapture() {
   if (media_service_) {
     media_service_->CreateAudioCapturer(media_capturer_.NewRequest());
     media_capturer_->GetSupportedMediaTypes([](auto) {});
-    media_capturer_.set_connection_error_handler([=] {
+    media_capturer_.set_connection_error_handler([this] {
       media_capturer_.reset();
 
       if (media_service_retry_.ShouldRetry()) {
@@ -459,6 +370,8 @@ void SuggestionEngineImpl::SetSpeechToText(
 // end SuggestionEngine
 
 void SuggestionEngineImpl::CleanUpPreviousQuery() {
+  active_query_ = nullptr;
+
   // Clean up the suggestions
   for (auto& suggestion : ask_suggestions_->Get()) {
     suggestion_prototypes_.erase(
@@ -469,8 +382,6 @@ void SuggestionEngineImpl::CleanUpPreviousQuery() {
 
   // Clean up the query suggestion subscriber
   ask_channel_.RemoveAllSubscribers();
-
-  // TODO(jwnichols): What else?
 }
 
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
@@ -613,7 +524,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
               time_lord_.reset();
               media_timeline_consumer_.reset();
 
-              speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
+              speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
                 listener->OnStatusChanged(SpeechStatus::RESPONDING);
               });
 

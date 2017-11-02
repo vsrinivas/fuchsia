@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_H_
 
-#include "peridot/bin/suggestion_engine/query_context.h"
+#include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_channel.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
@@ -23,7 +23,7 @@ class RankedSuggestions {
 
   void AddRankingFeature(double weight,
                          std::shared_ptr<RankingFeature> ranking_feature);
-  void Rank(const QueryContext& query_context = {NONE, ""});
+  void Rank(const UserInput& query = UserInput());
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 
