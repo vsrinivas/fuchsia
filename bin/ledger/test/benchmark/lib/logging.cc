@@ -11,7 +11,7 @@ namespace benchmark {
 
 bool QuitOnError(ledger::Status status, fxl::StringView description) {
   if (status != ledger::Status::OK) {
-    FXL_LOG(ERROR) << description << " failed";
+    FXL_LOG(ERROR) << description << " failed with status " << status << ".";
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return true;
   }
