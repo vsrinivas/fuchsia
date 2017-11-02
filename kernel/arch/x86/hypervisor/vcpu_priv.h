@@ -169,6 +169,11 @@ enum class VmcsFieldXX : uint64_t {
     HOST_RIP                        = 0x6c16, // Host RIP
 };
 
+enum class InvEpt : uint64_t {
+    SINGLE_CONTEXT                  = 1,
+    ALL_CONTEXT                     = 2,
+};
+
 // clang-format on
 
 /* Loads a VMCS within a given scope. */

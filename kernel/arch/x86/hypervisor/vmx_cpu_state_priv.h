@@ -42,14 +42,6 @@ struct VmxInfo {
     VmxInfo();
 };
 
-/* Stores miscellaneous VMX info from the X86_MSR_IA32_VMX_MISC MSR. */
-struct MiscInfo {
-    bool wait_for_sipi;
-    uint32_t msr_list_limit;
-
-    MiscInfo();
-};
-
 /* Stores EPT info from the IA32_VMX_EPT_VPID_CAP MSR. */
 struct EptInfo {
     bool page_walk_4;

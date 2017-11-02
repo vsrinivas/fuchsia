@@ -55,13 +55,6 @@ VmxInfo::VmxInfo() {
     vmx_controls = BIT_SHIFT(basic_info, 55);
 }
 
-MiscInfo::MiscInfo() {
-    // From Volume 3, Appendix A.6.
-    uint64_t misc_info = read_msr(X86_MSR_IA32_VMX_MISC);
-    wait_for_sipi = BIT_SHIFT(misc_info, 8);
-    msr_list_limit = static_cast<uint32_t>(BITS_SHIFT(misc_info, 27, 25) + 1) * 512;
-}
-
 EptInfo::EptInfo() {
     // From Volume 3, Appendix A.10.
     uint64_t ept_info = read_msr(X86_MSR_IA32_VMX_EPT_VPID_CAP);
@@ -148,11 +141,6 @@ static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
     if (!ept_info.invept)
         return ZX_ERR_NOT_SUPPORTED;
 
-    // Check that wait for startup IPI is a supported activity state.
-    MiscInfo misc_info;
-    if (!misc_info.wait_for_sipi)
-        return ZX_ERR_NOT_SUPPORTED;
-
     // Enable VMXON, if required.
     uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
     if (!(feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) ||
@@ -199,7 +187,7 @@ static void vmxoff_task(void* arg) {
         return;
     }
 
-    // Disable VZX.
+    // Disable VMX.
     x86_set_cr4(x86_get_cr4() & ~X86_CR4_VMXE);
 }
 

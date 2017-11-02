@@ -29,6 +29,19 @@ static const uint32_t kInterruptInfoValid = 1u << 31;
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptTypeHardwareException = 3u << 8;
 
+static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
+    uint8_t err;
+    uint64_t descriptor[] = { eptp, 0 };
+
+    __asm__ volatile(
+        "invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
+        : [err] "=r"(err)
+        : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
+        : "cc");
+
+    return err ? ZX_ERR_INTERNAL : ZX_OK;
+}
+
 static zx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
@@ -391,7 +404,17 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     // treated as guest-physical addresses. Guest-physical addresses are
     // translated by traversing a set of EPT paging structures to produce
     // physical addresses that are used to access memory.
-    vmcs.Write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
+    const auto eptp = ept_pointer(pml4_address);
+    vmcs.Write(VmcsField64::EPT_POINTER, eptp);
+
+    // From Volume 3, Section 28.3.3.4: If EPT was in use on a logical processor
+    // at one time with EPTP X, it is recommended that software use the INVEPT
+    // instruction with the “single-context” INVEPT type and with EPTP X in the
+    // INVEPT descriptor before a VM entry on the same logical processor that
+    // enables EPT with EPTP X and either (a) the “virtualize APIC accesses” VM-
+    // execution control was changed from 0 to 1; or (b) the value of the APIC-
+    // access address was changed.
+    invept(InvEpt::SINGLE_CONTEXT, eptp);
 
     // Setup APIC handling.
     vmcs.Write(VmcsField64::APIC_ACCESS_ADDRESS, apic_access_address);

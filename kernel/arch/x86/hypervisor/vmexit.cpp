@@ -590,11 +590,10 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
         return ZX_ERR_OUT_OF_RANGE;
 
     EptViolationInfo ept_violation_info(exit_info.exit_qualification);
-    uint pf_flags = VMM_PF_FLAG_HW_FAULT;
-    // TODO(ZX-981): Once EPT TLB invalidation is implemented, make these
-    // conditional upon the EPT violation type.
-    pf_flags |= VMM_PF_FLAG_WRITE;
-    pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+    // By default, we mark EPT PTEs as RWX. This is so we can avoid faulting
+    // again if the guest requests additional permissions, and so that we can
+    // avoid use of INVEPT.
+    uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
     return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 
