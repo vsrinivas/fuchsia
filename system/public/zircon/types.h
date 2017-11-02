@@ -141,8 +141,6 @@ typedef uint32_t zx_signals_t;
 
 // Thread
 #define ZX_THREAD_TERMINATED        __ZX_OBJECT_SIGNALED
-#define ZX_THREAD_RUNNING           __ZX_OBJECT_SIGNAL_4
-#define ZX_THREAD_SUSPENDED         __ZX_OBJECT_SIGNAL_5
 
 // Log
 #define ZX_LOG_READABLE             __ZX_OBJECT_READABLE

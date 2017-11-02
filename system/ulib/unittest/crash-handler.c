@@ -39,6 +39,8 @@ static void process_exception(crash_list_t crash_list,
 
     // Check for exceptions from registered processes that are not really crashes.
     switch (packet->type) {
+    case ZX_EXCP_GONE:
+        return;
     case ZX_EXCP_THREAD_STARTING:
     case ZX_EXCP_THREAD_EXITING: {
         zx_handle_t process = crash_list_lookup_koid(crash_list, exception->pid);

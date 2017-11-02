@@ -25,24 +25,6 @@ enum message {
     MSG_THREAD_HANDLE,
 };
 
-typedef struct {
-    zx_koid_t tid;
-    zx_handle_t handle;
-} thread_data_t;
-
-typedef struct {
-    // Koid of the inferior process.
-    zx_koid_t pid;
-    // Borrowed handle of the inferior process.
-    zx_handle_t inferior;
-    // Borrowed handle of the exception port.
-    zx_handle_t eport;
-    // #entries in |threads|.
-    size_t max_num_threads;
-    // The array is unsorted, and there can be holes (tid,handle = invalid).
-    thread_data_t* threads;
-} inferior_data_t;
-
 extern const char* program_path;
 
 extern uint32_t get_uint32(char* buf);
@@ -88,11 +70,7 @@ extern bool setup_inferior(const char* name,
                            zx_handle_t* out_inferior,
                            zx_handle_t* out_channel);
 
-extern inferior_data_t* attach_inferior(zx_handle_t inferior,
-                                        zx_handle_t eport,
-                                        size_t max_threads);
-
-extern void detach_inferior(inferior_data_t* data, bool unbind_eport);
+extern zx_handle_t attach_inferior(zx_handle_t inferior);
 
 extern bool start_inferior(launchpad_t* lp);
 
@@ -104,7 +82,8 @@ extern bool resume_inferior(zx_handle_t inferior, zx_koid_t tid);
 
 extern bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 
-extern bool read_exception(zx_handle_t eport, zx_port_packet_t* packet);
+extern bool read_exception(zx_handle_t eport, zx_handle_t inferior,
+                           zx_port_packet_t* packet);
 
 extern bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t eport);
 

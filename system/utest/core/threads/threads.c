@@ -47,12 +47,28 @@ static bool check_reported_pid_and_tid(zx_handle_t thread,
     return true;
 }
 
-// Suspend the given thread and block until it reaches the suspended state.
-static bool suspend_thread_synchronous(zx_handle_t thread) {
+// Suspend the given thread.  This waits for the thread suspension to take
+// effect, using the given exception port.
+static bool suspend_thread_synchronous(zx_handle_t thread, zx_handle_t eport) {
     ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
 
-    zx_signals_t observed = 0u;
-    ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed), ZX_OK, "");
+    // Wait for the thread to suspend.
+    for (;;) {
+        zx_port_packet_t packet;
+        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0), ZX_OK, "");
+        if (packet.type == ZX_EXCP_THREAD_EXITING) {
+            // Ignore this "thread exiting" event and retry.  This event
+            // was probably caused by a thread from an earlier test case.
+            // We can get these events even if the previous test case
+            // joined the thread or used zx_object_wait_one() to wait for
+            // the thread to terminate.
+            continue;
+        }
+        EXPECT_TRUE(check_reported_pid_and_tid(thread, &packet), "");
+        ASSERT_EQ(packet.key, kExceptionPortKey, "");
+        ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_SUSPENDED, "");
+        break;
+    }
 
     return true;
 }
@@ -62,6 +78,8 @@ static bool wait_thread_exiting(zx_handle_t eport) {
     while (true) {
         ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0), ZX_OK, "");
         ASSERT_EQ(packet.key, kExceptionPortKey, "");
+        if (packet.type == ZX_EXCP_THREAD_RESUMED)
+            continue;
         ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING, "");
         break;
     }
@@ -369,9 +387,13 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
     ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
 
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
     // Check that signaling the event while suspended results in the expected
     // behavior
-    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h, eport), "");
 
     // Verify thread is suspended
     ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
@@ -388,9 +410,14 @@ static bool test_resume_suspended(void) {
 
     ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_1, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
+    // Walk the thread past ZX_EXCP_THREAD_EXITING.
+    ASSERT_TRUE(wait_thread_exiting(eport), "");
+    ASSERT_EQ(zx_task_resume(thread_h, ZX_RESUME_EXCEPTION), ZX_OK, "");
+
     ASSERT_EQ(zx_object_wait_one(
         thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(event), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");
 
@@ -410,8 +437,11 @@ static bool test_suspend_sleeping(void) {
 
     zx_nanosleep(sleep_deadline - ZX_MSEC(50));
 
-    // Suspend the thread.
-    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
+    // Suspend the thread.  Use the debugger port to wait for the suspension.
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h, eport), "");
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 
     ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_OK, "");
 
@@ -442,8 +472,11 @@ static bool test_suspend_channel_call(void) {
     ASSERT_EQ(zx_object_wait_one(channel, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL),
               ZX_OK, "");
 
-    // Suspend the thread.
-    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
+    // Suspend the thread.  Use the debugger port to wait for the suspension.
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h, eport), "");
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 
     // Read the message
     uint8_t buf[9];
@@ -585,12 +618,11 @@ static bool test_kill_suspended_thread(void) {
         zx_nanosleep(0);
     }
 
-
-    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
-
-    // Attach to debugger port so we can see ZX_EXCP_THREAD_EXITING.
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
     zx_handle_t eport;
     ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h, eport), "");
 
     // Reset the test memory location.
     arg.v = 100;
@@ -631,7 +663,11 @@ static bool test_reading_register_state(void) {
     // instruction that spins.
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
 
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
 
     zx_general_regs_t regs;
     uint32_t size_read;
@@ -641,6 +677,7 @@ static bool test_reading_register_state(void) {
     ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
 
     // Clean up.
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
     ASSERT_EQ(zx_task_kill(thread_handle), ZX_OK, "");
     // Wait for the thread termination to complete.
     ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED,
@@ -664,7 +701,12 @@ static bool test_writing_register_state(void) {
     // instruction that spins.
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
 
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 
     struct {
         // A small stack that is used for calling zx_thread_exit().
@@ -724,7 +766,12 @@ static bool test_noncanonical_rip_address(void) {
     // the syscall.
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
 
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 
     struct zx_x86_64_general_regs regs;
     uint32_t size_read;
@@ -796,7 +843,10 @@ static bool test_writing_arm_flags_register(void) {
     while (arg.v != 1) {
         ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_USEC(1))), ZX_OK, "");
     }
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
+    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
+    zx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
 
     zx_general_regs_t regs;
     uint32_t size_read;
@@ -837,6 +887,7 @@ static bool test_writing_arm_flags_register(void) {
                                  ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
     // Clean up.
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 #endif
 
     END_TEST;

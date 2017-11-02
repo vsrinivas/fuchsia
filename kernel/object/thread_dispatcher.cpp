@@ -407,6 +407,19 @@ void ThreadDispatcher::Exiting() {
 
     LTRACE_ENTRY_OBJ;
 
+    {
+        // TODO(ZX-814): This obtains |state_lock_| again (first time was in
+        // above call to UpdateState). This will go away when ZX-814 lands:
+        // this exception will be subsumed by ZX_THREAD_TERMINATED.
+        fbl::RefPtr<ExceptionPort> eport(exception_port());
+        if (eport)
+            eport->OnThreadExit(this);
+        // Note: If an eport is bound, it will have a reference to the
+        // ThreadDispatcher and thus keep the object, and the underlying
+        // ThreadDispatcher object, around until someone unbinds the port or closes
+        // all handles to its underlying PortDispatcher.
+    }
+
     // Notify a debugger if attached. Do this before marking the thread as
     // dead: the debugger expects to see the thread in the DYING state, it may
     // try to read thread registers. The debugger still has to handle the case
@@ -434,11 +447,15 @@ void ThreadDispatcher::Exiting() {
         SetStateLocked(State::DEAD);
     }
 
+    // signal any waiters
+    UpdateState(0u, ZX_TASK_TERMINATED);
+
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);
 
     // drop LK's reference
     if (Release()) {
+
         // We're the last reference, so will need to destruct ourself while running, which is not possible
         // Use a dpc to pull this off
         cleanup_dpc_.func = ThreadCleanupDpc;
@@ -473,6 +490,16 @@ void ThreadDispatcher::Suspending() {
         }
     }
 
+    // Notify debugger if attached.
+    // This is done by first obtaining our own reference to the port so the
+    // test can be done safely.
+    {
+        fbl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        if (debugger_port) {
+            debugger_port->OnThreadSuspending(this);
+        }
+    }
+
     LTRACE_EXIT_OBJ;
 }
 
@@ -487,6 +514,16 @@ void ThreadDispatcher::Resuming() {
         DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
         if (state_ == State::SUSPENDED) {
             SetStateLocked(State::RUNNING);
+        }
+    }
+
+    // Notify debugger if attached.
+    // This is done by first obtaining our own reference to the port so the
+    // test can be done safely.
+    {
+        fbl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        if (debugger_port) {
+            debugger_port->OnThreadResuming(this);
         }
     }
 
@@ -540,26 +577,6 @@ void ThreadDispatcher::SetStateLocked(State state) {
     DEBUG_ASSERT(state_lock_.IsHeld());
 
     state_ = state;
-
-    // TODO(dje): This will call UpdateStateLocked() instead of UpdateState()
-    // when state_lock_ is supplanted by lock_.
-    switch (state) {
-    case State::RUNNING:
-        UpdateState(ZX_THREAD_SUSPENDED, ZX_THREAD_RUNNING);
-        break;
-    case State::SUSPENDED:
-        UpdateState(ZX_THREAD_RUNNING, ZX_THREAD_SUSPENDED);
-        break;
-    case State::DEAD:
-        UpdateState(ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED, ZX_THREAD_TERMINATED);
-        break;
-    default:
-        // Nothing to do.
-        // In particular, for the DYING state we don't modify the SUSPENDED
-        // or RUNNING signals: For observer purposes they'll only be interested
-        // in the transition from {SUSPENDED,RUNNING} to DEAD.
-        break;
-    }
 }
 
 zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
@@ -635,9 +652,6 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-
-    // Note: As far as userspace is concerned there is no state change
-    // that we would notify state tracker observers of, currently.
 
     {
         AutoLock lock(&state_lock_);

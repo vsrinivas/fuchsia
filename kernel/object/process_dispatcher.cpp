@@ -337,6 +337,37 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // tear down the address space
         aspace_->Destroy();
 
+        // Send out exception reports before signalling ZX_TASK_TERMINATED,
+        // the theory being that marking the process as terminated is the
+        // last thing that is done.
+        //
+        // Note: If we need OnProcessExit for the debugger to do an exchange
+        // with the debugger then this should preceed aspace destruction.
+        // For now it is left here, following aspace destruction.
+        //
+        // Note: If an eport is bound, it will have a reference to the
+        // ProcessDispatcher and thus keep the object around until someone
+        // unbinds the port or closes all handles to its underlying
+        // PortDispatcher.
+        //
+        // We don't assume anything about what OnProcessExit does.
+        // If it blocks the exception port could get removed out from
+        // underneath us, so make a copy.
+        //
+        // TODO(ZX-814): OnProcessExit calls will go away.
+        {
+            fbl::RefPtr<ExceptionPort> eport(exception_port_);
+            if (eport) {
+                eport->OnProcessExit(this);
+            }
+        }
+        {
+            fbl::RefPtr<ExceptionPort> debugger_eport(debugger_exception_port_);
+            if (debugger_eport) {
+                debugger_eport->OnProcessExit(this);
+            }
+        }
+
         // signal waiter
         LTRACEF_LEVEL(2, "signaling waiters\n");
         UpdateState(0u, ZX_TASK_TERMINATED);
