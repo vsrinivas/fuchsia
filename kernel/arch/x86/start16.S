@@ -175,6 +175,18 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
     # Load the IDT
     lidt _idtr(%rip)
 
+    # Restore %gs.base to &bp_percpu.  We need to do this before
+    # returning to C code, since the C code might use safe-stack
+    # and/or stack-protector.
+    # TODO(teisenbe):  There is a small peformance gain that could be made here
+    # by switching from wrmsr to wrgsbase, if wrgsbase is supported.  Currently
+    # this is omitted for simplicity.
+    lea bp_percpu(%rip), %rax
+    mov %rax, %rdx
+    shr $32, %rdx
+    mov $X86_MSR_IA32_GS_BASE, %ecx
+    wrmsr
+
     mov 8(%rdi), %rsi
     mov 16(%rdi), %rbp
     mov 24(%rdi), %rbx
