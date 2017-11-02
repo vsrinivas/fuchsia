@@ -109,4 +109,11 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
 // or ZX_HANDLE_INVALID.
 zx_handle_t fdio_service_clone(zx_handle_t h);
 
+// Attempt to clone a sevice handle by doing a pipelined
+// CLONE operation, using the provided serving channel.
+// On success srv is bound to a clone of h.  On failure
+// an error is returned and srv is closed.
+// Takes ownership of srv.
+zx_status_t fdio_service_clone_to(zx_handle_t h, zx_handle_t srv);
+
 __END_CDECLS

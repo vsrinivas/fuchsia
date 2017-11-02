@@ -589,6 +589,17 @@ zx_handle_t fdio_service_clone(zx_handle_t svc) {
     return cli;
 }
 
+zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
+    if (srv == ZX_HANDLE_INVALID) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (svc == ZX_HANDLE_INVALID) {
+        zx_handle_close(srv);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return zxrio_connect(svc, srv, ZXRIO_CLONE, O_RDWR, 0755, "");
+}
+
 zx_status_t zxrio_misc(fdio_t* io, uint32_t op, int64_t off,
                        uint32_t maxreply, void* ptr, size_t len) {
     zxrio_t* rio = (zxrio_t*)io;
