@@ -7,7 +7,7 @@
 # https://opensource.org/licenses/MIT
 
 # Uploads boot image (kernel+ramdisk) into RAM of a hikey960 which is in fastboot
-#  mode, and then executes image. Requires that the hikey be equiped with UEFI 
+#  mode, and then executes image. Requires that the hikey be equiped with UEFI
 #  bootloader.
 #  Assumes this is run from the zircon source directory.
 
@@ -29,15 +29,18 @@ DT_OFFSET=0x07a00000
 CMDLINE="TERM=uart"
 
 function HELP() {
-    echo "Usage: hikey-efi-boot-image <uefi repo path>"
-    echo "   see /docs/targets/hikey960-uefi.md for more info"
-    echo "-m : Add mexec option to command line"
-    echo "-h for help"
+    echo "Usage: hikey-efi-boot-image [options] <uefi repo path>"
+    echo "  See: /docs/targets/hikey960-uefi.md for more info"
+    echo
+    echo "  -b bootdata     Use specified bootdata file"
+    echo "  -m              Add mexec option to command line"
+    echo "  -h              For help"
     exit 1
 }
 
-while getopts "mh" FLAG; do
+while getopts "b:mh" FLAG; do
     case $FLAG in
+        b) RAMDISK="$OPTARG";;
         m) CMDLINE+=" netsvc.netboot=true";;
         h) HELP;;
         \?)
@@ -65,11 +68,12 @@ fi
 # mkdtimg and mkbootimg can be found at:
 #  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
 
+echo using mkbootimg at ${MKBOOTIMG}
 ${MKBOOTIMG} --kernel $KERNEL \
 --kernel_offset $KERNEL_OFFSET \
 --base $MEMBASE \
 --ramdisk_offset $RAMDISK_OFFSET \
---ramdisk $RAMDISK \
+--ramdisk "$RAMDISK" \
 --tags_offset $DT_OFFSET \
 --cmdline "$CMDLINE" \
 -o $OUT_IMAGE || exit 1
