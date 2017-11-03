@@ -105,7 +105,7 @@ TEST(StringView, ConstExprConstructors) {
 
   constexpr const char* string_ptr = TEST_STRING;
   constexpr StringView sw5(string_ptr);
-  EXPECT_EQ(TEST_STRING_LENGTH, sw4.size());
+  EXPECT_EQ(TEST_STRING_LENGTH, sw5.size());
 }
 
 TEST(StringView, CopyOperator) {
