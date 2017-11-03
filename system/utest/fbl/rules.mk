@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# If set, disable building these tests which account for a fair amount
+# of build time
+ifeq ($(call TOBOOL,$(DISABLE_FBL_TEST)),false)
+
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 fbl_common_tests := \
@@ -90,3 +94,5 @@ include make/module.mk
 fbl_common_tests :=
 fbl_device_tests :=
 fbl_host_tests :=
+
+endif # DISABLE_FBL_TEST
