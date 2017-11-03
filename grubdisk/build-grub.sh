@@ -15,7 +15,7 @@ if [[ ! -e $FUCHSIA_OUT_DIR/build-objconv/bin/objconv ]]; then
   cd "$FUCHSIA_OUT_DIR/build-objconv"
   curl -O http://www.agner.org/optimize/objconv.zip || exit 1
   got=$(shasum -a 256 objconv.zip | cut -d ' ' -f 1)
-  want="b95a40c4096510632a6ebb5870481c33bef254a32225b7c4a40835c98d182da6"
+  want="475a0d68e041485ecbd638289fb4304a28a87974a0ac38a7c71eba9692af8bf8"
   if [[ "$want" != "$got" ]]; then
     echo -e "shasum for objconv didn't match:\nwant: $want\ngot:  $got\n" >&2
     exit 1

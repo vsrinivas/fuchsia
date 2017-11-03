@@ -11,4 +11,4 @@ grubdisk="$FUCHSIA_OUT_DIR/${FUCHSIA_GCE_GRUB}.raw"
 
 makefile 1m "$grubdisk"
 
-$FUCHSIA_SCRIPTS_DIR/grubdisk/build-all.sh "$grubdisk"
+$FUCHSIA_DIR/scripts/grubdisk/build-all.sh "$grubdisk"
