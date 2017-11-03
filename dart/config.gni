@@ -4,3 +4,6 @@
 
 # Set the location of the Flutter engine project.
 flutter_root = "//third_party/flutter"
+
+# Define the toolchain used to build the host Dart SDK.
+dart_host_sdk_toolchain = "//build/dart/config:dart_host"
