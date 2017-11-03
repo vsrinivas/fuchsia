@@ -263,7 +263,7 @@ public:
         // Register in units of 16.66Mhz on skylake
         uint32_t val = mhz * 3 / 50;
         DASSERT(val <= 0x1ff);
-        return reg_io->Write32(kOffset, val << 23);
+        reg_io->Write32(kOffset, val << 23);
     }
 };
 
