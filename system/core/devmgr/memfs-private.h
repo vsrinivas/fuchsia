@@ -162,11 +162,11 @@ private:
 
 class Vfs : public fs::Vfs {
 public:
-   zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
-                             zx_handle_t vmo, zx_off_t off,
-                             zx_off_t len);
+    zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
+                              zx_handle_t vmo, zx_off_t off,
+                              zx_off_t len);
 
-   void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree);
+    void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree);
 };
 
 } // namespace memfs
@@ -205,6 +205,7 @@ zx_status_t bootfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, siz
 // system fs
 VnodeDir* systemfs_get_root(void);
 zx_status_t systemfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
+void systemfs_set_readonly(bool value);
 
 // Create the global root to memfs
 VnodeDir* vfs_create_global_root(void) TA_NO_THREAD_SAFETY_ANALYSIS;

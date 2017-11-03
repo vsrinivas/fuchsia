@@ -140,6 +140,9 @@ public:
     zx_status_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual) __TA_EXCLUDES(vfs_lock_);
 
+    // Sets whether this file system is read-only.
+    void SetReadonly(bool value) __TA_EXCLUDES(vfs_lock_);
+
 #ifdef __Fuchsia__
     void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
     zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
@@ -183,6 +186,10 @@ public:
     zx_status_t UninstallAll(zx_time_t deadline) __TA_EXCLUDES(vfs_lock_);
 #endif
 
+protected:
+    // Whether this file system is read-only.
+    bool ReadonlyLocked() const __TA_REQUIRES(vfs_lock_) { return readonly_; }
+
 private:
     // Starting at vnode |vn|, walk the tree described by the path string,
     // until either there is only one path segment remaining in the string
@@ -197,6 +204,9 @@ private:
     zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                            fbl::StringPiece path, fbl::StringPiece* pathout,
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
+
+    bool readonly_{};
+
 #ifdef __Fuchsia__
     zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
     zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);

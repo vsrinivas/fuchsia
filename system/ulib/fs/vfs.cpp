@@ -159,8 +159,9 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             return ZX_ERR_INVALID_ARGS;
         } else if (path == ".") {
             return ZX_ERR_INVALID_ARGS;
+        } else if (ReadonlyLocked()) {
+            return ZX_ERR_ACCESS_DENIED;
         }
-
         if ((r = vndir->Create(&vn, path, mode)) < 0) {
             if ((r == ZX_ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
@@ -192,6 +193,9 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 
         flags |= (must_be_dir ? O_DIRECTORY : 0);
 #endif
+        if (ReadonlyLocked() && IsWritable(flags)) {
+            return ZX_ERR_ACCESS_DENIED;
+        }
         if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
             return r;
         }
@@ -228,7 +232,11 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
 #ifdef __Fuchsia__
         fbl::AutoLock lock(&vfs_lock_);
 #endif
-        r = vndir->Unlink(path, must_be_dir);
+        if (ReadonlyLocked()) {
+            r = ZX_ERR_ACCESS_DENIED;
+        } else {
+            r = vndir->Unlink(path, must_be_dir);
+        }
     }
     if (r != ZX_OK) {
         return r;
@@ -325,6 +333,9 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
     fbl::RefPtr<fs::Vnode> newparent;
     {
         fbl::AutoLock lock(&vfs_lock_);
+        if (ReadonlyLocked()) {
+            return ZX_ERR_ACCESS_DENIED;
+        }
         if ((r = TokenToVnode(fbl::move(token), &newparent)) != ZX_OK) {
             return r;
         }
@@ -357,7 +368,9 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
     // Local filesystem
     bool old_must_be_dir;
     bool new_must_be_dir;
-    if ((r = vfs_name_trim(oldStr, &oldStr, &old_must_be_dir)) != ZX_OK) {
+    if (ReadonlyLocked()) {
+        return ZX_ERR_ACCESS_DENIED;
+    } else if ((r = vfs_name_trim(oldStr, &oldStr, &old_must_be_dir)) != ZX_OK) {
         return r;
     } else if (old_must_be_dir) {
         return ZX_ERR_NOT_DIR;
@@ -487,6 +500,13 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
     default:
         return vn->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
+}
+
+void Vfs::SetReadonly(bool value) {
+#ifdef __Fuchsia__
+    fbl::AutoLock lock(&vfs_lock_);
+#endif
+    readonly_ = value;
 }
 
 zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,

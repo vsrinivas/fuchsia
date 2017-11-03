@@ -32,10 +32,11 @@ namespace memfs {
 namespace {
 
 Vfs root_vfs;
+Vfs system_vfs;
 
 fbl::unique_ptr<async::Loop> global_loop;
 
-}
+}  // namespace
 
 // Artificially cap the maximum in-memory file size to 512MB.
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
@@ -73,13 +74,13 @@ VnodeMemfs::VnodeMemfs(Vfs* vfs) : dnode_(nullptr), link_count_(0), vfs_(vfs),
     ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {
     create_time_ = modify_time_ = zx_time_get(ZX_CLOCK_UTC);
 }
-VnodeMemfs::~VnodeMemfs() {
-}
+
+VnodeMemfs::~VnodeMemfs() {}
 
 VnodeFile::VnodeFile(Vfs* vfs)
     : VnodeMemfs(vfs), vmo_(ZX_HANDLE_INVALID), length_(0) {}
 
-    VnodeFile::VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length)
+VnodeFile::VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length)
     : VnodeMemfs(vfs), vmo_(vmo), length_(length) {}
 
 VnodeFile::~VnodeFile() {
@@ -123,12 +124,12 @@ zx_status_t VnodeVmo::ValidateFlags(uint32_t flags) {
         return ZX_ERR_NOT_DIR;
     }
     switch (flags & O_ACCMODE) {
-    case O_WRONLY:
-    case O_RDWR:
-        return ZX_ERR_ACCESS_DENIED;
+        case O_WRONLY:
+        case O_RDWR:
+            return ZX_ERR_ACCESS_DENIED;
+        }
+        return ZX_OK;
     }
-    return ZX_OK;
-}
 
 zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return ZX_OK;
@@ -709,7 +710,7 @@ zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, fbl::StringPiece n
 
 fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
-        zx_status_t r = memfs_create_fs("system", &memfs::root_vfs, &memfs::systemfs_root);
+        zx_status_t r = memfs_create_fs("system", &memfs::system_vfs, &memfs::systemfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'system' file system\n", r);
             __builtin_trap();
@@ -757,6 +758,10 @@ zx_status_t devfs_mount(zx_handle_t h) {
 
 VnodeDir* systemfs_get_root() {
     return SystemfsRoot().get();
+}
+
+void systemfs_set_readonly(bool value) {
+    SystemfsRoot()->vfs()->SetReadonly(value);
 }
 
 static zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_handle_t vmo,
@@ -824,12 +829,14 @@ VnodeDir* vfs_create_global_root() {
         memfs::global_loop.reset(new async::Loop());
         memfs::global_loop->StartThread("root-dispatcher");
         memfs::root_vfs.set_async(memfs::global_loop->async());
+        memfs::system_vfs.set_async(memfs::global_loop->async());
     }
     return memfs::global_root.get();
 }
 
 void devmgr_vfs_exit() {
     memfs::root_vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
+    memfs::system_vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
 }
 
 zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree) {

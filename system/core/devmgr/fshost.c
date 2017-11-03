@@ -82,6 +82,11 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) {
         bootfs_parse(&bfs, callback, &cd);
         bootfs_destroy(&bfs);
     }
+    if (type == BOOTDATA_BOOTFS_SYSTEM) {
+        // TODO(abarth): Uncomment this line when we're ready to make /system
+        // read only.
+        // systemfs_set_readonly(getenv("zircon.system.writable") == NULL);
+    }
     return cd.file_count;
 }
 
