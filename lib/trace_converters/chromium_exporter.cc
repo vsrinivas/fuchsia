@@ -147,6 +147,11 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       // We can't emit these into the regular stream, save them for later.
       context_switch_records_.push_back(record.GetContextSwitch());
       break;
+    case trace::RecordType::kString:
+    case trace::RecordType::kThread:
+      // We can ignore these, trace::TraceReader consumes them and maintains
+      // tables for future lookup.
+      break;
     default:
       break;
   }
