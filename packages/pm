@@ -3,7 +3,7 @@
         "go"
     ],
     "labels": [
-        "//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)"
+        "//garnet/go/src/pm:host"
     ],
     "packages": {
         "pm": "//garnet/go/src/pm"

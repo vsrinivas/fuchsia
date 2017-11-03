@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
+import("//build/host.gni")
 import("//packages/package.gni")
 
 go_binary("pm_bin") {
@@ -90,4 +91,13 @@ package("pkgfs_test") {
   tests = [ {
         name = "pkgfs_test"
       } ]
+}
+
+install_host_tools("host") {
+  deps = [
+    ":pm_bin",
+  ]
+  outputs = [
+    "pm",
+  ]
 }
