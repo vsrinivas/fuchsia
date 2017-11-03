@@ -380,9 +380,6 @@ mod tests {
 
     #[test]
     fn channel_call() {
-        // NOTE(raggi): we saw this time-out in CQ killing a tryjob, so upped to 500ms.
-        let five_hundred_ms = 500.millis();
-
         // Create a pair of channels
         let (p1, p2) = Channel::create().unwrap();
 
@@ -402,7 +399,14 @@ mod tests {
         // Make the call.
         let mut buf = MessageBuf::new();
         buf.ensure_capacity_bytes(12);
-        assert!(p1.call(five_hundred_ms.after_now(), b"txidcall", &mut vec![], &mut buf).is_ok());
+        // NOTE(raggi): CQ has been seeing some long stalls from channel call,
+        // and it's as yet unclear why. The timeout here has been made much
+        // larger in order to avoid that, as the issues are not issues with this
+        // crate's concerns. The timeout is here just to prevent the tests from
+        // stalling forever if a developer makes a mistake locally in this
+        // crate. Tests of Zircon behavior or virtualization behavior should be
+        // covered elsewhere. See ZX-1324.
+        assert!(p1.call(30.seconds().after_now(), b"txidcall", &mut vec![], &mut buf).is_ok());
         assert_eq!(buf.bytes(), b"txidresponse");
         assert_eq!(buf.n_handles(), 0);
 
