@@ -5,7 +5,7 @@
 
 mkdir -p $(dirname $FUCHSIA_VBOX_RAW)
 
-mfv=$FUCHSIA_BUILD_DIR/host_x64/make-fuchsia-vol
+mfv=$FUCHSIA_BUILD_DIR/tools/make-fuchsia-vol
 
 if [[ ! -x $mfv ]]; then
 	echo "You need to build the 'make-fuchsia-vol' package" >&2
