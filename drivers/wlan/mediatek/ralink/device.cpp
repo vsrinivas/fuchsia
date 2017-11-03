@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "device.h"
+#include "garnet/drivers/wlan/common/cipher.h"
 #include "logging.h"
 #include "ralink.h"
-#include "garnet/drivers/wlan/common/cipher.h"
 
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlan.h>
@@ -2827,57 +2827,93 @@ static const uint8_t kDataRates[4][8] = {
     // clang-format on
 };
 
+static uint8_t mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is_sgi) {
+    uint8_t rate = 0;            // Mbps * 2
+    uint8_t rate_tbl_idx = 255;  // Init with invalid idx.
+
+    if (phy_mode >= fbl::count_of(kDataRates)) { return rate; }
+
+    switch (phy_mode) {
+    case PhyMode::kLegacyCck:
+        if (mcs <= 3) {
+            // Long preamble case
+            rate_tbl_idx = mcs;
+        } else if (9 <= mcs && mcs <= 11) {
+            // Short preamble case
+            rate_tbl_idx = mcs - 8;
+        } else {
+            warnf("ralink: illegal mcs for phy %u mcs %u is_40mhz %u is_sgi %u\n", phy_mode, mcs,
+                  is_40mhz, is_sgi);
+            return rate;
+        }
+        break;
+    case PhyMode::kLegacyOfdm:
+        rate_tbl_idx = mcs;
+        break;
+    case PhyMode::kHtMixMode:
+    case PhyMode::kHtGreenfield:
+        if (mcs == 32) {
+            // 40MHz, ShortGuardInterval case: HT duplicate 6 Mbps.
+            rate_tbl_idx = 0;
+        } else {
+            rate_tbl_idx = mcs;
+        }
+        break;
+    default:
+        warnf("ralink: unknown phy %u with mcs %u is_40mhz %u is_sgi %u\n", phy_mode, mcs, is_40mhz,
+              is_sgi);
+        return rate;
+    }
+
+    if (rate_tbl_idx >= fbl::count_of(kDataRates[0])) {
+        warnf("ralink: illegal rate_tbl_idx %u for phy %u mcs %u is_40mhz %u is_sgi %u\n",
+              rate_tbl_idx, phy_mode, mcs, is_40mhz, is_sgi);
+        return rate;
+    }
+
+    rate = kDataRates[phy_mode][rate_tbl_idx];
+    if (is_40mhz) rate *= 2;
+    if (is_sgi) rate = static_cast<uint8_t>((static_cast<uint16_t>(rate) * 10) / 9);
+
+    return rate;
+}
+
+static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
+    switch (ralink_phy) {
+    case PhyMode::kLegacyCck:
+        return WLAN_PHY_CCK;
+    case PhyMode::kLegacyOfdm:
+        return WLAN_PHY_OFDM;
+    case PhyMode::kHtMixMode:
+        return WLAN_PHY_HT_MIXED;
+    case PhyMode::kHtGreenfield:
+        return WLAN_PHY_HT_GREENFIELD;
+    default:
+        warnf("ralink: Rxed unknown PHY: %u\n", ralink_phy);
+        ZX_DEBUG_ASSERT(0);  // TODO: Define Undefined Phy in DDK.
+        return 0;            // Happy compiler
+    }
+}
+
 static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3,
                          uint8_t* rssi_offsets, uint8_t lna_gain) {
     info->flags |= WLAN_RX_INFO_PHY_PRESENT;
-    ZX_DEBUG_ASSERT(rxwi1.phy_mode() < 4);
-    switch (rxwi1.phy_mode()) {
-    case PhyMode::kLegacyCck:
-        info->phy = WLAN_PHY_CCK;
-        break;
-    case PhyMode::kLegacyOfdm:
-        info->phy = WLAN_PHY_OFDM;
-        break;
-    case PhyMode::kHtMixMode:
-        info->phy = WLAN_PHY_HT_MIXED;
-        break;
-    case PhyMode::kHtGreenfield:
-        info->phy = WLAN_PHY_HT_GREENFIELD;
-        break;
-    default:
-        // This should not happen!
-        warnf("unknown PHY: %u\n", rxwi1.phy_mode());
-        info->flags &= ~(WLAN_RX_INFO_PHY_PRESENT);
-        break;
-    }
+    info->phy = ralink_phy_to_ddk_phy(rxwi1.phy_mode());
 
-    bool ht_phy =
-        rxwi1.phy_mode() == PhyMode::kHtMixMode || rxwi1.phy_mode() == PhyMode::kHtGreenfield;
-    uint8_t mcs = rxwi1.mcs();
-    if (rxwi1.phy_mode() == PhyMode::kLegacyCck && mcs > 8) { mcs -= 8; }
-    if (rxwi1.phy_mode() < fbl::count_of(kDataRates) && mcs < fbl::count_of(kDataRates[0])) {
-        uint8_t rate = kDataRates[rxwi1.phy_mode()][mcs];
-        if (rate > 0) {
-            info->flags |= WLAN_RX_INFO_DATA_RATE_PRESENT;
-            info->data_rate = rate;
-        }
-    } else if (ht_phy && rxwi1.mcs() == 32) {
+    uint8_t rate = mcs_to_rate(rxwi1.phy_mode(), rxwi1.mcs(), rxwi1.bw() == 1, rxwi1.sgi() == 1);
+    if (rate != 0) {
         info->flags |= WLAN_RX_INFO_DATA_RATE_PRESENT;
-        info->data_rate = 12;
+        info->data_rate = rate;
     }
 
     info->flags |= WLAN_RX_INFO_CHAN_WIDTH_PRESENT;
     info->chan_width = rxwi1.bw() ? WLAN_CHAN_WIDTH_40MHZ : WLAN_CHAN_WIDTH_20MHZ;
 
-    if (ht_phy) {
-        if (info->flags & WLAN_RX_INFO_DATA_RATE_PRESENT) {
-            if (rxwi1.bw()) info->data_rate *= 2;
-            if (rxwi1.sgi()) info->data_rate = (info->data_rate * 10) / 9;
-        }
-        if (rxwi1.mcs() < 8) {
-            info->flags |= WLAN_RX_INFO_MOD_PRESENT;
-            info->mod = rxwi1.mcs();
-        }
+    uint8_t phy_mode = rxwi1.phy_mode();
+    bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtMixMode;
+    if (is_ht && rxwi1.mcs() < 8) {
+        info->flags |= WLAN_RX_INFO_MOD_PRESENT;
+        info->mod = rxwi1.mcs();
     }
 
     // TODO(tkilbourn): check rssi1 and rssi2 and figure out what to do with them
@@ -3205,7 +3241,7 @@ bool Device::RequiresProtection(const uint8_t* frame, size_t len) {
 // uses hardware encryption.
 uint8_t Device::LookupTxWcid(const uint8_t* frame, size_t len) {
     if (RequiresProtection(frame, len)) {
-        auto addr1 = frame + 4; // 4 = FC + Duration fields
+        auto addr1 = frame + 4;  // 4 = FC + Duration fields
         // TODO(hahnr): Replace addresses and constants with MacAddr once it was moved to common/.
         if (memcmp(addr1, kBcastAddr, 6) == 0) {
             return kWcidBcastAddr;
@@ -3269,9 +3305,7 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
 // The KeyMode identifies a vendor supported cipher by a number and not as IEEE does by a type
 // and OUI.
 KeyMode Device::MapIeeeCipherSuiteToKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type) {
-    if (memcmp(cipher_oui, wlan::common::cipher::kStandardOui, 3)) {
-        return KeyMode::kUnsupported;
-    }
+    if (memcmp(cipher_oui, wlan::common::cipher::kStandardOui, 3)) { return KeyMode::kUnsupported; }
 
     switch (cipher_type) {
     case wlan::common::cipher::kTkip:
@@ -3312,8 +3346,8 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
     }
 
     size_t out_len;
-    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
-                              index, &keyEntry, sizeof(keyEntry), ZX_TIME_INFINITE, &out_len);
+    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                              &keyEntry, sizeof(keyEntry), ZX_TIME_INFINITE, &out_len);
     if (status != ZX_OK || out_len < sizeof(keyEntry)) {
         std::printf("Error writing Key Entry: %d\n", status);
         return ZX_ERR_IO;
@@ -3321,14 +3355,14 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
     return ZX_OK;
 }
 
-zx_status_t
-Device::WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len, KeyMode mode) {
+zx_status_t Device::WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len,
+                                     KeyMode mode) {
     uint16_t index = PAIRWISE_KEY_BASE + wcid * sizeof(KeyEntry);
     return WriteKey(key, key_len, index, mode);
 }
 
-zx_status_t
-Device::WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len, KeyMode mode) {
+zx_status_t Device::WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len,
+                                   KeyMode mode) {
     if (skey > kMaxSharedKeys) { return ZX_ERR_NOT_SUPPORTED; }
 
     uint16_t index = SHARED_KEY_BASE + skey * sizeof(KeyEntry);
@@ -3342,8 +3376,8 @@ zx_status_t Device::WriteWcid(uint8_t wcid, const uint8_t mac[]) {
 
     size_t out_len;
     uint16_t index = RX_WCID_BASE + wcid * sizeof(wcidEntry);
-    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
-                              index, &wcidEntry, sizeof(wcidEntry), ZX_TIME_INFINITE, &out_len);
+    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                              &wcidEntry, sizeof(wcidEntry), ZX_TIME_INFINITE, &out_len);
     if (status != ZX_OK || out_len < sizeof(wcidEntry)) {
         std::printf("Error writing WCID Entry: %d\n", status);
         return ZX_ERR_IO;
@@ -3405,8 +3439,8 @@ zx_status_t Device::ResetIvEiv(uint8_t wcid, uint8_t key_id, KeyMode mode) {
 
     size_t out_len;
     uint16_t index = IV_EIV_BASE + wcid * sizeof(ivEntry);
-    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
-                              index, &ivEntry, sizeof(ivEntry), ZX_TIME_INFINITE, &out_len);
+    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index,
+                              &ivEntry, sizeof(ivEntry), ZX_TIME_INFINITE, &out_len);
     if (status != ZX_OK || out_len < sizeof(ivEntry)) {
         std::printf("Error writing IVEIV Entry: %d\n", status);
         return ZX_ERR_IO;
@@ -3427,9 +3461,7 @@ zx_status_t Device::WriteSharedKeyMode(uint8_t skey, KeyMode mode) {
     CHECK_READ(SHARED_KEY_MODE, status);
 
     status = keyMode.set(skey_idx, mode);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     status = WriteRegister(offset, keyMode.value);
     CHECK_WRITE(SHARED_KEY_MODE, status);
@@ -3437,7 +3469,7 @@ zx_status_t Device::WriteSharedKeyMode(uint8_t skey, KeyMode mode) {
 }
 
 zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
-    fbl::MakeAutoCall([&](){ free(key_config); });
+    fbl::MakeAutoCall([&]() { free(key_config); });
 
     if (options != 0) { return ZX_ERR_INVALID_ARGS; }
 
@@ -3453,9 +3485,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         uint8_t wcid = kWcidBssid;
 
         // Reset everything on failure.
-        auto reset = fbl::MakeAutoCall([&]() {
-          ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE);
-        });
+        auto reset = fbl::MakeAutoCall([&]() { ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE); });
 
         auto status = WriteWcid(wcid, key_config->peer_addr);
         if (status != ZX_OK) { break; }
@@ -3480,9 +3510,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         uint8_t wcid = kWcidBcastAddr;
 
         // Reset everything on failure.
-        auto reset = fbl::MakeAutoCall([&]() {
-          ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP);
-        });
+        auto reset = fbl::MakeAutoCall([&]() { ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP); });
 
         auto status = WriteSharedKey(skey, key_config->key, key_config->key_len, keyMode);
         if (status != ZX_OK) { break; }
