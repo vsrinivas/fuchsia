@@ -4,7 +4,7 @@
 
 config("compiler") {
   asmflags = []
-  cflags = []
+  cflags = [ "-fcolor-diagnostics" ]
   cflags_c = []
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
   cflags_objc = []
