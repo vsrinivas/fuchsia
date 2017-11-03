@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_
+#define ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -54,8 +55,9 @@
 #define RNDIS_PACKET_TYPE_FUNCTIONAL      0x00004000
 #define RNDIS_PACKET_TYPE_MAC_FRAME       0x00008000
 
-#define RNDIS_BUFFER_SIZE 1025
+#define RNDIS_BUFFER_SIZE 1024
 #define RNDIS_QUERY_BUFFER_OFFSET 20
+#define RNDIS_CONTROL_TIMEOUT ZX_SEC(5)
 
 typedef struct {
     uint32_t msg_type;
@@ -148,3 +150,5 @@ typedef struct {
     uint32_t reserved0;
     uint32_t reserved1;
 } __PACKED rndis_packet_header;
+
+#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_

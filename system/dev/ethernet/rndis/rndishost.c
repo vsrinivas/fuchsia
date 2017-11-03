@@ -44,18 +44,19 @@ typedef struct {
 
     uint8_t bulk_in_addr;
     uint8_t bulk_out_addr;
-    uint8_t intr_addr;
 
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
-    list_node_t free_intr_reqs;
 
-    uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
-    uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
+    uint64_t rx_endpoint_delay; // wait time between 2 recv requests
+    uint64_t tx_endpoint_delay; // wait time between 2 transmit requests
 
     // Interface to the ethernet layer.
     ethmac_ifc_t* ifc;
     void* cookie;
+
+    thrd_t thread;
+    bool thread_started;
 
     mtx_t mutex;
 } rndishost_t;
@@ -98,16 +99,16 @@ static zx_status_t rndis_command(rndishost_t* eth, void* buf) {
     zx_status_t status;
     status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_CDC_SEND_ENCAPSULATED_COMMAND,
-                         0, eth->control_intf, buf, header->msg_length, ZX_TIME_INFINITE, NULL);
+                         0, eth->control_intf, buf, header->msg_length, RNDIS_CONTROL_TIMEOUT,
+                         NULL);
 
     if (status < 0) {
         return status;
     }
 
-    // TODO: Set a reasonable timeout on this call.
     status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_CDC_GET_ENCAPSULATED_RESPONSE,
-                         0, eth->control_intf, buf, RNDIS_BUFFER_SIZE, ZX_TIME_INFINITE, NULL);
+                         0, eth->control_intf, buf, RNDIS_BUFFER_SIZE, RNDIS_CONTROL_TIMEOUT, NULL);
 
     if (header->request_id != request_id) {
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -116,8 +117,42 @@ static zx_status_t rndis_command(rndishost_t* eth, void* buf) {
     return status;
 }
 
+static void rndishost_recv(rndishost_t* eth, usb_request_t* request) {
+    size_t len = request->response.actual;
+
+    uint8_t* read_data;
+    zx_status_t status = usb_request_mmap(request, (void*)&read_data);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "rndishost receive: usb_request_mmap failed: %d\n", status);
+        return;
+    }
+
+    while (len > sizeof(rndis_packet_header)) {
+        rndis_packet_header* header = (rndis_packet_header*)read_data;
+
+        // The |data_offset| field contains the offset to the payload measured from the start of
+        // the field itself.
+        size_t data_offset = offsetof(rndis_packet_header, data_offset) + header->data_offset;
+
+        if (header->msg_type != RNDIS_PACKET_MSG || len < header->msg_length ||
+            len < data_offset + header->data_length) {
+            zxlogf(DEBUG1, "rndis bad packet\n");
+            return;
+        }
+
+        if (header->data_length == 0) {
+            // No more data.
+            return;
+        }
+
+        eth->ifc->recv(eth->cookie, read_data + data_offset, header->data_length, 0);
+
+        read_data += header->msg_length;
+        len -= header->msg_length;
+    }
+}
+
 static void rndis_read_complete(usb_request_t* request, void* cookie) {
-    zxlogf(TRACE, "rndis_read_complete\n");
     rndishost_t* eth = (rndishost_t*)cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
@@ -131,24 +166,17 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         zxlogf(TRACE, "rndis_read_complete Slowing down the requests by %d usec"
-               " and resetting the recv endpoint\n", ETHMAC_RECV_DELAY);
+                      " and resetting the recv endpoint\n",
+               ETHMAC_RECV_DELAY);
         if (eth->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
             eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     }
     if ((request->response.status == ZX_OK) && eth->ifc) {
-        size_t len = request->response.actual;
-
-        uint8_t* read_data;
-        zx_status_t status = usb_request_mmap(request, (void*)&read_data);
-        if (status != ZX_OK) {
-            printf("usb_request_mmap failed: %d\n", status);
-            mtx_unlock(&eth->mutex);
-            return;
-        }
-
-        eth->ifc->recv(eth->cookie, read_data, len, 0);
+        rndishost_recv(eth, request);
+    } else {
+        zxlogf(DEBUG1, "rndis read complete: bad status = %d\n", request->response.status);
     }
 
     // TODO: Only usb_request_queue if the device is online.
@@ -173,7 +201,8 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         zxlogf(TRACE, "rndis_write_complete Slowing down the requests by %d usec"
-               " and resetting the transmit endpoint\n", ETHMAC_TRANSMIT_DELAY);
+                      " and resetting the transmit endpoint\n",
+               ETHMAC_TRANSMIT_DELAY);
         if (eth->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
             eth->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
         }
@@ -192,17 +221,12 @@ static void rndishost_free(rndishost_t* eth) {
     while ((txn = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
         usb_request_release(txn);
     }
-    while ((txn = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(txn);
-    }
     free(eth);
 }
 
 static zx_status_t rndishost_query(void* ctx, uint32_t options, ethmac_info_t* info) {
-    zxlogf(TRACE, "rndishost_query\n");
     rndishost_t* eth = (rndishost_t*)ctx;
 
-    zxlogf(DEBUG1, "options = %x\n", options);
     if (options) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -249,12 +273,17 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
 
     usb_request_t* req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
     if (req == NULL) {
-        zxlogf(DEBUG1, "dropped a packet.\n");
+        zxlogf(TRACE, "rndishost dropped a packet\n");
         status = ZX_ERR_NO_RESOURCES;
         goto done;
     }
 
-    // TODO: Check that length + header <= MTU
+    if (length + sizeof(rndis_packet_header) > RNDIS_MAX_XFER_SIZE) {
+        zxlogf(TRACE, "rndishost attempted to send a packet that's too large.\n");
+        list_add_tail(&eth->free_write_reqs, &req->node);
+        status = ZX_ERR_INVALID_ARGS;
+        goto done;
+    }
 
     rndis_packet_header header;
     uint8_t* header_data = (uint8_t*)&header;
@@ -268,7 +297,7 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
 
     usb_request_copy_to(req, header_data, sizeof(rndis_packet_header), 0);
     ssize_t bytes_copied = usb_request_copy_to(req, byte_data, length,
-                                           sizeof(rndis_packet_header));
+                                               sizeof(rndis_packet_header));
     req->header.length = sizeof(rndis_packet_header) + length;
     if (bytes_copied < 0) {
         printf("rndishost: failed to copy data into send txn (error %zd)\n", bytes_copied);
@@ -290,10 +319,16 @@ static void rndishost_unbind(void* ctx) {
 
 static void rndishost_release(void* ctx) {
     rndishost_t* eth = (rndishost_t*)ctx;
+    mtx_lock(&eth->mutex);
+    bool should_join = eth->thread_started;
+    mtx_unlock(&eth->mutex);
+    if (should_join) {
+        thrd_join(eth->thread, NULL);
+    }
     rndishost_free(eth);
 }
 
-static zx_status_t rndishost_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t rndishost_set_param(void* ctx, uint32_t param, int32_t value, void* data) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -326,14 +361,13 @@ static int rndis_start_thread(void* arg) {
 
     zx_status_t status = rndis_command(eth, buf);
     if (status < 0) {
-        zxlogf(DEBUG1, "rndishost bad status on initial message. %d\n", status);
+        zxlogf(ERROR, "rndishost bad status on initial message. %d\n", status);
         goto fail;
     }
 
-    // TODO: Save important fields of init_cmplt.
     rndis_init_complete* init_cmplt = buf;
     if (!command_succeeded(buf, RNDIS_INITIALIZE_CMPLT, sizeof(*init_cmplt))) {
-        zxlogf(DEBUG1, "rndishost initialization failed.\n");
+        zxlogf(ERROR, "rndishost initialization failed.\n");
         status = ZX_ERR_IO;
         goto fail;
     }
@@ -352,8 +386,9 @@ static int rndis_start_thread(void* arg) {
     if (status == ZX_OK) {
         // TODO: Do something with this information.
         rndis_query_complete* phy_query_cmplt = buf;
-        if (command_succeeded(buf, RNDIS_QUERY_CMPLT, sizeof(*phy_query_cmplt) +
-                                                          phy_query_cmplt->info_buffer_length)) {
+        if (command_succeeded(buf,
+                              RNDIS_QUERY_CMPLT,
+                              sizeof(*phy_query_cmplt) + phy_query_cmplt->info_buffer_length)) {
             // The offset given in the reply is from the beginning of the request_id
             // field. So, add 8 for the msg_type and msg_length fields.
             phy = buf + 8 + phy_query_cmplt->info_buffer_offset;
@@ -376,7 +411,7 @@ static int rndis_start_thread(void* arg) {
     rndis_query_complete* mac_query_cmplt = buf;
     if (!command_succeeded(buf, RNDIS_QUERY_CMPLT, sizeof(*mac_query_cmplt) +
                                                        mac_query_cmplt->info_buffer_length)) {
-        zxlogf(DEBUG1, "rndishost MAC query failed.\n");
+        zxlogf(ERROR, "rndishost MAC query failed.\n");
         status = ZX_ERR_IO;
         goto fail;
     }
@@ -412,20 +447,26 @@ static int rndis_start_thread(void* arg) {
         goto fail;
     }
 
+    // Queue read requests
+    mtx_lock(&eth->mutex);
+    usb_request_t* txn;
+    while ((txn = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+        usb_request_queue(&eth->usb, txn);
+    }
+    mtx_unlock(&eth->mutex);
+
     free(buf);
     device_make_visible(eth->zxdev);
     return ZX_OK;
 
 fail:
     free(buf);
-    rndishost_unbind(eth);
-    rndishost_free(eth);
+    device_remove(eth->zxdev);
     return status;
 }
 
 static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
-
     zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
         return status;
@@ -501,7 +542,6 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
 
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
-    list_initialize(&eth->free_intr_reqs);
 
     mtx_init(&eth->mutex, mtx_plain);
 
@@ -509,13 +549,12 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     eth->control_intf = control_intf;
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
-    eth->intr_addr = intr_addr;
     eth->ifc = NULL;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_in_addr,
+        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_MAX_XFER_SIZE, bulk_in_addr,
                                                      sizeof(usb_request_t));
         if (alloc_result != ZX_OK) {
             status = alloc_result;
@@ -527,8 +566,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        // TODO: Allocate based on mtu.
-        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_out_addr,
+        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_MAX_XFER_SIZE, bulk_out_addr,
                                                      sizeof(usb_request_t));
         if (alloc_result != ZX_OK) {
             status = alloc_result;
@@ -549,22 +587,25 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
         .flags = DEVICE_ADD_INVISIBLE,
     };
 
+    mtx_lock(&eth->mutex);
     status = device_add(eth->usb_zxdev, &args, &eth->zxdev);
     if (status < 0) {
+        mtx_unlock(&eth->mutex);
         zxlogf(ERROR, "rndishost: failed to create device: %d\n", status);
         goto fail;
     }
 
-    thrd_t thread;
-    int ret = thrd_create_with_name(&thread, rndis_start_thread,
+    eth->thread_started = true;
+    int ret = thrd_create_with_name(&eth->thread, rndis_start_thread,
                                     eth, "rndishost_start_thread");
     if (ret != thrd_success) {
-        status = ZX_ERR_NO_RESOURCES;
-        goto fail;
+        eth->thread_started = false;
+        mtx_unlock(&eth->mutex);
+        device_remove(eth->zxdev);
+        return ZX_ERR_NO_RESOURCES;
     }
-    // TODO: Save the thread in rndishost_t and join when we release the device.
-    thrd_detach(thread);
 
+    mtx_unlock(&eth->mutex);
     return ZX_OK;
 
 fail:
@@ -580,6 +621,7 @@ static zx_driver_ops_t rndis_driver_ops = {
 
 // TODO: Make sure we can bind to all RNDIS use cases. USB_CLASS_WIRELESS only
 // covers the tethered device case.
+// clang-format off
 ZIRCON_DRIVER_BEGIN(rndishost, rndis_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
