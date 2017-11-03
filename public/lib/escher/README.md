@@ -43,9 +43,9 @@ Escher can also build on Linux.  In order to do so, you need to:
   * specify that you want to build only the Escher module:
     ```
     cd $FUCHSIA_DIR
-    fset x86-64 --release --packages garnet/packages/escher_linux
+    fx set x86-64 --release --packages garnet/packages/escher_linux
     ```
-    * The `fset` command is provided by the `env.sh` script; see `$FUCHSIA_DIR/docs/getting_started.md`.
+    * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
     * There may be a spurious error regarding `skia_use_sfntly`; ignore it.
     * NOTE!! These commands may conflict with the Vulkan SDK on your LD_LIBRARY_PATH.  It is probably best to run these commands in one terminal window, then switch to another and setting LD_LIBRARY_PATH before Building
     and running.
