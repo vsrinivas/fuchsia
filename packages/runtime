@@ -12,5 +12,8 @@
         "bootstrap": "//garnet/bin/bootstrap",
         "far": "//garnet/bin/far",
         "run": "//garnet/bin/run"
-    }
+    },
+    "labels": [
+      "//garnet/bin/far:host"
+    ]
 }
