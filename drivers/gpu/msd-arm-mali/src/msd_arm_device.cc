@@ -242,8 +242,10 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
         power_manager_->ReceivedPowerInterrupt(register_io_.get());
     }
 
-    if (irq_status.reg_value())
+    if (irq_status.reg_value()) {
         magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+        ProcessDumpStatusToLog();
+    }
     gpu_interrupt_->Complete();
     return MAGMA_STATUS_OK;
 }
@@ -277,9 +279,11 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
     clear_flags.WriteTo(register_io_.get());
     DLOG("Processing job interrupt status %x", irq_status.reg_value());
 
-    if (irq_status.failed_slots().get())
+    if (irq_status.failed_slots().get()) {
         magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
                    irq_status.failed_slots().get());
+        ProcessDumpStatusToLog();
+    }
 
     uint32_t finished = irq_status.finished_slots().get();
     while (finished) {
@@ -310,6 +314,10 @@ int MsdArmDevice::MmuInterruptThreadLoop()
         clear_flags.WriteTo(register_io_.get());
 
         magma::log(magma::LOG_WARNING, "Got unexpected MMU IRQ %d\n", irq_status.reg_value());
+
+        // All MMU interrupts are unexpected, so dump status to log to help
+        // debugging.
+        DumpStatusToLog();
 
         mmu_interrupt_->Complete();
     }
