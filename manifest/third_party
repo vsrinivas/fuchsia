@@ -6,13 +6,16 @@
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="build"
             name="manifest"/>
-    <!-- TODO(abarth): Remove Dart runtime once SEC-28 is fixed -->
-    <import remote="https://fuchsia.googlesource.com/manifest"
-            manifest="runtimes/dart"
-            name="manifest"/>
   </imports>
   <projects>
     <!-- Third Party -->
+
+    <!-- TODO(SEC-28): move this back to Topaz. -->
+    <project name="dart/root_certificates"
+             path="third_party/root_certificates"
+             remote="https://dart.googlesource.com/root_certificates"
+             gerrithost="https://dart-review.googlesource.com"
+             revision="a4c7c6f23a664a37bc1b6f15a819e3f2a292791a"/>
 
     <project name="external/github.com/catapult-project/catapult"
              path="third_party/catapult"
