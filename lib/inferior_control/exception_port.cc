@@ -243,7 +243,7 @@ void ExceptionPort::Worker() {
   }
 }
 
-void PrintException(FILE* out, Thread* thread, zx_excp_type_t type,
+void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
                     const zx_exception_context_t& context) {
   if (ZX_EXCP_IS_ARCH(type)) {
     fprintf(out, "Thread %s received exception %s\n",
@@ -270,7 +270,7 @@ void PrintException(FILE* out, Thread* thread, zx_excp_type_t type,
   }
 }
 
-void PrintSignals(FILE* out, Thread* thread, zx_signals_t signals) {
+void PrintSignals(FILE* out, const Thread* thread, zx_signals_t signals) {
   std::string description;
   if (signals & ZX_THREAD_RUNNING)
     description += ", running";
