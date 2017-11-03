@@ -1090,7 +1090,7 @@ void usage(void) {
     "         -C <filename>         include kernel command line\n"
     "         -c                    compress bootfs image (default)\n"
     "         -v                    verbose output\n"
-    "         -x                    enable bootextra data (crc32)\n"
+    "         -x                    disable bootextra data (crc32)\n"
     "         -t <filename>         dump bootdata contents\n"
     "         -g <group>            select allowed groups for manifest items\n"
     "                               (multiple groups may be comma separated)\n"
@@ -1123,7 +1123,7 @@ int main(int argc, char **argv) {
     bool compressed = true;
     bool have_kernel = false;
     bool have_cmdline = false;
-    bool extra = false;
+    bool extra = true;
     const char* vid_arg = NULL;
     const char* pid_arg = NULL;
     const char* board_arg = NULL;
@@ -1216,7 +1216,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "error: -t option must be used alone, with one filename.\n");
             return 0;
         } else if (!strcmp(cmd,"-x")) {
-            extra = true;
+            extra = false;
         } else if (!strcmp(cmd,"-c")) {
             compressed = true;
         } else if (!strcmp(cmd,"--uncompressed")) {

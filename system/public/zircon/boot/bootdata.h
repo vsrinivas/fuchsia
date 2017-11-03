@@ -18,7 +18,7 @@
 // Round n up to the next 8 byte boundary
 #define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
 
-#define BOOTITEM_NO_CRC32 (~BOOTITEM_MAGIC)
+#define BOOTITEM_NO_CRC32 (0x4a87e8d6)
 
 // Bootdata items with the EXTRA flag have a bootextra_t
 // between them and the payload, which must have BOOTITEM_MAGIC
