@@ -35,9 +35,59 @@ static void dc_dump_state(void);
 static void dc_dump_devprops(void);
 static void dc_dump_drivers(void);
 
-static zx_status_t dh_suspend(device_t* dev, uint32_t flags);
+typedef struct {
+    zx_status_t status;
+    uint32_t flags;
+#define RUNNING 0
+#define SUSPEND 1
+    uint32_t sflags;    // suspend flags
+    uint32_t count;     // outstanding msgs
+    devhost_t* dh;      // next devhost to process
+    list_node_t devhosts;
+} suspend_context_t;
+static suspend_context_t suspend_ctx = {
+    .devhosts = LIST_INITIAL_VALUE(suspend_ctx.devhosts),
+};
 
-static device_t sys_device;
+static bool dc_in_suspend(void) {
+    return !!suspend_ctx.flags;
+}
+static void dc_suspend(uint32_t flags);
+static void dc_continue_suspend(suspend_context_t* ctx);
+
+static device_t root_device = {
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
+    .protocol_id = ZX_PROTOCOL_ROOT,
+    .name = "root",
+    .libname = "",
+    .args = "root,",
+    .children = LIST_INITIAL_VALUE(root_device.children),
+    .pending = LIST_INITIAL_VALUE(root_device.pending),
+    .refcount = 1,
+};
+
+static device_t misc_device = {
+    .parent = &root_device,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
+    .protocol_id = ZX_PROTOCOL_MISC_PARENT,
+    .name = "misc",
+    .libname = "",
+    .args = "misc,",
+    .children = LIST_INITIAL_VALUE(misc_device.children),
+    .pending = LIST_INITIAL_VALUE(misc_device.pending),
+    .refcount = 1,
+};
+
+static device_t sys_device = {
+    .parent = &root_device,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
+    .name = "sys",
+    .libname = "",
+    .args = "sys,",
+    .children = LIST_INITIAL_VALUE(sys_device.children),
+    .pending = LIST_INITIAL_VALUE(sys_device.pending),
+    .refcount = 1,
+};
 
 static zx_handle_t dmctl_socket;
 
@@ -79,8 +129,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     }
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
         devmgr_vfs_exit();
-        dh_suspend(&sys_device, DEVICE_SUSPEND_FLAG_REBOOT);
-        zx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
+        dc_suspend(DEVICE_SUSPEND_FLAG_REBOOT);
         return ZX_OK;
     }
     if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
@@ -90,8 +139,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if (len == 8) {
         if (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8)) {
             devmgr_vfs_exit();
-            dh_suspend(&sys_device, DEVICE_SUSPEND_FLAG_POWEROFF);
-            zx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
+            dc_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
             return ZX_OK;
         }
         if (!memcmp(cmd, "ktraceon", 8)) {
@@ -151,6 +199,9 @@ static list_node_t list_drivers_fallback = LIST_INITIAL_VALUE(list_drivers_fallb
 // All Devices (excluding static immortal devices)
 static list_node_t list_devices = LIST_INITIAL_VALUE(list_devices);
 
+// All DevHosts
+static list_node_t list_devhosts = LIST_INITIAL_VALUE(list_devhosts);
+
 static driver_t* libname_to_driver(const char* libname) {
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
@@ -179,40 +230,6 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
     }
     return r;
 }
-
-static device_t root_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
-    .protocol_id = ZX_PROTOCOL_ROOT,
-    .name = "root",
-    .libname = "",
-    .args = "root,",
-    .children = LIST_INITIAL_VALUE(root_device.children),
-    .pending = LIST_INITIAL_VALUE(root_device.pending),
-    .refcount = 1,
-};
-
-static device_t misc_device = {
-    .parent = &root_device,
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
-    .protocol_id = ZX_PROTOCOL_MISC_PARENT,
-    .name = "misc",
-    .libname = "",
-    .args = "misc,",
-    .children = LIST_INITIAL_VALUE(misc_device.children),
-    .pending = LIST_INITIAL_VALUE(misc_device.pending),
-    .refcount = 1,
-};
-
-static device_t sys_device = {
-    .parent = &root_device,
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
-    .name = "sys",
-    .libname = "",
-    .args = "sys,",
-    .children = LIST_INITIAL_VALUE(sys_device.children),
-    .pending = LIST_INITIAL_VALUE(sys_device.pending),
-    .refcount = 1,
-};
 
 zx_status_t devmgr_set_platform_id(zx_handle_t vmo, zx_off_t offset, size_t length) {
     bootdata_platform_id_t platform_id;
@@ -555,7 +572,8 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     return ZX_OK;
 }
 
-static zx_status_t dc_new_devhost(const char* name, devhost_t** out) {
+static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
+                                  devhost_t** out) {
     devhost_t* dh = calloc(1, sizeof(devhost_t));
     if (dh == NULL) {
         return ZX_ERR_NO_MEMORY;
@@ -575,18 +593,34 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t** out) {
     }
 
     list_initialize(&dh->devices);
+    list_initialize(&dh->children);
+
+    if (parent) {
+        dh->parent = parent;
+        dh->parent->refcount++;
+        list_add_tail(&dh->parent->children, &dh->node);
+    }
+    list_add_tail(&list_devhosts, &dh->anode);
+
+    log(DEVLC, "devcoord: new host %p\n", dh);
 
     *out = dh;
     return ZX_OK;
 }
 
 static void dc_release_devhost(devhost_t* dh) {
-    log(DEVLC, "devcoord: release host %p\n", dh);
     dh->refcount--;
     if (dh->refcount > 0) {
         return;
     }
     log(INFO, "devcoord: destroy host %p\n", dh);
+    devhost_t* parent = dh->parent;
+    if (parent != NULL) {
+        dh->parent = NULL;
+        list_delete(&dh->node);
+        dc_release_devhost(parent);
+    }
+    list_delete(&dh->anode);
     zx_handle_close(dh->hrpc);
     zx_task_kill(dh->proc);
     zx_handle_close(dh->proc);
@@ -924,6 +958,12 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
+        if (dc_in_suspend()) {
+            log(ERROR, "devcoord: rpc: add-device '%s' forbidden in suspend\n",
+                name);
+            r = ZX_ERR_BAD_STATE;
+            goto fail_close_handles;
+        }
         log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
         if ((r = dc_add_device(dev, hin[0], &msg, name, args, data,
                                msg.op == DC_OP_ADD_DEVICE_INVISIBLE)) < 0) {
@@ -935,6 +975,12 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
+        if (dc_in_suspend()) {
+            log(ERROR, "devcoord: rpc: remove-device '%s' forbidden in suspend\n",
+                dev->name);
+            r = ZX_ERR_BAD_STATE;
+            goto fail_close_handles;
+        }
         log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
         dc_remove_device(dev, false);
         goto disconnect;
@@ -942,6 +988,12 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
     case DC_OP_MAKE_VISIBLE:
         if (hcount != 0) {
             goto fail_wrong_hcount;
+        }
+        if (dc_in_suspend()) {
+            log(ERROR, "devcoord: rpc: make-visible '%s' forbidden in suspend\n",
+                dev->name);
+            r = ZX_ERR_BAD_STATE;
+            goto fail_close_handles;
         }
         log(RPC_IN, "devcoord: rpc: make-visible '%s'\n", dev->name);
         dc_make_visible(dev);
@@ -952,6 +1004,12 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
+        if (dc_in_suspend()) {
+            log(ERROR, "devcoord: rpc: bind-device '%s' forbidden in suspend\n",
+                dev->name);
+            r = ZX_ERR_BAD_STATE;
+            goto fail_close_handles;
+        }
         log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
         r = dc_bind_device(dev, args);
         break;
@@ -959,6 +1017,11 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
     case DC_OP_DM_COMMAND:
         if (hcount > 1) {
             goto fail_wrong_hcount;
+        }
+        if (dc_in_suspend()) {
+            log(ERROR, "devcoord: rpc: dm-command forbidden in suspend\n");
+            r = ZX_ERR_BAD_STATE;
+            goto fail_close_handles;
         }
         if (hcount == 1) {
             dmctl_socket = hin[0];
@@ -1027,6 +1090,16 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
             }
             //TODO: try next driver, clear BOUND flag
             break;
+        case PENDING_SUSPEND: {
+            if (msg.status != ZX_OK) {
+                log(ERROR, "devcoord: rpc: suspend '%s' status %d\n",
+                    dev->name, msg.status);
+            }
+            suspend_context_t* ctx = pending->ctx;
+            ctx->status = msg.status;
+            dc_continue_suspend((suspend_context_t*)pending->ctx);
+            break;
+        }
         }
         free(pending);
         return ZX_OK;
@@ -1247,28 +1320,6 @@ static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
     return r;
 }
 
-static zx_status_t dh_suspend(device_t* dev, uint32_t flags) {
-    dc_msg_t msg;
-    uint32_t mlen;
-    zx_status_t r;
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
-        return r;
-    }
-    msg.txid = 0;
-    msg.op = DC_OP_SUSPEND;
-    msg.value = flags;
-    zx_handle_t rpc = dev->proxy ? dev->proxy->hrpc : dev->hrpc;
-    if ((r = zx_channel_write(rpc, 0, &msg, mlen, NULL, 0)) != ZX_OK) {
-        return r;
-    }
-
-    // Wait 5 seconds for the other side to finish up.  Use zx_object_wait_one
-    // rather than just a nanosleep, so that on ARM this doesn't hang for 5s.
-    // TODO(swetland/teisenbe): This should use a completion mechanism to get
-    // the response from the other side rather than just timing out.
-    return zx_object_wait_one(rpc, ZX_CHANNEL_PEER_CLOSED, zx_deadline_after(ZX_SEC(5)), NULL);
-}
-
 static zx_status_t dc_prepare_proxy(device_t* dev) {
     if (dev->flags & DEV_CTX_PROXY) {
         log(ERROR, "devcoord: cannot proxy a proxy: %s\n", dev->name);
@@ -1307,8 +1358,9 @@ static zx_status_t dc_prepare_proxy(device_t* dev) {
                 return r;
             }
         }
-        if ((r = dc_new_devhost(devhostname, &dev->proxy->host)) < 0) {
-            log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
+        if ((r = dc_new_devhost(devhostname, dev->host,
+                                &dev->proxy->host)) < 0) {
+            log(ERROR, "devcoord: dc_new_devhost: %d\n", r);
             zx_handle_close(h0);
             zx_handle_close(h1);
             return r;
@@ -1363,6 +1415,150 @@ static void dc_handle_new_device(device_t* dev) {
             if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
                 break;
             }
+        }
+    }
+}
+
+static void dc_suspend_fallback(uint32_t flags) {
+    log(INFO, "devcoord: suspend fallback with flags 0x%08x\n", flags);
+    if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
+        zx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
+    } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
+        zx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
+    }
+}
+
+static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
+    device_t* dev = list_peek_head_type(&dh->devices, device_t, dhnode);
+    if (!dev) {
+        return ZX_OK;
+    }
+
+    if (!(dev->flags & DEV_CTX_PROXY)) {
+        log(INFO, "devcoord: devhost root '%s' (%p) is not a proxy\n",
+            dev->name, dev);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    log(DEVLC, "devcoord: suspend devhost %p device '%s' (%p)\n",
+        dh, dev->name, dev);
+
+    zx_handle_t rpc = ZX_HANDLE_INVALID;
+
+    pending_t* pending = malloc(sizeof(pending_t));
+    if (pending == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    dc_msg_t msg;
+    uint32_t mlen;
+    zx_status_t r;
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+        free(pending);
+        return r;
+    }
+    msg.txid = 0;
+    msg.op = DC_OP_SUSPEND;
+    msg.value = ctx->sflags;
+    rpc = dev->hrpc;
+    if ((r = zx_channel_write(rpc, 0, &msg, mlen, NULL, 0)) != ZX_OK) {
+        free(pending);
+        return r;
+    }
+
+    dh->flags |= DEV_HOST_SUSPEND;
+    pending->op = PENDING_SUSPEND;
+    pending->ctx = ctx;
+    list_add_tail(&dev->pending, &pending->node);
+
+    ctx->count += 1;
+
+    return ZX_OK;
+}
+
+static void build_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
+    // suspend order is children first
+    devhost_t* child = NULL;
+    list_for_every_entry(&dh->children, child, devhost_t, node) {
+        list_add_head(&ctx->devhosts, &child->snode);
+    }
+    list_for_every_entry(&dh->children, child, devhost_t, node) {
+        build_suspend_list(ctx, child);
+    }
+}
+
+static void process_suspend_list(suspend_context_t* ctx) {
+    devhost_t* dh = ctx->dh;
+    devhost_t* parent = NULL;
+    do {
+        if (!parent || (dh->parent == parent)) {
+            // send DC_OP_SUSPEND each set of children of a devhost at a time,
+            // since they can run in parallel
+            dc_suspend_devhost(dh, &suspend_ctx);
+            parent = dh->parent;
+        } else {
+            // if the parent is different than the previous devhost's
+            // parent, either this devhost is the parent, a child of
+            // its parent's sibling, or the parent's sibling, so stop
+            // processing until all the outstanding suspends are done
+            parent = NULL;
+            break;
+        }
+    } while ((dh = list_next_type(&ctx->devhosts, &dh->snode,
+                                  devhost_t, snode)) != NULL);
+    // next devhost to process once all the outstanding suspends are done
+    ctx->dh = dh;
+}
+
+static void dc_suspend(uint32_t flags) {
+    // these top level devices should all have proxies. if not,
+    // the system hasn't fully initialized yet and cannot go to
+    // suspend.
+    if (!sys_device.proxy || !root_device.proxy || !misc_device.proxy) {
+        return;
+    }
+
+    suspend_context_t* ctx = &suspend_ctx;
+    if (ctx->flags) {
+        return;
+    }
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->status = ZX_OK;
+    ctx->flags = SUSPEND;
+    ctx->sflags = flags;
+    list_initialize(&ctx->devhosts);
+
+    // sys_device must suspend last as on x86 it invokes
+    // ACPI S-state transition
+    list_add_head(&ctx->devhosts, &sys_device.proxy->host->snode);
+    build_suspend_list(ctx, sys_device.proxy->host);
+    list_add_head(&ctx->devhosts, &root_device.proxy->host->snode);
+    build_suspend_list(ctx, root_device.proxy->host);
+    list_add_head(&ctx->devhosts, &misc_device.proxy->host->snode);
+    build_suspend_list(ctx, misc_device.proxy->host);
+
+    ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
+    process_suspend_list(ctx);
+}
+
+static void dc_continue_suspend(suspend_context_t* ctx) {
+    if (ctx->status != ZX_OK) {
+        // TODO: unroll suspend
+        // do not continue to suspend as this indicates a driver suspend
+        // problem and should show as a bug
+        log(ERROR, "devcoord: failed to suspend\n");
+        return;
+    }
+
+    ctx->count -= 1;
+    if (ctx->count == 0) {
+        if (ctx->dh != NULL) {
+            process_suspend_list(ctx);
+        } else {
+            // should never get here on x86
+            // on arm, if the platform driver does not implement
+            // suspend go to the kernel fallback
+            dc_suspend_fallback(ctx->sflags);
         }
     }
 }

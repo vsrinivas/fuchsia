@@ -34,6 +34,7 @@ struct dc_pending {
 };
 
 #define PENDING_BIND 1
+#define PENDING_SUSPEND 2
 
 struct dc_devhost {
     port_handler_t ph;
@@ -42,12 +43,26 @@ struct dc_devhost {
     zx_koid_t koid;
     int32_t refcount;
     uint32_t flags;
+    devhost_t* parent;
 
     // list of all devices on this devhost
     list_node_t devices;
+
+    // listnode for this devhost in the all devhosts list
+    list_node_t anode;
+
+    // listnode for this devhost in the order-to-suspend list
+    list_node_t snode;
+
+    // listnode for this devhost in its parent devhost's list-of-children
+    list_node_t node;
+
+    // list of all cild devhosts of this devhost
+    list_node_t children;
 };
 
 #define DEV_HOST_DYING 1
+#define DEV_HOST_SUSPEND 2
 
 struct dc_device {
     zx_handle_t hrpc;

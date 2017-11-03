@@ -228,6 +228,15 @@ static void dh_handle_open(zxrio_msg_t* msg, size_t len,
     }
 }
 
+static void dh_send_status(zx_handle_t h, zx_status_t status) {
+    dc_msg_t reply = {
+        .txid = 0,
+        .op = DC_OP_STATUS,
+        .status = status,
+    };
+    zx_channel_write(h, 0, &reply, sizeof(reply), NULL, 0);
+}
+
 static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     dc_msg_t msg;
     zx_handle_t hin[3];
@@ -403,12 +412,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
                 log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
             }
         }
-        dc_msg_t reply = {
-            .txid = 0,
-            .op = DC_OP_STATUS,
-            .status = r,
-        };
-        zx_channel_write(h, 0, &reply, sizeof(reply), NULL, 0);
+        dh_send_status(h, r);
         return ZX_OK;
 
     case DC_OP_CONNECT_PROXY:
@@ -425,7 +429,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        ios->dev->ops->suspend(ios->dev->ctx, msg.value);
+        // call suspend on the device this devhost is rooted on
+        zx_device_t* device = ios->dev;
+        while (device->parent != NULL) {
+            device = device->parent;
+        }
+        DM_LOCK();
+        r = devhost_device_suspend(device, msg.value);
+        DM_UNLOCK();
+        dh_send_status(h, r);
         return ZX_OK;
 
     default:

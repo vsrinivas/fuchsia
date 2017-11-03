@@ -84,15 +84,7 @@ static zx_protocol_device_t platform_bus_proto = {
 };
 
 static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
-    switch (flags) {
-    case DEVICE_SUSPEND_FLAG_REBOOT:
-    case DEVICE_SUSPEND_FLAG_POWEROFF:
-        // Kill this driver so that the IPC channel gets closed; devmgr will
-        // perform a fallback that should shutdown or reboot the machine.
-        exit(0);
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    };
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_protocol_device_t sys_device_proto = {

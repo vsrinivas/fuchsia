@@ -52,6 +52,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
 zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out,
                                  const char* path, uint32_t flags);
 zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags);
+zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags);
 void devhost_device_destroy(zx_device_t* dev);
 
 zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,

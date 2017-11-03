@@ -512,6 +512,25 @@ zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) TA_REQ(&__dev
     return r;
 }
 
+zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags) {
+    zx_status_t st;
+    zx_device_t* child = NULL;
+    list_for_every_entry(&dev->children, child, zx_device_t, node) {
+        st = devhost_device_suspend(child, flags);
+        if (st != ZX_OK) {
+            return st;
+        }
+    }
+    st = dev->ops->suspend(dev->ctx, flags);
+    // default_suspend() returns ZX_ERR_NOT_SUPPORTED
+    if ((st != ZX_OK) && (st != ZX_ERR_NOT_SUPPORTED)) {
+        return st;
+    } else {
+        return ZX_OK;
+    }
+    return ZX_OK;
+}
+
 void devhost_device_destroy(zx_device_t* dev) {
     // Only destroy devices immediately after device_create() or after they're dead.
     ZX_DEBUG_ASSERT(dev->flags == 0 || dev->flags & DEV_FLAG_VERY_DEAD);
