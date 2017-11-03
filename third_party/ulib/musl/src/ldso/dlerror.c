@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-char* dlerror() {
+char* dlerror(void) {
     thrd_t self = __thrd_current();
     if (!self->dlerror_flag)
         return 0;
