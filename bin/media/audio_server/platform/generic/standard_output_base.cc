@@ -192,11 +192,11 @@ void StandardOutputBase::ForeachRenderer(TaskType task_type) {
       auto& link = *iter;
       auto tmp_iter = iter++;
 
-      // TODO(johngro) : remove the entire concept of valid vs. invlaid links.
+      // TODO(johngro) : remove the entire concept of active vs. inactive links.
       // We do not hold the set of active renderer links for very long at all
-      // anymore, when a link becomes invalid, it should just be atomically
-      // removed from the set instead of having an invalid flag set on it.
-      if (!link->valid()) {
+      // anymore, when a link becomes de-activated, it should just be atomically
+      // removed from the set.
+      if (!link->active()) {
         links_.erase(tmp_iter);
       } else {
         link_refs_.push_back(link);

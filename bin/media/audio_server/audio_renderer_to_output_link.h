@@ -84,6 +84,15 @@ class AudioRendererToOutputLink {
   void Invalidate() { valid_.store(false); }
   bool valid() const { return valid_.load(); }
 
+  // A link is active if it has not been explicitly flagged as invalid, and if
+  // the weak_ptr to the renderer has not yet expired.  Note: clearly the
+  // renderer pointer can be alive when this check is made and become expired in
+  // the instant afterwards.  This method is really only useful for outputs
+  // attempting to determine if they need to lazily clean up their
+  // renderer<->output links.  They will clean up the link the next time they
+  // mix if it happens to expire while they are running this time.
+  bool active() const { return valid() && !renderer_.expired(); }
+
   // Accessors for the renderer and output pointers.
   AudioRendererImplPtr GetRenderer() { return renderer_.lock(); }
   const fbl::RefPtr<AudioOutput>& GetOutput() { return output_; }
