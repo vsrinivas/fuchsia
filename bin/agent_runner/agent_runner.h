@@ -8,7 +8,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
+#include <map>
 
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
@@ -132,12 +132,10 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   void DeletedTask(const std::string& key) override;
 
   // agent URL -> { task id -> queue name }
-  std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
-      watched_queues_;
+  std::map<std::string, std::map<std::string, std::string>> watched_queues_;
 
   // agent URL -> { task id -> alarm in seconds }
-  std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>
-      running_alarms_;
+  std::map<std::string, std::map<std::string, uint32_t>> running_alarms_;
 
   // agent URL -> pending agent connections
   // This map holds connections to an agent that we hold onto while the existing
@@ -147,8 +145,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
     fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
-  std::unordered_map<std::string,
-                     std::vector<struct PendingAgentConnectionEntry>>
+  std::map<std::string, std::vector<struct PendingAgentConnectionEntry>>
       pending_agent_connections_;
 
   // agent URL -> pending entity provider connection
@@ -158,18 +155,17 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
     fidl::InterfaceRequest<EntityProvider> entity_provider_request;
     fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
-  std::unordered_map<std::string, struct PendingEntityProviderConnectionEntry>
+  std::map<std::string, struct PendingEntityProviderConnectionEntry>
       pending_entity_provider_connections_;
 
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a
   // terminating state, we pend those requests here until the agent terminates.
-  std::unordered_map<std::string, std::vector<std::function<void()>>>
+  std::map<std::string, std::vector<std::function<void()>>>
       run_agent_callbacks_;
 
   // agent URL -> modular.AgentContext
-  std::unordered_map<std::string, std::unique_ptr<AgentContextImpl>>
-      running_agents_;
+  std::map<std::string, std::unique_ptr<AgentContextImpl>> running_agents_;
 
   // ledger key -> [agent URL, task ID]
   //
@@ -178,7 +174,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // becomes impossible once we use hashes to construct it, or from
   // having to read the value from the previous snapshot, which would
   // be nifty but is easy only once we have Operations.
-  std::unordered_map<std::string, std::pair<std::string, std::string>>
+  std::map<std::string, std::pair<std::string, std::string>>
       task_by_ledger_key_;
 
   app::ApplicationLauncher* const application_launcher_;

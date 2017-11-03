@@ -221,7 +221,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
 class StoryProviderImpl::DeleteStoryCall : Operation<> {
  public:
   using StoryControllerImplMap =
-      std::unordered_map<std::string, struct StoryControllerImplContainer>;
+      std::map<std::string, struct StoryControllerImplContainer>;
   using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
   DeleteStoryCall(OperationContainer* const container,
@@ -308,7 +308,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
 class StoryProviderImpl::GetControllerCall : Operation<> {
  public:
   using StoryControllerImplMap =
-      std::unordered_map<std::string, struct StoryControllerImplContainer>;
+      std::map<std::string, struct StoryControllerImplContainer>;
 
   GetControllerCall(OperationContainer* const container,
                     ledger::Page* const page,

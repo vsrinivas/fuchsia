@@ -61,7 +61,7 @@ class UserProviderImpl : UserProvider {
   std::string serialized_users_;
   const modular::UsersStorage* users_storage_ = nullptr;
 
-  std::unordered_map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
+  std::map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
       user_controllers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);

@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
 #include <memory>
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
+#include <set>
 
 #include "lib/async/cpp/operation.h"
 #include "lib/config/fidl/config.fidl.h"
@@ -214,8 +214,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
     std::unique_ptr<StoryControllerImpl> impl;
     StoryInfoPtr current_info;
   };
-  std::unordered_map<std::string, StoryControllerImplContainer>
-      story_controller_impls_;
+  std::map<std::string, StoryControllerImplContainer> story_controller_impls_;
 
   const ComponentContextInfo component_context_info_;
 

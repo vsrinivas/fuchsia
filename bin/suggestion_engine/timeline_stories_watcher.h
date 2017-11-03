@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_WATCHER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_WATCHER_H_
 
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
+#include <set>
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/story/fidl/story_provider.fidl.h"
@@ -19,7 +19,7 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
  public:
   TimelineStoriesWatcher(modular::StoryProviderPtr* story_provider);
 
-  const std::unordered_set<std::string>& StoryUrls() const {
+  const std::set<std::string>& StoryUrls() const {
     return story_urls_;
   }
 
@@ -32,8 +32,8 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
 
   fidl::Binding<StoryProviderWatcher> binding_;
 
-  std::unordered_set<std::string> story_urls_;
-  std::unordered_map<std::string, std::string> id_to_url_;
+  std::set<std::string> story_urls_;
+  std::map<std::string, std::string> id_to_url_;
 
   std::function<void()> watcher_;
 };

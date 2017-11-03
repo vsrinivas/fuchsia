@@ -9,7 +9,7 @@
 #include <memory>
 #include <queue>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <utility>
 
 #include "lib/async/cpp/operation.h"
@@ -75,10 +75,9 @@ class MessageQueueManager : PageClient {
   using ComponentInstanceId = std::string;
   using ComponentQueueName = std::string;
   template <typename Value>
-  using ComponentQueueNameMap = std::unordered_map<
+  using ComponentQueueNameMap = std::map<
       ComponentNamespace,
-      std::unordered_map<ComponentInstanceId,
-                         std::unordered_map<ComponentQueueName, Value>>>;
+      std::map<ComponentInstanceId, std::map<ComponentQueueName, Value>>>;
 
   static void XdrMessageQueueInfo(XdrContext* xdr, MessageQueueInfo* data);
 
@@ -105,8 +104,7 @@ class MessageQueueManager : PageClient {
   const std::string local_path_;
 
   // A map of queue_token to |MessageStorageQueue|.
-  std::unordered_map<std::string, std::unique_ptr<MessageQueueStorage>>
-      message_queues_;
+  std::map<std::string, std::unique_ptr<MessageQueueStorage>> message_queues_;
 
   // A map of component instance id and queue name to queue tokens.
   // Entries are only here while a |MessageQueueStorage| exists.

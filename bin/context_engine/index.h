@@ -12,7 +12,7 @@
 #include <map>
 #include <set>
 #include <string>
-#include <unordered_map>
+#include <map>
 
 #include "lib/context/fidl/metadata.fidl.h"
 #include "lib/context/fidl/value.fidl.h"
@@ -44,7 +44,7 @@ class ContextIndex {
 
  private:
   // A posting list from encoded value list to ids.
-  std::unordered_map<std::string, std::set<Id>> index_;
+  std::map<std::string, std::set<Id>> index_;
 };
 
 }  // namespace maxwell

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/agent_runner/agent_runner.h"
 
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
+#include <set>
 #include <utility>
 
 #include "lib/fsl/tasks/message_loop.h"
@@ -322,7 +322,7 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
   } else {
     bool inserted = false;
     std::tie(found_it, inserted) = watched_queues_.emplace(
-        agent_url, std::unordered_map<std::string, std::string>());
+        agent_url, std::map<std::string, std::string>());
     FXL_DCHECK(inserted);
   }
 
@@ -358,7 +358,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
   } else {
     bool inserted = false;
     std::tie(found_it, inserted) = running_alarms_.emplace(
-        agent_url, std::unordered_map<std::string, uint32_t>());
+        agent_url, std::map<std::string, uint32_t>());
     FXL_DCHECK(inserted);
   }
 
@@ -396,7 +396,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
 
 fidl::Array<fidl::String> AgentRunner::GetAllAgents() {
   // A set of all agents that are either running or scheduled to be run.
-  std::unordered_set<std::string> agents;
+  std::set<std::string> agents;
   for (auto const& it : running_agents_) {
     agents.insert(it.first);
   }

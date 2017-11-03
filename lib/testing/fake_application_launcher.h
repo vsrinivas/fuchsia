@@ -6,7 +6,7 @@
 #define PERIDOT_LIB_TESTING_FAKE_APPLICATION_LAUNCHER_H_
 
 #include <string>
-#include <unordered_map>
+#include <map>
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -39,7 +39,7 @@ class FakeApplicationLauncher : public app::ApplicationLauncher {
       app::ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<app::ApplicationController> controller) override;
 
-  std::unordered_map<std::string, ApplicationConnectorFn> connectors_;
+  std::map<std::string, ApplicationConnectorFn> connectors_;
 };
 
 }  // namespace testing
