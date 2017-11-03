@@ -8,9 +8,9 @@ extern crate fuchsia_zircon;
 
 use fuchsia_zircon::{DurationNum, Status};
 use fuchsia_zircon::sys as sys;
-use ddk_rs::{DeviceOps, Device, UsbProtocol};
+use ddk_rs::{DeviceOps, Device, DriverOps, UsbProtocol};
 use ddk_rs as ddk;
-use ddk_sys::{zx_driver_ops_t, USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
+use ddk_sys::{USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
 use std::mem::size_of;
 use std::slice;
 
@@ -121,47 +121,36 @@ impl MicroOrb {
     }
 }
 
-fn bind(parent: Device) -> Result<(), Status> {
-    let usb = UsbProtocol::get(&parent)?;
-    println!("Got UsbProtocol");
-
-    // TODO: Find USB endpoint for our device
-
-    // Create now MicroOrb instance, and add the device to the system.
-    let mut orb = Box::new(MicroOrb {
-        usb: usb,
-    });
-
-    let serial = orb.get_serial()?;
-    println!("New MicroOrb, serial {}", serial);
-    let color = orb_rgb_t {
-        red: 64,
-        green: 32,
-        blue: 0,
-    };
-    orb.set_color(&color)?;
-
-    let parent = ddk::add_device(orb, Some(&parent), ddk::DEVICE_ADD_NONE)?;
-
-    Ok(())
+struct MicroOrbDriver {
 }
 
-pub extern fn microorb_bind(mut _ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, _cookie: *mut *mut u8) -> sys::zx_status_t {
-    println!("bind called");
-    let parent_wrapped = Device::wrap(parent);
-    match bind(parent_wrapped) {
-        Ok(device) => sys::ZX_OK,
-        Err(e) => e.into_raw(),
+impl DriverOps for MicroOrbDriver {
+    fn bind(&mut self, parent: Device) -> Result<Device, Status> {
+        let usb = UsbProtocol::get(&parent)?;
+        println!("Got UsbProtocol");
+
+        // TODO: Find USB endpoint for our device
+
+        // Create now MicroOrb instance, and add the device to the system.
+        let mut orb = Box::new(MicroOrb {
+            usb: usb,
+        });
+
+        let serial = orb.get_serial()?;
+        println!("New MicroOrb, serial {}", serial);
+        let color = orb_rgb_t {
+            red: 64,
+            green: 32,
+            blue: 0,
+        };
+        orb.set_color(&color)?;
+        println!("Set color {:?}", color);
+
+        ddk::add_device(orb, Some(&parent), ddk::DEVICE_ADD_NONE)
     }
 }
 
-pub extern fn microorb_unbind(mut _ctx: *mut u8, device: *mut ddk_sys::zx_device_t, _cookie: *mut u8) {
-    println!("driver unbind called with cookie {:?}", _cookie);
-}
-
 #[no_mangle]
-pub static DRIVER_OPS_MICROORB: zx_driver_ops_t = zx_driver_ops_t {
-    bind: Some(microorb_bind),
-    unbind: Some(microorb_unbind),
-    ..ddk_sys::DEFAULT_DRIVER_OPS
-};
+pub extern fn init() -> Result<Box<DriverOps>, Status> {
+    Ok(Box::new(MicroOrbDriver{}))
+}

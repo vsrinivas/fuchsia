@@ -6,8 +6,8 @@ extern crate ddk_rs;
 extern crate ddk_sys;
 extern crate fuchsia_zircon;
 use fuchsia_zircon::Status;
-use fuchsia_zircon::sys as sys;
 use ddk_rs as ddk;
+use ddk::{Device, DeviceOps, DriverOps};
 
 // This is a non-bindable device that can be read from and written to.
 struct SimpleDevice {
@@ -26,7 +26,7 @@ impl SimpleDevice {
     }
 }
 
-impl ddk::DeviceOps for SimpleDevice {
+impl DeviceOps for SimpleDevice {
     fn name(&self) -> String {
         return String::from("simple")
     }
@@ -50,32 +50,23 @@ impl ddk::DeviceOps for SimpleDevice {
         self.limit = *u64buf;
         Ok(std::mem::size_of_val(&self.limit))
     }
-}
 
-// TODO: move this somewhere else to isolate usage of ddk_sys
-//       OR figure out how to provide hooks so that ddk_sys calls like this can be wrapped
-pub extern fn simple_bind(mut _ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, mut _out_cookie: *mut *mut u8) -> sys::zx_status_t {
-    let simple = Box::new(SimpleDevice::new());
-    match ddk::add_device(simple, Some(&ddk::Device::wrap(parent)), ddk::DEVICE_ADD_NON_BINDABLE) {
-        Ok(device) => {
-            _out_cookie = Box::into_raw(Box::new(Box::new(device))) as *mut *mut u8;
-            sys::ZX_OK
-        }
-        Err(error) => error.into_raw()
+    fn unbind(&mut self, device: &mut Device) {
+        ddk::remove_device(device);
     }
 }
 
-pub extern fn simple_unbind(_ctx: *mut u8, _parent: *mut ddk_sys::zx_device_t, cookie: *mut u8) {
-    let device: Box<Box<ddk::Device>>;
-    unsafe {
-        device = Box::from_raw(cookie as *mut Box<ddk::Device>);
+struct SimpleDriver {
+}
+
+impl DriverOps for SimpleDriver {
+    fn bind(&mut self, parent: Device) -> Result<Device, Status> {
+        let simple = Box::new(SimpleDevice::new());
+        ddk::add_device(simple, Some(&parent), ddk::DEVICE_ADD_NON_BINDABLE)
     }
-    ddk::remove_device(**device);
 }
 
 #[no_mangle]
-pub static DRIVER_OPS_DDK_TOY: zx_driver_ops_t = zx_driver_ops_t {
-  bind: Some(simple_bind),
-  unbind: Some(simple_unbind),
-  ..ddk_sys::DEFAULT_DRIVER_OPS
-};
+pub extern fn init() -> Result<Box<DriverOps>, Status> {
+    Ok(Box::new(SimpleDriver{}))
+}

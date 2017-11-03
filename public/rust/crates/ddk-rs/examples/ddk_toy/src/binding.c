@@ -6,8 +6,8 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-extern zx_driver_ops_t DRIVER_OPS_DDK_TOY;
+extern zx_driver_ops_t DRIVER_OPS;
 
-ZIRCON_DRIVER_BEGIN(_driver_ddk_toy, DRIVER_OPS_DDK_TOY, "ddk-toy", "0.1.0", 1)
+ZIRCON_DRIVER_BEGIN(_driver_ddk_toy, DRIVER_OPS, "ddk-toy", "0.1.0", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
 ZIRCON_DRIVER_END(_driver_ddk_toy)

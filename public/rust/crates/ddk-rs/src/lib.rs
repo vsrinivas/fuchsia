@@ -26,6 +26,13 @@ impl Driver {
     }
 }
 
+pub trait DriverOps {
+    fn bind(&mut self, parent: Device) -> Result<Device, Status>;
+
+    fn release(&mut self) {
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Device {
     device: *mut ddk_sys::zx_device_t,
@@ -291,6 +298,54 @@ static mut DEVICE_OPS: ddk_sys::zx_protocol_device_t = ddk_sys::zx_protocol_devi
     suspend: Some(ddk_suspend),
     resume: Some(ddk_resume),
     ..ddk_sys::DEFAULT_PROTOCOL_DEVICE
+};
+
+extern {
+    // Not actually a C function, but the entry point for us to call the driver.
+    fn init() -> Result<Box<DriverOps>, Status>;
+}
+
+extern fn driver_init(out_ctx: *mut *mut u8) -> sys::zx_status_t {
+    println!("driver_init called");
+    match unsafe { init() } {
+        Ok(ops) => {
+            unsafe { *out_ctx = Box::into_raw(Box::new(ops)) as *mut u8 };
+            Status::OK
+        },
+        Err(e) => e,
+    }.into_raw()
+}
+
+extern fn driver_bind(mut ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, _cookie: *mut *mut u8) -> sys::zx_status_t {
+    println!("driver_bind called");
+    let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
+    let parent_wrapped = Device::wrap(parent);
+    let status = match ops.bind(parent_wrapped) {
+        Ok(device) => Status::OK,
+        Err(e) => e,
+    };
+    let _ = Box::into_raw(ops);
+    status.into_raw()
+}
+
+extern fn driver_unbind(mut _ctx: *mut u8, device: *mut ddk_sys::zx_device_t, _cookie: *mut u8) {
+    println!("driver unbind called with cookie {:?}", _cookie);
+}
+
+extern fn driver_release(mut ctx: *mut u8) {
+    println!("driver_release called");
+    let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
+    ops.release();
+    // Don't Box::into_raw the ops in this case, so it can be freed by Rust.
+}
+
+#[no_mangle]
+pub static DRIVER_OPS: ddk_sys::zx_driver_ops_t = ddk_sys::zx_driver_ops_t {
+    init: Some(driver_init),
+    bind: Some(driver_bind),
+    unbind: Some(driver_unbind),
+    release: Some(driver_release),
+    ..ddk_sys::DEFAULT_DRIVER_OPS
 };
 
 // Copied from fuchsia-zircon, as we don't want to make it part of the public API.

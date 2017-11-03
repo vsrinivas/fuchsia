@@ -6,9 +6,9 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-extern zx_driver_ops_t DRIVER_OPS_MICROORB;
+extern zx_driver_ops_t DRIVER_OPS;
 
-ZIRCON_DRIVER_BEGIN(_driver_microorb, DRIVER_OPS_MICROORB, "microorb", "0.1.0", 3)
+ZIRCON_DRIVER_BEGIN(_driver_microorb, DRIVER_OPS, "microorb", "0.1.0", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, 0x6666),
     BI_MATCH_IF(EQ, BIND_USB_PID, 0xf00d),
