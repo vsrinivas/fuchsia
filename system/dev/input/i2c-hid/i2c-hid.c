@@ -271,9 +271,9 @@ static int i2c_hid_noirq_thread(void* arg) {
                 mtx_unlock(&dev->i2c_lock);
                 continue;
             }
-            zxlogf(ERROR, "i2c-hid: fatal device_read failure %d\n", status);
+            zxlogf(ERROR, "i2c-hid: device_read failure %d\n", status);
             mtx_unlock(&dev->i2c_lock);
-            break;
+            continue;
         }
         if (actual < 2) {
             zxlogf(ERROR, "i2c-hid: short read (%zd < 2)!!!\n", actual);
@@ -367,7 +367,7 @@ static int i2c_hid_irq_thread(void* arg) {
                 mtx_unlock(&dev->i2c_lock);
                 goto complete_irq;
             }
-            zxlogf(ERROR, "i2c-hid: fatal device_read failure %d\n", status);
+            zxlogf(ERROR, "i2c-hid: device_read failure %d\n", status);
             mtx_unlock(&dev->i2c_lock);
             goto complete_irq;
         }
