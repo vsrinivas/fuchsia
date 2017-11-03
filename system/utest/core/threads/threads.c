@@ -395,7 +395,7 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
                                  &info, sizeof(info), NULL, NULL),
               ZX_OK, "");
-    ASSERT_TRUE(info.state == ZX_THREAD_STATE_BLOCKED, "");
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
 
     // When the thread is suspended the signaling should not take effect.
     ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
