@@ -6,7 +6,13 @@ import re
 import subprocess
 import sys
 
-fuchsia_dir = os.environ['FUCHSIA_DIR']
+try:
+  fuchsia_dir = os.environ['FUCHSIA_DIR']
+except KeyError, e:
+  print 'Missing FUCHSIA_DIR environment variable. Please run this script as:'
+  print '  fx exec scripts/generate-intellij-config.py'
+  sys.exit(1)
+
 idea_dir = os.path.join(fuchsia_dir, '.idea')
 
 
