@@ -68,10 +68,6 @@ int __parsespent(char* s, struct spwd* sp) {
     return 0;
 }
 
-static void cleanup(void* p) {
-    fclose(p);
-}
-
 int getspnam_r(const char* name, struct spwd* sp, char* buf, size_t size, struct spwd** res) {
     char path[20 + NAME_MAX];
     FILE* f = 0;
