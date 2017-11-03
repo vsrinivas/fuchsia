@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <stdbool.h>
 #include <zircon/compiler.h>
@@ -56,4 +56,4 @@ static inline void arch_trace_process_create(uint64_t pid, paddr_t tt_phys) {
 
 __END_CDECLS
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__

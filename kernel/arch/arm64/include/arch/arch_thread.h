@@ -9,7 +9,7 @@
 
 #define CURRENT_PERCPU_PTR_OFFSET 16
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <assert.h>
 #include <zircon/compiler.h>
@@ -72,4 +72,4 @@ static_assert(
 
 __END_CDECLS
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__

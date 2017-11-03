@@ -23,7 +23,7 @@
 /* magic number passed by multiboot-compliant boot loaders */
 #define MULTIBOOT_BOOTLOADER_MAGIC  0x2BADB002
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 /* multiboot header */
 typedef struct multiboot_header {

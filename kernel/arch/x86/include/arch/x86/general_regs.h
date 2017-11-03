@@ -14,7 +14,7 @@
 #define X86_GENERAL_REGS_SYSCALL 1
 #define X86_GENERAL_REGS_IFRAME  2
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <assert.h>
 #include <zircon/compiler.h>
@@ -48,4 +48,4 @@ typedef struct {
 
 __END_CDECLS
 
-#endif // !ASSEMBLY
+#endif // !__ASSEMBLER__

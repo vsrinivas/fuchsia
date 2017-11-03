@@ -138,7 +138,7 @@
 #define PFEX_SGX    (1<<15)
 
 /* C defines below */
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -179,4 +179,4 @@ paddr_t x86_kernel_cr3(void);
 
 __END_CDECLS
 
-#endif // !ASSEMBLY
+#endif // !__ASSEMBLER__

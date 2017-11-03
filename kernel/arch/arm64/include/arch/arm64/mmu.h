@@ -142,7 +142,7 @@
 
 #define MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT      (30)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 #define BM(base, count, val) (((val) & ((1UL << (count)) - 1)) << (base))
 #else
 #define BM(base, count, val) (((val) & ((0x1 << (count)) - 1)) << (base))
@@ -366,7 +366,7 @@
      MMU_PTE_ATTR_DEVICE | \
      MMU_PTE_ATTR_AP_P_RW_U_NA)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <sys/types.h>
 #include <assert.h>
@@ -396,4 +396,4 @@ __BEGIN_CDECLS
 
 
 __END_CDECLS
-#endif /* ASSEMBLY */
+#endif /* __ASSEMBLER__ */

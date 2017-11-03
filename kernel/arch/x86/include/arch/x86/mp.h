@@ -23,7 +23,7 @@
 /* offset of default_tss.rsp0 */
 #define PERCPU_KERNEL_SP_OFFSET        (PERCPU_DEFAULT_TSS_OFFSET + 4)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <arch/spinlock.h>
 #include <arch/ops.h>
@@ -132,4 +132,4 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
 
 __END_CDECLS
 
-#endif // !ASSEMBLY
+#endif // !__ASSEMBLER__

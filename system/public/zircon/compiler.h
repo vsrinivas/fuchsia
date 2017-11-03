@@ -4,7 +4,7 @@
 
 #pragma once
 
-#ifndef __ASSEMBLY__
+#ifndef __ASSEMBLER__
 
 #if __GNUC__ || defined(__clang__)
 #define likely(x)       __builtin_expect(!!(x), 1)
@@ -126,7 +126,7 @@
 #endif
 
 #endif  // if __GNUC__ || defined(__clang__)
-#endif  // ifndef __ASSEMBLY__
+#endif  // ifndef __ASSEMBLER__
 
 /* TODO: add type check */
 #define countof(a) (sizeof(a) / sizeof((a)[0]))

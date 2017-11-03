@@ -10,7 +10,7 @@
 #define MEMMOV_OPS_SRC_OFFSET (8)
 #define MEMMOV_OPS_LEN_OFFSET (16)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -55,4 +55,4 @@ static_assert(__offsetof(memmov_ops_t, len) == MEMMOV_OPS_LEN_OFFSET, "");
 
 __END_CDECLS
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__

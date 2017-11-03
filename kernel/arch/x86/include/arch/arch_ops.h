@@ -10,7 +10,7 @@
 
 #include <zircon/compiler.h>
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
@@ -72,4 +72,4 @@ void arch_trace_process_create(uint64_t pid, paddr_t pt_phys);
 
 __END_CDECLS
 
-#endif // !ASSEMBLY
+#endif // !__ASSEMBLER__

@@ -21,7 +21,7 @@
 
 #define RED_REGISTERS_OFFSET 28
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 #include <assert.h>
 #include <vm/vm_aspace.h>
 #include <zircon/compiler.h>
@@ -116,6 +116,6 @@ static_assert(__offsetof(struct x86_ap_bootstrap_data, per_cpu) == BCD_PER_CPU_B
 static_assert(__offsetof(struct x86_realmode_entry_data, hdr) == 0, "");
 static_assert(__offsetof(struct x86_realmode_entry_data, registers_ptr) == RED_REGISTERS_OFFSET, "");
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__
 
 #endif // ARCH_X86_64

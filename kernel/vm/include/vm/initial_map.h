@@ -23,7 +23,7 @@
 #define MMU_INITIAL_MAPPING_FLAG_DEVICE (0x4)
 
 // this file can be included from assembly to get to the defines above
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -48,4 +48,4 @@ static_assert(sizeof(struct mmu_initial_mapping) == __MMU_INITIAL_MAPPING_SIZE, 
 // Declared extern C because it may be accessed from assembly.
 extern "C" const struct mmu_initial_mapping mmu_initial_mappings[];
 
-#endif // !ASSEMBLY
+#endif // !__ASSEMBLER__

@@ -12,7 +12,7 @@
 #define DCACHE 2
 #define UCACHE (ICACHE|DCACHE)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <arch/defines.h>
 #include <kernel/atomic.h>
@@ -70,4 +70,4 @@ void arch_zero_page(void *);
 
 __END_CDECLS
 
-#endif // !ASSEMBLY
+#endif // !__ASSEMBLER__

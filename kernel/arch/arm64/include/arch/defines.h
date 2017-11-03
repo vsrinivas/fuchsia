@@ -27,7 +27,7 @@
 /* the maximum cache line seen on any known ARM hardware */
 #define MAX_CACHE_LINE 128
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 #define BM(base, count, val) (((val) & ((1UL << (count)) - 1)) << (base))
 #else
 #define BM(base, count, val) (((val) & ((0x1 << (count)) - 1)) << (base))

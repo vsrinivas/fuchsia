@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 #include <zircon/types.h> // for zx_status_t
 #endif
 

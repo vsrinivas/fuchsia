@@ -96,7 +96,7 @@
                                          X86_FLAGS_AC | \
                                          X86_FLAGS_ID)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <zircon/compiler.h>
 #include <sys/types.h>

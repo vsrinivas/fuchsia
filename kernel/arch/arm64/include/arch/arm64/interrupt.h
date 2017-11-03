@@ -6,7 +6,7 @@
 
 #pragma once
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <kernel/atomic.h>
 
@@ -60,4 +60,4 @@ static inline bool arch_fiqs_disabled(void)
 
 __END_CDECLS
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__

@@ -37,7 +37,7 @@
 #define GS_R15      (GS_R14 + 8)
 #define GS_CR2      (GS_R15 + 8)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <zircon/types.h>
 
@@ -139,4 +139,4 @@ void vmx_exit(VmxState* vmx_state);
 
 __END_CDECLS
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__

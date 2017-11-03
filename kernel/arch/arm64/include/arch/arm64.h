@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <assert.h>
 #include <stdbool.h>
@@ -126,7 +126,7 @@ extern uint32_t arm64_dcache_size;
 
 __END_CDECLS
 
-#endif // __ASSEMBLY__
+#endif // __ASSEMBLER__
 
 /* used in above exception_flags arguments */
 #define ARM64_EXCEPTION_FLAG_LOWER_EL (1<<0)

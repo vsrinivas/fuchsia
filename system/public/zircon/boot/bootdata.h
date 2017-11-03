@@ -4,7 +4,7 @@
 
 #pragma once
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 #include <zircon/compiler.h>
 #include <stdint.h>
 #endif
@@ -116,7 +116,7 @@
 
 #define BOOTDATA_IGNORE           (0x50494b53) // SKIP
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 __BEGIN_CDECLS;
 
 // BootData header, describing the type and size of data

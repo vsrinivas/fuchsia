@@ -14,7 +14,7 @@
 #define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8)
 #define VDSO_CONSTANTS_ALIGN 8
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <stdint.h>
 
@@ -46,4 +46,4 @@ static_assert(VDSO_CONSTANTS_SIZE == sizeof(vdso_constants),
 static_assert(VDSO_CONSTANTS_ALIGN == alignof(vdso_constants),
               "Need to adjust VDSO_CONSTANTS_ALIGN");
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__

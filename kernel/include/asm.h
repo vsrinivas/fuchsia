@@ -7,7 +7,7 @@
 
 #pragma once
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 #error for assembly files only
 #endif
 

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#if defined(ASSEMBLY)
+#if defined(__ASSEMBLER__)
 
 // This is used in assembly code to specify a code fragment that will get
 // filled in by the given function, patch_func(), when the kernel starts

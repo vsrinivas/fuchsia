@@ -40,7 +40,7 @@
 #define GS_ESR_EL2          (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_ESR_EL2 + 8)
 
-#ifndef ASSEMBLY
+#ifndef __ASSEMBLER__
 
 #include <zircon/types.h>
 
@@ -131,4 +131,4 @@ extern zx_status_t arm64_el2_tlbi_vmid(uint8_t vmid);
 
 __END_CDECLS
 
-#endif // ASSEMBLY
+#endif // __ASSEMBLER__
