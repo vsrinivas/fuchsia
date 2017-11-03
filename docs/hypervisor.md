@@ -25,7 +25,7 @@ system/uapp/guest/scripts/mksysroot.sh -ri
 # Optional: Build a GPT disk image for Zircon guests.
 system/uapp/guest/scripts/mkgpt.sh
 
-system/uapp/guest/scripts/mkbootfs.sh
+system/uapp/guest/scripts/mkbootfs.sh zircon-pc-x86-64
 build-zircon-pc-x86-64/tools/bootserver \
     build-zircon-pc-x86-64/zircon.bin \
     build-zircon-pc-x86-64/bootdata-with-guest.bin
