@@ -159,21 +159,26 @@ static inline bool intervals_intersect(const void* start1, const size_t len1,
 
 
 /* Takes a buffer to a bootimage and appends a section to the end of it */
-zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
-                                    const uint8_t* section, const uint32_t section_length,
-                                    const uint32_t type, const uint32_t extra,
-                                    const uint32_t flags) {
+zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
+                                    const uint8_t* section, uint32_t section_length,
+                                    uint32_t type, uint32_t extra, uint32_t flags) {
     bootdata_t* hdr = (bootdata_t*)bootdata_buf;
 
     if ((hdr->type != BOOTDATA_CONTAINER) ||
-        (hdr->extra != BOOTDATA_MAGIC) ||
-        (hdr->flags != 0)) {
+        (hdr->extra != BOOTDATA_MAGIC)) {
         // This buffer does not point to a bootimage.
         return ZX_ERR_WRONG_TYPE;
     }
 
-    size_t total_len = hdr->length + sizeof(*hdr);
-    size_t new_section_length = BOOTDATA_ALIGN(section_length) + sizeof(bootdata_t);
+    size_t hdrsize = sizeof(bootdata_t);
+
+    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
+        hdrsize += sizeof(bootextra_t);
+        flags |= BOOTDATA_FLAG_EXTRA;
+    }
+
+    size_t total_len = hdr->length + hdrsize;
+    size_t new_section_length = BOOTDATA_ALIGN(section_length) + hdrsize;
 
     // Make sure there's enough buffer space after the bootdata container to
     // append the new section.
@@ -190,7 +195,15 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
     new_hdr->extra = extra;
     new_hdr->flags = flags;
 
-    bootdata_buf += sizeof(*new_hdr);
+    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
+        bootextra_t* extra = (bootextra_t*) (bootdata_buf + sizeof(bootdata_t));
+        extra->reserved0 = 0;
+        extra->reserved1 = 0;
+        extra->magic = BOOTITEM_MAGIC;
+        extra->crc32 = BOOTITEM_NO_CRC32;
+    }
+
+    bootdata_buf += hdrsize;
 
     memcpy(bootdata_buf, section, section_length);
 
@@ -250,11 +263,20 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
     zx_status_t result;
 
     paddr_t new_kernel_addr;
+    uint8_t* kernel_buffer;
     size_t new_kernel_len;
-    result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, nullptr,
+    result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, &kernel_buffer,
                                 &new_kernel_len);
     if (result != ZX_OK) {
         return result;
+    }
+
+    // for kernels that are bootdata based (eg, x86-64), the location
+    // to find the entrypoint depends on the bootdata extra flag
+    bootdata_t* hdr = (bootdata_t*)kernel_buffer;
+    uintptr_t entry64_addr = 0x100020;
+    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
+        entry64_addr += 0x20;
     }
 
     paddr_t new_bootimage_addr;
@@ -269,22 +291,23 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
 
     result = bootdata_append_cmdline(cmdline, cmdline_len, bootimage_buffer, new_bootimage_len);
     if (result != ZX_OK) {
+        printf("mexec: could not append cmdline\n");
         return result;
     }
 
+    // Allow the platform to patch the bootdata with any platform specific
+    // sections before mexecing.
+    result = platform_mexec_patch_bootdata(bootimage_buffer, new_bootimage_len);
+    if (result != ZX_OK) {
+        printf("mexec: could not patch bootdata\n");
+        return result;
+    }
 
     // WARNING
     // It is unsafe to return from this function beyond this point.
     // This is because we have swapped out the user address space and halted the
     // secondary cores and there is no trivial way to bring both of these back.
     thread_migrate_to_cpu(BOOT_CPU_ID);
-
-    // Allow the platform to patch the bootdata with any platform specific
-    // sections before mexecing.
-    result = platform_mexec_patch_bootdata(bootimage_buffer, new_bootimage_len);
-    if (result != ZX_OK) {
-        panic("Error while patching platform bootdata.");
-    }
 
     void* id_page_addr = 0x0;
     result = identity_page_allocate(&id_page_addr);
@@ -349,7 +372,7 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
 
     // Ask the platform to mexec into the next kernel.
     mexec_asm_func mexec_assembly = (mexec_asm_func)id_page_addr;
-    platform_mexec(mexec_assembly, ops, new_bootimage_addr, new_bootimage_len);
+    platform_mexec(mexec_assembly, ops, new_bootimage_addr, new_bootimage_len, entry64_addr);
 
     panic("Execution should never reach here\n");
     return ZX_OK;

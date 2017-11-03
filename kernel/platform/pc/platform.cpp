@@ -668,7 +668,8 @@ static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t*
 }
 
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
-                    uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
+                    uintptr_t new_bootimage_addr, size_t new_bootimage_len,
+                    uintptr_t entry64_addr) {
 
     // A hacky way to handle disabling all PCI devices until we have devhost
     // lifecycles implemented.
@@ -733,7 +734,8 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 
     ptl4[0] = vaddr_to_paddr((void*)ptl3) | X86_KERNEL_PD_FLAGS;
 
-    mexec_assembly((uintptr_t)new_bootimage_addr, vaddr_to_paddr((void*)ptl4), 0, 0, ops, 0);
+    mexec_assembly((uintptr_t)new_bootimage_addr, vaddr_to_paddr((void*)ptl4),
+                   entry64_addr, 0, ops, 0);
 }
 
 void platform_halt_secondary_cpus(void)

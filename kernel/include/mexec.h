@@ -46,7 +46,8 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len);
 /* Ask the platform to mexec into the next kernel.
  */
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
-                    uintptr_t new_bootimage_addr, size_t new_bootimage_len);
+                    uintptr_t new_bootimage_addr, size_t new_bootimage_len,
+                    uintptr_t entry64_addr);
 
 static_assert(__offsetof(memmov_ops_t, dst) == MEMMOV_OPS_DST_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, src) == MEMMOV_OPS_SRC_OFFSET, "");

@@ -13,15 +13,13 @@
 #include <zircon/tls.h>
 #include <mexec.h>
 
-#define ENTRY64_ADDR 0x100020
-
 .section .text
 FUNCTION_LABEL(mexec_asm)
     /* Stash all the arguments passed in registers R8 - R13 */
     mov %r9,  %r13   /* Unused Arg */
     mov %r8,  %r12   /* Memmove Ops */
     mov %rcx, %r11   /* Unused Arg */
-    mov %rdx, %r10   /* Unused Arg */
+    mov %rdx, %r10   /* ENTRY64_ADDR */
     mov %rsi, %r9    /* CR3 for Safe page tables */
     mov %rdi, %r8    /* Bootimage Address */
 
@@ -38,13 +36,13 @@ FUNCTION_LABEL(mexec_asm)
     /* Move the address of the bootdata into the appropriate register */
     mov %r8, %rsi
 
-    /* Zero out some registers */ 
+    /* Zero out some registers */
     xor %ebx, %ebx
     xor %edi, %edi
     xor %ebp, %ebp
 
-    mov $ENTRY64_ADDR, %rbx
-    mov (%rbx), %rax
+    /* Grab 64bit entrypoint from provided location */
+    mov (%r10), %rax
     xor %rbx, %rbx
 
     /* Clear interrupts */

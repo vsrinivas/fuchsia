@@ -677,7 +677,8 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
 }
 
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
-                    uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
+                    uintptr_t new_bootimage_addr, size_t new_bootimage_len,
+                    uintptr_t entry64_addr) {
     mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, 0, ops,
                    (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
 }
