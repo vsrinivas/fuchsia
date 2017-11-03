@@ -32,6 +32,8 @@ if jiri_manifest != ""
       return
     endif
 
+    let b:is_fuchsia = 1
+
     " Set up path so that 'gf' and :find do what we want.
     " This includes the directory of the file, cwd, all layers, layer public
     " directories, the build directory, the gen directory and the zircon
@@ -56,7 +58,16 @@ if jiri_manifest != ""
       set filetype=json sw=4
     endif
 
-    if g:loaded_youcompleteme && &filetype == "cpp"
+    " The Buf* autocmds sometimes run before and sometimes after FileType.
+    if &filetype == "cpp"
+      call FuchsiaCppBuffer()
+    endif
+  endfunction
+
+  " This may be called twice because autocmds arrive in different orders on
+  " different platforms.
+  function FuchsiaCppBuffer()
+    if g:loaded_youcompleteme
       " Replace the normal go to tag key with YCM when editing C/CPP.
       nnoremap <C-]> :YcmCompleter GoTo<cr>
     endif
@@ -65,6 +76,7 @@ if jiri_manifest != ""
   augroup fuchsia
     au!
     autocmd BufRead,BufNewFile * call FuchsiaBuffer()
+    autocmd FileType cpp call FuchsiaCppBuffer()
   augroup END
 
 endif
