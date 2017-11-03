@@ -36,9 +36,16 @@ function __patched_path {
 function fx-update-path {
   local rust_dir="$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n "${BUILDTOOLS_RUST_DIR}/bin")"
 
+  local build_dir="$(fx-config-read; echo "${FUCHSIA_BUILD_DIR}")"
+
+  local tools_dirs="${ZIRCON_TOOLS_DIR}"
+  if [[ -n "${build_dir}" ]]; then
+    tools_dirs="${build_dir}/tools:${tools_dirs}"
+  fi
+
   export PATH="$(__patched_path \
       "${FUCHSIA_OUT_DIR}/[^/]*-[^/]*/tools" \
-      "${FUCHSIA_BUILD_DIR}/tools:${ZIRCON_TOOLS_DIR}"
+      "${tools_dirs}"
   )"
 
   export PATH="$(__patched_path "${rust_dir}" "${rust_dir}")"
