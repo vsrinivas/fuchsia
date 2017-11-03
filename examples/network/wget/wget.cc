@@ -9,6 +9,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
 
+#include <string>
+
 namespace examples {
 
 class ResponsePrinter {
@@ -81,6 +83,9 @@ class WGetApp {
       return false;
     }
     std::string url(args[1]);
+    if (url.find("://") == std::string::npos) {
+        url.insert(0, "http://");
+    }
     printf("Loading: %s\n", url.c_str());
 
     network_service_->CreateURLLoader(GetProxy(&url_loader_));

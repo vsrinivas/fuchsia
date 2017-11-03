@@ -60,7 +60,13 @@ fn main() {
 /// Connects to the network service, sends a url request, and prints the response.
 fn main_res() -> Result<(), fidl::Error> {
     let url = match std::env::args().nth(1) {
-        Some(url) => url,
+        Some(url) => {
+            if url.find("://").is_none() {
+                ["http://", &url].concat()
+            } else {
+                url
+            }
+        }
         None => {
             println!("usage: {} <url>", std::env::args().nth(0).unwrap());
             return Ok(());
