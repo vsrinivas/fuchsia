@@ -11,11 +11,15 @@ function get_build_dir {
 function commands {
   local cmds="$(ls "${fuchsia_dir}/scripts/devshell" | grep -v lib)"
 
+  local newline=$'\n'
   local build_dir=$(get_build_dir)
   if [[ -n "${build_dir}" ]]; then
-    local newline=$'\n'
     cmds="${cmds}${newline}$(ls "${build_dir}/tools")"
   fi
+
+  for tool in ${buildtools_whitelist}; do
+    cmds="${cmds}${newline}${tool}"
+  done
 
   echo "$(echo "${cmds}" | sort)"
 }
@@ -37,6 +41,17 @@ function find_command {
       return 0
     fi
   fi
+
+  for tool in ${buildtools_whitelist}; do
+    if [[ "$cmd" != "$tool" ]]; then
+      continue
+    fi
+    local command_path="${fuchsia_dir}/buildtools/${tool}"
+    if [[ -x "${command_path}" ]]; then
+      echo "${command_path}"
+      return 0
+    fi
+  done
 
   return 1
 }
@@ -71,6 +86,8 @@ To use these shell extensions, first source fx-env.sh into your shell:
 
 END
 }
+
+buildtools_whitelist="gn ninja go"
 
 fuchsia_dir="${FUCHSIA_DIR}"
 if [[ -z "${fuchsia_dir}" ]]; then
