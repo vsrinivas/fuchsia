@@ -71,7 +71,11 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) {
     };
     if ((type == BOOTDATA_BOOTFS_SYSTEM) && !has_secondary_bootfs) {
         has_secondary_bootfs = true;
-        memfs_mount(vfs_create_global_root(), systemfs_get_root());
+        status = memfs_mount(vfs_create_global_root(), "system", systemfs_get_root());
+        if (status != ZX_OK) {
+            printf("devmgr: failed to mount /system (%d)\n", status);
+            return status;
+        }
     }
     bootfs_t bfs;
     if (bootfs_create(&bfs, vmo) == ZX_OK) {

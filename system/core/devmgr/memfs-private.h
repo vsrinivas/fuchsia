@@ -29,6 +29,7 @@
 namespace memfs {
 
 class Dnode;
+class Vfs;
 
 class VnodeMemfs : public fs::Vnode {
 public:
@@ -45,12 +46,15 @@ public:
 
     virtual ~VnodeMemfs();
 
+    Vfs* vfs() const { return vfs_; }
+
     fbl::RefPtr<Dnode> dnode_;
     uint32_t link_count_;
 
 protected:
-    VnodeMemfs();
+    explicit VnodeMemfs(Vfs* vfs);
 
+    Vfs* vfs_;
     uint64_t ino_;
     uint64_t create_time_;
     uint64_t modify_time_;
@@ -61,8 +65,8 @@ private:
 
 class VnodeFile final : public VnodeMemfs {
 public:
-    VnodeFile();
-    VnodeFile(zx_handle_t vmo, zx_off_t length);
+    VnodeFile(Vfs* vfs);
+    VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length);
     ~VnodeFile();
 
     virtual zx_status_t ValidateFlags(uint32_t flags) final;
@@ -83,7 +87,7 @@ private:
 
 class VnodeDir : public VnodeMemfs {
 public:
-    VnodeDir();
+    VnodeDir(Vfs* vfs);
     virtual ~VnodeDir();
 
     virtual zx_status_t ValidateFlags(uint32_t flags) final;
@@ -138,7 +142,7 @@ private:
 
 class VnodeVmo final : public VnodeMemfs {
 public:
-    VnodeVmo(zx_handle_t vmo, zx_off_t offset, zx_off_t length);
+    VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length);
     ~VnodeVmo();
 
     virtual zx_status_t ValidateFlags(uint32_t flags) override;
@@ -154,6 +158,15 @@ private:
     zx_off_t offset_;
     zx_off_t length_;
     bool have_local_clone_;
+};
+
+class Vfs : public fs::Vfs {
+public:
+   zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
+                             zx_handle_t vmo, zx_off_t off,
+                             zx_off_t len);
+
+   void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree);
 };
 
 } // namespace memfs
@@ -199,7 +212,7 @@ VnodeDir* vfs_create_global_root(void) TA_NO_THREAD_SAFETY_ANALYSIS;
 // Create a generic root to memfs
 VnodeDir* vfs_create_root(void);
 
-void memfs_mount(VnodeDir* parent, VnodeDir* subtree);
+zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree);
 
 void devmgr_vfs_exit(void);
 

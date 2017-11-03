@@ -31,20 +31,7 @@
 namespace memfs {
 namespace {
 
-class MemVfs : public fs::Vfs {
- public:
-    zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
-                              zx_handle_t vmo, zx_off_t off,
-                              zx_off_t len) {
-        fbl::AutoLock lock(&vfs_lock_);
-        return parent->CreateFromVmo(vmofile, name, vmo, off, len);
-    }
-
-    void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
-        fbl::AutoLock lock(&vfs_lock_);
-        parent->MountSubtree(fbl::move(subtree));
-    }
-} vfs;
+Vfs root_vfs;
 
 fbl::unique_ptr<async::Loop> global_loop;
 
@@ -53,7 +40,7 @@ fbl::unique_ptr<async::Loop> global_loop;
 // Artificially cap the maximum in-memory file size to 512MB.
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
-static fbl::RefPtr<VnodeDir> vfs_root = nullptr;
+static fbl::RefPtr<VnodeDir> global_root = nullptr;
 static fbl::RefPtr<VnodeDir> memfs_root = nullptr;
 static fbl::RefPtr<VnodeDir> devfs_root = nullptr;
 static fbl::RefPtr<VnodeDir> bootfs_root = nullptr;
@@ -68,17 +55,32 @@ static bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) 
     return size == length;
 }
 
+zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
+                             zx_handle_t vmo, zx_off_t off,
+                             zx_off_t len) {
+    fbl::AutoLock lock(&vfs_lock_);
+    return parent->CreateFromVmo(vmofile, name, vmo, off, len);
+}
+
+void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
+    fbl::AutoLock lock(&vfs_lock_);
+    parent->MountSubtree(fbl::move(subtree));
+}
+
 fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
 
-VnodeMemfs::VnodeMemfs() : dnode_(nullptr), link_count_(0),
+VnodeMemfs::VnodeMemfs(Vfs* vfs) : dnode_(nullptr), link_count_(0), vfs_(vfs),
     ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {
     create_time_ = modify_time_ = zx_time_get(ZX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {
 }
 
-VnodeFile::VnodeFile() : vmo_(ZX_HANDLE_INVALID), length_(0) {}
-VnodeFile::VnodeFile(zx_handle_t vmo, zx_off_t length) : vmo_(vmo), length_(length) {}
+VnodeFile::VnodeFile(Vfs* vfs)
+    : VnodeMemfs(vfs), vmo_(ZX_HANDLE_INVALID), length_(0) {}
+
+    VnodeFile::VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length)
+    : VnodeMemfs(vfs), vmo_(vmo), length_(length) {}
 
 VnodeFile::~VnodeFile() {
     if (vmo_ != ZX_HANDLE_INVALID) {
@@ -86,13 +88,14 @@ VnodeFile::~VnodeFile() {
     }
 }
 
-VnodeDir::VnodeDir() {
+VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
     link_count_ = 1; // Implied '.'
 }
 VnodeDir::~VnodeDir() {}
 
-VnodeVmo::VnodeVmo(zx_handle_t vmo, zx_off_t offset, zx_off_t length) :
-    vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {}
+VnodeVmo::VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
+    : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {}
+
 VnodeVmo::~VnodeVmo() {
     if (have_local_clone_) {
         zx_handle_close(vmo_);
@@ -348,9 +351,9 @@ zx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
     fbl::AllocChecker ac;
     fbl::RefPtr<memfs::VnodeMemfs> vn;
     if (S_ISDIR(mode)) {
-        vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir());
+        vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir(vfs()));
     } else {
-        vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile());
+        vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile(vfs()));
     }
 
     if (!ac.check()) {
@@ -604,7 +607,7 @@ zx_status_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 
         bool vmofile = false;
         *out_actual = 0;
-        return vfs.CreateFromVmo(this, vmofile, name, config->vmo, 0, size);
+        return vfs()->CreateFromVmo(this, vmofile, name, config->vmo, 0, size);
     }
     default:
         return VnodeMemfs::Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
@@ -621,9 +624,9 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     return ZX_OK;
 }
 
-static zx_status_t memfs_create_fs(const char* name, fbl::RefPtr<VnodeDir>* out) {
+static zx_status_t memfs_create_fs(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out) {
     fbl::AllocChecker ac;
-    fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir());
+    fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir(vfs));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -652,9 +655,9 @@ zx_status_t VnodeDir::CreateFromVmo(bool vmofile, fbl::StringPiece name,
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeMemfs> vn;
     if (vmofile) {
-        vn = fbl::AdoptRef(new (&ac) VnodeVmo(vmo, off, len));
+        vn = fbl::AdoptRef(new (&ac) VnodeVmo(vfs(), vmo, off, len));
     } else {
-        vn = fbl::AdoptRef(new (&ac) VnodeFile(vmo, len));
+        vn = fbl::AdoptRef(new (&ac) VnodeFile(vfs(), vmo, len));
     }
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -706,7 +709,7 @@ zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, fbl::StringPiece n
 
 fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
-        zx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
+        zx_status_t r = memfs_create_fs("system", &memfs::root_vfs, &memfs::systemfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'system' file system\n", r);
             __builtin_trap();
@@ -717,7 +720,7 @@ fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
     if (memfs::memfs_root == nullptr) {
-        zx_status_t r = memfs_create_fs("tmp", &memfs::memfs_root);
+        zx_status_t r = memfs_create_fs("tmp", &memfs::root_vfs, &memfs::memfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'tmp' file system\n", r);
             __builtin_trap();
@@ -728,7 +731,7 @@ fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     if (memfs::devfs_root == nullptr) {
-        zx_status_t r = memfs_create_fs("dev", &memfs::devfs_root);
+        zx_status_t r = memfs_create_fs("dev", &memfs::root_vfs, &memfs::devfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'device' file system\n", r);
             __builtin_trap();
@@ -739,7 +742,7 @@ fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     if (memfs::bootfs_root == nullptr) {
-        zx_status_t r = memfs_create_fs("boot", &memfs::bootfs_root);
+        zx_status_t r = memfs_create_fs("boot", &memfs::root_vfs, &memfs::bootfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'boot' file system\n", r);
             __builtin_trap();
@@ -768,8 +771,8 @@ static zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_h
                 return ZX_ERR_INVALID_ARGS;
             }
             bool vmofile = true;
-            return memfs::vfs.CreateFromVmo(vnb.get(), vmofile,
-                                            fbl::StringPiece(path, strlen(path)), vmo, off, len);
+            return vnb->vfs()->CreateFromVmo(vnb.get(), vmofile,
+                                             fbl::StringPiece(path, strlen(path)), vmo, off, len);
         } else {
             if (nextpath == path) {
                 return ZX_ERR_INVALID_ARGS;
@@ -800,37 +803,44 @@ zx_status_t systemfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, s
 
 // Hardcoded initialization function to create/access global root directory
 VnodeDir* vfs_create_global_root() {
-    if (memfs::vfs_root == nullptr) {
-        zx_status_t r = memfs_create_fs("<root>", &memfs::vfs_root);
+    if (memfs::global_root == nullptr) {
+        zx_status_t r = memfs_create_fs("<root>", &memfs::root_vfs, &memfs::global_root);
         if (r < 0) {
             printf("fatal error %d allocating root file system\n", r);
             __builtin_trap();
         }
 
-        memfs::vfs.MountSubtree(memfs::vfs_root.get(), DevfsRoot());
-        memfs::vfs.MountSubtree(memfs::vfs_root.get(), BootfsRoot());
-        memfs::vfs.MountSubtree(memfs::vfs_root.get(), MemfsRoot());
+        memfs::root_vfs.MountSubtree(memfs::global_root.get(), DevfsRoot());
+        memfs::root_vfs.MountSubtree(memfs::global_root.get(), BootfsRoot());
+        memfs::root_vfs.MountSubtree(memfs::global_root.get(), MemfsRoot());
 
         fbl::RefPtr<fs::Vnode> vn;
         fbl::StringPiece pathout;
-        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, fbl::StringPiece("/data"), &pathout,
-                                  O_CREAT, S_IFDIR) == ZX_OK);
-        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, fbl::StringPiece("/volume"), &pathout,
-                                  O_CREAT, S_IFDIR) == ZX_OK);
+        ZX_ASSERT(memfs::root_vfs.Open(memfs::global_root, &vn, fbl::StringPiece("/data"), &pathout,
+                                       O_CREAT, S_IFDIR) == ZX_OK);
+        ZX_ASSERT(memfs::root_vfs.Open(memfs::global_root, &vn, fbl::StringPiece("/volume"), &pathout,
+                                       O_CREAT, S_IFDIR) == ZX_OK);
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_loop->StartThread("root-dispatcher");
-        memfs::vfs.set_async(memfs::global_loop->async());
+        memfs::root_vfs.set_async(memfs::global_loop->async());
     }
-    return memfs::vfs_root.get();
+    return memfs::global_root.get();
 }
 
 void devmgr_vfs_exit() {
-    memfs::vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
+    memfs::root_vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
 }
 
-void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
-    memfs::vfs.MountSubtree(parent, fbl::RefPtr<VnodeDir>(subtree));
+zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree) {
+    fbl::RefPtr<fs::Vnode> vn;
+    zx_status_t status = parent->Create(&vn, fbl::StringPiece(name), S_IFDIR);
+    if (status != ZX_OK)
+        return status;
+    zx_handle_t h = vfs_create_root_handle(subtree);
+    // TODO(abarth): vfs_create_root_handle can fail but has no way to report
+    // its failures now that zx_handle_t is unsigned.
+    return parent->vfs()->InstallRemote(fbl::move(vn), fs::MountChannel(h));
 }
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
@@ -840,7 +850,7 @@ zx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     if ((r = zx::channel::create(0, &h1, &h2)) != ZX_OK) {
         return r;
     }
-    if ((r = memfs::vfs.ServeDirectory(fbl::RefPtr<fs::Vnode>(vn),
+    if ((r = vn->vfs()->ServeDirectory(fbl::RefPtr<fs::Vnode>(vn),
                                        fbl::move(h1))) != ZX_OK) {
         return r;
     }
@@ -849,5 +859,5 @@ zx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
 
 zx_status_t vfs_connect_root_handle(VnodeMemfs* vn, zx_handle_t h) {
     zx::channel ch(h);
-    return memfs::vfs.ServeDirectory(fbl::RefPtr<fs::Vnode>(vn), fbl::move(ch));
+    return vn->vfs()->ServeDirectory(fbl::RefPtr<fs::Vnode>(vn), fbl::move(ch));
 }
