@@ -1402,7 +1402,6 @@ void StoryControllerImpl::ProcessPendingViews() {
 
 void StoryControllerImpl::OnPageChange(const std::string& key,
                                        const std::string& value) {
-  FXL_LOG(INFO) << "StoryControllerImpl::OnPageChange " << key << " " << value;
   auto module_data = ModuleData::New();
   if (!XdrRead(value, &module_data, XdrModuleData)) {
     FXL_LOG(ERROR) << "Unable to parse ModuleData " << key << " " << value;
