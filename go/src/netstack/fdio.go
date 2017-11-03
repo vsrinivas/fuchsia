@@ -109,7 +109,7 @@ type iostate struct {
 	refs      int
 	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
-	writeBufFlushed chan struct{}
+	writeLoopDone chan struct{}
 }
 
 func (ios *iostate) acquire() {
@@ -138,6 +138,8 @@ func (ios *iostate) release(f func()) {
 // That's not so bad for small client work, but even a client OS is
 // eventually going to feel the overhead of this.
 func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
+	defer func() { ios.writeLoopDone <- struct{}{} }()
+
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
@@ -187,15 +189,14 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 				return
 			}
 			switch {
-			case obs&zx.SignalSocketPeerClosed != 0:
-				return
 			case obs&zx.SignalSocketReadDisabled != 0:
 				// The next Read will return zx.BadState.
 				continue
 			case obs&zx.SignalSocketReadable != 0:
 				continue
 			case obs&LOCAL_SIGNAL_CLOSING != 0:
-				ios.writeBufFlushed <- struct{}{}
+				return
+			case obs&zx.SignalSocketPeerClosed != 0:
 				return
 			}
 		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
@@ -394,6 +395,8 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 
 // loopDgramWrite connects libc write to the network stack for UDP messages.
 func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
+	defer func() { ios.writeLoopDone <- struct{}{} }()
+
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
@@ -414,13 +417,12 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 				return
 			case zx.ErrOk:
 				switch {
-				case obs&zx.SignalSocketPeerClosed != 0:
-					return
 				case obs&zx.SignalChannelReadable != 0:
 					continue
 				case obs&LOCAL_SIGNAL_CLOSING != 0:
-					ios.writeBufFlushed <- struct{}{}
-					continue
+					return
+				case obs&zx.SignalSocketPeerClosed != 0:
+					return
 				}
 			default:
 				log.Printf("loopDgramWrite wait failed: %v", err)
@@ -460,12 +462,12 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	var peerS zx.Handle
 	if iosOrig == nil {
 		ios = &iostate{
-			netProto:        netProto,
-			transProto:      transProto,
-			wq:              wq,
-			ep:              ep,
-			refs:            1,
-			writeBufFlushed: make(chan struct{}),
+			netProto:      netProto,
+			transProto:    transProto,
+			wq:            wq,
+			ep:            ep,
+			refs:          1,
+			writeLoopDone: make(chan struct{}),
 		}
 		if ep != nil {
 			switch transProto {
@@ -1230,7 +1232,7 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 		go func() {
 			switch mxerror.Status(err) {
 			case zx.ErrOk:
-				<-ios.writeBufFlushed
+				<-ios.writeLoopDone
 			default:
 				log.Printf("close: signal failed: %v", err)
 			}
