@@ -48,9 +48,8 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
                          const char* contents,
                          int len) {
     const auto path = repo_dir_ + '/' + name;
+    FXL_CHECK(files::WriteFile(path, contents, len)) << path;
     manifests_written_.push_back(path);
-
-    FXL_CHECK(files::WriteFile(path, contents, len));
   }
 
   std::vector<ModuleManifestRepository::Entry> entries() const {
@@ -151,12 +150,23 @@ TEST_F(ModuleManifestRepositoryTest, All) {
   EXPECT_EQ("chair", entries()[2].noun_constraints[0].types[0]);
 }
 
-TEST_F(ModuleManifestRepositoryTest, DontCrashOnNoRepoDir) {
-  repo_dir_ = "/doesnt/exist";
+TEST_F(ModuleManifestRepositoryTest, RepoDirIsCreatedAutomatically) {
+  repo_dir_ = "/tmp/foo";
   // TODO(thatguy): Once making ModuleManifestRepository easier to test against
   // (ie, have a guaranteed initialized state we can synchronize on), do that
   // here.
   ResetRepository();
+  WriteManifestFile("manifest2", kManifest2, strlen(kManifest2));
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 1; }));
+}
+
+TEST_F(ModuleManifestRepositoryTest, IgnoreIncomingFiles) {
+  ResetRepository();
+  WriteManifestFile("foo.incoming", kManifest1, strlen(kManifest1));
+  WriteManifestFile("foo", kManifest2, strlen(kManifest2));
+
+  // The first manifest files contains two entries, but we should ignore them.
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 1; }));
 }
 
 }  // namespace
