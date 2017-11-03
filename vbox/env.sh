@@ -9,7 +9,7 @@ if ! which VBoxManage 2>&1 > /dev/null ; then
 fi
 
 if [[ -z $FUCHSIA_SCRIPTS_DIR ]]; then
-  source $( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)/../env.sh
+  source $( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)/../devshell/lib/vars.sh
 fi
 
 # VBoxManage makes RPCs to a running virtualbox instance, but the locks
