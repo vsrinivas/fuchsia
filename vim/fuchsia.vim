@@ -2,12 +2,19 @@
 " Use of this source code is governed by a BSD-style license that can be
 " found in the LICENSE file.
 
-" Only run if $FUCHSIA_DIR has been set by env.sh
-if $FUCHSIA_DIR != ""
-  let g:ycm_global_ycm_extra_conf = $FUCHSIA_DIR . '/scripts/vim/ycm_extra_conf.py'
+" Look for the fuchsia root containing the current directory by looking for a
+" .jiri_manifest file
+let jiri_manifest = findfile(".jiri_manifest", ".;")
+if jiri_manifest != ""
+  let g:fuchsia_dir = fnamemodify(jiri_manifest, ":h")
+  " Get the current build dir from fx
+  let g:fuchsia_build_dir = systemlist(g:fuchsia_dir . "/scripts/fx get-build-dir")[0]
+  " Tell YCM where to find its configuration script
+  let g:ycm_global_ycm_extra_conf = g:fuchsia_dir . '/scripts/vim/ycm_extra_conf.py'
 
-  set runtimepath+=$FUCHSIA_DIR/scripts/vim/
-  set runtimepath+=$FUCHSIA_DIR/garnet/public/lib/fidl/tools/vim/
+  let &runtimepath = g:fuchsia_dir . "/scripts/vim/," .
+        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/," .
+        \ &runtimepath
 
   " The "filetype plugin" line must come AFTER the changes to runtimepath
   " above (so the proper directories are searched), but must come BEFORE the
@@ -17,10 +24,38 @@ if $FUCHSIA_DIR != ""
   filetype plugin indent on
 
   function FuchsiaBuffer()
+    let full_path = expand("%:p")
+    let extension = expand("%:e")
+
+    " Only run if the buffer is inside the Fuchsia dir
+    if full_path !~ "^" . g:fuchsia_dir
+      return
+    endif
+
     " Set up path so that 'gf' and :find do what we want.
-    let &l:path = $PWD. "/**" . "," . $FUCHSIA_DIR . "," .
-          \ $FUCHSIA_BUILD_DIR . "," .
-          \ $FUCHSIA_BUILD_DIR . "/gen"
+    " This includes the directory of the file, cwd, all layers, layer public
+    " directories, the build directory, the gen directory and the zircon
+    " sysroot include directory.
+    let &l:path = ".,," .
+          \ $PWD . "/**/," .
+          \ g:fuchsia_dir . "," .
+          \ g:fuchsia_dir . "/*/," .
+          \ g:fuchsia_dir . "/*/public/," .
+          \ g:fuchsia_build_dir . "," .
+          \ g:fuchsia_build_dir . "/gen," .
+          \ g:fuchsia_dir . "/out/build-zircon/*/sysroot/include"
+
+    " Make sure Dart files are recognized as such.
+    if extension == "dart"
+      set filetype=dart
+    endif
+
+    " Treat files in a packages directory (or subdirectory) without a filetype
+    " that don't have an extension as JSON files.
+    if &filetype == "" && full_path =~ "/packages/" && extension == ""
+      set filetype=json sw=4
+    endif
+
     if g:loaded_youcompleteme && &filetype == "cpp"
       " Replace the normal go to tag key with YCM when editing C/CPP.
       nnoremap <C-]> :YcmCompleter GoTo<cr>
@@ -28,9 +63,8 @@ if $FUCHSIA_DIR != ""
   endfunction
 
   augroup fuchsia
-    autocmd BufRead,BufNewFile $FUCHSIA_DIR/** call FuchsiaBuffer()
-    autocmd BufRead,BufNewFile $FUCHSIA_DIR/packages/gn/*,$FUCHSIA_DIR/*/packages/* set filetype=json sw=4
-    autocmd BufRead,BufNewFile *.dart set filetype=dart
+    au!
+    autocmd BufRead,BufNewFile * call FuchsiaBuffer()
   augroup END
 
 endif

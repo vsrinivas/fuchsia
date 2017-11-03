@@ -6,6 +6,7 @@
 # Autocompletion config for YouCompleteMe in Fuchsia
 
 import os
+import re
 import stat
 import subprocess
 
@@ -15,11 +16,21 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 import paths as fuchsia_paths
 
-fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
-fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
+fuchsia_root = os.path.realpath(fuchsia_paths.FUCHSIA_ROOT)
+fuchsia_build = subprocess.check_output(
+    [os.path.join(fuchsia_paths.FUCHSIA_ROOT, 'scripts/fx'), 'get-build-dir']).strip()
 
 fuchsia_clang = os.path.join(fuchsia_paths.BUILDTOOLS_PATH, 'clang')
 ninja_path = os.path.join(fuchsia_root, 'buildtools', 'ninja')
+
+# Get the name of the zircon project from GN args.
+# Reading the args.gn is significantly faster than running `gn args` so we do
+# that.
+zircon_project = None
+args = open(os.path.join(fuchsia_build, 'args.gn')).read()
+match = re.search(r'zircon_project\s*=\s*"([^"]+)"', args)
+if match:
+    zircon_project = match.groups()[0]
 
 common_flags = [
     '-std=c++14',
@@ -29,6 +40,11 @@ common_flags = [
     '-isystem',
     fuchsia_clang + '/include/c++/v1',
 ]
+
+# Add the sysroot include if we found the zircon project
+if zircon_project:
+    common_flags += ['-I' + os.path.join(
+        fuchsia_root, 'out/build-zircon', 'build-' + zircon_project, 'sysroot/include')]
 
 default_flags = [
     '-I' + fuchsia_root,
