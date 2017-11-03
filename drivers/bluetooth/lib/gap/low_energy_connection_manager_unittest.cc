@@ -13,8 +13,8 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 
 #include "lib/fxl/macros.h"
 
@@ -25,7 +25,7 @@ namespace {
 using ::bluetooth::testing::FakeController;
 using ::bluetooth::testing::FakeDevice;
 
-using TestingBase = ::bluetooth::testing::TransportTest<FakeController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
 
 const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kLEPublic,
                                       "00:00:00:00:00:01");

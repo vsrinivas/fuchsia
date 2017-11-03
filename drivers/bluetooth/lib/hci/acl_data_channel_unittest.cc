@@ -11,15 +11,15 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
 namespace hci {
 namespace {
 
-using TestingBase =
-    ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<
+    ::bluetooth::testing::TestController>;
 
 class ACLDataChannelTest : public TestingBase {
  public:

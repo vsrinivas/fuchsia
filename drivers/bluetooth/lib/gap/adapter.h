@@ -19,7 +19,6 @@
 namespace bluetooth {
 
 namespace hci {
-class DeviceWrapper;
 class SequentialCommandRunner;
 class Transport;
 }  // namespace hci
@@ -49,7 +48,7 @@ class Adapter final {
   // all of its asynchronous tasks.
   //
   // This will take ownership of |hci_device|.
-  explicit Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device);
+  explicit Adapter(fxl::RefPtr<hci::Transport> hci);
   ~Adapter();
 
   // Returns a 128-bit UUID that uniquely identifies this adapter on the current

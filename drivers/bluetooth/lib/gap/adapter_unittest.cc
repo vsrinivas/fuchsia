@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {
@@ -20,7 +20,7 @@ namespace {
 
 using ::bluetooth::testing::FakeController;
 
-using TestingBase = ::bluetooth::testing::ControllerTest<FakeController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
 
 class AdapterTest : public TestingBase {
  public:
@@ -29,7 +29,10 @@ class AdapterTest : public TestingBase {
 
   void SetUp() override {
     transport_closed_called_ = false;
-    adapter_ = std::make_unique<Adapter>(TestingBase::SetUpTestDevice());
+
+    SetUpTransport();
+    FXL_DCHECK(transport());
+    adapter_ = std::make_unique<Adapter>(transport());
     test_device()->Start();
   }
 

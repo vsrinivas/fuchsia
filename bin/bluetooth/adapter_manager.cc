@@ -8,6 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -109,7 +110,8 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
 
   auto hci_dev = std::make_unique<bluetooth::hci::ZirconDeviceWrapper>(
       std::move(hci_dev_fd));
-  auto adapter = std::make_unique<bluetooth::gap::Adapter>(std::move(hci_dev));
+  auto hci = bluetooth::hci::Transport::Create(std::move(hci_dev));
+  auto adapter = std::make_unique<bluetooth::gap::Adapter>(std::move(hci));
 
   auto self = weak_ptr_factory_.GetWeakPtr();
 

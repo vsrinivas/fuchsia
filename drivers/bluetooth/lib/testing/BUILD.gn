@@ -2,6 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This target only includes the test_base.h header which is intended for tests
+# that only require a message loop and no HCI functionality.
+source_set("test_base") {
+  testonly = true
+
+  sources = [
+    "test_base.h"
+  ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
+}
+
 source_set("testing") {
   testonly = true
 
@@ -10,14 +24,20 @@ source_set("testing") {
     "fake_controller.h",
     "fake_controller_base.cc",
     "fake_controller_base.h",
+    "fake_controller_test.h",
     "fake_device.cc",
     "fake_device.h",
-    "test_base.h",
     "test_controller.cc",
     "test_controller.h",
   ]
 
+  public_deps = [
+    ":test_base",
+  ]
+
   deps = [
+    # Library dependencies are for the protocol headers only. FakeController
+    # does not depend on any logic from these libraries.
     "//garnet/drivers/bluetooth/lib/hci",
     "//third_party/gtest",
   ]

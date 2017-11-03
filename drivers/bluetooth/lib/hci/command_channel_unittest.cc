@@ -9,7 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
@@ -18,8 +18,8 @@ namespace {
 
 using ::bluetooth::testing::CommandTransaction;
 
-using TestingBase =
-    ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<
+    ::bluetooth::testing::TestController>;
 
 constexpr uint8_t UpperBits(const OpCode opcode) {
   return opcode >> 8;

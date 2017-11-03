@@ -10,7 +10,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/macros.h"
@@ -30,7 +30,7 @@ std::unique_ptr<common::MutableByteBuffer> NewBuffer(T... bytes) {
 
 using ::bluetooth::testing::TestController;
 
-using TestingBase = ::bluetooth::testing::TransportTest<TestController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<TestController>;
 
 class L2CAP_ChannelManagerTest : public TestingBase {
  public:
@@ -47,9 +47,9 @@ class L2CAP_ChannelManagerTest : public TestingBase {
     TestingBase::SetUp();
     TestingBase::InitializeACLDataChannel(acl_info, le_info);
 
-    // TransportTest's ACL data callbacks will no longer work after this call,
-    // as it overwrites ACLDataChannel's data rx handler. This is intended as
-    // the L2CAP layer takes ownership of ACL data traffic.
+    // FakeControllerTest's ACL data callbacks will no longer work after this
+    // call, as it overwrites ACLDataChannel's data rx handler. This is intended
+    // as the L2CAP layer takes ownership of ACL data traffic.
     chanmgr_ = std::make_unique<ChannelManager>(transport(),
                                                 message_loop()->task_runner());
 

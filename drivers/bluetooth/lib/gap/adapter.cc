@@ -9,7 +9,6 @@
 #include "garnet/drivers/bluetooth/lib/gap/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
-#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
@@ -24,18 +23,18 @@
 namespace bluetooth {
 namespace gap {
 
-Adapter::Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device)
+Adapter::Adapter(fxl::RefPtr<hci::Transport> hci)
     : identifier_(fxl::GenerateUUID()),
+      hci_(hci),
       init_state_(State::kNotInitialized),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(hci_device);
+  FXL_DCHECK(hci_);
 
   auto message_loop = fsl::MessageLoop::GetCurrent();
   FXL_DCHECK(message_loop)
       << "gap: Adapter: Must be created on a valid MessageLoop";
 
   task_runner_ = message_loop->task_runner();
-  hci_ = hci::Transport::Create(std::move(hci_device));
   init_seq_runner_ =
       std::make_unique<hci::SequentialCommandRunner>(task_runner_, hci_);
 

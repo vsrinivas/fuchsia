@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
@@ -22,8 +22,8 @@ const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
 
 using ::bluetooth::testing::CommandTransaction;
 
-using TestingBase =
-    ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<
+    ::bluetooth::testing::TestController>;
 
 class ConnectionTest : public TestingBase {
  public:

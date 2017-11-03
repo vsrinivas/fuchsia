@@ -10,8 +10,8 @@
 #include "garnet/drivers/bluetooth/lib/gap/random_address_generator.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {
@@ -19,7 +19,7 @@ namespace gap {
 namespace {
 
 using ::bluetooth::testing::FakeController;
-using TestingBase = ::bluetooth::testing::TransportTest<FakeController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
 
 const common::DeviceAddress kPublicAddress(
     common::DeviceAddress::Type::kLEPublic,

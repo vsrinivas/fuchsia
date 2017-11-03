@@ -5,7 +5,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
@@ -16,8 +16,8 @@ constexpr OpCode kTestOpCode = 0xFFFF;
 
 using ::bluetooth::testing::CommandTransaction;
 
-using TestingBase =
-    ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+using TestingBase = ::bluetooth::testing::FakeControllerTest<
+    ::bluetooth::testing::TestController>;
 
 class SequentialCommandRunnerTest : public TestingBase {
  public:
