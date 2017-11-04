@@ -91,8 +91,8 @@ void Device::WlanmacStop() {
     wlanmac_proxy_.reset();
 }
 
-void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
-    // TODO
+zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
+    return ZX_OK;
 }
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {

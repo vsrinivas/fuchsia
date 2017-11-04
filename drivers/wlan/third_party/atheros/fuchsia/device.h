@@ -36,7 +36,7 @@ class Device;
 using BaseDevice = ddk::Device<Device, ddk::Unbindable>;
 
 class Device : public BaseDevice,
-               public ddk::WlanmacProtocol<Device> {
+               public ddk::WlanmacProtocol<Device, true> {
   public:
     Device(zx_device_t* device, fbl::unique_ptr<Hif> hif);
 
@@ -51,7 +51,7 @@ class Device : public BaseDevice,
     zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
     zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
-    void WlanmacTx(uint32_t options, const void* data, size_t len);
+    zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
     zx_status_t WlanmacSetBss(uint32_t options, const uint8_t* mac, uint8_t type);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* config);
