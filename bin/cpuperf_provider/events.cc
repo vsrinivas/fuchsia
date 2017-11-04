@@ -12,13 +12,13 @@
 
 namespace cpuperf_provider {
 
-constexpr EventDetails g_arch_event_details[] = {
+const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
   { event, umask, flags, name },
 #include <zircon/device/intel-pm-events.inc>
 };
 
-constexpr EventDetails g_skl_event_details[] = {
+const EventDetails g_skl_event_details[] = {
 #define DEF_SKL_EVENT(symbol, event, umask, flags, name) \
   { event, umask, flags, name },
 #include <zircon/device/intel-pm-events.inc>
@@ -91,11 +91,11 @@ const EventDetails* GetFixedEventDetails(int n) {
 
   switch (n) {
     case 0:
-      return &g_arch_event_details[EVENT_INSTRUCTIONS_RETIRED];
+      return &g_arch_event_details[EVENT_ARCH_INSTRUCTIONS_RETIRED];
     case 1:
-      return &g_arch_event_details[EVENT_UNHALTED_CORE_CYCLES];
+      return &g_arch_event_details[EVENT_ARCH_UNHALTED_CORE_CYCLES];
     case 2:
-      return &g_arch_event_details[EVENT_UNHALTED_REFERENCE_CYCLES];
+      return &g_arch_event_details[EVENT_ARCH_UNHALTED_REFERENCE_CYCLES];
     default:
       assert(0);
       __UNREACHABLE;

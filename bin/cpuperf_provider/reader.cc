@@ -41,7 +41,7 @@ bool Reader::ReadPerfConfig(zx_x86_ipm_perf_config_t* config) {
   return true;
 }
 
-static bool ReadBufferInfo(zx::vmo& vmo, bool sampling_mode,
+static bool ReadBufferInfo(zx::vmo& vmo, uint32_t cpu, bool sampling_mode,
                            zx_x86_ipm_buffer_info_t* info) {
   size_t actual;
   auto status = vmo.read(info, 0, sizeof(*info), &actual);
@@ -55,7 +55,8 @@ static bool ReadBufferInfo(zx::vmo& vmo, bool sampling_mode,
     return false;
   }
 
-  FXL_LOG(INFO) << "Reading buffer version " << info->version
+  FXL_LOG(INFO) << "cpu " << cpu
+                << ": buffer version " << info->version
                 << ", " << info->capture_end << " bytes";
 
   uint32_t expected_version =
@@ -95,7 +96,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu, zx_x86_ipm_counters_t* counters) {
 
   zx::vmo vmo(handle);
   zx_x86_ipm_buffer_info_t info;
-  if (!ReadBufferInfo(vmo, false, &info))
+  if (!ReadBufferInfo(vmo, current_cpu_, false, &info))
     return false;
 
   FXL_VLOG(2) << fxl::StringPrintf("ReadNextRecord: cpu=%u", current_cpu_);
@@ -140,7 +141,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu,
       current_vmo_.reset(handle);
 
       zx_x86_ipm_buffer_info_t info;
-      if (!ReadBufferInfo(current_vmo_, true, &info))
+      if (!ReadBufferInfo(current_vmo_, current_cpu_, true, &info))
         return false;
       next_record_ = sizeof(info);
       capture_end_ = info.capture_end;

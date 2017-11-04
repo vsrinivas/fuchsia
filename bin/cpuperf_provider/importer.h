@@ -32,19 +32,33 @@ private:
   static_assert(kMaxNumCpus <= TRACE_ENCODED_THREAD_REF_MAX_INDEX,
                 "bad value for kMaxNumCpus");
 
-  void ImportCountRecord(trace_cpu_number_t cpu,
+  uint64_t ImportTallyRecords(Reader& reader,
+                              const zx_x86_ipm_state_t& state,
+                              const zx_x86_ipm_perf_config_t& config);
+  uint64_t ImportSampleRecords(Reader& reader,
+                               const zx_x86_ipm_state_t& state,
+                               const zx_x86_ipm_perf_config_t& config);
+
+  void ImportTallyRecord(trace_cpu_number_t cpu,
                          const zx_x86_ipm_state_t& state,
                          const zx_x86_ipm_perf_config_t& config,
                          const zx_x86_ipm_counters_t& counters);
-  void ImportSampleRecord(trace_cpu_number_t cpu,
-                          const zx_x86_ipm_state_t& state,
-                          const zx_x86_ipm_perf_config_t& config,
-                          const zx_x86_ipm_sample_record_t& record,
-                          trace_ticks_t previous_time,
-                          uint64_t* programmable_counter_value,
-                          uint64_t* fixed_counter_value);
+  void ImportProgrammableSampleRecord(trace_cpu_number_t cpu,
+                                      const zx_x86_ipm_state_t& state,
+                                      const zx_x86_ipm_perf_config_t& config,
+                                      const zx_x86_ipm_sample_record_t& record,
+                                      trace_ticks_t previous_time,
+                                      uint64_t counter_value,
+                                      uint64_t* programmable_counter_value);
+  void ImportFixedSampleRecord(trace_cpu_number_t cpu,
+                               const zx_x86_ipm_state_t& state,
+                               const zx_x86_ipm_perf_config_t& config,
+                               const zx_x86_ipm_sample_record_t& record,
+                               trace_ticks_t previous_time,
+                               uint64_t counter_value,
+                               uint64_t* fixed_counter_value);
 
-  void EmitCountRecord(trace_cpu_number_t cpu, const EventDetails* details,
+  void EmitTallyRecord(trace_cpu_number_t cpu, const EventDetails* details,
                        const trace_string_ref_t& category_ref,
                        uint64_t value);
 
@@ -56,7 +70,7 @@ private:
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu);
 
   bool IsSampleMode() const;
-  bool IsCountingMode() const { return !IsSampleMode(); }
+  bool IsTallyMode() const { return !IsSampleMode(); }
 
   trace_context* const context_;
   uint32_t category_mask_;
@@ -69,9 +83,6 @@ private:
   trace_string_ref_t const rate_name_ref_;
 
   trace_thread_ref_t cpu_thread_refs_[kMaxNumCpus];
-
-  // Only print this warning once.
-  bool printed_zero_period_warning_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Importer);
 };

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(dje): IWBN to have this available a separate library and dumper.
+
 #include "garnet/bin/cpuperf_provider/importer.h"
 
 #include <atomic>
@@ -71,55 +73,124 @@ bool Importer::Import(Reader& reader) {
   FXL_VLOG(2) << fxl::StringPrintf("Beginning import: category_mask=0x%x",
                                    category_mask_);
 
+  uint32_t record_count;
   if (IsSampleMode()) {
-    trace_ticks_t previous_time[kMaxNumCpus];
-    uint64_t programmable_counter_value[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
-    uint64_t fixed_counter_value[IPM_MAX_FIXED_COUNTERS] = {};
-    for (size_t i = 0; i < countof(previous_time); ++i)
-      previous_time[i] = start_time_;
-    uint32_t cpu;
-    zx_x86_ipm_sample_record_t record;
-    while (reader.ReadNextRecord(&cpu, &record)) {
-      FXL_DCHECK(cpu < kMaxNumCpus);
-      trace_ticks_t prev_time = previous_time[cpu];
-      if (record.time < prev_time) {
-        // TODO(dje): May wish to only print this once, or once per cpu,
-        // but at present this warning hasn't been an excessive problem.
-        FXL_LOG(WARNING) << "Record time " << record.time
-                         << " < previous time " << prev_time;
-      } else {
-        if (record.time > prev_time) {
-          ImportSampleRecord(cpu, state, config, record, prev_time,
-                             programmable_counter_value,
-                             fixed_counter_value);
-        } else {
-          // Only print this once, we don't want a broken trace to flood
-          // the screen with messages.
-          if (!printed_zero_period_warning_) {
-            FXL_LOG(WARNING) << "empty interval for cpu " << cpu
-                             << " at time " << record.time
-                             << " (further such warnings are omitted)";
-            printed_zero_period_warning_ = true;
-          }
-        }
-      }
-      previous_time[cpu] = record.time;
-    }
+    record_count = ImportSampleRecords(reader, state, config);
   } else {
-    uint32_t cpu;
-    zx_x86_ipm_counters_t counters;
-    while (reader.ReadNextRecord(&cpu, &counters)) {
-      ImportCountRecord(cpu, state, config, counters);
-    }
+    record_count = ImportTallyRecords(reader, state, config);
   }
 
-  FXL_VLOG(2) << "Import of cpu perf records took: "
-              << (fxl::TimePoint::Now() - start).ToMicroseconds() << " us";
+  FXL_LOG(INFO) << "Import of " << record_count << " cpu perf records took "
+                << (fxl::TimePoint::Now() - start).ToMicroseconds() << " us";
 
   return true;
 }
 
-void Importer::ImportCountRecord(trace_cpu_number_t cpu,
+uint64_t Importer::ImportTallyRecords(
+    Reader& reader,
+    const zx_x86_ipm_state_t& state,
+    const zx_x86_ipm_perf_config_t& config) {
+  uint64_t record_count = 0;
+  uint32_t cpu;
+  zx_x86_ipm_counters_t counters;
+
+  while (reader.ReadNextRecord(&cpu, &counters)) {
+    ImportTallyRecord(cpu, state, config, counters);
+    ++record_count;
+  }
+
+  return record_count;
+}
+
+uint64_t Importer::ImportSampleRecords(
+    Reader& reader,
+    const zx_x86_ipm_state_t& state,
+    const zx_x86_ipm_perf_config_t& config) {
+  trace_ticks_t programmable_previous_time[kMaxNumCpus][IPM_MAX_PROGRAMMABLE_COUNTERS];
+  trace_ticks_t fixed_previous_time[kMaxNumCpus][IPM_MAX_FIXED_COUNTERS];
+  uint64_t accum_programmable_counter_value[kMaxNumCpus][IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
+  uint64_t accum_fixed_counter_value[kMaxNumCpus][IPM_MAX_FIXED_COUNTERS] = {};
+  for (size_t i = 0; i < kMaxNumCpus; ++i) {
+    for (size_t j = 0; j < IPM_MAX_PROGRAMMABLE_COUNTERS; ++j) {
+      programmable_previous_time[i][j] = start_time_;
+    }
+    for (size_t j = 0; j < IPM_MAX_FIXED_COUNTERS; ++j) {
+      fixed_previous_time[i][j] = start_time_;
+    }
+  }
+
+  uint32_t record_count = 0;
+  // Only print these warnings once, and then again at the end with
+  // the total count. We don't want a broken trace to flood the screen
+  // with messages.
+  uint32_t printed_zero_period_warning_count = 0;
+  uint32_t printed_old_time_warning_count = 0;
+
+  uint32_t cpu;
+  zx_x86_ipm_sample_record_t record;
+
+  uint64_t sample_freq = GetSampleFreq(category_mask_);
+  FXL_DCHECK(sample_freq > 0);
+
+  while (reader.ReadNextRecord(&cpu, &record)) {
+    FXL_DCHECK(cpu < kMaxNumCpus);
+    uint32_t counter = record.counter & ~IPM_COUNTER_NUMBER_FIXED;
+    bool is_fixed = !!(record.counter & IPM_COUNTER_NUMBER_FIXED);
+    trace_ticks_t prev_time;
+    if (is_fixed) {
+      prev_time = fixed_previous_time[cpu][counter];
+    } else {
+      prev_time = programmable_previous_time[cpu][counter];
+    }
+    FXL_VLOG(2) << fxl::StringPrintf("Import: cpu=%u, counter=0x%x, time=%"
+                                     PRIu64,
+                                     cpu, record.counter, record.time);
+    if (record.time < prev_time) {
+      if (printed_old_time_warning_count == 0) {
+        FXL_LOG(WARNING) << "cpu " << cpu << ": record time " << record.time
+                         << " < previous time " << prev_time
+                         << " (further such warnings are omitted)";
+      }
+      ++printed_old_time_warning_count;
+    } else if (record.time == prev_time) {
+      if (printed_zero_period_warning_count == 0) {
+        FXL_LOG(WARNING) << "cpu " << cpu
+                         << ": empty interval at time " << record.time
+                         << " (further such warnings are omitted)";
+      }
+      ++printed_zero_period_warning_count;
+    } else {
+      if (is_fixed) {
+        ImportFixedSampleRecord(
+          cpu, state, config, record, prev_time, sample_freq,
+          &accum_programmable_counter_value[cpu][counter]);
+      } else {
+        ImportProgrammableSampleRecord(
+          cpu, state, config, record, prev_time, sample_freq,
+          &accum_fixed_counter_value[cpu][counter]);
+      }
+    }
+    if (is_fixed) {
+      fixed_previous_time[cpu][counter] = record.time;
+    } else {
+      programmable_previous_time[cpu][counter] = record.time;
+    }
+    ++record_count;
+  }
+
+  if (printed_old_time_warning_count > 0) {
+    FXL_LOG(WARNING) << printed_old_time_warning_count
+                     << " total occurrences of records going back in time";
+  }
+  if (printed_zero_period_warning_count > 0) {
+    FXL_LOG(WARNING) << printed_zero_period_warning_count
+                     << " total occurrences of records with an empty interval";
+  }
+
+  return record_count;
+}
+
+void Importer::ImportTallyRecord(trace_cpu_number_t cpu,
                                  const zx_x86_ipm_state_t& state,
                                  const zx_x86_ipm_perf_config_t& config,
                                  const zx_x86_ipm_counters_t& counters) {
@@ -130,7 +201,7 @@ void Importer::ImportCountRecord(trace_cpu_number_t cpu,
                                    config.fixed_counter_ctrl);
   for (uint32_t i = 0; i < state.num_fixed_counters; ++i) {
     if (config.fixed_counter_ctrl & IA32_FIXED_CTR_CTRL_EN_MASK(i)) {
-      EmitCountRecord(cpu, GetFixedEventDetails(i), fixed_category_ref_,
+      EmitTallyRecord(cpu, GetFixedEventDetails(i), fixed_category_ref_,
                       counters.fixed_counters[i]);
     }
   }
@@ -150,7 +221,7 @@ void Importer::ImportCountRecord(trace_cpu_number_t cpu,
         const EventDetails* details;
         if (EventSelectToEventDetails(config.programmable_events[i], &details)) {
           FXL_VLOG(2) << fxl::StringPrintf("Import: event %s", details->name);
-          EmitCountRecord(cpu, details, category_ref,
+          EmitTallyRecord(cpu, details, category_ref,
                         counters.programmable_counters[i]);
         } else {
           FXL_LOG(ERROR) << fxl::StringPrintf(
@@ -162,71 +233,74 @@ void Importer::ImportCountRecord(trace_cpu_number_t cpu,
   }
 }
 
-// TODO(dje): IWBN to have this available a separate library and program.
-
-void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
-                                  const zx_x86_ipm_state_t& state,
-                                  const zx_x86_ipm_perf_config_t& config,
-                                  const zx_x86_ipm_sample_record_t& record,
-                                  trace_ticks_t previous_time,
-                                  uint64_t* programmable_counter_value,
-                                  uint64_t* fixed_counter_value) {
-  uint64_t sample_freq = GetSampleFreq(category_mask_);
-  FXL_DCHECK(sample_freq > 0);
-  FXL_VLOG(2) << fxl::StringPrintf("Import: cpu=%u, counter=0x%x, time=%" PRIu64,
-                                   cpu, record.counter,
-                                   record.time);
-  FXL_DCHECK(previous_time < record.time);
-
-  if (record.counter & IPM_COUNTER_NUMBER_FIXED) {
-    uint32_t counter = record.counter & ~IPM_COUNTER_NUMBER_FIXED;
-    if (counter < state.num_fixed_counters) {
-      fixed_counter_value[counter] += sample_freq;
-      EmitSampleRecord(cpu, GetFixedEventDetails(counter), fixed_category_ref_,
-                       previous_time, record.time, sample_freq);
-    } else {
-      FXL_LOG(ERROR) << fxl::StringPrintf("Invalid fixed counter number: %u",
-                                          counter);
-    }
+void Importer::ImportProgrammableSampleRecord(
+    trace_cpu_number_t cpu, 
+    const zx_x86_ipm_state_t& state,
+    const zx_x86_ipm_perf_config_t& config,
+    const zx_x86_ipm_sample_record_t& record,
+    trace_ticks_t previous_time,
+    uint64_t counter_value,
+    uint64_t* accum_counter_value) {
+  uint32_t counter = record.counter;
+  // Note: Errors here are generally rare, so at present we don't get clever
+  // with minimizing the noise.
+  if (counter >= state.num_programmable_counters) {
+    FXL_LOG(ERROR) << fxl::StringPrintf("Invalid programmable counter number: %u",
+                                        counter);
+    return;
+  }
+  *accum_counter_value += counter_value;
+  uint32_t programmable_category = category_mask_ & IPM_CATEGORY_PROGRAMMABLE_MASK;
+  if (programmable_category >= IPM_CATEGORY_MAX) {
+    FXL_LOG(ERROR) << "Invalid category in mask";
+    return;
+  }
+  if (programmable_category == IPM_CATEGORY_NONE) {
+    FXL_LOG(ERROR) << "Got programmable counter record, but not enabled in category";
+    return;
+  }
+  if (!(config.programmable_events[counter] & IA32_PERFEVTSEL_EN_MASK)) {
+    FXL_LOG(ERROR) << "Got programmable counter record, but not enabled in event select";
+    return;
+  }
+  const char* category_name = GetCategory(programmable_category).name;
+  trace_string_ref_t category_ref = trace_context_make_registered_string_literal(context_, category_name);
+  FXL_VLOG(2) << fxl::StringPrintf("Import: event select 0x%" PRIx64,
+                                   config.programmable_events[counter]);
+  const EventDetails* details;
+  if (EventSelectToEventDetails(config.programmable_events[counter], &details)) {
+    FXL_VLOG(2) << fxl::StringPrintf("Import: event %s", details->name);
+    EmitSampleRecord(cpu, details, category_ref,
+                     previous_time, record.time, counter_value);
   } else {
-    uint32_t counter = record.counter;
-    if (counter >= state.num_programmable_counters) {
-      FXL_LOG(ERROR) << fxl::StringPrintf("Invalid programmable counter number: %u",
-                                          counter);
-      return;
-    }
-    programmable_counter_value[counter] += sample_freq;
-    uint32_t programmable_category = category_mask_ & IPM_CATEGORY_PROGRAMMABLE_MASK;
-    if (programmable_category >= IPM_CATEGORY_MAX) {
-      FXL_LOG(ERROR) << "Invalid category in mask";
-      return;
-    }
-    if (programmable_category == IPM_CATEGORY_NONE) {
-      FXL_LOG(ERROR) << "Got programmable counter record, but not enabled in category";
-      return;
-    }
-    if (!(config.programmable_events[counter] & IA32_PERFEVTSEL_EN_MASK)) {
-      FXL_LOG(ERROR) << "Got programmable counter record, but not enabled in event select";
-      return;
-    }
-    const char* category_name = GetCategory(programmable_category).name;
-    trace_string_ref_t category_ref = trace_context_make_registered_string_literal(context_, category_name);
-    FXL_VLOG(2) << fxl::StringPrintf("Import: event select 0x%" PRIx64,
-                                     config.programmable_events[counter]);
-    const EventDetails* details;
-    if (EventSelectToEventDetails(config.programmable_events[counter], &details)) {
-      FXL_VLOG(2) << fxl::StringPrintf("Import: event %s", details->name);
-      EmitSampleRecord(cpu, details, category_ref,
-                       previous_time, record.time, sample_freq);
-    } else {
-      FXL_LOG(ERROR) << fxl::StringPrintf(
-        "Unknown event in event select register %u: 0x%" PRIx64,
-        counter, config.programmable_events[counter]);
-    }
+    FXL_LOG(ERROR) << fxl::StringPrintf(
+      "Unknown event in event select register %u: 0x%" PRIx64,
+      counter, config.programmable_events[counter]);
   }
 }
 
-void Importer::EmitCountRecord(trace_cpu_number_t cpu,
+void Importer::ImportFixedSampleRecord(
+    trace_cpu_number_t cpu,
+    const zx_x86_ipm_state_t& state,
+    const zx_x86_ipm_perf_config_t& config,
+    const zx_x86_ipm_sample_record_t& record,
+    trace_ticks_t previous_time,
+    uint64_t counter_value,
+    uint64_t* accum_counter_value) {
+  uint32_t counter = record.counter & ~IPM_COUNTER_NUMBER_FIXED;
+  // Note: Errors here are generally rare, so at present we don't get clever
+  // with minimizing the noise.
+  if (counter < state.num_fixed_counters) {
+    *accum_counter_value += counter_value;
+    EmitSampleRecord(cpu, GetFixedEventDetails(counter), fixed_category_ref_,
+                     previous_time, record.time, counter_value);
+  } else {
+    FXL_LOG(ERROR) << fxl::StringPrintf("Invalid fixed counter number: %u",
+                                        counter);
+  }
+}
+
+void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
                                const EventDetails* details,
                                const trace_string_ref_t& category_ref,
                                uint64_t value) {
@@ -290,8 +364,10 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   trace_arg_t args[1] = {
     {trace_make_arg(rate_name_ref_, trace_make_double_arg_value(rate))},
   };
+  // TODO(dje): Chrome seems to take the timestamp we give it as the start
+  // of the interval. Verify this is true.
   trace_context_write_counter_event_record(
-      context_, end_time,
+      context_, start_time,
       &thread_ref, &category_ref, &name_ref,
       id, &args[0], countof(args));
 #endif
