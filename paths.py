@@ -16,5 +16,5 @@ DART_PLATFORM = {
     "Windows": "win"
 }[platform.system()]
 
-DART_ROOT = os.path.join(FUCHSIA_ROOT, "dart", "tools", "sdks", DART_PLATFORM,
-                         "dart-sdk")
+DART_ROOT = os.path.join(FUCHSIA_ROOT, "third_party", "dart", "tools", "sdks",
+                         DART_PLATFORM, "dart-sdk")
