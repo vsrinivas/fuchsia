@@ -294,39 +294,56 @@ void SuggestionEngineImpl::PrimeSpeechCapture() {
   }
 }
 
+fidl::InterfaceHandle<media::MediaCapturer>
+SuggestionEngineImpl::GetMediaCapturer() {
+  // HACK(rosswang): Maintain a singleton media capturer. The media subsystem
+  // behaves unpredictably when the pipeline is mutated due to race conditions.
+  // Fix once media API redesign is complete; fix TBD pending redesign.
+  if (!media_capturer_binding_) {
+    media_capturer_binding_ =
+        std::make_unique<fidl::Binding<media::MediaCapturer>>(
+            media_capturer_.get());
+    media_capturer_binding_->set_connection_error_handler([this] {
+      media_capturer_->Stop();
+      media_capturer_binding_ = nullptr;
+
+      // With the hacks in place right now, this tends to mean that Kronk
+      // hasn't received any new packets from the media capturer. That or
+      // Kronk crashed.
+      media_capturer_.reset();
+      FXL_LOG(INFO) << "Restarting possible dead media capturer";
+      PrimeSpeechCapture();
+    });
+    return media_capturer_binding_->NewBinding();
+  } else {
+    // This song and dance makes the handle look valid (invalid handles fail
+    // FIDL validation).
+    media::MediaCapturerPtr dummy;
+    dummy.NewRequest();
+    return dummy.PassInterfaceHandle();
+  }
+}
+
 // |SuggestionProvider|
 void SuggestionEngineImpl::BeginSpeechCapture(
     fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
   if (speech_to_text_ && media_capturer_) {
-    // hack: only serve one media capturer
-    if (!media_capturer_binding_) {
-      media_capturer_binding_ =
-          std::make_unique<fidl::Binding<media::MediaCapturer>>(
-              media_capturer_.get());
-      media_capturer_binding_->set_connection_error_handler([this] {
-        media_capturer_->Stop();
-        media_capturer_binding_ = nullptr;
-
-        // With the hacks in place right now, this tends to mean that Kronk
-        // hasn't received any new packets from the media capturer. That or
-        // Kronk crashed.
-        media_capturer_.reset();
-        FXL_LOG(INFO) << "Restarting possible dead media capturer";
-        PrimeSpeechCapture();
-      });
-      speech_to_text_->BeginCapture(media_capturer_binding_->NewBinding(),
-                                    std::move(transcription_listener));
-    } else {
-      media::MediaCapturerPtr dummy;
-      dummy.NewRequest();
-      speech_to_text_->BeginCapture(dummy.PassInterfaceHandle(),  // ignored
-                                    std::move(transcription_listener));
-    }
+    speech_to_text_->BeginCapture(GetMediaCapturer(),
+                                  std::move(transcription_listener));
   } else {
     // Requesting speech capture without the requisite services is an immediate
     // error.
     TranscriptionListenerPtr::Create(std::move(transcription_listener))
         ->OnError();
+  }
+}
+
+// |SuggestionProvider|
+void SuggestionEngineImpl::ListenForHotword(
+    fidl::InterfaceHandle<HotwordListener> hotword_listener) {
+  if (speech_to_text_ && media_capturer_) {
+    speech_to_text_->ListenForHotword(GetMediaCapturer(),
+                                      std::move(hotword_listener));
   }
 }
 
@@ -618,13 +635,19 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
               });
             });
       });
+
+  media_packet_producer_.set_connection_error_handler([this] {
+    speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
+      listener->OnStatusChanged(SpeechStatus::IDLE);
+    });
+  });
 }
 
 void SuggestionEngineImpl::HandleMediaUpdates(
     uint64_t version,
     media::MediaTimelineControlPointStatusPtr status) {
   if (status && status->end_of_stream) {
-    speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
+    speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
       listener->OnStatusChanged(SpeechStatus::IDLE);
     });
     media_packet_producer_ = nullptr;

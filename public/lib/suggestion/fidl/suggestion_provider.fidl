@@ -64,6 +64,11 @@ interface SuggestionProvider {
   // However, it's worth it to also consider the implications for any other
   // input modalities we might like to support.
   BeginSpeechCapture(TranscriptionListener transcription_listener);
+
+  // Starts listening for hotwords from the microphone. This is a simplification
+  // of the |SpeechToText| interface (for now) in that it does not require that
+  // the caller supply a |MediaCapturer|.
+  ListenForHotword(HotwordListener hotword_listener);
 };
 
 interface SuggestionListener {

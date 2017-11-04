@@ -113,6 +113,10 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void BeginSpeechCapture(fidl::InterfaceHandle<TranscriptionListener>
                               transcription_listener) override;
 
+  // |SuggestionProvider|
+  void ListenForHotword(
+      fidl::InterfaceHandle<HotwordListener> hotword_listener) override;
+
   // When a user interacts with a Suggestion, the suggestion engine will be
   // notified of consumed suggestion's ID. With this, we will do two things:
   //
@@ -155,6 +159,10 @@ class SuggestionEngineImpl : public SuggestionEngine,
  private:
   // TODO(rosswang): move elsewhere, though this should ideally be unnecessary
   void PrimeSpeechCapture();
+
+  // HACK(rosswang): Maintains a singleton media capturer (and returns it or a
+  // dummy open handle). See definition for details.
+  fidl::InterfaceHandle<media::MediaCapturer> GetMediaCapturer();
 
   // Cleans up all resources associated with a query, including clearing
   // the previous ask suggestions, closing any still open SuggestionListeners,

@@ -17,6 +17,11 @@ interface SpeechToText {
   // sense, since I don't think this is an isolated problem.
   BeginCapture(media.MediaCapturer media_capturer,
                TranscriptionListener transcription_listener);
+
+  // Begins hotword detection. Detected hotword utterances are reported on the
+  // given listener.
+  ListenForHotword(media.MediaCapturer media_capturer,
+                   HotwordListener hotword_listener);
 };
 
 // Represents an active transcription session. Either side may close this
@@ -37,4 +42,11 @@ interface TranscriptionListener {
   // never be called. This binding will be closed immediately after sending this
   // message.
   OnError();
+};
+
+// Listens for hotwords. Each detected hotword utterance triggers |OnHotword|.
+// Closure of this handle by the speech service indicates an error.
+interface HotwordListener {
+  // Called for each detected hotword utterance.
+  OnHotword();
 };
