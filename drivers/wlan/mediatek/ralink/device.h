@@ -30,7 +30,7 @@ template <uint16_t A> class EepromField;
 enum KeyMode : uint8_t;
 enum KeyType : uint8_t;
 
-class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device, true> {
+class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
    public:
     Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
