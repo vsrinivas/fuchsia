@@ -649,7 +649,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
     FidlStringMap extra_info,
     const fidl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
-  FXL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
+  FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
                       module_url, std::move(extra_info), root_json, callback);
 }
