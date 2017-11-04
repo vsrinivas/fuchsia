@@ -234,7 +234,9 @@ void x86_perfmon_init(void)
 
     supports_perfmon = perfmon_version >= MINIMUM_PERFMON_VERSION;
 
-    perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
+    if (x86_feature_test(X86_FEATURE_PDCM)) {
+        perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
+    }
 
     perfmon_counter_status_bits = 0;
     for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i)
