@@ -5,8 +5,12 @@
 static_library("gatt") {
   sources = [
     "gatt.h",
+    "local_service_manager.cc",
+    "local_service_manager.h",
     "server.cc",
     "server.h",
+    "types.cc",
+    "types.h",
   ]
 
   deps = [
@@ -18,6 +22,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "local_service_manager_unittest.cc",
     "server_unittest.cc"
   ]
 
