@@ -564,6 +564,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     zx_status_t status = alloc_vpid(&vpid);
     if (status != ZX_OK)
         return status;
+
     auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
@@ -609,6 +610,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     if (status != ZX_OK)
         return status;
 
+    auto_call.cancel();
+
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
     status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, ip, cr3, virtual_apic_address,
@@ -617,7 +620,6 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     if (status != ZX_OK)
         return status;
 
-    auto_call.cancel();
     *out = fbl::move(vcpu);
     return ZX_OK;
 }
