@@ -58,10 +58,13 @@ void VmMapping::Dump(uint depth, bool verbose) const {
     }
     char vmo_name[32];
     object_->get_name(vmo_name, sizeof(vmo_name));
-    printf("map %p [%#" PRIxPTR " %#" PRIxPTR
-           "] sz %#zx mmufl %#x vmo %p/k%" PRIu64 " off %#" PRIx64
+    printf("map %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx mmufl %#x\n",
+           this, base_, base_ + size_ - 1, size_, arch_mmu_flags_);
+    for (uint i = 0; i < depth + 1; ++i) {
+        printf("  ");
+    }
+    printf("vmo %p/k%" PRIu64 " off %#" PRIx64
            " pages %zu ref %d '%s'\n",
-           this, base_, base_ + size_ - 1, size_, arch_mmu_flags_,
            object_.get(), object_->user_id(), object_offset_,
            // TODO(dbort): Use AllocatePagesLocked() once Dump() is locked
            // consistently. Currently, Dump() may be called without the aspace
