@@ -18,6 +18,7 @@
 #include <lk/init.h>
 #include <kernel/cmdline.h>
 #include <vm/vm.h>
+#include <vm/physmap.h>
 #include <kernel/spinlock.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
@@ -135,7 +136,7 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
     if (ramdisk_size) *ramdisk_size = 0;
     if (mem_size) *mem_size = 0;
 
-    void* fdt = paddr_to_kvaddr(boot_structure_paddr);
+    void* fdt = paddr_to_physmap(boot_structure_paddr);
     if (!fdt) {
         printf("%s: could not find device tree\n", __FUNCTION__);
         return;
@@ -190,7 +191,7 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
         }
 
         if (ramdisk_start_phys && ramdisk_end_phys) {
-            *ramdisk_base = paddr_to_kvaddr(ramdisk_start_phys);
+            *ramdisk_base = paddr_to_physmap(ramdisk_start_phys);
             size_t length = ramdisk_end_phys - ramdisk_start_phys;
             *ramdisk_size = (length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
         }
@@ -494,7 +495,7 @@ void platform_early_init(void)
         boot_structure_paddr = MEMBASE;
     }
 
-    void* boot_structure_kvaddr = paddr_to_kvaddr(boot_structure_paddr);
+    void* boot_structure_kvaddr = paddr_to_physmap(boot_structure_paddr);
     if (!boot_structure_kvaddr) {
         panic("no bootdata structure!\n");
     }
@@ -513,7 +514,7 @@ void platform_early_init(void)
             ramdisk_start_phys = hdr->ramdisk_base_phys;
             ramdisk_size = hdr->ramdisk_size;
             ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
-            ramdisk_base =  paddr_to_kvaddr(ramdisk_start_phys);
+            ramdisk_base =  paddr_to_physmap(ramdisk_start_phys);
     } else {
         // on qemu we read arena size from the device tree
         read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);

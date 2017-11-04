@@ -36,6 +36,7 @@
 #include <lk/init.h>
 #include <kernel/cmdline.h>
 #include <vm/initial_map.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 
@@ -279,7 +280,7 @@ static void platform_preserve_ramdisk(void) {
         p->state = VM_PAGE_STATE_WIRED;
     }
 
-    ramdisk_base = paddr_to_kvaddr(bootloader.ramdisk_base);
+    ramdisk_base = paddr_to_physmap(bootloader.ramdisk_base);
     ramdisk_size = pages * PAGE_SIZE;
 }
 
@@ -384,7 +385,7 @@ typedef struct {
 
 static size_t nvram_stow_crashlog(void* log, size_t len) {
     size_t max = bootloader.nvram.length - sizeof(log_hdr_t);
-    void* nvram = paddr_to_kvaddr(bootloader.nvram.base);
+    void* nvram = paddr_to_physmap(bootloader.nvram.base);
     if (nvram == NULL) {
         return 0;
     }
@@ -411,7 +412,7 @@ static size_t nvram_stow_crashlog(void* log, size_t len) {
 static size_t nvram_recover_crashlog(size_t len, void* cookie,
                                      void (*func)(const void* data, size_t, size_t len, void* cookie)) {
     size_t max = bootloader.nvram.length - sizeof(log_hdr_t);
-    void* nvram = paddr_to_kvaddr(bootloader.nvram.base);
+    void* nvram = paddr_to_physmap(bootloader.nvram.base);
     if (nvram == NULL) {
         return 0;
     }
@@ -712,8 +713,8 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                              kTotalPageTableCount, safe_pages);
 
     size_t safe_page_id = 0;
-    volatile pt_entry_t* ptl4 = (pt_entry_t*)paddr_to_kvaddr(safe_pages[safe_page_id++]);
-    volatile pt_entry_t* ptl3 = (pt_entry_t*)paddr_to_kvaddr(safe_pages[safe_page_id++]);
+    volatile pt_entry_t* ptl4 = (pt_entry_t*)paddr_to_physmap(safe_pages[safe_page_id++]);
+    volatile pt_entry_t* ptl3 = (pt_entry_t*)paddr_to_physmap(safe_pages[safe_page_id++]);
 
     // Initialize these to 0
     for (size_t i = 0; i < NO_OF_PT_ENTRIES; i++) {
@@ -723,7 +724,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 
     for (size_t i = 0; i < kNumL2PageTables; i++) {
         ptl3[i] = safe_pages[safe_page_id] | X86_KERNEL_PD_FLAGS;
-        volatile pt_entry_t* ptl2 = (pt_entry_t*)paddr_to_kvaddr(safe_pages[safe_page_id]);
+        volatile pt_entry_t* ptl2 = (pt_entry_t*)paddr_to_physmap(safe_pages[safe_page_id]);
 
         for (size_t j = 0; j < NO_OF_PT_ENTRIES; j++) {
             ptl2[j] = (2 * MB * (i * NO_OF_PT_ENTRIES + j)) | X86_KERNEL_PD_LP_FLAGS;

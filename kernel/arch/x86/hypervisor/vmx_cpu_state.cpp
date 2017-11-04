@@ -13,6 +13,7 @@
 #include <hypervisor/cpu.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 
 #include <fbl/mutex.h>
@@ -108,7 +109,7 @@ paddr_t VmxPage::PhysicalAddress() const {
 
 void* VmxPage::VirtualAddress() const {
     DEBUG_ASSERT(pa_ != 0);
-    return paddr_to_kvaddr(pa_);
+    return paddr_to_physmap(pa_);
 }
 
 static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {

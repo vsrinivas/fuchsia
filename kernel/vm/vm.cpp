@@ -20,6 +20,7 @@
 #include <trace.h>
 #include <vm/bootalloc.h>
 #include <vm/initial_map.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
@@ -123,7 +124,7 @@ void vm_init_preheap(uint level) {
         dprintf(INFO, "VM: marking boot alloc used range [%#" PRIxPTR ", %#" PRIxPTR ")\n", boot_alloc_start,
                 boot_alloc_end);
 
-        MarkPagesInUse((vaddr_t)paddr_to_kvaddr(boot_alloc_start), boot_alloc_end - boot_alloc_start);
+        MarkPagesInUse((vaddr_t)paddr_to_physmap(boot_alloc_start), boot_alloc_end - boot_alloc_start);
     }
 
     // Reserve up to 15 pages as a random padding in the kernel physical mapping
@@ -140,7 +141,7 @@ void vm_init_preheap(uint level) {
     zero_page = pmm_alloc_page(0, &zero_page_paddr);
     DEBUG_ASSERT(zero_page);
 
-    void* ptr = paddr_to_kvaddr(zero_page_paddr);
+    void* ptr = paddr_to_physmap(zero_page_paddr);
     DEBUG_ASSERT(ptr);
 
     arch_zero_page(ptr);
@@ -262,6 +263,9 @@ void vm_init_postheap(uint level) {
 }
 
 paddr_t vaddr_to_paddr(const void* ptr) {
+    if (is_physmap_addr(ptr))
+        return physmap_to_paddr(ptr);
+
     auto aspace = VmAspace::vaddr_to_aspace(reinterpret_cast<uintptr_t>(ptr));
     if (!aspace)
         return (paddr_t) nullptr;
@@ -291,8 +295,13 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 3)
             goto notenoughargs;
 
-        void* ptr = paddr_to_kvaddr((paddr_t)argv[2].u);
-        printf("paddr_to_kvaddr returns %p\n", ptr);
+        if (!is_physmap_phys_addr(argv[2].u)) {
+            printf("address isn't in physmap\n");
+            return -1;
+        }
+
+        void* ptr = paddr_to_physmap((paddr_t)argv[2].u);
+        printf("paddr_to_physmap returns %p\n", ptr);
     } else if (!strcmp(argv[1].str, "virt2phys")) {
         if (argc < 3)
             goto notenoughargs;

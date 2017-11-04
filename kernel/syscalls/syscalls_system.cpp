@@ -12,6 +12,7 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <vm/vm.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/boot/bootdata.h>
@@ -111,7 +112,7 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
         panic("Failed to allocate contiguous memory");
     }
 
-    uint8_t* dst_addr = (uint8_t*)paddr_to_kvaddr(base_addr);
+    uint8_t* dst_addr = (uint8_t*)paddr_to_physmap(base_addr);
 
     size_t bytes_remaining = vmo_size;
     size_t offset = 0;

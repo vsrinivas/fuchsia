@@ -12,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <hypervisor/cpu.h>
 #include <kernel/mp.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 
 static fbl::Mutex guest_mutex;
@@ -40,12 +41,12 @@ zx_status_t El2TranslationTable::Init() {
         return ZX_ERR_NO_MEMORY;
 
     // L0: Point to a single L1 translation table.
-    pte_t* l0_pte = static_cast<pte_t*>(paddr_to_kvaddr(l0_pa_));
+    pte_t* l0_pte = static_cast<pte_t*>(paddr_to_physmap(l0_pa_));
     arch_zero_page(l0_pte);
     *l0_pte = l1_pa_ | MMU_PTE_L012_DESCRIPTOR_TABLE;
 
     // L1: Identity map the first 512GB of physical memory at.
-    pte_t* l1_pte = static_cast<pte_t*>(paddr_to_kvaddr(l1_pa_));
+    pte_t* l1_pte = static_cast<pte_t*>(paddr_to_physmap(l1_pa_));
     for (size_t i = 0; i < PAGE_SIZE / sizeof(pte_t); i++) {
         l1_pte[i] = i * (1u << 30) | MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE | \
                     MMU_PTE_ATTR_AP_P_RW_U_RW | MMU_PTE_ATTR_NORMAL_MEMORY | \

@@ -18,6 +18,7 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <vm/arch_vm_aspace.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <fbl/auto_lock.h>
@@ -1305,7 +1306,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
             return ZX_ERR_NO_MEMORY;
         }
         p->state = VM_PAGE_STATE_MMU;
-        pt_virt_ = static_cast<pt_entry_t*>(paddr_to_kvaddr(pt_phys_));
+        pt_virt_ = static_cast<pt_entry_t*>(paddr_to_physmap(pt_phys_));
         // TODO(abdulla): Remove when PMM returns pre-zeroed pages.
         arch_zero_page(pt_virt_);
         LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", pt_phys_, pt_virt_);

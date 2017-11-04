@@ -21,6 +21,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/auto_lock.h>
 #include <vm/fault.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
@@ -469,7 +470,7 @@ static zx_status_t get_page(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpa
             return status;
         if (level == X86_PAGING_LEVELS || IS_LARGE_PAGE(pt_addr))
             break;
-        pt_entry_t* pt = static_cast<pt_entry_t*>(paddr_to_kvaddr(pa));
+        pt_entry_t* pt = static_cast<pt_entry_t*>(paddr_to_physmap(pa));
         pt_addr = pt[indices[level]];
         if (!IS_PAGE_PRESENT(pt_addr))
             return ZX_ERR_NOT_FOUND;
@@ -490,7 +491,7 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
         return status;
 
     size_t page_offset = guest_vaddr & PAGE_OFFSET_MASK_4KB;
-    uint8_t* page = static_cast<uint8_t*>(paddr_to_kvaddr(pa));
+    uint8_t* page = static_cast<uint8_t*>(paddr_to_physmap(pa));
     size_t from_page = fbl::min(size, PAGE_SIZE - page_offset);
     mandatory_memcpy(data, page + page_offset, from_page);
 
@@ -502,7 +503,7 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
     if (status != ZX_OK)
         return status;
 
-    page = static_cast<uint8_t*>(paddr_to_kvaddr(pa));
+    page = static_cast<uint8_t*>(paddr_to_physmap(pa));
     mandatory_memcpy(data + from_page, page, size - from_page);
     return ZX_OK;
 }

@@ -11,6 +11,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <kernel/spinlock.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
@@ -124,7 +125,7 @@ void apic_io_init(
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic *apic = &io_apics[i];
         paddr_t paddr = apic->desc.paddr;
-        void *vaddr = paddr_to_kvaddr(paddr);
+        void *vaddr = paddr_to_physmap(paddr);
         // If the window isn't mapped yet (multiple IO APICs can be in the
         // same page), map it in.
         if (vaddr == NULL) {

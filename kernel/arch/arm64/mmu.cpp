@@ -16,6 +16,7 @@
 #include <kernel/mutex.h>
 #include <vm/vm.h>
 #include <vm/arch_vm_aspace.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <lib/heap.h>
 #include <fbl/atomic.h>
@@ -212,7 +213,7 @@ zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
             PANIC_UNIMPLEMENTED;
         }
 
-        page_table = static_cast<volatile pte_t*>(paddr_to_kvaddr(pte_addr));
+        page_table = static_cast<volatile pte_t*>(paddr_to_physmap(pte_addr));
         index_shift -= page_size_shift - 3;
     }
 
@@ -329,7 +330,7 @@ volatile pte_t* ArmArchVmAspace::GetPageTable(vaddr_t index, uint page_size_shif
             TRACEF("failed to allocate page table\n");
             return NULL;
         }
-        vaddr = paddr_to_kvaddr(paddr);
+        vaddr = paddr_to_physmap(paddr);
 
         LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", vaddr, paddr);
         memset(vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
@@ -346,7 +347,7 @@ volatile pte_t* ArmArchVmAspace::GetPageTable(vaddr_t index, uint page_size_shif
     case MMU_PTE_L012_DESCRIPTOR_TABLE:
         paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
         LTRACEF("found page table %#" PRIxPTR "\n", paddr);
-        return static_cast<volatile pte_t*>(paddr_to_kvaddr(paddr));
+        return static_cast<volatile pte_t*>(paddr_to_physmap(paddr));
 
     case MMU_PTE_L012_DESCRIPTOR_BLOCK:
         return NULL;
@@ -404,7 +405,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
         if (index_shift > page_size_shift &&
             (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
             page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-            next_page_table = static_cast<volatile pte_t*>(paddr_to_kvaddr(page_table_paddr));
+            next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
             UnmapPageTable(vaddr, vaddr_rem, chunk_size,
                            index_shift - (page_size_shift - 3),
                            page_size_shift, next_page_table, asid);
@@ -565,7 +566,7 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         if (index_shift > page_size_shift &&
             (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
             page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-            next_page_table = static_cast<volatile pte_t*>(paddr_to_kvaddr(page_table_paddr));
+            next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
             ret = ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs,
                                    index_shift - (page_size_shift - 3),
                                    page_size_shift, next_page_table, asid);

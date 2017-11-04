@@ -20,6 +20,7 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/bootalloc.h>
+#include <vm/physmap.h>
 #include <vm/vm.h>
 
 #include "pmm_arena.h"
@@ -246,7 +247,7 @@ void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* _pa) {
     }
 
     LTRACEF("pa %#" PRIxPTR "\n", pa);
-    void* ptr = paddr_to_kvaddr(pa);
+    void* ptr = paddr_to_physmap(pa);
     DEBUG_ASSERT(ptr);
 
     if (_pa)
@@ -263,7 +264,7 @@ void* pmm_alloc_kpage(paddr_t* _pa, vm_page_t** _p) {
     if (!p)
         return nullptr;
 
-    void* ptr = paddr_to_kvaddr(pa);
+    void* ptr = paddr_to_physmap(pa);
     DEBUG_ASSERT(ptr);
 
     if (_pa)

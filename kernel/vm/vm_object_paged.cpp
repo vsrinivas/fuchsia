@@ -20,6 +20,7 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/fault.h>
+#include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <zircon/types.h>
@@ -31,7 +32,7 @@ using fbl::AutoLock;
 namespace {
 
 void ZeroPage(paddr_t pa) {
-    void* ptr = paddr_to_kvaddr(pa);
+    void* ptr = paddr_to_physmap(pa);
     DEBUG_ASSERT(ptr);
 
     arch_zero_page(ptr);
@@ -331,8 +332,8 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
             InitializeVmPage(p_clone);
 
             // do a direct copy of the two pages
-            const void* src = paddr_to_kvaddr(pa);
-            void* dst = paddr_to_kvaddr(pa_clone);
+            const void* src = paddr_to_physmap(pa);
+            void* dst = paddr_to_physmap(pa_clone);
 
             DEBUG_ASSERT(src && dst);
 
@@ -846,7 +847,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t
             return status;
 
         // compute the kernel mapping of this page
-        uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_kvaddr(pa));
+        uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_physmap(pa));
 
         // call the copy routine
         auto err = copyfunc(page_ptr + page_offset, dest_offset, tocopy);
@@ -1066,7 +1067,7 @@ zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t l
 
         if (likely(status == ZX_OK)) {
             // Convert the page address to a Kernel virtual address.
-            const void* ptr = paddr_to_kvaddr(pa);
+            const void* ptr = paddr_to_physmap(pa);
             const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
 
             LTRACEF("ptr %p op %d\n", ptr, (int)type);

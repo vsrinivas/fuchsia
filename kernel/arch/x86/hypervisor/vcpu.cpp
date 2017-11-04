@@ -12,6 +12,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/mp.h>
 #include <vm/fault.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -594,7 +595,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
                                      &virtual_apic_address);
     if (status != ZX_OK)
         return status;
-    vcpu->local_apic_state_.apic_addr = paddr_to_kvaddr(virtual_apic_address);
+    vcpu->local_apic_state_.apic_addr = paddr_to_physmap(virtual_apic_address);
 
     VmxInfo vmx_info;
     status = vcpu->host_msr_page_.Alloc(vmx_info, 0);

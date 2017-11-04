@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <vm/pmm.h>
+#include <vm/physmap.h>
 #include <lk/init.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
@@ -103,7 +103,7 @@ void platform_init_debug_early(void)
         uart_irq = bootloader.uart.irq;
         break;
     case BOOTDATA_UART_PC_MMIO:
-        uart_mem_addr = (uint64_t)paddr_to_kvaddr(bootloader.uart.base);
+        uart_mem_addr = (uint64_t)paddr_to_physmap(bootloader.uart.base);
         uart_irq = bootloader.uart.irq;
         break;
     }

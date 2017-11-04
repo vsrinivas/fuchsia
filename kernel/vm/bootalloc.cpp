@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <trace.h>
 #include <vm/vm.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
@@ -20,8 +21,7 @@
 // Simple boot time allocator that starts by allocating physical memory off
 // the end of wherever the kernel is loaded in physical space.
 //
-// Pointers are returned from the Big Kernel Map (BKM) which is placed at the base of
-// kernel memory.
+// Pointers are returned from the kernel's physmap
 
 // store the start and current pointer to the boot allocator in physical address
 paddr_t boot_alloc_start;
@@ -59,9 +59,9 @@ void* boot_alloc_mem(size_t len) {
     ptr = ALIGN(boot_alloc_end, 8);
     boot_alloc_end = (ptr + ALIGN(len, 8));
 
-    LTRACEF("len %zu, phys ptr %#" PRIxPTR " ptr %p\n", len, ptr, paddr_to_kvaddr(ptr));
+    LTRACEF("len %zu, phys ptr %#" PRIxPTR " ptr %p\n", len, ptr, paddr_to_physmap(ptr));
 
-    return paddr_to_kvaddr(ptr);
+    return paddr_to_physmap(ptr);
 }
 
 // called from arch start.S
