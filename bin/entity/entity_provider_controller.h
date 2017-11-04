@@ -7,15 +7,17 @@
 
 #include <map>
 
+#include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
 #include "lib/entity/fidl/entity.fidl.h"
+#include "lib/entity/fidl/entity_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/entity/entity_provider_launcher.h"
 
 namespace modular {
 
+class EntityProviderLauncher;
 class EntityProviderRunner;
 
 // This class runs and manages the lifetime of an agent's EntityProvider

@@ -17,6 +17,7 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
+#include "lib/entity/fidl/entity_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -24,7 +25,6 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
-#include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace modular {
@@ -34,6 +34,7 @@ namespace modular {
 constexpr char kAgentComponentNamespace[] = "agents";
 
 class AgentContextImpl;
+class EntityProviderRunner;
 class MessageQueueManager;
 class XdrContext;
 

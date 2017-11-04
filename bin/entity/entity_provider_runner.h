@@ -8,16 +8,19 @@
 #include <map>
 
 #include "lib/entity/fidl/entity.fidl.h"
+#include "lib/entity/fidl/entity_provider.fidl.h"
 #include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/entity/entity_provider_controller.h"
-#include "peridot/bin/entity/entity_provider_launcher.h"
 
 namespace modular {
+
+class EntityProviderController;
+class EntityProviderLauncher;
 
 // This class provides an implementation for |EntityResolver| and
 // |EntityReferenceFactory| and manages all the EntityProviders running in the

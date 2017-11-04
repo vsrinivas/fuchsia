@@ -4,6 +4,7 @@
 
 #include "peridot/bin/entity/entity_provider_controller.h"
 
+#include "peridot/bin/entity/entity_provider_launcher.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
 
 namespace modular {
