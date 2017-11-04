@@ -70,9 +70,9 @@ void Bss::Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info) {
     bcn_chan_.primary20 = rx_info->chan.channel_num;
 
     // If the latest beacons lack measurements, keep the last report.
-    if (rx_info->flags & WLAN_RX_INFO_RSSI_PRESENT) { rssi_ = rx_info->rssi; }
-    if (rx_info->flags & WLAN_RX_INFO_RCPI_PRESENT) { rcpi_ = rx_info->rcpi; }
-    if (rx_info->flags & WLAN_RX_INFO_SNR_PRESENT) { rsni_ = rx_info->snr; }
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) { rssi_ = rx_info->rssi; }
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) { rcpi_ = rx_info->rcpi; }
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) { rsni_ = rx_info->snr; }
 }
 
 bool Bss::HasBeaconChanged(const Beacon* beacon, size_t len) const {

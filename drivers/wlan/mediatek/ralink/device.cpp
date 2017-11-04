@@ -2897,35 +2897,35 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
 
 static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3,
                          uint8_t* rssi_offsets, uint8_t lna_gain) {
-    info->flags |= WLAN_RX_INFO_PHY_PRESENT;
+    info->valid_fields |= WLAN_RX_INFO_VALID_PHY;
     info->phy = ralink_phy_to_ddk_phy(rxwi1.phy_mode());
 
     uint8_t rate = mcs_to_rate(rxwi1.phy_mode(), rxwi1.mcs(), rxwi1.bw() == 1, rxwi1.sgi() == 1);
     if (rate != 0) {
-        info->flags |= WLAN_RX_INFO_DATA_RATE_PRESENT;
+        info->valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
         info->data_rate = rate;
     }
 
-    info->flags |= WLAN_RX_INFO_CHAN_WIDTH_PRESENT;
+    info->valid_fields |= WLAN_RX_INFO_VALID_CHAN_WIDTH;
     info->chan_width = rxwi1.bw() ? WLAN_CHAN_WIDTH_40MHZ : WLAN_CHAN_WIDTH_20MHZ;
 
     uint8_t phy_mode = rxwi1.phy_mode();
     bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtMixMode;
     if (is_ht && rxwi1.mcs() < 8) {
-        info->flags |= WLAN_RX_INFO_MOD_PRESENT;
-        info->mod = rxwi1.mcs();
+        info->valid_fields |= WLAN_RX_INFO_VALID_MCS;
+        info->mcs = rxwi1.mcs();
     }
 
     // TODO(tkilbourn): check rssi1 and rssi2 and figure out what to do with them
     if (rxwi2.rssi0() > 0) {
-        info->flags |= WLAN_RX_INFO_RSSI_PRESENT;
+        info->valid_fields |= WLAN_RX_INFO_VALID_RSSI;
         // Use rssi offsets from the EEPROM to convert to RSSI
         info->rssi = static_cast<uint8_t>(-12 - rssi_offsets[0] - lna_gain - rxwi2.rssi0());
     }
 
     // TODO(tkilbourn): check snr1 and figure out what to do with it
     if (rxwi1.phy_mode() != PhyMode::kLegacyCck && rxwi3.snr0() > 0) {
-        info->flags |= WLAN_RX_INFO_SNR_PRESENT;
+        info->valid_fields |= WLAN_RX_INFO_VALID_SNR;
         // Convert to SNR
         info->snr = ((rxwi3.snr0() * 3 / 16) + 10) * 2;
     }

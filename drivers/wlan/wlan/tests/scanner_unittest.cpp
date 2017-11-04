@@ -258,7 +258,7 @@ TEST_F(ScannerTest, ScanResponse) {
     Packet p(std::move(buf), sizeof(kBeacon));
     p.CopyFrom(kBeacon, sizeof(kBeacon), 0);
     wlan_rx_info_t info;
-    info.flags = WLAN_RX_INFO_RSSI_PRESENT | WLAN_RX_INFO_SNR_PRESENT;
+    info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
     info.chan = {1};
     info.rssi = 10;
     info.snr = 60;
