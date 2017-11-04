@@ -7,6 +7,7 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
 #include "peridot/public/lib/entity/cpp/json.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace maxwell {
 
@@ -64,12 +65,15 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 
 }  // namespace
 
-ModuleResolverImpl::ModuleResolverImpl(std::string manifest_repository_path)
-    : next_entry_id_(0) {
+ModuleResolverImpl::ModuleResolverImpl(std::string manifest_repository_path) {
   manifest_repository_.reset(new modular::ModuleManifestRepository(
       std::move(manifest_repository_path),
-      [this](const modular::ModuleManifestRepository::Entry& entry) {
-        OnNewManifestEntry(entry);
+      fsl::MessageLoop::GetCurrent()->task_runner(),
+      [this](std::string id, const modular::ModuleManifestRepository::Entry& entry) {
+        OnNewManifestEntry(std::move(id), entry);
+      },
+      [this](std::string id) {
+        OnRemoveManifestEntry(std::move(id));
       }));
 }
 ModuleResolverImpl::~ModuleResolverImpl() = default;
@@ -95,7 +99,7 @@ void ModuleResolverImpl::FindModules(
     return;
   }
 
-  std::set<uint32_t> result_entries(verb_it->second);
+  std::set<std::string> result_entries(verb_it->second);
 
   // For each noun in the Daisy, try to find Modules that provide the types in
   // the noun as constraints.
@@ -110,7 +114,7 @@ void ModuleResolverImpl::FindModules(
 
     // The types list we have is an OR - any Module that can handle any of the
     // types is valid, So, we union all valid resolutions.
-    std::set<uint32_t> this_noun_entries;
+    std::set<std::string> this_noun_entries;
     for (const auto& type : types) {
       auto noun_it = noun_type_to_entry_.find(std::make_pair(type, name));
       if (noun_it == noun_type_to_entry_.end())
@@ -121,7 +125,7 @@ void ModuleResolverImpl::FindModules(
 
     // The target Module must match the types in every noun specified in the
     // Daisy, so here we do a set intersection.
-    std::set<uint32_t> new_result_entries;
+    std::set<std::string> new_result_entries;
     std::set_intersection(
         result_entries.begin(), result_entries.end(), this_noun_entries.begin(),
         this_noun_entries.end(),
@@ -152,9 +156,9 @@ void ModuleResolverImpl::FindModules(
 }
 
 void ModuleResolverImpl::OnNewManifestEntry(
-    modular::ModuleManifestRepository::Entry new_entry) {
+    std::string id_in, modular::ModuleManifestRepository::Entry new_entry) {
   // Add this new entry info to our local index.
-  auto ret = entries_.emplace(next_entry_id_++, std::move(new_entry));
+  auto ret = entries_.emplace(std::move(id_in), std::move(new_entry));
 
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;
@@ -166,6 +170,25 @@ void ModuleResolverImpl::OnNewManifestEntry(
       noun_type_to_entry_[std::make_pair(type, constraint.name)].insert(id);
     }
   }
+}
+
+void ModuleResolverImpl::OnRemoveManifestEntry(std::string id) {
+  auto it = entries_.find(id);
+  if (it == entries_.end()) {
+    FXL_LOG(WARNING) << "Asked to remove non-existent manifest entry: " << id;
+    return;
+  }
+
+  const auto& entry = it->second;
+  verb_to_entry_[entry.verb].erase(id);
+
+  for (const auto& constraint : entry.noun_constraints) {
+    for (const auto& type : constraint.types) {
+      noun_type_to_entry_[std::make_pair(type, constraint.name)].erase(id);
+    }
+  }
+
+  entries_.erase(id);
 }
 
 }  // namespace maxwell

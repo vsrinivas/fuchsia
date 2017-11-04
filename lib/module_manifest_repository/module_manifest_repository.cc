@@ -11,11 +11,9 @@
 #include <sys/types.h>
 #include <thread>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
@@ -38,13 +36,22 @@ struct WatcherState {
   // Called with the filename of the new file every time one is found.
   std::function<void(std::string)> on_new;
 
+  // Called with the filename of removed files.
+  std::function<void(std::string)> on_remove;
+
   // We use this to post tasks to the TaskRunner of the thread that created
   // the ModuleManifestRepository.
   fxl::RefPtr<fxl::TaskRunner> task_runner;
-
-  // The directory file handle for our repository directory.
-  int dirfd;
 };
+
+bool ShouldIgnoreFile(const std::string& name) {
+  if (name.size() >= kIncomingSuffixLen &&
+      name.compare(name.size() - kIncomingSuffixLen, kIncomingSuffixLen,
+                   kIncomingSuffix) == 0) {
+    return true;
+  }
+  return false;
+}
 
 zx_status_t WatcherHandler(const int dirfd,
                            const int event,
@@ -52,7 +59,6 @@ zx_status_t WatcherHandler(const int dirfd,
                            void* const cookie) {
   auto state = static_cast<WatcherState*>(cookie);
   if (!state->weak_repository) {
-    close(state->dirfd);
     delete state;
     // Returning ZX_ERR_STOP prevents future notifications from happening.
     return ZX_ERR_STOP;
@@ -71,7 +77,14 @@ zx_status_t WatcherHandler(const int dirfd,
       });
       break;
     case WATCH_EVENT_REMOVE_FILE:
-      // TODO(thatguy)
+      state->task_runner->PostTask([weak_repository = state->weak_repository,
+                                    state, name_str = std::move(name_str)] {
+        // If the repository has gone out of scope, |state| either already
+        // did, or it will soon.
+        if (!weak_repository)
+          return;
+        state->on_remove(name_str);
+      });
       break;
     case WATCH_EVENT_IDLE:
       // This means we've seen all the existing files and we're now waiting for
@@ -99,9 +112,15 @@ void XdrEntry(modular::XdrContext* const xdr,
 
 }  // namespace
 
-ModuleManifestRepository::ModuleManifestRepository(std::string repository_dir,
-                                                   NewEntryFn fn)
-    : repository_dir_(repository_dir), new_entry_fn_(fn), weak_factory_(this) {
+ModuleManifestRepository::ModuleManifestRepository(
+    std::string repository_dir,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    NewEntryFn new_fn,
+    RemovedEntryFn removed_fn)
+    : repository_dir_(repository_dir),
+      new_entry_fn_(new_fn),
+      removed_entry_fn_(removed_fn),
+      weak_factory_(this) {
   if (!files::IsDirectory(repository_dir)) {
     FXL_LOG(INFO) << "Missing repository dir. Creating " << repository_dir;
     auto create_result = files::CreateDirectory(repository_dir);
@@ -111,31 +130,36 @@ ModuleManifestRepository::ModuleManifestRepository(std::string repository_dir,
   // fdio_watch_directory() is blocking so we start the watching process in its
   // own thread. We give that thread a pointer to our TaskRunner and a WeakPtr
   // to us in case we are destroyed.
-  auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-  auto thread = std::thread([weak_this = weak_factory_.GetWeakPtr(),
-                             task_runner,
-                             repository_dir = std::move(repository_dir)] {
-    // In the unlikely event our owner is destroyed before we get here.
-    if (!weak_this)
-      return;
+  auto thread =
+      std::thread([weak_this = weak_factory_.GetWeakPtr(), task_runner,
+                   repository_dir = std::move(repository_dir)] {
+        // In the unlikely event our owner is destroyed before we get here.
+        if (!weak_this)
+          return;
 
-    // Set up the fdio waiter.
-    auto dirfd = open(repository_dir.c_str(), O_DIRECTORY | O_RDONLY);
-    FXL_CHECK(dirfd >= 0) << "Could not open " << repository_dir << ": "
-                          << strerror(errno);
+        // Set up the fdio waiter.
+        auto dirfd = open(repository_dir.c_str(), O_DIRECTORY | O_RDONLY);
+        FXL_CHECK(dirfd >= 0)
+            << "Could not open " << repository_dir << ": " << strerror(errno);
 
-    auto state = new WatcherState();  // Managed by WatcherHandler() above.
-    state->weak_repository = weak_this;
-    state->task_runner = task_runner;
+        auto state = new WatcherState();  // Managed by WatcherHandler() above.
+        state->weak_repository = weak_this;
+        state->task_runner = task_runner;
 
-    state->on_new = [weak_this](const std::string name) {
-      if (!weak_this)
-        return;
-      weak_this->OnNewFile(name);
-    };
-    fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
-                         static_cast<void*>(state));
-  });
+        state->on_new = [weak_this](const std::string name) {
+          if (!weak_this)
+            return;
+          weak_this->OnNewFile(name);
+        };
+        state->on_remove = [weak_this](const std::string name) {
+          if (!weak_this)
+            return;
+          weak_this->OnRemoveFile(name);
+        };
+        fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
+                             static_cast<void*>(state));
+        close(dirfd);
+      });
 
   // We rely on the fact that the thread will kill itself eventually if either:
   // a) The owning process is killed.
@@ -151,9 +175,7 @@ ModuleManifestRepository::ModuleManifestRepository(std::string repository_dir,
 ModuleManifestRepository::~ModuleManifestRepository() {}
 
 void ModuleManifestRepository::OnNewFile(const std::string& name) {
-  if (name.size() >= kIncomingSuffixLen &&
-      name.compare(name.size() - kIncomingSuffixLen, kIncomingSuffixLen,
-                   kIncomingSuffix) == 0) {
+  if (ShouldIgnoreFile(name)) {
     return;
   }
 
@@ -180,8 +202,20 @@ void ModuleManifestRepository::OnNewFile(const std::string& name) {
     return;
   }
 
+  uint32_t count = 0;
   for (auto& entry : entries) {
-    new_entry_fn_(std::move(entry));
+    std::string id = name + std::to_string(count++);
+    file_entry_ids_[name].push_back(id);
+    new_entry_fn_(id, std::move(entry));
+  }
+}
+
+void ModuleManifestRepository::OnRemoveFile(const std::string& name) {
+  auto it = file_entry_ids_.find(name);
+  if (it == file_entry_ids_.end()) return;
+
+  for (const auto& id : it->second) {
+    removed_entry_fn_(id);
   }
 }
 

@@ -38,9 +38,13 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
 
  protected:
   void ResetRepository() {
+    auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
     repo_.reset(new ModuleManifestRepository(
-        repo_dir_, [this](ModuleManifestRepository::Entry entry) {
+        repo_dir_, task_runner, [this](std::string id, ModuleManifestRepository::Entry entry) {
           entries_.push_back(entry);
+          entry_ids_.push_back(std::move(id));
+        }, [this](std::string id) {
+          removed_ids_.push_back(std::move(id));
         }));
   }
 
@@ -52,8 +56,9 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
     manifests_written_.push_back(path);
   }
 
-  std::vector<ModuleManifestRepository::Entry> entries() const {
-    return entries_;
+  void RemoveManifestFile(const std::string& name) {
+    const auto path = repo_dir_ + '/' + name;
+    unlink(path.c_str());
   }
 
   std::vector<std::string> manifests_written_;
@@ -61,6 +66,8 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
   std::unique_ptr<ModuleManifestRepository> repo_;
 
   std::vector<ModuleManifestRepository::Entry> entries_;
+  std::vector<std::string> entry_ids_;
+  std::vector<std::string> removed_ids_;
 };
 
 const char* kManifest1 = R"END(
@@ -110,44 +117,57 @@ const char* kManifest2 = R"END(
 ]
 )END";
 
-TEST_F(ModuleManifestRepositoryTest, All) {
+TEST_F(ModuleManifestRepositoryTest, CreateFiles_And_CorrectEntries) {
   // Write a manifest file before creating the repo.
   WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
 
   ResetRepository();
 
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 2; }));
-  EXPECT_EQ("m1_binary1", entries()[0].binary);
-  EXPECT_EQ("m1_local_name1", entries()[0].local_name);
-  EXPECT_EQ("com.google.fuchsia.navigate.v1", entries()[0].verb);
-  EXPECT_EQ(2lu, entries()[0].noun_constraints.size());
-  EXPECT_EQ("start", entries()[0].noun_constraints[0].name);
-  EXPECT_EQ(2lu, entries()[0].noun_constraints[0].types.size());
-  EXPECT_EQ("foo", entries()[0].noun_constraints[0].types[0]);
-  EXPECT_EQ("bar", entries()[0].noun_constraints[0].types[1]);
-  EXPECT_EQ("destination", entries()[0].noun_constraints[1].name);
-  EXPECT_EQ(1lu, entries()[0].noun_constraints[1].types.size());
-  EXPECT_EQ("baz", entries()[0].noun_constraints[1].types[0]);
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 2; }));
+  EXPECT_EQ("m1_binary1", entries_[0].binary);
+  EXPECT_EQ("m1_local_name1", entries_[0].local_name);
+  EXPECT_EQ("com.google.fuchsia.navigate.v1", entries_[0].verb);
+  EXPECT_EQ(2lu, entries_[0].noun_constraints.size());
+  EXPECT_EQ("start", entries_[0].noun_constraints[0].name);
+  EXPECT_EQ(2lu, entries_[0].noun_constraints[0].types.size());
+  EXPECT_EQ("foo", entries_[0].noun_constraints[0].types[0]);
+  EXPECT_EQ("bar", entries_[0].noun_constraints[0].types[1]);
+  EXPECT_EQ("destination", entries_[0].noun_constraints[1].name);
+  EXPECT_EQ(1lu, entries_[0].noun_constraints[1].types.size());
+  EXPECT_EQ("baz", entries_[0].noun_constraints[1].types[0]);
 
-  EXPECT_EQ("m1_binary2", entries()[1].binary);
-  EXPECT_EQ("m1_local_name2", entries()[1].local_name);
-  EXPECT_EQ("com.google.fuchsia.pick.v1", entries()[1].verb);
-  EXPECT_EQ(1lu, entries()[1].noun_constraints.size());
-  EXPECT_EQ("thing", entries()[1].noun_constraints[0].name);
-  EXPECT_EQ(1lu, entries()[1].noun_constraints[0].types.size());
-  EXPECT_EQ("frob", entries()[1].noun_constraints[0].types[0]);
+  EXPECT_EQ("m1_binary2", entries_[1].binary);
+  EXPECT_EQ("m1_local_name2", entries_[1].local_name);
+  EXPECT_EQ("com.google.fuchsia.pick.v1", entries_[1].verb);
+  EXPECT_EQ(1lu, entries_[1].noun_constraints.size());
+  EXPECT_EQ("thing", entries_[1].noun_constraints[0].name);
+  EXPECT_EQ(1lu, entries_[1].noun_constraints[0].types.size());
+  EXPECT_EQ("frob", entries_[1].noun_constraints[0].types[0]);
 
   // Add a new file, expect to see the results.
   WriteManifestFile("manifest2", kManifest2, strlen(kManifest2));
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 3; }));
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 3; }));
 
-  EXPECT_EQ("binary", entries()[2].binary);
-  EXPECT_EQ("local_name", entries()[2].local_name);
-  EXPECT_EQ("Annotate", entries()[2].verb);
-  EXPECT_EQ(1lu, entries()[2].noun_constraints.size());
-  EXPECT_EQ("thingy", entries()[2].noun_constraints[0].name);
-  EXPECT_EQ(1lu, entries()[2].noun_constraints[0].types.size());
-  EXPECT_EQ("chair", entries()[2].noun_constraints[0].types[0]);
+  EXPECT_EQ("binary", entries_[2].binary);
+  EXPECT_EQ("local_name", entries_[2].local_name);
+  EXPECT_EQ("Annotate", entries_[2].verb);
+  EXPECT_EQ(1lu, entries_[2].noun_constraints.size());
+  EXPECT_EQ("thingy", entries_[2].noun_constraints[0].name);
+  EXPECT_EQ(1lu, entries_[2].noun_constraints[0].types.size());
+  EXPECT_EQ("chair", entries_[2].noun_constraints[0].types[0]);
+}
+
+TEST_F(ModuleManifestRepositoryTest, RemovedFiles) {
+  // Write a manifest file before creating the repo.
+  WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
+
+  ResetRepository();
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 2; }));
+
+  RemoveManifestFile("manifest1");
+  ASSERT_TRUE(RunLoopUntil([this]() { return removed_ids_.size() == 2; }));
+  EXPECT_EQ(removed_ids_[0], entry_ids_[0]);
+  EXPECT_EQ(removed_ids_[1], entry_ids_[1]);
 }
 
 TEST_F(ModuleManifestRepositoryTest, RepoDirIsCreatedAutomatically) {
@@ -157,7 +177,7 @@ TEST_F(ModuleManifestRepositoryTest, RepoDirIsCreatedAutomatically) {
   // here.
   ResetRepository();
   WriteManifestFile("manifest2", kManifest2, strlen(kManifest2));
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 1; }));
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
 }
 
 TEST_F(ModuleManifestRepositoryTest, IgnoreIncomingFiles) {
@@ -166,7 +186,7 @@ TEST_F(ModuleManifestRepositoryTest, IgnoreIncomingFiles) {
   WriteManifestFile("foo", kManifest2, strlen(kManifest2));
 
   // The first manifest files contains two entries, but we should ignore them.
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 1; }));
+  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
 }
 
 }  // namespace

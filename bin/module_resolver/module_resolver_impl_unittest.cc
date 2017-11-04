@@ -67,7 +67,7 @@ class DaisyBuilder {
     SetVerb(verb);
   }
 
-  modular::DaisyPtr get() { return std::move(daisy); }
+  modular::DaisyPtr build() { return std::move(daisy); }
 
   DaisyBuilder& SetVerb(std::string verb) {
     daisy->verb = verb;
@@ -110,11 +110,14 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   void TearDown() override {
     // Clean up.
     resolver_.reset();
+    RemoveManifestFiles();
+    rmdir(repo_dir_.c_str());
+  }
+
+  void RemoveManifestFiles() {
     for (const auto& path : manifests_written_) {
       remove(path.c_str());
     }
-
-    rmdir(repo_dir_.c_str());
   }
 
  protected:
@@ -169,7 +172,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   EXPECT_EQ("resolution_failed", results[0]->module_id);
 
 TEST_F(ModuleResolverImplTest, Null) {
-  auto daisy = DaisyBuilder("no matchy!").get();
+  auto daisy = DaisyBuilder("no matchy!").build();
 
   FindModules(std::move(daisy));
 
@@ -178,13 +181,20 @@ TEST_F(ModuleResolverImplTest, Null) {
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
-  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1").get();
-
+  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1").build();
   FindModules(std::move(daisy));
-
   ASSERT_EQ(2lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
   EXPECT_EQ("module2", results()[1]->module_id);
+
+  // Remove the manifest files and we should see no more results.
+  RemoveManifestFiles();
+  // TODO(thatguy): Refactor ModuleManifestRepository to so we have enough
+  // control to avoid this hack.
+  RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
+
+  FindModules(DaisyBuilder("com.google.fuchsia.navigate.v1").build());
+  ASSERT_DEFAULT_RESULT(results());
 }
 
 TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
@@ -192,7 +202,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
   // actually match.
   auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
                    .AddNounTypes("start", {"foo", "tangoTown"})
-                   .get();
+                   .build();
   FindModules(std::move(daisy));
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
@@ -202,7 +212,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
   daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
               .AddNounTypes("start", {"foo", "tangoTown"})
               .AddNounTypes("destination", {"notbaz"})
-              .get();
+              .build();
   FindModules(std::move(daisy));
   ASSERT_DEFAULT_RESULT(results());
 }
@@ -219,7 +229,7 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
                       "@type": "baz",
                       "really": "it is"
                     })")
-                   .get();
+                   .build();
   FindModules(std::move(daisy));
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);

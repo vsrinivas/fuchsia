@@ -27,19 +27,21 @@ class ModuleResolverImpl : modular::ModuleResolver {
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
 
-  void OnNewManifestEntry(modular::ModuleManifestRepository::Entry entry);
+  void OnNewManifestEntry(std::string id,
+                          modular::ModuleManifestRepository::Entry entry);
+  void OnRemoveManifestEntry(std::string id);
 
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules
   // Ask handler.
   std::unique_ptr<modular::ModuleManifestRepository> manifest_repository_;
-  uint32_t next_entry_id_;
-  std::map<uint32_t, modular::ModuleManifestRepository::Entry> entries_;
+  std::map<std::string, modular::ModuleManifestRepository::Entry> entries_;
 
   // verb -> key in |entries_|
-  std::map<std::string, std::set<uint32_t>> verb_to_entry_;
+  std::map<std::string, std::set<std::string>> verb_to_entry_;
   // (type, noun name) -> key in |entries_|
-  std::map<std::pair<std::string, std::string>, std::set<uint32_t>> noun_type_to_entry_;
+  std::map<std::pair<std::string, std::string>, std::set<std::string>>
+      noun_type_to_entry_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
 
