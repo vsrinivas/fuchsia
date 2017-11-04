@@ -24,12 +24,12 @@ constexpr char kId1AsString[] = "0000180d-0000-1000-8000-00805f9b34fb";
 // 16-bit ID for comparison
 constexpr uint16_t kOther16BitId = 0x1800;
 
-// Variants of 32-bit ID 0x12341234
-constexpr uint32_t kId2As32 = 0x12341234;
+// Variants of 32-bit ID 0xdeadbeef
+constexpr uint32_t kId2As32 = 0xdeadbeef;
 constexpr UInt128 kId2As128 = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80,
-                                0x00, 0x10, 0x00, 0x00, 0x34, 0x12, 0x34,
-                                0x12}};
-constexpr char kId2AsString[] = "12341234-0000-1000-8000-00805f9b34fb";
+                                0x00, 0x10, 0x00, 0x00, 0xef, 0xbe, 0xad,
+                                0xde}};
+constexpr char kId2AsString[] = "deadbeef-0000-1000-8000-00805f9b34fb";
 
 constexpr UInt128 kId3As128 = {
     {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
@@ -214,6 +214,8 @@ TEST(UUIDTest, CompactSize) {
 
   EXPECT_EQ(4u, direct.CompactSize());
   EXPECT_EQ(4u, fromstring.CompactSize());
+  EXPECT_EQ(16u, direct.CompactSize(false /* allow_32bit */));
+  EXPECT_EQ(16u, fromstring.CompactSize(false /* allow_32bit */));
 
   direct = UUID(kId3As128);
   StringToUuid(kId3AsString, &fromstring);
@@ -222,7 +224,7 @@ TEST(UUIDTest, CompactSize) {
   EXPECT_EQ(16u, fromstring.CompactSize());
 }
 
-TEST(UUIDTest, ToBytes) {
+TEST(UUIDTest, ToBytes16) {
   auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
 
   UUID uuid(kId1As16);
@@ -235,6 +237,45 @@ TEST(UUIDTest, ToBytes) {
 
   EXPECT_EQ(bytes.size(), uuid.ToBytes(&bytes));
   EXPECT_TRUE(common::ContainersEqual(kUuid16Bytes, bytes));
+}
+
+TEST(UUIDTest, ToBytes32) {
+  auto kUuid32Bytes = common::CreateStaticByteBuffer(0xef, 0xbe, 0xad, 0xde);
+
+  UUID uuid(kId2As32);
+  common::DynamicByteBuffer bytes(uuid.CompactSize());
+
+  EXPECT_EQ(bytes.size(), uuid.ToBytes(&bytes));
+  EXPECT_TRUE(common::ContainersEqual(kUuid32Bytes, bytes));
+
+  common::StaticByteBuffer<16> bytes128;
+  EXPECT_EQ(bytes128.size(), uuid.ToBytes(&bytes128, false /* allow_32bit */));
+  EXPECT_TRUE(common::ContainersEqual(kId2As128, bytes128));
+}
+
+TEST(UUIDTest, CompactView16) {
+  auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
+
+  UUID uuid(kId1As16);
+
+  common::BufferView view = uuid.CompactView();
+  EXPECT_TRUE(common::ContainersEqual(kUuid16Bytes, view));
+
+  uuid = UUID(kId1As32);
+  view = uuid.CompactView();
+  EXPECT_TRUE(common::ContainersEqual(kUuid16Bytes, view));
+}
+
+TEST(UUIDTest, CompactView32) {
+  auto kUuid32Bytes = common::CreateStaticByteBuffer(0xef, 0xbe, 0xad, 0xde);
+
+  UUID uuid(kId2As32);
+
+  common::BufferView view = uuid.CompactView();
+  EXPECT_TRUE(common::ContainersEqual(kUuid32Bytes, view));
+
+  view = uuid.CompactView(false /* allow_32bit */);
+  EXPECT_TRUE(common::ContainersEqual(kId2As128, view));
 }
 
 TEST(UUIDTest, Hash) {

@@ -137,12 +137,15 @@ std::string UUID::ToString() const {
       value_[3], value_[2], value_[1], value_[0]);
 }
 
-size_t UUID::CompactSize() const {
+size_t UUID::CompactSize(bool allow_32bit) const {
   switch (type_) {
     case Type::k16Bit:
       return k16BitSize;
     case Type::k32Bit:
-      return k32BitSize;
+      if (allow_32bit)
+        return k32BitSize;
+
+      // Fall through if 32-bit UUIDs are not allowed.
     case Type::k128Bit:
       return k128BitSize;
   };
@@ -150,14 +153,17 @@ size_t UUID::CompactSize() const {
   return 0;
 }
 
-size_t UUID::ToBytes(common::MutableByteBuffer* bytes) const {
-  size_t size = CompactSize();
-  if (size != k128BitSize) {
-    bytes->Write(value_.data() + kBaseOffset, size);
-    return size;
-  }
-  bytes->Write(value_.data(), size);
+size_t UUID::ToBytes(common::MutableByteBuffer* bytes, bool allow_32bit) const {
+  size_t size = CompactSize(allow_32bit);
+  size_t offset = (size == k128BitSize) ? 0u : kBaseOffset;
+  bytes->Write(value_.data() + offset, size);
   return size;
+}
+
+const BufferView UUID::CompactView(bool allow_32bit) const {
+  size_t size = CompactSize(allow_32bit);
+  size_t offset = (size == k128BitSize) ? 0u : kBaseOffset;
+  return BufferView(value_.data() + offset, size);
 }
 
 std::size_t UUID::Hash() const {

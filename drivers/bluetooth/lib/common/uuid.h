@@ -7,13 +7,11 @@
 #include <string>
 #include <unordered_set>
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 
 namespace bluetooth {
 namespace common {
-
-class ByteBuffer;
-class MutableByteBuffer;
 
 // Represents a 128-bit Bluetooth UUID. This class allows UUID values to be
 // constructed in the official Bluetooth 16-bit, 32-bit, and 128-bit formats and
@@ -64,9 +62,6 @@ class UUID final {
   // formats, respectively.
   bool CompareBytes(const common::ByteBuffer& bytes) const;
 
-  // Returns the underlying value in little-endian byte order.
-  const UInt128& value() const { return value_; }
-
   // Returns a string representation of this UUID in the following format:
   //
   //   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -75,16 +70,30 @@ class UUID final {
   // 0123456789abcdef.
   std::string ToString() const;
 
-  // Returns the number of bytes required to store this UUID.
-  size_t CompactSize() const;
+  // Returns the number of bytes required to store this UUID. Returns 16 (i.e.
+  // 128 bits) if |allow_32bit| is false and the compact size is 4 bytes (i.e.
+  // 32 bits).
+  size_t CompactSize(bool allow_32bit = true) const;
 
-  // Writes a representation of this UUID to |buffer|.  Returns the number of
-  // bytes used. there must be enough space in |buffer| to store
-  // |compact_size()| bytes.
-  size_t ToBytes(common::MutableByteBuffer* buffer) const;
+  // Writes a little-endian representation of this UUID to |buffer|.  Returns
+  // the number of bytes used. there must be enough space in |buffer| to store
+  // |CompactSize()| bytes.
+  size_t ToBytes(common::MutableByteBuffer* buffer,
+                 bool allow_32bit = true) const;
+
+  // Returns the most compact representation of this UUID. If |allow_32bit| is
+  // false, then a 32-bit UUIDs will default to 128-bit. The contents will be in
+  // little-endian order.
+  //
+  // Unlike ToBytes(), this does not copy. Since the returned view does not own
+  // its data, it should not outlive this UUID instance.
+  const BufferView CompactView(bool allow_32bit = true) const;
 
   // Returns a hash of this UUID.
   std::size_t Hash() const;
+
+  // Returns the underlying value in little-endian byte order.
+  const UInt128& value() const { return value_; }
 
  private:
   // The Bluetooth Base UUID defines the first value in the range reserved
