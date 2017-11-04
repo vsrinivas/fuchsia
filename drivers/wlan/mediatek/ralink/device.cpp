@@ -2831,16 +2831,18 @@ static uint8_t mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is
     uint8_t rate = 0;            // Mbps * 2
     uint8_t rate_tbl_idx = 255;  // Init with invalid idx.
 
-    if (phy_mode >= fbl::count_of(kDataRates)) { return rate; }
+    if (phy_mode >= fbl::count_of(kDataRates)) {
+        return rate;
+    }
 
     switch (phy_mode) {
     case PhyMode::kLegacyCck:
-        if (mcs <= 3) {
+        if (mcs <= kLongPreamble11Mbps) {
             // Long preamble case
             rate_tbl_idx = mcs;
-        } else if (9 <= mcs && mcs <= 11) {
+        } else if (kShortPreamble1Mbps <= mcs && mcs <= kShortPreamble11Mbps) {
             // Short preamble case
-            rate_tbl_idx = mcs - 8;
+            rate_tbl_idx = mcs - kShortPreamble1Mbps;
         } else {
             warnf("ralink: illegal mcs for phy %u mcs %u is_40mhz %u is_sgi %u\n", phy_mode, mcs,
                   is_40mhz, is_sgi);
@@ -2851,8 +2853,9 @@ static uint8_t mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is
         rate_tbl_idx = mcs;
         break;
     case PhyMode::kHtMixMode:
+        // fallthrough
     case PhyMode::kHtGreenfield:
-        if (mcs == 32) {
+        if (mcs == kHtDuplicateMcs) {
             // 40MHz, ShortGuardInterval case: HT duplicate 6 Mbps.
             rate_tbl_idx = 0;
         } else {
@@ -2872,8 +2875,12 @@ static uint8_t mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is
     }
 
     rate = kDataRates[phy_mode][rate_tbl_idx];
-    if (is_40mhz) rate *= 2;
-    if (is_sgi) rate = static_cast<uint8_t>((static_cast<uint16_t>(rate) * 10) / 9);
+    if (is_40mhz) {
+        rate *= 2;
+    }
+    if (is_sgi) {
+        rate = static_cast<uint8_t>((static_cast<uint16_t>(rate) * 10) / 9);
+    }
 
     return rate;
 }
@@ -2900,7 +2907,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
     info->valid_fields |= WLAN_RX_INFO_VALID_PHY;
     info->phy = ralink_phy_to_ddk_phy(rxwi1.phy_mode());
 
-    uint8_t rate = mcs_to_rate(rxwi1.phy_mode(), rxwi1.mcs(), rxwi1.bw() == 1, rxwi1.sgi() == 1);
+    uint8_t rate = mcs_to_rate(rxwi1.phy_mode(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi());
     if (rate != 0) {
         info->valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
         info->data_rate = rate;
@@ -2911,7 +2918,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
 
     uint8_t phy_mode = rxwi1.phy_mode();
     bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtMixMode;
-    if (is_ht && rxwi1.mcs() < 8) {
+    if (is_ht && rxwi1.mcs() < kMaxHtMcs) {
         info->valid_fields |= WLAN_RX_INFO_VALID_MCS;
         info->mcs = rxwi1.mcs();
     }
@@ -3132,7 +3139,15 @@ void Device::WlanmacStop() {
     // TODO(tkilbourn) disable radios, stop queues, etc.
 }
 
-void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
+zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
+    size_t len = pkt->packet_head->len;
+    if (pkt->packet_tail != nullptr) {
+        if (pkt->packet_tail->len < pkt->tail_offset) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        len += pkt->packet_tail->len - pkt->tail_offset;
+    }
+
     // Our USB packet looks like:
     //   TxInfo (4 bytes)
     //   TXWI fields (16-20 bytes, depending on device)
@@ -3146,7 +3161,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
 
     if (req_len > kWriteBufSize) {
         errorf("usb request buffer size insufficient for tx packet -- %zu bytes needed\n", req_len);
-        return;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     usb_request_t* req = nullptr;
@@ -3154,9 +3169,10 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
         std::lock_guard<std::mutex> guard(lock_);
         if (free_write_reqs_.empty()) {
             // No free write requests! Drop the packet.
+            // TODO(tkilbourn): buffer the wlan_tx_packet_ts.
             static int failed_writes = 0;
             if (failed_writes++ % 50 == 0) { warnf("dropping tx; no free usb requests\n"); }
-            return;
+            return ZX_ERR_IO;
         }
         req = free_write_reqs_.back();
         free_write_reqs_.pop_back();
@@ -3169,7 +3185,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
         errorf("could not map usb request: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
         free_write_reqs_.push_back(req);
-        return;
+        return status;
     }
 
     std::memset(packet, 0, sizeof(TxInfo) + txwi_len);
@@ -3178,8 +3194,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     packet->tx_info.set_tx_pkt_length(txwi_len + len + align_pad_len);
 
     // TODO(tkilbourn): set these more appropriately
-    auto frame = reinterpret_cast<const uint8_t*>(data);
-    uint8_t wiv = !RequiresProtection(frame, len);
+    uint8_t wiv = !(pkt->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
     packet->tx_info.set_wiv(wiv);
     packet->tx_info.set_qsel(2);
 
@@ -3193,15 +3208,45 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     // txwi0.set_mpdu_density(Txwi0::kFourUsec); // Aruba
     // txwi0.set_mpdu_density(Txwi0::kEightUsec);  // TP-Link
     txwi0.set_txop(Txwi0::kHtTxop);
-    txwi0.set_mcs(7);
-    txwi0.set_bw(0);  // for 20 Mhz
-    // txwi0.set_bw(1); // for 40 MHz
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_MCS && pkt->info.mcs < 8) {
+        txwi0.set_mcs(pkt->info.mcs);
+    } else {
+        txwi0.set_mcs(7);
+    }
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH
+            && pkt->info.chan_width == WLAN_CHAN_WIDTH_40MHZ) {
+        txwi0.set_bw(1);  // for 40 Mhz
+    } else {
+        txwi0.set_bw(0);  // for 20 Mhz
+    }
     txwi0.set_sgi(1);
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
-    txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
-    // txwi0.set_phy_mode(PhyMode::kHtMixMode);
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_PHY) {
+        switch (pkt->info.phy) {
+        case WLAN_PHY_CCK:
+            txwi0.set_phy_mode(PhyMode::kLegacyCck);
+            break;
+        case WLAN_PHY_OFDM:
+            txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
+            break;
+        case WLAN_PHY_HT_MIXED:
+            txwi0.set_phy_mode(PhyMode::kHtMixMode);
+            break;
+        case WLAN_PHY_HT_GREENFIELD:
+            txwi0.set_phy_mode(PhyMode::kHtGreenfield);
+            break;
+        default:
+            warnf("invalid phy: %u\n", pkt->info.phy);
+            txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
+            break;
+        }
+    } else {
+        txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
+    }
 
-    auto wcid = LookupTxWcid(frame, len);
+    // The frame header is always in the packet head.
+    auto wcid = LookupTxWcid(static_cast<const uint8_t*>(pkt->packet_head->data),
+            pkt->packet_head->len);
     Txwi1& txwi1 = packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);
@@ -3222,12 +3267,18 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     uint8_t* payload_ptr = &packet->payload[payload_offset];
 
     // Write out the payload
-    std::memcpy(payload_ptr, data, len);
+    std::memcpy(payload_ptr, pkt->packet_head->data, pkt->packet_head->len);
+    if (pkt->packet_tail != nullptr) {
+        uint8_t* tail_data = static_cast<uint8_t*>(pkt->packet_tail->data);
+        std::memcpy(payload_ptr + pkt->packet_head->len, tail_data + pkt->tail_offset,
+                pkt->packet_tail->len - pkt->tail_offset);
+    }
     std::memset(&payload_ptr[len], 0, align_pad_len + terminal_pad_len);
 
     // Send the whole thing
     req->header.length = req_len;
     usb_request_queue(&usb_, req);
+    return ZX_OK;
 }
 
 bool Device::RequiresProtection(const uint8_t* frame, size_t len) {

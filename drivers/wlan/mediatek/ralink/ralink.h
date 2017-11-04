@@ -1110,6 +1110,22 @@ enum PhyMode : uint8_t {
     kHtGreenfield = 3,
 };
 
+enum LegacyCckMcs : uint8_t {
+    kLongPreamble1Mbps = 0,
+    kLongPreamble2Mbps = 1,
+    kLongPreamble5_5Mbps = 2,
+    kLongPreamble11Mbps = 3,
+    // 4-7 reserved
+    kShortPreamble1Mbps = 8,
+    kShortPreamble2Mbps = 9,
+    kShortPreamble5_5Mbps = 10,
+    kShortPreamble11Mbps = 11,
+    // All other values reserved
+};
+constexpr uint8_t kMaxOfdmMcs = 7;
+constexpr uint8_t kMaxHtMcs = 7;  // excluding "duplicate 6Mbps" mcs
+constexpr uint8_t kHtDuplicateMcs = 32;
+
 class Rxwi2 : public AddressableBitField<uint16_t, uint32_t, 3> {
    public:
     constexpr explicit Rxwi2(uint32_t val) : AddressableBitField(val) {}
