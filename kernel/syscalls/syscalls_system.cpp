@@ -176,15 +176,8 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
         return ZX_ERR_WRONG_TYPE;
     }
 
-    size_t hdrsize = sizeof(bootdata_t);
-
-    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
-        hdrsize += sizeof(bootextra_t);
-        flags |= BOOTDATA_FLAG_EXTRA;
-    }
-
-    size_t total_len = hdr->length + hdrsize;
-    size_t new_section_length = BOOTDATA_ALIGN(section_length) + hdrsize;
+    size_t total_len = hdr->length + sizeof(bootdata_t);
+    size_t new_section_length = BOOTDATA_ALIGN(section_length) + sizeof(bootdata_t);
 
     // Make sure there's enough buffer space after the bootdata container to
     // append the new section.
@@ -199,17 +192,13 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
     new_hdr->type = type;
     new_hdr->length = section_length;
     new_hdr->extra = extra;
-    new_hdr->flags = flags;
+    new_hdr->flags = flags | BOOTDATA_FLAG_V2;
+    new_hdr->reserved0 = 0;
+    new_hdr->reserved1 = 0;
+    new_hdr->magic = BOOTITEM_MAGIC;
+    new_hdr->crc32 = BOOTITEM_NO_CRC32;
 
-    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
-        bootextra_t* extra = (bootextra_t*) (bootdata_buf + sizeof(bootdata_t));
-        extra->reserved0 = 0;
-        extra->reserved1 = 0;
-        extra->magic = BOOTITEM_MAGIC;
-        extra->crc32 = BOOTITEM_NO_CRC32;
-    }
-
-    bootdata_buf += hdrsize;
+    bootdata_buf += sizeof(bootdata_t);
 
     memcpy(bootdata_buf, section, section_length);
 
@@ -269,21 +258,16 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
     zx_status_t result;
 
     paddr_t new_kernel_addr;
-    uint8_t* kernel_buffer;
     size_t new_kernel_len;
-    result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, &kernel_buffer,
+    result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, NULL,
                                 &new_kernel_len);
     if (result != ZX_OK) {
         return result;
     }
 
     // for kernels that are bootdata based (eg, x86-64), the location
-    // to find the entrypoint depends on the bootdata extra flag
-    bootdata_t* hdr = (bootdata_t*)kernel_buffer;
-    uintptr_t entry64_addr = 0x100020;
-    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
-        entry64_addr += 0x20;
-    }
+    // to find the entrypoint depends on the bootdata format
+    uintptr_t entry64_addr = 0x100040;
 
     paddr_t new_bootimage_addr;
     uint8_t* bootimage_buffer;

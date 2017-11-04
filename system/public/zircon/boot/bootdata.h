@@ -20,20 +20,11 @@
 
 #define BOOTITEM_NO_CRC32 (0x4a87e8d6)
 
-// Bootdata items with the EXTRA flag have a bootextra_t
-// between them and the payload, which must have BOOTITEM_MAGIC
-// in its magic field, otherwise the file is corrupt.
-//
-// The bootextra_t is not included in the length of the header.
-// Consider the EXTRA flag to indicate a larger v2 header.
-//
-// The crc32 field must be BOOTITEM_NO_CRC32, unless the CRC32
-// flag is present, in which case it must be a valid crc32 of
-// the bootitem, bootextra (with crc32 field set to 0), and the
-// payload.
-#define BOOTDATA_FLAG_EXTRA      (0x00010000)
+// This flag is required.
+#define BOOTDATA_FLAG_V2         (0x00010000)
 
-// Bootdata items with the CRC32 flag must have a valid crc32
+// Bootdata items with the CRC32 flag must have a valid crc32.
+// Otherwise their crc32 field must contain BOOTITEM_NO_CRC32
 #define BOOTDATA_FLAG_CRC32      (0x00020000)
 
 // Containers are used to wrap a set of bootdata items
@@ -140,14 +131,18 @@ typedef struct {
 
     // Flags for the boot data. See flag descriptions for each type.
     uint32_t flags;
-} bootdata_t;
 
-typedef struct {
+    // For future expansion.  Set to 0.
     uint32_t reserved0;
     uint32_t reserved1;
+
+    // Must be BOOTITEM_MAGIC
     uint32_t magic;
+
+    // Must be the CRC32 of payload if FLAG_CRC32 is set,
+    // otherwise must be BOOTITEM_NO_CRC32
     uint32_t crc32;
-} bootextra_t;
+} bootdata_t;
 
 typedef struct {
     uint64_t base; // physical base addr
@@ -167,14 +162,6 @@ typedef struct {
     bootdata_t hdr_kernel;
     bootdata_kernel_t data_kernel;
 } zircon_kernel_t;
-
-typedef struct {
-    bootdata_t hdr_file;
-    bootextra_t ext_file;
-    bootdata_t hdr_kernel;
-    bootextra_t ext_kernel;
-    bootdata_kernel_t data_kernel;
-} zircon_kernel2_t;
 
 typedef struct {
     uint64_t base;

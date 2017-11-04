@@ -265,11 +265,11 @@ int import_file_as(const char* fn, item_type_t type, uint32_t hdrlen,
     notice_dep(fn);
 
     if (type == ITEM_BOOTDATA) {
-        size_t hsz = sizeof(bootdata_t);
-        if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
-            hsz += sizeof(bootextra_t);
+        if (!(hdr->flags & BOOTDATA_FLAG_V2)) {
+            fprintf(stderr, "error: v1 bootdata no longer supported '%s'\n", fn);
+            return -1;
         }
-        if (s.st_size < hsz) {
+        if (s.st_size < sizeof(bootdata_t)) {
             fprintf(stderr, "error: bootdata file too small '%s'\n", fn);
             return -1;
         }
@@ -277,7 +277,7 @@ int import_file_as(const char* fn, item_type_t type, uint32_t hdrlen,
             fprintf(stderr, "error: bootdata file misaligned '%s'\n", fn);
             return -1;
         }
-        if (s.st_size != (hdrlen + hsz)) {
+        if (s.st_size != (hdrlen + sizeof(bootdata_t))) {
             fprintf(stderr, "error: bootdata header size mismatch '%s'\n", fn);
             return -1;
         }
@@ -601,13 +601,9 @@ ssize_t copybootdatafile(int fd, const char* fn, size_t len) {
         goto fail;
     }
     len -= sizeof(hdr);
-    if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
-        bootextra_t extra;
-        if ((r = readx(fdi, &extra, sizeof(extra))) < 0) {
-            fprintf(stderr, "error: '%s' cannot read extra header\n", fn);
-            goto fail;
-        }
-        len -= sizeof(extra);
+    if (!(hdr.flags & BOOTDATA_FLAG_V2)) {
+        fprintf(stderr, "error: '%s' is a v1 (unsupported) bootdata file\n", fn);
+        goto fail;
     }
     if ((hdr.length != len)) {
         fprintf(stderr, "error: '%s' header length (%u) != %zd\n", fn, hdr.length, len);
@@ -641,19 +637,13 @@ static const char fill[4096];
 
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
-int write_bootfs(int fd, const io_ops* op, item_t* item, bool compressed, bool extra) {
+int write_bootfs(int fd, const io_ops* op, item_t* item, bool compressed) {
     uint32_t n;
     fsentry_t* e;
 
-    uint32_t crcval = 0;
-    uint32_t* crc = NULL;
+    uint32_t crc = 0;
 
-    size_t hdrsize = sizeof(bootdata_t);
-
-    if (extra) {
-        hdrsize += sizeof(bootextra_t);
-        crc = &crcval;
-    }
+    const size_t hdrsize = sizeof(bootdata_t);
 
     // Make note of where we started
     off_t start = lseek(fd, 0, SEEK_CUR);
@@ -677,7 +667,7 @@ fail:
 
     void* cookie = NULL;
     if (op->setup) {
-        CHECK(op->setup(fd, &cookie, crc));
+        CHECK(op->setup(fd, &cookie, &crc));
     }
 
     // write directory size entry
@@ -686,7 +676,7 @@ fail:
             .magic = BOOTFS_MAGIC,
             .dirsize = item->hdrsize - sizeof(bootfs_header_t),
         };
-        CHECK(op->write(fd, &hdr, sizeof(hdr), cookie, crc));
+        CHECK(op->write(fd, &hdr, sizeof(hdr), cookie, &crc));
     }
     fsentry_t* last_entry = NULL;
     for (e = item->first; e != NULL; e = e->next) {
@@ -695,10 +685,10 @@ fail:
             .data_len = e->length,
             .data_off = e->offset,
         };
-        CHECK(op->write(fd, &entry, sizeof(entry), cookie, crc));
-        CHECK(op->write(fd, e->name, e->namelen, cookie, crc));
+        CHECK(op->write(fd, &entry, sizeof(entry), cookie, &crc));
+        CHECK(op->write(fd, e->name, e->namelen, cookie, &crc));
         if ((n = BOOTFS_ALIGN(e->namelen) - e->namelen) > 0) {
-            CHECK(op->write(fd, fill, n, cookie, crc));
+            CHECK(op->write(fd, fill, n, cookie, &crc));
         }
         last_entry = e;
     }
@@ -706,27 +696,27 @@ fail:
     uint32_t last_length = last_entry ? last_entry->length : 0;
 
     if ((n = PAGEFILL(item->hdrsize))) {
-        CHECK(op->write(fd, fill, n, cookie, crc));
+        CHECK(op->write(fd, fill, n, cookie, &crc));
     }
 
     for (e = item->first; e != NULL; e = e->next) {
         if (verbose) {
             fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
         }
-        CHECK(op->write_file(fd, e->srcpath, e->length, cookie, crc));
+        CHECK(op->write_file(fd, e->srcpath, e->length, cookie, &crc));
         if ((n = PAGEFILL(e->length))) {
-            CHECK(op->write(fd, fill, n, cookie, crc));
+            CHECK(op->write(fd, fill, n, cookie, &crc));
         }
     }
     // If the last entry has length zero, add an extra zero page at the end.
     // This prevents the possibility of trying to read/map past the end of the
     // bootfs at runtime.
     if (last_length == 0) {
-        CHECK(op->write(fd, fill, sizeof(fill), cookie, crc));
+        CHECK(op->write(fd, fill, sizeof(fill), cookie, &crc));
     }
 
     if (op->finish) {
-        CHECK(op->finish(fd, cookie, crc));
+        CHECK(op->finish(fd, cookie, &crc));
     }
 
     off_t end = lseek(fd, 0, SEEK_CUR);
@@ -755,28 +745,21 @@ fail:
         .type = (item->type == ITEM_BOOTFS_SYSTEM) ?
                 BOOTDATA_BOOTFS_SYSTEM : BOOTDATA_BOOTFS_BOOT,
         .length = wrote,
-        .extra = compressed ? item->outsize : wrote,
-        .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
+        .extra = wrote,
+        .flags = BOOTDATA_FLAG_V2 | BOOTDATA_FLAG_CRC32,
+        .reserved0 = 0,
+        .reserved1 = 0,
+        .magic = BOOTITEM_MAGIC,
+        .crc32 = 0,
     };
-    if (extra) {
-        boothdr.flags |= BOOTDATA_FLAG_EXTRA | BOOTDATA_FLAG_CRC32;
+    if (compressed) {
+        boothdr.extra = item->outsize;
+        boothdr.flags |= BOOTDATA_BOOTFS_FLAG_COMPRESSED;
     }
+    uint32_t hdrcrc = crc32(0, (void*) &boothdr, sizeof(boothdr));
+    boothdr.crc32 = crc32_combine(hdrcrc, crc, boothdr.length);
     if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
         return -1;
-    }
-    if (extra) {
-        bootextra_t extra = {
-            .reserved0 = 0,
-            .reserved1 = 0,
-            .magic = BOOTITEM_MAGIC,
-            .crc32 = 0,
-        };
-        uint32_t hdrcrc = crc32(0, (void*) &boothdr, sizeof(boothdr));
-        hdrcrc = crc32(hdrcrc, (void*) &extra, sizeof(extra));
-        extra.crc32 = crc32_combine(hdrcrc, *crc, boothdr.length);
-        if (writex(fd, &extra, sizeof(extra)) < 0) {
-            return -1;
-        }
     }
 
     if (lseek(fd, end + pad, SEEK_SET) != (end + pad)) {
@@ -787,8 +770,11 @@ fail:
     return 0;
 }
 
-int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra) {
-    uint32_t* crc = NULL;
+int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls) {
+    off_t hoff = 0;
+    if ((hoff = lseek(fd, 0, SEEK_CUR)) < 0) {
+        return -1;
+    }
 
     bootdata_t hdr = {
         .type = type,
@@ -796,43 +782,28 @@ int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra
                     sizeof(item->platform_id) : item->first->length)
                    + nulls),
         .extra = 0,
-        .flags = 0,
-    };
-    bootextra_t ehdr = {
+        .flags = BOOTDATA_FLAG_V2 | BOOTDATA_FLAG_CRC32,
         .reserved0 = 0,
         .reserved1 = 0,
         .magic = BOOTITEM_MAGIC,
         .crc32 = 0,
     };
-    if (extra) {
-        hdr.flags |= BOOTDATA_FLAG_EXTRA | BOOTDATA_FLAG_CRC32;
-    }
     if (writex(fd, &hdr, sizeof(hdr)) < 0) {
         return -1;
     }
-    off_t eoff = 0;
-    if (extra) {
-        if ((eoff = lseek(fd, 0, SEEK_CUR)) < 0) {
-            return -1;
-        }
-        // placeholder header
-        if (writex(fd, &ehdr, sizeof(ehdr)) < 0) {
-            return -1;
-        }
-        crc = &ehdr.crc32;
-        uint32_t tmp = crc32(0, (void*) &hdr, sizeof(hdr));
-        *crc = crc32(tmp, (void*) &ehdr, sizeof(ehdr));
-    }
+
+    hdr.crc32 = crc32(0, (void*) &hdr, sizeof(hdr));
+
     if (item->type == ITEM_PLATFORM_ID) {
         if (copydata(fd, &item->platform_id, sizeof(item->platform_id),
-                     NULL, crc) < 0) {
+                     NULL, &hdr.crc32) < 0) {
             return -1;
         }
     } else if (copyfile(fd, item->first->srcpath, item->first->length,
-                        NULL, crc) < 0) {
+                        NULL, &hdr.crc32) < 0) {
         return -1;
     }
-    if (nulls && (copydata(fd, fill, nulls, NULL, crc) < 0)) {
+    if (nulls && (copydata(fd, fill, nulls, NULL, &hdr.crc32) < 0)) {
         return -1;
     }
     size_t pad = BOOTDATA_ALIGN(hdr.length) - hdr.length;
@@ -841,26 +812,26 @@ int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra
             return -1;
         }
     }
-    if (extra) {
-        // patch computed crc into extra header
-        off_t save;
-        if ((save = lseek(fd, 0, SEEK_CUR)) < 0) {
-            return -1;
-        }
-        if (lseek(fd, eoff, SEEK_SET) != eoff) {
-            return -1;
-        }
-        if (writex(fd, &ehdr, sizeof(ehdr)) < 0) {
-            return -1;
-        }
-        if (lseek(fd, save, SEEK_SET) != save) {
-            return -1;
-        }
+
+    // patch computed crc into header
+    off_t save;
+    if ((save = lseek(fd, 0, SEEK_CUR)) < 0) {
+        return -1;
     }
+    if (lseek(fd, hoff, SEEK_SET) != hoff) {
+        return -1;
+    }
+    if (writex(fd, &hdr, sizeof(hdr)) < 0) {
+        return -1;
+    }
+    if (lseek(fd, save, SEEK_SET) != save) {
+        return -1;
+    }
+
     return 0;
 }
 
-int write_bootdata(const char* fn, item_t* item, bool extra) {
+int write_bootdata(const char* fn, item_t* item) {
     //TODO: re-enable for debugging someday
     bool compressed = true;
 
@@ -873,13 +844,8 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
         return -1;
     }
 
-    size_t hdrsize = sizeof(bootdata_t);
-    if (extra) {
-        hdrsize += sizeof(bootextra_t);
-    }
-
     // Leave room for file header
-    if (lseek(fd, hdrsize, SEEK_SET) != hdrsize) {
+    if (lseek(fd, sizeof(bootdata_t), SEEK_SET) != sizeof(bootdata_t)) {
         fprintf(stderr, "error: cannot seek\n");
         goto fail;
     }
@@ -890,17 +856,17 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
             CHECK(copybootdatafile(fd, item->first->srcpath, item->first->length));
             break;
         case ITEM_KERNEL:
-            CHECK(write_bootitem(fd, item, BOOTDATA_KERNEL, 0, extra));
+            CHECK(write_bootitem(fd, item, BOOTDATA_KERNEL, 0));
             break;
         case ITEM_CMDLINE:
-            CHECK(write_bootitem(fd, item, BOOTDATA_CMDLINE, 1, extra));
+            CHECK(write_bootitem(fd, item, BOOTDATA_CMDLINE, 1));
             break;
         case ITEM_PLATFORM_ID:
-            CHECK(write_bootitem(fd, item, BOOTDATA_PLATFORM_ID, 0, extra));
+            CHECK(write_bootitem(fd, item, BOOTDATA_PLATFORM_ID, 0));
             break;
         case ITEM_BOOTFS_BOOT:
         case ITEM_BOOTFS_SYSTEM:
-            CHECK(write_bootfs(fd, op, item, compressed, extra));
+            CHECK(write_bootfs(fd, op, item, compressed));
             break;
         default:
             fprintf(stderr, "error: internal: type %08x unknown\n", item->type);
@@ -924,23 +890,16 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
 
     bootdata_t filehdr = {
         .type = BOOTDATA_CONTAINER,
-        .length = file_end - hdrsize,
+        .length = file_end - sizeof(bootdata_t),
         .extra = BOOTDATA_MAGIC,
-        .flags = extra ? BOOTDATA_FLAG_EXTRA : 0,
+        .flags = BOOTDATA_FLAG_V2,
+        .reserved0 = 0,
+        .reserved1 = 0,
+        .magic = BOOTITEM_MAGIC,
+        .crc32 = BOOTITEM_NO_CRC32,
     };
     if (writex(fd, &filehdr, sizeof(filehdr)) < 0) {
         goto fail;
-    }
-    if (extra) {
-        bootextra_t fileextra = {
-            .reserved0 = 0,
-            .reserved1 = 0,
-            .magic = BOOTITEM_MAGIC,
-            .crc32 = BOOTITEM_NO_CRC32,
-        };
-        if (writex(fd, &fileextra, sizeof(fileextra)) < 0) {
-            goto fail;
-        }
     }
     close(fd);
     return 0;
@@ -971,17 +930,9 @@ int dump_bootdata(const char* fn) {
         goto fail;
     }
     size_t off = sizeof(hdr);
-    if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
-        bootextra_t extra;
-        if (readx(fd, &extra, sizeof(extra)) < 0) {
-            fprintf(stderr, "error: cannot read extra header\n");
-            goto fail;
-        }
-        if (extra.magic != BOOTITEM_MAGIC) {
-            fprintf(stderr, "error: invalid extra header\n");
-            goto fail;
-        }
-        off += sizeof(bootextra_t);
+    if (!(hdr.flags & BOOTDATA_FLAG_V2)) {
+        fprintf(stderr, "error: bootdata v1 no longer supported\n");
+        goto fail;
     }
     size_t end = off + hdr.length;
 
@@ -1026,35 +977,19 @@ int dump_bootdata(const char* fn) {
         }
         off += sizeof(hdr);
 
-        bootextra_t ehdr;
-        uint32_t crc = 0;
-        if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
-            if (readx(fd, &ehdr, sizeof(ehdr)) < 0) {
-                fprintf(stderr, "error: cannot read extra header data\n");
-                goto fail;
-            }
-            printf("%08zx:          MAGIC=%08x CRC=%08x\n", off, ehdr.magic, ehdr.crc32);
-            if (ehdr.magic != BOOTITEM_MAGIC) {
-                fprintf(stderr, "error: bad bootitem magic\n");
-            }
-            uint32_t tmp = ehdr.crc32;
-            ehdr.crc32 = 0;
-            crc = crc32(crc, (void*) &hdr, sizeof(hdr));
-            crc = crc32(crc, (void*) &ehdr, sizeof(ehdr));
-            ehdr.crc32 = tmp;
-            off += sizeof(ehdr);
-        }
         size_t pad = BOOTDATA_ALIGN(hdr.length) - hdr.length;
         if (hdr.flags & BOOTDATA_FLAG_CRC32) {
-            if (!(hdr.flags & BOOTDATA_FLAG_EXTRA)) {
-                fprintf(stderr, "error: crc32 indicated w/out extra data!\n");
-                goto fail;
-            }
+            printf("        :          MAGIC=%08x CRC=%08x\n", hdr.magic, hdr.crc32);
+            uint32_t tmp = hdr.crc32;
+            hdr.crc32 = 0;
+            uint32_t crc = crc32(0, (void*) &hdr, sizeof(hdr));
+            hdr.crc32 = tmp;
+
             if (readcrc32(fd, hdr.length, &crc) < 0) {
                 fprintf(stderr, "error: failed to read data for crc\n");
                 goto fail;
             }
-            if (crc != ehdr.crc32) {
+            if (crc != hdr.crc32) {
                 fprintf(stderr, "error: CRC %08x does not match header\n", crc);
             }
             if (pad && (lseek(fd, pad, SEEK_CUR) < 0)) {
@@ -1062,6 +997,7 @@ int dump_bootdata(const char* fn) {
                 goto fail;
             }
         } else {
+            printf("        :          MAGIC=%08x NO CRC\n", hdr.magic);
             if (lseek(fd, hdr.length + pad, SEEK_CUR) < 0) {
                 fprintf(stderr, "error: seeking\n");
                 goto fail;
@@ -1090,7 +1026,6 @@ void usage(void) {
     "         -C <filename>         include kernel command line\n"
     "         -c                    compress bootfs image (default)\n"
     "         -v                    verbose output\n"
-    "         -x                    disable bootextra data (crc32)\n"
     "         -t <filename>         dump bootdata contents\n"
     "         -g <group>            select allowed groups for manifest items\n"
     "                               (multiple groups may be comma separated)\n"
@@ -1123,7 +1058,6 @@ int main(int argc, char **argv) {
     bool compressed = true;
     bool have_kernel = false;
     bool have_cmdline = false;
-    bool extra = true;
     const char* vid_arg = NULL;
     const char* pid_arg = NULL;
     const char* board_arg = NULL;
@@ -1215,8 +1149,6 @@ int main(int argc, char **argv) {
         } else if (!strcmp(cmd,"-t")) {
             fprintf(stderr, "error: -t option must be used alone, with one filename.\n");
             return 0;
-        } else if (!strcmp(cmd,"-x")) {
-            extra = false;
         } else if (!strcmp(cmd,"-c")) {
             compressed = true;
         } else if (!strcmp(cmd,"--uncompressed")) {
@@ -1361,5 +1293,5 @@ int main(int argc, char **argv) {
         }
     }
 
-    return write_bootdata(output_file, first_item, extra);
+    return write_bootdata(output_file, first_item);
 }

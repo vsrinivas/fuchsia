@@ -23,12 +23,11 @@
 
 LOCAL_DATA(_setup_start)
 
-#if ENABLE_NEW_BOOTDATA
     /* bootdata file header */
     .int BOOTDATA_CONTAINER
     .int PHYS(__data_end) - PHYS_LOAD_ADDRESS - 32
     .int BOOTDATA_MAGIC
-    .int BOOTDATA_FLAG_EXTRA
+    .int BOOTDATA_FLAG_V2
     .int 0
     .int 0
     .int BOOTITEM_MAGIC
@@ -38,24 +37,13 @@ LOCAL_DATA(_setup_start)
     .int BOOTDATA_KERNEL
     .int PHYS(__data_end) - PHYS_LOAD_ADDRESS - 64
     .int 0
-    .int BOOTDATA_FLAG_EXTRA
+    .int BOOTDATA_FLAG_V2
     .int 0
     .int 0
     .int BOOTITEM_MAGIC
     .int BOOTITEM_NO_CRC32
-#else
-    /* bootdata file header */
-    .int BOOTDATA_CONTAINER
-    .int PHYS(__data_end) - PHYS_LOAD_ADDRESS - 16
-    .int BOOTDATA_MAGIC
-    .int 0
 
-    /* bootdata kernel header */
-    .int BOOTDATA_KERNEL
-    .int PHYS(__data_end) - PHYS_LOAD_ADDRESS - 32
-    .int 0
-    .int 0
-#endif
+    /* bootdata kernel payload */
     .quad PHYS(_start)
     .quad 0
 

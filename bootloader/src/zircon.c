@@ -49,91 +49,62 @@ static void start_zircon(uint64_t entry, void* bootdata) {
         ;
 }
 
-static bool with_extra = false;
-static bootextra_t default_extra = {
-    .reserved0 = 0,
-    .reserved1 = 0,
-    .magic = BOOTITEM_MAGIC,
-    .crc32 = BOOTITEM_NO_CRC32,
-};
-
 static int add_bootdata(void** ptr, size_t* avail,
                         bootdata_t* bd, void* data) {
-    if (with_extra) {
-        size_t len = BOOTDATA_ALIGN(bd->length);
-        if ((sizeof(bootdata_t) + sizeof(bootextra_t) + len) > *avail) {
-            printf("boot: no room for bootdata type=%08x size=%08x\n",
-                   bd->type, bd->length);
-            return -1;
-        }
-        bd->flags |= BOOTDATA_FLAG_EXTRA;
-        memcpy(*ptr, bd, sizeof(bootdata_t));
-        memcpy((*ptr) + sizeof(bootdata_t), &default_extra, sizeof(bootextra_t));
-        memcpy((*ptr) + sizeof(bootdata_t) + sizeof(bootextra_t), data, len);
-        len += sizeof(bootdata_t) + sizeof(bootextra_t);
-        (*ptr) += len;
-        (*avail) -= len;
-    } else {
-        size_t len = BOOTDATA_ALIGN(bd->length);
-        if ((sizeof(bootdata_t) + len) > *avail) {
-            printf("boot: no room for bootdata type=%08x size=%08x\n",
-                   bd->type, bd->length);
-            return -1;
-        }
-        memcpy(*ptr, bd, sizeof(bootdata_t));
-        memcpy((*ptr) + sizeof(bootdata_t), data, len);
-        len += sizeof(bootdata_t);
-        (*ptr) += len;
-        (*avail) -= len;
+    size_t len = BOOTDATA_ALIGN(bd->length);
+    if ((sizeof(bootdata_t) + len) > *avail) {
+        printf("boot: no room for bootdata type=%08x size=%08x\n",
+               bd->type, bd->length);
+        return -1;
     }
+    bd->flags |= BOOTDATA_FLAG_V2;
+    bd->reserved0 = 0;
+    bd->reserved1 = 0;
+    bd->magic = BOOTITEM_MAGIC;
+    bd->crc32 = BOOTITEM_NO_CRC32;
+
+    memcpy(*ptr, bd, sizeof(bootdata_t));
+    memcpy((*ptr) + sizeof(bootdata_t), data, len);
+    len += sizeof(bootdata_t);
+    (*ptr) += len;
+    (*avail) -= len;
+
     return 0;
 }
 
 static int header_check(void* image, size_t sz, uint64_t* _entry,
-                        size_t* _hsz, size_t* _flen, size_t* _klen) {
+                        size_t* _flen, size_t* _klen) {
     bootdata_t* bd = image;
-    size_t hsz, flen, klen;
+    size_t flen, klen;
     uint64_t entry;
 
-    if (bd->flags & BOOTDATA_FLAG_EXTRA) {
-        hsz = sizeof(bootdata_t) + sizeof(bootextra_t);
-        zircon_kernel2_t* kernel2 = image;
-        if ((sz < sizeof(zircon_kernel2_t)) ||
-            (kernel2->hdr_kernel.type != BOOTDATA_KERNEL) ||
-            ((kernel2->hdr_kernel.flags & BOOTDATA_FLAG_EXTRA) == 0)) {
-            printf("boot: invalid zircon kernel header\n");
-            return -1;
-        }
-        flen = BOOTDATA_ALIGN(kernel2->hdr_file.length);
-        klen = BOOTDATA_ALIGN(kernel2->hdr_kernel.length);
-        entry = kernel2->data_kernel.entry64;
-    } else {
-        hsz = sizeof(bootdata_t);
-        zircon_kernel_t* kernel = image;
-        if ((sz < sizeof(zircon_kernel_t)) ||
-            (kernel->hdr_kernel.type != BOOTDATA_KERNEL)) {
-            printf("boot: invalid zircon kernel header\n");
-            return -1;
-        }
-        flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
-        klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
-        entry = kernel->data_kernel.entry64;
+    if (!(bd->flags & BOOTDATA_FLAG_V2)) {
+        printf("boot: v1 bootdata kernel no longer supported\n");
+        return -1;
     }
-
-    if (flen > (sz - hsz)) {
+    zircon_kernel_t* kernel = image;
+    if ((sz < sizeof(zircon_kernel_t)) ||
+        (kernel->hdr_kernel.type != BOOTDATA_KERNEL) ||
+        ((kernel->hdr_kernel.flags & BOOTDATA_FLAG_V2) == 0)) {
+        printf("boot: invalid zircon kernel header\n");
+        return -1;
+    }
+    flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
+    klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
+    entry = kernel->data_kernel.entry64;
+    if (flen > (sz - sizeof(bootdata_t))) {
         printf("boot: invalid zircon kernel header (bad flen)\n");
         return -1;
     }
 
-    if (klen > (sz - (hsz * 2))) {
+    if (klen > (sz - (sizeof(bootdata_t) * 2))) {
         printf("boot: invalid zircon kernel header (bad klen)\n");
         return -1;
     }
     if (_entry) {
         *_entry = entry;
     }
-    if (_hsz) {
-        *_hsz = hsz;
+    if (_flen) {
         *_flen = flen;
         *_klen = klen;
     }
@@ -148,30 +119,23 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     efi_boot_services* bs = sys->BootServices;
     uint64_t entry;
 
-    if (header_check(image, isz, &entry, NULL, NULL, NULL)) {
+    if (header_check(image, isz, &entry, NULL, NULL)) {
         return -1;
     }
-    if ((ramdisk == NULL) || (rsz < (sizeof(bootdata_t) + sizeof(bootextra_t)))) {
+    if ((ramdisk == NULL) || (rsz < sizeof(bootdata_t))) {
         printf("boot: ramdisk missing or too small\n");
         return -1;
     }
 
     bootdata_t* hdr0 = ramdisk;
     if ((hdr0->type != BOOTDATA_CONTAINER) ||
-        (hdr0->extra != BOOTDATA_MAGIC)) {
+        (hdr0->extra != BOOTDATA_MAGIC) ||
+        !(hdr0->flags & BOOTDATA_FLAG_V2)) {
         printf("boot: ramdisk has invalid bootdata header\n");
         return -1;
     }
 
-    // If the ramdisk container header is a new/large header,
-    // generate all our prepended headers in the same style...
-    size_t hsz = sizeof(bootdata_t);
-    if (hdr0->flags & BOOTDATA_FLAG_EXTRA) {
-        with_extra = true;
-        hsz += sizeof(bootextra_t);
-    }
-
-    if ((hdr0->length > (rsz - hsz))) {
+    if ((hdr0->length > (rsz - sizeof(bootdata_t)))) {
         printf("boot: ramdisk has invalid bootdata length\n");
         return -1;
     }
@@ -187,13 +151,13 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     hdr.type = BOOTDATA_CONTAINER;
     hdr.length = hdr0->length + FRONT_BYTES;
     hdr.extra = BOOTDATA_MAGIC;
-    hdr.flags = with_extra ? BOOTDATA_FLAG_EXTRA : 0;
+    hdr.flags = BOOTDATA_FLAG_V2;
+    hdr.reserved0 = 0;
+    hdr.reserved1 = 0;
+    hdr.magic = BOOTITEM_MAGIC;
+    hdr.crc32 = BOOTITEM_NO_CRC32;
     memcpy(bptr, &hdr, sizeof(hdr));
     bptr += sizeof(hdr);
-    if (with_extra) {
-        memcpy(bptr, &default_extra, sizeof(default_extra));
-        bptr += sizeof(default_extra);
-    }
 
     // pass kernel commandline
     hdr.type = BOOTDATA_CMDLINE;
@@ -309,15 +273,13 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     }
 
     // fill the remaining gap between pre-data and ramdisk image
-    if ((blen < hsz) || (blen & 7)) {
+    if ((blen < sizeof(hdr)) || (blen & 7)) {
         goto fail;
     }
     hdr.type = BOOTDATA_IGNORE;
-    hdr.length = blen - hsz;
+    hdr.length = blen - sizeof(hdr);
+    hdr.flags = BOOTDATA_FLAG_V2;
     memcpy(bptr, &hdr, sizeof(hdr));
-    if (with_extra) {
-        memcpy(bptr + sizeof(hdr), &default_extra, sizeof(default_extra));
-    }
 
     // jump to the kernel
     start_zircon(entry, ramdisk - FRONT_BYTES);
@@ -332,14 +294,14 @@ static char cmdline[CMDLINE_MAX];
 int zedboot(efi_handle img, efi_system_table* sys,
             void* image, size_t sz) {
 
-    size_t hsz, flen, klen;
-    if (header_check(image, sz, NULL, &hsz, &flen, &klen)) {
+    size_t flen, klen;
+    if (header_check(image, sz, NULL, &flen, &klen)) {
         return -1;
     }
 
     // ramdisk portion is file - headers - kernel len
-    uint32_t rlen = flen - hsz - klen;
-    uint32_t roff = (hsz * 2) + klen;
+    uint32_t rlen = flen - sizeof(bootdata_t) - klen;
+    uint32_t roff = (sizeof(bootdata_t) * 2) + klen;
     if (rlen == 0) {
         printf("zedboot: no ramdisk?!\n");
         return -1;
@@ -347,7 +309,7 @@ int zedboot(efi_handle img, efi_system_table* sys,
 
     // allocate space for the ramdisk
     efi_boot_services* bs = sys->BootServices;
-    size_t rsz = rlen + hsz + FRONT_BYTES;
+    size_t rsz = rlen + sizeof(bootdata_t) + FRONT_BYTES;
     size_t pages = BYTES_TO_PAGES(rsz);
     void* ramdisk = NULL;
     efi_status r = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages,
@@ -362,26 +324,21 @@ int zedboot(efi_handle img, efi_system_table* sys,
     hdr->type = BOOTDATA_CONTAINER;
     hdr->length = rlen;
     hdr->extra = BOOTDATA_MAGIC;
-    hdr->flags = 0;
-    if (hsz != sizeof(bootdata_t)) {
-        hdr->flags |= BOOTDATA_FLAG_EXTRA;
-        memcpy(hdr + 1, &default_extra, sizeof(default_extra));
-    }
-    memcpy(ramdisk + hsz, image + roff, rlen);
-    rlen += hsz;
+    hdr->flags = BOOTDATA_FLAG_V2;
+    hdr->reserved0 = 0;
+    hdr->reserved1 = 0;
+    hdr->magic = BOOTITEM_MAGIC;
+    hdr->crc32 = BOOTITEM_NO_CRC32;
+    memcpy(ramdisk + sizeof(bootdata_t), image + roff, rlen);
+    rlen += sizeof(bootdata_t);
 
     printf("ramdisk @ %p\n", ramdisk);
 
     size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
 
     // shrink original image header to include only the kernel
-    if (hsz == sizeof(bootdata_t)) {
-        zircon_kernel_t* kernel = image;
-        kernel->hdr_file.length = hsz + klen;
-    } else {
-        zircon_kernel2_t* kernel2 = image;
-        kernel2->hdr_file.length = hsz + klen;
-    }
+    zircon_kernel_t* kernel = image;
+    kernel->hdr_file.length = sizeof(bootdata_t) + klen;
 
     return boot_zircon(img, sys, image, roff, ramdisk, rlen, cmdline, csz);
 }

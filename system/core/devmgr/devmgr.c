@@ -470,22 +470,18 @@ static void devmgr_import_bootdata(zx_handle_t vmo) {
         printf("devmgr: bootdata item does not contain bootdata\n");
         return;
     }
+    if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
+        printf("devmgr: bootdata v1 not supported\n");
+    }
     size_t len = bootdata.length;
     size_t off = sizeof(bootdata);
-    if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
-        off += sizeof(bootextra_t);
-    }
 
     while (len > sizeof(bootdata)) {
         zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata), &actual);
         if ((status < 0) || (actual != sizeof(bootdata))) {
             break;
         }
-        size_t hdrsz = sizeof(bootdata_t);
-        if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
-            hdrsz += sizeof(bootextra_t);
-        }
-        size_t itemlen = BOOTDATA_ALIGN(hdrsz + bootdata.length);
+        size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
         if (itemlen > len) {
             printf("devmgr: bootdata item too large (%zd > %zd)\n", itemlen, len);
             break;
@@ -495,7 +491,7 @@ static void devmgr_import_bootdata(zx_handle_t vmo) {
             printf("devmgr: unexpected bootdata container header\n");
             return;
         case BOOTDATA_PLATFORM_ID:
-            devmgr_set_platform_id(vmo, off + hdrsz, itemlen);
+            devmgr_set_platform_id(vmo, off + sizeof(bootdata_t), itemlen);
             break;
         default:
             break;

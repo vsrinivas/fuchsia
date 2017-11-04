@@ -47,7 +47,8 @@ static bool is_bootdata(const bootdata_t* container) {
     return container->type == BOOTDATA_CONTAINER &&
            container->length > sizeof(bootdata_t) &&
            container->extra == BOOTDATA_MAGIC &&
-           container->flags & BOOTDATA_FLAG_EXTRA;
+           container->flags & BOOTDATA_FLAG_V2 &&
+           container->magic == BOOTITEM_MAGIC;
 }
 
 static zx_status_t load_zircon(const int fd, const uintptr_t addr, const uintptr_t first_page,
@@ -82,6 +83,12 @@ static zx_status_t load_cmdline(const char* cmdline, const uintptr_t addr,
     bootdata_t* cmdline_hdr = reinterpret_cast<bootdata_t*>(addr + data_off);
     cmdline_hdr->type = BOOTDATA_CMDLINE;
     cmdline_hdr->length = cmdline_len & UINT32_MAX;
+    cmdline_hdr->extra = 0;
+    cmdline_hdr->flags = BOOTDATA_FLAG_V2;
+    cmdline_hdr->reserved0 = 0;
+    cmdline_hdr->reserved1 = 0;
+    cmdline_hdr->magic = BOOTITEM_MAGIC;
+    cmdline_hdr->crc32 = BOOTITEM_NO_CRC32;
     memcpy(cmdline_hdr + 1, cmdline, cmdline_len);
 
     bootdata_hdr->length += BOOTDATA_ALIGN(cmdline_hdr->length) +
@@ -99,10 +106,6 @@ static zx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
     if (!is_bootdata(&ramdisk_hdr)) {
         fprintf(stderr, "Invalid BOOTFS container\n");
         return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-    if (lseek(fd, sizeof(bootextra_t), SEEK_CUR) < 0) {
-        fprintf(stderr, "Failed to skip BOOTFS extra header\n");
-        return ZX_ERR_IO;
     }
 
     bootdata_t* bootdata_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
@@ -160,7 +163,7 @@ static zx_status_t create_bootdata(const uintptr_t addr, const size_t size,
 
 static zx_status_t is_zircon(const size_t size, const uintptr_t first_page, uintptr_t* guest_ip,
                              uintptr_t* kernel_off, uintptr_t* kernel_len) {
-    zircon_kernel2_t* kernel_header = reinterpret_cast<zircon_kernel2_t*>(first_page);
+    zircon_kernel_t* kernel_header = reinterpret_cast<zircon_kernel_t*>(first_page);
     if (is_bootdata(&kernel_header->hdr_file)) {
         if (kernel_header->hdr_kernel.type != BOOTDATA_KERNEL) {
             fprintf(stderr, "Invalid Zircon kernel header\n");
@@ -169,7 +172,7 @@ static zx_status_t is_zircon(const size_t size, const uintptr_t first_page, uint
         *guest_ip = kernel_header->data_kernel.entry64;
         *kernel_off = kKernelOffset;
         *kernel_len = BOOTDATA_ALIGN(kernel_header->hdr_kernel.length) +
-                      __offsetof(zircon_kernel2_t, data_kernel);
+                      __offsetof(zircon_kernel_t, data_kernel);
         return ZX_OK;
     }
 

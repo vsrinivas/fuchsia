@@ -123,23 +123,20 @@ static void setup_bootfs(void) {
             printf("devmgr: bootdata item does not contain bootdata\n");
             goto done;
         }
+        if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
+            printf("devmgr: bootdata v1 no longer supported\n");
+            goto done;
+        }
 
         size_t len = bootdata.length;
         size_t off = sizeof(bootdata);
-        if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
-            off += sizeof(bootextra_t);
-        }
 
         while (len > sizeof(bootdata)) {
             zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata), &actual);
             if ((status < 0) || (actual != sizeof(bootdata))) {
                 break;
             }
-            size_t hdrsz = sizeof(bootdata_t);
-            if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
-                hdrsz += sizeof(bootextra_t);
-            }
-            size_t itemlen = BOOTDATA_ALIGN(hdrsz + bootdata.length);
+            size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
             if (itemlen > len) {
                 printf("devmgr: bootdata item too large (%zd > %zd)\n", itemlen, len);
                 break;
@@ -156,7 +153,7 @@ static void setup_bootfs(void) {
                 const char* errmsg;
                 zx_handle_t bootfs_vmo;
                 status = decompress_bootdata(zx_vmar_root_self(), vmo,
-                                             off, bootdata.length + hdrsz,
+                                             off, bootdata.length + sizeof(bootdata_t),
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
                     printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
@@ -166,11 +163,11 @@ static void setup_bootfs(void) {
                 break;
             }
             case BOOTDATA_LAST_CRASHLOG:
-                setup_last_crashlog(vmo, off + hdrsz, bootdata.length);
+                setup_last_crashlog(vmo, off + sizeof(bootdata_t), bootdata.length);
                 break;
 #ifndef WITH_FSHOST
             case BOOTDATA_PLATFORM_ID: {
-                devmgr_set_platform_id(vmo, off + hdrsz, itemlen);
+                devmgr_set_platform_id(vmo, off + sizeof(bootdata_t), itemlen);
                 break;
             }
 #endif

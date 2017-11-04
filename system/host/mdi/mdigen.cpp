@@ -61,14 +61,22 @@ static bool run(std::vector<std::string>& in_paths, const char* out_path,
         header.type = BOOTDATA_CONTAINER;
         header.length = total_len - sizeof(header);
         header.extra = BOOTDATA_MAGIC;
-        header.flags = 0;
+        header.flags = BOOTDATA_FLAG_V2;
+        header.reserved0 = 0;
+        header.reserved1 = 0;
+        header.magic = BOOTITEM_MAGIC;
+        header.crc32 = BOOTITEM_NO_CRC32;
         out_file.write((const char *)&header, sizeof(header));
 
         // MDI header around the MDI data
         header.type = BOOTDATA_MDI;
         header.length = total_len - 2 * sizeof(header);
         header.extra = 0;
-        header.flags = 0;
+        header.flags = BOOTDATA_FLAG_V2;
+        header.reserved0 = 0;
+        header.reserved1 = 0;
+        header.magic = BOOTITEM_MAGIC;
+        header.crc32 = BOOTITEM_NO_CRC32;
         out_file.write((const char *)&header, sizeof(header));
     }
 

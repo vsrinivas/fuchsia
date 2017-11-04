@@ -425,7 +425,7 @@ static void platform_mdi_init(const bootdata_t* section) {
     pdev_init(&kernel_drivers);
 }
 
-static uint32_t process_bootsection(bootdata_t* section, size_t hsz) {
+static uint32_t process_bootsection(bootdata_t* section) {
     switch(section->type) {
     case BOOTDATA_MDI:
         platform_mdi_init(section);
@@ -434,7 +434,7 @@ static uint32_t process_bootsection(bootdata_t* section, size_t hsz) {
         if (section->length < 1) {
             break;
         }
-        char* contents = reinterpret_cast<char*>(section) + hsz;
+        char* contents = reinterpret_cast<char*>(section) + sizeof(bootdata_t);
         contents[section->length - 1] = '\0';
         cmdline_append(contents);
         break;
@@ -460,8 +460,8 @@ static void process_bootdata(bootdata_t* root) {
     size_t offset = sizeof(bootdata_t);
     const size_t length = (root->length);
 
-    if (root->flags & BOOTDATA_FLAG_EXTRA) {
-        offset += sizeof(bootextra_t);
+    if (!(root->flags & BOOTDATA_FLAG_V2)) {
+        printf("bootdata: v1 no longer supported\n");
     }
 
     while (offset < length) {
@@ -469,17 +469,12 @@ static void process_bootdata(bootdata_t* root) {
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
 
-        size_t hsz = sizeof(bootdata_t);
-        if (section->flags & BOOTDATA_FLAG_EXTRA) {
-            hsz += sizeof(bootextra_t);
-        }
-
-        const uint32_t type = process_bootsection(section, hsz);
+        const uint32_t type = process_bootsection(section);
         if (BOOTDATA_MDI == type) {
             mdi_found = true;
         }
 
-        offset += BOOTDATA_ALIGN(hsz + section->length);
+        offset += BOOTDATA_ALIGN(sizeof(bootdata_t) + section->length);
     }
 
     if (!mdi_found) {

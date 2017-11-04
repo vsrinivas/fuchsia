@@ -33,18 +33,12 @@ zx_status_t mdi_init(const void* mdi_data, size_t length, mdi_node_ref_t* out_re
         xprintf("%s: not a MDI bootdata header\n", __FUNCTION__);
         return ZX_ERR_INVALID_ARGS;
     }
+    if (!(header->flags & BOOTDATA_FLAG_V2)) {
+        xprintf("%s: v1 bootdata no longer supported\n", __FUNCTION__);
+        return ZX_ERR_INVALID_ARGS;
+    }
     mdi_data += sizeof(bootdata_t);
     length -= sizeof(bootdata_t);
-
-    // Adjust for extended header if present
-    if (header->flags & BOOTDATA_FLAG_EXTRA) {
-        if (length < sizeof(bootextra_t)) {
-            xprintf("%s: bad bootextra length\n", __FUNCTION__);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        mdi_data += sizeof(bootextra_t);
-        length -= sizeof(bootextra_t);
-    }
 
     // Sanity check the length. Must be big enough to contain at least one node.
     if (length < header->length || header->length < sizeof(mdi_node_t)) {

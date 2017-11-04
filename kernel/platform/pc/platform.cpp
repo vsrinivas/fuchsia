@@ -144,22 +144,18 @@ extern "C" void boot_alloc_reserve(uintptr_t phys, size_t _len);
 
 static void process_bootdata(bootdata_t* hdr, uintptr_t phys, bool verify) {
     if ((hdr->type != BOOTDATA_CONTAINER) ||
-        (hdr->extra != BOOTDATA_MAGIC)) {
+        (hdr->extra != BOOTDATA_MAGIC) ||
+        !(hdr->flags & BOOTDATA_FLAG_V2)) {
         printf("bootdata: invalid %08x %08x %08x %08x\n",
                hdr->type, hdr->length, hdr->extra, hdr->flags);
         return;
     }
 
-    size_t hsz = sizeof(bootdata_t);
-    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
-        hsz += sizeof(bootextra_t);
-    }
-
-    size_t total_len = hdr->length + hsz;
+    size_t total_len = hdr->length + sizeof(bootdata_t);
 
     printf("bootdata: @ %p (%zu bytes)\n", hdr, total_len);
 
-    bootdata_t* bd = reinterpret_cast<bootdata_t*>(reinterpret_cast<char*>(hdr) + hsz);
+    bootdata_t* bd = hdr + 1;
 
     size_t remain = hdr->length;
     while (remain > sizeof(bootdata_t)) {
@@ -179,19 +175,9 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys, bool verify) {
                bd, bd->type, tag, bd->length, bd->extra, bd->flags);
 #endif
 
-        // check for extra header and process if it exists
-        if (bd->flags & BOOTDATA_FLAG_EXTRA) {
-            if (remain < sizeof(bootextra_t)) {
-                printf("bootdata: truncated header\n");
-                break;
-            }
-            bootextra_t* extra = reinterpret_cast<bootextra_t*>(item);
-            item += sizeof(bootextra_t);
-            remain -= sizeof(bootextra_t);
-            if (extra->magic != BOOTITEM_MAGIC) {
-                printf("bootdata: bad magic\n");
-                break;
-            }
+        if (hdr->magic != BOOTITEM_MAGIC) {
+            printf("bootdata: bad magic\n");
+            break;
         }
 
         size_t advance = BOOTDATA_ALIGN(bd->length);
@@ -201,18 +187,12 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys, bool verify) {
         }
 #if DEBUG_BOOT_DATA
         if (verify && (bd->flags & BOOTDATA_FLAG_CRC32)) {
-            if (!(bd->flags & BOOTDATA_FLAG_EXTRA)) {
-                printf("bootdata: crc flag set but no extra data!\n");
-                break;
-            }
-            bootextra_t* extra = reinterpret_cast<bootextra_t*>(item - sizeof(bootextra_t));
             uint32_t crc = 0;
-            uint32_t tmp = extra->crc32;
-            extra->crc32 = 0;
+            uint32_t tmp = hdr->crc32;
+            hdr->crc32 = 0;
             crc = crc32(crc, reinterpret_cast<uint8_t*>(bd), sizeof(bootdata_t));
-            crc = crc32(crc, reinterpret_cast<uint8_t*>(extra), sizeof(bootextra_t));
             crc = crc32(crc, reinterpret_cast<uint8_t*>(item), bd->length);
-            extra->crc32 = tmp;
+            hdr->crc32 = tmp;
             printf("bootdata: crc %08x, computed %08x: %s\n", tmp, crc,
                    (tmp == crc) ? "OKAY" : "FAIL");
         }
