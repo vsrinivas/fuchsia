@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "wlan.h"
 
+#include <fbl/limits.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/wlan.h>
@@ -203,6 +204,12 @@ void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_r
     if (status != ZX_OK) { warnf("could not queue inbound packet err=%d\n", status); }
 }
 
+void Device::WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
+    // TODO(tkilbourn): free memory and complete the ethernet tx (if necessary). For now, we aren't
+    // doing any async transmits in the wlan drivers, so this method shouldn't be called yet.
+    ZX_PANIC("not implemented yet!");
+}
+
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     ZX_DEBUG_ASSERT(timer != nullptr);
     ZX_DEBUG_ASSERT(timer->get() == nullptr);
@@ -223,8 +230,27 @@ zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
 }
 
 zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
-    wlanmac_proxy_.Tx(0u, packet->data(), packet->len());
-    return ZX_OK;
+    ZX_DEBUG_ASSERT(packet->len() <= fbl::numeric_limits<uint16_t>::max());
+    ethmac_netbuf_t netbuf = {
+        .data = packet->mut_data(),
+        .len = static_cast<uint16_t>(packet->len()),
+    };
+    wlan_tx_packet_t pkt = {
+        .packet_head = &netbuf
+    };
+    if (packet->has_ext_data()) {
+        pkt.packet_tail = packet->ext_data();
+        pkt.tail_offset = packet->ext_offset();
+    }
+    if (packet->has_ctrl_data<wlan_tx_info_t>()) {
+        std::memcpy(&pkt.info, packet->ctrl_data<wlan_tx_info_t>(), sizeof(pkt.info));
+    }
+    zx_status_t status = wlanmac_proxy_.QueueTx(0u, &pkt);
+    // TODO(tkilbourn): remove this once we implement WlanmacCompleteTx and allow wlanmac drivers to
+    // complete transmits asynchronously.
+    ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
+
+    return status;
 }
 
 // Disable thread safety analysis, since these methods are called through an interface from an

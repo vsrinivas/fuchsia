@@ -36,7 +36,7 @@ using WlanBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
 class Device : public WlanBaseDevice,
                public ddk::EthmacProtocol<Device>,
-               public ddk::WlanmacIfc<Device>,
+               public ddk::WlanmacIfc<Device, true>,
                public DeviceInterface {
    public:
     Device(zx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
@@ -53,6 +53,7 @@ class Device : public WlanBaseDevice,
     // ddk::WlanmacIfc methods
     void WlanmacStatus(uint32_t status);
     void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
+    void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status);
 
     // ddk::EthmacProtocol methods
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);

@@ -16,6 +16,8 @@
 #include <cstdint>
 #include <cstring>
 
+typedef struct ethmac_netbuf ethmac_netbuf_t;
+
 namespace wlan {
 
 // A Buffer is a type that points at bytes and knows how big it is. For now, it can also carry
@@ -103,6 +105,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     Packet(fbl::unique_ptr<Buffer> buffer, size_t len);
     size_t Capacity() const { return buffer_->capacity(); }
     void clear() {
+        ZX_DEBUG_ASSERT(!has_ext_data());
         buffer_->clear(len_);
         ctrl_len_ = 0;
     }
@@ -148,11 +151,22 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 
     zx_status_t CopyFrom(const void* src, size_t len, size_t offset);
 
+    bool has_ext_data() const { return ext_data_ != nullptr; }
+    void set_ext_data(ethmac_netbuf_t* netbuf, uint16_t offset) {
+        ZX_DEBUG_ASSERT(!has_ext_data());
+        ext_data_ = netbuf;
+        ext_offset_ = offset;
+    }
+    ethmac_netbuf_t* ext_data() const { return ext_data_; }
+    uint16_t ext_offset() const { return ext_offset_; }
+
    private:
     fbl::unique_ptr<Buffer> buffer_;
     size_t len_ = 0;
     size_t ctrl_len_ = 0;
     Peer peer_ = Peer::kUnknown;
+    ethmac_netbuf_t* ext_data_ = nullptr;
+    uint16_t ext_offset_ = 0;
 };
 
 class PacketQueue {
