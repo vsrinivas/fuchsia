@@ -18,12 +18,30 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf '%s: [-c] [-v] [-V] [-A] [-H] [-p project] [-t target] [-o outdir]\n' "$0"
+  printf '%s: [-c] [-v] [-V] [-A] [-H] [-p projects] [-t target] [-o outdir]\n' "$0"
   printf 'Note: Passing extra arguments to make is not supported.\n'
 }
 
+make_zircon() {
+  local v="$1" project="$2" outdir="$3" asan_zircon="$4" asan_ulib="$5"
+  local zircon_buildroot="${outdir}/build-zircon"
+
+  # build zircon (including its portion of the sysroot) for the target architecture
+  make -j ${JOBS} V=${v} \
+    ${zircon_build_type_flags:-} ${project} \
+    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
+    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_zircon} \
+    BUILDDIR_SUFFIX=
+  # Build the alternate shared libraries (ASan).
+  make -j ${JOBS} V=${V} \
+    ${zircon_build_type_flags:-} ${project} \
+    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
+    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_ulib} \
+    ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
+}
+
 build() {
-  local project="$1" outdir="$2" clean="$3" verbose="$4" asan="$5" host_asan="$6"
+  local projects="$1" outdir="$2" clean="$3" verbose="$4" asan="$5" host_asan="$6"
   local zircon_buildroot="${outdir}/build-zircon"
 
   if [[ "${clean}" = "true" ]]; then
@@ -50,25 +68,23 @@ build() {
   make -j ${JOBS} V=${V} \
     BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon \
     HOST_USE_ASAN="${host_asan}" tools
-  # build zircon (including its portion of the sysroot) for the target architecture
-  make -j ${JOBS} V=${V} \
-    ${zircon_build_type_flags:-} ${project} \
-    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
-    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_zircon} \
-    BUILDDIR_SUFFIX=
-  # Build the alternate shared libraries (ASan).
-  make -j ${JOBS} V=${V} \
-    ${zircon_build_type_flags:-} ${project} \
-    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
-    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_ulib} \
-    ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
+  # Check if we are building any arm64 projects and build for qemu-arm64 if so.
+  # The later build steps will use the sysroot from the qemu-arm64 build.
+  if [[ "${projects}" == *"arm64"* ]]; then
+      make_zircon "${V}" "zircon-qemu-arm64" "${outdir}" "${asan_zircon}" "${asan_ulib}"
+  fi
+  IFS=','
+  for project in $projects; do
+      if [[ "${project}" != "zircon-qemu-arm64" ]]; then
+          make_zircon "${V}" "${project}" "${outdir}" "${asan_zircon}" "${asan_ulib}"
+      fi
+  done
   popd > /dev/null
 }
 
 declare ASAN="${ASAN:-false}"
 declare CLEAN="${CLEAN:-false}"
 declare HOST_ASAN="${HOST_ASAN:-false}"
-declare PROJECT="${PROJECT:-zircon-pc-x86-64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare VERBOSE="${VERBOSE:-0}"
 
@@ -79,22 +95,22 @@ while getopts "AcHht:p:o:vV" opt; do
     H) HOST_ASAN="true" ;;
     h) usage ; exit 0 ;;
     o) OUTDIR="${OPTARG}" ;;
-    t) case "${OPTARG}" in
-          "x86_64"|"x86-64") PROJECT="zircon-pc-x86-64" ;;
-          "aarch64"|"arm64") PROJECT="zircon-qemu-arm64" ;;
-          "gauss") PROJECT="zircon-gauss-arm64" ;;
-          "odroidc2") PROJECT="zircon-odroidc2-arm64" ;;
-          "hikey960") PROJECT="zircon-hikey960-arm64" ;;
-          *) echo "unknown target '${OPTARG}'" 1>&2 && exit 1;;
-        esac
-        ;;
-    p) PROJECT="${OPTARG}" ;;
+    t) TARGET="${OPTARG}" ;;
+    p) PROJECTS="${OPTARG}" ;;
     v) VERBOSE="1" ;;
     V) VERBOSE="2" ;;
     *) usage 1>&2 ; exit 1 ;;
   esac
 done
 
-readonly ASAN CLEAN HOST_ASAN PROJECT OUTDIR VERBOSE
+if [[ "${PROJECTS}" = "" ]]; then
+    if [[ "${TARGET}" != "" ]]; then
+        PROJECTS="${TARGET}"
+    else
+        PROJECTS="zircon-pc-x86-64" # Default
+    fi
+fi
 
-build "${PROJECT}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}" "${HOST_ASAN}"
+readonly ASAN CLEAN HOST_ASAN PROJECTS OUTDIR VERBOSE
+
+build "${PROJECTS}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}" "${HOST_ASAN}"
