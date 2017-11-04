@@ -121,7 +121,7 @@ uint8_t RealtekStream::ComputeGainSteps(const CommonCaps& caps, float target_gai
 
     ZX_DEBUG_ASSERT(caps.gain_step > 0);
     float tmp = ((target_gain - caps.min_gain) + (caps.gain_step / 2)) / caps.gain_step;
-    ZX_DEBUG_ASSERT(static_cast<uint32_t>(tmp) <= caps.amp_caps.num_steps());
+    ZX_DEBUG_ASSERT(static_cast<uint32_t>(tmp) < caps.amp_caps.num_steps());
 
     return static_cast<uint8_t>(tmp);
 }
@@ -724,5 +724,5 @@ zx_status_t RealtekStream::ProcessConverterSampleFormats(const Command& cmd,
 #undef THUNK
 
 }  // namespace codecs
-}  // namespace audio
 }  // namespace intel_hda
+}  // namespace audio

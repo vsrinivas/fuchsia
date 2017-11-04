@@ -47,7 +47,7 @@ zx_status_t QemuStream::OnActivateLocked() {
     range.min_channels = 1;
     range.max_channels = 2;
     range.min_frames_per_second = 16000;
-    range.min_frames_per_second = 96000;
+    range.max_frames_per_second = 96000;
     range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 
     fbl::AllocChecker ac;
@@ -79,5 +79,5 @@ zx_status_t QemuStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
 }
 
 }  // namespace codecs
-}  // namespace audio
 }  // namespace intel_hda
+}  // namespace audio
