@@ -18,7 +18,7 @@ namespace {
 #define get_this() reinterpret_cast<uintptr_t>(this)
 
 class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
-                       public ddk::WlanmacIfc<TestWlanmacIfc, true> {
+                       public ddk::WlanmacIfc<TestWlanmacIfc> {
   public:
     TestWlanmacIfc() : ddk::Device<TestWlanmacIfc>(nullptr) {
         this_ = get_this();
@@ -67,7 +67,7 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
 };
 
 class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>,
-                            public ddk::WlanmacProtocol<TestWlanmacProtocol, true> {
+                            public ddk::WlanmacProtocol<TestWlanmacProtocol> {
   public:
     TestWlanmacProtocol()
       : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {

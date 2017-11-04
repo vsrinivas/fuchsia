@@ -134,7 +134,7 @@
 
 namespace ddk {
 
-template <typename D, bool HasCompleteTx=false>
+template <typename D, bool HasCompleteTx=true>
 class WlanmacIfc {
   public:
     WlanmacIfc() {
@@ -191,7 +191,7 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D, bool HasQueueTx=false>
+template <typename D, bool HasQueueTx=true>
 class WlanmacProtocol : public internal::base_protocol {
   public:
     WlanmacProtocol() {
