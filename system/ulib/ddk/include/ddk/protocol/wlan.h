@@ -24,15 +24,6 @@ enum {
     WLAN_RX_INFO_VALID_RCPI = (1 << 5),
     WLAN_RX_INFO_VALID_SNR = (1 << 6),
     // Bits 7-31 reserved
-
-    // Deprecated enum names
-    WLAN_RX_INFO_PHY_PRESENT = (1 << 0),
-    WLAN_RX_INFO_DATA_RATE_PRESENT = (1 << 1),
-    WLAN_RX_INFO_CHAN_WIDTH_PRESENT = (1 << 2),
-    WLAN_RX_INFO_MOD_PRESENT = (1 << 3),
-    WLAN_RX_INFO_RSSI_PRESENT = (1 << 4),
-    WLAN_RX_INFO_RCPI_PRESENT = (1 << 5),
-    WLAN_RX_INFO_SNR_PRESENT = (1 << 6),
 };
 
 enum {
@@ -63,8 +54,6 @@ enum {
 };
 
 typedef struct wlan_rx_info {
-    // Deprecated field; use present_flags instead.
-    uint32_t flags;
     // Receive flags. These represent boolean flags as opposed to enums or value-based info which
     // are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
     uint32_t rx_flags;
@@ -83,8 +72,6 @@ typedef struct wlan_rx_info {
     // The modulation and coding scheme index of the device at the time of the operation. Depends
     // on the PHY format and channel width.
     uint8_t mcs;
-    // Deprecated field; use mcs instead.
-    uint8_t mod;
     // The RSSI measured by the device. No units.
     uint8_t rssi;
     // The RCPI (IEEE Std 802.11-2016, 17.3.10.7) measured by the device.
@@ -192,9 +179,6 @@ typedef struct wlanmac_protocol_ops {
     // Shut down a running wlanmac
     // Safe to call if the wlanmac is already stopped.
     void (*stop)(void* ctx);
-
-    // Queue the data for transmit (deprecated)
-    void (*tx)(void* ctx, uint32_t options, const void* data, size_t length);
 
     // Queue the data for transmit. Return status indicates disposition:
     //   ZX_ERR_SHOULD_WAIT: Packet is being transmitted
