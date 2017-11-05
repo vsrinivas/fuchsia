@@ -166,7 +166,7 @@ zx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
             return ZX_OK;
         }
     }
-    for (vmoid_t i = 0; i < last_id_; i++) {
+    for (vmoid_t i = VMOID_INVALID + 1; i < last_id_; i++) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
             last_id_ = static_cast<vmoid_t>(i + 1);
@@ -364,7 +364,7 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(block_protocol_t* proto) : proto_(proto), last_id_(0) {
+BlockServer::BlockServer(block_protocol_t* proto) : proto_(proto), last_id_(VMOID_INVALID + 1) {
     block_get_info(proto_, &info_);
 }
 

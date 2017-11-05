@@ -115,6 +115,10 @@ IOCTL_WRAPPER_OUT(ioctl_block_get_fifos, IOCTL_BLOCK_GET_FIFOS, zx_handle_t);
 
 typedef uint16_t vmoid_t;
 
+// Dummy vmoid value reserved for "invalid". Will never be allocated; can be
+// used as a local value for unallocated / freed ID.
+#define VMOID_INVALID 0
+
 // ssize_t ioctl_block_attach_vmo(int fd, zx_handle_t* in, vmoid_t* out_vmoid);
 IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, zx_handle_t, vmoid_t);
 
