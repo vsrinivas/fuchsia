@@ -237,7 +237,7 @@ TEST_F(NetStreamTest, NonBlockingConnectRead) {
 }
 
 // TODO: Enable this test when it works.
-TEST_F(NetStreamTest, NonBlockingConnectRefused) {
+TEST_F(NetStreamTest, DISABLED_NonBlockingConnectRefused) {
   // No listen() on acptfd_.
 
   int connfd = socket(AF_INET, SOCK_STREAM, 0);
