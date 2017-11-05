@@ -121,6 +121,7 @@ class EthmacIfc {
         internal::CheckEthmacIfc<D>();
         ifc_.status = Status;
         ifc_.recv = Recv;
+        ifc_.complete_tx = CompleteTx;
     }
 
     ethmac_ifc_t* ethmac_ifc() { return &ifc_; }
@@ -132,6 +133,10 @@ class EthmacIfc {
 
     static void Recv(void* cookie, void* data, size_t length, uint32_t flags) {
         static_cast<D*>(cookie)->EthmacRecv(data, length, flags);
+    }
+
+    static void CompleteTx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
+        static_cast<D*>(cookie)->EthmacCompleteTx(netbuf, status);
     }
 
     ethmac_ifc_t ifc_ = {};
@@ -150,8 +155,8 @@ class EthmacIfcProxy {
         ifc_->recv(cookie_, data, length, flags);
     }
 
-    void CompleteTx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
-        ifc_->complete_tx(cookie, netbuf, status);
+    void CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
+        ifc_->complete_tx(cookie_, netbuf, status);
     }
 
   private:

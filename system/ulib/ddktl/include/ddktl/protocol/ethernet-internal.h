@@ -19,6 +19,7 @@ namespace internal {
 
 DECLARE_HAS_MEMBER_FN(has_ethmac_status, EthmacStatus);
 DECLARE_HAS_MEMBER_FN(has_ethmac_recv, EthmacRecv);
+DECLARE_HAS_MEMBER_FN(has_ethmac_complete_tx, EthmacCompleteTx);
 
 template <typename D>
 constexpr void CheckEthmacIfc() {
@@ -37,6 +38,13 @@ constexpr void CheckEthmacIfc() {
                   "'void EthmacRecv(void*, size_t, uint32_t)', and be visible to "
                   "ddk::EthmacIfc<D> (either because they are public, or because of "
                   "friendship).");
+    static_assert(internal::has_ethmac_complete_tx<D>::value,
+                  "EthmacIfc subclasses must implement EthmacCompleteTx");
+    static_assert(fbl::is_same<decltype(&D::EthmacCompleteTx),
+                                void (D::*)(ethmac_netbuf_t*, zx_status_t)>::value,
+                  "EthmacCompleteTx must be a non-static member function with signature "
+                  "'void EthmacCompleteTx(ethmac_netbuf_t*, zx_status_t)', and be visible to "
+                  "ddk::EthmacIfc<D> (either because they are public, or because of friendship).");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ethmac_query, EthmacQuery);

@@ -36,12 +36,19 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
         recv_called_ = true;
     }
 
+    void EthmacCompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
+        complete_tx_this_ = get_this();
+        complete_tx_called_ = true;
+    }
+
     bool VerifyCalls() const {
         BEGIN_HELPER;
         EXPECT_EQ(this_, status_this_, "");
         EXPECT_EQ(this_, recv_this_, "");
+        EXPECT_EQ(this_, complete_tx_this_, "");
         EXPECT_TRUE(status_called_, "");
         EXPECT_TRUE(recv_called_, "");
+        EXPECT_TRUE(complete_tx_called_, "");
         END_HELPER;
     }
 
@@ -53,8 +60,10 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
     uintptr_t this_ = 0u;
     uintptr_t status_this_ = 0u;
     uintptr_t recv_this_ = 0u;
+    uintptr_t complete_tx_this_ = 0u;
     bool status_called_ = false;
     bool recv_called_ = false;
+    bool complete_tx_called_ = false;
 };
 
 class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>,
@@ -117,6 +126,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         // Use the provided proxy to test the ifc proxy.
         proxy_->Status(0);
         proxy_->Recv(nullptr, 0, 0);
+        proxy_->CompleteTx(nullptr, ZX_OK);
         return true;
     }
 
@@ -142,6 +152,7 @@ static bool test_ethmac_ifc() {
     auto ifc = dev.ethmac_ifc();
     ifc->status(&dev, 0);
     ifc->recv(&dev, nullptr, 0, 0);
+    ifc->complete_tx(&dev, nullptr, ZX_OK);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -156,6 +167,7 @@ static bool test_ethmac_ifc_proxy() {
 
     proxy.Status(0);
     proxy.Recv(nullptr, 0, 0);
+    proxy.CompleteTx(nullptr, ZX_OK);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
