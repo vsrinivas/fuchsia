@@ -9,7 +9,6 @@ package("rust-crates-tests") {
   system_image = true
 
   deps = [
-    "ddk-rs",
     "fdio",
     "fuchsia-vfs",
     "fuchsia-zircon",
@@ -17,7 +16,6 @@ package("rust-crates-tests") {
   ]
 
   tests = [
-    { name = "ddk_rs-lib-test" },
     { name = "fdio-lib-test" },
     { name = "fuchsia_vfs-lib-test" },
     { name = "fuchsia_zircon-lib-test" },
