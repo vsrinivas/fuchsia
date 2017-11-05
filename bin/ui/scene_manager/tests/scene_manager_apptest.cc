@@ -75,7 +75,7 @@ bool IsFenceSignalled(const zx::event& fence) {
   return signals & kFenceSignalled;
 }
 
-TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {
+TEST_F(SceneManagerTest, ReleaseFences) {
   // Tests creating a session, and calling Present with two release fences.
   // The release fences should be signalled after a subsequent Present.
   EXPECT_EQ(0u, engine()->GetSessionCount());
