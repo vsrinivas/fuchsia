@@ -77,12 +77,7 @@ static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent, void** cookie)
         return ZX_ERR_NO_MEMORY;
     }
 
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
-        free(gpio_test);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, &gpio_test->gpio) != ZX_OK) {
+    if (device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_test->gpio) != ZX_OK) {
         free(gpio_test);
         return ZX_ERR_NOT_SUPPORTED;
     }

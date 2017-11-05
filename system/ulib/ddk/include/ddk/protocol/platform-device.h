@@ -12,7 +12,6 @@
 __BEGIN_CDECLS;
 
 typedef struct {
-    zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* out);
     zx_status_t (*map_mmio)(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
                             size_t* out_size, zx_handle_t* out_handle);
 
@@ -23,12 +22,6 @@ typedef struct {
     platform_device_protocol_ops_t* ops;
     void* ctx;
 } platform_device_protocol_t;
-
-// Requests a given protocol from the platform bus implementation
-static inline zx_status_t pdev_get_protocol(platform_device_protocol_t* pdev, uint32_t proto_id,
-                                             void* out_proto) {
-    return pdev->ops->get_protocol(pdev->ctx, proto_id, out_proto);
-}
 
 // Maps an MMIO region based on information in the MDI
 // index is based on ordering of the device's mmio nodes in the MDI

@@ -291,31 +291,6 @@ static i2c_protocol_ops_t i2c_ops = {
     .get_channel_by_address = pdev_i2c_get_channel_by_address,
 };
 
-static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    switch (proto_id) {
-    case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        usb_mode_switch_protocol_t* proto = out;
-        proto->ctx = ctx;
-        proto->ops = &usb_mode_switch_ops;
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_GPIO: {
-        gpio_protocol_t* proto = out;
-        proto->ctx = ctx;
-        proto->ops = &gpio_ops;
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_I2C: {
-        i2c_protocol_t* proto = out;
-        proto->ctx = ctx;
-        proto->ops = &i2c_ops;
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
                                          void** vaddr, size_t* size, zx_handle_t* out_handle) {
     platform_dev_t* dev = ctx;
@@ -374,10 +349,40 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_hand
 }
 
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
-    .get_protocol = platform_dev_get_protocol,
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
 };
+
+static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_PLATFORM_DEV: {
+        platform_device_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &platform_dev_proto_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_USB_MODE_SWITCH: {
+        usb_mode_switch_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &usb_mode_switch_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_GPIO: {
+        gpio_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &gpio_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_I2C: {
+        i2c_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &i2c_ops;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
 
 static void platform_dev_release(void* ctx) {
     platform_dev_t* dev = ctx;
@@ -388,6 +393,7 @@ static void platform_dev_release(void* ctx) {
 
 static zx_protocol_device_t platform_dev_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = platform_dev_get_protocol,
     .release = platform_dev_release,
 };
 

@@ -401,7 +401,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
         goto fail;
     }
 
-    status = pdev_get_protocol(&dwc->pdev, ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
+    status = device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
     if (status != ZX_OK) {
         goto fail;
     }
