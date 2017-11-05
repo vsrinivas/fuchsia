@@ -35,6 +35,7 @@ class StrokeGroup final : public Resource {
 
   // Record the command to update the mesh.
   void UpdateMesh(escher::impl::CommandBuffer* command,
+                  escher::TimestampProfilerPtr profiler,
                   escher::BufferFactory* buffer_factory);
 
   const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
@@ -42,10 +43,12 @@ class StrokeGroup final : public Resource {
  private:
   // Record the command to merge the strokes to add.
   void MergeStrokes(escher::impl::CommandBuffer* command,
+                    escher::TimestampProfilerPtr profiler,
                     escher::BufferFactory* buffer_factory);
 
   // Record the command to re-tessellate the strokes.
   void ReTessellateStrokes(escher::impl::CommandBuffer* command,
+                           escher::TimestampProfilerPtr profiler,
                            escher::BufferFactory* buffer_factory);
 
   scenic_lib::ShapeNode shape_node_;

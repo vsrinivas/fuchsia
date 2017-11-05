@@ -6,6 +6,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/shape/mesh_builder.h"
+#include "lib/escher/util/trace_macros.h"
 
 namespace {
 
@@ -68,6 +69,9 @@ bool Stroke::SetPath(std::unique_ptr<StrokePath> path) {
   }
   index_count_ = vertex_count_ * 3;
 
+  // Prepare after division counts are done.
+  PrepareDivisionSegmentIndices();
+
   control_points_buffer_ = nullptr;
   re_params_buffer_ = nullptr;
   division_counts_buffer_ = nullptr;
@@ -75,7 +79,20 @@ bool Stroke::SetPath(std::unique_ptr<StrokePath> path) {
   return true;
 }
 
+void Stroke::PrepareDivisionSegmentIndices() {
+  TRACE_DURATION(
+      "gfx", "sketchy_service::Stroke::PrepareDivisionSegmentIndices");
+  division_segment_indices_.resize(division_count_);
+  for (uint32_t i = 0; i < division_counts_.size(); i++) {
+    auto begin =
+        division_segment_indices_.begin() + cumulative_division_counts_[i];
+    auto end = begin + division_counts_[i];
+    std::fill(begin, end, i);
+  }
+}
+
 void Stroke::TessellateAndMergeWithGpu(escher::impl::CommandBuffer* command,
+                                       escher::TimestampProfilerPtr profiler,
                                        escher::BufferFactory* buffer_factory,
                                        MeshBuffer* mesh_buffer) {
   if (path_->empty()) {
@@ -116,8 +133,12 @@ void Stroke::TessellateAndMergeWithGpu(escher::impl::CommandBuffer* command,
           command, buffer_factory, cumulative_division_counts_buffer_,
           cumulative_division_counts_.data(),
           cumulative_division_counts_.size() * sizeof(uint32_t)),
+      GetOrCreateStorageBuffer(
+          command, buffer_factory, division_segment_index_buffer_,
+          division_segment_indices_.data(),
+          division_segment_indices_.size() * sizeof(uint32_t)),
       vertex_buffer, index_buffer,
-      command, division_count_);
+      command, profiler, division_count_);
 
   // Dependency is pretty clear within the command buffer. The compute command
   // depends on the copy command for input. No further command depends on the
@@ -172,6 +193,8 @@ escher::BufferPtr Stroke::GetOrCreateStorageBuffer(
 void Stroke::TessellateAndMergeWithCpu(escher::impl::CommandBuffer* command,
                                        escher::BufferFactory* buffer_factory,
                                        MeshBuffer* mesh_buffer) {
+  TRACE_DURATION(
+      "gfx", "sketchy_service::Stroke::TessellateAndMergeWithCpu");
   if (path_->empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;

@@ -80,6 +80,14 @@ class CommandBuffer {
                   const BufferPtr& dst,
                   vk::BufferCopy region);
 
+  // Copy the specified region of |src| into |dst| after inserting a
+  // memory-barrier to use the memory on the same queue (i.e. the barrier's
+  // queue family indices are VK_QUEUE_FAMILY_IGNORED).
+  void CopyBufferAfterBarrier(const BufferPtr& src,
+                              const BufferPtr& dst,
+                              vk::BufferCopy region,
+                              vk::AccessFlags src_access_mask);
+
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
   void TransitionImageLayout(const ImagePtr& image,

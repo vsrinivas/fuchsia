@@ -18,6 +18,7 @@ const vk::BufferUsageFlags kVertexBufferUsageFlags =
 
 const vk::BufferUsageFlags kIndexBufferUsageFlags =
     vk::BufferUsageFlagBits::eIndexBuffer |
+    vk::BufferUsageFlagBits::eStorageBuffer |
     vk::BufferUsageFlagBits::eTransferSrc |
     vk::BufferUsageFlagBits::eTransferDst;
 
@@ -89,8 +90,9 @@ void Buffer::PreserveSize(escher::impl::CommandBuffer* command,
   if (new_capacity > capacity()) {
     auto expanded_escher_buffer =
         factory->NewBuffer(new_capacity, flags_, kMemoryPropertyFlags);
-    command->CopyBuffer(escher_buffer_, expanded_escher_buffer, {0, 0, size_});
-
+    command->CopyBufferAfterBarrier(
+        escher_buffer_, expanded_escher_buffer, {0, 0, size_},
+        vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderWrite);
     escher_buffer_ = std::move(expanded_escher_buffer);
     scenic_buffer_ = NewScenicBufferFromEscherBuffer(escher_buffer_, session_);
   }

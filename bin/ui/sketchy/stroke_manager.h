@@ -20,6 +20,7 @@ class StrokeManager {
   bool SetStrokePath(StrokePtr stroke, std::unique_ptr<StrokePath> path);
 
   void Update(escher::impl::CommandBuffer* command,
+              escher::TimestampProfilerPtr profiler,
               escher::BufferFactory* buffer_factory);
 
   StrokeTessellator* stroke_tessellator() { return &stroke_tessellator_; }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/stroke_manager.h"
+#include "lib/escher/profiling/timestamp_profiler.h"
 
 namespace sketchy_service {
 
@@ -33,11 +34,12 @@ bool StrokeManager::SetStrokePath(StrokePtr stroke,
 }
 
 void StrokeManager::Update(escher::impl::CommandBuffer* command,
+                           escher::TimestampProfilerPtr profiler,
                            escher::BufferFactory* buffer_factory) {
   while (!dirty_stroke_groups_.empty()) {
     const auto& stroke_group = *dirty_stroke_groups_.begin();
     dirty_stroke_groups_.erase(stroke_group);
-    stroke_group->UpdateMesh(command, buffer_factory);
+    stroke_group->UpdateMesh(command, profiler, buffer_factory);
   }
 }
 

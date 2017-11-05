@@ -155,6 +155,25 @@ void CommandBuffer::CopyBuffer(const BufferPtr& src,
   KeepAlive(dst);
 }
 
+void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src,
+                                           const BufferPtr& dst,
+                                           vk::BufferCopy region,
+                                           vk::AccessFlags src_access_mask) {
+  vk::BufferMemoryBarrier barrier;
+  barrier.srcAccessMask = src_access_mask;
+  barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer = dst->get();
+  barrier.offset = 0;
+  barrier.size = dst->size();
+  command_buffer_.pipelineBarrier(
+      vk::PipelineStageFlagBits::eTransfer,
+      vk::PipelineStageFlagBits::eTransfer,
+      vk::DependencyFlags(), 0, nullptr, 1, &barrier, 0, nullptr);
+  CopyBuffer(src, dst, region);
+}
+
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
                                           vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {

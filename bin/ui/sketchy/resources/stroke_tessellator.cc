@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/resources/stroke_tessellator.h"
+#include "lib/escher/profiling/timestamp_profiler.h"
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/texture.h"
 
@@ -55,23 +56,17 @@ layout(std430, binding = 4) buffer CumulativeDivisionCounts {
   uint cumulative_division_counts[];
 };
 
-layout(std430, binding = 5) buffer Vertices {
+layout(std430, binding = 5) buffer DivisionSegmentIndices {
+  uint division_segment_indices[];
+};
+
+layout(std430, binding = 6) buffer Vertices {
   Vertex vertices[];
 };
 
-layout(std430, binding = 6) buffer Indices {
+layout(std430, binding = 7) buffer Indices {
   uint indices[];
 };
-
-// TODO(MZ-269): Do binary search, along with other optimizations.
-uint FindSegmentIndex(uint division_idx) {
-  for (uint i = 1; i < segment_count; i++) {
-    if (cumulative_division_counts[i] > division_idx) {
-      return i - 1;
-    }
-  }
-  return segment_count - 1;
-}
 
 void EvaluatePointAndNormal(in Bezier2f bezier2f, in float t,
                             out vec2 point, out vec2 normal) {
@@ -106,7 +101,7 @@ void main() {
     return;
   }
 
-  uint segment_idx = FindSegmentIndex(division_idx);
+  uint segment_idx = division_segment_indices[division_idx];
   float division_idx_in_segment =
       division_idx - cumulative_division_counts[segment_idx];
   float t_before_re_param =
@@ -164,9 +159,11 @@ StrokeTessellator::StrokeTessellator(escher::Escher* escher)
                   vk::DescriptorType::eStorageBuffer,
                   // Binding 4: |cumulative_division_counts_buffer|
                   vk::DescriptorType::eStorageBuffer,
-                  // Binding 5: output vertex buffer
+                  // Binding 5: |division_segment_index_buffer|
                   vk::DescriptorType::eStorageBuffer,
-                  // Binding 6: output index buffer
+                  // Binding 6: output vertex buffer
+                  vk::DescriptorType::eStorageBuffer,
+                  // Binding 7: output index buffer
                   vk::DescriptorType::eStorageBuffer},
               /* push_constants_size= */ 0, kShaderCode) {}
 
@@ -176,10 +173,18 @@ void StrokeTessellator::Dispatch(
     escher::BufferPtr re_params_buffer,
     escher::BufferPtr division_counts_buffer,
     escher::BufferPtr cumulative_division_counts_buffer,
+    escher::BufferPtr division_segment_index_buffer,
     escher::BufferPtr vertex_buffer,
     escher::BufferPtr index_buffer,
     escher::impl::CommandBuffer* command,
+    const escher::TimestampProfilerPtr& profiler,
     uint32_t division_count) {
+  if (profiler) {
+    profiler->AddTimestamp(
+        command, vk::PipelineStageFlagBits::eBottomOfPipe,
+        "Before Tessellation");
+  }
+
   uint32_t group_count = (division_count + kLocalSize - 1) / kLocalSize;
   kernel_.Dispatch(
       std::vector<escher::TexturePtr>{},
@@ -188,11 +193,18 @@ void StrokeTessellator::Dispatch(
        std::move(re_params_buffer),
        std::move(division_counts_buffer),
        std::move(cumulative_division_counts_buffer),
+       std::move(division_segment_index_buffer),
        std::move(vertex_buffer),
        std::move(index_buffer)},
       command, group_count,
       /* group_count_y= */ 1, /* group_count_z= */ 1,
       /* push_constants= */ nullptr);
+
+  if (profiler) {
+    profiler->AddTimestamp(
+        command, vk::PipelineStageFlagBits::eBottomOfPipe,
+        "After Tessellation");
+  }
 }
 
 }  // namespace sketchy_service

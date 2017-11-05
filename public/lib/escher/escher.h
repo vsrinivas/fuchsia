@@ -84,16 +84,16 @@ class Escher : public MeshBuilderFactory {
     return transfer_command_buffer_pool_.get();
   }
 
+  // Check if GPU performance profiling is supported.
+  bool supports_timer_queries() const { return supports_timer_queries_; }
+  float timestamp_period() const { return timestamp_period_; }
+
  private:
   friend class Renderer;
 
   // Called by Renderer constructor and destructor, respectively.
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }
-
-  // Called by Renderer to support GPU performance profiling.
-  bool supports_timer_queries() const { return supports_timer_queries_; }
-  float timestamp_period() const { return timestamp_period_; }
 
   VulkanDeviceQueuesPtr device_;
   VulkanContext vulkan_context_;
