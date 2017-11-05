@@ -819,7 +819,7 @@ static int i8042_init_thread(void* arg) {
     return ZX_OK;
 }
 
-static zx_status_t i8042_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t i8042_bind(void* ctx, zx_device_t* parent) {
     thrd_t t;
     int rc = thrd_create_with_name(&t, i8042_init_thread, parent, "i8042-init");
     return rc;

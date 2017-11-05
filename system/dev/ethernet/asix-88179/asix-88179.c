@@ -758,7 +758,7 @@ fail:
     return status;
 }
 
-static zx_status_t ax88179_bind(void* ctx, zx_device_t* device, void** cookie) {
+static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "ax88179_bind\n");
 
     usb_protocol_t usb;

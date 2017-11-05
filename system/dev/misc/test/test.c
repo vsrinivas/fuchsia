@@ -184,7 +184,7 @@ static zx_protocol_device_t test_root_proto = {
     .ioctl = test_ioctl,
 };
 
-static zx_status_t test_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t test_bind(void* ctx, zx_device_t* dev) {
     test_root_t* root = calloc(1, sizeof(test_root_t));
     if (!root) {
         return ZX_ERR_NO_MEMORY;

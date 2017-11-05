@@ -29,7 +29,7 @@ void iotxn_synchronous_op(zx_device_t* dev, iotxn_t* txn) {
     completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
-static zx_status_t fvm_bind_c(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t fvm_bind_c(void* ctx, zx_device_t* dev) {
     return fvm_bind(dev);
 }
 

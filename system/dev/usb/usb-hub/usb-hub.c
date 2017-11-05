@@ -379,7 +379,7 @@ fail:
     return result;
 }
 
-static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
+static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
     zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {

@@ -544,7 +544,7 @@ static zx_protocol_device_t usb_cdc_proto = {
     .release = usb_cdc_release,
 };
 
-zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent, void** cookie) {
+zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "%s\n", __FUNCTION__);
 
     usb_cdc_t* cdc = calloc(1, sizeof(usb_cdc_t));

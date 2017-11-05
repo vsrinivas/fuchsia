@@ -402,7 +402,7 @@ unbind:
     return -1;
 }
 
-static zx_status_t mbr_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
     // Make sure the MBR structs are the right size.
     static_assert(sizeof(mbr_t) == MBR_SIZE, "mbr_t is the wrong size");
     static_assert(sizeof(mbr_partition_entry_t) == MBR_PARTITION_ENTRY_SIZE,

@@ -230,7 +230,7 @@ static zx_protocol_device_t usb_virtual_bus_proto = {
     .release = usb_bus_release,
 };
 
-static zx_status_t usb_virtual_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t usb_virtual_bus_bind(void* ctx, zx_device_t* parent) {
 printf("usb_virtual_bus_bind\n");
     usb_virtual_bus_t* bus = calloc(1, sizeof(usb_virtual_bus_t));
     if (!bus) {

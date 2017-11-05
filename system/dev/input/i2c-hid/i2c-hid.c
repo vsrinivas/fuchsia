@@ -431,7 +431,7 @@ static zx_protocol_device_t i2c_hid_dev_ops = {
     .release = i2c_hid_release,
 };
 
-static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     zxlogf(TRACE, "i2c_hid_bind\n");
 
     // Read the i2c HID descriptor

@@ -15,7 +15,7 @@
 
 #include <intel-serialio/serialio.h>
 
-static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev) {
     pci_protocol_t pci;
     zx_status_t res;
 

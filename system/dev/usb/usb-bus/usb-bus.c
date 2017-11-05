@@ -120,7 +120,7 @@ static zx_protocol_device_t usb_bus_device_proto = {
     .release = usb_bus_release,
 };
 
-static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device, void** cookie) {
+static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
     usb_bus_t* bus = calloc(1, sizeof(usb_bus_t));
     if (!bus) {
         zxlogf(ERROR, "Not enough memory for usb_bus_t.\n");

@@ -48,8 +48,7 @@ public:
         TA_EXCL(stream_pool_lock_);
 
     static zx_status_t DriverInit(void** out_ctx);
-    static zx_status_t DriverBind(void* ctx, zx_device_t* device, void** cookie);
-    static void        DriverUnbind(void* ctx, zx_device_t* device, void* cookie);
+    static zx_status_t DriverBind(void* ctx, zx_device_t* device);
     static void        DriverRelease(void* ctx);
 
 private:
@@ -74,8 +73,11 @@ private:
 
     // Device interface implementation
     void        DeviceShutdown();
-    zx_status_t DeviceRelease();
+    void        DeviceRelease();
     zx_status_t DeviceIoctl(uint32_t op, void* out_buf, size_t out_len, size_t* out_actual);
+
+    // Root device interface implementation
+    void RootDeviceRelease();
 
     // State control
     // TODO(johngro) : extend fbl::atomic to support enum classes as well.
@@ -129,6 +131,7 @@ private:
     zx_device_t*          pci_dev_ = nullptr;
     pci_protocol_t        pci_ = { nullptr, nullptr };
     zx_pcie_device_info_t pci_dev_info_;
+    static zx_protocol_device_t ROOT_DEVICE_THUNKS;
 
     // Unique ID and published HDA device node.
     const uint32_t id_;

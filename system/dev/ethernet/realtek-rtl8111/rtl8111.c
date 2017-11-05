@@ -309,7 +309,7 @@ static zx_protocol_device_t device_ops = {
     .release = rtl8111_release,
 };
 
-static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     zxlogf(TRACE, "rtl8111: binding device\n");
 
     zx_status_t r;

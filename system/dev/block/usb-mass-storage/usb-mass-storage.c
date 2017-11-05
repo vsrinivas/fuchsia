@@ -644,7 +644,7 @@ static int ums_worker_thread(void* arg) {
     return ZX_OK;
 }
 
-static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
+static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
     if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb)) {
         return 0;

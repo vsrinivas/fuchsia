@@ -89,7 +89,7 @@ static zx_protocol_device_t ktrace_device_proto = {
     .get_size = ktrace_get_size,
 };
 
-static zx_status_t ktrace_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t ktrace_bind(void* ctx, zx_device_t* parent) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ktrace",

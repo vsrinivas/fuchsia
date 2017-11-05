@@ -368,7 +368,7 @@ static int sdmmc_worker_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev) {
     // Allocate the device.
     sdmmc_t* sdmmc = calloc(1, sizeof(*sdmmc));
     if (!sdmmc) {

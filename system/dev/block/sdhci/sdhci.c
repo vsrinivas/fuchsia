@@ -890,7 +890,7 @@ fail:
     return status;
 }
 
-static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     sdhci_device_t* dev = calloc(1, sizeof(sdhci_device_t));
     if (!dev) {
         return ZX_ERR_NO_MEMORY;

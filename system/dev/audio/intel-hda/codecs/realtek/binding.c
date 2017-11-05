@@ -7,14 +7,12 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 
-extern zx_status_t realtek_ihda_codec_bind_hook(void*, zx_device_t*, void**);
-extern void        realtek_ihda_codec_unbind_hook(void*, zx_device_t*, void*);
+extern zx_status_t realtek_ihda_codec_bind_hook(void*, zx_device_t*);
 
 static zx_driver_ops_t realtek_ihda_codec_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .init    = NULL,
     .bind    = realtek_ihda_codec_bind_hook,
-    .unbind  = realtek_ihda_codec_unbind_hook,
     .release = NULL,
 };
 

@@ -497,7 +497,7 @@ static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
     return intf->bInterfaceClass == USB_CLASS_CDC;
 }
 
-static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
+static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "%s: starting %s\n", module_name, __FUNCTION__);
 
     usb_protocol_t usb;

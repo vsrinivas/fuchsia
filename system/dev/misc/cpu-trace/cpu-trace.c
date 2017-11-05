@@ -81,7 +81,7 @@ static zx_protocol_device_t cpu_trace_device_proto = {
     .release = cpu_trace_release,
 };
 
-static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
     ipt_init_once();
     ipm_init_once();
 

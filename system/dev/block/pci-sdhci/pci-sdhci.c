@@ -120,7 +120,7 @@ static zx_protocol_device_t pci_sdhci_device_proto = {
     .release = pci_sdhci_release,
 };
 
-static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent) {
     printf("pci-sdhci: bind\n");
     pci_sdhci_device_t* dev = calloc(1, sizeof(pci_sdhci_device_t));
     if (!dev) {

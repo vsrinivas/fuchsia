@@ -236,7 +236,7 @@ static zx_protocol_device_t usb_hid_dev_ops = {
     .release = usb_hid_release,
 };
 
-static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
     usb_protocol_t usb;
 
     zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB, &usb);

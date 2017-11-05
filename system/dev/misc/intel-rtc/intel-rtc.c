@@ -335,7 +335,7 @@ static zx_protocol_device_t intel_rtc_device_proto __UNUSED = {
 };
 
 //TODO: bind against hw, not misc
-static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
 #if defined(__x86_64__) || defined(__i386__)
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it
     // exists.

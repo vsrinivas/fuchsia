@@ -50,7 +50,7 @@ protected:
     // Bind should only ever be called exactly once (during driver
     // instantiation).  Drivers must make sure that no other methods are in
     // flight during a call to Bind.
-    zx_status_t Bind(zx_device_t* codec_dev);
+    zx_status_t Bind(zx_device_t* codec_dev, const char* name);
 
     // Send a codec command to our codec device.
     zx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
@@ -83,6 +83,8 @@ private:
         ihda_proto::SetStreamFmtResp  set_stream_fmt;
     };
 
+    void DeviceRelease();
+
     // Thunks for dispatching channel events.
     zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
     void ProcessClientDeactivate(const dispatcher::Channel* channel);
@@ -106,6 +108,7 @@ private:
                                       uint32_t resp_size,
                                       zx::handle&& rxed_handle);
 
+    static zx_protocol_device_t CODEC_DEVICE_THUNKS;
     zx_device_t* codec_device_ = nullptr;
     zx_time_t    create_time_  = zx_time_get(ZX_CLOCK_MONOTONIC);
 

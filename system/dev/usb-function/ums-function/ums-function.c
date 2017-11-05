@@ -497,7 +497,7 @@ static zx_protocol_device_t usb_ums_proto = {
     .release = usb_ums_release,
 };
 
-zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent, void** cookie) {
+zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "usb_ums_bind\n");
 
     usb_ums_t* ums = calloc(1, sizeof(usb_ums_t));

@@ -8,7 +8,7 @@
 
 #include <zircon/types.h>
 
-extern zx_status_t tapctl_bind(void* ctx, zx_device_t* device, void** cookie);
+extern zx_status_t tapctl_bind(void* ctx, zx_device_t* device);
 
 static zx_driver_ops_t tapctl_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -321,7 +321,7 @@ static zx_protocol_device_t fb_ops = {
     .release = fb_release,
 };
 
-static zx_status_t fb_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t fb_bind(void* ctx, zx_device_t* dev) {
     fb_t* fb;
     if ((fb = calloc(1, sizeof(fb_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;

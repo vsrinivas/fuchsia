@@ -8,15 +8,13 @@
 #include <ddk/protocol/pci.h>
 
 extern zx_status_t ihda_init_hook(void**);
-extern zx_status_t ihda_bind_hook(void*, zx_device_t*, void**);
-extern void        ihda_unbind_hook(void*, zx_device_t*, void*);
+extern zx_status_t ihda_bind_hook(void*, zx_device_t*);
 extern void        ihda_release_hook(void*);
 
 static zx_driver_ops_t intel_hda_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .init = ihda_init_hook,
     .bind = ihda_bind_hook,
-    .unbind = ihda_unbind_hook,
     .release = ihda_release_hook,
 };
 

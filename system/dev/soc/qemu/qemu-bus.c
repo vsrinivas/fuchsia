@@ -111,7 +111,7 @@ static const pbus_dev_t pl031_dev = {
     .mmio_count = countof(pl031_mmios),
 };
 
-static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
     // we don't really need a context struct yet, but lets create one for future expansion.
     qemu_bus_t* bus = calloc(1, sizeof(qemu_bus_t));
     if (!bus) {

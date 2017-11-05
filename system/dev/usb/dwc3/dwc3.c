@@ -388,7 +388,7 @@ static zx_protocol_device_t dwc3_device_proto = {
     .release = dwc3_release,
 };
 
-static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "dwc3_bind\n");
 
     dwc3_t* dwc = calloc(1, sizeof(dwc3_t));

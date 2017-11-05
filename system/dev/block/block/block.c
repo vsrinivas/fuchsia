@@ -246,7 +246,7 @@ static zx_protocol_device_t blkdev_ops = {
     .release = blkdev_release,
 };
 
-static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     blkdev_t* bdev;
     if ((bdev = calloc(1, sizeof(blkdev_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;

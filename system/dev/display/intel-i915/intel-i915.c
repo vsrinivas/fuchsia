@@ -121,7 +121,7 @@ static zx_protocol_device_t intel_i915_device_proto = {
 
 // implement driver object:
 
-static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev) {
     pci_protocol_t pci;
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
         return ZX_ERR_NOT_SUPPORTED;

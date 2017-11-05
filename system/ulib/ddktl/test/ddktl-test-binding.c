@@ -8,7 +8,7 @@
 
 #include <zircon/types.h>
 
-extern zx_status_t ddktl_test_bind(void* ctx, zx_device_t* dev, void** cookie);
+extern zx_status_t ddktl_test_bind(void* ctx, zx_device_t* dev);
 
 static zx_driver_ops_t ddktl_test_driver_ops = {
     .version = DRIVER_OPS_VERSION,

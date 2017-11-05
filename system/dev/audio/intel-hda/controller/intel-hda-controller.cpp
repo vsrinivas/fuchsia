@@ -200,7 +200,7 @@ void IntelHDAController::DeviceShutdown() {
     ShutdownIRQThread();
 }
 
-zx_status_t IntelHDAController::DeviceRelease() {
+void IntelHDAController::DeviceRelease() {
     // Take our unmanaged reference back from our published device node.
     auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
 
@@ -208,8 +208,6 @@ zx_status_t IntelHDAController::DeviceRelease() {
     // reference to our state as we allow thiz to go out of scope.
     ZX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
     thiz.reset();
-
-    return ZX_OK;
 }
 
 zx_status_t IntelHDAController::DeviceIoctl(uint32_t op,
@@ -226,6 +224,13 @@ zx_status_t IntelHDAController::DeviceIoctl(uint32_t op,
                              default_domain_,
                              fbl::move(phandler),
                              nullptr);
+}
+
+void IntelHDAController::RootDeviceRelease() {
+    // Take our unmanaged reference back from our published device node.
+    auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+    // Now let go of it.
+    thiz.reset();
 }
 
 zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channel) {
@@ -294,6 +299,26 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
     }
 }
 
+#define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
+zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
+    .version      = DEVICE_OPS_VERSION,
+    .get_protocol = nullptr,
+    .open         = nullptr,
+    .open_at      = nullptr,
+    .close        = nullptr,
+    .unbind       = nullptr,
+    .release      = [](void* ctx) { DEV(ctx)->RootDeviceRelease(); },
+    .read         = nullptr,
+    .write        = nullptr,
+    .iotxn_queue  = nullptr,
+    .get_size     = nullptr,
+    .ioctl        = nullptr,
+    .suspend      = nullptr,
+    .resume       = nullptr,
+    .rxrpc        = nullptr,
+};
+#undef DEV
+
 zx_status_t IntelHDAController::DriverInit(void** out_ctx) {
     // Note: It is assumed that calls to Init/Release are serialized by the
     // pci_dev manager.  If this assumption ever needs to be relaxed, explicit
@@ -303,32 +328,33 @@ zx_status_t IntelHDAController::DriverInit(void** out_ctx) {
 }
 
 zx_status_t IntelHDAController::DriverBind(void* ctx,
-                                           zx_device_t* device,
-                                           void** cookie) {
-    if (cookie == nullptr) return ZX_ERR_INVALID_ARGS;
-
+                                           zx_device_t* device) {
     fbl::RefPtr<IntelHDAController> controller(fbl::AdoptRef(new IntelHDAController()));
 
-    // If we successfully initialize, transfer our reference into the unmanaged
-    // world.  We will re-claim it later when unbind is called.
     zx_status_t ret = controller->Init(device);
-    if (ret == ZX_OK)
-        *cookie = controller.leak_ref();
+    if (ret != ZX_OK) {
+        return ret;
+    }
 
+    // Initialize our device and fill out the protocol hooks
+    device_add_args_t args;
+    memset(&args, 0, sizeof(args));
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "intel-hda-controller";
+    {
+        // use a different refptr to avoid problems in error path
+        auto ddk_ref = controller;
+        args.ctx = ddk_ref.leak_ref();
+    }
+    args.ops =  &ROOT_DEVICE_THUNKS;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
+
+    // Publish the device.
+    ret = device_add(device, &args, nullptr);
+    if (ret != ZX_OK) {
+        controller.reset();
+    }
     return ret;
-}
-
-void IntelHDAController::DriverUnbind(void* ctx,
-                                      zx_device_t* device,
-                                      void* cookie) {
-    ZX_DEBUG_ASSERT(cookie != nullptr);
-
-    // Reclaim our reference from the cookie.
-    auto controller =
-        fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<IntelHDAController*>(cookie));
-
-    // Now let go of it.
-    controller.reset();
 }
 
 void IntelHDAController::DriverRelease(void* ctx) {
@@ -344,12 +370,8 @@ zx_status_t ihda_init_hook(void** out_ctx) {
     return ::audio::intel_hda::IntelHDAController::DriverInit(out_ctx);
 }
 
-zx_status_t ihda_bind_hook(void* ctx, zx_device_t* pci_dev, void** cookie) {
-    return ::audio::intel_hda::IntelHDAController::DriverBind(ctx, pci_dev, cookie);
-}
-
-void ihda_unbind_hook(void* ctx, zx_device_t* pci_dev, void* cookie) {
-    ::audio::intel_hda::IntelHDAController::DriverUnbind(ctx, pci_dev, cookie);
+zx_status_t ihda_bind_hook(void* ctx, zx_device_t* pci_dev) {
+    return ::audio::intel_hda::IntelHDAController::DriverBind(ctx, pci_dev);
 }
 
 void ihda_release_hook(void* ctx) {

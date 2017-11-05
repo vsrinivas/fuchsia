@@ -6,12 +6,12 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-zx_status_t null_bind(void* ctx, zx_device_t* parent, void** cookie);
-zx_status_t zero_bind(void* ctx, zx_device_t* parent, void** cookie);
+zx_status_t null_bind(void* ctx, zx_device_t* parent);
+zx_status_t zero_bind(void* ctx, zx_device_t* parent);
 
-zx_status_t root_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    null_bind(ctx, parent, cookie);
-    zero_bind(ctx, parent, cookie);
+zx_status_t root_bind(void* ctx, zx_device_t* parent) {
+    null_bind(ctx, parent);
+    zero_bind(ctx, parent);
     return ZX_OK;
 }
 

@@ -118,10 +118,6 @@ zx_protocol_device_t device_default_ops = {
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
-static inline bool device_is_bound(zx_device_t* dev) {
-    return dev->owner != NULL;
-}
-
 void dev_ref_release(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     if (dev->refcount < 1) {
         printf("device: %p: REFCOUNT GOING NEGATIVE\n", dev);
@@ -441,15 +437,6 @@ zx_status_t devhost_device_remove(zx_device_t* dev) TA_REQ(&__devhost_api_lock) 
     xprintf("device: %p: devhost->devmgr remove rpc\n", dev);
     devhost_remove(dev);
 
-    // detach from owner, downref on behalf of owner
-    if (dev->owner) {
-        if (dev->owner->ops->unbind) {
-            dev->owner->ops->unbind(dev->owner->ctx, dev, dev->owner_cookie);
-        }
-        dev->owner = NULL;
-        dev_ref_release(dev);
-    }
-
     // detach from parent.  we do not downref the parent
     // until after our refcount hits zero and our release()
     // hook has been called.
@@ -477,15 +464,6 @@ zx_status_t devhost_device_rebind(zx_device_t* dev) TA_REQ(&__devhost_api_lock) 
 
     // notify children that they've been unbound
     devhost_unbind_children(dev);
-
-    // detach from owner and downref
-    if (dev->owner) {
-        if (dev->owner->ops->unbind) {
-            dev->owner->ops->unbind(dev->owner->ctx, dev, dev->owner_cookie);
-        }
-        dev->owner = NULL;
-        dev_ref_release(dev);
-    }
 
     dev->flags &= ~DEV_FLAG_BUSY;
 

@@ -829,7 +829,7 @@ hidbus_ifc_t hid_ifc = {
     .io_queue = hid_io_queue,
 };
 
-static zx_status_t hid_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
     hid_device_t* hiddev;
     if ((hiddev = calloc(1, sizeof(hid_device_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;

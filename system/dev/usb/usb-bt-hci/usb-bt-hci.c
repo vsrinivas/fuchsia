@@ -545,7 +545,7 @@ static zx_protocol_device_t hci_device_proto = {
     .release = hci_release,
 };
 
-static zx_status_t hci_bind(void* ctx, zx_device_t* device, void** cookie) {
+static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
 
     zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);

@@ -209,7 +209,7 @@ ZIRCON_DRIVER_END(pci)
 
 #else
 
-static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent) {
     for (uint32_t index = 0;; index++) {
         zx_device_t* dev;
         // don't hang onto the PCI handle - we don't need it any more

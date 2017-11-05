@@ -69,7 +69,7 @@ static int i2c_test_thread(void *arg) {
     return 0;
 }
 
-static zx_status_t i2c_test_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t i2c_test_bind(void* ctx, zx_device_t* parent) {
     i2c_test_t* i2c_test = calloc(1, sizeof(i2c_test_t));
     if (!i2c_test) {
         return ZX_ERR_NO_MEMORY;

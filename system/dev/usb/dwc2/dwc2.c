@@ -1691,7 +1691,7 @@ static zx_status_t create_default_device(dwc_usb_t* dwc) {
 }
 
 // Bind is the entry point for this driver.
-static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
     zxlogf(TRACE, "usb_dwc: bind dev = %p\n", dev);
 
     dwc_usb_t* usb_dwc = NULL;

@@ -703,7 +703,7 @@ fail:
 
 // implement driver object:
 
-static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     // map resources and initalize the device
     ahci_device_t* device = calloc(1, sizeof(ahci_device_t));
     if (!device) {

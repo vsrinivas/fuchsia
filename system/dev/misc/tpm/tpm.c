@@ -134,7 +134,7 @@ static zx_protocol_device_t tpm_device_proto __UNUSED = {
 
 
 //TODO: bind against hw, not misc
-zx_status_t tpm_bind(void* ctx, zx_device_t* parent, void** cookie) {
+zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
 #if defined(__x86_64__) || defined(__i386__)
     zx_status_t status = io_buffer_init_physical(&io_buffer, TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
                                                  get_root_resource(), ZX_CACHE_POLICY_UNCACHED);

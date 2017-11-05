@@ -71,7 +71,7 @@ static int led_test_thread(void *arg) {
     return 0;
 }
 
-static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent) {
     gpio_test_t* gpio_test = calloc(1, sizeof(gpio_test_t));
     if (!gpio_test) {
         return ZX_ERR_NO_MEMORY;

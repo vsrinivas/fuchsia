@@ -150,7 +150,7 @@ static zx_protocol_device_t device_ops = {
     .release = eth_release,
 };
 
-static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     ethernet_device_t* edev;
     if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;

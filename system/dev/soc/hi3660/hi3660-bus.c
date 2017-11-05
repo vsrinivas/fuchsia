@@ -131,7 +131,7 @@ static zx_protocol_device_t hi3660_device_protocol = {
     .release = hi3660_release,
 };
 
-static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent) {
     hi3660_bus_t* bus = calloc(1, sizeof(hi3660_bus_t));
     if (!bus) {
         return ZX_ERR_NO_MEMORY;

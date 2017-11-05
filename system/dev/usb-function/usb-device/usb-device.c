@@ -939,7 +939,7 @@ static zx_status_t usb_dev_set_default_config(usb_device_t* dev) {
 }
 #endif // defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
 
-zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
+zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "usb_dev_bind\n");
 
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));

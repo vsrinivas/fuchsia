@@ -347,7 +347,7 @@ static zx_protocol_device_t ramdisk_ctl_proto = {
     .ioctl = ramctl_ioctl,
 };
 
-static zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent) {
     ramctl_device_t* ramctl = calloc(1, sizeof(ramctl_device_t));
     if (ramctl == NULL) {
         return ZX_ERR_NO_MEMORY;

@@ -762,7 +762,7 @@ static zx_protocol_device_t ethdev0_ops = {
     .release = eth0_release,
 };
 
-static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     ethdev0_t* edev0;
     if ((edev0 = calloc(1, sizeof(ethdev0_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;

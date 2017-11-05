@@ -459,7 +459,7 @@ unbind:
     return ZX_OK;
 }
 
-static zx_status_t gpt_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     // create an invisible device, which will be used for the first partition
     gptpart_device_t* device = calloc(1, sizeof(gptpart_device_t));
     if (!device) {

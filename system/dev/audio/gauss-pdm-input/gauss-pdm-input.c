@@ -11,7 +11,7 @@
 
 #include "gauss-pdm-input.h"
 
-extern zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* parent, void** cookie);
+extern zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* parent);
 extern void gauss_pdm_input_release(void*);
 
 static zx_driver_ops_t gauss_pdm_input_driver_ops = {

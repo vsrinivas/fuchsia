@@ -82,7 +82,7 @@ static zx_protocol_device_t dmctl_device_ops = {
     .ioctl = dmctl_ioctl,
 };
 
-zx_status_t dmctl_bind(void* ctx, zx_device_t* parent, void** cookie) {
+zx_status_t dmctl_bind(void* ctx, zx_device_t* parent) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "dmctl",

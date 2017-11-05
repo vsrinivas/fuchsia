@@ -76,7 +76,7 @@ static zx_protocol_device_t a113_bus_device_protocol = {
     .release = a113_bus_release,
 };
 
-static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
     a113_bus_t* bus = calloc(1, sizeof(a113_bus_t));

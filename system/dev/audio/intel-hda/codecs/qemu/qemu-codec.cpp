@@ -37,7 +37,7 @@ fbl::RefPtr<QemuCodec> QemuCodec::Create() {
 }
 
 zx_status_t QemuCodec::Init(zx_device_t* codec_dev) {
-    zx_status_t res = Bind(codec_dev);
+    zx_status_t res = Bind(codec_dev, "qemu-codec");
     if (res != ZX_OK)
         return res;
 
@@ -71,39 +71,12 @@ zx_status_t QemuCodec::Start() {
 }
 
 extern "C" zx_status_t qemu_ihda_codec_bind_hook(void* ctx,
-                                                 zx_device_t* codec_dev,
-                                                 void** cookie) {
-    if (cookie == nullptr)
-        return ZX_ERR_INVALID_ARGS;
-
+                                                 zx_device_t* codec_dev) {
     auto codec = QemuCodec::Create();
     ZX_DEBUG_ASSERT(codec != nullptr);
 
-    // Init our codec.  If we succeed, transfer our reference to the unmanaged
-    // world.  We will re-claim it later when unbind is called.
-    zx_status_t res = codec->Init(codec_dev);
-    if (res == ZX_OK)
-        *cookie = codec.leak_ref();
-
-    return res;
-}
-
-extern "C" void qemu_ihda_codec_unbind_hook(void* ctx,
-                                            zx_device_t* codec_dev,
-                                            void* cookie) {
-    ZX_DEBUG_ASSERT(cookie != nullptr);
-
-    // Reclaim our reference from the cookie.
-    auto codec = fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<QemuCodec*>(cookie));
-
-    // Shut the codec down.
-    codec->Shutdown();
-
-    // Let go of the reference.
-    codec.reset();
-
-    // Signal the thread pool so it can completely shut down if we were the last client.
-    dispatcher::ThreadPool::ShutdownAll();
+    // Init our codec.
+    return codec->Init(codec_dev);
 }
 
 }  // namespace codecs

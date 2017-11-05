@@ -34,13 +34,7 @@ typedef struct zx_driver_ops {
 
     // Requests that the driver bind to the provided device,
     // initialize it, and publish and children.
-    // On success, the cookie is remembered and passed back on unbind.
-    zx_status_t (*bind)(void* ctx, zx_device_t* device, void** cookie);
-
-    // Notifies driver that the device which the driver bound to
-    // is being removed.  Called after the unbind() op of any devices
-    // that are children of that device.
-    void (*unbind)(void* ctx, zx_device_t* device, void* cookie);
+    zx_status_t (*bind)(void* ctx, zx_device_t* device);
 
     // Only provided by bus manager drivers, create() is invoked to
     // instantiate a bus device instance in a new device host process

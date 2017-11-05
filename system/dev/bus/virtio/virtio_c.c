@@ -13,7 +13,7 @@
 #include <string.h>
 
 // implemented in virtio_driver.cpp
-extern zx_status_t virtio_bind(void* ctx, zx_device_t* device, void** cookie);
+extern zx_status_t virtio_bind(void* ctx, zx_device_t* device);
 
 static zx_driver_ops_t virtio_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -163,7 +163,7 @@ static zx_protocol_device_t ptmx_ops = {
     .open = ptmx_open,
 };
 
-static zx_status_t ptmx_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t ptmx_bind(void* ctx, zx_device_t* parent) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ptmx",

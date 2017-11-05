@@ -61,7 +61,7 @@ static void pl031_set_kernel_offset(pl031_t* pl031) {
     }
 }
 
-static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(TRACE, "pl031_rtc: bind parent = %p\n", parent);
 
     platform_device_protocol_t proto;

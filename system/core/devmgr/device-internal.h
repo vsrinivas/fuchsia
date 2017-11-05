@@ -34,11 +34,6 @@ struct zx_device {
     // parent in the device tree
     zx_device_t* parent;
 
-    // driver that is bound to this device, NULL if unbound
-    zx_driver_t* owner;
-
-    void* owner_cookie;
-
     // for the parent's device_list
     struct list_node node;
 

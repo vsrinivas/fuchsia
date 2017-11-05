@@ -9,6 +9,8 @@
 #include <fbl/limits.h>
 #include <string.h>
 
+#include <dispatcher-pool/dispatcher-thread-pool.h>
+
 #include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/codec-utils/stream-base.h>
 #include <intel-hda/utils/intel-hda-proto.h>
@@ -29,7 +31,27 @@ IntelHDACodecDriverBase::IntelHDACodecDriverBase() {
     ZX_ASSERT(default_domain_ != nullptr);
 }
 
-zx_status_t IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev) {
+#define DEV(_ctx)  static_cast<IntelHDACodecDriverBase*>(_ctx)
+zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = {
+    .version      = DEVICE_OPS_VERSION,
+    .get_protocol = nullptr,
+    .open         = nullptr,
+    .open_at      = nullptr,
+    .close        = nullptr,
+    .unbind       = nullptr,
+    .release      = [](void* ctx) { DEV(ctx)->DeviceRelease(); },
+    .read         = nullptr,
+    .write        = nullptr,
+    .iotxn_queue  = nullptr,
+    .get_size     = nullptr,
+    .ioctl        = nullptr,
+    .suspend      = nullptr,
+    .resume       = nullptr,
+    .rxrpc        = nullptr,
+};
+#undef DEV
+
+zx_status_t IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
     zx_status_t res;
 
     if (codec_dev == nullptr)
@@ -89,6 +111,33 @@ zx_status_t IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev) {
         return res;
     }
 
+    auto codec = fbl::RefPtr<IntelHDACodecDriverBase>(this);
+
+    // Initialize our device and fill out the protocol hooks
+    device_add_args_t args;
+    memset(&args, 0, sizeof(args));
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = name;
+    {
+        // use a different refptr to avoid problems in error path
+        auto ddk_ref = codec;
+        args.ctx = ddk_ref.leak_ref();
+    }
+    args.ops =  &CODEC_DEVICE_THUNKS;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
+
+    // Publish the device.
+    res = device_add(codec_dev, &args, nullptr);
+    if (res != ZX_OK) {
+        LOG("Failed to add codec device for \"%s\" (res %d)\n", name, res);
+
+        fbl::AutoLock device_channel_lock(&device_channel_lock_);
+        device_channel_.reset();
+        codec->Shutdown();
+        codec.reset();
+        return res;
+    }
+
     // Success!  Now that we are started, stash a pointer to the codec device
     // that we are the driver for.
     codec_device_ = codec_dev;
@@ -121,6 +170,14 @@ void IntelHDACodecDriverBase::Shutdown() {
     UnlinkFromController();
 
     DEBUG_LOG("Shutdown complete\n");
+}
+
+void IntelHDACodecDriverBase::DeviceRelease() {
+    auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+    // Shut the codec down.
+    thiz->Shutdown();
+    // Let go of the reference.
+    thiz.reset();
 }
 
 #define CHECK_RESP_ALLOW_HANDLE(_ioctl, _payload)           \

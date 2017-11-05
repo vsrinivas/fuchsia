@@ -331,7 +331,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             // magic cookie for device create handshake
             zx_device_t parent = {
                 .name = "device_create dummy",
-                .owner = drv,
             };
 
             creation_context_t ctx = {
@@ -384,7 +383,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         } else if ((r = dh_find_driver(name, hin[0], &drv)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
-            void* cookie = NULL;
             if (drv->ops->bind) {
                 creation_context_t ctx = {
                     .parent = ios->dev,
@@ -392,7 +390,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
                     .rpc = ZX_HANDLE_INVALID,
                 };
                 devhost_set_creation_context(&ctx);
-                r = drv->ops->bind(drv->ctx, ios->dev, &cookie);
+                r = drv->ops->bind(drv->ctx, ios->dev);
                 devhost_set_creation_context(NULL);
 
                 if ((r == ZX_OK) && (ctx.child == NULL)) {
@@ -403,24 +401,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             }
             if (r < 0) {
                 log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
-            } else {
-                //TODO: Best behaviour for multibind? maybe retire "owner"?
-                //      For now this is extermely rare, so we mostly can ignore
-                //      it.
-                if (drv->ops->unbind || cookie) {
-                    log(INFO, "devhost[%s] driver '%s' unbind=%p, cookie=%p\n",
-                        path, name, drv->ops->unbind, cookie);
-
-                    DM_LOCK();
-                    if (ios->dev->owner) {
-                        log(ERROR, "devhost[%s] driver '%s' device already owned!\n", path, name);
-                    } else {
-                        ios->dev->owner = drv;
-                        ios->dev->owner_cookie = cookie;
-                        ios->dev->refcount++;
-                    }
-                    DM_UNLOCK();
-                }
             }
         }
         dc_msg_t reply = {

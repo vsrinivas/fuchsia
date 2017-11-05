@@ -429,7 +429,7 @@ error_return:
     return status;
 }
 
-static zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent) {
     pci_protocol_t pci;
     platform_device_protocol_t pdev;
     zx_status_t status;

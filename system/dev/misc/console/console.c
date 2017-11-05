@@ -119,7 +119,7 @@ static zx_protocol_device_t console_device_proto = {
     .release = console_release,
 };
 
-static zx_status_t console_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t console_bind(void* ctx, zx_device_t* parent) {
     console_device_t* console = calloc(1, sizeof(console_device_t));
     if (!console) {
         return ZX_ERR_NO_MEMORY;
