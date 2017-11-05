@@ -8,9 +8,14 @@ fx-config-read
 
 qemu_dir="${QEMU_DIR:-$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n ${BUILDTOOLS_QEMU_DIR})/bin}"
 
+arch="${FUCHSIA_ARCH}"
+if [[ "${arch}" -eq "aarch64" ]]; then
+  arch="arm64"
+fi
+
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -o "${ZIRCON_BUILD_DIR}" \
-  -a "${FUCHSIA_ARCH}" \
+  -a "${arch}" \
   -q "${qemu_dir}" \
   -x "${FUCHSIA_BUILD_DIR}/user.bootfs" \
   "$@"

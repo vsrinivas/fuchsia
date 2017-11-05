@@ -8,8 +8,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 function usage {
   cat <<END
 usage: fx set x86-64|aarch64|gauss|hikey960|odroidc2
-              [--release] [--packages p1,p2,...]
-              [--build-dir DIR]
+              [--release] [--packages P1,P2,...]
+              [--args ARG] [--build-dir DIR]
               [--goma|--no-goma] [--no-ensure-goma]
               [--goma-dir DIR]
               [--ccache|--no-ccache]
@@ -24,6 +24,9 @@ optional arguments:
                         for the Garnet layer). If the --package argument is
                         given multiple times, all the specified packages are
                         included in the build.
+  --args                Additional argument to pass to gn. If the --args
+                        argument is given multiple times, all the specified
+                        arguments are passed to gn.
   --build-dir           The directory (relative to FUCHSIA_DIR) into which to
                         generate the build system. Defaults to
                         "out/<variant>-<arch>".
