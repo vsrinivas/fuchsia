@@ -534,16 +534,6 @@ zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) TA_REQ(&__dev
     return r;
 }
 
-zx_status_t devhost_device_unbind(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
-    if (!dev->owner) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    dev->owner = NULL;
-    dev_ref_release(dev);
-
-    return ZX_OK;
-}
-
 void devhost_device_destroy(zx_device_t* dev) {
     // Only destroy devices immediately after device_create() or after they're dead.
     ZX_DEBUG_ASSERT(dev->flags == 0 || dev->flags & DEV_FLAG_VERY_DEAD);

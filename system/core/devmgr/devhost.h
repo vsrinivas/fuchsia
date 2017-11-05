@@ -39,8 +39,6 @@ typedef struct zx_driver {
 
 extern zx_protocol_device_t device_default_ops;
 
-zx_status_t devhost_device_unbind(zx_device_t* dev);
-
 zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const char* proxy_args);

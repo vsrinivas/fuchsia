@@ -136,8 +136,6 @@ zx_status_t device_remove(zx_device_t* device);
 zx_status_t device_rebind(zx_device_t* device);
 void device_make_visible(zx_device_t* device);
 
-void device_unbind(zx_device_t* dev);
-
 #define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDDOWN(a, b) ((a) & ~((b)-1))
 #define ALIGN(a, b) ROUNDUP(a, b)

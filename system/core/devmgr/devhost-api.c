@@ -96,12 +96,6 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) {
     return r;
 }
 
-__EXPORT void device_unbind(zx_device_t* dev) {
-    DM_LOCK();
-    devhost_device_unbind(dev);
-    DM_UNLOCK();
-}
-
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
     zx_status_t r;
     DM_LOCK();
