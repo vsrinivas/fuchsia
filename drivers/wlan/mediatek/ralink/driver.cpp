@@ -15,7 +15,7 @@
 #include "device.h"
 #include "logging.h"
 
-extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device, void** cookie) {
+extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     std::printf("%s\n", __func__);
 
     usb_protocol_t usb;

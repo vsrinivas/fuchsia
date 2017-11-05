@@ -161,7 +161,7 @@ static zx_protocol_device_t arm_mali_device_proto = {
     .release = arm_mali_release,
 };
 
-static zx_status_t arm_mali_bind(void* context, zx_device_t* parent, void** cookie)
+static zx_status_t arm_mali_bind(void* context, zx_device_t* parent)
 {
     magma::log(magma::LOG_INFO, "arm_mali_bind: binding\n");
     auto gpu = std::make_unique<arm_mali_device>();

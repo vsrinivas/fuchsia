@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <memory>
 
-extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device, void** cookie) {
+extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
     std::printf("%s\n", __func__);
 
     wlanmac_protocol_t wlanmac_proto;

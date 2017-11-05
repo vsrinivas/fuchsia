@@ -398,7 +398,7 @@ static zx_protocol_device_t intel_gpu_device_proto = {
 
 // implement driver object:
 
-static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device, void** cookie)
+static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device)
 {
     DLOG("intel_gen_bind start zx_device %p", zx_device);
 
