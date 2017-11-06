@@ -21,13 +21,15 @@ public:
                                         uint64_t size)
     {
         ASSERT_NE(address_space, nullptr);
+        auto page_directory = address_space->root_page_directory_.get();
+        constexpr uint32_t kRootDirectoryShift =
+            AddressSpace::kPageOffsetBits * (AddressSpace::kPageDirectoryLevels - 1) + PAGE_SHIFT;
+        uint64_t offset = (gpu_addr >> kRootDirectoryShift) & AddressSpace::kPageTableMask;
 
-        uint32_t page_count = size >> PAGE_SHIFT;
-
-        for (unsigned int i = 0; i < page_count; i++) {
-            uint64_t pte = get_pte(address_space, gpu_addr + i * PAGE_SIZE);
-            EXPECT_EQ(2u, pte);
-        }
+        // This are no other buffers nearby, so levels 2, 1, and 0 should have
+        // been cleared and removed.
+        EXPECT_EQ(2u, page_directory->gpu()->entry[offset]);
+        EXPECT_EQ(nullptr, page_directory->next_levels_[offset]);
     }
 
     static void check_pte_entries(AddressSpace* address_space, magma::PlatformBuffer* buffer,
@@ -121,8 +123,60 @@ public:
                                            buffer[1]->size(),
                                            kAccessFlagRead | kAccessFlagNoExecute));
     }
+
+    static void GarbageCollect()
+    {
+        auto address_space = AddressSpace::Create();
+
+        // buffer[0] should overlap two level 0 page tables.
+        constexpr uint64_t kInitialAddress = PAGE_SIZE * 511;
+        // create some buffers
+        std::vector<uint64_t> addr = {kInitialAddress, kInitialAddress + PAGE_SIZE * 5};
+        std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
+
+        buffer[0] = magma::PlatformBuffer::Create(PAGE_SIZE * 5, "test");
+        buffer[1] = magma::PlatformBuffer::Create(PAGE_SIZE * 10, "test");
+
+        EXPECT_TRUE(buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE));
+        EXPECT_TRUE(buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE));
+
+        EXPECT_TRUE(address_space->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(),
+                                          kAccessFlagRead | kAccessFlagNoExecute));
+        check_pte_entries(address_space.get(), buffer[0].get(), addr[0], (1 << 6) | (1l << 54));
+        EXPECT_TRUE(address_space->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(),
+                                          kAccessFlagRead | kAccessFlagNoExecute));
+
+        EXPECT_TRUE(address_space->Clear(addr[0], buffer[0]->size()));
+
+        // Buffer 1 should remain mapped.
+        check_pte_entries(address_space.get(), buffer[1].get(), addr[1], (1 << 6) | (1l << 54));
+
+        auto page_directory3 = address_space->root_page_directory_.get();
+
+        EXPECT_EQ(3u, page_directory3->gpu()->entry[0] & 3u);
+        EXPECT_TRUE(page_directory3->gpu()->entry[0] & ~511);
+        auto page_directory2 = page_directory3->next_levels_[0].get();
+
+        EXPECT_EQ(3u, page_directory2->gpu()->entry[0] & 3u);
+        EXPECT_TRUE(page_directory2->gpu()->entry[0] & ~511);
+        auto page_directory1 = page_directory2->next_levels_[0].get();
+
+        // The level 0 that's now empty should be removed.
+        EXPECT_EQ(2u, page_directory1->gpu()->entry[0] & 3u);
+        EXPECT_EQ(0u, page_directory1->gpu()->entry[0] & ~511);
+        EXPECT_EQ(nullptr, page_directory1->next_levels_[0].get());
+
+        EXPECT_TRUE(address_space->Clear(addr[1], buffer[1]->size()));
+
+        for (uint32_t i = 0; i < AddressSpace::kPageTableEntries; ++i) {
+            EXPECT_EQ(2u, address_space->root_page_directory_->gpu()->entry[i]);
+            EXPECT_EQ(nullptr, address_space->root_page_directory_->next_levels_[i]);
+        }
+    }
 };
 
 TEST(AddressSpace, Init) { TestAddressSpace::Init(); }
 
 TEST(AddressSpace, Insert) { TestAddressSpace::Insert(); }
+
+TEST(AddressSpace, GarbageCollect) { TestAddressSpace::GarbageCollect(); }

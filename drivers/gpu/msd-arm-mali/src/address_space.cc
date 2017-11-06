@@ -95,6 +95,7 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length)
     if (start_page_index + num_pages > (1l << (kVirtualAddressSize - PAGE_SHIFT)))
         return DRETF(false, "Virtual address too large");
 
+    std::vector<std::unique_ptr<PageTable>> empty_tables;
     // TODO(MA-363): synchronize with MMU (if address space is scheduled in).
     for (uint64_t i = 0; i < num_pages; i++) {
         // TODO(MA-364): optimize walk to not get page table every time.
@@ -105,9 +106,15 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length)
 
         mali_pte_t pte = kLpaeEntryTypeInvalid;
         page_table->WritePte(page_index, pte);
+        // Only attempt to GC children once per level 0 page table.
+        bool last_entry = (page_index & kPageTableMask) == kPageTableMask;
+        if (last_entry || i == num_pages - 1) {
+            root_page_directory_->GarbageCollectChildren(page_index, nullptr, &empty_tables);
+        }
     }
 
-    // TODO(MA-361): clear empty page directories.
+    // TODO(MA-363): synchronize with MMU (if address space is scheduled in)
+    // before clearing empty_tables.
 
     return true;
 }
@@ -162,10 +169,43 @@ AddressSpace::PageTable* AddressSpace::PageTable::GetPageTableLevel0(uint64_t pa
 
 void AddressSpace::PageTable::WritePte(uint64_t page_index, mali_pte_t pte)
 {
-    DASSERT(level_ == 0);
     page_index &= kPageTableMask;
     gpu_->entry[page_index] = pte;
     buffer_->CleanCache(page_index * sizeof(gpu_->entry[0]), sizeof(gpu_->entry[0]), false);
+}
+
+void AddressSpace::PageTable::GarbageCollectChildren(
+    uint64_t page_number, bool* is_empty, std::vector<std::unique_ptr<PageTable>>* empty_tables)
+{
+    uint32_t shift = level_ * kPageOffsetBits;
+    uint32_t offset = (page_number >> shift) & kPageTableMask;
+    if (is_empty)
+        *is_empty = false;
+
+    bool invalidated_entry = false;
+    if (level_ == 0) {
+        // Caller should have already made this entry invalid.
+        invalidated_entry = true;
+    } else if (next_levels_[offset]) {
+        bool next_level_empty = false;
+        next_levels_[offset]->GarbageCollectChildren(page_number, &next_level_empty, empty_tables);
+        if (next_level_empty) {
+            WritePte(offset, kLpaeEntryTypeInvalid);
+            // Caller should synchronize MMU before deleting empty tables.
+            empty_tables->push_back(std::move(next_levels_[offset]));
+            invalidated_entry = true;
+        }
+    }
+
+    if (!invalidated_entry)
+        return;
+
+    for (size_t i = 0; i < kPageTableEntries; i++) {
+        if (gpu_->entry[i] != kLpaeEntryTypeInvalid)
+            return;
+    }
+    if (is_empty)
+        *is_empty = true;
 }
 
 mali_pte_t AddressSpace::PageTable::get_directory_entry(uint64_t physical_address)

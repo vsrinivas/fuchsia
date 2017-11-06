@@ -68,6 +68,12 @@ private:
 
         uint64_t page_bus_address() const { return page_bus_address_; }
 
+        // Collect empty page tables that are in the path to page_number, and
+        // put them in |empty_tables|. |is_empty| is set if the page table is
+        // now empty.
+        void GarbageCollectChildren(uint64_t page_number, bool* is_empty,
+                                    std::vector<std::unique_ptr<PageTable>>* empty_tables);
+
     private:
         static mali_pte_t get_directory_entry(uint64_t physical_address);
 
