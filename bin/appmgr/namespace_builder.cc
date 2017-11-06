@@ -97,20 +97,29 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
     if (feature == "vulkan") {
       PushDirectoryFromPath("/dev/class/display", O_RDWR);
       PushDirectoryFromPath("/system/data/vulkan", O_RDONLY);
+    } else if (feature == "root-ssl-certificates") {
+      PushDirectoryFromPath("/system/data/boringssl", O_RDONLY);
+      PushDirectoryFromPathAs("/system/data/boringssl", "/etc/ssl", O_RDONLY);
     }
   }
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
-  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
+  PushDirectoryFromPathAs(path, path, oflags);
+}
+
+void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path,
+                                               std::string dst_path ,
+                                               int oflags) {
+if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end())
     return;
-  fxl::UniqueFD dir(open(path.c_str(), O_DIRECTORY | oflags));
+  fxl::UniqueFD dir(open(src_path.c_str(), O_DIRECTORY | oflags));
   if (!dir.is_valid())
     return;
   zx::channel handle = CloneChannel(dir.get());
   if (!handle)
     return;
-  PushDirectoryFromChannel(std::move(path), std::move(handle));
+  PushDirectoryFromChannel(std::move(dst_path), std::move(handle));
 }
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path,

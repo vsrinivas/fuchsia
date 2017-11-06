@@ -47,6 +47,9 @@ class NamespaceBuilder {
 
  private:
   void PushDirectoryFromPath(std::string path, int oflags);
+  void PushDirectoryFromPathAs(std::string src_path,
+                               std::string dst_path,
+                               int oflags);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);
   void Release();
 
