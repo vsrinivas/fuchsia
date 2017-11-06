@@ -10,6 +10,7 @@ const GenerateEndpoint = `
 {{- $endpoint := .Name -}}
 {{- $interface := .Interface -}}
 
+#[derive(Debug)]
 pub struct {{$endpoint}}(::zircon::Channel);
 
 impl ::zircon::HandleRef for {{$endpoint}} {
@@ -86,8 +87,10 @@ pub trait Client {
     {{end}}
 }
 
+#[derive(Debug)]
 pub struct Dispatcher<T: Server>(pub T);
 
+#[derive(Debug)]
 pub enum DispatchResponseFuture <
     {{range $message := $interface.Messages}}
         {{if ne $message.ResponseStruct.Name ""}}
@@ -154,6 +157,7 @@ Future for DispatchResponseFuture<
     }
 }
 
+#[derive(Debug)]
 pub enum DispatchFuture <
     {{range $message := $interface.Messages}}
         {{if eq $message.ResponseStruct.Name ""}}
@@ -276,6 +280,7 @@ impl<T: Server> Stub for Dispatcher<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Proxy(fidl::Client);
 
 impl Client for Proxy {
@@ -345,6 +350,7 @@ impl Proxy {
     {{end}}
 }
 
+#[derive(Debug)]
 pub struct Service;
 impl fidl::FidlService for Service {
     type Proxy = Proxy;

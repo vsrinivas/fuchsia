@@ -13,6 +13,7 @@ const GenerateUnion = `
 
 {{template "GenerateEnum" $union.TagsEnum}}
 
+#[derive(Debug)]
 pub enum {{$union.Name}} {
 {{range $field := $union.Fields}}    {{$field.Name}}({{$field.Type}}),
 {{end -}}

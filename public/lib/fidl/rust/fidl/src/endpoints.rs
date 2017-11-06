@@ -7,8 +7,8 @@
 use std::marker::PhantomData;
 
 use zircon;
-use {Encodable, Decodable, EncodableNullable, DecodableNullable, encode_handle, decode_handle,
-    EncodeBuf, DecodeBuf, EncodableType, Result};
+use {FidlService, Encodable, Decodable, EncodableNullable, DecodableNullable, encode_handle,
+    decode_handle, EncodeBuf, DecodeBuf, EncodableType, Result};
 
 /// The `Client` end of a FIDL connection.
 pub struct ClientEnd<T> {
@@ -46,6 +46,12 @@ impl<T> From<zircon::Handle> for ClientEnd<T> {
             inner: handle.into(),
             phantom: PhantomData,
         }
+    }
+}
+
+impl<T: FidlService> ::std::fmt::Debug for ClientEnd<T> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "ClientEnd(name={}, version={})", T::NAME, T::VERSION)
     }
 }
 
@@ -113,6 +119,12 @@ impl<T> From<zircon::Handle> for ServerEnd<T> {
             inner: handle.into(),
             phantom: PhantomData,
         }
+    }
+}
+
+impl<T: FidlService> ::std::fmt::Debug for ServerEnd<T> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "ServerEnd(name={}, version={})", T::NAME, T::VERSION)
     }
 }
 
