@@ -137,7 +137,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         } else if (status == ZX_OK) {
             status = vmexit_handler(&el2_state_.guest_state, gpas_, traps_, packet);
         } else {
-            dprintf(SPEW, "VCPU resume failed: %d\n", status);
+            dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;
@@ -154,7 +154,15 @@ zx_status_t Vcpu::Interrupt(uint32_t interrupt) {
     hcr_.fetch_or(kHcrVi);
 
     // TODO(abdulla): Handle the case when the VCPU is halted.
-    mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
+    DEBUG_ASSERT(!arch_ints_disabled());
+    arch_disable_ints();
+    auto cpu = cpu_of(vpid_);
+    if (cpu == arch_curr_cpu_num()) {
+        thread_reschedule();
+    } else {
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu), 0);
+    }
+    arch_enable_ints();
     return ZX_OK;
 }
 
