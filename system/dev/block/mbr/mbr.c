@@ -265,7 +265,8 @@ static block_protocol_ops_t mbr_block_ops = {
 };
 
 static int mbr_bind_thread(void* arg) {
-    zx_device_t* dev = arg;
+    mbrpart_device_t* first_dev = (mbrpart_device_t*)arg;
+    zx_device_t* dev = first_dev->parent;
 
     // Classic MBR supports 4 partitions.
     uint8_t partition_count = 0;
@@ -344,33 +345,45 @@ static int mbr_bind_thread(void* arg) {
                 partition_count + 1, entry->type, entry->start_sector_lba,
                 entry->sector_partition_length);
 
-        mbrpart_device_t* pdev = calloc(1, sizeof(*pdev));
-        if (!pdev) {
-            xprintf("mbr: out of memory\n");
-            goto unbind;
+        mbrpart_device_t* pdev;
+        // use first_dev for first partition
+        if (first_dev) {
+            pdev = first_dev;
+        } else {
+            pdev = calloc(1, sizeof(*pdev));
+            if (!pdev) {
+                xprintf("mbr: out of memory\n");
+                goto unbind;
+            }
+            pdev->parent = dev;
         }
-        pdev->parent = dev;
 
         memcpy(&pdev->partition, entry, sizeof(*entry));
         block_info.block_count = pdev->partition.sector_partition_length;
         memcpy(&pdev->info, &block_info, sizeof(block_info));
 
-        char name[16];
-        snprintf(name, sizeof(name), "part-%03u",partition_count);
+        if (first_dev) {
+            // make our initial device visible and use if for partition zero
+            device_make_visible(first_dev->zxdev);
+            first_dev = NULL;
+        } else {
+            char name[16];
+            snprintf(name, sizeof(name), "part-%03u",partition_count);
 
-        device_add_args_t args = {
-            .version = DEVICE_ADD_ARGS_VERSION,
-            .name = name,
-            .ctx = pdev,
-            .ops = &mbr_proto,
-            .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-            .proto_ops = &mbr_block_ops,
-        };
+            device_add_args_t args = {
+                .version = DEVICE_ADD_ARGS_VERSION,
+                .name = name,
+                .ctx = pdev,
+                .ops = &mbr_proto,
+                .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+                .proto_ops = &mbr_block_ops,
+            };
 
-        if ((st = device_add(dev, &args, &pdev->zxdev)) != ZX_OK) {
-            xprintf("mbr: device_add failed, retcode = %d\n", st);
-            free(pdev);
-            continue;
+            if ((st = device_add(dev, &args, &pdev->zxdev)) != ZX_OK) {
+                xprintf("mbr: device_add failed, retcode = %d\n", st);
+                free(pdev);
+                continue;
+            }
         }
     }
 
@@ -381,24 +394,50 @@ unbind:
     if (txn)
         iotxn_release(txn);
 
-    // If we weren't able to bind any subdevices (for partitions), then unbind
-    // the MBR driver as well.
-    if (partition_count == 0) {
-        device_unbind(dev);
+    if (first_dev) {
+        // handle case where no partitions were found
+        device_remove(first_dev->zxdev);
     }
 
     return -1;
 }
 
-static zx_status_t mbr_bind(void* ctx, zx_device_t* dev, void** cookie) {
+static zx_status_t mbr_bind(void* ctx, zx_device_t* parent, void** cookie) {
     // Make sure the MBR structs are the right size.
     static_assert(sizeof(mbr_t) == MBR_SIZE, "mbr_t is the wrong size");
     static_assert(sizeof(mbr_partition_entry_t) == MBR_PARTITION_ENTRY_SIZE,
                   "mbr_partition_entry_t is the wrong size");
 
+    // create an invisible device, which will be used for the first partition
+    mbrpart_device_t* device = calloc(1, sizeof(mbrpart_device_t));
+    if (!device) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    device->parent = parent;
+
+    char name[128];
+    snprintf(name, sizeof(name), "part-%03u", 0);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = device,
+        .ops = &mbr_proto,
+        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &mbr_block_ops,
+        .flags = DEVICE_ADD_INVISIBLE,
+    };
+
+    zx_status_t status = device_add(parent, &args, &device->zxdev);
+    if (status != ZX_OK) {
+        printf("mbr device_add failed\n");
+        free(device);
+        return status;
+    }
+
     // Read the partition table asyncrhonously.
     thrd_t t;
-    int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, dev, "mbr-init");
+    int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, device, "mbr-init");
     if (thrd_rc != thrd_success) {
         return thrd_status_to_zx_status(thrd_rc);
     }
