@@ -1,0 +1,11 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script is a wrapper around the fx script that allows it to be run from
+# a current working directory outside the fuchsia source tree.
+
+export FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+exec ${FUCHSIA_DIR}/scripts/fx "$@"
