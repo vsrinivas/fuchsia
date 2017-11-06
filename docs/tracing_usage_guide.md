@@ -148,19 +148,33 @@ For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
 results will be reported in three groups: sample 0, samples 1 - 49, and samples
 50 to N, where N is the last samples.
 
-#### Catapult dashboard upload
+#### Benchmark result export
 
-Results of the benchmarking run can be uploaded to an instance of the
-[Catapult](https://github.com/catapult-project/catapult) dashboard. For that,
-the following additional parameters must be passed to `trace record`:
+Results of the benchmarking run can be exported into a JSON file. For that, pass
+the path to the output file to `trace record` as
+`--benchmark-results-file=<file>`.
 
- - `--upload-server-url` - the url of the Catapult dashboard server
- - `--upload-master` - name of the buildbot master
- - `--upload-bot` - name of the builder
- - `--upload-point-id` - integer sequence number for the new samples
+The resulting file has the following format:
 
-In order to experiment against a local instance of the dashboard, follow these
-[instructions](docs/catapult.md).
+```{json}
+    [
+      {
+        "label": "put",
+        "unit": "ms",
+        "samples": [
+          {
+            "label": "samples 0 to 0",
+             values: [2.74]
+          },
+          {
+            "label: "samples 1 to 9",
+            values: [1.01, 1.12, 0.91, 1, 1.03, 0.97, 1.03, 1.07, 1.15]
+          }
+        ]
+      },
+      <more results>
+    ]
+```
 
 ## Configuration
 

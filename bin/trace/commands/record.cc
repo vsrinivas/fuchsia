@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "garnet/bin/trace/commands/record.h"
+#include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
@@ -29,13 +30,14 @@ const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
 const char kBufferSize[] = "buffer-size";
+const char kBenchmarkResultsFile[] = "benchmark-results-file";
 
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
-      kSpecFile, kCategories, kAppendArgs, kOutputFile,
-      kDuration, kDetach,     kDecouple,   kBufferSize};
+      kSpecFile, kCategories, kAppendArgs, kOutputFile,          kDuration,
+      kDetach,   kDecouple,   kBufferSize, kBenchmarkResultsFile};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -124,6 +126,11 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     buffer_size_megabytes_hint = megabytes;
   }
 
+  // --benchmark-results-file=<file>
+  if (command_line.HasOption(kBenchmarkResultsFile, &index)) {
+    benchmark_results_file = command_line.options()[index].value;
+  }
+
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
@@ -160,6 +167,8 @@ Command::Info Record::Describe() {
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
+       {"benchmark-results-file=[none]",
+        "Destination for exported benchmark results"},
        {"[command args]",
         "Run program before starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
@@ -276,6 +285,15 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
     err() << "One or more measurements had empty results. Quitting."
           << std::endl;
     exit(1);
+  }
+
+  if (!options_.benchmark_results_file.empty()) {
+    if (!ExportResults(options_.benchmark_results_file, results)) {
+      err() << "Failed to write benchmark results to "
+            << options_.benchmark_results_file;
+      exit(1);
+    }
+    out() << "Benchmark results written to " << options_.benchmark_results_file;
   }
 
   on_done();
