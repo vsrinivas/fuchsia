@@ -23,10 +23,84 @@ type netstatApp struct {
 	netstack *netstack.Netstack_Proxy
 }
 
+type icmpHistogram struct {
+	// see third_party/netstack/tcpip/header/icmpv{4,6}.go for an exhaustive list
+	echoRequests uint64
+	echoReplies  uint64
+}
+
+type icmpOutput struct {
+	received        uint64
+	inputFailed     uint64
+	sent            uint64
+	sentFailed      uint64
+	inputHistogram  icmpHistogram
+	outputHistogram icmpHistogram
+}
+
+type statsOutput struct {
+	icmp icmpOutput
+}
+
+func (h icmpHistogram) String() string {
+	return fmt.Sprintf("\t\techo request: %d\n\t\techo replies: %d", h.echoRequests, h.echoReplies)
+}
+
+func (o *statsOutput) String() string {
+	return fmt.Sprintf(
+		`Icmp:
+      %d ICMP messages received
+      %d input ICMP message failed.
+      ICMP input histogram:
+      %v
+      %d ICMP messages sent
+      %d ICMP messages failed
+      ICMP output histogram:
+      %v`,
+		o.icmp.received,
+		o.icmp.inputFailed,
+		o.icmp.inputHistogram,
+		o.icmp.sent,
+		o.icmp.sentFailed,
+		o.icmp.outputHistogram)
+}
+
+func (o *statsOutput) add(stats netstack.NetInterfaceStats) {
+	tx := stats.Tx
+	rx := stats.Rx
+
+	o.icmp.sent += tx.PktsEchoReq + tx.PktsEchoReqV6 + tx.PktsEchoRep + tx.PktsEchoRepV6
+	o.icmp.received += rx.PktsEchoReq + rx.PktsEchoReqV6 + rx.PktsEchoRep + rx.PktsEchoRepV6
+	o.icmp.outputHistogram.echoRequests += tx.PktsEchoReq + tx.PktsEchoReqV6
+	o.icmp.outputHistogram.echoReplies += tx.PktsEchoRep + tx.PktsEchoRepV6
+	o.icmp.inputHistogram.echoRequests += rx.PktsEchoReq + rx.PktsEchoReqV6
+	o.icmp.inputHistogram.echoReplies += rx.PktsEchoRep + rx.PktsEchoRepV6
+}
+
+func dumpStats(a *netstatApp) {
+	nics, err := a.netstack.GetInterfaces()
+	if err != nil {
+		errorf("Failed to get interfaces: %v\n.", err)
+		return
+	}
+
+	stats := &statsOutput{}
+	for _, nic := range nics {
+		nicStats, err := a.netstack.GetStats(nic.Id)
+		if err != nil {
+			errorf("Failed to get statistics for nic: %v\n", err)
+		} else {
+			stats.add(nicStats)
+		}
+	}
+
+	fmt.Printf("%v\n", stats)
+}
+
 func dumpRouteTables(a *netstatApp) {
 	entries, err := a.netstack.GetRouteTable()
 	if err != nil {
-		fmt.Printf("Failed to fetch routing Table: %v\n", err)
+		errorf("Failed to get route table: %v\n", err)
 		return
 	}
 	for _, entry := range entries {
@@ -80,13 +154,22 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+var hasErrors bool = false
+
+func errorf(format string, args ...interface{}) {
+	hasErrors = true
+	fmt.Printf("netstat: "+format, args...)
+}
+
 func main() {
 	a := &netstatApp{ctx: context.CreateFromStartupInfo()}
 
 	flag.Usage = usage
 
 	var showRouteTables bool
+	var showStats bool
 	flag.BoolVar(&showRouteTables, "r", false, "Dump the Route Tables")
+	flag.BoolVar(&showStats, "s", false, "Show network statistics")
 	flag.Parse()
 
 	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
@@ -96,5 +179,12 @@ func main() {
 
 	if showRouteTables {
 		dumpRouteTables(a)
+	}
+	if showStats {
+		dumpStats(a)
+	}
+
+	if hasErrors {
+		os.Exit(1)
 	}
 }
