@@ -6,6 +6,10 @@ A GDB stub for Fuchsia that supports the
 Refer to [this page](https://sourceware.org/gdb/onlinedocs/gdb/index.html) for
 further documentation on debugging with GDB.
 
+Notes on reading this document:
+- prompts that begin with "devhost$" are on the development host
+- prompts that begin with just "$" are on the fuchsia target
+
 ## Setting up the environment
 
 The stub currently communicates with GDB over a TCP connection using BSD sockets
@@ -27,22 +31,40 @@ Fuchsia support is not in upstream GDB yet, so the Fuchsia copy of GDB
 must be used: https://fuchsia.googlesource.com/third_party/gdb.
 
 ```
-$ cd fuchsia
-fuchsia$ jiri import gdb https://fuchsia.googlesource.com/manifest
-fuchsia$ jiri update
-fuchsia$ sh scripts/gdb/build-gdb.sh
+devhost$ cd /path/to/fuchsia
+devhost$ jiri import gdb https://fuchsia.googlesource.com/manifest
+devhost$ jiri update
+devhost$ sh scripts/gdb/build-gdb.sh
 ```
 
 The gdb binary can be found in `out/toolchain/x86_64-linux/gdb/bin/gdb`.
 
+### If using qemu
+
+If using qemu run the following to make sure dnsmasq is running:
+
+```
+devhost$ scripts/start-dhcp-server.sh qemu
+```
+
+Make sure to pass the `-N` argument to enable networking.
+
+```
+devhost$ fx run -N
+```
+
 ### On the target machine running Fuchsia
 
-First, make sure that the TCP stack is running and has acquired an IP address.
-Zircon should print its ipv4 address when it boots.
-GDB doesn't currently support ipv6.
+Make sure that the TCP stack is running and has acquired an
+ipv4 address. Zircon should print its ipv4 address when it boots.
+GDB currently doesn't support ipv6.
 
-**N.B.** The following step is only necessary if qemu is started with netsvc
-disabled. Look for the log messages below in the system boot logs.
+```
+[00014.920] 02933.03643> netstack: NIC 2: DHCP acquired IP 192.168.3.53 for 24h0m0s
+```
+
+If zircon is started with netsvc disabled (uncommon), then you need
+the following:
 
 ```
 > netstack &
@@ -75,7 +97,7 @@ This example uses the debugger unit test program, passing "segfault" as
 an argument to trigger a segfault (to help exercise the debugger).
 
 ```
-debugserver --verbose=2 7000 /boot/test/sys/debugger-test segfault
+debugserver --verbose=2 7000 /system/test/sys/debugger-test segfault
 ```
 
 ### On the host machine
@@ -84,7 +106,7 @@ Use the `target extended-remote` command to connect to the IP
 and port number that stub acquired earlier:
 
 ```
-fuchsia$ out/toolchain/x86_64-linux/gdb/bin/gdb
+devhost$ out/toolchain/x86_64-linux/gdb/bin/gdb
 GNU gdb (GDB) <version>
 ...
 Hi, this is fuchsia.py. Adding Fuchsia support.
@@ -97,6 +119,7 @@ From here we can use gdb as usual:
 
 ```
 (gdb) file out/build-zircon/build-zircon-pc-x86-64/system/utest/debugger/debugger.elf
+...
 (gdb) break main
 (gdb) run
 Starting program: ...
@@ -150,7 +173,7 @@ $ debugserver 7000
 On Linux:
 
 ```
-fuchsia$ out/toolchain/x86_64-linux/gdb/bin/gdb
+devhost$ out/toolchain/x86_64-linux/gdb/bin/gdb
 (gdb) file out/build-zircon/build-zircon-pc-x86-64/system/utest/debugger/debugger.elf
 (gdb) tar ext 192.168.3.53:7000
 (gdb) set remote exec-file /boot/test/sys/debugger-test
@@ -179,6 +202,11 @@ Parameters:
   verbosity - useful range is -2 to 3 (-2 is most verbose)
 ```
 
+## Attaching to a running program
+
+This is not supported yet. We just need to wire up support for suspend/resume
+in the debugserver stub.
+
 ## Notes
 
 ### Logging output
@@ -203,7 +231,23 @@ Use the "info sharedlibrary" command to see the complete listing.
 Do you need "set solib-search-path" or "set sysroot"?
 ```
 
-In general you can ignore these.
+Depending on the library you may be able to ignore these.
+The error occurs because the library isn't in gdb's search path.
+If you need the library (say you want to set a breakpoint in a function in it)
+then find the library in the build tree, e.g.,
+
+```
+devhost$ find out/build-zircon/build-zircon-pc-x86-64 -name libtest-utils.so
+out/build-zircon/build-zircon-pc-x86-64/system/ulib/test-utils/libtest-utils.so
+```
+
+and then in gdb:
+
+```
+(gdb) show solib-search-path
+The search path for loading non-absolute shared library symbol files is out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info.
+(gdb) set solib-search-path out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info:out/build-zircon/build-zircon-pc-x86-64/system/ulib/test-utils
+```
 
 ### Limitations
 
@@ -221,7 +265,7 @@ place to look.
 Do both of these files exist?
 
 ```
-fuchsia$ ls -l out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/{libc.so,ld.so.1}
+devhost$ ls -l out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/{libc.so,ld.so.1}
 lrwxrwxrwx 1 dje eng       7 Oct  1 12:53 out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/ld.so.1 -> libc.so
 -rwxr-x--- 2 dje eng 4934096 Oct  1 12:53 out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/libc.so
 ```
