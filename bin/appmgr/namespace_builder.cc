@@ -76,21 +76,20 @@ void NamespaceBuilder::AddDev() {
 }
 
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
-  if (sandbox.dev().empty())
-    return;
-
-  fxl::UniqueFD dir(open("/dev", O_DIRECTORY | O_RDWR));
-  if (!dir.is_valid())
-    return;
-  const auto& dev = sandbox.dev();
-  for (const auto& path : dev) {
-    fxl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
-    if (!entry.is_valid())
-      continue;
-    zx::channel handle = CloneChannel(entry.get());
-    if (!handle)
-      continue;
-    PushDirectoryFromChannel("/dev/" + path, std::move(handle));
+  if (!sandbox.dev().empty()) {
+    fxl::UniqueFD dir(open("/dev", O_DIRECTORY | O_RDWR));
+    if (dir.is_valid()) {
+      const auto& dev = sandbox.dev();
+      for (const auto& path : dev) {
+        fxl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
+        if (!entry.is_valid())
+          continue;
+        zx::channel handle = CloneChannel(entry.get());
+        if (!handle)
+          continue;
+        PushDirectoryFromChannel("/dev/" + path, std::move(handle));
+      }
+    }
   }
 
   for (const auto& feature : sandbox.features()) {

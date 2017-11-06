@@ -6,17 +6,16 @@ import("//packages/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 package("cobalt") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "cobalt"
-    },
-  ]
+  binary = "cobalt"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 package("cobalt_tests") {
