@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 extern crate ddk_rs;
-extern crate ddk_sys;
 extern crate fuchsia_zircon;
 use fuchsia_zircon::Status;
 use ddk_rs as ddk;

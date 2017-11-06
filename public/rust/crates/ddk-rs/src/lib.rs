@@ -16,16 +16,6 @@ use zircon::sys as sys;
 use std::slice;
 use std::os::raw::c_char;
 
-pub struct Driver {
-    driver: *mut ddk_sys::zx_driver_t,
-}
-
-impl Driver {
-    pub fn wrap(driver: *mut ddk_sys::zx_driver_t) -> Driver {
-        Driver { driver: driver }
-    }
-}
-
 pub trait DriverOps {
     fn bind(&mut self, parent: Device) -> Result<Device, Status>;
 
@@ -161,7 +151,7 @@ pub fn remove_device(device: &mut Device) -> Status {
     }
 }
 
-extern fn ddk_get_protocol(ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t {
+extern fn ddk_get_protocol(_ctx: *mut u8, _proto_id: u32, _protocol: *mut u8) -> sys::zx_status_t {
     sys::ZX_ERR_NOT_SUPPORTED
 }
 
@@ -244,7 +234,7 @@ extern fn ddk_write(ctx: *mut u8, buf: *const u8, count: usize, off: sys::zx_off
     ret
 }
 
-extern fn ddk_iotxn_queue(ctx: *mut u8, txn: *mut ddk_sys::iotxn_t) {
+extern fn ddk_iotxn_queue(_ctx: *mut u8, _txn: *mut ddk_sys::iotxn_t) {
 }
 
 extern fn ddk_get_size(ctx: *mut u8) -> u64 {
@@ -316,23 +306,23 @@ extern fn driver_init(out_ctx: *mut *mut u8) -> sys::zx_status_t {
     }.into_raw()
 }
 
-extern fn driver_bind(mut ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, _cookie: *mut *mut u8) -> sys::zx_status_t {
+extern fn driver_bind(ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, _cookie: *mut *mut u8) -> sys::zx_status_t {
     println!("driver_bind called");
     let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
     let parent_wrapped = Device::wrap(parent);
     let status = match ops.bind(parent_wrapped) {
-        Ok(device) => Status::OK,
+        Ok(_) => Status::OK,
         Err(e) => e,
     };
     let _ = Box::into_raw(ops);
     status.into_raw()
 }
 
-extern fn driver_unbind(mut _ctx: *mut u8, device: *mut ddk_sys::zx_device_t, _cookie: *mut u8) {
+extern fn driver_unbind(_ctx: *mut u8, _device: *mut ddk_sys::zx_device_t, _cookie: *mut u8) {
     println!("driver unbind called with cookie {:?}", _cookie);
 }
 
-extern fn driver_release(mut ctx: *mut u8) {
+extern fn driver_release(ctx: *mut u8) {
     println!("driver_release called");
     let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
     ops.release();

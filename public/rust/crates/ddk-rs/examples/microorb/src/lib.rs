@@ -7,7 +7,6 @@ extern crate ddk_sys;
 extern crate fuchsia_zircon;
 
 use fuchsia_zircon::{DurationNum, Status};
-use fuchsia_zircon::sys as sys;
 use ddk_rs::{DeviceOps, Device, DriverOps, UsbProtocol};
 use ddk_rs as ddk;
 use ddk_sys::{USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};

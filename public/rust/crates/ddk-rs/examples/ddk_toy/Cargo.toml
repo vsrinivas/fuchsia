@@ -13,7 +13,6 @@ crate-type = ["dylib"]
 
 [dependencies]
 ddk-rs = { path = "../../../ddk-rs" }
-ddk-sys = { path = "../../ddk-sys" }
 fuchsia-zircon = { path = "../../../fuchsia-zircon" }
 
 [build-dependencies]
