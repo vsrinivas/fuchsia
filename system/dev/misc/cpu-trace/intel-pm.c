@@ -159,6 +159,17 @@ static const category_spec_t kCategorySpecs[] = {
 #include "zircon/device/intel-pm-categories.inc"
 };
 
+// Map programmable category ids to indices in |category_specs|.
+static const uint32_t kProgrammableCategoryMap[] = {
+#define DEF_CATEGORY(symbol, id, name, counters...) \
+  [id] = symbol,
+#include <zircon/device/intel-pm-categories.inc>
+};
+
+static_assert(countof(kCategorySpecs) == IPM_CATEGORY_MAX, "");
+static_assert(countof(kProgrammableCategoryMap) <=
+              IPM_CATEGORY_PROGRAMMABLE_MAX, "");
+
 static uint32_t get_simple_config_os_usr_mask(const ioctl_ipm_simple_perf_config_t* simple_config) {
     uint32_t os_usr_mask = simple_config->categories & (IPM_CATEGORY_OS | IPM_CATEGORY_USR);
     // TODO(dje): Maybe convert no bits specified -> both os+usr. Later.
@@ -278,11 +289,14 @@ static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_confi
             return status;
     }
 
-    if (programmable_category >= IPM_CATEGORY_MAX)
+    if (programmable_category >= countof(kProgrammableCategoryMap)) {
+        zxlogf(ERROR, "ipm: bad programmable category %u\n", programmable_category);
         return ZX_ERR_INVALID_ARGS;
+    }
     if (programmable_category != IPM_CATEGORY_NONE) {
+        uint32_t spec_index = kProgrammableCategoryMap[programmable_category];
         status = category_to_config(simple_config,
-                                    &kCategorySpecs[programmable_category],
+                                    &kCategorySpecs[spec_index],
                                     config);
         if (status != ZX_OK)
             return status;
