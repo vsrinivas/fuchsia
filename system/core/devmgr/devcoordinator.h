@@ -156,7 +156,9 @@ bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
 // dedicated channel for forwarding OPEN operations.
 // Our opcodes set the high bit to avoid overlap.
 typedef struct {
-    zx_txid_t txid;
+    zx_txid_t txid;     // FIDL2 message header
+    uint32_t reserved0;
+    uint32_t flags;
     uint32_t op;
 
     union {

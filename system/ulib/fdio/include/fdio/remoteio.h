@@ -133,10 +133,15 @@ typedef struct {
     zx_handle_t handle[FDIO_MAX_HANDLES];
 } zxrio_object_t;
 
+static_assert(sizeof(zx_txid_t) == 4,
+        "If the size of txid changes to 8 bytes then reserved0 should be removed from zxrio_msg");
 
 struct zxrio_msg {
-    zx_txid_t txid;                    // transaction id
-    uint32_t op;                       // opcode
+    zx_txid_t txid;                    // FIDL2 message header
+    uint32_t reserved0;
+    uint32_t flags;
+    uint32_t op;
+
     uint32_t datalen;                  // size of data[]
     int32_t arg;                       // tx: argument, rx: return value
     union {
@@ -145,7 +150,7 @@ struct zxrio_msg {
         uint32_t protocol;             // rx: Open
         uint32_t op;                   // tx: Ioctl
     } arg2;
-    int32_t reserved;
+    int32_t reserved1;
     uint32_t hcount;                   // number of valid handles
     zx_handle_t handle[4];             // up to 3 handles + reply channel handle
     uint8_t data[FDIO_CHUNK_SIZE];     // payload
