@@ -144,10 +144,6 @@ package("ledger") {
     {
       name = "cloud_provider_firebase"
     },
-    {
-      name = "cloud_sync"
-      source = "ledger_tool"
-    },
 
     {
       name = "ledger_tool"
