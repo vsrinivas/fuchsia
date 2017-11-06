@@ -7,7 +7,6 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/managed-vfs.h>
-#include <svcfs/svcfs.h>
 #include <zx/channel.h>
 
 #include <functional>
@@ -18,6 +17,7 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace app {
 
@@ -27,8 +27,7 @@ namespace app {
 // The bridge takes a service provider to use as a backend and exposes both the
 // service provider interface and the directory interface, which will make it
 // easier to migrate clients to the directory interface.
-class ServiceProviderBridge : public svcfs::ServiceProvider,
-                              public app::ServiceProvider {
+class ServiceProviderBridge : public app::ServiceProvider {
  public:
   ServiceProviderBridge();
   ~ServiceProviderBridge() override;
@@ -63,8 +62,22 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   int OpenAsFileDescriptor();
 
  private:
-  // Overridden from |svcfs::ServiceProvider|:
-  void Connect(fbl::StringPiece name, zx::channel channel) override;
+  // A directory-like object which dynamically creates Service vnodes
+  // for any file lookup.  Does not support enumeration since the actual
+  // set of services available is not known by the bridge.
+  class ServiceProviderDir : public fs::Vnode {
+   public:
+    explicit ServiceProviderDir(fxl::WeakPtr<ServiceProviderBridge> bridge);
+    ~ServiceProviderDir() final;
+
+    // Overridden from |fs::Vnode|:
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out,
+                       fbl::StringPiece name) final;
+    zx_status_t Getattr(vnattr_t* a) final;
+
+   private:
+    fxl::WeakPtr<ServiceProviderBridge> const bridge_;
+  };
 
   // Overridden from |app::ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
@@ -72,10 +85,12 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
 
   fs::ManagedVfs vfs_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
-  fbl::RefPtr<svcfs::VnodeProviderDir> directory_;
+  fbl::RefPtr<ServiceProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;
   app::ServiceProviderPtr backend_;
+
+  fxl::WeakPtrFactory<ServiceProviderBridge> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
 };

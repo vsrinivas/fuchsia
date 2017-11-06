@@ -18,7 +18,6 @@ source_set("cpp") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/svcfs",
     "//zircon/system/ulib/zx",
   ]
 

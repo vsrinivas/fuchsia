@@ -7,7 +7,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/managed-vfs.h>
-#include <svcfs/svcfs.h>
+#include <fs/pseudo-dir.h>
 #include <zx/channel.h>
 
 #include <functional>
@@ -21,8 +21,7 @@
 
 namespace app {
 
-class ServiceNamespace : public svcfs::ServiceProvider,
-                         public app::ServiceProvider {
+class ServiceNamespace : public app::ServiceProvider {
  public:
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceNamespace| to connect generic "interface requests" (i.e.,
@@ -109,19 +108,17 @@ class ServiceNamespace : public svcfs::ServiceProvider,
   bool MountAtPath(const char* path);
 
  private:
-  // Overridden from |svcfs::ServiceProvider|:
-  void Connect(fbl::StringPiece name, zx::channel channel) override;
-
   // Overridden from |app::ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
                         zx::channel channel) override;
 
+  void Connect(fbl::StringPiece name, zx::channel channel);
   void ConnectCommon(const std::string& service_name, zx::channel channel);
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
   fs::ManagedVfs vfs_;
-  fbl::RefPtr<svcfs::VnodeDir> directory_;
+  fbl::RefPtr<fs::PseudoDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
