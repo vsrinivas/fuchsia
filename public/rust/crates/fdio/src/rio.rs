@@ -79,6 +79,14 @@ impl Message {
         unsafe { *self.msg }.txid
     }
 
+    pub fn reserved0(&self) -> zx_txid_t {
+        unsafe { *self.msg }.reserved0
+    }
+
+    pub fn flags(&self) -> zx_txid_t {
+        unsafe { *self.msg }.flags
+    }
+
     /// op returns the type of IO operation requested
     pub fn op(&self) -> c_uint {
         unsafe { *self.msg }.op
@@ -110,8 +118,8 @@ impl Message {
         unsafe { (*self.msg).arg2.op }
     }
 
-    pub fn reserved(&self) -> i32 {
-        unsafe { *self.msg }.reserved
+    pub fn reserved1(&self) -> i32 {
+        unsafe { *self.msg }.reserved1
     }
 
     pub fn hcount(&self) -> u32 {
@@ -159,6 +167,8 @@ impl<'a> ::std::fmt::Debug for Message {
     fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         fmt.debug_struct("zxrio_msg")
             .field("txid", &self.txid())
+            .field("reserved0", &self.reserved0())
+            .field("flags", &self.flags())
             .field("op", &self.opname())
             .field("datalen", &self.datalen())
             .field("arg", &self.arg())
@@ -167,7 +177,7 @@ impl<'a> ::std::fmt::Debug for Message {
             // information leak that must be fixed. The struct should always be
             // initialized or read from the wire.
             .field("arg2", &self.off())
-            .field("reserved", &self.reserved())
+            .field("reserved1", &self.reserved1())
             .field("hcount", &self.hcount())
             .field("data", &self.data())
             .finish()
@@ -209,10 +219,12 @@ mod test {
         let mut m = zxrio_msg_t {
             txid: 2,
             op: ZXRIO_OPEN,
+            reserved0: 7,
+            flags: 5,
             datalen: 1,
             arg: 3,
             arg2: zxrio_msg__bindgen_ty_1 { mode: fdio_sys::O_PIPELINE as u32 },
-            reserved: 4,
+            reserved1: 4,
             hcount: 1,
             handle: [5, 0, 0, 0],
             data: [0; 8192],
@@ -237,10 +249,12 @@ mod test {
         let buf = zircon::MessageBuf::new_with(newmsg().into(), vec![zircon::Handle::invalid()]);
         let m: Message = buf.into();
         assert_eq!(m.txid(), 2);
+        assert_eq!(m.reserved0(), 7);
+        assert_eq!(m.flags(), 5);
         assert_eq!(m.op(), ZXRIO_OPEN);
         assert_eq!(m.datalen(), 1);
         assert_eq!(m.arg(), 3);
-        assert_eq!(m.reserved(), 4);
+        assert_eq!(m.reserved1(), 4);
         assert_eq!(m.hcount(), 1);
         assert_eq!(m.data().len(), m.datalen() as usize);
         assert_eq!(m.data(), &['.' as u8]);

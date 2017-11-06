@@ -52,7 +52,7 @@ pub const O_NOREMOTE: raw::c_int = 0o0100000000;
 pub const O_ADMIN: raw::c_int = 0o0200000000;
 pub const O_PIPELINE: raw::c_int = 0o02000000000;
 
-pub const ZXRIO_HDR_SZ: usize = 48;
+pub const ZXRIO_HDR_SZ: usize = 56;
 pub const ZXRIO_MSG_SZ: usize = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE as usize;
 
 pub const ZXRIO_OBJECT_MINSIZE: usize = 8;
@@ -202,11 +202,13 @@ pub type zx_txid_t = u32;
 #[derive(Copy)]
 pub struct zxrio_msg {
     pub txid: zx_txid_t,
+    pub reserved0: u32,
+    pub flags: u32,
     pub op: u32,
     pub datalen: u32,
     pub arg: i32,
     pub arg2: zxrio_msg__bindgen_ty_1,
-    pub reserved: i32,
+    pub reserved1: i32,
     pub hcount: u32,
     pub handle: [zx_handle_t; 4usize],
     pub data: [u8; 8192usize],
@@ -282,7 +284,7 @@ impl Clone for zxrio_msg__bindgen_ty_1 {
 fn bindgen_test_layout_zxrio_msg() {
     assert_eq!(
         ::std::mem::size_of::<zxrio_msg>(),
-        8240usize,
+        8248usize,
         concat!("Size of: ", stringify!(zxrio_msg))
     );
     assert_eq!(
@@ -301,8 +303,28 @@ fn bindgen_test_layout_zxrio_msg() {
         )
     );
     assert_eq!(
-        unsafe { &(*(0 as *const zxrio_msg)).op as *const _ as usize },
+        unsafe { &(*(0 as *const zxrio_msg)).reserved0 as *const _ as usize },
         4usize,
+        concat!(
+            "Alignment of field: ",
+            stringify!(zxrio_msg),
+            "::",
+            stringify!(reserved0)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(0 as *const zxrio_msg)).flags as *const _ as usize },
+        8usize,
+        concat!(
+            "Alignment of field: ",
+            stringify!(zxrio_msg),
+            "::",
+            stringify!(flags)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(0 as *const zxrio_msg)).op as *const _ as usize },
+        12usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -312,7 +334,7 @@ fn bindgen_test_layout_zxrio_msg() {
     );
     assert_eq!(
         unsafe { &(*(0 as *const zxrio_msg)).datalen as *const _ as usize },
-        8usize,
+        16usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -322,7 +344,7 @@ fn bindgen_test_layout_zxrio_msg() {
     );
     assert_eq!(
         unsafe { &(*(0 as *const zxrio_msg)).arg as *const _ as usize },
-        12usize,
+        20usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -332,7 +354,7 @@ fn bindgen_test_layout_zxrio_msg() {
     );
     assert_eq!(
         unsafe { &(*(0 as *const zxrio_msg)).arg2 as *const _ as usize },
-        16usize,
+        24usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -341,8 +363,8 @@ fn bindgen_test_layout_zxrio_msg() {
         )
     );
     assert_eq!(
-        unsafe { &(*(0 as *const zxrio_msg)).reserved as *const _ as usize },
-        24usize,
+        unsafe { &(*(0 as *const zxrio_msg)).reserved1 as *const _ as usize },
+        32usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -352,7 +374,7 @@ fn bindgen_test_layout_zxrio_msg() {
     );
     assert_eq!(
         unsafe { &(*(0 as *const zxrio_msg)).hcount as *const _ as usize },
-        28usize,
+        36usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -362,7 +384,7 @@ fn bindgen_test_layout_zxrio_msg() {
     );
     assert_eq!(
         unsafe { &(*(0 as *const zxrio_msg)).handle as *const _ as usize },
-        32usize,
+        40usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
@@ -372,7 +394,7 @@ fn bindgen_test_layout_zxrio_msg() {
     );
     assert_eq!(
         unsafe { &(*(0 as *const zxrio_msg)).data as *const _ as usize },
-        48usize,
+        56usize,
         concat!(
             "Alignment of field: ",
             stringify!(zxrio_msg),
