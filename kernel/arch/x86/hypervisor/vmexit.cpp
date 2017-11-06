@@ -30,7 +30,6 @@
 
 #define LOCAL_TRACE 0
 
-static const uint16_t kLocalApicEoi = 0x00b0;
 static const uint16_t kLocalApicLvtTimer = 0x320;
 static const uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
@@ -135,7 +134,8 @@ static bool local_apic_issue_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
     return true;
 }
 
-static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+// Injects an interrupt into the guest, if there is one pending.
+void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
     uint32_t vector = local_apic_pop_interrupt(local_apic_state);
     if (vector == kNumInterrupts)
         return;
@@ -150,9 +150,8 @@ static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
     }
 }
 
-/* Sets the given interrupt in the bitmap and signals waiters, returning true if
- * a waiter was signaled.
- */
+// Sets the given interrupt in the bitmap and signals waiters, returning true if
+// a waiter was signaled.
 bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vector,
                                  bool reschedule) {
     local_apic_pending_interrupt(local_apic_state, vector);
@@ -557,14 +556,6 @@ static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
         return ZX_ERR_NOT_SUPPORTED;
     case ApicAccessType::LINEAR_ACCESS_WRITE:
-        if (apic_access_info.offset == kLocalApicEoi) {
-            // When we observe an EOI, we issue any pending interrupts. This is
-            // not architecture-accurate, but works for the virtual machine.
-            local_apic_maybe_interrupt(vmcs, local_apic_state);
-            next_rip(exit_info, vmcs);
-            return ZX_OK;
-        }
-    /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
         zx_vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
         return handle_trap(exit_info, vmcs, guest_paddr, gpas, traps, packet);

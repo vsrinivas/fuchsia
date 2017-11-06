@@ -81,7 +81,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     case ZX_GUEST_TRAP_MEM:
         if (port)
             return ZX_ERR_INVALID_ARGS;
-        /* fall-through */
+        // fallthrough
     case ZX_GUEST_TRAP_BELL: {
         if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
             return ZX_ERR_INVALID_ARGS;

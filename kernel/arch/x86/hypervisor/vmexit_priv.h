@@ -105,6 +105,7 @@ struct ApicAccessInfo {
     ApicAccessInfo(uint64_t qualification);
 };
 
+void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state);
 bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vector,
                                  bool reschedule);
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,

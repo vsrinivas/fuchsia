@@ -184,15 +184,15 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {
-        dprintf(SPEW, "can not set vmcs controls %#x\n", static_cast<uint>(controls));
+        dprintf(INFO, "can not set vmcs controls %#x\n", static_cast<uint>(controls));
         return ZX_ERR_NOT_SUPPORTED;
     }
     if ((~allowed_0 & clear) != clear) {
-        dprintf(SPEW, "can not clear vmcs controls %#x\n", static_cast<uint>(controls));
+        dprintf(INFO, "can not clear vmcs controls %#x\n", static_cast<uint>(controls));
         return ZX_ERR_NOT_SUPPORTED;
     }
     if ((set & clear) != 0) {
-        dprintf(SPEW, "can not set and clear the same vmcs controls %#x\n",
+        dprintf(INFO, "can not set and clear the same vmcs controls %#x\n",
                 static_cast<uint>(controls));
         return ZX_ERR_INVALID_ARGS;
     }
@@ -564,7 +564,6 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     zx_status_t status = alloc_vpid(&vpid);
     if (status != ZX_OK)
         return status;
-
     auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
@@ -609,7 +608,6 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     status = vcpu->vmcs_page_.Alloc(vmx_info, 0);
     if (status != ZX_OK)
         return status;
-
     auto_call.cancel();
 
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
@@ -647,6 +645,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     zx_status_t status;
     do {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
+        local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
         if (x86_feature_test(X86_FEATURE_XSAVE)) {
             // Save the host XCR0, and load the guest XCR0.
             vmx_state_.host_state.xcr0 = x86_xgetbv(0);
@@ -660,7 +659,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         }
         if (status != ZX_OK) {
             uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
-            dprintf(SPEW, "VCPU resume failed: %#lx\n", error);
+            dprintf(INFO, "VCPU resume failed: %#lx\n", error);
         } else {
             vmx_state_.resume = true;
             status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, gpas_,
@@ -687,10 +686,16 @@ void vmx_exit(VmxState* vmx_state) {
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (vector > X86_INT_MAX)
         return ZX_ERR_OUT_OF_RANGE;
+    auto cpu = cpu_of(vpid_);
     if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
-        // If we did not signal the VCPU, it means it is currently running,
-        // therefore we should issue an IPI to force a VM exit.
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
+        DEBUG_ASSERT(!arch_ints_disabled());
+        arch_disable_ints();
+        // If we did not signal the VCPU and we are not running on the same CPU,
+        // it means the VCPU is currently running, therefore we should issue an
+        // IPI to force a VM exit.
+        if (cpu != arch_curr_cpu_num())
+            mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu), 0);
+        arch_enable_ints();
     }
     return ZX_OK;
 }
