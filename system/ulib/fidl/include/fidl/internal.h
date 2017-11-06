@@ -17,6 +17,11 @@
 
 namespace fidl {
 
+enum FidlNullability : uint32_t {
+    kNonnullable = 0u,
+    kNullable = 1u,
+};
+
 inline uint64_t FidlAlign(uint32_t offset) {
     constexpr uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
     return (offset + alignment_mask) & ~alignment_mask;
@@ -94,9 +99,9 @@ struct FidlCodedHandle {
     // Note that an explicitly sized type is used here, as
     // zx_obj_type_t is a C enum and hence has no guaranteed ABI.
     const uint32_t handle_subtype;
-    const bool nullable;
+    const FidlNullability nullable;
 
-    constexpr FidlCodedHandle(uint32_t handle_subtype, bool nullable)
+    constexpr FidlCodedHandle(uint32_t handle_subtype, FidlNullability nullable)
         : handle_subtype(handle_subtype), nullable(nullable) {}
 
     static_assert(ZX_OBJ_TYPE_LAST <= UINT32_MAX, "");
@@ -104,9 +109,9 @@ struct FidlCodedHandle {
 
 struct FidlCodedString {
     const uint32_t max_size;
-    const bool nullable;
+    const FidlNullability nullable;
 
-    constexpr FidlCodedString(uint32_t max_size, bool nullable)
+    constexpr FidlCodedString(uint32_t max_size, FidlNullability nullable)
         : max_size(max_size), nullable(nullable) {}
 };
 
@@ -116,10 +121,10 @@ struct FidlCodedVector {
     const fidl_type* const element;
     const uint32_t max_count;
     const uint32_t element_size;
-    const bool nullable;
+    const FidlNullability nullable;
 
     constexpr FidlCodedVector(const fidl_type* element, uint32_t max_count, uint32_t element_size,
-                              bool nullable)
+                              FidlNullability nullable)
         : element(element), max_count(max_count), element_size(element_size), nullable(nullable) {}
 };
 

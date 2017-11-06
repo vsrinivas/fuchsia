@@ -19,17 +19,17 @@ template <typename T, size_t N> uint32_t ArrayCount(T const (&array)[N]) {
 
 // Handle types.
 static const fidl_type_t nonnullable_handle =
-    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, false));
+    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, fidl::kNonnullable));
 static const fidl_type_t nullable_handle =
-    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, true));
+    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, fidl::kNullable));
 static const fidl_type_t nullable_channel_handle =
-    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, true));
+    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, fidl::kNullable));
 static const fidl_type_t nullable_vmo_handle =
-    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, true));
+    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, fidl::kNullable));
 static const fidl_type_t nonnullable_channel_handle =
-    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, false));
+    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, fidl::kNonnullable));
 static const fidl_type_t nonnullable_vmo_handle =
-    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, false));
+    fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, fidl::kNonnullable));
 
 // Array types.
 static const fidl_type_t array_of_two_nonnullable_handles = fidl_type_t(
@@ -47,29 +47,32 @@ static const fidl_type_t array_of_two_arrays_of_two_nonnullable_handles =
 
 // String types.
 static const fidl_type_t unbounded_nonnullable_string =
-    fidl_type_t(fidl::FidlCodedString(FIDL_MAX_SIZE, false));
+    fidl_type_t(fidl::FidlCodedString(FIDL_MAX_SIZE, fidl::kNonnullable));
 static const fidl_type_t unbounded_nullable_string =
-    fidl_type_t(fidl::FidlCodedString(FIDL_MAX_SIZE, true));
+    fidl_type_t(fidl::FidlCodedString(FIDL_MAX_SIZE, fidl::kNullable));
 static const fidl_type_t bounded_32_nonnullable_string =
-    fidl_type_t(fidl::FidlCodedString(32, false));
-static const fidl_type_t bounded_32_nullable_string = fidl_type_t(fidl::FidlCodedString(32, true));
+    fidl_type_t(fidl::FidlCodedString(32, fidl::kNonnullable));
+static const fidl_type_t bounded_32_nullable_string =
+    fidl_type_t(fidl::FidlCodedString(32, fidl::kNullable));
 static const fidl_type_t bounded_4_nonnullable_string =
-    fidl_type_t(fidl::FidlCodedString(4, false));
-static const fidl_type_t bounded_4_nullable_string = fidl_type_t(fidl::FidlCodedString(4, true));
+    fidl_type_t(fidl::FidlCodedString(4, fidl::kNonnullable));
+static const fidl_type_t bounded_4_nullable_string =
+    fidl_type_t(fidl::FidlCodedString(4, fidl::kNullable));
 
 // Vector types.
-static const fidl_type_t unbounded_nonnullable_vector_of_handles = fidl_type_t(
-    fidl::FidlCodedVector(&nonnullable_handle, FIDL_MAX_SIZE, sizeof(zx_handle_t), false));
-static const fidl_type_t unbounded_nullable_vector_of_handles = fidl_type_t(
-    fidl::FidlCodedVector(&nonnullable_handle, FIDL_MAX_SIZE, sizeof(zx_handle_t), true));
-static const fidl_type_t bounded_32_nonnullable_vector_of_handles =
-    fidl_type_t(fidl::FidlCodedVector(&nonnullable_handle, 32, sizeof(zx_handle_t), false));
-static const fidl_type_t bounded_32_nullable_vector_of_handles =
-    fidl_type_t(fidl::FidlCodedVector(&nonnullable_handle, 32, sizeof(zx_handle_t), true));
-static const fidl_type_t bounded_2_nonnullable_vector_of_handles =
-    fidl_type_t(fidl::FidlCodedVector(&nonnullable_handle, 2, sizeof(zx_handle_t), false));
-static const fidl_type_t bounded_2_nullable_vector_of_handles =
-    fidl_type_t(fidl::FidlCodedVector(&nonnullable_handle, 2, sizeof(zx_handle_t), true));
+static const fidl_type_t unbounded_nonnullable_vector_of_handles =
+    fidl_type_t(fidl::FidlCodedVector(&nonnullable_handle, FIDL_MAX_SIZE, sizeof(zx_handle_t),
+                                      fidl::kNonnullable));
+static const fidl_type_t unbounded_nullable_vector_of_handles = fidl_type_t(fidl::FidlCodedVector(
+    &nonnullable_handle, FIDL_MAX_SIZE, sizeof(zx_handle_t), fidl::kNullable));
+static const fidl_type_t bounded_32_nonnullable_vector_of_handles = fidl_type_t(
+    fidl::FidlCodedVector(&nonnullable_handle, 32, sizeof(zx_handle_t), fidl::kNonnullable));
+static const fidl_type_t bounded_32_nullable_vector_of_handles = fidl_type_t(
+    fidl::FidlCodedVector(&nonnullable_handle, 32, sizeof(zx_handle_t), fidl::kNullable));
+static const fidl_type_t bounded_2_nonnullable_vector_of_handles = fidl_type_t(
+    fidl::FidlCodedVector(&nonnullable_handle, 2, sizeof(zx_handle_t), fidl::kNonnullable));
+static const fidl_type_t bounded_2_nullable_vector_of_handles = fidl_type_t(
+    fidl::FidlCodedVector(&nonnullable_handle, 2, sizeof(zx_handle_t), fidl::kNullable));
 
 } // namespace
 
