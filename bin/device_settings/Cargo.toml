@@ -9,8 +9,11 @@ license = "BSD-3-Clause"
 
 [dependencies]
 futures = "0.1"
-tokio-core = "0.1"
+tokio-core = { path = "../../../third_party/rust-mirrors/tokio-core" }
 bytes = "0.4"
+fdio = { path = "../../../public/rust/crates/fdio" }
+
+[dev-dependencies]
 tempdir = "0.3"
 
 [profile.release]

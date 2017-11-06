@@ -4,16 +4,15 @@
 
 #![deny(warnings)]
 
-extern crate bytes;
 extern crate fidl;
-extern crate fuchsia_zircon;
+extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate mxruntime;
 extern crate mxruntime_sys;
 extern crate tokio_core;
 extern crate tokio_fuchsia;
+extern crate fdio;
 
-use bytes::ByteOrder;
 use fidl::{InterfacePtr, ClientEnd};
 use futures::{Future, future};
 use std::cell::RefCell;
@@ -21,7 +20,6 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io;
-use std::os::unix::ffi::OsStrExt;
 use std::rc::Rc;
 use tokio_core::reactor;
 
@@ -206,51 +204,60 @@ fn main() {
     let mut core = reactor::Core::new().expect("Unable to create core");
     let handle = core.handle();
 
-
     // TODO(raggi): clean this up, should check for handle_invalid etc.
     // We should update mxruntime to provide a safe version of this returning result or option.
     let fdio_handle = unsafe {
         mxruntime_sys::zx_get_startup_handle(mxruntime::HandleType::ServiceRequest as u32)
     };
 
+    // TODO(raggi): add tokio_fuchsia::Channel::from_raw ?
     let fdio_channel =
         tokio_fuchsia::Channel::from_channel(
-            fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(fdio_handle) }),
+            zx::Channel::from(unsafe { zx::Handle::from_raw(fdio_handle) }),
             &handle,
         ).unwrap();
 
     let watchers = Rc::new(RefCell::new(HashMap::new()));
-    let server = fdio_channel.repeat_server(|_chan, ref mut buf| {
-        let fdio_op = bytes::LittleEndian::read_u32(&buf.bytes()[4..8]);
+    let server = fdio_channel.chain_server(|(chan, buf)| {
+        let mut msg : fdio::rio::Message = buf.into();
 
-        let path = std::ffi::OsStr::from_bytes(&buf.bytes()[48..]).to_owned();
-
-        if fdio_op != 259 {
-            eprintln!(
-                "service request channel received unknown op: {:?}",
-                &fdio_op
-            );
+        let mut reply_channel = None;
+        // open & clone use a different reply channel
+        if msg.op() == fdio::fdio_sys::ZXRIO_OPEN || msg.op() == fdio::fdio_sys::ZXRIO_CLONE {
+            // Note: msg.validate() ensures that open must have exactly one
+            // handle, but the message may yet be invalid.
+            match msg.take_handle(0) {
+                Some(c) => reply_channel = Some(zx::Channel::from(c)),
+                None => {}
+            }
         }
+
+        let validation = msg.validate();
+        if validation.is_err() || msg.op() != fdio::fdio_sys::ZXRIO_OPEN || !msg.is_pipelined() || !reply_channel.is_some() {
+            eprintln!(
+                "service request channel received invalid/unsupported zxrio request: {:?}",
+                &msg
+            );
+
+            if !msg.is_pipelined() {
+                match reply_channel {
+                    Some(c) => fdio::rio::write_object(&c, validation.err().unwrap_or(zx::Status::NOT_SUPPORTED), 0, &[], &mut vec![]),
+                    None => fdio::rio::write_object(&chan, validation.err().unwrap_or(zx::Status::NOT_SUPPORTED), 0, &[], &mut vec![]),
+                }.unwrap_or_else(|e| {
+                    eprintln!("service request reply write failed with {:?}", e)
+                });
+            }
+
+            return future::ok((chan, msg.into()));
+        }
+
+        let service_channel = reply_channel.unwrap();
+        let path = msg.data().to_owned();
 
         println!(
             "service request channel received open request for path: {:?}",
             &path
         );
-
-        if buf.n_handles() != 1 {
-            eprintln!(
-                "service request channel received invalid handle count: {}",
-                buf.n_handles()
-            );
-
-            // TODO(raggi): repeat_server should actually be doing this:
-            for i in 0..buf.n_handles() {
-                std::mem::drop(buf.take_handle(i).unwrap());
-            }
-            return;
-        }
-
-        let service_channel = fuchsia_zircon::Channel::from(buf.take_handle(0).unwrap());
 
         let mut d = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
@@ -275,6 +282,8 @@ fn main() {
             }
             Err(e) => eprintln!("service spawn for {:?} failed: {:?}", path, e),
         }
+
+        future::ok((chan, msg.into()))
     });
 
     if let Err(e) = core.run(server) {

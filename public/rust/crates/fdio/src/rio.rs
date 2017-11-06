@@ -147,6 +147,10 @@ impl Message {
     pub fn take_handle(&mut self, i: usize) -> Option<zircon::Handle> {
         self.buf.take_handle(i)
     }
+
+    pub fn is_pipelined(&self) -> bool {
+        self.arg() & O_PIPELINE != 0
+    }
 }
 
 impl Into<zircon::MessageBuf> for Message {

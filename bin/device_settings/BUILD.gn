@@ -11,6 +11,7 @@ rust_binary("device_settings_manager_bin") {
   deps = [
     "//garnet/public/lib/device_settings/fidl:fidl_rust_library",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
