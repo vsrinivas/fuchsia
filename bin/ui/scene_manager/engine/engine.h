@@ -95,6 +95,9 @@ class Engine : private FrameSchedulerDelegate {
   void AddCompositor(Compositor* compositor);
   void RemoveCompositor(Compositor* compositor);
 
+  // Dumps the contents of all scene graphs.
+  std::string DumpScenes() const;
+
  protected:
   // Only used by subclasses used in testing.
   Engine(DisplayManager* display_manager,

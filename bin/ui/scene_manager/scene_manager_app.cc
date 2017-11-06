@@ -4,6 +4,8 @@
 
 #include "garnet/bin/ui/scene_manager/scene_manager_app.h"
 
+#include <fs/pseudo-file.h>
+
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {
@@ -28,6 +30,13 @@ SceneManagerApp::SceneManagerApp(
         FXL_LOG(INFO) << "Accepting connection to SceneManagerImpl";
         bindings_.AddBinding(scene_manager_.get(), std::move(request));
       });
+
+  application_context_->GetOrCreateDebugExportDir()->AddEntry(
+      "dump-scenes",
+      fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
+        *out = scene_manager_->engine()->DumpScenes();
+        return ZX_OK;
+      })));
 }
 
 SceneManagerApp::~SceneManagerApp() {

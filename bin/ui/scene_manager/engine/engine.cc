@@ -13,6 +13,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
+#include "garnet/bin/ui/scene_manager/resources/dump_visitor.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
 #include "garnet/bin/ui/scene_manager/swapchain/display_swapchain.h"
 #include "lib/escher/renderer/paper_renderer.h"
@@ -124,7 +125,7 @@ void Engine::TearDownSession(SessionId id) {
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        fxl::MakeCopyable([handler = std::move(handler)] {}));
+        fxl::MakeCopyable([handler = std::move(handler)]{}));
   }
 }
 
@@ -240,6 +241,22 @@ void Engine::UpdateMetrics(Node* node,
       *node, [this, &local_metrics, updated_nodes](Node* node) {
         UpdateMetrics(node, local_metrics, updated_nodes);
       });
+}
+
+std::string Engine::DumpScenes() const {
+  std::ostringstream output;
+  DumpVisitor visitor(output);
+
+  bool first = true;
+  for (auto compositor : compositors_) {
+    if (first)
+      first = false;
+    else
+      output << std::endl << "===" << std::endl << std::endl;
+
+    compositor->Accept(&visitor);
+  }
+  return output.str();
 }
 
 }  // namespace scene_manager

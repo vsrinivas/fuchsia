@@ -183,7 +183,7 @@ void DumpVisitor::Visit(MeshShape* r) {
     BeginSection("index_buffer");
     r->index_buffer()->Accept(this);
     EndSection();
-    BeginSection("vertx_buffer");
+    BeginSection("vertex_buffer");
     r->vertex_buffer()->Accept(this);
     EndSection();
   }
