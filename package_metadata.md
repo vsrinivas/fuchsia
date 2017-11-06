@@ -85,4 +85,9 @@ The set of currently known features are as follows:
 - `vulkan`, which requests access to the resources required to use the Vulkan
   graphics interface.
 
+- `root-ssl-certificates`, which requests access to the root SSL certificates
+  for the device. These certicates are provided in the `/etc/ssl` and
+  `/system/data/boringssl` directories in the package's namespace. (The latter
+  of which will be removed once all clients transition to the former.)
+
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
