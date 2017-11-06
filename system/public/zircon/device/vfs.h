@@ -8,6 +8,36 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/types.h>
 
+// Rights
+// The file may be read.
+#define ZX_FS_RIGHT_READABLE      0x00000001
+// The file may be written.
+#define ZX_FS_RIGHT_WRITABLE      0x00000002
+// The connection can mount and unmount filesystems.
+#define ZX_FS_RIGHT_ADMIN         0x00000004
+
+// Flags
+// If the file does not exist, it will be created.
+#define ZX_FS_FLAG_CREATE         0x00010000
+// The file must not exist, otherwise an error will be returned. Must be used
+// with ZX_FS_FLAG_CREATE.
+#define ZX_FS_FLAG_EXCLUSIVE      0x00020000
+// Truncates the file before using it.
+#define ZX_FS_FLAG_TRUNCATE       0x00040000
+// Returns an error if the opened file is not a directory.
+#define ZX_FS_FLAG_DIRECTORY      0x00080000
+// The file is opened in append mode, seeking to the end of the file before each
+// write.
+#define ZX_FS_FLAG_APPEND         0x00100000
+// If the endpoint of this request refers to a mount point, open the local
+// directory, not the remote mount.
+#define ZX_FS_FLAG_NOREMOTE       0x00200000
+// The file underlying file should not be opened, just a reference to the file.
+#define ZX_FS_FLAG_VNODE_REF_ONLY 0x00400000
+// The file is opened asynchronously, and no object description is
+// returned for the caller.
+#define ZX_FS_FLAG_PIPELINE       0x80000000
+
 #define MAX_FS_NAME_LEN 32
 
 #define IOCTL_VFS_MOUNT_FS \
