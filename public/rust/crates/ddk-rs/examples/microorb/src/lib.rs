@@ -65,7 +65,7 @@ impl DeviceOps for MicroOrb {
 
     fn unbind(&mut self, device: &mut Device) {
         println!("DeviceOps::unbind called");
-        ddk::remove_device(device);
+        device.remove();
         println!("remove_device returned");
     }
 
@@ -145,7 +145,7 @@ impl DriverOps for MicroOrbDriver {
         orb.set_color(&color)?;
         println!("Set color {:?}", color);
 
-        ddk::add_device(orb, Some(&parent), ddk::DEVICE_ADD_NONE)
+        Device::add(orb, Some(&parent), ddk::DEVICE_ADD_NONE)
     }
 }
 

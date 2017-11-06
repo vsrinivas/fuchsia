@@ -51,7 +51,7 @@ impl DeviceOps for SimpleDevice {
     }
 
     fn unbind(&mut self, device: &mut Device) {
-        ddk::remove_device(device);
+        device.remove();
     }
 }
 
@@ -61,7 +61,7 @@ struct SimpleDriver {
 impl DriverOps for SimpleDriver {
     fn bind(&mut self, parent: Device) -> Result<Device, Status> {
         let simple = Box::new(SimpleDevice::new());
-        ddk::add_device(simple, Some(&parent), ddk::DEVICE_ADD_NON_BINDABLE)
+        Device::add(simple, Some(&parent), ddk::DEVICE_ADD_NON_BINDABLE)
     }
 }
 

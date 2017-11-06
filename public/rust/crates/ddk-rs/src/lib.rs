@@ -32,6 +32,62 @@ impl Device {
     pub fn wrap(device: *mut ddk_sys::zx_device_t) -> Device {
         Device { device: device }
     }
+
+    pub fn add(device_ops: Box<DeviceOps>, parent: Option<&Device>, flags: AddDeviceFlags)
+        -> Result<Device, Status>
+    {
+        let device_name = device_ops.name();
+        if device_name.len() > ddk_sys::ZX_DEVICE_NAME_MAX {
+            return Err(Status::INVALID_ARGS)
+        }
+
+        let raw_parent = match parent {
+            None => std::ptr::null_mut(),
+            Some(device) => device.device,
+        };
+
+        let mut device_add_args: ddk_sys::device_add_args_t = ddk_sys::device_add_args_t::new();
+
+        // Create the Device with a null pointer initially; device_add_from_driver below will fill it
+        // in.
+        let device = Device::wrap(std::ptr::null_mut());
+        let device_and_ops = DeviceAndOps { device: device, ops: device_ops };
+        device_add_args.ctx = Box::into_raw(Box::new(device_and_ops)) as *mut u8;
+        let mut context: Box<DeviceAndOps> = unsafe {
+            Box::from_raw(device_add_args.ctx as *mut DeviceAndOps)
+        };
+
+        // Bind the CString to a local variable to ensure it lives long enough for the call below.
+        let name_cstring = CString::new(device_name).unwrap();
+        device_add_args.name = name_cstring.as_ptr();
+        device_add_args.flags = flags;
+
+        unsafe {
+            device_add_args.ops = &mut DEVICE_OPS;
+            let status = ddk_sys::device_add_from_driver(ddk_sys::__zircon_driver_rec__.driver, raw_parent,
+                &mut device_add_args, &mut context.device.device);
+            match status {
+                sys::ZX_OK => {
+                    // Take a copy of the Device, which should now contain a valid zx_device_t*.
+                    let device = context.device.clone();
+                    // Make sure the context doesn't get freed by Rust yet.
+                    let _ = Box::into_raw(context);
+                    Ok(device)
+                },
+                // Note that in this error case the context will be freed, as there shouldn't be any
+                // callbacks with it.
+                _ => Err(Status::from_raw(status)),
+            }
+        }
+    }
+
+    // Should be called after unbind() has been called on the device and the driver is ready to
+    // remove the device. Beware that the underlying call may free the zx_device_t.
+    pub fn remove(&mut self) -> Status {
+        unsafe {
+            Status::from_raw(ddk_sys::device_remove(self.device))
+        }
+    }
 }
 
 pub trait DeviceOps {
@@ -94,62 +150,6 @@ pub use ddk_sys::{
     DEVICE_ADD_MUST_ISOLATE,
     DEVICE_ADD_INVISIBLE,
 };
-
-pub fn add_device(device_ops: Box<DeviceOps>, parent: Option<&Device>, flags: AddDeviceFlags)
-    -> Result<Device, Status>
-{
-    let device_name = device_ops.name();
-    if device_name.len() > ddk_sys::ZX_DEVICE_NAME_MAX {
-        return Err(Status::INVALID_ARGS)
-    }
-
-    let raw_parent = match parent {
-        None => std::ptr::null_mut(),
-        Some(device) => device.device,
-    };
-
-    let mut device_add_args: ddk_sys::device_add_args_t = ddk_sys::device_add_args_t::new();
-
-    // Create the Device with a null pointer initially; device_add_from_driver below will fill it
-    // in.
-    let device = Device::wrap(std::ptr::null_mut());
-    let device_and_ops = DeviceAndOps { device: device, ops: device_ops };
-    device_add_args.ctx = Box::into_raw(Box::new(device_and_ops)) as *mut u8;
-    let mut context: Box<DeviceAndOps> = unsafe {
-        Box::from_raw(device_add_args.ctx as *mut DeviceAndOps)
-    };
-
-    // Bind the CString to a local variable to ensure it lives long enough for the call below.
-    let name_cstring = CString::new(device_name).unwrap();
-    device_add_args.name = name_cstring.as_ptr();
-    device_add_args.flags = flags;
-
-    unsafe {
-        device_add_args.ops = &mut DEVICE_OPS;
-        let status = ddk_sys::device_add_from_driver(ddk_sys::__zircon_driver_rec__.driver, raw_parent,
-            &mut device_add_args, &mut context.device.device);
-        match status {
-            sys::ZX_OK => {
-                // Take a copy of the Device, which should now contain a valid zx_device_t*.
-                let device = context.device.clone();
-                // Make sure the context doesn't get freed by Rust yet.
-                let _ = Box::into_raw(context);
-                Ok(device)
-            },
-            // Note that in this error case the context will be freed, as there shouldn't be any
-            // callbacks with it.
-            _ => Err(Status::from_raw(status)),
-        }
-    }
-}
-
-// Should be called after unbind() has been called on the device and the driver is ready to remove
-// the device. Beware that the underlying call may free the zx_device_t.
-pub fn remove_device(device: &mut Device) -> Status {
-    unsafe {
-        Status::from_raw(ddk_sys::device_remove(device.device))
-    }
-}
 
 extern fn ddk_get_protocol(_ctx: *mut u8, _proto_id: u32, _protocol: *mut u8) -> sys::zx_status_t {
     sys::ZX_ERR_NOT_SUPPORTED
