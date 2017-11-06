@@ -25,6 +25,7 @@ uint32_t max_ext_cpuid = 0;
 
 enum x86_vendor_list x86_vendor;
 enum x86_microarch_list x86_microarch;
+const x86_microarch_config_t* x86_microarch_config;
 
 static struct x86_model_info model_info;
 
@@ -33,6 +34,7 @@ bool g_x86_feature_fsgsbase;
 static int initialized = 0;
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info);
+static void select_microarch_config(void);
 
 void x86_feature_init(void)
 {
@@ -104,6 +106,7 @@ void x86_feature_init(void)
 
         x86_microarch = get_microarch(&model_info);
     }
+    select_microarch_config();
 
     g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
 }
@@ -111,6 +114,15 @@ void x86_feature_init(void)
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
     if (x86_vendor == X86_VENDOR_INTEL && info->family == 0x6) {
         switch (info->display_model) {
+            case 0x1a: /* Nehalem */
+            case 0x1e: /* Nehalem */
+            case 0x1f: /* Nehalem */
+            case 0x2e: /* Nehalem */
+                return X86_MICROARCH_INTEL_NEHALEM;
+            case 0x25: /* Westmere */
+            case 0x2c: /* Westmere */
+            case 0x2f: /* Westmere */
+                return X86_MICROARCH_INTEL_WESTMERE;
             case 0x2a: /* Sandy Bridge */
             case 0x2d: /* Sandy Bridge EP */
                 return X86_MICROARCH_INTEL_SANDY_BRIDGE;
@@ -238,6 +250,8 @@ void x86_feature_debug(void)
     const char *microarch_string = NULL;
     switch (x86_microarch) {
         case X86_MICROARCH_UNKNOWN: microarch_string = "unknown"; break;
+        case X86_MICROARCH_INTEL_NEHALEM: microarch_string = "Nehalem"; break;
+        case X86_MICROARCH_INTEL_WESTMERE: microarch_string = "Westmere"; break;
         case X86_MICROARCH_INTEL_SANDY_BRIDGE: microarch_string = "Sandy Bridge"; break;
         case X86_MICROARCH_INTEL_IVY_BRIDGE: microarch_string = "Ivy Bridge"; break;
         case X86_MICROARCH_INTEL_BROADWELL: microarch_string = "Broadwell"; break;
@@ -249,6 +263,8 @@ void x86_feature_debug(void)
         case X86_MICROARCH_AMD_ZEN: microarch_string = "Zen"; break;
     }
     printf("Microarch: %s\n", microarch_string);
+    printf("F/M/S: %x/%x/%x\n", model_info.display_family, model_info.display_model,
+           model_info.stepping);
 
     printf("Features: ");
     uint col = 0;
@@ -262,5 +278,207 @@ void x86_feature_debug(void)
     }
     if (col > 0)
         printf("\n");
+}
 
+static uint64_t default_apic_freq() {
+    // The APIC frequency is the core crystal clock frequency if it is
+    // enumerated in the CPUID leaf 0x15, or the processor's bus clock
+    // frequency.
+
+    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+    if (tsc_leaf && tsc_leaf->c != 0) {
+        return tsc_leaf->c;
+    }
+    return 0;
+}
+
+static uint64_t kbl_apic_freq() {
+    uint64_t v = default_apic_freq();
+    if (v != 0) {
+        return v;
+    }
+    return 24ul * 1000 * 1000;
+}
+
+static uint64_t bdw_apic_freq() {
+    uint64_t v = default_apic_freq();
+    if (v != 0) {
+        return v;
+    }
+    uint64_t platform_info;
+    const uint32_t msr_platform_info = 0xce;
+    if (read_msr_safe(msr_platform_info, &platform_info) == ZX_OK) {
+        uint64_t bus_freq_mult = (platform_info >> 8) & 0xf;
+        return bus_freq_mult * 100 * 1000 * 1000;
+    }
+    return 0;
+}
+
+static uint64_t bulldozer_apic_freq() {
+    uint64_t v = default_apic_freq();
+    if (v != 0) {
+        return v;
+    }
+
+    // 15h-17h BKDGs mention the APIC timer rate is 2xCLKIN,
+    // which experimentally appears to be 100Mhz always
+    return 100ul * 1000 * 1000;
+}
+
+static uint64_t unknown_freq() {
+    return 0;
+}
+
+static uint64_t intel_tsc_freq() {
+    const uint64_t core_crystal_clock_freq = x86_get_microarch_config()->get_apic_freq();
+
+    // If this leaf is present, then 18.18.3 (Determining the Processor Base
+    // Frequency) documents this as the nominal TSC frequency.
+    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+    if (tsc_leaf && tsc_leaf->a) {
+        return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
+    }
+    return 0;
+}
+
+static uint64_t amd_compute_p_state_clock(uint64_t p_state_msr) {
+    // is it valid?
+    if (!BIT(p_state_msr, 63))
+        return 0;
+
+    // different AMD microarchitectures use slightly different formulas to compute
+    // the effective clock rate of a P state
+    uint64_t clock = 0;
+    switch (x86_microarch) {
+        case X86_MICROARCH_AMD_BULLDOZER:
+        case X86_MICROARCH_AMD_JAGUAR: {
+            uint64_t did = BITS_SHIFT(p_state_msr, 8, 6);
+            uint64_t fid = BITS(p_state_msr, 5, 0);
+
+            clock = (100 * (fid + 0x10) / (1 << did)) * 1000 * 1000;
+            break;
+        }
+        case X86_MICROARCH_AMD_ZEN: {
+            uint64_t fid = BITS(p_state_msr, 7, 0);
+
+            clock = (fid * 25) * 1000 * 1000;
+            break;
+        }
+        default:
+            break;
+    }
+
+    return clock;
+}
+
+static uint64_t zen_tsc_freq() {
+    const uint32_t p0_state_msr = 0xc0010064; // base P-state MSR
+    // According to the Family 17h PPR, the first P-state MSR is indeed
+    // P0 state and appears to be experimentally so
+    uint64_t p0_state;
+    if (read_msr_safe(p0_state_msr, &p0_state) != ZX_OK)
+        return 0;
+
+    return amd_compute_p_state_clock(p0_state);
+}
+
+// Intel microarches
+static const x86_microarch_config_t kbl_config {
+    .get_apic_freq = kbl_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t skl_config {
+    .get_apic_freq = kbl_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t bdw_config {
+    .get_apic_freq = bdw_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t hsw_config {
+    .get_apic_freq = bdw_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t ivb_config {
+    .get_apic_freq = bdw_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t snb_config {
+    .get_apic_freq = bdw_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t westmere_config {
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t nehalem_config {
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = true,
+};
+static const x86_microarch_config_t intel_default_config {
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .disable_c1e = false,
+};
+
+// AMD microarches
+static const x86_microarch_config_t zen_config {
+    .get_apic_freq = bulldozer_apic_freq,
+    .get_tsc_freq = zen_tsc_freq,
+    .disable_c1e = false,
+};
+static const x86_microarch_config_t jaguar_config {
+    .get_apic_freq = bulldozer_apic_freq,
+    .get_tsc_freq = unknown_freq,
+    .disable_c1e = false,
+};
+static const x86_microarch_config_t bulldozer_config {
+    .get_apic_freq = bulldozer_apic_freq,
+    .get_tsc_freq = unknown_freq,
+    .disable_c1e = false,
+};
+static const x86_microarch_config_t amd_default_config {
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = unknown_freq,
+    .disable_c1e = false,
+};
+
+// Unknown vendor config
+static const x86_microarch_config_t unknown_vendor_config {
+    .get_apic_freq = unknown_freq,
+    .get_tsc_freq = unknown_freq,
+    .disable_c1e = false,
+};
+
+void select_microarch_config(void) {
+    switch (x86_microarch) {
+        case X86_MICROARCH_INTEL_NEHALEM: x86_microarch_config = &nehalem_config; break;
+        case X86_MICROARCH_INTEL_WESTMERE: x86_microarch_config = &westmere_config; break;
+        case X86_MICROARCH_INTEL_SANDY_BRIDGE: x86_microarch_config = &snb_config; break;
+        case X86_MICROARCH_INTEL_IVY_BRIDGE: x86_microarch_config = &ivb_config; break;
+        case X86_MICROARCH_INTEL_BROADWELL: x86_microarch_config = &bdw_config; break;
+        case X86_MICROARCH_INTEL_HASWELL: x86_microarch_config = &hsw_config; break;
+        case X86_MICROARCH_INTEL_SKYLAKE: x86_microarch_config = &skl_config; break;
+        case X86_MICROARCH_INTEL_KABYLAKE: x86_microarch_config = &kbl_config; break;
+        case X86_MICROARCH_AMD_BULLDOZER: x86_microarch_config = &bulldozer_config; break;
+        case X86_MICROARCH_AMD_JAGUAR: x86_microarch_config = &jaguar_config; break;
+        case X86_MICROARCH_AMD_ZEN: x86_microarch_config = &zen_config; break;
+        case X86_MICROARCH_UNKNOWN: {
+            printf("WARNING: Could not identify microarch.\n");
+            printf("Please file a bug with your boot log and description of hardware.\n");
+            switch (x86_vendor) {
+                case X86_VENDOR_INTEL: x86_microarch_config = &intel_default_config; break;
+                case X86_VENDOR_AMD: x86_microarch_config = &amd_default_config; break;
+                case X86_VENDOR_UNKNOWN: x86_microarch_config = &unknown_vendor_config; break;
+            }
+        }
+    }
 }

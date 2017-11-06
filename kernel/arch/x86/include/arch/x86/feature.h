@@ -237,6 +237,8 @@ const struct x86_model_info * x86_get_model(void);
 
 enum x86_microarch_list {
     X86_MICROARCH_UNKNOWN,
+    X86_MICROARCH_INTEL_NEHALEM,
+    X86_MICROARCH_INTEL_WESTMERE,
     X86_MICROARCH_INTEL_SANDY_BRIDGE,
     X86_MICROARCH_INTEL_IVY_BRIDGE,
     X86_MICROARCH_INTEL_BROADWELL,
@@ -250,5 +252,21 @@ enum x86_microarch_list {
 extern enum x86_microarch_list x86_microarch;
 
 extern bool g_x86_feature_fsgsbase;
+
+/* returns 0 if unknown, otherwise value in Hz */
+typedef uint64_t (*x86_get_timer_freq_func_t)(void);
+
+/* Structure for supporting per-microarchitecture kernel configuration */
+typedef struct {
+    x86_get_timer_freq_func_t get_apic_freq;
+    x86_get_timer_freq_func_t get_tsc_freq;
+
+    bool disable_c1e;
+} x86_microarch_config_t;
+
+static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
+    extern const x86_microarch_config_t* x86_microarch_config;
+    return x86_microarch_config;
+}
 
 __END_CDECLS

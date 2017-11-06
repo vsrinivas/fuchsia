@@ -168,36 +168,13 @@ void x86_init_percpu(cpu_num_t cpu_num)
         x86_set_cr4(x86_get_cr4() | X86_CR4_FSGSBASE);
     }
 
-    // These intel cpus support auto-entering C1E state when all cores are at C1. In
+    // Some intel cpus support auto-entering C1E state when all cores are at C1. In
     // C1E state the voltage is reduced on all cores as well as clock gated. There is
     // a latency associated with ramping the voltage on wake. Disable this feature here
     // to save time on the irq path from idle. (5-10us on skylake nuc from kernel irq
     // handler to user space handler).
-    // TODO(ZX-981): Look for a nicer way to handle this across different processors
-    const struct x86_model_info* model = x86_get_model();
     if (!x86_feature_test(X86_FEATURE_HYPERVISOR) &&
-            x86_vendor == X86_VENDOR_INTEL && model->display_family == 0x6 && (
-            model->display_model == 0x1a || // nehalem
-            model->display_model == 0x1e ||
-            model->display_model == 0x1f ||
-            model->display_model == 0x2e ||
-            model->display_model == 0x25 || // westermere
-            model->display_model == 0x2c ||
-            model->display_model == 0x2f ||
-            model->display_model == 0x2a || // sandy bridge
-            model->display_model == 0x2d ||
-            model->display_model == 0x3a || // ivy bridge
-            model->display_model == 0x3e ||
-            model->display_model == 0x3c || // haswell
-            model->display_model == 0x3f ||
-            model->display_model == 0x45 ||
-            model->display_model == 0x46 ||
-            model->display_model == 0x3d || // broadwell
-            model->display_model == 0x47 ||
-            model->display_model == 0x4f ||
-            model->display_model == 0x56 ||
-            model->display_model == 0x4e || // skylake
-            model->display_model == 0x5e)) {
+            x86_get_microarch_config()->disable_c1e) {
         uint64_t power_ctl_msr = read_msr(0x1fc);
         write_msr(0x1fc, power_ctl_msr & ~0x2);
     }
