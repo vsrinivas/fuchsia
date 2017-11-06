@@ -20,15 +20,20 @@ usage() {
     exit 1
 }
 
-if [[ "$1" != zircon-* ]]; then
-    usage
-fi
-
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR="$GUEST_SCRIPTS_DIR/../../../.."
 BUILD_DIR="$ZIRCON_DIR/build-$1"
-shift
 
+if [[ "$1" != zircon-* ]]; then
+    echo "Please specify a valid Zircon target."
+    usage
+fi
+if [ ! -d "$BUILD_DIR" ]; then
+    echo "Build directory for '$1' does not exit."
+    usage
+fi
+
+shift # Remove "target" from the argument list
 declare ZIRCON="$BUILD_DIR/zircon.bin"
 declare BOOTDATA="$BUILD_DIR/bootdata.bin"
 declare ZIRCON_DISK="$BUILD_DIR/zircon.gpt"
