@@ -36,7 +36,6 @@ class Amalgamation:
         self.config_paths = []
         self.component_urls = []
         self.build_root = ""
-        self.boot = Filesystem() # Files that will live in /boot
         self.system = Filesystem() # Files that will live in /system
         self.resources = []
 
@@ -63,7 +62,7 @@ class Amalgamation:
             file["bootfs_path"] = r["bootfs_path"]
             file["default"] = r.has_key("default")
             self.system.add_file(file)
-        for key in ["binaries", "components", "drivers", "early_boot", "gopaths"]:
+        for key in ["binaries", "components", "drivers", "gopaths"]:
             if config.has_key(key):
                 raise Exception("The \"%s\" key is no longer supported" % key)
 
@@ -122,7 +121,6 @@ def main():
     parser = argparse.ArgumentParser(description="Generate bootfs manifest and "
                                      + "list of GN targets for a list of Fuchsia modules")
     parser.add_argument("--packages", help="path to packages file to generate")
-    parser.add_argument("--boot-manifest", help="path to manifest file to generate for /boot")
     parser.add_argument("--system-manifest", help="path to manifest file to generate for /system")
     parser.add_argument("--modules", help="list of modules", default="default")
     parser.add_argument("--omit-files", help="list of files omitted from user.bootfs", default="")
@@ -136,8 +134,6 @@ def main():
     if not amalgamation:
         return 1
 
-    update_file(args.boot_manifest, manifest_contents(amalgamation.boot.files))
-
     system_manifest_contents = manifest_contents(amalgamation.system.files)
     if args.autorun:
         system_manifest_contents += "autorun=%s\n" % autorun
@@ -145,8 +141,7 @@ def main():
 
     if args.depfile:
         with open(args.depfile, "w") as f:
-            f.write("user.bootfs: ")
-            f.write(args.boot_manifest + " " + args.system_manifest)
+            f.write("user.bootfs: %s" % args.system_manifest)
             for path in amalgamation.config_paths:
                 f.write(" " + path)
             for resource in amalgamation.resources:

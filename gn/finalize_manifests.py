@@ -5,7 +5,7 @@
 
 """
 This tool takes in multiple manifest files:
- * /boot and /system manifests from each package
+ * manifest file from each package
  * Zircon's bootfs.manifest, optionally using a subset selected by the
    "group" syntax (e.g. could specify just "core", or "core,misc" or
    "core,misc,test").
