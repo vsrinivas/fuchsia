@@ -42,10 +42,6 @@ package("magma") {
       deps += [ "$msd_intel_gen_build_root:msd_intel" ]
 
       drivers = [ {
-            # This driver is needed early in bootup (i.e. in the /boot partition)
-            # so that devmgr correctly chooses it over the intel-i915.so driver on
-            # hardware with supported intel GPUs.
-            early_boot_driver = true
             name = "libmsd_intel.so"
           } ]
       libraries += [ {
@@ -95,10 +91,6 @@ package("magma-dev") {
       deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
 
       drivers = [ {
-            # This driver is needed early in bootup (i.e. in the /boot partition)
-            # so that devmgr correctly chooses it over the intel-i915.so driver on
-            # hardware with supported intel GPUs.
-            early_boot_driver = true
             name = "libmsd_intel_test.so"
           } ]
       libraries += [ {
