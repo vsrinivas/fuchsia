@@ -50,7 +50,7 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
     fvm_info_.vslice_count = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices +
                              fvm_info_.dat_slices;
 
-    printf("Blobfs: slice_size is %" PRIu64 ", kBlocksPerSlice is %" PRIu64 "\n", fvm_info_.slice_size,
+    printf("Blobfs: slice_size is %" PRIu64 ", kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
            kBlocksPerSlice);
     printf("Blobfs: abm_blocks: %" PRIu64 ", abm_slices: %u\n", BlockMapBlocks(info_),
            fvm_info_.abm_slices);

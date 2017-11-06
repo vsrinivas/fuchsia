@@ -122,8 +122,8 @@ zx_status_t FvmContainer::Report() const {
 
     fvm::fvm_t* sb = static_cast<fvm::fvm_t*>((void*)metadata_.get());
 
-    printf("Total size is %" PRIu64 "\n", disk_size_);
-    printf("Metadata size is %" PRIu64 "\n", metadata_size_);
+    printf("Total size is %zu\n", disk_size_);
+    printf("Metadata size is %zu\n", metadata_size_);
     printf("Slice size is %" PRIu64 "\n", sb->slice_size);
     printf("Slice count is %" PRIu64 "\n", sb->pslice_count);
 
