@@ -11,7 +11,7 @@ mod usb;
 pub use usb::UsbProtocol;
 
 use std::ffi::{CStr, CString};
-use zircon::Status;
+use zircon::{ok, Handle, Signals, Status, Vmo};
 use zircon::sys as sys;
 use std::slice;
 use std::os::raw::c_char;
@@ -58,7 +58,7 @@ impl Device {
         };
 
         // Bind the CString to a local variable to ensure it lives long enough for the call below.
-        let name_cstring = CString::new(device_name).unwrap();
+        let name_cstring = CString::new(device_name)?;
         device_add_args.name = name_cstring.as_ptr();
         device_add_args.flags = flags;
 
@@ -86,6 +86,73 @@ impl Device {
     pub fn remove(&mut self) -> Status {
         unsafe {
             Status::from_raw(ddk_sys::device_remove(self.device))
+        }
+    }
+
+    pub fn rebind(&mut self) -> Status {
+        unsafe {
+            Status::from_raw(ddk_sys::device_rebind(self.device))
+        }
+    }
+
+    pub fn get_name(&mut self) -> String {
+        unsafe {
+            let name = ddk_sys::device_get_name(self.device);
+            CStr::from_ptr(name).to_string_lossy().into_owned()
+        }
+    }
+
+    pub fn get_parent(&mut self) -> Device {
+        Self::wrap(unsafe { ddk_sys::device_get_parent(self.device) })
+    }
+
+    pub fn read(&mut self, buf: &mut [u8], offset: u64) -> Result<usize, Status> {
+        let mut bytes_read = 0;
+        let status = unsafe {
+            ddk_sys::device_read(self.device, buf.as_mut_ptr(), buf.len(), offset, &mut bytes_read)
+        };
+        ok(status)?;
+        Ok(bytes_read)
+    }
+
+    pub fn write(&mut self, buf: &[u8], offset: u64) -> Result<usize, Status> {
+        let mut bytes_written = 0;
+        let status = unsafe {
+            ddk_sys::device_write(self.device, buf.as_ptr(), buf.len(), offset, &mut bytes_written)
+        };
+        ok(status)?;
+        Ok(bytes_written)
+    }
+
+    pub fn get_size(&mut self) -> u64 {
+        unsafe { ddk_sys::device_get_size(self.device) }
+    }
+
+    pub fn ioctl(&mut self, op: u32, in_buf: &[u8], out_buf: &mut [u8]) -> Result<usize, Status> {
+        let mut out_actual = 0;
+        let status = unsafe {
+            ddk_sys::device_ioctl(self.device, op, in_buf.as_ptr(), in_buf.len(),
+                out_buf.as_mut_ptr(), out_buf.len(), &mut out_actual)
+        };
+        ok(status)?;
+        Ok(out_actual)
+    }
+
+    pub fn load_firmware(&mut self, path: &str) -> Result<(Vmo, usize), Status> {
+        let mut size = 0;
+        let mut fw = 0;
+        let path_cstring = CString::new(path)?;
+        let status = unsafe {
+            ddk_sys::load_firmware(self.device, path_cstring.as_ptr(), &mut fw, &mut size)
+        };
+        ok(status)?;
+        let vmo = Vmo::from(unsafe { Handle::from_raw(fw) });
+        Ok((vmo, size))
+    }
+
+    pub fn state_clr_set(&mut self, clear_mask: Signals, set_mask: Signals) {
+        unsafe {
+            ddk_sys::device_state_clr_set(self.device, clear_mask.bits(), set_mask.bits())
         }
     }
 }

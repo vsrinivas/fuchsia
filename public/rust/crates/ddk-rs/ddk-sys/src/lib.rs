@@ -420,16 +420,14 @@ extern "C" {
     pub fn device_add_from_driver(driver: *mut zx_driver_t, parent: *mut zx_device_t, args: *mut device_add_args_t, out: *mut *mut zx_device_t) -> sys::zx_status_t;
     pub fn device_remove(device: *mut zx_device_t) -> sys::zx_status_t;
     pub fn device_rebind(device: *mut zx_device_t) -> sys::zx_status_t;
-    pub fn device_unbind(device: *mut zx_device_t);
     pub fn load_firmware(device: *mut zx_device_t, path: *const c_char, fw: *mut sys::zx_handle_t, size: *mut usize) -> sys::zx_status_t;
     pub fn device_get_name(dev: *mut zx_device_t) -> *const c_char;
     pub fn device_get_parent(dev: *mut zx_device_t) -> *mut zx_device_t;
-    pub fn device_get_resource(dev: *mut zx_device_t) -> sys::zx_handle_t;
     pub fn device_get_protocol(dev: *mut zx_device_t, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t;
     pub fn device_read(dev: *mut zx_device_t, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
     pub fn device_write(dev: *mut zx_device_t, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
     pub fn device_get_size(dev: *mut zx_device_t) -> sys::zx_off_t;
     pub fn device_ioctl(dev: *mut zx_device_t, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t;
     pub fn device_iotxn_queue(dev: *mut zx_device_t, txn: *mut iotxn_t) -> sys::zx_status_t;
-    pub fn device_stat_clr_set(dev: *mut zx_device_t, clearflag: sys::zx_signals_t, setflag: sys::zx_signals_t);
+    pub fn device_state_clr_set(dev: *mut zx_device_t, clearflag: sys::zx_signals_t, setflag: sys::zx_signals_t);
 }

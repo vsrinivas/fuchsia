@@ -1,3 +1,4 @@
+use std::ffi::NulError;
 use std::io;
 use sys;
 
@@ -96,6 +97,7 @@ impl From<io::ErrorKind> for Status {
         }
     }
 }
+
 impl From<Status> for io::ErrorKind {
     fn from(status: Status) -> io::ErrorKind {
         use std::io::ErrorKind::*;
@@ -150,5 +152,11 @@ impl From<io::Error> for Status {
 impl From<Status> for io::Error {
     fn from(status: Status) -> io::Error {
         io::Error::from(io::ErrorKind::from(status))
+    }
+}
+
+impl From<NulError> for Status {
+    fn from(_error: NulError) -> Status {
+        Status::INVALID_ARGS
     }
 }
