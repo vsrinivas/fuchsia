@@ -154,12 +154,12 @@ if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_zircon" = "" ]; then
   fi
 fi
 
-arch=""
-build_arch="x86_64"
+arch=
+build_arch=
 case $platform in
   x86-64)
     arch="X64"
-    build_arch="x86_64"
+    build_arch="x86-64"
     ;;
   arm-64)
     arch="AA64"
@@ -171,12 +171,8 @@ case $platform in
     exit -1
 esac
 
-echo "Building zircon for installer"
-"${script_dir}/../build-zircon.sh" -t "$build_arch"
-
-if [ "$build_arch" == "x86_64" ]; then
-  build_arch="x86-64"
-fi
+echo "Building zircon for installer (x86-64 only)"
+"${script_dir}/../build-zircon.sh"
 
 # if the build directory is not specified, infer it from other parameters
 if [ "$build_dir_fuchsia" = "" ]; then
