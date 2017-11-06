@@ -46,20 +46,85 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, CachingType caching_ty
 
 //////////////////////////////////////////////////////////////////////////////
 
+std::unique_ptr<PerProcessGtt::PageTable>
+PerProcessGtt::PageTable::Create(std::shared_ptr<PerProcessGtt::Page> scratch_page)
+{
+    auto page_table = std::unique_ptr<PageTable>(new PageTable(std::move(scratch_page)));
+    if (!page_table->Init())
+        return DRETP(nullptr, "page table init failed");
+    for (uint32_t i = 0; i < kPageTableEntries; i++) {
+        *page_table->page_table_entry(i) =
+            gen_pte_encode(page_table->scratch_page()->bus_addr(), CACHING_NONE, true, false);
+    }
+    return page_table;
+}
+
+std::unique_ptr<PerProcessGtt::PageDirectory>
+PerProcessGtt::PageDirectory::Create(std::shared_ptr<PerProcessGtt::PageTable> scratch_table)
+{
+    auto dir = std::unique_ptr<PageDirectory>(new PageDirectory(std::move(scratch_table)));
+    if (!dir->Init())
+        return DRETP(nullptr, "init failed");
+    for (uint32_t i = 0; i < kPageDirectoryEntries; i++) {
+        dir->page_directory_table_gpu()->entry[i] =
+            gen_pde_encode(dir->scratch_table()->bus_addr());
+    }
+    return dir;
+}
+
+std::unique_ptr<PerProcessGtt::PageDirectoryPtrTable> PerProcessGtt::PageDirectoryPtrTable::Create(
+    std::shared_ptr<PerProcessGtt::PageDirectory> scratch_dir)
+{
+    auto table =
+        std::unique_ptr<PageDirectoryPtrTable>(new PageDirectoryPtrTable(std::move(scratch_dir)));
+    if (!table->Init())
+        return DRETP(nullptr, "init failed");
+    for (uint32_t i = 0; i < kPageDirectoryPtrEntries; i++) {
+        table->page_directory_ptr_table_gpu()->entry[i] =
+            gen_pdpe_encode(table->scratch_dir()->bus_addr());
+    }
+    return table;
+}
+
+std::unique_ptr<PerProcessGtt::Pml4Table> PerProcessGtt::Pml4Table::Create()
+{
+    auto scratch_page = std::shared_ptr<Page>(new Page());
+    if (!scratch_page)
+        return DRETP(nullptr, "failed to create scratch page");
+    if (!scratch_page->Init())
+        return DRETP(nullptr, "failed to init scratch page");
+
+    uint64_t scratch_bus_addr = scratch_page->bus_addr();
+
+    auto scratch_table = std::shared_ptr<PageTable>(PageTable::Create(std::move(scratch_page)));
+    if (!scratch_table)
+        return DRETP(nullptr, "failed to create scratch table");
+
+    auto scratch_dir =
+        std::shared_ptr<PageDirectory>(PageDirectory::Create(std::move(scratch_table)));
+    if (!scratch_dir)
+        return DRETP(nullptr, "failed to create scratch dir");
+
+    auto scratch_directory_ptr = PageDirectoryPtrTable::Create(std::move(scratch_dir));
+    if (!scratch_directory_ptr)
+        return DRETP(nullptr, "failed to create scratch directory ptr");
+
+    auto table = std::unique_ptr<Pml4Table>(
+        new Pml4Table(scratch_bus_addr, std::move(scratch_directory_ptr)));
+    if (!table->Init())
+        return DRETP(nullptr, "init failed");
+
+    for (uint32_t i = 0; i < kPml4Entries; i++) {
+        table->pml4_table_gpu()->entry[i] =
+            gen_pml4_encode(table->scratch_directory_ptr_->bus_addr());
+    }
+
+    return table;
+}
+
 std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(std::shared_ptr<GpuMappingCache> cache)
 {
-    auto scratch_page = magma::PlatformBuffer::Create(PAGE_SIZE, "scratch");
-    if (!scratch_page)
-        return DRETP(nullptr, "couldn't allocate scratch page");
-
-    if (!scratch_page->PinPages(0, 1))
-        return DRETP(nullptr, "failed to pin scratch page");
-
-    uint64_t scratch_bus_addr;
-    if (!scratch_page->MapPageRangeBus(0, 1, &scratch_bus_addr))
-        return DRETP(nullptr, "MapPageRangeBus failed");
-
-    auto pml4_table = Pml4Table::Create(std::move(scratch_page), scratch_bus_addr);
+    auto pml4_table = Pml4Table::Create();
     if (!pml4_table)
         return DRETP(nullptr, "failed to create pml4table");
 
@@ -284,10 +349,11 @@ gen_pte_t PerProcessGtt::get_pte(gpu_addr_t gpu_addr)
     DLOG("gpu_addr 0x%lx pml4 0x%x pdp 0x%x pd 0x%x pt 0x%x", gpu_addr, pml4_index,
          page_directory_ptr_index, page_directory_index, page_table_index);
 
-    auto page_directory = pml4_table_->page_directory(pml4_index, page_directory_ptr_index);
+    auto page_directory = pml4_table_->page_directory_ptr(pml4_index, false)
+                              ->page_directory(page_directory_ptr_index, false);
     DASSERT(page_directory);
     auto page_table_entry =
-        page_directory->page_table_entry(page_directory_index, page_table_index);
+        page_directory->page_table(page_directory_index, false)->page_table_entry(page_table_index);
     DASSERT(page_table_entry);
 
     return *page_table_entry;

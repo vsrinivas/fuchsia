@@ -22,16 +22,6 @@ public:
         }
     }
 
-    static void check_pte_entries_zero(PerProcessGtt* ppgtt, uint64_t gpu_addr, uint64_t size)
-    {
-        uint32_t page_count = size >> PAGE_SHIFT;
-
-        for (unsigned int i = 0; i < page_count; i++) {
-            uint64_t pte = ppgtt->get_pte(gpu_addr + i * PAGE_SIZE);
-            EXPECT_EQ(0u, pte);
-        }
-    }
-
     static void check_pte_entries_clear(PerProcessGtt* ppgtt, uint64_t gpu_addr, uint64_t size)
     {
         uint32_t page_count = size >> PAGE_SHIFT;
@@ -76,13 +66,13 @@ public:
         auto ppgtt = PerProcessGtt::Create(GpuMappingCache::Create());
         ASSERT_TRUE(ppgtt->Init());
 
-        check_pte_entries_zero(ppgtt.get(), (1ull << 48) - PAGE_SIZE, PAGE_SIZE);
-        check_pte_entries_zero(ppgtt.get(), (1ull << 47) - PAGE_SIZE, PAGE_SIZE);
-        check_pte_entries_zero(ppgtt.get(), (1ull << 40) - PAGE_SIZE, PAGE_SIZE);
-        check_pte_entries_zero(ppgtt.get(), (1ull << 33) - PAGE_SIZE, PAGE_SIZE);
-        check_pte_entries_zero(ppgtt.get(), (1ull << 32) - PAGE_SIZE, PAGE_SIZE);
-        check_pte_entries_zero(ppgtt.get(), (1ull << 31) - PAGE_SIZE, PAGE_SIZE);
-        check_pte_entries_zero(ppgtt.get(), 0, ppgtt->Size());
+        check_pte_entries_clear(ppgtt.get(), (1ull << 48) - PAGE_SIZE, PAGE_SIZE);
+        check_pte_entries_clear(ppgtt.get(), (1ull << 47) - PAGE_SIZE, PAGE_SIZE);
+        check_pte_entries_clear(ppgtt.get(), (1ull << 40) - PAGE_SIZE, PAGE_SIZE);
+        check_pte_entries_clear(ppgtt.get(), (1ull << 33) - PAGE_SIZE, PAGE_SIZE);
+        check_pte_entries_clear(ppgtt.get(), (1ull << 32) - PAGE_SIZE, PAGE_SIZE);
+        check_pte_entries_clear(ppgtt.get(), (1ull << 31) - PAGE_SIZE, PAGE_SIZE);
+        check_pte_entries_clear(ppgtt.get(), 0, ppgtt->Size());
     }
 
     static void Error()

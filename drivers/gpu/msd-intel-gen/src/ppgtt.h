@@ -120,16 +120,14 @@ public:
             return &reinterpret_cast<PageTableGpu*>(mapping())->entry[page_index];
         }
 
-        static std::unique_ptr<PageTable> Create()
-        {
-            auto page_table = std::unique_ptr<PageTable>(new PageTable());
-            if (!page_table->Init())
-                return DRETP(nullptr, "page table init failed");
-            return page_table;
-        }
+        static std::unique_ptr<PageTable> Create(std::shared_ptr<Page> scratch_page);
+
+        std::shared_ptr<Page> scratch_page() { return scratch_page_; }
 
     private:
-        PageTable() {}
+        PageTable(std::shared_ptr<Page> scratch_page) : scratch_page_(std::move(scratch_page)) {}
+
+        std::shared_ptr<Page> scratch_page_;
     };
 
     class PageDirectory : public Page {
@@ -139,11 +137,13 @@ public:
             return reinterpret_cast<PageDirectoryTableGpu*>(mapping());
         }
 
-        PageTable* page_table(uint32_t index)
+        PageTable* page_table(uint32_t index, bool alloc)
         {
             DASSERT(index < kPageDirectoryEntries);
             if (!page_tables_[index]) {
-                page_tables_[index] = PageTable::Create();
+                if (!alloc)
+                    return scratch_table_.get();
+                page_tables_[index] = PageTable::Create(scratch_table_->scratch_page());
                 if (!page_tables_[index])
                     return DRETP(nullptr, "couldn't create page table");
                 page_directory_table_gpu()->entry[index] =
@@ -154,24 +154,24 @@ public:
 
         gen_pte_t* page_table_entry(uint32_t page_directory_index, uint32_t page_table_index)
         {
-            auto table = page_table(page_directory_index);
+            auto table = page_table(page_directory_index, true);
             if (!table)
                 return nullptr;
             return table->page_table_entry(page_table_index);
         }
 
-        static std::unique_ptr<PageDirectory> Create()
-        {
-            auto dir = std::unique_ptr<PageDirectory>(new PageDirectory());
-            if (!dir->Init())
-                return DRETP(nullptr, "init failed");
-            return dir;
-        }
+        static std::unique_ptr<PageDirectory> Create(std::shared_ptr<PageTable> scratch_table);
+
+        std::shared_ptr<PageTable> scratch_table() { return scratch_table_; }
 
     private:
-        PageDirectory() : page_tables_(kPageDirectoryEntries) {}
+        PageDirectory(std::shared_ptr<PageTable> scratch_table)
+            : page_tables_(kPageDirectoryEntries), scratch_table_(std::move(scratch_table))
+        {
+        }
 
         std::vector<std::unique_ptr<PageTable>> page_tables_;
+        std::shared_ptr<PageTable> scratch_table_;
     };
 
     class PageDirectoryPtrTable : public Page {
@@ -181,11 +181,13 @@ public:
             return reinterpret_cast<PageDirectoryPtrTableGpu*>(mapping());
         }
 
-        PageDirectory* page_directory(uint32_t index)
+        PageDirectory* page_directory(uint32_t index, bool alloc)
         {
             DASSERT(index < kPageDirectoryPtrEntries);
             if (!page_directories_[index]) {
-                page_directories_[index] = PageDirectory::Create();
+                if (!alloc)
+                    return scratch_dir_.get();
+                page_directories_[index] = PageDirectory::Create(scratch_dir_->scratch_table());
                 if (!page_directories_[index])
                     return DRETP(nullptr, "couldn't create page directory");
                 page_directory_ptr_table_gpu()->entry[index] =
@@ -197,35 +199,39 @@ public:
         gen_pte_t* page_table_entry(uint32_t page_directory_ptr_index,
                                     uint32_t page_directory_index, uint32_t page_table_index)
         {
-            auto dir = page_directory(page_directory_ptr_index);
+            auto dir = page_directory(page_directory_ptr_index, true);
             if (!dir)
                 return nullptr;
             return dir->page_table_entry(page_directory_index, page_table_index);
         }
 
-        static std::unique_ptr<PageDirectoryPtrTable> Create()
-        {
-            auto table = std::unique_ptr<PageDirectoryPtrTable>(new PageDirectoryPtrTable());
-            if (!table->Init())
-                return DRETP(nullptr, "init failed");
-            return table;
-        }
+        static std::unique_ptr<PageDirectoryPtrTable>
+        Create(std::shared_ptr<PageDirectory> scratch_dir);
+
+        std::shared_ptr<PageDirectory> scratch_dir() { return scratch_dir_; }
 
     private:
-        PageDirectoryPtrTable() : page_directories_(kPageDirectoryPtrEntries) {}
+        PageDirectoryPtrTable(std::shared_ptr<PageDirectory> scratch_dir)
+            : page_directories_(kPageDirectoryPtrEntries), scratch_dir_(std::move(scratch_dir))
+        {
+        }
 
         std::vector<std::unique_ptr<PageDirectory>> page_directories_;
+        std::shared_ptr<PageDirectory> scratch_dir_;
     };
 
     class Pml4Table : public Page {
     public:
         Pml4TableGpu* pml4_table_gpu() { return reinterpret_cast<Pml4TableGpu*>(mapping()); }
 
-        PageDirectoryPtrTable* page_directory_ptr(uint32_t index)
+        PageDirectoryPtrTable* page_directory_ptr(uint32_t index, bool alloc)
         {
             DASSERT(index < kPml4Entries);
             if (!directory_ptrs_[index]) {
-                directory_ptrs_[index] = PageDirectoryPtrTable::Create();
+                if (!alloc)
+                    return scratch_directory_ptr_.get();
+                directory_ptrs_[index] =
+                    PageDirectoryPtrTable::Create(scratch_directory_ptr_->scratch_dir());
                 if (!directory_ptrs_[index])
                     return DRETP(nullptr, "couldn't create page directory ptr table");
                 pml4_table_gpu()->entry[index] =
@@ -236,35 +242,27 @@ public:
 
         PageDirectory* page_directory(uint32_t pml4_index, uint32_t page_directory_ptr_index)
         {
-            auto dir_ptr = page_directory_ptr(pml4_index);
+            auto dir_ptr = page_directory_ptr(pml4_index, true);
             if (!dir_ptr)
                 return nullptr;
-            return dir_ptr->page_directory(page_directory_ptr_index);
+            return dir_ptr->page_directory(page_directory_ptr_index, true);
         }
 
         uint64_t scratch_page_bus_addr() { return scratch_page_bus_addr_; }
 
-        static std::unique_ptr<Pml4Table>
-        Create(std::unique_ptr<magma::PlatformBuffer> scratch_page, uint64_t scratch_bus_addr)
-        {
-            auto table = std::unique_ptr<Pml4Table>(
-                new Pml4Table(std::move(scratch_page), scratch_bus_addr));
-            if (!table->Init())
-                return DRETP(nullptr, "init failed");
-            return table;
-        }
+        static std::unique_ptr<Pml4Table> Create();
 
     private:
-        Pml4Table(std::unique_ptr<magma::PlatformBuffer> scratch_page,
-                  uint64_t scratch_page_bus_addr)
-            : directory_ptrs_(kPml4Entries + 1), scratch_page_buffer_(std::move(scratch_page)),
-              scratch_page_bus_addr_(scratch_page_bus_addr)
+        Pml4Table(uint64_t scratch_page_bus_addr,
+                  std::unique_ptr<PageDirectoryPtrTable> scratch_directory_ptr)
+            : directory_ptrs_(kPml4Entries + 1), scratch_page_bus_addr_(scratch_page_bus_addr),
+              scratch_directory_ptr_(std::move(scratch_directory_ptr))
         {
         }
 
         std::vector<std::unique_ptr<PageDirectoryPtrTable>> directory_ptrs_;
-        std::shared_ptr<magma::PlatformBuffer> scratch_page_buffer_;
         uint64_t scratch_page_bus_addr_;
+        std::unique_ptr<PageDirectoryPtrTable> scratch_directory_ptr_;
     };
 
     Pml4Table* pml4_table() { return pml4_table_.get(); }
