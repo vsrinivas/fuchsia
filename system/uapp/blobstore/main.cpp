@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_fd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
@@ -80,6 +81,63 @@ int do_blobstore_add_blob(int fd, int argc, char** argv) {
     return r;
 }
 
+zx_status_t process_manifest_line(FILE* manifest, int blob_fd) {
+    uint64_t size = 0;
+    char* src = nullptr;
+
+    int r = getline(&src, &size, manifest);
+
+    if (r < 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    fbl::unique_free_ptr<char> ptr(src);
+    char* nl_ptr = strchr(src, '\n');
+    if (nl_ptr != nullptr) {
+        *nl_ptr = '\0';
+    }
+
+    fbl::unique_fd data_fd(open(src, O_RDONLY, 0644));
+    if (!data_fd) {
+        fprintf(stderr, "error: cannot open '%s'\n", src);
+        return ZX_ERR_IO;
+    }
+
+    if (blobstore::blobstore_add_blob(blob_fd, data_fd.get()) != 0) {
+        fprintf(stderr, "error: failed to add blob '%s'\n", src);
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+}
+
+int do_blobstore_add_manifest(int fd, int argc, char** argv) {
+    if (argc < 1) {
+        fprintf(stderr, "Adding a manifest requires an additional file argument\n");
+        close(fd);
+        return -1;
+    }
+
+    fbl::unique_fd blob_fd(fd);
+    fbl::unique_fd manifest_fd(open(argv[0], O_RDONLY, 0644));
+    if (!manifest_fd) {
+        fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
+        return -1;
+    }
+
+    FILE* manifest = fdopen(manifest_fd.release(), "r");
+    while (true) {
+        zx_status_t status = process_manifest_line(manifest, blob_fd.get());
+        if (status == ZX_ERR_OUT_OF_RANGE) {
+            fclose(manifest);
+            return 0;
+        } else if (status != ZX_OK) {
+            fclose(manifest);
+            return -1;
+        }
+    }
+}
+
 #endif
 
 int do_blobstore_mkfs(int fd, int argc, char** argv) {
@@ -104,6 +162,7 @@ struct {
     {"fsck", do_blobstore_check, "check filesystem integrity"},
 #else
     {"add", do_blobstore_add_blob, "add a blob to a blobstore image"},
+    {"manifest", do_blobstore_add_manifest, "add all blobs in manifest to a blobstore image"},
 #endif
 };
 
