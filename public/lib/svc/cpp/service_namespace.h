@@ -21,6 +21,11 @@
 
 namespace app {
 
+// ServiceNamespace lets a client to publish services in the form of a
+// directory and provides compatibility with ServiceProvider.
+//
+// This class will be deprecated and removed once ServiceProvider is replaced
+// by direct use of directories for publishing and discoverying services.
 class ServiceNamespace : public app::ServiceProvider {
  public:
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
@@ -47,6 +52,9 @@ class ServiceNamespace : public app::ServiceProvider {
       fidl::InterfaceRequest<app::ServiceProvider> request);
 
   ~ServiceNamespace() override;
+
+  // Gets the underlying pseudo-directory.
+  const fbl::RefPtr<fs::PseudoDir>& directory() const { return directory_; }
 
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed

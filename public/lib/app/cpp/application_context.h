@@ -5,16 +5,18 @@
 #ifndef LIB_APP_CPP_APPLICATION_CONTEXT_H_
 #define LIB_APP_CPP_APPLICATION_CONTEXT_H_
 
+#include <fs/pseudo-dir.h>
+
 #include <memory>
 
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/svc/cpp/service_namespace.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/application_runner.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/svc/cpp/service_namespace.h"
 
 namespace app {
 
@@ -67,6 +69,30 @@ class ApplicationContext {
   // provide outgoing services back to its creator.
   ServiceNamespace* outgoing_services() { return &outgoing_services_; }
 
+  // Gets the directory which is the root of the tree of file-system objects
+  // exported by this application to the rest of the system.
+  //
+  // Clients should organize exported objects into sub-directories by role
+  // using conventions such as the following:
+  // - svc: public services exported by the application
+  // - debug: debugging information exported by the application
+  // - fs: the mounted file-system (for applications which are file-systems)
+  const fbl::RefPtr<fs::PseudoDir>& export_dir() const {
+    // TODO(ZX-1036): For compatibiliy purposes, we map ServiceNamespace
+    // to the root of the export directory.  Once all clients migrate off of
+    // the legacy ServiceProvider and the bridging band-aids we have built,
+    // we can move these objects into the "svc" subdirectory as intended.
+    return outgoing_services_.directory();
+  }
+
+  // Gets or creates an export sub-directory called "svc" for publishing
+  // services.
+  const fbl::RefPtr<fs::PseudoDir>& GetOrCreateServiceExportDir();
+
+  // Gets or creates an export sub-directory called "debug" for publishing
+  // debugging information.
+  const fbl::RefPtr<fs::PseudoDir>& GetOrCreateDebugExportDir();
+
   // Connects to a service provided by the application's environment,
   // returning an interface pointer.
   template <typename Interface>
@@ -95,6 +121,8 @@ class ApplicationContext {
  private:
   ApplicationEnvironmentPtr environment_;
   ServiceNamespace outgoing_services_;
+  fbl::RefPtr<fs::PseudoDir> service_export_dir_;
+  fbl::RefPtr<fs::PseudoDir> debug_export_dir_;
   zx::channel service_root_;
   ApplicationLauncherPtr launcher_;
 

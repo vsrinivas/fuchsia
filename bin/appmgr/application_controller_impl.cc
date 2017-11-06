@@ -57,7 +57,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
           return ZX_OK;
         })));
     info_dir_->AddEntry(
-        "svc",
+        "export",
         fbl::AdoptRef(new fs::RemoteDir(fbl::move(service_dir_channel))));
   }
 }

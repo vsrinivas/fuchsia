@@ -80,4 +80,22 @@ void ApplicationContext::ConnectToEnvironmentService(
                           channel.release());
 }
 
+const fbl::RefPtr<fs::PseudoDir>&
+ApplicationContext::GetOrCreateServiceExportDir() {
+  if (!service_export_dir_) {
+    service_export_dir_ = fbl::AdoptRef(new fs::PseudoDir());
+    export_dir()->AddEntry("svc", service_export_dir_);
+  }
+  return service_export_dir_;
+}
+
+const fbl::RefPtr<fs::PseudoDir>&
+ApplicationContext::GetOrCreateDebugExportDir() {
+  if (!debug_export_dir_) {
+    debug_export_dir_ = fbl::AdoptRef(new fs::PseudoDir());
+    export_dir()->AddEntry("debug", debug_export_dir_);
+  }
+  return debug_export_dir_;
+}
+
 }  // namespace app
