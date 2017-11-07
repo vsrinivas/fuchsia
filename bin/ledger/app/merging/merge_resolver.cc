@@ -119,6 +119,12 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
           }
           return;
         }
+        if (!strategy_) {
+          if (on_empty_callback_) {
+            on_empty_callback_();
+          }
+          return;
+        }
         merge_in_progress_ = true;
         heads.resize(2);
         ResolveConflicts(delayed_status, std::move(heads));
