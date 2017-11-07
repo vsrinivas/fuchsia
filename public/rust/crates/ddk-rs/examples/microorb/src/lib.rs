@@ -150,6 +150,6 @@ impl DriverOps for MicroOrbDriver {
 }
 
 #[no_mangle]
-pub extern fn init() -> Result<Box<DriverOps>, Status> {
+pub extern "Rust" fn init() -> Result<Box<DriverOps>, Status> {
     Ok(Box::new(MicroOrbDriver{}))
 }

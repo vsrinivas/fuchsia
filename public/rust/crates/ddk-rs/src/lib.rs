@@ -357,8 +357,8 @@ static mut DEVICE_OPS: ddk_sys::zx_protocol_device_t = ddk_sys::zx_protocol_devi
     ..ddk_sys::DEFAULT_PROTOCOL_DEVICE
 };
 
-extern {
-    // Not actually a C function, but the entry point for us to call the driver.
+extern "Rust" {
+    // This is the entry point for us to call the driver, implemented by the driver writer.
     fn init() -> Result<Box<DriverOps>, Status>;
 }
 
