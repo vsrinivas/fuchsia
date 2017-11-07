@@ -48,8 +48,9 @@ bool IoctlIpmInit(int fd, bool sample_mode, uint32_t buffer_size) {
     config.buffer_size = buffer_size;
   } else {
     // For "counting mode" we just need something large enough to hold
-    // zx_x86_ipm_counters_t.
-    config.buffer_size = sizeof(zx_x86_ipm_counters_t);
+    // the header + zx_x86_ipm_counters_t.
+    config.buffer_size = (sizeof(zx_x86_ipm_buffer_info_t) +
+                          sizeof(zx_x86_ipm_counters_t));
   }
   FXL_VLOG(2) << fxl::StringPrintf("num_buffers=%u, buffer_size=0x%x",
                                    config.num_buffers, config.buffer_size);
