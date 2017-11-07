@@ -54,6 +54,10 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
   // Keeps track of whether we already called the client callback for the most
   // recent SetWatcher() call.
   bool set_watcher_callback_called_ = false;
+  // Keeps track of whether we already sent the request to update the
+  // server-side timestamp storing the last time the client started watching the
+  // device key.
+  bool timestamp_update_request_sent_ = false;
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;

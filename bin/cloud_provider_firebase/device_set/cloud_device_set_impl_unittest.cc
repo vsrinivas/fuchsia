@@ -143,7 +143,8 @@ TEST_F(CloudDeviceSetImplTest, SetFingerprintOk) {
   EXPECT_EQ(CloudDeviceSet::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->put_query_params);
-  EXPECT_EQ((std::vector<std::string>{"true"}), firebase_->put_data);
+  EXPECT_EQ((std::vector<std::string>{"{\".sv\": \"timestamp\"}"}),
+            firebase_->put_data);
 }
 
 TEST_F(CloudDeviceSetImplTest, WatchFingerprint) {

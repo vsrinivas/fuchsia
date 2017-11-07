@@ -102,6 +102,7 @@ TEST_F(DeviceSetImplTest, SetWatcher) {
   EXPECT_TRUE(RunLoopUntil(
       [this] { return cloud_device_set_->watch_callback != nullptr; }));
   EXPECT_EQ("bazinga", cloud_device_set_->watched_fingerprint);
+  EXPECT_EQ(0, cloud_device_set_->timestamp_update_requests_);
 
   // Call the callback the first time confirming that it was correctly set.
   cloud_device_set_->watch_callback(CloudDeviceSet::Status::OK);
@@ -109,12 +110,14 @@ TEST_F(DeviceSetImplTest, SetWatcher) {
   EXPECT_EQ(cloud_provider::Status::OK, status);
   EXPECT_EQ(0, on_cloud_erased_calls_);
   EXPECT_EQ(0, on_network_error_calls_);
+  EXPECT_EQ(1, cloud_device_set_->timestamp_update_requests_);
 
   // Call the callback the second time signalling that the cloud was erased.
   cloud_device_set_->watch_callback(CloudDeviceSet::Status::ERASED);
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, on_cloud_erased_calls_);
   EXPECT_EQ(0, on_network_error_calls_);
+  EXPECT_EQ(1, cloud_device_set_->timestamp_update_requests_);
 }
 
 TEST_F(DeviceSetImplTest, SetWatcherFailToSet) {
@@ -135,6 +138,7 @@ TEST_F(DeviceSetImplTest, SetWatcherFailToSet) {
   EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, status);
   EXPECT_EQ(0, on_cloud_erased_calls_);
   EXPECT_EQ(1, on_network_error_calls_);
+  EXPECT_EQ(0, cloud_device_set_->timestamp_update_requests_);
 }
 
 TEST_F(DeviceSetImplTest, Erase) {

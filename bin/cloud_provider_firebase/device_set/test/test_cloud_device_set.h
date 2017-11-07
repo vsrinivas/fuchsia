@@ -34,12 +34,17 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
   void EraseAllFingerprints(std::string auth_token,
                             std::function<void(Status)> callback) override;
 
+  void UpdateTimestampAssociatedWithFingerprint(
+      std::string auth_token,
+      std::string fingerprint) override;
+
   CloudDeviceSet::Status status_to_return = CloudDeviceSet::Status::OK;
 
   std::string checked_fingerprint;
   std::string set_fingerprint;
   std::string watched_fingerprint;
   std::function<void(Status)> watch_callback;
+  int timestamp_update_requests_ = 0;
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

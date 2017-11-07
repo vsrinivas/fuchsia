@@ -28,6 +28,8 @@ class CloudDeviceSet {
     // local state on this device.
     ERASED,
     // Couldn't determine the compatibility due to a network error.
+    // Causes of this error include lack of connectivity and using an expired
+    // authentication token.
     NETWORK_ERROR
   };
 
@@ -61,6 +63,12 @@ class CloudDeviceSet {
   // succeeded and NETWORK_ERROR if not.
   virtual void EraseAllFingerprints(std::string auth_token,
                                     std::function<void(Status)> callback) = 0;
+
+  // Sends a request to update the server-side timestamp associated with the
+  // |fingerprint|.
+  virtual void UpdateTimestampAssociatedWithFingerprint(
+      std::string auth_token,
+      std::string fingerprint) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudDeviceSet);

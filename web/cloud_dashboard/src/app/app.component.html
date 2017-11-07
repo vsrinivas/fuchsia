@@ -52,6 +52,14 @@
           <ul>
             <li class="text" *ngFor="let device of devices | async">
               {{device.$key}}
+
+              <!-- The ngIf is a workaround for clients that do not yet have their timestamp set. -->
+              <!-- TODO(jif): LE-350: Remove once "enough" time as passed. -->
+              <span *ngIf="device.$value != true">
+              -- Last connection at
+              {{device.$value | date:'yyyy-MM-dd HH:mm:ss Z'}}
+              </span>
+
             </li>
           </ul>
           <p>Device IDs are opaque and meaningful only to Ledger.</p>

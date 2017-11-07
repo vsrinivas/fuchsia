@@ -49,4 +49,10 @@ void TestCloudDeviceSet::EraseAllFingerprints(
       });
 }
 
+void TestCloudDeviceSet::UpdateTimestampAssociatedWithFingerprint(
+    std::string auth_token,
+    std::string fingerprint) {
+  timestamp_update_requests_++;
+}
+
 }  // namespace cloud_provider_firebase

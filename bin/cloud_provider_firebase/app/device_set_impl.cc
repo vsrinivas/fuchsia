@@ -97,6 +97,7 @@ void DeviceSetImpl::SetWatcher(
     const SetWatcherCallback& callback) {
   watcher_ = cloud_provider::DeviceSetWatcherPtr::Create(std::move(watcher));
   set_watcher_callback_called_ = false;
+  timestamp_update_request_sent_ = false;
 
   auto request = auth_provider_->GetFirebaseToken(
       [this, fingerprint = convert::ToString(fingerprint), callback](
@@ -109,19 +110,30 @@ void DeviceSetImpl::SetWatcher(
         }
 
         // Note that the callback passed to WatchFingerprint() can be called
-        // once or twice: if setting the watcher is successful, it is first
-        // called with status = OK, and then again with an error status when the
-        // connection breaks or the timestamp is erased. We use
-        // |set_watcher_callback_called_| to ensure that the client callback is
-        // called exactly once.
+        // up to 3 times: if setting the watcher is successful, it is first
+        // called with status = OK, then again with the status = OK after the
+        // request to update the fingerprint timestamp completed, and then again
+        // with an error status when the connection breaks or the fingerprint is
+        // erased.
+        // We use |set_watcher_callback_called_| to ensure that the client
+        // callback is called exactly once.
+        // We use |timestamp_update_request_sent_| to ensure that the request to
+        // update the timestamp occurs only once.
         cloud_device_set_->WatchFingerprint(
-            std::move(auth_token), std::move(fingerprint),
-            [this,
-             callback = std::move(callback)](CloudDeviceSet::Status status) {
+            auth_token, fingerprint,
+            [this, callback = std::move(callback),
+             auth_token = std::move(auth_token),
+             fingerprint =
+                 std::move(fingerprint)](CloudDeviceSet::Status status) {
               cloud_provider::Status response_status;
               switch (status) {
                 case CloudDeviceSet::Status::OK:
                   response_status = cloud_provider::Status::OK;
+                  if (!timestamp_update_request_sent_) {
+                    timestamp_update_request_sent_ = true;
+                    cloud_device_set_->UpdateTimestampAssociatedWithFingerprint(
+                        auth_token, fingerprint);
+                  }
                   break;
                 case CloudDeviceSet::Status::ERASED:
                   response_status = cloud_provider::Status::NOT_FOUND;

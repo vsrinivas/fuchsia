@@ -10,9 +10,23 @@
 namespace cloud_provider_firebase {
 
 namespace {
+
 std::string GetDeviceMapKey(fxl::StringView fingerprint) {
   return fxl::Concatenate({kDeviceMapRelpath, "/", fingerprint});
 }
+
+std::vector<std::string> QueryParamsFromAuthToken(std::string auth_token) {
+  std::vector<std::string> query_params;
+  if (!auth_token.empty()) {
+    query_params.push_back("auth=" + auth_token);
+  }
+  return query_params;
+}
+
+// Firebase-specific value that requests updating the timestamp.
+// See Firebase Database REST API documentation.
+const char kUpdateTimestampValue[] = "{\".sv\": \"timestamp\"}";
+
 }  // namespace
 
 CloudDeviceSetImpl::CloudDeviceSetImpl(
@@ -29,10 +43,7 @@ void CloudDeviceSetImpl::CheckFingerprint(
     std::string auth_token,
     std::string fingerprint,
     std::function<void(Status)> callback) {
-  std::vector<std::string> query_params;
-  if (!auth_token.empty()) {
-    query_params.push_back("auth=" + auth_token);
-  }
+  auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Get(
       GetDeviceMapKey(fingerprint), query_params,
@@ -57,13 +68,10 @@ void CloudDeviceSetImpl::CheckFingerprint(
 void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
                                         std::string fingerprint,
                                         std::function<void(Status)> callback) {
-  std::vector<std::string> query_params;
-  if (!auth_token.empty()) {
-    query_params.push_back("auth=" + auth_token);
-  }
+  auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Put(
-      GetDeviceMapKey(fingerprint), query_params, "true",
+      GetDeviceMapKey(fingerprint), query_params, kUpdateTimestampValue,
       [callback = std::move(callback)](firebase::Status status) {
         if (status != firebase::Status::OK) {
           FXL_LOG(WARNING) << "Unable to set local version on the cloud.";
@@ -83,10 +91,7 @@ void CloudDeviceSetImpl::WatchFingerprint(
     ResetWatcher();
   }
 
-  std::vector<std::string> query_params;
-  if (!auth_token.empty()) {
-    query_params.push_back("auth=" + auth_token);
-  }
+  auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Watch(GetDeviceMapKey(fingerprint), query_params, this);
   firebase_watcher_set_ = true;
@@ -96,10 +101,7 @@ void CloudDeviceSetImpl::WatchFingerprint(
 void CloudDeviceSetImpl::EraseAllFingerprints(
     std::string auth_token,
     std::function<void(Status)> callback) {
-  std::vector<std::string> query_params;
-  if (!auth_token.empty()) {
-    query_params.push_back("auth=" + auth_token);
-  }
+  auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Delete(
       kDeviceMapRelpath, query_params,
@@ -110,6 +112,21 @@ void CloudDeviceSetImpl::EraseAllFingerprints(
         }
 
         callback(Status::OK);
+      });
+}
+
+void CloudDeviceSetImpl::UpdateTimestampAssociatedWithFingerprint(
+    std::string auth_token,
+    std::string fingerprint) {
+  auto query_params = QueryParamsFromAuthToken(auth_token);
+
+  user_firebase_->Put(
+      GetDeviceMapKey(fingerprint), query_params, kUpdateTimestampValue,
+      [](firebase::Status status) {
+        if (status != firebase::Status::OK) {
+          FXL_LOG(WARNING) << "Firebase timestamp update returned status:"
+                           << status;
+        }
       });
 }
 
