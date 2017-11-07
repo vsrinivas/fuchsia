@@ -18,5 +18,6 @@ struct thread;
 void arch_thread_initialize(struct thread *, vaddr_t entry_point);
 void arch_context_switch(struct thread *oldthread, struct thread *newthread);
 void arch_thread_construct_first(struct thread *);
+void* arch_thread_get_blocked_fp(struct thread *);
 
 __END_CDECLS

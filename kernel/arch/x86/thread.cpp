@@ -79,6 +79,16 @@ void arch_dump_thread(thread_t *t)
     }
 }
 
+void* arch_thread_get_blocked_fp(struct thread *t)
+{
+    if (!WITH_FRAME_POINTERS)
+        return nullptr;
+
+    struct x86_64_context_switch_frame *frame = (struct x86_64_context_switch_frame *)t->arch.sp;
+
+    return (void *)frame->rbp;
+}
+
 __NO_SAFESTACK __attribute__((target("fsgsbase")))
 void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 {
@@ -149,3 +159,4 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
+

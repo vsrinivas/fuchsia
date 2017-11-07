@@ -38,7 +38,7 @@ static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
-STATIC_COMMAND_MASKED("thread", "list kernel threads with options", &cmd_thread, CMD_AVAIL_ALWAYS)
+STATIC_COMMAND_MASKED("thread", "manipulate kernel threads", &cmd_thread, CMD_AVAIL_ALWAYS)
 #endif
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
@@ -52,13 +52,27 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
     notenoughargs:
         printf("not enough arguments\n");
     usage:
+        printf("%s bt <thread pointer or id>\n", argv[0].str);
         printf("%s dump <thread pointer or id>\n", argv[0].str);
         printf("%s list\n", argv[0].str);
         printf("%s list_full\n", argv[0].str);
         return -1;
     }
 
-    if (!strcmp(argv[1].str, "dump")) {
+    if (!strcmp(argv[1].str, "bt")) {
+        if (argc < 3)
+            goto notenoughargs;
+
+        thread_t* t = NULL;
+        if (is_kernel_address(argv[2].u)) {
+            t = (thread_t *)argv[2].u;
+        } else {
+            t = thread_id_to_thread_slow(argv[2].u);
+        }
+        if (t) {
+            thread_print_backtrace(t);
+        }
+    } else if (!strcmp(argv[1].str, "dump")) {
         if (argc < 3)
             goto notenoughargs;
 

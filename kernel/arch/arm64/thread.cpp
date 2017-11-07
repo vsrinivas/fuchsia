@@ -115,3 +115,14 @@ void arch_dump_thread(thread_t *t)
         dprintf(INFO, "sp 0x%lx\n", t->arch.sp);
     }
 }
+
+void* arch_thread_get_blocked_fp(struct thread *t)
+{
+    if (!WITH_FRAME_POINTERS)
+        return nullptr;
+
+    struct context_switch_frame *frame = (struct context_switch_frame *)t->arch.sp;
+
+    return (void *)frame->r29;
+}
+

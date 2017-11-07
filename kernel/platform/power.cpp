@@ -21,9 +21,7 @@
 __WEAK void platform_halt(platform_halt_action suggested_action,
                           platform_halt_reason reason) {
 
-#if WITH_PANIC_BACKTRACE
-    thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
-#endif
+    thread_print_current_backtrace();
 
 #if ENABLE_PANIC_SHELL
     if (reason == HALT_REASON_SW_PANIC) {

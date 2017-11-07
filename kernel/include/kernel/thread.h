@@ -215,14 +215,11 @@ void thread_reschedule(void); /* revaluate the run queue on the current cpu,
 
 void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]);
 
-#define THREAD_BACKTRACE_DEPTH 10
-typedef struct thread_backtrace {
-    void* pc[THREAD_BACKTRACE_DEPTH];
-} thread_backtrace_t;
+// print the backtrace on the current thread
+void thread_print_current_backtrace(void);
 
-int thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb);
-
-void thread_print_backtrace(thread_t* t, void* fp);
+// print the backtrace of the passed in thread, if possible
+zx_status_t thread_print_backtrace(thread_t* t);
 
 // Return true if stopped in an exception.
 static inline bool thread_stopped_in_exception(const thread_t* thread) {
@@ -262,6 +259,11 @@ void dump_all_threads(bool full);
 void dump_all_threads_locked(bool full);
 void dump_thread_user_tid(uint64_t tid, bool full);
 void dump_thread_user_tid_locked(uint64_t tid, bool full);
+
+// find a thread based on the thread id
+// NOTE: used only for debugging, its a slow linear search through the
+// global thread list
+thread_t* thread_id_to_thread_slow(uint64_t tid);
 
 static inline bool thread_is_realtime(thread_t* t) {
     return (t->flags & THREAD_FLAG_REAL_TIME) && t->base_priority > DEFAULT_PRIORITY;

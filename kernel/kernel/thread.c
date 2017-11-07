@@ -1239,6 +1239,17 @@ void dump_thread_user_tid_locked(uint64_t tid, bool full) {
     }
 }
 
+thread_t* thread_id_to_thread_slow(uint64_t tid) {
+    thread_t* t;
+    list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
+        if (t->user_tid == tid) {
+            return t;
+        }
+    }
+
+    return NULL;
+}
+
 /** @} */
 
 #if WITH_LIB_KTRACE
@@ -1556,7 +1567,11 @@ static zx_status_t thread_unblock_from_wait_queue(thread_t* t, zx_status_t wait_
     return ZX_OK;
 }
 
-#if WITH_PANIC_BACKTRACE
+#define THREAD_BACKTRACE_DEPTH 16
+typedef struct thread_backtrace {
+    void* pc[THREAD_BACKTRACE_DEPTH];
+} thread_backtrace_t;
+
 static zx_status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz) {
     if (!is_kernel_address((uintptr_t)ptr) ||
         (ptr < t->stack) ||
@@ -1567,12 +1582,17 @@ static zx_status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t s
     return ZX_OK;
 }
 
-int thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb) {
+static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb) {
+    // without frame pointers, dont even try
+    // the compiler should optimize out the body of all the callers if it's not present
+    if (!WITH_FRAME_POINTERS)
+        return 0;
+
     void* pc;
     if (t == NULL) {
-        return -1;
+        return 0;
     }
-    int n = 0;
+    size_t n = 0;
     for (; n < THREAD_BACKTRACE_DEPTH; n++) {
         if (thread_read_stack(t, fp + 8, &pc, sizeof(void*))) {
             break;
@@ -1585,16 +1605,45 @@ int thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb) {
     return n;
 }
 
-void thread_print_backtrace(thread_t* t, void* fp) {
-    thread_backtrace_t tb;
-    int count = thread_get_backtrace(t, fp, &tb);
-    if (count < 0) {
-        return;
+static zx_status_t _thread_print_backtrace(thread_t* t, void *fp) {
+    if (!t || !fp) {
+        return ZX_ERR_BAD_STATE;
     }
 
-    for (int n = 0; n < count; n++) {
-        printf("bt#%02d: %p\n", n, tb.pc[n]);
+    thread_backtrace_t tb;
+    size_t count = thread_get_backtrace(t, fp, &tb);
+    if (count == 0) {
+        return ZX_ERR_BAD_STATE;
     }
-    printf("bt#%02d: end\n", count);
+
+    for (size_t n = 0; n < count; n++) {
+        printf("bt#%02zu: %p\n", n, tb.pc[n]);
+    }
+    printf("bt#%02zu: end\n", count);
+
+    return ZX_OK;
 }
-#endif
+
+// print the backtrace of the current thread, at the current spot
+void thread_print_current_backtrace(void) {
+    _thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
+}
+
+// print the backtrace of a passed in thread, if possible
+zx_status_t thread_print_backtrace(thread_t* t) {
+    // get the starting point if it's in a usable state
+    void *fp = NULL;
+    switch (t->state) {
+        case THREAD_BLOCKED:
+        case THREAD_SLEEPING:
+        case THREAD_SUSPENDED:
+            // thread is blocked, so ask the arch code to get us a starting point
+            fp = arch_thread_get_blocked_fp(t);
+            break;
+        // we can't deal with every other state
+        default:
+            return ZX_ERR_BAD_STATE;
+    }
+
+    return _thread_print_backtrace(t, fp);
+}
