@@ -373,7 +373,7 @@ extern fn driver_init(out_ctx: *mut *mut u8) -> sys::zx_status_t {
     }.into_raw()
 }
 
-extern fn driver_bind(ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, _cookie: *mut *mut u8) -> sys::zx_status_t {
+extern fn driver_bind(ctx: *mut u8, parent: *mut ddk_sys::zx_device_t) -> sys::zx_status_t {
     println!("driver_bind called");
     let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
     let parent_wrapped = Device::wrap(parent);
@@ -383,10 +383,6 @@ extern fn driver_bind(ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, _cookie: 
     };
     let _ = Box::into_raw(ops);
     status.into_raw()
-}
-
-extern fn driver_unbind(_ctx: *mut u8, _device: *mut ddk_sys::zx_device_t, _cookie: *mut u8) {
-    println!("driver unbind called with cookie {:?}", _cookie);
 }
 
 extern fn driver_release(ctx: *mut u8) {
@@ -400,7 +396,6 @@ extern fn driver_release(ctx: *mut u8) {
 pub static DRIVER_OPS: ddk_sys::zx_driver_ops_t = ddk_sys::zx_driver_ops_t {
     init: Some(driver_init),
     bind: Some(driver_bind),
-    unbind: Some(driver_unbind),
     release: Some(driver_release),
     ..ddk_sys::DEFAULT_DRIVER_OPS
 };

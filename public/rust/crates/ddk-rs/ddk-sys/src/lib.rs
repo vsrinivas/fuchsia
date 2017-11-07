@@ -67,9 +67,8 @@ pub struct zx_driver_ops_t {
     pub __version: u64,
 
     pub init: Option<extern "C" fn (out_ctx: *mut *mut u8) -> sys::zx_status_t>,
-    pub bind: Option<extern "C" fn (ctx: *mut u8, device: *mut zx_device_t, cookie: *mut *mut u8) -> sys::zx_status_t>,
-    pub unbind: Option<extern "C" fn (ctx: *mut u8, device: *mut zx_device_t, cookie: *mut u8)>,
-    pub create: Option<extern "C" fn (ctx: *mut u8, parent: *mut zx_device_t, name: *const c_char, args: *const c_char, resource: sys::zx_handle_t) -> sys::zx_status_t>,
+    pub bind: Option<extern "C" fn (ctx: *mut u8, device: *mut zx_device_t) -> sys::zx_status_t>,
+    pub create: Option<extern "C" fn (ctx: *mut u8, parent: *mut zx_device_t, name: *const c_char, args: *const c_char, rpc_channel: sys::zx_handle_t) -> sys::zx_status_t>,
     pub release: Option<extern "C" fn (ctx: *mut u8)>,
 }
 
@@ -79,7 +78,6 @@ pub const DEFAULT_DRIVER_OPS: zx_driver_ops_t = zx_driver_ops_t {
     __version: DRIVER_OPS_VERSION,
     init: None,
     bind: None,
-    unbind: None,
     create: None,
     release: None,
 };
@@ -151,6 +149,7 @@ pub struct zx_protocol_device_t {
     pub ioctl: Option<extern "C" fn (ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t>,
     pub suspend: Option<extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
     pub resume: Option<extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
+    pub rxrpc: Option<extern "C" fn (ctx: *mut u8, channel: sys::zx_handle_t) -> sys::zx_status_t>,
 }
 
 // This is needed instead of Default::default() because the latter can't be called in a static
@@ -170,6 +169,7 @@ pub const DEFAULT_PROTOCOL_DEVICE: zx_protocol_device_t = zx_protocol_device_t {
     ioctl: None,
     suspend: None,
     resume: None,
+    rxrpc: None,
 };
 
 impl Default for zx_protocol_device_t {
