@@ -1681,6 +1681,18 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
             system_loaded = true;
             find_loadable_drivers("/system/driver");
             find_loadable_drivers("/system/lib/driver");
+            if (require_system && dc_running) {
+                driver_t* drv;
+
+                while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
+                    printf("devcoord: fallback driver '%s' is available\n", drv->name);
+                    list_add_tail(&list_drivers_new, &drv->node);
+                }
+
+                if (new_driver_work.op == WORK_IDLE) {
+                    queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
+                }
+            }
         }
         break;
     }
@@ -1729,8 +1741,8 @@ void coordinator(void) {
 #endif
     dc_prepare_proxy(&sys_device);
 
-    if (require_system) {
-        printf("devcoord: full system required, ignoring fallback drivers\n");
+    if (require_system && !system_loaded) {
+        printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
         driver_t* drv;
         while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
