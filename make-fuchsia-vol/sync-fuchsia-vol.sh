@@ -42,24 +42,11 @@ bootdata="$FUCHSIA_BUILD_DIR/bootdata.bin"
 syncstamp="$FUCHSIA_BUILD_DIR/sync.stamp"
 
 boot-manifests() {
-  echo "$ZIRCON_BUILD_DIR/bootfs.manifest"
-  while IFS='' read pkg; do
-    local manifest="$packagedir/$pkg/boot_manifest"
-    test -s "$manifest" && echo $manifest
-  done < "$FUCHSIA_BUILD_DIR/gen/packages/gn/packages"
+  echo "$FUCHSIA_BUILD_DIR/boot.manifest"
 }
 
 system-manifests() {
-  local manifest="$FUCHSIA_BUILD_DIR/gen/packages/gn/system.bootfs.manifest"
-  if [[ ! -s $manifest ]]; then
-    echo "fatal: missing $manifest" >&2
-    exit 1
-  fi
-  echo $manifest
-  while IFS='' read pkg; do
-    local manifest="$packagedir/$pkg/system_manifest"
-    test -s "$manifest" && echo $manifest
-  done < "$FUCHSIA_BUILD_DIR/gen/packages/gn/packages"
+  echo "$FUCHSIA_BUILD_DIR/system.manifest"
 }
 
 # Parse a manifest file, give as arg or stdin, extracting source or target
@@ -120,7 +107,7 @@ sftp-batch-updated-system-files() {
 mount-writable-parts() {
   scp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config "$thisdir/remount.sh" "[$1]:/tmp/remount.sh" || exit 1
 
-  fssh $1 /boot/bin/sh /tmp/remount.sh || exit 1
+  fx ssh $1 /boot/bin/sh /tmp/remount.sh || exit 1
 }
 
 sftp-batch-updated-efi-files() {
@@ -147,6 +134,8 @@ sftp-batch-updated-efi-files() {
   done
 }
 
+cd $FUCHSIA_BUILD_DIR
+
 echo "finding address of host"
 host=$(netaddr --fuchsia $@)
 if [[ $? != 0 ]]; then
@@ -166,9 +155,11 @@ eficmds=$(sftp-batch-updated-efi-files "$syncstamp")
   echo progress
   sftp-batch-updated-system-files "$syncstamp"
   echo $eficmds
-) | fsftp -b - "[$host]"
+) | fx sftp -b - "[$host]"
 touch "$syncstamp"
 
 if [[ -n $eficmds ]]; then
   echo "EFI files were updated, you should reboot"
 fi
+
+fx shell umount /efi

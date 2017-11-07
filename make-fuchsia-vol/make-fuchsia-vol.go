@@ -14,7 +14,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,25 +28,16 @@ import (
 )
 
 var (
-	fuchsiaDir      = os.Getenv("FUCHSIA_DIR")
-	fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
-	zirconBuildDir  = os.Getenv("ZIRCON_BUILD_DIR")
-)
+	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
+	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILD_DIR"), "zircon build dir")
 
-var (
-	bootloader     = flag.String("bootloader", filepath.Join(zirconBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
-	kernel         = flag.String("kernel", filepath.Join(zirconBuildDir, "zircon.bin"), "path to zircon.bin")
-	bootfsmanifest = flag.String("bootfsmanifest", filepath.Join(zirconBuildDir, "bootfs.manifest"), "path to zircon bootfs.manifest")
-	bootmanifest   = flag.String("bootmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/boot.bootfs.manifest"), "path to boot manifest")
-	sysmanifest    = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
-	packages       = flag.String("packages", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/packages"), "file containing list of packages to include")
-	packagesDir    = flag.String("packagesDir", filepath.Join(fuchsiaBuildDir, "package"), "path to the build packages directory")
-	cmdline        = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
+	bootloader   = flag.String("bootloader", "", "path to bootx64.efi")
+	kernel       = flag.String("kernel", "", "path to zircon.bin")
+	bootmanifest = flag.String("bootmanifest", "", "path to boot_bootfs.manifest")
+	sysmanifest  = flag.String("sysmanifest", "", "path to system_bootfs.manifest")
+	cmdline      = flag.String("cmdline", "", "path to command line file (if exists)")
 
-	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("ZIRCON_PROJECT"), "rpi"), "install rpi3 layout")
-	rpi3Root = flag.String("rpi3Root", filepath.Join(fuchsiaDir, "zircon/kernel/target/rpi3"), "zircon rpi3 target root")
-
-	efiOnly = flag.Bool("efionly", false, "install only Zircon EFI partition")
+	fatboot = flag.Bool("fatboot", false, "fatboot - include /system in boot ramdisk")
 
 	blockSize           = flag.Int64("blockSize", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physicalBlockSize", 0, "the physical block size of the target disk (0 means detect)")
@@ -64,10 +54,34 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Usage: %s disk-path\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
 	}
+
 }
 
 func main() {
 	flag.Parse()
+
+	if *fuchsiaBuildDir == "" {
+		log.Fatalf("either pass -fuchsia-build-dir or set $FUCHSIA_BUILD_DIR")
+	}
+	if (*bootloader == "" || *kernel == "") && *zirconBuildDir == "" {
+		log.Fatalf("either pass -zircon-build-dir or set $ZIRCON_BUILD_DIR")
+	}
+
+	if *bootloader == "" {
+		*bootloader = filepath.Join(*zirconBuildDir, "bootloader/bootx64.efi")
+	}
+	if *kernel == "" {
+		*kernel = filepath.Join(*zirconBuildDir, "zircon.bin")
+	}
+	if *bootmanifest == "" {
+		*bootmanifest = filepath.Join(*fuchsiaBuildDir, "boot.manifest")
+	}
+	if *sysmanifest == "" {
+		*sysmanifest = filepath.Join(*fuchsiaBuildDir, "system.manifest")
+	}
+	if *cmdline == "" {
+		*cmdline = filepath.Join(*fuchsiaBuildDir, "cmdline")
+	}
 
 	if len(flag.Args()) != 1 {
 		flag.Usage()
@@ -76,15 +90,9 @@ func main() {
 
 	disk := flag.Args()[0]
 
-	for _, path := range []string{*kernel, *bootfsmanifest, disk} {
+	for _, path := range []string{*kernel, *bootmanifest, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
-		}
-	}
-
-	if !*rpi3 {
-		if _, err := os.Stat(*bootloader); err != nil {
-			log.Fatalf("cannot read %q: %s\n", *bootloader, err)
 		}
 	}
 
@@ -107,30 +115,6 @@ func main() {
 		log.Printf("sys manifest %s was missing, ignoring", *sysmanifest)
 	}
 
-	if !*efiOnly {
-		b, err := ioutil.ReadFile(*packages)
-		if err == nil {
-			for _, packageName := range strings.Split(string(b), "\n") {
-				path := filepath.Join(*packagesDir, packageName, "system_manifest")
-				// TODO(raggi): remove the size check hack here once packages declare
-				// explicit manifests to include.
-				if info, err := os.Stat(path); err == nil {
-					if info.Size() > 0 {
-						systemManifests = append(systemManifests, path)
-					}
-				}
-				path = filepath.Join(*packagesDir, packageName, "boot_manifest")
-				if info, err := os.Stat(path); err == nil {
-					if info.Size() > 0 {
-						bootManifests = append(bootManifests, path)
-					}
-				}
-			}
-		} else {
-			log.Printf("Packages file %q could not be opened (%s), ignoring", *packages, err)
-		}
-	}
-
 	tempDir, err := ioutil.TempDir("", "make-fuchsia-vol")
 	if err != nil {
 		log.Fatal(err)
@@ -139,14 +123,24 @@ func main() {
 
 	// persist the ramdisk in case a user wants it to boot qemu against a
 	// persistent image
-	ramdiskDir := fuchsiaBuildDir
+	ramdiskDir := *fuchsiaBuildDir
 	if ramdiskDir == "" {
 		ramdiskDir = tempDir
 	}
 	ramdisk := filepath.Join(ramdiskDir, "bootdata.bin")
 
-	args := []string{"-o", ramdisk, "--target=boot", *bootfsmanifest}
-	cmd := exec.Command("mkbootfs", append(args, bootManifests...)...)
+	args := []string{"-o", ramdisk, "--target=boot"}
+	args = append(args, bootManifests...)
+
+	if *fatboot {
+		args = append(args, "--target=system")
+		args = append(args, systemManifests...)
+	}
+
+	log.Print(append([]string{"mkbootfs"}, args...))
+
+	cmd := exec.Command("mkbootfs", args...)
+	cmd.Dir = *fuchsiaBuildDir
 	b2, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Printf("%s %v failed:\n%s\n", cmd.Path, cmd.Args, b2)
@@ -238,67 +232,63 @@ func main() {
 		EndingLBA:           end,
 	})
 
-	if *rpi3 {
-		var startingCHS [3]byte
-		startingCHS[0] = byte(efiStart / (16 * 63))
-		startingCHS[1] = byte((efiStart / 63) % 16)
-		startingCHS[2] = byte((efiStart % 63) + 1)
+	var startingCHS [3]byte
+	startingCHS[0] = byte(efiStart / (16 * 63))
+	startingCHS[1] = byte((efiStart / 63) % 16)
+	startingCHS[2] = byte((efiStart % 63) + 1)
 
-		efiEnd := end
-		var endingCHS [3]byte
-		endingCHS[0] = byte(efiEnd / (16 * 63))
-		endingCHS[1] = byte((efiEnd / 63) % 16)
-		endingCHS[2] = byte((efiEnd % 63) + 1)
+	efiEnd := end
+	var endingCHS [3]byte
+	endingCHS[0] = byte(efiEnd / (16 * 63))
+	endingCHS[1] = byte((efiEnd / 63) % 16)
+	endingCHS[2] = byte((efiEnd % 63) + 1)
 
-		// Install a "hybrid MBR" hack for the case of bios bootloaders that might
-		// need it (e.g. rpi's binary blob that's stuck in MBR land).
-		g.MBR.PartitionRecord[0] = mbr.PartitionRecord{
-			BootIndicator: 0x80,
-			StartingCHS:   startingCHS,
-			EndingCHS:     endingCHS,
-			OSType:        mbr.FAT32,
-			StartingLBA:   uint32(efiStart),
-			SizeInLBA:     uint32(uint64(*efiSize) / logical),
-		}
+	// Install a "hybrid MBR" hack for the case of bios bootloaders that might
+	// need it (e.g. rpi's binary blob that's stuck in MBR land).
+	g.MBR.PartitionRecord[0] = mbr.PartitionRecord{
+		BootIndicator: 0x80,
+		StartingCHS:   startingCHS,
+		EndingCHS:     endingCHS,
+		OSType:        mbr.FAT32,
+		StartingLBA:   uint32(efiStart),
+		SizeInLBA:     uint32(uint64(*efiSize) / logical),
 	}
 
 	var sysStart, blobStart, dataStart uint64
 
-	if !*efiOnly {
-		sysStart, end = optimialBlockAlign(end+1, uint64(*sysSize), logical, physical, optimal)
-		*sysSize = int64((end - sysStart) * logical)
+	sysStart, end = optimialBlockAlign(end+1, uint64(*sysSize), logical, physical, optimal)
+	*sysSize = int64((end - sysStart) * logical)
 
-		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-			PartitionTypeGUID:   gpt.GUIDFuchsiaSystem,
-			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("SYS"),
-			StartingLBA:         sysStart,
-			EndingLBA:           end,
-		})
+	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+		PartitionTypeGUID:   gpt.GUIDFuchsiaSystem,
+		UniquePartitionGUID: gpt.NewRandomGUID(),
+		PartitionName:       gpt.NewPartitionName("SYS"),
+		StartingLBA:         sysStart,
+		EndingLBA:           end,
+	})
 
-		blobStart, end = optimialBlockAlign(end+1, uint64(*blobSize), logical, physical, optimal)
-		*blobSize = int64((end - blobStart) * logical)
+	blobStart, end = optimialBlockAlign(end+1, uint64(*blobSize), logical, physical, optimal)
+	*blobSize = int64((end - blobStart) * logical)
 
-		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-			PartitionTypeGUID:   gpt.GUIDFuchsiaBlob,
-			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("BLOB"),
-			StartingLBA:         blobStart,
-			EndingLBA:           end,
-		})
+	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+		PartitionTypeGUID:   gpt.GUIDFuchsiaBlob,
+		UniquePartitionGUID: gpt.NewRandomGUID(),
+		PartitionName:       gpt.NewPartitionName("BLOB"),
+		StartingLBA:         blobStart,
+		EndingLBA:           end,
+	})
 
-		dataStart, end = optimialBlockAlign(end+1, uint64(*dataSize), logical, physical, optimal)
-		end = g.Primary.LastUsableLBA
-		*dataSize = int64((end - dataStart) * logical)
+	dataStart, end = optimialBlockAlign(end+1, uint64(*dataSize), logical, physical, optimal)
+	end = g.Primary.LastUsableLBA
+	*dataSize = int64((end - dataStart) * logical)
 
-		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-			PartitionTypeGUID:   gpt.GUIDFuchsiaData,
-			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("DATA"),
-			StartingLBA:         dataStart,
-			EndingLBA:           end,
-		})
-	}
+	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+		PartitionTypeGUID:   gpt.GUIDFuchsiaData,
+		UniquePartitionGUID: gpt.NewRandomGUID(),
+		PartitionName:       gpt.NewPartitionName("DATA"),
+		StartingLBA:         dataStart,
+		EndingLBA:           end,
+	})
 
 	g.Update(logical, physical, optimal, diskSize)
 
@@ -307,11 +297,9 @@ func main() {
 	}
 
 	log.Printf("EFI size: %d", *efiSize)
-	if !*efiOnly {
-		log.Printf("SYS size: %d", *sysSize)
-		log.Printf("BLOB size: %d", *blobSize)
-		log.Printf("DATA size: %d", *dataSize)
-	}
+	log.Printf("SYS size: %d", *sysSize)
+	log.Printf("BLOB size: %d", *blobSize)
+	log.Printf("DATA size: %d", *dataSize)
 
 	log.Printf("Writing GPT")
 
@@ -326,11 +314,9 @@ func main() {
 	f.Sync()
 
 	efiStart = efiStart * logical
-	if !*efiOnly {
-		sysStart = sysStart * logical
-		blobStart = blobStart * logical
-		dataStart = dataStart * logical
-	}
+	sysStart = sysStart * logical
+	blobStart = blobStart * logical
+	dataStart = dataStart * logical
 
 	log.Printf("Writing EFI partition and files")
 
@@ -362,68 +348,18 @@ func main() {
 
 	root := fatfs.RootDirectory()
 
-	if !*rpi3 {
-		msCopyIn(*bootloader, root, "EFI/BOOT")
-	}
+	msCopyIn(*bootloader, root, "EFI/BOOT")
 	msCopyIn(*kernel, root, "")
 	msCopyIn(ramdisk, root, "")
 	if _, err := os.Stat(*cmdline); err == nil {
 		msCopyIn(*cmdline, root, "")
 	}
 
-	if *rpi3 {
-		for _, f := range []string{"cmdline.txt", "config.txt", "bcm2710-rpi-3-b.dtb"} {
-			msCopyIn(filepath.Join(*rpi3Root, f), root, "")
-		}
-		root.Rename(root, "zircon.bin", "kernel8.img")
-		root.Sync()
-
-		to, _, err := root.Open("start.elf", fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		r, err := http.Get("https://github.com/raspberrypi/firmware/raw/390f53ed0fd79df274bdcc81d99e09fa262f03ab/boot/start.elf")
-		if err != nil {
-			log.Fatal(err)
-		}
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if _, err := to.Write(b, 0, fs.WhenceFromCurrent); err != nil {
-			log.Fatal(err)
-		}
-		r.Body.Close()
-		to.Sync()
-		to.Close()
-
-		to, _, err = root.Open("bootcode.bin", fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		r, err = http.Get("https://github.com/raspberrypi/firmware/raw/390f53ed0fd79df274bdcc81d99e09fa262f03ab/boot/bootcode.bin")
-		if err != nil {
-			log.Fatal(err)
-		}
-		b, err = ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if _, err := to.Write(b, 0, fs.WhenceFromCurrent); err != nil {
-			log.Fatal(err)
-		}
-		r.Body.Close()
-		to.Sync()
-		to.Close()
-
-		root.Sync()
-	}
-
 	root.Sync()
 	root.Close()
 	fatfs.Close()
 
-	if !*efiOnly {
+	if !*fatboot {
 		log.Printf("Creating SYS minfs")
 		path, err := mkminfs(*sysSize)
 		if err != nil {
@@ -487,6 +423,7 @@ func main() {
 
 func minfs(args ...string) error {
 	cmd := exec.Command("minfs", args...)
+	cmd.Dir = *fuchsiaBuildDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
