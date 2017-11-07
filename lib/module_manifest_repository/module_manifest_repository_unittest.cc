@@ -39,13 +39,13 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
  protected:
   void ResetRepository() {
     auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-    repo_.reset(new ModuleManifestRepository(
-        repo_dir_, task_runner, [this](std::string id, ModuleManifestRepository::Entry entry) {
+    repo_.reset(new ModuleManifestRepository(repo_dir_));
+    repo_->Watch(task_runner, [this](std::string id, ModuleManifestRepository::Entry entry) {
           entries_.push_back(entry);
           entry_ids_.push_back(std::move(id));
         }, [this](std::string id) {
           removed_ids_.push_back(std::move(id));
-        }));
+        });
   }
 
   void WriteManifestFile(const std::string& name,

@@ -23,24 +23,24 @@ class ModuleManifestRepository {
   using NewEntryFn = std::function<void(std::string, Entry)>;
   using RemovedEntryFn = std::function<void(std::string)>;
 
-  // Watches |repository_dir| for Module manifest files, parses them and posts
-  // tasks to |task_runner| calling |new_fn| for each entry in new files and
-  // |removed_fn| for entries that have been removed.
+  // If |repository_dir| does not already exist, it will be created.
+  ModuleManifestRepository(std::string repository_dir);
+
+  // Watches |repository_dir| (in the constructor) for Module manifest files,
+  // parses them and posts tasks to |task_runner| calling |new_fn| for each
+  // entry in new files and |removed_fn| for entries that have been removed.
   //
   // |new_fn| takes a string Entry id and the Entry itself.
   //
   // |removed_fn| takes only the string Entry id.
-  //
-  // If |repository_dir| does not already exist, it will be created.
-  ModuleManifestRepository(std::string repository_dir,
-                           fxl::RefPtr<fxl::TaskRunner> task_runner,
-                           NewEntryFn new_fn,
-                           RemovedEntryFn removed_fn);
+  void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+             NewEntryFn new_fn,
+             RemovedEntryFn removed_fn);
   ~ModuleManifestRepository();
 
  private:
-  void OnNewFile(const std::string& name);
-  void OnRemoveFile(const std::string& name);
+  void OnNewFile(const std::string& name, NewEntryFn);
+  void OnRemoveFile(const std::string& name, RemovedEntryFn);
 
   const std::string repository_dir_;
   NewEntryFn new_entry_fn_;

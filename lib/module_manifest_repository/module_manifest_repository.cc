@@ -113,13 +113,8 @@ void XdrEntry(modular::XdrContext* const xdr,
 }  // namespace
 
 ModuleManifestRepository::ModuleManifestRepository(
-    std::string repository_dir,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    NewEntryFn new_fn,
-    RemovedEntryFn removed_fn)
+    std::string repository_dir)
     : repository_dir_(repository_dir),
-      new_entry_fn_(new_fn),
-      removed_entry_fn_(removed_fn),
       weak_factory_(this) {
   if (!files::IsDirectory(repository_dir)) {
     FXL_LOG(INFO) << "Missing repository dir. Creating " << repository_dir;
@@ -127,34 +122,41 @@ ModuleManifestRepository::ModuleManifestRepository(
     FXL_CHECK(create_result) << "Could not create " << repository_dir;
   }
 
+}
+
+ModuleManifestRepository::~ModuleManifestRepository() {}
+
+void ModuleManifestRepository::Watch(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    NewEntryFn new_fn,
+    RemovedEntryFn removed_fn) {
   // fdio_watch_directory() is blocking so we start the watching process in its
-  // own thread. We give that thread a pointer to our TaskRunner and a WeakPtr
+  // own thread. We give that thread a pointer to the TaskRunner and a WeakPtr
   // to us in case we are destroyed.
   auto thread =
-      std::thread([weak_this = weak_factory_.GetWeakPtr(), task_runner,
-                   repository_dir = std::move(repository_dir)] {
+      std::thread([weak_this = weak_factory_.GetWeakPtr(), task_runner, new_fn, removed_fn] {
         // In the unlikely event our owner is destroyed before we get here.
         if (!weak_this)
           return;
 
         // Set up the fdio waiter.
-        auto dirfd = open(repository_dir.c_str(), O_DIRECTORY | O_RDONLY);
+        auto dirfd = open(weak_this->repository_dir_.c_str(), O_DIRECTORY | O_RDONLY);
         FXL_CHECK(dirfd >= 0)
-            << "Could not open " << repository_dir << ": " << strerror(errno);
+            << "Could not open " << weak_this->repository_dir_ << ": " << strerror(errno);
 
         auto state = new WatcherState();  // Managed by WatcherHandler() above.
         state->weak_repository = weak_this;
         state->task_runner = task_runner;
 
-        state->on_new = [weak_this](const std::string name) {
+        state->on_new = [weak_this, new_fn](const std::string name) {
           if (!weak_this)
             return;
-          weak_this->OnNewFile(name);
+          weak_this->OnNewFile(name, new_fn);
         };
-        state->on_remove = [weak_this](const std::string name) {
+        state->on_remove = [weak_this, removed_fn](const std::string name) {
           if (!weak_this)
             return;
-          weak_this->OnRemoveFile(name);
+          weak_this->OnRemoveFile(name, removed_fn);
         };
         fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
                              static_cast<void*>(state));
@@ -172,9 +174,7 @@ ModuleManifestRepository::ModuleManifestRepository(
   thread.detach();
 }
 
-ModuleManifestRepository::~ModuleManifestRepository() {}
-
-void ModuleManifestRepository::OnNewFile(const std::string& name) {
+void ModuleManifestRepository::OnNewFile(const std::string& name, NewEntryFn fn) {
   if (ShouldIgnoreFile(name)) {
     return;
   }
@@ -206,16 +206,16 @@ void ModuleManifestRepository::OnNewFile(const std::string& name) {
   for (auto& entry : entries) {
     std::string id = name + std::to_string(count++);
     file_entry_ids_[name].push_back(id);
-    new_entry_fn_(id, std::move(entry));
+    fn(id, std::move(entry));
   }
 }
 
-void ModuleManifestRepository::OnRemoveFile(const std::string& name) {
+void ModuleManifestRepository::OnRemoveFile(const std::string& name, RemovedEntryFn fn) {
   auto it = file_entry_ids_.find(name);
   if (it == file_entry_ids_.end()) return;
 
   for (const auto& id : it->second) {
-    removed_entry_fn_(id);
+    fn(id);
   }
 }
 

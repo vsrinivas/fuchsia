@@ -67,14 +67,15 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 
 ModuleResolverImpl::ModuleResolverImpl(std::string manifest_repository_path) {
   manifest_repository_.reset(new modular::ModuleManifestRepository(
-      std::move(manifest_repository_path),
+      std::move(manifest_repository_path)));
+  manifest_repository_->Watch(
       fsl::MessageLoop::GetCurrent()->task_runner(),
       [this](std::string id, const modular::ModuleManifestRepository::Entry& entry) {
         OnNewManifestEntry(std::move(id), entry);
       },
       [this](std::string id) {
         OnRemoveManifestEntry(std::move(id));
-      }));
+      });
 }
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
