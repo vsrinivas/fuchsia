@@ -271,12 +271,15 @@ public:
         EXPECT_TRUE(buffer->UnmapCpu());
     }
 
-    static void CleanCache(bool invalidate)
+    static void CleanCache(bool mapped, bool invalidate)
     {
         const uint64_t kNumPages = 100;
         const uint64_t kBufferSize = kNumPages * PAGE_SIZE;
         std::unique_ptr<magma::PlatformBuffer> buffer =
             magma::PlatformBuffer::Create(kBufferSize, "test");
+        void* address;
+        if (mapped)
+            buffer->MapCpu(&address);
 
         // start of range invalid
         EXPECT_FALSE(buffer->CleanCache(kBufferSize, 1, invalidate));
@@ -321,6 +324,12 @@ TEST(PlatformBuffer, MapAligned)
 
 TEST(PlatformBuffer, CleanCache)
 {
-    TestPlatformBuffer::CleanCache(false);
-    TestPlatformBuffer::CleanCache(true);
+    TestPlatformBuffer::CleanCache(false, false);
+    TestPlatformBuffer::CleanCache(false, true);
+}
+
+TEST(PlatformBuffer, CleanCacheMapped)
+{
+    TestPlatformBuffer::CleanCache(true, false);
+    TestPlatformBuffer::CleanCache(true, true);
 }

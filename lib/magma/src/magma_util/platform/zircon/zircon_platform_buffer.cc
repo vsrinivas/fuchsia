@@ -406,10 +406,24 @@ bool ZirconPlatformBuffer::UnmapPageRangeBus(uint32_t start_page_index, uint32_t
     return true;
 }
 
-bool ZirconPlatformBuffer::CleanCache(uint64_t offset, uint64_t size, bool invalidate)
+bool ZirconPlatformBuffer::CleanCache(uint64_t offset, uint64_t length, bool invalidate)
 {
+#if defined(__aarch64__)
+    if (map_count_) {
+        uint32_t op = ZX_CACHE_FLUSH_DATA;
+        if (invalidate)
+            op |= ZX_CACHE_FLUSH_INVALIDATE;
+        if (offset + length > size())
+            return DRETF(false, "size too large for buffer");
+        zx_status_t status = zx_cache_flush(static_cast<uint8_t*>(virt_addr_) + offset, length, op);
+        if (status != ZX_OK)
+            return DRETF(false, "failed to clean cache: %d", status);
+        return true;
+    }
+#endif
+
     uint32_t op = invalidate ? ZX_VMO_OP_CACHE_CLEAN_INVALIDATE : ZX_VMO_OP_CACHE_CLEAN;
-    zx_status_t status = vmo_.op_range(op, offset, size, nullptr, 0);
+    zx_status_t status = vmo_.op_range(op, offset, length, nullptr, 0);
     if (status != ZX_OK)
         return DRETF(false, "failed to clean cache: %d", status);
     return true;
