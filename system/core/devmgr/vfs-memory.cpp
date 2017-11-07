@@ -104,32 +104,28 @@ VnodeVmo::~VnodeVmo() {
 }
 
 zx_status_t VnodeDir::ValidateFlags(uint32_t flags) {
-    switch (flags & O_ACCMODE) {
-    case O_WRONLY:
-    case O_RDWR:
+    if (flags & ZX_FS_RIGHT_WRITABLE) {
         return ZX_ERR_NOT_FILE;
     }
     return ZX_OK;
 }
 
 zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
-    if (flags & O_DIRECTORY) {
+    if (flags & ZX_FS_FLAG_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
     return ZX_OK;
 }
 
 zx_status_t VnodeVmo::ValidateFlags(uint32_t flags) {
-    if (flags & O_DIRECTORY) {
+    if (flags & ZX_FS_FLAG_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
-    switch (flags & O_ACCMODE) {
-        case O_WRONLY:
-        case O_RDWR:
-            return ZX_ERR_ACCESS_DENIED;
-        }
-        return ZX_OK;
+    if (flags & ZX_FS_RIGHT_WRITABLE) {
+        return ZX_ERR_ACCESS_DENIED;
     }
+    return ZX_OK;
+}
 
 zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return ZX_OK;
@@ -822,9 +818,9 @@ VnodeDir* vfs_create_global_root() {
         fbl::RefPtr<fs::Vnode> vn;
         fbl::StringPiece pathout;
         ZX_ASSERT(memfs::root_vfs.Open(memfs::global_root, &vn, fbl::StringPiece("/data"), &pathout,
-                                       O_CREAT, S_IFDIR) == ZX_OK);
+                                       ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR) == ZX_OK);
         ZX_ASSERT(memfs::root_vfs.Open(memfs::global_root, &vn, fbl::StringPiece("/volume"), &pathout,
-                                       O_CREAT, S_IFDIR) == ZX_OK);
+                                       ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR) == ZX_OK);
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_loop->StartThread("root-dispatcher");

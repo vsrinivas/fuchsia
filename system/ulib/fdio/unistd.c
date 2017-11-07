@@ -166,6 +166,72 @@ zx_status_t fdio_close(fdio_t* io) {
     return io->ops->close(io);
 }
 
+// Verify the O_* flags which align with ZXIO_FS_*.
+static_assert(O_PATH == ZX_FS_FLAG_VNODE_REF_ONLY, "Open Flag mismatch");
+static_assert(O_ADMIN == ZX_FS_RIGHT_ADMIN, "Open Flag mismatch");
+static_assert(O_CREAT == ZX_FS_FLAG_CREATE, "Open Flag mismatch");
+static_assert(O_EXCL == ZX_FS_FLAG_EXCLUSIVE, "Open Flag mismatch");
+static_assert(O_TRUNC == ZX_FS_FLAG_TRUNCATE, "Open Flag mismatch");
+static_assert(O_DIRECTORY == ZX_FS_FLAG_DIRECTORY, "Open Flag mismatch");
+static_assert(O_APPEND == ZX_FS_FLAG_APPEND, "Open Flag mismatch");
+static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
+static_assert(O_PIPELINE == ZX_FS_FLAG_PIPELINE, "Open Flag mismatch");
+
+// The mask of "1:1" flags which match between both open flag representations.
+#define ZXIO_FS_MASK (O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | \
+                      O_DIRECTORY | O_APPEND | O_NOREMOTE | O_PIPELINE)
+
+// Verify that the remaining O_* flags don't overlap with the ZXIO mask.
+static_assert(!(O_RDONLY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_WRONLY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_RDWR & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NONBLOCK & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_DSYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_SYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_RSYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NOFOLLOW & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_CLOEXEC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NOCTTY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_ASYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_DIRECT & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_LARGEFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NOATIME & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_TMPFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+
+static uint32_t fdio_flags_to_zxio(uint32_t flags) {
+    uint32_t result = 0;
+    switch (flags & O_ACCMODE) {
+    case O_RDONLY:
+        result |= ZX_FS_RIGHT_READABLE;
+        break;
+    case O_WRONLY:
+        result |= ZX_FS_RIGHT_WRITABLE;
+        break;
+    case O_RDWR:
+        result |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+        break;
+    }
+
+    result |= (flags & ZXIO_FS_MASK);
+    return result;
+}
+
+static uint32_t zxio_flags_to_fdio(uint32_t flags) {
+    uint32_t result = 0;
+    if ((flags & (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE)) ==
+        (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE)) {
+        result |= O_RDWR;
+    } else if (flags & ZX_FS_RIGHT_WRITABLE) {
+        result |= O_WRONLY;
+    } else {
+        result |= O_RDONLY;
+    }
+
+    result |= (flags & ZXIO_FS_MASK);
+    return result;
+}
+
+
 // Possibly return an owned fdio_t corresponding to either the root,
 // the cwd, or, for the ...at variants, dirfd. In the absolute path
 // case, *path is also adjusted.
@@ -313,7 +379,7 @@ zx_status_t __fdio_open_at(fdio_t** io, int dirfd, const char* path, int flags, 
     }
     flags |= (is_dir ? O_DIRECTORY : 0);
 
-    status = iodir->ops->open(iodir, clean, flags, mode, io);
+    status = iodir->ops->open(iodir, clean, fdio_flags_to_zxio(flags), mode, io);
     fdio_release(iodir);
     return status;
 }
@@ -442,7 +508,8 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
         clean[1] = 0;
     }
 
-    zx_status_t r = iodir->ops->open(iodir, clean, O_RDONLY | O_DIRECTORY, 0, io);
+    zx_status_t r = iodir->ops->open(iodir, clean,
+                                     fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0, io);
     fdio_release(iodir);
     return r;
 }
@@ -1102,6 +1169,7 @@ int fcntl(int fd, int cmd, ...) {
             flags = 0;
             r = ZX_OK;
         }
+        flags = zxio_flags_to_fdio(flags);
         if (io->flags & FDIO_FLAG_NONBLOCK) {
             flags |= O_NONBLOCK;
         }
@@ -1125,7 +1193,8 @@ int fcntl(int fd, int cmd, ...) {
             // support FCNTL but it's still valid to set non-blocking
             r = ZX_OK;
         } else {
-            r = io->ops->misc(io, ZXRIO_FCNTL, n & (~O_NONBLOCK), F_SETFL, NULL, 0);
+            uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
+            r = io->ops->misc(io, ZXRIO_FCNTL, flags, F_SETFL, NULL, 0);
         }
         if (r != ZX_OK) {
             n = STATUS(r);

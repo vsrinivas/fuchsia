@@ -4,7 +4,6 @@
 
 #include <fs/vmo-file.h>
 
-#include <fcntl.h>
 #include <limits.h>
 #include <string.h>
 
@@ -19,19 +18,14 @@ constexpr uint64_t kVmoFileBlksize = PAGE_SIZE;
 
 zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
     zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP;
-    switch (flags & O_ACCMODE) {
-    case O_RDONLY:
-        rights |= ZX_RIGHT_READ | ZX_RIGHT_EXECUTE;
-        break;
-    case O_RDWR:
-        rights |= ZX_RIGHT_READ | ZX_RIGHT_WRITE; // no execute
-        break;
-    case O_WRONLY:
+    if (flags & ZX_FS_RIGHT_READABLE) {
+        rights |= ZX_RIGHT_READ;
+    }
+    if (flags & ZX_FS_RIGHT_WRITABLE) {
         rights |= ZX_RIGHT_WRITE;
-        break;
-    default:
-        ZX_DEBUG_ASSERT(false); // checked by the VFS
-        break;
+    }
+    if ((flags & ZX_FS_RIGHT_READABLE) & !(flags & ZX_FS_RIGHT_WRITABLE)) {
+        rights |= ZX_RIGHT_EXECUTE;
     }
     return rights;
 }
@@ -65,7 +59,7 @@ VmoFile::VmoFile(const zx::vmo& unowned_vmo,
 VmoFile::~VmoFile() {}
 
 zx_status_t VmoFile::ValidateFlags(uint32_t flags) {
-    if (flags & O_DIRECTORY) {
+    if (flags & ZX_FS_FLAG_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
     if (IsWritable(flags) && !writable_) {

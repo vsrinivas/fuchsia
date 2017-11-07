@@ -40,7 +40,7 @@ typedef struct fdio_ops {
     off_t (*seek)(fdio_t* io, off_t offset, int whence);
     zx_status_t (*misc)(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len);
     zx_status_t (*close)(fdio_t* io);
-    zx_status_t (*open)(fdio_t* io, const char* path, int32_t flags, uint32_t mode, fdio_t** out);
+    zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
     zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handles, uint32_t* out_types);
     zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handles, uint32_t* out_types);
     zx_status_t (*shutdown)(fdio_t* io, int how);
@@ -69,7 +69,7 @@ typedef struct fdio {
     uint32_t magic;
     atomic_int_fast32_t refcount;
     int32_t dupcount;
-    int32_t flags;
+    uint32_t flags;
 } fdio_t;
 
 // Lifecycle notes:
@@ -115,7 +115,7 @@ static inline off_t fdio_seek(fdio_t* io, off_t offset, int whence) {
 static inline zx_status_t fdio_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len) {
     return io->ops->misc(io, op, off, maxreply, data, len);
 }
-static inline zx_status_t fdio_open(fdio_t* io, const char* path, int32_t flags, uint32_t mode, fdio_t** out) {
+static inline zx_status_t fdio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out) {
     return io->ops->open(io, path, flags, mode, out);
 }
 zx_status_t fdio_close(fdio_t* io);
@@ -183,7 +183,7 @@ ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags);
 off_t fdio_default_seek(fdio_t* io, off_t offset, int whence);
 zx_status_t fdio_default_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len);
 zx_status_t fdio_default_close(fdio_t* io);
-zx_status_t fdio_default_open(fdio_t* io, const char* path, int32_t flags, uint32_t mode, fdio_t** out);
+zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
 zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types);
 ssize_t fdio_default_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals);

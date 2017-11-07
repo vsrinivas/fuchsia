@@ -89,15 +89,9 @@ bool test_access_badflags(void) {
 
     const char* filename = "::foobar";
 
-    // No creation with "RDWR + WRONLY"
-    ASSERT_LT(open(filename, O_RDWR | O_WRONLY | O_CREAT, 0644), 0);
-
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
-
-    // No re-opening with "RDWR + WRONLY"
-    ASSERT_LT(open(filename, O_RDWR | O_WRONLY, 0644), 0);
 
     // No read-only truncation
     ASSERT_LT(open(filename, O_RDONLY | O_TRUNC | O_CREAT, 0644), 0);

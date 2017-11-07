@@ -4,7 +4,6 @@
 
 #include <fs/vmo-file.h>
 
-#include <fcntl.h>
 #include <limits.h>
 
 #include <zircon/syscalls.h>
@@ -127,14 +126,15 @@ bool test_open() {
     {
         fs::VmoFile file(abc, 0u, 0u);
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file.Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+                  file.ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateFlags(O_WRONLY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateFlags(ZX_FS_RIGHT_WRITABLE));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(ZX_FS_FLAG_DIRECTORY));
         EXPECT_NULL(redirect);
     }
 
@@ -142,16 +142,16 @@ bool test_open() {
     {
         fs::VmoFile file(abc, 0u, 0u, true);
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file.Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_OK, file.Open(O_RDWR, &redirect));
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file.Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(ZX_FS_FLAG_DIRECTORY));
         EXPECT_NULL(redirect);
     }
 
@@ -373,7 +373,8 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
-        EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetHandles(O_RDONLY, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetHandles(ZX_FS_RIGHT_READABLE,
+                                                        vmo.reset_and_get_address(),
                                                         &handle_count, &type, info, &info_size));
     }
 
@@ -388,7 +389,7 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
-        EXPECT_EQ(ZX_OK, file.GetHandles(O_RDONLY, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE, vmo.reset_and_get_address(),
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -416,7 +417,8 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-        EXPECT_EQ(ZX_OK, file.GetHandles(O_RDWR, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                                         vmo.reset_and_get_address(),
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -451,7 +453,7 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-        EXPECT_EQ(ZX_OK, file.GetHandles(O_WRONLY, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_WRITABLE, vmo.reset_and_get_address(),
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -483,7 +485,7 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetHandles(O_RDONLY, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE, vmo.reset_and_get_address(),
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -511,7 +513,8 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetHandles(O_RDWR, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                                         vmo.reset_and_get_address(),
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -545,7 +548,7 @@ bool test_get_handles() {
         zx_off_t info[2];
         uint32_t info_size;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetHandles(O_WRONLY, vmo.reset_and_get_address(),
+        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_WRITABLE, vmo.reset_and_get_address(),
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -94,8 +93,9 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
 zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
                             uint32_t flags) {
     fbl::AutoLock lock(&vfs_lock_);
-    zx_status_t r = OpenLocked(vn, &vn, name, &name,
-                               O_CREAT | O_RDONLY | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
+    zx_status_t r = OpenLocked(vn, &vn, name, &name, ZX_FS_FLAG_CREATE |
+                               ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY |
+                               ZX_FS_FLAG_NOREMOTE, S_IFDIR);
     ZX_DEBUG_ASSERT(r <= ZX_OK); // Should not be accessing remote nodes
     if (r < 0) {
         return r;

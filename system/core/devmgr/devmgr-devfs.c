@@ -464,14 +464,14 @@ static void devfs_open(devnode_t* dirdn, zx_handle_t h, char* path, uint32_t fla
     devnode_t* dn = dirdn;
     zx_status_t r = devfs_walk(&dn, path, &path);
 
-    bool pipeline = flags & O_PIPELINE;
+    bool pipeline = flags & ZX_FS_FLAG_PIPELINE;
 
     if (r == ZX_ERR_NEXT) {
         // we only partially matched -- there's more path to walk
         if ((dn->device == NULL) || (dn->device->hrpc == ZX_HANDLE_INVALID)) {
             // no remote to pass this on to
             r = ZX_ERR_NOT_FOUND;
-        } else if (flags & (O_NOREMOTE | O_DIRECTORY)) {
+        } else if (flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) {
             // local requested, but this is remote only
             r = ZX_ERR_NOT_SUPPORTED;
         } else {
@@ -495,7 +495,7 @@ fail:
 
     // If we are a local-only node, or we are asked to not go remote,
     // or we are asked to open-as-a-directory, open locally:
-    if ((flags & (O_NOREMOTE | O_DIRECTORY)) || devnode_is_local(dn)) {
+    if ((flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) || devnode_is_local(dn)) {
         if ((r = iostate_create(dn, h)) < 0) {
             goto fail;
         }
@@ -596,7 +596,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     switch (ZXRIO_OP(msg->op)) {
     case ZXRIO_CLONE:
         msg->data[0] = 0;
-        devfs_open(dn, msg->handle[0], (char*) msg->data, arg | O_NOREMOTE);
+        devfs_open(dn, msg->handle[0], (char*) msg->data, arg | ZX_FS_FLAG_NOREMOTE);
         return ERR_DISPATCHER_INDIRECT;
     case ZXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {

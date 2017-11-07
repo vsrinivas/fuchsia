@@ -16,6 +16,7 @@
 
 #include <zircon/device/device.h>
 #include <zircon/device/ioctl.h>
+#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -520,7 +521,7 @@ static zx_status_t zxrio_reply_channel_call(zx_handle_t rio_h, zxrio_msg_t* msg,
 // This function always consumes the cnxn handle
 // The svc handle is only used to send a message
 static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
-                                 uint32_t op, int32_t flags, uint32_t mode,
+                                 uint32_t op, uint32_t flags, uint32_t mode,
                                  const char* name) {
     size_t len = strlen(name);
     if (len >= PATH_MAX) {
@@ -532,7 +533,7 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
     memset(&msg, 0, ZXRIO_HDR_SZ);
     msg.op = op;
     msg.datalen = len;
-    msg.arg = O_PIPELINE | flags;
+    msg.arg = ZX_FS_FLAG_PIPELINE | flags;
     msg.arg2.mode = mode;
     msg.hcount = 1;
     msg.handle[0] = cnxn;
@@ -570,7 +571,8 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
         zx_handle_close(h);
         return ZX_ERR_UNAVAILABLE;
     }
-    return zxrio_connect(dir, h, ZXRIO_OPEN, O_RDWR, 0755, path);
+    return zxrio_connect(dir, h, ZXRIO_OPEN, ZX_FS_RIGHT_READABLE |
+                         ZX_FS_RIGHT_WRITABLE, 0755, path);
 }
 
 zx_handle_t fdio_service_clone(zx_handle_t svc) {
@@ -582,7 +584,8 @@ zx_handle_t fdio_service_clone(zx_handle_t svc) {
     if ((r = zx_channel_create(0, &cli, &srv)) < 0) {
         return ZX_HANDLE_INVALID;
     }
-    if ((r = zxrio_connect(svc, srv, ZXRIO_CLONE, O_RDWR, 0755, "")) < 0) {
+    if ((r = zxrio_connect(svc, srv, ZXRIO_CLONE, ZX_FS_RIGHT_READABLE |
+                           ZX_FS_RIGHT_WRITABLE, 0755, "")) < 0) {
         zx_handle_close(cli);
         return ZX_HANDLE_INVALID;
     }
@@ -597,7 +600,8 @@ zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
         zx_handle_close(srv);
         return ZX_ERR_INVALID_ARGS;
     }
-    return zxrio_connect(svc, srv, ZXRIO_CLONE, O_RDWR, 0755, "");
+    return zxrio_connect(svc, srv, ZXRIO_CLONE, ZX_FS_RIGHT_READABLE |
+                         ZX_FS_RIGHT_WRITABLE, 0755, "");
 }
 
 zx_status_t zxrio_misc(fdio_t* io, uint32_t op, int64_t off,
@@ -792,7 +796,7 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
 }
 
 zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
-                            int32_t flags, uint32_t mode,
+                            uint32_t flags, uint32_t mode,
                             zxrio_object_t* info) {
     if (name == NULL) {
         return ZX_ERR_INVALID_ARGS;
@@ -803,7 +807,7 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
         return ZX_ERR_BAD_PATH;
     }
 
-    if (flags & O_PIPELINE) {
+    if (flags & ZX_FS_FLAG_PIPELINE) {
         zx_handle_t h0, h1;
         zx_status_t r;
         if ((r = zx_channel_create(0, &h0, &h1)) < 0) {
@@ -833,7 +837,7 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
     }
 }
 
-zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, int32_t flags,
+zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out) {
     zxrio_object_t info;
     zx_status_t r = zxrio_getobject(h, ZXRIO_OPEN, path, flags, mode, &info);
@@ -843,7 +847,7 @@ zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, int32_t flags,
     return fdio_from_handles(info.type, info.handle, info.hcount, info.extra, info.esize, out);
 }
 
-zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, int32_t flags,
+zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, uint32_t flags,
                                   uint32_t mode, zx_handle_t *out) {
     zxrio_object_t info;
     zx_status_t r = zxrio_getobject(h, ZXRIO_OPEN, path, flags, mode, &info);
@@ -863,7 +867,7 @@ zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, int32_t flags
     return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxrio_open(fdio_t* io, const char* path, int32_t flags, uint32_t mode, fdio_t** out) {
+zx_status_t zxrio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out) {
     zxrio_t* rio = (void*)io;
     return zxrio_open_handle(rio->h, path, flags, mode, out);
 }
