@@ -195,8 +195,7 @@ static zx_status_t get_simple_config_sample_freq(
         *sample_freq = 1000000;
         break;
     default:
-        zxlogf(ERROR, "%s: invalid sample frequency: 0x%x\n",
-               __func__, freq_sel);
+        zxlogf(ERROR, "ipm: invalid sample frequency: 0x%x\n", freq_sel);
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
@@ -297,7 +296,7 @@ static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_confi
 
     if (!os_usr_mask) {
         // Help the user understand why there's no data.
-        zxlogf(INFO, "Neither OS nor USR tracing specified\n");
+        zxlogf(INFO, "ipm: Neither OS nor USR tracing specified\n");
     }
 
     return ZX_OK;
