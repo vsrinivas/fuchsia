@@ -4,8 +4,6 @@
 
 #include <fs/pseudo-file.h>
 
-#include <fcntl.h>
-
 #include <fbl/initializer_list.h>
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
@@ -111,54 +109,54 @@ bool test_open_validation_buffered() {
     // no read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile());
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
     }
 
     // read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_NONNULL(redirect);
     }
 
     // no read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(nullptr, &DummyWriter));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NONNULL(redirect);
     }
 
     // read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_NONNULL(redirect);
         redirect.reset();
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDWR, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NONNULL(redirect);
         redirect.reset();
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NONNULL(redirect);
     }
 
@@ -171,51 +169,51 @@ bool test_open_validation_unbuffered() {
     // no read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
     }
 
     // read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_NONNULL(redirect);
     }
 
     // no read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(nullptr, &DummyWriter));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NONNULL(redirect);
     }
 
     // read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader, &DummyWriter));
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_NONNULL(redirect);
         redirect.reset();
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDWR, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NONNULL(redirect);
         redirect.reset();
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_NONNULL(redirect);
     }
 
@@ -232,7 +230,7 @@ bool test_getattr_buffered() {
         EXPECT_EQ(ZX_OK, file->Getattr(&attr));
         EXPECT_EQ(V_TYPE_FILE, attr.mode);
         EXPECT_EQ(1, attr.nlink);
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_PATH));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_FLAG_VNODE_REF_ONLY));
         vnattr_t path_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&path_attr));
         EXPECT_BYTES_EQ((uint8_t*) &attr, (uint8_t*) &path_attr, sizeof(attr), "");
@@ -247,8 +245,8 @@ bool test_getattr_buffered() {
         EXPECT_EQ(1, attr.nlink);
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         vnattr_t open_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&open_attr));
         EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&open_attr, sizeof(attr), "");
@@ -263,8 +261,8 @@ bool test_getattr_buffered() {
         EXPECT_EQ(1, attr.nlink);
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         vnattr_t open_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&open_attr));
         EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&open_attr, sizeof(attr), "");
@@ -279,8 +277,8 @@ bool test_getattr_buffered() {
         EXPECT_EQ(1, attr.nlink);
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDWR, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &redirect));
         vnattr_t open_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&open_attr));
         EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&open_attr, sizeof(attr), "");
@@ -300,7 +298,7 @@ bool test_getattr_unbuffered() {
         EXPECT_EQ(V_TYPE_FILE, attr.mode);
         EXPECT_EQ(1, attr.nlink);
 
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_PATH));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_FLAG_VNODE_REF_ONLY));
         vnattr_t path_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&path_attr));
         EXPECT_BYTES_EQ((uint8_t*) &attr, (uint8_t*) &path_attr, sizeof(attr), "");
@@ -315,8 +313,8 @@ bool test_getattr_unbuffered() {
         EXPECT_EQ(1, attr.nlink);
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         vnattr_t open_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&open_attr));
         EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&open_attr, sizeof(attr), "");
@@ -331,8 +329,8 @@ bool test_getattr_unbuffered() {
         EXPECT_EQ(1, attr.nlink);
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         vnattr_t open_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&open_attr));
         EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&open_attr, sizeof(attr), "");
@@ -347,8 +345,8 @@ bool test_getattr_unbuffered() {
         EXPECT_EQ(1, attr.nlink);
 
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDWR));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDWR, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &redirect));
         vnattr_t open_attr;
         EXPECT_EQ(ZX_OK, file->Getattr(&open_attr));
         EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&open_attr, sizeof(attr), "");
@@ -366,8 +364,8 @@ bool test_read_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 0u, 0u, ""));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, "firs"));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, "rst"));
@@ -378,8 +376,8 @@ bool test_read_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, "cond"));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 6u, 0u, "second"));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 8u, 0u, "second"));
@@ -388,8 +386,8 @@ bool test_read_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, ""));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, ""));
         EXPECT_EQ(ZX_OK, redirect->Close());
@@ -397,7 +395,7 @@ bool test_read_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 0u, 0u, ""));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, "null"));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, fbl::StringPiece("ll\0n", 4u)));
@@ -408,7 +406,7 @@ bool test_read_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_ERR_IO, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_ERR_IO, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
     }
 
     END_TEST;
@@ -423,8 +421,8 @@ bool test_read_unbuffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 0u, 0u, ""));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, "seco"));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, ""));
@@ -435,8 +433,8 @@ bool test_read_unbuffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_READABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_READABLE, &redirect));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 8u, 0u, "fifth"));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, ""));
         EXPECT_TRUE(CheckRead(redirect, ZX_OK, 12u, 0u, fbl::StringPiece("null\0null", 9u)));
@@ -455,8 +453,8 @@ bool test_write_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "fixx", 4u));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "", 0u));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 2u, "rst", 3u));
@@ -465,23 +463,23 @@ bool test_write_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "second", 6u));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "thxrxxx", 7u, 7u));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 2u, "i", 1u));
         EXPECT_EQ(ZX_OK, redirect->Truncate(4u));
@@ -491,8 +489,8 @@ bool test_write_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "null", 4u));
         EXPECT_EQ(ZX_OK, redirect->Truncate(5u));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "null", 9u, 4u));
@@ -501,8 +499,8 @@ bool test_write_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_EQ(ZX_ERR_NO_SPACE, redirect->Truncate(11u));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "too-long", 8u, 8u));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "-off-the-end", 10u, 2u));
@@ -512,8 +510,8 @@ bool test_write_buffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_EQ(ZX_ERR_IO, redirect->Close());
     }
 
@@ -536,8 +534,8 @@ bool test_write_unbuffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "first", 5u));
         EXPECT_TRUE(CheckWrite(redirect, ZX_ERR_NO_SPACE, 2u, "xxx", 0u));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "second", 6u));
@@ -546,8 +544,8 @@ bool test_write_unbuffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "", 0u));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "third", 5u, 5u));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, fbl::StringPiece("null\0null", 9u), 9u, 9u));
@@ -556,45 +554,45 @@ bool test_write_unbuffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY | O_TRUNC));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY | O_TRUNC, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_TRUNCATE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_TRUNCATE, &redirect));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY | O_CREAT));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY | O_CREAT, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE, &redirect));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_EQ(ZX_OK, redirect->Truncate(0u));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "fourth", 6u, 6u));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_EQ(ZX_OK, redirect->Close());
     }
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "fifth", 5u, 5u));
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, redirect->Truncate(10u));
         EXPECT_EQ(ZX_OK, redirect->Truncate(0u));
@@ -603,8 +601,8 @@ bool test_write_unbuffered() {
 
     {
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
-        EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+        EXPECT_EQ(ZX_OK, file->Open(ZX_FS_RIGHT_WRITABLE, &redirect));
         EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "a long string", 13u));
         EXPECT_EQ(ZX_OK, redirect->Truncate(0u));
         EXPECT_EQ(ZX_ERR_IO, redirect->Close());

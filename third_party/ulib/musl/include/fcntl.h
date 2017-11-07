@@ -42,31 +42,35 @@ int posix_fallocate(int, off_t, off_t);
 #define O_WRONLY            01
 #define O_RDWR              02
 
-#define O_CREAT           0100
-#define O_EXCL            0200
-#define O_NOCTTY          0400
-#define O_TRUNC          01000
-#define O_APPEND         02000
-#define O_NONBLOCK       04000
-#define O_DSYNC         010000
-#define O_SYNC        04010000
-#define O_RSYNC       04010000
-#define O_DIRECTORY    0200000
-#define O_NOFOLLOW     0400000
-#define O_CLOEXEC     02000000
-
-#define O_ASYNC         020000
-#define O_DIRECT        040000
-#define O_LARGEFILE    0100000
-#define O_NOATIME     01000000
-#define O_PATH       010000000
-#define O_TMPFILE    020200000
-
+// Flags which align with ZXIO_FS_*
+// system/ulib/fdio/unistd.c asserts that these flags are aligned
+// with the ZXIO_FS_* versions.
+#define O_CREAT     0x00010000
+#define O_EXCL      0x00020000
+#define O_TRUNC     0x00040000
+#define O_DIRECTORY 0x00080000
+#define O_APPEND    0x00100000
+#define O_PATH      0x00400000
 #ifdef _ALL_SOURCE
-#define O_NOREMOTE  0100000000
-#define O_ADMIN     0200000000
-#define O_PIPELINE 02000000000
+#define O_NOREMOTE  0x00200000
+#define O_ADMIN     0x00000004
+#define O_PIPELINE  0x80000000
 #endif
+
+// Flags which do not align with ZXIO_FS_*
+#define O_NONBLOCK  0x00000010
+#define O_DSYNC     0x00000020
+#define O_SYNC      (0x00000040 | O_DSYNC)
+#define O_RSYNC     O_SYNC
+#define O_NOFOLLOW  0x00000080
+#define O_CLOEXEC   0x00000100
+#define O_NOCTTY    0x00000200
+#define O_ASYNC     0x00000400
+#define O_DIRECT    0x00000800
+#define O_LARGEFILE 0x00001000
+#define O_NOATIME   0x00002000
+#define O_TMPFILE   0x00004000
+
 // clang-format on
 
 #define O_NDELAY O_NONBLOCK

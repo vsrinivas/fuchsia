@@ -34,7 +34,8 @@ public:
     // |vfs| is the VFS which is responsible for dispatching operations to the vnode.
     // |vnode| is the vnode which will handle I/O requests.
     // |channel| is the channel on which the RIO protocol will be served.
-    // |flags| are the file flags passed to |open()|, such as |O_RDONLY|.
+    // |flags| are the file flags passed to |open()|, such as
+    // |ZX_FS_RIGHT_READABLE|.
     Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
                uint32_t flags);
 
@@ -71,7 +72,7 @@ private:
     // The object field is |ZX_HANDLE_INVALID| when not actively waiting.
     async::Wait wait_;
 
-    // Open flags such as |O_RDONLY|, |O_ADMIN|, and other bits.
+    // Open flags such as |ZX_FS_RIGHT_READABLE|, and other bits.
     uint32_t flags_;
 
     // Handle to event which allows client to refer to open vnodes in multi-path
