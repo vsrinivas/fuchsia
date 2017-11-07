@@ -165,6 +165,9 @@ parser.add_argument('--bootdata_zedboot', action='store', required=False,
                     help="Bootdata for zedboot")
 parser.add_argument('--cmdline_zedboot', action='store', required=False,
                     help="File containging device command line for zedboot")
+parser.add_argument('--sys_mount', action='store', required=True, default="any",
+                    help="""The type of system partition to mount.
+                    local|any|none default:any""")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -174,6 +177,7 @@ build_dir_zircon = args.build_dir_zircon
 kernel_cmdline = args.kernel_cmdline
 enable_thread_exp = not args.disable_thread_exp
 mdir_path = args.mdir_path
+sys_mount = args.sys_mount
 
 runtime_dir = args.runtime_dir
 zedboot_build_dir = args.build_dir_zedboot
@@ -280,6 +284,10 @@ if arch != "X64" and arch != "ARM" and arch != "AA64":
   print "Architecture '%s' is not recognized" % arch
   sys.exit(-1)
 
+if sys_mount != "none" and sys_mount != "local" and sys_mount != "any":
+  print "'sys_mount' must be either 'none', 'local', or 'any'"
+  sys.exit(-1)
+
 bootloader_remote_path = "%s/BOOT%s.EFI" % (DIR_EFI_BOOT, arch)
 
 print "Copying files to disk image."
@@ -352,6 +360,7 @@ if not kernel_cmdline:
 with open(kernel_cmdline, "a+") as kcmd:
   kcmd.write(" %s=%s" % ("thread.set.priority.allowed",
                          "true" if enable_thread_exp else "false"))
+  kcmd.write(" %s=%s" % ("zircon.system.volume", sys_mount))
 
 if not cp_fat(mcopy_path, mdir_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_CMDLINE, working_dir):
   print "Could not copy kernel cmdline"

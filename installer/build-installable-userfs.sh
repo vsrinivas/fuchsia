@@ -53,6 +53,7 @@ bootdata=""
 kernel_args=""
 boot_manifest=""
 enable_thread_exp=1
+sys_mount="any"
 extras=("")
 
 while (( "$#" )); do
@@ -78,6 +79,8 @@ while (( "$#" )); do
       echo "-x: bootdata location"
       echo "-w: location of the boot partition manifest"
       echo "-j: disable experimental thread prioritization"
+      echo "--sys-mount: where the system should get its system partition from" \
+        "none|local|any. This defaults to 'any'."
       exit 0
       ;;
     "-j")
@@ -130,12 +133,21 @@ while (( "$#" )); do
       shift
       boot_manifest=$1
       ;;
+    "--sys-mount")
+      shift
+      sys_mount=$1
+      ;;
     *)
       extras+=("$1")
       ;;
   esac
   shift
 done
+
+if [ "$sys_mount" != "none" ] && [ "$sys_mount" != "any" ] && [ $sys_mount != "local" ]; then
+  echo "System mounting option \"${sys_mount}\" not allowed, must be either 'none', 'any', or 'local'"
+  exit -1;
+fi
 
 if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_zircon" = "" ]; then
   if [ "$release" -eq "$debug" ]; then
@@ -298,7 +310,7 @@ imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcp
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia"
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch"
   --efi_disk="$disk_path_efi" --build_dir_zircon="$build_dir_zircon"
-  --bootdata="$bootdata" --boot_manifest="$boot_manifest"
+  --bootdata="$bootdata" --boot_manifest="$boot_manifest" --sys_mount="$sys_mount"
   --mdir_path="$mdir_loc" --runtime_dir="$sys_out" "${extras[@]}" )
 
 if [ "$enable_thread_exp" -eq 0 ]; then
