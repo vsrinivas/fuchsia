@@ -260,6 +260,8 @@ void dump_thread(thread_t* t, bool full);
 void arch_dump_thread(thread_t* t);
 void dump_all_threads(bool full);
 void dump_all_threads_locked(bool full);
+void dump_thread_user_tid(uint64_t tid, bool full);
+void dump_thread_user_tid_locked(uint64_t tid, bool full);
 
 static inline bool thread_is_realtime(thread_t* t) {
     return (t->flags & THREAD_FLAG_REAL_TIME) && t->base_priority > DEFAULT_PRIORITY;

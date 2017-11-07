@@ -1216,6 +1216,29 @@ void dump_all_threads_locked(bool full) {
     }
 }
 
+void dump_thread_user_tid(uint64_t tid, bool full) {
+    THREAD_LOCK(state);
+    dump_thread_user_tid_locked(tid, full);
+    THREAD_UNLOCK(state);
+}
+
+void dump_thread_user_tid_locked(uint64_t tid, bool full) {
+    thread_t* t;
+
+    list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
+        if (t->user_tid != tid) {
+            continue;
+        }
+
+        if (t->magic != THREAD_MAGIC) {
+            dprintf(INFO, "bad magic on thread struct %p, aborting.\n", t);
+            hexdump(t, sizeof(thread_t));
+            break;
+        }
+        dump_thread(t, full);
+    }
+}
+
 /** @} */
 
 #if WITH_LIB_KTRACE

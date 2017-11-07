@@ -25,6 +25,7 @@
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+#include <vm/vm.h>
 #include <zircon/types.h>
 
 #if WITH_LIB_CONSOLE
@@ -46,15 +47,33 @@ STATIC_COMMAND_END(kernel);
 
 #if LK_DEBUGLEVEL > 1
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
+
     if (argc < 2) {
+    notenoughargs:
         printf("not enough arguments\n");
     usage:
+        printf("%s dump <thread pointer or id>\n", argv[0].str);
         printf("%s list\n", argv[0].str);
         printf("%s list_full\n", argv[0].str);
         return -1;
     }
 
-    if (!strcmp(argv[1].str, "list")) {
+    if (!strcmp(argv[1].str, "dump")) {
+        if (argc < 3)
+            goto notenoughargs;
+
+        thread_t* t = NULL;
+        if (is_kernel_address(argv[2].u)) {
+            t = (thread_t *)argv[2].u;
+            dump_thread(t, true);
+        } else {
+            if (flags & CMD_FLAG_PANIC) {
+                dump_thread_user_tid_locked(argv[2].u, true);
+            } else {
+                dump_thread_user_tid(argv[2].u, true);
+            }
+        }
+    } else if (!strcmp(argv[1].str, "list")) {
         printf("thread list:\n");
         if (flags & CMD_FLAG_PANIC) {
             dump_all_threads_locked(false);
