@@ -67,12 +67,14 @@ bool CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Continue(bool interrupt) {
+  FXL_DCHECK(!finished_);
+
   interrupted_ = interrupted_ || interrupt;
   context::SwapContext(&main_context_, &routine_context_);
 
   if (finished_) {
     cleanup_(std::move(stack_));
-    // cleanup delete this, return.
+    // this object has been deleted by |cleanup_|, return.
     return;
   }
 }
@@ -90,6 +92,9 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun(void* data) {
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
   runnable_(this);
+  // Delete |runnable_|, as it can have side effects that should be run inside
+  // the co-routine.
+  runnable_ = [](CoroutineHandler*) {};
   finished_ = true;
   DoYield();
   FXL_NOTREACHED() << "Last yield should never return.";
@@ -104,7 +109,7 @@ CoroutineServiceImpl::CoroutineServiceImpl() {}
 
 CoroutineServiceImpl::~CoroutineServiceImpl() {
   while (!handlers_.empty()) {
-    handlers_[0]->Continue(true);
+    handlers_.back()->Continue(true);
   }
 }
 
