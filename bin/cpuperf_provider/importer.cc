@@ -194,41 +194,41 @@ void Importer::ImportTallyRecord(trace_cpu_number_t cpu,
                                  const zx_x86_ipm_state_t& state,
                                  const zx_x86_ipm_perf_config_t& config,
                                  const zx_x86_ipm_counters_t& counters) {
-  FXL_VLOG(2) << fxl::StringPrintf("Import: cpu=%u", cpu);
+  FXL_VLOG(2) << fxl::StringPrintf("Import tally: cpu=%u", cpu);
 
-  // TODO(dje): Could check category_mask_ & IPM_CATEGORY_FIXED.
-  FXL_VLOG(2) << fxl::StringPrintf("Import: fixed_counter_ctrl=0x%" PRIx64,
-                                   config.fixed_counter_ctrl);
   for (uint32_t i = 0; i < state.num_fixed_counters; ++i) {
     if (config.fixed_counter_ctrl & IA32_FIXED_CTR_CTRL_EN_MASK(i)) {
+      FXL_VLOG(2) << fxl::StringPrintf("Import: fixed %u: %" PRIu64,
+                                       i, counters.fixed_counters[i]);
       EmitTallyRecord(cpu, GetFixedEventDetails(i), fixed_category_ref_,
                       counters.fixed_counters[i]);
     }
   }
 
   uint32_t programmable_category = category_mask_ & IPM_CATEGORY_PROGRAMMABLE_MASK;
-  if (programmable_category >= IPM_CATEGORY_MAX) {
-    FXL_LOG(ERROR) << "Invalid category in mask";
-  } else if (programmable_category != IPM_CATEGORY_NONE) {
-    const char* category_name = GetCategory(programmable_category).name;
-    trace_string_ref_t category_ref = trace_context_make_registered_string_literal(context_, category_name);
-    FXL_VLOG(2) << fxl::StringPrintf("Import: category name %s",
-                                     category_name);
-    for (uint32_t i = 0; i < state.num_programmable_counters; ++i) {
-      FXL_VLOG(2) << fxl::StringPrintf("Import: event select 0x%" PRIx64,
-                                       config.programmable_events[i]);
-      if (config.programmable_events[i] & IA32_PERFEVTSEL_EN_MASK) {
-        const EventDetails* details;
-        if (EventSelectToEventDetails(config.programmable_events[i], &details)) {
-          FXL_VLOG(2) << fxl::StringPrintf("Import: event %s", details->name);
-          EmitTallyRecord(cpu, details, category_ref,
-                        counters.programmable_counters[i]);
-        } else {
-          FXL_LOG(ERROR) << fxl::StringPrintf(
-            "Unknown event in event select register %u: 0x%" PRIx64,
-            i, config.programmable_events[i]);
-        }
-      }
+  if (programmable_category == IPM_CATEGORY_NONE)
+    return;
+
+  const char* category_name =
+    GetProgrammableCategoryFromId(programmable_category).name;
+  trace_string_ref_t category_ref = trace_context_make_registered_string_literal(context_, category_name);
+  FXL_VLOG(2) << fxl::StringPrintf("Import: category name %s",
+                                   category_name);
+  for (uint32_t i = 0; i < state.num_programmable_counters; ++i) {
+    if (!(config.programmable_events[i] & IA32_PERFEVTSEL_EN_MASK))
+      continue;
+    uint64_t event = config.programmable_events[i];
+    uint64_t value = counters.programmable_counters[i];
+    const EventDetails* details;
+    if (EventSelectToEventDetails(event, &details)) {
+      FXL_VLOG(2) << fxl::StringPrintf(
+        "Import: event 0x%" PRIx64 "/%s: %" PRIu64,
+        event, details->name, value);
+      EmitTallyRecord(cpu, details, category_ref, value);
+    } else {
+      FXL_LOG(ERROR) << fxl::StringPrintf(
+        "Unknown event in event select register %u: 0x%" PRIx64,
+        i, event);
     }
   }
 }
@@ -250,11 +250,8 @@ void Importer::ImportProgrammableSampleRecord(
     return;
   }
   *accum_counter_value += counter_value;
+
   uint32_t programmable_category = category_mask_ & IPM_CATEGORY_PROGRAMMABLE_MASK;
-  if (programmable_category >= IPM_CATEGORY_MAX) {
-    FXL_LOG(ERROR) << "Invalid category in mask";
-    return;
-  }
   if (programmable_category == IPM_CATEGORY_NONE) {
     FXL_LOG(ERROR) << "Got programmable counter record, but not enabled in category";
     return;
@@ -263,19 +260,21 @@ void Importer::ImportProgrammableSampleRecord(
     FXL_LOG(ERROR) << "Got programmable counter record, but not enabled in event select";
     return;
   }
-  const char* category_name = GetCategory(programmable_category).name;
+  const char* category_name =
+    GetProgrammableCategoryFromId(programmable_category).name;
   trace_string_ref_t category_ref = trace_context_make_registered_string_literal(context_, category_name);
-  FXL_VLOG(2) << fxl::StringPrintf("Import: event select 0x%" PRIx64,
-                                   config.programmable_events[counter]);
+
+  uint64_t event = config.programmable_events[counter];
   const EventDetails* details;
-  if (EventSelectToEventDetails(config.programmable_events[counter], &details)) {
-    FXL_VLOG(2) << fxl::StringPrintf("Import: event %s", details->name);
+  if (EventSelectToEventDetails(event, &details)) {
+    FXL_VLOG(2) << fxl::StringPrintf("Import: event 0x%" PRIx64 "/%s",
+                                     event, details->name);
     EmitSampleRecord(cpu, details, category_ref,
                      previous_time, record.time, counter_value);
   } else {
     FXL_LOG(ERROR) << fxl::StringPrintf(
       "Unknown event in event select register %u: 0x%" PRIx64,
-      counter, config.programmable_events[counter]);
+      counter, event);
   }
 }
 

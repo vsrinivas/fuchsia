@@ -10,12 +10,12 @@
 
 namespace cpuperf_provider {
 
-constexpr IpmCategory kCategories[] = {
+const IpmCategory kCategories[] = {
+  // The categories from intel-pm-categories.inc must appear first for
+  // |kProgrammableCategoryMap|.
 #define DEF_CATEGORY(symbol, ordinal, name, counters...) \
   { "cpu:" name, ordinal },
 #include "zircon/device/intel-pm-categories.inc"
-  // These are last so that ipm_perf_event_category_t values can index
-  // |kCategories|.
   {"cpu:fixed:all", (IPM_CATEGORY_FIXED_CTR0 |
                      IPM_CATEGORY_FIXED_CTR1 |
                      IPM_CATEGORY_FIXED_CTR2) },
@@ -36,11 +36,33 @@ constexpr IpmCategory kCategories[] = {
   {"cpu:sample:1000000", IPM_CATEGORY_SAMPLE_1000000},
 };
 
+// Map programmable category ids to indices in kCategories.
+const uint32_t kProgrammableCategoryMap[] = {
+#define DEF_CATEGORY(symbol, id, name, counters...) \
+  [id] = symbol,
+#include "zircon/device/intel-pm-categories.inc"
+};
+
+static_assert(countof(kProgrammableCategoryMap) <=
+              IPM_CATEGORY_PROGRAMMABLE_MAX, "");
+
 size_t GetNumCategories() {
   return countof(kCategories);
 }
 
 const IpmCategory& GetCategory(size_t cat) {
+  FXL_DCHECK(cat < GetNumCategories());
+  return kCategories[cat];
+}
+
+const IpmCategory& GetProgrammableCategoryFromId(uint32_t id) {
+  FXL_DCHECK(id < countof(kProgrammableCategoryMap));
+  if (id == 0)
+    return kCategories[0];
+  uint32_t cat = kProgrammableCategoryMap[id];
+  // There can be gaps as ids aren't necessarily consecutive.
+  // However |id| must have originally come from a lookup in kCategories.
+  FXL_DCHECK(cat != 0);
   FXL_DCHECK(cat < GetNumCategories());
   return kCategories[cat];
 }

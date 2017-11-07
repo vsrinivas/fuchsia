@@ -19,6 +19,8 @@ size_t GetNumCategories();
 
 const IpmCategory& GetCategory(size_t cat);
 
+const IpmCategory& GetProgrammableCategoryFromId(uint32_t id);
+
 uint64_t GetSampleFreq(uint32_t category_mask);
 
 }  // namespace cpuperf_provider
