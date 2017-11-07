@@ -14,6 +14,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/alloc_checker.cpp \
+    $(LOCAL_DIR)/string_buffer.cpp \
     $(LOCAL_DIR)/string_piece.cpp \
     $(LOCAL_DIR)/string_printf.cpp \
     $(LOCAL_DIR)/string.cpp \
@@ -30,6 +31,7 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/alloc_checker.cpp \
+    $(LOCAL_DIR)/string_buffer.cpp \
     $(LOCAL_DIR)/string_piece.cpp \
     $(LOCAL_DIR)/string_printf.cpp \
     $(LOCAL_DIR)/string.cpp \

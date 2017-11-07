@@ -48,6 +48,7 @@ source_set("fbl") {
     "include/fbl/unique_ptr.h",
     "include/fbl/vector.h",
     "string.cpp",
+    "string_buffer.cpp",
     "string_piece.cpp",
     "string_printf.cpp",
   ]

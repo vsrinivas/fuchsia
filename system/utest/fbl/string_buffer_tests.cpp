@@ -9,7 +9,23 @@
 #define EXPECT_CSTR_EQ(expected, actual) \
     EXPECT_STR_EQ(expected, actual, strlen(expected) + 1u, "unequal cstr")
 
+#define EXPECT_DATA_AND_LENGTH(expected, actual)      \
+    do {                                              \
+        EXPECT_CSTR_EQ(expected, actual.data());      \
+        EXPECT_EQ(strlen(expected), actual.length()); \
+    } while (false)
+
 namespace {
+
+// Note: |runnable| can't be a reference since that'd make the behavior of
+// |va_start()| undefined.
+template <typename Runnable>
+void VAListHelper(Runnable runnable, ...) {
+    va_list ap;
+    va_start(ap, runnable);
+    runnable(ap);
+    va_end(ap);
+}
 
 bool capacity_test() {
     BEGIN_TEST;
@@ -107,53 +123,80 @@ bool append_test() {
     {
         fbl::StringBuffer<3u> str;
         str.Append('a');
-        EXPECT_CSTR_EQ("a", str.data());
+        EXPECT_DATA_AND_LENGTH("a", str);
         str.Append('b');
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append('c');
-        EXPECT_CSTR_EQ("abc", str.data());
+        EXPECT_DATA_AND_LENGTH("abc", str);
         str.Append('d');
-        EXPECT_CSTR_EQ("abc", str.data());
+        EXPECT_DATA_AND_LENGTH("abc", str);
     }
 
     {
         fbl::StringBuffer<3u> str;
         str.Append("ab");
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append("");
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append("cdefg");
-        EXPECT_CSTR_EQ("abc", str.data());
+        EXPECT_DATA_AND_LENGTH("abc", str);
     }
 
     {
         fbl::StringBuffer<3u> str;
         str.Append("abcdef", 2u);
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append("zzzz", 0u);
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append("cdefghijk", 5u);
-        EXPECT_CSTR_EQ("abc", str.data());
+        EXPECT_DATA_AND_LENGTH("abc", str);
     }
 
     {
         fbl::StringBuffer<3u> str;
         str.Append(fbl::StringPiece("abcdef", 2u));
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append(fbl::StringPiece("zzzz", 0u));
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append(fbl::StringPiece("cdefghijk", 5u));
-        EXPECT_CSTR_EQ("abc", str.data());
+        EXPECT_DATA_AND_LENGTH("abc", str);
     }
 
     {
         fbl::StringBuffer<3u> str;
         str.Append(fbl::String("ab"));
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append(fbl::String());
-        EXPECT_CSTR_EQ("ab", str.data());
+        EXPECT_DATA_AND_LENGTH("ab", str);
         str.Append(fbl::String("cdefg"));
-        EXPECT_CSTR_EQ("abc", str.data());
+        EXPECT_DATA_AND_LENGTH("abc", str);
+    }
+
+    END_TEST;
+}
+
+bool append_printf_test() {
+    BEGIN_TEST;
+
+    {
+        fbl::StringBuffer<12u> str;
+        str.AppendPrintf("abc");
+        EXPECT_DATA_AND_LENGTH("abc", str);
+        str.AppendPrintf("%d,%s", 20, "de").Append('f');
+        EXPECT_DATA_AND_LENGTH("abc20,def", str);
+        str.AppendPrintf("%d", 123456789);
+        EXPECT_DATA_AND_LENGTH("abc20,def123", str);
+    }
+
+    {
+        fbl::StringBuffer<12u> str;
+        VAListHelper([&str](va_list ap) { str.AppendVPrintf("abc", ap); });
+        EXPECT_DATA_AND_LENGTH("abc", str);
+        VAListHelper([&str](va_list ap) { str.AppendVPrintf("%d,%s", ap).Append('f'); },
+                     20, "de");
+        EXPECT_DATA_AND_LENGTH("abc20,def", str);
+        VAListHelper([&str](va_list ap) { str.AppendVPrintf("%d", ap); }, 123456789);
+        EXPECT_DATA_AND_LENGTH("abc20,def123", str);
     }
 
     END_TEST;
@@ -169,10 +212,10 @@ bool modify_test() {
         EXPECT_EQ('c', str[2u]);
         str[2u] = 'x';
         EXPECT_EQ('x', str[2u]);
-        EXPECT_CSTR_EQ("abxdef", str.data());
+        EXPECT_DATA_AND_LENGTH("abxdef", str);
 
         memcpy(str.data(), "yyyy", 4u);
-        EXPECT_CSTR_EQ("yyyyef", str.data());
+        EXPECT_DATA_AND_LENGTH("yyyyef", str);
     }
 
     END_TEST;
@@ -255,6 +298,7 @@ BEGIN_TEST_CASE(string_buffer_tests)
 RUN_TEST(capacity_test)
 RUN_TEST(empty_string_test)
 RUN_TEST(append_test)
+RUN_TEST(append_printf_test)
 RUN_TEST(modify_test)
 RUN_TEST(resize_test)
 RUN_TEST(clear_test)

@@ -4,12 +4,19 @@
 
 #pragma once
 
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
+#include <stdarg.h>
+#include <string.h>
+
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 namespace fbl {
+namespace internal {
+size_t StringBufferAppendPrintf(char* dest, size_t remaining,
+                                const char* format, va_list ap);
+} // namespace internal
 
 // A fixed-size buffer for assembling a string.
 //
@@ -113,6 +120,24 @@ public:
     // The result is truncated if the appended content does not fit completely.
     StringBuffer& Append(const fbl::String& other) {
         AppendInternal(other.data(), other.length());
+        return *this;
+    }
+
+    // Appends |printf()|-like input.
+    // The result is truncated if the appended content does not fit completely.
+    StringBuffer& AppendPrintf(const char* format, ...) __PRINTFLIKE(2, 3) {
+        va_list ap;
+        va_start(ap, format);
+        AppendVPrintf(format, ap);
+        va_end(ap);
+        return *this;
+    }
+
+    // Appends |vprintf()|-like input using a |va_list|.
+    // The result is truncated if the appended content does not fit completely.
+    StringBuffer& AppendVPrintf(const char* format, va_list ap) {
+        length_ += internal::StringBufferAppendPrintf(
+            data_ + length_, N - length_, format, ap);
         return *this;
     }
 
