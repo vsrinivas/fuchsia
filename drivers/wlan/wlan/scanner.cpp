@@ -142,20 +142,11 @@ wlan_channel_t Scanner::ScanChannel() const {
     return wlan_channel_t{req_->channel_list[channel_index_]};
 }
 
-// A ProbeResponse carries all currently used attributes of a Beacon frame. Hence, treat a
-// ProbeResponse as a Beacon for now to support active scanning. There are additional information
-// for either frame type which we have to process on a per frame type basis in the future. For now,
-// stick with this kind of unification.
-// TODO(hahnr): find a way to properly split up the Beacon and ProbeResponse processing
-zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
+zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
-    auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
-    ZX_DEBUG_ASSERT(rxinfo);
-
-    auto hdr = packet->field<MgmtFrameHeader>(0);
-
+    auto hdr = frame->hdr;
     common::MacAddr bssid(hdr->addr3);
     common::MacAddr src_addr(hdr->addr2);
 
@@ -166,16 +157,32 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
         return ZX_OK;  // Do not process.
     }
 
-    auto hdr_len = hdr->len();
-    auto beacon = packet->field<Beacon>(hdr_len);
-    size_t beacon_len = packet->len() - hdr_len;  // packet->len() does not include FCS.
-    auto status = nbrs_bss_.Upsert(bssid, beacon, beacon_len, rxinfo);
-
+    auto status = nbrs_bss_.Upsert(bssid, frame->body, frame->body_len,
+                                   rxinfo);  // body_len does not include FCS.
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 MACSTR(bssid), beacon->timestamp);
+                 MACSTR(bssid), frame->body->timestamp);
     }
 
+    return ZX_OK;
+}
+
+zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>* frame,
+                                         const wlan_rx_info_t* rxinfo) {
+    debugfn();
+
+    // A ProbeResponse carries all currently used attributes of a Beacon frame. Hence, treat a
+    // ProbeResponse as a Beacon for now to support active scanning. There are additional
+    // information for either frame type which we have to process on a per frame type basis in the
+    // future. For now, stick with this kind of unification.
+    // TODO(hahnr): find a way to properly split up the Beacon and ProbeResponse processing
+    MgmtFrame<Beacon> mgmt_frame = {
+        .hdr = frame->hdr,
+        .body = reinterpret_cast<const Beacon*>(frame->body),
+        .body_len = frame->body_len,
+    };
+
+    HandleBeacon(&mgmt_frame, rxinfo);
     return ZX_OK;
 }
 

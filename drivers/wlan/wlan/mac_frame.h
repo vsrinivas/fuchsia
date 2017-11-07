@@ -488,10 +488,10 @@ struct DataFrameHeader {
     // uint8_t qos_ctrl[2];
     // HtControl* ht_ctrl;
 
-    bool HasAddr4() { return fc.to_ds() && fc.from_ds(); }
-    bool HasQosCtrl() { return (0 != (fc.subtype() & kQos)); }
+    bool HasAddr4() const { return fc.to_ds() && fc.from_ds(); }
+    bool HasQosCtrl() const { return (0 != (fc.subtype() & kQos)); }
 
-    uint16_t len() {
+    uint16_t len() const {
         uint16_t hdr_len = sizeof(DataFrameHeader);
         if (HasAddr4()) hdr_len += common::kMacAddrLen;
         if (HasQosCtrl()) hdr_len += kQosCtrlLen;
@@ -571,5 +571,20 @@ struct EapolFrame {
     uint16_t packet_body_length;
     uint8_t packet_body[];
 } __PACKED;
+
+template <typename Header, typename Body> struct Frame {
+    const Header* hdr;
+    const Body* body;
+    size_t body_len;
+};
+
+using Payload = uint8_t;
+
+// Frame which contains a known header but unknown payload.
+template <typename Header> using BaseFrame = Frame<Header, Payload>;
+
+template <typename T> using MgmtFrame = Frame<MgmtFrameHeader, T>;
+
+template <typename T> using DataFrame = Frame<DataFrameHeader, T>;
 
 }  // namespace wlan

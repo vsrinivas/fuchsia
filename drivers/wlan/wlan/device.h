@@ -5,7 +5,7 @@
 #pragma once
 
 #include "device_interface.h"
-#include "client_mlme.h"
+#include "dispatcher.h"
 #include "packet.h"
 
 #include "garnet/drivers/wlan/common/macaddr.h"
@@ -107,8 +107,7 @@ class Device : public WlanBaseDevice,
     std::thread work_thread_;
     zx::port port_;
 
-    // TODO(hahnr): Depend on MLME Dispatcher rather than concrete MLME.
-    ClientMlme mlme_ __TA_GUARDED(lock_);
+    Dispatcher dispatcher_ __TA_GUARDED(lock_);
 
     bool dead_ __TA_GUARDED(lock_) = false;
     zx::channel channel_ __TA_GUARDED(lock_);

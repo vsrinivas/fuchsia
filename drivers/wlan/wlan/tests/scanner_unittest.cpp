@@ -7,6 +7,7 @@
 #include "clock.h"
 #include "device_interface.h"
 #include "mac_frame.h"
+#include "mlme.h"
 #include "packet.h"
 #include "serialize.h"
 #include "timer.h"
@@ -254,19 +255,20 @@ TEST_F(ScannerTest, ScanResponse) {
 
     ASSERT_EQ(ZX_OK, Start());
 
-    auto buf = LargeBufferAllocator::New();
-    ASSERT_NE(nullptr, buf);
-
-    Packet p(std::move(buf), sizeof(kBeacon));
-    p.CopyFrom(kBeacon, sizeof(kBeacon), 0);
     wlan_rx_info_t info;
     info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
     info.chan = {1};
     info.rssi = 10;
     info.snr = 60;
-    p.CopyCtrlFrom(info);
 
-    EXPECT_EQ(ZX_OK, scanner_.HandleBeaconOrProbeResponse(&p));
+    auto hdr = reinterpret_cast<const MgmtFrameHeader*>(kBeacon);
+    auto bcn = reinterpret_cast<const Beacon*>(kBeacon + hdr->len());
+    MgmtFrame<Beacon> beacon = {
+            .hdr = hdr,
+            .body = bcn,
+            .body_len = sizeof(kBeacon) - hdr->len()
+    };
+    EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(&beacon, &info));
     clock_.Set(1);
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 

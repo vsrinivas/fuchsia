@@ -27,7 +27,7 @@
 namespace wlan {
 
 Device::Device(zx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
-    : WlanBaseDevice(device), wlanmac_proxy_(wlanmac_proto), mlme_(this) {
+    : WlanBaseDevice(device), wlanmac_proxy_(wlanmac_proto), dispatcher_(this) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
 }
@@ -49,7 +49,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
 
-    status = mlme_.Init();
+    status = dispatcher_.Init();
     if (status != ZX_OK) {
         errorf("could not initialize mlme: %d\n", status);
         return status;
@@ -267,16 +267,16 @@ zx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_S
     return ZX_OK;
 }
 
-// TODO(tkilbourn): figure out how to make sure we have the lock for accessing mlme_.
+// TODO(tkilbourn): figure out how to make sure we have the lock for accessing dispatcher_.
 zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
     debugf("%s chan=%u\n", __PRETTY_FUNCTION__, chan.channel_num);
     if (chan.channel_num == state_->channel().channel_num) { return ZX_OK; }
 
-    zx_status_t status = mlme_.PreChannelChange(chan);
+    zx_status_t status = dispatcher_.PreChannelChange(chan);
     if (status != ZX_OK) { return status; }
     status = wlanmac_proxy_.SetChannel(0u, &chan);
     if (status == ZX_OK) { state_->set_channel(chan); }
-    zx_status_t post_status = mlme_.PostChannelChange();
+    zx_status_t post_status = dispatcher_.PostChannelChange();
     if (status != ZX_OK) { return status; }
     return post_status;
 }
@@ -343,7 +343,7 @@ void Device::MainLoop() {
                     packet = packet_queue_.Dequeue();
                     ZX_DEBUG_ASSERT(packet != nullptr);
                 }
-                zx_status_t status = mlme_.HandlePacket(packet.get());
+                zx_status_t status = dispatcher_.HandlePacket(packet.get());
                 if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
                 break;
             }
@@ -355,7 +355,7 @@ void Device::MainLoop() {
         case ZX_PKT_TYPE_SIGNAL_REP:
             switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kMlme:
-                mlme_.HandlePortPacket(pkt.key);
+                dispatcher_.HandlePortPacket(pkt.key);
                 break;
             case PortKeyType::kService:
                 ProcessChannelPacketLocked(pkt);

@@ -37,8 +37,10 @@ class Scanner {
     Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
+    zx_status_t HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>* frame,
+                                    const wlan_rx_info_t* rxinfo);
     zx_status_t Start(ScanRequestPtr req);
-    zx_status_t HandleBeaconOrProbeResponse(const Packet* packet);
     zx_status_t HandleTimeout();
     zx_status_t HandleError(zx_status_t error_code);
 

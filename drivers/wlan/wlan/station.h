@@ -67,16 +67,20 @@ class Station {
     zx_status_t Deauthenticate(DeauthenticateRequestPtr req);
     zx_status_t Associate(AssociateRequestPtr req);
 
-    zx_status_t HandleBeacon(const Packet* packet);
-    zx_status_t HandleAuthentication(const Packet* packet);
-    zx_status_t HandleDeauthentication(const Packet* packet);
-    zx_status_t HandleAssociationResponse(const Packet* packet);
-    zx_status_t HandleDisassociation(const Packet* packet);
-    zx_status_t HandleAction(const Packet* packet);
-    zx_status_t HandleBlockAck(const Packet* packet);
-    zx_status_t RefuseAddBar(const Packet* packet);
-    zx_status_t HandleData(const Packet* packet);
-    zx_status_t HandleEth(const Packet* packet);
+    zx_status_t HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>* frame,
+                                     const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>* frame,
+                                       const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>* frame,
+                                          const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>* frame,
+                                     const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleAddBaRequest(const MgmtFrame<AddBaRequestFrame>* frame,
+                                   const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleNullDataFrame(const DataFrameHeader* frame, const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>* frame, const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleEthFrame(const BaseFrame<EthernetII>* frame);
     zx_status_t HandleTimeout();
 
     zx_status_t SendEapolRequest(EapolRequestPtr req);
@@ -97,8 +101,7 @@ class Station {
 
     zx_status_t SendSignalReportIndication(uint8_t rssi);
     zx_status_t SendEapolResponse(EapolResultCodes result_code);
-    zx_status_t SendEapolIndication(const EapolFrame* eapol,
-                                    const common::MacAddr& src,
+    zx_status_t SendEapolIndication(const EapolFrame* eapol, const common::MacAddr& src,
                                     const common::MacAddr& dst);
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
