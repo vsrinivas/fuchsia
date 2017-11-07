@@ -14,7 +14,6 @@ MODULE_DEPS := \
     kernel/lib/crypto \
     kernel/lib/fbl \
     kernel/lib/pci \
-    kernel/lib/vdso \
     kernel/lib/user_copy \
     kernel/lib/vdso \
     kernel/object \
