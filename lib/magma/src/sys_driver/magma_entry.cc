@@ -31,9 +31,7 @@
 void magma_indriver_test(zx_device_t* device);
 #endif
 
-#define INTEL_I915_VID (0x8086)
-
-struct intel_gen_device_t {
+struct sysdrv_device_t {
     zx_device_t* parent_device;
     zx_device_t* zx_device_display;
     zx_device_t* zx_device_gpu;
@@ -59,49 +57,49 @@ struct intel_gen_device_t {
 
 static magma::CacheFlush g_cache_flush;
 
-static int magma_start(intel_gen_device_t* dev);
+static int magma_start(sysdrv_device_t* dev);
 
 #if MAGMA_TEST_DRIVER
-static int magma_stop(intel_gen_device_t* dev);
+static int magma_stop(sysdrv_device_t* dev);
 #endif
 
-intel_gen_device_t* get_device(void* context) { return static_cast<intel_gen_device_t*>(context); }
+sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
 
 // implement display protocol
 
-static zx_status_t intel_display_set_mode(void* ctx, zx_display_info_t* info)
+static zx_status_t sysdrv_display_set_mode(void* ctx, zx_display_info_t* info)
 {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t intel_display_get_mode(void* ctx, zx_display_info_t* info)
+static zx_status_t sysdrv_display_get_mode(void* ctx, zx_display_info_t* info)
 {
     assert(info);
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
     memcpy(info, &device->info, sizeof(zx_display_info_t));
     return ZX_OK;
 }
 
-static zx_status_t intel_display_get_framebuffer(void* ctx, void** framebuffer)
+static zx_status_t sysdrv_display_get_framebuffer(void* ctx, void** framebuffer)
 {
     assert(framebuffer);
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
     (*framebuffer) = device->framebuffer_addr;
     return ZX_OK;
 }
 
-static void intel_display_flush(void* ctx)
+static void sysdrv_display_flush(void* ctx)
 {
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
     // Don't incur overhead of flushing when console's not visible
     if (device->console_visible)
         g_cache_flush.clflush_range(device->framebuffer_addr, device->framebuffer_size);
 }
 
-static void intel_display_acquire_or_release_display(void* ctx, bool acquire)
+static void sysdrv_display_acquire_or_release_display(void* ctx, bool acquire)
 {
-    intel_gen_device_t* device = get_device(ctx);
-    DLOG("intel_i915_acquire_or_release_display");
+    sysdrv_device_t* device = get_device(ctx);
+    DLOG("sysdrv_i915_acquire_or_release_display");
 
     std::unique_lock<std::mutex> lock(device->magma_mutex);
 
@@ -134,30 +132,30 @@ static void intel_display_acquire_or_release_display(void* ctx, bool acquire)
     }
 }
 
-static void intel_display_set_ownership_change_callback(void* ctx, zx_display_cb_t callback,
+static void sysdrv_display_set_ownership_change_callback(void* ctx, zx_display_cb_t callback,
                                                         void* cookie)
 {
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
     std::unique_lock<std::mutex> lock(device->magma_mutex);
     device->ownership_change_callback = callback;
     device->ownership_change_cookie = cookie;
 }
 
-static display_protocol_ops_t intel_gen_display_proto = {
-    .set_mode = intel_display_set_mode,
-    .get_mode = intel_display_get_mode,
-    .get_framebuffer = intel_display_get_framebuffer,
-    .acquire_or_release_display = intel_display_acquire_or_release_display,
-    .set_ownership_change_callback = intel_display_set_ownership_change_callback,
-    .flush = intel_display_flush,
+static display_protocol_ops_t sysdrv_display_proto = {
+    .set_mode = sysdrv_display_set_mode,
+    .get_mode = sysdrv_display_get_mode,
+    .get_framebuffer = sysdrv_display_get_framebuffer,
+    .acquire_or_release_display = sysdrv_display_acquire_or_release_display,
+    .set_ownership_change_callback = sysdrv_display_set_ownership_change_callback,
+    .flush = sysdrv_display_flush,
 };
 
 // implement device protocol
 
-static zx_status_t intel_common_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                       void* out_buf, size_t out_len, size_t* out_actual)
 {
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
 
     DASSERT(device->magma_system_device);
 
@@ -190,7 +188,7 @@ static zx_status_t intel_common_ioctl(void* ctx, uint32_t op, const void* in_buf
         case IOCTL_MAGMA_DUMP_STATUS: {
             DLOG("IOCTL_MAGMA_DUMP_STATUS");
             std::unique_lock<std::mutex> lock(device->magma_mutex);
-            intel_gen_device_t* device = get_device(ctx);
+            sysdrv_device_t* device = get_device(ctx);
             if (device->magma_system_device)
                 device->magma_system_device->DumpStatus();
             result = ZX_OK;
@@ -213,18 +211,18 @@ static zx_status_t intel_common_ioctl(void* ctx, uint32_t op, const void* in_buf
     return result;
 }
 
-static zx_status_t intel_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+static zx_status_t sysdrv_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                    void* out_buf, size_t out_len, size_t* out_actual)
 {
-    DLOG("intel_gpu_ioctl");
-    zx_status_t result = intel_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+    DLOG("sysdrv_gpu_ioctl");
+    zx_status_t result = sysdrv_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
     if (result == ZX_OK)
         return ZX_OK;
 
     if (result != ZX_ERR_NOT_SUPPORTED)
         return result;
 
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
     DASSERT(device->magma_system_device);
 
     switch (op) {
@@ -257,13 +255,13 @@ static zx_status_t intel_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, s
         }
 
         default:
-            DLOG("intel_gpu_ioctl unhandled op 0x%x", op);
+            DLOG("sysdrv_gpu_ioctl unhandled op 0x%x", op);
     }
 
     return result;
 }
 
-static int reset_placeholder(intel_gen_device_t* device)
+static int reset_placeholder(sysdrv_device_t* device)
 {
     void* addr;
     if (device->placeholder_buffer->MapCpu(&addr)) {
@@ -284,18 +282,18 @@ static int reset_placeholder(intel_gen_device_t* device)
     return ZX_OK;
 }
 
-static zx_status_t intel_display_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+static zx_status_t sysdrv_display_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                        void* out_buf, size_t out_len, size_t* out_actual)
 {
-    DLOG("intel_display_ioctl");
-    zx_status_t result = intel_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+    DLOG("sysdrv_display_ioctl");
+    zx_status_t result = sysdrv_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
     if (result == ZX_OK)
         return ZX_OK;
 
     if (result != ZX_ERR_NOT_SUPPORTED)
         return result;
 
-    intel_gen_device_t* device = get_device(ctx);
+    sysdrv_device_t* device = get_device(ctx);
     DASSERT(device->magma_system_device);
 
     switch (op) {
@@ -367,47 +365,47 @@ static zx_status_t intel_display_ioctl(void* ctx, uint32_t op, const void* in_bu
         }
 
         default:
-            DLOG("intel_display_ioctl unhandled op 0x%x", op);
+            DLOG("sysdrv_display_ioctl unhandled op 0x%x", op);
     }
 
     return result;
 }
 
-static void intel_display_release(void* ctx)
+static void sysdrv_display_release(void* ctx)
 {
     // TODO(ZX-1170) - when testable:
-    // Perform magma_stop but don't free the context unless intel_gpu_release has already been
+    // Perform magma_stop but don't free the context unless sysdrv_gpu_release has already been
     // called
     DASSERT(false);
 }
 
-static zx_protocol_device_t intel_display_device_proto = {
-    .version = DEVICE_OPS_VERSION, .ioctl = intel_display_ioctl, .release = intel_display_release,
+static zx_protocol_device_t sysdrv_display_device_proto = {
+    .version = DEVICE_OPS_VERSION, .ioctl = sysdrv_display_ioctl, .release = sysdrv_display_release,
 };
 
-static void intel_gpu_release(void* ctx)
+static void sysdrv_gpu_release(void* ctx)
 {
     // TODO(ZX-1170) - when testable:
-    // Free context if intel_display_release has already been called
+    // Free context if sysdrv_display_release has already been called
     DASSERT(false);
 }
 
-static zx_protocol_device_t intel_gpu_device_proto = {
-    .version = DEVICE_OPS_VERSION, .ioctl = intel_gpu_ioctl, .release = intel_gpu_release,
+static zx_protocol_device_t sysdrv_gpu_device_proto = {
+    .version = DEVICE_OPS_VERSION, .ioctl = sysdrv_gpu_ioctl, .release = sysdrv_gpu_release,
 };
 
 // implement driver object:
 
-static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device)
+static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
 {
-    DLOG("intel_gen_bind start zx_device %p", zx_device);
+    DLOG("sysdrv_bind start zx_device %p", zx_device);
 
     pci_protocol_t pci;
     if (device_get_protocol(zx_device, ZX_PROTOCOL_PCI, (void*)&pci))
         return DRET_MSG(ZX_ERR_NOT_SUPPORTED, "device_get_protocol failed");
 
     // map resources and initialize the device
-    auto device = std::make_unique<intel_gen_device_t>();
+    auto device = std::make_unique<sysdrv_device_t>();
 
     zx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
@@ -485,11 +483,11 @@ static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device)
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "intel_gen_display";
+    args.name = "magma_display";
     args.ctx = device.get();
-    args.ops = &intel_display_device_proto;
+    args.ops = &sysdrv_display_device_proto;
     args.proto_id = ZX_PROTOCOL_DISPLAY;
-    args.proto_ops = &intel_gen_display_proto;
+    args.proto_ops = &sysdrv_display_proto;
 
     status = device_add(zx_device, &args, &device->zx_device_display);
     if (status != ZX_OK)
@@ -497,9 +495,9 @@ static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device)
 
     args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "intel_gen_gpu";
+    args.name = "magma_gpu";
     args.ctx = device.get();
-    args.ops = &intel_gpu_device_proto;
+    args.ops = &sysdrv_gpu_device_proto;
     args.proto_id = ZX_PROTOCOL_GPU;
     args.proto_ops = nullptr;
 
@@ -509,24 +507,16 @@ static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device)
 
     device.release();
 
-    DLOG("initialized magma intel driver");
+    DLOG("initialized magma system driver");
 
     return ZX_OK;
 }
 
-static zx_driver_ops_t intel_gen_driver_ops = {
-    .version = DRIVER_OPS_VERSION, .bind = intel_gen_bind,
+zx_driver_ops_t msd_driver_ops = {
+    .version = DRIVER_OPS_VERSION, .bind = sysdrv_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(intel_gen_gpu, intel_gen_driver_ops, "zircon", "!0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_CLASS, 0x3), // Display class
-ZIRCON_DRIVER_END(intel_gen_gpu)
-    // clang-format on
-
-    static int magma_start(intel_gen_device_t* device)
+static int magma_start(sysdrv_device_t* device)
 {
     DLOG("magma_start");
 
@@ -560,7 +550,7 @@ ZIRCON_DRIVER_END(intel_gen_gpu)
 }
 
 #if MAGMA_TEST_DRIVER
-static int magma_stop(intel_gen_device_t* device)
+static int magma_stop(sysdrv_device_t* device)
 {
     DLOG("magma_stop");
 

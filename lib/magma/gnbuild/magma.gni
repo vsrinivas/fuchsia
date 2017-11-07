@@ -27,3 +27,31 @@ declare_args() {
     mesa_build_root = "//third_party/mesa"
   }
 }
+
+template("magma_pci_entry") {
+  source_set(target_name) {
+    assert(defined(invoker.pci_vendor_id), "pci_vendor_id not defined")
+    if (!defined(invoker.test_entry)) {
+      test_entry = false
+    }
+
+    forward_variables_from(invoker, "*")
+
+    sources = [ "//garnet/lib/magma/src/sys_driver/pci_entry.cc" ]
+    defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    if (!test_entry) {
+      deps += [
+        "//garnet/lib/magma/src/sys_driver:entry",
+      ]
+    } else {
+      deps += [
+        "//garnet/lib/magma/src/sys_driver:test_entry_pci",
+      ]
+    }
+  }
+}

@@ -7,12 +7,14 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
+INTEL_PCI_VID = "0x8086"
+
 driver_module("msd_intel") {
   output_name = "libmsd_intel"
 
   deps = [
     "src",
-    "src:main",
+    ":msd_intel_entry",
   ]
 
   ldflags = [ "$shared_ldflags" ]
@@ -25,10 +27,25 @@ driver_module("msd_intel_test") {
 
   deps = [
     "src",
-    "src:test_driver",
+    ":msd_intel_test_entry",
   ]
 
   ldflags = [ "$shared_ldflags" ]
+}
+
+magma_pci_entry("msd_intel_entry") {
+  pci_vendor_id = INTEL_PCI_VID
+}
+
+magma_pci_entry("msd_intel_test_entry") {
+  testonly = true
+
+  pci_vendor_id = INTEL_PCI_VID
+  test_entry = true
+
+  deps = [
+    ":indriver_gtest",
+  ]
 }
 
 group("tests") {
