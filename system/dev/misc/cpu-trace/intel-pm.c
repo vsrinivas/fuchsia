@@ -49,7 +49,7 @@ typedef struct {
     uint32_t flags;
 } perf_event_t;
 
-static const perf_event_t perf_events[] = {
+static const perf_event_t kPerfEvents[] = {
 // N.B. The order of fixed/arch/nonarch here must match perf_event_kind_t.
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, description) \
   { event, umask, flags },
@@ -146,12 +146,12 @@ typedef struct {
     const perf_event_kind_t* events;
 } category_spec_t;
 
-#define DEF_CATEGORY(symbol, ordinal, name, counters...) \
+#define DEF_CATEGORY(symbol, id, name, counters...) \
   static const perf_event_kind_t symbol ## _events[] = { counters };
 #include "zircon/device/intel-pm-categories.inc"
 
-static const category_spec_t category_specs[] = {
-#define DEF_CATEGORY(symbol, ordinal, name, counters...) \
+static const category_spec_t kCategorySpecs[] = {
+#define DEF_CATEGORY(symbol, id, name, counters...) \
   { \
     countof(symbol ## _events), \
     &symbol ## _events[0] \
@@ -234,7 +234,7 @@ static zx_status_t category_to_config(const ioctl_ipm_simple_perf_config_t* simp
     uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
 
     for (size_t i = 0; i < spec->count && i < ipm_num_programmable_counters; ++i) {
-        const perf_event_t* event = &perf_events[spec->events[i]];
+        const perf_event_t* event = &kPerfEvents[spec->events[i]];
         uint64_t evtsel = 0;
         evtsel |= event->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
         evtsel |= event->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
@@ -282,7 +282,7 @@ static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_confi
         return ZX_ERR_INVALID_ARGS;
     if (programmable_category != IPM_CATEGORY_NONE) {
         status = category_to_config(simple_config,
-                                    &category_specs[programmable_category],
+                                    &kCategorySpecs[programmable_category],
                                     config);
         if (status != ZX_OK)
             return status;

@@ -11,7 +11,7 @@
 
 // Arguments:
 // - symbol
-// - ordinal (enum value, must be within IPM_CATEGORY_PROGRAMMABLE_MASK)
+// - id (must be within IPM_CATEGORY_PROGRAMMABLE_MASK)
 // - name (cannot have any spaces, used in trace category name)
 // - varargs list of register names
 

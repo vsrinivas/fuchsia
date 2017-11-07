@@ -412,11 +412,13 @@ typedef struct {
 // so we cannot provide an "all" category.
 // TODO(dje): Provide one or more user-defined categories and allow user to
 // specify what gets collected (say via scripting language used by
-// ipm_provider).
+// cpuperf_provider).
 
 // Only one of the programmable categories can be selected at a time.
-// TODO(dje): For now.
-#define IPM_CATEGORY_PROGRAMMABLE_MASK 0xfff
+// Anything more complex can't use ioctl_ipm_stage_simple_perf_config.
+// The value is the "id" specified in intel-pm-categories.inc.
+#define IPM_CATEGORY_PROGRAMMABLE_MASK 0xff
+#define IPM_CATEGORY_PROGRAMMABLE_MAX  (IPM_CATEGORY_PROGRAMMABLE_MASK)
 
 // The fixed counters are separate and fixed-purpose, any combination may
 // be used.
@@ -450,13 +452,10 @@ typedef struct {
 #define EVENT_UNHALTED_CORE_CYCLES      EVENT_ARCH_UNHALTED_CORE_CYCLES
 #define EVENT_UNHALTED_REFERENCE_CYCLES EVENT_ARCH_UNHALTED_REFERENCE_CYCLES
 
-// Only one of the remaining categories can currently be chosen.
+// Only one of the programmable categories can be chosen.
 // See intel-pm-categories.inc for how this translates to actual registers.
-// TODO(dje): All of this is just a first pass to provide something that can
-// be experimented with.
-
 typedef enum {
-#define DEF_CATEGORY(symbol, ordinal, name, counters...) symbol,
+#define DEF_CATEGORY(symbol, id, name, counters...) symbol,
 #include "zircon/device/intel-pm-categories.inc"
     IPM_CATEGORY_MAX
 } ipm_perf_event_category_t;
