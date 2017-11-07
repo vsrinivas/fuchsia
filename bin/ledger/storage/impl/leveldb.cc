@@ -106,7 +106,7 @@ class BatchImpl : public Db::Batch {
 
   bool MakeEmptySyncCallAndCheck(coroutine::CoroutineHandler* handler) {
     return coroutine::SyncCall(handler, [this](fxl::Closure on_done) {
-      task_runner_->PostTask([on_done = std::move(on_done)]() { on_done(); });
+      task_runner_->PostTask(std::move(on_done));
     });
   }
 
