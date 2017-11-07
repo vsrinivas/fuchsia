@@ -10,12 +10,13 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "peridot/lib/module_manifest_repository/module_manifest_repository.h"
+#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace {
 
-class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
+class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
  public:
   void SetUp() override {
     testing::TestWithMessageLoop::SetUp();
@@ -39,7 +40,7 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
  protected:
   void ResetRepository() {
     auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-    repo_.reset(new ModuleManifestRepository(repo_dir_));
+    repo_.reset(new DirectoryRepository(repo_dir_));
     repo_->Watch(task_runner, [this](std::string id, ModuleManifestRepository::Entry entry) {
           entries_.push_back(entry);
           entry_ids_.push_back(std::move(id));
@@ -63,7 +64,7 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
 
   std::vector<std::string> manifests_written_;
   std::string repo_dir_;
-  std::unique_ptr<ModuleManifestRepository> repo_;
+  std::unique_ptr<DirectoryRepository> repo_;
 
   std::vector<ModuleManifestRepository::Entry> entries_;
   std::vector<std::string> entry_ids_;
@@ -117,7 +118,7 @@ const char* kManifest2 = R"END(
 ]
 )END";
 
-TEST_F(ModuleManifestRepositoryTest, CreateFiles_And_CorrectEntries) {
+TEST_F(DirectoryRepositoryTest, CreateFiles_And_CorrectEntries) {
   // Write a manifest file before creating the repo.
   WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
 
@@ -157,7 +158,7 @@ TEST_F(ModuleManifestRepositoryTest, CreateFiles_And_CorrectEntries) {
   EXPECT_EQ("chair", entries_[2].noun_constraints[0].types[0]);
 }
 
-TEST_F(ModuleManifestRepositoryTest, RemovedFiles) {
+TEST_F(DirectoryRepositoryTest, RemovedFiles) {
   // Write a manifest file before creating the repo.
   WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
 
@@ -170,9 +171,9 @@ TEST_F(ModuleManifestRepositoryTest, RemovedFiles) {
   EXPECT_EQ(removed_ids_[1], entry_ids_[1]);
 }
 
-TEST_F(ModuleManifestRepositoryTest, RepoDirIsCreatedAutomatically) {
+TEST_F(DirectoryRepositoryTest, RepoDirIsCreatedAutomatically) {
   repo_dir_ = "/tmp/foo";
-  // TODO(thatguy): Once making ModuleManifestRepository easier to test against
+  // TODO(thatguy): Once making DirectoryRepository easier to test against
   // (ie, have a guaranteed initialized state we can synchronize on), do that
   // here.
   ResetRepository();
@@ -180,7 +181,7 @@ TEST_F(ModuleManifestRepositoryTest, RepoDirIsCreatedAutomatically) {
   ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
 }
 
-TEST_F(ModuleManifestRepositoryTest, IgnoreIncomingFiles) {
+TEST_F(DirectoryRepositoryTest, IgnoreIncomingFiles) {
   ResetRepository();
   WriteManifestFile("foo.incoming", kManifest1, strlen(kManifest1));
   WriteManifestFile("foo", kManifest2, strlen(kManifest2));

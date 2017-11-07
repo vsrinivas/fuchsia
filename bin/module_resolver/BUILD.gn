@@ -29,6 +29,7 @@ source_set("module_resolver_impl") {
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/fidl",
     "//peridot/lib/module_manifest_repository",
+    "//peridot/lib/module_manifest_repository/directory_repository",
   ]
 }
 

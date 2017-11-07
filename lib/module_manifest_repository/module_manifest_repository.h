@@ -6,50 +6,36 @@
 #define PERIDOT_LIB_MODULE_MANIFEST_REPOSITORY_MODULE_MANIFEST_REPOSITORY_H_
 
 #include <functional>
-#include <map>
 #include <string>
 #include <vector>
 
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace modular {
 
-// Watches a directory for new Module manifest files, parses them, and notifies
-// each watcher of each entry within.
+// Abstract base class for all Module Manifest Repository implementations.
 class ModuleManifestRepository {
  public:
   struct Entry;
   using NewEntryFn = std::function<void(std::string, Entry)>;
   using RemovedEntryFn = std::function<void(std::string)>;
 
-  // If |repository_dir| does not already exist, it will be created.
-  ModuleManifestRepository(std::string repository_dir);
+  virtual ~ModuleManifestRepository() = 0;
 
-  // Watches |repository_dir| (in the constructor) for Module manifest files,
-  // parses them and posts tasks to |task_runner| calling |new_fn| for each
-  // entry in new files and |removed_fn| for entries that have been removed.
+  // Watches the repository for new or removed Module manifest entries.  Posts
+  // tasks to |task_runner| calling |new_fn| for each entry in new files and
+  // |removed_fn| for entries that have been removed.
+  //
+  // Destroying |this| stops watching and guarantees neither |new_fn| or
+  // |removed_fn| will be called. Caller is responsible for ensuring
+  // |task_runner| remains alive as long as |this| is alive.
   //
   // |new_fn| takes a string Entry id and the Entry itself.
   //
   // |removed_fn| takes only the string Entry id.
-  void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
-             NewEntryFn new_fn,
-             RemovedEntryFn removed_fn);
-  ~ModuleManifestRepository();
-
- private:
-  void OnNewFile(const std::string& name, NewEntryFn);
-  void OnRemoveFile(const std::string& name, RemovedEntryFn);
-
-  const std::string repository_dir_;
-  NewEntryFn new_entry_fn_;
-  RemovedEntryFn removed_entry_fn_;
-
-  // Map of file path to entry IDs. Supports OnRemoveFile.
-  std::map<std::string, std::vector<std::string>> file_entry_ids_;
-
-  fxl::WeakPtrFactory<ModuleManifestRepository> weak_factory_;
+  virtual void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                     NewEntryFn new_fn,
+                     RemovedEntryFn removed_fn) = 0;
 };
 
 // These fields mirror those in the Module manifest doc:

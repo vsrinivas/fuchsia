@@ -1,0 +1,36 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("directory_repository") {
+  sources = [
+    "directory_repository.cc",
+    "directory_repository.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/module_manifest_repository",
+    "//third_party/rapidjson",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+executable("directory_repository_unittest") {
+  testonly = true
+
+  sources = [
+    "directory_repository_unittest.cc",
+  ]
+
+  deps = [
+    ":directory_repository",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//peridot/lib/testing:test_with_message_loop",
+    "//third_party/gtest",
+  ]
+}

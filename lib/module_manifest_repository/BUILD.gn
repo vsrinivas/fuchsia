@@ -11,25 +11,5 @@ source_set("module_manifest_repository") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/fidl:json_xdr",
-    "//third_party/rapidjson",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-executable("module_manifest_repository_unittest") {
-  testonly = true
-
-  sources = [
-    "module_manifest_repository_unittest.cc",
-  ]
-
-  deps = [
-    ":module_manifest_repository",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//peridot/lib/testing:test_with_message_loop",
-    "//third_party/gtest",
   ]
 }

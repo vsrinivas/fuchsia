@@ -144,8 +144,8 @@
       "exec":"/system/test/maxwell/context_repository_unittest"
     },
     {
-      "name":"module_manifest_repository",
-      "exec":"/system/test/maxwell/module_manifest_repository_unittest"
+      "name":"directory_module_manifest_repository",
+      "exec":"/system/test/maxwell/directory_repository_unittest"
     },
     {
       "name":"module_resolver",

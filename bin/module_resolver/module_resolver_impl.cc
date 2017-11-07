@@ -8,6 +8,7 @@
 
 #include "peridot/public/lib/entity/cpp/json.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
 
 namespace maxwell {
 
@@ -66,7 +67,7 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 }  // namespace
 
 ModuleResolverImpl::ModuleResolverImpl(std::string manifest_repository_path) {
-  manifest_repository_.reset(new modular::ModuleManifestRepository(
+  manifest_repository_.reset(new modular::DirectoryRepository(
       std::move(manifest_repository_path)));
   manifest_repository_->Watch(
       fsl::MessageLoop::GetCurrent()->task_runner(),

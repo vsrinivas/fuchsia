@@ -96,7 +96,7 @@ package("maxwell_tests") {
     "//peridot/bin/context_engine:context_index_unittest",
     "//peridot/bin/context_engine:context_repository_unittest",
     "//peridot/bin/module_resolver:module_resolver_impl_unittest",
-    "//peridot/lib/module_manifest_repository:module_manifest_repository_unittest",
+    "//peridot/lib/module_manifest_repository/directory_repository:directory_repository_unittest",
     "//peridot/tests/maxwell_integration",
   ]
 
@@ -110,8 +110,8 @@ package("maxwell_tests") {
       dest = "maxwell/context_repository_unittest"
     },
     {
-      name = "module_manifest_repository_unittest"
-      dest = "maxwell/module_manifest_repository_unittest"
+      name = "directory_repository_unittest"
+      dest = "maxwell/directory_repository_unittest"
     },
     {
       name = "module_resolver_impl_unittest"
