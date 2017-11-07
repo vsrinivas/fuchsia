@@ -79,6 +79,18 @@ __BEGIN_CDECLS;
 #define USB_AUDIO_BASS_BOOST_CONTROL            0x09
 #define USB_AUDIO_LOUDNESS_CONTROL              0x0A
 
+// feature unit control support bitmasks
+#define USB_AUDIO_FU_BMA_MUTE                   (1u << 0u)
+#define USB_AUDIO_FU_BMA_VOLUME                 (1u << 1u)
+#define USB_AUDIO_FU_BMA_BASS                   (1u << 2u)
+#define USB_AUDIO_FU_BMA_MID                    (1u << 3u)
+#define USB_AUDIO_FU_BMA_TREBLE                 (1u << 4u)
+#define USB_AUDIO_FU_BMA_GRAPHIC_EQUALIZER      (1u << 5u)
+#define USB_AUDIO_FU_BMA_AUTOMATIC_GAIN         (1u << 6u)
+#define USB_AUDIO_FU_BMA_DELAY                  (1u << 7u)
+#define USB_AUDIO_FU_BMA_BASS_BOOST             (1u << 8u)
+#define USB_AUDIO_FU_BMA_LOUDNESS               (1u << 9u)
+
 // up/down mix processing unit control selectors
 #define USB_AUDIO_UD_ENABLE_CONTROL             0x01
 #define USB_AUDIO_UD_MODE_SELECT_CONTROL        0x02

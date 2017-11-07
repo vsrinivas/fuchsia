@@ -241,6 +241,7 @@ zx_status_t UsbAudioStream::AddFormats(
 
             supported_formats->push_back(range);
         }
+        fixed_sample_rate_ = supported_formats->size() <= 1;
     } else {
         fbl::AllocChecker ac;
         supported_formats->reserve(1, &ac);
@@ -254,6 +255,7 @@ zx_status_t UsbAudioStream::AddFormats(
         range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
 
         supported_formats->push_back(range);
+        fixed_sample_rate_ = false;
     }
 
     return ZX_OK;
@@ -576,14 +578,22 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
         }
     }
 
-    // Send the commands required to set up the new format.
+    // Send the commands required to set up the new format.  Do not attempt to
+    // set the sample rate if the endpoint supports only one.  In theory,
+    // devices should ignore this request, but in practice, some devices will
+    // refuse the command entirely, and we will get ZX_ERR_IO_REFUSED back from
+    // the bus driver.
     //
     // TODO(johngro): more work is needed if we are changing sample format or
     // channel count.  Right now, we only support the one format/count provided
     // to us by the outer layer, but eventually we need to support them all.
-    ZX_DEBUG_ASSERT(parent_ != nullptr);
-    resp.result = usb_audio_set_sample_rate(&usb_, usb_ep_addr_, req.frames_per_second);
-    if (resp.result != ZX_OK) goto finished;
+    if (!fixed_sample_rate_) {
+        ZX_DEBUG_ASSERT(parent_ != nullptr);
+        resp.result = usb_audio_set_sample_rate(&usb_, usb_ep_addr_, req.frames_per_second);
+        if (resp.result != ZX_OK) {
+            goto finished;
+        }
+    }
 
     // Create a new ring buffer channel which can be used to move bulk data and
     // bind it to us.

@@ -138,6 +138,7 @@ private:
     // descriptors present for a stream, not just a single format (with multiple
     // sample rates).
     fbl::Vector<audio_stream_format_range_t> supported_formats_;
+    bool fixed_sample_rate_ = false;
 
     uint32_t frame_size_;
     uint32_t iso_packet_rate_;

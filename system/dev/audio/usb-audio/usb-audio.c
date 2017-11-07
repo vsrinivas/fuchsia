@@ -114,13 +114,13 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
                              usb_audio_source_create(device, &usb, audio_source_index++, intf, endp,
                                                      format_desc);
                         }
-                        // this is a quick and dirty hack to set volume to 75%
+                        // this is a quick and dirty hack to set volume to 100%
                         // otherwise, audio might default to 0%
                         // TODO - properly support getting and setting stream volumes via ioctls
                         feature_unit_node_t* fu_node;
                         list_for_every_entry(&fu_descs, fu_node, feature_unit_node_t, node) {
                             // this may fail, but we are taking shotgun approach here
-                            usb_audio_set_volume(&usb, intf->bInterfaceNumber, fu_node->desc->bUnitID, 75);
+                            usb_audio_set_volume(&usb, intf->bInterfaceNumber, fu_node->desc, 100);
                         }
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_BULK) {
@@ -177,6 +177,11 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
                     if (fu_node) {
                         fu_node->desc = (usb_audio_ac_feature_unit_desc *)header;
                         list_add_tail(&fu_descs, &fu_node->node);
+#if TRACE
+                        usb_audio_dump_feature_unit_caps(&usb,
+                                                         intf->bInterfaceNumber,
+                                                         fu_node->desc);
+#endif
                     }
                     break;
                 }
