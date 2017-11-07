@@ -321,17 +321,21 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
   trace_string_ref_t name_ref{trace_context_make_registered_string_literal(
       context_, details->name)};
 
-  // TODO(dje): For now just show a value of 0 at the start and the
-  // collected value at the end.
-
-  trace_arg_t arg0{trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(0))};
-  trace_context_write_counter_event_record(
-      context_, start_time_, &thread_ref, &category_ref, &name_ref,
-      MakeEventKey(*details), &arg0, 1);
-
+  // Chrome interprets the timestamp we give Count records as the start
+  // of the interval with that count, which for a count makes sense: this is
+  // the value of the count from this point on until the next count record.
+  // But if we emit a value of zero at the start Chrome shows the entire trace
+  // of having the value zero and the count record at the end of the interval
+  // is very hard to see.
+  // To make things easier to view we emit a count record with a time of the
+  // start of the interval and a value of the counter at the end of the
+  // interval and another count record to mark the end of the interval.
   trace_arg_t args[1] = {
     {trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))},
   };
+  trace_context_write_counter_event_record(
+      context_, start_time_, &thread_ref, &category_ref, &name_ref,
+      MakeEventKey(*details), &args[0], countof(args));
   trace_context_write_counter_event_record(
       context_, stop_time_, &thread_ref, &category_ref, &name_ref,
       MakeEventKey(*details), &args[0], countof(args));
@@ -356,18 +360,6 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   uint64_t id = cpu + 1;
 #endif
 
-#if 0
-  trace_context_write_async_begin_event_record(
-      context_, start_time,
-      &thread_ref, &category_ref, &name_ref,
-      id, nullptr, 0);
-
-  trace_arg_t arg{trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))};
-  trace_context_write_async_end_event_record(
-      context_, end_time,
-      &thread_ref, &category_ref, &name_ref,
-      id, &arg, 1);
-#else
   // While the count of events is cumulative, it's more useful to report some
   // measure that's useful within each time period. E.g., a rate.
   uint64_t period = end_time - start_time;
@@ -377,8 +369,23 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   trace_arg_t args[1] = {
     {trace_make_arg(rate_name_ref_, trace_make_double_arg_value(rate))},
   };
-  // TODO(dje): Chrome seems to take the timestamp we give it as the start
-  // of the interval. Verify this is true.
+
+#if 0
+  // TODO(dje): This is a failed experiment to use something other than
+  // counters. It is kept, for now, to allow easy further experimentation.
+  trace_context_write_async_begin_event_record(
+      context_, start_time,
+      &thread_ref, &category_ref, &name_ref,
+      id, nullptr, 0);
+  trace_context_write_async_end_event_record(
+      context_, end_time,
+      &thread_ref, &category_ref, &name_ref,
+      id, &args[0], countof(args));
+#else
+  // Chrome interprets the timestamp we give it as the start of the
+  // interval, which for a count makes sense: this is the value of the count
+  // from this point on until the next count record. We're abusing this record
+  // type to display a rate.
   trace_context_write_counter_event_record(
       context_, start_time,
       &thread_ref, &category_ref, &name_ref,
