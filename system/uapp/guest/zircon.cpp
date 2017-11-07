@@ -16,8 +16,34 @@
 
 static const uintptr_t kKernelOffset = 0x100000;
 static const uintptr_t kBootdataOffset = 0x800000;
+static const uint16_t kMzSignature = 0x5a4d; // MZ
+static const uint32_t kMzMagic = 0x644d5241; // ARM\x64
 
-static bool container_is_valid(const bootdata_t* container) {
+// MZ header used to boot ARM64 kernels.
+//
+// See: https://www.kernel.org/doc/Documentation/arm64/booting.txt.
+struct MzHeader {
+    uint32_t code0;
+    uint32_t code1;
+    uint64_t kernel_offset;
+    uint64_t kernel_length;
+    uint64_t flags;
+    uint64_t reserved0;
+    uint64_t reserved1;
+    uint64_t reserved2;
+    uint32_t magic;
+    uint32_t pe_offset;
+} __PACKED;
+static_assert(sizeof(MzHeader) == 64, "");
+
+static bool is_mz(const MzHeader* header) {
+    return (header->code0 & UINT16_MAX) == kMzSignature &&
+           header->kernel_length > sizeof(MzHeader) &&
+           header->magic == kMzMagic &&
+           header->pe_offset >= sizeof(MzHeader);
+}
+
+static bool is_bootdata(const bootdata_t* container) {
     return container->type == BOOTDATA_CONTAINER &&
            container->length > sizeof(bootdata_t) &&
            container->extra == BOOTDATA_MAGIC &&
@@ -25,40 +51,22 @@ static bool container_is_valid(const bootdata_t* container) {
 }
 
 static zx_status_t load_zircon(const int fd, const uintptr_t addr, const size_t size,
-                                const uintptr_t first_page, uintptr_t* guest_ip,
-                                uintptr_t* end_off) {
-    zircon_kernel_t* header = reinterpret_cast<zircon_kernel_t*>(addr + kKernelOffset);
+                               const uintptr_t first_page, const uintptr_t kernel_offset,
+                               const uintptr_t kernel_length) {
+    zircon_kernel_t* header = reinterpret_cast<zircon_kernel_t*>(addr + kernel_offset);
     // Move the first page to where zircon would like it to be
     memmove(header, reinterpret_cast<void*>(first_page), PAGE_SIZE);
-
-    if (!container_is_valid(&header->hdr_file)) {
-        fprintf(stderr, "Invalid Zircon container\n");
-        return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-    if (header->hdr_kernel.type != BOOTDATA_KERNEL) {
-        fprintf(stderr, "Invalid Zircon kernel header\n");
-        return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-    if (header->data_kernel.entry64 >= size) {
-        fprintf(stderr, "Kernel entry point is outside of guest physical memory\n");
-        return ZX_ERR_IO_DATA_INTEGRITY;
-    }
 
     // We already read a page, now we need the rest...
     // The rest is the length in the header, minus what we already read, but accounting for
     // the bootdata_kernel_t portion of zircon_kernel_t that's included in the header length.
-    uintptr_t data_off = kKernelOffset + PAGE_SIZE;
-    size_t data_len = header->hdr_kernel.length -
-                      (PAGE_SIZE - sizeof(zircon_kernel_t) + sizeof(bootdata_kernel_t));
-
-    ssize_t ret = read(fd, reinterpret_cast<void*>(addr + data_off), data_len);
+    const uintptr_t data_off = kernel_offset + PAGE_SIZE;
+    const size_t data_len = kernel_length - PAGE_SIZE;
+    const ssize_t ret = read(fd, reinterpret_cast<void*>(addr + data_off), data_len);
     if (ret < 0 || (size_t)ret != data_len) {
         fprintf(stderr, "Failed to read Zircon kernel data\n");
         return ZX_ERR_IO;
     }
-
-    *guest_ip = header->data_kernel.entry64;
-    *end_off = header->hdr_file.length + sizeof(bootdata_t);
     return ZX_OK;
 }
 
@@ -89,7 +97,7 @@ static zx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
         return ZX_ERR_IO;
     }
 
-    if (!container_is_valid(&ramdisk_hdr)) {
+    if (!is_bootdata(&ramdisk_hdr)) {
         fprintf(stderr, "Invalid BOOTFS container\n");
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
@@ -106,8 +114,8 @@ static zx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
     return ZX_OK;
 }
 
-static zx_status_t create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
-                                   uintptr_t bootdata_off) {
+static zx_status_t create_bootdata(const uintptr_t addr, const size_t size,
+                                   const uintptr_t acpi_off, uintptr_t bootdata_off) {
     if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
         return ZX_ERR_INVALID_ARGS;
 
@@ -145,29 +153,57 @@ static zx_status_t create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_o
     return guest_create_e820(addr, size, bootdata_off);
 }
 
-static bool is_zircon(const uintptr_t first_page) {
-    zircon_kernel_t* header = (zircon_kernel_t*)first_page;
-    return container_is_valid(&header->hdr_file);
+static zx_status_t is_zircon(const size_t size, const uintptr_t first_page, uintptr_t* guest_ip,
+                             uintptr_t* kernel_offset, uintptr_t* kernel_length) {
+    zircon_kernel_t* kernel_header = reinterpret_cast<zircon_kernel_t*>(first_page);
+    if (is_bootdata(&kernel_header->hdr_file)) {
+        if (kernel_header->hdr_kernel.type != BOOTDATA_KERNEL) {
+            fprintf(stderr, "Invalid Zircon kernel header\n");
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+        if (kernel_header->data_kernel.entry64 >= size) {
+            fprintf(stderr, "Kernel entry point is outside of guest physical memory\n");
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+        *guest_ip = kernel_header->data_kernel.entry64;
+        *kernel_offset = kKernelOffset;
+        *kernel_length = kernel_header->hdr_kernel.length + sizeof(zircon_kernel_t) -
+                         sizeof(bootdata_kernel_t);
+        return ZX_OK;
+    }
+
+#if __aarch64__
+    MzHeader* mz_header = reinterpret_cast<MzHeader*>(first_page);
+    if (is_mz(mz_header)) {
+        *guest_ip = mz_header->kernel_offset;
+        *kernel_offset = mz_header->kernel_offset;
+        *kernel_length = mz_header->kernel_length;
+        return ZX_OK;
+    }
+#endif
+
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t setup_zircon(const uintptr_t addr, const size_t size, const uintptr_t first_page,
-                          const uintptr_t acpi_off, const int fd, const char* bootdata_path,
-                          const char* cmdline, uintptr_t* guest_ip, uintptr_t* bootdata_offset) {
-    if (!is_zircon(first_page)) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+                         const uintptr_t acpi_off, const int fd, const char* bootdata_path,
+                         const char* cmdline, uintptr_t* guest_ip, uintptr_t* bootdata_offset) {
+    uintptr_t kernel_offset = 0;
+    uintptr_t kernel_length = 0;
+    zx_status_t status = is_zircon(size, first_page, guest_ip, &kernel_offset, &kernel_length);
+    if (status != ZX_OK)
+        return status;
 
-    zx_status_t status = create_bootdata(addr, size, acpi_off, kBootdataOffset);
+    status = create_bootdata(addr, size, acpi_off, kBootdataOffset);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create bootdata\n");
         return status;
     }
 
-    uintptr_t zircon_end_off;
-    status = load_zircon(fd, addr, size, first_page, guest_ip, &zircon_end_off);
+    status = load_zircon(fd, addr, size, first_page, kernel_offset, kernel_length);
     if (status != ZX_OK)
         return status;
-    ZX_ASSERT(zircon_end_off <= kBootdataOffset);
+    ZX_ASSERT(kernel_offset + kernel_length <= kBootdataOffset);
 
     // If we have a command line, load it.
     if (cmdline != NULL) {

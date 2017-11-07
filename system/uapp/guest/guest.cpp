@@ -171,8 +171,6 @@ int main(int argc, char** argv) {
     }
     if (optind >= argc)
         return usage(cmd);
-    argc -= optind;
-    argv += optind;
 
     Guest guest;
     zx_status_t status = guest.Init(kVmoSize);
@@ -181,23 +179,26 @@ int main(int argc, char** argv) {
 
     uintptr_t physmem_addr = guest.phys_mem().addr();
     size_t physmem_size = guest.phys_mem().size();
-    uintptr_t pt_end_off;
+    uintptr_t pt_end_off = 0;
+
+#if __x86_64__
     status = guest.CreatePageTable(&pt_end_off);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create page table\n");
         return status;
     }
-
     status = guest_create_acpi_table(physmem_addr, physmem_size, pt_end_off);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create ACPI table\n");
         return status;
     }
+#endif // __x86_64__
+
 
     // Prepare the OS image
-    int fd = open(argv[0], O_RDONLY);
+    int fd = open(argv[optind], O_RDONLY);
     if (fd < 0) {
-        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[0]);
+        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[optind]);
         return ZX_ERR_IO;
     }
 
