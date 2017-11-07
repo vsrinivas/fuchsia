@@ -182,8 +182,8 @@ DisplaySwapchain::Semaphore DisplaySwapchain::Export(
     escher::SemaphorePtr escher_semaphore) {
   Semaphore semaphore;
   semaphore.escher_semaphore = escher_semaphore;
-  zx::event fence = GetEventForSemaphore(vulkan_proc_addresses_, device_,
-                                                escher_semaphore);
+  zx::event fence =
+      GetEventForSemaphore(vulkan_proc_addresses_, device_, escher_semaphore);
   FXL_CHECK(fence);
   semaphore.magma_semaphore =
       MagmaSemaphore::NewFromEvent(&magma_connection_, fence);
@@ -219,7 +219,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
       (next_semaphore_index_ + 1) % kDesiredSwapchainImageCount;
 
   {
-    TRACE_DURATION("gfx", "VulkanDisplaySwapchain::DrawAndPresent() acquire");
+    TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() acquire");
 
     // TODO(MZ-260): once FrameScheduler back-pressure is implemented,
     // it will no longer be necessary to wait for the image to become
