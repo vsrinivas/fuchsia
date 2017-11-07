@@ -39,6 +39,42 @@ go_binary("pmd_bin") {
   ]
 }
 
+go_binary("pkgsvr_bin") {
+  output_name = "pkgsvr"
+  gopackage = "fuchsia.googlesource.com/pm/cmd/pkgsvr"
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/pm"
+    },
+    {
+      package = "thinfs"
+      source = "//garnet/go/src/thinfs"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    },
+  ]
+}
+
+go_binary("installblob_bin") {
+  output_name = "installblob"
+  gopackage = "fuchsia.googlesource.com/pm/cmd/installblob"
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/pm"
+    },
+    {
+      package = "thinfs"
+      source = "//garnet/go/src/thinfs"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    },
+  ]
+}
+
 go_test("pkgfs_test_bin") {
   output_name = "pkgfs_test"
   gopackage = "fuchsia.googlesource.com/pm/pkgfs"
@@ -78,6 +114,30 @@ package("pmd") {
 
   binaries = [ {
         name = "pmd"
+      } ]
+}
+
+package("pkgsvr") {
+  system_image = true
+
+  deps = [
+    ":pkgsvr_bin",
+  ]
+
+  binaries = [ {
+        name = "pkgsvr"
+      } ]
+}
+
+package("installblob") {
+  system_image = true
+
+  deps = [
+    ":installblob_bin",
+  ]
+
+  binaries = [ {
+        name = "installblob"
       } ]
 }
 

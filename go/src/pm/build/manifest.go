@@ -6,6 +6,7 @@ package build
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -75,7 +76,7 @@ func (m *Manifest) Meta() map[string]string {
 func (m *Manifest) Package() (*pkg.Package, error) {
 	f, err := os.Open(m.Paths["meta/package.json"])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build.Manifest.Package: %s", err)
 	}
 	defer f.Close()
 	var p pkg.Package
@@ -140,7 +141,7 @@ func walk(root string) (map[string]string, error) {
 func parseManifest(path string) (map[string]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build.parseManifest: %s", err)
 	}
 	defer f.Close()
 	r := map[string]string{}

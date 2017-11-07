@@ -1,5 +1,7 @@
 {
     "packages": {
-        "pmd": "//garnet/go/src/pm:pmd"
+        "pmd": "//garnet/go/src/pm:pmd",
+        "pkgsvr": "//garnet/go/src/pm:pkgsvr",
+        "installblob": "//garnet/go/src/pm:installblob"
     }
 }

@@ -90,7 +90,7 @@ func Update(cfg *Config) error {
 		var t merkle.Tree
 		cf, err := os.Open(manifest.Paths[dest])
 		if err != nil {
-			return err
+			return fmt.Errorf("build.Update: open %s for %s: %s", manifest.Paths[dest], dest, err)
 		}
 		_, err = t.ReadFrom(bufio.NewReader(cf))
 		cf.Close()

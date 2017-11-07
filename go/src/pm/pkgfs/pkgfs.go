@@ -46,6 +46,10 @@ func New(indexDir, blobstoreDir string) (*Filesystem, error) {
 	}
 
 	bm, err := blobstore.New(blobstoreDir, "")
+	if err != nil {
+		return nil, err
+	}
+
 	f := &Filesystem{
 		index:     index,
 		blobstore: bm,
@@ -71,6 +75,29 @@ func New(indexDir, blobstoreDir string) (*Filesystem, error) {
 			"metadata": unsupportedDirectory("/metadata"),
 		},
 	}
+
+	return f, nil
+}
+
+// NewSinglePackage initializes a new pkgfs filesystem that hosts only a single
+// package.
+func NewSinglePackage(pkgPath, blobstoreDir string) (*Filesystem, error) {
+	bm, err := blobstore.New(blobstoreDir, "")
+	if err != nil {
+		return nil, err
+	}
+
+	f := &Filesystem{
+		index:     nil,
+		blobstore: bm,
+	}
+
+	pd, err := newPackageDirFromBlob(pkgPath, f)
+	if err != nil {
+		return nil, err
+	}
+
+	f.root = pd
 
 	return f, nil
 }
@@ -586,41 +613,109 @@ type packageDir struct {
 	fs            *Filesystem
 	name, version string
 	contents      map[string]string
+
+	// if this packagedir is a subdirectory, then this is the prefix name
+	subdir        *string
 }
 
 func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, error) {
 	packageIndex := filesystem.index.PackageVersionPath(name, version)
+	f, err := os.Open(packageIndex)
+	if err != nil {
+		return nil, goErrToFSErr(err)
+	}
+	defer f.Close()
 
+	pd, err := newPackageDirFromReader(f, filesystem)
+	if err != nil {
+		return nil, goErrToFSErr(err)
+	}
+
+	// update the name related fields for easier debugging:
+	pd.unsupportedDirectory = unsupportedDirectory(filepath.Join("/packages", name, version))
+	pd.name = name
+	pd.version = version
+
+	return pd, nil
+}
+
+// Initialize a package directory server interface from a package meta.far
+func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, error) {
+	f, err := os.Open(blob)
+	if err != nil {
+		log.Printf("pkgfs: failed to open package contents at %q: %s", blob, err)
+		return nil, goErrToFSErr(err)
+	}
+	defer f.Close()
+
+	fr, err := far.NewReader(f)
+	if err != nil {
+		log.Printf("pkgfs: failed to read meta.far at %q: %s", blob, err)
+		return nil, goErrToFSErr(err)
+	}
+
+	buf, err := fr.ReadFile("meta/contents")
+	if err != nil {
+		log.Printf("pkgfs: failed to read meta/contents from %q: %s", blob, err)
+		return nil, goErrToFSErr(err)
+	}
+
+	pd, err := newPackageDirFromReader(bytes.NewReader(buf), filesystem)
+	if err != nil {
+		return nil, goErrToFSErr(err)
+	}
+	pd.unsupportedDirectory = unsupportedDirectory(blob)
+	pd.name = blob
+	pd.version = ""
+	return pd, nil
+}
+
+func newPackageDirFromReader(r io.Reader, filesystem *Filesystem) (*packageDir, error) {
 	pd := packageDir{
-		unsupportedDirectory: unsupportedDirectory(filepath.Join("/packages", name, version)),
+		unsupportedDirectory: unsupportedDirectory("packageDir"),
 		fs:                   filesystem,
-		name:                 name,
-		version:              version,
 		contents:             map[string]string{},
 	}
 
-	f, err := os.Open(packageIndex)
-	if err != nil {
-		log.Printf("pkgfs: failed to open package contents at %q: %s", packageIndex, err)
-		return nil, goErrToFSErr(err)
-	}
-	b := bufio.NewReader(f)
+	b := bufio.NewReader(r)
+
 	for {
 		line, err := b.ReadString('\n')
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			f.Close()
-			log.Printf("pkgfs: failed to read package contents from %q: %s", packageIndex, err)
+			log.Printf("pkgfs: failed to read package contents from %v: %s", r, err)
 			// TODO(raggi): better error?
 			return nil, fs.ErrFailedPrecondition
 		}
 		parts := strings.SplitN(line[:len(line)-1], "=", 2)
+		if len(parts) != 2 {
+			log.Printf("pkgfs: bad contents line: %v", line)
+			continue
+		}
 		pd.contents[parts[0]] = parts[1]
 	}
-	f.Close()
+
 	return &pd, nil
+}
+
+func (d *packageDir) openSubdir(name string) (*packageDir, error) {
+	// the name to search for in any key
+	var dirname = name + "/"
+	if d.subdir != nil {
+		dirname = *d.subdir + name + "/"
+	}
+
+	for k, _ := range d.contents {
+		if strings.HasPrefix(k, dirname) {
+			// subdir is a copy of d, but with subdir set
+			subdir := *d
+			subdir.subdir = &dirname
+			return &subdir, nil
+		}
+	}
+	return nil, fs.ErrNotFound
 }
 
 func (d *packageDir) Close() error {
@@ -631,24 +726,35 @@ func (d *packageDir) Close() error {
 func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
 	name = clean(name)
 	debugLog("pkgfs:packagedir:open %q", name)
+
+	if d.subdir != nil {
+		name = strings.TrimPrefix(name, *d.subdir)
+	}
+
 	if name == "" {
 		return nil, d, nil
 	}
 
 	if flags.Create() || flags.Truncate() || flags.Write() || flags.Append() {
+		debugLog("pkgfs:packagedir:open %q unsupported flags", name)
 		return nil, nil, fs.ErrNotSupported
 	}
 
 	if root, ok := d.contents[name]; ok {
 		f, err := d.fs.blobstore.Open(root)
 		if err != nil {
-			log.Printf("pkgfs: package file open failure: %q for %q/%q/%q", root, d.name, d.version, name)
+			debugLog("pkgfs: package file open failure: %q for %q/%q/%q", root, d.name, d.version, name)
 			return nil, nil, goErrToFSErr(err)
 		}
 		return &packageFile{f, unsupportedFile("packagefile:" + root)}, nil, nil
 	}
-	log.Printf("pkgfs:packagedir:open %q not found in %v", name, d.contents)
-	return nil, nil, fs.ErrNotFound
+
+	subdir, err := d.openSubdir(name)
+	if err == nil {
+		return nil, subdir, nil
+	}
+	debugLog("pkgfs:packagedir:open %q not found", name)
+	return nil, nil, err
 }
 
 func (d *packageDir) Read() ([]fs.Dirent, error) {
@@ -656,6 +762,13 @@ func (d *packageDir) Read() ([]fs.Dirent, error) {
 	dirs := map[string]struct{}{}
 	dents := []fs.Dirent{}
 	for name := range d.contents {
+		if d.subdir != nil {
+			if !strings.HasPrefix(name, *d.subdir) {
+				continue
+			}
+			name = strings.TrimPrefix(name, *d.subdir)
+		}
+
 		parts := strings.SplitN(name, "/", 2)
 		if len(parts) == 2 {
 			if _, ok := dirs[parts[0]]; !ok {
