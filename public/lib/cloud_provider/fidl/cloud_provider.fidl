@@ -100,8 +100,9 @@ struct Commit {
 // Implementation of this class manages a *commit log*, which is an append-only
 // list of commits produced by all devices that participate in syncing this
 // page. Position of commits within the log are references using position
-// tokens, allowing the caller to retrieve only commits not older than the given
-// position token.
+// tokens, allowing the caller to retrieve the commits added to the cloud since
+// the previous read. (plus possibly more - see comments for GetCommits() and
+// SetWatcher().)
 //
 // Closing the client connection to PageCloud disconnects all watchers set on
 // it.
@@ -112,9 +113,12 @@ interface PageCloud {
   // delivered in the same order in a single OnNewCommits() call.
   AddCommits(array<Commit> commits) => (Status status);
 
-  // Retrieves commits not older than the given |min_position_token|.
+  // Retrieves commits from the cloud.
   //
-  // Passing null |min_position_token| retrieves all commits.
+  // All commits newer than |min_position_token| are guaranteed to be returned.
+  // In addition to that, the response may include additional commits older
+  // than or at |min_position_token|. Passing null |min_position_token|
+  // retrieves all commits.
   //
   // If the resulting |status| is |OK|, |commits| contains all matching commits
   // (might be empty) and |position_token| contains the position token of the
@@ -139,9 +143,11 @@ interface PageCloud {
   // is set, only the one set most recently is notified when the fingerprint is
   // erased.
   //
-  // Only notifications for commits not earlier than |min_position_token| are
-  // delivered to |watcher|. If |min_position_token| is null, notifications
-  // for all commits are delivered.
+  // All commits newer than |min_position_token| added to the cloud before or
+  // after making this call are guaranteed to be delivered to |watcher|. In
+  // addition to that, additional commits older than or at |min_position_token|
+  // may be delivered to. If |min_position_token| is null, notifications for
+  // all commits are delivered.
   SetWatcher(array<uint8>? min_position_token, PageCloudWatcher watcher)
       => (Status status);
 };
