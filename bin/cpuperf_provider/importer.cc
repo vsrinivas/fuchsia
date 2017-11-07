@@ -125,6 +125,7 @@ uint64_t Importer::ImportSampleRecords(
   // with messages.
   uint32_t printed_zero_period_warning_count = 0;
   uint32_t printed_old_time_warning_count = 0;
+  uint32_t printed_late_record_warning_count = 0;
 
   uint32_t cpu;
   zx_x86_ipm_sample_record_t record;
@@ -142,9 +143,11 @@ uint64_t Importer::ImportSampleRecords(
     } else {
       prev_time = programmable_previous_time[cpu][counter];
     }
+
     FXL_VLOG(2) << fxl::StringPrintf("Import: cpu=%u, counter=0x%x, time=%"
                                      PRIu64,
                                      cpu, record.counter, record.time);
+
     if (record.time < prev_time) {
       if (printed_old_time_warning_count == 0) {
         FXL_LOG(WARNING) << "cpu " << cpu << ": record time " << record.time
@@ -159,6 +162,12 @@ uint64_t Importer::ImportSampleRecords(
                          << " (further such warnings are omitted)";
       }
       ++printed_zero_period_warning_count;
+    } else if (record.time > stop_time_) {
+      if (printed_late_record_warning_count == 0) {
+        FXL_LOG(WARNING) << "Record has time > stop_time: " << record.time
+                         << " (further such warnings are omitted)";
+      }
+      ++printed_late_record_warning_count;
     } else {
       if (is_fixed) {
         ImportFixedSampleRecord(
@@ -170,6 +179,7 @@ uint64_t Importer::ImportSampleRecords(
           &accum_fixed_counter_value[cpu][counter]);
       }
     }
+
     if (is_fixed) {
       fixed_previous_time[cpu][counter] = record.time;
     } else {
@@ -185,6 +195,10 @@ uint64_t Importer::ImportSampleRecords(
   if (printed_zero_period_warning_count > 0) {
     FXL_LOG(WARNING) << printed_zero_period_warning_count
                      << " total occurrences of records with an empty interval";
+  }
+  if (printed_late_record_warning_count > 0) {
+    FXL_LOG(WARNING) << printed_late_record_warning_count
+                     << " total occurrences of records with late times";
   }
 
   return record_count;
