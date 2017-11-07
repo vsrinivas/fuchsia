@@ -27,6 +27,7 @@
 using digest::Digest;
 using digest::MerkleTree;
 
+namespace blobstore {
 namespace {
 
 zx_status_t vmo_read_exact(zx_handle_t h, void* data, uint64_t offset, size_t len) {
@@ -51,9 +52,61 @@ zx_status_t vmo_write_exact(zx_handle_t h, const void* data, uint64_t offset, si
     return ZX_OK;
 }
 
-} // namespace
+zx_status_t CheckFvmConsistency(const blobstore_info_t* info, int block_fd) {
+    if ((info->flags & kBlobstoreFlagFVM) == 0) {
+        return ZX_OK;
+    }
 
-namespace blobstore {
+    fvm_info_t fvm_info;
+    zx_status_t status = static_cast<zx_status_t>(ioctl_block_fvm_query(block_fd, &fvm_info));
+    if (status < ZX_OK) {
+        FS_TRACE_ERROR("blobstore: Unable to query FVM, fd: %d status: 0x%x\n", block_fd, status);
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    if (info->slice_size != fvm_info.slice_size) {
+        FS_TRACE_ERROR("blobstore: Slice size did not match expected\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    const size_t kBlocksPerSlice = info->slice_size / kBlobstoreBlockSize;
+
+    size_t expected_count[3];
+    expected_count[0] = info->abm_slices;
+    expected_count[1] = info->ino_slices;
+    expected_count[2] = info->dat_slices;
+
+    query_request_t request;
+    request.count = 3;
+    request.vslice_start[0] = kFVMBlockMapStart / kBlocksPerSlice;
+    request.vslice_start[1] = kFVMNodeMapStart / kBlocksPerSlice;
+    request.vslice_start[2] = kFVMDataStart / kBlocksPerSlice;
+
+    query_response_t response;
+    status = static_cast<zx_status_t>(ioctl_block_fvm_vslice_query(block_fd, &request, &response));
+    if (status < ZX_OK) {
+        FS_TRACE_ERROR("blobstore: Unable to query slices, status: 0x%x\n", status);
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    if (response.count != request.count) {
+        FS_TRACE_ERROR("blobstore: Missing slize\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    for (size_t i = 0; i < request.count; i++) {
+        size_t actual_count = response.vslice_range[i].count;
+        if (!response.vslice_range[i].allocated || expected_count[i] != actual_count) {
+            // TODO(rvargas): Consider modifying the size automatically.
+            FS_TRACE_ERROR("blobstore: Wrong slice size\n");
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+    }
+
+    return ZX_OK;
+}
+
+}  // namespace
+
 
 blobstore_inode_t* Blobstore::GetNode(size_t index) const {
     return &reinterpret_cast<blobstore_inode_t*>(node_map_->GetData())[index];
@@ -833,8 +886,15 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
     if ((status = blobstore_get_blockcount(blockfd, &blocks)) != ZX_OK) {
         fprintf(stderr, "blobstore: cannot find end of underlying device\n");
         return status;
-    } else if ((status = blobstore_check_info(info, blocks)) != ZX_OK) {
+    }
+
+    if ((status = blobstore_check_info(info, blocks)) != ZX_OK) {
         fprintf(stderr, "blobstore: Info check failed\n");
+        return status;
+    }
+
+    if ((status = CheckFvmConsistency(info, blockfd)) != ZX_OK) {
+        fprintf(stderr, "blobstore: FVM info check failed\n");
         return status;
     }
 

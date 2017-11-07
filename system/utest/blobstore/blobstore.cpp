@@ -1433,6 +1433,38 @@ static bool ResizePartition(void) {
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
+static bool CorruptAtMount(void) {
+    BEGIN_TEST;
+    ASSERT_EQ(TestType, FS_TEST_FVM);
+
+    char ramdisk_path[PATH_MAX];
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0,
+              "Mounting Blobstore");
+
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
+
+    int vp_fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(vp_fd, 0, "Could not open ramdisk");
+
+    size_t slice_size = 512 * (1 << 20) / 4096;
+    size_t kBlocksPerSlice = slice_size / 8192;
+
+    // Manually grow slice so FVM will differ from Blobstore.
+    extend_request_t extend_request;
+    extend_request.offset = (0x10000 / kBlocksPerSlice) + 1;
+    extend_request.length = 1;
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &extend_request), 0);
+
+    // Attempt to mount the VPart.
+    ASSERT_NE(mount(vp_fd, MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+
+    // Clean up.
+    ASSERT_EQ(destroy_ramdisk(fvm_path), 0);
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(blobstore_tests)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
@@ -1457,6 +1489,7 @@ RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLarge)
 RUN_TEST_FOR_ALL_TYPES(LARGE, NoSpace)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, QueryDevicePath)
 RUN_TEST_MEDIUM(ResizePartition<FS_TEST_FVM>)
+RUN_TEST_MEDIUM(CorruptAtMount<FS_TEST_FVM>)
 END_TEST_CASE(blobstore_tests)
 
 int main(int argc, char** argv) {
