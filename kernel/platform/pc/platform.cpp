@@ -30,6 +30,7 @@
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/memory.h>
+#include <platform/pc/smbios.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/bootreserve.h>
@@ -608,6 +609,17 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
         }
     }
 
+    if (bootloader.smbios) {
+        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.smbios,
+                                      sizeof(bootloader.smbios), BOOTDATA_SMBIOS, 0, 0);
+        if (ret != ZX_OK) {
+            printf("mexec: Failed to append smbios data to bootdata. len = %lu, "
+                   "section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.smbios), ret);
+            return ret;
+        }
+    }
+
     if (bootloader.uart.type != BOOTDATA_UART_NONE) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.uart,
                                       sizeof(bootloader.uart), BOOTDATA_DEBUG_UART, 0, 0);
@@ -898,6 +910,8 @@ void platform_init(void) {
 #endif
 
     platform_init_smp();
+
+    pc_init_smbios();
 }
 
 void platform_suspend(void) {

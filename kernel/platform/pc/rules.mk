@@ -24,6 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/platform.cpp \
     $(LOCAL_DIR)/platform_pcie.cpp \
     $(LOCAL_DIR)/power.cpp \
+    $(LOCAL_DIR)/smbios.cpp \
     $(LOCAL_DIR)/timer.cpp \
 
 MODULE_DEPS += \
