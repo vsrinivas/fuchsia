@@ -305,7 +305,7 @@ static partition_flags find_install_partitions(gpt_device_t *gpt_data,
  * Attempt to unmount all known mount paths.
  */
 static zx_status_t unmount_all(void) {
-  const char *static_paths[2] = {"/data", "/system"};
+  const char *static_paths[1] = {"/data"};
   zx_status_t result = ZX_OK;
   for (uint16_t idx = 0; idx < countof(static_paths); idx++) {
     zx_status_t rc = umount(static_paths[idx]);
