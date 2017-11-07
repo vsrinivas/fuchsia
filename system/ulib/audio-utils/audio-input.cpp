@@ -140,7 +140,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
 
         if (amt < todo) {
             amt = todo - amt;
-            ZX_DEBUG_ASSERT(amt < ring_bytes);
+            ZX_DEBUG_ASSERT(amt < rb_sz_);
 
             res = sink.PutFrames(rb_virt_, amt);
             if (res != ZX_OK) {
@@ -151,8 +151,8 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
             rd_ptr = amt;
         } else {
             rd_ptr += amt;
-            if (rd_ptr >= ring_bytes) {
-                ZX_DEBUG_ASSERT(rd_ptr == ring_bytes);
+            if (rd_ptr >= rb_sz_) {
+                ZX_DEBUG_ASSERT(rd_ptr == rb_sz_);
                 rd_ptr = 0;
             }
         }
