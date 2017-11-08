@@ -19,8 +19,8 @@ uint64_t find_acpi_root(efi_handle img, efi_system_table* sys) {
     int i;
 
     for (i = 0; i < sys->NumberOfTableEntries; i++) {
-        if (!xefi_cmp_guid(&cfgtab[i].VendorGuid, &AcpiTableGUID) &&
-            !xefi_cmp_guid(&cfgtab[i].VendorGuid, &Acpi2TableGUID)) {
+        if (xefi_cmp_guid(&cfgtab[i].VendorGuid, &AcpiTableGUID) &&
+            xefi_cmp_guid(&cfgtab[i].VendorGuid, &Acpi2TableGUID)) {
             // not an ACPI table
             continue;
         }
