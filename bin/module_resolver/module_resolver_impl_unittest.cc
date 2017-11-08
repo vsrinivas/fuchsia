@@ -7,6 +7,7 @@
 #include "lib/fxl/files/file.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 #include "peridot/public/lib/module_resolver/cpp/formatting.h"
+#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
 
 namespace maxwell {
 namespace {
@@ -122,7 +123,8 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
 
  protected:
   void ResetRepository() {
-    impl_.reset(new ModuleResolverImpl(repo_dir_));
+    impl_.reset(new ModuleResolverImpl);
+    impl_->AddRepository("test", std::make_unique<modular::DirectoryRepository>(repo_dir_));
     impl_->Connect(resolver_.NewRequest());
 
     // |impl_| has a thread that posts tasks to our MessageLoop that need to be

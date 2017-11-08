@@ -6,13 +6,18 @@
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
-#include "peridot/public/lib/entity/cpp/json.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
+#include "peridot/public/lib/entity/cpp/json.h"
 
 namespace maxwell {
 
 namespace {
+
+// << operator for ModuleResolverImpl::EntryId.
+std::ostream& operator<<(std::ostream& o,
+                         const std::pair<std::string, std::string>& id) {
+  return o << id.first << ":" << id.second;
+}
 
 void CopyNounsToModuleResolverResult(const modular::DaisyPtr& daisy,
                                      modular::ModuleResolverResultPtr* result) {
@@ -66,19 +71,28 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 
 }  // namespace
 
-ModuleResolverImpl::ModuleResolverImpl(std::string manifest_repository_path) {
-  manifest_repository_.reset(new modular::DirectoryRepository(
-      std::move(manifest_repository_path)));
-  manifest_repository_->Watch(
-      fsl::MessageLoop::GetCurrent()->task_runner(),
-      [this](std::string id, const modular::ModuleManifestRepository::Entry& entry) {
-        OnNewManifestEntry(std::move(id), entry);
-      },
-      [this](std::string id) {
-        OnRemoveManifestEntry(std::move(id));
-      });
-}
+ModuleResolverImpl::ModuleResolverImpl() = default;
 ModuleResolverImpl::~ModuleResolverImpl() = default;
+
+void ModuleResolverImpl::AddRepository(
+    std::string name,
+    std::unique_ptr<modular::ModuleManifestRepository> repo) {
+  FXL_CHECK(bindings_.size() == 0);
+
+  // TODO(thatguy): Block calls to Connect() until we've indexed all of each
+  // repo.
+  repo->Watch(
+      fsl::MessageLoop::GetCurrent()->task_runner(),
+      [this, name](std::string id,
+                   const modular::ModuleManifestRepository::Entry& entry) {
+        OnNewManifestEntry(name, std::move(id), entry);
+      },
+      [this, name](std::string id) {
+        OnRemoveManifestEntry(name, std::move(id));
+      });
+
+  repositories_.push_back(std::move(repo));
+}
 
 void ModuleResolverImpl::Connect(
     fidl::InterfaceRequest<modular::ModuleResolver> request) {
@@ -101,7 +115,7 @@ void ModuleResolverImpl::FindModules(
     return;
   }
 
-  std::set<std::string> result_entries(verb_it->second);
+  std::set<EntryId> result_entries(verb_it->second);
 
   // For each noun in the Daisy, try to find Modules that provide the types in
   // the noun as constraints.
@@ -116,7 +130,7 @@ void ModuleResolverImpl::FindModules(
 
     // The types list we have is an OR - any Module that can handle any of the
     // types is valid, So, we union all valid resolutions.
-    std::set<std::string> this_noun_entries;
+    std::set<EntryId> this_noun_entries;
     for (const auto& type : types) {
       auto noun_it = noun_type_to_entry_.find(std::make_pair(type, name));
       if (noun_it == noun_type_to_entry_.end())
@@ -127,7 +141,7 @@ void ModuleResolverImpl::FindModules(
 
     // The target Module must match the types in every noun specified in the
     // Daisy, so here we do a set intersection.
-    std::set<std::string> new_result_entries;
+    std::set<EntryId> new_result_entries;
     std::set_intersection(
         result_entries.begin(), result_entries.end(), this_noun_entries.begin(),
         this_noun_entries.end(),
@@ -158,9 +172,12 @@ void ModuleResolverImpl::FindModules(
 }
 
 void ModuleResolverImpl::OnNewManifestEntry(
-    std::string id_in, modular::ModuleManifestRepository::Entry new_entry) {
+    std::string repo_name,
+    std::string id_in,
+    modular::ModuleManifestRepository::Entry new_entry) {
   // Add this new entry info to our local index.
-  auto ret = entries_.emplace(std::move(id_in), std::move(new_entry));
+  auto ret = entries_.emplace(EntryId(repo_name, id_in), std::move(new_entry));
+  FXL_CHECK(ret.second) << ret.first->first;
 
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;
@@ -174,7 +191,9 @@ void ModuleResolverImpl::OnNewManifestEntry(
   }
 }
 
-void ModuleResolverImpl::OnRemoveManifestEntry(std::string id) {
+void ModuleResolverImpl::OnRemoveManifestEntry(std::string repo_name,
+                                               std::string id_in) {
+  EntryId id{repo_name, id_in};
   auto it = entries_.find(id);
   if (it == entries_.end()) {
     FXL_LOG(WARNING) << "Asked to remove non-existent manifest entry: " << id;

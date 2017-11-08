@@ -14,7 +14,7 @@ source_set("json") {
     "json.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
   ]
