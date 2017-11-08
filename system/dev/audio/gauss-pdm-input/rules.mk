@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/a113-audio-device.c \
     $(LOCAL_DIR)/gauss-pdm-input.c \
     $(LOCAL_DIR)/gauss-pdm-input-stream.cpp \
 
