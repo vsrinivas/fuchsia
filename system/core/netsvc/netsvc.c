@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         }
 
         if (netbootloader) {
-            puts(zedboot_banner);
+            printf("%szedboot: version: %s\n\n", zedboot_banner, BOOTLOADER_VERSION);
         }
 
         printf("netsvc: nodename='%s'\n", nodename);
