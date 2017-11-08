@@ -159,8 +159,8 @@ $(MODULE_PKG_FILE): _INCS := $(MODULE_PKG_INCS)
 $(MODULE_PKG_FILE): _SRCS := $(MODULE_PKG_SRCS)
 $(MODULE_PKG_FILE): _DEPS := $(MODULE_PKG_DEPS)
 $(MODULE_PKG_FILE): $(MODULE_SRCDIR)/rules.mk make/module-userlib.mk
-	@$(MKDIR) ;\
-	echo creating $@ ;\
+	@$(call BUILDECHO,creating package $@ ;)\
+	$(MKDIR) ;\
 	echo "[package]" > $@ ;\
 	echo "name=$(_NAME)" >> $@ ;\
 	echo "type=lib" >> $@ ;\
@@ -176,11 +176,11 @@ $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
 	@$(MKDIR) ;\
 	if [ -f "$@" ]; then \
 		if ! cmp "$<" "$@" >/dev/null 2>1; then \
-			echo installing $@; \
+			$(if $(BUILDECHO),echo installing $@ ;)\
 			cp -f $< $@; \
 		fi \
 	else \
-		echo installing $@; \
+		$(if $(BUILDECHO),echo installing $@ ;)\
 		cp -f $< $@; \
 	fi
 
