@@ -87,7 +87,7 @@ static bool pci_device_read_bar_size(void) {
     value.u32 = 0;
     EXPECT_EQ(device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES, &value), ZX_OK,
               "Failed to read BAR0 from PCI config space");
-    EXPECT_EQ(value.u32 & PCI_BAR_ASPACE_MASK, PCI_BAR_ASPACE_PIO,
+    EXPECT_EQ(value.u32 & PCI_BAR_ASPACE_MASK, PCI_BAR_ASPACE_MMIO,
               "Expected PIO bit to be set in BAR");
     const PciBar* bar = device.bar(0);
     ASSERT_NOT_NULL(bar);

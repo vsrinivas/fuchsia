@@ -121,7 +121,7 @@ PciBus::PciBus(Guest* guest, const IoApic* io_apic)
 
 zx_status_t PciBus::Init() {
     root_complex_.bar_[0].size = 0x10;
-    root_complex_.bar_[0].trap_type = TrapType::PIO_SYNC;
+    root_complex_.bar_[0].trap_type = TrapType::MMIO_SYNC;
     zx_status_t status = Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
     if (status != ZX_OK)
         return status;
@@ -132,11 +132,13 @@ zx_status_t PciBus::Init() {
     if (status != ZX_OK)
         return status;
 
+#if __x86_64__
     // Setup PIO trap.
     status = guest_->CreateMapping(TrapType::PIO_SYNC, PCI_CONFIG_PORT_BASE, PCI_CONFIG_PORT_SIZE,
                                    0, &port_handler_);
     if (status != ZX_OK)
         return status;
+#endif
 
     return ZX_OK;
 }
@@ -310,6 +312,10 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
+}
+
+zx_status_t PciBus::Interrupt(const PciDevice& device) const {
+    return io_apic_->Interrupt(device.global_irq_);
 }
 
 // PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.
@@ -553,8 +559,4 @@ zx_status_t PciDevice::Interrupt() const {
     if (!bus_)
         return ZX_ERR_BAD_STATE;
     return bus_->Interrupt(*this);
-}
-
-zx_status_t PciBus::Interrupt(const PciDevice& device) const {
-    return io_apic_->Interrupt(device.global_irq_);
 }
