@@ -83,7 +83,7 @@ int do_blobstore_add_blob(int fd, int argc, char** argv) {
 }
 
 zx_status_t process_manifest_line(FILE* manifest, int blob_fd) {
-    uint64_t size = 0;
+    size_t size = 0;
     char* src = nullptr;
 
     int r = getline(&src, &size, manifest);

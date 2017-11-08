@@ -144,7 +144,7 @@ void get_emu_path(const char* path, char* out) {
 // Process line in |manifest|, add directories as needed and copy src file to dst
 // Returns "ZX_ERR_OUT_OF_RANGE" when manifest has reached EOF.
 zx_status_t process_manifest_line(FILE* manifest) {
-    uint64_t size = 0;
+    size_t size = 0;
     char* line = nullptr;
 
     int r = getline(&line, &size, manifest);
