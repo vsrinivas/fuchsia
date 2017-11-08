@@ -173,13 +173,11 @@ static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* loc
     DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
     x86_call_external_interrupt_handler(int_info.vector);
     vmcs->Reload();
-    local_apic_maybe_interrupt(vmcs, local_apic_state);
     return ZX_OK;
 }
 
 static zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
     vmcs->InterruptWindowExiting(false);
-    local_apic_issue_interrupt(vmcs, local_apic_state);
     return ZX_OK;
 }
 

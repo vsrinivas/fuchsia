@@ -145,6 +145,8 @@ void AutoVmcs::IssueInterrupt(uint32_t vector) {
         interrupt_info |= kInterruptInfoDeliverErrorCode;
         Write(VmcsField32::ENTRY_EXCEPTION_ERROR_CODE, 0);
     }
+
+    DEBUG_ASSERT((Read(VmcsField32::ENTRY_INTERRUPTION_INFORMATION) & kInterruptInfoValid) == 0);
     Write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, interrupt_info);
 }
 
