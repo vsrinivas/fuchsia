@@ -74,6 +74,10 @@
 // Content: uint64_t phys addr
 #define BOOTDATA_ACPI_RSDP        (0x50445352) // RSDP
 
+// SMBIOS entry point pointer
+// Content: uint64_t phys addr
+#define BOOTDATA_SMBIOS           (0x49424d53) // SMBI
+
 // Framebuffer Parameters
 // Content: bootdata_swfb_t
 #define BOOTDATA_FRAMEBUFFER      (0x42465753) // SWFB

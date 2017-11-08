@@ -27,6 +27,7 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
                 void* ramdisk, size_t rsz);
 
 uint64_t find_acpi_root(efi_handle img, efi_system_table* sys);
+uint64_t find_smbios(efi_handle img, efi_system_table* sys);
 
 uint32_t get_zx_pixel_format(efi_graphics_output_protocol* gop);
 

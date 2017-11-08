@@ -212,6 +212,14 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
         return -1;
     }
 
+    // pass SMBIOS entry point pointer
+    uint64_t smbios = find_smbios(img, sys);
+    hdr.type = BOOTDATA_SMBIOS;
+    hdr.length = sizeof(smbios);
+    if (add_bootdata(&bptr, &blen, &hdr, &smbios)) {
+        return -1;
+    }
+
     // pass EFI system table
     uint64_t addr = (uintptr_t) sys;
     hdr.type = BOOTDATA_EFI_SYSTEM_TABLE;
