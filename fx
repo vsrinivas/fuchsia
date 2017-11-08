@@ -161,4 +161,4 @@ if [[ $? -ne 0 ]]; then
 fi
 
 shift # Removes the command name.
-"${command_path}" "$@"
+exec "${command_path}" "$@"
