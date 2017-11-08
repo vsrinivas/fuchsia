@@ -67,7 +67,7 @@ the system.
  2. Also on your host machine, run the following command from the root of your
     Fuchsia checkout:
 
-    ```fcmd memgraph -vt | ./scripts/memory/treemap.py > mem.html```
+    ```fx shell memgraph -vt | ./scripts/memory/treemap.py > mem.html```
  3. Open `mem.html` in a browser.
 
 The `memgraph` tool generates a JSON description of system task and memory
