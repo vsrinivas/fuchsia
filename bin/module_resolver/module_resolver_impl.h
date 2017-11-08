@@ -37,18 +37,25 @@ class ModuleResolverImpl : modular::ModuleResolver {
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
 
-  void OnNewManifestEntry(std::string repo_name,
+  void OnRepositoryIdle(const std::string& repo_name);
+  void OnNewManifestEntry(const std::string& repo_name,
                           std::string id,
                           modular::ModuleManifestRepository::Entry entry);
-  void OnRemoveManifestEntry(std::string repo_name, std::string id);
+  void OnRemoveManifestEntry(const std::string& repo_name, std::string id);
+
+  bool AllRepositoriesAreReady() const {
+    return ready_repositories_.size() == repositories_.size();
+  }
 
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules
   // Ask handler.
   std::vector<std::unique_ptr<modular::ModuleManifestRepository>> repositories_;
+  // Set of repositories that have told us they are idle, meaning they have
+  // sent us all entries they knew about at construction time.
+  std::set<std::string> ready_repositories_;
   // Map of (repo name, entry name) -> entry.
-  std::map<EntryId, modular::ModuleManifestRepository::Entry>
-      entries_;
+  std::map<EntryId, modular::ModuleManifestRepository::Entry> entries_;
 
   // verb -> key in |entries_|
   std::map<std::string, std::set<EntryId>> verb_to_entry_;
@@ -57,6 +64,8 @@ class ModuleResolverImpl : modular::ModuleResolver {
       noun_type_to_entry_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
+  // These are buffered until AllRepositoriesAreReady() == true.
+  std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);
 };

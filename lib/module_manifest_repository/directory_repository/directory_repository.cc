@@ -34,6 +34,8 @@ struct WatcherState {
   // DirectoryRepository instance is destroyed.
   fxl::WeakPtr<DirectoryRepository> weak_repository;
 
+  std::function<void()> on_idle;
+
   // Called with the filename of the new file every time one is found.
   std::function<void(std::string)> on_new;
 
@@ -87,7 +89,13 @@ zx_status_t WatcherHandler(const int dirfd,
       break;
     case WATCH_EVENT_IDLE:
       // This means we've seen all the existing files and we're now waiting for
-      // new ones. Just return as normal.
+      // new ones.
+      state->task_runner->PostTask(
+          [weak_repository = state->weak_repository, state] {
+            if (!weak_repository)
+              return;
+            state->on_idle();
+          });
       break;
   }
 
@@ -125,13 +133,14 @@ DirectoryRepository::DirectoryRepository(std::string repository_dir,
 DirectoryRepository::~DirectoryRepository() {}
 
 void DirectoryRepository::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                                IdleFn idle_fn,
                                 NewEntryFn new_fn,
                                 RemovedEntryFn removed_fn) {
   // fdio_watch_directory() is blocking so we start the watching process in its
   // own thread. We give that thread a pointer to the TaskRunner and a WeakPtr
   // to us in case we are destroyed.
   auto thread = std::thread([weak_this = weak_factory_.GetWeakPtr(),
-                             task_runner, new_fn, removed_fn] {
+                             task_runner, idle_fn, new_fn, removed_fn] {
     // In the unlikely event our owner is destroyed before we get here.
     if (!weak_this)
       return;
@@ -140,8 +149,8 @@ void DirectoryRepository::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
     auto dirfd =
         open(weak_this->repository_dir_.c_str(), O_DIRECTORY | O_RDONLY);
     if (dirfd < 0) {
-      FXL_LOG(ERROR) << "Could not open " << weak_this->repository_dir_
-                     << ": " << strerror(errno) << std::endl;
+      FXL_LOG(ERROR) << "Could not open " << weak_this->repository_dir_ << ": "
+                     << strerror(errno) << std::endl;
       return;
     }
 
@@ -149,6 +158,7 @@ void DirectoryRepository::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
     state->weak_repository = weak_this;
     state->task_runner = task_runner;
 
+    state->on_idle = idle_fn;
     state->on_new = [weak_this, new_fn](const std::string name) {
       if (!weak_this)
         return;

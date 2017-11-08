@@ -79,10 +79,9 @@ void ModuleResolverImpl::AddRepository(
     std::unique_ptr<modular::ModuleManifestRepository> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
-  // TODO(thatguy): Block calls to Connect() until we've indexed all of each
-  // repo.
   repo->Watch(
       fsl::MessageLoop::GetCurrent()->task_runner(),
+      [this, name]() { OnRepositoryIdle(name); },
       [this, name](std::string id,
                    const modular::ModuleManifestRepository::Entry& entry) {
         OnNewManifestEntry(name, std::move(id), entry);
@@ -96,7 +95,11 @@ void ModuleResolverImpl::AddRepository(
 
 void ModuleResolverImpl::Connect(
     fidl::InterfaceRequest<modular::ModuleResolver> request) {
-  bindings_.AddBinding(this, std::move(request));
+  if (!AllRepositoriesAreReady()) {
+    pending_bindings_.push_back(std::move(request));
+  } else {
+    bindings_.AddBinding(this, std::move(request));
+  }
 }
 
 void ModuleResolverImpl::FindModules(
@@ -171,8 +174,21 @@ void ModuleResolverImpl::FindModules(
   done(std::move(results));
 }
 
+void ModuleResolverImpl::OnRepositoryIdle(const std::string& name) {
+  auto res = ready_repositories_.insert(name);
+  FXL_CHECK(res.second) << "Got idle notification twice from " << name;
+
+  if (AllRepositoriesAreReady()) {
+    // They are all ready. Bind any pending Connect() calls.
+    for (auto& request : pending_bindings_) {
+      bindings_.AddBinding(this, std::move(request));
+    }
+    pending_bindings_.clear();
+  }
+}
+
 void ModuleResolverImpl::OnNewManifestEntry(
-    std::string repo_name,
+    const std::string& repo_name,
     std::string id_in,
     modular::ModuleManifestRepository::Entry new_entry) {
   // Add this new entry info to our local index.
@@ -191,7 +207,7 @@ void ModuleResolverImpl::OnNewManifestEntry(
   }
 }
 
-void ModuleResolverImpl::OnRemoveManifestEntry(std::string repo_name,
+void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& repo_name,
                                                std::string id_in) {
   EntryId id{repo_name, id_in};
   auto it = entries_.find(id);

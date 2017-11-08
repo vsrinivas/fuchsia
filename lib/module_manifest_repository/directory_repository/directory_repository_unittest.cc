@@ -40,9 +40,13 @@ class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
  protected:
   void ResetRepository(bool create_dir = false) {
     auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
+    idle_ = false;
     repo_.reset(new DirectoryRepository(repo_dir_, create_dir));
     repo_->Watch(
         task_runner,
+        [this]() {
+          idle_ = true;
+        },
         [this](std::string id, ModuleManifestRepository::Entry entry) {
           entries_.push_back(entry);
           entry_ids_.push_back(std::move(id));
@@ -62,6 +66,8 @@ class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
     const auto path = repo_dir_ + '/' + name;
     unlink(path.c_str());
   }
+
+  bool idle_;
 
   std::vector<std::string> manifests_written_;
   std::string repo_dir_;
@@ -125,7 +131,8 @@ TEST_F(DirectoryRepositoryTest, CreateFiles_And_CorrectEntries) {
 
   ResetRepository();
 
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 2; }));
+  ASSERT_TRUE(RunLoopUntil([this]() { return idle_; }));
+  ASSERT_EQ(2lu, entries_.size());
   EXPECT_EQ("m1_binary1", entries_[0].binary);
   EXPECT_EQ("m1_local_name1", entries_[0].local_name);
   EXPECT_EQ("com.google.fuchsia.navigate.v1", entries_[0].verb);
@@ -164,7 +171,7 @@ TEST_F(DirectoryRepositoryTest, RemovedFiles) {
   WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
 
   ResetRepository();
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 2; }));
+  ASSERT_TRUE(RunLoopUntil([this]() { return idle_; }));
 
   RemoveManifestFile("manifest1");
   ASSERT_TRUE(RunLoopUntil([this]() { return removed_ids_.size() == 2; }));

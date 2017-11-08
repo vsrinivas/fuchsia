@@ -127,13 +127,6 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     impl_->AddRepository("test", std::make_unique<modular::DirectoryRepository>(
                                      repo_dir_, false));
     impl_->Connect(resolver_.NewRequest());
-
-    // |impl_| has a thread that posts tasks to our MessageLoop that need to be
-    // processed for initialization. Give them a chance to post and for |impl_|
-    // to pick them up.
-    // TODO(thatguy): To avoid potential flake: improve internals so that we
-    // can wait on a real initialization condition on |impl|.
-    RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
   }
 
   void WriteManifestFile(const std::string& name, const char* contents) {
@@ -192,8 +185,9 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
 
   // Remove the manifest files and we should see no more results.
   RemoveManifestFiles();
-  // TODO(thatguy): Refactor ModuleManifestRepository to so we have enough
-  // control to avoid this hack.
+  // TODO(thatguy): Use a fake ModuleManifestRepository instead of a
+  // DirectoryRepository in this test, so we have more control over
+  // synchronization.
   RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
 
   FindModules(DaisyBuilder("com.google.fuchsia.navigate.v1").build());

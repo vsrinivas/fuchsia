@@ -27,6 +27,7 @@ class DirectoryRepository : public ModuleManifestRepository {
   ~DirectoryRepository() override;
 
   void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+             IdleFn idle_fn,
              NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override;
 
@@ -35,6 +36,7 @@ class DirectoryRepository : public ModuleManifestRepository {
   void OnRemoveFile(const std::string& name, RemovedEntryFn);
 
   const std::string repository_dir_;
+  IdleFn ready_fn_;
   NewEntryFn new_entry_fn_;
   RemovedEntryFn removed_entry_fn_;
 

@@ -19,12 +19,15 @@ class ModuleManifestRepository {
   struct Entry;
   using NewEntryFn = std::function<void(std::string, Entry)>;
   using RemovedEntryFn = std::function<void(std::string)>;
+  using IdleFn = std::function<void()>;
 
   virtual ~ModuleManifestRepository() = 0;
 
   // Watches the repository for new or removed Module manifest entries.  Posts
   // tasks to |task_runner| calling |new_fn| for each entry in new files and
-  // |removed_fn| for entries that have been removed.
+  // |removed_fn| for entries that have been removed. Calls |idle_fn| once all
+  // existing entries at the time of calling Watch() have been read and sent to
+  // |new_fn|.
   //
   // Destroying |this| stops watching and guarantees neither |new_fn| or
   // |removed_fn| will be called. Caller is responsible for ensuring
@@ -34,6 +37,7 @@ class ModuleManifestRepository {
   //
   // |removed_fn| takes only the string Entry id.
   virtual void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                     IdleFn idle_fn,
                      NewEntryFn new_fn,
                      RemovedEntryFn removed_fn) = 0;
 };
