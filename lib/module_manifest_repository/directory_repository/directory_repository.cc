@@ -13,8 +13,8 @@
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
@@ -111,56 +111,58 @@ void XdrEntry(modular::XdrContext* const xdr,
 
 }  // namespace
 
-DirectoryRepository::DirectoryRepository(
-    std::string repository_dir)
-    : repository_dir_(repository_dir),
-      weak_factory_(this) {
+DirectoryRepository::DirectoryRepository(std::string repository_dir,
+                                         const bool create)
+    : repository_dir_(repository_dir), weak_factory_(this) {
   if (!files::IsDirectory(repository_dir)) {
-    FXL_LOG(INFO) << "Missing repository dir. Creating " << repository_dir;
-    auto create_result = files::CreateDirectory(repository_dir);
-    FXL_CHECK(create_result) << "Could not create " << repository_dir;
+    if (create) {
+      auto create_result = files::CreateDirectory(repository_dir);
+      FXL_CHECK(create_result) << "Could not create " << repository_dir;
+    }
   }
-
 }
 
 DirectoryRepository::~DirectoryRepository() {}
 
-void DirectoryRepository::Watch(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    NewEntryFn new_fn,
-    RemovedEntryFn removed_fn) {
+void DirectoryRepository::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                                NewEntryFn new_fn,
+                                RemovedEntryFn removed_fn) {
   // fdio_watch_directory() is blocking so we start the watching process in its
   // own thread. We give that thread a pointer to the TaskRunner and a WeakPtr
   // to us in case we are destroyed.
-  auto thread =
-      std::thread([weak_this = weak_factory_.GetWeakPtr(), task_runner, new_fn, removed_fn] {
-        // In the unlikely event our owner is destroyed before we get here.
-        if (!weak_this)
-          return;
+  auto thread = std::thread([weak_this = weak_factory_.GetWeakPtr(),
+                             task_runner, new_fn, removed_fn] {
+    // In the unlikely event our owner is destroyed before we get here.
+    if (!weak_this)
+      return;
 
-        // Set up the fdio waiter.
-        auto dirfd = open(weak_this->repository_dir_.c_str(), O_DIRECTORY | O_RDONLY);
-        FXL_CHECK(dirfd >= 0)
-            << "Could not open " << weak_this->repository_dir_ << ": " << strerror(errno);
+    // Set up the fdio waiter.
+    auto dirfd =
+        open(weak_this->repository_dir_.c_str(), O_DIRECTORY | O_RDONLY);
+    if (dirfd < 0) {
+      FXL_LOG(ERROR) << "Could not open " << weak_this->repository_dir_
+                     << ": " << strerror(errno) << std::endl;
+      return;
+    }
 
-        auto state = new WatcherState();  // Managed by WatcherHandler() above.
-        state->weak_repository = weak_this;
-        state->task_runner = task_runner;
+    auto state = new WatcherState();  // Managed by WatcherHandler() above.
+    state->weak_repository = weak_this;
+    state->task_runner = task_runner;
 
-        state->on_new = [weak_this, new_fn](const std::string name) {
-          if (!weak_this)
-            return;
-          weak_this->OnNewFile(name, new_fn);
-        };
-        state->on_remove = [weak_this, removed_fn](const std::string name) {
-          if (!weak_this)
-            return;
-          weak_this->OnRemoveFile(name, removed_fn);
-        };
-        fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
-                             static_cast<void*>(state));
-        close(dirfd);
-      });
+    state->on_new = [weak_this, new_fn](const std::string name) {
+      if (!weak_this)
+        return;
+      weak_this->OnNewFile(name, new_fn);
+    };
+    state->on_remove = [weak_this, removed_fn](const std::string name) {
+      if (!weak_this)
+        return;
+      weak_this->OnRemoveFile(name, removed_fn);
+    };
+    fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
+                         static_cast<void*>(state));
+    close(dirfd);
+  });
 
   // We rely on the fact that the thread will kill itself eventually if either:
   // a) The owning process is killed.
@@ -209,9 +211,11 @@ void DirectoryRepository::OnNewFile(const std::string& name, NewEntryFn fn) {
   }
 }
 
-void DirectoryRepository::OnRemoveFile(const std::string& name, RemovedEntryFn fn) {
+void DirectoryRepository::OnRemoveFile(const std::string& name,
+                                       RemovedEntryFn fn) {
   auto it = file_entry_ids_.find(name);
-  if (it == file_entry_ids_.end()) return;
+  if (it == file_entry_ids_.end())
+    return;
 
   for (const auto& id : it->second) {
     fn(id);

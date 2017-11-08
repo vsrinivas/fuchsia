@@ -19,15 +19,22 @@ namespace {
 
 // NOTE: This must match the path specified in
 // build/module_repository/publish.gni
-constexpr char kModuleRepositoryPath[] =
+constexpr char kROModuleRepositoryPath[] =
     "/system/data/module_manifest_repository";
+
+// NOTE: This must match deploy-module in the SDK.
+constexpr char kRWModuleRepositoryPath[] = "/data/module_manifest_repository";
 
 class ModuleResolverApp {
  public:
   ModuleResolverApp(app::ApplicationContext* const context) {
     resolver_impl_.AddRepository(
-        "local_ro",
-        std::make_unique<modular::DirectoryRepository>(kModuleRepositoryPath));
+        "local_ro", std::make_unique<modular::DirectoryRepository>(
+                        kROModuleRepositoryPath, false /* create */));
+    resolver_impl_.AddRepository(
+        "local_rw", std::make_unique<modular::DirectoryRepository>(
+                        kRWModuleRepositoryPath, true /* create */));
+
     context->outgoing_services()->AddService<modular::ModuleResolver>(
         [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
           resolver_impl_.Connect(std::move(request));

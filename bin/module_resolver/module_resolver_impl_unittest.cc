@@ -5,9 +5,9 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
+#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 #include "peridot/public/lib/module_resolver/cpp/formatting.h"
-#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
 
 namespace maxwell {
 namespace {
@@ -124,7 +124,8 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
  protected:
   void ResetRepository() {
     impl_.reset(new ModuleResolverImpl);
-    impl_->AddRepository("test", std::make_unique<modular::DirectoryRepository>(repo_dir_));
+    impl_->AddRepository("test", std::make_unique<modular::DirectoryRepository>(
+                                     repo_dir_, false));
     impl_->Connect(resolver_.NewRequest());
 
     // |impl_| has a thread that posts tasks to our MessageLoop that need to be
@@ -170,7 +171,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
 };
 
 #define ASSERT_DEFAULT_RESULT(results) \
-  ASSERT_EQ(1lu, results.size()); \
+  ASSERT_EQ(1lu, results.size());      \
   EXPECT_EQ("resolution_failed", results[0]->module_id);
 
 TEST_F(ModuleResolverImplTest, Null) {

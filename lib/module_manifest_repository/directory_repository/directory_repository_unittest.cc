@@ -9,8 +9,8 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
-#include "peridot/lib/module_manifest_repository/module_manifest_repository.h"
 #include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
+#include "peridot/lib/module_manifest_repository/module_manifest_repository.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
@@ -38,15 +38,16 @@ class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
   }
 
  protected:
-  void ResetRepository() {
+  void ResetRepository(bool create_dir = false) {
     auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-    repo_.reset(new DirectoryRepository(repo_dir_));
-    repo_->Watch(task_runner, [this](std::string id, ModuleManifestRepository::Entry entry) {
+    repo_.reset(new DirectoryRepository(repo_dir_, create_dir));
+    repo_->Watch(
+        task_runner,
+        [this](std::string id, ModuleManifestRepository::Entry entry) {
           entries_.push_back(entry);
           entry_ids_.push_back(std::move(id));
-        }, [this](std::string id) {
-          removed_ids_.push_back(std::move(id));
-        });
+        },
+        [this](std::string id) { removed_ids_.push_back(std::move(id)); });
   }
 
   void WriteManifestFile(const std::string& name,
@@ -176,7 +177,7 @@ TEST_F(DirectoryRepositoryTest, RepoDirIsCreatedAutomatically) {
   // TODO(thatguy): Once making DirectoryRepository easier to test against
   // (ie, have a guaranteed initialized state we can synchronize on), do that
   // here.
-  ResetRepository();
+  ResetRepository(true /* create_dir */);
   WriteManifestFile("manifest2", kManifest2, strlen(kManifest2));
   ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
 }

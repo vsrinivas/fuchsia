@@ -20,8 +20,10 @@ namespace modular {
 // each watcher of each entry within.
 class DirectoryRepository : public ModuleManifestRepository {
  public:
-  // If |repository_dir| does not already exist, it will be created.
-  DirectoryRepository(std::string repository_dir);
+  // If |repository_dir| does not exist and |create| is true, it will be
+  // created. Otherwise, a missing |repository_dir| when Watch() is called will
+  // result in this DirectoryWatcher doing nothing.
+  DirectoryRepository(std::string repository_dir, bool create);
   ~DirectoryRepository() override;
 
   void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
