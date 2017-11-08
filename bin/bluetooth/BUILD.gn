@@ -34,17 +34,16 @@ executable("bin") {
 }
 
 package("bluetooth") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "bluetooth"
-    },
-  ]
+  binary = "bluetooth"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 executable("bluetooth_unittests") {

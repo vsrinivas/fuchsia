@@ -9,9 +9,9 @@ building HCI transport drivers.
 ## Packages
 
 The
-[bluetooth](https://fuchsia.googlesource.com/packages/+/master/gn/bluetooth) package contains
+[bluetooth](https://fuchsia.googlesource.com/garnet/+/master/packages/bluetooth) package contains
 the Bluetooth process, some command-line tools, and unit tests. The
-[bluetooth_examples](https://fuchsia.googlesource.com/packages/+/master/gn/bluetooth_examples)
+[bluetooth_examples](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth)
 package contains various example applications that interact with the Bluetooth FIDL interfaces.
 
 You generally do not need to build the entire Fuchsia tree for Bluetooth development. The following
@@ -43,18 +43,18 @@ bt-hci device using the ioctls defined
 ### The bluetooth process
 
 Bluetooth functionality is currently exposed via FIDL services that are provided by the Bluetooth
-process (currently installed at `/system/apps/bluetooth`). This process implements the core
+process (currently installed at `/system/pkgs/bluetooth`). This process implements the core
 Bluetooth protocols required for the Generic Access Profile (HCI state machines, L2CAP, GATT,
 SDP, SM, etc).
 
 The process is launched by
-[Bootstrap](https://fuchsia.googlesource.com/application/+/master/src/bootstrap) when an application
+[Bootstrap](https://fuchsia.googlesource.com/garnet/+/master/bin/bootstrap/) when an application
 requests one of the Bluetooth services. The service-to-binary mapping for Bluetooth services is
 currently defined in Bootstrap's
-[`services.config`](https://fuchsia.googlesource.com/application/+/master/src/bootstrap/services.config)
+[`services.config`](https://fuchsia.googlesource.com/garnet/+/master/bin/bootstrap/services.config)
 file.
 
-[`bluetoothcli`](https://fuchsia.googlesource.com/bluetooth/+/master/tools/bluetoothcli/) and
+[`bluetoothcli`](https://fuchsia.googlesource.com/garnet/+/master/bin/bluetooth_tools/bluetoothcli/) and
 the [Flutter examples](examples) provide examples that interact with the Bluetooth services.
 
 ### Tools & Testing
@@ -62,7 +62,7 @@ the [Flutter examples](examples) provide examples that interact with the Bluetoo
 #### bluetoothcli
 
 This is a command-line client for the
-[control](https://fuchsia.googlesource.com/bluetooth/+/master/service/interfaces/control.fidl) FIDL
+[control](https://fuchsia.googlesource.com/garnet/+/master/public/lib/bluetooth/fidl/control.fidl) FIDL
 interfaces. The `bluetooth` process does not need to launched directly before using `bluetoothcli`
 since Bootstrap will launch a new `bluetooth` process during the service request if one isn't
 already running.
