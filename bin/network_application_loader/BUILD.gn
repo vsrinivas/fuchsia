@@ -21,15 +21,9 @@ executable("bin") {
 }
 
 package("network_application_loader") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "network_application_loader"
-    },
-  ]
+  binary = "network_application_loader"
 }
