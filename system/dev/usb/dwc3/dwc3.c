@@ -377,7 +377,7 @@ static void dwc3_release(void* ctx) {
     io_buffer_release(&dwc->event_buffer);
     io_buffer_release(&dwc->ep0_buffer);
 
-    pdev_mmio_buffer_release(&dwc->mmio);
+    pdev_vmo_buffer_release(&dwc->mmio);
     zx_handle_close(dwc->irq_handle);
     free(dwc);
 }

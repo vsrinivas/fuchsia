@@ -18,6 +18,7 @@ enum {
     // ZX_PROTOCOL_PLATFORM_DEV
     PDEV_GET_MMIO = 1,
     PDEV_GET_INTERRUPT,
+    PDEV_ALLOC_CONTIG_VMO,
 
     // ZX_PROTOCOL_USB_MODE_SWITCH
     PDEV_UMS_GET_INITIAL_MODE,
@@ -44,6 +45,11 @@ typedef struct {
 } pdev_i2c_txn_ctx_t;
 
 typedef struct {
+    size_t size;
+    uint32_t align_log2;
+} pdev_config_vmo_t;
+
+typedef struct {
     pdev_i2c_txn_ctx_t txn_ctx;
     // private context for the server, returned from i2c_get_channel and passed by client
     // for all channel operations
@@ -64,6 +70,7 @@ typedef struct {
     uint32_t op;
     uint32_t index;
     union {
+        pdev_config_vmo_t contig_vmo;
         usb_mode_t usb_mode;
         gpio_config_flags_t gpio_flags;
         uint8_t gpio_value;

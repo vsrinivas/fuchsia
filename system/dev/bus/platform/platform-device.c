@@ -66,9 +66,23 @@ static zx_status_t platform_dev_get_interrupt(platform_dev_t* dev, uint32_t inde
         return ZX_ERR_INVALID_ARGS;
     }
     pbus_irq_t* irq = &dev->irqs[index];
-    zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ, out_handle);
+    zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ,
+                                             out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
+        return status;
+    }
+    *out_handle_count = 1;
+    return ZX_OK;
+}
+
+static zx_status_t platform_dev_alloc_contig_vmo(platform_dev_t* dev, size_t size,
+                                                 uint32_t align_log2,  zx_handle_t* out_handle,
+                                                 uint32_t* out_handle_count) {
+    zx_status_t status = zx_vmo_create_contiguous(dev->bus->resource, size, align_log2, out_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_create_contiguous failed %d\n",
+               status);
         return status;
     }
     *out_handle_count = 1;
@@ -251,6 +265,11 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GET_INTERRUPT:
         resp.status = platform_dev_get_interrupt(dev, req->index, &handle, &handle_count);
+        break;
+    case PDEV_ALLOC_CONTIG_VMO:
+        resp.status = platform_dev_alloc_contig_vmo(dev, req->contig_vmo.size,
+                                                    req->contig_vmo.align_log2,
+                                                    &handle, &handle_count);
         break;
     case PDEV_UMS_GET_INITIAL_MODE:
         resp.status = platform_dev_ums_get_initial_mode(dev, &resp.usb_mode);

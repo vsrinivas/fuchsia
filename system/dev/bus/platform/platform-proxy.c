@@ -200,8 +200,9 @@ static zx_status_t pdev_i2c_transact(void* ctx, const void* write_buf, size_t wr
         memcpy(req.data, write_buf, write_length);
     }
     uint32_t data_received;
-    zx_status_t status = platform_dev_rpc(channel_ctx->proxy, &req.req, sizeof(req.req) + write_length,
-                                          &resp.resp, sizeof(resp), NULL, 0, &data_received);
+    zx_status_t status = platform_dev_rpc(channel_ctx->proxy, &req.req,
+                                          sizeof(req.req) + write_length, &resp.resp, sizeof(resp),
+                                          NULL, 0, &data_received);
     if (status != ZX_OK) {
         return status;
     }
@@ -224,7 +225,8 @@ static zx_status_t pdev_i2c_set_bitrate(void* ctx, uint32_t bitrate) {
     };
     pdev_resp_t resp;
 
-    return platform_dev_rpc(channel_ctx->proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
+    return platform_dev_rpc(channel_ctx->proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0,
+                            NULL);
 }
 
 static zx_status_t pdev_i2c_get_max_transfer_size(void* ctx, size_t* out_size) {
@@ -301,8 +303,8 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
     pdev_resp_t resp;
     zx_handle_t vmo_handle;
 
-    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), &vmo_handle,
-                                           1, NULL);
+    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                          &vmo_handle, 1, NULL);
     if (status != ZX_OK) {
         return status;
     }
@@ -348,9 +350,55 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_hand
     return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
 }
 
+static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
+                                                 zx_handle_t* out_handle) {
+    platform_proxy_t* dev = ctx;
+    pdev_req_t req = {
+        .op = PDEV_ALLOC_CONTIG_VMO,
+        .contig_vmo = {
+            .size = size,
+            .align_log2 = align_log2,
+        },
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(dev, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
+}
+
+static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
+                                               uint32_t map_flags, void** out_vaddr,
+                                               zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
+    zx_handle_t handle;
+    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, &handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = zx_vmo_op_range(handle, ZX_VMO_OP_LOOKUP, 0, size, out_paddr, sizeof(*out_paddr));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmo_op_range failed %d\n", status);
+        zx_handle_close(handle);
+        return status;
+    }
+
+    uintptr_t addr;
+    status = zx_vmar_map(zx_vmar_root_self(), 0, handle, 0, size, map_flags, &addr);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmar_map failed %d\n", status);
+        zx_handle_close(handle);
+        return status;
+    }
+
+    *out_vaddr = (void *)addr;
+    *out_handle = handle;
+    return ZX_OK;
+}
+
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
+    .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
+    .map_contig_vmo = platform_dev_map_contig_vmo,
 };
 
 static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {

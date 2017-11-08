@@ -126,8 +126,8 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,
 
 init_fail:
     if (audio_device) {
-        pdev_mmio_buffer_release(&audio_device->ee_audio_mmio);
-        pdev_mmio_buffer_release(&audio_device->pdm_mmio);
+        pdev_vmo_buffer_release(&audio_device->ee_audio_mmio);
+        pdev_vmo_buffer_release(&audio_device->pdm_mmio);
     };
     return status;
 }

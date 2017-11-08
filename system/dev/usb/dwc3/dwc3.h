@@ -81,7 +81,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
-    pdev_mmio_buffer_t mmio;
+    pdev_vmo_buffer_t mmio;
 
     usb_mode_t usb_mode;
 
