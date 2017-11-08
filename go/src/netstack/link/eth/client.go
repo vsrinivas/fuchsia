@@ -164,6 +164,24 @@ func (c *Client) changeStateLocked(s State) {
 	}()
 }
 
+// Start restarts the interface.
+func (c *Client) Start() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.state != StateStarted {
+		c.changeStateLocked(StateStarted)
+	}
+}
+
+// Down disables the interface.
+func (c *Client) Down() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.state != StateDown {
+		c.changeStateLocked(StateDown)
+	}
+}
+
 // Close closes a Client, releasing any held resources.
 func (c *Client) Close() {
 	c.mu.Lock()

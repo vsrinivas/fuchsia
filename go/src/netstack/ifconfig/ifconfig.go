@@ -6,6 +6,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/google/netstack/tcpip"
 
@@ -21,31 +23,42 @@ type netstackClientApp struct {
 	netstack *netstack.Netstack_Proxy
 }
 
-func (a *netstackClientApp) start() {
-	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
-	a.netstack = p
-	a.ctx.ConnectToEnvService(r)
-
+func (a *netstackClientApp) printAll() {
 	ifaces, err := a.netstack.GetInterfaces()
 	if err != nil {
-		fmt.Print("Failed to fetch interfaces.\n")
+		fmt.Print("ifconfig: failed to fetch interfaces\n")
 		return
 	}
 
 	for _, iface := range ifaces {
-		stats, err := a.netstack.GetStats(iface.Id)
-		if err != nil {
-			fmt.Printf("Failed to lookup %v.\n\n", iface.Name)
-			continue
-		}
-		printIface(iface, stats)
-		fmt.Print("\n")
+		a.printIface(iface)
 	}
 
 	a.netstack.Close()
 }
 
-func printIface(iface netstack.NetInterface, stats netstack.NetInterfaceStats) {
+func (a *netstackClientApp) getIfaceByName(name string) *netstack.NetInterface {
+	ifaces, err := a.netstack.GetInterfaces()
+	if err != nil {
+		fmt.Print("ifconfig: failed to fetch interfaces\n")
+		return nil
+	}
+
+	for _, iface := range ifaces {
+		if iface.Name == name {
+			return &iface
+		}
+	}
+	return nil
+}
+
+func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
+	stats, err := a.netstack.GetStats(iface.Id)
+	if err != nil {
+		fmt.Printf("ifconfig: failed to fetch stats for '%v'\n\n", iface.Name)
+		return
+	}
+
 	fmt.Printf("%s\tHWaddr %s\n", iface.Name, hwAddrToString(iface.Hwaddr))
 	fmt.Printf("\tinet addr:%s  Bcast:%s  Mask:%s\n", netAddrToString(iface.Addr), netAddrToString(iface.Broadaddr), netAddrToString(iface.Netmask))
 	for _, addr := range iface.Ipv6addrs {
@@ -58,7 +71,14 @@ func printIface(iface netstack.NetInterface, stats netstack.NetInterfaceStats) {
 	fmt.Printf("\tTX packets:%d\n", stats.Tx.PktsTotal)
 	fmt.Printf("\tRX bytes:%s  TX bytes:%s\n",
 		bytesToString(stats.Rx.BytesTotal), bytesToString(stats.Tx.BytesTotal))
+	fmt.Printf("\n")
 	// TODO: more stats. MTU, RX/TX errors
+}
+
+func (a *netstackClientApp) setStatus(iface netstack.NetInterface, up bool) {
+	a.netstack.SetInterfaceStatus(iface.Id, up)
+	// TODO: remove this hack when US-376 is fixed.
+	time.Sleep(1 * time.Second)
 }
 
 func hwAddrToString(hwaddr []uint8) string {
@@ -118,7 +138,41 @@ func bytesToString(bytes uint64) string {
 	}
 }
 
+func usage() {
+	fmt.Printf("Usage:\n")
+	fmt.Printf("  %s [<interface>]\n", os.Args[0])
+	fmt.Printf("  %s [<interface>] [up|down]\n", os.Args[0])
+}
+
 func main() {
 	a := &netstackClientApp{ctx: context.CreateFromStartupInfo()}
-	a.start()
+	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
+	a.netstack = p
+	defer a.netstack.Close()
+	a.ctx.ConnectToEnvService(r)
+
+	if len(os.Args) == 1 {
+		a.printAll()
+		return
+	}
+
+	iface := a.getIfaceByName(os.Args[1])
+	if iface == nil {
+		fmt.Printf("ifconfig: no such interface '%s'", os.Args[1])
+		return
+	}
+
+	if len(os.Args) == 2 {
+		a.printIface(*iface)
+	} else if len(os.Args) == 3 {
+		if os.Args[2] == "up" {
+			a.setStatus(*iface, true)
+		} else if os.Args[2] == "down" {
+			a.setStatus(*iface, false)
+		} else {
+			usage()
+		}
+	} else {
+		usage()
+	}
 }

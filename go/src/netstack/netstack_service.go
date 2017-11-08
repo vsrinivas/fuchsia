@@ -190,6 +190,23 @@ func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, 
 	return ifState.statsEP.Stats, nil
 }
 
+func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err error) {
+	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]
+
+	if !ok {
+		// TODO(mpcomplete): This will close the FIDL channel. Should fail more gracefully.
+		return fmt.Errorf("no such interface id: %d", nicid)
+	}
+
+	if enabled {
+		ifState.eth.Start()
+	} else {
+		ifState.eth.Down()
+	}
+
+	return nil
+}
+
 func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {
 	if ni.listener != nil {
 		ni.listener.OnInterfacesChanged(interfaces)

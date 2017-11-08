@@ -100,4 +100,7 @@ interface Netstack {
 
   // TODO (porce): Separate interfaces.
   GetStats(uint32 nicid) => (NetInterfaceStats stats);
+
+  // Sets the status (up or down) for the interface with the given nicid.
+  SetInterfaceStatus(uint32 nicid, bool enabled);
 };
