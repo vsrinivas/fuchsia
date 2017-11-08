@@ -338,6 +338,42 @@ out:
 static int sdmmc_worker_thread(void* arg) {
     sdmmc_t* sdmmc = (sdmmc_t*)arg;
 
+    zx_status_t st;
+    iotxn_t* setup_txn = NULL;
+    // Allocate a single iotxn that we use to bootstrap the card with.
+    static_assert(SDHC_BLOCK_SIZE <= PAGE_SIZE, "");
+    if ((st = iotxn_alloc(&setup_txn, 0, SDHC_BLOCK_SIZE)) != ZX_OK) {
+        zxlogf(ERROR, "sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
+        device_remove(sdmmc->zxdev);
+        return st;
+    }
+
+    // Reset the card.
+    device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_HW_RESET, NULL, 0, NULL, 0, NULL);
+
+    // No matter what state the card is in, issuing the GO_IDLE_STATE command will
+    // put the card into the idle state.
+    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != ZX_OK) {
+        zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
+        iotxn_release(setup_txn);
+        device_remove(sdmmc->zxdev);
+        return st;
+    }
+
+    // Probe for SD, then MMC
+    if ((st = sdmmc_probe_sd(sdmmc, setup_txn)) != ZX_OK) {
+        if ((st = sdmmc_probe_mmc(sdmmc, setup_txn)) != ZX_OK) {
+            zxlogf(ERROR, "sdmmc: failed to probe\n");
+            iotxn_release(setup_txn);
+            device_remove(sdmmc->zxdev);
+            return st;
+        }
+    }
+
+    iotxn_release(setup_txn);
+
+    device_make_visible(sdmmc->zxdev);
+
     for (;;) {
         // don't loop until txn_list is empty to check for SDMMC_SHUTDOWN
         // between each txn.
@@ -380,39 +416,12 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev) {
     mtx_init(&sdmmc->lock, mtx_plain);
     list_initialize(&sdmmc->txn_list);
 
-    zx_status_t st;
-    iotxn_t* setup_txn = NULL;
-    // Allocate a single iotxn that we use to bootstrap the card with.
-    static_assert(SDHC_BLOCK_SIZE <= PAGE_SIZE, "");
-    if ((st = iotxn_alloc(&setup_txn, 0, SDHC_BLOCK_SIZE)) != ZX_OK) {
-        zxlogf(ERROR, "sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
+    zx_status_t st = zx_event_create(0, &sdmmc->worker_event);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdmmc: failed to create event, retcode = %d\n", st);
         free(sdmmc);
         return st;
     }
-
-    // Reset the card.
-    device_ioctl(dev, IOCTL_SDMMC_HW_RESET, NULL, 0, NULL, 0, NULL);
-
-    // No matter what state the card is in, issuing the GO_IDLE_STATE command will
-    // put the card into the idle state.
-    if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != ZX_OK) {
-        zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
-        iotxn_release(setup_txn);
-        free(sdmmc);
-        return st;
-    }
-
-    // Probe for SD, then MMC
-    if ((st = sdmmc_probe_sd(sdmmc, setup_txn)) != ZX_OK) {
-        if ((st = sdmmc_probe_mmc(sdmmc, setup_txn)) != ZX_OK) {
-            zxlogf(ERROR, "sdmmc: failed to probe\n");
-            iotxn_release(setup_txn);
-            free(sdmmc);
-            return st;
-        }
-    }
-
-    iotxn_release(setup_txn);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -421,6 +430,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev) {
         .ops = &sdmmc_device_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
         .proto_ops = &sdmmc_block_ops,
+        .flags = DEVICE_ADD_INVISIBLE,
     };
 
     st = device_add(dev, &args, &sdmmc->zxdev);
@@ -429,18 +439,9 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev) {
         return st;
     }
 
-    zxlogf(TRACE, "sdmmc: bind success!\n");
-
-    st = zx_event_create(0, &sdmmc->worker_event);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "sdmmc: failed to create event, retcode = %d\n", st);
-        device_remove(sdmmc->zxdev);
-        return st;
-    }
-
     // bootstrap in a thread
     int rc = thrd_create_with_name(&sdmmc->worker_thread, sdmmc_worker_thread, sdmmc,
-            "sdmmc-worker");
+                                   "sdmmc-worker");
     if (rc != thrd_success) {
         device_remove(sdmmc->zxdev);
         return thrd_status_to_zx_status(rc);
