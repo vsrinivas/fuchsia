@@ -194,14 +194,35 @@ echo "SUCCESS"
 echo -n "Copying run-qemu.sh..."
 sudo cp /tmp/linux/arch/x86/boot/bzImage "${MOUNT_PATH}/opt/bzImage"
 RUN_QEMU=$(mktemp)
+
+###############################################################################
+# Emit run-qemu.sh.
+###############################################################################
 cat > "${RUN_QEMU}" << EOF
 #!/bin/sh
 
+KERNEL_CMDLINE="root=/dev/vda ro lockfs console=ttyS0 io_delay=none"
+CPU_SPEC="host,migratable=no"
+KVM_DISABLE_PARAVIRT_FEATURES="-kvmclock,-kvm-nopiodelay,-kvm-asyncpf,-kvm-steal-time,-kvm-pv-eoi,-kvmclock-stable-bit,-kvm-pv-unhalt"
+
+usage() {
+    echo "usage: run-qemu.sh [options]"
+    echo ""
+    echo "  -p    Disable KVM paravirt features."
+}
+
+while getopts "p" opt; do
+  case "\${opt}" in
+    p) CPU_SPEC="\${CPU_SPEC},\${KVM_DISABLE_PARAVIRT_FEATURES}" ;;
+    *) usage ;;
+  esac
+done
+
 qemu-system-x86_64 \\
     -nographic \\
-    -drive file=/dev/disk/by-uuid/${ROOT_UUID},readonly=on,format=raw,if=none,id=root \\
+    -drive file=/dev/disk/by-uuid/${ROOT_UUID},readonly=on,format=raw,if=none,cache=none,id=root \\
     -device virtio-blk-pci,drive=root \\
-    -drive file=/dev/disk/by-uuid/${HOME_UUID},format=raw,if=none,id=home \\
+    -drive file=/dev/disk/by-uuid/${HOME_UUID},format=raw,if=none,cache=none,id=home \\
     -device virtio-blk-pci,drive=home \\
     -device virtio-serial-pci \\
     -net none \\
@@ -209,11 +230,14 @@ qemu-system-x86_64 \\
     -m 1G \\
     -smp 1 \\
     -enable-kvm \\
-    -cpu host,migratable=no \\
+    -cpu "\${CPU_SPEC}" \\
     -initrd /initrd.img \\
     -kernel /opt/bzImage \\
-    -append "root=/dev/vda ro lockfs console=ttyS0"
+    -append "\${KERNEL_CMDLINE}"
 EOF
+###############################################################################
+# End run-qemu.sh
+###############################################################################
 sudo cp "${RUN_QEMU}" "${MOUNT_PATH}/opt/run-qemu.sh"
 sudo chmod +x "${MOUNT_PATH}/opt/run-qemu.sh"
 rm "${RUN_QEMU}"
