@@ -718,6 +718,46 @@ static zx_status_t intel_serialio_i2c_device_specific_init(
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent,
+                                       pci_protocol_t* pci) {
+    // get child info from aux data, max 4
+    // TODO: this seems nonstandard to device model
+    uint8_t childdata[sizeof(auxdata_i2c_device_t) * 4];
+    memset(childdata, 0, sizeof(childdata));
+
+    uint32_t actual;
+    zx_status_t status = pci_get_auxdata(pci, "i2c-child", childdata, sizeof(childdata),
+                             &actual);
+    if (status != ZX_OK) {
+        return;
+    }
+
+    auxdata_i2c_device_t* child = (auxdata_i2c_device_t*)childdata;
+    uint32_t count = actual / sizeof(auxdata_i2c_device_t);
+    uint32_t bus_speed = 0;
+    while (count--) {
+        zxlogf(SPEW, "i2c: got child bus_master=%d ten_bit=%d address=0x%x bus_speed=%u"
+                     " protocol_id=0x%08x\n",
+               child->bus_master, child->ten_bit, child->address, child->bus_speed,
+               child->protocol_id);
+
+        if (child->protocol_id == ZX_PROTOCOL_I2C_HID) {
+            if (bus_speed && bus_speed != child->bus_speed) {
+                zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)\n",
+                        bus_speed, child->bus_speed);
+            }
+            if (!bus_speed) {
+                intel_serialio_i2c_set_bus_frequency(parent, child->bus_speed);
+                bus_speed = child->bus_speed;
+            }
+            intel_serialio_i2c_add_slave(parent,
+                    child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
+                    child->address);
+        }
+        child += 1;
+    }
+}
+
 zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
     pci_protocol_t pci;
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
@@ -830,36 +870,7 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         "reg=%p regsize=%ld\n",
         device->regs, device->regs_size);
 
-    // get child info from aux data
-    auxdata_args_nth_device_t auxdata_args = {
-        .child_type = AUXDATA_DEVICE_I2C,
-        .n = 0,
-    };
-    auxdata_i2c_device_t child;
-    uint32_t bus_speed = 0;
-    // TODO: this seems nonstandard to device model
-    do {
-        memset(&child, 0, sizeof(child));
-        status = pci_get_auxdata(&pci, AUXDATA_NTH_DEVICE, &auxdata_args, sizeof(auxdata_args),
-                                 &child, sizeof(child));
-        if (status == ZX_OK) {
-            if (child.protocol_id == ZX_PROTOCOL_I2C_HID) {
-                if (bus_speed && bus_speed != child.bus_speed) {
-                    zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)\n",
-                            bus_speed, child.bus_speed);
-                    break;
-                }
-                if (!bus_speed) {
-                    intel_serialio_i2c_set_bus_frequency(device, child.bus_speed);
-                    bus_speed = child.bus_speed;
-                }
-                intel_serialio_i2c_add_slave(device,
-                        child.ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
-                        child.address);
-            }
-        }
-    } while ((status == ZX_OK) && auxdata_args.n++);
-
+    intel_serialio_add_devices(device, &pci);
 
     zx_handle_close(config_handle);
     return ZX_OK;

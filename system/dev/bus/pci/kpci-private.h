@@ -33,26 +33,15 @@ typedef enum {
 
 extern _Atomic zx_txid_t pci_global_txid;
 
-typedef struct {
-    zx_txid_t txid;
-    uint32_t len;
-    uint32_t op;
-} pci_req_hdr_t;
+#define PCI_MAX_DATA 4096
 
 typedef struct {
-    pci_req_hdr_t hdr;
-    auxdata_type_t auxdata_type;
-    auxdata_args_nth_device_t args;
-} pci_req_auxdata_nth_device_t;
+    zx_txid_t txid;     // FIDL2 message header
+    uint32_t reserved0;
+    uint32_t flags;
+    uint32_t ordinal;
 
-typedef struct {
-    zx_txid_t txid;
-    uint32_t len;
-    uint32_t op;
-    zx_status_t status;
-} pci_resp_hdr_t;
-
-typedef struct {
-    pci_resp_hdr_t hdr;
-    auxdata_i2c_device_t device;
-} pci_resp_auxdata_i2c_nth_device_t;
+    uint32_t outlen;
+    uint32_t datalen;
+    uint8_t data[PCI_MAX_DATA];
+} pci_msg_t;

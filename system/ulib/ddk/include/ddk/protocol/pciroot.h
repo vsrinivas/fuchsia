@@ -11,9 +11,8 @@
 __BEGIN_CDECLS;
 
 typedef struct pciroot_protocol_ops {
-    zx_status_t (*get_auxdata)(void* ctx, auxdata_type_t type,
-                               void* args, size_t args_len,
-                               void* out_data, size_t out_len);
+    zx_status_t (*get_auxdata)(void* ctx, const char* args, void* data,
+                               uint32_t bytes, uint32_t* actual);
 } pciroot_protocol_ops_t;
 
 typedef struct pciroot_protocol {
@@ -22,10 +21,9 @@ typedef struct pciroot_protocol {
 } pciroot_protocol_t;
 
 static inline zx_status_t pciroot_get_auxdata(pciroot_protocol_t* pciroot,
-                                              auxdata_type_t type,
-                                              void* args, size_t args_len,
-                                              void* out_data, size_t out_len) {
-    return pciroot->ops->get_auxdata(pciroot->ctx, type, args, args_len, out_data, out_len);
+                                              const char* args, void* data,
+                                              uint32_t bytes, uint32_t* actual) {
+    return pciroot->ops->get_auxdata(pciroot->ctx, args, data, bytes, actual);
 }
 
 __END_CDECLS;

@@ -82,9 +82,8 @@ typedef struct {
 } publish_acpi_device_ctx_t;
 
 typedef struct {
-    uint8_t n;
+    uint8_t max;
     uint8_t i;
-    zx_status_t st;
     auxdata_i2c_device_t* data;
 } pci_child_auxdata_ctx_t;
 
@@ -136,7 +135,7 @@ static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t nesting_
 
 static ACPI_STATUS pci_child_data_resources_callback(ACPI_RESOURCE* res, void* context) {
     pci_child_auxdata_ctx_t* ctx = (pci_child_auxdata_ctx_t*)context;
-    auxdata_i2c_device_t* child = ctx->data;
+    auxdata_i2c_device_t* child = ctx->data + ctx->i;
 
     if (res->Type != ACPI_RESOURCE_TYPE_SERIAL_BUS) {
         return AE_NOT_FOUND;
@@ -151,18 +150,14 @@ static ACPI_STATUS pci_child_data_resources_callback(ACPI_RESOURCE* res, void* c
     child->address = i2c->SlaveAddress;
     child->bus_speed = i2c->ConnectionSpeed;
 
-    ctx->st = ZX_OK;
-
     return AE_CTRL_TERMINATE;
 }
 
-static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t nesting_level,
-                                       void* context, void** out_value) {
+static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object,
+                                           uint32_t nesting_level,
+                                           void* context, void** out_value) {
     pci_child_auxdata_ctx_t* ctx = (pci_child_auxdata_ctx_t*)context;
-    uint32_t i = ctx->i++;
-    if (i < ctx->n) {
-        return AE_OK;
-    } else if (i > ctx->n) {
+    if ((ctx->i + 1) > ctx->max) {
         return AE_CTRL_TERMINATE;
     }
 
@@ -182,33 +177,37 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t nesting_
     // call _CRS to get i2c info
     acpi_status = AcpiWalkResources(object, (char*)"_CRS",
                                     pci_child_data_resources_callback, ctx);
-    if (acpi_status != AE_OK) {
-        ctx->st = acpi_to_zx_status(acpi_status);
+    if ((acpi_status == AE_OK) || (acpi_status == AE_CTRL_TERMINATE)) {
+        ctx->i += 1;
     }
-
-    // terminate child walk once the the nth device is found
-    return AE_CTRL_TERMINATE;
+    return AE_OK;
 }
 
-static zx_status_t pciroot_op_get_auxdata(void* context, auxdata_type_t type,
-                                          void* _args, size_t args_len,
-                                          void* out_data, size_t out_len) {
+static zx_status_t pciroot_op_get_auxdata(void* context, const char* args,
+                                          void* data, uint32_t bytes,
+                                          uint32_t* actual) {
     acpi_device_t* dev = (acpi_device_t*)context;
-    if (type != AUXDATA_PCI_CHILD_NTH_DEVICE) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 
-    auxdata_args_pci_child_nth_device_t* args = _args;
-    if (args->child_type != AUXDATA_DEVICE_I2C) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    if (out_len != sizeof(auxdata_i2c_device_t)) {
+    char type[16];
+    uint32_t bus_id, dev_id, func_id;
+    int n;
+    if ((n = sscanf(args, "%[^,],%02x:%02x:%02x", type, &bus_id, &dev_id, &func_id)) != 4) {
         return ZX_ERR_INVALID_ARGS;
     }
 
+    zxlogf(SPEW, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x\n", type,
+           bus_id, dev_id, func_id);
+
+    if (strcmp(type, "i2c-child")) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (bytes < (2 * sizeof(uint32_t))) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
     ACPI_HANDLE pci_node = NULL;
-    uint32_t addr = (args->dev_id << 16) | args->func_id;
+    uint32_t addr = (dev_id << 16) | func_id;
 
     // Look for the child node with this device and function id
     ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, dev->ns_node, 1,
@@ -221,21 +220,26 @@ static zx_status_t pciroot_op_get_auxdata(void* context, auxdata_type_t type,
         return ZX_ERR_NOT_FOUND;
     }
 
-    // Look for the nth child for this pci node and fill in data
+    // Look for as many children as can fit in the provided buffer
     pci_child_auxdata_ctx_t ctx = {
-        .n = args->n,
+        .max = bytes / sizeof(auxdata_i2c_device_t),
         .i = 0,
-        .st = ZX_ERR_NOT_FOUND,
-        .data = out_data,
+        .data = data,
     };
 
-    acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, pci_node, 1, pci_child_data_callback,
-                                    NULL, &ctx, NULL);
+    acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, pci_node, 1,
+                                    pci_child_data_callback, NULL, &ctx, NULL);
     if ((acpi_status != AE_OK) && (acpi_status != AE_CTRL_TERMINATE)) {
+        *actual = 0;
         return acpi_to_zx_status(acpi_status);
     }
 
-    return ctx.st;
+    *actual = ctx.i * sizeof(auxdata_i2c_device_t);
+
+    zxlogf(SPEW, "bus-acpi: get_auxdata '%s' %u devs actual %u\n",
+           args, ctx.i, *actual);
+
+    return ZX_OK;
 }
 
 static pciroot_protocol_ops_t pciroot_proto = {
@@ -640,8 +644,6 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
             zxlogf(ERROR, "acpi-bus: acpi error 0x%x in I2C1._PS0\n", acpi_status);
         }
     }
-
-    zxlogf(TRACE, "acpi-bus: handle %p nesting level %d\n", (void*)object, nesting_level);
 
     publish_acpi_device_ctx_t* ctx = (publish_acpi_device_ctx_t*)context;
     zx_device_t* parent = ctx->parent;

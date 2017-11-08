@@ -231,44 +231,32 @@ static zx_status_t kpci_get_device_info(void* ctx, zx_pcie_device_info_t* out_in
     return ZX_OK;
 }
 
-static zx_status_t kpci_get_auxdata(void* ctx, auxdata_type_t type,
-                                    void* _args, size_t args_len,
-                                    void* out_data, size_t out_len) {
+static zx_status_t kpci_get_auxdata(void* ctx, const char* args, void* data,
+                                    uint32_t bytes, uint32_t* actual) {
 #if PROXY_DEVICE
-    if (type != AUXDATA_NTH_DEVICE) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    if (args_len != sizeof(auxdata_args_nth_device_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    auxdata_args_nth_device_t* args = _args;
-    if (args->child_type != AUXDATA_DEVICE_I2C) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (out_len != sizeof(auxdata_i2c_device_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     kpci_device_t* dev = ctx;
     if (dev->pciroot_rpcch == ZX_HANDLE_INVALID) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    pci_req_auxdata_nth_device_t req = {
-        .hdr = {
-            .txid = atomic_fetch_add(&pci_global_txid, 1),
-            .op = PCI_OP_GET_AUXDATA,
-            .len = sizeof(req),
-        },
-        .auxdata_type = type,
-        .args = {
-            .child_type = args->child_type,
-            .n = args->n,
-        },
+    size_t arglen = strlen(args);
+    if (arglen > PCI_MAX_DATA) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    pci_msg_t resp;
+    pci_msg_t req = {
+        .txid = atomic_fetch_add(&pci_global_txid, 1),
+        .reserved0 = 0,
+        .flags = 0,
+        .ordinal = PCI_OP_GET_AUXDATA,
+        .outlen = bytes,
+        .datalen = arglen,
     };
-    pci_resp_auxdata_i2c_nth_device_t resp;
+    memcpy(req.data, args, arglen);
+
+    zxlogf(SPEW, "pci: rpc-out op %d args '%s'\n", req.ordinal, req.data);
+
     zx_channel_call_args_t cc_args = {
         .wr_bytes = &req,
         .rd_bytes = &resp,
@@ -281,19 +269,26 @@ static zx_status_t kpci_get_auxdata(void* ctx, auxdata_type_t type,
     };
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    zx_status_t st = zx_channel_call(dev->pciroot_rpcch, 0, ZX_TIME_INFINITE, &cc_args,
-                                     &actual_bytes, &actual_handles, NULL);
+    zx_status_t st = zx_channel_call(dev->pciroot_rpcch, 0, ZX_TIME_INFINITE,
+                                     &cc_args, &actual_bytes,
+                                     &actual_handles, NULL);
     if (st != ZX_OK) {
         return st;
-    } else if (actual_bytes != sizeof(resp)) {
+    }
+    if (actual_bytes != sizeof(resp)) {
         return ZX_ERR_INTERNAL;
     }
-
-    if (resp.hdr.status == ZX_OK) {
-        memcpy(out_data, &resp.device, sizeof(resp.device));
+    if (resp.ordinal != ZX_OK) {
+        return resp.ordinal;
     }
-
-    return resp.hdr.status;
+    if (resp.datalen > bytes) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    memcpy(data, resp.data, resp.datalen);
+    if (actual) {
+        *actual = resp.datalen;
+    }
+    return ZX_OK;
 #else
     return ZX_ERR_NOT_SUPPORTED;
 #endif

@@ -36,56 +36,40 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t h) {
 #if PROXY_DEVICE
     return ZX_ERR_NOT_SUPPORTED;
 #else
-    uint32_t actual;
-    zx_status_t st = zx_channel_read(h, 0, NULL, NULL, 0, 0, &actual, NULL);
-    if ((st != ZX_OK) && (st != ZX_ERR_BUFFER_TOO_SMALL)) {
-        return st;
-    }
-
-    pci_req_auxdata_nth_device_t req;
-    if (actual > sizeof(req)) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    st = zx_channel_read(h, 0, &req, NULL, sizeof(req), 0, &actual, NULL);
+    pci_msg_t req;
+    zx_status_t st = zx_channel_read(h, 0, &req, NULL, sizeof(req), 0, NULL, NULL);
     if (st != ZX_OK) {
         return st;
     }
 
-    if ((req.hdr.op != PCI_OP_GET_AUXDATA) ||
-        (req.auxdata_type != AUXDATA_NTH_DEVICE) ||
-        (req.args.child_type != AUXDATA_DEVICE_I2C)) {
-        return ZX_ERR_NOT_SUPPORTED;
+    pci_msg_t resp = {
+        .txid = req.txid,
+        .reserved0 = 0,
+        .flags = 0,
+        .datalen = 0,
+    };
+    if (req.ordinal != PCI_OP_GET_AUXDATA) {
+        resp.ordinal = ZX_ERR_NOT_SUPPORTED;
+        goto out;
     }
+
+    zxlogf(SPEW, "pci: rpc-in op %d args '%s'\n", req.ordinal, req.data);
 
     kpci_device_t* device = ctx;
-    if (device->pciroot.ctx == NULL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    char args[32];
+    snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req.data,
+            device->info.bus_id, device->info.dev_id, device->info.func_id);
 
-    auxdata_args_pci_child_nth_device_t args = {
-        .bus_id = device->info.bus_id,
-        .dev_id = device->info.dev_id,
-        .func_id = device->info.func_id,
-        .n = req.args.n,
-        .child_type = req.args.child_type,
-    };
-
-    pci_resp_auxdata_i2c_nth_device_t resp = {
-        .hdr = {
-            .txid = req.hdr.txid,
-            .len = sizeof(resp),
-            .op = req.hdr.op,
-            .status = ZX_OK,
-        },
-    };
-    st = pciroot_get_auxdata(&device->pciroot, AUXDATA_PCI_CHILD_NTH_DEVICE,
-                             &args, sizeof(args),
-                             &resp.device, sizeof(resp.device));
+    uint32_t actual;
+    st = pciroot_get_auxdata(&device->pciroot, args, resp.data, req.outlen, &actual);
     if (st != ZX_OK) {
-        resp.hdr.status = st;
+        resp.ordinal = st;
+    } else {
+        resp.ordinal = ZX_OK;
+        resp.datalen = actual;
     }
 
+out:
     return zx_channel_write(h, 0, &resp, sizeof(resp), NULL, 0);
 #endif
 }
