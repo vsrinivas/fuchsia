@@ -21,3 +21,13 @@ bool MsdArmAtom::AreDependenciesFinished()
     }
     return true;
 }
+
+void MsdArmAtom::set_address_slot_mapping(std::shared_ptr<AddressSlotMapping> address_slot_mapping)
+{
+    if (address_slot_mapping) {
+        DASSERT(!address_slot_mapping_);
+        DASSERT(address_slot_mapping->connection());
+        DASSERT(connection_.lock() == address_slot_mapping->connection());
+    }
+    address_slot_mapping_ = address_slot_mapping;
+}

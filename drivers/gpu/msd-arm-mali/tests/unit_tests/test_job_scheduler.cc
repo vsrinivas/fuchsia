@@ -21,6 +21,21 @@ public:
 private:
     std::vector<MsdArmAtom*> run_list_;
 };
+
+class TestAddressSpaceObserver : public AddressSpaceObserver {
+public:
+    void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length) override {}
+    void ReleaseSpaceMappings(AddressSpace* address_space) override {}
+};
+
+class TestConnectionOwner : public MsdArmConnection::Owner {
+public:
+    void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
+    AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_space_observer_; }
+
+private:
+    TestAddressSpaceObserver address_space_observer_;
+};
 }
 
 class TestJobScheduler {
@@ -28,7 +43,9 @@ public:
     void TestRunBasic()
     {
         TestOwner owner;
-        std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
         EXPECT_EQ(0u, owner.run_list().size());
         JobScheduler scheduler(&owner, 1);
         auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
@@ -53,7 +70,9 @@ public:
     void TestCancelJob()
     {
         TestOwner owner;
-        std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
         JobScheduler scheduler(&owner, 1);
 
         auto atom1 = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
@@ -97,7 +116,9 @@ public:
     void TestJobDependencies()
     {
         TestOwner owner;
-        std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
         JobScheduler scheduler(&owner, 1);
 
         auto unqueued_atom1 =

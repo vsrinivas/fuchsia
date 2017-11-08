@@ -129,15 +129,22 @@ magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, m
 
 std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t client_id, Owner* owner)
 {
-    auto address_space = AddressSpace::Create();
-    if (!address_space)
-        return DRETP(nullptr, "Couldn't create address space");
-    return std::make_shared<MsdArmConnection>(client_id, std::move(address_space), owner);
+    auto connection = std::shared_ptr<MsdArmConnection>(new MsdArmConnection(client_id, owner));
+    if (!connection->Init())
+        return DRETP(nullptr, "Couldn't create connection");
+    return connection;
 }
 
-MsdArmConnection::MsdArmConnection(msd_client_id_t client_id,
-                                   std::unique_ptr<AddressSpace> address_space, Owner* owner)
-    : client_id_(client_id), address_space_(std::move(address_space)), owner_(owner)
+bool MsdArmConnection::Init()
+{
+    address_space_ = AddressSpace::Create(this);
+    if (!address_space_)
+        return DRETF(false, "Couldn't create address space");
+    return true;
+}
+
+MsdArmConnection::MsdArmConnection(msd_client_id_t client_id, Owner* owner)
+    : client_id_(client_id), owner_(owner)
 {
 }
 

@@ -9,9 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include "address_space.h"
 #include "magma_arm_mali_types.h"
-
-class MsdArmConnection;
 
 class MsdArmAtom {
 public:
@@ -33,8 +32,16 @@ public:
     void set_dependencies(const DependencyList& dependencies);
     bool AreDependenciesFinished();
 
+    // These methods should only be called on the device thread.
     bool finished() const { return finished_; }
     void set_finished() { finished_ = true; }
+
+    // These methods should only be called on the device thread.
+    void set_address_slot_mapping(std::shared_ptr<AddressSlotMapping> address_slot_mapping);
+    std::shared_ptr<AddressSlotMapping> address_slot_mapping() const
+    {
+        return address_slot_mapping_;
+    }
 
 private:
     // The following data is immmutable after construction.
@@ -46,8 +53,9 @@ private:
     uint8_t atom_number_;
     magma_arm_mali_user_data user_data_;
 
-    // This data is mutable after construction.
+    // This data is mutable after construction from the device thread.
     bool finished_ = false;
+    std::shared_ptr<AddressSlotMapping> address_slot_mapping_;
 };
 
 #endif // MSD_ARM_ATOM_H_

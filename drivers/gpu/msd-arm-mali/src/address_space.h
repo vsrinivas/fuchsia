@@ -23,12 +23,47 @@
 
 #endif
 
+class AddressSpace;
+class MsdArmConnection;
+
+class AddressSlotMapping {
+public:
+    AddressSlotMapping(uint32_t slot_number, std::shared_ptr<MsdArmConnection> connection)
+        : slot_number_(slot_number), connection_(connection)
+    {
+    }
+
+    uint32_t slot_number() const { return slot_number_; }
+    std::shared_ptr<MsdArmConnection> connection() const { return connection_; }
+
+private:
+    uint32_t slot_number_;
+    std::shared_ptr<MsdArmConnection> connection_;
+};
+
+class AddressSpaceObserver {
+public:
+    virtual void FlushAddressMappingRange(AddressSpace* address_space, uint64_t start,
+                                          uint64_t length) = 0;
+
+    virtual void ReleaseSpaceMappings(AddressSpace* address_space) = 0;
+};
+
 // This should only be accessed on the connection thread (for now).
 class AddressSpace {
 public:
+    class Owner {
+    public:
+        virtual ~Owner() = 0;
+        virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
+        virtual std::shared_ptr<Owner> GetSharedPtr() = 0;
+    };
+
     static constexpr uint32_t kVirtualAddressSize = 48;
 
-    static std::unique_ptr<AddressSpace> Create();
+    static std::unique_ptr<AddressSpace> Create(Owner* owner);
+
+    ~AddressSpace();
 
     bool Insert(gpu_addr_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
                 uint64_t flags);
@@ -38,6 +73,8 @@ public:
     bool ReadPteForTesting(gpu_addr_t addr, mali_pte_t* entry);
 
     uint64_t translation_table_entry() const;
+
+    std::shared_ptr<Owner> owner() const { return owner_->GetSharedPtr(); }
 
 private:
     static constexpr uint32_t kPageTableEntries = PAGE_SIZE / sizeof(mali_pte_t);
@@ -90,8 +127,9 @@ private:
         friend class TestAddressSpace;
     };
 
-    AddressSpace(std::unique_ptr<PageTable> root_page_directory);
+    AddressSpace(Owner* owner, std::unique_ptr<PageTable> root_page_directory);
 
+    Owner* owner_;
     std::unique_ptr<PageTable> root_page_directory_;
 
     friend class TestAddressSpace;

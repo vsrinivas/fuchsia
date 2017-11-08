@@ -2,11 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "address_manager.h"
 #include "address_space.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
 #include "registers.h"
 #include "gtest/gtest.h"
+
+class FakeAddressSpaceOwner : public std::enable_shared_from_this<FakeAddressSpaceOwner>,
+                              public AddressSpace::Owner {
+public:
+    FakeAddressSpaceOwner() : address_manager_(nullptr, 8) {}
+    AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_manager_; }
+    std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
+
+private:
+    AddressManager address_manager_;
+};
 
 class TestAddressSpace {
 public:
@@ -56,14 +68,16 @@ public:
 
     static void Init()
     {
-        auto address_space = AddressSpace::Create();
+        FakeAddressSpaceOwner owner;
+        auto address_space = AddressSpace::Create(&owner);
 
         check_pte_entries_clear(address_space.get(), 0, 1024);
     }
 
     static void Insert()
     {
-        auto address_space = AddressSpace::Create();
+        FakeAddressSpaceOwner owner;
+        auto address_space = AddressSpace::Create(&owner);
 
         // create some buffers
         std::vector<uint64_t> addr = {PAGE_SIZE * 0xbdefcccef, PAGE_SIZE * 100};
@@ -126,7 +140,8 @@ public:
 
     static void GarbageCollect()
     {
-        auto address_space = AddressSpace::Create();
+        FakeAddressSpaceOwner owner;
+        auto address_space = AddressSpace::Create(&owner);
 
         // buffer[0] should overlap two level 0 page tables.
         constexpr uint64_t kInitialAddress = PAGE_SIZE * 511;

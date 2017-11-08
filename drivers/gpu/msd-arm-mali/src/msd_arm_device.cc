@@ -151,7 +151,7 @@ bool MsdArmDevice::Init(void* device_handle)
     power_manager_ = std::make_unique<PowerManager>();
 
     scheduler_ = std::make_unique<JobScheduler>(this, 3);
-    address_manager_ = std::make_unique<AddressManager>();
+    address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
 
     if (!InitializeInterrupts())
         return false;
@@ -504,7 +504,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io
     }
 
     // Skip atom if address space can't be assigned.
-    if (!address_manager_->AssignAddressSpace(register_io, atom)) {
+    if (!address_manager_->AssignAddressSpace(atom)) {
         scheduler_->JobCompleted(atom->slot());
         return;
     }
@@ -512,6 +512,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io
     registers::JobSlotRegisters slot(atom->slot());
     slot.HeadNext().FromValue(atom->gpu_address()).WriteTo(register_io);
     auto config = slot.ConfigNext().FromValue(0);
+    config.address_space().set(atom->address_slot_mapping()->slot_number());
     config.start_flush_clean().set(true);
     config.start_flush_invalidate().set(true);
     // TODO(MA-367): Enable flush reduction optimization.
@@ -530,7 +531,7 @@ void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, registe
 void MsdArmDevice::AtomCompleted(MsdArmAtom* atom)
 {
     DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
-    address_manager_->AtomFinished(register_io_.get(), atom);
+    address_manager_->AtomFinished(atom);
     atom->set_finished();
     auto connection = atom->connection().lock();
     if (connection)

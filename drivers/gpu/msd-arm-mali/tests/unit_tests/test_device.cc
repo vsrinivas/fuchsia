@@ -138,10 +138,14 @@ public:
         // Atom has 0 job chain address and should be thrown out.
         EXPECT_EQ(0u, device->scheduler_->GetAtomListSize());
 
-        constexpr uint32_t kJobSlot = 1;
-        MsdArmAtom atom(connection, 100, kJobSlot, 0, magma_arm_mali_user_data());
-
+        MsdArmAtom atom(connection, 5, 0, 0, magma_arm_mali_user_data());
         device->ExecuteAtomOnDevice(&atom, reg_io.get());
+
+        constexpr uint32_t kJobSlot = 1;
+        auto connection1 = MsdArmConnection::Create(0, device.get());
+        MsdArmAtom atom1(connection1, 100, kJobSlot, 0, magma_arm_mali_user_data());
+
+        device->ExecuteAtomOnDevice(&atom1, reg_io.get());
 
         registers::JobSlotRegisters regs(kJobSlot);
         EXPECT_EQ(1u, regs.AffinityNext().ReadFrom(reg_io.get()).reg_value());
@@ -149,7 +153,10 @@ public:
         constexpr uint32_t kCommandStart = registers::JobSlotCommand::kCommandStart;
         EXPECT_EQ(kCommandStart, regs.CommandNext().ReadFrom(reg_io.get()).reg_value());
         auto config_next = regs.ConfigNext().ReadFrom(reg_io.get());
-        EXPECT_EQ(0u, config_next.address_space().get());
+
+        // connection should get address slot 0, and connection1 should get
+        // slot 1.
+        EXPECT_EQ(1u, config_next.address_space().get());
         EXPECT_EQ(1u, config_next.start_flush_clean().get());
         EXPECT_EQ(1u, config_next.start_flush_invalidate().get());
         EXPECT_EQ(0u, config_next.job_chain_flag().get());

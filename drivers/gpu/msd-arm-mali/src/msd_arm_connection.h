@@ -9,27 +9,26 @@
 #include <memory>
 #include <mutex>
 
+#include "address_space.h"
 #include "gpu_mapping.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "msd_arm_atom.h"
 
-class AddressSpace;
 struct magma_arm_mali_atom;
 
 // This can only be accessed on the connection thread.
 class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
-                         public GpuMapping::Owner {
+                         public GpuMapping::Owner,
+                         public AddressSpace::Owner {
 public:
     class Owner {
     public:
         virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
+        virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
     };
 
     static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
-
-    MsdArmConnection(msd_client_id_t client_id, std::unique_ptr<AddressSpace> address_space,
-                     Owner* owner);
 
     virtual ~MsdArmConnection();
 
@@ -45,8 +44,18 @@ public:
     void SetNotificationChannel(msd_channel_send_callback_t send_callback, msd_channel_t channel);
     void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status);
 
+    AddressSpaceObserver* GetAddressSpaceObserver() override
+    {
+        return owner_->GetAddressSpaceObserver();
+    }
+    std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
+
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
+
+    MsdArmConnection(msd_client_id_t client_id, Owner* owner);
+
+    bool Init();
 
     msd_client_id_t client_id_;
     std::unique_ptr<AddressSpace> address_space_;

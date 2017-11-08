@@ -31,7 +31,8 @@
 
 class MsdArmDevice : public msd_device_t,
                      public JobScheduler::Owner,
-                     public MsdArmConnection::Owner {
+                     public MsdArmConnection::Owner,
+                     public AddressManager::Owner {
 public:
     // Creates a device for the given |device_handle| and returns ownership.
     // If |start_device_thread| is false, then StartDeviceThread should be called
@@ -79,6 +80,7 @@ public:
 
     // MsdArmConnection::Owner implementation.
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
+    AddressSpaceObserver* GetAddressSpaceObserver() override { return address_manager_.get(); }
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -98,7 +100,7 @@ private:
     class JobInterruptRequest;
     class ScheduleAtomRequest;
 
-    RegisterIo* register_io()
+    RegisterIo* register_io() override
     {
         DASSERT(register_io_);
         return register_io_.get();
@@ -148,8 +150,8 @@ private:
     GpuFeatures gpu_features_;
 
     std::unique_ptr<PowerManager> power_manager_;
-    std::unique_ptr<JobScheduler> scheduler_;
     std::unique_ptr<AddressManager> address_manager_;
+    std::unique_ptr<JobScheduler> scheduler_;
 };
 
 #endif // MSD_ARM_DEVICE_H

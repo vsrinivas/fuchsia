@@ -6,11 +6,22 @@
 
 #include "gtest/gtest.h"
 
+#include "address_manager.h"
 #include "gpu_mapping.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_connection.h"
 
 namespace {
+
+class FakeConnectionOwner : public MsdArmConnection::Owner {
+public:
+    FakeConnectionOwner() : address_manager_(nullptr, 8) {}
+    void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
+    AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_manager_; }
+
+private:
+    AddressManager address_manager_;
+};
 
 uint32_t g_test_channel;
 uint64_t g_test_data_size;
@@ -29,7 +40,8 @@ class TestConnection {
 public:
     void MapUnmap()
     {
-        auto connection = MsdArmConnection::Create(0, nullptr);
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
         EXPECT_TRUE(connection);
         constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
 
@@ -88,7 +100,8 @@ public:
 
     void Notification()
     {
-        auto connection = MsdArmConnection::Create(0, nullptr);
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
         EXPECT_TRUE(connection);
         MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8});
 

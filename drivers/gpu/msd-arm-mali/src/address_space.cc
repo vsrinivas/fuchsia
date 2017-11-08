@@ -42,13 +42,17 @@ static uint64_t get_mmu_flags(uint64_t access_flags)
     return mmu_flags;
 }
 
-std::unique_ptr<AddressSpace> AddressSpace::Create()
+AddressSpace::Owner::~Owner() = default;
+
+std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner)
 {
     auto page_directory = AddressSpace::PageTable::Create(kPageDirectoryLevels - 1);
     if (!page_directory)
         return DRETP(nullptr, "failed to create root page table");
-    return std::unique_ptr<AddressSpace>(new AddressSpace(std::move(page_directory)));
+    return std::unique_ptr<AddressSpace>(new AddressSpace(owner, std::move(page_directory)));
 }
+
+AddressSpace::~AddressSpace() { owner_->GetAddressSpaceObserver()->ReleaseSpaceMappings(this); }
 
 bool AddressSpace::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset,
                           uint64_t length, uint64_t flags)
@@ -96,7 +100,6 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length)
         return DRETF(false, "Virtual address too large");
 
     std::vector<std::unique_ptr<PageTable>> empty_tables;
-    // TODO(MA-363): synchronize with MMU (if address space is scheduled in).
     for (uint64_t i = 0; i < num_pages; i++) {
         // TODO(MA-364): optimize walk to not get page table every time.
         uint64_t page_index = i + start_page_index;
@@ -113,8 +116,7 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length)
         }
     }
 
-    // TODO(MA-363): synchronize with MMU (if address space is scheduled in)
-    // before clearing empty_tables.
+    owner_->GetAddressSpaceObserver()->FlushAddressMappingRange(this, start, length);
 
     return true;
 }
@@ -248,7 +250,7 @@ AddressSpace::PageTable::PageTable(uint32_t level, std::unique_ptr<magma::Platfo
     buffer_->CleanCache(0, sizeof(*gpu_), false);
 }
 
-AddressSpace::AddressSpace(std::unique_ptr<PageTable> page_directory)
-    : root_page_directory_(std::move(page_directory))
+AddressSpace::AddressSpace(Owner* owner, std::unique_ptr<PageTable> page_directory)
+    : owner_(owner), root_page_directory_(std::move(page_directory))
 {
 }
