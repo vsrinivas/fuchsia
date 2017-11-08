@@ -36,16 +36,11 @@ executable("bin") {
 }
 
 package("cpuperf_provider") {
-  archive = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "cpuperf_provider"
-        dest = "app"
-      } ]
+  binary = "cpuperf_provider"
 
   meta = [ {
         path = rebase_path("meta/sandbox")
