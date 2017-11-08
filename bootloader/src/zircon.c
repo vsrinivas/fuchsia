@@ -206,18 +206,22 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
 
     // pass ACPI root pointer
     uint64_t rsdp = find_acpi_root(img, sys);
-    hdr.type = BOOTDATA_ACPI_RSDP;
-    hdr.length = sizeof(rsdp);
-    if (add_bootdata(&bptr, &blen, &hdr, &rsdp)) {
-        return -1;
+    if (rsdp != 0) {
+        hdr.type = BOOTDATA_ACPI_RSDP;
+        hdr.length = sizeof(rsdp);
+        if (add_bootdata(&bptr, &blen, &hdr, &rsdp)) {
+            return -1;
+        }
     }
 
     // pass SMBIOS entry point pointer
     uint64_t smbios = find_smbios(img, sys);
-    hdr.type = BOOTDATA_SMBIOS;
-    hdr.length = sizeof(smbios);
-    if (add_bootdata(&bptr, &blen, &hdr, &smbios)) {
-        return -1;
+    if (smbios != 0) {
+        hdr.type = BOOTDATA_SMBIOS;
+        hdr.length = sizeof(smbios);
+        if (add_bootdata(&bptr, &blen, &hdr, &smbios)) {
+            return -1;
+        }
     }
 
     // pass EFI system table
