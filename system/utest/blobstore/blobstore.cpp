@@ -1383,6 +1383,50 @@ static bool QueryDevicePath(void) {
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
+static bool TestReadOnly(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path),
+              0, "Mounting Blobstore");
+
+    // Mount the filesystem as read-write.
+    // We can create new blobs.
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateBlob(1 << 10, &info));
+    int blob_fd;
+    ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
+                         info->data.get(), info->size_data, &blob_fd));
+    ASSERT_TRUE(VerifyContents(blob_fd, info->data.get(), info->size_data));
+    ASSERT_EQ(close(blob_fd), 0);
+
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
+    int fd = open(ramdisk_path, O_RDONLY);
+    ASSERT_GE(fd, 0);
+
+    // Remount the filesystem as read-only
+    mount_options_t options;
+    memcpy(&options, &default_mount_options, sizeof(options));
+    options.readonly = true;
+    ASSERT_EQ(mount(fd, MOUNT_PATH, DISK_FORMAT_BLOBFS, &options,
+                    launch_stdio_async), ZX_OK);
+
+    // We can read old blobs
+    blob_fd = open(info->path, O_RDONLY);
+    ASSERT_GE(blob_fd, 0);
+    ASSERT_TRUE(VerifyContents(blob_fd, info->data.get(), info->size_data));
+    ASSERT_EQ(close(blob_fd), 0);
+
+    // We cannot create new blobs
+    ASSERT_TRUE(GenerateBlob(1 << 10, &info));
+    ASSERT_LT(open(info->path, O_CREAT | O_RDWR), 0);
+
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path),
+              0, "unmounting blobstore");
+    END_TEST;
+}
+
 // This tests growing both additional inodes and blocks
 template <fs_test_type_t TestType>
 static bool ResizePartition(void) {
@@ -1488,6 +1532,7 @@ RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLargeMultithreaded)
 RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLarge)
 RUN_TEST_FOR_ALL_TYPES(LARGE, NoSpace)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, QueryDevicePath)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReadOnly)
 RUN_TEST_MEDIUM(ResizePartition<FS_TEST_FVM>)
 RUN_TEST_MEDIUM(CorruptAtMount<FS_TEST_FVM>)
 END_TEST_CASE(blobstore_tests)

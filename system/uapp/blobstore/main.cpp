@@ -27,7 +27,7 @@ namespace {
 
 #ifdef __Fuchsia__
 
-int do_blobstore_mount(int fd, int argc, char** argv) {
+int do_blobstore_mount(int fd, bool readonly) {
     fbl::RefPtr<blobstore::VnodeBlob> vn;
     if (blobstore::blobstore_mount(&vn, fd) < 0) {
         return -1;
@@ -40,6 +40,7 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
 
     async::Loop loop;
     fs::Vfs vfs(loop.async());
+    vfs.SetReadonly(readonly);
     zx_status_t status;
     if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
         return status;
@@ -157,7 +158,6 @@ struct {
     {"create", do_blobstore_mkfs, "initialize filesystem"},
     {"mkfs", do_blobstore_mkfs, "initialize filesystem"},
 #ifdef __Fuchsia__
-    {"mount", do_blobstore_mount, "mount filesystem"},
     {"check", do_blobstore_check, "check filesystem integrity"},
     {"fsck", do_blobstore_check, "check filesystem integrity"},
 #else
@@ -169,7 +169,9 @@ struct {
 int usage() {
     fprintf(stderr,
 #ifdef __Fuchsia__
-            "usage: blobstore <command> [ <arg>* ]\n"
+            "usage: blobstore [ <options>* ] <command> [ <arg>* ]\n"
+            "\n"
+            "options: --readonly  Mount filesystem read-only\n"
             "\n"
             "On Fuchsia, blobstore takes the block device argument by handle.\n"
             "This can make 'blobstore' commands hard to invoke from command line.\n"
@@ -182,6 +184,9 @@ int usage() {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
                 CMDS[n].name, CMDS[n].help);
     }
+#ifdef __Fuchsia__
+    fprintf(stderr, "%9s %-10s %s\n", "", "mount", "mount filesystem");
+#endif
     fprintf(stderr, "\n");
     return -1;
 }
@@ -190,6 +195,18 @@ int usage() {
 
 int main(int argc, char** argv) {
     int fd;
+    bool readonly = false;
+
+    while (argc > 1) {
+        if (!strcmp(argv[1], "--readonly")) {
+            readonly = true;
+        } else {
+            break;
+        }
+        argc--;
+        argv++;
+    }
+
 #ifdef __Fuchsia__
     if (argc < 2) {
         return usage();
@@ -199,6 +216,10 @@ int main(int argc, char** argv) {
     fd = FS_FD_BLOCKDEVICE;
     argv += 2;
     argc -= 2;
+
+    if (!strcmp(cmd, "mount")) {
+        return do_blobstore_mount(fd, readonly);
+    }
 #else
     if (argc < 3) {
         return usage();
