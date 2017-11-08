@@ -4,6 +4,10 @@
     <localimport file="minimal"/>
   </imports>
   <projects>
+    <project name="third_party/googleapis"
+             path="third_party/googleapis"
+             remote="https://fuchsia.googlesource.com/third_party/googleapis"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/leveldb"
              path="third_party/leveldb"
              remote="https://fuchsia.googlesource.com/third_party/leveldb"
