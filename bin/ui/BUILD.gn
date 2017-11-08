@@ -79,6 +79,19 @@ package("view_manager") {
   binary = "view_manager"
 }
 
+package("scene_manager") {
+  deps = [
+    "scene_manager",
+  ]
+
+  binary = "scene_manager"
+
+  meta = [ {
+        path = rebase_path("scene_manager/meta/sandbox")
+        dest = "sandbox"
+      } ]
+}
+
 package("mozart") {
   system_image = true
 
@@ -86,13 +99,9 @@ package("mozart") {
     "input",
     "launch",
     "print_input",
-    "scene_manager",
   ]
 
   binaries = [
-    {
-      name = "scene_manager"
-    },
     {
       name = "input"
     },

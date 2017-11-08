@@ -1,0 +1,4 @@
+{
+    "dev": [ "class/gpu" ],
+    "features": [ "vulkan" ]
+}

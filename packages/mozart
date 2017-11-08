@@ -10,10 +10,11 @@
         "garnet/packages/zlib"
     ],
     "packages": {
+        "ime_service": "//garnet/bin/ui:ime_service",
+        "mozart_tests": "//garnet/bin/ui:mozart_tests",
         "mozart": "//garnet/bin/ui:mozart",
         "root_presenter": "//garnet/bin/ui:root_presenter",
-        "view_manager": "//garnet/bin/ui:view_manager",
-        "ime_service": "//garnet/bin/ui:ime_service",
-        "mozart_tests": "//garnet/bin/ui:mozart_tests"
+        "scene_manager": "//garnet/bin/ui:scene_manager",
+        "view_manager": "//garnet/bin/ui:view_manager"
     }
 }
