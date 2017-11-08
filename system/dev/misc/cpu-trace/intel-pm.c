@@ -30,12 +30,12 @@
 #define TRY_FREEZE_ON_PMI 0
 
 // Individual bits in the fixed counter enable field.
-// See Intel Volume 3, Figure 18-2 "Layout of IA32_FIXED_CTR_CTRL MSR".
+// See Intel Volume 3, Figure 18-2.
 #define FIXED_CTR_ENABLE_OS 1
 #define FIXED_CTR_ENABLE_USR 2
 
 typedef enum {
-// N.B. The order of fixed/arch/nonarch here must match |perf_events|.
+// N.B. The order of arch/nonarch here must match struct perf_event_t.
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
   symbol,
 #define DEF_SKL_EVENT(symbol, event, umask, flags, name) \
@@ -50,7 +50,7 @@ typedef struct {
 } perf_event_t;
 
 static const perf_event_t perf_events[] = {
-// N.B. The order of fixed/arch/nonarch here must match perf_event_kind_t.
+// N.B. The order of arch/nonarch here must match perf_event_kind_t.
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, description) \
   { event, umask, flags },
 #define DEF_SKL_EVENT(symbol, event, umask, flags, description) \
@@ -170,26 +170,17 @@ static zx_status_t get_simple_config_sample_freq(
         uint32_t* sample_freq) {
     uint32_t freq_sel = simple_config->categories & IPM_CATEGORY_MODE_MASK;
     switch (freq_sel) {
-    case IPM_CATEGORY_TALLY:
+    case IPM_CATEGORY_COUNT:
         *sample_freq = 0;
         break;
     case IPM_CATEGORY_SAMPLE_1000:
         *sample_freq = 1000;
         break;
-    case IPM_CATEGORY_SAMPLE_5000:
-        *sample_freq = 5000;
-        break;
     case IPM_CATEGORY_SAMPLE_10000:
         *sample_freq = 10000;
         break;
-    case IPM_CATEGORY_SAMPLE_50000:
-        *sample_freq = 50000;
-        break;
     case IPM_CATEGORY_SAMPLE_100000:
         *sample_freq = 100000;
-        break;
-    case IPM_CATEGORY_SAMPLE_500000:
-        *sample_freq = 500000;
         break;
     case IPM_CATEGORY_SAMPLE_1000000:
         *sample_freq = 1000000;
@@ -210,20 +201,9 @@ static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_
         enable |= FIXED_CTR_ENABLE_OS;
     if (os_usr_mask & IPM_CATEGORY_USR)
         enable |= FIXED_CTR_ENABLE_USR;
-    // Indexed by fixed counter number.
-    static const uint32_t event_mask[] = {
-        IPM_CATEGORY_FIXED_CTR0,
-        IPM_CATEGORY_FIXED_CTR1,
-        IPM_CATEGORY_FIXED_CTR2,
-    };
-    uint32_t num_fixed = ipm_num_fixed_counters;
-    if (countof(event_mask) < num_fixed)
-        num_fixed = countof(event_mask);
-    for (uint32_t i = 0; i < num_fixed; ++i) {
-        if (simple_config->categories & event_mask[i]) {
-            config->fixed_counter_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(i);
-            config->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(i);
-        }
+    for (uint32_t i = 0; i < ipm_num_fixed_counters; ++i) {
+        config->fixed_counter_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(i);
+        config->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(i);
     }
 
     return ZX_OK; // TODO(dje): Maybe remove, but later.
@@ -262,7 +242,7 @@ static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_confi
                                                zx_x86_ipm_perf_config_t* config) {
     uint32_t programmable_category =
         simple_config->categories & IPM_CATEGORY_PROGRAMMABLE_MASK;
-    bool use_fixed = !!(simple_config->categories & IPM_CATEGORY_FIXED_MASK);
+    bool use_fixed = !!(simple_config->categories & IPM_CATEGORY_FIXED);
     uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
     uint32_t sample_freq;
     zx_status_t status;

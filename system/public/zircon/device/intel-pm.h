@@ -319,8 +319,7 @@ typedef struct {
     // IA32_DEBUGCTL
     uint64_t debug_ctrl;
 
-    // Sampling frequency. If zero then do simple counting (collect a tally
-    // of all counts and report at the end).
+    // Sampling frequency. If zero then do simple counting.
     // When a counter gets this many hits an interrupt is generated.
     uint32_t sample_freq;
 
@@ -352,27 +351,20 @@ typedef struct {
 } zx_x86_ipm_counters_t;
 
 // Sampling mode data in the buffer.
-// This does not include the counter value (e.g., the sample frequency)
-// in order to keep the size small: The user should know what value was
-// configured for each counter (currently they all get the same value but
-// that could change).
 typedef struct {
     zx_time_t time;
     uint32_t counter;
+    uint32_t padding_reserved;
 // OR'd to the value in |counter| to indicate a fixed counter.
 #define IPM_COUNTER_NUMBER_FIXED 0x100
-    uint32_t padding_reserved;
     uint64_t pc;
 } zx_x86_ipm_sample_record_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Flags for the counters in intel-pm.inc.
-// See for example Intel Volume 3, Table 19-3.
-// "Non-Architectural Performance Events of the Processor Core Supported by
-// Skylake Microarchitecture and Kaby Lake Microarchitecture"
+// Flags for the non-architectural counters in intel-pm.inc.
+// See for example Intel Volume 3, Chapter 19, Table 19-3.
 
-// Flags for non-architectural counters
 // CounterMask values
 #define IPM_REG_FLAG_CMSK_MASK 0xff
 #define IPM_REG_FLAG_CMSK1   1
@@ -395,14 +387,8 @@ typedef struct {
 #define IPM_REG_FLAG_PSDLA     0x800
 // Also supports PEBS
 #define IPM_REG_FLAG_PS        0x1000
-
-// Extra flags
 // Architectural event
-#define IPM_REG_FLAG_ARCH      0x10000
-// Fixed counters
-#define IPM_REG_FLAG_FIXED0    0x100000
-#define IPM_REG_FLAG_FIXED1    0x200000
-#define IPM_REG_FLAG_FIXED2    0x400000
+#define IPM_REG_FLAG_ARCH      0x2000
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -418,30 +404,24 @@ typedef struct {
 // TODO(dje): For now.
 #define IPM_CATEGORY_PROGRAMMABLE_MASK 0xfff
 
-// The fixed counters are separate and fixed-purpose, any combination may
-// be used.
-#define IPM_CATEGORY_FIXED_MASK 0xf000
-#define IPM_CATEGORY_FIXED_CTR0 0x1000
-#define IPM_CATEGORY_FIXED_CTR1 0x2000
-#define IPM_CATEGORY_FIXED_CTR2 0x4000
+// The fixed counters are separate and fixed-purpose, this can be added to any
+// of the remaining categories.
+#define IPM_CATEGORY_FIXED 0x1000
 
 // One or both of these must be added.
 // If both are elided then no data collection is done.
-#define IPM_CATEGORY_OS  0x10000
-#define IPM_CATEGORY_USR 0x20000
+#define IPM_CATEGORY_OS  0x2000
+#define IPM_CATEGORY_USR 0x4000
 
 // Only one of the following may be specified.
-// A better way would be to provide numeric arguments to categories, but
-// this is for the "simple mode" of driving the device, so we KISS for now.
-#define IPM_CATEGORY_MODE_MASK      0xff00000
-#define IPM_CATEGORY_TALLY          0x0000000 // cpu:tally
-#define IPM_CATEGORY_SAMPLE_1000    0x0100000 // cpu:sample-1000
-#define IPM_CATEGORY_SAMPLE_5000    0x0200000 // cpu:sample-5000
-#define IPM_CATEGORY_SAMPLE_10000   0x0300000 // cpu:sample-10000
-#define IPM_CATEGORY_SAMPLE_50000   0x0400000 // cpu:sample-50000
-#define IPM_CATEGORY_SAMPLE_100000  0x0500000 // cpu:sample-100000
-#define IPM_CATEGORY_SAMPLE_500000  0x0600000 // cpu:sample-500000
-#define IPM_CATEGORY_SAMPLE_1000000 0x0700000 // cpu:sample-1000000
+// A better way would be to provide numeric arguments to categories,
+// but this is for the "simple mode", so we KISS for now.
+#define IPM_CATEGORY_MODE_MASK      0xff0000
+#define IPM_CATEGORY_COUNT          0x000000 // ipm:count
+#define IPM_CATEGORY_SAMPLE_1000    0x010000 // ipm:sample-1000
+#define IPM_CATEGORY_SAMPLE_10000   0x020000 // ipm:sample-10000
+#define IPM_CATEGORY_SAMPLE_100000  0x030000 // ipm:sample-100000
+#define IPM_CATEGORY_SAMPLE_1000000 0x040000 // ipm:sample-1000000
 
 // Only one of the remaining categories can currently be chosen.
 // See intel-pm-categories.inc for how this translates to actual registers.
@@ -538,7 +518,7 @@ IOCTL_WRAPPER_IN(ioctl_ipm_stage_perf_config, IOCTL_IPM_STAGE_PERF_CONFIG,
 // A simple way for clients to request particular counters without having to
 // deal with the details.
 typedef struct {
-    // Sampling frequency. If zero then do simple counting (tally).
+    // Sampling frequency. If zero then do simple counting.
     // When a counter gets this many hits an interrupt is generated.
     uint32_t sample_freq;
 
