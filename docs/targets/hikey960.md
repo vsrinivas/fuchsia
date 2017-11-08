@@ -94,7 +94,7 @@ If using a __FTDI-style serial adapter cable__:
 ([reference](https://raw.githubusercontent.com/96boards/documentation/master/ConsumerEdition/HiKey960/AdditionalDocs/Images/Images_HWUserManual/HiKey960_Numbered_Front2.png))
     + Pin 1  - GND
     + Pin 11 - UART TX (HiKey960 --> Host)
-    + PIN 13 - UART RX (Hikey960 <-- Host)
+    + PIN 13 - UART RX (HiKey960 <-- Host)
 
 
   + This means that for a common [FTDI style adapter](https://www.digikey.com/products/en?keywords=768-1070-ND):
@@ -150,7 +150,7 @@ connection on the HiKey960 main board. Additionally, the HiKey960 must be in
 fastboot mode. You can enter fastboot in one of two ways:
 
 + __DIP Switch method__  Use the switches on the back of the board. (Older
-  Hikeys may have jumpers instead of DIP switches.) To boot into fastboot mode,
+  HiKeys may have jumpers instead of DIP switches.) To boot into fastboot mode,
   the switches should be in the following positions:
 
         Auto Power up(Switch 1)   closed/ON
