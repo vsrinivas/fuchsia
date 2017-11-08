@@ -103,6 +103,13 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent) {
     a113_pinmux_config(bus, I2C_SCK_B, 1);
     a113_pinmux_config(bus, I2C_SDA_B, 1);
 
+    // Config pinmux for gauss PDM pins
+    a113_pinmux_config(bus, A113_GPIOA(14), 1);
+    a113_pinmux_config(bus, A113_GPIOA(15), 1);
+    a113_pinmux_config(bus, A113_GPIOA(16), 1);
+    a113_pinmux_config(bus, A113_GPIOA(17), 1);
+    a113_pinmux_config(bus, A113_GPIOA(18), 1);
+
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
     bus->usb_mode_switch.ctx = bus;
 
