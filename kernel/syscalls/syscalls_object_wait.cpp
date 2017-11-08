@@ -32,7 +32,8 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-constexpr uint32_t kMaxWaitHandleCount = 8u;
+// TODO(ZX-1349) Re-lower this to 8.
+constexpr uint32_t kMaxWaitHandleCount = 16u;
 
 // ensure public headers agree
 static_assert(ZX_WAIT_MANY_MAX_ITEMS == kMaxWaitHandleCount, "");

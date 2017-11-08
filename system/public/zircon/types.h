@@ -171,7 +171,8 @@ typedef struct {
 } zx_channel_call_args_t;
 
 // Maximum number of wait items allowed for zx_object_wait_many()
-#define ZX_WAIT_MANY_MAX_ITEMS 8
+// TODO(ZX-1349) Re-lower this.
+#define ZX_WAIT_MANY_MAX_ITEMS 16
 
 // Structure for zx_object_wait_many():
 typedef struct {
