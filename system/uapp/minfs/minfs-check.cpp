@@ -54,12 +54,17 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
             *next_n = kMinfsDirect + (i + 1) * kMinfsDirectPerIndirect;
             return ZX_OK;
         }
-        char data[kMinfsBlockSize];
-        zx_status_t status;
-        if ((status = fs_->bc_->Readblk(ibno + fs_->info_.dat_block, data)) != ZX_OK) {
-            return status;
+
+        if (cached_indirect_ != ibno) {
+            zx_status_t status;
+            if ((status = fs_->bc_->Readblk(ibno + fs_->info_.dat_block,
+                                            indirect_cache_)) != ZX_OK) {
+                return status;
+            }
+            cached_indirect_ = ibno;
         }
-        uint32_t* ientry = reinterpret_cast<uint32_t*>(data);
+
+        uint32_t* ientry = reinterpret_cast<uint32_t*>(indirect_cache_);
         *bno_out = ientry[j];
         return ZX_OK;
     }
