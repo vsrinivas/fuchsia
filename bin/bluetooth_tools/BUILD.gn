@@ -2,11 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("bluetooth_tools") {
-  public_deps = [
+import("//packages/package.gni")
+
+package("bluetooth_tools") {
+  system_image = true
+
+  deps = [
     "bluetoothcli",
     "bt_intel_tool",
     "btsnoop",
     "hcitool",
+  ]
+
+  binaries = [
+    {
+      name = "bluetoothcli"
+    },
+    {
+      name = "btsnoop"
+    },
+    {
+      name = "hcitool"
+    },
+    {
+      name = "bt-intel-tool"
+    },
   ]
 }

@@ -38,28 +38,11 @@ package("bluetooth") {
 
   deps = [
     ":bin",
-    "//garnet/bin/bluetooth_tools",
   ]
 
   binaries = [
     {
       name = "bluetooth"
-    },
-
-    {
-      name = "bluetoothcli"
-    },
-
-    {
-      name = "btsnoop"
-    },
-
-    {
-      name = "hcitool"
-    },
-
-    {
-      name = "bt-intel-tool"
     },
   ]
 }

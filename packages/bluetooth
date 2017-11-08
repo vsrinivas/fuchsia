@@ -4,6 +4,7 @@
     ],
     "packages": {
         "bluetooth": "//garnet/bin/bluetooth",
+        "bluetooth_tools": "//garnet/bin/bluetooth_tools",
         "bluetooth_tests": "//garnet/bin/bluetooth:bluetooth_tests"
     }
 }
