@@ -289,7 +289,7 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Rights, Vmo};
+    use {DurationNum, Rights, Signals, Vmo};
     use std::thread;
 
     #[test]
@@ -391,6 +391,7 @@ mod tests {
             let mut buf = MessageBuf::new();
             // if either the read or the write fail, this thread will panic,
             // resulting in tx being dropped, which will be noticed by the rx.
+            p2.wait_handle(Signals::CHANNEL_READABLE, 1.seconds().after_now()).expect("callee wait error");
             p2.read(&mut buf).expect("callee read error");
             p2.write(b"txidresponse", &mut vec![]).expect("callee write error");
             tx.send(buf).expect("callee mpsc send error");
@@ -406,7 +407,7 @@ mod tests {
         // stalling forever if a developer makes a mistake locally in this
         // crate. Tests of Zircon behavior or virtualization behavior should be
         // covered elsewhere. See ZX-1324.
-        assert!(p1.call(30.seconds().after_now(), b"txidcall", &mut vec![], &mut buf).is_ok());
+        p1.call(30.seconds().after_now(), b"txidcall", &mut vec![], &mut buf).expect("channel call error");
         assert_eq!(buf.bytes(), b"txidresponse");
         assert_eq!(buf.n_handles(), 0);
 
