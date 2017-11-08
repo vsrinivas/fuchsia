@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <fbl/atomic.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -17,20 +18,24 @@ namespace audio {
 //
 // This class enables a client to easily create and write LPCM audio data to a
 // RIFF-based WAV file. After creating the WavWriter object, Initialize should
-// be called before invoking other methods. Following that, the Write method
-// is used to instruct the library to append the specified number of bytes to
-// the audio file that has been created.  Once the client has completely written
-// the file, the client should call Close to update 'length' fields in the file
-// and close the file.  If the client wishes, it can also occasionally call
-// UpdateHeader, to update the 'length' fields prior to file closure.  These
-// calls help maximize the amount of audio data retained, in case of a crash
-// before file closure, but at the expense of higher file I/O load.
+// be called before invoking other methods. If nullptr or "" is passed to
+// Initialize (instead of a valid file name), a default file path+name of
+// '/tmp/wav_writer_N.wav' is used, where N is an integer corresponding to the
+// instance of WavWriter running in that process.
+//
+// Following Initialize, the Write method is used to instruct the library to
+// append the specified number of bytes to the audio file that has been created.
+// Once the client has completely written the file, the client should call Close
+// to update 'length' fields in the file and close the file.  If the client
+// wishes, it can also occasionally call UpdateHeader, to update the 'length'
+// fields prior to file closure.  These calls help maximize the amount of audio
+// data retained, in case of a crash before file closure, but at the expense of
+// higher file I/O load.
 //
 // The method Reset discards any previously-written audio data, and returns the
-// file to a state of readiness to be provided audio data.
-// By contrast, the Delete method removes the file entirely -- following this
-// call, the object generally would be destroyed, although it can be reused by
-// again calling Initialize.
+// file to a state of readiness to be provided audio data. By contrast, the
+// Delete method removes the file entirely -- subsequently the object would
+// generally be destroyed, although it can be revived by re-calling Initialize.
 //
 // Note that this library makes no effort to be thread-safe, so the client bears
 // all responsibilities for synchronization.
@@ -57,6 +62,8 @@ class WavWriter {
   std::string file_name_;
   fxl::UniqueFD file_;
   size_t payload_written_ = 0;
+
+  static fbl::atomic<uint32_t> instance_count_;
 };
 
 template <>

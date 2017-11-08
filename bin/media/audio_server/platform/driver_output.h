@@ -8,13 +8,15 @@
 #include <zircon/device/audio.h>
 #include <zx/channel.h>
 #include <zx/vmo.h>
-#include <string>
 
 #include "garnet/bin/media/audio_server/audio_driver.h"
 #include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
+#include "garnet/lib/media/wav_writer/wav_writer.h"
 
 namespace media {
 namespace audio {
+
+constexpr bool kWavWriterEnabled = false;
 
 class DriverOutput : public StandardOutputBase {
  public:
@@ -72,6 +74,8 @@ class DriverOutput : public StandardOutputBase {
   GenerationId clock_mono_to_ring_buf_pos_id_;
   zx_time_t underflow_start_time_ = 0;
   zx_time_t underflow_cooldown_deadline_ = 0;
+
+  WavWriter<kWavWriterEnabled> wav_writer_;
 };
 
 }  // namespace audio

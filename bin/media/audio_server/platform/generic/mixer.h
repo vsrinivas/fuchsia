@@ -75,7 +75,7 @@ class Mixer {
   // TODO(johngro): Right now, this number may have some amount of rounding
   // error which will accumulate as sampling position error as we produce more
   // output samples for a single call to Mix.  This error will reset when we
-  // swtich to the next source buffer, but could (in theory) be the source of
+  // switch to the next source buffer, but could (in theory) be the source of
   // distortion.  If this becomes a problem, we should consider switching to
   // some form of (N,M) stepping system where we count by frac_step_size for N
   // output samples, then frac_step_size+1 for M samples, etc...

@@ -9,15 +9,14 @@
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
-#include <fcntl.h>
-#include <fdio/io.h>
 #include <zircon/process.h>
 #include <iomanip>
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
+#include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/fxl/logging.h"
 
-static constexpr bool VERBOSE_TIMING_DEBUG = false;
+constexpr bool VERBOSE_TIMING_DEBUG = false;
 
 namespace media {
 namespace audio {
@@ -45,7 +44,9 @@ DriverOutput::DriverOutput(AudioDeviceManager* manager,
     : StandardOutputBase(manager),
       initial_stream_channel_(fbl::move(initial_stream_channel)) {}
 
-DriverOutput::~DriverOutput() {}
+DriverOutput::~DriverOutput() {
+  wav_writer_.Close();
+}
 
 MediaResult DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);
@@ -131,6 +132,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         underflow_start_time_ = now;
         output_formatter_->FillWithSilence(rb.virt(), rb.frames());
         zx_cache_flush(rb.virt(), rb.size(), ZX_CACHE_FLUSH_DATA);
+
+        wav_writer_.Close();
       }
 
       // Regardless of whether this was the first or a subsequent underflow,
@@ -200,6 +203,9 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
   const auto& rb = driver_ring_buffer();
   FXL_DCHECK(rb != nullptr);
   size_t buf_len = job.buf_frames * rb->frame_size();
+
+  wav_writer_.Write(job.buf, buf_len);
+  wav_writer_.UpdateHeader();
   zx_cache_flush(job.buf, buf_len, ZX_CACHE_FLUSH_DATA);
 
   if (VERBOSE_TIMING_DEBUG) {
@@ -267,17 +273,17 @@ void DriverOutput::OnDriverGetFormatsComplete() {
                          &pref_fmt);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Audio output failed to find any compatible driver formats.  "
-        << "Req was "
-        << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x"
-        << std::hex << static_cast<uint32_t>(pref_fmt) << ")";
+    FXL_LOG(ERROR) << "Output: cannot match a driver format to this request: "
+                   << pref_fps << " Hz, " << pref_chan
+                   << "-channel, sample format 0x" << std::hex
+                   << static_cast<uint32_t>(pref_fmt);
     return;
   }
 
-  FXL_LOG(INFO) << "AudioOutput Configuring for " << pref_fps << " Hz "
-                << pref_chan << " channel(s) sample format(0x" << std::hex
-                << static_cast<uint32_t>(pref_fmt) << ")";
+  FXL_LOG(INFO) << "Output: configuring the following best-fit format: "
+                << pref_fps << " Hz, " << pref_chan
+                << "-channel, sample format 0x" << std::hex
+                << static_cast<uint32_t>(pref_fmt);
 
   TimelineRate ns_to_frames(pref_fps, ZX_SEC(1));
   int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);
@@ -294,20 +300,25 @@ void DriverOutput::OnDriverGetFormatsComplete() {
 
   output_formatter_ = OutputFormatter::Select(config);
   if (!output_formatter_) {
-    FXL_LOG(ERROR) << "Failed to find output formatter for format "
-                   << config->frames_per_second << "Hz " << config->channels
-                   << "-Ch 0x" << std::hex << config->sample_format;
+    FXL_LOG(ERROR) << "Output: OutputFormatter cannot support this request: "
+                   << pref_fps << " Hz, " << pref_chan
+                   << "-channel, sample format 0x" << std::hex
+                   << static_cast<uint32_t>(pref_fmt);
     return;
   }
 
   // Start the process of configuring our driver
   res = driver_->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to configure driver for: " << pref_fps << " Hz "
-                   << pref_chan << "-Ch 0x" << std::hex << pref_fmt << "(res "
+    FXL_LOG(ERROR) << "Output: failed to configure driver for: " << pref_fps
+                   << " Hz, " << pref_chan << "-channel, sample format 0x"
+                   << std::hex << static_cast<uint32_t>(pref_fmt) << " (res "
                    << std::dec << res << ")";
     return;
   }
+
+  wav_writer_.Initialize(nullptr, pref_chan, pref_fps,
+                         driver_->bytes_per_frame() * 8 / pref_chan);
 
   // Success, wait until configuration completes.
   state_ = State::Configuring;

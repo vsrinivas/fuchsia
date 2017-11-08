@@ -9,12 +9,22 @@
 #include <fdio/io.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
+#include <iomanip>
 #include <limits>
 
 namespace media {
 namespace audio {
 
 namespace {
+
+// Consts for WAV file location, name (instance_count_ is appended), extension
+constexpr const char* kDefaultWavFilePathName = "/tmp/wav_writer_";
+constexpr const char* kWavFileExtension = ".wav";
+
+//
+// Struct and const definitions related to RIFF file format
+//
+
 // Encode a 32-bit 'fourcc' value from these 4 byte values
 static inline constexpr uint32_t make_fourcc(uint8_t a,
                                              uint8_t b,
@@ -199,6 +209,10 @@ ssize_t WriteData(int file_desc, const void* const buffer, size_t num_bytes) {
 
 }  // namespace
 
+// Private static ('enabled' specialization) member, for default WAV file name
+template <>
+fbl::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
+
 //
 // Public instance methods (general template implementation)
 // (Note: the .h contains a 'not enabled' specialization, consisting of no-op
@@ -207,16 +221,28 @@ ssize_t WriteData(int file_desc, const void* const buffer, size_t num_bytes) {
 
 // Create the audio file; save the RIFF chunk and 'fmt ' / 'data' sub-chunks.
 // If this object already had a file open, the header is not updated.
+// TODO(mpuryear): pass in sample type, so we can support 32-bit int and float.
+// Also, leverage utility code elsewhere for bytes-per-sample lookup, for either
+// FIDL-defined sample types and/or driver defined sample packings
 template <bool enabled>
 bool WavWriter<enabled>::Initialize(const char* const file_name,
                                     uint32_t channel_count,
                                     uint32_t frame_rate,
                                     uint32_t bits_per_sample) {
   // Open our output file.
-  file_name_ = std::string(file_name);
-  file_.reset(::open(file_name_.c_str(), O_RDWR | O_CREAT));
+  uint32_t instance_count = instance_count_.fetch_add(1);
+  if (file_name == nullptr || strlen(file_name) == 0) {
+    file_name_ = kDefaultWavFilePathName;
+    file_name_ += (std::to_string(instance_count) + kWavFileExtension);
+  } else {
+    file_name_ = file_name;
+  }
+
+  int file_desc = ::open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+  file_.reset(file_desc);
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "Failed to open '" << file_name_ << "'";
+    FXL_LOG(WARNING) << "::open failed for " << std::quoted(file_name_)
+                     << ", returned " << file_desc << ", errno " << errno;
     return false;
   }
 
@@ -231,13 +257,13 @@ bool WavWriter<enabled>::Initialize(const char* const file_name,
                                       bits_per_sample_);
   if (status != ZX_OK) {
     Delete();
-    FXL_LOG(WARNING) << "Failed (" << status << ") writing initial header for '"
-                     << file_name_ << "'.";
+    FXL_LOG(WARNING) << "Failed (" << status << ") writing initial header for "
+                     << std::quoted(file_name_);
     return false;
   }
   FXL_LOG(INFO) << "WavWriter[" << this << "] recording " << bits_per_sample_
                 << "-bit " << frame_rate_ << " Hz " << channel_count_
-                << "-chan PCM to '" << file_name_ << "'";
+                << "-chan PCM to " << std::quoted(file_name_);
   return true;
 }
 
@@ -247,14 +273,13 @@ bool WavWriter<enabled>::Initialize(const char* const file_name,
 template <bool enabled>
 bool WavWriter<enabled>::Write(void* const buffer, uint32_t num_bytes) {
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
     return false;
   }
 
   ssize_t amt = WriteData(file_.get(), buffer, num_bytes);
   if (amt < 0) {
-    FXL_LOG(WARNING) << "Failed (" << amt << ") while writing to '"
-                     << file_name_ << "'.";
+    FXL_LOG(WARNING) << "Failed (" << amt << ") while writing to "
+                     << std::quoted(file_name_);
     return false;
   }
 
@@ -274,14 +299,13 @@ bool WavWriter<enabled>::Write(void* const buffer, uint32_t num_bytes) {
 template <bool enabled>
 bool WavWriter<enabled>::UpdateHeader() {
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
     return false;
   }
 
   zx_status_t status = UpdateHeaderLengths(file_.get(), payload_written_);
   if (status < 0) {
-    FXL_LOG(WARNING) << "Failed (" << status << ") to update WavHeader for '"
-                     << file_name_ << "'.";
+    FXL_LOG(WARNING) << "Failed (" << status << ") to update WavHeader for "
+                     << std::quoted(file_name_);
     return false;
   }
 
@@ -293,7 +317,7 @@ bool WavWriter<enabled>::UpdateHeader() {
 template <bool enabled>
 bool WavWriter<enabled>::Reset() {
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
+    FXL_LOG(WARNING) << "Invalid file " << std::quoted(file_name_);
     return false;
   }
 
@@ -303,11 +327,13 @@ bool WavWriter<enabled>::Reset() {
   }
 
   if (::ftruncate(file_.get(), kWavHeaderOverhead) < 0) {
-    FXL_LOG(WARNING) << "Failed to truncate file, upon WavWritter::Reset().";
+    FXL_LOG(WARNING) << "Failed to truncate " << std::quoted(file_name_)
+                     << ", in WavWriter::Reset().";
     Close();
     return false;
   }
 
+  FXL_LOG(INFO) << "Reset WAV file " << std::quoted(file_name_);
   return true;
 }
 
@@ -316,17 +342,17 @@ bool WavWriter<enabled>::Reset() {
 template <bool enabled>
 bool WavWriter<enabled>::Close() {
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
+    FXL_LOG(WARNING) << "Invalid file " << std::quoted(file_name_);
     return false;
   }
 
-  FXL_LOG(INFO) << "Closing WAV file '" << file_name_ << "'";
   // Keep any additional content since the last header update.
   if (!UpdateHeader()) {
     return false;
   }
 
   file_.reset();
+  FXL_LOG(INFO) << "Closed WAV file " << std::quoted(file_name_);
   return true;
 }
 
@@ -340,12 +366,12 @@ bool WavWriter<enabled>::Delete() {
     return true;
   }
 
-  FXL_LOG(WARNING) << "Deleting WAV file '" << file_name_ << "'";
   if (::unlink(file_name_.c_str()) < 0) {
-    FXL_LOG(WARNING) << "Could not delete file.";
+    FXL_LOG(WARNING) << "Could not delete " << std::quoted(file_name_);
     return false;
   }
 
+  FXL_LOG(INFO) << "Deleted WAV file " << std::quoted(file_name_);
   return true;
 }
 

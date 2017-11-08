@@ -1,4 +1,5 @@
 {
     "dev": [ "class/audio-input", "class/audio-output" ],
+    "features": [ "system-temp" ],
     "system": [ "data/media" ]
 }
