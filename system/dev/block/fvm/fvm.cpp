@@ -42,7 +42,6 @@ fbl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
     return fbl::move(new_extent);
 }
 
-
 bool SliceExtent::Merge(const SliceExtent& other) {
     ZX_DEBUG_ASSERT(end() == other.start());
     fbl::AllocChecker ac;
@@ -102,6 +101,7 @@ zx_status_t VPartitionManager::Load() {
     fbl::AutoLock lock(&lock_);
 
     auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        DdkRemove();
         // "Load" is running in a background thread called by bind.
         // This thread will be joined when the fvm_device is released,
         // but it must be added to be released.
@@ -198,9 +198,7 @@ zx_status_t VPartitionManager::Load() {
     }
 
     // Begin initializing the underlying partitions
-    if ((status = DdkAdd("fvm")) != ZX_OK) {
-        return status;
-    }
+    DdkMakeVisible();
     auto_detach.cancel();
 
     // 0th vpartition is invalid
@@ -1045,10 +1043,14 @@ zx_status_t fvm_bind(zx_device_t* parent) {
     if (status != ZX_OK) {
         return status;
     }
+    if ((status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
+        return status;
+    }
 
     // Read vpartition table asynchronously
     status = thrd_create_with_name(&vpm->init_, fvm_load_thread, vpm.get(), "fvm-init");
     if (status < 0) {
+        vpm->DdkRemove();
         return status;
     }
     vpm.release();
