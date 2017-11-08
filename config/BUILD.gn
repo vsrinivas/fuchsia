@@ -114,6 +114,12 @@ config("default_warnings") {
     "-Wall",
     "-Wextra",
     "-Wno-unused-parameter",
+
+    # TODO(phosek): We need to disable this warning type because the current
+    # implementation is too aggressive and is reporting cases that are generally
+    # safe. Remove this once https://reviews.llvm.org/D39462 lands.
+    "-Wno-tautological-constant-compare",
+    "-Wno-unknown-warning-option",
   ]
   if (current_os == "fuchsia") {
     cflags += [
