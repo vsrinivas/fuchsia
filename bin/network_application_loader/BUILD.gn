@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("application_loader") {
+import("//packages/package.gni")
+
+executable("bin") {
   output_name = "network_application_loader"
 
   sources = [
@@ -15,5 +17,19 @@ executable("application_loader") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
+  ]
+}
+
+package("network_application_loader") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "network_application_loader"
+    },
   ]
 }

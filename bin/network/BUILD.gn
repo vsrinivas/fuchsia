@@ -4,17 +4,29 @@
 
 import("//packages/package.gni")
 
-executable("network") {
+source_set("errors") {
+  sources = [
+    "net_error_list.h",
+    "net_errors.cc",
+    "net_errors.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("bin") {
   # if you don't need HTTPS, comment out NETWORK_SERVICE_USE_HTTPS in |defines| below.
   defines = [ "NETWORK_SERVICE_USE_HTTPS" ]
+
+  output_name = "network"
 
   sources = [
     "http_client.h",
     "main.cc",
     "net_adapters.cc",
     "net_adapters.h",
-    "net_errors.cc",
-    "net_errors.h",
     "network_service_delegate.cc",
     "network_service_delegate.h",
     "network_service_impl.cc",
@@ -26,6 +38,7 @@ executable("network") {
   ]
 
   deps = [
+    ":errors",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -38,29 +51,16 @@ executable("network") {
   ]
 }
 
-# TODO: This should really be called just 'network' but the executable target 'network' is also
-# being used as a dependency elsewhere in the tree to get access to net_errors.h. This is wrong -
-# targets shouldn't declare a dependency on an executable just to get access to their header files.
-# The right fix is to define an API target with the errors, preferably in a fidl file, and have
-# other targets depend on that so the name of the executable target can be a detail internal to the
-# package target.
-package("network_pkg") {
+package("network") {
   system_image = true
 
-  package_name = "network"
-
   deps = [
-    ":network",
-    "//garnet/bin/application_loader",
+    ":bin",
   ]
 
   binaries = [
     {
       name = "network"
-    },
-
-    {
-      name = "network_application_loader"
     },
   ]
 }

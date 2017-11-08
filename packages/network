@@ -6,6 +6,7 @@
         "garnet/packages/netstack"
     ],
     "packages": {
-        "network": "//garnet/bin/network:network_pkg"
+        "network": "//garnet/bin/network",
+        "network_application_loader": "//garnet/bin/network_application_loader"
     }
 }
