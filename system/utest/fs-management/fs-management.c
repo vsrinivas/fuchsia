@@ -382,6 +382,70 @@ static bool mount_get_device(void) {
     END_TEST;
 }
 
+static bool mount_readonly(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_readonly";
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    mount_options_t options;
+    memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+    options.readonly = false;
+
+    // Mount MinFS as writable
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
+                    launch_stdio_async), ZX_OK, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+
+    // Demonstrate we can modify the filesystem
+    int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GE(root_fd, 0, "");
+    fd = openat(root_fd, "some_file", O_CREAT | O_RDWR);
+    ASSERT_GE(fd, 0, "");
+    ASSERT_EQ(write(fd, "hello", 6), 6, "");
+
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(root_fd), 0, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
+
+    // Let's try mounting again, but as read-only
+    options.readonly = true;
+    fd = open(ramdisk_path, O_RDWR);
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
+                    launch_stdio_async), ZX_OK, "");
+    root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GE(root_fd, 0, "");
+    fd = openat(root_fd, "some_file", O_CREAT | O_RDWR);
+
+    // We can no longer open the file as writable
+    ASSERT_LT(fd, 0, "");
+
+    // We CAN open it as readable though
+    fd = openat(root_fd, "some_file", O_RDONLY);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_LT(write(fd, "hello", 6), 0, "");
+    char buf[6];
+    ASSERT_EQ(read(fd, buf, 6), 6, "");
+    ASSERT_EQ(memcmp(buf, "hello", 6), 0, "");
+
+    ASSERT_LT(renameat(root_fd, "some_file", root_fd, "new_file"), 0, "");
+    ASSERT_LT(unlinkat(root_fd, "some_file", 0), 0, "");
+
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(root_fd), 0, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
+
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fs_management_tests)
 RUN_TEST_MEDIUM(mount_unmount)
 RUN_TEST_MEDIUM(mount_mkdir_unmount)
@@ -392,6 +456,7 @@ RUN_TEST_MEDIUM(umount_test_evil)
 RUN_TEST_MEDIUM(mount_remount)
 RUN_TEST_MEDIUM(mount_fsck)
 RUN_TEST_MEDIUM(mount_get_device)
+RUN_TEST_MEDIUM(mount_readonly)
 END_TEST_CASE(fs_management_tests)
 
 int main(int argc, char** argv) {

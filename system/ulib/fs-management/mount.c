@@ -151,8 +151,13 @@ static zx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp
     if (options->verbose_mount) {
         printf("fs_mount: Launching %s\n", binary);
     }
-    const char* argv[] = {binary, "mount"};
-    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mp, root);
+    const char* argv[3] = {binary};
+    int argc = 1;
+    if (options->readonly) {
+        argv[argc++] = "--readonly";
+    }
+    argv[argc++] = "mount";
+    return launch_and_mount(cb, options, argv, argc, hnd, ids, n, mp, root);
 }
 
 static zx_status_t mount_fat(int devicefd, mountpoint_t* mp, const mount_options_t* options,

@@ -45,7 +45,7 @@ int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
 }
 
 #ifdef __Fuchsia__
-int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
+int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
     fbl::RefPtr<minfs::VnodeMinfs> vn;
     if (minfs_mount(&vn, fbl::move(bc)) < 0) {
         return -1;
@@ -58,6 +58,7 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
     }
 
     async::Loop loop;
+    minfs::vfs.SetReadonly(readonly);
     minfs::vfs.set_async(loop.async());
     zx_status_t status;
     if ((status = minfs::vfs.ServeDirectory(fbl::move(vn),
@@ -323,9 +324,7 @@ struct {
     {"mkfs", do_minfs_mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
     {"check", do_minfs_check, O_RDONLY, "check filesystem integrity"},
     {"fsck", do_minfs_check, O_RDONLY, "check filesystem integrity"},
-#ifdef __Fuchsia__
-    {"mount", do_minfs_mount, O_RDWR, "mount filesystem"},
-#else
+#ifndef __Fuchsia__
     {"cp", do_cp, O_RDWR, "copy to/from fs. Prefix fs paths with '::'"},
     {"mkdir", do_mkdir, O_RDWR, "create directory. Prefix paths with '::'"},
     {"ls", do_ls, O_RDWR, "list content of directory. Prefix paths with '::'"},
@@ -340,8 +339,9 @@ int usage() {
     fprintf(stderr,
             "usage: minfs [ <option>* ] <file-or-device>[@<size>] <command> [ <arg>* ]\n"
             "\n"
-            "options:  -v         some debug messages\n"
-            "          -vv        all debug messages\n"
+            "options:  -v          some debug messages\n"
+            "          -vv         all debug messages\n"
+            "          --readonly  Mount filesystem read-only\n"
 #ifdef __Fuchsia__
             "\n"
             "On Fuchsia, MinFS takes the block device argument by handle.\n"
@@ -353,6 +353,9 @@ int usage() {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
                 CMDS[n].name, CMDS[n].help);
     }
+#ifdef __Fuchsia__
+    fprintf(stderr, "%9s %-10s %s\n", "", "mount", "mount filesystem");
+#endif
     fprintf(stderr, "\n");
     return -1;
 }
@@ -379,6 +382,7 @@ off_t get_size(int fd) {
 
 int main(int argc, char** argv) {
     off_t size = 0;
+    bool readonly = false;
 
     // handle options
     while (argc > 1) {
@@ -386,6 +390,8 @@ int main(int argc, char** argv) {
             fs_trace_on(FS_TRACE_SOME);
         } else if (!strcmp(argv[1], "-vv")) {
             fs_trace_on(FS_TRACE_ALL);
+        } else if (!strcmp(argv[1], "--readonly")) {
+            readonly = true;
         } else {
             break;
         }
@@ -448,7 +454,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "minfs: unknown command: %s\n", cmd);
     return usage();
 found:
-    fd.reset(open(fn, flags, 0644));
+    fd.reset(open(fn, readonly ? O_RDONLY : flags, 0644));
     if (!fd) {
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
@@ -468,6 +474,12 @@ found:
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }
+
+#ifdef __Fuchsia__
+    if (!strcmp(cmd, "mount")) {
+        return do_minfs_mount(fbl::move(bc), readonly);
+    }
+#endif
 
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
