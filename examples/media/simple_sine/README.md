@@ -26,14 +26,14 @@ including the retrieval of supported media formats, setting the renderer gain,
 packet demand management, and nuanced treatment of timeline transforms.
 
 Once the app object is created, we handle any command-line options, call
-MediaApp::Run (which sets everything up and starts playback), then run the
+`MediaApp::Run` (which sets everything up and starts playback), then run the
 asynchronous message loop (which allows asynchronous callbacks from the system
 to flow to our app, so that playback can continue to the end). Once all of the
 audio has been played, the app posts the 'quit' task as detailed earlier, and
 the app subsequently exits.
 
 Focusing on this example's media-specific setup and asynchronous tasks, the
-highest-level description of events (shown in **MediaApp::Run**) is as follows:
+highest-level description of events (shown in `MediaApp::Run`) is as follows:
 1. Open the primary FIDL interface to the audio subsystem (AudioRenderer2);
 2. Set the audio playback format;
 3. Map a shared memory section through which we transport audio to the renderer;
@@ -53,9 +53,9 @@ AudioServer, and use that to obtain interface pointers to AudioRenderer2. At
 that point we no longer need our AudioServer interface and can allow it to go
 out of scope (and hence be automatically closed).
 
-We use the AudioRenderer2 interface to _set playback format_ and start playback.
-If we so desired, we could also use AudioRenderer2 to _set output gain_ for our
-audio stream (not shown in this example).
+We use the AudioRenderer2 interface to _set playback format_ and start
+playback. If we so desired, we could also use AudioRenderer2 to set output
+gain for our audio stream (not shown in this example).
 
 We must **set_error_handler** on every interface before using it. These
 interfaces represent FIDL channels, which can close asynchronously. The system
@@ -65,7 +65,7 @@ shutdown process.
 
 ##### Set Playback Format
 
-We populate an AudioPcmFormat struct with the appropriate number of channels,
+We populate an `AudioPcmFormat` struct with the appropriate number of channels,
 sample rate, and sample format. If the float flag has been specified via the
 command-line, then 32-bit floating-point format is used; otherwise this example
 uses 16-bit signed integers. In this example, the number of channels and sample
@@ -85,21 +85,21 @@ be writable and readable.
 
 This example uses the VMO mapper object from FBL, to create and map this memory
 section, before instructing the audio renderer to use this section via the
-SetPayloadBuffer call. 
+`SetPayloadBuffer` call.
 
 ##### Write Audio Data Into the Shared Buffer
 
 Having mapped our shared memory section into our process (at
-**payload_buffer_.start()**), we can now write audio data into it. In this
-simple example, we write our audio data only once, during setup, but clients can
-write into mapped memory at any time **before it is submitted** to the system,
-or **after the system returns it**. This is described in more detail in the
-following section.
+`payload_buffer_.start()`), we can now write audio data into it. In this
+simple example, we write our audio data only once, during setup, but clients
+can write into mapped memory at any time **before it is submitted** to the
+system, or **after the system returns it**. This is described in more detail
+in the following section.
 
 This example plays a sine wave signal, sending identical data to both left and
-right channels (as shown in the inner loop of **WriteStereoAudioIntoBuffer**).
-For each frame in our audio buffer we compute the appropriate sine value using
-32-bit float precision, then convert it into signed 16-bit integer if needed.
+right channels (as shown in the inner loop of `WriteAudioIntoBuffer`). For each
+frame in our audio buffer we compute the appropriate sine value using 32-bit
+float precision, then convert it into signed 16-bit integer if needed.
 
 In order for the audio subsystem to use our buffer as a wraparound ring-buffer,
 we must subdivide it and continuously submit these pieces in sequence. This
@@ -120,21 +120,21 @@ same overall memory section. In this way, the example keeps the same number of
 media packets with the renderer at all times, each packet pointing to a
 different piece of the overall mapped buffer.
 
-In this example, we do not specify presentation timestamps. We use a PTS of
-_kNoTimestamp_, which means that the audio subsystem should start playback
-immediately when ready, and play each buffer successively, without overlap or
-intervening gap. All media packets created in this example are identical except
-for one field: *payload_offset*. This field (along with payload_size) specifies
-the buffer location that this packet represents. Once we call SendPacket, we
-should not access the associated payload memory until we receive a signal from
-the audio subsystem -- specifically the callback that we provided to SendPacket.
+In this example, we do not specify presentation timestamps. This means that the
+audio subsystem should start playback immediately when ready, and play each
+buffer successively, without overlap or intervening gap. All media packets
+created in this example are identical except for one field: `payload_offset`.
+This field (along with `payload_size`) specifies the buffer location that this
+packet represents. Once we call `SendPacket`, we should not access the
+associated payload memory until we receive a signal from the audio subsystem --
+specifically the callback that we provided to `SendPacket`.
 
-Once playback has begun, the sequence of [SendPacket -> callback] is our primary
-mechanism for ongoing conversation with the audio subsystem. For this reason,
-most interactive clients will generate the next set of audio data within the
-SendPacket callback itself, immediately before submitting it. In this example,
-data has been pre-written and payloads can simply be resubmitted without being
-rewritten.
+Once playback has begun, the sequence of [`SendPacket` -> callback] is our
+primary mechanism for ongoing conversation with the audio subsystem. For this
+reason, most interactive clients will generate the next set of audio data
+within the `SendPacket` callback itself, immediately before submitting it. In
+this example, data has been pre-written and payloads can simply be resubmitted
+without being rewritten.
 
 This example plays a sine wave for two seconds. It knows the exact number of
 media packets needed, and submits exactly that number. Once the callback is
@@ -145,26 +145,26 @@ thing upon receiving a signal to stop from its UI.
 ##### Begin Playback
 
 Once we tell the audio renderer to begin playback, we will almost immediately
-begin to receive SendPacket callbacks. For this reason, we do not need to
-receive a separate callback when the Play() function completes; this is wny we
-call PlayNoReply. The parameters to PlayNoreply indicate that playback should
+begin to receive `SendPacket` callbacks. For this reason, we do not need to
+receive a separate callback when playback completes; this is why we call
+`PlayNoReply`. The parameters to `PlayNoreply` indicate that playback should
 begin as soon as the system can responsibly do so, using a media timestamp of
 the first packet that we provided (thus, 0 here). The callbacks (and subsequent
 sending of the next packets) will continue until we stop submitting them, or
 until we stop the system.
 
 Even though we have not completed playback -- even though audio packets are
-still outstanding at the audio renderer, and others have not yet been sent -- we
-can nonetheless exit our MediaApp::Run method at this point, returning to
+still outstanding at the audio renderer, and others have not yet been sent --
+we can nonetheless exit our `MediaApp::Run` method at this point, returning to
 main.cc while our message loop dutifully waits until it receives each callback,
 and eventually the Quit task. Note: our thread *must* be a message loop thread,
 for FIDL interface calls (and callbacks) to function.
 
 ##### Shutdown
 
-As stated above, once we receive a SendPacket callback signaling that we have
-played the right number of packets, we then call Shutdown to close all remaining
-resources and exit our app.
+As stated above, once we receive a `SendPacket` callback signaling that we have
+played the right number of packets, we then call Shutdown to close all
+remaining resources and exit our app.
 
 There are actually two scenarios that can lead to our calling Shutdown.
 1. In the normal case described above, after completing the correct number
@@ -179,5 +179,5 @@ Our Shutdown function unmaps our section of shared memory and closes (resets)
 our VMO object. It also posts a Quit task to our message loop thread, allowing
 it to exit its "dutiful" wait (and immediately thereafter, the app). Once the
 main function exits, our MediaApp object is destroyed, and at this point any
-remaining FIDL interface (AudioRenderer2, in case of normal shutdown) is
+remaining FIDL interface (`AudioRenderer2`, in case of normal shutdown) is
 released.

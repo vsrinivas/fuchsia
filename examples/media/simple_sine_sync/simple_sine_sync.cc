@@ -43,6 +43,9 @@ int MediaApp::Run() {
   payload_size_ = kFramesPerPayload * kNumChannels * sample_size_;
   total_mapping_size_ = kTotalMappingFrames * kNumChannels * sample_size_;
 
+  if (high_water_mark_ < low_water_mark_) {
+    high_water_mark_ = low_water_mark_;
+  }
   if (verbose_) {
     printf("Low water mark: %ldms\n", low_water_mark_ / 1000000);
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);

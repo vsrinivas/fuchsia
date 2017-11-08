@@ -9,5 +9,6 @@ first one, nor does it consider devices other than the default or take into
 account the preferred format of that device.
 
 ### USAGE
-
+```
   media_client_sine
+```
