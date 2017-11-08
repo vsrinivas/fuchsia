@@ -14,7 +14,7 @@
 #define EP0_LOCK(dwc)   (&(dwc)->eps[EP0_OUT].lock)
 
 static void dwc3_queue_setup_locked(dwc3_t* dwc) {
-    dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_SETUP, io_buffer_phys(&dwc->ep0_buffer),
+    dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_SETUP, dwc->ep0_buffer.paddr,
                            sizeof(usb_setup_t));
     dwc->ep0_state = EP0_STATE_SETUP;
 }
@@ -159,8 +159,8 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
     case EP0_STATE_SETUP: {
         usb_setup_t* setup = &dwc->cur_setup;
 
-        io_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(*setup));
-        memcpy(setup, io_buffer_virt(&dwc->ep0_buffer), sizeof(*setup));
+        pdev_vmo_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(*setup));
+        memcpy(setup, dwc->ep0_buffer.vaddr, sizeof(*setup));
 
         zxlogf(TRACE, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d\n",
                 setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex,
@@ -170,11 +170,11 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
         if (setup->wLength > 0 && is_out) {
             // queue a read for the data phase
             dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_CONTROL_DATA,
-                                   io_buffer_phys(&dwc->ep0_buffer), setup->wLength);
+                                   dwc->ep0_buffer.paddr, setup->wLength);
             dwc->ep0_state = EP0_STATE_DATA_OUT;
         } else {
             size_t actual;
-            zx_status_t status = dwc3_handle_setup(dwc, setup, io_buffer_virt(&dwc->ep0_buffer),
+            zx_status_t status = dwc3_handle_setup(dwc, setup, dwc->ep0_buffer.vaddr,
                                                    dwc->ep0_buffer.size, &actual);
             zxlogf(TRACE, "dwc3_handle_setup returned %d actual %zu\n", status, actual);
             if (status != ZX_OK) {
@@ -185,9 +185,9 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
 
             if (setup->wLength > 0) {
                 // queue a write for the data phase
-                io_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, actual);
-                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA,
-                                       io_buffer_phys(&dwc->ep0_buffer), actual);
+                pdev_vmo_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, actual);
+                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA, dwc->ep0_buffer.paddr,
+                                       actual);
                 dwc->ep0_state = EP0_STATE_DATA_IN;
             } else {
                 dwc->ep0_state = EP0_STATE_WAIT_NRDY_IN;

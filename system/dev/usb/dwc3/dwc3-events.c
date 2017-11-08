@@ -180,7 +180,7 @@ static int dwc3_irq_thread(void* arg) {
 
     zxlogf(TRACE, "dwc3_irq_thread start\n");
 
-    uint32_t* ring_start = io_buffer_virt(&dwc->event_buffer);
+    uint32_t* ring_start = dwc->event_buffer.vaddr;
     uint32_t* ring_end = (void *)ring_start + EVENT_BUFFER_SIZE;
     volatile uint32_t* ring_cur = ring_start;
 
@@ -198,8 +198,8 @@ static int dwc3_irq_thread(void* arg) {
         uint32_t event_count;
         while ((event_count = DWC3_READ32(mmio + GEVNTCOUNT(0)) & GEVNTCOUNT_EVNTCOUNT_MASK) > 0) {
             // invalidate cache so we can read fresh events
-            io_buffer_cache_op(&dwc->event_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0,
-                               EVENT_BUFFER_SIZE);
+            pdev_vmo_buffer_cache_op(&dwc->event_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0,
+                                     EVENT_BUFFER_SIZE);
 
             for (unsigned i = 0; i < event_count; i += sizeof(uint32_t)) {
                 uint32_t event = *ring_cur++;
@@ -223,7 +223,7 @@ void dwc3_events_start(dwc3_t* dwc) {
 
     // set event buffer pointer and size
     // keep interrupts masked until we are ready
-    zx_paddr_t paddr = io_buffer_phys(&dwc->event_buffer);
+    zx_paddr_t paddr = dwc->event_buffer.paddr;
     DWC3_WRITE32(mmio + GEVNTADRLO(0), (uint32_t)paddr);
     DWC3_WRITE32(mmio + GEVNTADRHI(0), (uint32_t)(paddr >> 32));
     DWC3_WRITE32(mmio + GEVNTSIZ(0), EVENT_BUFFER_SIZE | GEVNTSIZ_EVNTINTRPTMASK);
