@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_test.gni")
 
 go_binary("netstat") {
   gopackage = "netstack/netstat"
@@ -38,6 +39,44 @@ go_binary("netstat") {
     },
   ]
 
+  deps = [
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/netstack/fidl",
+  ]
+}
+
+go_test("netstack_netstat_test") {
+  gopackage = "netstack/netstat"
+  go_dependencies = [
+    {
+      package = "netstack"
+      source = "//garnet/go/src/netstack"
+    },
+    {
+      package = "app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "github.com/google/netstack"
+      source = "//third_party/netstack"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/netstack/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
+    },
+  ]
   deps = [
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/netstack/fidl",

@@ -43,11 +43,17 @@ package("netstack_gotests") {
 
   deps = [
     ":netstack_netiface_test",
+    "//garnet/go/src/netstack/netstat:netstack_netstat_test",
   ]
 
-  tests = [ {
-        name = "netstack_netiface_test"
-      } ]
+  tests = [
+    {
+      name = "netstack_netiface_test"
+    },
+    {
+     name = "netstack_netstat_test"
+    },
+  ]
 }
 
 go_binary("netstack_bin") {
