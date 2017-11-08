@@ -5,18 +5,20 @@
 import("//packages/package.gni")
 
 package("network_time") {
-  system_image = true
-
   deps = [
-    ":network_time_bin",
+    ":bin",
   ]
 
-  binaries = [ {
-        name = "network_time"
-      } ]
+  binary = "network_time"
+
   resources = [ {
         path = rebase_path("roughtime-servers.json")
-        dest = "network_time/roughtime-servers.json"
+        dest = "roughtime-servers.json"
+      } ]
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
       } ]
 }
 
@@ -52,7 +54,7 @@ source_set("lib") {
   ]
 }
 
-executable("network_time_bin") {
+executable("bin") {
   output_name = "network_time"
 
   sources = [
