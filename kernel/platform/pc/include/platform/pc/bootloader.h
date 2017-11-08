@@ -15,6 +15,7 @@
 
 typedef struct pc_bootloader_info {
     uint64_t acpi_rsdp;
+    uint64_t smbios;
 
     void* efi_system_table;
 

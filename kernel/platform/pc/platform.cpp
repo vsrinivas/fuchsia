@@ -91,6 +91,11 @@ static int process_bootitem(bootdata_t* bd, void* item) {
             bootloader.acpi_rsdp = *((uint64_t*)item);
         }
         break;
+    case BOOTDATA_SMBIOS:
+        if (bd->length >= sizeof(uint64_t)) {
+            bootloader.smbios = *((uint64_t*)item);
+        }
+        break;
     case BOOTDATA_EFI_SYSTEM_TABLE:
         if (bd->length >= sizeof(uint64_t)) {
             bootloader.efi_system_table = (void*) *((uint64_t*)item);
