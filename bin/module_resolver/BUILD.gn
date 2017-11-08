@@ -18,6 +18,14 @@ executable("module_resolver") {
   ]
 }
 
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":module_resolver_impl_unittest",
+  ]
+}
+
 source_set("module_resolver_impl") {
   sources = [
     "module_resolver_impl.cc",
@@ -33,7 +41,7 @@ source_set("module_resolver_impl") {
   ]
 }
 
-executable("module_resolver_impl_unittest") {
+source_set("module_resolver_impl_unittest") {
   testonly = true
 
   sources = [
@@ -45,7 +53,6 @@ executable("module_resolver_impl_unittest") {
     "//garnet/public/lib/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",

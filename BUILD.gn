@@ -88,34 +88,28 @@ package("maxwell_agents") {
   ]
 }
 
+executable("maxwell_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//peridot/bin/module_resolver:unittests",
+    "//peridot/bin/context_engine:unittests",
+  ]
+}
+
 package("maxwell_tests") {
   testonly = true
   system_image = true
 
   deps = [
-    "//peridot/bin/context_engine:context_index_unittest",
-    "//peridot/bin/context_engine:context_repository_unittest",
-    "//peridot/bin/module_resolver:module_resolver_impl_unittest",
-    "//peridot/lib/module_manifest_repository/directory_repository:directory_repository_unittest",
+    ":maxwell_unittests",
     "//peridot/tests/maxwell_integration",
   ]
 
   tests = [
     {
-      name = "context_index_unittest"
-      dest = "maxwell/context_index_unittest"
-    },
-    {
-      name = "context_repository_unittest"
-      dest = "maxwell/context_repository_unittest"
-    },
-    {
-      name = "directory_repository_unittest"
-      dest = "maxwell/directory_repository_unittest"
-    },
-    {
-      name = "module_resolver_impl_unittest"
-      dest = "maxwell/module_resolver_impl_unittest"
+      name = "maxwell_unittests"
     },
     {
       name = "context_engine_test"
@@ -124,10 +118,6 @@ package("maxwell_tests") {
     {
       name = "suggestion_engine_test"
       dest = "maxwell/suggestion_engine_test"
-    },
-    {
-      name = "resolver_test"
-      dest = "maxwell/resolver_test"
     },
   ]
 }

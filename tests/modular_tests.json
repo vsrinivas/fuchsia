@@ -137,19 +137,7 @@
     },
     {
       "name":"context_index",
-      "exec":"/system/test/maxwell/context_index_unittest"
-    },
-    {
-      "name":"context_repository",
-      "exec":"/system/test/maxwell/context_repository_unittest"
-    },
-    {
-      "name":"directory_module_manifest_repository",
-      "exec":"/system/test/maxwell/directory_repository_unittest"
-    },
-    {
-      "name":"module_resolver",
-      "exec":"/system/test/maxwell/module_resolver_impl_unittest"
+      "exec":"/system/test/maxwell_unittests"
     }
   ]
 }

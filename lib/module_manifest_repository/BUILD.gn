@@ -13,3 +13,11 @@ source_set("module_manifest_repository") {
     "//garnet/public/lib/fxl",
   ]
 }
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    "directory_repository:directory_repository_unittest",
+  ]
+}

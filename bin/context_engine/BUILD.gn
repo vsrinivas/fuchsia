@@ -14,6 +14,15 @@ executable("context_engine") {
   ]
 }
 
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":context_index_unittest",
+    ":context_repository_unittest",
+  ]
+}
+
 source_set("context_index") {
   sources = [
     "index.cc",
@@ -25,7 +34,7 @@ source_set("context_index") {
   ]
 }
 
-executable("context_index_unittest") {
+source_set("context_index_unittest") {
   testonly = true
 
   sources = [
@@ -35,7 +44,6 @@ executable("context_index_unittest") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//third_party/gtest",
@@ -74,7 +82,7 @@ source_set("context_repository") {
   ]
 }
 
-executable("context_repository_unittest") {
+source_set("context_repository_unittest") {
   testonly = true
 
   sources = [
@@ -84,7 +92,6 @@ executable("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",

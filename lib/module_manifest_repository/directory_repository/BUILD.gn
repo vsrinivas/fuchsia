@@ -18,7 +18,7 @@ source_set("directory_repository") {
   ]
 }
 
-executable("directory_repository_unittest") {
+source_set("directory_repository_unittest") {
   testonly = true
 
   sources = [
@@ -29,7 +29,6 @@ executable("directory_repository_unittest") {
     ":directory_repository",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/testing:test_with_message_loop",
     "//third_party/gtest",
   ]
