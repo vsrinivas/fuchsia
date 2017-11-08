@@ -78,7 +78,7 @@ zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
 
         if (info->slice_size != fvm_info.slice_size) {
             FS_TRACE_ERROR("minfs: Slice size did not match expected\n");
-            return ZX_ERR_INTERNAL;
+            return ZX_ERR_BAD_STATE;
         }
 
         size_t expected_count[4];
@@ -103,7 +103,7 @@ zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
 
         if (response.count != request.count) {
             FS_TRACE_ERROR("minfs: Unable to query FVM\n");
-            return ZX_ERR_CALL_FAILED;
+            return ZX_ERR_BAD_STATE;
         }
 
         for (unsigned i = 0; i < request.count; i++) {
