@@ -26,14 +26,6 @@ struct ExceptionSyndrome {
     ExceptionSyndrome(uint32_t esr);
 };
 
-// Data abort for the VM exit.
-struct DataAbort {
-    bool valid;
-    bool write;
-
-    DataAbort(uint32_t iss);
-};
-
 typedef struct zx_port_packet zx_port_packet_t;
 
 class GuestPhysicalAddressSpace;

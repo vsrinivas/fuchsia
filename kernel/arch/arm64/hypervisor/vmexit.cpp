@@ -23,11 +23,6 @@ ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     iss = BITS(esr, 24, 0);
 }
 
-DataAbort::DataAbort(uint32_t iss) {
-    valid = BIT_SHIFT(iss, 24);
-    write = BIT(iss, 6);
-}
-
 static void next_pc(GuestState* state) {
     state->system_state.elr_el2 += 4;
 }
@@ -42,19 +37,14 @@ static zx_status_t handle_instruction_abort(GuestState* guest_state,
     return handle_page_fault(guest_state->hpfar_el2, gpas);
 }
 
-static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
-                                     GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                                     zx_port_packet_t* packet) {
+static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddressSpace* gpas,
+                                     TrapMap* traps, zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
     Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     switch (status) {
-    case ZX_ERR_NOT_FOUND: {
-        DataAbort data_abort(iss);
-        if (data_abort.valid)
-            return ZX_ERR_NOT_SUPPORTED;
+    case ZX_ERR_NOT_FOUND:
         return handle_page_fault(guest_paddr, gpas);
-    }
     case ZX_OK:
         break;
     default:
@@ -100,7 +90,7 @@ zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* g
         return handle_instruction_abort(guest_state, gpas);
     case ExceptionClass::DATA_ABORT:
         LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
-        return handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
+        return handle_data_abort(guest_state, gpas, traps, packet);
     default:
         LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n",
             static_cast<uint32_t>(syndrome.ec), syndrome.iss);
