@@ -51,6 +51,14 @@ uint32_t a113_toddr_get_int_status(a113_audio_device_t* audio_device) {
     return a113_ee_audio_read(audio_device, EE_AUDIO_TODDR_B_STATUS1) & 0xff;
 }
 
+void a113_toddr_clear_interrupt(a113_audio_device_t* audio_device,
+                                uint32_t interrupt_mask) {
+    a113_ee_audio_update_bits(audio_device, EE_AUDIO_TODDR_B_CTRL1,
+                              interrupt_mask, 0xff);
+    a113_ee_audio_update_bits(audio_device, EE_AUDIO_TODDR_B_CTRL1,
+                              interrupt_mask, 0x0);
+}
+
 void a113_toddr_enable(a113_audio_device_t* audio_device, bool enable) {
 
     a113_ee_audio_update_bits(audio_device, EE_AUDIO_TODDR_B_CTRL0, 1 << 31,

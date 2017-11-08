@@ -8,11 +8,16 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <zx/vmo.h>
 
+#include "a113-ddr.h"
+#include "a113-pdm.h"
 #include "audio-proto/audio-proto.h"
 #include "dispatcher-pool/dispatcher-channel.h"
 #include "dispatcher-pool/dispatcher-execution-domain.h"
+
+#include "a113-ddr.h"
+#include "a113-pdm.h"
+#include "vmo_helper.h"
 
 namespace audio {
 namespace gauss {
@@ -50,9 +55,11 @@ private:
 
     virtual ~GaussPdmInputStream();
 
-    zx_status_t Bind(const char* devname);
+    uint32_t GetFifoBytes();
 
-    void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
+    static int IrqThread(void* arg);
+
+    zx_status_t Bind(const char* devname, zx_device_t* parent);
 
     zx_status_t AddFormats();
 
@@ -119,13 +126,14 @@ private:
     fbl::Vector<audio_stream_format_range_t> supported_formats_;
 
     uint32_t frame_size_;
-    uint32_t fifo_bytes_;
 
-    uint32_t bytes_per_notification_ = 0;
+    VmoHelper<false> vmo_helper_;
 
-    zx::vmo ring_buffer_vmo_;
-    void* ring_buffer_virt_ = nullptr;
-    uint32_t ring_buffer_size_ = 0;
+    // TODO(almasrymina): hardcoded.
+    uint32_t frame_rate_ = 48000;
+
+    a113_audio_device_t audio_device_;
+    thrd_t irqthrd_;
 };
 
 } // namespace gauss

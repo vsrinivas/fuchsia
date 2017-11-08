@@ -8,6 +8,8 @@
 
 #include "a113-audio-device.h"
 
+__BEGIN_CDECLS;
+
 // DDR types. From A113G datasheet.
 enum ddr_types {
     LJ_8BITS,
@@ -44,3 +46,8 @@ void a113_toddr_set_format(a113_audio_device_t* audio_device, uint32_t type,
 
 uint32_t a113_toddr_get_position(a113_audio_device_t* audio_device);
 uint32_t a113_toddr_get_int_status(a113_audio_device_t* audio_device);
+
+void a113_toddr_clear_interrupt(a113_audio_device_t* audio_device,
+                                uint32_t interrupt_mask);
+
+__END_CDECLS;
