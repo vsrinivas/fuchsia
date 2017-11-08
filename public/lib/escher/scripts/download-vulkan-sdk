@@ -115,7 +115,7 @@ install_vulkansdk () {
   echo "Escher: Running Vulkan SDK installer."
   cd "${TEMP_DIR}"
   chmod a+x "${SHA}"
-  ./"${SHA}" --quiet --noprogress
+  ./"${SHA}" --quiet --noprogress --nox11
   if [ $? -ne 0 ]; then
     panic "Vulkan SDK installion failed !!"
   fi
