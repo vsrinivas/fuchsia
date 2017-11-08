@@ -392,10 +392,27 @@ static bool test_resume_suspended(void) {
 
     // Resuming the thread should mark the thread as blocked again.
     ASSERT_TRUE(resume_thread_synchronous(thread_h), "");
-    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
-                                 &info, sizeof(info), NULL, NULL),
-              ZX_OK, "");
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+
+    // When a thread has a blocking syscall interrupted for a suspend, it may
+    // momentarily resume running.  If we catch it in the intermediate state,
+    // give it a chance to quiesce.
+    const size_t kNumTries = 20;
+    for (size_t i = 0; i < kNumTries; ++i) {
+        ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                     &info, sizeof(info), NULL, NULL),
+                  ZX_OK, "");
+
+        if (i == kNumTries - 1) {
+            ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+        }
+
+        if (info.state == ZX_THREAD_STATE_BLOCKED) {
+            break;
+        }
+        ASSERT_EQ(info.state, ZX_THREAD_STATE_RUNNING, "");
+
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+    }
 
     // When the thread is suspended the signaling should not take effect.
     ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
