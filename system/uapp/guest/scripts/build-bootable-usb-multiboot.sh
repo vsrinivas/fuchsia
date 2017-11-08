@@ -86,8 +86,8 @@ fi
 echo " SUCCESS"
 
 echo -n "Building zircon..."
-$ZIRCON_SCRIPTS_DIR/build-zircon-x86-64
-ZIRCON_BUILD_DIR=${BUILDDIR} ${GUEST_SCRIPTS_DIR}/mkbootfs.sh
+${ZIRCON_SCRIPTS_DIR}/build-zircon-x86-64
+${GUEST_SCRIPTS_DIR}/mkbootfs.sh zircon-pc-x86-64
 echo " SUCCESS"
 
 echo -n "Building zircon-guest kernel..."
