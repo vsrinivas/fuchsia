@@ -5,6 +5,7 @@
     ],
     "packages": {
         "netstack": "//garnet/go/src/netstack",
+        "netstack_tools": "//garnet/go/src/netstack:netstack_tools",
         "netstack_gotests" : "//garnet/go/src/netstack:netstack_gotests"
     }
 }

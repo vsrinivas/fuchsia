@@ -7,21 +7,30 @@ import("//build/go/go_test.gni")
 import("//packages/package.gni")
 
 package("netstack") {
+  deps = [
+    ":netstack_bin",
+  ]
+
+  binary = "netstack"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
+}
+
+package("netstack_tools") {
   system_image = true
 
   deps = [
-    ":netstack_bin",
-    "//garnet/go/src/netstack/ifconfig",
-    "//garnet/go/src/netstack/ifinfo",
-    "//garnet/go/src/netstack/netstack_service_test",
-    "//garnet/go/src/netstack/netstat",
+    "ifconfig",
+    "ifinfo",
+    "netstack_service_test",
+    "netstat",
     "//garnet/public/lib/netstack/fidl",
   ]
 
   binaries = [
-    {
-      name = "netstack"
-    },
     {
       name = "ifconfig"
     },
