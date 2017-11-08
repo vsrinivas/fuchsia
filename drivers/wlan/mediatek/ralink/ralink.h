@@ -1108,6 +1108,8 @@ enum PhyMode : uint8_t {
     kLegacyOfdm = 1,
     kHtMixMode = 2,
     kHtGreenfield = 3,
+
+    kUnknown = 255,
 };
 
 enum LegacyCckMcs : uint8_t {

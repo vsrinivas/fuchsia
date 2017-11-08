@@ -2827,7 +2827,7 @@ static const uint8_t kDataRates[4][8] = {
     // clang-format on
 };
 
-static uint8_t mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is_sgi) {
+static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, bool is_sgi) {
     uint8_t rate = 0;            // Mbps * 2
     uint8_t rate_tbl_idx = 255;  // Init with invalid idx.
 
@@ -2896,9 +2896,25 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
     case PhyMode::kHtGreenfield:
         return WLAN_PHY_HT_GREENFIELD;
     default:
-        warnf("ralink: Rxed unknown PHY: %u\n", ralink_phy);
+        warnf("received unknown PHY: %u\n", ralink_phy);
         ZX_DEBUG_ASSERT(0);  // TODO: Define Undefined Phy in DDK.
         return 0;            // Happy compiler
+    }
+}
+
+static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
+    switch (ddk_phy) {
+    case WLAN_PHY_CCK:
+        return PhyMode::kLegacyCck;
+    case WLAN_PHY_OFDM:
+        return PhyMode::kLegacyOfdm;
+    case WLAN_PHY_HT_MIXED:
+        return PhyMode::kHtMixMode;
+    case WLAN_PHY_HT_GREENFIELD:
+        return PhyMode::kHtGreenfield;
+    default:
+        warnf("invalid DDK phy: %u\n", ddk_phy);
+        return PhyMode::kUnknown;
     }
 }
 
@@ -2907,7 +2923,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
     info->valid_fields |= WLAN_RX_INFO_VALID_PHY;
     info->phy = ralink_phy_to_ddk_phy(rxwi1.phy_mode());
 
-    uint8_t rate = mcs_to_rate(rxwi1.phy_mode(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi());
+    uint8_t rate = ralink_mcs_to_rate(rxwi1.phy_mode(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi());
     if (rate != 0) {
         info->valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
         info->data_rate = rate;
@@ -3139,7 +3155,18 @@ void Device::WlanmacStop() {
     // TODO(tkilbourn) disable radios, stop queues, etc.
 }
 
+void WritePayload(uint8_t* dest, wlan_tx_packet_t* pkt) {
+    std::memcpy(dest, pkt->packet_head->data, pkt->packet_head->len);
+    if (pkt->packet_tail != nullptr) {
+        uint8_t* tail_data = static_cast<uint8_t*>(pkt->packet_tail->data);
+        std::memcpy(dest + pkt->packet_head->len, tail_data + pkt->tail_offset,
+                pkt->packet_tail->len - pkt->tail_offset);
+    }
+}
+
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
+    ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
+
     size_t len = pkt->packet_head->len;
     if (pkt->packet_tail != nullptr) {
         if (pkt->packet_tail->len < pkt->tail_offset) {
@@ -3208,11 +3235,13 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     // txwi0.set_mpdu_density(Txwi0::kFourUsec); // Aruba
     // txwi0.set_mpdu_density(Txwi0::kEightUsec);  // TP-Link
     txwi0.set_txop(Txwi0::kHtTxop);
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_MCS && pkt->info.mcs < 8) {
-        txwi0.set_mcs(pkt->info.mcs);
-    } else {
-        txwi0.set_mcs(7);
+
+    uint8_t mcs = kMaxOfdmMcs;  // this is the same as the max HT mcs
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_MCS) {
+        // TODO(tkilbourn): define an 802.11-to-Ralink mcs translator
     }
+    txwi0.set_mcs(mcs);
+
     if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH
             && pkt->info.chan_width == WLAN_CHAN_WIDTH_40MHZ) {
         txwi0.set_bw(1);  // for 40 Mhz
@@ -3221,25 +3250,13 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     }
     txwi0.set_sgi(1);
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
+
+    uint8_t phy_mode = PhyMode::kUnknown;
     if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_PHY) {
-        switch (pkt->info.phy) {
-        case WLAN_PHY_CCK:
-            txwi0.set_phy_mode(PhyMode::kLegacyCck);
-            break;
-        case WLAN_PHY_OFDM:
-            txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
-            break;
-        case WLAN_PHY_HT_MIXED:
-            txwi0.set_phy_mode(PhyMode::kHtMixMode);
-            break;
-        case WLAN_PHY_HT_GREENFIELD:
-            txwi0.set_phy_mode(PhyMode::kHtGreenfield);
-            break;
-        default:
-            warnf("invalid phy: %u\n", pkt->info.phy);
-            txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
-            break;
-        }
+        phy_mode = ddk_phy_to_ralink_phy(pkt->info.phy);
+    }
+    if (phy_mode != PhyMode::kUnknown) {
+        txwi0.set_phy_mode(phy_mode);
     } else {
         txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
     }
@@ -3267,12 +3284,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     uint8_t* payload_ptr = &packet->payload[payload_offset];
 
     // Write out the payload
-    std::memcpy(payload_ptr, pkt->packet_head->data, pkt->packet_head->len);
-    if (pkt->packet_tail != nullptr) {
-        uint8_t* tail_data = static_cast<uint8_t*>(pkt->packet_tail->data);
-        std::memcpy(payload_ptr + pkt->packet_head->len, tail_data + pkt->tail_offset,
-                pkt->packet_tail->len - pkt->tail_offset);
-    }
+    WritePayload(payload_ptr, pkt);
     std::memset(&payload_ptr[len], 0, align_pad_len + terminal_pad_len);
 
     // Send the whole thing
