@@ -58,11 +58,10 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
     }
 
     async::Loop loop;
-    minfs::vfs.SetReadonly(readonly);
-    minfs::vfs.set_async(loop.async());
+    fs::Vfs vfs(loop.async());
+    vfs.SetReadonly(readonly);
     zx_status_t status;
-    if ((status = minfs::vfs.ServeDirectory(fbl::move(vn),
-                                            zx::channel(h))) != ZX_OK) {
+    if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
         return status;
     }
     loop.Run();

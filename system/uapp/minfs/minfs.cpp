@@ -22,8 +22,6 @@
 
 namespace minfs {
 
-fs::Vfs vfs;
-
 void minfs_dump_info(const minfs_info_t* info) {
     FS_TRACE(MINFS, "minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
     FS_TRACE(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);

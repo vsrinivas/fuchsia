@@ -85,6 +85,7 @@ int status_to_errno(zx_status_t status) {
     FAIL(status_to_errno(status))
 
 fbl::RefPtr<fs::Vnode> fake_root = nullptr;
+fs::Vfs fake_vfs;
 
 int emu_mkfs(const char* path) {
     fbl::unique_fd fd(open(path, O_RDWR));
@@ -151,7 +152,7 @@ int emu_open(const char* path, int flags, mode_t mode) {
         if (fdtab[fd].vn == nullptr) {
             fbl::RefPtr<fs::Vnode> vn_fs;
             fbl::StringPiece str(path + PREFIX_SIZE);
-            zx_status_t status = minfs::vfs.Open(fake_root, &vn_fs, str, &str, flags, mode);
+            zx_status_t status = fake_vfs.Open(fake_root, &vn_fs, str, &str, flags, mode);
             if (status < 0) {
                 STATUS(status);
             }
@@ -366,7 +367,7 @@ DIR* emu_opendir(const char* name) {
     ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
     fbl::RefPtr<fs::Vnode> vn;
     fbl::StringPiece path(name + PREFIX_SIZE);
-    zx_status_t status = minfs::vfs.Open(fake_root, &vn, path, &path, O_RDONLY, 0);
+    zx_status_t status = fake_vfs.Open(fake_root, &vn, path, &path, O_RDONLY, 0);
     if (status != ZX_OK) {
         return nullptr;
     }
