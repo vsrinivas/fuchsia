@@ -93,7 +93,7 @@ class TimelineFunction {
 
   int64_t subject_time() const { return subject_time_; }
 
-  TimelineRate rate() const { return rate_; }
+  const TimelineRate& rate() const { return rate_; }
 
   uint32_t reference_delta() const { return rate_.reference_delta(); }
 
