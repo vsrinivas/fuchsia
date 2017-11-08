@@ -16,15 +16,14 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/assert.h>
 
 #include "a113-bus.h"
 #include "a113-hw.h"
 #include "gauss-hw.h"
 #include <hw/reg.h>
-
 
 static zx_status_t a113_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
     *out_mode = USB_MODE_HOST;
