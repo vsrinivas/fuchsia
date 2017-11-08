@@ -698,7 +698,7 @@ static zx_status_t sdhci_mmc_tuning(sdhci_device_t* dev) {
     iotxn_t* tune_txn = NULL;
     zx_status_t st;
 
-    if ((st = iotxn_alloc(&tune_txn, IOTXN_ALLOC_CONTIGUOUS, 0)) != ZX_OK) {
+    if ((st = iotxn_alloc(&tune_txn, 0, 0)) != ZX_OK) {
         zxlogf(ERROR, "sdhci: failed to allocate iotxn for tuning");
         return st;
     }

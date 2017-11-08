@@ -383,7 +383,8 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev) {
     zx_status_t st;
     iotxn_t* setup_txn = NULL;
     // Allocate a single iotxn that we use to bootstrap the card with.
-    if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != ZX_OK) {
+    static_assert(SDHC_BLOCK_SIZE <= PAGE_SIZE, "");
+    if ((st = iotxn_alloc(&setup_txn, 0, SDHC_BLOCK_SIZE)) != ZX_OK) {
         zxlogf(ERROR, "sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
         free(sdmmc);
         return st;

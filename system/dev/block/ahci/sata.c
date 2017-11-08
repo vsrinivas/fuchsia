@@ -57,7 +57,7 @@ static bool model_id_is_qemu(char* model_id) {
 static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* controller, const char* name) {
     // send IDENTIFY DEVICE
     iotxn_t* txn;
-    zx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 512);
+    zx_status_t status = iotxn_alloc(&txn, 0, 512);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: error %d allocating iotxn\n", name, status);
         return status;
@@ -230,7 +230,7 @@ static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
     }
     case IOCTL_DEVICE_SYNC: {
         iotxn_t* txn;
-        zx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 0);
+        zx_status_t status = iotxn_alloc(&txn, 0, 0);
         if (status != ZX_OK) {
             return status;
         }
