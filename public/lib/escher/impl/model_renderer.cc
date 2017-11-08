@@ -255,7 +255,7 @@ void ModelRenderer::UpdatePipelineCache(vk::Format pre_pass_color_format,
       lighting_pass_sample_count != lighting_pass_sample_count_) {
     // The render passes have changed; any existing ModelPipelineCache must be
     // replaced with a new one.
-    FXL_LOG(INFO) << "ModelRenderer: updating pipeline cache.";
+    FXL_VLOG(1) << "ModelRenderer: updating pipeline cache.";
 
     pre_pass_color_format_ = pre_pass_color_format;
     lighting_pass_color_format_ = lighting_pass_color_format;

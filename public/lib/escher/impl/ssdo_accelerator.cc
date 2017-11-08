@@ -408,7 +408,7 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
                                         vk::ImageLayout::eGeneral);
 
   if (!kernel_) {
-    FXL_DLOG(INFO) << "Lazily instantiating kernel_";
+    FXL_VLOG(1) << "Lazily instantiating kernel_";
     kernel_ = std::make_unique<ComputeShader>(
         escher_,
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,

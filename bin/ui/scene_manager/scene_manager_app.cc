@@ -27,7 +27,7 @@ SceneManagerApp::SceneManagerApp(
 
   application_context_->outgoing_services()->AddService<scenic::SceneManager>(
       [this](fidl::InterfaceRequest<scenic::SceneManager> request) {
-        FXL_LOG(INFO) << "Accepting connection to SceneManagerImpl";
+        FXL_VLOG(1) << "Accepting connection to SceneManagerImpl";
         bindings_.AddBinding(scene_manager_.get(), std::move(request));
       });
 
