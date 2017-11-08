@@ -52,12 +52,11 @@ extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
 ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
     // From Volume 3, Section 26.7.
     uint32_t full_exit_reason = vmcs.Read(VmcsField32::EXIT_REASON);
-    uint32_t basic_exit_reason = BITS(full_exit_reason, 15, 0);
-    exit_reason = static_cast<ExitReason>(basic_exit_reason);
-    vmentry_failure = BIT(full_exit_reason, 31);
+    entry_failure = BIT(full_exit_reason, 31);
+    exit_reason = static_cast<ExitReason>(BITS(full_exit_reason, 15, 0));
 
     exit_qualification = vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION);
-    instruction_length = vmcs.Read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
+    exit_instruction_length = vmcs.Read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
     guest_physical_address = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
     guest_rip = vmcs.Read(VmcsFieldXX::GUEST_RIP);
 
@@ -65,14 +64,15 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
         exit_reason == ExitReason::IO_INSTRUCTION)
         return;
 
+    LTRACEF("entry failure: %d\n", entry_failure);
     LTRACEF("exit reason: %#x\n", static_cast<uint32_t>(exit_reason));
     LTRACEF("exit qualification: %#lx\n", exit_qualification);
-    LTRACEF("instruction length: %#x\n", instruction_length);
-    LTRACEF("guest physical address: %#lx\n", guest_physical_address);
-    LTRACEF("guest linear address: %#lx\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
+    LTRACEF("exit instruction length: %#x\n", exit_instruction_length);
     LTRACEF("guest activity state: %#x\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
     LTRACEF("guest interruptibility state: %#x\n",
             vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
+    LTRACEF("guest physical address: %#lx\n", guest_physical_address);
+    LTRACEF("guest linear address: %#lx\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
     LTRACEF("guest rip: %#lx\n", guest_rip);
 }
 
@@ -104,7 +104,7 @@ EptViolationInfo::EptViolationInfo(uint64_t qualification) {
 }
 
 static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
-    vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
+    vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
 }
 
 /* Removes the highest priority interrupt from the bitmap, and returns it. */
@@ -511,7 +511,7 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
 static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vaddr_t guest_paddr,
                                GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                                zx_port_packet_t* packet) {
-    if (exit_info.instruction_length > X86_MAX_INST_LEN)
+    if (exit_info.exit_instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
 
     Trap* trap;
@@ -535,7 +535,7 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vad
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
-        packet->guest_mem.inst_len = exit_info.instruction_length & UINT8_MAX;
+        packet->guest_mem.inst_len = exit_info.exit_instruction_length & UINT8_MAX;
         status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
                             packet->guest_mem.inst_len);
         if (status != ZX_OK)
