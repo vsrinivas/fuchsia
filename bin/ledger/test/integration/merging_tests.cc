@@ -278,6 +278,27 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
   fidl::Binding<ConflictResolver> binding_;
 };
 
+// Custom conflict resolver that doesn't resolve any conflicts.
+class DummyConflictResolver : public ledger::ConflictResolver {
+ public:
+  explicit DummyConflictResolver(
+      fidl::InterfaceRequest<ConflictResolver> request)
+      : binding_(this, std::move(request)) {}
+  ~DummyConflictResolver() override {}
+
+ private:
+  // ledger::ConflictResolver:
+  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
+               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
+               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+               fidl::InterfaceHandle<ledger::MergeResultProvider>
+                   result_provider) override {
+    // Do nothing.
+  }
+
+  fidl::Binding<ConflictResolver> binding_;
+};
+
 class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
  public:
   TestConflictResolverFactory(
@@ -292,6 +313,10 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
 
   uint get_policy_calls = 0;
   std::map<storage::PageId, ConflictResolverImpl> resolvers;
+
+  void set_use_dummy_resolver(bool use_dummy_resolver) {
+    use_dummy_resolver_ = use_dummy_resolver;
+  }
 
  private:
   // ConflictResolverFactory:
@@ -311,12 +336,21 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   void NewConflictResolver(
       fidl::Array<uint8_t> page_id,
       fidl::InterfaceRequest<ledger::ConflictResolver> resolver) override {
+    if (use_dummy_resolver_) {
+      dummy_resolvers_.emplace(
+          std::piecewise_construct,
+          std::forward_as_tuple(convert::ToString(page_id)),
+          std::forward_as_tuple(std::move(resolver)));
+      return;
+    }
     resolvers.emplace(std::piecewise_construct,
                       std::forward_as_tuple(convert::ToString(page_id)),
                       std::forward_as_tuple(std::move(resolver)));
   }
 
   ledger::MergePolicy policy_;
+  bool use_dummy_resolver_ = false;
+  std::map<storage::PageId, DummyConflictResolver> dummy_resolvers_;
   fidl::Binding<ConflictResolverFactory> binding_;
   fxl::Closure callback_;
   fxl::TimeDelta response_delay_;
@@ -454,12 +488,12 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  // Set up a resolver
+  // Set up a resolver configured not to resolve any conflicts.
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
-  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
-      std::make_unique<TestConflictResolverFactory>(
-          ledger::MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
-          [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
+      ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  resolver_factory->set_use_dummy_resolver(true);
   ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
@@ -540,7 +574,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
-  // Change the merge strategy.
+  // Change the merge strategy, triggering resolution of the conflicts.
   resolver_factory_ptr = nullptr;  // Suppress misc-use-after-move.
   resolver_factory = std::make_unique<TestConflictResolverFactory>(
       ledger::MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
@@ -1671,12 +1705,12 @@ TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
   // Try to wait for conflicts resolution.
   bool merged = false;
   bool conflicts_resolved_callback_called = false;
-  auto conflicts_resolved_callback =
-      [&merged, &conflicts_resolved_callback_called]() {
-        conflicts_resolved_callback_called = true;
-        EXPECT_TRUE(merged);
-        fsl::MessageLoop::GetCurrent()->PostQuitTask();
-      };
+  auto conflicts_resolved_callback = [&merged,
+                                      &conflicts_resolved_callback_called]() {
+    conflicts_resolved_callback_called = true;
+    EXPECT_TRUE(merged);
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  };
   page1->WaitForConflictResolution(conflicts_resolved_callback);
 
   // Check that conflicts_resolved_callback is not called, as there are merge

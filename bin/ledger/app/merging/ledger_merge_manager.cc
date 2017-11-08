@@ -71,9 +71,6 @@ void LedgerMergeManager::GetResolverStrategyForPage(
         convert::ToArray(page_id),
         [this, page_id, strategy_callback](MergePolicy policy) {
           switch (policy) {
-            case MergePolicy::NONE:
-              strategy_callback(nullptr);
-              break;
             case MergePolicy::LAST_ONE_WINS:
               strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
               break;

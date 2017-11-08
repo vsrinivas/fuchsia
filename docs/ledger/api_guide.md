@@ -248,7 +248,6 @@ Available conflict resolution policies:
    conflicting ones).
  - custom, invoked for all merges (even if the entries modified by each branch
    are non-conflicting): `CUSTOM`
- - disable merges: `NONE`
 
    Conflicting changes are ignored and there are no merges performed.
 

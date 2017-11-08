@@ -328,8 +328,6 @@ interface ConflictResolverFactory {
 
 // Strategy to be used when resolving conflicts.
 enum MergePolicy {
-  // No merge happens on the device. Parallel commits are not merged.
-  NONE,
   // Last one wins. When 2 commits are merged, the resulting commit contains:
   //  - all keys/values that do not conflict
   //  - all keys/values of the commit with the biggest timestamp (or biggest
