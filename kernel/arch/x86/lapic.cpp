@@ -86,7 +86,6 @@ static bool bsp_apic_id_valid;
 #define LVT_VECTOR(x) (x)
 #define LVT_DELIVERY_MODE(x) (((uint32_t)(x)) << 8)
 #define LVT_DELIVERY_PENDING (1 << 12)
-#define LVT_MASKED (1 << 16)
 
 static void apic_error_init(void);
 static void apic_timer_init(void);

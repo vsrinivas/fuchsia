@@ -26,6 +26,7 @@ __BEGIN_CDECLS
 #define LVT_TIMER_MODE_ONESHOT      (0u << 17)
 #define LVT_TIMER_MODE_PERIODIC     (1u << 17)
 #define LVT_TIMER_MODE_TSC_DEADLINE (2u << 17)
+#define LVT_MASKED                  (1u << 16)
 
 enum apic_interrupt_delivery_mode {
     // Unless you know what you're doing, you want FIXED.
