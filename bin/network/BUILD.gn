@@ -52,15 +52,14 @@ executable("bin") {
 }
 
 package("network") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "network"
-    },
-  ]
+  binary = "network"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
