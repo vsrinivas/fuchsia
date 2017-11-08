@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file contains the definition for EntityProvider.
-//
-// STATUS: Draft / Heavy WIP: expect significant changes.
-
 module modular;
 
-// EntityProviders (agents) must implement the |EntityProvider| interface,
-// which is used to provide data for an |Entity| interface. This interface is
-// requested by the framework in the agent's *application* outgoing services,
-// and is closed by the framework when there are no more |Entity|s that need to
-// be provided.
+// EntityProviders (agents) must implement and provide the |EntityProvider|
+// service if they create entity references (using |EntityReferenceFactory|).
+// This service is used by the framework to provide data for an |Entity|
+// interface for an entity. This interface is requested by the framework in the
+// agent's *application* outgoing services, and is closed by the framework when
+// there are no more |Entity|s that need to be provided.
 [ServiceName="modular.EntityProvider"]
 interface EntityProvider {
   // Returns Entity types for the supplied |cookie|. |cookie| will be

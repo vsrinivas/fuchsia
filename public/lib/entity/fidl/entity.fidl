@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file contains the definition for Entity. |Entity| is obtained by
-// dereferencing an entity reference using |EntityResolver|.
-
 module modular;
 
+// |Entity| is obtained by dereferencing an entity reference using
+// |EntityResolver|.
 interface Entity {
     // Returns the types associated with this entity. Each entry in |type|
     // references a well-known content type.
