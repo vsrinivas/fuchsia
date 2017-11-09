@@ -30,18 +30,21 @@
 #include <string.h>
 #include <unistd.h>
 
+// Because of test flakiness if a previous test case's ethertap device isn't cleaned up, we put a
+// delay at the end of each test to give devmgr time to clean up the ethertap devices.
+#define ETHTEST_CLEANUP_DELAY zx::nanosleep(zx::deadline_after(ZX_MSEC(25)))
+
 namespace {
 
 const char kEthernetDir[] = "/dev/class/ethernet";
 const char kTapctl[] = "/dev/misc/tapctl";
-const char kTapDevName[] = "test";
 const uint8_t kTapMac[] = { 0x12, 0x20, 0x30, 0x40, 0x50, 0x60 };
 
 const char* mxstrerror(zx_status_t status) {
     return zx_status_get_string(status);
 }
 
-zx_status_t CreateEthertap(uint32_t mtu, zx::socket* sock) {
+zx_status_t CreateEthertap(uint32_t mtu, const char* name, zx::socket* sock) {
     if (sock == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -54,7 +57,7 @@ zx_status_t CreateEthertap(uint32_t mtu, zx::socket* sock) {
     auto closer = fbl::MakeAutoCall([ctlfd]() { close(ctlfd); });
 
     ethertap_ioctl_config_t config = {};
-    strlcpy(config.name, kTapDevName, ETHERTAP_MAX_NAME_LEN);
+    strlcpy(config.name, name, ETHERTAP_MAX_NAME_LEN);
     // Uncomment this to trace ETHERTAP events
     //config.options = ETHERTAP_OPT_TRACE;
     config.mtu = mtu;
@@ -284,7 +287,7 @@ class EthernetClient {
 static bool EthernetStartTest() {
     // Create the ethertap device
     zx::socket sock;
-    ASSERT_EQ(ZX_OK, CreateEthertap(1500, &sock));
+    ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
 
     // Open the ethernet device
     int devfd = -1;
@@ -293,7 +296,7 @@ static bool EthernetStartTest() {
 
     // Set up an ethernet client
     EthernetClient client(devfd);
-    ASSERT_EQ(ZX_OK, client.Register(kTapDevName, 32, 2048));
+    ASSERT_EQ(ZX_OK, client.Register(__func__, 32, 2048));
 
     // Verify no signals asserted on the rx fifo
     zx_signals_t obs;
@@ -324,16 +327,19 @@ static bool EthernetStartTest() {
     // Clean up the ethertap device
     sock.reset();
 
+    ETHTEST_CLEANUP_DELAY;
     return true;
 }
 
 static bool EthernetLinkStatusTest() {
     // Create the ethertap device
     zx::socket sock;
-    ASSERT_EQ(ZX_OK, CreateEthertap(1500, &sock));
+    ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
 
     // Set the link status to online
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
+    // Sleep for just long enough to let the signal propagate
+    zx::nanosleep(zx::deadline_after(ZX_MSEC(50)));
 
     // Open the ethernet device
     int devfd = -1;
@@ -342,7 +348,7 @@ static bool EthernetLinkStatusTest() {
 
     // Set up an ethernet client
     EthernetClient client(devfd);
-    ASSERT_EQ(ZX_OK, client.Register(kTapDevName, 32, 2048));
+    ASSERT_EQ(ZX_OK, client.Register(__func__, 32, 2048));
 
     // Start the ethernet client
     EXPECT_EQ(ZX_OK, client.Start());
@@ -370,20 +376,21 @@ static bool EthernetLinkStatusTest() {
     // Clean up the ethertap device
     sock.reset();
 
+    ETHTEST_CLEANUP_DELAY;
     return true;
 }
 
 static bool EthernetDataTest_Send() {
     // Set up the tap device and the ethernet client
     zx::socket sock;
-    ASSERT_EQ(ZX_OK, CreateEthertap(1500, &sock));
+    ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
 
     int devfd = -1;
     ASSERT_EQ(ZX_OK, OpenEthertapDev(&devfd));
     ASSERT_GE(devfd, 0);
 
     EthernetClient client(devfd);
-    ASSERT_EQ(ZX_OK, client.Register(kTapDevName, 32, 2048));
+    ASSERT_EQ(ZX_OK, client.Register(__func__, 32, 2048));
     ASSERT_EQ(ZX_OK, client.Start());
 
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
@@ -446,20 +453,21 @@ static bool EthernetDataTest_Send() {
     EXPECT_EQ(ZX_OK, client.Stop());
     sock.reset();
 
+    ETHTEST_CLEANUP_DELAY;
     return true;
 }
 
 static bool EthernetDataTest_Recv() {
     // Set up the tap device and the ethernet client
     zx::socket sock;
-    ASSERT_EQ(ZX_OK, CreateEthertap(1500, &sock));
+    ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
 
     int devfd = -1;
     ASSERT_EQ(ZX_OK, OpenEthertapDev(&devfd));
     ASSERT_GE(devfd, 0);
 
     EthernetClient client(devfd);
-    ASSERT_EQ(ZX_OK, client.Register(kTapDevName, 32, 2048));
+    ASSERT_EQ(ZX_OK, client.Register(__func__, 32, 2048));
     ASSERT_EQ(ZX_OK, client.Start());
 
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
@@ -505,6 +513,7 @@ static bool EthernetDataTest_Recv() {
     EXPECT_EQ(ZX_OK, client.Stop());
     sock.reset();
 
+    ETHTEST_CLEANUP_DELAY;
     return true;
 }
 
