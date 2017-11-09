@@ -7,11 +7,13 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-extern crate fuchsia_zircon as zircon;
+extern crate fuchsia_zircon as zx;
 extern crate mxruntime;
+extern crate fdio;
 extern crate fidl;
 extern crate futures;
 extern crate tokio_core;
+extern crate tokio_fuchsia;
 
 // Generated FIDL bindings
 extern crate garnet_public_lib_app_fidl_service_provider;
@@ -25,9 +27,13 @@ use garnet_public_lib_app_fidl::{
 };
 use garnet_public_lib_app_fidl_service_provider::ServiceProvider;
 use fidl::FidlService;
-use zircon::Channel;
+use zx::Channel;
 use std::io;
 use tokio_core::reactor::Handle as TokioHandle;
+use futures::prelude::*;
+use futures::stream::FuturesUnordered;
+use tokio_fuchsia::Channel as TokioChannel;
+use tokio_fuchsia::RecvMsg;
 
 /// Tools for starting or connecting to existing Fuchsia applications and services.
 pub mod client {
@@ -160,7 +166,7 @@ pub mod server {
 
     impl<Services: ServiceFactories> Server<Services> {
         /// Create a new `Server` to serve service connection requests on the specified channel.
-        pub fn new(services: ServiceProviderServer<Services>, channel: zircon::Channel, handle: &TokioHandle) -> Result<Self, fidl::Error> {
+        pub fn new(services: ServiceProviderServer<Services>, channel: zx::Channel, handle: &TokioHandle) -> Result<Self, fidl::Error> {
             Ok(Server(fidl::Server::new(
                 ServiceProvider::Dispatcher(services),
                 channel,
@@ -170,7 +176,7 @@ pub mod server {
 
         /// Create a `Server` which serves serves connection requests on the outgoing service channel.
         pub fn new_outgoing(services: ServiceProviderServer<Services>, handle: &TokioHandle) -> Result<Self, fidl::Error> {
-            let channel = zircon::Channel::from(
+            let channel = zx::Channel::from(
                 mxruntime::get_startup_handle(mxruntime::HandleType::OutgoingServices)
                     .ok_or(io::Error::new(io::ErrorKind::NotFound, "No OutgoingServices handle found"))?);
 
@@ -205,6 +211,7 @@ pub mod server {
         type Stub: fidl::Stub + 'static;
 
         /// Create a `fidl::Stub` service.
+        // TODO(cramertj): allow `create` calls to fail.
         fn create(&mut self) -> Self::Stub;
     }
 
@@ -297,5 +304,144 @@ pub mod server {
             self.services.spawn_service(service_name, channel, &self.handle);
             future::ok(())
         }
+    }
+
+    /// `FdioServer` is a very basic vfs directory server that only responds to
+    /// OPEN and CLONE messages. OPEN always connects the client channel to a
+    /// newly spawned fidl service produced by the factory F.
+    #[must_use = "futures must be polled"]
+    pub struct FdioServer<F: ServiceFactory + 'static> {
+        readers: FuturesUnordered<RecvMsg<zx::MessageBuf>>,
+        factory: F,
+        handle: TokioHandle,
+    }
+
+    impl<F: ServiceFactory + 'static> FdioServer<F> {
+
+        fn dispatch(&mut self, chan: &TokioChannel, buf: zx::MessageBuf) -> zx::MessageBuf {
+            // TODO(raggi): provide an alternative to the into() here so that we
+            // don't need to pass the buf in owned back and forward.
+            let mut msg: fdio::rio::Message = buf.into();
+
+            // open & clone use a different reply channel
+            //
+            // Note: msg.validate() ensures that open must have exactly one
+            // handle, but the message may yet be invalid.
+            let reply_channel = match msg.op() {
+                fdio::fdio_sys::ZXRIO_OPEN |
+                fdio::fdio_sys::ZXRIO_CLONE => {
+                    msg.take_handle(0).map(zx::Channel::from)
+                }
+                _ => None,
+            };
+
+            let validation = msg.validate();
+            if validation.is_err() ||
+                (
+                    msg.op() != fdio::fdio_sys::ZXRIO_OPEN &&
+                    msg.op() != fdio::fdio_sys::ZXRIO_CLONE
+                ) ||
+                !msg.is_pipelined() ||
+                !reply_channel.is_some()
+            {
+                eprintln!(
+                    "service request channel received invalid/unsupported zxrio request: {:?}",
+                    &msg
+                );
+
+                if !msg.is_pipelined() {
+                    let reply_channel = reply_channel.as_ref().unwrap_or(chan.as_ref());
+                    let reply_err = validation.err().unwrap_or(zx::Status::NOT_SUPPORTED);
+                    fdio::rio::write_object(reply_channel, reply_err, 0, &[], &mut vec![])
+                        .unwrap_or_else(|e| {
+                            eprintln!("service request reply write failed with {:?}", e)
+                        });
+                }
+
+                return msg.into();
+            }
+
+            if msg.op() == fdio::fdio_sys::ZXRIO_CLONE {
+                if let Some(c) = reply_channel {
+                    if let Ok(fdio_chan) = TokioChannel::from_channel(c, &self.handle) {
+                        self.serve_channel(fdio_chan);
+                    }
+                }
+                return msg.into();
+            }
+
+            let service_channel = reply_channel.unwrap();
+            let path = msg.data().to_owned();
+
+            println!(
+                "service request channel received open request for path: {:?}",
+                &path
+            );
+
+            match fidl::Server::new(
+                self.factory.create(),
+                service_channel,
+                &self.handle,
+            ) {
+                Ok(server) => {
+                    self.handle.spawn(server.map_err(move |e| match e {
+                        fidl::Error::IoError(ref ie)
+                            if ie.kind() == io::ErrorKind::ConnectionAborted => {}
+                        e => eprintln!("runtime fidl server error for {:?}: {:?}", path, e),
+                    }))
+                }
+                Err(e) => eprintln!("service spawn for {:?} failed: {:?}", path, e),
+            }
+
+            msg.into()
+        }
+
+        fn serve_channel(&mut self, chan: TokioChannel) {
+            let rmsg = chan.recv_msg(zx::MessageBuf::new());
+            self.readers.push(rmsg);
+        }
+
+    }
+
+    impl<F: ServiceFactory + 'static> Future for FdioServer<F> {
+        type Item = ();
+        type Error = fidl::Error;
+
+        fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+            loop {
+                match self.readers.poll() {
+                    Ok(Async::Ready(Some((chan, buf)))) => {
+                        let buf = self.dispatch(&chan, buf);
+                        self.readers.push(chan.recv_msg(buf));
+                    },
+                    Ok(Async::Ready(None)) | Ok(Async::NotReady) => return Ok(Async::NotReady),
+                    Err(_) => {
+                        // errors are ignored, as we assume that the channel should still be read from.
+                    },
+                }
+            }
+        }
+    }
+
+    /// Creates a new server which runs on the `ServiceRequest` startup handle.
+    pub fn bootstrap_server<F>(handle: TokioHandle, f: F) -> Result<FdioServer<F>, fidl::Error>
+        where
+        F: ServiceFactory + 'static,
+    {
+        let fdio_handle = mxruntime::get_startup_handle(mxruntime::HandleType::ServiceRequest)
+            .ok_or(fidl::Error::MissingStartupHandle)?;
+
+        let fdio_channel = TokioChannel::from_channel(fdio_handle.into(), &handle)
+            .map_err(fidl::Error::from)?;
+
+        let mut server = FdioServer{
+            readers: FuturesUnordered::new(),
+            factory: f,
+            handle: handle.clone(),
+        };
+
+        server.serve_channel(fdio_channel);
+
+        Ok(server)
     }
 }

@@ -14,6 +14,9 @@ pub type Result<T> = result::Result<T, Error>;
 /// The error type used by FIDL operations.
 #[derive(Debug)]
 pub enum Error {
+    /// The startup handle on which the FIDL service attempted to run was missing.
+    MissingStartupHandle,
+
     /// Invalid header for a FIDL buffer.
     InvalidHeader,
 

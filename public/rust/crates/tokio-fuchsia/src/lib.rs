@@ -18,7 +18,7 @@ extern crate fuchsia_zircon as zircon;
 mod channel;
 mod socket;
 
-pub use channel::Channel;
+pub use channel::{Channel, RecvMsg};
 pub use socket::Socket;
 
 use std::io;

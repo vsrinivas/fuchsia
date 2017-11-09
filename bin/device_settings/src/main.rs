@@ -5,6 +5,7 @@
 #![deny(warnings)]
 
 extern crate fidl;
+extern crate fuchsia_app;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate mxruntime;
@@ -13,8 +14,9 @@ extern crate tokio_core;
 extern crate tokio_fuchsia;
 extern crate fdio;
 
+use fuchsia_app::server::bootstrap_server;
 use fidl::{InterfacePtr, ClientEnd};
-use futures::{Future, future};
+use futures::future;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -28,8 +30,6 @@ extern crate garnet_public_lib_device_settings_fidl;
 use garnet_public_lib_device_settings_fidl::{DeviceSettingsManager, Status, DeviceSettingsWatcher,
                                              ValueType};
 
-type FidlImmediate<T> = future::FutureResult<T, fidl::CloseChannel>;
-
 struct DeviceSettingsManagerServer {
     setting_file_map: HashMap<String, String>,
     watchers: Rc<RefCell<HashMap<String, Vec<DeviceSettingsWatcher::Proxy>>>>,
@@ -37,21 +37,13 @@ struct DeviceSettingsManagerServer {
 }
 
 impl DeviceSettingsManagerServer {
-    fn initialize_keys(&mut self, data_dir: String, keys: &[&str]) {
-        self.setting_file_map = HashMap::with_capacity(keys.len());
-        for k in keys {
-            self.setting_file_map.insert(
-                k.to_string(),
-                format!(
-                    "{}/{}",
-                    data_dir,
-                    k.to_lowercase()
-                ),
-            );
-        }
+    fn initialize_keys(&mut self, data_dir: &str, keys: &[&str]) {
+        self.setting_file_map = keys.iter().map(|k|
+            (k.to_string(), format!("{}/{}", data_dir, k.to_lowercase()))
+        ).collect();
     }
 
-    fn run_watchers(&mut self, key: &String, t: ValueType) {
+    fn run_watchers(&mut self, key: &str, t: ValueType) {
         let mut map = self.watchers.borrow_mut();
         if let Some(m) = map.get_mut(key) {
             m.retain(|w| {
@@ -71,7 +63,7 @@ impl DeviceSettingsManagerServer {
         }
     }
 
-    fn set_key(&mut self, key: &String, buf: &[u8], t: ValueType) -> io::Result<bool> {
+    fn set_key(&mut self, key: &str, buf: &[u8], t: ValueType) -> io::Result<bool> {
         {
             let file = if let Some(f) = self.setting_file_map.get(key) {
                 f
@@ -104,7 +96,7 @@ fn read_file(file: &str) -> io::Result<String> {
 }
 
 impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
-    type GetInteger = FidlImmediate<(i64, Status)>;
+    type GetInteger = fidl::ServerImmediate<(i64, Status)>;
 
     fn get_integer(&mut self, key: String) -> Self::GetInteger {
         let file = if let Some(f) = self.setting_file_map.get(&key) {
@@ -129,7 +121,7 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
         }
     }
 
-    type SetInteger = FidlImmediate<bool>;
+    type SetInteger = fidl::ServerImmediate<bool>;
 
     fn set_integer(&mut self, key: String, val: i64) -> Self::SetInteger {
         match self.set_key(&key, val.to_string().as_bytes(), ValueType::Int) {
@@ -141,7 +133,7 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
         }
     }
 
-    type GetString = FidlImmediate<(String, Status)>;
+    type GetString = fidl::ServerImmediate<(String, Status)>;
 
     fn get_string(&mut self, key: String) -> Self::GetString {
         let file = if let Some(f) = self.setting_file_map.get(&key) {
@@ -161,7 +153,7 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
         }
     }
 
-    type SetString = FidlImmediate<bool>;
+    type SetString = fidl::ServerImmediate<bool>;
 
     fn set_string(&mut self, key: String, val: String) -> Self::SetString {
         match self.set_key(&key, val.as_bytes(), ValueType::String) {
@@ -174,7 +166,7 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
 
     }
 
-    type Watch = FidlImmediate<Status>;
+    type Watch = fidl::ServerImmediate<Status>;
     fn watch(
         &mut self,
         key: String,
@@ -204,93 +196,22 @@ fn main() {
     let mut core = reactor::Core::new().expect("Unable to create core");
     let handle = core.handle();
 
-    // TODO(raggi): clean this up, should check for handle_invalid etc.
-    // We should update mxruntime to provide a safe version of this returning result or option.
-    let fdio_handle = unsafe {
-        mxruntime_sys::zx_get_startup_handle(mxruntime::HandleType::ServiceRequest as u32)
-    };
-
-    // TODO(raggi): add tokio_fuchsia::Channel::from_raw ?
-    let fdio_channel =
-        tokio_fuchsia::Channel::from_channel(
-            zx::Channel::from(unsafe { zx::Handle::from_raw(fdio_handle) }),
-            &handle,
-        ).unwrap();
-
     let watchers = Rc::new(RefCell::new(HashMap::new()));
-    let server = fdio_channel.chain_server(|(chan, buf)| {
-        let mut msg : fdio::rio::Message = buf.into();
-
-        let mut reply_channel = None;
-        // open & clone use a different reply channel
-        if msg.op() == fdio::fdio_sys::ZXRIO_OPEN || msg.op() == fdio::fdio_sys::ZXRIO_CLONE {
-            // Note: msg.validate() ensures that open must have exactly one
-            // handle, but the message may yet be invalid.
-            match msg.take_handle(0) {
-                Some(c) => reply_channel = Some(zx::Channel::from(c)),
-                None => {}
-            }
-        }
-
-        let validation = msg.validate();
-        if validation.is_err() || msg.op() != fdio::fdio_sys::ZXRIO_OPEN || !msg.is_pipelined() || !reply_channel.is_some() {
-            eprintln!(
-                "service request channel received invalid/unsupported zxrio request: {:?}",
-                &msg
-            );
-
-            if !msg.is_pipelined() {
-                match reply_channel {
-                    Some(c) => fdio::rio::write_object(&c, validation.err().unwrap_or(zx::Status::NOT_SUPPORTED), 0, &[], &mut vec![]),
-                    None => fdio::rio::write_object(&chan, validation.err().unwrap_or(zx::Status::NOT_SUPPORTED), 0, &[], &mut vec![]),
-                }.unwrap_or_else(|e| {
-                    eprintln!("service request reply write failed with {:?}", e)
-                });
-            }
-
-            return future::ok((chan, msg.into()));
-        }
-
-        let service_channel = reply_channel.unwrap();
-        let path = msg.data().to_owned();
-
-        println!(
-            "service request channel received open request for path: {:?}",
-            &path
-        );
-
+    let server = bootstrap_server(handle.clone(), move || {
         let mut d = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
             watchers: watchers.clone(),
             handle: handle.clone(),
         };
-        d.initialize_keys(DATA_DIR.to_owned(), &["Timezone"]);
-        // Create data directory
+
+        d.initialize_keys(DATA_DIR, &["Timezone"]);
+        // Attempt to create data directory
         let _ = fs::create_dir_all(DATA_DIR);
 
-        match fidl::Server::new(
-            DeviceSettingsManager::Dispatcher(d),
-            service_channel,
-            &handle,
-        ) {
-            Ok(server) => {
-                handle.spawn(server.map_err(move |e| match e {
-                    fidl::Error::IoError(ref ie)
-                        if ie.kind() == io::ErrorKind::ConnectionAborted => {}
-                    e => eprintln!("runtime fidl server error for {:?}: {:?}", path, e),
-                }))
-            }
-            Err(e) => eprintln!("service spawn for {:?} failed: {:?}", path, e),
-        }
+        DeviceSettingsManager::Dispatcher(d)
+    }).unwrap();
 
-        future::ok((chan, msg.into()))
-    });
-
-    if let Err(e) = core.run(server) {
-        if e.kind() != io::ErrorKind::ConnectionAborted {
-            println!("Error running server: {:?}", e);
-        }
-    }
+    core.run(server).unwrap();
 }
 
 #[cfg(test)]
@@ -315,7 +236,7 @@ mod tests {
         let tmp_dir = TempDir::new("ds_test").unwrap();
 
 
-        device_settings.initialize_keys(tmp_dir.path().to_str().unwrap().to_string(), keys);
+        device_settings.initialize_keys(tmp_dir.path().to_str().unwrap(), keys);
 
         // return tmp_dir to keep it in scope
         return Ok((core, device_settings, tmp_dir));
