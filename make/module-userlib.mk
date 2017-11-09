@@ -9,7 +9,7 @@ ifneq ($(MODULE_DEPS),)
 $(error $(MODULE) $(MODULE_TYPE) modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
 endif
 ifneq ($(MODULE_HOST_LIBS)$(MODULE_HOST_SYSLIBS),)
-$(error $(MODULE) $(MODULE_TYPE) modules must not use MODULE_{LIBS,STATIC_LIBS}, not MODULE_HOST_{LIBS,SYSLIBS})
+$(error $(MODULE) $(MODULE_TYPE) modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_HOST_{LIBS,SYSLIBS})
 endif
 
 # Things that are library-like but not "userlib" do not
