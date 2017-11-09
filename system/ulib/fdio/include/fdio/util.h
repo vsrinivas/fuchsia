@@ -51,9 +51,6 @@ zx_status_t bootfs_parse(bootfs_t* bfs,
                          zx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
                          void* cookie);
 
-// used for bootstrap
-void fdio_install_root(fdio_t* root);
-
 // attempt to install a fdio in the unistd fd table
 // if fd >= 0, request a specific fd, and starting_fd is ignored
 // if fd < 0, request the first available fd >= starting_fd

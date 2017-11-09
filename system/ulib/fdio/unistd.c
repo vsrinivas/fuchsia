@@ -51,15 +51,6 @@ fdio_state_t __fdio_global_state = {
     .cwd_path = "/",
 };
 
-void fdio_install_root(fdio_t* root) {
-    mtx_lock(&fdio_lock);
-    if (fdio_root_init) {
-        fdio_root_handle = root;
-        fdio_root_init = false;
-    }
-    mtx_unlock(&fdio_lock);
-}
-
 // Attaches an fdio to an fdtab slot.
 // The fdio must have been upref'd on behalf of the
 // fdtab prior to binding.
