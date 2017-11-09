@@ -2876,7 +2876,14 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
 
     rate = kDataRates[phy_mode][rate_tbl_idx];
     if (is_40mhz) {
-        rate *= 2;
+        // 802.11n case
+        // Set the multipler by the ratio of the subcarriers, not by the ratio of the bandwidth
+        // rate *= 2.0769;          // Correct
+        // rate *= (40MHz / 20MHz); // Incorrect
+
+        constexpr uint8_t subcarriers_data_40 = 108;  // counts
+        constexpr uint8_t subcarriers_data_20 = 52;   // counts
+        rate = rate * subcarriers_data_40 / subcarriers_data_20;
     }
     if (is_sgi) {
         rate = static_cast<uint8_t>((static_cast<uint16_t>(rate) * 10) / 9);
