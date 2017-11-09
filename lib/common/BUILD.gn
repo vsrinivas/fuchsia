@@ -45,3 +45,13 @@ source_set("teardown") {
     "//garnet/public/lib/fxl",
   ]
 }
+
+source_set("xdr") {
+  sources = [
+    "xdr.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/fidl:json_xdr",
+  ]
+}

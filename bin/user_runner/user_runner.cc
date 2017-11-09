@@ -27,6 +27,12 @@ class UserRunnerApp {
         [this](fidl::InterfaceRequest<UserRunner> request) {
           user_runner_impl_.Connect(std::move(request));
         });
+    // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
+    // to filesystem instead of this indirection.
+    application_context_->outgoing_services()->AddService<UserRunnerDebug>(
+        [this](fidl::InterfaceRequest<UserRunnerDebug> request) {
+          user_runner_impl_.Connect(std::move(request));
+        });
   }
 
  private:

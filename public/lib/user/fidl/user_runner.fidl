@@ -14,7 +14,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 // The device_runner application (there is no |DeviceRunner| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per
 // user.
-[ServiceName="modular.UserRunnerFactory"]  // Created by user_runner application.
+[ServiceName="modular.UserRunner"]  // Created by user_runner application.
 interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
@@ -36,4 +36,16 @@ interface UserContext {
   Logout();
 
   GetPresentation(mozart.Presentation& presentation);
+};
+
+// For development purposes only.
+// This is implemented by user runner and used to expose some debug information.
+// TODO(alhaad): This should not be a FIDL method but rather exposed directly
+// via the outgoing directory. The reason that we can't do that now is because
+// VFS doesn't currently support asynchronous operations and getting debug data
+// within user runner synchronously is hard.
+[ServiceName="modular.UserRunnerDebug"]  // Created by user_runner application.
+interface UserRunnerDebug {
+  // TODO(alhaad): We might be limited by FIDL message size. Consider using vmo.
+  DumpState() => (string debug_state);
 };

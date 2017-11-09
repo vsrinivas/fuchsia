@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include <fs/pseudo-file.h>
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -222,6 +223,17 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         Start();
       });
     }
+
+    // 0c. Expose debug information via outgoing directory.
+    // TODO(alhaad): We want to split this up into multiple files or even
+    // organize it into multiple directories. Pseudo-directories needs to be
+    // changed first to support callbacks.
+    app_context_->GetOrCreateDebugExportDir()->AddEntry(
+        "dump-state",
+        fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
+          *out = user_provider_impl_->DumpState();
+          return ZX_OK;
+        })));
   }
 
  private:

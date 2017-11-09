@@ -508,6 +508,72 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetLinkPeerCall);
 };
 
+class StoryProviderImpl::DumpStateCall : Operation<std::string> {
+ public:
+  DumpStateCall(OperationContainer* const container,
+                StoryProviderImpl* const story_provider_impl,
+                ResultCall result_call)
+      : Operation("StoryProviderImpl::CreateStoryCall",
+                  container,
+                  std::move(result_call)),
+        story_provider_impl_(story_provider_impl) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &dump_};
+
+    output_ << "=================Begin story provider info=======" << std::endl;
+
+    new DumpPageSnapshotCall(&operation_queue_, story_provider_impl_->page(),
+                             [this, flow] (auto dump) {
+                               output_ << dump;
+                             });
+    new ReadAllDataCall<StoryData>(
+      &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
+      XdrStoryData, [this, flow](fidl::Array<StoryDataPtr> data) {
+        for (auto& story_data : data) {
+          DumpStoryPage(std::move(story_data), flow);
+        }
+
+        // This needs to be the last operations on |operation_queue_| since we
+        // need to get all the content from |output_| into |dump_|.
+        new SyncCall(&operation_queue_, [this, flow] {
+          dump_ = output_.str();
+        });
+      });
+  }
+
+  void DumpStoryPage(StoryDataPtr story_data, FlowToken flow) {
+    auto story_id = std::move(story_data->story_info->id);
+    auto page_id = std::move(story_data->story_page_id);
+    ledger::PagePtr story_page;
+    story_provider_impl_->ledger_client_->ledger()->GetPage(
+        std::move(page_id), story_page.NewRequest(), [] (auto s) {});
+    story_pages_.push_back(std::move(story_page));
+    new DumpPageSnapshotCall(
+        &operation_queue_, story_pages_.back().get(),
+        [this, story_id, flow] (auto dump) {
+          output_ << "=================Story id: " << story_id << "==========="
+                  << std::endl;
+          output_ << dump;
+        });
+  }
+
+  StoryProviderImpl* const story_provider_impl_;  // not owned
+
+  std::vector<ledger::PagePtr> story_pages_;
+
+  std::string dump_;
+  std::ostringstream output_;
+
+  // Sub operations run in this queue.
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DumpStateCall);
+};
+
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope,
     std::string device_id,
@@ -634,6 +700,14 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
 
   new MutateStoryDataCall(&operation_queue_, page(), story_id, mutate, done);
 };
+
+void StoryProviderImpl::DumpState(
+    const std::function<void(const std::string&)>& callback) {
+  new DumpStateCall(&operation_queue_, this,
+                    [callback] (auto dump) {
+                      callback(dump);
+                    });
+}
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(const fidl::String& module_url,

@@ -107,6 +107,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void NotifyStoryStateChange(const fidl::String& story_id,
                               StoryState story_state);
 
+  void DumpState(const std::function<void(const std::string&)>& callback);
+
  private:
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
   using ImportanceMap = fidl::Map<fidl::String, float>;
@@ -260,6 +262,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   class TeardownCall;
   class GetImportanceCall;
   class GetLinkPeerCall;
+  class DumpStateCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

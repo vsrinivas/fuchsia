@@ -8,6 +8,8 @@
 #include <utility>
 
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/user/fidl/user_runner.fidl-sync.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -59,6 +61,14 @@ UserControllerImpl::UserControllerImpl(
       std::move(account), std::move(user_shell), std::move(story_shell),
       std::move(token_provider_factory), user_context_binding_.NewBinding(),
       std::move(view_owner_request));
+}
+
+std::string UserControllerImpl::DumpState() {
+  UserRunnerDebugSyncPtr debug;
+  ConnectToService(user_runner_->services(), fidl::GetSynchronousProxy(&debug));
+  fidl::String output;
+  debug->DumpState(&output);
+  return output;
 }
 
 // |UserController|

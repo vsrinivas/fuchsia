@@ -12,6 +12,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/device_runner/users_generated.h"
+#include "peridot/lib/common/xdr.h"
+#include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
 
@@ -111,6 +113,23 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
 
     it.second->Logout(cont);
   }
+}
+
+std::string UserProviderImpl::DumpState() {
+  std::ostringstream output;
+  if (users_storage_) {
+    output << "=================Begin userdb=====================" << std::endl;
+    for (const auto* user : *users_storage_->users()) {
+      auto account = Convert(user);
+      std::string account_json;
+      XdrWrite(&account_json, &account, XdrAccount);
+      output << account_json << std::endl;
+    }
+  }
+  for (const auto& kv : user_controllers_) {
+    output << kv.first->DumpState();
+  }
+  return output.str();
 }
 
 void UserProviderImpl::Login(UserLoginParamsPtr params) {

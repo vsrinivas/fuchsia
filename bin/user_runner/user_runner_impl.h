@@ -51,7 +51,8 @@ class RemoteInvokerImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
-class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
+class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher,
+                       UserRunnerDebug {
  public:
   UserRunnerImpl(std::shared_ptr<app::ApplicationContext> application_context,
                  bool test);
@@ -59,6 +60,8 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
   ~UserRunnerImpl() override;
 
   void Connect(fidl::InterfaceRequest<UserRunner> request);
+
+  void Connect(fidl::InterfaceRequest<UserRunnerDebug> request);
 
  private:
   // |UserRunner|
@@ -69,8 +72,6 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
-
-  // |UserRunner|
   void Terminate() override;
 
   // |UserShellContext|
@@ -107,6 +108,9 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
       fidl::InterfaceRequest<AgentController> agent_controller_request)
       override;
 
+  // |UserRunnerDebug|
+  void DumpState(const DumpStateCallback& callback) override;
+
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
@@ -119,6 +123,7 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
   std::shared_ptr<app::ApplicationContext> application_context_;
   const bool test_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
+  fidl::BindingSet<UserRunnerDebug> user_runner_debug_bindings_;
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;

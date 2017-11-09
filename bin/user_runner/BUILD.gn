@@ -36,6 +36,7 @@ executable("user_runner") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/story_runner",
     "//peridot/lib/common:async_holder",
+    "//peridot/lib/common:xdr",
     "//peridot/lib/common:teardown",
     "//peridot/lib/device_info",
     "//peridot/lib/fidl:app_client",

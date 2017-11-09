@@ -230,6 +230,72 @@ class WriteDataCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
 };
 
+class DumpPageSnapshotCall : Operation<std::string> {
+ public:
+  DumpPageSnapshotCall(OperationContainer* const container,
+                       ledger::Page* const page,
+                       ResultCall result_call)
+      : Operation("DumpPageSnapshotCall",
+                  container,
+                  std::move(result_call)),
+        page_(page) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &dump_};
+
+    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                       [this, flow](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FXL_LOG(ERROR) << "DumpPageSnapshotCall() "
+                                          << "Page.GetSnapshot() " << status;
+                           return;
+                         }
+
+                         Cont1(flow);
+                       });
+  }
+
+  void Cont1(FlowToken flow) {
+    GetEntries(page_snapshot_.get(), &entries_,
+               [this, flow](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FXL_LOG(ERROR) << "DumpPageSnapshotCall() "
+                                  << "GetEntries() " << status;
+                   return;
+                 }
+
+                 Cont2(flow);
+               });
+  }
+
+  void Cont2(FlowToken /*flow*/) {
+    std::ostringstream stream;
+    for (auto& entry : entries_) {
+      stream << "key: " << to_hex_string(entry->key) << std::endl;
+
+      std::string value_as_string;
+      if (!fsl::StringFromVmo(entry->value, &value_as_string)) {
+        FXL_LOG(ERROR) << "DumpPageSnapshotCall() "
+                       << "Unable to extract data.";
+        continue;
+      }
+      stream << "value: " << value_as_string << std::endl;
+    }
+    dump_ = stream.str();
+  }
+
+  ledger::Page* page_;  // not owned
+  ledger::PageSnapshotPtr page_snapshot_;
+  std::vector<ledger::EntryPtr> entries_;
+  std::string dump_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DumpPageSnapshotCall);
+};
+
+
 }  // namespace modular
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_

@@ -34,9 +34,11 @@
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/remote_invoker_impl.h"
+#include "peridot/lib/common/xdr.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -98,6 +100,10 @@ UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunner> request) {
   binding_->Bind(std::move(request));
+}
+
+void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunnerDebug> request) {
+  user_runner_debug_bindings_.AddBinding(this, std::move(request));
 }
 
 void UserRunnerImpl::Initialize(
@@ -380,6 +386,25 @@ void UserRunnerImpl::Terminate() {
       });
     });
   });
+}
+
+void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
+  std::ostringstream output;
+  output << "=================Begin user info====================" << std::endl;
+
+  output << "=================Begin account info=================" << std::endl;
+  std::string account_json;
+  XdrWrite(&account_json, &account_, XdrAccount);
+  output << account_json << std::endl;
+
+  story_provider_impl_->DumpState(fxl::MakeCopyable(
+      [output = std::move(output), callback] (
+          const std::string& debug) mutable {
+        output << debug;
+        callback(output.str());
+      }));
+
+  // TODO(alhaad): Add debug info about agents, device map, etc.
 }
 
 void UserRunnerImpl::GetAccount(const GetAccountCallback& callback) {
