@@ -9,8 +9,8 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/hi3660-bus.c \
-    $(LOCAL_DIR)/hi3660-devices.c \
+    $(LOCAL_DIR)/hikey960.c \
+    $(LOCAL_DIR)/hikey960-devices.c \
     $(LOCAL_DIR)/hi3660-gpios.c \
     $(LOCAL_DIR)/hi3660-usb.c \
 
@@ -29,7 +29,7 @@ MODULE_NAME := hi3660-gpio-test
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/hi3660-gpio-test.c \
+    $(LOCAL_DIR)/hikey960-gpio-test.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 

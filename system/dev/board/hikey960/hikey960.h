@@ -20,14 +20,14 @@ typedef struct {
     io_buffer_t peri_crg;
     io_buffer_t pctrl;
     usb_mode_t usb_mode;
-} hi3660_bus_t;
+} hikey960_t;
 
-// hi3660-devices.c
-zx_status_t hi3360_add_devices(hi3660_bus_t* bus);
+// hikey960-devices.c
+zx_status_t hikey960_add_devices(hikey960_t* bus);
 
 // hi3660-gpios.c
-zx_status_t hi3360_add_gpios(hi3660_bus_t* bus);
+zx_status_t hi3360_add_gpios(hikey960_t* bus);
 
 // hi3660-usb.c
-zx_status_t hi3360_usb_init(hi3660_bus_t* bus);
-zx_status_t hi3660_usb_set_mode(hi3660_bus_t* bus, usb_mode_t mode);
+zx_status_t hi3360_usb_init(hikey960_t* bus);
+zx_status_t hi3660_usb_set_mode(hikey960_t* bus, usb_mode_t mode);

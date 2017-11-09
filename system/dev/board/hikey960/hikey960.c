@@ -21,10 +21,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/assert.h>
 
-#include "hi3660-bus.h"
 #include "hi3660-hw.h"
+#include "hikey960.h"
 
-static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, uint32_t index) {
+static pl061_gpios_t* find_gpio(hikey960_t* bus, uint32_t index) {
     pl061_gpios_t* gpios;
     // TODO(voydanoff) consider using a fancier data structure here
     list_for_every_entry(&bus->gpios, gpios, pl061_gpios_t, node) {
@@ -37,7 +37,7 @@ static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, uint32_t index) {
 }
 
 static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
-    hi3660_bus_t* bus = ctx;
+    hikey960_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
@@ -46,7 +46,7 @@ static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, gpio_config_fla
 }
 
 static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
-    hi3660_bus_t* bus = ctx;
+    hikey960_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
@@ -55,7 +55,7 @@ static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_valu
 }
 
 static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
-    hi3660_bus_t* bus = ctx;
+    hikey960_t* bus = ctx;
     pl061_gpios_t* gpios = find_gpio(bus, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
@@ -75,7 +75,7 @@ static zx_status_t hi3660_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
 }
 
 static zx_status_t hi3660_set_mode(void* ctx, usb_mode_t mode) {
-    hi3660_bus_t* bus = ctx;
+    hikey960_t* bus = ctx;
 
     if (mode == USB_MODE_OTG) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -90,7 +90,7 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
 };
 
 static zx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    hi3660_bus_t* bus = ctx;
+    hikey960_t* bus = ctx;
 
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO: {
@@ -111,7 +111,7 @@ static pbus_interface_ops_t hi3660_bus_ops = {
 };
 
 static void hi3660_release(void* ctx) {
-    hi3660_bus_t* bus = ctx;
+    hikey960_t* bus = ctx;
     pl061_gpios_t* gpios;
 
     while ((gpios = list_remove_head_type(&bus->gpios, pl061_gpios_t, node)) != NULL) {
@@ -132,7 +132,7 @@ static zx_protocol_device_t hi3660_device_protocol = {
 };
 
 static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent) {
-    hi3660_bus_t* bus = calloc(1, sizeof(hi3660_bus_t));
+    hikey960_t* bus = calloc(1, sizeof(hikey960_t));
     if (!bus) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -187,7 +187,7 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "hi3660_bind: hi3360_add_gpios failed!\n");;
     }
 
-    if ((status = hi3360_add_devices(bus)) != ZX_OK) {
+    if ((status = hikey960_add_devices(bus)) != ZX_OK) {
         zxlogf(ERROR, "hi3660_bind: hi3360_add_devices failed!\n");;
     }
 

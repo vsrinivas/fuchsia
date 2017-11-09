@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "hi3660-bus.h"
+#include "hikey960.h"
 
 // TODO(voydanoff) Move hard coded values to a header file
 
@@ -97,7 +97,7 @@ static const gpio_block_t gpio_blocks[] = {
     },
 };
 
-zx_status_t hi3360_add_gpios(hi3660_bus_t* bus) {
+zx_status_t hi3360_add_gpios(hikey960_t* bus) {
     zx_status_t status;
     zx_handle_t resource = get_root_resource();
 

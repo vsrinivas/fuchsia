@@ -6,8 +6,8 @@
 #include <ddk/protocol/platform-defs.h>
 #include <stdio.h>
 
-#include "hi3660-bus.h"
 #include "hi3660-hw.h"
+#include "hikey960.h"
 #include "hikey960-hw.h"
 
 //#define GPIO_TEST 1
@@ -116,7 +116,7 @@ static const pbus_dev_t gpio_test_dev = {
 };
 #endif
 
-zx_status_t hi3360_add_devices(hi3660_bus_t* bus) {
+zx_status_t hikey960_add_devices(hikey960_t* bus) {
     zx_status_t status;
 
     if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
