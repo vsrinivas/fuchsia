@@ -294,8 +294,11 @@ static bool wait_process_exit_from_debugger(zx_handle_t eport, zx_handle_t proce
         zx_status_t status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
         if (status == ZX_OK) {
             status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
-            if (status < 0)
-                tu_fatal("wait_process_exit_from_debugger", status);
+            if (status < 0) {
+                // If the resume failed the thread must be dying or dead.
+                EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
+                EXPECT_TRUE(tu_thread_is_dying_or_dead(thread), "");
+            }
             zx_handle_close(thread);
         }
     }

@@ -376,6 +376,13 @@ zx_info_thread_t tu_thread_get_info(zx_handle_t thread)
     return info;
 }
 
+bool tu_thread_is_dying_or_dead(zx_handle_t thread)
+{
+    zx_info_thread_t info = tu_thread_get_info(thread);
+    return (info.state == ZX_THREAD_STATE_DYING ||
+            info.state == ZX_THREAD_STATE_DEAD);
+}
+
 int tu_run_program(const char *progname, int argc, const char** argv)
 {
     launchpad_t* lp;

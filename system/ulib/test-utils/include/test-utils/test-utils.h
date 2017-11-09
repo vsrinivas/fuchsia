@@ -176,6 +176,10 @@ zx_handle_t tu_get_thread(zx_handle_t proc, zx_koid_t tid);
 
 zx_info_thread_t tu_thread_get_info(zx_handle_t thread);
 
+// Return true if |thread| is dying or dead.
+
+bool tu_thread_is_dying_or_dead(zx_handle_t thread);
+
 // Run a program and wait for it to exit.
 // Any error in trying to run the program is fatal.
 // The result is the return code of the child process.
