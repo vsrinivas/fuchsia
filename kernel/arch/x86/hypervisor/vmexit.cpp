@@ -206,23 +206,26 @@ static zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size)
 
 static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                 GuestState* guest_state) {
-    const uint64_t leaf = guest_state->rax;
-    const uint64_t subleaf = guest_state->rcx;
+    const uint32_t leaf = static_cast<uint32_t>(guest_state->rax);
+    const uint32_t subleaf = static_cast<uint32_t>(guest_state->rcx);
 
+    next_rip(exit_info, vmcs);
     switch (leaf) {
     case X86_CPUID_BASE:
     case X86_CPUID_EXT_BASE:
-        next_rip(exit_info, vmcs);
-        cpuid((uint32_t)guest_state->rax,
-              (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
-              (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
+        cpuid(leaf,
+              reinterpret_cast<uint32_t*>(&guest_state->rax),
+              reinterpret_cast<uint32_t*>(&guest_state->rbx),
+              reinterpret_cast<uint32_t*>(&guest_state->rcx),
+              reinterpret_cast<uint32_t*>(&guest_state->rdx));
         return ZX_OK;
     case X86_CPUID_BASE + 1 ... MAX_SUPPORTED_CPUID:
     case X86_CPUID_EXT_BASE + 1 ... MAX_SUPPORTED_CPUID_EXT:
-        next_rip(exit_info, vmcs);
-        cpuid_c((uint32_t)guest_state->rax, (uint32_t)guest_state->rcx,
-                (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
-                (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
+        cpuid_c(leaf, subleaf,
+                reinterpret_cast<uint32_t*>(&guest_state->rax),
+                reinterpret_cast<uint32_t*>(&guest_state->rbx),
+                reinterpret_cast<uint32_t*>(&guest_state->rcx),
+                reinterpret_cast<uint32_t*>(&guest_state->rdx));
         switch (leaf) {
         case X86_CPUID_MODEL_FEATURES:
             // Enable the hypervisor bit.
@@ -274,23 +277,23 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X86_CPUID_HYP_VENDOR: {
         // This leaf is commonly used to identify a hypervisor via ebx:ecx:edx.
         static const uint32_t* regs = reinterpret_cast<const uint32_t*>(kHypVendorId);
-        next_rip(exit_info, vmcs);
         guest_state->rax = 0;
         guest_state->rbx = regs[0];
         guest_state->rcx = regs[1];
         guest_state->rdx = regs[2];
         return ZX_OK;
     }
-    case X86_CPUID_HYP_VENDOR + 1 ... X86_CPUID_HYP_MAX:
-        next_rip(exit_info, vmcs);
-        guest_state->rax = 0;
-        guest_state->rbx = 0;
-        guest_state->rcx = 0;
-        guest_state->rdx = 0;
-        return ZX_OK;
+    // From Volume 2A, CPUID instruction reference. If the EAX value is outside
+    // the range recognized by CPUID then the information for the highest
+    // supported base information leaf is returned. Any value in ECX is
+    // honored.
     default:
-        dprintf(INFO, "Unimplemented cpuid %#lx.%#lx\n", leaf, subleaf);
-        return ZX_ERR_NOT_SUPPORTED;
+        cpuid_c(MAX_SUPPORTED_CPUID, subleaf,
+                reinterpret_cast<uint32_t*>(&guest_state->rax),
+                reinterpret_cast<uint32_t*>(&guest_state->rbx),
+                reinterpret_cast<uint32_t*>(&guest_state->rcx),
+                reinterpret_cast<uint32_t*>(&guest_state->rdx));
+        return ZX_OK;
     }
 }
 
