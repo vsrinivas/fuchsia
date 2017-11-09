@@ -4,17 +4,23 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/driver/binding.h>
 
 __BEGIN_CDECLS;
 
-zx_status_t di_read_driver_info(int fd, void *cookie,
-                                void (*func)(
-                                    zircon_driver_note_payload_t* note,
-                                    const zx_bind_inst_t* binding,
-                                    void *cookie));
+typedef void (*di_info_func_t)(zircon_driver_note_payload_t* note,
+                               const zx_bind_inst_t* binding, void *cookie);
+
+zx_status_t di_read_driver_info(int fd, void* cookie, di_info_func_t func);
+
+typedef zx_status_t (*di_read_func_t)(void* obj, void* data, size_t len, size_t off);
+
+zx_status_t di_read_driver_info_etc(void* obj, di_read_func_t rfunc,
+                                    void* cookie, di_info_func_t ifunc);
 
 // Lookup the human readable name of a bind program parameter, or return NULL if
 // the name is not known.  Used by debug code to do things like dump the

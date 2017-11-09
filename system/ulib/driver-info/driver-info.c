@@ -14,15 +14,15 @@
 #include <zircon/driver/binding.h>
 #include <zircon/types.h>
 
+typedef zx_status_t (*note_func_t)(void* note, size_t sz, void* cookie);
+
 typedef Elf64_Ehdr elfhdr;
 typedef Elf64_Phdr elfphdr;
 typedef Elf64_Nhdr notehdr;
 
 static zx_status_t find_note(const char* name, size_t nlen, uint32_t type,
                              void* data, size_t size,
-                             zx_status_t (*func)(void* note, size_t sz,
-                                                 void* cookie),
-                             void* cookie) {
+                             note_func_t func, void* cookie) {
     while (size >= sizeof(notehdr)) {
         const notehdr* hdr = data;
         uint32_t nsz = (hdr->n_namesz + 3) & (~3);
@@ -50,15 +50,14 @@ static zx_status_t find_note(const char* name, size_t nlen, uint32_t type,
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t for_each_note(int fd, const char* name, uint32_t type,
+static zx_status_t for_each_note(void* obj, di_read_func_t diread,
+                                 const char* name, uint32_t type,
                                  void* data, size_t dsize,
-                                 zx_status_t (*func)(void* note,
-                                                     size_t sz, void* cookie),
-                                 void* cookie) {
+                                 note_func_t func, void* cookie) {
     size_t nlen = strlen(name) + 1;
     elfphdr ph[64];
     elfhdr eh;
-    if (pread(fd, &eh, sizeof(eh), 0) != sizeof(eh)) {
+    if (diread(obj, &eh, sizeof(eh), 0) != ZX_OK) {
         printf("for_each_note: pread(eh) failed\n");
         return ZX_ERR_IO;
     }
@@ -73,7 +72,7 @@ static zx_status_t for_each_note(int fd, const char* name, uint32_t type,
         printf("for_each_note: too many phdrs\n");
         return ZX_ERR_INTERNAL;
     }
-    if ((pread(fd, ph, sz, eh.e_phoff) != (ssize_t)sz)) {
+    if (diread(obj, ph, sz, eh.e_phoff) != ZX_OK) {
         printf("for_each_note: pread(sz,eh.e_phoff) failed\n");
         return ZX_ERR_IO;
     }
@@ -82,7 +81,7 @@ static zx_status_t for_each_note(int fd, const char* name, uint32_t type,
             (ph[i].p_filesz > dsize)) {
             continue;
         }
-        if ((pread(fd, data, ph[i].p_filesz, ph[i].p_offset) != (ssize_t)ph[i].p_filesz)) {
+        if (diread(obj, data, ph[i].p_filesz, ph[i].p_offset) != ZX_OK) {
             printf("for_each_note: pread(ph[i]) failed\n");
             return ZX_ERR_IO;
         }
@@ -96,8 +95,7 @@ static zx_status_t for_each_note(int fd, const char* name, uint32_t type,
 
 typedef struct {
     void* cookie;
-    void (*func)(zircon_driver_note_payload_t* note,
-                 const zx_bind_inst_t* binding, void* cookie);
+    di_info_func_t func;
 } context;
 
 static zx_status_t callback(void* note, size_t sz, void* _ctx) {
@@ -115,17 +113,34 @@ static zx_status_t callback(void* note, size_t sz, void* _ctx) {
     return ZX_OK;
 }
 
-zx_status_t di_read_driver_info(int fd, void *cookie,
-                                void (*func)(
-                                    zircon_driver_note_payload_t* note,
-                                    const zx_bind_inst_t* binding,
-                                    void *cookie)) {
+static zx_status_t di_pread(void* obj, void* data, size_t len, size_t off) {
+    if (pread(*((int*)obj), data, len, off) == (ssize_t)len) {
+        return ZX_OK;
+    } else {
+        return ZX_ERR_IO;
+    }
+}
+
+zx_status_t di_read_driver_info_etc(void* obj, di_read_func_t rfunc,
+                                    void *cookie, di_info_func_t func) {
     context ctx = {
         .cookie = cookie,
         .func = func,
     };
     uint8_t data[4096];
-    return for_each_note(fd, ZIRCON_NOTE_NAME, ZIRCON_NOTE_DRIVER,
+    return for_each_note(obj, rfunc,
+                         ZIRCON_NOTE_NAME, ZIRCON_NOTE_DRIVER,
+                         data, sizeof(data), callback, &ctx);
+}
+
+zx_status_t di_read_driver_info(int fd, void *cookie, di_info_func_t func) {
+    context ctx = {
+        .cookie = cookie,
+        .func = func,
+    };
+    uint8_t data[4096];
+    return for_each_note(&fd, di_pread,
+                         ZIRCON_NOTE_NAME, ZIRCON_NOTE_DRIVER,
                          data, sizeof(data), callback, &ctx);
 }
 
