@@ -610,6 +610,7 @@ CPPFILT := $(CLANG_TOOLCHAIN_PREFIX)llvm-cxxfilt
 SIZE := $(CLANG_TOOLCHAIN_PREFIX)llvm-size
 NM := $(CLANG_TOOLCHAIN_PREFIX)llvm-nm
 OBJCOPY := $(CLANG_TOOLCHAIN_PREFIX)llvm-objcopy
+STRIP := $(CLANG_TOOLCHAIN_PREFIX)llvm-objcopy --strip-sections
 else
 CC := $(GOMACC) $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
@@ -619,6 +620,7 @@ CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
 SIZE := $(TOOLCHAIN_PREFIX)size
 NM := $(TOOLCHAIN_PREFIX)nm
 OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
+STRIP := $(TOOLCHAIN_PREFIX)objcopy --strip-all
 endif
 LD := $(TOOLCHAIN_PREFIX)ld
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
@@ -629,7 +631,6 @@ USER_LD := $(LD).gold
 else
 USER_LD := $(LD)
 endif
-STRIP := $(TOOLCHAIN_PREFIX)strip
 
 LIBGCC := $(shell $(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) -print-libgcc-file-name)
 ifeq ($(LIBGCC),)

@@ -83,7 +83,7 @@ $(BUILDDIR)/%.debug.lst: $(BUILDDIR)/%
 
 $(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(STRIP) $< -o $@
+	$(NOECHO)$(STRIP) $< $@
 
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
 	$(call BUILDECHO,generating symbols $@)
