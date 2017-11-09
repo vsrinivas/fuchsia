@@ -137,8 +137,6 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
   ad.SetServiceData(common::UUID((uint16_t)0xfeaa), oversize_data);
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr, 1000,
                                  false, GetErrorCallback());
-  RunMessageLoop();
-
   EXPECT_TRUE(MoveLastStatus());
 }
 
@@ -166,28 +164,34 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   EXPECT_EQ((LowEnergyConnectionRef*)0xF00DFACE, ref.release());
 }
 
-// - Starts the advertisement when asked
+// - Starts the advertisement when asked and verifies that the parameters have
+//   been passed down correctly.
 // - Stops advertisement
 // - Uses the random address given and sets it.
 TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartAndStop) {
+  constexpr uint16_t kIntervalMs = 500;
+  constexpr uint16_t kIntervalSlices = 800;
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
   common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
 
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
-                                 GetSuccessCallback());
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kIntervalMs,
+                                 false, GetSuccessCallback());
 
   RunMessageLoop();
 
   EXPECT_TRUE(MoveLastStatus());
 
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_EQ(addr, test_device()->le_random_address());
+  EXPECT_EQ(kIntervalSlices, test_device()->le_advertising_state().interval);
+
   AdvertisingData controller_ad;
   EXPECT_TRUE(AdvertisingData::FromBytes(
       test_device()->le_advertising_state().advertised_view(), &controller_ad));
   EXPECT_EQ(ad, controller_ad);
-  EXPECT_EQ(addr, test_device()->le_random_address());
+  EXPECT_EQ(0u, test_device()->le_advertising_state().scan_rsp_view().size());
 
   test_device()->SetAdvertisingStateCallback(
       [this]() {
@@ -244,7 +248,7 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   test_device()->SetAdvertisingStateCallback(
       [this]() {
         if (!test_device()->le_advertising_state().enabled &&
-            test_device()->le_advertising_state().length == 0 &&
+            test_device()->le_advertising_state().data_length == 0 &&
             test_device()->le_advertising_state().scan_rsp_length == 0) {
           message_loop()->PostQuitTask();
         }
@@ -276,8 +280,6 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
 
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
                                  GetErrorCallback());
-  RunMessageLoop();
-
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 }
@@ -291,8 +293,6 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
 
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, true,
                                  GetErrorCallback());
-  RunMessageLoop();
-
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 }

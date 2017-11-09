@@ -113,8 +113,9 @@ FakeController::LEScanState::LEScanState()
       filter_policy(hci::LEScanFilterPolicy::kNoWhiteList) {}
 
 FakeController::LEAdvertisingState::LEAdvertisingState()
-    : enabled(false), length(0) {
+    : enabled(false), interval(0), data_length(0), scan_rsp_length(0) {
   std::memset(data, 0, sizeof(data));
+  std::memset(scan_rsp_data, 0, sizeof(scan_rsp_data));
 }
 
 FakeController::FakeController(zx::channel cmd_channel,
@@ -718,7 +719,14 @@ void FakeController::OnCommandPacketReceived(
         out_params.status = hci::Status::kCommandDisallowed;
         RespondWithCommandComplete(
             opcode, common::BufferView(&out_params, sizeof(out_params)));
+        return;
       }
+
+      uint32_t interval_min = le16toh(in_params.adv_interval_min);
+      uint32_t interval_max = le16toh(in_params.adv_interval_max);
+
+      // Just assign the average for the interval.
+      le_adv_state_.interval = (interval_min + interval_max) / 2;
       le_adv_state_.adv_type = in_params.adv_type;
 
       RespondWithSuccess(opcode);
@@ -728,8 +736,9 @@ void FakeController::OnCommandPacketReceived(
     case hci::kLESetAdvertisingData: {
       const auto& in_params =
           command_packet.payload<hci::LESetAdvertisingDataCommandParams>();
-      le_adv_state_.length = in_params.adv_data_length;
-      std::memcpy(le_adv_state_.data, in_params.adv_data, le_adv_state_.length);
+      le_adv_state_.data_length = in_params.adv_data_length;
+      std::memcpy(le_adv_state_.data, in_params.adv_data,
+                  le_adv_state_.data_length);
 
       RespondWithSuccess(opcode);
       NotifyAdvertisingState();

@@ -21,10 +21,9 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   LegacyLowEnergyAdvertiser(fxl::RefPtr<hci::Transport> hci);
   ~LegacyLowEnergyAdvertiser() override;
 
+  // LowEnergyAdvertiser overrides:
   size_t GetSizeLimit() override;
-
   size_t GetMaxAdvertisements() const override { return 1; }
-
   void StartAdvertising(const bluetooth::common::DeviceAddress& address,
                         const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
@@ -32,10 +31,8 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
                         uint32_t interval_ms,
                         bool anonymous,
                         const AdvertisingResultCallback& callback) override;
-
   bool StopAdvertising(
       const bluetooth::common::DeviceAddress& address) override;
-
   void OnIncomingConnection(LowEnergyConnectionRefPtr connection) override;
 
  private:

@@ -83,18 +83,21 @@ class FakeController : public FakeControllerBase {
   struct LEAdvertisingState final {
     LEAdvertisingState();
 
-    bool enabled;
-    hci::LEAdvertisingType adv_type;
-    uint8_t length;
-    uint8_t data[hci::kMaxLEAdvertisingDataLength];
-    uint8_t scan_rsp_length;
-    uint8_t scan_rsp_data[hci::kMaxLEAdvertisingDataLength];
     common::BufferView advertised_view() const {
-      return common::BufferView(data, length);
+      return common::BufferView(data, data_length);
     }
     common::BufferView scan_rsp_view() const {
       return common::BufferView(scan_rsp_data, scan_rsp_length);
     }
+
+    bool enabled;
+    hci::LEAdvertisingType adv_type;
+    uint16_t interval;
+
+    uint8_t data_length;
+    uint8_t data[hci::kMaxLEAdvertisingDataLength];
+    uint8_t scan_rsp_length;
+    uint8_t scan_rsp_data[hci::kMaxLEAdvertisingDataLength];
   };
 
   // Constructor initializes the controller with the minimal default settings
