@@ -700,24 +700,6 @@ func newPackageDirFromReader(r io.Reader, filesystem *Filesystem) (*packageDir, 
 	return &pd, nil
 }
 
-func (d *packageDir) openSubdir(name string) (*packageDir, error) {
-	// the name to search for in any key
-	var dirname = name + "/"
-	if d.subdir != nil {
-		dirname = *d.subdir + name + "/"
-	}
-
-	for k, _ := range d.contents {
-		if strings.HasPrefix(k, dirname) {
-			// subdir is a copy of d, but with subdir set
-			subdir := *d
-			subdir.subdir = &dirname
-			return &subdir, nil
-		}
-	}
-	return nil, fs.ErrNotFound
-}
-
 func (d *packageDir) Close() error {
 	debugLog("pkgfs:packageDir:close %q/%q", d.name, d.version)
 	return nil
@@ -736,7 +718,7 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	debugLog("pkgfs:packagedir:open %q", name)
 
 	if d.subdir != nil {
-		name = strings.TrimPrefix(name, *d.subdir)
+		name = filepath.Join(*d.subdir, name)
 	}
 
 	if name == "" {
@@ -754,15 +736,21 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 			debugLog("pkgfs: package file open failure: %q for %q/%q/%q", root, d.name, d.version, name)
 			return nil, nil, goErrToFSErr(err)
 		}
-		return &packageFile{f, unsupportedFile("packagefile:" + root)}, nil, nil
+		return &packageFile{f, unsupportedFile("packagefile:" + name)}, nil, nil
 	}
 
-	subdir, err := d.openSubdir(name)
-	if err == nil {
-		return nil, subdir, nil
+	dirname := name + "/"
+	for k := range d.contents {
+		if strings.HasPrefix(k, dirname) {
+			// subdir is a copy of d, but with subdir set
+			subdir := *d
+			subdir.subdir = &dirname
+			return nil, &subdir, nil
+		}
 	}
+
 	debugLog("pkgfs:packagedir:open %q not found", name)
-	return nil, nil, err
+	return nil, nil, fs.ErrNotFound
 }
 
 func (d *packageDir) Read() ([]fs.Dirent, error) {
