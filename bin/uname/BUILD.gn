@@ -4,7 +4,9 @@
 
 import("//packages/package.gni")
 
-executable("uname") {
+executable("bin") {
+  output_name = "uname"
+
   sources = [
     "uname.c",
   ]
@@ -12,14 +14,12 @@ executable("uname") {
   libs = [ "zircon" ]
 }
 
-package("package") {
+package("uname") {
   system_image = true
 
   deps = [
-    ":uname",
+    ":bin",
   ]
-
-  package_name = "uname"
 
   binaries = [ {
         name = "uname"

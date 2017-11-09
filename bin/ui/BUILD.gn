@@ -92,7 +92,7 @@ package("scene_manager") {
       } ]
 }
 
-package("mozart") {
+package("mozart_tools") {
   system_image = true
 
   deps = [

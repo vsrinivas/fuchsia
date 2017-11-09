@@ -3,9 +3,9 @@
         "cpp"
     ],
     "packages": {
-        "cowsay": "//garnet/bin/cowsay:package",
-        "sysinfo": "//garnet/bin/sysinfo:package",
-        "time": "//garnet/bin/time:package",
-        "uname": "//garnet/bin/uname:package"
+        "cowsay": "//garnet/bin/cowsay",
+        "sysinfo": "//garnet/bin/sysinfo",
+        "time": "//garnet/bin/time",
+        "uname": "//garnet/bin/uname"
     }
 }

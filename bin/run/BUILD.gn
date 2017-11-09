@@ -4,11 +4,13 @@
 
 import("//packages/package.gni")
 
-executable("run_bin") {
+executable("bin") {
   output_name = "run"
+
   sources = [
     "main.cc",
   ]
+
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
@@ -19,7 +21,7 @@ package("run") {
   system_image = true
 
   deps = [
-    ":run_bin",
+    ":bin",
   ]
 
   binaries = [ {

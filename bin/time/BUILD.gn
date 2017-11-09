@@ -4,23 +4,24 @@
 
 import("//packages/package.gni")
 
-executable("time") {
+executable("bin") {
+  output_name = "time"
+
   sources = [
     "time.cc",
   ]
+
   libs = [
     "launchpad",
     "zircon",
   ]
 }
 
-package("package") {
+package("time") {
   system_image = true
 
-  package_name = "time"
-
   deps = [
-    ":time",
+    ":bin",
   ]
 
   binaries = [ {

@@ -5,8 +5,10 @@
     "imports": [
         "garnet/packages/fxl"
     ],
+    "labels": [
+        "//garnet/bin/auth"
+    ],
     "packages": {
-        "auth": "//garnet/bin/auth",
         "auth_tests": "//garnet/bin/auth:tests"
     }
 }

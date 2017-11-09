@@ -5,9 +5,11 @@
 import("//build/rust/rust_binary.gni")
 import("//packages/package.gni")
 
-rust_binary("device_settings_manager_bin") {
+rust_binary("bin") {
   with_tests = true
+
   name = "device_settings_manager"
+
   deps = [
     "//garnet/public/lib/device_settings/fidl:fidl_rust_library",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -29,12 +31,13 @@ package("device_settings_manager") {
   system_image = true
 
   deps = [
-    ":device_settings_manager_bin",
+    ":bin",
   ]
 
   binaries = [ {
         name = "device_settings_manager"
       } ]
+
   tests = [ {
         name = "device_settings_manager-bin-test"
       } ]

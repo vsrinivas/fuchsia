@@ -4,27 +4,29 @@
 
 import("//packages/package.gni")
 
-executable("sysinfo") {
+executable("bin") {
+  output_name = "sysinfo"
+
   sources = [
     "sysinfo.cc",
   ]
+
   libs = [
     "launchpad",
     "zircon",
   ]
+
   deps = [
     "//garnet/public/lib/netstack/c",
   ]
 }
 
-package("package") {
+package("sysinfo") {
   system_image = true
 
   deps = [
-    ":sysinfo",
+    ":bin",
   ]
-
-  package_name = "sysinfo"
 
   binaries = [ {
         name = "sysinfo"

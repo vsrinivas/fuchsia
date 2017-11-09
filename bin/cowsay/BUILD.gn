@@ -4,20 +4,20 @@
 
 import("//packages/package.gni")
 
-executable("cowsay") {
+executable("bin") {
+  output_name = "cowsay"
+
   sources = [
     "cowsay.c",
   ]
 }
 
-package("package") {
+package("cowsay") {
   system_image = true
 
   deps = [
-    ":cowsay",
+    ":bin",
   ]
-
-  package_name = "cowsay"
 
   binaries = [ {
         name = "cowsay"
