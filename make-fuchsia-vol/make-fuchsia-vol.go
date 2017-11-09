@@ -8,7 +8,7 @@
 package main
 
 import (
-	"bufio"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"io"
@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"thinfs/block/file"
@@ -28,26 +29,33 @@ import (
 )
 
 var (
+	fuchsiaOutDir   = flag.String("fuchsia-out-dir", os.Getenv("FUCHSIA_OUT_DIR"), "fuchsia out dir")
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILD_DIR"), "zircon build dir")
 
 	bootloader   = flag.String("bootloader", "", "path to bootx64.efi")
 	kernel       = flag.String("kernel", "", "path to zircon.bin")
-	bootmanifest = flag.String("bootmanifest", "", "path to boot_bootfs.manifest")
-	sysmanifest  = flag.String("sysmanifest", "", "path to system_bootfs.manifest")
+	bootmanifest = flag.String("boot-manifest", "", "path to boot.manifest")
+	sysmanifest  = flag.String("system-manifest", "", "path to system.manifest")
 	cmdline      = flag.String("cmdline", "", "path to command line file (if exists)")
 
-	fatboot = flag.Bool("fatboot", false, "fatboot - include /system in boot ramdisk")
+	grub        = flag.Bool("grub", false, "install grub to the disk")
+	grubBootImg = flag.String("grub-mbr", "", "path to grub mbr image")
+	grubCoreImg = flag.String("grub-core", "", "path to grub standalone core.img")
 
-	blockSize           = flag.Int64("blockSize", 0, "the block size of the target disk (0 means detect)")
-	physicalBlockSize   = flag.Int64("physicalBlockSize", 0, "the physical block size of the target disk (0 means detect)")
-	optimalTransferSize = flag.Int64("optimalTransferSize", 0, "the optimal transfer size of the target disk (0 means unknown/unused)")
+	ramdisk   = flag.Bool("ramdisk-only", false, "ramdisk-only mode - include /system in boot ramdisk and only write an ESP partition (requires sysmanifest)")
+	blobstore = flag.String("blobstore", "", "path to blobstore partition image (not used with ramdisk)")
+	data      = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
-	efiSize  = flag.Int64("efiSize", 100*1024*1024, "efi partition size in bytes")
-	sysSize  = flag.Int64("sysSize", 2*1024*1024*1024, "sys partition size in bytes")
-	blobSize = flag.Int64("blobSize", 1024*1024*1024, "blob partition size in bytes")
-	dataSize = flag.Int64("dataSize", 0, "data partition size in bytes (0 means `fill`)")
+	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
+	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
+	optimalTransferSize = flag.Int64("optimal-transfer-size", 0, "the optimal transfer size of the target disk (0 means unknown/unused)")
+
+	efiSize = flag.Int64("efi-size", 100*1024*1024, "efi partition size in bytes")
+	fvmSize = flag.Int64("fvm-size", 0, "fvm partition size in bytes (0 means `fill`)")
 )
+
+const grubCoreOffset = 92
 
 func init() {
 	flag.Usage = func() {
@@ -57,30 +65,88 @@ func init() {
 
 }
 
-func main() {
-	flag.Parse()
-
+func needFuchsiaOutDir() {
+	if *fuchsiaOutDir == "" {
+		log.Fatalf("either pass -fuchsia-out-dir or set $FUCHSIA_OUT_DIR")
+	}
+}
+func needFuchsiaBuildDir() {
 	if *fuchsiaBuildDir == "" {
 		log.Fatalf("either pass -fuchsia-build-dir or set $FUCHSIA_BUILD_DIR")
 	}
+}
+func needZirconBuildDir() {
 	if (*bootloader == "" || *kernel == "") && *zirconBuildDir == "" {
 		log.Fatalf("either pass -zircon-build-dir or set $ZIRCON_BUILD_DIR")
 	}
+}
+
+func main() {
+	flag.Parse()
 
 	if *bootloader == "" {
+		needZirconBuildDir()
 		*bootloader = filepath.Join(*zirconBuildDir, "bootloader/bootx64.efi")
 	}
 	if *kernel == "" {
+		needZirconBuildDir()
 		*kernel = filepath.Join(*zirconBuildDir, "zircon.bin")
 	}
 	if *bootmanifest == "" {
+		needFuchsiaBuildDir()
 		*bootmanifest = filepath.Join(*fuchsiaBuildDir, "boot.manifest")
 	}
 	if *sysmanifest == "" {
+		needFuchsiaBuildDir()
 		*sysmanifest = filepath.Join(*fuchsiaBuildDir, "system.manifest")
 	}
 	if *cmdline == "" {
+		needFuchsiaBuildDir()
 		*cmdline = filepath.Join(*fuchsiaBuildDir, "cmdline")
+	}
+
+	if *grub {
+		if *grubBootImg == "" {
+			needFuchsiaOutDir()
+
+			*grubBootImg = filepath.Join(*fuchsiaOutDir, "build-grub/lib/grub/i386-pc/boot.img")
+			if _, err := os.Stat(*grubBootImg); err != nil {
+				log.Fatalf("%q not found, you may need to run scripts/grubdisk/build-all.sh", *grubBootImg)
+			}
+		}
+		if *grubCoreImg == "" {
+			needFuchsiaOutDir()
+			*grubCoreImg = filepath.Join(*fuchsiaOutDir, "build-grub/core.img")
+			if _, err := os.Stat(*grubCoreImg); err != nil {
+				log.Fatalf("%q not found, you may need to run scripts/grubdisk/build-all.sh", *grubCoreImg)
+			}
+		}
+	}
+
+	if !*ramdisk {
+		if *blobstore == "" {
+			needFuchsiaBuildDir()
+			*blobstore = filepath.Join(*fuchsiaBuildDir, "gen", "image_builds", "blobstore.blk")
+		}
+		if *data == "" {
+			needFuchsiaBuildDir()
+			*data = filepath.Join(*fuchsiaBuildDir, "gen", "image_builds", "data.blk")
+		}
+
+		if _, err := os.Stat(*blobstore); err != nil {
+			log.Fatalf("Blobstore image error: %s\nEither provide a blobstore image, or pass -ramdisk", err)
+		}
+		if _, err := os.Stat(*data); err != nil {
+			f, err := os.Create(*data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			f.Truncate(10 * 1024 * 1024)
+			f.Close()
+			if err := exec.Command(zirconTool("minfs"), *data, "create").Run(); err != nil {
+				log.Fatalf("minfs %q create failed", *data)
+			}
+		}
 	}
 
 	if len(flag.Args()) != 1 {
@@ -88,31 +154,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	disk := flag.Args()[0]
+	disk, err := filepath.Abs(flag.Args()[0])
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	for _, path := range []string{*kernel, *bootmanifest, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
-	}
-
-	bootManifests := []string{}
-	systemManifests := []string{}
-
-	if info, err := os.Stat(*bootmanifest); err == nil {
-		if info.Size() > 0 {
-			bootManifests = append(bootManifests, *bootmanifest)
-		}
-	} else {
-		log.Printf("boot manifest %s was missing, ignoring", *bootmanifest)
-	}
-
-	if info, err := os.Stat(*sysmanifest); err == nil {
-		if info.Size() > 0 {
-			systemManifests = append(systemManifests, *sysmanifest)
-		}
-	} else {
-		log.Printf("sys manifest %s was missing, ignoring", *sysmanifest)
 	}
 
 	tempDir, err := ioutil.TempDir("", "make-fuchsia-vol")
@@ -121,25 +171,17 @@ func main() {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// persist the ramdisk in case a user wants it to boot qemu against a
-	// persistent image
-	ramdiskDir := *fuchsiaBuildDir
-	if ramdiskDir == "" {
-		ramdiskDir = tempDir
-	}
-	ramdisk := filepath.Join(ramdiskDir, "bootdata.bin")
+	bootdata := filepath.Join(tempDir, "bootdata.bin")
 
-	args := []string{"-o", ramdisk, "--target=boot"}
-	args = append(args, bootManifests...)
+	args := []string{"-o", bootdata, "--target=boot"}
+	args = append(args, *bootmanifest)
 
-	if *fatboot {
+	if *ramdisk {
 		args = append(args, "--target=system")
-		args = append(args, systemManifests...)
+		args = append(args, *sysmanifest)
 	}
 
-	log.Print(append([]string{"mkbootfs"}, args...))
-
-	cmd := exec.Command("mkbootfs", args...)
+	cmd := exec.Command(zirconTool("mkbootfs"), args...)
 	cmd.Dir = *fuchsiaBuildDir
 	b2, err := cmd.CombinedOutput()
 	if err != nil {
@@ -147,7 +189,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("combined bootdata written to: %s", ramdisk)
+	log.Printf("combined bootdata written to: %s", bootdata)
 
 	f, err := os.Open(disk)
 	if err != nil {
@@ -199,7 +241,7 @@ func main() {
 	// Note: this isn't entirely correct, as it doesn't take into account padding.
 	// Consider adding a real API for this in the GPT lib.
 	minGPTSize := int64((gpt.MinPartitionEntryArraySize + gpt.HeaderSize) * 2)
-	if uint64(*efiSize+*sysSize+minGPTSize) > diskSize {
+	if uint64(*efiSize+minGPTSize) > diskSize {
 		log.Fatalf("%q is not large enough for the partition layout\n", disk)
 	}
 
@@ -216,12 +258,67 @@ func main() {
 
 	lbaSize := diskSize / logical
 	g.MBR = mbr.NewProtectiveMBR(lbaSize)
+	if *grub {
+		grubMBR, err := ioutil.ReadFile(*grubBootImg)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		copy(g.MBR.BootCode[:], grubMBR[0:len(g.MBR.BootCode)])
+		copy(g.MBR.Pad[:], grubMBR[len(g.MBR.BootCode):len(g.MBR.BootCode)+len(g.MBR.Pad)])
+	}
 
 	g.Primary.Partitions = []gpt.PartitionEntry{}
 
 	g.Update(logical, physical, optimal, diskSize) // for the firstusablelba
+	end := g.Primary.FirstUsableLBA
 
-	efiStart, end := optimialBlockAlign(g.Primary.FirstUsableLBA, uint64(*efiSize), logical, physical, optimal)
+	var biosStart uint64
+	var grubCore []byte
+	if *grub {
+		var err error
+		grubCore, err = ioutil.ReadFile(*grubCoreImg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		biosStart, end = optimialBlockAlign(end, uint64(len(grubCore)), logical, physical, optimal)
+		binary.LittleEndian.PutUint64(g.MBR.BootCode[grubCoreOffset:], biosStart)
+		// nop, nop mr floppy.
+		g.MBR.BootCode[0x66] = 0x90
+		g.MBR.BootCode[0x67] = 0x90
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDBIOS,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("BIOS"),
+			StartingLBA:         biosStart,
+			EndingLBA:           end,
+		})
+		biosSize := int64((end - biosStart) * logical)
+
+		var startingCHS [3]byte
+		startingCHS[0] = byte(biosStart / (16 * 63))
+		startingCHS[1] = byte((biosStart / 63) % 16)
+		startingCHS[2] = byte((biosStart % 63) + 1)
+
+		var endingCHS [3]byte
+		endingCHS[0] = byte(end / (16 * 63))
+		endingCHS[1] = byte((end / 63) % 16)
+		endingCHS[2] = byte((end % 63) + 1)
+
+		// Install a "hybrid MBR" hack for the case of bios bootloaders that might
+		// need it (e.g. rpi's binary blob that's stuck in MBR land).
+		g.MBR.PartitionRecord[1] = mbr.PartitionRecord{
+			BootIndicator: 0x00,
+			StartingCHS:   startingCHS,
+			EndingCHS:     endingCHS,
+			OSType:        mbr.FAT32,
+			StartingLBA:   uint32(biosStart),
+			SizeInLBA:     uint32(uint64(biosSize) / logical),
+		}
+	}
+
+	var efiStart uint64
+	efiStart, end = optimialBlockAlign(end, uint64(*efiSize), logical, physical, optimal)
 	*efiSize = int64((end - efiStart) * logical)
 
 	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
@@ -245,7 +342,7 @@ func main() {
 
 	// Install a "hybrid MBR" hack for the case of bios bootloaders that might
 	// need it (e.g. rpi's binary blob that's stuck in MBR land).
-	g.MBR.PartitionRecord[0] = mbr.PartitionRecord{
+	g.MBR.PartitionRecord[2] = mbr.PartitionRecord{
 		BootIndicator: 0x80,
 		StartingCHS:   startingCHS,
 		EndingCHS:     endingCHS,
@@ -254,39 +351,19 @@ func main() {
 		SizeInLBA:     uint32(uint64(*efiSize) / logical),
 	}
 
-	var sysStart, blobStart, dataStart uint64
+	var fvmStart uint64
 
-	sysStart, end = optimialBlockAlign(end+1, uint64(*sysSize), logical, physical, optimal)
-	*sysSize = int64((end - sysStart) * logical)
-
-	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-		PartitionTypeGUID:   gpt.GUIDFuchsiaSystem,
-		UniquePartitionGUID: gpt.NewRandomGUID(),
-		PartitionName:       gpt.NewPartitionName("SYS"),
-		StartingLBA:         sysStart,
-		EndingLBA:           end,
-	})
-
-	blobStart, end = optimialBlockAlign(end+1, uint64(*blobSize), logical, physical, optimal)
-	*blobSize = int64((end - blobStart) * logical)
+	fvmStart, end = optimialBlockAlign(end+1, uint64(*fvmSize), logical, physical, optimal)
+	if *fvmSize == 0 {
+		end = g.Primary.LastUsableLBA
+	}
+	*fvmSize = int64((end - fvmStart) * logical)
 
 	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-		PartitionTypeGUID:   gpt.GUIDFuchsiaBlob,
+		PartitionTypeGUID:   gpt.GUIDFuchsiaFVM,
 		UniquePartitionGUID: gpt.NewRandomGUID(),
-		PartitionName:       gpt.NewPartitionName("BLOB"),
-		StartingLBA:         blobStart,
-		EndingLBA:           end,
-	})
-
-	dataStart, end = optimialBlockAlign(end+1, uint64(*dataSize), logical, physical, optimal)
-	end = g.Primary.LastUsableLBA
-	*dataSize = int64((end - dataStart) * logical)
-
-	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-		PartitionTypeGUID:   gpt.GUIDFuchsiaData,
-		UniquePartitionGUID: gpt.NewRandomGUID(),
-		PartitionName:       gpt.NewPartitionName("DATA"),
-		StartingLBA:         dataStart,
+		PartitionName:       gpt.NewPartitionName("FVM"),
+		StartingLBA:         fvmStart,
 		EndingLBA:           end,
 	})
 
@@ -297,9 +374,7 @@ func main() {
 	}
 
 	log.Printf("EFI size: %d", *efiSize)
-	log.Printf("SYS size: %d", *sysSize)
-	log.Printf("BLOB size: %d", *blobSize)
-	log.Printf("DATA size: %d", *dataSize)
+	log.Printf("FVM size: %d", *fvmSize)
 
 	log.Printf("Writing GPT")
 
@@ -313,18 +388,32 @@ func main() {
 
 	f.Sync()
 
+	if *grub {
+		if _, err := f.Seek(int64(biosStart*logical), io.SeekStart); err != nil {
+			log.Fatal(err)
+		}
+
+		pad := (int(logical) - (len(grubCore) % int(logical)))
+		core := make([]byte, len(grubCore)+pad)
+		copy(core, grubCore)
+
+		binary.LittleEndian.PutUint64(core[0x1f4:], biosStart+1)
+		sectors := uint16(len(core) / int(logical))
+		binary.LittleEndian.PutUint16(core[0x1fc:], sectors)
+
+		if _, err := f.Write(core); err != nil {
+			log.Fatal(err)
+		}
+
+		f.Sync()
+	}
+
 	efiStart = efiStart * logical
-	sysStart = sysStart * logical
-	blobStart = blobStart * logical
-	dataStart = dataStart * logical
+	fvmStart = fvmStart * logical
 
 	log.Printf("Writing EFI partition and files")
 
-	if _, err := exec.LookPath("mkfs-msdosfs"); err != nil {
-		log.Fatal("Could not find mkfs-msdosfs, you might need to build, or change to $FUCHSIA_DIR")
-	}
-
-	cmd = exec.Command("mkfs-msdosfs", "-LESP", "-F32",
+	cmd = exec.Command(zirconTool("mkfs-msdosfs"), "-LESP", "-F32",
 		fmt.Sprintf("-@%d", efiStart),
 		fmt.Sprintf("-b%d", logical),
 		fmt.Sprintf("-S%d", *efiSize),
@@ -350,7 +439,7 @@ func main() {
 
 	msCopyIn(*bootloader, root, "EFI/BOOT")
 	msCopyIn(*kernel, root, "")
-	msCopyIn(ramdisk, root, "")
+	msCopyIn(bootdata, root, "")
 	if _, err := os.Stat(*cmdline); err == nil {
 		msCopyIn(*cmdline, root, "")
 	}
@@ -359,121 +448,30 @@ func main() {
 	root.Close()
 	fatfs.Close()
 
-	if !*fatboot {
-		log.Printf("Creating SYS minfs")
-		path, err := mkminfs(*sysSize)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer os.Remove(path)
+	f.Sync()
 
-		dirs := map[string]struct{}{}
-		minfsimg := fmt.Sprintf("%s@%d", path, *sysSize)
-
-		for _, manifest := range systemManifests {
-			m, err := os.Open(manifest)
-			if err != nil {
-				log.Fatal(err)
-			}
-			mb := bufio.NewReader(m)
-			for {
-				line, err := mb.ReadString('\n')
-				if err == io.EOF {
-					break
-				}
-				if err != nil {
-					log.Print(err)
-					break
-				}
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) < 2 {
-					continue
-				}
-				from := strings.TrimSpace(parts[1])
-				to := "::" + strings.TrimSpace(parts[0])
-
-				d := ""
-				for _, part := range strings.Split(filepath.Dir(to), "/") {
-					d = filepath.Join(d, part)
-					if _, ok := dirs[d]; !ok {
-						if err := minfs(minfsimg, "mkdir", d); err != nil {
-							log.Fatal(err)
-						}
-						dirs[d] = struct{}{}
-					}
-				}
-				if err := minfs(minfsimg, "cp", from, to); err != nil {
-					log.Fatal(err)
-				}
-			}
-			m.Close()
-		}
-
-		log.Print("Copying SYS into gpt image")
-		if err := copyIn(disk, int64(sysStart), *sysSize, path); err != nil {
-			log.Fatal(err)
-		}
+	if !*ramdisk {
+		log.Print("Populating FVM in GPT image")
+		fvm(disk, int64(fvmStart), *fvmSize, "create", "--blobstore", *blobstore, "--data", *data)
 	}
 
-	f.Sync()
+	// Keep the file open so that OSX doesn't try to remount the disk while tools are working on it.
 	f.Close()
 
 	log.Printf("Done")
 }
 
-func minfs(args ...string) error {
-	cmd := exec.Command("minfs", args...)
-	cmd.Dir = *fuchsiaBuildDir
+func fvm(disk string, offset, size int64, command string, args ...string) {
+	offs := strconv.FormatInt(offset, 10)
+	szs := strconv.FormatInt(size, 10)
+	argv := []string{disk, command, "--offset", offs, "--length", szs}
+	argv = append(argv, args...)
+	cmd := exec.Command(zirconTool("fvm"), argv...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("minfs %s: %s", args, err)
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("fvm %s failed", argv)
 	}
-	return nil
-}
-
-func copyIn(dstpath string, offset, size int64, srcpath string) error {
-	from, err := os.OpenFile(srcpath, os.O_RDONLY, 0)
-	if err != nil {
-		return err
-	}
-	defer from.Close()
-
-	i, err := from.Stat()
-	if err != nil {
-		return err
-	}
-
-	if i.Size() > size {
-		return fmt.Errorf("%s is larger than %d", srcpath, size)
-	}
-
-	to, err := os.OpenFile(dstpath, os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer to.Close()
-
-	_, err = to.Seek(offset, io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(to, from)
-	return err
-}
-
-func mkminfs(size int64) (string, error) {
-	f, err := ioutil.TempFile("", "minfs")
-	if err != nil {
-		return "", err
-	}
-	// Truncate enough space for the tables, but not the whole volume
-	f.Truncate(size)
-	f.Close()
-	path := f.Name()
-	return path, minfs(fmt.Sprintf("%s@%d", path, size), "create")
 }
 
 // msCopyIn copies srcpath from the host filesystem into destdir under the given
@@ -559,4 +557,17 @@ func optimialBlockAlign(first, byteSize, logical, physical, optimal uint64) (sta
 
 	end = start + lSize
 	return
+}
+
+func zirconTool(name string) string {
+	var tool string
+	tool, _ = exec.LookPath(tool)
+	if tool == "" {
+		needZirconBuildDir()
+		tool, _ = exec.LookPath(filepath.Join(*zirconBuildDir, "tools", name))
+	}
+	if tool == "" {
+		log.Fatalf("Could not find %q, you might need to build zircon", tool)
+	}
+	return tool
 }
