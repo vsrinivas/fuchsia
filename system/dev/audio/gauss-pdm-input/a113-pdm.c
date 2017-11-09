@@ -58,7 +58,11 @@ void a113_pdm_enable(a113_audio_device_t* audio_device, int is_enable) {
     } else {
         a113_pdm_update_bits(audio_device, PDM_CTRL, 1 << 31 | 1 << 16,
                              0 << 31 | 0 << 16);
-        sleep(1000);
+        // Amlogic recommend a sleep after pdm_disable. Not sure why yet. In
+        // our code structure the sleep doesn't actually do anything since all
+        // the code is async. Disable it for now, and revisit if we actually
+        // end up seeing issues here.
+        // zx_nanosleep(1);
     }
 }
 

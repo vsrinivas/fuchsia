@@ -57,11 +57,9 @@ private:
 
     uint32_t GetFifoBytes();
 
-    static int IrqThread(void* arg);
+    int IrqThread();
 
     zx_status_t Bind(const char* devname, zx_device_t* parent);
-
-    zx_status_t AddFormats();
 
     // Thunks for dispatching stream channel events.
     zx_status_t ProcessStreamChannel(dispatcher::Channel* channel,
