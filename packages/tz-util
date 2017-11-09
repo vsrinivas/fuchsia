@@ -1,0 +1,12 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/fsl",
+        "garnet/packages/fxl"
+    ],
+    "packages": {
+        "tz-util": "//garnet/bin/tz-util"
+    }
+}

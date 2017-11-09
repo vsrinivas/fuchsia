@@ -1,0 +1,32 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module time_service;
+
+enum Status {
+  OK,
+  ERR_WRITE,
+  ERR_INVALID_OFFSET,
+};
+
+// TODO(US-384): Update protocol for more stuctured data: timezone names,
+// standard timezone codenames, and DST start/end information
+// (see go/garnet-time).
+[ServiceName="time_service::TimeService"]
+interface TimeService {
+  // Gets timezone offset (in minutes. Can be negative).
+  GetTimezoneOffsetMinutes() => (int64 offset);
+
+  // Sets the UTC offset in minutes.  Must be a privileged user.
+  SetTimezoneOffsetMinutes(int64 offset) => (Status s);
+
+  // Watches for updates to timezone.
+  Watch(TimeServiceWatcher watcher);
+};
+
+interface TimeServiceWatcher {
+  // When the timezone changes, returns the new offset in minutes. Functions as
+  // a callback version of TimeService::GetTimezoneOffsetMinutes().
+  OnTimezoneOffsetChange(int64 offset_minutes);
+};

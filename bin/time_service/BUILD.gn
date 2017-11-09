@@ -1,0 +1,35 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("time_service_bin") {
+  output_name = "time_service"
+
+  sources = [
+    "main.cc",
+    "time_service.cc",
+    "time_service.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/time_service/fidl",
+  ]
+}
+
+package("time_service") {
+  deps = [
+    ":time_service_bin",
+  ]
+
+  binary = "time_service"
+
+  meta = [{
+    path = rebase_path("meta/sandbox")
+    dest = "sandbox"
+  }]
+}

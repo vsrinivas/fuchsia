@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+      "garnet/packages/fxl"
+    ],
+    "packages": {
+        "time_service": "//garnet/bin/time_service:time_service"
+    }
+}
