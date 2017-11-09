@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
+
 #include "fvm/container.h"
 
 zx_status_t SparseContainer::Create(const char* path, size_t slice_size,
