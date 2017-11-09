@@ -1,17 +1,11 @@
 {
   "startup_agents": [
     "agents/module_suggester.dartx",
-    "concert_agent",
-    "music_artist_agent",
-    "last_fm_agent",
-    "location_agent",
     "agents/eddystone_agent",
-    "agents/geoip_agent.dartx",
     "agents/maxwell_btl",
     "agents/maxwell_entity_selector",
     "agents/maxwell_proposal_maker",
-    "agents/usage_log.dartx",
-    "weather_agent"
+    "agents/usage_log.dartx"
   ],
   "kronk": "https://storage.googleapis.com/maxwell-agents/kronk-2017.11.08.10.55",
   "mi_dashboard": true
