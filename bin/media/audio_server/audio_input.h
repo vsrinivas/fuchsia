@@ -21,7 +21,6 @@ class AudioInput : public AudioDevice {
 
  protected:
   MediaResult Init() override FXL_LOCKS_EXCLUDED(mix_domain_->token());
-  void Unlink() override FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   void OnWakeup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 

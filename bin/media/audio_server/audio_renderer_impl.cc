@@ -9,7 +9,6 @@
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
-#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
@@ -51,7 +50,8 @@ AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     AudioServerImpl* owner)
-    : owner_(owner),
+    : AudioObject(Type::Renderer),
+      owner_(owner),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       media_renderer_binding_(this, std::move(media_renderer_request)),
       pipe_(this, owner) {
@@ -102,15 +102,13 @@ AudioRendererImpl::~AudioRendererImpl() {
   FXL_DCHECK(!media_renderer_binding_.is_bound());
 }
 
-AudioRendererImplPtr AudioRendererImpl::Create(
+fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     AudioServerImpl* owner) {
-  AudioRendererImplPtr ret(
-      new AudioRendererImpl(std::move(audio_renderer_request),
-                            std::move(media_renderer_request), owner));
-  ret->weak_this_ = ret;
-  return ret;
+  return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request),
+                                             std::move(media_renderer_request),
+                                             owner));
 }
 
 void AudioRendererImpl::Shutdown() {
@@ -121,11 +119,13 @@ void AudioRendererImpl::Shutdown() {
     FXL_DCHECK(!media_renderer_binding_.is_bound());
     FXL_DCHECK(!pipe_.is_bound());
     FXL_DCHECK(!timeline_control_point_.is_bound());
-    FXL_DCHECK(!output_links_.size());
     return;
   }
 
   is_shutdown_ = true;
+
+  PreventNewLinks();
+  Unlink();
 
   if (audio_renderer_binding_.is_bound()) {
     audio_renderer_binding_.set_connection_error_handler(nullptr);
@@ -141,12 +141,12 @@ void AudioRendererImpl::Shutdown() {
   // the process.
   pipe_.Reset();
   timeline_control_point_.Reset();
-  output_links_.clear();
   throttle_output_link_ = nullptr;
 
   FXL_DCHECK(owner_);
-  AudioRendererImplPtr thiz = weak_this_.lock();
-  owner_->GetDeviceManager().RemoveRenderer(thiz);
+  if (in_object_list()) {
+    owner_->GetDeviceManager().RemoveRenderer(this);
+  }
 }
 
 void AudioRendererImpl::GetSupportedMediaTypes(
@@ -195,8 +195,14 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   bool has_pending =
       (throttle_output_link_ && !throttle_output_link_->pending_queue_empty());
   if (!has_pending) {
-    for (const auto& link : output_links_) {
-      if (!link->pending_queue_empty()) {
+    fbl::AutoLock links_lock(&links_lock_);
+    // Renderers should never be linked to sources.
+    FXL_DCHECK(source_links_.empty());
+
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      if (!packet_link->pending_queue_empty()) {
         has_pending = true;
         break;
       }
@@ -211,9 +217,9 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
 
   FLOG(log_channel_, SetMediaType(media_type.Clone()));
 
-  // Everything checks out.  Discard any existing output links we are holding
+  // Everything checks out.  Discard any existing links we are holding
   // onto.  New links need to be created with our new format.
-  RemoveAllOutputs();
+  Unlink();
 
   pipe_.SetPtsRate(TimelineRate(cfg->frames_per_second, 1));
 
@@ -232,16 +238,13 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   //
   // TODO(johngro): someday, we will need to deal with recalculating properties
   // which depend on a renderer's current set of outputs (for example, the
-  // minimum
-  // latency).  This will probably be done using a dirty flag in the renderer
-  // implementations, and scheduling a job to recalculate the properties for the
-  // dirty renderers and notify the users as appropriate.
+  // minimum latency).  This will probably be done using a dirty flag in the
+  // renderer implementations, and scheduling a job to recalculate the
+  // properties for the dirty renderers and notify the users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
-  AudioRendererImplPtr strong_this(weak_this_.lock());
-  FXL_DCHECK(strong_this);
   FXL_DCHECK(owner_);
-  owner_->GetDeviceManager().SelectOutputsForRenderer(strong_this);
+  owner_->GetDeviceManager().SelectOutputsForRenderer(this);
 }
 
 void AudioRendererImpl::GetPacketConsumer(
@@ -269,9 +272,13 @@ void AudioRendererImpl::SetGain(float db_gain) {
 
   db_gain_ = db_gain;
 
-  for (const auto& output : output_links_) {
-    FXL_DCHECK(output);
-    output->gain().SetRendererGain(db_gain_);
+  {
+    fbl::AutoLock links_lock(&links_lock_);
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      packet_link->gain().SetRendererGain(db_gain_);
+    }
   }
 }
 
@@ -280,61 +287,29 @@ void AudioRendererImpl::GetMinDelay(const GetMinDelayCallback& callback) {
   callback(ZX_MSEC(40));
 }
 
-void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
-  // TODO(johngro): assert that we are on the main message loop thread.
+zx_status_t AudioRendererImpl::InitializeDestLink(const AudioLinkPtr& link) {
   FXL_DCHECK(link);
   FXL_DCHECK(link->valid());
+  FXL_DCHECK(link->GetSource().get() == static_cast<AudioObject*>(this));
+  FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
 
-  auto res = output_links_.emplace(link);
-  FXL_DCHECK(res.second);
-  link->gain().SetRendererGain(db_gain_);
+  auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+  packet_link->gain().SetRendererGain(db_gain_);
 
-  // Prime this new output with the pending contents of the throttle output.
+  // Prime this new link with the pending contents of the throttle output.
   if (throttle_output_link_ != nullptr) {
-    link->InitPendingQueue(throttle_output_link_);
-  }
-}
-
-void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
-  // TODO(johngro): assert that we are on the main message loop thread.
-  FXL_DCHECK(link);
-
-  link->Invalidate();
-
-  if (link == throttle_output_link_) {
-    throttle_output_link_ = nullptr;
-  } else {
-    auto iter = output_links_.find(link);
-    if (iter != output_links_.end()) {
-      output_links_.erase(iter);
-    } else {
-      // TODO(johngro): that's odd.  I can't think of a reason why we we should
-      // not be able to find this link in our set of outputs... should we log
-      // something about this?
-      FXL_DCHECK(false);
-    }
-  }
-}
-
-void AudioRendererImpl::RemoveAllOutputs() {
-  if (throttle_output_link_) {
-    throttle_output_link_->Invalidate();
-    throttle_output_link_ = nullptr;
+    packet_link->CopyPendingQueue(throttle_output_link_);
   }
 
-  for (const auto& link : output_links_) {
-    link->Invalidate();
-  }
-
-  output_links_.clear();
+  return ZX_OK;
 }
 
 void AudioRendererImpl::SetThrottleOutput(
-    const AudioRendererToOutputLinkPtr& throttle_output_link) {
+    std::shared_ptr<AudioLinkPacketSource> throttle_output_link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FXL_DCHECK(throttle_output_link != nullptr);
   FXL_DCHECK(throttle_output_link_ == nullptr);
-  throttle_output_link_ = throttle_output_link;
+  throttle_output_link_ = std::move(throttle_output_link);
 }
 
 void AudioRendererImpl::OnRenderRange(int64_t presentation_time,
@@ -350,9 +325,13 @@ void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
     throttle_output_link_->PushToPendingQueue(packet);
   }
 
-  for (const auto& output : output_links_) {
-    FXL_DCHECK(output);
-    output->PushToPendingQueue(packet);
+  {
+    fbl::AutoLock links_lock(&links_lock_);
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      packet_link->PushToPendingQueue(packet);
+    }
   }
 
   if (packet->supplied_packet()->packet()->flags & MediaPacket::kFlagEos) {
@@ -368,9 +347,13 @@ bool AudioRendererImpl::OnFlushRequested(
     throttle_output_link_->FlushPendingQueue();
   }
 
-  for (const auto& output : output_links_) {
-    FXL_DCHECK(output);
-    output->FlushPendingQueue();
+  {
+    fbl::AutoLock links_lock(&links_lock_);
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      packet_link->FlushPendingQueue();
+    }
   }
 
   timeline_control_point_.ClearEndOfStream();

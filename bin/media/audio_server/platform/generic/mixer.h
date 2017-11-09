@@ -82,8 +82,8 @@ class Mixer {
   //
   // @param amplitude_scale
   // The scale factor for the amplitude to be applied when mixing.  Currently,
-  // this is expressed as a 4.28 fixed point integer.  See the
-  // AudioRendererToOutputLink class for details.
+  // this is expressed as a 4.28 fixed point integer.  See the AudioLink class
+  // for details.
   //
   // @param accumulate
   // When true, the mixer will accumulate into the destination buffer (read,

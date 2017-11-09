@@ -6,8 +6,8 @@
 
 #include <dispatcher-pool/dispatcher-timer.h>
 
+#include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
-#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
@@ -41,7 +41,7 @@ class StandardOutputBase : public AudioOutput {
     uint32_t frames_produced;
   };
 
-  struct RendererBookkeeping : public AudioRendererToOutputLink::Bookkeeping {
+  struct RendererBookkeeping : public AudioLink::Bookkeeping {
     RendererBookkeeping();
     ~RendererBookkeeping() override;
 
@@ -58,7 +58,7 @@ class StandardOutputBase : public AudioOutput {
     Gain::AScale amplitude_scale;
     MixerPtr mixer;
 
-    void UpdateRendererTrans(const AudioRendererImplPtr& renderer,
+    void UpdateRendererTrans(const fbl::RefPtr<AudioRendererImpl>& renderer,
                              const AudioRendererFormatInfo& format_info);
     void UpdateOutputTrans(const MixJob& job);
   };
@@ -69,7 +69,7 @@ class StandardOutputBase : public AudioOutput {
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  MediaResult InitializeLink(const AudioRendererToOutputLinkPtr& link) final;
+  zx_status_t InitializeSourceLink(const AudioLinkPtr& link) final;
 
   void SetNextSchedTime(fxl::TimePoint next_sched_time) {
     next_sched_time_ = next_sched_time;
@@ -97,20 +97,21 @@ class StandardOutputBase : public AudioOutput {
  private:
   enum class TaskType { Mix, Trim };
 
-  void ForeachRenderer(TaskType task_type)
+  void ForeachLink(TaskType task_type)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupMix(const AudioRendererImplPtr& renderer, RendererBookkeeping* info)
+  bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& renderer,
+                RendererBookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessMix(const AudioRendererImplPtr& renderer,
+  bool ProcessMix(const fbl::RefPtr<AudioRendererImpl>& renderer,
                   RendererBookkeeping* info,
                   const AudioPipe::AudioPacketRefPtr& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupTrim(const AudioRendererImplPtr& renderer,
+  bool SetupTrim(const fbl::RefPtr<AudioRendererImpl>& renderer,
                  RendererBookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessTrim(const AudioRendererImplPtr& renderer,
+  bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& renderer,
                    RendererBookkeeping* info,
                    const AudioPipe::AudioPacketRefPtr& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
@@ -118,10 +119,10 @@ class StandardOutputBase : public AudioOutput {
   fxl::TimePoint next_sched_time_;
   bool next_sched_time_known_;
 
-  // Vector used to hold references to our renderer links while we are mixing
-  // (instead of holding the lock which prevents links_ mutation for the entire
-  // mix job)
-  std::vector<std::shared_ptr<AudioRendererToOutputLink>> link_refs_
+  // Vector used to hold references to our source links while we are mixing
+  // (instead of holding the lock which prevents source_links_ mutation for the
+  // entire mix job)
+  std::vector<std::shared_ptr<AudioLink>> source_link_refs_
       FXL_GUARDED_BY(mix_domain_->token());
 
   // State for the internal buffer which holds intermediate mix results.

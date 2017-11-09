@@ -11,7 +11,6 @@
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
-#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -30,8 +29,7 @@ namespace audio {
 class AudioDriver;
 class DriverRingBuffer;
 
-class AudioDevice : public AudioObject,
-                    public fbl::DoublyLinkedListable<fbl::RefPtr<AudioDevice>> {
+class AudioDevice : public AudioObject {
  public:
   // Wakeup
   //
@@ -39,10 +37,6 @@ class AudioDevice : public AudioObject,
   // AudioDevice's::OnWakeup handler to run from within the context of the
   // mixing execution domain.
   void Wakeup();
-
-  // Accessors to check to see if this is an AudioInput or AudioOutput
-  bool is_input() const { return type() == Type::Input; }
-  bool is_output() const { return type() == Type::Output; }
 
   // Accessors for the current plug state of the device.
   //
@@ -80,14 +74,6 @@ class AudioDevice : public AudioObject,
   // hardware resources and initialize any internal state.  Return
   // MediaResult::OK if everything is good and the output is ready to do work.
   virtual MediaResult Init();
-
-  // Unlink
-  //
-  // Called from AudioDeviceManager (either directly, or indirectly from
-  // Shutdown).  AudioDevice implementations should use this hook to unlink
-  // themselves from all of the other audio objects they are currently linked
-  // to.
-  virtual void Unlink() = 0;
 
   // Cleanup
   //
@@ -174,7 +160,6 @@ class AudioDevice : public AudioObject,
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   AudioDeviceManager* manager_;
-  fxl::Mutex mutex_;
 
   // State used to manage asynchronous processing using the dispatcher
   // framework.

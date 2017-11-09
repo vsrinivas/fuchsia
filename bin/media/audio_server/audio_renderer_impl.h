@@ -7,6 +7,8 @@
 #include <deque>
 #include <set>
 
+#include "garnet/bin/media/audio_server/audio_link_packet_source.h"
+#include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/util/timeline_control_point.h"
@@ -21,14 +23,18 @@
 namespace media {
 namespace audio {
 
-class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
+class AudioRendererImpl
+    : public AudioObject,
+      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
+      public AudioRenderer,
+      public MediaRenderer {
  public:
   // TODO(johngro): Find a better place for this constant.  It affects the
   // behavior of more than just the Audio Renderer implementation.
   static constexpr size_t PTS_FRACTIONAL_BITS = 12;
 
   ~AudioRendererImpl() override;
-  static AudioRendererImplPtr Create(
+  static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
       fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
       AudioServerImpl* owner);
@@ -37,13 +43,8 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   // connections to all clients and removing it from its owner server's list.
   void Shutdown();
 
-  // Methods used by the output manager to link/unlink this renderer to/from
-  // different outputs.
-  void AddOutput(AudioRendererToOutputLinkPtr link);
-  void RemoveOutput(AudioRendererToOutputLinkPtr link);
-  void RemoveAllOutputs();
   void SetThrottleOutput(
-      const AudioRendererToOutputLinkPtr& throttle_output_link);
+      std::shared_ptr<AudioLinkPacketSource> throttle_output_link);
 
   // Used by the output to report packet usage.
   void OnRenderRange(int64_t presentation_time, uint32_t duration);
@@ -51,8 +52,8 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   // Note: format_info() is subject to change and must only be accessed from the
   // main message loop thread.  Outputs which are running on mixer threads
   // should never access format_info() directly from a renderer.  Instead, they
-  // should use the format_info which was assigned to the RendererToOutput link
-  // at the time the link was created.
+  // should use the format_info which was assigned to the AudioLink at the time
+  // the link was created.
   const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const {
     return format_info_;
   }
@@ -70,6 +71,9 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
       fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
       fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
       AudioServerImpl* owner);
+
+  // AudioObject overrides.
+  zx_status_t InitializeDestLink(const AudioLinkPtr& link) final;
 
   // Implementation of AudioRenderer interface.
   void SetGain(float db_gain) override;
@@ -95,15 +99,13 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
   fidl::Array<MediaTypeSetPtr> SupportedMediaTypes();
 
-  AudioRendererImplWeakPtr weak_this_;
   AudioServerImpl* owner_;
   fidl::Binding<AudioRenderer> audio_renderer_binding_;
   fidl::Binding<MediaRenderer> media_renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
-  AudioRendererToOutputLinkSet output_links_;
-  AudioRendererToOutputLinkPtr throttle_output_link_;
+  std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
   float db_gain_ = 0.0;
   bool is_shutdown_ = false;
 

@@ -46,23 +46,24 @@ class AudioDeviceManager {
   void Shutdown();
 
   // Add a renderer to the set of active audio renderers.
-  void AddRenderer(AudioRendererImplPtr renderer) {
+  void AddRenderer(fbl::RefPtr<AudioRendererImpl> renderer) {
     FXL_DCHECK(renderer);
-    renderers_.insert(std::move(renderer));
+    renderers_.push_back(std::move(renderer));
   }
 
   // Remove a renderer from the set of active audio renderers.
-  void RemoveRenderer(AudioRendererImplPtr renderer) {
-    size_t removed = renderers_.erase(renderer);
-    FXL_DCHECK(removed);
+  void RemoveRenderer(AudioRendererImpl* renderer) {
+    FXL_DCHECK(renderer != nullptr);
+    FXL_DCHECK(renderer->in_object_list());
+    renderers_.erase(*renderer);
   }
 
   // Select the initial set of outputs for a renderer which has just been
   // configured.
-  void SelectOutputsForRenderer(AudioRendererImplPtr renderer);
+  void SelectOutputsForRenderer(AudioRendererImpl* renderer);
 
   // Link an output to an audio renderer
-  void LinkOutputToRenderer(AudioOutput* output, AudioRendererImplPtr renderer);
+  void LinkOutputToRenderer(AudioOutput* output, AudioRendererImpl* renderer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMessageLoopTask(const fxl::Closure& task);
@@ -72,7 +73,7 @@ class AudioDeviceManager {
 
   // Shutdown the specified audio device and remove it from the appropriate set
   // of active devices.
-  void ShutdownDevice(const fbl::RefPtr<AudioDevice>& device);
+  void RemoveDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Handles a plugged/unplugged state change for the supplied audio device.
   void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device,
@@ -126,12 +127,12 @@ class AudioDeviceManager {
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
 
-  // Our sets of currently active audio devices and renderers.
+  // Our sets of currently active audio devices, capturers, and renderers.
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioDevice>> devices_;
-  AudioRendererImplSet renderers_;
+  AudioObject::List devices_;
+  AudioObject::List renderers_;
 
   // The special throttle output.  This output always exists, and is always used
   // by all renderers.

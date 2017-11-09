@@ -5,7 +5,7 @@
 #include "garnet/bin/media/audio_server/audio_output.h"
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
-#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
+#include "garnet/bin/media/audio_server/audio_link.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
@@ -66,6 +66,8 @@ void AudioDevice::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
   if (!is_shutting_down()) {
+    PreventNewLinks();
+
     FXL_DCHECK(mix_domain_);
     mix_domain_->DeactivateFromWithinDomain();
 
@@ -73,7 +75,7 @@ void AudioDevice::ShutdownSelf() {
     FXL_DCHECK(manager_);
     manager_->ScheduleMessageLoopTask(
       [ manager = manager_, self = fbl::WrapRefPtr(this) ]() {
-        manager->ShutdownDevice(self);
+        manager->RemoveDevice(self);
       });
     // clang-format on
   }

@@ -15,22 +15,12 @@ class AudioDeviceManager;
 class AudioServerImpl;
 class AudioRendererFormatInfo;
 class AudioRendererImpl;
-class AudioRendererToOutputLink;
+class AudioLink;
 
-// TODO(johngro) : Remove these aliases and move to a style where we always
-// explicitly declare our managed pointer types.
-using AudioRendererImplPtr = std::shared_ptr<AudioRendererImpl>;
-using AudioRendererImplSet =
-    std::set<AudioRendererImplPtr, std::owner_less<AudioRendererImplPtr>>;
-using AudioRendererImplWeakPtr = std::weak_ptr<AudioRendererImpl>;
-using AudioRendererImplWeakSet =
-    std::set<AudioRendererImplWeakPtr,
-             std::owner_less<AudioRendererImplWeakPtr>>;
-
-using AudioRendererToOutputLinkPtr = std::shared_ptr<AudioRendererToOutputLink>;
-using AudioRendererToOutputLinkSet =
-    std::set<AudioRendererToOutputLinkPtr,
-             std::owner_less<AudioRendererToOutputLinkPtr>>;
+// TODO(johngro) : Remove these definitions when we move to intrusive containers
+// for managing links.
+using AudioLinkPtr = std::shared_ptr<AudioLink>;
+using AudioLinkSet = std::set<AudioLinkPtr, std::owner_less<AudioLinkPtr>>;
 
 }  // namespace audio
 }  // namespace media

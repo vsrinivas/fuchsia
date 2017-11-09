@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
+#include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 
-#include "garnet/bin/media/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/fxl/logging.h"
@@ -12,40 +12,47 @@
 namespace media {
 namespace audio {
 
-AudioRendererToOutputLink::Bookkeeping::~Bookkeeping() {}
-
-AudioRendererToOutputLink::AudioRendererToOutputLink(
-    AudioRendererImplWeakPtr renderer,
-    fbl::RefPtr<AudioRendererFormatInfo> format_info,
-    fbl::RefPtr<AudioOutput> output)
-    : renderer_(renderer),
+AudioLinkPacketSource::AudioLinkPacketSource(
+    fbl::RefPtr<AudioObject> source,
+    fbl::RefPtr<AudioObject> dest,
+    fbl::RefPtr<AudioRendererFormatInfo> format_info)
+    : AudioLink(SourceType::Packet, std::move(source), std::move(dest)),
       format_info_(std::move(format_info)),
-      output_(fbl::move(output)),
-      pending_queue_(new PacketQueue),
-      valid_(true) {}
+      pending_queue_(new PacketQueue) {}
 
-AudioRendererToOutputLink::~AudioRendererToOutputLink() {
+AudioLinkPacketSource::~AudioLinkPacketSource() {
   ReleaseQueue(pending_queue_);
 }
 
 // static
-AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
-    const AudioRendererImplPtr& renderer,
-    fbl::RefPtr<AudioOutput> output) {
-  FXL_DCHECK(renderer);
-  FXL_DCHECK(renderer->format_info_valid());
+std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
+    fbl::RefPtr<AudioObject> source,
+    fbl::RefPtr<AudioObject> dest) {
+  FXL_DCHECK(source);
+  FXL_DCHECK(dest);
 
-  return AudioRendererToOutputLinkPtr(new AudioRendererToOutputLink(
-      renderer, renderer->format_info(), fbl::move(output)));
+  // TODO(johngro): Relax this if we get to the point where other audio objects
+  // may also be packet sources.
+  if (source->type() != AudioObject::Type::Renderer) {
+    FXL_LOG(ERROR)
+        << "Cannot create packet source link, packet sources must be renderers";
+    return nullptr;
+  }
+
+  auto& renderer = *(static_cast<AudioRendererImpl*>(source.get()));
+
+  FXL_DCHECK(renderer.format_info_valid());
+  return std::shared_ptr<AudioLinkPacketSource>(new AudioLinkPacketSource(
+      std::move(source), std::move(dest), renderer.format_info()));
 }
 
-void AudioRendererToOutputLink::PushToPendingQueue(
+void AudioLinkPacketSource::PushToPendingQueue(
     const AudioPipe::AudioPacketRefPtr& pkt) {
   fxl::MutexLocker locker(&pending_queue_mutex_);
   pending_queue_->emplace_back(pkt);
 }
 
-void AudioRendererToOutputLink::FlushPendingQueue() {
+void AudioLinkPacketSource::FlushPendingQueue() {
   // Create a new (empty) queue before obtaining any locks.  This will allow us
   // to quickly swap the empty queue for the current queue and get out of all
   // the locks, and then release the packets at our leisure instead of
@@ -78,21 +85,21 @@ void AudioRendererToOutputLink::FlushPendingQueue() {
   ReleaseQueue(new_queue);
 }
 
-void AudioRendererToOutputLink::InitPendingQueue(
-    const AudioRendererToOutputLinkPtr& source) {
-  FXL_DCHECK(source != nullptr);
-  FXL_DCHECK(this != source.get());
+void AudioLinkPacketSource::CopyPendingQueue(
+    const std::shared_ptr<AudioLinkPacketSource>& other) {
+  FXL_DCHECK(other != nullptr);
+  FXL_DCHECK(this != other.get());
 
-  fxl::MutexLocker source_locker(&source->pending_queue_mutex_);
-  if (source->pending_queue_->empty())
+  fxl::MutexLocker source_locker(&other->pending_queue_mutex_);
+  if (other->pending_queue_->empty())
     return;
 
   fxl::MutexLocker locker(&pending_queue_mutex_);
   FXL_DCHECK(pending_queue_->empty());
-  *pending_queue_ = *source->pending_queue_;
+  *pending_queue_ = *other->pending_queue_;
 }
 
-AudioPipe::AudioPacketRefPtr AudioRendererToOutputLink::LockPendingQueueFront(
+AudioPipe::AudioPacketRefPtr AudioLinkPacketSource::LockPendingQueueFront(
     bool* was_flushed) {
   flush_mutex_.Lock();
 
@@ -110,7 +117,7 @@ AudioPipe::AudioPacketRefPtr AudioRendererToOutputLink::LockPendingQueueFront(
   }
 }
 
-void AudioRendererToOutputLink::UnlockPendingQueueFront(
+void AudioLinkPacketSource::UnlockPendingQueueFront(
     AudioPipe::AudioPacketRefPtr* pkt,
     bool release_packet) {
   {
@@ -134,7 +141,7 @@ void AudioRendererToOutputLink::UnlockPendingQueueFront(
   flush_mutex_.Unlock();
 }
 
-void AudioRendererToOutputLink::ReleaseQueue(const PacketQueuePtr& queue) {
+void AudioLinkPacketSource::ReleaseQueue(const PacketQueuePtr& queue) {
   if (!queue) {
     return;
   }

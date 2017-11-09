@@ -35,8 +35,6 @@ MediaResult AudioInput::Init() {
   return MediaResult::OK;
 }
 
-void AudioInput::Unlink() {}
-
 void AudioInput::OnWakeup() {
   // We were poked.  Are we just starting up?
   if (state_ == State::Initialized) {
