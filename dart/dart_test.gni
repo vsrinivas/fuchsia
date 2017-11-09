@@ -65,6 +65,8 @@ template("dart_test") {
   action(main_target_name) {
     script = "//build/dart/gen_test_invocation.py"
 
+    testonly = true
+
     outputs = [
       invocation_file,
     ]
