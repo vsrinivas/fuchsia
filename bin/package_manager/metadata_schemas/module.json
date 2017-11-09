@@ -2,17 +2,6 @@
   "$schema": "http://json-schema.org/schema#",
   "title": "Schema for `verb_template` metadata file",
   "definitions": {
-    "verbImplementation": {
-      "type": "object",
-      "properties": {
-        "binary": { "type": "string" },
-        "local_name": { "type": "string" },
-        "verb": { "type" : "string" },
-        "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" }
-      },
-      "required": [ "binary", "local_name", "verb" ],
-      "additionalProperties": false
-    },
     "nounConstraintArray": {
       "type": "array",
       "items": { "$ref": "#/definitions/nounConstraint" },
@@ -41,11 +30,13 @@
       "pattern": "^[a-zA-Z0-9_]+$"
     }
   },
-  "type": "array",
-  "minItems": 1,
-  "uniqueItems": true,
-  "additionalItems": false,
-  "items": {
-    "$ref": "#/definitions/verbImplementation"
-  }
+  "type": "object",
+  "properties": {
+    "binary": { "type": "string" },
+    "local_name": { "type": "string" },
+    "verb": { "type" : "string" },
+    "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" }
+  },
+  "required": [ "binary", "local_name", "verb" ],
+  "additionalProperties": false
 }

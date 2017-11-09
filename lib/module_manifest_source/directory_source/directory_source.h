@@ -40,9 +40,6 @@ class DirectoryModuleManifestSource : public ModuleManifestSource {
   NewEntryFn new_entry_fn_;
   RemovedEntryFn removed_entry_fn_;
 
-  // Map of file path to entry IDs. Supports OnRemoveFile.
-  std::map<std::string, std::vector<std::string>> file_entry_ids_;
-
   fxl::WeakPtrFactory<DirectoryModuleManifestSource> weak_factory_;
 };
 

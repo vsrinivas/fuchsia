@@ -100,18 +100,13 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     // rapidjson::Document.
     rapidjson::Document doc;
     doc.CopyFrom(value, doc.GetAllocator());
-    std::vector<Entry> entries;
-    if (!modular::XdrRead(&doc, &entries, XdrEntry)) {
+    Entry entry;
+    if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
       FXL_LOG(WARNING) << "Could not parse Module manifest from: " << name;
       return;
     }
 
-    // Only send back the first element. MI4-662
-    // This way we don't have to keep track of how many entries there were
-    // in this key when it's deleted.
-    if (!entries.empty()) {
-      new_fn_(name, entries.front());
-    }
+    new_fn_(name, entry);
   }
 
   ModuleManifestSource::IdleFn idle_fn_;

@@ -207,29 +207,18 @@ void DirectoryModuleManifestSource::OnNewFile(const std::string& name,
   // It may be good to do this, though.
   // TODO(thatguy): Do this if it becomes a problem.
 
-  std::vector<Entry> entries;
-  if (!modular::XdrRead(&doc, &entries, XdrEntry)) {
+  Entry entry;
+  if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
     FXL_LOG(WARNING) << "Could not parse Module manifest from: " << path;
     return;
   }
 
-  uint32_t count = 0;
-  for (auto& entry : entries) {
-    std::string id = name + std::to_string(count++);
-    file_entry_ids_[name].push_back(id);
-    fn(id, std::move(entry));
-  }
+  fn(name, std::move(entry));
 }
 
 void DirectoryModuleManifestSource::OnRemoveFile(const std::string& name,
                                                  RemovedEntryFn fn) {
-  auto it = file_entry_ids_.find(name);
-  if (it == file_entry_ids_.end())
-    return;
-
-  for (const auto& id : it->second) {
-    fn(id);
-  }
+  fn(name);
 }
 
 }  // namespace modular

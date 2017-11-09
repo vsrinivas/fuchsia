@@ -3,59 +3,58 @@ Module Metadata File
 > Status: DRAFT
 
 A Module metadata file defines the runtime capabilities of a single `Module`
-(**TODO: link**). A Module expresses its capabilities by providing one or more
-implementations for `verb`s (**TODO**: link to verb/verb template doc).
+(**TODO: link**). A Module expresses its capabilities by providing a description
+of an implementation for a `verb`s (**TODO**: link to verb/verb template doc).
 
 The file is part of a Fuchsia package (**TODO: link**), is named `module` and
 placed within the `meta/` of the package.
 
-The `module` file contents are a JSON-encoded array of dictionaries (JSON
-schema [available here](../src/package_manager/metadata_schemas/module.json)).
-Each element in the array defines a single verb implementation.
+The `module` file contents are a JSON-encoded object (JSON schema [available
+here](../src/package_manager/metadata_schemas/module.json)) that defines a
+single verb implementation.
 
 ## Example `module` metadata file
 
-The following sample `module` file describes a `Module` that implements a number
-of `verb`s.
+Following are two sample `module` files. Each describes a `Module` that
+implements different `verb`s.
 
 ```javascript
-[
-  {
-    "binary": "bin/myPersonPreviewer",
-    "local_name": "previewPerson",
-    "verb": "com.google.fuchsia.preview.v1",
-    "noun_constraints": [
-      {
-        "name": "entityToPreview",
-        "types": [
-          "https://fuchsia.io/package/coreTypes/Person",
-          "https://fuchsia.instagram.com/types/Friend"
-        ]
-      }
-    ]
-  },
-  {
-    "binary": "bin/myContactPicker",
-    "local_name": "pickContact",
-    "verb": "com.google.fuchsia.pick.v1",
-    "noun_constraints": [
-      {
-        "name": "source",
-        "types": [ "https://fuchsia.instagram.com/types/FriendRepository" ]
-      },
-      {
-        "name": "picked",
-        "types": [ "https://fuchsia.instagram.com/types/Friend" ]
-      }
-    ]
-  }
-]
-
+{
+  "binary": "bin/myPersonPreviewer",
+  "local_name": "previewPerson",
+  "verb": "com.google.fuchsia.preview.v1",
+  "noun_constraints": [
+    {
+      "name": "entityToPreview",
+      "types": [
+        "https://fuchsia.io/package/coreTypes/Person",
+        "https://fuchsia.instagram.com/types/Friend"
+      ]
+    }
+  ]
+}
+```
+```javascript
+{
+  "binary": "bin/myContactPicker",
+  "local_name": "pickContact",
+  "verb": "com.google.fuchsia.pick.v1",
+  "noun_constraints": [
+    {
+      "name": "source",
+      "types": [ "https://fuchsia.instagram.com/types/FriendRepository" ]
+    },
+    {
+      "name": "picked",
+      "types": [ "https://fuchsia.instagram.com/types/Friend" ]
+    }
+  ]
+}
 ```
 
 ## Detailed description
 
-Let's break down the example above and detail the properties in each list element:
+Let's break down one of the examples above and go through the properties in detail.
 
 ### Attributes that define behavior
 
@@ -70,6 +69,8 @@ executable file can be found. Different verb implementations within the same
 package can share a single `binary`.
 
 #### local_name
+
+> TODO(thatguy): This property makes no sense any more. Consider removing it.
 
 ```javascript
 "local_name": "previewPerson",

@@ -12,51 +12,53 @@
 namespace maxwell {
 namespace {
 
-const char* kManifest = R"END(
-[
-  {
-    "binary": "module1",
-    "local_name": "module1",
-    "verb": "com.google.fuchsia.navigate.v1",
-    "noun_constraints": [
-      {
-        "name": "start",
-        "types": [ "foo", "bar" ]
-      },
-      {
-        "name": "destination",
-        "types": [ "baz" ]
-      }
-    ]
-  },
-  {
-    "binary": "module2",
-    "local_name": "module2",
-    "verb": "com.google.fuchsia.navigate.v1",
-    "noun_constraints": [
-      {
-        "name": "start",
-        "types": [ "frob" ]
-      },
-      {
-        "name": "destination",
-        "types": [ "froozle" ]
-      }
-    ]
-  },
-  {
-    "binary": "module3",
-    "local_name": "module3",
-    "verb": "com.google.fuchsia.exist.vinfinity",
-    "noun_constraints": [
-      {
-        "name": "with",
-        "types": [ "companionCube" ]
-      }
-    ]
-  }
-]
-)END";
+const char* kManifests[] = {
+    R"END(
+{
+  "binary": "module1",
+  "local_name": "module1",
+  "verb": "com.google.fuchsia.navigate.v1",
+  "noun_constraints": [
+    {
+      "name": "start",
+      "types": [ "foo", "bar" ]
+    },
+    {
+      "name": "destination",
+      "types": [ "baz" ]
+    }
+  ]
+})END",
+    R"END(
+{
+  "binary": "module2",
+  "local_name": "module2",
+  "verb": "com.google.fuchsia.navigate.v1",
+  "noun_constraints": [
+    {
+      "name": "start",
+      "types": [ "frob" ]
+    },
+    {
+      "name": "destination",
+      "types": [ "froozle" ]
+    }
+  ]
+}
+)END",
+    R"END(
+{
+  "binary": "module3",
+  "local_name": "module3",
+  "verb": "com.google.fuchsia.exist.vinfinity",
+  "noun_constraints": [
+    {
+      "name": "with",
+      "types": [ "companionCube" ]
+    }
+  ]
+})END"};
+const int kNumManifests = 3;
 
 class DaisyBuilder {
  public:
@@ -104,7 +106,10 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     FXL_CHECK(mkdtemp(temp_dir)) << strerror(errno);
     repo_dir_ = temp_dir;
 
-    WriteManifestFile("manifest", kManifest);
+    for (int i = 0; i < kNumManifests; ++i) {
+      WriteManifestFile(std::string("manifest") + std::to_string(i),
+                        kManifests[i]);
+    }
     Reset();
   }
 
@@ -124,9 +129,9 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
  protected:
   void Reset() {
     impl_.reset(new ModuleResolverImpl);
-    impl_->AddSource(
-        "test", std::make_unique<modular::DirectoryModuleManifestSource>(
-                    repo_dir_, false));
+    impl_->AddSource("test",
+                     std::make_unique<modular::DirectoryModuleManifestSource>(
+                         repo_dir_, false));
     impl_->Connect(resolver_.NewRequest());
   }
 
