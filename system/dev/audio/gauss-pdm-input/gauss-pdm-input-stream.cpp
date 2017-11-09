@@ -26,8 +26,8 @@ zx_status_t GaussPdmInputStream::Create(zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    auto stream = fbl::AdoptRef(
-        new GaussPdmInputStream(parent, fbl::move(domain)));
+    auto stream =
+        fbl::AdoptRef(new GaussPdmInputStream(parent, fbl::move(domain)));
 
     zx_status_t res = stream->Bind("pdm-audio-driver");
     if (res == ZX_OK) {
@@ -51,8 +51,8 @@ zx_status_t GaussPdmInputStream::Bind(const char* devname) {
 void GaussPdmInputStream::ReleaseRingBufferLocked() {
     if (ring_buffer_virt_ != nullptr) {
         ZX_DEBUG_ASSERT(ring_buffer_size_ != 0);
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ring_buffer_virt_),
-                                    ring_buffer_size_);
+        zx::vmar::root_self().unmap(
+            reinterpret_cast<uintptr_t>(ring_buffer_virt_), ring_buffer_size_);
         ring_buffer_virt_ = nullptr;
         ring_buffer_size_ = 0;
     }
@@ -78,19 +78,15 @@ void GaussPdmInputStream::DdkRelease() {
     auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
 }
 
-zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op,
-                                          const void* in_buf,
-                                          size_t in_len,
-                                          void* out_buf,
-                                          size_t out_len,
-                                          size_t* out_actual) {
+zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op, const void* in_buf,
+                                          size_t in_len, void* out_buf,
+                                          size_t out_len, size_t* out_actual) {
     // The only IOCTL we support is get channel.
     if (op != AUDIO_IOCTL_GET_CHANNEL) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if ((out_buf == nullptr) ||
-        (out_actual == nullptr) ||
+    if ((out_buf == nullptr) || (out_actual == nullptr) ||
         (out_len != sizeof(zx_handle_t))) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -106,26 +102,27 @@ zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op,
     if (channel == nullptr)
         return ZX_ERR_NO_MEMORY;
 
-    dispatcher::Channel::ProcessHandler phandler(
-        [ stream = fbl::WrapRefPtr(this), privileged ](dispatcher::Channel * channel)->zx_status_t {
-            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-            return stream->ProcessStreamChannel(channel, privileged);
-        });
+    dispatcher::Channel::ProcessHandler phandler([
+        stream = fbl::WrapRefPtr(this), privileged
+    ](dispatcher::Channel * channel)->zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+        return stream->ProcessStreamChannel(channel, privileged);
+    });
 
     dispatcher::Channel::ChannelClosedHandler chandler;
     if (privileged) {
         chandler = dispatcher::Channel::ChannelClosedHandler(
-            [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel)->void {
-                OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-                stream->DeactivateStreamChannel(channel);
-            });
+            [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel)
+                ->void {
+                    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+                    stream->DeactivateStreamChannel(channel);
+                });
     }
 
     zx::channel client_endpoint;
-    zx_status_t res = channel->Activate(&client_endpoint,
-                                        default_domain_,
-                                        fbl::move(phandler),
-                                        fbl::move(chandler));
+    zx_status_t res =
+        channel->Activate(&client_endpoint, default_domain_,
+                          fbl::move(phandler), fbl::move(chandler));
     if (res == ZX_OK) {
         if (privileged) {
             ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -139,24 +136,26 @@ zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op,
     return res;
 }
 
-#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)             \
-    case _cmd:                                                        \
-        if (req_size != sizeof(req._payload)) {                       \
-            zxlogf(ERROR, "Bad " #_cmd                                \
-                          " response length (%u != %zu)\n",           \
-                   req_size, sizeof(req._payload));                   \
-            return ZX_ERR_INVALID_ARGS;                               \
-        }                                                             \
-        if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {     \
-            zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "\n"); \
-            return ZX_ERR_INVALID_ARGS;                               \
-        }                                                             \
+#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                      \
+    case _cmd:                                                                 \
+        if (req_size != sizeof(req._payload)) {                                \
+            zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)\n",       \
+                   req_size, sizeof(req._payload));                            \
+            return ZX_ERR_INVALID_ARGS;                                        \
+        }                                                                      \
+        if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {              \
+            zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "\n");          \
+            return ZX_ERR_INVALID_ARGS;                                        \
+        }                                                                      \
         return _handler(channel, req._payload, ##__VA_ARGS__);
-zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel, bool privileged) {
+zx_status_t
+GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
+                                          bool privileged) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock lock(&lock_);
 
-    // TODO(almasrymina): Factor all of this behavior around accepting channels and
+    // TODO(almasrymina): Factor all of this behavior around accepting channels
+    // and
     // dispatching audio driver requests into some form of utility class so it
     // can be shared with the IntelHDA codec implementations as well.
     union {
@@ -169,8 +168,9 @@ zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* chann
         // TODO(almasrymina): add more commands here
     } req;
 
-    static_assert(sizeof(req) <= 256,
-                  "Request buffer is getting to be too large to hold on the stack!");
+    static_assert(
+        sizeof(req) <= 256,
+        "Request buffer is getting to be too large to hold on the stack!");
 
     uint32_t req_size;
     zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
@@ -181,21 +181,26 @@ zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* chann
          (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
         return ZX_ERR_INVALID_ARGS;
 
-    // Strip the NO_ACK flag from the request before selecting the dispatch target.
+    // Strip the NO_ACK flag from the request before selecting the dispatch
+    // target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, OnGetStreamFormatsLocked, false);
-        HREQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, OnSetStreamFormatLocked, false, privileged);
+        HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats,
+             OnGetStreamFormatsLocked, false);
+        HREQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, OnSetStreamFormatLocked,
+             false, privileged);
         HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGainLocked, false);
         HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGainLocked, true);
-        HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked, true);
+        HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,
+             true);
     default:
         zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-zx_status_t GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
+zx_status_t
+GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock lock(&lock_);
 
@@ -208,8 +213,9 @@ zx_status_t GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* c
         // TODO(almasrymina): add more commands here
     } req;
 
-    static_assert(sizeof(req) <= 256,
-                  "Request buffer is getting to be too large to hold on the stack!");
+    static_assert(
+        sizeof(req) <= 256,
+        "Request buffer is getting to be too large to hold on the stack!");
 
     uint32_t req_size;
     zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
@@ -220,10 +226,12 @@ zx_status_t GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* c
          (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
         return ZX_ERR_INVALID_ARGS;
 
-    // Strip the NO_ACK flag from the request before selecting the dispatch target.
+    // Strip the NO_ACK flag from the request before selecting the dispatch
+    // target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HREQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepthLocked, false);
+        HREQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepthLocked,
+             false);
         HREQ(AUDIO_RB_CMD_GET_BUFFER, get_buffer, OnGetBufferLocked, false);
         HREQ(AUDIO_RB_CMD_START, rb_start, OnStartLocked, false);
         HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStopLocked, false);
@@ -236,14 +244,15 @@ zx_status_t GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* c
 }
 #undef HANDLE_REQ
 
-zx_status_t GaussPdmInputStream::OnGetStreamFormatsLocked(dispatcher::Channel* channel,
-                                                          const audio_proto::StreamGetFmtsReq& req) {
+zx_status_t GaussPdmInputStream::OnGetStreamFormatsLocked(
+    dispatcher::Channel* channel, const audio_proto::StreamGetFmtsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     uint16_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp;
 
     if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
-        zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+        zxlogf(ERROR, "Too many formats (%zu) to send during "
+                      "AUDIO_STREAM_CMD_GET_FORMATS request!\n",
                supported_formats_.size());
         return ZX_ERR_INTERNAL;
     }
@@ -255,16 +264,21 @@ zx_status_t GaussPdmInputStream::OnGetStreamFormatsLocked(dispatcher::Channel* c
         uint16_t todo, payload_sz;
         zx_status_t res;
 
-        todo = fbl::min<uint16_t>(static_cast<uint16_t>(supported_formats_.size() - formats_sent),
-                                  AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
-        payload_sz = static_cast<uint16_t>(sizeof(resp.format_ranges[0]) * todo);
+        todo = fbl::min<uint16_t>(
+            static_cast<uint16_t>(supported_formats_.size() - formats_sent),
+            AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
+        payload_sz =
+            static_cast<uint16_t>(sizeof(resp.format_ranges[0]) * todo);
 
         resp.first_format_range_ndx = formats_sent;
-        ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
+        ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent,
+                 payload_sz);
 
         res = channel->Write(&resp, sizeof(resp));
         if (res != ZX_OK) {
-            zxlogf(ERROR, "Failed to send get stream formats response (res %d)\n", res);
+            zxlogf(ERROR,
+                   "Failed to send get stream formats response (res %d)\n",
+                   res);
             return res;
         }
 
@@ -274,9 +288,9 @@ zx_status_t GaussPdmInputStream::OnGetStreamFormatsLocked(dispatcher::Channel* c
     return ZX_OK;
 }
 
-zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(dispatcher::Channel* channel,
-                                                         const audio_proto::StreamSetFmtReq& req,
-                                                         bool privileged) {
+zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(
+    dispatcher::Channel* channel, const audio_proto::StreamSetFmtReq& req,
+    bool privileged) {
     ZX_DEBUG_ASSERT(channel != nullptr);
 
     zx::channel client_rb_channel;
@@ -294,10 +308,8 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(dispatcher::Channel* ch
 
     // Check the format for compatibility
     for (const auto& fmt : supported_formats_) {
-        if (audio::utils::FormatIsCompatible(req.frames_per_second,
-                                             req.channels,
-                                             req.sample_format,
-                                             fmt)) {
+        if (audio::utils::FormatIsCompatible(
+                req.frames_per_second, req.channels, req.sample_format, fmt)) {
             found_one = true;
             break;
         }
@@ -309,10 +321,11 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(dispatcher::Channel* ch
     }
 
     // Determine the frame size.
-    frame_size_ = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
+    frame_size_ =
+        audio::utils::ComputeFrameSize(req.channels, req.sample_format);
     if (!frame_size_) {
-        zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n", req.channels,
-               req.sample_format);
+        zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n",
+               req.channels, req.sample_format);
         resp.result = ZX_ERR_INTERNAL;
         goto finished;
     }
@@ -330,22 +343,27 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(dispatcher::Channel* ch
     if (rb_channel_ == nullptr) {
         resp.result = ZX_ERR_NO_MEMORY;
     } else {
-        dispatcher::Channel::ProcessHandler phandler(
-            [stream = fbl::WrapRefPtr(this)](dispatcher::Channel * channel)->zx_status_t {
-                OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-                return stream->ProcessRingBufferChannel(channel);
-            });
+        dispatcher::Channel::ProcessHandler
+            phandler([stream =
+                          fbl::WrapRefPtr(this)](dispatcher::Channel * channel)
+                         ->zx_status_t {
+                             OBTAIN_EXECUTION_DOMAIN_TOKEN(
+                                 t, stream->default_domain_);
+                             return stream->ProcessRingBufferChannel(channel);
+                         });
 
-        dispatcher::Channel::ChannelClosedHandler chandler(
-            [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel)->void {
-                OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-                stream->DeactivateRingBufferChannel(channel);
-            });
+        dispatcher::Channel::ChannelClosedHandler
+        chandler([stream =
+                      fbl::WrapRefPtr(this)](const dispatcher::Channel* channel)
+                     ->void {
+                         OBTAIN_EXECUTION_DOMAIN_TOKEN(t,
+                                                       stream->default_domain_);
+                         stream->DeactivateRingBufferChannel(channel);
+                     });
 
-        resp.result = rb_channel_->Activate(&client_rb_channel,
-                                            default_domain_,
-                                            fbl::move(phandler),
-                                            fbl::move(chandler));
+        resp.result =
+            rb_channel_->Activate(&client_rb_channel, default_domain_,
+                                  fbl::move(phandler), fbl::move(chandler));
         if (resp.result != ZX_OK) {
             rb_channel_.reset();
         }
@@ -353,14 +371,16 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(dispatcher::Channel* ch
 
 finished:
     if (resp.result == ZX_OK) {
-        return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
+        return channel->Write(&resp, sizeof(resp),
+                              fbl::move(client_rb_channel));
     } else {
         return channel->Write(&resp, sizeof(resp));
     }
 }
 
-zx_status_t GaussPdmInputStream::OnGetGainLocked(dispatcher::Channel* channel,
-                                                 const audio_proto::GetGainReq& req) {
+zx_status_t
+GaussPdmInputStream::OnGetGainLocked(dispatcher::Channel* channel,
+                                     const audio_proto::GetGainReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     audio_proto::GetGainResp resp;
 
@@ -375,8 +395,9 @@ zx_status_t GaussPdmInputStream::OnGetGainLocked(dispatcher::Channel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t GaussPdmInputStream::OnSetGainLocked(dispatcher::Channel* channel,
-                                                 const audio_proto::SetGainReq& req) {
+zx_status_t
+GaussPdmInputStream::OnSetGainLocked(dispatcher::Channel* channel,
+                                     const audio_proto::SetGainReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
@@ -384,20 +405,21 @@ zx_status_t GaussPdmInputStream::OnSetGainLocked(dispatcher::Channel* channel,
     audio_proto::SetGainResp resp;
     resp.hdr = req.hdr;
 
-    bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE);
-    bool illegal_gain = (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0.0f);
+    bool illegal_mute =
+        (req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE);
+    bool illegal_gain =
+        (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0.0f);
 
     resp.cur_mute = false;
     resp.cur_gain = 0.0;
-    resp.result = (illegal_mute || illegal_gain)
-                      ? ZX_ERR_INVALID_ARGS
-                      : ZX_OK;
+    resp.result = (illegal_mute || illegal_gain) ? ZX_ERR_INVALID_ARGS : ZX_OK;
 
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t GaussPdmInputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
-                                                    const audio_proto::PlugDetectReq& req) {
+zx_status_t
+GaussPdmInputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
+                                        const audio_proto::PlugDetectReq& req) {
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
@@ -408,8 +430,9 @@ zx_status_t GaussPdmInputStream::OnPlugDetectLocked(dispatcher::Channel* channel
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t GaussPdmInputStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
-                                                      const audio_proto::RingBufGetFifoDepthReq& req) {
+zx_status_t GaussPdmInputStream::OnGetFifoDepthLocked(
+    dispatcher::Channel* channel,
+    const audio_proto::RingBufGetFifoDepthReq& req) {
     audio_proto::RingBufGetFifoDepthResp resp;
 
     resp.hdr = req.hdr;
@@ -419,8 +442,8 @@ zx_status_t GaussPdmInputStream::OnGetFifoDepthLocked(dispatcher::Channel* chann
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t GaussPdmInputStream::OnGetBufferLocked(dispatcher::Channel* channel,
-                                                   const audio_proto::RingBufGetBufferReq& req) {
+zx_status_t GaussPdmInputStream::OnGetBufferLocked(
+    dispatcher::Channel* channel, const audio_proto::RingBufGetBufferReq& req) {
     audio_proto::RingBufGetBufferResp resp;
     zx::vmo client_rb_handle;
     uint32_t client_rights;
@@ -442,7 +465,8 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(dispatcher::Channel* channel,
 
     // Set up our state for generating notifications.
     if (req.notifications_per_ring) {
-        bytes_per_notification_ = ring_buffer_size_ / req.notifications_per_ring;
+        bytes_per_notification_ =
+            ring_buffer_size_ / req.notifications_per_ring;
     } else {
         bytes_per_notification_ = 0;
     }
@@ -450,19 +474,21 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(dispatcher::Channel* channel,
     // Create the ring buffer vmo we will use to share memory with the client.
     resp.result = zx::vmo::create(ring_buffer_size_, 0, &ring_buffer_vmo_);
     if (resp.result != ZX_OK) {
-        zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)\n", ring_buffer_size_,
-               resp.result);
+        zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)\n",
+               ring_buffer_size_, resp.result);
         goto finished;
     }
 
     // TODO(almasrymina): fetch physical mappings and set up DMA hardware here!
 
-    // Create the client's handle to the ring buffer vmo and set it back to them.
+    // Create the client's handle to the ring buffer vmo and set it back to
+    // them.
     client_rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP | ZX_RIGHT_READ;
 
     resp.result = ring_buffer_vmo_.duplicate(client_rights, &client_rb_handle);
     if (resp.result != ZX_OK) {
-        zxlogf(ERROR, "Failed to duplicate ring buffer handle (res %d)\n", resp.result);
+        zxlogf(ERROR, "Failed to duplicate ring buffer handle (res %d)\n",
+               resp.result);
         goto finished;
     }
 
@@ -481,17 +507,20 @@ finished:
     return res;
 }
 
-zx_status_t GaussPdmInputStream::OnStartLocked(dispatcher::Channel* channel,
-                                               const audio_proto::RingBufStartReq& req) {
+zx_status_t
+GaussPdmInputStream::OnStartLocked(dispatcher::Channel* channel,
+                                   const audio_proto::RingBufStartReq& req) {
     return ZX_OK;
 }
 
-zx_status_t GaussPdmInputStream::OnStopLocked(dispatcher::Channel* channel,
-                                              const audio_proto::RingBufStopReq& req) {
+zx_status_t
+GaussPdmInputStream::OnStopLocked(dispatcher::Channel* channel,
+                                  const audio_proto::RingBufStopReq& req) {
     return ZX_OK;
 }
 
-void GaussPdmInputStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
+void GaussPdmInputStream::DeactivateStreamChannel(
+    const dispatcher::Channel* channel) {
     fbl::AutoLock lock(&lock_);
 
     ZX_DEBUG_ASSERT(stream_channel_.get() == channel);
@@ -499,7 +528,8 @@ void GaussPdmInputStream::DeactivateStreamChannel(const dispatcher::Channel* cha
     stream_channel_.reset();
 }
 
-void GaussPdmInputStream::DeactivateRingBufferChannel(const dispatcher::Channel* channel) {
+void GaussPdmInputStream::DeactivateRingBufferChannel(
+    const dispatcher::Channel* channel) {
     fbl::AutoLock lock(&lock_);
 
     ZX_DEBUG_ASSERT(stream_channel_.get() != channel);
@@ -511,7 +541,8 @@ void GaussPdmInputStream::DeactivateRingBufferChannel(const dispatcher::Channel*
 } // namespace gauss
 } // namespace audio
 
-extern "C" zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* device, void** cookie) {
+extern "C" zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* device,
+                                            void** cookie) {
     printf("gauss_audio_bind\n");
     audio::gauss::GaussPdmInputStream::Create(device);
     return ZX_OK;
