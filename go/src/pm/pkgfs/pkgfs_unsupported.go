@@ -11,7 +11,7 @@ import (
 	"thinfs/fs"
 )
 
-var debug = true
+var debug = false
 
 func debugLog(s string, args ...interface{}) {
 	if debug {
