@@ -83,9 +83,10 @@ class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
     return true;
   }
 
-  void StopAdvertising(
+  bool StopAdvertising(
       const bluetooth::common::DeviceAddress& address) override {
     ads_->erase(address);
+    return true;
   }
 
   void OnIncomingConnection(LowEnergyConnectionRefPtr connection) override {

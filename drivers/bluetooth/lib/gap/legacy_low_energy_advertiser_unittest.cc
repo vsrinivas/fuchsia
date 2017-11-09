@@ -27,8 +27,6 @@ const common::DeviceAddress kPublicAddress(
 
 constexpr size_t kDefaultAdSize = 20;
 
-constexpr fxl::TimeDelta kStopAdvWait = fxl::TimeDelta::FromMilliseconds(5);
-
 class GAP_LegacyLowEnergyAdvertiserTest : public TestingBase {
  public:
   GAP_LegacyLowEnergyAdvertiserTest() = default;
@@ -193,9 +191,17 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartAndStop) {
   EXPECT_EQ(ad, controller_ad);
   EXPECT_EQ(addr, test_device()->le_random_address());
 
-  advertiser()->StopAdvertising(addr);
+  test_device()->SetAdvertisingStateCallback(
+      [this]() {
+        if (!test_device()->le_advertising_state().enabled) {
+          message_loop()->PostQuitTask();
+        }
+      },
+      message_loop()->task_runner());
 
-  RunMessageLoop(kStopAdvWait);
+  EXPECT_TRUE(advertiser()->StopAdvertising(addr));
+
+  RunMessageLoop();
 
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 }
@@ -226,9 +232,7 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   }
   EXPECT_EQ(addr, test_device()->le_random_address());
 
-  advertiser()->StopAdvertising(kPublicAddress);
-
-  RunMessageLoop(kStopAdvWait);
+  EXPECT_FALSE(advertiser()->StopAdvertising(kPublicAddress));
 
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
   {
@@ -239,9 +243,19 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
     EXPECT_EQ(ad, controller_ad);
   }
 
-  advertiser()->StopAdvertising(addr);
+  test_device()->SetAdvertisingStateCallback(
+      [this]() {
+        if (!test_device()->le_advertising_state().enabled &&
+            test_device()->le_advertising_state().length == 0 &&
+            test_device()->le_advertising_state().scan_rsp_length == 0) {
+          message_loop()->PostQuitTask();
+        }
+      },
+      message_loop()->task_runner());
 
-  RunMessageLoop(kStopAdvWait);
+  EXPECT_TRUE(advertiser()->StopAdvertising(addr));
+
+  RunMessageLoop();
 
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
   EXPECT_EQ(0u, test_device()->le_advertising_state().advertised_view().size());

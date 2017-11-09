@@ -51,8 +51,9 @@ class LowEnergyAdvertiser {
                                 bool anonymous,
                                 const AdvertisingResultCallback& callback) = 0;
 
-  // Stops any advertisement currently active on |address|. Idempotent.
-  virtual void StopAdvertising(
+  // Stops any advertisement currently active on |address|. Idempotent and
+  // asynchronous. Returns true if advertising will be stopped, false otherwise.
+  virtual bool StopAdvertising(
       const bluetooth::common::DeviceAddress& address) = 0;
 
   // Callback for an incoming connection.  |connection| should be an LE

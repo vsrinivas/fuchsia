@@ -33,7 +33,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
                         bool anonymous,
                         const AdvertisingResultCallback& callback) override;
 
-  void StopAdvertising(
+  bool StopAdvertising(
       const bluetooth::common::DeviceAddress& address) override;
 
   void OnIncomingConnection(LowEnergyConnectionRefPtr connection) override;

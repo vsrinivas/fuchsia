@@ -16,6 +16,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -130,6 +131,10 @@ class FakeController : public FakeControllerBase {
   void SetScanStateCallback(const ScanStateCallback& callback,
                             fxl::RefPtr<fxl::TaskRunner> task_runner);
 
+  // Sets a callback to be invoked when the LE Advertising state changes.
+  void SetAdvertisingStateCallback(const fxl::Closure& callback,
+                                   fxl::RefPtr<fxl::TaskRunner> task_runner);
+
   // Sets a callback to be invoked on connection events.
   using ConnectionStateCallback = std::function<
       void(const common::DeviceAddress&, bool connected, bool canceled)>;
@@ -216,6 +221,9 @@ class FakeController : public FakeControllerBase {
   // enabled.
   void SendAdvertisingReports();
 
+  // Notifies |advertising_state_cb_|
+  void NotifyAdvertisingState();
+
   // Notifies |conn_state_cb_| with the given parameters.
   void NotifyConnectionState(const common::DeviceAddress& addr,
                              bool connected,
@@ -265,6 +273,9 @@ class FakeController : public FakeControllerBase {
 
   ScanStateCallback scan_state_cb_;
   fxl::RefPtr<fxl::TaskRunner> scan_state_cb_runner_;
+
+  fxl::Closure advertising_state_cb_;
+  fxl::RefPtr<fxl::TaskRunner> advertising_state_cb_runner_;
 
   ConnectionStateCallback conn_state_cb_;
   fxl::RefPtr<fxl::TaskRunner> conn_state_cb_runner_;

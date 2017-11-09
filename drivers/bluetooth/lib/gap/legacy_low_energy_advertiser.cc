@@ -189,13 +189,14 @@ bool LegacyLowEnergyAdvertiser::StartAdvertising(
   return true;
 }
 
-void LegacyLowEnergyAdvertiser::StopAdvertising(
+bool LegacyLowEnergyAdvertiser::StopAdvertising(
     const bluetooth::common::DeviceAddress& address) {
   if (advertised_ != address) {
-    // not advertising.
-    return;
+    // not advertising, or not on this address.
+    return false;
   }
   StopAdvertisingInternal();
+  return true;
 }
 
 void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {

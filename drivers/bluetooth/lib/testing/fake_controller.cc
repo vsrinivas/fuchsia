@@ -153,6 +153,16 @@ void FakeController::SetScanStateCallback(
   scan_state_cb_runner_ = task_runner;
 }
 
+void FakeController::SetAdvertisingStateCallback(
+    const fxl::Closure& callback,
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
+
+  advertising_state_cb_ = callback;
+  advertising_state_cb_runner_ = task_runner;
+}
+
 void FakeController::SetConnectionStateCallback(
     const ConnectionStateCallback& callback,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
@@ -457,6 +467,14 @@ void FakeController::SendAdvertisingReports() {
   }
 }
 
+void FakeController::NotifyAdvertisingState() {
+  if (!advertising_state_cb_)
+    return;
+
+  FXL_DCHECK(advertising_state_cb_runner_);
+  advertising_state_cb_runner_->PostTask(advertising_state_cb_);
+}
+
 void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
                                            bool connected,
                                            bool canceled) {
@@ -704,6 +722,7 @@ void FakeController::OnCommandPacketReceived(
       le_adv_state_.adv_type = in_params.adv_type;
 
       RespondWithSuccess(opcode);
+      NotifyAdvertisingState();
       break;
     }
     case hci::kLESetAdvertisingData: {
@@ -713,6 +732,7 @@ void FakeController::OnCommandPacketReceived(
       std::memcpy(le_adv_state_.data, in_params.adv_data, le_adv_state_.length);
 
       RespondWithSuccess(opcode);
+      NotifyAdvertisingState();
       break;
     }
     case hci::kLESetScanResponseData: {
@@ -723,6 +743,7 @@ void FakeController::OnCommandPacketReceived(
                   le_adv_state_.scan_rsp_length);
 
       RespondWithSuccess(opcode);
+      NotifyAdvertisingState();
       break;
     }
     case hci::kLESetAdvertisingEnable: {
@@ -732,6 +753,7 @@ void FakeController::OnCommandPacketReceived(
           (in_params.advertising_enable == hci::GenericEnableParam::kEnable);
 
       RespondWithSuccess(opcode);
+      NotifyAdvertisingState();
       break;
     }
     case hci::kReadBDADDR: {
