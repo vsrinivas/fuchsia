@@ -6,16 +6,15 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
+#include <soc/hi3660/hi3660.h>
+#include <soc/hi3660/hi3660-regs.h>
+
 #include <stdio.h>
 
-#include "hi3660-regs.h"
-#include "hikey960.h"
-#include "hikey960-hw.h"
-
-zx_status_t hi3660_usb_init(hikey960_t* bus) {
-    volatile void* usb3otg_bc = io_buffer_virt(&bus->usb3otg_bc);
-    volatile void* peri_crg = io_buffer_virt(&bus->peri_crg);
-    volatile void* pctrl = io_buffer_virt(&bus->pctrl);
+zx_status_t hi3660_usb_init(hi3660_t* hi3660) {
+    volatile void* usb3otg_bc = io_buffer_virt(&hi3660->usb3otg_bc);
+    volatile void* peri_crg = io_buffer_virt(&hi3660->peri_crg);
+    volatile void* pctrl = io_buffer_virt(&hi3660->pctrl);
     uint32_t temp;
 
     writel(PERI_CRG_ISODIS_REFCLK_ISO_EN, peri_crg + PERI_CRG_ISODIS);
@@ -56,27 +55,5 @@ zx_status_t hi3660_usb_init(hikey960_t* bus) {
     writel(temp, usb3otg_bc + USB3OTG_CTRL3);
     zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
 
-    return ZX_OK;
-}
-
-zx_status_t hi3660_usb_set_mode(hikey960_t* bus, usb_mode_t mode) {
-    if (mode == bus->usb_mode) {
-        return ZX_OK;
-    }
-
-    gpio_protocol_t* gpio = &bus->gpio;
-    gpio_config(gpio, GPIO_HUB_VDD33_EN, GPIO_DIR_OUT);
-    gpio_config(gpio, GPIO_VBUS_TYPEC, GPIO_DIR_OUT);
-    gpio_config(gpio, GPIO_USBSW_SW_SEL, GPIO_DIR_OUT);
-
-    gpio_write(gpio, GPIO_HUB_VDD33_EN, mode == USB_MODE_HOST);
-    gpio_write(gpio, GPIO_VBUS_TYPEC, mode == USB_MODE_HOST);
-    gpio_write(gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
-
-    // add or remove XHCI device
-    pbus_device_enable(&bus->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
-                       mode == USB_MODE_HOST);
-
-    bus->usb_mode = mode;
     return ZX_OK;
 }

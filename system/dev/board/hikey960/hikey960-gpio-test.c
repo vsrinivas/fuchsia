@@ -37,11 +37,11 @@ typedef struct {
 } gpio_test_t;
 
 static void gpio_test_release(void* ctx) {
-    gpio_test_t* bus = ctx;
+    gpio_test_t* gpio_test = ctx;
 
-    bus->done = true;
-    thrd_join(bus->thread, NULL);
-    free(bus);
+    gpio_test->done = true;
+    thrd_join(gpio_test->thread, NULL);
+    free(gpio_test);
 }
 
 static zx_protocol_device_t gpio_test_device_protocol = {

@@ -4,9 +4,10 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-defs.h>
+#include <soc/hi3660/hi3660-hw.h>
+
 #include <stdio.h>
 
-#include "hi3660-hw.h"
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
@@ -116,25 +117,25 @@ static const pbus_dev_t gpio_test_dev = {
 };
 #endif
 
-zx_status_t hikey960_add_devices(hikey960_t* bus) {
+zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     zx_status_t status;
 
-    if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&hikey->pbus, &dwc3_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "hi3360_add_devices could not add dwc3_dev: %d\n", status);
         return status;
     }
     // xhci_dev is enabled/disabled dynamically, so don't enable it here
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
+    if ((status = pbus_device_add(&hikey->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
         zxlogf(ERROR, "hi3360_add_devices could not add xhci_dev: %d\n", status);
         return status;
     }
-    if ((status = pbus_device_add(&bus->pbus, &mali_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&hikey->pbus, &mali_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "hi3360_add_devices could not add mali_dev: %d\n", status);
         return status;
     }
 
 #if GPIO_TEST
-    if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev, 0)) != ZX_OK) {
+    if ((status = pbus_device_add(&hikey->pbus, &gpio_test_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "hi3360_add_devices could not add gpio_test_dev: %d\n", status);
         return status;
     }

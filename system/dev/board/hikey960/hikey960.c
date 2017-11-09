@@ -15,104 +15,112 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
-#include <gpio/pl061/pl061.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/assert.h>
 
-#include "hi3660-hw.h"
 #include "hikey960.h"
+#include "hikey960-hw.h"
 
-static zx_status_t hi3660_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
+static zx_status_t hikey960_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
     *out_mode = USB_MODE_HOST;
     return ZX_OK;
 }
 
-static zx_status_t hi3660_set_mode(void* ctx, usb_mode_t mode) {
-    hikey960_t* bus = ctx;
+static zx_status_t hikey960_set_mode(void* ctx, usb_mode_t mode) {
+    hikey960_t* hikey = ctx;
 
+    if (mode == hikey->usb_mode) {
+        return ZX_OK;
+    }
     if (mode == USB_MODE_OTG) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    return hi3660_usb_set_mode(bus, mode);
+    gpio_protocol_t gpio;
+    zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &gpio);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    gpio_config(&gpio, GPIO_HUB_VDD33_EN, GPIO_DIR_OUT);
+    gpio_config(&gpio, GPIO_VBUS_TYPEC, GPIO_DIR_OUT);
+    gpio_config(&gpio, GPIO_USBSW_SW_SEL, GPIO_DIR_OUT);
+
+    gpio_write(&gpio, GPIO_HUB_VDD33_EN, mode == USB_MODE_HOST);
+    gpio_write(&gpio, GPIO_VBUS_TYPEC, mode == USB_MODE_HOST);
+    gpio_write(&gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
+
+    // add or remove XHCI device
+    pbus_device_enable(&hikey->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
+                       mode == USB_MODE_HOST);
+
+    hikey->usb_mode = mode;
+    return ZX_OK;
 }
 
 usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
-    .get_initial_mode = hi3660_get_initial_mode,
-    .set_mode = hi3660_set_mode,
+    .get_initial_mode = hikey960_get_initial_mode,
+    .set_mode = hikey960_set_mode,
 };
 
-static zx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    hikey960_t* bus = ctx;
+static zx_status_t hikey960_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    hikey960_t* hikey = ctx;
 
     switch (proto_id) {
-    case ZX_PROTOCOL_GPIO: {
-        memcpy(out, &bus->gpio, sizeof(bus->gpio));
-        return ZX_OK;
-    }
     case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        memcpy(out, &bus->usb_mode_switch, sizeof(bus->usb_mode_switch));
+        memcpy(out, &hikey->usb_mode_switch, sizeof(hikey->usb_mode_switch));
         return ZX_OK;
     }
     default:
-        return ZX_ERR_NOT_SUPPORTED;
+        return hi3660_get_protocol(hikey->hi3660, proto_id, out);
     }
 }
 
-static pbus_interface_ops_t hi3660_bus_ops = {
-    .get_protocol = hi3660_get_protocol,
+static pbus_interface_ops_t hikey960_ops = {
+    .get_protocol = hikey960_get_protocol,
 };
 
-static void hi3660_release(void* ctx) {
-    hikey960_t* bus = ctx;
+static void hikey960_release(void* ctx) {
+    hikey960_t* hikey = ctx;
 
-    hi3660_gpio_release(bus);
-    io_buffer_release(&bus->usb3otg_bc);
-    io_buffer_release(&bus->peri_crg);
-    io_buffer_release(&bus->pctrl);
-
-    free(bus);
+    if (hikey->hi3660) {
+        hi3660_release(hikey->hi3660);
+    }
+    free(hikey);
 }
 
-static zx_protocol_device_t hi3660_device_protocol = {
+static zx_protocol_device_t hikey960_device_protocol = {
     .version = DEVICE_OPS_VERSION,
-    .release = hi3660_release,
+    .release = hikey960_release,
 };
 
-static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent) {
-    hikey960_t* bus = calloc(1, sizeof(hikey960_t));
-    if (!bus) {
+static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
+    hikey960_t* hikey = calloc(1, sizeof(hikey960_t));
+    if (!hikey) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus) != ZX_OK) {
-        free(bus);
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &hikey->pbus) != ZX_OK) {
+        free(hikey);
         return ZX_ERR_NOT_SUPPORTED;
     }
-
-    list_initialize(&bus->gpios);
-    bus->usb_mode = USB_MODE_NONE;
+    hikey->usb_mode = USB_MODE_NONE;
 
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();
-    zx_status_t status;
-    if ((status = io_buffer_init_physical(&bus->usb3otg_bc, MMIO_USB3OTG_BC_BASE,
-                                          MMIO_USB3OTG_BC_LENGTH, resource,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical(&bus->peri_crg, MMIO_PERI_CRG_BASE, MMIO_PERI_CRG_LENGTH,
-                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical(&bus->pctrl, MMIO_PCTRL_BASE, MMIO_PCTRL_LENGTH,
-                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
+    zx_status_t status = hi3660_init(resource, &hikey->hi3660);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "hikey960_bind: hi3660_init failed %d\n", status);
         goto fail;
     }
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "hi3660-bus",
-        .ctx = bus,
-        .ops = &hi3660_device_protocol,
+        .name = "hikey960",
+        .ctx = hikey,
+        .ops = &hikey960_device_protocol,
         // nothing should bind to this device
         // all interaction will be done via the pbus_interface_t
         .flags = DEVICE_ADD_NON_BINDABLE,
@@ -123,43 +131,33 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    bus->usb_mode_switch.ops = &usb_mode_switch_ops;
-    bus->usb_mode_switch.ctx = bus;
+    hikey->usb_mode_switch.ops = &usb_mode_switch_ops;
+    hikey->usb_mode_switch.ctx = hikey;
 
     pbus_interface_t intf;
-    intf.ops = &hi3660_bus_ops;
-    intf.ctx = bus;
-    pbus_set_interface(&bus->pbus, &intf);
+    intf.ops = &hikey960_ops;
+    intf.ctx = hikey;
+    pbus_set_interface(&hikey->pbus, &intf);
 
-    if ((status = hi3660_gpio_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "hi3660_bind: hi3660_gpio_init failed!\n");;
+    if ((status = hikey960_add_devices(hikey)) != ZX_OK) {
+        zxlogf(ERROR, "hikey960_bind: hi3660_add_devices failed!\n");;
     }
-
-    if ((status = hikey960_add_devices(bus)) != ZX_OK) {
-        zxlogf(ERROR, "hi3660_bind: hi3660_add_devices failed!\n");;
-    }
-
-    // must be after pbus_set_interface
-    if ((status = hi3660_usb_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "hi3660_bind: hi3660_usb_init failed!\n");;
-    }
-    hi3660_usb_set_mode(bus, USB_MODE_NONE);
 
     return ZX_OK;
 
 fail:
-    zxlogf(ERROR, "hi3660_bind failed %d\n", status);
-    hi3660_release(bus);
+    zxlogf(ERROR, "hikey960_bind failed %d\n", status);
+    hikey960_release(hikey);
     return status;
 }
 
-static zx_driver_ops_t hi3660_driver_ops = {
+static zx_driver_ops_t hikey960_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = hi3660_bind,
+    .bind = hikey960_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(hi3660, hi3660_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(hikey960, hikey960_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_96BOARDS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_HIKEY960),
-ZIRCON_DRIVER_END(hi3660)
+ZIRCON_DRIVER_END(hikey960)
