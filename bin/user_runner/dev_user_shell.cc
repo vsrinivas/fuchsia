@@ -47,7 +47,8 @@ class Settings {
 };
 
 class DevUserShellApp : modular::StoryWatcher,
-                        maxwell::SuggestionListener,
+                        maxwell::InterruptionListener,
+                        maxwell::NextListener,
                         public modular::SingleServiceApp<modular::UserShell> {
  public:
   explicit DevUserShellApp(app::ApplicationContext* const application_context,
@@ -79,9 +80,9 @@ class DevUserShellApp : modular::StoryWatcher,
         visible_stories_controller_.NewRequest());
 
     suggestion_provider_->SubscribeToInterruptions(
-        suggestion_listener_bindings_.AddBinding(this));
+        interruption_listener_bindings_.AddBinding(this));
     suggestion_provider_->SubscribeToNext(
-        suggestion_listener_bindings_.AddBinding(this), 3);
+        next_listener_bindings_.AddBinding(this), 3);
 
     Connect();
   }
@@ -153,29 +154,24 @@ class DevUserShellApp : modular::StoryWatcher,
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
-  // |SuggestionListener|
-  void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
-    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnAdd()";
+  // |NextListener|
+  void OnNextResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
+    FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "
                     << suggestion->display->headline;
     }
   }
 
-  // |SuggestionListener|
-  void OnRemove(const fidl::String& suggestion_id) override {
-    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemove() "
-                << suggestion_id;
+  // |InterruptionListener|
+  void OnInterrupt(maxwell::SuggestionPtr suggestion) override {
+    FXL_VLOG(4) << "DevUserShell/InterruptionListener::OnInterrupt() "
+                << suggestion->uuid;
   }
 
-  // |SuggestionListener|
-  void OnRemoveAll() override {
-    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemoveAll()";
-  }
-
-  // |SuggestionListener|
+  // |NextListener|
   void OnProcessingChange(bool processing) override {
-    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnProcessingChange("
+    FXL_VLOG(4) << "DevUserShell/NextListener::OnProcessingChange("
                 << processing << ")";
   }
 
@@ -193,7 +189,9 @@ class DevUserShellApp : modular::StoryWatcher,
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
+  fidl::BindingSet<maxwell::InterruptionListener>
+      interruption_listener_bindings_;
+  fidl::BindingSet<maxwell::NextListener> next_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };

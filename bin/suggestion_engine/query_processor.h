@@ -8,6 +8,7 @@
 #include <set>
 
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
@@ -16,10 +17,20 @@ namespace maxwell {
 
 class SuggestionEngineImpl;
 
+// The query processor handles the pull-based query suggestion process,
+// including requesting suggestions from QueryHandlers, collating and
+// ranking those suggestions, and then providing them to the user.
 class QueryProcessor {
  public:
-  QueryProcessor(SuggestionEngineImpl* engine, UserInputPtr input);
+  QueryProcessor(SuggestionEngineImpl* engine,
+                 fidl::InterfaceHandle<QueryListener> listener,
+                 UserInputPtr input,
+                 size_t max_results);
   ~QueryProcessor();
+
+  void AddProposal(const std::string& source_url, ProposalPtr proposal);
+  void RemoveProposal(const std::string& component_url,
+                      const std::string& proposal_id);
 
  private:
   void DispatchQuery(const QueryHandlerRecord& handler_record);
@@ -27,9 +38,15 @@ class QueryProcessor {
                        QueryResponsePtr response);
   void EndRequest();
   void TimeOut();
+  void NotifyOfResults();
+
+  QueryListener* listener() const { return listener_.get(); }
 
   SuggestionEngineImpl* const engine_;
+  QueryListenerPtr listener_;
   const UserInputPtr input_;
+  const size_t max_results_;
+  bool dirty_;
 
   std::multiset<std::string> outstanding_handlers_;
   // When multiple handlers want to play media as part of their responses, we

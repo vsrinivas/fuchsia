@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/time/time_delta.h"
@@ -16,34 +17,32 @@
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
-#include "peridot/bin/suggestion_engine/windowed_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 #include <string>
 
 namespace maxwell {
 
-SuggestionEngineImpl::SuggestionEngineImpl()
-    : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      ask_suggestions_(new RankedSuggestions(&ask_channel_)),
-      ask_dirty_(false),
-      next_suggestions_(new RankedSuggestions(&next_channel_)),
-      next_dirty_(false) {
-  app_context_->outgoing_services()->AddService<SuggestionEngine>(
+SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
+    : ask_suggestions_(new RankedSuggestionsList()),
+      interruptions_processor_(new InterruptionsProcessor()),
+      next_processor_(new NextProcessor(this)),
+      next_suggestions_(new RankedSuggestionsList()) {
+  app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-  app_context_->outgoing_services()->AddService<SuggestionProvider>(
+  app_context->outgoing_services()->AddService<SuggestionProvider>(
       [this](fidl::InterfaceRequest<SuggestionProvider> request) {
         suggestion_provider_bindings_.AddBinding(this, std::move(request));
       });
-  app_context_->outgoing_services()->AddService<SuggestionDebug>(
+  app_context->outgoing_services()->AddService<SuggestionDebug>(
       [this](fidl::InterfaceRequest<SuggestionDebug> request) {
         debug_bindings_.AddBinding(&debug_, std::move(request));
       });
 
   media_service_ =
-      app_context_->ConnectToEnvironmentService<media::MediaService>();
+      app_context->ConnectToEnvironmentService<media::MediaService>();
   media_service_.set_error_handler([this] {
     FXL_LOG(INFO) << "Media service connection error";
     media_service_ = nullptr;
@@ -70,30 +69,11 @@ SuggestionEngineImpl::SuggestionEngineImpl()
       0, std::make_shared<QueryMatchRankingFeature>());
 }
 
+SuggestionEngineImpl::~SuggestionEngineImpl() = default;
+
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            ProposalPtr proposal) {
-  // The component_url and proposal ID form a unique identifier for a proposal.
-  // If one already exists, remove it before adding the new one.
-  RemoveProposal(source->component_url(), proposal->id);
-
-  auto suggestion =
-      CreateSuggestionPrototype(source->component_url(), std::move(proposal));
-
-  if (IsInterruption(*suggestion)) {
-    debug_.OnInterrupt(suggestion);
-    interruption_channel_.AddSuggestion(*suggestion);
-  }
-
-  next_suggestions_->AddSuggestion(suggestion);
-  next_dirty_ = true;
-}
-
-void SuggestionEngineImpl::AddAskProposal(const std::string& source_url,
-                                          ProposalPtr proposal) {
-  RemoveProposal(source_url, proposal->id);
-  auto suggestion = CreateSuggestionPrototype(source_url, std::move(proposal));
-  ask_suggestions_->AddSuggestion(std::move(suggestion));
-  ask_dirty_ = true;
+  next_processor_->AddProposal(source->component_url(), std::move(proposal));
 }
 
 void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
@@ -101,26 +81,17 @@ void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
   const auto key = std::make_pair(component_url, proposal_id);
   auto toRemove = suggestion_prototypes_.find(key);
   if (toRemove != suggestion_prototypes_.end()) {
-    RankedSuggestion* matchingSuggestion =
-        next_suggestions_->GetSuggestion(component_url, proposal_id);
-    if (matchingSuggestion && IsInterruption(*matchingSuggestion->prototype)) {
-      interruption_channel_.RemoveSuggestion(*matchingSuggestion->prototype);
-    }
-    if (ask_suggestions_->RemoveProposal(component_url, proposal_id)) {
-      ask_dirty_ = true;
-    }
-    if (next_suggestions_->RemoveProposal(component_url, proposal_id)) {
-      next_dirty_ = true;
-    }
+    if (active_query_ != nullptr)
+      active_query_->RemoveProposal(component_url, proposal_id);
+    next_processor_->RemoveProposal(component_url, proposal_id);
     suggestion_prototypes_.erase(toRemove);
   }
 }
 
 // |SuggestionProvider|
-void SuggestionEngineImpl::Query(
-    fidl::InterfaceHandle<SuggestionListener> listener,
-    UserInputPtr input,
-    int count) {
+void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
+                                 UserInputPtr input,
+                                 int count) {
   // TODO(jwnichols): I'm not sure this is correct or should be here
   speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
     listener->OnStatusChanged(SpeechStatus::PROCESSING);
@@ -149,52 +120,26 @@ void SuggestionEngineImpl::Query(
     debug_.OnAskStart(query, ask_suggestions_);
   }
 
-  // Step 3
-  // TODO(rosswang/jwnichols): move the subscriber and ask channel into the
-  // query processor
-  std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
-      std::make_unique<WindowedSuggestionSubscriber>(
-          ask_suggestions_, std::move(listener), count);
-
-  subscriber->set_error_handler([this] {
-    debug_.OnSuggestionSelected(nullptr);
-    CleanUpPreviousQuery();
-  });  // called if the listener disconnects
-
-  ask_channel_.AddSubscriber(std::move(subscriber));
-
-  // Steps 4 - 6
-  active_query_ = std::make_unique<QueryProcessor>(this, std::move(input));
+  // Steps 3 - 6
+  active_query_ = std::make_unique<QueryProcessor>(this, std::move(listener),
+                                                   std::move(input), count);
 }
 
 void SuggestionEngineImpl::Validate() {
-  if (next_dirty_) {
-    next_suggestions_->Rank();
-    debug_.OnNextUpdate(next_suggestions_);
-    next_dirty_ = false;
-  }
-  if (ask_dirty_) {
-    // The only way ask can be dirty outside of a query is removals, so we don't
-    // need to rerank.
-    ask_channel_.DispatchInvalidate();
-    ask_dirty_ = false;
-  }
+  next_processor_->Validate();
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
-    fidl::InterfaceHandle<SuggestionListener> listener) {
-  interruption_channel_.AddSubscriber(std::move(listener), *next_suggestions_);
+    fidl::InterfaceHandle<InterruptionListener> listener) {
+  interruptions_processor_->RegisterListener(std::move(listener));
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToNext(
-    fidl::InterfaceHandle<SuggestionListener> listener,
+    fidl::InterfaceHandle<NextListener> listener,
     int count) {
-  std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
-      std::make_unique<WindowedSuggestionSubscriber>(
-          next_suggestions_, std::move(listener), count);
-  next_channel_.AddSubscriber(std::move(subscriber));
+  next_processor_->RegisterListener(std::move(listener), count);
 }
 
 // |SuggestionProvider|
@@ -285,7 +230,8 @@ void SuggestionEngineImpl::Initialize(
 // end SuggestionEngine
 
 void SuggestionEngineImpl::CleanUpPreviousQuery() {
-  active_query_ = nullptr;
+  // Clean up the query processor
+  active_query_.reset();
 
   // Clean up the suggestions
   for (auto& suggestion : ask_suggestions_->Get()) {
@@ -294,9 +240,6 @@ void SuggestionEngineImpl::CleanUpPreviousQuery() {
                        suggestion->prototype->proposal->id));
   }
   ask_suggestions_->RemoveAllSuggestions();
-
-  // Clean up the query suggestion subscriber
-  ask_channel_.RemoveAllSubscribers();
 }
 
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
@@ -487,7 +430,11 @@ void SuggestionEngineImpl::HandleMediaUpdates(
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  maxwell::SuggestionEngineImpl app;
+  auto context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<maxwell::SuggestionEngineImpl> driver(
+      context->outgoing_services(),
+      std::make_unique<maxwell::SuggestionEngineImpl>(context.get()),
+      [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

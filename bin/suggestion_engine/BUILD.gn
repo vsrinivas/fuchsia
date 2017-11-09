@@ -16,6 +16,8 @@ executable("bin") {
   output_name = "suggestion_engine"
 
   sources = [
+    "next_processor.cc",
+    "next_processor.h",
     "proposal_publisher_impl.cc",
     "proposal_publisher_impl.h",
     "query_handler_record.h",
@@ -28,12 +30,10 @@ executable("bin") {
   deps = [
     ":debug",
     ":filter",
-    ":interfaces",
     ":interruptions",
     ":models",
     ":ranking",
     ":state",
-    ":subscribers",
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
     "//garnet/public/lib/app/cpp",
@@ -43,6 +43,7 @@ executable("bin") {
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
@@ -53,40 +54,14 @@ executable("bin") {
 
 source_set("interruptions") {
   sources = [
-    "interruptions_channel.cc",
-    "interruptions_channel.h",
+    "interruptions_processor.cc",
+    "interruptions_processor.h",
   ]
 
   deps = [
     ":models",
     ":ranking",
     ":state",
-    "//peridot/public/lib/suggestion/fidl",
-  ]
-}
-
-source_set("subscribers") {
-  sources = [
-    "windowed_subscriber.cc",
-    "windowed_subscriber.h",
-  ]
-
-  deps = [
-    ":interfaces",
-    ":models",
-    ":state",
-    "//peridot/public/lib/suggestion/fidl",
-  ]
-}
-
-source_set("interfaces") {
-  sources = [
-    "suggestion_subscriber.cc",
-    "suggestion_subscriber.h",
-  ]
-
-  deps = [
-    ":models",
     "//peridot/public/lib/suggestion/fidl",
   ]
 }
@@ -114,14 +89,11 @@ source_set("ranking") {
 
 source_set("state") {
   sources = [
-    "ranked_suggestions.cc",
-    "ranked_suggestions.h",
-    "suggestion_channel.cc",
-    "suggestion_channel.h",
+    "ranked_suggestions_list.cc",
+    "ranked_suggestions_list.h",
   ]
 
   deps = [
-    ":interfaces",
     ":models",
     ":ranking",
     "//garnet/public/lib/fxl",

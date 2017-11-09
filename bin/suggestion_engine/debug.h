@@ -12,21 +12,22 @@
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 
-#include "peridot/bin/suggestion_engine/ranked_suggestions.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {
 
+// Provides a debug interface that is accessible through the MI dashboard.
 class SuggestionDebugImpl : public SuggestionDebug {
  public:
   SuggestionDebugImpl();
 
-  void OnAskStart(std::string query, const RankedSuggestions* suggestions);
+  void OnAskStart(std::string query, const RankedSuggestionsList* suggestions);
   void OnSuggestionSelected(const SuggestionPrototype* selected_suggestion);
   void OnInterrupt(const SuggestionPrototype* interrupt_suggestion);
-  void OnNextUpdate(const RankedSuggestions* suggestions);
+  void OnNextUpdate(const RankedSuggestionsList* suggestions);
 
  private:
   // |SuggestionDebug|

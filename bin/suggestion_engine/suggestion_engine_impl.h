@@ -13,11 +13,12 @@
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/filter.h"
-#include "peridot/bin/suggestion_engine/interruptions_channel.h"
+#include "peridot/bin/suggestion_engine/interruptions_processor.h"
+#include "peridot/bin/suggestion_engine/next_processor.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
 #include "peridot/bin/suggestion_engine/query_processor.h"
-#include "peridot/bin/suggestion_engine/ranked_suggestions.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
@@ -35,6 +36,7 @@
 namespace maxwell {
 
 class ProposalPublisherImpl;
+class NextProcessor;
 class QueryProcessor;
 
 const std::string kQueryContextKey = "/suggestion_engine/current_query";
@@ -42,42 +44,38 @@ const std::string kQueryContextKey = "/suggestion_engine/current_query";
 // This class is currently responsible for 3 things:
 //
 // 1) Maintaining repositories of ranked Suggestions (stored inside
-//    the RankedSuggestions class) for both Ask and Next proposals.
-//  a) Ask suggestions are issued by AskHandlers, in a pull-based model
-//     in response to Ask queries. Ask queries are issued via the
-//     DispatchAsk method, and Suggestions are asynchronously returned
-//     through DispatchAsk's callback.
+//    the RankedSuggestionsList class) for both Query and Next proposals.
+//  a) Each query is handled by a separate instance of the QueryProcessor.
 //
-//     The set of Ask proposals for the latest query are currently
-//     buffered in the ask_suggestions_ member, though this process can
+//     The set of Query proposals for the latest query are currently
+//     buffered in the ask_suggestions_ member, though this process should
 //     be made entirely stateless.
 //
 //  b) Next suggestions are issued by ProposalPublishers through the
 //     Propose method, and can be issued at any time. These proposals
-//     are stored in the next_suggestions_ member.
+//     are stored in the next_suggestions_ member. The NextProcessor
+//     handles all processing and notification of these proposals.
 //
-//   Whenever a RankedSuggestions object is updated, that update is pushed
-//   to its registered subscribers (SuggestionSubscribers). These subscribers
-//   are registered on a SuggestionChannel object -- each RankedSuggestions
-//   object has a single SuggestionChannel.
+//  c) New next proposals are also considered for interruption. The
+//     InterruptionProcessor examines proposals, decides whether they
+//     should interruption, and, if so, makes further decisions about
+//     when and how those interruptions should take place.
 //
-// 2) Storing FIDL bindings for AskHandlers and ProposalPublishers.
+// 2) Storing the FIDL bindings for QueryHandlers and ProposalPublishers.
 //
 //  a) ProposalPublishers (for Next Suggestions) can be registered via the
-//     RegisterPublisher method.
+//     RegisterProposalPublisher method.
 //
-//  b) AskHandlers are currently registered through
-//     ProposalPublisher.RegisterAskHandler, but this is unnecessary coupling
-//     between the ProposalPublisher (a Next interface) and AskHandler (an Ask
-//     interface), so this should eventually be changed with the addition of
-//     SuggestionEngine.RegisterAskHandler
+//  b) QueryHandlers are currently registered through the 
+//     RegisterQueryHandler method.
 //
 // 3) Acts as a SuggestionProvider for those wishing to subscribe to
 //    Suggestions.
 class SuggestionEngineImpl : public SuggestionEngine,
                              public SuggestionProvider {
  public:
-  SuggestionEngineImpl();
+  SuggestionEngineImpl(app::ApplicationContext* app_context);
+  ~SuggestionEngineImpl();
 
   // TODO(andrewosh): The following two methods should be removed. New
   // ProposalPublishers should be created whenever they're requested, and they
@@ -96,14 +94,14 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // |SuggestionProvider|
   void SubscribeToInterruptions(
-      fidl::InterfaceHandle<SuggestionListener> listener) override;
+      fidl::InterfaceHandle<InterruptionListener> listener) override;
 
   // |SuggestionProvider|
-  void SubscribeToNext(fidl::InterfaceHandle<SuggestionListener> listener,
+  void SubscribeToNext(fidl::InterfaceHandle<NextListener> listener,
                        int count) override;
 
   // |SuggestionProvider|
-  void Query(fidl::InterfaceHandle<SuggestionListener> listener,
+  void Query(fidl::InterfaceHandle<QueryListener> listener,
              UserInputPtr input,
              int count) override;
 
@@ -147,17 +145,17 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // re-ranks dirty channels and dispatches updates
   void Validate();
 
+  void Terminate(std::function<void()> done) { done(); }
+
  private:
+  friend class InterruptionsProcessor;
+  friend class NextProcessor;
   friend class QueryProcessor;
 
   // Cleans up all resources associated with a query, including clearing
   // the previous ask suggestions, closing any still open SuggestionListeners,
   // etc.
   void CleanUpPreviousQuery();
-
-  // TODO(jwnichols): Remove when we change the way ask suggestions are
-  // returned to SysUI
-  void AddAskProposal(const std::string& source_url, ProposalPtr proposal);
 
   // Searches for a SuggestionPrototype in the Next and Ask lists.
   SuggestionPrototype* FindSuggestion(std::string suggestion_id);
@@ -179,8 +177,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void PlayMediaResponse(MediaResponsePtr media_response);
   void HandleMediaUpdates(uint64_t version,
                           media::MediaTimelineControlPointStatusPtr status);
-
-  std::unique_ptr<app::ApplicationContext> app_context_;
 
   fidl::BindingSet<SuggestionEngine> bindings_;
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
@@ -212,15 +208,12 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // TODO(rosswang): it may be worthwhile to collapse these trios into classes
   // Channels that dispatch outbound suggestions to SuggestionListeners.
-  SuggestionChannel ask_channel_;
-  RankedSuggestions* ask_suggestions_;
-  bool ask_dirty_;
+  RankedSuggestionsList* ask_suggestions_;
 
-  SuggestionChannel next_channel_;
-  RankedSuggestions* next_suggestions_;
-  bool next_dirty_;
+  InterruptionsProcessor* interruptions_processor_;
 
-  InterruptionsChannel interruption_channel_;
+  NextProcessor* next_processor_;
+  RankedSuggestionsList* next_suggestions_;
 
   // The set of all QueryHandlers that have been registered mapped to their
   // URLs (stored as strings).
@@ -249,6 +242,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineImpl);
 };
 
 }  // namespace maxwell

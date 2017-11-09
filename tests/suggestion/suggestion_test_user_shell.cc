@@ -17,7 +17,7 @@
 namespace {
 
 class TestApp : modular::StoryWatcher,
-                maxwell::SuggestionListener,
+                maxwell::NextListener,
                 public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(app::ApplicationContext* const application_context)
@@ -81,8 +81,8 @@ class TestApp : modular::StoryWatcher,
 
   TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
-  // |SuggestionListener|
-  void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
+  // |NextListener|
+  void OnNextResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
     for (auto& suggestion : suggestions) {
       auto& display = suggestion->display;
       if (display->headline == "foo" && display->subheadline == "bar" &&
@@ -95,13 +95,7 @@ class TestApp : modular::StoryWatcher,
     }
   }
 
-  // |SuggestionListener|
-  void OnRemove(const fidl::String& /*suggestion_id*/) override {}
-
-  // |SuggestionListener|
-  void OnRemoveAll() override {}
-
-  // |SuggestionListener|
+  // |NextListener|
   void OnProcessingChange(bool processing) override {}
 
   mozart::ViewOwnerPtr view_owner_;
@@ -112,7 +106,7 @@ class TestApp : modular::StoryWatcher,
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
+  fidl::BindingSet<maxwell::NextListener> suggestion_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

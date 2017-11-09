@@ -11,13 +11,39 @@ bool suggestion_less(const maxwell::Suggestion* a,
   return a->confidence > b->confidence;
 }
 
-void TestSuggestionListener::OnAdd(
-    fidl::Array<maxwell::SuggestionPtr> suggestions) {
-  FXL_LOG(INFO) << "OnAdd(" << suggestions << ")";
+void TestSuggestionListener::OnInterrupt(maxwell::SuggestionPtr suggestion) {
+  FXL_LOG(INFO) << "OnInterrupt(" << suggestion->uuid << ")";
 
-  // Since OnAdd receives a snapshot of changes with self-consistent ordering
-  // (TODO(rosswang): behavior not documented), we don't have to re-search from
-  // the beginning every time (though this is not a significant savings).
+  ClearSuggestions();
+
+  auto insert_head = ordered_suggestions_.begin();
+  insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
+                                 suggestion.get(), suggestion_less);
+  insert_head = ordered_suggestions_.emplace(insert_head, suggestion.get()) + 1;
+  suggestions_by_id_[suggestion->uuid] = std::move(suggestion);
+
+  EXPECT_EQ((signed)ordered_suggestions_.size(),
+            (signed)suggestions_by_id_.size());
+}
+
+void TestSuggestionListener::OnNextResults(
+    fidl::Array<maxwell::SuggestionPtr> suggestions) {
+  FXL_LOG(INFO) << "OnNextResults(" << suggestions << ")";
+
+  OnAnyResults(suggestions);
+}
+
+void TestSuggestionListener::OnQueryResults(
+    fidl::Array<maxwell::SuggestionPtr> suggestions) {
+  FXL_LOG(INFO) << "OnQueryResults(" << suggestions << ")";
+
+  OnAnyResults(suggestions);
+}
+
+void TestSuggestionListener::OnAnyResults(
+    fidl::Array<maxwell::SuggestionPtr>& suggestions) {
+  ClearSuggestions();
+
   auto insert_head = ordered_suggestions_.begin();
   for (auto& suggestion : suggestions) {
     insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
@@ -31,26 +57,16 @@ void TestSuggestionListener::OnAdd(
             (signed)suggestions_by_id_.size());
 }
 
-void TestSuggestionListener::OnRemove(const fidl::String& uuid) {
-  FXL_LOG(INFO) << "OnRemove(" << uuid << ")";
-  auto it = suggestions_by_id_.find(uuid);
-  auto range =
-      std::equal_range(ordered_suggestions_.begin(), ordered_suggestions_.end(),
-                       it->second.get(), suggestion_less);
-  ordered_suggestions_.erase(
-      std::remove(range.first, range.second, it->second.get()), range.second);
-  suggestions_by_id_.erase(it);
-
-  EXPECT_EQ((signed)ordered_suggestions_.size(),
-            (signed)suggestions_by_id_.size());
-}
-
-void TestSuggestionListener::OnRemoveAll() {
-  FXL_LOG(INFO) << "OnRemoveAll";
+void TestSuggestionListener::ClearSuggestions() {
+  // For use when the listener_binding_ is reset
   ordered_suggestions_.clear();
   suggestions_by_id_.clear();
 }
 
 void TestSuggestionListener::OnProcessingChange(bool processing) {
   FXL_LOG(INFO) << "OnProcessingChange to " << processing;
+}
+
+void TestSuggestionListener::OnQueryComplete() {
+  FXL_LOG(INFO) << "OnQueryComplete";
 }

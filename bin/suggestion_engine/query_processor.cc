@@ -18,9 +18,14 @@ constexpr fxl::TimeDelta kQueryTimeout = fxl::TimeDelta::FromSeconds(9);
 }  // namespace
 
 QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
-                               maxwell::UserInputPtr input)
+                               fidl::InterfaceHandle<QueryListener> listener,
+                               maxwell::UserInputPtr input,
+                               size_t max_results)
     : engine_(engine),
+      listener_(listener.Bind()),
       input_(std::move(input)),
+      max_results_(max_results),
+      dirty_(false),
       has_media_response_(false),
       request_ended_(false),
       weak_ptr_factory_(this) {
@@ -46,6 +51,22 @@ QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
 QueryProcessor::~QueryProcessor() {
   if (!request_ended_)
     EndRequest();
+}
+
+void QueryProcessor::AddProposal(const std::string& source_url,
+                                 ProposalPtr proposal) {
+  RemoveProposal(source_url, proposal->id);
+  auto suggestion =
+      engine_->CreateSuggestionPrototype(source_url, std::move(proposal));
+  engine_->ask_suggestions_->AddSuggestion(std::move(suggestion));
+  dirty_ = true;
+}
+
+void QueryProcessor::RemoveProposal(const std::string& component_url,
+                                    const std::string& proposal_id) {
+  if (engine_->ask_suggestions_->RemoveProposal(component_url, proposal_id)) {
+    dirty_ = true;
+  }
 }
 
 void QueryProcessor::DispatchQuery(const QueryHandlerRecord& handler_record) {
@@ -83,11 +104,14 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 
   // Ranking currently happens as each set of proposals are added.
   for (auto& proposal : response->proposals) {
-    engine_->AddAskProposal(handler_url, std::move(proposal));
+    AddProposal(handler_url, std::move(proposal));
   }
   engine_->ask_suggestions_->Rank(*input_);
   // Rank includes an invalidate dispatch
-  engine_->ask_dirty_ = false;
+  dirty_ = false;
+
+  // Update the QueryListener with new results
+  NotifyOfResults();
 
   // Update the suggestion engine debug interface
   engine_->debug_.OnAskStart(input_->text, engine_->ask_suggestions_);
@@ -105,7 +129,7 @@ void QueryProcessor::EndRequest() {
   FXL_DCHECK(!request_ended_);
 
   engine_->debug_.OnAskStart(input_->text, engine_->ask_suggestions_);
-  engine_->ask_channel_.DispatchOnProcessingChange(false);
+  listener_->OnQueryComplete();
 
   if (!has_media_response_) {
     // there was no media response for this query, so idle immediately
@@ -127,6 +151,18 @@ void QueryProcessor::TimeOut() {
 
     EndRequest();
   }
+}
+
+void QueryProcessor::NotifyOfResults() {
+  const auto& suggestion_vector = engine_->ask_suggestions_->Get();
+
+  fidl::Array<SuggestionPtr> window;
+  for (size_t i = 0; i < max_results_ && i < suggestion_vector.size(); i++) {
+    window.push_back(CreateSuggestion(*suggestion_vector[i]));
+  }
+
+  if (window)
+    listener_->OnQueryResults(std::move(window));
 }
 
 }  // namespace maxwell

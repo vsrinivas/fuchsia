@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/suggestion_engine/ranked_suggestions.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 
 #include <algorithm>
 #include <string>
@@ -26,10 +26,11 @@ MatchPredicate GetSuggestionMatcher(const std::string& suggestion_id) {
   };
 }
 
-RankedSuggestions::RankedSuggestions(SuggestionChannel* channel)
-    : channel_(channel), normalization_factor_(0.0) {}
+RankedSuggestionsList::RankedSuggestionsList() : normalization_factor_(0.0) {}
 
-RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
+RankedSuggestionsList::~RankedSuggestionsList() = default;
+
+RankedSuggestion* RankedSuggestionsList::GetMatchingSuggestion(
     MatchPredicate matchFunction) const {
   auto findIter =
       std::find_if(suggestions_.begin(), suggestions_.end(), matchFunction);
@@ -38,7 +39,7 @@ RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
   return nullptr;
 }
 
-bool RankedSuggestions::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
+bool RankedSuggestionsList::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
   auto remove_iter =
       std::remove_if(suggestions_.begin(), suggestions_.end(), matchFunction);
   if (remove_iter == suggestions_.end()) {
@@ -49,7 +50,7 @@ bool RankedSuggestions::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
   }
 }
 
-void RankedSuggestions::AddRankingFeature(
+void RankedSuggestionsList::AddRankingFeature(
     double weight,
     std::shared_ptr<RankingFeature> ranking_feature) {
   ranking_features_.emplace_back(weight, ranking_feature);
@@ -58,7 +59,7 @@ void RankedSuggestions::AddRankingFeature(
     normalization_factor_ += weight;
 }
 
-void RankedSuggestions::Rank(const UserInput& query) {
+void RankedSuggestionsList::Rank(const UserInput& query) {
   for (auto& suggestion : suggestions_) {
     double confidence = 0.0;
     for (auto& feature : ranking_features_) {
@@ -77,42 +78,40 @@ void RankedSuggestions::Rank(const UserInput& query) {
                 << " => " << suggestion->confidence;
   }
   DoStableSort();
-  channel_->DispatchInvalidate();
 }
 
-void RankedSuggestions::AddSuggestion(SuggestionPrototype* prototype) {
+void RankedSuggestionsList::AddSuggestion(SuggestionPrototype* prototype) {
   std::unique_ptr<RankedSuggestion> ranked_suggestion =
       std::make_unique<RankedSuggestion>();
   ranked_suggestion->prototype = prototype;
   suggestions_.push_back(std::move(ranked_suggestion));
 }
 
-bool RankedSuggestions::RemoveProposal(const std::string& component_url,
+bool RankedSuggestionsList::RemoveProposal(const std::string& component_url,
                                        const std::string& proposal_id) {
   return RemoveMatchingSuggestion(
       GetSuggestionMatcher(component_url, proposal_id));
 }
 
-RankedSuggestion* RankedSuggestions::GetSuggestion(
+RankedSuggestion* RankedSuggestionsList::GetSuggestion(
     const std::string& suggestion_id) const {
   return GetMatchingSuggestion(GetSuggestionMatcher(suggestion_id));
 }
 
-RankedSuggestion* RankedSuggestions::GetSuggestion(
+RankedSuggestion* RankedSuggestionsList::GetSuggestion(
     const std::string& component_url,
     const std::string& proposal_id) const {
   return GetMatchingSuggestion(
       GetSuggestionMatcher(component_url, proposal_id));
 }
 
-void RankedSuggestions::RemoveAllSuggestions() {
+void RankedSuggestionsList::RemoveAllSuggestions() {
   suggestions_.clear();
-  channel_->DispatchInvalidate();
 }
 
 // Start of private sorting methods.
 
-void RankedSuggestions::DoStableSort() {
+void RankedSuggestionsList::DoStableSort() {
   std::stable_sort(suggestions_.begin(), suggestions_.end(),
                    [](const std::unique_ptr<RankedSuggestion>& a,
                       const std::unique_ptr<RankedSuggestion>& b) {

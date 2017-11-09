@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_
 
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
-#include "peridot/bin/suggestion_engine/suggestion_channel.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 #include <functional>
@@ -17,9 +16,13 @@ namespace maxwell {
 using MatchPredicate =
     std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
 
-class RankedSuggestions {
+// Stores a list of RankedSuggestion objects and the features by which they
+// should be ranked.  Ranking must be explicitly triggered via the Rank
+// method.
+class RankedSuggestionsList {
  public:
-  RankedSuggestions(SuggestionChannel* channel);
+  RankedSuggestionsList();
+  ~RankedSuggestionsList();
 
   void AddRankingFeature(double weight,
                          std::shared_ptr<RankingFeature> ranking_feature);
@@ -47,9 +50,6 @@ class RankedSuggestions {
   bool RemoveMatchingSuggestion(MatchPredicate matchFunction);
   void DoStableSort();
 
-  // The channel to push addition/removal events into.
-  SuggestionChannel* channel_;
-
   // The sorted vector of RankedSuggestions, sorted by
   // |ranking_function_|. The vector is re-sorted whenever its
   // contents are modified or when |ranking_function_| is updated.
@@ -68,4 +68,4 @@ class RankedSuggestions {
 
 }  // namespace maxwell
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_

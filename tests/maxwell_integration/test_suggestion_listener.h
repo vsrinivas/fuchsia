@@ -12,20 +12,28 @@
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
-class TestSuggestionListener : public maxwell::SuggestionListener {
+class TestSuggestionListener : public maxwell::NextListener,
+                               public maxwell::QueryListener,
+                               public maxwell::InterruptionListener {
  public:
-  void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override;
-  void OnRemove(const fidl::String& uuid) override;
-  void OnRemoveAll() override;
+  // |InterruptionListener|
+  void OnInterrupt(maxwell::SuggestionPtr suggestion) override;
+
+  // |NextListener|
+  void OnNextResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override;
+
+  // |NextListener|
   void OnProcessingChange(bool processing) override;
+
+  // |QueryListener|
+  void OnQueryResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override;
+
+  // |QueryListener|
+  void OnQueryComplete() override;
 
   int suggestion_count() const { return (signed)ordered_suggestions_.size(); }
 
-  void ClearSuggestions() {
-    // For use when the listener_binding_ is reset
-    ordered_suggestions_.clear();
-    suggestions_by_id_.clear();
-  }
+  void ClearSuggestions();
 
   // Exposes a pointer to the only suggestion in this listener. Retains
   // ownership of the pointer.
@@ -55,6 +63,8 @@ class TestSuggestionListener : public maxwell::SuggestionListener {
   }
 
  private:
+  void OnAnyResults(fidl::Array<maxwell::SuggestionPtr>& suggestions);
+
   std::map<std::string, maxwell::SuggestionPtr> suggestions_by_id_;
   std::vector<maxwell::Suggestion*> ordered_suggestions_;
 };

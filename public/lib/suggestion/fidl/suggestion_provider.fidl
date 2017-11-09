@@ -21,23 +21,23 @@ interface SuggestionProvider {
   //
   // Any user interactions received by the client should be forwarded to the
   // SuggestionService by calling NotifyInteraction().
-  SubscribeToInterruptions@0(SuggestionListener listener);
+  SubscribeToInterruptions@0(InterruptionListener listener);
 
   // Creates a subscription to "Next" Suggestions, with changes sent to
   // |listener|. A maximum of |count| suggestions will be returned. To
   // change the count, call this method again with a new count.
   //
   // Closing the the |listener| pipe terminates the subscription.
-  SubscribeToNext@1(SuggestionListener listener, int32 count);
+  SubscribeToNext@1(NextListener listener, int32 count);
 
-  // Should be called when the user initiates a query for suggestions, perhaps
+  // Must be called when the user initiates a query for suggestions, perhaps
   // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
   // to the query should be communicated by closing the previous |listener| and
   // calling the method again with the new query.
   //
   // Closing the |listener| pipe signals to the SuggestionService that the query
   // has been completed or canceled.
-  Query@2(SuggestionListener listener, UserInput query, int32 count);
+  Query@2(QueryListener listener, UserInput query, int32 count);
 
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
@@ -52,16 +52,29 @@ interface SuggestionProvider {
   RegisterFeedbackListener@4(FeedbackListener speech_listener);
 };
 
-interface SuggestionListener {
-  // Changed suggestions will maintain the same UUID but will result in a
-  // remove/add pair.
-  OnAdd@0(array<Suggestion> suggestions);
-  OnRemove@1(string uuid);
-  OnRemoveAll@2();
+interface InterruptionListener {
+  // Notifies the user interface to interrupt the user
+  OnInterrupt@0(Suggestion suggestion);
+};
 
-  // This method allows the listener to track the progress of the query and
-  // show an indicator to the user, if desired.
-  OnProcessingChange@3(bool processing);
+interface NextListener {
+  // Notifies the user interface that the passive suggestion results have been
+  // updated. This is called every time the suggestion results change.
+  OnNextResults@0(array<Suggestion> suggestions);
+
+  // Notifies the user interface when processing is occurring on the passive
+  // suggestions, which may result in additions or re-ranking.  The UI may
+  // wish to show a spinner during this time.
+  OnProcessingChange@1(bool processing);
+};
+
+interface QueryListener {
+  // Notifies the user interface that new suggestion results are available.
+  // This may be called multiple times if the suggestion results are updated.
+  OnQueryResults@0(array<Suggestion> suggestions);
+
+  // Notifies the user interface that query processing is completed.
+  OnQueryComplete@1();
 };
 
 enum InteractionType {

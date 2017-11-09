@@ -17,7 +17,7 @@ void makeProposalSummary(const SuggestionPrototype* suggestion,
   (*summary)->display = suggestion->proposal->display.Clone();
 }
 
-void makeProposalSummaries(const RankedSuggestions* suggestions,
+void makeProposalSummaries(const RankedSuggestionsList* suggestions,
                            fidl::Array<ProposalSummaryPtr>* summaries) {
   for (const auto& suggestion : suggestions->Get()) {
     ProposalSummaryPtr summary = ProposalSummary::New();
@@ -27,7 +27,7 @@ void makeProposalSummaries(const RankedSuggestions* suggestions,
 }
 
 void SuggestionDebugImpl::OnAskStart(std::string query,
-                                     const RankedSuggestions* suggestions) {
+                                     const RankedSuggestionsList* suggestions) {
   ask_proposal_listeners_.ForAllPtrs(
       [query, suggestions](AskProposalListener* listener) {
         auto proposals = fidl::Array<ProposalSummaryPtr>::New(0);
@@ -60,7 +60,7 @@ void SuggestionDebugImpl::OnInterrupt(
       });
 }
 
-void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestions* suggestions) {
+void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestionsList* suggestions) {
   next_proposal_listeners_.ForAllPtrs(
       [this, suggestions](NextProposalListener* listener) {
         auto proposals = fidl::Array<ProposalSummaryPtr>::New(0);
