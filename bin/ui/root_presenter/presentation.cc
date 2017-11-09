@@ -17,6 +17,7 @@
 // No workaround required.
 #include <glm/glm.hpp>
 #endif
+#include <glm/ext.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "lib/app/cpp/connect.h"
@@ -27,6 +28,8 @@
 
 namespace root_presenter {
 namespace {
+
+constexpr float kPi = glm::pi<float>();
 
 // View Key: The presentation's own root view.
 constexpr uint32_t kRootViewKey = 1u;
@@ -101,15 +104,15 @@ void Presentation::Present(
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scene_manager_->GetDisplayInfo(fxl::MakeCopyable([
-    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
-    presentation_request = std::move(presentation_request)
-  ](scenic::DisplayInfoPtr display_info) mutable {
-    if (weak)
-      weak->CreateViewTree(std::move(view_owner),
-                           std::move(presentation_request),
-                           std::move(display_info));
-  }));
+  scene_manager_->GetDisplayInfo(fxl::MakeCopyable(
+      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+       presentation_request = std::move(presentation_request)](
+          scenic::DisplayInfoPtr display_info) mutable {
+        if (weak)
+          weak->CreateViewTree(std::move(view_owner),
+                               std::move(presentation_request),
+                               std::move(display_info));
+      }));
 }
 
 void Presentation::CreateViewTree(
@@ -254,78 +257,89 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
   FXL_VLOG(1) << "OnEvent " << *(event);
 
   bool invalidate = false;
-  if (event->is_pointer()) {
-    const mozart::PointerEventPtr& pointer = event->get_pointer();
-    if (pointer->type == mozart::PointerEvent::Type::MOUSE) {
-      if (cursors_.count(pointer->device_id) == 0) {
-        cursors_.emplace(pointer->device_id, CursorState{});
-      }
+  bool dispatch_event = true;
 
-      cursors_[pointer->device_id].position.x = pointer->x;
-      cursors_[pointer->device_id].position.y = pointer->y;
+  // First, allow DisplayFlipper to handle event.
+  if (dispatch_event) {
+    invalidate |= display_flipper_.OnEvent(event, &scene_, display_info_,
+                                           &dispatch_event);
+  }
 
-      // TODO(jpoichet) for now don't show cursor when mouse is added until we
-      // have a timer to hide it. Acer12 sleeve reports 2 mice but only one will
-      // generate events for now.
-      if (pointer->phase != mozart::PointerEvent::Phase::ADD &&
-          pointer->phase != mozart::PointerEvent::Phase::REMOVE) {
-        cursors_[pointer->device_id].visible = true;
-      }
-      invalidate = true;
-    } else {
-      for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {
-        if (it->second.visible) {
-          it->second.visible = false;
-          invalidate = true;
+  if (dispatch_event) {
+    if (event->is_pointer()) {
+      const mozart::PointerEventPtr& pointer = event->get_pointer();
+
+      if (pointer->type == mozart::PointerEvent::Type::MOUSE) {
+        if (cursors_.count(pointer->device_id) == 0) {
+          cursors_.emplace(pointer->device_id, CursorState{});
         }
-      }
-    }
 
-    if (animation_state_ == kTrackball) {
-      if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
-        // If we're not already panning/rotating the camera, then start, but
-        // only if the touch-down is in the bottom 10% of the screen.
-        if (!trackball_pointer_down_ && pointer->y > 0.9f * logical_height_) {
-          trackball_pointer_down_ = true;
-          trackball_device_id_ = pointer->device_id;
-          trackball_pointer_id_ = pointer->pointer_id;
-          trackball_previous_x_ = pointer->x;
+        cursors_[pointer->device_id].position.x = pointer->x;
+        cursors_[pointer->device_id].position.y = pointer->y;
+
+        // TODO(jpoichet) for now don't show cursor when mouse is added until we
+        // have a timer to hide it. Acer12 sleeve reports 2 mice but only one
+        // will generate events for now.
+        if (pointer->phase != mozart::PointerEvent::Phase::ADD &&
+            pointer->phase != mozart::PointerEvent::Phase::REMOVE) {
+          cursors_[pointer->device_id].visible = true;
         }
-      } else if (pointer->phase == mozart::PointerEvent::Phase::MOVE) {
-        // If the moved pointer is the one that is currently panning/rotating
-        // the camera, then update the camera position.
-        if (trackball_pointer_down_ &&
-            trackball_device_id_ == pointer->device_id &&
-            trackball_device_id_ == pointer->device_id) {
-          float pan_rate = -2.5f / logical_width_;
-          float pan_change = pan_rate * (pointer->x - trackball_previous_x_);
-          trackball_previous_x_ = pointer->x;
-
-          camera_pan_ += pan_change;
-          if (camera_pan_ < -1.f) {
-            camera_pan_ = -1.f;
-          } else if (camera_pan_ > 1.f) {
-            camera_pan_ = 1.f;
+        invalidate = true;
+      } else {
+        for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {
+          if (it->second.visible) {
+            it->second.visible = false;
+            invalidate = true;
           }
         }
-      } else if (pointer->phase == mozart::PointerEvent::Phase::UP) {
-        // The pointer was released.
-        if (trackball_pointer_down_ &&
-            trackball_device_id_ == pointer->device_id &&
-            trackball_device_id_ == pointer->device_id) {
-          trackball_pointer_down_ = false;
+      }
+
+      if (animation_state_ == kTrackball) {
+        if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+          // If we're not already panning/rotating the camera, then start, but
+          // only if the touch-down is in the bottom 10% of the screen.
+          if (!trackball_pointer_down_ && pointer->y > 0.9f * logical_height_) {
+            trackball_pointer_down_ = true;
+            trackball_device_id_ = pointer->device_id;
+            trackball_pointer_id_ = pointer->pointer_id;
+            trackball_previous_x_ = pointer->x;
+          }
+        } else if (pointer->phase == mozart::PointerEvent::Phase::MOVE) {
+          // If the moved pointer is the one that is currently panning/rotating
+          // the camera, then update the camera position.
+          if (trackball_pointer_down_ &&
+              trackball_device_id_ == pointer->device_id &&
+              trackball_device_id_ == pointer->device_id) {
+            float pan_rate = -2.5f / logical_width_;
+            float pan_change = pan_rate * (pointer->x - trackball_previous_x_);
+            trackball_previous_x_ = pointer->x;
+
+            camera_pan_ += pan_change;
+            if (camera_pan_ < -1.f) {
+              camera_pan_ = -1.f;
+            } else if (camera_pan_ > 1.f) {
+              camera_pan_ = 1.f;
+            }
+          }
+        } else if (pointer->phase == mozart::PointerEvent::Phase::UP) {
+          // The pointer was released.
+          if (trackball_pointer_down_ &&
+              trackball_device_id_ == pointer->device_id &&
+              trackball_device_id_ == pointer->device_id) {
+            trackball_pointer_down_ = false;
+          }
         }
       }
-    }
-  } else if (event->is_keyboard()) {
-    // Alt-Backspace cycles through modes.
-    const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
-    if ((kbd->modifiers & mozart::kModifierAlt) &&
-        kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == 0 && kbd->hid_usage == 42 &&
-        !trackball_pointer_down_) {
-      HandleAltBackspace();
-      invalidate = true;
+    } else if (event->is_keyboard()) {
+      // Alt-Backspace cycles through modes.
+      const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
+      if ((kbd->modifiers & mozart::kModifierAlt) &&
+          kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
+          kbd->code_point == 0 && kbd->hid_usage == 42 &&
+          !trackball_pointer_down_) {
+        HandleAltBackspace();
+        invalidate = true;
+      }
     }
   }
 
@@ -333,7 +347,7 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
     PresentScene();
   }
 
-  if (input_dispatcher_)
+  if (dispatch_event && input_dispatcher_)
     input_dispatcher_->DispatchEvent(std::move(event));
 }
 
@@ -363,8 +377,8 @@ bool Presentation::UpdateAnimation(uint64_t presentation_time) {
     return false;
   }
 
-  const float half_width = logical_width_ * device_pixel_ratio_ * 0.5f;
-  const float half_height = logical_height_ * device_pixel_ratio_ * 0.5f;
+  const float half_width = display_info_->physical_width * 0.5f;
+  const float half_height = display_info_->physical_height * 0.5f;
 
   // Always look at the middle of the stage.
   float target[3] = {half_width, half_height, 0};
@@ -414,7 +428,7 @@ bool Presentation::UpdateAnimation(uint64_t presentation_time) {
   glm::vec3 eye_start(half_width, half_height, kOrthoEyeDist);
 
   constexpr float kEyePanRadius = 1.01f * kOrthoEyeDist;
-  constexpr float kMaxPanAngle = 3.14159 / 4;
+  constexpr float kMaxPanAngle = kPi / 4;
   float eye_end_x =
       sin(camera_pan_ * kMaxPanAngle) * kEyePanRadius + half_width;
   float eye_end_y =

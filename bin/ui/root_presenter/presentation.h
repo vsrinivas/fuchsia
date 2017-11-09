@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 
+#include "garnet/bin/ui/root_presenter/display_flipper.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -15,6 +16,7 @@
 #include "lib/ui/geometry/fidl/geometry.fidl.h"
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/fidl/input_dispatcher.fidl.h"
+#include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/presentation/fidl/presentation.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
@@ -162,6 +164,9 @@ class Presentation : private mozart::ViewTreeListener,
     kTrackball,
   };
   AnimationState animation_state_ = kDefault;
+
+  // State related to flipping the display
+  DisplayFlipper display_flipper_;
 
   // Presentation time at which this presentation last entered either
   // kCameraMovingAway or kCameraReturning state.
