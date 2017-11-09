@@ -19,7 +19,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
     system/ulib/zircon \
@@ -35,9 +35,6 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/fvm.cpp \
-    system/ulib/digest/digest.cpp \
-    system/ulib/digest/merkle-tree.cpp \
-    third_party/ulib/cryptolib/cryptolib.c \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -45,7 +42,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/zircon/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/digest/include \
-    -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/gpt/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/block-client/include \
@@ -53,7 +49,9 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/zx/include \
 
 MODULE_HOST_LIBS := \
-    system/ulib/fbl.hostlib
+    third_party/ulib/uboringssl.hostlib \
+    system/ulib/digest.hostlib \
+    system/ulib/fbl.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

@@ -27,7 +27,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.loop \
     system/ulib/block-client \
     system/ulib/digest \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
@@ -56,7 +56,7 @@ MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/digest/include \
-    -Ithird_party/ulib/cryptolib/include \
+    -Ithird_party/ulib/uboringssl/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fdio/include \

@@ -27,7 +27,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/digest \
     system/ulib/zxcpp \
     third_party/ulib/cksum \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
     system/ulib/c \

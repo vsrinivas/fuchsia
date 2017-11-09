@@ -15,7 +15,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/digest \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
     system/ulib/zxcpp \
     system/ulib/fbl \
 

@@ -22,7 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.loop \
     system/ulib/block-client \
     system/ulib/digest \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
@@ -48,20 +48,18 @@ MODULE_TYPE := hostapp
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/digest/digest.cpp \
-    system/ulib/digest/merkle-tree.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
-    third_party/ulib/cryptolib/cryptolib.c \
 
 MODULE_HOST_LIBS := \
+    third_party/ulib/uboringssl.hostlib \
     system/ulib/blobstore.hostlib \
-    system/ulib/fbl.hostlib
+    system/ulib/digest.hostlib \
+    system/ulib/fbl.hostlib \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
-    -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/blobstore/include \
     -Isystem/ulib/digest/include \

@@ -25,7 +25,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/uapp/fvm/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/digest/include \
-    -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/gpt/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fvm/include \
@@ -38,9 +37,11 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
 
 MODULE_HOST_LIBS := \
-    system/ulib/blobstore.hostlib \
+    third_party/ulib/uboringssl.hostlib \
+    system/uapp/blobstore.hostlib \
     system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
+    system/ulib/digest.hostlib \
     system/ulib/minfs.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS

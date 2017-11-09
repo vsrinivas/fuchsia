@@ -23,7 +23,7 @@ MODULE_LIBS := \
     system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
     system/ulib/zxcpp \
     system/ulib/fbl \
 

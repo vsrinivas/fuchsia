@@ -4,18 +4,11 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <stddef.h>
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <stdint.h>
-
-#ifdef USE_LIBCRYPTO
-#include <openssl/sha.h>
-#else // USE_LIBCRYPTO
-#include <lib/crypto/cryptolib.h>
-#endif // USE_LIBCRYPTO
 
 #ifndef SHA256_DIGEST_LENGTH
 #define SHA256_DIGEST_LENGTH 32
@@ -24,6 +17,8 @@
 #define DIGEST_LENGTH SHA256_DIGEST_LENGTH
 
 #ifdef __cplusplus
+
+#include <fbl/unique_ptr.h>
 
 namespace digest {
 
@@ -34,17 +29,15 @@ public:
     // The length of a digest in bytes; this matches sizeof(this->data).
     static constexpr size_t kLength = DIGEST_LENGTH;
 
-    Digest() : ctx_{}, bytes_{0}, ref_count_(0) {}
-    explicit Digest(const Digest& other);
+    Digest();
     explicit Digest(const uint8_t* other);
     explicit Digest(Digest&& o) = delete;
-    Digest& operator=(const Digest& rhs);
     Digest& operator=(const uint8_t* rhs);
     ~Digest();
 
     // Initializes the hash algorithm context.  It must be called before Update,
     // and after Final when reusing the Digest object.
-    void Init();
+    zx_status_t Init();
 
     // Adds data to be hashed.  This may be called multiple times between calls
     // to |Init| and |Final|.  If A and B are byte sequences of length A_len and
@@ -97,17 +90,14 @@ public:
     bool operator!=(const uint8_t* rhs) const;
 
 private:
-// The hash algorithm context.
-#ifdef USE_LIBCRYPTO
-    SHA256_CTX ctx_;
-#else
-    clSHA256_CTX ctx_;
-#endif // USE_LIBCRYPTO
+    // Opaque crypto implementation context.
+    struct Context;
 
+    // Opaque pointer to the crypto implementation context.
+    fbl::unique_ptr<Context> ctx_;
     // The raw bytes of the current digest.  This is filled in either by the
     // assignment operators or the Parse and Final methods.
     uint8_t bytes_[kLength];
-
     // The number of outstanding calls to |AcquireBytes| without matching calls
     // to |ReleaseBytes|.
     mutable size_t ref_count_;

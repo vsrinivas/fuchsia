@@ -15,12 +15,30 @@ MODULE_SRCS += \
 MODULE_SO_NAME := digest
 MODULE_LIBS := system/ulib/c
 
-# TODO(aarongreen): cryptolib is FAR too slow for general purpose use.  We'll
-# need to use it to bootstrap and verify libcrypto.so before switching to
-# BoringSSL's optimized digests.
 MODULE_STATIC_LIBS := \
-    third_party/ulib/cryptolib \
+    third_party/ulib/uboringssl \
     system/ulib/zxcpp \
     system/ulib/fbl \
+
+include make/module.mk
+
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_TYPE := hostlib
+
+MODULE_COMPILEFLAGS := \
+    -Ithird_party/ulib/uboringssl/include \
+    -Isystem/ulib/fbl/include \
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/digest.cpp \
+    $(LOCAL_DIR)/merkle-tree.cpp
+
+MODULE_HOST_LIBS := \
+    third_party/ulib/uboringssl.hostlib \
+    system/ulib/fbl.hostlib \
+
+MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 
 include make/module.mk
