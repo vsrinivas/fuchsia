@@ -43,11 +43,7 @@ fi
 curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s "${layer}"
 cd "${layer}"
 
-if [[ "${layer}" == "garnet" ]] || [[ "${layer}" == "peridot" ]]; then
-  .jiri_root/bin/jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
-else
-  .jiri_root/bin/jiri import fuchsia https://fuchsia.googlesource.com/manifest
-fi
+.jiri_root/bin/jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
 
 .jiri_root/bin/jiri update
 

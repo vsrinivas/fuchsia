@@ -47,11 +47,7 @@ remove-import garnet manifest/garnet
 remove-import peridot manifest/peridot
 remove-import manifest fuchsia
 
-if [[ "${layer}" == "garnet" ]] || [[ "${layer}" == "peridot" ]]; then
-  .jiri_root/bin/jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
-else
-  .jiri_root/bin/jiri import fuchsia https://fuchsia.googlesource.com/manifest
-fi
+.jiri_root/bin/jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
 
   cat <<END
 Configured jiri for ${layer}. Run these commands to update your build:
