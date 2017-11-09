@@ -33,6 +33,7 @@ class Optional final {
     if (other) {
       value_ = std::move(other.value_);
       ptr_ = &value_;
+      other.Reset();
     } else {
       Reset();
     }
@@ -52,6 +53,7 @@ class Optional final {
     if (other) {
       value_ = std::move(other.value_);
       ptr_ = &value_;
+      other.Reset();
     } else {
       Reset();
     }

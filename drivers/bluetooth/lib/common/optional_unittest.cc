@@ -66,6 +66,23 @@ TEST(OptionalTest, Move) {
   EXPECT_TRUE(optional_obj);
   EXPECT_EQ(5, optional_obj->value);
 
+  Optional<TestObject> moved(std::move(optional_obj));
+  EXPECT_FALSE(optional_obj);
+  EXPECT_TRUE(moved);
+  EXPECT_EQ(5, moved->value);
+
+  auto move_assigned = std::move(moved);
+  EXPECT_FALSE(moved);
+  EXPECT_TRUE(move_assigned);
+  EXPECT_EQ(5, move_assigned->value);
+}
+
+TEST(OptionalTest, MoveValue) {
+  Optional<TestObject> optional_obj;
+  optional_obj = TestObject(5);
+  EXPECT_TRUE(optional_obj);
+  EXPECT_EQ(5, optional_obj->value);
+
   auto obj = std::move(*optional_obj);
 
   // |optional_obj| still contains a value even though its contents have been
