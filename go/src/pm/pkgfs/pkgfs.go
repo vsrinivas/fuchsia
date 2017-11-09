@@ -615,7 +615,7 @@ type packageDir struct {
 	contents      map[string]string
 
 	// if this packagedir is a subdirectory, then this is the prefix name
-	subdir        *string
+	subdir *string
 }
 
 func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, error) {
@@ -723,6 +723,14 @@ func (d *packageDir) Close() error {
 	return nil
 }
 
+func (d *packageDir) Dup() (fs.Directory, error) {
+	return d, nil
+}
+
+func (d *packageDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
+	return d, nil
+}
+
 func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
 	name = clean(name)
 	debugLog("pkgfs:packagedir:open %q", name)
@@ -801,7 +809,7 @@ func (pf *packageFile) Close() error {
 
 func (pf *packageFile) Dup() (fs.File, error) {
 	debugLog("pkgfs:packageFile:dup")
-	return nil, fs.ErrNotSupported
+	return pf, nil
 }
 
 func (pf *packageFile) Read(p []byte, off int64, whence int) (int, error) {
@@ -823,7 +831,7 @@ func (pf *packageFile) Read(p []byte, off int64, whence int) (int, error) {
 
 func (pf *packageFile) Reopen(flags fs.OpenFlags) (fs.File, error) {
 	debugLog("pkgfs:packageFile:reopen")
-	return nil, fs.ErrNotSupported
+	return pf, nil
 }
 
 func (pf *packageFile) Seek(offset int64, whence int) (int64, error) {
