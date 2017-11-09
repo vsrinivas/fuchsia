@@ -1,5 +1,24 @@
 #!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Opens the given commit ref (or HEAD) if no commit ref is passed in gerrit.
+#
+# Example: `git fuchsia-review <commit hash>`, `git fuchsia-review`.
+
+usage() {
+  printf 'usage: git fuchsia-review [<commit ref>]\n'
+  exit 0
+}
+
 set -e
+
+if [[ ($1 == "-h") || ($1 == "--help") ]]
+then
+  usage;
+fi
+
 ID=`git show $1 | egrep 'Change-Id' | awk '{print $(NF);}'`
 URL="https://fuchsia-review.googlesource.com/q/$ID"
 
