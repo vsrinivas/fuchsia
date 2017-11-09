@@ -402,17 +402,13 @@ static bool test_resume_suspended(void) {
                                      &info, sizeof(info), NULL, NULL),
                   ZX_OK, "");
 
-        if (i == kNumTries - 1) {
-            ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
-        }
-
         if (info.state == ZX_THREAD_STATE_BLOCKED) {
             break;
         }
         ASSERT_EQ(info.state, ZX_THREAD_STATE_RUNNING, "");
-
         zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     }
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
 
     // When the thread is suspended the signaling should not take effect.
     ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
