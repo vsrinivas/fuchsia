@@ -73,6 +73,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   std::string kronk_url_;
   modular::RateLimitedRetry kronk_restart_;
   app::ServiceProviderPtr kronk_services_;
+  modular::AgentControllerPtr kronk_controller_;
 
   AgentLauncher agent_launcher_;
 

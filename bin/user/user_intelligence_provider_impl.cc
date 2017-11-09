@@ -180,7 +180,9 @@ void UserIntelligenceProviderImpl::StartActionLog(
 }
 
 void UserIntelligenceProviderImpl::StartKronk() {
-  kronk_services_ = StartAgent(kronk_url_);
+  component_context_->ConnectToAgent(kronk_url_,
+                                     kronk_services_.NewRequest(),
+                                     kronk_controller_.NewRequest());
   auto kronk_stt = app::ConnectToService<SpeechToText>(kronk_services_.get());
   suggestion_engine_->SetSpeechToText(kronk_stt.PassInterfaceHandle());
   kronk_services_.set_connection_error_handler([=] {
