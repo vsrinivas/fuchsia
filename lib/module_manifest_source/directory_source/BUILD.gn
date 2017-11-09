@@ -2,31 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("directory_repository") {
+source_set("directory_source") {
   sources = [
-    "directory_repository.cc",
-    "directory_repository.h",
+    "directory_source.cc",
+    "directory_source.h",
   ]
 
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/module_manifest_repository",
+    "//peridot/lib/module_manifest_source",
     "//third_party/rapidjson",
     "//zircon/system/ulib/zx",
   ]
 }
 
-source_set("directory_repository_unittest") {
+source_set("directory_source_unittest") {
   testonly = true
 
   sources = [
-    "directory_repository_unittest.cc",
+    "directory_source_unittest.cc",
   ]
 
   deps = [
-    ":directory_repository",
+    ":directory_source",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/testing:test_with_message_loop",

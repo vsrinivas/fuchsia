@@ -12,7 +12,7 @@
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
-#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
+#include "peridot/lib/module_manifest_source/directory_source/directory_source.h"
 
 namespace maxwell {
 namespace {
@@ -28,11 +28,11 @@ constexpr char kRWModuleRepositoryPath[] = "/data/module_manifest_repository";
 class ModuleResolverApp {
  public:
   ModuleResolverApp(app::ApplicationContext* const context) {
-    resolver_impl_.AddRepository(
-        "local_ro", std::make_unique<modular::DirectoryRepository>(
+    resolver_impl_.AddSource(
+        "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kROModuleRepositoryPath, false /* create */));
-    resolver_impl_.AddRepository(
-        "local_rw", std::make_unique<modular::DirectoryRepository>(
+    resolver_impl_.AddSource(
+        "local_rw", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kRWModuleRepositoryPath, true /* create */));
 
     context->outgoing_services()->AddService<modular::ModuleResolver>(

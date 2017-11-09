@@ -74,28 +74,28 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 ModuleResolverImpl::ModuleResolverImpl() = default;
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
-void ModuleResolverImpl::AddRepository(
+void ModuleResolverImpl::AddSource(
     std::string name,
-    std::unique_ptr<modular::ModuleManifestRepository> repo) {
+    std::unique_ptr<modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
   repo->Watch(
       fsl::MessageLoop::GetCurrent()->task_runner(),
-      [this, name]() { OnRepositoryIdle(name); },
+      [this, name]() { OnSourceIdle(name); },
       [this, name](std::string id,
-                   const modular::ModuleManifestRepository::Entry& entry) {
+                   const modular::ModuleManifestSource::Entry& entry) {
         OnNewManifestEntry(name, std::move(id), entry);
       },
       [this, name](std::string id) {
         OnRemoveManifestEntry(name, std::move(id));
       });
 
-  repositories_.push_back(std::move(repo));
+  sources_.push_back(std::move(repo));
 }
 
 void ModuleResolverImpl::Connect(
     fidl::InterfaceRequest<modular::ModuleResolver> request) {
-  if (!AllRepositoriesAreReady()) {
+  if (!AllSourcesAreReady()) {
     pending_bindings_.push_back(std::move(request));
   } else {
     bindings_.AddBinding(this, std::move(request));
@@ -174,11 +174,11 @@ void ModuleResolverImpl::FindModules(
   done(std::move(results));
 }
 
-void ModuleResolverImpl::OnRepositoryIdle(const std::string& name) {
-  auto res = ready_repositories_.insert(name);
-  FXL_CHECK(res.second) << "Got idle notification twice from " << name;
+void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {
+  auto res = ready_sources_.insert(source_name);
+  FXL_CHECK(res.second) << "Got idle notification twice from " << source_name;
 
-  if (AllRepositoriesAreReady()) {
+  if (AllSourcesAreReady()) {
     // They are all ready. Bind any pending Connect() calls.
     for (auto& request : pending_bindings_) {
       bindings_.AddBinding(this, std::move(request));
@@ -188,11 +188,11 @@ void ModuleResolverImpl::OnRepositoryIdle(const std::string& name) {
 }
 
 void ModuleResolverImpl::OnNewManifestEntry(
-    const std::string& repo_name,
+    const std::string& source_name,
     std::string id_in,
-    modular::ModuleManifestRepository::Entry new_entry) {
+    modular::ModuleManifestSource::Entry new_entry) {
   // Add this new entry info to our local index.
-  auto ret = entries_.emplace(EntryId(repo_name, id_in), std::move(new_entry));
+  auto ret = entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
   FXL_CHECK(ret.second) << ret.first->first;
 
   const auto& id = ret.first->first;
@@ -207,9 +207,9 @@ void ModuleResolverImpl::OnNewManifestEntry(
   }
 }
 
-void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& repo_name,
+void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
                                                std::string id_in) {
-  EntryId id{repo_name, id_in};
+  EntryId id{source_name, id_in};
   auto it = entries_.find(id);
   if (it == entries_.end()) {
     FXL_LOG(WARNING) << "Asked to remove non-existent manifest entry: " << id;

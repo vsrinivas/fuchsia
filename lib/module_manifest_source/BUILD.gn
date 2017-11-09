@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("module_manifest_repository") {
+source_set("module_manifest_source") {
   sources = [
-    "module_manifest_repository.cc",
-    "module_manifest_repository.h",
+    "module_manifest_source.cc",
+    "module_manifest_source.h",
   ]
 
   public_deps = [
@@ -18,6 +18,6 @@ group("unittests") {
   testonly = true
 
   deps = [
-    "directory_repository:directory_repository_unittest",
+    "directory_source:directory_source_unittest",
   ]
 }

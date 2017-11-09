@@ -9,14 +9,14 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
-#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
-#include "peridot/lib/module_manifest_repository/module_manifest_repository.h"
+#include "peridot/lib/module_manifest_source/directory_source/directory_source.h"
+#include "peridot/lib/module_manifest_source/module_manifest_source.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace {
 
-class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
+class DirectoryModuleManifestSourceTest : public testing::TestWithMessageLoop {
  public:
   void SetUp() override {
     testing::TestWithMessageLoop::SetUp();
@@ -38,16 +38,13 @@ class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
   }
 
  protected:
-  void ResetRepository(bool create_dir = false) {
+  void Reset(bool create_dir = false) {
     auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
     idle_ = false;
-    repo_.reset(new DirectoryRepository(repo_dir_, create_dir));
+    repo_.reset(new DirectoryModuleManifestSource(repo_dir_, create_dir));
     repo_->Watch(
-        task_runner,
-        [this]() {
-          idle_ = true;
-        },
-        [this](std::string id, ModuleManifestRepository::Entry entry) {
+        task_runner, [this]() { idle_ = true; },
+        [this](std::string id, ModuleManifestSource::Entry entry) {
           entries_.push_back(entry);
           entry_ids_.push_back(std::move(id));
         },
@@ -71,9 +68,9 @@ class DirectoryRepositoryTest : public testing::TestWithMessageLoop {
 
   std::vector<std::string> manifests_written_;
   std::string repo_dir_;
-  std::unique_ptr<DirectoryRepository> repo_;
+  std::unique_ptr<DirectoryModuleManifestSource> repo_;
 
-  std::vector<ModuleManifestRepository::Entry> entries_;
+  std::vector<ModuleManifestSource::Entry> entries_;
   std::vector<std::string> entry_ids_;
   std::vector<std::string> removed_ids_;
 };
@@ -125,11 +122,11 @@ const char* kManifest2 = R"END(
 ]
 )END";
 
-TEST_F(DirectoryRepositoryTest, CreateFiles_And_CorrectEntries) {
+TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
   // Write a manifest file before creating the repo.
   WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
 
-  ResetRepository();
+  Reset();
 
   ASSERT_TRUE(RunLoopUntil([this]() { return idle_; }));
   ASSERT_EQ(2lu, entries_.size());
@@ -166,11 +163,11 @@ TEST_F(DirectoryRepositoryTest, CreateFiles_And_CorrectEntries) {
   EXPECT_EQ("chair", entries_[2].noun_constraints[0].types[0]);
 }
 
-TEST_F(DirectoryRepositoryTest, RemovedFiles) {
+TEST_F(DirectoryModuleManifestSourceTest, RemovedFiles) {
   // Write a manifest file before creating the repo.
   WriteManifestFile("manifest1", kManifest1, strlen(kManifest1));
 
-  ResetRepository();
+  Reset();
   ASSERT_TRUE(RunLoopUntil([this]() { return idle_; }));
 
   RemoveManifestFile("manifest1");
@@ -179,18 +176,18 @@ TEST_F(DirectoryRepositoryTest, RemovedFiles) {
   EXPECT_EQ(removed_ids_[1], entry_ids_[1]);
 }
 
-TEST_F(DirectoryRepositoryTest, RepoDirIsCreatedAutomatically) {
+TEST_F(DirectoryModuleManifestSourceTest, RepoDirIsCreatedAutomatically) {
   repo_dir_ = "/tmp/foo";
   // TODO(thatguy): Once making DirectoryRepository easier to test against
   // (ie, have a guaranteed initialized state we can synchronize on), do that
   // here.
-  ResetRepository(true /* create_dir */);
+  Reset(true /* create_dir */);
   WriteManifestFile("manifest2", kManifest2, strlen(kManifest2));
   ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
 }
 
-TEST_F(DirectoryRepositoryTest, IgnoreIncomingFiles) {
-  ResetRepository();
+TEST_F(DirectoryModuleManifestSourceTest, IgnoreIncomingFiles) {
+  Reset();
   WriteManifestFile("foo.incoming", kManifest1, strlen(kManifest1));
   WriteManifestFile("foo", kManifest2, strlen(kManifest2));
 

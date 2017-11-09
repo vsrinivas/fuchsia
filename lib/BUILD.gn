@@ -10,6 +10,6 @@ group("unittests") {
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/testing:unittests",
     "//peridot/lib/util:unittests",
-    "//peridot/lib/module_manifest_repository:unittests",
+    "//peridot/lib/module_manifest_source:unittests",
   ]
 }

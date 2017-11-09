@@ -12,7 +12,7 @@
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
-#include "peridot/lib/module_manifest_repository/module_manifest_repository.h"
+#include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace maxwell {
 
@@ -22,9 +22,9 @@ class ModuleResolverImpl : modular::ModuleResolver {
   ~ModuleResolverImpl() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
-  // AddRepository() after Connect(). |name| must be unique.
-  void AddRepository(std::string name,
-                     std::unique_ptr<modular::ModuleManifestRepository> repo);
+  // AddSource() after Connect(). |name| must be unique.
+  void AddSource(std::string name,
+                     std::unique_ptr<modular::ModuleManifestSource> repo);
 
   void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
 
@@ -37,25 +37,25 @@ class ModuleResolverImpl : modular::ModuleResolver {
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
 
-  void OnRepositoryIdle(const std::string& repo_name);
-  void OnNewManifestEntry(const std::string& repo_name,
+  void OnSourceIdle(const std::string& source_name);
+  void OnNewManifestEntry(const std::string& source_name,
                           std::string id,
-                          modular::ModuleManifestRepository::Entry entry);
-  void OnRemoveManifestEntry(const std::string& repo_name, std::string id);
+                          modular::ModuleManifestSource::Entry entry);
+  void OnRemoveManifestEntry(const std::string& source_name, std::string id);
 
-  bool AllRepositoriesAreReady() const {
-    return ready_repositories_.size() == repositories_.size();
+  bool AllSourcesAreReady() const {
+    return ready_sources_.size() == sources_.size();
   }
 
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules
   // Ask handler.
-  std::vector<std::unique_ptr<modular::ModuleManifestRepository>> repositories_;
-  // Set of repositories that have told us they are idle, meaning they have
+  std::vector<std::unique_ptr<modular::ModuleManifestSource>> sources_;
+  // Set of sources that have told us they are idle, meaning they have
   // sent us all entries they knew about at construction time.
-  std::set<std::string> ready_repositories_;
+  std::set<std::string> ready_sources_;
   // Map of (repo name, entry name) -> entry.
-  std::map<EntryId, modular::ModuleManifestRepository::Entry> entries_;
+  std::map<EntryId, modular::ModuleManifestSource::Entry> entries_;
 
   // verb -> key in |entries_|
   std::map<std::string, std::set<EntryId>> verb_to_entry_;
@@ -64,7 +64,7 @@ class ModuleResolverImpl : modular::ModuleResolver {
       noun_type_to_entry_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
-  // These are buffered until AllRepositoriesAreReady() == true.
+  // These are buffered until AllSourcesAreReady() == true.
   std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);

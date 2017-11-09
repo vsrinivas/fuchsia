@@ -14,7 +14,7 @@ executable("module_resolver") {
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/module_resolver/fidl",
-    "//peridot/lib/module_manifest_repository/directory_repository",
+    "//peridot/lib/module_manifest_source/directory_source",
   ]
 }
 
@@ -37,7 +37,7 @@ source_set("module_resolver_impl") {
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/fidl",
-    "//peridot/lib/module_manifest_repository",
+    "//peridot/lib/module_manifest_source",
   ]
 }
 
@@ -56,6 +56,6 @@ source_set("module_resolver_impl_unittest") {
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",
-    "//peridot/lib/module_manifest_repository/directory_repository",
+    "//peridot/lib/module_manifest_source/directory_source",
   ]
 }

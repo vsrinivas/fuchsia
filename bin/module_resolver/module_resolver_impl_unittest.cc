@@ -5,7 +5,7 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
-#include "peridot/lib/module_manifest_repository/directory_repository/directory_repository.h"
+#include "peridot/lib/module_manifest_source/directory_source/directory_source.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 #include "peridot/public/lib/module_resolver/cpp/formatting.h"
 
@@ -105,7 +105,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     repo_dir_ = temp_dir;
 
     WriteManifestFile("manifest", kManifest);
-    ResetRepository();
+    Reset();
   }
 
   void TearDown() override {
@@ -122,10 +122,11 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   }
 
  protected:
-  void ResetRepository() {
+  void Reset() {
     impl_.reset(new ModuleResolverImpl);
-    impl_->AddRepository("test", std::make_unique<modular::DirectoryRepository>(
-                                     repo_dir_, false));
+    impl_->AddSource(
+        "test", std::make_unique<modular::DirectoryModuleManifestSource>(
+                    repo_dir_, false));
     impl_->Connect(resolver_.NewRequest());
   }
 
@@ -185,8 +186,8 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
 
   // Remove the manifest files and we should see no more results.
   RemoveManifestFiles();
-  // TODO(thatguy): Use a fake ModuleManifestRepository instead of a
-  // DirectoryRepository in this test, so we have more control over
+  // TODO(thatguy): Use a fake ModuleManifestSource instead of a
+  // DirectoryModuleManifestSource in this test, so we have more control over
   // synchronization.
   RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
 
