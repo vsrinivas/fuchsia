@@ -296,9 +296,6 @@ int service_starter(void* arg) {
         thrd_detach(t);
     }
 
-#ifndef WITH_FSHOST
-    block_device_watcher(svcs_job_handle, netboot);
-#endif
     return 0;
 }
 
@@ -458,7 +455,6 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-#ifdef WITH_FSHOST
 static void devmgr_import_bootdata(zx_handle_t vmo) {
     bootdata_t bootdata;
     size_t actual;
@@ -660,7 +656,6 @@ zx_handle_t fs_root_clone(void) {
 void devmgr_vfs_exit(void) {
     //TODO: wire up correctly
 }
-#endif
 
 void devmgr_vfs_init(void) {
     printf("devmgr: vfs init\n");

@@ -165,12 +165,6 @@ static void setup_bootfs(void) {
             case BOOTDATA_LAST_CRASHLOG:
                 setup_last_crashlog(vmo, off + sizeof(bootdata_t), bootdata.length);
                 break;
-#ifndef WITH_FSHOST
-            case BOOTDATA_PLATFORM_ID: {
-                devmgr_set_platform_id(vmo, off + sizeof(bootdata_t), itemlen);
-                break;
-            }
-#endif
             default:
                 break;
             }
@@ -261,7 +255,6 @@ zx_handle_t devmgr_load_file(const char* path) {
     return ZX_HANDLE_INVALID;
 }
 
-#ifdef WITH_FSHOST
 static zx_handle_t devfs_root;
 static zx_handle_t svc_root;
 static zx_handle_t fuchsia_event;
@@ -335,4 +328,3 @@ int main(int argc, char** argv) {
 
     block_device_watcher(zx_job_default(), netboot);
 }
-#endif

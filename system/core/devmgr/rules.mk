@@ -2,35 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-ENABLE_FSHOST := true
-
 LOCAL_DIR := $(GET_LOCAL_DIR)
-
-LOCAL_FSHOST_SRCS := \
-    $(LOCAL_DIR)/block-watcher.c \
-    $(LOCAL_DIR)/dnode.cpp \
-    $(LOCAL_DIR)/fshost.c \
-    $(LOCAL_DIR)/vfs-memory.cpp \
-    $(LOCAL_DIR)/vfs-rpc.cpp
-
-LOCAL_FSHOST_STATIC_LIBS := \
-    system/ulib/fs \
-    system/ulib/fbl \
-    system/ulib/async \
-    system/ulib/async.loop \
-    system/ulib/zx \
-    system/ulib/zxcpp
-
-LOCAL_FSHOST_LIBS := \
-    system/ulib/async.default \
-    system/ulib/fs-management \
-
-MODULE := $(LOCAL_DIR)
 
 # devmgr - core userspace services process
 #
-MODULE_NAME := devmgr
+MODULE := $(LOCAL_DIR)
 
+MODULE_NAME := devmgr
 MODULE_TYPE := userapp
 MODULE_GROUP := core
 
@@ -64,48 +42,46 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c
 
-ifeq ($(ENABLE_FSHOST),false)
-MODULE_SRCS += $(LOCAL_FSHOST_SRCS)
-MODULE_STATIC_LIBS += $(LOCAL_FSHOST_STATIC_LIBS)
-MODULE_LIBS += $(LOCAL_FSHOST_LIBS)
-else
-MODULE_DEFINES := WITH_FSHOST=1
-endif
-
 include make/module.mk
 
 
-ifeq ($(ENABLE_FSHOST),true)
 # fshost - container for filesystems
 
 MODULE := $(LOCAL_DIR).fshost
 
 MODULE_NAME := fshost
-
 MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/block-watcher.c \
     $(LOCAL_DIR)/devmgr-fdio.c \
-    $(LOCAL_FSHOST_SRCS)
+    $(LOCAL_DIR)/dnode.cpp \
+    $(LOCAL_DIR)/fshost.c \
+    $(LOCAL_DIR)/vfs-memory.cpp \
+    $(LOCAL_DIR)/vfs-rpc.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/gpt \
+    system/ulib/fs \
+    system/ulib/async \
+    system/ulib/async.loop \
     system/ulib/bootdata \
+    system/ulib/fbl \
+    system/ulib/gpt \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     third_party/ulib/lz4 \
-    $(LOCAL_FSHOST_STATIC_LIBS)
 
 MODULE_LIBS := \
-    $(LOCAL_FSHOST_LIBS) \
+    system/ulib/async.default \
     system/ulib/launchpad \
     system/ulib/fdio \
+    system/ulib/fs-management \
     system/ulib/zircon \
     system/ulib/c
 
-MODULE_DEFINES := WITH_FSHOST=1
-
 include make/module.mk
-endif
+
 
 # devhost - container for drivers
 #
