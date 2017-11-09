@@ -107,10 +107,10 @@ static const pbus_gpio_t gpio_test_gpios[] = {
 };
 
 static const pbus_dev_t gpio_test_dev = {
-    .name = "gpio-test",
-    .vid = PDEV_VID_HI_SILICON,
-    .pid = PDEV_PID_HI3660,
-    .did = PDEV_DID_HI3660_GPIO_TEST,
+    .name = "hikey960-gpio-test",
+    .vid = PDEV_VID_96BOARDS,
+    .pid = PDEV_PID_HIKEY960,
+    .did = PDEV_DID_HIKEY960_GPIO_TEST,
     .gpios = gpio_test_gpios,
     .gpio_count = countof(gpio_test_gpios),
 };

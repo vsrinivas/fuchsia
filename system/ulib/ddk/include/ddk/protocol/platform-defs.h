@@ -22,10 +22,10 @@ __BEGIN_CDECLS;
 #define PDEV_VID_QEMU               1
 #define PDEV_PID_QEMU               1
 
-// HiSilicon
-#define PDEV_VID_HI_SILICON         2
-#define PDEV_PID_HI3660             1
-#define PDEV_DID_HI3660_GPIO_TEST   1
+// 96Boards
+#define PDEV_VID_96BOARDS           2
+#define PDEV_PID_HIKEY960           1
+#define PDEV_DID_HIKEY960_GPIO_TEST 1
 
 // Amlogic
 #define PDEV_VID_AMLOGIC            3
