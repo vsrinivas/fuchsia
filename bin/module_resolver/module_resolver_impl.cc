@@ -79,16 +79,15 @@ void ModuleResolverImpl::AddSource(
     std::unique_ptr<modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
-  repo->Watch(
-      fsl::MessageLoop::GetCurrent()->task_runner(),
-      [this, name]() { OnSourceIdle(name); },
-      [this, name](std::string id,
-                   const modular::ModuleManifestSource::Entry& entry) {
-        OnNewManifestEntry(name, std::move(id), entry);
-      },
-      [this, name](std::string id) {
-        OnRemoveManifestEntry(name, std::move(id));
-      });
+  repo->Watch(fsl::MessageLoop::GetCurrent()->task_runner(),
+              [this, name]() { OnSourceIdle(name); },
+              [this, name](std::string id,
+                           const modular::ModuleManifestSource::Entry& entry) {
+                OnNewManifestEntry(name, std::move(id), entry);
+              },
+              [this, name](std::string id) {
+                OnRemoveManifestEntry(name, std::move(id));
+              });
 
   sources_.push_back(std::move(repo));
 }
@@ -193,7 +192,10 @@ void ModuleResolverImpl::OnNewManifestEntry(
     modular::ModuleManifestSource::Entry new_entry) {
   // Add this new entry info to our local index.
   auto ret = entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
-  FXL_CHECK(ret.second) << ret.first->first;
+  if (!ret.second) {
+    FXL_LOG(INFO) << "Ignoring manifest entry I already know about: "
+                  << ret.first->first;
+  }
 
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;

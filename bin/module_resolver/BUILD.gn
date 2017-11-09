@@ -12,9 +12,11 @@ executable("module_resolver") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/module_resolver/fidl",
     "//peridot/lib/module_manifest_source/directory_source",
+    "//peridot/lib/module_manifest_source/firebase_source",
   ]
 }
 

@@ -5,6 +5,10 @@
 visibility = [
   "//peridot/bin/cloud_provider_firebase/*",
   "//peridot/bin/ledger/*",
+  # TODO(thatguy): This dependency will go away, but the exact timeframe is not
+  # known ATM. It doesn't seem like we want to allow many (if any) clients
+  # outside ledger to depend on it.
+  "//peridot/lib/module_manifest_source/*",
 ]
 
 source_set("network") {

@@ -10,9 +10,11 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "peridot/lib/module_manifest_source/directory_source/directory_source.h"
+#include "peridot/lib/module_manifest_source/firebase_source/firebase_source.h"
 
 namespace maxwell {
 namespace {
@@ -34,6 +36,17 @@ class ModuleResolverApp {
     resolver_impl_.AddSource(
         "local_rw", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kRWModuleRepositoryPath, true /* create */));
+    resolver_impl_.AddSource(
+        "firebase_mods",
+        std::make_unique<modular::FirebaseModuleManifestSource>(
+            fsl::MessageLoop::GetCurrent()->task_runner(),
+            [context]() {
+              network::NetworkServicePtr network_service;
+              context->ConnectToEnvironmentService(
+                  network_service.NewRequest());
+              return network_service;
+            },
+            "cloud-mods", "" /* prefix */));
 
     context->outgoing_services()->AddService<modular::ModuleResolver>(
         [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {

@@ -2,7 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/bin/cloud_provider_firebase/*" ]
+visibility = [
+  "//peridot/bin/cloud_provider_firebase/*",
+  # TODO(thatguy): This dependency will go away, but the exact timeframe is not
+  # known ATM. Consider moving . into //peridot/lib/firebase if any other
+  # clients come to depend on it.
+  "//peridot/lib/module_manifest_source/*",
+]
 
 source_set("firebase") {
   sources = [
