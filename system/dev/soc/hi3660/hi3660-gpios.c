@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <gpio/pl061/pl061.h>
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "hi3660-bus.h"
-#include "pl061.h"
 
 // TODO(voydanoff) Move hard coded values to a header file
 

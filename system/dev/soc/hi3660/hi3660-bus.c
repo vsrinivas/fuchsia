@@ -15,12 +15,12 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
+#include <gpio/pl061/pl061.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/assert.h>
 
-#include "pl061.h"
 #include "hi3660-bus.h"
 #include "hi3660-hw.h"
 

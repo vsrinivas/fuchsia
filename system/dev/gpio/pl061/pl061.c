@@ -6,7 +6,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-#include "pl061.h"
+#include <gpio/pl061/pl061.h>
 
 // GPIO register offsets
 #define GPIODATA(mask)  ((mask) << 2)   // Data registers, mask provided as index

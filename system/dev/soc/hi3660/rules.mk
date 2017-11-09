@@ -13,9 +13,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hi3660-devices.c \
     $(LOCAL_DIR)/hi3660-gpios.c \
     $(LOCAL_DIR)/hi3660-usb.c \
-    $(LOCAL_DIR)/pl061.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := \
+    system/dev/gpio/pl061 \
+    system/ulib/ddk \
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
