@@ -1582,7 +1582,6 @@ extern "C" {
         signals_out: *mut zx_signals_t,
     );
     pub fn __fdio_wait_end(io: *mut fdio_t, signals: zx_signals_t, events_out: *mut u32);
-    pub fn fdio_clone_root(handles: *mut zx_handle_t, types: *mut u32) -> zx_status_t;
     pub fn fdio_clone_cwd(handles: *mut zx_handle_t, types: *mut u32) -> zx_status_t;
     pub fn fdio_clone_fd(
         fd: raw::c_int,
@@ -1603,7 +1602,6 @@ extern "C" {
         hcount: usize,
         fd_out: *mut raw::c_int,
     ) -> zx_status_t;
-    pub fn fdio_install_root(root: *mut fdio_t);
     pub fn fdio_bind_to_fd(io: *mut fdio_t, fd: raw::c_int, starting_fd: raw::c_int) -> raw::c_int;
     pub fn fdio_unbind_from_fd(fd: raw::c_int, io_out: *mut *mut fdio_t) -> zx_status_t;
     pub fn fdio_get_service_handle(fd: raw::c_int, out: *mut zx_handle_t) -> zx_status_t;
