@@ -20,6 +20,51 @@
 #define GPIO_22_ADDR    0xfff0b000
 #define GPIO_28_ADDR    0xfff1d000
 
+static pl061_gpios_t* find_gpio(hikey960_t* bus, uint32_t index) {
+    pl061_gpios_t* gpios;
+    // TODO(voydanoff) consider using a fancier data structure here
+    list_for_every_entry(&bus->gpios, gpios, pl061_gpios_t, node) {
+        if (index >= gpios->gpio_start && index < gpios->gpio_start + gpios->gpio_count) {
+            return gpios;
+        }
+    }
+    zxlogf(ERROR, "find_gpio failed for index %u\n", index);
+    return NULL;
+}
+
+static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
+    hikey960_t* bus = ctx;
+    pl061_gpios_t* gpios = find_gpio(bus, index);
+    if (!gpios) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return pl061_proto_ops.config(gpios, index, flags);
+}
+
+static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
+    hikey960_t* bus = ctx;
+    pl061_gpios_t* gpios = find_gpio(bus, index);
+    if (!gpios) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return pl061_proto_ops.read(gpios, index, out_value);
+}
+
+static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
+    hikey960_t* bus = ctx;
+    pl061_gpios_t* gpios = find_gpio(bus, index);
+    if (!gpios) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return pl061_proto_ops.write(gpios, index, value);
+}
+
+static gpio_protocol_ops_t gpio_ops = {
+    .config = hi3660_gpio_config,
+    .read = hi3660_gpio_read,
+    .write = hi3660_gpio_write,
+};
+
 typedef struct {
     zx_paddr_t  base;
     size_t      length;
@@ -97,7 +142,7 @@ static const gpio_block_t gpio_blocks[] = {
     },
 };
 
-zx_status_t hi3360_add_gpios(hikey960_t* bus) {
+zx_status_t hi3660_gpio_init(hikey960_t* bus) {
     zx_status_t status;
     zx_handle_t resource = get_root_resource();
 
@@ -112,7 +157,7 @@ zx_status_t hi3360_add_gpios(hikey960_t* bus) {
         status = io_buffer_init_physical(&gpios->buffer, block->base, block->length,
                                          resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "hi3360_add_gpios: io_buffer_init_physical failed %d\n", status);
+            zxlogf(ERROR, "hi3660_gpio_init: io_buffer_init_physical failed %d\n", status);
             free(gpios);
             return status;
         }
@@ -125,5 +170,17 @@ zx_status_t hi3360_add_gpios(hikey960_t* bus) {
         list_add_tail(&bus->gpios, &gpios->node);
     }
 
+    bus->gpio.ops = &gpio_ops;
+    bus->gpio.ctx = bus;
+
     return ZX_OK;
+}
+
+void hi3660_gpio_release(hikey960_t* bus) {
+    pl061_gpios_t* gpios;
+
+    while ((gpios = list_remove_head_type(&bus->gpios, pl061_gpios_t, node)) != NULL) {
+        io_buffer_release(&gpios->buffer);
+        free(gpios);
+    }
 }

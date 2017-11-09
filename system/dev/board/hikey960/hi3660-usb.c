@@ -12,7 +12,7 @@
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
-zx_status_t hi3360_usb_init(hikey960_t* bus) {
+zx_status_t hi3660_usb_init(hikey960_t* bus) {
     volatile void* usb3otg_bc = io_buffer_virt(&bus->usb3otg_bc);
     volatile void* peri_crg = io_buffer_virt(&bus->peri_crg);
     volatile void* pctrl = io_buffer_virt(&bus->pctrl);
