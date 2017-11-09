@@ -85,9 +85,10 @@ This file may refer to a common set of options by way of an `include` directive:
 ```
 include: relative/path/to/options.file
 ```
-A default set is available at `//build/dart/default_analysis_options.yaml`:
+A canonical set is available at `//topaz/tools/analysis_options.yaml`.
+It is customary to merely include that set from a local options file:
 ```
-include: path/to/fuchsia/root/build/dart/default_analysis_options.yaml
+include: path/to/topaz/tools/analysis_options.yaml
 ```
 
 Analysis may be disabled altogether for a given target with:
@@ -214,15 +215,12 @@ will make all log statements appear in the console.
 
 ## IDEs
 
-### Atom
-
-The Dart SDK built in the Fuchsia tree has a version of the analysis service
-which understands the structure of the Fuchsia directory. In the `dartlang` Atom
-plugin, set the Dart SDK as
-`//out/<build-type>/dart_host/dart-sdk`. Packages and apps with
-build targets should now be error-free. Note that in order for the plugin to
-locate a Dart package, it needs a marker: add an empty `pubspec.yaml` file at
-the root of the package.
+A prebuilt Dart SDK is available for IDE consumption at:
+`//third_party/dart/tools/sdks/<linux|mac>/dart-sdk`.
+Note that this SDK is sometimes a few days behind the version of
+`//third_party/dart`. If you require an up-to-date SDK, one gets built with
+Fuchsia at:
+`//out/<build-type>/dart_host/dart-sdk`.
 
 ### Troubleshooting
 
@@ -232,8 +230,8 @@ following:
   build. This means that if you have a broken release build, any release build
   overrides a debug build. With a broken release build, no amount of correct
   rebuilding on debug will solve the issue until you delete
-  `//out/release-x86-64`
-- Delete the .packages file in your project and rebuild
+  `//out/release-x86-64`.
+- Delete the .packages file in your project and rebuild.
 
 
 ## Known issues
