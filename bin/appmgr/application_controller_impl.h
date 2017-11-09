@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 #define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
+#include <async/auto_wait.h>
 #include <fs/pseudo-dir.h>
 #include <zx/process.h>
 
@@ -12,16 +13,13 @@
 #include "garnet/lib/farfs/file_system.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace app {
 class JobHolder;
 
-class ApplicationControllerImpl : public ApplicationController,
-                                  public fsl::MessageLoopHandler {
+class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
@@ -43,10 +41,8 @@ class ApplicationControllerImpl : public ApplicationController,
   void Wait(const WaitCallback& callback) override;
 
  private:
-  // |fsl::MessageLoopHandler| implementation:
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override;
+  async_wait_result_t Handler(async_t* async, zx_status_t status,
+                              const zx_packet_signal* signal);
 
   bool SendReturnCodeIfTerminated();
 
@@ -60,7 +56,7 @@ class ApplicationControllerImpl : public ApplicationController,
 
   fxl::RefPtr<ApplicationNamespace> application_namespace_;
 
-  fsl::MessageLoop::HandlerKey termination_handler_ = 0u;
+  async::AutoWait wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };

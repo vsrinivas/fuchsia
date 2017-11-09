@@ -33,9 +33,12 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       fs_(std::move(fs)),
       process_(std::move(process)),
       label_(std::move(label)),
-      application_namespace_(std::move(application_namespace)) {
-  termination_handler_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, process_.get(), ZX_TASK_TERMINATED);
+      application_namespace_(std::move(application_namespace)),
+      wait_(fsl::MessageLoop::GetCurrent()->async(), process_.get(),
+            ZX_TASK_TERMINATED) {
+  wait_.set_handler(fbl::BindMember(this, &ApplicationControllerImpl::Handler));
+  auto status = wait_.Begin();
+  FXL_DCHECK(status == ZX_OK);
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
     binding_.set_connection_error_handler([this] { Kill(); });
@@ -63,7 +66,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
 }
 
 ApplicationControllerImpl::~ApplicationControllerImpl() {
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(termination_handler_);
+  wait_.Cancel();
   // Two ways we end up here:
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be
@@ -104,12 +107,10 @@ void ApplicationControllerImpl::Wait(const WaitCallback& callback) {
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-void ApplicationControllerImpl::OnHandleReady(zx_handle_t handle,
-                                              zx_signals_t pending,
-                                              uint64_t count) {
-  FXL_DCHECK(handle == process_.get());
-  FXL_DCHECK(pending & ZX_TASK_TERMINATED);
-
+async_wait_result_t ApplicationControllerImpl::Handler(
+    async_t* async, zx_status_t status, const zx_packet_signal* signal) {
+  FXL_DCHECK(status == ZX_OK);
+  FXL_DCHECK(signal->observed == ZX_TASK_TERMINATED);
   if (!wait_callbacks_.empty()) {
     bool terminated = SendReturnCodeIfTerminated();
     FXL_DCHECK(terminated);
@@ -120,6 +121,8 @@ void ApplicationControllerImpl::OnHandleReady(zx_handle_t handle,
   job_holder_->ExtractApplication(this);
   // The destructor of the temporary returned by ExtractApplication destroys
   // |this| at the end of the previous statement.
+
+  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace app
