@@ -431,11 +431,10 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
 
 // Verifies that commits that are received between the first upload and the
 // retry are not sent.
-//
-// Disabled as flaky on the bots, see LE-333.
-TEST_F(PageUploadTest, DISABLED_DoNotUploadSyncedCommitsOnRetry) {
+TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
+    if (page_upload_->IsIdle() ||
+        states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
       message_loop_.PostQuitTask();
     }
   });
@@ -449,10 +448,11 @@ TEST_F(PageUploadTest, DISABLED_DoNotUploadSyncedCommitsOnRetry) {
   storage_.watcher_->OnNewCommits(commit->AsList(),
                                   storage::ChangeSource::LOCAL);
 
+  // Wait for the page upload to run into temporary error.
   EXPECT_TRUE(RunLoopUntil([this] {
-    // Stop once cloud provider has rejected a commit.
-    return page_cloud_.add_commits_calls > 0u;
+    return states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR;
   }));
+  EXPECT_TRUE(page_cloud_.add_commits_calls > 0u);
 
   // Configure the cloud to accept the next attempt to upload.
   page_cloud_.commit_status_to_return = cloud_provider::Status::OK;
