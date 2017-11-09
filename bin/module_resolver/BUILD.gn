@@ -15,8 +15,8 @@ executable("module_resolver") {
     "//garnet/public/lib/network/fidl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/module_resolver/fidl",
-    "//peridot/lib/module_manifest_source/directory_source",
-    "//peridot/lib/module_manifest_source/firebase_source",
+    "//peridot/lib/module_manifest_source:directory_source",
+    "//peridot/lib/module_manifest_source:firebase_source",
   ]
 }
 
@@ -58,6 +58,6 @@ source_set("module_resolver_impl_unittest") {
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",
-    "//peridot/lib/module_manifest_source/directory_source",
+    "//peridot/lib/module_manifest_source:directory_source",
   ]
 }

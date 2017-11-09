@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_MODULE_MANIFEST_SOURCE_SOURCE_FIREBASE_SOURCE_H_
-#define PERIDOT_LIB_MODULE_MANIFEST_SOURCE_SOURCE_FIREBASE_SOURCE_H_
+#ifndef PERIDOT_LIB_MODULE_MANIFEST_SOURCE_FIREBASE_SOURCE_H_
+#define PERIDOT_LIB_MODULE_MANIFEST_SOURCE_FIREBASE_SOURCE_H_
 
 #include <functional>
 #include <map>
@@ -66,4 +66,4 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_SOURCE_FIREBASE_SOURCE_H_
+#endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_FIREBASE_SOURCE_H_

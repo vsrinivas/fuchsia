@@ -18,6 +18,55 @@ group("unittests") {
   testonly = true
 
   deps = [
-    "directory_source:directory_source_unittest",
+    ":directory_source_unittest",
+  ]
+}
+
+source_set("directory_source") {
+  sources = [
+    "directory_source.cc",
+    "directory_source.h",
+  ]
+
+  public_deps = [
+    ":module_manifest_source",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:json_xdr",
+    "//third_party/rapidjson",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("directory_source_unittest") {
+  testonly = true
+
+  sources = [
+    "directory_source_unittest.cc",
+  ]
+
+  deps = [
+    ":directory_source",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/testing:test_with_message_loop",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("firebase_source") {
+  sources = [
+    "firebase_source.cc",
+    "firebase_source.h",
+  ]
+
+  public_deps = [
+    ":module_manifest_source",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/bin/cloud_provider_firebase/firebase",
+    "//third_party/rapidjson",
   ]
 }
