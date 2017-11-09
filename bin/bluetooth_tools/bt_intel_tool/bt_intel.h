@@ -25,6 +25,9 @@ struct IntelVersionReturnParams {
   uint8_t fw_patch_num;
 } __PACKED;
 
+constexpr bluetooth::hci::OpCode kSecureSend =
+    bluetooth::hci::VendorOpCode(0x0009);
+
 constexpr bluetooth::hci::OpCode kReadBootParams =
     bluetooth::hci::VendorOpCode(0x000D);
 
@@ -52,6 +55,34 @@ constexpr bluetooth::hci::OpCode kReset = bluetooth::hci::VendorOpCode(0x0001);
 
 struct IntelResetCommandParams {
   uint8_t data[8];
+} __PACKED;
+
+constexpr bluetooth::hci::OpCode kMfgModeChange =
+    bluetooth::hci::VendorOpCode(0x0011);
+
+enum class MfgDisableMode : uint8_t {
+  kNoPatches = 0x00,
+  kPatchesDisabled = 0x01,
+  kPatchesEnabled = 0x02,
+};
+
+struct IntelMfgModeChangeCommandParams {
+  bluetooth::hci::GenericEnableParam enable;
+  MfgDisableMode disable_mode;
+} __PACKED;
+
+struct IntelSecureSendEventParams {
+  uint8_t vendor_event_code;
+  uint8_t result;
+  uint16_t opcode;
+  uint8_t status;
+} __PACKED;
+
+struct IntelBootloaderVendorEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(IntelBootloaderVendorEventParams);
+
+  uint8_t vendor_event_code;
+  uint8_t vendor_params[];
 } __PACKED;
 
 }  // namespace bt_intel

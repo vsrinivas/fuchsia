@@ -484,6 +484,10 @@ struct ReadDataBlockSizeReturnParams {
 // ======= Events =======
 // Core Spec v5.0 Vol 2, Part E, Section 7.7
 
+// Reserved for vendor-specific debug events
+// (Vol 2, Part E, Section 5.4.4)
+constexpr EventCode kVendorDebugEventCode = 0xFF;
+
 // =================================================
 // Disconnection Complete Event (v1.1) (BR/EDR & LE)
 constexpr EventCode kDisconnectionCompleteEventCode = 0x05;

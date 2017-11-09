@@ -6,8 +6,12 @@ executable("bt_intel_tool") {
   output_name = "bt-intel-tool"
 
   sources = [
+    "command_channel.cc",
+    "command_channel.h",
     "commands.cc",
     "commands.h",
+    "intel_firmware_loader.cc",
+    "intel_firmware_loader.h",
     "main.cc",
   ]
 

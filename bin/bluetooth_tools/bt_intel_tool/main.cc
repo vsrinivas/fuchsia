@@ -15,11 +15,11 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "command_channel.h"
 #include "commands.h"
 
 using namespace bluetooth;
@@ -62,22 +62,11 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  fxl::UniqueFD hci_dev_fd(open(hci_dev_path.c_str(), O_RDWR));
-  if (!hci_dev_fd.is_valid()) {
-    std::perror("Failed to open HCI device");
-    return EXIT_FAILURE;
-  }
-
-  auto hci_dev =
-      std::make_unique<hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
-  auto hci = hci::Transport::Create(std::move(hci_dev));
-  hci->Initialize();
   fsl::MessageLoop message_loop;
+  CommandChannel channel(hci_dev_path);
 
   tools::CommandDispatcher dispatcher;
-  bt_intel::CommandData cmd_data(hci->command_channel(),
-                                 message_loop.task_runner());
-  RegisterCommands(&cmd_data, &dispatcher);
+  bt_intel::RegisterCommands(&channel, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {
     dispatcher.DescribeAllCommands();
