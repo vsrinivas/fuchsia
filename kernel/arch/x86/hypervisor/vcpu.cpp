@@ -115,9 +115,9 @@ void AutoVmcs::Reload() {
 void AutoVmcs::InterruptWindowExiting(bool enable) {
     uint32_t controls = Read(VmcsField32::PROCBASED_CTLS);
     if (enable) {
-        controls |= PROCBASED_CTLS_INT_WINDOW_EXITING;
+        controls |= kProcbasedCtlsIntWindowExiting;
     } else {
-        controls &= ~PROCBASED_CTLS_INT_WINDOW_EXITING;
+        controls &= ~kProcbasedCtlsIntWindowExiting;
     }
     Write(VmcsField32::PROCBASED_CTLS, controls);
 }
@@ -267,16 +267,16 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                              read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
                              0,
                              // Enable APIC access virtualization.
-                             PROCBASED_CTLS2_APIC_ACCESS |
+                             kProcbasedCtls2ApicAccess |
                                  // Enable use of extended page tables.
-                                 PROCBASED_CTLS2_EPT |
+                                 kProcbasedCtls2Ept |
                                  // Enable use of RDTSCP instruction.
-                                 PROCBASED_CTLS2_RDTSCP |
+                                 kProcbasedCtls2Rdtscp |
                                  // Associate cached translations of linear
                                  // addresses with a virtual processor ID.
-                                 PROCBASED_CTLS2_VPID |
+                                 kProcbasedCtls2Vpid |
                                  // Enable use of INVPCID instruction.
-                                 PROCBASED_CTLS2_INVPCID,
+                                 kProcbasedCtls2Invpcid,
                              0);
     if (status != ZX_OK)
         return status;
@@ -286,9 +286,9 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                              read_msr(X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS),
                              read_msr(X86_MSR_IA32_VMX_PINBASED_CTLS),
                              // External interrupts cause a VM exit.
-                             PINBASED_CTLS_EXT_INT_EXITING |
+                             kPinbasedCtlsExtIntExiting |
                                  // Non-maskable interrupts cause a VM exit.
-                                 PINBASED_CTLS_NMI_EXITING,
+                                 kPinbasedCtlsNmiExiting,
                              0);
     if (status != ZX_OK)
         return status;
@@ -298,25 +298,25 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                              read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
                              read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
                              // Enable VM exit when interrupts are enabled.
-                             PROCBASED_CTLS_INT_WINDOW_EXITING |
+                             kProcbasedCtlsIntWindowExiting |
                                  // Enable VM exit on HLT instruction.
-                                 PROCBASED_CTLS_HLT_EXITING |
+                                 kProcbasedCtlsHltExiting |
                                  // Enable TPR virtualization.
-                                 PROCBASED_CTLS_TPR_SHADOW |
+                                 kProcbasedCtlsTprShadow |
                                  // Enable VM exit on IO instructions.
-                                 PROCBASED_CTLS_IO_EXITING |
+                                 kProcbasedCtlsIoExiting |
                                  // Enable use of MSR bitmaps.
-                                 PROCBASED_CTLS_MSR_BITMAPS |
+                                 kProcbasedCtlsMsrBitmaps |
                                  // Enable secondary processor-based controls.
-                                 PROCBASED_CTLS_PROCBASED_CTLS2,
+                                 kProcbasedCtlsProcbasedCtls2,
                              // Disable VM exit on CR3 load.
-                             PROCBASED_CTLS_CR3_LOAD_EXITING |
+                             kProcbasedCtlsCr3LoadExiting |
                                  // Disable VM exit on CR3 store.
-                                 PROCBASED_CTLS_CR3_STORE_EXITING |
+                                 kProcbasedCtlsCr3StoreExiting |
                                  // Disable VM exit on CR8 load.
-                                 PROCBASED_CTLS_CR8_LOAD_EXITING |
+                                 kProcbasedCtlsCr8LoadExiting |
                                  // Disable VM exit on CR8 store.
-                                 PROCBASED_CTLS_CR8_STORE_EXITING);
+                                 kProcbasedCtlsCr8StoreExiting);
     if (status != ZX_OK)
         return status;
 
@@ -331,17 +331,17 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                              // Logical processor is in 64-bit mode after VM
                              // exit. On VM exit CS.L, IA32_EFER.LME, and
                              // IA32_EFER.LMA is set to true.
-                             EXIT_CTLS_64BIT_MODE |
+                             kExitCtls64bitMode |
                                  // Save the guest IA32_PAT MSR on exit.
-                                 EXIT_CTLS_SAVE_IA32_PAT |
+                                 kExitCtlsSaveIa32Pat |
                                  // Load the host IA32_PAT MSR on exit.
-                                 EXIT_CTLS_LOAD_IA32_PAT |
+                                 kExitCtlsLoadIa32Pat |
                                  // Save the guest IA32_EFER MSR on exit.
-                                 EXIT_CTLS_SAVE_IA32_EFER |
+                                 kExitCtlsSaveIa32Efer |
                                  // Load the host IA32_EFER MSR on exit.
-                                 EXIT_CTLS_LOAD_IA32_EFER |
+                                 kExitCtlsLoadIa32Efer |
                                  // Acknowledge external interrupt on exit.
-                                 EXIT_CTLS_ACK_INT_ON_EXIT,
+                                 kExitCtlsAckIntOnExit,
                              0);
     if (status != ZX_OK)
         return status;
@@ -352,11 +352,11 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                              read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS),
                              // After VM entry, logical processor is in IA-32e
                              // mode and IA32_EFER.LMA is set to true.
-                             ENTRY_CTLS_IA32E_MODE |
+                             kEntryCtlsIa32eMode |
                                  // Load the guest IA32_PAT MSR on entry.
-                                 ENTRY_CTLS_LOAD_IA32_PAT |
+                                 kEntryCtlsLoadIa32Pat |
                                  // Load the guest IA32_EFER MSR on entry.
-                                 ENTRY_CTLS_LOAD_IA32_EFER,
+                                 kEntryCtlsLoadIa32Efer,
                              0);
     if (status != ZX_OK)
         return status;
@@ -501,25 +501,25 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     vmcs.Write(VmcsField64::GUEST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
 
     vmcs.Write(VmcsField32::GUEST_CS_ACCESS_RIGHTS,
-               GUEST_XX_ACCESS_RIGHTS_TYPE_A |
-                   GUEST_XX_ACCESS_RIGHTS_TYPE_W |
-                   GUEST_XX_ACCESS_RIGHTS_TYPE_E |
-                   GUEST_XX_ACCESS_RIGHTS_TYPE_CODE |
-                   GUEST_XX_ACCESS_RIGHTS_S |
-                   GUEST_XX_ACCESS_RIGHTS_P |
-                   GUEST_XX_ACCESS_RIGHTS_L);
+               kGuestXxAccessRightsTypeA |
+                   kGuestXxAccessRightsTypeW |
+                   kGuestXxAccessRightsTypeE |
+                   kGuestXxAccessRightsTypeCode |
+                   kGuestXxAccessRightsS |
+                   kGuestXxAccessRightsP |
+                   kGuestXxAccessRightsL);
 
     vmcs.Write(VmcsField32::GUEST_TR_ACCESS_RIGHTS,
-               GUEST_TR_ACCESS_RIGHTS_TSS_BUSY |
-                   GUEST_XX_ACCESS_RIGHTS_P);
+               kGuestTrAccessRightsTssBusy |
+                   kGuestXxAccessRightsP);
 
     // Disable all other segment selectors until we have a guest that uses them.
-    vmcs.Write(VmcsField32::GUEST_SS_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
-    vmcs.Write(VmcsField32::GUEST_DS_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
-    vmcs.Write(VmcsField32::GUEST_ES_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
-    vmcs.Write(VmcsField32::GUEST_FS_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
-    vmcs.Write(VmcsField32::GUEST_GS_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
-    vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
+    vmcs.Write(VmcsField32::GUEST_SS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
+    vmcs.Write(VmcsField32::GUEST_DS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
+    vmcs.Write(VmcsField32::GUEST_ES_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
+    vmcs.Write(VmcsField32::GUEST_FS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
+    vmcs.Write(VmcsField32::GUEST_GS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
+    vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
 
     vmcs.Write(VmcsFieldXX::GUEST_GDTR_BASE, 0);
     vmcs.Write(VmcsField32::GUEST_GDTR_LIMIT, 0);
@@ -548,7 +548,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     // referenced by this pointer (see Section 24.10). Otherwise, software
     // should set this field to FFFFFFFF_FFFFFFFFH to avoid VM-entry
     // failures (see Section 26.3.1.5).
-    vmcs.Write(VmcsField64::LINK_POINTER, LINK_POINTER_INVALIDATE);
+    vmcs.Write(VmcsField64::LINK_POINTER, kLinkPointerInvalidate);
 
     if (x86_feature_test(X86_FEATURE_XSAVE)) {
         // Enable x87 state in guest XCR0.
