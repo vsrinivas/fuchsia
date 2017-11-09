@@ -8,10 +8,10 @@
 #include <lib/version.h>
 
 #include <debug.h>
+#include <lk/init.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <lk/init.h>
 
 /* generated for us */
 #include <config-buildid.h>
@@ -42,8 +42,7 @@ __USED const lk_version_t version = {
     .elf_build_id = elf_build_id_string,
 };
 
-void print_version(void)
-{
+void print_version(void) {
     printf("version:\n");
     printf("\tarch:     %s\n", version.arch);
     printf("\tplatform: %s\n", version.platform);
@@ -71,7 +70,7 @@ extern const struct build_id_note __build_id_note_start;
 extern const uint8_t __build_id_note_end[];
 
 static void init_build_id(uint level) {
-    const struct build_id_note *const note = &__build_id_note_start;
+    const struct build_id_note* const note = &__build_id_note_start;
     if (note->type != NT_GNU_BUILD_ID ||
         note->namesz != sizeof(NOTE_NAME) ||
         memcmp(note->name, NOTE_NAME, sizeof(NOTE_NAME)) != 0 ||
@@ -95,8 +94,7 @@ LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_HEAP - 2);
 #include <debug.h>
 #include <lib/console.h>
 
-static int cmd_version(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_version(int argc, const cmd_args* argv, uint32_t flags) {
     print_version();
     return 0;
 }
@@ -108,6 +106,10 @@ STATIC_COMMAND_END(version);
 #endif // WITH_LIB_CONSOLE
 
 #if LK_DEBUGLEVEL > 0
+static void print_version_init(uint) {
+    print_version();
+}
+
 // print the version string if any level of debug is set
-LK_INIT_HOOK(version, (void *)&print_version, LK_INIT_LEVEL_HEAP - 1);
+LK_INIT_HOOK(version, print_version_init, LK_INIT_LEVEL_HEAP - 1);
 #endif

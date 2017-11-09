@@ -15,17 +15,17 @@ __BEGIN_CDECLS
 
 typedef struct {
     unsigned int struct_version;
-    const char *arch;
-    const char *platform;
-    const char *target;
-    const char *project;
-    const char *buildid;
+    const char* arch;
+    const char* platform;
+    const char* target;
+    const char* project;
+    const char* buildid;
 
     // This is a printable string of hex digits giving the ELF build ID
     // bits.  The ELF build ID is a unique bit-string identifying the
     // kernel binary, produced automatically by the linker.  It's the
     // canonical way to find a binary and its debug information.
-    const char *elf_build_id;
+    const char* elf_build_id;
 } lk_version_t;
 
 extern const lk_version_t version;

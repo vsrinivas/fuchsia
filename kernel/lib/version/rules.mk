@@ -10,7 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/version.c
+	$(LOCAL_DIR)/version.cpp
 
 # if no one else has defined it by now, build us a default buildid
 # based on the current time.
