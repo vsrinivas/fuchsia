@@ -300,6 +300,7 @@ var (
 	GUIDFuchsiaSystem    = mustNewGUID("606B000B-B7C7-4653-A7D5-B737332C899D")
 	GUIDFuchsiaData      = mustNewGUID("08185F0C-892D-428A-A789-DBEEC8F55E6A")
 	GUIDFuchsiaBlob      = mustNewGUID("2967380E-134C-4CBB-B6DA-17E7CE1CA45D")
+	GUIDFuchsiaFVM       = mustNewGUID("41D0E340-57E3-954E-8C1E-17ECAC44CFF5")
 )
 
 // GUIDS contains a map of known GUIDS to their names.
