@@ -1,0 +1,36 @@
+_message -r $context
+_message -r $curcontext
+_message -r $state
+_message -r $CURRENT
+local -a commands
+commands=(
+  'build-disk:build a fuchsia disk for virtualbox'
+  'create:create a fuchsia vm in virtualbox'
+  "console:connect to the fuchsia vm's console"
+  'start:start the fuchsia vm'
+  'stop:stop the fuchsiavm'
+)
+
+if (( CURRENT == 2 )); then
+  _describe -t commands 'fx box command' commands || compadd "$@"
+else
+  local curcontext="$curcontext"
+  local cmd="${${commands[(r)$words[2]:*]%%:*}}"
+  case "$cmd" in
+    build-disk|create|console|off|stop|delete|reset)
+      # no arguments
+      ;;
+    start)
+      _arguments '--type:running mode:(gui sdl headless)'
+      ;;
+    off|stop)
+      ;;
+    *)
+      _message "unknown fx box command: $words[2]"
+      ;;
+  esac
+  if (( $#cmd )); then
+
+  else
+  fi
+fi

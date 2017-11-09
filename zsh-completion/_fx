@@ -1,5 +1,11 @@
 #compdef fx
 
+__fx_nodename() {
+  # TODO: allow configuration of node names with zstyle
+  local -a nodenames=( $(${fuchsia_dir}/out/build-zircon/tools/netls | awk '/device/ { print $2; }') )
+  _describe 'nodename' nodenames
+}
+
 _fx() {
   typeset -A opt_args
 
