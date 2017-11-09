@@ -12,4 +12,4 @@ fx-config-read
 echo "After netbooting, please run 'install-fuchsia' on the device to complete the installation."
 "${ZIRCON_TOOLS_DIR}/bootserver" \
   "${ZIRCON_BUILD_DIR}/zircon.bin" \
-  "${FUCHSIA_BUILD_DIR}/installer.bootfs"
+  "${FUCHSIA_BUILD_DIR}/user.bootfs"
