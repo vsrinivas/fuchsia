@@ -131,12 +131,6 @@ zx_status_t zx_pipe_close(fdio_t* io) {
     return 0;
 }
 
-static void zx_pipe_release(fdio_t* io) {
-    zx_pipe_t* p = (zx_pipe_t*)io;
-    zx_handle_close(p->h);
-    free(io);
-}
-
 void zx_pipe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
     zx_pipe_t* p = (void*)io;
     *handle = p->h;
