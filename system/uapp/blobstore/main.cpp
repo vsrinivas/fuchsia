@@ -84,15 +84,32 @@ int do_blobstore_add_blob(int fd, int argc, char** argv) {
 
 zx_status_t process_manifest_line(FILE* manifest, int blob_fd) {
     size_t size = 0;
-    char* src = nullptr;
+    char* line = nullptr;
 
-    int r = getline(&src, &size, manifest);
+    int r = getline(&line, &size, manifest);
 
     if (r < 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    fbl::unique_free_ptr<char> ptr(src);
+    fbl::unique_free_ptr<char> ptr(line);
+
+    // Exit early if line is commented out
+    if (line[0] == '#') {
+        return ZX_OK;
+    }
+
+    char* src = strchr(line, '=');
+    if (src == nullptr) {
+        src = line;
+    } else {
+        src = src + 1;
+        if (strchr(src, '=') != nullptr) {
+            fprintf(stderr, "Too many '=' in input\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
+
     char* nl_ptr = strchr(src, '\n');
     if (nl_ptr != nullptr) {
         *nl_ptr = '\0';
@@ -104,7 +121,8 @@ zx_status_t process_manifest_line(FILE* manifest, int blob_fd) {
         return ZX_ERR_IO;
     }
 
-    if (blobstore::blobstore_add_blob(blob_fd, data_fd.get()) != 0) {
+    zx_status_t status = blobstore::blobstore_add_blob(blob_fd, data_fd.get());
+    if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
         fprintf(stderr, "error: failed to add blob '%s'\n", src);
         return ZX_ERR_INTERNAL;
     }

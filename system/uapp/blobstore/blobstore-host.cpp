@@ -182,8 +182,7 @@ int blobstore_add_blob(int fd, int data_fd) {
         auto observed_inode = &iblk[i % kInodesPerBlock];
         if (observed_inode->start_block >= kStartBlockMinimum) {
             if (digest == observed_inode->merkle_root_hash) {
-                fprintf(stderr, "error: Blob already exists in blobstore\n");
-                return -1;
+                return ZX_ERR_ALREADY_EXISTS;
             }
         } else if (inode == nullptr) {
             memcpy(ino_block, iblk, kBlobstoreBlockSize);

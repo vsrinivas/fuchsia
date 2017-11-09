@@ -153,6 +153,12 @@ zx_status_t process_manifest_line(FILE* manifest) {
     }
 
     fbl::unique_free_ptr<char> ptr(line);
+
+    // Exit early if line is commented out
+    if (line[0] == '#') {
+        return ZX_OK;
+    }
+
     char* eq_ptr = strchr(line, '=');
 
     if (eq_ptr == nullptr) {
