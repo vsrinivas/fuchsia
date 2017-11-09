@@ -1,0 +1,46 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+fx-config-read
+
+# the manifests contain paths relative to the build dir
+cd "${FUCHSIA_BUILD_DIR}"
+
+if [[ ! -s "${system_manifest}" ]]; then
+  echo "${system_manifest} is empty/missing, run fx build?" >&2
+  exit 1
+fi
+
+mkdir -p "${system_package_dir}"
+export FUCHSIA_PACKAGE_KEY="${FUCHSIA_PACKAGE_KEY:-"${FUCHSIA_BUILD_DIR}/package.key"}"
+if [[ ! -f "${FUCHSIA_PACKAGE_KEY}" ]]; then
+  "${FUCHSIA_BUILD_DIR}/tools/pm" -k "${FUCHSIA_PACKAGE_KEY}" genkey
+fi
+
+if [[ ! -f "${system_package_dir}" ]]; then
+  "${FUCHSIA_BUILD_DIR}/tools/pm" -o "${system_package_dir}" init
+fi
+
+if [[ -f "${system_package_meta_far}" ]]; then
+  rm "${system_package_meta_far}"
+fi
+"${FUCHSIA_BUILD_DIR}/tools/pm" \
+  -k "${FUCHSIA_PACKAGE_KEY}" \
+  -o "${system_package_dir}" \
+  -m "${system_manifest}" \
+  build
+
+pkgsvr_merkleroot="$("${ZIRCON_TOOLS_DIR}/merkleroot" "${FUCHSIA_BUILD_DIR}/pkgsvr" | cut -d ' ' -f 1)"
+system_package_meta_far_merkle="$("${ZIRCON_TOOLS_DIR}/merkleroot" "${system_package_meta_far}" | cut -d ' ' -f 1)"
+(
+  # allow grep -v to fail (matches nothing / missing file)
+  set +e
+  grep -v "zircon.autorun.blobstore=" "${cmdline}" || echo -n
+  echo "zircon.autorun.blobstore=/blobstore/${pkgsvr_merkleroot}+-package+/blobstore/${system_package_meta_far_merkle}"
+) > "${FUCHSIA_BUILD_DIR}/.cmdline"
+exec mv "${FUCHSIA_BUILD_DIR}/.cmdline" "${cmdline}"

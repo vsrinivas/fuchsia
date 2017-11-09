@@ -1,0 +1,43 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+source "${FUCHSIA_DIR}/scripts/devshell/lib/disktools.sh"
+fx-need-mtools
+
+# the manifests contain paths relative to the build dir
+cd "${FUCHSIA_BUILD_DIR}"
+
+# mkfs-msdosfs requires a particular shape, so the below size conforms to that
+efi_size="$((32 * 63 * 25 * 1024))"
+
+fx-truncate "${efi_block}" "${efi_size}"
+# mkfs-msdosfs is noisy, so suppress the mkfs_msdosfs_combined_output unless there's an error:
+mkfs_msdosfs_combined_output="$("${ZIRCON_TOOLS_DIR}/mkfs-msdosfs" -S "${efi_size}" "${efi_block}" 2>&1)"
+if [[ $? != 0 ]]; then
+  echo >&2 "${mkfs_msdosfs_combined_output}"
+  exit $?
+fi
+
+# TODO(raggi): fat kernel+bootdata images are not yet supported by gigaboot
+# except for zedboot.bin.
+# mkbootfs -o "${zircon_bin}" "${ZIRCON_BUILD_DIR}/zircon.bin" --target=boot "$boot_manifest"
+cp "${ZIRCON_BUILD_DIR}/zircon.bin" "${zircon_bin}"
+
+"${ZIRCON_TOOLS_DIR}/mkbootfs" -o "${ramdisk_bin}" --target=boot "${boot_manifest}"
+
+mmd -i "${efi_block}" ::EFI
+mmd -i "${efi_block}" ::EFI/BOOT
+mcopy -i "${efi_block}" "${zircon_bin}" "::$(basename "${zircon_bin}")"
+mcopy -i "${efi_block}" "${ramdisk_bin}" "::$(basename "${ramdisk_bin}")"
+mcopy -i "${efi_block}" "${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi" "::EFI/BOOT/BOOTX64.EFI"
+
+# TODO(raggi): replace this with a bootdata section, or better the system config
+# partition. Currently this is actually more convenient for EFI systems as we
+# can alter the boot commandline by hand, but this will not be allowed on a
+# verified boot path.
+mcopy -i "${efi_block}" "${FUCHSIA_BUILD_DIR}/cmdline" "::cmdline"

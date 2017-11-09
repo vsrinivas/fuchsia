@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+source "${FUCHSIA_DIR}/scripts/devshell/lib/disktools.sh"
+
+# the manifests contain paths relative to the build dir
+cd "${FUCHSIA_BUILD_DIR}"
+
+for f in "${system_manifest}" "${system_package_meta_far}"; do
+  if [[ ! -s "$f" ]]; then
+    echo >&2 "Required file \"$f\" is missing, run build and \"fx mksystempkg\""
+    exit 1
+  fi
+done
+
+# blob size is size of files plus some slack
+input_size="$(du -ck $(cat "${system_manifest}" | cut -d = -f 2) | grep total | cut -f 1)"
+blobstore_size="$(( ${input_size} * 1024 * 14 / 10 ))"
+
+fx-truncate "${blobstore_block}" "${blobstore_size}"
+"${ZIRCON_TOOLS_DIR}/blobstore" "${blobstore_block}" create
+
+"${ZIRCON_TOOLS_DIR}/blobstore" "${blobstore_block}" manifest "${system_manifest}"
+"${ZIRCON_TOOLS_DIR}/blobstore" "${blobstore_block}" add "${system_package_meta_far}"

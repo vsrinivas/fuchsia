@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+source "${FUCHSIA_DIR}/scripts/devshell/lib/disktools.sh"
+
+for f in "${blobstore_block}"; do
+  if [[ ! -s "$f" ]]; then
+    echo >&2 "Required file '$f' is missing, run fx mkblobstore"
+    exit 1
+  fi
+done
+
+cd "${FUCHSIA_BUILD_DIR}"
+
+# 10mb is the minimum size of a minfs image
+if [[ ! -f "${data_block}" ]]; then
+  fx-truncate "${data_block}" "$((10 * 1024 * 1024))"
+  "${ZIRCON_TOOLS_DIR}/minfs" "${data_block}" create
+fi
+
+if [[ -f "${fvm_sparse_block}" ]]; then
+  rm "${fvm_sparse_block}"
+fi
+exec "${ZIRCON_TOOLS_DIR}/fvm" "${fvm_sparse_block}" sparse --blobstore "${blobstore_block}" --data "${data_block}"
