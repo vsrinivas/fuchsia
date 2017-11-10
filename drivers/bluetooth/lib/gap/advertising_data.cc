@@ -41,9 +41,9 @@ bool ParseUuids(const ::bluetooth::common::BufferView& data,
                 size_t uuid_size,
                 UuidFunction func) {
   FXL_DCHECK(func);
-  FXL_DCHECK((uuid_size == ::bluetooth::gap::k16BitUuidElemSize) ||
-             (uuid_size == ::bluetooth::gap::k32BitUuidElemSize) ||
-             (uuid_size == ::bluetooth::gap::k128BitUuidElemSize));
+  FXL_DCHECK((uuid_size == k16BitUuidElemSize) ||
+             (uuid_size == k32BitUuidElemSize) ||
+             (uuid_size == k128BitUuidElemSize));
 
   if (data.size() % uuid_size) {
     FXL_LOG(WARNING) << "Malformed service UUIDs list";
@@ -64,20 +64,20 @@ bool ParseUuids(const ::bluetooth::common::BufferView& data,
   return true;
 }
 
-size_t SizeForType(::bluetooth::gap::DataType type) {
+size_t SizeForType(DataType type) {
   switch (type) {
-    case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
-    case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
-    case ::bluetooth::gap::DataType::kServiceData16Bit:
-      return ::bluetooth::gap::k16BitUuidElemSize;
-    case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
-    case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
-    case ::bluetooth::gap::DataType::kServiceData32Bit:
-      return ::bluetooth::gap::k32BitUuidElemSize;
-    case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
-    case ::bluetooth::gap::DataType::kComplete128BitServiceUuids:
-    case ::bluetooth::gap::DataType::kServiceData128Bit:
-      return ::bluetooth::gap::k128BitUuidElemSize;
+    case DataType::kIncomplete16BitServiceUuids:
+    case DataType::kComplete16BitServiceUuids:
+    case DataType::kServiceData16Bit:
+      return k16BitUuidElemSize;
+    case DataType::kIncomplete32BitServiceUuids:
+    case DataType::kComplete32BitServiceUuids:
+    case DataType::kServiceData32Bit:
+      return k32BitUuidElemSize;
+    case DataType::kIncomplete128BitServiceUuids:
+    case DataType::kComplete128BitServiceUuids:
+    case DataType::kServiceData128Bit:
+      return k128BitUuidElemSize;
     default:
       break;
   };
@@ -162,12 +162,12 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   if (!reader.is_valid())
     return false;
 
-  ::bluetooth::gap::DataType type;
+  DataType type;
   ::bluetooth::common::BufferView field;
   while (reader.GetNextField(&type, &field)) {
     switch (type) {
-      case ::bluetooth::gap::DataType::kTxPowerLevel: {
-        if (field.size() != ::bluetooth::gap::kTxPowerLevelSize) {
+      case DataType::kTxPowerLevel: {
+        if (field.size() != kTxPowerLevelSize) {
           FXL_LOG(WARNING) << "Received malformed Tx Power Level";
           return false;
         }
@@ -175,22 +175,22 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
         out_ad->SetTxPower(static_cast<int8_t>(field[0]));
         break;
       }
-      case ::bluetooth::gap::DataType::kShortenedLocalName:
+      case DataType::kShortenedLocalName:
         // If a name has been previously set (e.g. because the Complete Local
         // Name was included in the scan response) then break. Otherwise we fall
         // through.
         if (out_ad->local_name())
           break;
-      case ::bluetooth::gap::DataType::kCompleteLocalName: {
+      case DataType::kCompleteLocalName: {
         out_ad->SetLocalName(field.ToString());
         break;
       }
-      case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
-      case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
-      case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete128BitServiceUuids: {
+      case DataType::kIncomplete16BitServiceUuids:
+      case DataType::kComplete16BitServiceUuids:
+      case DataType::kIncomplete32BitServiceUuids:
+      case DataType::kComplete32BitServiceUuids:
+      case DataType::kIncomplete128BitServiceUuids:
+      case DataType::kComplete128BitServiceUuids: {
         if (!ParseUuids(field, SizeForType(type),
                         [&](const common::UUID& uuid) {
                           out_ad->AddServiceUuid(uuid);
@@ -198,23 +198,22 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
           return false;
         break;
       }
-      case ::bluetooth::gap::DataType::kManufacturerSpecificData: {
-        if (field.size() < ::bluetooth::gap::kManufacturerSpecificDataSizeMin) {
+      case DataType::kManufacturerSpecificData: {
+        if (field.size() < kManufacturerSpecificDataSizeMin) {
           FXL_LOG(WARNING) << "Manufacturer specific data too small";
           return false;
         }
 
         uint16_t id = le16toh(*reinterpret_cast<const uint16_t*>(field.data()));
-        const common::BufferView manuf_data(
-            field.data() + ::bluetooth::gap::kManufacturerIdSize,
-            field.size() - ::bluetooth::gap::kManufacturerIdSize);
+        const common::BufferView manuf_data(field.data() + kManufacturerIdSize,
+                                            field.size() - kManufacturerIdSize);
 
         out_ad->SetManufacturerData(id, manuf_data);
         break;
       }
-      case ::bluetooth::gap::DataType::kServiceData16Bit:
-      case ::bluetooth::gap::DataType::kServiceData32Bit:
-      case ::bluetooth::gap::DataType::kServiceData128Bit: {
+      case DataType::kServiceData16Bit:
+      case DataType::kServiceData32Bit:
+      case DataType::kServiceData128Bit: {
         ::bluetooth::common::UUID uuid;
         size_t uuid_size = SizeForType(type);
         const common::BufferView uuid_bytes(field.data(), uuid_size);
@@ -225,11 +224,11 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
         out_ad->SetServiceData(uuid, service_data);
         break;
       }
-      case ::bluetooth::gap::DataType::kAppearance: {
+      case DataType::kAppearance: {
         // TODO(armansito): RemoteDevice should have a function to return the
         // device appearance, as it can be obtained either from advertising data
         // or via GATT.
-        if (field.size() != ::bluetooth::gap::kAppearanceSize) {
+        if (field.size() != kAppearanceSize) {
           FXL_LOG(WARNING) << "Received malformed Appearance";
           return false;
         }
@@ -237,11 +236,11 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
         out_ad->SetAppearance(*reinterpret_cast<const uint16_t*>(field.data()));
         break;
       }
-      case ::bluetooth::gap::DataType::kURI: {
+      case DataType::kURI: {
         out_ad->AddURI(DecodeUri(field.ToString()));
         break;
       }
-      case ::bluetooth::gap::DataType::kFlags: {
+      case DataType::kFlags: {
         // TODO(jamuraa): is there anything to do here?
         break;
       }
