@@ -18,6 +18,85 @@
 
 namespace btlib {
 namespace gap {
+namespace internal {
+
+// Represents the state of an active connection. Each instance is owned
+// and managed by a LowEnergyConnectionManager and is kept alive as long as
+// there is at least one LowEnergyConnectionRef that references it.
+class LowEnergyConnection {
+ public:
+  LowEnergyConnection(const std::string& id,
+                      std::unique_ptr<hci::Connection> link,
+                      fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr)
+      : id_(id), link_(std::move(link)), conn_mgr_(conn_mgr) {
+    FXL_DCHECK(!id_.empty());
+    FXL_DCHECK(link_);
+    FXL_DCHECK(conn_mgr_);
+  }
+
+  ~LowEnergyConnection() {
+    // Tell the controller to disconnect the link if it is marked as open.
+    link_->Close();
+
+    // Notify all active references that the link is gone. This will
+    // synchronously notify all refs.
+    CloseRefs();
+  }
+
+  LowEnergyConnectionRefPtr AddRef() {
+    LowEnergyConnectionRefPtr conn_ref(
+        new LowEnergyConnectionRef(id_, conn_mgr_));
+    FXL_CHECK(conn_ref);
+
+    refs_.insert(conn_ref.get());
+
+    FXL_VLOG(1) << fxl::StringPrintf(
+        "gap: LowEnergyConnectionManager: added ref (handle: 0x%04x, refs: "
+        "%lu)",
+        handle(), ref_count());
+
+    return conn_ref;
+  }
+
+  void DropRef(LowEnergyConnectionRef* ref) {
+    FXL_DCHECK(ref);
+
+    __UNUSED size_t res = refs_.erase(ref);
+    FXL_DCHECK(res == 1u) << "DropRef called with wrong connection reference";
+
+    FXL_VLOG(1) << fxl::StringPrintf(
+        "gap: LowEnergyConnectionManager: dropped ref (handle: 0x%04x, refs: "
+        "%lu)",
+        handle(), ref_count());
+  }
+
+  size_t ref_count() const { return refs_.size(); }
+
+  const std::string& id() const { return id_; }
+  hci::ConnectionHandle handle() const { return link_->handle(); }
+  hci::Connection* link() const { return link_.get(); }
+
+ private:
+  void CloseRefs() {
+    for (auto* ref : refs_) {
+      ref->MarkClosed();
+    }
+
+    refs_.clear();
+  }
+
+  std::string id_;
+  std::unique_ptr<hci::Connection> link_;
+  fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
+
+  // LowEnergyConnectionManager is responsible for making sure that these
+  // pointers are always valid.
+  std::unordered_set<LowEnergyConnectionRef*> refs_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnection);
+};
+
+}  // namespace internal
 
 LowEnergyConnectionRef::LowEnergyConnectionRef(
     const std::string& device_id,
@@ -45,11 +124,6 @@ void LowEnergyConnectionRef::MarkClosed() {
   active_ = false;
   if (closed_cb_)
     closed_cb_();
-}
-
-void LowEnergyConnectionManager::ConnectionState::CloseRefs() {
-  for (auto* conn_ref : refs)
-    conn_ref->MarkClosed();
 }
 
 LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
@@ -135,8 +209,7 @@ LowEnergyConnectionManager::~LowEnergyConnectionManager() {
 
   // Clean up all connections.
   for (auto& iter : connections_) {
-    auto& conn_state = iter.second;
-    CleanUpConnectionState(&conn_state);
+    CleanUpConnection(std::move(iter.second));
   }
 
   connections_.clear();
@@ -227,16 +300,13 @@ bool LowEnergyConnectionManager::Disconnect(
   }
 
   // Remove the connection state from the internal map right away.
-  auto conn_state = std::move(iter->second);
+  auto conn = std::move(iter->second);
   connections_.erase(iter);
 
-  FXL_DCHECK(conn_state.conn);
-  FXL_DCHECK(!conn_state.refs.empty());
-
   FXL_LOG(INFO) << "gap: LowEnergyConnectionManager: disconnecting link: "
-                << conn_state.conn->ToString();
+                << conn->link()->ToString();
 
-  CleanUpConnectionState(&conn_state);
+  CleanUpConnection(std::move(conn));
   return true;
 }
 
@@ -274,29 +344,19 @@ void LowEnergyConnectionManager::ReleaseReference(
   auto iter = connections_.find(conn_ref->device_identifier());
   FXL_DCHECK(iter != connections_.end());
 
-  auto& conn_state = iter->second;
-  FXL_DCHECK(conn_state.conn);
-
-  // Drop the reference from the connection state.
-  __UNUSED size_t res = conn_state.refs.erase(conn_ref);
-  FXL_DCHECK(res == 1u) << "ReleaseReference called on bad |conn_ref|!";
-  FXL_VLOG(1) << fxl::StringPrintf(
-      "gap: LowEnergyConnectionManager: dropped ref (handle: 0x%04x, refs: "
-      "%lu)",
-      conn_state.conn->handle(), conn_state.refs.size());
-
-  if (!conn_state.refs.empty()) {
+  iter->second->DropRef(conn_ref);
+  if (iter->second->ref_count() != 0u)
     return;
-  }
+
+  // Move the connection object before erasing the entry.
+  auto conn = std::move(iter->second);
+  connections_.erase(iter);
 
   FXL_LOG(INFO)
       << "gap: LowEnergyConnectionManager: all refs dropped on connection: "
-      << conn_state.conn->ToString();
+      << conn->link()->ToString();
 
-  auto conn_state_moved = std::move(conn_state);
-  connections_.erase(iter);
-
-  CleanUpConnectionState(&conn_state_moved);
+  CleanUpConnection(std::move(conn));
 }
 
 void LowEnergyConnectionManager::TryCreateNextConnection() {
@@ -369,21 +429,19 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
                                initial_params, result_cb, request_timeout_ms_);
 }
 
-LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
+std::pair<LowEnergyConnectionRefPtr, internal::LowEnergyConnection*>
+LowEnergyConnectionManager::InitializeConnection(
     const std::string& device_identifier,
-    std::unique_ptr<hci::Connection> connection) {
+    std::unique_ptr<hci::Connection> link) {
   FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
 
-  LowEnergyConnectionRefPtr conn_ref(new LowEnergyConnectionRef(
-      device_identifier, weak_ptr_factory_.GetWeakPtr()));
+  auto conn = std::make_unique<internal::LowEnergyConnection>(
+      device_identifier, std::move(link), weak_ptr_factory_.GetWeakPtr());
 
-  ConnectionState state;
-  state.device_id = device_identifier;
-  state.conn = std::move(connection);
-  state.refs.insert(conn_ref.get());
-  connections_[device_identifier] = std::move(state);
+  auto result = std::make_pair(conn->AddRef(), conn.get());
 
-  return conn_ref;
+  connections_[device_identifier] = std::move(conn);
+  return result;
 }
 
 LowEnergyConnectionRefPtr LowEnergyConnectionManager::AddConnectionRef(
@@ -392,43 +450,39 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::AddConnectionRef(
   if (iter == connections_.end())
     return nullptr;
 
-  LowEnergyConnectionRefPtr conn_ref(new LowEnergyConnectionRef(
-      device_identifier, weak_ptr_factory_.GetWeakPtr()));
-  iter->second.refs.insert(conn_ref.get());
-
-  FXL_VLOG(1) << fxl::StringPrintf(
-      "gap: LowEnergyConnectionManager: added ref (handle: 0x%04x, refs: %lu)",
-      iter->second.conn->handle(), iter->second.refs.size());
-
-  return conn_ref;
+  return iter->second->AddRef();
 }
 
-void LowEnergyConnectionManager::CleanUpConnectionState(
-    ConnectionState* conn_state) {
-  FXL_DCHECK(conn_state);
-  FXL_DCHECK(conn_state->conn);
+void LowEnergyConnectionManager::CleanUpConnection(
+    std::unique_ptr<internal::LowEnergyConnection> conn,
+    bool close_link) {
+  FXL_DCHECK(conn);
 
   // Mark the peer device as no longer connected.
-  RemoteDevice* peer = device_cache_->FindDeviceById(conn_state->device_id);
-  FXL_CHECK(peer);
+  RemoteDevice* peer = device_cache_->FindDeviceById(conn->id());
+  FXL_DCHECK(peer);
   peer->set_connection_state(RemoteDevice::ConnectionState::kNotConnected);
 
   // This will notify all open L2CAP channels about the severed link.
-  l2cap_->Unregister(conn_state->conn->handle());
+  l2cap_->Unregister(conn->handle());
 
-  // Close the link if it marked as open.
-  conn_state->conn->Close();
+  if (!close_link) {
+    // Mark the connection as already closed so that hci::Connection::Close()
+    // doesn't send HCI_Disconnect to the controller.
+    //
+    // |close_link| is expected to be false only when this method is called due
+    // to a disconnection that was not requested by the local host.
+    conn->link()->set_closed();
+  }
 
-  // Notify all active references that the link is gone. This will synchronously
-  // notify all refs.
-  conn_state->CloseRefs();
+  // The |conn| is destroyed when it goes out of scope.
 }
 
 void LowEnergyConnectionManager::OnConnectionCreated(
     std::unique_ptr<hci::Connection> connection) {
   FXL_DCHECK(connection);
   FXL_DCHECK(connection->ll_type() == hci::Connection::LinkType::kLE);
-  FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: new connection: "
+  FXL_LOG(INFO) << "gap: LowEnergyConnectionManager: new connection: "
                 << connection->ToString();
 
   RemoteDevice* peer =
@@ -445,8 +499,14 @@ void LowEnergyConnectionManager::OnConnectionCreated(
   // to 0 due to an unclaimed reference while notifying pending callbacks and
   // listeners below.
   auto conn_ptr = connection.get();
-  auto conn_ref =
+  auto ref_state_pair =
       InitializeConnection(peer->identifier(), std::move(connection));
+
+  LowEnergyConnectionRefPtr first_ref = std::move(ref_state_pair.first);
+  internal::LowEnergyConnection* conn = ref_state_pair.second;
+
+  FXL_DCHECK(first_ref);
+  FXL_DCHECK(conn);
 
   // Add the connection to the L2CAP table. Incoming data will be buffered until
   // the channels are open.
@@ -489,23 +549,23 @@ void LowEnergyConnectionManager::OnConnectionCreated(
     pending_requests_.erase(iter);
 
     pending_req_data.NotifyCallbacks(hci::Status::kSuccess, [this, peer] {
-      auto conn_ref = AddConnectionRef(peer->identifier());
-      FXL_CHECK(conn_ref);
-      return conn_ref;
+      auto new_ref = AddConnectionRef(peer->identifier());
+      FXL_CHECK(new_ref);
+      return new_ref;
     });
   }
 
   // Notify each listener with a unique reference.
   for (const auto& iter : listeners_) {
-    auto conn_ref = AddConnectionRef(peer->identifier());
-    FXL_DCHECK(conn_ref);
+    auto new_ref = AddConnectionRef(peer->identifier());
+    FXL_DCHECK(new_ref);
 
-    iter.second(std::move(conn_ref));
+    iter.second(std::move(new_ref));
   }
 
   // Release the extra reference before attempting the next connection. This
   // will disconnect the link if no callback or listener retained its reference.
-  conn_ref = nullptr;
+  first_ref = nullptr;
 
   FXL_DCHECK(!connector_->request_pending());
   TryCreateNextConnection();
@@ -575,7 +635,7 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
 
   // See if we can find a connection with a matching handle by walking the
   // connections list.
-  auto iter = FindConnectionStateIter(handle);
+  auto iter = FindConnection(handle);
   if (iter == connections_.end()) {
     FXL_VLOG(1) << fxl::StringPrintf(
         "gap: LowEnergyConnectionManager: unknown connection handle: 0x%04x",
@@ -585,15 +645,13 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
 
   // Found the connection. Remove the entry from |connections_| before notifying
   // the "closed" handlers.
-  ConnectionState conn_state = std::move(iter->second);
+  auto conn = std::move(iter->second);
   connections_.erase(iter);
 
-  FXL_DCHECK(!conn_state.refs.empty());
+  FXL_DCHECK(conn->ref_count());
 
-  // Mark the connection as closed so that hci::Connection::Close() becomes a
-  // NOP.
-  conn_state.conn->set_closed();
-  CleanUpConnectionState(&conn_state);
+  // The connection is already closed, so no need to send HCI_Disconnect.
+  CleanUpConnection(std::move(conn), false /* close_link */);
 }
 
 void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
@@ -615,7 +673,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
     return;
   }
 
-  auto iter = FindConnectionStateIter(handle);
+  auto iter = FindConnection(handle);
   if (iter == connections_.end()) {
     FXL_VLOG(1) << fxl::StringPrintf(
         "gap: Connection parameters received for unknown connection (handle: "
@@ -624,20 +682,19 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
     return;
   }
 
-  const ConnectionState& conn_state = iter->second;
-  FXL_DCHECK(conn_state.conn);
-  FXL_DCHECK(conn_state.conn->handle() == handle);
+  const auto& conn = *iter->second;
+  FXL_DCHECK(conn.handle() == handle);
 
   FXL_LOG(INFO) << fxl::StringPrintf(
       "gap: LE conn. params. updated (id: %s, handle: 0x%04x)",
-      conn_state.device_id.c_str(), handle);
+      conn.id().c_str(), handle);
 
   hci::LEConnectionParameters params(le16toh(payload->conn_interval),
                                      le16toh(payload->conn_latency),
                                      le16toh(payload->supervision_timeout));
-  conn_state.conn->set_low_energy_parameters(params);
+  conn.link()->set_low_energy_parameters(params);
 
-  RemoteDevice* peer = device_cache_->FindDeviceById(conn_state.device_id);
+  RemoteDevice* peer = device_cache_->FindDeviceById(conn.id());
   if (!peer) {
     FXL_VLOG(1) << "(ERROR): gap: LE conn. params. updated for peer no longer "
                    "in cache!";
@@ -714,14 +771,12 @@ void LowEnergyConnectionManager::UpdateConnectionParams(
                                        hci::kCommandStatusEventCode);
 }
 
-LowEnergyConnectionManager::ConnectionStateMap::iterator
-LowEnergyConnectionManager::FindConnectionStateIter(
-    hci::ConnectionHandle handle) {
+LowEnergyConnectionManager::ConnectionMap::iterator
+LowEnergyConnectionManager::FindConnection(hci::ConnectionHandle handle) {
   auto iter = connections_.begin();
   for (; iter != connections_.end(); ++iter) {
-    auto& conn_state = iter->second;
-    FXL_DCHECK(conn_state.conn);
-    if (conn_state.conn->handle() == handle)
+    const auto& conn = *iter->second;
+    if (conn.handle() == handle)
       break;
   }
   return iter;

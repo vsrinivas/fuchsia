@@ -34,6 +34,7 @@ static_library("gap") {
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/gatt",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//garnet/public/lib/bluetooth/fidl:fidl_data_only",

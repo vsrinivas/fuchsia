@@ -35,6 +35,10 @@ class ChannelManager;
 
 namespace gap {
 
+namespace internal {
+class LowEnergyConnection;
+}  // namespace internal
+
 // TODO(armansito): Document the usage pattern.
 
 class LowEnergyConnectionManager;
@@ -61,6 +65,7 @@ class LowEnergyConnectionRef final {
 
  private:
   friend class LowEnergyConnectionManager;
+  friend class internal::LowEnergyConnection;
 
   LowEnergyConnectionRef(const std::string& device_id,
                          fxl::WeakPtr<LowEnergyConnectionManager> manager);
@@ -121,7 +126,9 @@ class LowEnergyConnectionManager final {
   // A connection listener can be used to be notified when a connection is
   // established to any remote LE device.
   //
-  // |callback| is posted on the creation thread's task runner.
+  // |callback| is run on the creation thread's task runner. A previously
+  // registered |callback| is guaranteed not to run if it is unregistered via
+  // RemoveListener().
   using ListenerId = size_t;
   using ConnectionCallback = std::function<void(LowEnergyConnectionRefPtr)>;
   ListenerId AddListener(const ConnectionCallback& callback);
@@ -154,26 +161,10 @@ class LowEnergyConnectionManager final {
  private:
   friend class LowEnergyConnectionRef;
 
-  struct ConnectionState {
-    ConnectionState() = default;
-    ~ConnectionState() = default;
-
-    ConnectionState(ConnectionState&&) = default;
-    ConnectionState& operator=(ConnectionState&&) = default;
-
-    std::string device_id;
-    std::unique_ptr<hci::Connection> conn;
-    std::unordered_set<LowEnergyConnectionRef*> refs;
-
-    // Marks all references to this connection as closed.
-    void CloseRefs();
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(ConnectionState);
-  };
-
   // Mapping from device identifiers to open LE connections.
-  using ConnectionStateMap = std::unordered_map<std::string, ConnectionState>;
+  using ConnectionMap =
+      std::unordered_map<std::string,
+                         std::unique_ptr<internal::LowEnergyConnection>>;
 
   class PendingRequestData {
    public:
@@ -215,9 +206,9 @@ class LowEnergyConnectionManager final {
 
   // Initializes the connection state for the device with the given identifier
   // and returns the initial reference.
-  LowEnergyConnectionRefPtr InitializeConnection(
-      const std::string& device_identifier,
-      std::unique_ptr<hci::Connection> connection);
+  std::pair<LowEnergyConnectionRefPtr, internal::LowEnergyConnection*>
+  InitializeConnection(const std::string& device_identifier,
+                       std::unique_ptr<hci::Connection> link);
 
   // Adds a new connection reference to an existing connection to the device
   // with the ID |device_identifier| and returns it. Returns nullptr if
@@ -225,13 +216,18 @@ class LowEnergyConnectionManager final {
   LowEnergyConnectionRefPtr AddConnectionRef(
       const std::string& device_identifier);
 
-  // Cleans up a connection state. This result in a HCI_Disconnect command (if
-  // the connection is marked as open) and notifies any referenced
-  // LowEnergyConnectionRefs of the disconnection.
+  // Cleans up a connection state. This result in a HCI_Disconnect command
+  // if |close_link| is true, and notifies any referenced
+  // LowEnergyConnectionRefs of the disconnection. Marks the corresponding
+  // RemoteDeviceCache entry as disconnected and cleans up all data bearers.
+  //
+  // |conn_state| will have been removed from the underlying map at the time of
+  // a call. Its ownership is passed to the method for disposal.
   //
   // This is also responsible for unregistering the link from managed subsystems
   // (e.g. L2CAP).
-  void CleanUpConnectionState(ConnectionState* conn_state);
+  void CleanUpConnection(std::unique_ptr<internal::LowEnergyConnection> conn,
+                         bool close_link = true);
 
   // Called by |connector_| when a new LE connection has been created.
   void OnConnectionCreated(std::unique_ptr<hci::Connection> connection);
@@ -279,14 +275,13 @@ class LowEnergyConnectionManager final {
       hci::ConnectionHandle handle,
       const hci::LEPreferredConnectionParameters& params);
 
-  // Returns an interator into |connections_| if a ConnectionState is found that
+  // Returns an iterator into |connections_| if a connection is found that
   // matches the given logical link |handle|. Otherwise, returns an iterator
   // that is equal to |connections_.end()|.
   //
   // The general rules of validity around std::unordered_map::iterator apply to
   // the returned value.
-  ConnectionStateMap::iterator FindConnectionStateIter(
-      hci::ConnectionHandle handle);
+  ConnectionMap::iterator FindConnection(hci::ConnectionHandle handle);
 
   fxl::RefPtr<hci::Transport> hci_;
 
@@ -323,7 +318,7 @@ class LowEnergyConnectionManager final {
   std::unordered_map<std::string, PendingRequestData> pending_requests_;
 
   // Mapping from device identifiers to currently open LE connections.
-  ConnectionStateMap connections_;
+  ConnectionMap connections_;
 
   // Performs the Direct Connection Establishment procedure.
   std::unique_ptr<hci::LowEnergyConnector> connector_;
