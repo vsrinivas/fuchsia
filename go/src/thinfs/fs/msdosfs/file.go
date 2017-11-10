@@ -297,6 +297,8 @@ func (f *file) Seek(offset int64, whence int) (int64, error) {
 	defer f.fs.RUnlock()
 	if f.fs.unmounted {
 		return 0, fs.ErrUnmounted
+	} else if f.flags.Path() {
+		return 0, fs.ErrPermission
 	}
 
 	f.RLock() // Reading 'closed'

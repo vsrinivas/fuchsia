@@ -105,7 +105,7 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 			return fs.ErrInvalidArgs // Node already exists; these are bad arguments
 		} else if flags.Append() || flags.Truncate() || flags.File() {
 			return fs.ErrNotAFile // File-specific args
-		} else if !flags.Read() {
+		} else if !flags.Read() && !flags.Path() {
 			return fs.ErrPermission // Directories require read privileges
 		}
 		return nil
@@ -616,7 +616,7 @@ func createIncremental(parent node.DirectoryNode, name string, flags fs.OpenFlag
 
 	if flags.Append() || flags.Truncate() {
 		return nil, fs.ErrNotAFile // Reject non-directory flags
-	} else if !flags.Read() {
+	} else if !flags.Read() && !flags.Path() {
 		return nil, fs.ErrPermission // Directories require read permission
 	}
 

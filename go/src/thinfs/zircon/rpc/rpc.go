@@ -186,6 +186,9 @@ func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
 	} else {
 		res |= fs.OpenFlagRead
 	}
+	if arg&syscall.O_PATH != 0 {
+		res |= fs.OpenFlagPath
+	}
 
 	// Additional open flags
 	if arg&syscall.O_CREAT != 0 {
@@ -298,6 +301,9 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 	case fdio.OpSync:
 		return errorToRIO(f.Sync())
 	case fdio.OpSetAttr:
+		if f.GetOpenFlags().Path() {
+			return zx.ErrBadHandle
+		}
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(f.Touch(atime, mtime))
 	case fdio.OpFcntl:
@@ -314,6 +320,8 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 				cflags |= syscall.O_RDWR
 			} else if oflags.Write() {
 				cflags |= syscall.O_WRONLY
+			} else if oflags.Path() {
+				cflags |= syscall.O_PATH
 			}
 			msg.SetFcntlFlags(cflags)
 			return zx.ErrOk
@@ -375,6 +383,10 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
 		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
+		if flags.Path() {
+			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagPipeline
+		}
+
 		f, d, err := dir.Open(path, flags)
 		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return fdio.IndirectError(msg.Handle[0], mxErr)

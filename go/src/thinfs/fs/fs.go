@@ -101,6 +101,9 @@ const (
 	OpenFlagFile
 	// OpenFlagDirectory indicates the operation must act on a directory
 	OpenFlagDirectory
+	// OpenFlagPath indicates the operation should only open the file descriptor,
+	// not actually opening the file.
+	OpenFlagPath
 	// OpenFlagPipeline indicates the open request should open immediately with no response
 	OpenFlagPipeline
 )
@@ -143,6 +146,10 @@ func (f OpenFlags) File() bool {
 // Directory returns if the Directory flag is active
 func (f OpenFlags) Directory() bool {
 	return f&OpenFlagDirectory != 0
+}
+
+func (f OpenFlags) Path() bool {
+	return f&OpenFlagPath != 0
 }
 
 func (f OpenFlags) Pipeline() bool {

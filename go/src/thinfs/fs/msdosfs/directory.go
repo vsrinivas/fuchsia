@@ -129,6 +129,9 @@ func (d *directory) Read() ([]fs.Dirent, error) {
 	if d.closed {
 		return nil, fs.ErrNotOpen
 	}
+	if d.flags.Path() {
+		return nil, fs.ErrPermission
+	}
 
 	return readDir(d.node)
 }
@@ -149,7 +152,7 @@ func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 		return nil, nil, fs.ErrPermission
 	} else if flags.Create() && !d.flags.Write() {
 		return nil, nil, fs.ErrPermission // Creation requires the parent directory to be writable
-	} else if !flags.Read() && !flags.Write() {
+	} else if !flags.Read() && !flags.Write() && !flags.Path() {
 		return nil, nil, fs.ErrPermission // Cannot open a file with no permissions
 	}
 
