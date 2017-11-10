@@ -135,7 +135,7 @@ package("magma-tools") {
 package("vkcube") {
   system_image = true
 
-  if (target_cpu == "x64") {
+  if (build_libvulkan_arm_mali || build_intel_gen) {
     deps = [
       "//garnet/lib/magma/tests/vkcube",
     ]
