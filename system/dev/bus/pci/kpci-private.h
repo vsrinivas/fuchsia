@@ -27,11 +27,25 @@ typedef struct kpci_device {
 } kpci_device_t;
 
 typedef enum {
+    PCI_OP_RESET_DEVICE = 1,
+    PCI_OP_ENABLE_BUS_MASTER,
+    PCI_OP_ENABLE_PIO,
+    PCI_OP_CONFIG_READ,
+    PCI_OP_GET_NEXT_CAPABILITY,
+    PCI_OP_GET_RESOURCE,
+    PCI_OP_MAP_RESOURCE,
+    PCI_OP_QUERY_IRQ_MODE_CAPS,
+    PCI_OP_SET_IRQ_MODE,
+    PCI_OP_MAP_INTERRUPT,
+    PCI_OP_GET_DEVICE_INFO,
     PCI_OP_GET_AUXDATA,
     PCI_OP_MAX,
 } pci_op_t;
 
 extern _Atomic zx_txid_t pci_global_txid;
+static inline uint32_t pci_next_txid(void) {
+    return atomic_fetch_add(&pci_global_txid, 1);
+}
 
 #define PCI_MAX_DATA 4096
 

@@ -13,19 +13,23 @@
 
 #include "kpci-private.h"
 
+// kpci_op_* methods are called by the proxy devhost. For each PCI
+// protocol method there is generally a kpci_op_* method for the proxy
+// devhost and a corresponding kpci_* method in the top devhost that the
+// protocol request is handled by.
 _Atomic zx_txid_t pci_global_txid = 0;
 
-static zx_status_t kpci_enable_bus_master(void* ctx, bool enable) {
+static zx_status_t kpci_op_enable_bus_master(void* ctx, bool enable) {
     kpci_device_t* device = ctx;
     return zx_pci_enable_bus_master(device->handle, enable);
 }
 
-static zx_status_t kpci_enable_pio(void* ctx, bool enable) {
+static zx_status_t kpci_op_enable_pio(void* ctx, bool enable) {
     kpci_device_t* device = ctx;
     return zx_pci_enable_pio(device->handle, enable);
 }
 
-static zx_status_t kpci_reset_device(void* ctx) {
+static zx_status_t kpci_op_reset_device(void* ctx) {
     kpci_device_t* device = ctx;
     return zx_pci_reset_device(device->handle);
 }
@@ -65,7 +69,7 @@ static zx_status_t do_resource_bookkeeping(zx_pci_resource_t* res) {
 // along the lines of hardware failure or a device being removed from the bus. Due to this,
 // those statuses will be asserted upon rather than forcing callers to add additional checks
 // every time they wish to do a config read / write.
-static uint32_t kpci_config_read(void* ctx, uint8_t offset, size_t width) {
+static uint32_t kpci_op_config_read(void* ctx, uint8_t offset, size_t width) {
     ZX_DEBUG_ASSERT(ctx);
     kpci_device_t* device = ctx;
     uint32_t val;
@@ -77,28 +81,28 @@ static uint32_t kpci_config_read(void* ctx, uint8_t offset, size_t width) {
     return val;
 }
 
-static uint8_t kpci_get_next_capability(void* ctx, uint8_t offset, uint8_t type) {
-    uint8_t cap_offset = (uint8_t)kpci_config_read(ctx, offset + 1, 8);
+static uint8_t kpci_op_get_next_capability(void* ctx, uint8_t offset, uint8_t type) {
+    uint8_t cap_offset = (uint8_t)kpci_op_config_read(ctx, offset + 1, 8);
     uint8_t limit = 64;
 
     // Walk the capability list looking for the type requested, starting at the offset
     // passed in. limit acts as a barrier in case of an invalid capability pointer list
     // that causes us to iterate forever otherwise.
     while (cap_offset != 0 && limit--) {
-        uint8_t type_id = (uint8_t)kpci_config_read(ctx, cap_offset, 8);
+        uint8_t type_id = (uint8_t)kpci_op_config_read(ctx, cap_offset, 8);
         if (type_id == type) {
             return cap_offset;
         }
 
         // We didn't find the right type, move on
-        cap_offset = (uint8_t)kpci_config_read(ctx, cap_offset + 1, 8);
+        cap_offset = (uint8_t)kpci_op_config_read(ctx, cap_offset + 1, 8);
     }
 
     // No more entries are in the list
     return 0;
 }
 
-static zx_status_t kpci_get_resource(void* ctx, uint32_t res_id, zx_pci_resource_t* out_res) {
+static zx_status_t kpci_op_get_resource(void* ctx, uint32_t res_id, zx_pci_resource_t* out_res) {
     zx_status_t status = ZX_OK;
 
     if (!out_res || res_id >= PCI_RESOURCE_COUNT) {
@@ -134,7 +138,7 @@ static_assert(PCI_RESOURCE_BAR_5 == 5, "BAR 5's value is not 5");
 static_assert(PCI_RESOURCE_CONFIG > PCI_RESOURCE_BAR_5, "resource order in the enum is wrong");
 
 /* Get a resource from the pci bus driver and map for the driver. */
-static zx_status_t kpci_map_resource(void* ctx,
+static zx_status_t kpci_op_map_resource(void* ctx,
                                     uint32_t res_id,
                                     zx_cache_policy_t cache_policy,
                                     void** vaddr,
@@ -145,7 +149,7 @@ static zx_status_t kpci_map_resource(void* ctx,
     }
 
     zx_pci_resource_t resource;
-    zx_status_t status = kpci_get_resource(ctx, res_id, &resource);
+    zx_status_t status = kpci_op_get_resource(ctx, res_id, &resource);
     if (status != ZX_OK) {
         return status;
     }
@@ -187,7 +191,7 @@ static zx_status_t kpci_map_resource(void* ctx,
     return status;
 }
 
-static zx_status_t kpci_map_interrupt(void* ctx, int which_irq, zx_handle_t* out_handle) {
+static zx_status_t kpci_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* out_handle) {
     zx_status_t status = ZX_OK;
 
     if (!out_handle) {
@@ -208,20 +212,20 @@ static zx_status_t kpci_map_interrupt(void* ctx, int which_irq, zx_handle_t* out
     return ZX_OK;
 }
 
-static zx_status_t kpci_query_irq_mode_caps(void* ctx,
+static zx_status_t kpci_op_query_irq_mode_caps(void* ctx,
                                            zx_pci_irq_mode_t mode,
                                            uint32_t* out_max_irqs) {
     kpci_device_t* device = ctx;
     return zx_pci_query_irq_mode_caps(device->handle, mode, out_max_irqs);
 }
 
-static zx_status_t kpci_set_irq_mode(void* ctx, zx_pci_irq_mode_t mode,
+static zx_status_t kpci_op_set_irq_mode(void* ctx, zx_pci_irq_mode_t mode,
                                     uint32_t requested_irq_count) {
     kpci_device_t* device = ctx;
     return zx_pci_set_irq_mode(device->handle, mode, requested_irq_count);
 }
 
-static zx_status_t kpci_get_device_info(void* ctx, zx_pcie_device_info_t* out_info) {
+static zx_status_t kpci_op_get_device_info(void* ctx, zx_pcie_device_info_t* out_info) {
     if (out_info == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -231,7 +235,7 @@ static zx_status_t kpci_get_device_info(void* ctx, zx_pcie_device_info_t* out_in
     return ZX_OK;
 }
 
-static zx_status_t kpci_get_auxdata(void* ctx, const char* args, void* data,
+static zx_status_t kpci_op_get_auxdata(void* ctx, const char* args, void* data,
                                     uint32_t bytes, uint32_t* actual) {
 #if PROXY_DEVICE
     kpci_device_t* dev = ctx;
@@ -255,8 +259,8 @@ static zx_status_t kpci_get_auxdata(void* ctx, const char* args, void* data,
     };
     memcpy(req.data, args, arglen);
 
-    zxlogf(SPEW, "pci: rpc-out op %d args '%s'\n", req.ordinal, req.data);
-
+    zxlogf(SPEW, "pci[%s]: rpc-out op %d args '%s'\n", device_get_name(dev->zxdev), req.ordinal,
+           req.data);
     zx_channel_call_args_t cc_args = {
         .wr_bytes = &req,
         .rd_bytes = &resp,
@@ -295,16 +299,16 @@ static zx_status_t kpci_get_auxdata(void* ctx, const char* args, void* data,
 }
 
 static pci_protocol_ops_t _pci_protocol = {
-    .enable_bus_master = kpci_enable_bus_master,
-    .enable_pio = kpci_enable_pio,
-    .reset_device = kpci_reset_device,
-    .get_resource = kpci_get_resource,
-    .map_resource = kpci_map_resource,
-    .map_interrupt = kpci_map_interrupt,
-    .query_irq_mode_caps = kpci_query_irq_mode_caps,
-    .set_irq_mode = kpci_set_irq_mode,
-    .get_device_info = kpci_get_device_info,
-    .config_read = kpci_config_read,
-    .get_next_capability = kpci_get_next_capability,
-    .get_auxdata = kpci_get_auxdata,
+    .enable_bus_master = kpci_op_enable_bus_master,
+    .enable_pio = kpci_op_enable_pio,
+    .reset_device = kpci_op_reset_device,
+    .get_resource = kpci_op_get_resource,
+    .map_resource = kpci_op_map_resource,
+    .map_interrupt = kpci_op_map_interrupt,
+    .query_irq_mode_caps = kpci_op_query_irq_mode_caps,
+    .set_irq_mode = kpci_op_set_irq_mode,
+    .get_device_info = kpci_op_get_device_info,
+    .config_read = kpci_op_config_read,
+    .get_next_capability = kpci_op_get_next_capability,
+    .get_auxdata = kpci_op_get_auxdata,
 };

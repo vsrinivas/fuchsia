@@ -10,11 +10,11 @@
 #include <ddk/protocol/platform-defs.h>
 
 #include <hw/pci.h>
-#include <zircon/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <zircon/syscalls.h>
 
 #include <zircon/compiler.h>
 
@@ -23,6 +23,26 @@
 #include "protocol.c"
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
+static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+    char args[32];
+    snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req->data,
+             device->info.bus_id, device->info.dev_id, device->info.func_id);
+
+    uint32_t actual;
+    pci_msg_t resp = {
+        .txid = req->txid,
+    };
+
+    zx_status_t st = pciroot_get_auxdata(&device->pciroot, args, resp.data, req->outlen, &actual);
+    if (st != ZX_OK) {
+        return st;
+    } else {
+        resp.ordinal = ZX_OK;
+        resp.datalen = actual;
+    }
+
+    return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
+}
 
 static void kpci_release(void* ctx) {
     kpci_device_t* device = ctx;
@@ -32,45 +52,56 @@ static void kpci_release(void* ctx) {
     free(device);
 }
 
-static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t h) {
+// All callbacks corresponding to protocol operations match this signature.
+// Rather than passing the outgoing message back to kpci_rxrpc, the callback
+// itself is expected to write to the channel directly. This greatly simplifies
+// lifecycles around handles that need to be passed to/from the proxy devhost,
+// as well as keeping the method  declaration simpler. In the event of an error
+// the callback can return the error code back to kpci_rxrpc and it will handle
+// sending it back over the channel.
+typedef zx_status_t (*rxrpc_cbk_t)(pci_msg_t*, kpci_device_t*, zx_handle_t);
+rxrpc_cbk_t rxrpc_cbk_tbl[] = {
+        [PCI_OP_RESET_DEVICE] = NULL,
+        [PCI_OP_ENABLE_BUS_MASTER] = NULL,
+        [PCI_OP_ENABLE_PIO] = NULL,
+        [PCI_OP_CONFIG_READ] = NULL,
+        [PCI_OP_GET_NEXT_CAPABILITY] = NULL,
+        [PCI_OP_GET_RESOURCE] = NULL,
+        [PCI_OP_QUERY_IRQ_MODE_CAPS] = NULL,
+        [PCI_OP_SET_IRQ_MODE] = NULL,
+        [PCI_OP_MAP_INTERRUPT] = NULL,
+        [PCI_OP_GET_DEVICE_INFO] = NULL,
+        [PCI_OP_GET_AUXDATA] = kpci_get_auxdata,
+        [PCI_OP_MAX] = NULL,
+};
+
+static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
 #if PROXY_DEVICE
     return ZX_ERR_NOT_SUPPORTED;
 #else
     pci_msg_t req;
-    zx_status_t st = zx_channel_read(h, 0, &req, NULL, sizeof(req), 0, NULL, NULL);
+    zx_status_t st = zx_channel_read(ch, 0, &req, NULL, sizeof(req), 0, NULL, NULL);
     if (st != ZX_OK) {
         return st;
     }
 
-    pci_msg_t resp = {
-        .txid = req.txid,
-        .reserved0 = 0,
-        .flags = 0,
-        .datalen = 0,
-    };
-    if (req.ordinal != PCI_OP_GET_AUXDATA) {
-        resp.ordinal = ZX_ERR_NOT_SUPPORTED;
-        goto out;
+    if (req.ordinal >= PCI_OP_MAX || rxrpc_cbk_tbl[req.ordinal] == NULL) {
+        st = ZX_ERR_NOT_SUPPORTED;
+        goto err;
     }
-
-    zxlogf(SPEW, "pci: rpc-in op %d args '%s'\n", req.ordinal, req.data);
 
     kpci_device_t* device = ctx;
-    char args[32];
-    snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req.data,
-            device->info.bus_id, device->info.dev_id, device->info.func_id);
+    zxlogf(SPEW, "pci[%s]: rpc-in op %d args '%s'\n", device_get_name(device->zxdev),
+           req.ordinal, req.data);
+    return rxrpc_cbk_tbl[req.ordinal](&req, device, ch);
 
-    uint32_t actual;
-    st = pciroot_get_auxdata(&device->pciroot, args, resp.data, req.outlen, &actual);
-    if (st != ZX_OK) {
-        resp.ordinal = st;
-    } else {
-        resp.ordinal = ZX_OK;
-        resp.datalen = actual;
-    }
-
-out:
-    return zx_channel_write(h, 0, &resp, sizeof(resp), NULL, 0);
+err : {
+    pci_msg_t resp = {
+        .txid = req.txid,
+    };
+    resp.ordinal = st;
+    return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
+}
 #endif
 }
 
@@ -121,16 +152,14 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
 
 #if !PROXY_DEVICE
     zx_device_prop_t device_props[] = {
-        (zx_device_prop_t){ BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI },
-        (zx_device_prop_t){ BIND_PCI_VID, 0, info.vendor_id },
-        (zx_device_prop_t){ BIND_PCI_DID, 0, info.device_id },
-        (zx_device_prop_t){ BIND_PCI_CLASS, 0, info.base_class },
-        (zx_device_prop_t){ BIND_PCI_SUBCLASS, 0, info.sub_class },
-        (zx_device_prop_t){ BIND_PCI_INTERFACE, 0, info.program_interface },
-        (zx_device_prop_t){ BIND_PCI_REVISION, 0, info.revision_id },
-        (zx_device_prop_t){ BIND_PCI_BDF_ADDR, 0, BIND_PCI_BDF_PACK(info.bus_id,
-                                                                    info.dev_id,
-                                                                    info.func_id) },
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
+        {BIND_PCI_VID, 0, info.vendor_id},
+        {BIND_PCI_DID, 0, info.device_id},
+        {BIND_PCI_CLASS, 0, info.base_class},
+        {BIND_PCI_SUBCLASS, 0, info.sub_class},
+        {BIND_PCI_INTERFACE, 0, info.program_interface},
+        {BIND_PCI_REVISION, 0, info.revision_id},
+        {BIND_PCI_BDF_ADDR, 0, BIND_PCI_BDF_PACK(info.bus_id, info.dev_id, info.func_id)},
     };
 #endif
 
@@ -187,9 +216,11 @@ static zx_driver_ops_t kpci_driver_ops = {
     .create = kpci_drv_create,
 };
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(pci, kpci_driver_ops, "zircon", "0.1", 1)
     BI_ABORT_IF_AUTOBIND,
 ZIRCON_DRIVER_END(pci)
+// clang-format on
 
 #else
 
@@ -210,6 +241,7 @@ static zx_driver_ops_t kpci_driver_ops = {
 };
 
 // TODO(voydanoff): mdi driver should publish a device with ZX_PROTOCOL_PCIROOT
+// clang-format off
 ZIRCON_DRIVER_BEGIN(pci, kpci_driver_ops, "zircon", "0.1", 5)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PCIROOT),
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
