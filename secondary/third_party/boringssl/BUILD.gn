@@ -136,10 +136,9 @@ config("boringssl_config") {
 config("internal_config") {
   visibility = [ "./*" ]
   defines = [
-    "BORINGSSL_ALLOW_CXX_RUNTIME",
     "BORINGSSL_IMPLEMENTATION",
-    "BORINGSSL_NO_STATIC_INITIALIZER",
     "BORINGSSL_SHARED_LIBRARY",
+    "BORINGSSL_NO_STATIC_INITIALIZER",
     "OPENSSL_SMALL",
   ]
   if (is_linux || is_mac) {

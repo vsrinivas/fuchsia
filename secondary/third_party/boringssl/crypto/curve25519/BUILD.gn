@@ -8,6 +8,7 @@ import("../../boringssl.gni")
 source_set("curve25519") {
   visibility = [ "//third_party/boringssl/*" ]
   sources = [
+    "curve25519.c",
     "spake25519.c",
   ]
   if (current_cpu == "x64") {
