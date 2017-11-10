@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <async/auto_wait.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -72,21 +74,30 @@ static uint32_t hsv_inc(uint32_t index, int16_t inc) {
     return signed_index;
 }
 
-class BufferHandler : public fsl::MessageLoopHandler {
+class BufferHandler {
  public:
   BufferHandler(Buffer *buffer, uint32_t index) :
-      buffer_(buffer), index_(index) {
-    handler_key_ =
-        fsl::MessageLoop::GetCurrent()->AddHandler(this,
-                                                   buffer->release_fence().get(),
-                                                   ZX_EVENT_SIGNALED);
+      buffer_(buffer),
+      index_(index),
+      wait_(fsl::MessageLoop::GetCurrent()->async(),
+            buffer->release_fence().get(), ZX_EVENT_SIGNALED) {
+    wait_.set_handler(fbl::BindMember(this, &BufferHandler::Handler));
+    auto status = wait_.Begin();
+    FXL_DCHECK(status == ZX_OK);
   }
 
-  ~BufferHandler() override = default;
+  ~BufferHandler() = default;
 
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override {
+  async_wait_result_t Handler(async_t* async, zx_status_t status,
+                              const zx_packet_signal* signal) {
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "BufferHandler received an error ("
+                       << zx_status_get_string(status) << ").  Exiting.";
+        wait_.Cancel();
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
+        return ASYNC_WAIT_FINISHED;
+      }
+
       buffer_->Reset();
 
       auto acq = fidl::Array<zx::event>::New(1);
@@ -103,19 +114,13 @@ class BufferHandler : public fsl::MessageLoopHandler {
       buffer_->Fill(r, g, b);
 
       buffer_->Signal();
+      return ASYNC_WAIT_AGAIN;
   }
-
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override {
-      FXL_LOG(ERROR) << "BufferHandler received an error ("
-          << zx_status_get_string(error) << ").  Exiting.";
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
-  };
 
  private:
   Buffer *buffer_;
   uint32_t index_;
-  fsl::MessageLoop::HandlerKey handler_key_;
-
+  async::AutoWait wait_;
 };
 
 Buffer *buffers[2];
