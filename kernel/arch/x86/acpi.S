@@ -16,19 +16,19 @@ struct x86_realmode_entry_data_registers {
 */
 .code64
 .section .text
-# ACPI_STATUS x86_acpi_transition_s_state(struct x86_realmode_entry_data_registers* reg,
-#                                         uint8_t target_s_state, uint8_t sleep_type_a,
-#                                         uint8_t sleep_type_b)
+// ACPI_STATUS x86_acpi_transition_s_state(struct x86_realmode_entry_data_registers* reg,
+//                                         uint8_t target_s_state, uint8_t sleep_type_a,
+//                                         uint8_t sleep_type_b)
 FUNCTION_LABEL(x86_acpi_transition_s_state)
-    # We do not need to save floating point registers, since this method must be called
-    # by a kernel thread if the system is expected to return from the S-state.
+    // We do not need to save floating point registers, since this method must be called
+    // by a kernel thread if the system is expected to return from the S-state.
     mov %rdi, (%rdi)
     mov %rsi, 8(%rdi)
     mov %rbp, 16(%rdi)
     mov %rbx, 24(%rdi)
     mov %rdx, 32(%rdi)
     mov %rcx, 40(%rdi)
-    # Stash 0 as rax, so we return AE_OK if we do suspend
+    // Stash 0 as rax, so we return AE_OK if we do suspend
     movq $0, 48(%rdi)
     mov %r8, 56(%rdi)
     mov %r9, 64(%rdi)
@@ -40,11 +40,11 @@ FUNCTION_LABEL(x86_acpi_transition_s_state)
     mov %r15, 112(%rdi)
     mov %rsp, 120(%rdi)
 
-    # Set up our return IP, in case the S-state needs it (jumped to by _x86_suspend_wakeup())
+    // Set up our return IP, in case the S-state needs it (jumped to by _x86_suspend_wakeup())
     leaq .Lafter_sleep(%rip), %rax
     movq %rax, 128(%rdi)
 
-    # Enter the sleep state
+    // Enter the sleep state
     sub $8, %rsp
     mov %rsi, %rdi
     mov %rdx, %rsi

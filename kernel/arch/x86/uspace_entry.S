@@ -7,14 +7,14 @@
 #include <asm.h>
 #include <arch/x86/descriptor.h>
 
-# x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp, uintptr_t pc, uint64_t rflags)
+// x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp, uintptr_t pc, uint64_t rflags)
 FUNCTION(x86_uspace_entry)
     /* push a fake 64bit interrupt stack frame and iret to it */
-    push_value $USER_DATA_SELECTOR    # ss
-    push_value %rdx                   # sp
-    push_value %r8                    # rflags
-    push_value $USER_CODE_64_SELECTOR # cs
-    push_value %rcx                   # pc
+    push_value $USER_DATA_SELECTOR    // ss
+    push_value %rdx                   // sp
+    push_value %r8                    // rflags
+    push_value $USER_CODE_64_SELECTOR // cs
+    push_value %rcx                   // pc
 
     ALL_CFI_UNDEFINED
 

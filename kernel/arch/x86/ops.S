@@ -37,24 +37,24 @@ END_FUNCTION(arch_idle)
 
 /* zx_status_t read_msr_safe(uint32_t msr_id, uint64_t *val); */
 FUNCTION(read_msr_safe)
-    # Set up MSR index
+    // Set up MSR index
     mov %rdi, %rcx
 
-    # Disable interrupts before touching percpu state
+    // Disable interrupts before touching percpu state
     pushfq
     cli
 
-    # Set up the GPF handler, in case the MSR doesn't exist
+    // Set up the GPF handler, in case the MSR doesn't exist
     leaq .Lgpf_handler(%rip), %rax
     movq %rax, %gs:PERCPU_GPF_RETURN_OFFSET
     rdmsr
 
-    # Cleanup the GPF handler
+    // Cleanup the GPF handler
     movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
-    # Restore interrupts if they were on before
+    // Restore interrupts if they were on before
     popfq
 
-    # rdmsr returns value via edx:eax
+    // rdmsr returns value via edx:eax
     shl $32, %rdx
     or %rax, %rdx
     mov %rdx, (%rsi)
@@ -62,9 +62,9 @@ FUNCTION(read_msr_safe)
     mov $ZX_OK, %rax
     ret
 .Lgpf_handler:
-    # Cleanup GPF handler
+    // Cleanup GPF handler
     movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
-    # Restore interrupts if they were on before
+    // Restore interrupts if they were on before
     popfq
 
     mov $ZX_ERR_NOT_SUPPORTED, %rax

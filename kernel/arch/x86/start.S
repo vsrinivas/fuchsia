@@ -59,10 +59,10 @@
 0:
     mov  %eax, %ebx
     shll $21, %ebx
-    orl  $X86_KERNEL_PD_LP_FLAGS, %ebx    # lower word of the entry
+    orl  $X86_KERNEL_PD_LP_FLAGS, %ebx    // lower word of the entry
     movl %ebx, (%esi)
     mov  %eax, %ebx
-    shrl $11, %ebx      # upper word of the entry
+    shrl $11, %ebx      // upper word of the entry
     movl %ebx, 4(%esi)
     addl $8,%esi
     inc  %eax

@@ -20,36 +20,36 @@
  *   - moved to %r10
  */
 
-# zx_status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return)
+// zx_status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return)
 FUNCTION(_x86_copy_to_or_from_user)
-    # Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
+    // Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
     movq %rcx, %r10
 
-    # Disable SMAP protection if SMAP is enabled
+    // Disable SMAP protection if SMAP is enabled
     STAC
 
-    # Setup page fault return
+    // Setup page fault return
     leaq .Lfault_copy(%rip), %rax
     movq %rax, (%r10)
 
-    # Between now and the reset of the fault return, we cannot make a function
-    # call or manipulate the stack.  We need to be able to restore all callee
-    # registers, without any knowledge of where between these two points we
-    # faulted.
+    // Between now and the reset of the fault return, we cannot make a function
+    // call or manipulate the stack.  We need to be able to restore all callee
+    // registers, without any knowledge of where between these two points we
+    // faulted.
 
-    # Perform the actual copy
+    // Perform the actual copy
     cld
-    # %rdi and %rsi already contain the destination and source addresses.
+    // %rdi and %rsi already contain the destination and source addresses.
     movq %rdx, %rcx
-    rep movsb  # while (rcx-- > 0) *rdi++ = *rsi++;
+    rep movsb  // while (rcx-- > 0) *rdi++ = *rsi++;
 
     mov $ZX_OK, %rax
 
 .Lcleanup_copy:
-    # Reset fault return
+    // Reset fault return
     movq $0, (%r10)
 
-    # Re-enable SMAP protection
+    // Re-enable SMAP protection
     CLAC
     ret
 
