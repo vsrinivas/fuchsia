@@ -3539,8 +3539,6 @@ zx_status_t Device::WriteSharedKeyMode(uint8_t skey, KeyMode mode) {
 }
 
 zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
-    fbl::MakeAutoCall([&]() { free(key_config); });
-
     if (options != 0) { return ZX_ERR_INVALID_ARGS; }
 
     auto keyMode = MapIeeeCipherSuiteToKeyMode(key_config->cipher_oui, key_config->cipher_type);

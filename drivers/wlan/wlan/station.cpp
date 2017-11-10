@@ -1060,21 +1060,20 @@ zx_status_t Station::SetKeys(SetKeysRequestPtr req) {
             break;
         }
 
-        auto key_config = reinterpret_cast<wlan_key_config_t*>(malloc(sizeof(wlan_key_config_t)));
-        if (key_config == nullptr) { return ZX_ERR_NO_RESOURCES; }
-        memcpy(key_config->key, keyPtr->key.data(), keyPtr->length);
-        key_config->key_type = key_type;
-        key_config->key_len = static_cast<uint8_t>(keyPtr->length);
-        key_config->key_idx = keyPtr->key_id;
-        key_config->protection = WLAN_PROTECTION_RX_TX;
-        key_config->cipher_type = keyPtr->cipher_suite_type;
-        memcpy(key_config->cipher_oui, keyPtr->cipher_suite_oui.data(),
-               sizeof(key_config->cipher_oui));
+        wlan_key_config_t key_config = {};
+        memcpy(key_config.key, keyPtr->key.data(), keyPtr->length);
+        key_config.key_type = key_type;
+        key_config.key_len = static_cast<uint8_t>(keyPtr->length);
+        key_config.key_idx = keyPtr->key_id;
+        key_config.protection = WLAN_PROTECTION_RX_TX;
+        key_config.cipher_type = keyPtr->cipher_suite_type;
+        memcpy(key_config.cipher_oui, keyPtr->cipher_suite_oui.data(),
+               sizeof(key_config.cipher_oui));
         if (!keyPtr->address.is_null()) {
-            memcpy(key_config->peer_addr, keyPtr->address.data(), sizeof(key_config->peer_addr));
+            memcpy(key_config.peer_addr, keyPtr->address.data(), sizeof(key_config.peer_addr));
         }
 
-        auto status = device_->SetKey(key_config);
+        auto status = device_->SetKey(&key_config);
         if (status != ZX_OK) {
             errorf("Could not configure keys in hardware: %d\n", status);
             return status;

@@ -108,7 +108,6 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t* mac, uint8_t 
 
 zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* config) {
     // TODO
-    std::free(config);
     return ZX_OK;
 }
 
