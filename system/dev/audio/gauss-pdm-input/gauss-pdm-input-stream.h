@@ -65,26 +65,21 @@ private:
 
     void DeactivateStreamChannel(const dispatcher::Channel* channel);
 
-    zx_status_t
-    OnGetStreamFormatsLocked(dispatcher::Channel* channel,
-                             const audio_proto::StreamGetFmtsReq& req)
-        __TA_REQUIRES(lock_);
+    zx_status_t OnGetStreamFormats(dispatcher::Channel* channel,
+                                   const audio_proto::StreamGetFmtsReq& req);
 
-    zx_status_t OnSetStreamFormatLocked(dispatcher::Channel* channel,
-                                        const audio_proto::StreamSetFmtReq& req,
-                                        bool privileged) __TA_REQUIRES(lock_);
+    zx_status_t OnSetStreamFormat(dispatcher::Channel* channel,
+                                  const audio_proto::StreamSetFmtReq& req,
+                                  bool privileged);
 
-    zx_status_t OnGetGainLocked(dispatcher::Channel* channel,
-                                const audio_proto::GetGainReq& req)
-        __TA_REQUIRES(lock_);
+    zx_status_t OnGetGain(dispatcher::Channel* channel,
+                          const audio_proto::GetGainReq& req);
 
-    zx_status_t OnSetGainLocked(dispatcher::Channel* channel,
-                                const audio_proto::SetGainReq& req)
-        __TA_REQUIRES(lock_);
+    zx_status_t OnSetGain(dispatcher::Channel* channel,
+                          const audio_proto::SetGainReq& req);
 
-    zx_status_t OnPlugDetectLocked(dispatcher::Channel* channel,
-                                   const audio_proto::PlugDetectReq& req)
-        __TA_REQUIRES(lock_);
+    zx_status_t OnPlugDetect(dispatcher::Channel* channel,
+                             const audio_proto::PlugDetectReq& req);
 
     // Thunks for dispatching ring buffer channel events.
     zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
@@ -93,29 +88,26 @@ private:
 
     // Stream command handlers
     // Ring buffer command handlers
-    zx_status_t
-    OnGetFifoDepthLocked(dispatcher::Channel* channel,
-                         const audio_proto::RingBufGetFifoDepthReq& req)
+    zx_status_t OnGetFifoDepth(dispatcher::Channel* channel,
+                               const audio_proto::RingBufGetFifoDepthReq& req)
         __TA_REQUIRES(lock_);
 
-    zx_status_t OnGetBufferLocked(dispatcher::Channel* channel,
-                                  const audio_proto::RingBufGetBufferReq& req)
+    zx_status_t OnGetBuffer(dispatcher::Channel* channel,
+                            const audio_proto::RingBufGetBufferReq& req)
         __TA_REQUIRES(lock_);
 
-    zx_status_t OnStartLocked(dispatcher::Channel* channel,
-                              const audio_proto::RingBufStartReq& req)
+    zx_status_t OnStart(dispatcher::Channel* channel,
+                        const audio_proto::RingBufStartReq& req)
         __TA_REQUIRES(lock_);
 
-    zx_status_t OnStopLocked(dispatcher::Channel* channel,
-                             const audio_proto::RingBufStopReq& req)
+    zx_status_t OnStop(dispatcher::Channel* channel,
+                       const audio_proto::RingBufStopReq& req)
         __TA_REQUIRES(lock_);
-
-    void RequestComplete();
 
     fbl::Mutex lock_;
 
     // Dispatcher framework state
-    fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
+    fbl::RefPtr<dispatcher::Channel> stream_channel_;
     fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(lock_);
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 

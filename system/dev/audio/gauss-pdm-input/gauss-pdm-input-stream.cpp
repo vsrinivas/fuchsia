@@ -187,7 +187,6 @@ zx_status_t
 GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
                                           bool privileged) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-    fbl::AutoLock lock(&lock_);
 
     union {
         audio_proto::CmdHdr hdr;
@@ -215,14 +214,13 @@ GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
     // target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats,
-             OnGetStreamFormatsLocked, false);
-        HREQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, OnSetStreamFormatLocked,
-             false, privileged);
-        HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGainLocked, false);
-        HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGainLocked, true);
-        HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,
-             true);
+        HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, OnGetStreamFormats,
+             false);
+        HREQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, OnSetStreamFormat, false,
+             privileged);
+        HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGain, false);
+        HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGain, true);
+        HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetect, true);
     default:
         zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
@@ -233,6 +231,7 @@ zx_status_t
 GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
     zxlogf(DEBUG1, "%s\n", __func__);
     ZX_DEBUG_ASSERT(channel != nullptr);
+
     fbl::AutoLock lock(&lock_);
 
     union {
@@ -260,11 +259,11 @@ GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
     // target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HREQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepthLocked,
+        HREQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepth,
              false);
-        HREQ(AUDIO_RB_CMD_GET_BUFFER, get_buffer, OnGetBufferLocked, false);
-        HREQ(AUDIO_RB_CMD_START, rb_start, OnStartLocked, false);
-        HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStopLocked, false);
+        HREQ(AUDIO_RB_CMD_GET_BUFFER, get_buffer, OnGetBuffer, false);
+        HREQ(AUDIO_RB_CMD_START, rb_start, OnStart, false);
+        HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStop, false);
     default:
         zxlogf(ERROR, "Unrecognized ring buffer command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
@@ -274,7 +273,7 @@ GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
 }
 #undef HANDLE_REQ
 
-zx_status_t GaussPdmInputStream::OnGetStreamFormatsLocked(
+zx_status_t GaussPdmInputStream::OnGetStreamFormats(
     dispatcher::Channel* channel, const audio_proto::StreamGetFmtsReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
     ZX_DEBUG_ASSERT(channel != nullptr);
@@ -319,9 +318,10 @@ zx_status_t GaussPdmInputStream::OnGetStreamFormatsLocked(
     return ZX_OK;
 }
 
-zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(
-    dispatcher::Channel* channel, const audio_proto::StreamSetFmtReq& req,
-    bool privileged) {
+zx_status_t
+GaussPdmInputStream::OnSetStreamFormat(dispatcher::Channel* channel,
+                                       const audio_proto::StreamSetFmtReq& req,
+                                       bool privileged) {
     zxlogf(DEBUG1, "%s\n", __func__);
     ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -355,40 +355,44 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(
 
     // Looks like we are going ahead with this format change.  Tear down any
     // exiting ring buffer interface before proceeding.
-    if (rb_channel_ != nullptr) {
-        rb_channel_->Deactivate();
-        rb_channel_.reset();
-    }
+    {
+        fbl::AutoLock lock(&lock_);
+        if (rb_channel_ != nullptr) {
+            rb_channel_->Deactivate();
+            rb_channel_.reset();
+        }
 
-    // Create a new ring buffer channel which can be used to move bulk data and
-    // bind it to us.
-    rb_channel_ = dispatcher::Channel::Create();
-    if (rb_channel_ == nullptr) {
-        resp.result = ZX_ERR_NO_MEMORY;
-    } else {
-        dispatcher::Channel::ProcessHandler
-            phandler([stream =
-                          fbl::WrapRefPtr(this)](dispatcher::Channel * channel)
-                         ->zx_status_t {
+        // Create a new ring buffer channel which can be used to move bulk data
+        // and bind it to us.
+        rb_channel_ = dispatcher::Channel::Create();
+        if (rb_channel_ == nullptr) {
+            resp.result = ZX_ERR_NO_MEMORY;
+        } else {
+            dispatcher::Channel::ProcessHandler
+                phandler([stream = fbl::WrapRefPtr(this)](dispatcher::Channel *
+                                                          channel)
+                             ->zx_status_t {
+                                 OBTAIN_EXECUTION_DOMAIN_TOKEN(
+                                     t, stream->default_domain_);
+                                 return stream->ProcessRingBufferChannel(
+                                     channel);
+                             });
+
+            dispatcher::Channel::ChannelClosedHandler
+            chandler([stream = fbl::WrapRefPtr(this)](
+                         const dispatcher::Channel* channel)
+                         ->void {
                              OBTAIN_EXECUTION_DOMAIN_TOKEN(
                                  t, stream->default_domain_);
-                             return stream->ProcessRingBufferChannel(channel);
+                             stream->DeactivateRingBufferChannel(channel);
                          });
 
-        dispatcher::Channel::ChannelClosedHandler
-        chandler([stream =
-                      fbl::WrapRefPtr(this)](const dispatcher::Channel* channel)
-                     ->void {
-                         OBTAIN_EXECUTION_DOMAIN_TOKEN(t,
-                                                       stream->default_domain_);
-                         stream->DeactivateRingBufferChannel(channel);
-                     });
-
-        resp.result =
-            rb_channel_->Activate(&client_rb_channel, default_domain_,
-                                  fbl::move(phandler), fbl::move(chandler));
-        if (resp.result != ZX_OK) {
-            rb_channel_.reset();
+            resp.result =
+                rb_channel_->Activate(&client_rb_channel, default_domain_,
+                                      fbl::move(phandler), fbl::move(chandler));
+            if (resp.result != ZX_OK) {
+                rb_channel_.reset();
+            }
         }
     }
 
@@ -396,6 +400,8 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormatLocked(
 
 finished:
     if (resp.result != ZX_OK) {
+        fbl::AutoLock lock(&lock_);
+
         if (rb_channel_) {
             rb_channel_->Deactivate();
             rb_channel_.reset();
@@ -455,9 +461,8 @@ int GaussPdmInputStream::IrqThread() {
     return ZX_OK;
 }
 
-zx_status_t
-GaussPdmInputStream::OnGetGainLocked(dispatcher::Channel* channel,
-                                     const audio_proto::GetGainReq& req) {
+zx_status_t GaussPdmInputStream::OnGetGain(dispatcher::Channel* channel,
+                                           const audio_proto::GetGainReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
     ZX_DEBUG_ASSERT(channel != nullptr);
@@ -474,9 +479,8 @@ GaussPdmInputStream::OnGetGainLocked(dispatcher::Channel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t
-GaussPdmInputStream::OnSetGainLocked(dispatcher::Channel* channel,
-                                     const audio_proto::SetGainReq& req) {
+zx_status_t GaussPdmInputStream::OnSetGain(dispatcher::Channel* channel,
+                                           const audio_proto::SetGainReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
@@ -491,8 +495,8 @@ GaussPdmInputStream::OnSetGainLocked(dispatcher::Channel* channel,
 }
 
 zx_status_t
-GaussPdmInputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
-                                        const audio_proto::PlugDetectReq& req) {
+GaussPdmInputStream::OnPlugDetect(dispatcher::Channel* channel,
+                                  const audio_proto::PlugDetectReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
@@ -505,10 +509,11 @@ GaussPdmInputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t GaussPdmInputStream::OnGetFifoDepthLocked(
+zx_status_t GaussPdmInputStream::OnGetFifoDepth(
     dispatcher::Channel* channel,
     const audio_proto::RingBufGetFifoDepthReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
+
     audio_proto::RingBufGetFifoDepthResp resp;
 
     resp.hdr = req.hdr;
@@ -518,9 +523,11 @@ zx_status_t GaussPdmInputStream::OnGetFifoDepthLocked(
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t GaussPdmInputStream::OnGetBufferLocked(
-    dispatcher::Channel* channel, const audio_proto::RingBufGetBufferReq& req) {
+zx_status_t
+GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
+                                 const audio_proto::RingBufGetBufferReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
+
     audio_proto::RingBufGetBufferResp resp;
     zx::vmo client_rb_handle;
     uint32_t client_rights;
@@ -608,19 +615,16 @@ finished:
 }
 
 zx_status_t
-GaussPdmInputStream::OnStartLocked(dispatcher::Channel* channel,
-                                   const audio_proto::RingBufStartReq& req) {
+GaussPdmInputStream::OnStart(dispatcher::Channel* channel,
+                             const audio_proto::RingBufStartReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
+
     audio_proto::RingBufStartResp resp;
     resp.hdr = req.hdr;
 
-    resp.start_ticks = 0;
-
     a113_pdm_fifo_reset(&audio_device_);
-
     a113_toddr_enable(&audio_device_, 1);
     a113_pdm_enable(&audio_device_, 1);
-
     resp.start_ticks = zx_ticks_get();
 
     resp.result = ZX_OK;
@@ -628,9 +632,8 @@ GaussPdmInputStream::OnStartLocked(dispatcher::Channel* channel,
 }
 
 zx_status_t
-GaussPdmInputStream::OnStopLocked(dispatcher::Channel* channel,
-                                  const audio_proto::RingBufStopReq& req) {
-
+GaussPdmInputStream::OnStop(dispatcher::Channel* channel,
+                            const audio_proto::RingBufStopReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
     audio_proto::RingBufStopResp resp;
