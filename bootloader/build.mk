@@ -6,40 +6,29 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-EFI_LIBDIRS	:= system/ulib/tftp
+EFI_LIBDIRS := system/ulib/tftp
+
+EFI_CFLAGS += -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
+EFI_CFLAGS += -Isystem/public -Isystem/private
+EFI_CFLAGS += $(foreach LIBDIR,$(EFI_LIBDIRS),-I$(LIBDIR)/include)
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-EFI_CC		:= $(CLANG_TOOLCHAIN_PREFIX)clang
-EFI_LD		:= $(CLANG_TOOLCHAIN_PREFIX)lld-link
+EFI_LDFLAGS := /subsystem:efi_application /entry:efi_main /libpath:out
 else
-EFI_CC		:= $(TOOLCHAIN_PREFIX)gcc
-EFI_LD		:= $(TOOLCHAIN_PREFIX)ld
+EFI_LINKSCRIPT := $(LOCAL_DIR)/build/efi-x86-64.lds
+EFI_LDFLAGS := -nostdlib -T $(EFI_LINKSCRIPT) -pie -Lout
 endif
 
-EFI_CFLAGS	:= -O2
-EFI_CFLAGS	+= -fshort-wchar -fno-stack-protector -mno-red-zone
-EFI_CFLAGS	+= -Wall -std=c99
-EFI_CFLAGS	+= -ffreestanding -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
-EFI_CFLAGS	+= -Isystem/public -Isystem/private
-EFI_CFLAGS	+= $(foreach LIBDIR,$(EFI_LIBDIRS),-I$(LIBDIR)/include)
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-EFI_CFLAGS	+= --target=x86_64-windows-msvc
-else
-EFI_CFLAGS	+= -fPIE
-endif
+EFI_SECTIONS := .text .data .reloc
+EFI_SECTIONS := $(patsubst %,-j %,$(EFI_SECTIONS))
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-EFI_LDFLAGS	:= /subsystem:efi_application /entry:efi_main /libpath:out
-else
-EFI_LINKSCRIPT	:= $(LOCAL_DIR)/build/efi-x86-64.lds
-EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie -Lout
-endif
-
-EFI_SECTIONS	:= .text .data .reloc
-EFI_SECTIONS	:= $(patsubst %,-j %,$(EFI_SECTIONS))
-
+ifeq ($(EFI_ARCH),x86_64)
 EFI_SO          := $(BUILDDIR)/bootloader/bootx64.so
 EFI_BOOTLOADER  := $(BUILDDIR)/bootloader/bootx64.efi
+else ifeq ($(EFI_ARCH),aarch64)
+EFI_SO          := $(BUILDDIR)/bootloader/bootaa64.so
+EFI_BOOTLOADER  := $(BUILDDIR)/bootloader/bootaa64.efi
+endif
 
 # Bootloader sources
 EFI_SOURCES := \
@@ -75,7 +64,7 @@ EFI_LIBS := $(foreach LIBDIR,$(EFI_LIBDIRS), \
 $(BUILDDIR)/bootloader/%.o : $(LOCAL_DIR)/%.c
 	@$(MKDIR)
 	$(call BUILDECHO,compiling $<)
-	$(NOECHO)$(EFI_CC) -MMD -MP -o $@ -c $(EFI_CFLAGS) $<
+	$(NOECHO)$(EFI_CC) -MMD -MP -o $@ -c $(EFI_OPTFLAGS) $(EFI_COMPILEFLAGS) $(EFI_CFLAGS) $<
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 
@@ -107,9 +96,19 @@ $(EFI_BOOTLOADER): $(EFI_SO)
 endif
 
 GENERATED += $(EFI_BOOTLOADER)
-EXTRA_BUILDDEPS += $(EFI_BOOTLOADER)
 
 .PHONY: gigaboot
 gigaboot: $(EFI_BOOTLOADER)
+
+# top level target to just build the bootloader
+.PHONY: bootloader
+bootloader: gigaboot
+
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
+# x86 only by default for now
+ifeq ($(ARCH),x86)
+all:: bootloader
+endif
+endif
 
 -include $(EFI_DEPS)

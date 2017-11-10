@@ -38,6 +38,7 @@ static size_t get_last_crashlog(efi_system_table* sys, void* ptr, size_t max) {
 static unsigned char scratch[32768];
 
 static void start_zircon(uint64_t entry, void* bootdata) {
+#if __x86_64__
     // ebx = 0, ebp = 0, edi = 0, esi = bootdata
     __asm__ __volatile__(
         "movl $0, %%ebp \n"
@@ -45,6 +46,9 @@ static void start_zircon(uint64_t entry, void* bootdata) {
         "jmp *%[entry] \n" ::[entry] "a"(entry),
         [bootdata] "S"(bootdata),
         "b"(0), "D"(0));
+#else
+#warning "add code for other arches here"
+#endif
     for (;;)
         ;
 }

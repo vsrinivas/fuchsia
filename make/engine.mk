@@ -441,7 +441,7 @@ endif
 # does for many other codegen options so we have to set it explicitly. This
 # can be removed when https://bugs.llvm.org/show_bug.cgi?id=33306 is fixed.
 KERNEL_LDFLAGS += $(patsubst -mcmodel=%,-mllvm -code-model=%,\
-			     $(filter -mcmodel=%,$(KERNEL_COMPILEFLAGS)))
+                  $(filter -mcmodel=%,$(KERNEL_COMPILEFLAGS)))
 ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
 GLOBAL_COMPILEFLAGS += -flto=thin
 GLOBAL_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(THINLTO_CACHE_DIR)
@@ -470,7 +470,7 @@ USER_COMPILEFLAGS += -fsanitize=address -fno-sanitize=safe-stack
 # Ask the Clang driver where the library with SONAME $1 is found at link time.
 find-clang-solib = \
     $(shell $(CLANG_TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) \
-					   -print-file-name=$1)
+    -print-file-name=$1)
 # Every userland executable and shared library compiled with ASan
 # needs to link with $(ASAN_SOLIB).  module-user{app,lib}.mk adds it
 # to MODULE_EXTRA_OBJS so the linking target will depend on it.
@@ -484,7 +484,7 @@ USER_MANIFEST_LINES += {core}lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
 ASAN_RUNTIME_SONAMES := libc++abi.so.1 libunwind.so.1
 USER_MANIFEST_LINES += \
     $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
-	      {core}lib/$(soname)=$(call find-clang-solib,$(soname)))
+    {core}lib/$(soname)=$(call find-clang-solib,$(soname)))
 endif
 
 ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
@@ -559,21 +559,21 @@ all:: packages
 
 # add some automatic configuration defines
 KERNEL_DEFINES += \
-	PROJECT_$(PROJECT)=1 \
-	PROJECT=\"$(PROJECT)\" \
-	TARGET_$(TARGET)=1 \
-	TARGET=\"$(TARGET)\" \
-	PLATFORM_$(PLATFORM)=1 \
-	PLATFORM=\"$(PLATFORM)\" \
-	ARCH_$(ARCH)=1 \
-	ARCH=\"$(ARCH)\" \
+    PROJECT_$(PROJECT)=1 \
+    PROJECT=\"$(PROJECT)\" \
+    TARGET_$(TARGET)=1 \
+    TARGET=\"$(TARGET)\" \
+    PLATFORM_$(PLATFORM)=1 \
+    PLATFORM=\"$(PLATFORM)\" \
+    ARCH_$(ARCH)=1 \
+    ARCH=\"$(ARCH)\" \
 
 # debug build?
 # TODO(johngro) : Make LK and ZX debug levels independently controlable.
 ifneq ($(DEBUG),)
 GLOBAL_DEFINES += \
-	LK_DEBUGLEVEL=$(DEBUG) \
-	ZX_DEBUGLEVEL=$(DEBUG)
+    LK_DEBUGLEVEL=$(DEBUG) \
+    ZX_DEBUGLEVEL=$(DEBUG)
 endif
 
 # allow additional defines from outside the build system
@@ -640,23 +640,35 @@ endif
 export GCC_COLORS ?= 1
 
 # setup bootloader toolchain
+ifeq ($(ARCH),x86)
+EFI_ARCH := x86_64
+else ifeq ($(ARCH),arm64)
+EFI_ARCH := aarch64
+endif
+
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 EFI_AR := $(CLANG_TOOLCHAIN_PREFIX)llvm-ar
 EFI_CC := $(CLANG_TOOLCHAIN_PREFIX)clang
 EFI_CXX := $(CLANG_TOOLCHAIN_PREFIX)clang++
-EFI_COMPILEFLAGS := --target=x86_64-windows-msvc
+EFI_LD := $(CLANG_TOOLCHAIN_PREFIX)lld-link
+EFI_COMPILEFLAGS := --target=$(EFI_ARCH)-windows-msvc
 else
 EFI_AR := $(TOOLCHAIN_PREFIX)ar
 EFI_CC := $(TOOLCHAIN_PREFIX)gcc
 EFI_CXX := $(TOOLCHAIN_PREFIX)g++
+EFI_LD := $(TOOLCHAIN_PREFIX)ld
 EFI_COMPILEFLAGS := -fPIE
 endif
 
 EFI_OPTFLAGS := -O2
-EFI_COMPILEFLAGS += -fno-stack-protector -mno-red-zone
+EFI_COMPILEFLAGS += -fno-stack-protector
 EFI_COMPILEFLAGS += -nostdinc
 EFI_COMPILEFLAGS += -Wall
 EFI_CFLAGS := -fshort-wchar -std=c99 -ffreestanding
+ifeq ($(EFI_ARCH),x86_64)
+EFI_CFLAGS += -mno-red-zone
+endif
+
 
 # setup host toolchain
 # default to prebuilt clang
@@ -726,6 +738,9 @@ endif
 # the logic to compile and link stuff is in here
 include make/build.mk
 
+# build a bootloader if needed
+include bootloader/build.mk
+
 DEPS := $(ALLOBJS:%o=%d)
 
 # put all of the build flags in various config.h files to force a rebuild if any change
@@ -763,14 +778,6 @@ HOST_DEFINES += HOST_LDFLAGS=\"$(subst $(SPACE),_,$(HOST_LDFLAGS))\"
 #$(info LIBGCC = $(LIBGCC))
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))
 #$(info GLOBAL_OPTFLAGS = $(GLOBAL_OPTFLAGS))
-
-ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
-# bootloader (x86-64 only for now)
-# This needs to be after CC et al are set above.
-ifeq ($(ARCH),x86)
-include bootloader/build.mk
-endif
-endif
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)

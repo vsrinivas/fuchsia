@@ -33,6 +33,7 @@ help:
 	@echo "make clean: cleans build of current project"
 	@echo "make spotless: removes all build directories"
 	@echo "make gigaboot: build the x86 UEFI bootloader"
+	@echo "make bootloader: build the project's bootloader"
 	@echo "make kernel: build the kernel"
 	@echo "make sysroot: build and populate the sysroot"
 	@echo "make tools: build all the host tools"
