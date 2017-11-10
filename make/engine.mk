@@ -398,6 +398,7 @@ BUILDID ?=
 
 # Tool locations.
 TOOLS := $(BUILDDIR)/tools
+FIDL := $(TOOLS)/fidlc
 MKBOOTFS := $(TOOLS)/mkbootfs
 ABIGEN := $(TOOLS)/abigen
 
