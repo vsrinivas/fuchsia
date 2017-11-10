@@ -28,6 +28,7 @@ LOG_CATEGORY(kLogDataHeaderTrace, 18);
 LOG_CATEGORY(kLogDataPacketTrace, 19);
 LOG_CATEGORY(kLogDataBeaconTrace, 20);
 LOG_CATEGORY(kLogWlanFrameTrace, 21);
+LOG_CATEGORY(kLogFrameHandlerTrace, 22);
 
 #undef LOG_CATEGORY
 
@@ -51,6 +52,7 @@ constexpr uint64_t kLogLevel = kLogInfos;
 #define debughdr(args...)  wlogf(kLogDataHeaderTrace, "[V:hdr ] ", args)
 #define debugbcn(args...)  wlogf(kLogDataBeaconTrace, "[V:bcn ] ", args)
 #define debugbss(args...)  wlogf(kLogDataBeaconTrace, "[V:bss ] ", args)
+#define debugfhandler(args...)  wlogf(kLogFrameHandlerTrace, "[V:fhdl] ", args)
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"

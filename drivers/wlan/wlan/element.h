@@ -235,7 +235,7 @@ const uint16_t kEapolProtocolId = 0x888E;
 // The MLME always forwards the RSNE and never requires to decode the element itself.
 // Hence, support for accessing optional fields is left out and implemented only by the SME.
 struct RsnElement : public Element<RsnElement, element_id::kRsn> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, size_t raw_len);
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, const uint8_t* raw, size_t raw_len);
     static const size_t kMinLen = 2;
     static const size_t kMaxLen = 255;
 

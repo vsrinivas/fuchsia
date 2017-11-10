@@ -95,7 +95,9 @@ class ScannerTest : public ::testing::Test {
 
     void SetActive() { req_->scan_type = ScanTypes::ACTIVE; }
 
-    zx_status_t Start() { return scanner_.Start(req_.Clone()); }
+    zx_status_t Start() {
+        return scanner_.Start(*req_.Clone().get());
+    }
 
     uint16_t CurrentChannel() { return mock_dev_.GetState()->channel().channel_num; }
 
@@ -263,12 +265,9 @@ TEST_F(ScannerTest, ScanResponse) {
 
     auto hdr = reinterpret_cast<const MgmtFrameHeader*>(kBeacon);
     auto bcn = reinterpret_cast<const Beacon*>(kBeacon + hdr->len());
-    MgmtFrame<Beacon> beacon = {
-            .hdr = hdr,
-            .body = bcn,
-            .body_len = sizeof(kBeacon) - hdr->len()
-    };
-    EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(&beacon, &info));
+    auto beacon = MgmtFrame<Beacon>(hdr, bcn, sizeof(kBeacon) - hdr->len());
+
+    EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon, info));
     clock_.Set(1);
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 

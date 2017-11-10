@@ -65,6 +65,7 @@ class Dispatcher {
     zx_status_t HandleMgmtPacket(const Packet* packet);
     zx_status_t HandleEthPacket(const Packet* packet);
     zx_status_t HandleSvcPacket(const Packet* packet);
+    template <typename Message> zx_status_t HandleMlmeMethod(const Packet* packet, Method method);
     zx_status_t HandleActionPacket(const Packet* packet, const MgmtFrameHeader* hdr,
                                    const ActionFrame* action, const wlan_rx_info_t* rxinfo);
 

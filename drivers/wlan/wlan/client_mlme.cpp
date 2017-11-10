@@ -46,7 +46,10 @@ zx_status_t ClientMlme::Init() {
         errorf("could not create scan timer: %d\n", status);
         return status;
     }
-    scanner_.reset(new Scanner(device_, std::move(timer)));
+
+    ZX_DEBUG_ASSERT(scanner_.get() == nullptr);
+    scanner_ = std::make_shared<Scanner>(device_, std::move(timer));
+    AddChildHandler(scanner_);
     return status;
 }
 
@@ -71,163 +74,21 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
-zx_status_t ClientMlme::HandleNullDataFrame(const DataFrameHeader* hdr,
-                                            const wlan_rx_info_t* rxinfo) {
+zx_status_t ClientMlme::HandleMlmeJoinReq(const JoinRequest& req) {
     debugfn();
-
-    if (IsStaValid() && *sta_->bssid() == hdr->addr2) {
-        return sta_->HandleNullDataFrame(hdr, rxinfo);
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleDataFrame(const DataFrame<LlcHeader>* frame,
-                                        const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr2) {
-        return sta_->HandleDataFrame(frame, rxinfo);
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleEthFrame(const BaseFrame<EthernetII>* frame) {
-    debugfn();
-
-    return IsStaValid() ? sta_->HandleEthFrame(frame) : ZX_OK;
-}
-
-// TODO(tkilbourn): send error response back to service is !IsStaValid (for all MLME requests)
-zx_status_t ClientMlme::HandleMlmeScanReq(ScanRequestPtr req) {
-    debugfn();
-
-    return scanner_->Start(std::move(req));
-}
-
-zx_status_t ClientMlme::HandleMlmeJoinReq(JoinRequestPtr req) {
-    debugfn();
-
     fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
     timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-    timer_id.set_mac(common::MacAddr(req->selected_bss->bssid.data()).ToU64());
+    timer_id.set_mac(common::MacAddr(req.selected_bss->bssid.data()).ToU64());
     auto status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
     if (status != ZX_OK) {
         errorf("could not create station timer: %d\n", status);
         return status;
     }
+
     sta_.reset(new Station(device_, std::move(timer)));
-    return sta_->Join(std::move(req));
-}
-
-zx_status_t ClientMlme::HandleMlmeAuthReq(AuthenticateRequestPtr req) {
-    debugfn();
-
-    if (IsStaValid()) { return sta_->Authenticate(std::move(req)); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleMlmeDeauthReq(DeauthenticateRequestPtr req) {
-    debugfn();
-
-    if (IsStaValid()) { return sta_->Deauthenticate(std::move(req)); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleMlmeAssocReq(AssociateRequestPtr req) {
-    debugfn();
-
-    if (IsStaValid()) { return sta_->Associate(std::move(req)); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleMlmeEapolReq(EapolRequestPtr req) {
-    debugfn();
-
-    if (IsStaValid()) { return sta_->SendEapolRequest(std::move(req)); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleMlmeSetKeysReq(SetKeysRequestPtr req) {
-    debugfn();
-
-    if (IsStaValid()) { return sta_->SetKeys(std::move(req)); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (scanner_->IsRunning()) { scanner_->HandleBeacon(frame, rxinfo); }
-
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr3) { sta_->HandleBeacon(frame, rxinfo); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleProbeResponse(const MgmtFrame<ProbeResponse>* frame,
-                                            const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (scanner_->IsRunning()) { scanner_->HandleProbeResponse(frame, rxinfo); }
-
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleAuthentication(const MgmtFrame<Authentication>* frame,
-                                             const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr3) {
-        sta_->HandleAuthentication(frame, rxinfo);
-    }
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleDeauthentication(const MgmtFrame<Deauthentication>* frame,
-                                               const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr3) {
-        sta_->HandleDeauthentication(frame, rxinfo);
-    }
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleAssociationResponse(const MgmtFrame<AssociationResponse>* frame,
-                                                  const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr3) {
-        sta_->HandleAssociationResponse(frame, rxinfo);
-    }
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleDisassociation(const MgmtFrame<Disassociation>* frame,
-                                             const wlan_rx_info_t* rxinfo) {
-    debugfn();
-
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr3) {
-        sta_->HandleDisassociation(frame, rxinfo);
-    }
-    return ZX_OK;
-}
-
-zx_status_t ClientMlme::HandleAddBaRequest(const MgmtFrame<AddBaRequestFrame>* frame,
-                                           const wlan_rx_info_t* rxinfo) {
-    debugfn();
-    if (IsStaValid() && *sta_->bssid() == frame->hdr->addr3) {
-        sta_->HandleAddBaRequest(frame, rxinfo);
-    }
+    AddChildHandler(sta_);
     return ZX_OK;
 }
 

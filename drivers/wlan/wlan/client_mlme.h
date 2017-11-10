@@ -29,49 +29,16 @@ class ClientMlme : public Mlme {
     zx_status_t PreChannelChange(wlan_channel_t chan) override;
     zx_status_t PostChannelChange() override;
     zx_status_t HandleTimeout(const ObjectId id) override;
-
-    zx_status_t HandleEthFrame(const BaseFrame<EthernetII>* frame) override;
-
-    // Service Message handlers.
-
-    zx_status_t HandleMlmeScanReq(ScanRequestPtr req) override;
-    zx_status_t HandleMlmeJoinReq(JoinRequestPtr req) override;
-    zx_status_t HandleMlmeAuthReq(AuthenticateRequestPtr req) override;
-    zx_status_t HandleMlmeDeauthReq(DeauthenticateRequestPtr req) override;
-    zx_status_t HandleMlmeAssocReq(AssociateRequestPtr req) override;
-    zx_status_t HandleMlmeEapolReq(EapolRequestPtr req) override;
-    zx_status_t HandleMlmeSetKeysReq(SetKeysRequestPtr req) override;
-
-    // Data frame handlers.
-
-    zx_status_t HandleNullDataFrame(const DataFrameHeader* frame,
-                                    const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>* frame,
-                                const wlan_rx_info_t* rxinfo) override;
-
-    // Management frame handlers.
-
-    zx_status_t HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>* frame,
-                                    const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>* frame,
-                                     const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>* frame,
-                                       const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>* frame,
-                                          const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>* frame,
-                                     const wlan_rx_info_t* rxinfo) override;
-    zx_status_t HandleAddBaRequest(const MgmtFrame<AddBaRequestFrame>* frame,
-                                   const wlan_rx_info_t* rxinfo) override;
+    // MLME-JOIN.request will initialize a Station and starts the association flow.
+    zx_status_t HandleMlmeJoinReq(const JoinRequest& msg) override;
 
     bool IsStaValid() const;
 
     DeviceInterface* const device_;
 
-    fbl::unique_ptr<Scanner> scanner_;
+    std::shared_ptr<Scanner> scanner_;
     // TODO(tkilbourn): track other STAs
-    fbl::unique_ptr<Station> sta_;
+    std::shared_ptr<Station> sta_;
 };
 
 }  // namespace wlan

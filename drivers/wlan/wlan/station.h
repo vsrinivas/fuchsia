@@ -5,6 +5,7 @@
 #pragma once
 
 #include "device_interface.h"
+#include "frame_handler.h"
 #include "mac_frame.h"
 
 #include "garnet/drivers/wlan/common/macaddr.h"
@@ -21,7 +22,7 @@ namespace wlan {
 class Packet;
 class Timer;
 
-class Station {
+class Station : public FrameHandler {
    public:
     Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
 
@@ -62,29 +63,36 @@ class Station {
 
     zx_status_t SendKeepAliveResponse();
 
-    zx_status_t Join(JoinRequestPtr req);
-    zx_status_t Authenticate(AuthenticateRequestPtr req);
-    zx_status_t Deauthenticate(DeauthenticateRequestPtr req);
-    zx_status_t Associate(AssociateRequestPtr req);
+    bool ShouldDropMlmeMessage(Method& method) override;
+    zx_status_t HandleMlmeJoinReq(const JoinRequest& req) override;
+    zx_status_t HandleMlmeAuthReq(const AuthenticateRequest& req) override;
+    zx_status_t HandleMlmeDeauthReq(const DeauthenticateRequest& req) override;
+    zx_status_t HandleMlmeAssocReq(const AssociateRequest& req) override;
+    zx_status_t HandleMlmeEapolReq(const EapolRequest& req) override;
+    zx_status_t HandleMlmeSetKeysReq(const SetKeysRequest& req) override;
 
-    zx_status_t HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>* frame,
-                                     const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>* frame,
-                                       const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>* frame,
-                                          const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>* frame,
-                                     const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleAddBaRequest(const MgmtFrame<AddBaRequestFrame>* frame,
-                                   const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleNullDataFrame(const DataFrameHeader* frame, const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>* frame, const wlan_rx_info_t* rxinfo);
-    zx_status_t HandleEthFrame(const BaseFrame<EthernetII>* frame);
+    bool ShouldDropDataFrame(const DataFrameHeader& hdr) override;
+    zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
+                                     const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
+                                       const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame,
+                                          const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame,
+                                     const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame,
+                                        const wlan_rx_info_t& rxinfo) override;
+
+    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) override;
+    zx_status_t HandleNullDataFrame(const DataFrameHeader& frame,
+                                    const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame,
+                                const wlan_rx_info_t& rxinfo) override;
+
+    bool ShouldDropEthFrame(const BaseFrame<EthernetII>& hdr) override;
+    zx_status_t HandleEthFrame(const BaseFrame<EthernetII>& frame) override;
     zx_status_t HandleTimeout();
-
-    zx_status_t SendEapolRequest(EapolRequestPtr req);
-    zx_status_t SetKeys(SetKeysRequestPtr req);
 
     zx_status_t PreChannelChange(wlan_channel_t chan);
     zx_status_t PostChannelChange();

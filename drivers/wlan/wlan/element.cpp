@@ -162,7 +162,7 @@ bool ExtendedSupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* act
     return true;
 }
 
-bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, size_t raw_len) {
+bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, const uint8_t* raw, size_t raw_len) {
     if (raw_len < sizeof(RsnElement)) return false;
     if (raw_len > len) return false;
 

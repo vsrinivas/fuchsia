@@ -585,6 +585,9 @@ struct EapolFrame {
 } __PACKED;
 
 template <typename Header, typename Body> struct Frame {
+    Frame(const Header* hdr, const Body* body, size_t body_len)
+        : hdr(hdr), body(body), body_len(body_len) {}
+
     const Header* hdr;
     const Body* body;
     size_t body_len;

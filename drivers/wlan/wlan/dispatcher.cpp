@@ -4,6 +4,7 @@
 
 #include "dispatcher.h"
 #include "client_mlme.h"
+#include "frame_handler.h"
 #include "packet.h"
 #include "serialize.h"
 
@@ -175,7 +176,10 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
     ZX_DEBUG_ASSERT(rxinfo);
 
-    if (hdr->fc.subtype() == kNull) { return mlme_->HandleNullDataFrame(hdr, rxinfo); }
+    if (hdr->fc.subtype() == kNull) {
+        // TODO(hahnr): Use DataFrame with an empty body rather than the header directly.
+        return mlme_->HandleFrame(*hdr, *rxinfo);
+    }
 
     if (hdr->fc.subtype() != 0) {
         warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
@@ -187,11 +191,13 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
         errorf("short data packet len=%zu\n", packet->len());
         return ZX_ERR_IO;
     }
-    ZX_DEBUG_ASSERT(packet->len() >= kDataPayloadHeader);
-
+    if (packet->len() < kDataPayloadHeader) {
+        errorf("short LLC packet len=%zu\n", packet->len());
+        return ZX_ERR_IO;
+    }
     size_t llc_len = packet->len() - hdr->len();
-    auto frame = DataFrame<LlcHeader>{.hdr = hdr, .body = llc, .body_len = llc_len};
-    return mlme_->HandleDataFrame(&frame, rxinfo);
+    auto frame = DataFrame<LlcHeader>(hdr, llc, llc_len);
+    return mlme_->HandleFrame(frame, *rxinfo);
 }
 
 zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
@@ -223,8 +229,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("beacon packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<Beacon>{.hdr = hdr, .body = beacon, .body_len = payload_len};
-        return mlme_->HandleBeacon(&frame, rxinfo);
+        auto frame = MgmtFrame<Beacon>(hdr, beacon, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kProbeResponse: {
         auto proberesp = packet->field<ProbeResponse>(hdr->len());
@@ -232,9 +238,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("probe response packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame =
-            MgmtFrame<ProbeResponse>{.hdr = hdr, .body = proberesp, .body_len = payload_len};
-        return mlme_->HandleProbeResponse(&frame, rxinfo);
+        auto frame = MgmtFrame<ProbeResponse>(hdr, proberesp, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAuthentication: {
         auto auth = packet->field<Authentication>(hdr->len());
@@ -242,8 +247,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("authentication packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<Authentication>{.hdr = hdr, .body = auth, .body_len = payload_len};
-        return mlme_->HandleAuthentication(&frame, rxinfo);
+        auto frame = MgmtFrame<Authentication>(hdr, auth, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kDeauthentication: {
         auto deauth = packet->field<Deauthentication>(hdr->len());
@@ -251,9 +256,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("deauthentication packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame =
-            MgmtFrame<Deauthentication>{.hdr = hdr, .body = deauth, .body_len = payload_len};
-        return mlme_->HandleDeauthentication(&frame, rxinfo);
+        auto frame = MgmtFrame<Deauthentication>(hdr, deauth, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAssociationResponse: {
         auto authresp = packet->field<AssociationResponse>(hdr->len());
@@ -261,9 +265,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("assocation response packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame =
-            MgmtFrame<AssociationResponse>{.hdr = hdr, .body = authresp, .body_len = payload_len};
-        return mlme_->HandleAssociationResponse(&frame, rxinfo);
+        auto frame = MgmtFrame<AssociationResponse>(hdr, authresp, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kDisassociation: {
         auto disassoc = packet->field<Disassociation>(hdr->len());
@@ -271,9 +274,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("disassociation packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame =
-            MgmtFrame<Disassociation>{.hdr = hdr, .body = disassoc, .body_len = payload_len};
-        return mlme_->HandleDisassociation(&frame, rxinfo);
+        auto frame = MgmtFrame<Disassociation>(hdr, disassoc, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAction: {
         auto action = packet->field<ActionFrame>(hdr->len());
@@ -323,15 +325,14 @@ zx_status_t Dispatcher::HandleActionPacket(const Packet* packet, const MgmtFrame
         // TODO(porce): Support AddBar. Work with lower mac.
         // TODO(porce): Make this conditional depending on the hardware capability.
 
-        auto frame =
-            MgmtFrame<AddBaRequestFrame>{.hdr = hdr, .body = addbar, .body_len = payload_len};
-        return mlme_->HandleAddBaRequest(&frame, rxinfo);
+        auto frame = MgmtFrame<AddBaRequestFrame>(hdr, addbar, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
         break;
     }
     case action::BaAction::kAddBaResponse:
-        // fall-through
+    // fall-through
     case action::BaAction::kDelBa:
-        // fall-through
+    // fall-through
     default:
         warnf("BlockAck action frame with action %u not handled.\n", ba_frame->action);
         break;
@@ -350,8 +351,8 @@ zx_status_t Dispatcher::HandleEthPacket(const Packet* packet) {
 
     auto payload = packet->field<uint8_t>(sizeof(hdr));
     size_t payload_len = packet->len() - sizeof(hdr);
-    auto frame = BaseFrame<EthernetII>{.hdr = hdr, .body = payload, .body_len = payload_len};
-    return mlme_->HandleEthFrame(&frame);
+    auto frame = BaseFrame<EthernetII>(hdr, payload, payload_len);
+    return mlme_->HandleFrame(frame);
 }
 
 zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
@@ -370,80 +371,36 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
 
     auto method = static_cast<Method>(hdr->ordinal);
     switch (method) {
-    case Method::SCAN_request: {
-        ScanRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::SCAN_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize ScanRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeScanReq(std::move(req));
-    }
-    case Method::JOIN_request: {
-        JoinRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::JOIN_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize JoinRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeJoinReq(std::move(req));
-    }
-    case Method::AUTHENTICATE_request: {
-        AuthenticateRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::AUTHENTICATE_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize AuthenticateRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeAuthReq(std::move(req));
-    }
-    case Method::DEAUTHENTICATE_request: {
-        DeauthenticateRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::DEAUTHENTICATE_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize DeauthenticateRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeDeauthReq(std::move(req));
-    }
-    case Method::ASSOCIATE_request: {
-        AssociateRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::ASSOCIATE_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize AssociateRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeAssocReq(std::move(req));
-    }
-    case Method::EAPOL_request: {
-        EapolRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::EAPOL_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize EapolRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeEapolReq(std::move(req));
-    }
-    case Method::SETKEYS_request: {
-        SetKeysRequestPtr req;
-        auto status = DeserializeServiceMsg(*packet, Method::SETKEYS_request, &req);
-        if (status != ZX_OK) {
-            errorf("could not deserialize SetKeysRequest: %d\n", status);
-            return status;
-        }
-        ZX_DEBUG_ASSERT(!req.is_null());
-        return mlme_->HandleMlmeSetKeysReq(std::move(req));
-    }
+    case Method::SCAN_request:
+        return HandleMlmeMethod<ScanRequest>(packet, method);
+    case Method::JOIN_request:
+        return HandleMlmeMethod<JoinRequest>(packet, method);
+    case Method::AUTHENTICATE_request:
+        return HandleMlmeMethod<AuthenticateRequest>(packet, method);
+    case Method::DEAUTHENTICATE_request:
+        return HandleMlmeMethod<DeauthenticateRequest>(packet, method);
+    case Method::ASSOCIATE_request:
+        return HandleMlmeMethod<AssociateRequest>(packet, method);
+    case Method::EAPOL_request:
+        return HandleMlmeMethod<EapolRequest>(packet, method);
+    case Method::SETKEYS_request:
+        return HandleMlmeMethod<SetKeysRequest>(packet, method);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;
     }
+}
+
+template <typename Message>
+zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, Method method) {
+    ::fidl::StructPtr<Message> req;
+    auto status = DeserializeServiceMsg(*packet, method, &req);
+    if (status != ZX_OK) {
+        errorf("could not deserialize MLME Method %d: %d\n", method, status);
+        return status;
+    }
+    ZX_DEBUG_ASSERT(!req.is_null());
+    return mlme_->HandleFrame(method, *req);
 }
 
 zx_status_t Dispatcher::PreChannelChange(wlan_channel_t chan) {

@@ -30,10 +30,14 @@ Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     ZX_DEBUG_ASSERT(timer_.get());
 }
 
-zx_status_t Scanner::Start(ScanRequestPtr req) {
+zx_status_t Scanner::HandleMlmeScanReq(const ScanRequest& req) {
+    return Start(req);
+}
+
+zx_status_t Scanner::Start(const ScanRequest& req) {
     debugfn();
+
     if (IsRunning()) { return ZX_ERR_UNAVAILABLE; }
-    ZX_DEBUG_ASSERT(req_.is_null());
     ZX_DEBUG_ASSERT(channel_index_ == 0);
     ZX_DEBUG_ASSERT(channel_start_ == 0);
 
@@ -41,16 +45,16 @@ zx_status_t Scanner::Start(ScanRequestPtr req) {
     resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
     resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
 
-    if (req->channel_list.size() == 0) { return SendScanResponse(); }
-    if (req->max_channel_time < req->min_channel_time) { return SendScanResponse(); }
-    if (!BSSTypes_IsValidValue(req->bss_type) || !ScanTypes_IsValidValue(req->scan_type)) {
+    if (req.channel_list.size() == 0) { return SendScanResponse(); }
+    if (req.max_channel_time < req.min_channel_time) { return SendScanResponse(); }
+    if (!BSSTypes_IsValidValue(req.bss_type) || !ScanTypes_IsValidValue(req.scan_type)) {
         return SendScanResponse();
     }
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
     // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
     resp_->result_code = ScanResultCodes::SUCCESS;
-    req_ = std::move(req);
+    req_ = req.Clone();
 
     channel_start_ = timer_->Now();
     zx_time_t timeout = InitialTimeout();
@@ -107,11 +111,16 @@ wlan_channel_t Scanner::ScanChannel() const {
     return wlan_channel_t{req_->channel_list[channel_index_]};
 }
 
-zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_info_t* rxinfo) {
+bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
+    // Ignore all management frames when scanner is not running.
+    return !IsRunning();
+}
+
+zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
-    auto hdr = frame->hdr;
+    auto hdr = frame.hdr;
     common::MacAddr bssid(hdr->addr3);
     common::MacAddr src_addr(hdr->addr2);
 
@@ -122,32 +131,29 @@ zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>* frame, const wlan_rx_
         return ZX_OK;  // Do not process.
     }
 
-    auto status = nbrs_bss_.Upsert(bssid, frame->body, frame->body_len,
-                                   rxinfo);  // body_len does not include FCS.
+    auto status = nbrs_bss_.Upsert(bssid, frame.body, frame.body_len,
+                                   &rxinfo);  // body_len does not include FCS.
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 MACSTR(bssid), frame->body->timestamp);
+                 MACSTR(bssid), frame.body->timestamp);
     }
 
     return ZX_OK;
 }
 
-zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>* frame,
-                                         const wlan_rx_info_t* rxinfo) {
+zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
+                                         const wlan_rx_info_t& rxinfo) {
     debugfn();
 
     // A ProbeResponse carries all currently used attributes of a Beacon frame. Hence, treat a
     // ProbeResponse as a Beacon for now to support active scanning. There are additional
     // information for either frame type which we have to process on a per frame type basis in the
     // future. For now, stick with this kind of unification.
-    // TODO(hahnr): find a way to properly split up the Beacon and ProbeResponse processing
-    MgmtFrame<Beacon> mgmt_frame = {
-        .hdr = frame->hdr,
-        .body = reinterpret_cast<const Beacon*>(frame->body),
-        .body_len = frame->body_len,
-    };
+    // TODO(hahnr): The should probably moved somehow into the Dispatcher.
+    auto bcn = reinterpret_cast<const Beacon*>(frame.body);
+    auto mgmt_frame = MgmtFrame<Beacon>(frame.hdr, bcn, frame.body_len);
 
-    HandleBeacon(&mgmt_frame, rxinfo);
+    HandleBeacon(mgmt_frame, rxinfo);
     return ZX_OK;
 }
 
