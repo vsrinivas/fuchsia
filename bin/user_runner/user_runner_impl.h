@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
+#include "lib/app/cpp/service_provider_impl.h"
 #include "lib/auth/fidl/account/account.fidl.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
@@ -162,6 +163,9 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher,
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
   fidl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
+
+  // Services we provide to the module resolver's namespace.
+  app::ServiceProviderImpl module_resolver_ns_services_;
   ModuleResolverPtr module_resolver_service_;
 
   std::unique_ptr<FocusHandler> focus_handler_;

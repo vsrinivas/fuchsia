@@ -263,12 +263,33 @@ void UserRunnerImpl::Initialize(
         }
       });
 
+  // Setup for kModuleResolverUrl
+  module_resolver_ns_services_.AddService<maxwell::IntelligenceServices>(
+      [this](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+        auto component_scope = maxwell::ComponentScope::New();
+        component_scope->set_global_scope(maxwell::GlobalScope::New());
+        fidl::InterfaceHandle<maxwell::IntelligenceServices>
+            intelligence_services;
+        user_intelligence_provider_->GetComponentIntelligenceServices(
+            std::move(component_scope), std::move(request));
+
+      });
+  auto service_list = app::ServiceList::New();
+  service_list->names.push_back(maxwell::IntelligenceServices::Name_);
+  module_resolver_ns_services_.AddBinding(service_list->provider.NewRequest());
+
   auto module_resolver_config = AppConfig::New();
   module_resolver_config->url = kModuleResolverUrl;
+  // For now, we want data_origin to be "", which uses our (parent process's)
+  // /data. This is appropriate for the module_resolver, for now. We can in the
+  // future isolate the data it reads to a subdir of /data and map that in
+  // here.
   module_resolver_ = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), std::move(module_resolver_config));
+      user_scope_->GetLauncher(), std::move(module_resolver_config),
+      "" /* data_origin */, std::move(service_list));
   ConnectToService(module_resolver_->services(),
                    module_resolver_service_.NewRequest());
+  // End kModuleResolverUrl
   // End init maxwell.
 
   user_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
