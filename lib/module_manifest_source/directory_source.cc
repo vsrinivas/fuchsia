@@ -203,6 +203,13 @@ void DirectoryModuleManifestSource::OnNewFile(const std::string& name,
   // get here, we assume it's valid manifest JSON.
   doc.Parse(data.c_str());
 
+  // Handle bad manifests, including older files expressed as an array.
+  // Any mismatch causes XdrRead to DCHECK.
+  if (!doc.IsObject()) {
+    FXL_LOG(WARNING) << "Ignored invalid manifest: " << path;
+    return;
+  }
+
   // Our tooling validates |doc|'s JSON schema so that we don't have to here.
   // It may be good to do this, though.
   // TODO(thatguy): Do this if it becomes a problem.

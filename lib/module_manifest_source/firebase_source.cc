@@ -96,10 +96,18 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
   }
 
   void ProcessEntry(const std::string& name, const rapidjson::Value& value) {
-    // We have to deep-copy |it->value| becaues XdrRead() must have a
+    // We have to deep-copy |it->value| because XdrRead() must have a
     // rapidjson::Document.
     rapidjson::Document doc;
     doc.CopyFrom(value, doc.GetAllocator());
+
+    // Handle bad manifests, including older files expressed as an array.
+    // Any mismatch causes XdrRead to DCHECK.
+    if (!doc.IsObject()) {
+      FXL_LOG(WARNING) << "Ignored invalid manifest: " << name;
+      return;
+    }
+
     Entry entry;
     if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
       FXL_LOG(WARNING) << "Could not parse Module manifest from: " << name;
