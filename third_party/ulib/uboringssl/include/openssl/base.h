@@ -54,20 +54,20 @@
 #define OPENSSL_HEADER_BASE_H
 
 
-/* This file should be the first included by all BoringSSL headers. */
+// This file should be the first included by all BoringSSL headers.
 
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 
 #if defined(__MINGW32__)
-/* stdio.h is needed on MinGW for __MINGW_PRINTF_FORMAT. */
+// stdio.h is needed on MinGW for __MINGW_PRINTF_FORMAT.
 #include <stdio.h>
 #endif
 
-/* Include a BoringSSL-only header so consumers including this header without
- * setting up include paths do not accidentally pick up the system
- * opensslconf.h. */
+// Include a BoringSSL-only header so consumers including this header without
+// setting up include paths do not accidentally pick up the system
+// opensslconf.h.
 #include <openssl/is_boringssl.h>
 #include <openssl/opensslconf.h>
 
@@ -107,10 +107,10 @@ extern "C" {
 #elif defined(__myriad2__)
 #define OPENSSL_32_BIT
 #else
-/* Note BoringSSL only supports standard 32-bit and 64-bit two's-complement,
- * little-endian architectures. Functions will not produce the correct answer
- * on other systems. Run the crypto_test binary, notably
- * crypto/compiler_test.cc, before adding a new architecture. */
+// Note BoringSSL only supports standard 32-bit and 64-bit two's-complement,
+// little-endian architectures. Functions will not produce the correct answer
+// on other systems. Run the crypto_test binary, notably
+// crypto/compiler_test.cc, before adding a new architecture.
 #error "Unknown target CPU"
 #endif
 
@@ -137,20 +137,22 @@ extern "C" {
 #define OPENSSL_NO_THREADS
 #endif
 
+#if !defined(OPENSSL_NO_THREADS)
+#define OPENSSL_THREADS
+#endif
+
 #define OPENSSL_IS_BORINGSSL
-#define BORINGSSL_201512
-#define BORINGSSL_201603
-#define OPENSSL_VERSION_NUMBER 0x100020af
+#define OPENSSL_VERSION_NUMBER 0x1010007f
 #define SSLEAY_VERSION_NUMBER OPENSSL_VERSION_NUMBER
 
-/* BORINGSSL_API_VERSION is a positive integer that increments as BoringSSL
- * changes over time. The value itself is not meaningful. It will be incremented
- * whenever is convenient to coordinate an API change with consumers. This will
- * not denote any special point in development.
- *
- * A consumer may use this symbol in the preprocessor to temporarily build
- * against multiple revisions of BoringSSL at the same time. It is not
- * recommended to do so for longer than is necessary. */
+// BORINGSSL_API_VERSION is a positive integer that increments as BoringSSL
+// changes over time. The value itself is not meaningful. It will be incremented
+// whenever is convenient to coordinate an API change with consumers. This will
+// not denote any special point in development.
+//
+// A consumer may use this symbol in the preprocessor to temporarily build
+// against multiple revisions of BoringSSL at the same time. It is not
+// recommended to do so for longer than is necessary.
 #define BORINGSSL_API_VERSION 4
 
 #if defined(BORINGSSL_SHARED_LIBRARY)
@@ -163,7 +165,7 @@ extern "C" {
 #define OPENSSL_EXPORT __declspec(dllimport)
 #endif
 
-#else  /* defined(OPENSSL_WINDOWS) */
+#else  // defined(OPENSSL_WINDOWS)
 
 #if defined(BORINGSSL_IMPLEMENTATION)
 #define OPENSSL_EXPORT __attribute__((visibility("default")))
@@ -171,19 +173,19 @@ extern "C" {
 #define OPENSSL_EXPORT
 #endif
 
-#endif  /* defined(OPENSSL_WINDOWS) */
+#endif  // defined(OPENSSL_WINDOWS)
 
-#else  /* defined(BORINGSSL_SHARED_LIBRARY) */
+#else  // defined(BORINGSSL_SHARED_LIBRARY)
 
 #define OPENSSL_EXPORT
 
-#endif  /* defined(BORINGSSL_SHARED_LIBRARY) */
+#endif  // defined(BORINGSSL_SHARED_LIBRARY)
 
 
-#if defined(__GNUC__)
-/* MinGW has two different printf implementations. Ensure the format macro
- * matches the selected implementation. See
- * https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/. */
+#if defined(__GNUC__) || defined(__clang__)
+// MinGW has two different printf implementations. Ensure the format macro
+// matches the selected implementation. See
+// https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/.
 #if defined(__MINGW_PRINTF_FORMAT)
 #define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check) \
   __attribute__(                                                 \
@@ -196,7 +198,7 @@ extern "C" {
 #define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check)
 #endif
 
-/* OPENSSL_MSVC_PRAGMA emits a pragma on MSVC and nothing on other compilers. */
+// OPENSSL_MSVC_PRAGMA emits a pragma on MSVC and nothing on other compilers.
 #if defined(_MSC_VER)
 #define OPENSSL_MSVC_PRAGMA(arg) __pragma(arg)
 #else
@@ -223,7 +225,20 @@ extern "C" {
 #endif
 #endif
 
-/* CRYPTO_THREADID is a dummy value. */
+// Have a generic fall-through for different versions of C/C++.
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define OPENSSL_FALLTHROUGH [[fallthrough]]
+#elif defined(__cplusplus) && __cplusplus >= 201103L && defined(__clang__)
+#define OPENSSL_FALLTHROUGH [[clang::fallthrough]]
+#elif defined(__cplusplus) && __cplusplus >= 201103L && __GNUC__ >= 7
+#define OPENSSL_FALLTHROUGH [[gnu::fallthrough]]
+#elif  __GNUC__ >= 7 // gcc 7
+#define OPENSSL_FALLTHROUGH __attribute__ ((fallthrough))
+#else // C++11 on gcc 6, and all other cases
+#define OPENSSL_FALLTHROUGH
+#endif
+
+// CRYPTO_THREADID is a dummy value.
 typedef int CRYPTO_THREADID;
 
 typedef int ASN1_BOOLEAN;
@@ -309,6 +324,7 @@ typedef struct evp_pkey_st EVP_PKEY;
 typedef struct hmac_ctx_st HMAC_CTX;
 typedef struct md4_state_st MD4_CTX;
 typedef struct md5_state_st MD5_CTX;
+typedef struct ossl_init_settings_st OPENSSL_INIT_SETTINGS;
 typedef struct pkcs12_st PKCS12;
 typedef struct pkcs8_priv_key_info_st PKCS8_PRIV_KEY_INFO;
 typedef struct private_key_st X509_PKEY;
@@ -345,7 +361,7 @@ typedef void *OPENSSL_BLOCK;
 
 
 #if defined(__cplusplus)
-}  /* extern C */
+}  // extern C
 #elif !defined(BORINGSSL_NO_CXX)
 #define BORINGSSL_NO_CXX
 #endif
@@ -415,6 +431,9 @@ class StackAllocated {
   T *get() { return &ctx_; }
   const T *get() const { return &ctx_; }
 
+  T *operator->() { return &ctx_; }
+  const T *operator->() const { return &ctx_; }
+
   void Reset() {
     cleanup(&ctx_);
     init(&ctx_);
@@ -442,8 +461,8 @@ using UniquePtr = std::unique_ptr<T, internal::Deleter<T>>;
 
 }  // namespace bssl
 
-}  /* extern C++ */
+}  // extern C++
 
 #endif  // !BORINGSSL_NO_CXX
 
-#endif  /* OPENSSL_HEADER_BASE_H */
+#endif  // OPENSSL_HEADER_BASE_H

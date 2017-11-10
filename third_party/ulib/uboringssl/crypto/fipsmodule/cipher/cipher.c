@@ -80,11 +80,8 @@ EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void) {
 }
 
 int EVP_CIPHER_CTX_cleanup(EVP_CIPHER_CTX *c) {
-  if (c->cipher != NULL) {
-    if (c->cipher->cleanup) {
-      c->cipher->cleanup(c);
-    }
-    OPENSSL_cleanse(c->cipher_data, c->cipher->ctx_size);
+  if (c->cipher != NULL && c->cipher->cleanup) {
+    c->cipher->cleanup(c);
   }
   OPENSSL_free(c->cipher_data);
 
@@ -126,6 +123,11 @@ int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in) {
   }
 
   return 1;
+}
+
+void EVP_CIPHER_CTX_reset(EVP_CIPHER_CTX *ctx) {
+  EVP_CIPHER_CTX_cleanup(ctx);
+  EVP_CIPHER_CTX_init(ctx);
 }
 
 int EVP_CipherInit_ex(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
@@ -609,3 +611,5 @@ int EVP_DecryptInit(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
 int EVP_add_cipher_alias(const char *a, const char *b) {
   return 1;
 }
+
+void EVP_CIPHER_CTX_set_flags(const EVP_CIPHER_CTX *ctx, uint32_t flags) {}

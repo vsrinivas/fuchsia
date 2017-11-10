@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 // This script is useful for checking whether the current source files under a
-// boring-crypto directory are compatible with those in a boringssl repository.
+// uboringssl directory are compatible with those in a boringssl repository.
 // This can be used to determine whether any upstream changes need to be ported
-// from boringssl to boring-crypto.
+// from boringssl to uboringssl.
 
 package main
 
@@ -24,6 +24,13 @@ const (
   DefaultBoringSSL = "//third_party/boringssl"
   DefaultZircon = "//zircon/third_party/ulib/uboringssl"
 )
+
+// These files are special; they are either auto-generated, manually modified, or explicitly added.
+var skipped_files = map[string]bool {
+  "/crypto/cpu-aarch64-zircon.cpp": true,
+  "/crypto/err/err_data.c": true,
+  "/include/openssl/base.h": true,
+}
 
 // GetRealPath returns a canonical path, with '//' replaced by $FUCHSIA_DIR
 func GetRealPath(path string) string {
@@ -44,16 +51,16 @@ func GetRealPath(path string) string {
   return path
 }
 
-// CheckReadMe returns whether the README.fuchsia.md in boring-crypto references
+// CheckReadMe returns whether the README.fuchsia.md in uboringssl references
 // the current boringssl revision or not.
-func CheckReadMe(mxRoot, bsslRoot string) bool {
+func CheckReadMe(zxRoot, bsslRoot string) bool {
   cmd := exec.Command("git", "log", "-n1", "--pretty=%H")
   cmd.Dir = bsslRoot
   out, err := cmd.Output()
   if err != nil {
     log.Fatal(err)
   }
-  file, err := os.Open(mxRoot + string(os.PathSeparator) + "README.fuchsia.md")
+  file, err := os.Open(zxRoot + string(os.PathSeparator) + "README.fuchsia.md")
   if err != nil {
     log.Fatal(err)
   }
@@ -67,28 +74,6 @@ func CheckReadMe(mxRoot, bsslRoot string) bool {
     log.Fatal(err)
   }
   return false
-}
-
-// IsValidAddedFile returns whether a file found only in boring-crypto and not
-// in boringssl is a valid addition; that is, if it includes a Fuchsia copyright
-// and ends in a -zircon.cpp suffix.
-func IsValidAddedFile(path string) bool {
-  if !strings.HasSuffix(path, "-zircon.cpp") {
-    return false
-  }
-  file, err := os.Open(path)
-  if err != nil {
-    log.Fatal(err)
-  }
-  scanner := bufio.NewScanner(file)
-  if !scanner.Scan() {
-    if err := scanner.Err(); err != nil {
-      log.Fatal(err)
-    }
-    return false
-  }
-  s := scanner.Text()
-  return strings.Contains(s, "Copyright") && strings.Contains(s, "Fuchsia")
 }
 
 // ReadNextLine reads the next newline-delimited line of text from a source
@@ -113,11 +98,11 @@ func ReadNextLine(scanner *bufio.Scanner) (string, bool) {
   return "", false
 }
 
-// IsSameFile returns whether a boring-crypto and boringssl file match, except
+// IsSameFile returns whether a uboringssl and boringssl file match, except
 // for the allowable differences that are ignored by ReadNextLine.
-func IsSameFile(mxPath string, bsslPath string) bool {
+func IsSameFile(zxPath string, bsslPath string) bool {
   same := true
-  mxFile, err := os.Open(mxPath)
+  zxFile, err := os.Open(zxPath)
   if err != nil {
     log.Fatal(err)
   }
@@ -125,55 +110,54 @@ func IsSameFile(mxPath string, bsslPath string) bool {
   if err != nil {
     log.Fatal(err)
   }
-  mxScan := bufio.NewScanner(mxFile)
+  zxScan := bufio.NewScanner(zxFile)
   bsslScan := bufio.NewScanner(bsslFile)
-  mxText, mxMore := ReadNextLine(mxScan)
+  zxText, zxMore := ReadNextLine(zxScan)
   bsslText, bsslMore := ReadNextLine(bsslScan)
-  for mxMore && bsslMore {
-    if !mxMore {
+  for zxMore && bsslMore {
+    if !zxMore {
       bsslText, bsslMore = ReadNextLine(bsslScan)
       same = false
       continue
     }
     if !bsslMore {
-      mxText, mxMore = ReadNextLine(mxScan)
+      zxText, zxMore = ReadNextLine(zxScan)
       same = false
       continue
     }
-    if mxText != bsslText {
+    if zxText != bsslText {
       same = false
     }
-    mxText, mxMore = ReadNextLine(mxScan)
+    zxText, zxMore = ReadNextLine(zxScan)
     bsslText, bsslMore = ReadNextLine(bsslScan)
   }
   return same
 }
 
-// CompareAll walks the files in boring-crypto and checks whether each is a
+// CompareAll walks the files in uboringssl and checks whether each is a
 // valid addition or matches a corresponding file in boringssl.
-func CompareAll(mxRoot, bsslRoot string) []string {
+func CompareAll(zxRoot, bsslRoot string) []string {
   files := []string{}
-  walker := func(mxPath string, mxInfo os.FileInfo, err error) error {
+  walker := func(zxPath string, zxInfo os.FileInfo, err error) error {
     if err != nil {
       return err
     }
-    if mxInfo.IsDir() {
+    if zxInfo.IsDir() {
       return nil
     }
-    stem := mxPath[len(mxRoot):]
+    stem := zxPath[len(zxRoot):]
+    if skipped_files[stem] {
+      return nil
+    }
     bsslPath := bsslRoot + stem
-    if _, err = os.Stat(bsslPath); err != nil {
-      if !IsValidAddedFile(mxPath) {
-        files = append(files, stem)
-      }
-  } else if !IsSameFile(mxPath, bsslPath) {
+    if _, err = os.Stat(bsslPath); err != nil || !IsSameFile(zxPath, bsslPath) {
       files = append(files, stem)
     }
     return nil
   }
-  stems := []string{"crypto", "include"}
+  stems := []string{"crypto", "decrepit", "include"}
   for _, stem := range stems {
-    path := mxRoot + string(os.PathSeparator) + stem
+    path := zxRoot + string(os.PathSeparator) + stem
     if err := filepath.Walk(path, walker); err != nil {
       log.Fatal(err)
     }
@@ -184,15 +168,15 @@ func CompareAll(mxRoot, bsslRoot string) []string {
 // Main function
 func main() {
   bsslFlag := flag.String("boringssl", DefaultBoringSSL, "BoringSSL repository")
-  mxFlag := flag.String("boring-crypto", DefaultZircon, "boring-crypto path")
+  zxFlag := flag.String("uboringssl", DefaultZircon, "uboringssl path")
   flag.Parse()
-  mxRoot :=  GetRealPath(*mxFlag)
+  zxRoot :=  GetRealPath(*zxFlag)
   bsslRoot :=  GetRealPath(*bsslFlag)
-  ready := CheckReadMe(mxRoot, bsslRoot)
+  ready := CheckReadMe(zxRoot, bsslRoot)
   if !ready {
     fmt.Println("[-] The README file needs to be updated.")
   }
-  files := CompareAll(mxRoot, bsslRoot)
+  files := CompareAll(zxRoot, bsslRoot)
   if len(files) != 0 {
     fmt.Println("[-] The following files do not match:")
     for _, file := range files {
@@ -201,8 +185,8 @@ func main() {
     ready = false
   }
   if ready {
-    fmt.Printf("[+] %s and %s are in sync.\n", *mxFlag, *bsslFlag)
+    fmt.Printf("[+] %s and %s are in sync.\n", *zxFlag, *bsslFlag)
   } else {
-    fmt.Printf("\n[-] %s and %s are NOT in sync.\n", *mxFlag, *bsslFlag)
+    fmt.Printf("\n[-] %s and %s are NOT in sync.\n", *zxFlag, *bsslFlag)
   }
 }

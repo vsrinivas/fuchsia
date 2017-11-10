@@ -123,25 +123,57 @@ OPENSSL_MSVC_PRAGMA(warning(pop))
 #include <openssl/thread.h>
 
 #include "../internal.h"
+#include "./internal.h"
 
+
+struct err_error_st {
+  // file contains the filename where the error occurred.
+  const char *file;
+  // data contains a NUL-terminated string with optional data. It must be freed
+  // with |OPENSSL_free|.
+  char *data;
+  // packed contains the error library and reason, as packed by ERR_PACK.
+  uint32_t packed;
+  // line contains the line number where the error occurred.
+  uint16_t line;
+  // mark indicates a reversion point in the queue. See |ERR_pop_to_mark|.
+  unsigned mark : 1;
+};
+
+// ERR_STATE contains the per-thread, error queue.
+typedef struct err_state_st {
+  // errors contains the ERR_NUM_ERRORS most recent errors, organised as a ring
+  // buffer.
+  struct err_error_st errors[ERR_NUM_ERRORS];
+  // top contains the index one past the most recent error. If |top| equals
+  // |bottom| then the queue is empty.
+  unsigned top;
+  // bottom contains the index of the last error in the queue.
+  unsigned bottom;
+
+  // to_free, if not NULL, contains a pointer owned by this structure that was
+  // previously a |data| pointer of one of the elements of |errors|.
+  void *to_free;
+} ERR_STATE;
 
 extern const uint32_t kOpenSSLReasonValues[];
 extern const size_t kOpenSSLReasonValuesLen;
 extern const char kOpenSSLReasonStringData[];
 
-// err_clear_data frees the optional |data| member of the given error.
-static void err_clear_data(struct err_error_st *error) {
-  if ((error->flags & ERR_FLAG_MALLOCED) != 0) {
-    OPENSSL_free(error->data);
-  }
-  error->data = NULL;
-  error->flags &= ~ERR_FLAG_MALLOCED;
-}
-
 // err_clear clears the given queued error.
 static void err_clear(struct err_error_st *error) {
-  err_clear_data(error);
+  OPENSSL_free(error->data);
   OPENSSL_memset(error, 0, sizeof(struct err_error_st));
+}
+
+static void err_copy(struct err_error_st *dst, const struct err_error_st *src) {
+  err_clear(dst);
+  dst->file = src->file;
+  if (src->data != NULL) {
+    dst->data = OPENSSL_strdup(src->data);
+  }
+  dst->packed = src->packed;
+  dst->line = src->line;
 }
 
 // global_next_library contains the next custom library value to return.
@@ -159,8 +191,7 @@ static void err_state_free(void *statep) {
     return;
   }
 
-  unsigned i;
-  for (i = 0; i < ERR_NUM_ERRORS; i++) {
+  for (unsigned i = 0; i < ERR_NUM_ERRORS; i++) {
     err_clear(&state->errors[i]);
   }
   OPENSSL_free(state->to_free);
@@ -227,7 +258,7 @@ static uint32_t get_error_values(int inc, int top, const char **file, int *line,
     } else {
       *data = error->data;
       if (flags != NULL) {
-        *flags = error->flags & ERR_FLAG_PUBLIC_MASK;
+        *flags = ERR_FLAG_STRING;
       }
       // If this error is being removed, take ownership of data from
       // the error. The semantics are such that the caller doesn't
@@ -235,12 +266,11 @@ static uint32_t get_error_values(int inc, int top, const char **file, int *line,
       // ownership and retains it until the next call that affects the
       // error queue.
       if (inc) {
-        if (error->flags & ERR_FLAG_MALLOCED) {
+        if (error->data != NULL) {
           OPENSSL_free(state->to_free);
           state->to_free = error->data;
         }
         error->data = NULL;
-        error->flags = 0;
       }
     }
   }
@@ -585,24 +615,20 @@ void ERR_print_errors_fp(FILE *file) {
   ERR_print_errors_cb(print_errors_to_file, file);
 }
 
-// err_set_error_data sets the data on the most recent error. The |flags|
-// argument is a combination of the |ERR_FLAG_*| values.
-static void err_set_error_data(char *data, int flags) {
+// err_set_error_data sets the data on the most recent error.
+static void err_set_error_data(char *data) {
   ERR_STATE *const state = err_get_state();
   struct err_error_st *error;
 
   if (state == NULL || state->top == state->bottom) {
-    if (flags & ERR_FLAG_MALLOCED) {
-      OPENSSL_free(data);
-    }
+    OPENSSL_free(data);
     return;
   }
 
   error = &state->errors[state->top];
 
-  err_clear_data(error);
+  OPENSSL_free(error->data);
   error->data = data;
-  error->flags = flags;
 }
 
 void ERR_put_error(int library, int unused, int reason, const char *file,
@@ -680,7 +706,7 @@ static void err_add_error_vdata(unsigned num, va_list args) {
   }
 
   buf[len] = 0;
-  err_set_error_data(buf, ERR_FLAG_MALLOCED | ERR_FLAG_STRING);
+  err_set_error_data(buf);
 }
 
 void ERR_add_error_data(unsigned count, ...) {
@@ -708,7 +734,7 @@ void ERR_add_error_dataf(const char *format, ...) {
   buf[buf_len] = 0;
   va_end(ap);
 
-  err_set_error_data(buf, ERR_FLAG_MALLOCED | ERR_FLAG_STRING);
+  err_set_error_data(buf);
 }
 
 int ERR_set_mark(void) {
@@ -717,7 +743,7 @@ int ERR_set_mark(void) {
   if (state == NULL || state->bottom == state->top) {
     return 0;
   }
-  state->errors[state->top].flags |= ERR_FLAG_MARK;
+  state->errors[state->top].mark = 1;
   return 1;
 }
 
@@ -731,8 +757,8 @@ int ERR_pop_to_mark(void) {
   while (state->bottom != state->top) {
     struct err_error_st *error = &state->errors[state->top];
 
-    if ((error->flags & ERR_FLAG_MARK) != 0) {
-      error->flags &= ~ERR_FLAG_MARK;
+    if (error->mark) {
+      error->mark = 0;
       return 1;
     }
 
@@ -754,3 +780,68 @@ void ERR_free_strings(void) {}
 void ERR_load_BIO_strings(void) {}
 
 void ERR_load_ERR_strings(void) {}
+
+struct err_save_state_st {
+  struct err_error_st *errors;
+  size_t num_errors;
+};
+
+void ERR_SAVE_STATE_free(ERR_SAVE_STATE *state) {
+  if (state == NULL) {
+    return;
+  }
+  for (size_t i = 0; i < state->num_errors; i++) {
+    err_clear(&state->errors[i]);
+  }
+  OPENSSL_free(state->errors);
+  OPENSSL_free(state);
+}
+
+ERR_SAVE_STATE *ERR_save_state(void) {
+  ERR_STATE *const state = err_get_state();
+  if (state == NULL || state->top == state->bottom) {
+    return NULL;
+  }
+
+  ERR_SAVE_STATE *ret = OPENSSL_malloc(sizeof(ERR_SAVE_STATE));
+  if (ret == NULL) {
+    return NULL;
+  }
+
+  // Errors are stored in the range (bottom, top].
+  size_t num_errors = state->top >= state->bottom
+                          ? state->top - state->bottom
+                          : ERR_NUM_ERRORS + state->top - state->bottom;
+  assert(num_errors < ERR_NUM_ERRORS);
+  ret->errors = OPENSSL_malloc(num_errors * sizeof(struct err_error_st));
+  if (ret->errors == NULL) {
+    OPENSSL_free(ret);
+    return NULL;
+  }
+  OPENSSL_memset(ret->errors, 0, num_errors * sizeof(struct err_error_st));
+  ret->num_errors = num_errors;
+
+  for (size_t i = 0; i < num_errors; i++) {
+    size_t j = (state->bottom + i + 1) % ERR_NUM_ERRORS;
+    err_copy(&ret->errors[i], &state->errors[j]);
+  }
+  return ret;
+}
+
+void ERR_restore_state(const ERR_SAVE_STATE *state) {
+  if (state == NULL || state->num_errors == 0) {
+    ERR_clear_error();
+    return;
+  }
+
+  ERR_STATE *const dst = err_get_state();
+  if (dst == NULL) {
+    return;
+  }
+
+  for (size_t i = 0; i < state->num_errors; i++) {
+    err_copy(&dst->errors[i], &state->errors[i]);
+  }
+  dst->top = state->num_errors - 1;
+  dst->bottom = ERR_NUM_ERRORS - 1;
+}
