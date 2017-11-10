@@ -7,7 +7,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/google/netstack/tcpip"
 
@@ -33,8 +32,6 @@ func (a *netstackClientApp) printAll() {
 	for _, iface := range ifaces {
 		a.printIface(iface)
 	}
-
-	a.netstack.Close()
 }
 
 func (a *netstackClientApp) getIfaceByName(name string) *netstack.NetInterface {
@@ -77,8 +74,6 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
 
 func (a *netstackClientApp) setStatus(iface netstack.NetInterface, up bool) {
 	a.netstack.SetInterfaceStatus(iface.Id, up)
-	// TODO: remove this hack when US-376 is fixed.
-	time.Sleep(1 * time.Second)
 }
 
 func hwAddrToString(hwaddr []uint8) string {
@@ -158,7 +153,7 @@ func main() {
 
 	iface := a.getIfaceByName(os.Args[1])
 	if iface == nil {
-		fmt.Printf("ifconfig: no such interface '%s'", os.Args[1])
+		fmt.Printf("ifconfig: no such interface '%s'\n", os.Args[1])
 		return
 	}
 
