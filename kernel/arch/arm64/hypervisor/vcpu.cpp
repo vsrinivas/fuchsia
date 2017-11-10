@@ -19,19 +19,6 @@
 #include "el2_cpu_state_priv.h"
 #include "vmexit_priv.h"
 
-static const uint64_t kHcrVm = 1u << 0;
-static const uint64_t kHcrPtw = 1u << 2;
-static const uint64_t kHcrFmo = 1u << 3;
-static const uint64_t kHcrImo = 1u << 4;
-static const uint64_t kHcrAmo = 1u << 5;
-static const uint64_t kHcrVi = 1u << 7;
-static const uint64_t kHcrDc = 1u << 12;
-static const uint64_t kHcrTwi = 1u << 13;
-static const uint64_t kHcrTwe = 1u << 14;
-static const uint64_t kHcrTsc = 1u << 19;
-static const uint64_t kHcrTvm = 1u << 26;
-static const uint64_t kHcrRw = 1u << 31;
-
 static const uint32_t kSpsrEl1h = 0b0101;
 static const uint32_t kSpsrNzcv = 0b1111 << 28;
 
@@ -102,8 +89,9 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
 
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrEl1h;
-    vcpu->hcr_.store(kHcrVm | kHcrPtw | kHcrFmo | kHcrImo | kHcrAmo | kHcrDc | kHcrTwi | kHcrTwe |
-                     kHcrTsc | kHcrTvm | kHcrRw);
+    vcpu->hcr_.store(HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO |
+                     HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM |
+                     HCR_EL2_RW);
     vcpu->gich_->hcr |= kGichHcrEn;
 
     *out = fbl::move(vcpu);
@@ -129,13 +117,13 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     zx_paddr_t vttbr = vttbr_of(vmid_, gpas_->table_phys());
     zx_status_t status;
     do {
-        uint64_t hcr = hcr_.fetch_and(~kHcrVi);
+        uint64_t hcr = hcr_.fetch_and(~HCR_EL2_VI);
         status = arm64_el2_resume(state, vttbr, hcr);
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
             status = ZX_OK;
         } else if (status == ZX_OK) {
-            status = vmexit_handler(&el2_state_.guest_state, gpas_, traps_, packet);
+            status = vmexit_handler(&el2_state_.guest_state, &hcr_, gpas_, traps_, packet);
         } else {
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
@@ -151,7 +139,7 @@ zx_status_t Vcpu::Interrupt(uint32_t interrupt) {
 
     size_t i = __builtin_ctzl(elsr);
     gich_->lr[i] = kGichLrPending | interrupt;
-    hcr_.fetch_or(kHcrVi);
+    hcr_.fetch_or(HCR_EL2_VI);
 
     // TODO(abdulla): Handle the case when the VCPU is halted.
     DEBUG_ASSERT(!arch_ints_disabled());

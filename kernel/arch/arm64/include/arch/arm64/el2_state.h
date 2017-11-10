@@ -8,6 +8,38 @@
 
 #include <zircon/compiler.h>
 
+// clang-format off
+
+#ifndef __ASSEMBLER__
+#define BIT_32(bit)         (1u << bit)
+#define BIT_64(bit)         (1ul << bit)
+#else
+#define BIT_32(bit)         (0x1 << bit)
+#define BIT_64(bit)         (0x1 << bit)
+#endif
+
+#define HCR_EL2_VM          BIT_64(0)
+#define HCR_EL2_PTW         BIT_64(2)
+#define HCR_EL2_FMO         BIT_64(3)
+#define HCR_EL2_IMO         BIT_64(4)
+#define HCR_EL2_AMO         BIT_64(5)
+#define HCR_EL2_VI          BIT_64(7)
+#define HCR_EL2_DC          BIT_64(12)
+#define HCR_EL2_TWI         BIT_64(13)
+#define HCR_EL2_TWE         BIT_64(14)
+#define HCR_EL2_TSC         BIT_64(19)
+#define HCR_EL2_TVM         BIT_64(26)
+#define HCR_EL2_RW          BIT_64(31)
+
+#define SCTLR_ELX_M         BIT_32(0)
+#define SCTLR_ELX_A         BIT_32(1)
+#define SCTLR_ELX_C         BIT_32(2)
+#define SCTLR_ELX_SA        BIT_32(3)
+#define SCTLR_ELX_I         BIT_32(12)
+
+#define SCTLR_EL1_RES1      0x00500800
+#define SCTLR_EL2_RES1      0x30c50830
+
 #define SS_CNTKCTL_EL1      0
 #define SS_CONTEXTIDR_EL1   (SS_CNTKCTL_EL1 + 8)
 #define SS_CPACR_EL1        (SS_CONTEXTIDR_EL1 + 8)
@@ -39,6 +71,8 @@
 #define GS_SYSTEM_STATE     GS_X(GS_NUM_REGS)
 #define GS_ESR_EL2          (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_ESR_EL2 + 8)
+
+// clang-format on
 
 #ifndef __ASSEMBLER__
 

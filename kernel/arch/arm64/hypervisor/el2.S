@@ -14,15 +14,6 @@
 #define ESR_EL2_EC_SHIFT                26
 #define ESR_EL2_ISS_MASK                0x01ffffff
 
-#define HCR_EL2_RW                      (1 << 31)
-
-#define SCTLR_EL2_M                     (1 << 0)
-#define SCTLR_EL2_A                     (1 << 1)
-#define SCTLR_EL2_C                     (1 << 2)
-#define SCTLR_EL2_SA                    (1 << 3)
-#define SCTLR_EL2_I                     (1 << 12)
-#define SCTLR_EL2_RES1                  0x30c50830
-
 #define XTCR_EL2_PS_SHIFT               16
 
 // NOTE(abdulla): This excludes the top bit, as it is too large for VTCR_EL2.PS.
@@ -281,7 +272,7 @@ FUNCTION_LABEL(el2_hvc_on)
     isb
 
     // Enable the MMU, I-cache, D-cache, and all alignment checking.
-    movlit x9, SCTLR_EL2_M | SCTLR_EL2_A | SCTLR_EL2_C | SCTLR_EL2_SA | SCTLR_EL2_I | \
+    movlit x9, SCTLR_ELX_M | SCTLR_ELX_A | SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | \
                SCTLR_EL2_RES1
     msr sctlr_el2, x9
     isb
@@ -312,7 +303,7 @@ FUNCTION(arm64_el2_off)
 END_FUNCTION(arm64_el2_off)
 FUNCTION_LABEL(el2_hvc_off)
     // Disable the MMU, but enable I-cache, D-cache, and all alignment checking.
-    movlit x9, SCTLR_EL2_A | SCTLR_EL2_C | SCTLR_EL2_SA | SCTLR_EL2_I | SCTLR_EL2_RES1
+    movlit x9, SCTLR_ELX_A | SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
     msr sctlr_el2, x9
     isb
 

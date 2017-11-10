@@ -23,8 +23,46 @@ ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     iss = BITS(esr, 24, 0);
 }
 
-static void next_pc(GuestState* state) {
-    state->system_state.elr_el2 += 4;
+SystemInstruction::SystemInstruction(uint32_t iss) {
+    sr = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
+    xt = static_cast<uint8_t>(BITS_SHIFT(iss, 9, 5));
+    read = BIT(iss, 0);
+}
+
+static void next_pc(GuestState* guest_state) {
+    guest_state->system_state.elr_el2 += 4;
+}
+
+static zx_status_t handle_system_instruction(uint32_t iss, GuestState* guest_state,
+                                             fbl::atomic<uint64_t>* hcr) {
+    SystemInstruction si(iss);
+    switch (si.sr) {
+    case SystemRegister::SCTLR_EL1: {
+        if (si.read)
+            return ZX_ERR_NOT_SUPPORTED;
+
+        // From ARM DDI 0487B.b, Section D10.2.89: If the value of HCR_EL2.{DC,
+        // TGE} is not {0, 0} then in Non-secure state the PE behaves as if the
+        // value of the SCTLR_EL1.M field is 0 for all purposes other than
+        // returning the value of a direct read of the field.
+        //
+        // We do not set HCR_EL2.TGE, so we only need to modify HCR_EL2.DC.
+        //
+        // TODO(abdulla): Investigate clean of cache and invalidation of TLB.
+        uint32_t sctrlr_el1 = guest_state->x[si.xt] & UINT32_MAX;
+        if (sctrlr_el1 & SCTLR_ELX_M) {
+            hcr->fetch_and(~HCR_EL2_DC);
+        } else {
+            hcr->fetch_or(HCR_EL2_DC);
+        }
+        guest_state->system_state.sctlr_el1 = sctrlr_el1;
+
+        LTRACEF("guest sctrlr_el1: %#x\n", sctrlr_el1);
+        LTRACEF("guest hcr_el2: %#lx\n", hcr->load());
+        next_pc(guest_state);
+        return ZX_OK;
+    }}
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr, GuestPhysicalAddressSpace* gpas) {
@@ -76,7 +114,8 @@ static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddre
     return ZX_ERR_NEXT;
 }
 
-zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+zx_status_t vmexit_handler(GuestState* guest_state, fbl::atomic<uint64_t>* hcr,
+                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                            zx_port_packet_t* packet) {
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
     LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
@@ -85,6 +124,9 @@ zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* g
 
     ExceptionSyndrome syndrome(guest_state->esr_el2);
     switch (syndrome.ec) {
+    case ExceptionClass::SYSTEM_INSTRUCTION:
+        LTRACEF("handling system instruction\n");
+        return handle_system_instruction(syndrome.iss, guest_state, hcr);
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
         return handle_instruction_abort(guest_state, gpas);
