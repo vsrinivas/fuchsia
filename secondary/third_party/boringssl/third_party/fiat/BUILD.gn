@@ -4,17 +4,11 @@
 
 import("../../boringssl.gni")
 
-# See //third_party/boringssl/crypto/curve25519/CMakeLists.txt
-source_set("curve25519") {
+# See //third_party/boringssl/third_party/fiat/CMakeLists.txt
+source_set("fiat") {
   visibility = [ "//third_party/boringssl/*" ]
   sources = [
-    "spake25519.c",
+    "curve25519.c",
   ]
-  if (current_cpu == "x64") {
-    sources += [
-      "asm/x25519-asm-x86_64.S",
-      "x25519-x86_64.c",
-    ]
-  }
   configs += [ "//third_party/boringssl:internal_config" ]
 }

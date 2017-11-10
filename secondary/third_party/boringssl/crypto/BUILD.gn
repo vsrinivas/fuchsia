@@ -45,6 +45,7 @@ source_set("crypto") {
     "stack",
     "x509",
     "x509v3",
+    "//third_party/boringssl/third_party/fiat",
   ]
 }
 
@@ -76,6 +77,7 @@ executable("crypto_test") {
     "asn1/asn1_test.cc",
     "base64/base64_test.cc",
     "bio/bio_test.cc",
+    "buf/buf_test.cc",
     "bytestring/bytestring_test.cc",
     "chacha/chacha_test.cc",
     "cipher_extra/aead_test.cc",
