@@ -241,6 +241,10 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
 // Verifies that failing attempts to download the backlog of unsynced commits
 // are retried.
 TEST_F(PageDownloadTest, RetryDownloadBacklog) {
+  // Forces RunLoopUntil to check its condition each time the state changes.
+  SetOnNewStateCallback([this] {
+      message_loop_.QuitNow();
+  });
   page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   page_download_->StartDownload();
 
@@ -254,7 +258,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
       test::MakeCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.position_token_to_return = convert::ToArray("42");
   EXPECT_TRUE(
-      RunLoopUntil([this] { return storage_.received_commits.size() == 1u; }));
+      RunLoopUntil([this] { return page_download_->IsIdle(); }));
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
