@@ -43,6 +43,7 @@ typedef struct {
     uint32_t sflags;    // suspend flags
     uint32_t count;     // outstanding msgs
     devhost_t* dh;      // next devhost to process
+    zx_handle_t socket; // socket to notify on
     list_node_t devhosts;
 } suspend_context_t;
 static suspend_context_t suspend_ctx = {
@@ -1526,6 +1527,8 @@ static void dc_suspend(uint32_t flags) {
     ctx->status = ZX_OK;
     ctx->flags = SUSPEND;
     ctx->sflags = flags;
+    ctx->socket = dmctl_socket;
+    dmctl_socket = ZX_HANDLE_INVALID;   // to prevent the rpc handler from closing this handle
     list_initialize(&ctx->devhosts);
 
     // sys_device must suspend last as on x86 it invokes
@@ -1559,6 +1562,10 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
             // on arm, if the platform driver does not implement
             // suspend go to the kernel fallback
             dc_suspend_fallback(ctx->sflags);
+            // this handle is leaked on the shutdown path for x86
+            if (ctx->socket) {
+                zx_handle_close(ctx->socket);
+            }
         }
     }
 }
