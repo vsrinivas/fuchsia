@@ -36,6 +36,28 @@ std::string ErrorToString(btlib::hci::Status error) {
 
 }  // namespace
 
+LowEnergyPeripheralFidlImpl::InstanceData::InstanceData(const std::string& id,
+                                                        DelegatePtr delegate)
+    : id_(id), delegate_(std::move(delegate)) {}
+
+void LowEnergyPeripheralFidlImpl::InstanceData::RetainConnection(
+    ConnectionRefPtr conn_ref,
+    ::btfidl::low_energy::RemoteDevicePtr peer) {
+  FXL_DCHECK(connectable());
+  FXL_DCHECK(!conn_ref_);
+
+  conn_ref_ = std::move(conn_ref);
+  delegate_->OnCentralConnected(id_, std::move(peer));
+}
+
+void LowEnergyPeripheralFidlImpl::InstanceData::ReleaseConnection() {
+  FXL_DCHECK(connectable());
+  FXL_DCHECK(conn_ref_);
+
+  delegate_->OnCentralDisconnected(conn_ref_->device_identifier());
+  conn_ref_ = nullptr;
+}
+
 LowEnergyPeripheralFidlImpl::LowEnergyPeripheralFidlImpl(
     AdapterManager* adapter_manager,
     ::fidl::InterfaceRequest<::btfidl::low_energy::Peripheral> request,
@@ -54,7 +76,8 @@ LowEnergyPeripheralFidlImpl::~LowEnergyPeripheralFidlImpl() {
   auto advertising_manager = GetAdvertisingManager();
   if (!advertising_manager)
     return;
-  for (const auto& it : delegates_) {
+
+  for (const auto& it : instances_) {
     advertising_manager->StopAdvertising(it.first);
   }
 }
@@ -106,7 +129,8 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
         // we keep it to track the current advertisements.
         auto delegate_ptr = ::btfidl::low_energy::PeripheralDelegatePtr::Create(
             std::move(delegate));
-        self->delegates_[advertisement_id] = std::move(delegate_ptr);
+        self->instances_[advertisement_id] =
+            InstanceData(advertisement_id, std::move(delegate_ptr));
         callback(::btfidl::Status::New(), advertisement_id);
       });
 
@@ -118,36 +142,77 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
 void LowEnergyPeripheralFidlImpl::StopAdvertising(
     const ::fidl::String& advertisement_id,
     const StopAdvertisingCallback& callback) {
-  delegates_.erase(advertisement_id);
   auto advertising_manager = GetAdvertisingManager();
   if (!advertising_manager) {
     callback(fidl_helpers::NewErrorStatus(
         ::btfidl::ErrorCode::BLUETOOTH_NOT_AVAILABLE, "Not available"));
     return;
   }
+
+  auto iter = instances_.find(advertisement_id);
+  if (iter == instances_.end()) {
+    callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND,
+                                          "Unrecognized advertisement ID"));
+    return;
+  }
+
+  instances_.erase(iter);
   advertising_manager->StopAdvertising(advertisement_id);
+
   callback(::btfidl::Status::New());
 }
 
 void LowEnergyPeripheralFidlImpl::OnActiveAdapterChanged(
     ::btlib::gap::Adapter* adapter) {
   // TODO(jamuraa): re-add the advertisements that have been started here?
-  FXL_NOTIMPLEMENTED();
+
+  // Clean up all connections and advertising instances.
+  instances_.clear();
 }
 
 void LowEnergyPeripheralFidlImpl::OnConnected(
     std::string advertisement_id,
     ::btlib::gap::LowEnergyConnectionRefPtr connection) {
-  auto it = delegates_.find(advertisement_id);
-  if (it == delegates_.end() || !it->second)
+  FXL_DCHECK(connection);
+
+  auto it = instances_.find(advertisement_id);
+  if (it == instances_.end()) {
+    FXL_VLOG(1) << "Connection received from wrong advertising instance";
     return;
+  }
 
+  FXL_DCHECK(it->second.connectable());
+
+  auto adapter = adapter_manager_->GetActiveAdapter();
+  if (!adapter) {
+    FXL_VLOG(1) << "Adapter removed: ignoring connection";
+    return;
+  }
+
+  // A RemoteDevice will have been created for the new connection.
   auto* device =
-      adapter_manager_->GetActiveAdapter()->device_cache().FindDeviceById(
-          connection->device_identifier());
+      adapter->device_cache().FindDeviceById(connection->device_identifier());
+  FXL_DCHECK(device);
 
-  auto fidl_device = fidl_helpers::NewLERemoteDevice(*device);
-  it->second->OnCentralConnected(advertisement_id, std::move(fidl_device));
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  connection->set_closed_callback([self, id = advertisement_id] {
+    FXL_VLOG(1) << "Central disconnected";
+
+    if (!self)
+      return;
+
+    // Make sure that the instance hasn't been removed.
+    auto it = self->instances_.find(id);
+    if (it == self->instances_.end())
+      return;
+
+    // This sends OnCentralDisconnected() to the delegate.
+    it->second.ReleaseConnection();
+  });
+
+  FXL_VLOG(1) << "Central connected";
+  it->second.RetainConnection(std::move(connection),
+                              fidl_helpers::NewLERemoteDevice(*device));
 }
 
 ::btlib::gap::LowEnergyAdvertisingManager*

@@ -121,14 +121,19 @@ namespace {
 ::btfidl::low_energy::RemoteDevicePtr NewLERemoteDevice(
     const ::btlib::gap::RemoteDevice& device) {
   ::btlib::gap::AdvertisingData ad;
-  if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
-                                                &ad))
-    return nullptr;
-
   auto fidl_device = ::btfidl::low_energy::RemoteDevice::New();
   fidl_device->identifier = device.identifier();
   fidl_device->connectable = device.connectable();
-  fidl_device->advertising_data = ad.AsLEAdvertisingData();
+
+  // Initialize advertising data only if its non-empty.
+  if (device.advertising_data().size() != 0u) {
+    ::btlib::gap::AdvertisingData ad;
+    if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
+                                                  &ad))
+      return nullptr;
+
+    fidl_device->advertising_data = ad.AsLEAdvertisingData();
+  }
 
   if (device.rssi() != ::btlib::hci::kRSSIInvalid) {
     fidl_device->rssi = ::btfidl::Int8::New();

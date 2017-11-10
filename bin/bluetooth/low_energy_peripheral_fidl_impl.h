@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include "garnet/bin/bluetooth/adapter_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_advertising_manager.h"
@@ -31,6 +32,36 @@ class LowEnergyPeripheralFidlImpl : public ::bluetooth::low_energy::Peripheral,
   ~LowEnergyPeripheralFidlImpl() override;
 
  private:
+  using DelegatePtr = ::bluetooth::low_energy::PeripheralDelegatePtr;
+  using ConnectionRefPtr = ::btlib::gap::LowEnergyConnectionRefPtr;
+
+  class InstanceData final {
+   public:
+    InstanceData() = default;
+    InstanceData(const std::string& id, DelegatePtr delegate);
+
+    InstanceData(InstanceData&& other) = default;
+    InstanceData& operator=(InstanceData&& other) = default;
+
+    bool connectable() const { return static_cast<bool>(delegate_); }
+
+    // Takes ownership of |conn_ref| and notifies the delegate of the new
+    // connection.
+    void RetainConnection(ConnectionRefPtr conn_ref,
+                          ::bluetooth::low_energy::RemoteDevicePtr central);
+
+    // Deletes the connetion reference and notifies the delegate of
+    // disconnection.
+    void ReleaseConnection();
+
+   private:
+    std::string id_;
+    DelegatePtr delegate_;
+    ConnectionRefPtr conn_ref_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(InstanceData);
+  };
+
   // ::bluetooth::low_energy::Peripheral overrides:
   void StartAdvertising(
       ::bluetooth::low_energy::AdvertisingDataPtr advertising_data,
@@ -63,10 +94,7 @@ class LowEnergyPeripheralFidlImpl : public ::bluetooth::low_energy::Peripheral,
   ::fidl::Binding<::bluetooth::low_energy::Peripheral> binding_;
 
   // Tracks currently active advertisements.
-  // Keys are advertisement ids, delegates are bound if they are connectable.
-  std::unordered_map<std::string,
-                     ::bluetooth::low_energy::PeripheralDelegatePtr>
-      delegates_;
+  std::unordered_map<std::string, InstanceData> instances_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.
