@@ -149,7 +149,7 @@ impl Message {
     }
 
     pub fn is_pipelined(&self) -> bool {
-        self.arg() & O_PIPELINE != 0
+        (self.arg() as u32) & O_PIPELINE != 0
     }
 }
 

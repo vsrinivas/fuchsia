@@ -47,10 +47,10 @@ impl<T> ::std::clone::Clone for __IncompleteArrayField<T> {
 impl<T> ::std::marker::Copy for __IncompleteArrayField<T> {}
 
 // TODO(raggi): this should be able to come from libc instead.
-pub const O_DIRECTORY: raw::c_int = 0o0200000;
-pub const O_NOREMOTE: raw::c_int = 0o0100000000;
-pub const O_ADMIN: raw::c_int = 0o0200000000;
-pub const O_PIPELINE: raw::c_int = 0o02000000000;
+pub const O_DIRECTORY: raw::c_int = 0x00080000;
+pub const O_NOREMOTE: raw::c_int = 0x00200000;
+pub const O_ADMIN: raw::c_int = 0x00000004;
+pub const O_PIPELINE: raw::c_uint = 0x80000000;
 
 pub const ZXRIO_HDR_SZ: usize = 56;
 pub const ZXRIO_MSG_SZ: usize = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE as usize;

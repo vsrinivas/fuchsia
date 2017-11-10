@@ -130,8 +130,8 @@ impl Connection {
         flags: i32,
         mode: u32,
     ) -> Result<(), std::io::Error> {
-        let pipeline = flags & fdio::fdio_sys::O_PIPELINE != 0;
-        let open_flags = flags & !fdio::fdio_sys::O_PIPELINE;
+        let pipeline = (flags as u32) & fdio::fdio_sys::O_PIPELINE != 0;
+        let open_flags = flags & !(fdio::fdio_sys::O_PIPELINE as i32);
 
         let mut status = zircon::Status::OK;
         let mut proto = fdio::fdio_sys::FDIO_PROTOCOL_REMOTE;

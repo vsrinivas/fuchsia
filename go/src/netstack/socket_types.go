@@ -89,7 +89,7 @@ package main
 
 // TODO: move some subset of these constants to syscall package
 const O_RDWR = 02
-const O_DIRECTORY = 0200000
+const O_DIRECTORY = 02000000
 const SOCK_STREAM = 1
 const SOCK_DGRAM = 2
 

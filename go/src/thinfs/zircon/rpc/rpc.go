@@ -175,40 +175,15 @@ func fileTypeToRIO(t fs.FileType) uint32 {
 	}
 }
 
-func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
-	res := fs.OpenFlags(0)
+const alignedFlags = uint32(syscall.FdioAlignedFlags | syscall.FsRightReadable | syscall.FsRightWritable)
 
-	// File access mode
-	if arg&syscall.O_RDWR != 0 {
-		res |= fs.OpenFlagRead | fs.OpenFlagWrite
-	} else if arg&syscall.O_WRONLY != 0 {
-		res |= fs.OpenFlagWrite
-	} else {
-		res |= fs.OpenFlagRead
-	}
-	if arg&syscall.O_PATH != 0 {
-		res |= fs.OpenFlagPath
-	}
+func openFlagsFromRIO(arg uint32, mode uint32) fs.OpenFlags {
+	res := fs.OpenFlags(arg & alignedFlags)
 
 	// Additional open flags
-	if arg&syscall.O_CREAT != 0 {
+	if arg&syscall.FsFlagCreate != 0 {
 		res |= fs.OpenFlagCreate
 		res |= fs.OpenFlagWrite | fs.OpenFlagRead
-	}
-	if arg&syscall.O_EXCL != 0 {
-		res |= fs.OpenFlagExclusive
-	}
-	if arg&syscall.O_TRUNC != 0 {
-		res |= fs.OpenFlagTruncate
-	}
-	if arg&syscall.O_APPEND != 0 {
-		res |= fs.OpenFlagAppend
-	}
-	if arg&syscall.O_DIRECTORY != 0 {
-		res |= fs.OpenFlagDirectory
-	}
-	if arg&syscall.O_PIPELINE != 0 {
-		res |= fs.OpenFlagPipeline
 	}
 
 	// Ad-hoc mechanism for additional file access mode flags
@@ -226,41 +201,14 @@ func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
 	return res
 }
 
-func openFlagsToRIO(f fs.OpenFlags) (arg int32, mode uint32) {
-	if f.Read() && f.Write() {
-		arg |= syscall.O_RDWR
-	} else if f.Write() {
-		arg |= syscall.O_WRONLY
-	}
-	if f.Path() {
-		arg |= syscall.O_PATH
-	}
+func openFlagsToRIO(f fs.OpenFlags) (arg uint32, mode uint32) {
+	arg = uint32(f) & alignedFlags
 
-	if f.Create() {
-		arg |= syscall.O_CREAT
-		if !f.Directory() {
-			mode |= syscall.S_IFREG
-		}
-	}
-	if f.Exclusive() {
-		arg |= syscall.O_EXCL
-	}
-
-	if f.Truncate() {
-		arg |= syscall.O_TRUNC
-	}
-	if f.Append() {
-		arg |= syscall.O_APPEND
+	if (f.Create() && !f.Directory()) || f.File() {
+		mode |= syscall.S_IFREG
 	}
 	if f.Directory() {
-		arg |= syscall.O_DIRECTORY
 		mode |= syscall.S_IFDIR
-	}
-	if f.Pipeline() {
-		arg |= syscall.O_PIPELINE
-	}
-	if f.File() {
-		mode |= syscall.S_IFREG
 	}
 	return
 }
@@ -346,26 +294,19 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(f.Touch(atime, mtime))
 	case fdio.OpFcntl:
-		flags := openFlagsFromRIO(int32(msg.FcntlFlags()), 0)
-		statusFlags := fs.OpenFlagAppend
+		statusFlags := uint32(syscall.FsFlagAppend)
+		rightFlags := uint32(syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsFlagPath)
 		switch uint32(msg.Arg) {
 		case fdio.OpFcntlCmdGetFL:
 			var cflags uint32
-			oflags := f.GetOpenFlags()
-			if oflags.Append() {
-				cflags |= syscall.O_APPEND
-			}
-			if oflags.Read() && oflags.Write() {
-				cflags |= syscall.O_RDWR
-			} else if oflags.Write() {
-				cflags |= syscall.O_WRONLY
-			} else if oflags.Path() {
-				cflags |= syscall.O_PATH
-			}
+			oflags := uint32(f.GetOpenFlags())
+			cflags = oflags & (rightFlags | statusFlags)
 			msg.SetFcntlFlags(cflags)
 			return zx.ErrOk
 		case fdio.OpFcntlCmdSetFL:
-			err := f.SetOpenFlags((f.GetOpenFlags() & ^statusFlags) | (flags & statusFlags))
+			flags := uint32(openFlagsFromRIO(msg.FcntlFlags(), 0))
+			uflags := (uint32(f.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
+			err := f.SetOpenFlags(fs.OpenFlags(uflags))
 			return errorToRIO(err)
 		default:
 			msg.DiscardHandles()
@@ -421,7 +362,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			return fdio.IndirectError(msg.Handle[0], zx.ErrInvalidArgs)
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
-		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
+		flags := openFlagsFromRIO(uint32(msg.Arg), msg.Mode())
 		if flags.Path() {
 			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagPipeline
 		}
@@ -436,7 +377,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			msg.Datalen = uint32(len(r.Path))
 			msg.Data[msg.Datalen] = 0
 			arg, mode := openFlagsToRIO(r.Flags)
-			msg.Arg = arg
+			msg.Arg = int32(arg)
 			msg.SetMode(mode)
 			msg.WriteMsg(r.Channel)
 			return fdio.ErrIndirect.Status
