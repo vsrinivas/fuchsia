@@ -36,8 +36,6 @@ zx_status_t GaussPdmInputStream::Create(zx_device_t* parent) {
         // lifecycle and will release us when finished with us.  Let go of our
         // local reference.
         //
-        // TODO(almasrymina): outright leaking this reference feels wrong.  We
-        // should bind this to the devmgr cookie somehow instead.
         __UNUSED auto dummy = stream.leak_ref();
     }
 
@@ -190,10 +188,6 @@ GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock lock(&lock_);
 
-    // TODO(almasrymina): Factor all of this behavior around accepting channels
-    // and
-    // dispatching audio driver requests into some form of utility class so it
-    // can be shared with the IntelHDA codec implementations as well.
     union {
         audio_proto::CmdHdr hdr;
         audio_proto::StreamGetFmtsReq get_formats;
@@ -201,7 +195,6 @@ GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
         audio_proto::GetGainReq get_gain;
         audio_proto::SetGainReq set_gain;
         audio_proto::PlugDetectReq plug_detect;
-        // TODO(almasrymina): add more commands here
     } req;
 
     static_assert(
@@ -247,7 +240,6 @@ GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
         audio_proto::RingBufGetBufferReq get_buffer;
         audio_proto::RingBufStartReq rb_start;
         audio_proto::RingBufStopReq rb_stop;
-        // TODO(almasrymina): add more commands here
     } req;
 
     static_assert(
@@ -533,7 +525,7 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(
 
     // Compute the ring buffer size.  It needs to be at least as big
     // as the virtual fifo depth.
-    // TODO(almasrymina): need to revist these calculations.
+    zxlogf(ERROR, "%d %d\n", GetFifoBytes(), frame_size_);
     ZX_DEBUG_ASSERT(frame_size_ && ((GetFifoBytes() % frame_size_) == 0));
 
     vmo_helper_.DestroyVmo();
