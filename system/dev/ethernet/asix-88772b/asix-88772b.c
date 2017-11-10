@@ -24,7 +24,8 @@
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
 #define INTR_REQ_COUNT 4
-#define USB_BUF_SIZE 2048
+#define USB_BUF_IN_SIZE 12288
+#define USB_BUF_OUT_SIZE 2048
 #define INTR_REQ_SIZE 8
 #define ETH_HEADER_SIZE 4
 #define ETH_MTU 1500
@@ -176,7 +177,7 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
 static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac_netbuf_t* netbuf) {
     size_t length = netbuf->len;
 
-    if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
+    if (length + ETH_HEADER_SIZE > USB_BUF_OUT_SIZE) {
         printf("ax88772b: unsupported packet length %zu\n", length);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -361,7 +362,7 @@ static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* in
     }
 
     memset(info, 0, sizeof(*info));
-    ZX_DEBUG_ASSERT(USB_BUF_SIZE - ETH_HEADER_SIZE >= ETH_MTU);
+    ZX_DEBUG_ASSERT(USB_BUF_OUT_SIZE - ETH_HEADER_SIZE >= ETH_MTU);
     info->mtu = ETH_MTU;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
@@ -573,7 +574,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -583,7 +584,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }
