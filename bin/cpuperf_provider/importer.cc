@@ -128,12 +128,13 @@ uint64_t Importer::ImportSampleRecords(
   uint32_t printed_late_record_warning_count = 0;
 
   uint32_t cpu;
+  uint64_t ticks_per_second;
   zx_x86_ipm_sample_record_t record;
 
   uint64_t sample_freq = GetSampleFreq(category_mask_);
   FXL_DCHECK(sample_freq > 0);
 
-  while (reader.ReadNextRecord(&cpu, &record)) {
+  while (reader.ReadNextRecord(&cpu, &ticks_per_second, &record)) {
     FXL_DCHECK(cpu < kMaxNumCpus);
     uint32_t counter = record.counter & ~IPM_COUNTER_NUMBER_FIXED;
     bool is_fixed = !!(record.counter & IPM_COUNTER_NUMBER_FIXED);
@@ -171,12 +172,12 @@ uint64_t Importer::ImportSampleRecords(
     } else {
       if (is_fixed) {
         ImportFixedSampleRecord(
-          cpu, state, config, record, prev_time, sample_freq,
-          &accum_programmable_counter_value[cpu][counter]);
+          cpu, state, config, record, prev_time, ticks_per_second,
+          sample_freq, &accum_programmable_counter_value[cpu][counter]);
       } else {
         ImportProgrammableSampleRecord(
-          cpu, state, config, record, prev_time, sample_freq,
-          &accum_fixed_counter_value[cpu][counter]);
+          cpu, state, config, record, prev_time, ticks_per_second,
+          sample_freq, &accum_fixed_counter_value[cpu][counter]);
       }
     }
 
@@ -253,6 +254,7 @@ void Importer::ImportProgrammableSampleRecord(
     const zx_x86_ipm_perf_config_t& config,
     const zx_x86_ipm_sample_record_t& record,
     trace_ticks_t previous_time,
+    uint64_t ticks_per_second,
     uint64_t counter_value,
     uint64_t* accum_counter_value) {
   uint32_t counter = record.counter;
@@ -284,7 +286,8 @@ void Importer::ImportProgrammableSampleRecord(
     FXL_VLOG(2) << fxl::StringPrintf("Import: event 0x%" PRIx64 "/%s",
                                      event, details->name);
     EmitSampleRecord(cpu, details, category_ref,
-                     previous_time, record.time, counter_value);
+                     previous_time, record.time, ticks_per_second,
+                     counter_value);
   } else {
     FXL_LOG(ERROR) << fxl::StringPrintf(
       "Unknown event in event select register %u: 0x%" PRIx64,
@@ -298,6 +301,7 @@ void Importer::ImportFixedSampleRecord(
     const zx_x86_ipm_perf_config_t& config,
     const zx_x86_ipm_sample_record_t& record,
     trace_ticks_t previous_time,
+    uint64_t ticks_per_second,
     uint64_t counter_value,
     uint64_t* accum_counter_value) {
   uint32_t counter = record.counter & ~IPM_COUNTER_NUMBER_FIXED;
@@ -306,7 +310,8 @@ void Importer::ImportFixedSampleRecord(
   if (counter < state.num_fixed_counters) {
     *accum_counter_value += counter_value;
     EmitSampleRecord(cpu, GetFixedEventDetails(counter), fixed_category_ref_,
-                     previous_time, record.time, counter_value);
+                     previous_time, record.time, ticks_per_second,
+                     counter_value);
   } else {
     FXL_LOG(ERROR) << fxl::StringPrintf("Invalid fixed counter number: %u",
                                         counter);
@@ -346,6 +351,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
                                 const trace_string_ref_t& category_ref,
                                 trace_ticks_t start_time,
                                 trace_ticks_t end_time,
+                                uint64_t ticks_per_second,
                                 uint64_t value) {
   FXL_DCHECK(start_time < end_time);
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu)};
@@ -362,12 +368,20 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
 
   // While the count of events is cumulative, it's more useful to report some
   // measure that's useful within each time period. E.g., a rate.
-  uint64_t period = end_time - start_time;
-  FXL_DCHECK(period > 0);
-  double rate = 0;
-  rate = static_cast<double>(value) / period;
+  uint64_t interval_ticks = end_time - start_time;
+  FXL_DCHECK(interval_ticks > 0);
+  double rate_per_second = 0;
+  // rate_per_second = value / (interval_ticks / ticks_per_second)
+  // ticks_per_second could be zero if there's bad data in the buffer.
+  // Don't crash because of it. If it's zero just punt and compute the rate
+  // per tick.
+  rate_per_second = static_cast<double>(value) / interval_ticks;
+  if (ticks_per_second != 0) {
+    rate_per_second *= ticks_per_second;
+  }
   trace_arg_t args[1] = {
-    {trace_make_arg(rate_name_ref_, trace_make_double_arg_value(rate))},
+    {trace_make_arg(rate_name_ref_,
+                    trace_make_double_arg_value(rate_per_second))},
   };
 
 #if 0

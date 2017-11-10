@@ -113,6 +113,12 @@ bool Reader::ReadNextRecord(uint32_t* cpu, zx_x86_ipm_counters_t* counters) {
     return false;
   }
 
+  if (ticks_per_second_ != 0 &&
+      ticks_per_second_ != info.ticks_per_second) {
+    FXL_LOG(WARNING) << "Current buffer using different timebase from previous buffer"
+                     << ": was " << ticks_per_second_
+                     << " now " << info.ticks_per_second;
+  }
   ticks_per_second_ = info.ticks_per_second;
   *cpu = current_cpu_;
   ++current_cpu_;
@@ -120,7 +126,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu, zx_x86_ipm_counters_t* counters) {
   return true;
 }
 
-bool Reader::ReadNextRecord(uint32_t* cpu,
+bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
                             zx_x86_ipm_sample_record_t* record) {
   while (current_cpu_ < num_cpus_) {
     // If this is the first cpu, or if we're done with this cpu's records,
@@ -180,6 +186,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu,
 
     next_record_ += sizeof(*record);
     *cpu = current_cpu_;
+    *ticks_per_second = ticks_per_second_;
     return true;
   }
 

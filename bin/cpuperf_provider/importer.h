@@ -48,6 +48,7 @@ private:
                                       const zx_x86_ipm_perf_config_t& config,
                                       const zx_x86_ipm_sample_record_t& record,
                                       trace_ticks_t previous_time,
+                                      uint64_t ticks_per_second,
                                       uint64_t counter_value,
                                       uint64_t* programmable_counter_value);
   void ImportFixedSampleRecord(trace_cpu_number_t cpu,
@@ -55,6 +56,7 @@ private:
                                const zx_x86_ipm_perf_config_t& config,
                                const zx_x86_ipm_sample_record_t& record,
                                trace_ticks_t previous_time,
+                               uint64_t ticks_per_second,
                                uint64_t counter_value,
                                uint64_t* fixed_counter_value);
 
@@ -65,7 +67,7 @@ private:
   void EmitSampleRecord(trace_cpu_number_t cpu, const EventDetails* details,
                         const trace_string_ref_t& category_ref,
                         trace_ticks_t start_time, trace_ticks_t end_time,
-                        uint64_t value);
+                        uint64_t ticks_per_second, uint64_t value);
 
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu);
 
