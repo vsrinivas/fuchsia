@@ -130,7 +130,8 @@ public:
         EXPECT_NE(device, nullptr);
         auto connection = MsdArmConnection::Create(0, device.get());
 
-        auto null_atom = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+        auto null_atom =
+            std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
         device->scheduler_->EnqueueAtom(std::move(null_atom));
         device->scheduler_->TryToSchedule();
 
@@ -138,7 +139,7 @@ public:
         EXPECT_EQ(0u, device->scheduler_->GetAtomListSize());
 
         constexpr uint32_t kJobSlot = 1;
-        MsdArmAtom atom(connection, 100, kJobSlot, 0);
+        MsdArmAtom atom(connection, 100, kJobSlot, 0, magma_arm_mali_user_data());
 
         device->ExecuteAtomOnDevice(&atom, reg_io.get());
 

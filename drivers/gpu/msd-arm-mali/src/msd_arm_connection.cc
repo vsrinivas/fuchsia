@@ -51,8 +51,11 @@ void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
         magma::log(magma::LOG_WARNING, "Invalid core requirements 0x%x\n", atom->core_requirements);
         return;
     }
-    auto msd_atom =
-        std::make_unique<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot, atom_number);
+    magma_arm_mali_user_data user_data;
+    user_data.data[0] = atom->data.data[0];
+    user_data.data[1] = atom->data.data[1];
+    auto msd_atom = std::make_unique<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
+                                                 atom_number, user_data);
     owner_->ScheduleAtom(std::move(msd_atom));
 }
 
@@ -192,6 +195,28 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
     return true;
 }
 
+void MsdArmConnection::SetNotificationChannel(msd_channel_send_callback_t send_callback,
+                                              msd_channel_t channel)
+{
+    std::lock_guard<std::mutex> lock(channel_lock_);
+    send_callback_ = send_callback;
+    return_channel_ = channel;
+}
+
+void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status)
+{
+    std::lock_guard<std::mutex> lock(channel_lock_);
+    // It may already have been destroyed on the main thread.
+    if (!return_channel_)
+        return;
+    magma_arm_mali_status data;
+    data.data = atom->user_data();
+    data.result_code = status;
+    data.atom_number = atom->atom_number();
+
+    send_callback_(return_channel_, &data, sizeof(data));
+}
+
 void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
                                    uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
                                    uint64_t flags)
@@ -213,4 +238,12 @@ void msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection, msd_buffe
 void msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* buffer,
                                   uint64_t page_offset, uint64_t page_count)
 {
+}
+
+void msd_connection_set_notification_channel(msd_connection_t* abi_connection,
+                                             msd_channel_send_callback_t send_callback,
+                                             msd_channel_t notification_channel)
+{
+    auto connection = MsdArmAbiConnection::cast(abi_connection)->ptr();
+    connection->SetNotificationChannel(send_callback, notification_channel);
 }

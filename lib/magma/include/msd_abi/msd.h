@@ -49,6 +49,12 @@ void msd_connection_unmap_buffer_gpu(struct msd_connection_t* connection,
 void msd_connection_commit_buffer(struct msd_connection_t* connection, struct msd_buffer_t* buffer,
                                   uint64_t page_offset, uint64_t page_count);
 
+// Sets the channel to be used by a connection to return status information to
+// the client.
+void msd_connection_set_notification_channel(struct msd_connection_t* connection,
+                                             msd_channel_send_callback_t callback,
+                                             msd_channel_t handle);
+
 // Creates a context for the given connection. returns null on failure.
 struct msd_context_t* msd_connection_create_context(struct msd_connection_t* connection);
 

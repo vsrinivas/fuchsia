@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include "gpu_mapping.h"
 #include "magma_util/macros.h"
@@ -41,6 +42,9 @@ public:
     bool AddMapping(std::unique_ptr<GpuMapping> mapping);
     void ExecuteAtom(volatile magma_arm_mali_atom* atom);
 
+    void SetNotificationChannel(msd_channel_send_callback_t send_callback, msd_channel_t channel);
+    void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status);
+
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
@@ -50,6 +54,10 @@ private:
     std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
 
     Owner* owner_;
+
+    std::mutex channel_lock_;
+    msd_channel_send_callback_t send_callback_;
+    msd_channel_t return_channel_ = {};
 };
 
 class MsdArmAbiConnection : public msd_connection_t {

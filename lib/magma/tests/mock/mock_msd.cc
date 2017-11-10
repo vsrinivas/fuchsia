@@ -159,3 +159,9 @@ void msd_connection_commit_buffer(struct msd_connection_t* connection, struct ms
                                   uint64_t page_offset, uint64_t page_count)
 {
 }
+
+void msd_connection_set_notification_channel(msd_connection_t* abi_connection,
+                                             msd_channel_send_callback_t callback,
+                                             msd_channel_t channel)
+{
+}

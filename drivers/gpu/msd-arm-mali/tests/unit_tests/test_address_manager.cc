@@ -14,7 +14,7 @@ TEST(AddressManager, MockAssignFinish)
     std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
     AddressManager address_manager;
-    auto atom = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    auto atom = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
 
     EXPECT_TRUE(address_manager.AssignAddressSpace(reg_io.get(), atom.get()));
     registers::AsRegisters as_regs(0);

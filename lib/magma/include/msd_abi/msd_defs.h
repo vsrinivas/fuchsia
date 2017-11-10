@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 typedef uint64_t msd_client_id_t;
+typedef uint32_t msd_channel_t;
 
 // callback type for magma_system_pageflip and msd_device_pageflip
 // |status| indicates whether an error occurred
@@ -23,6 +24,10 @@ typedef uint64_t msd_client_id_t;
 // |data| is a user defined parameter which is passed into the page flip function
 typedef void (*msd_present_buffer_callback_t)(magma_status_t status, uint64_t vblank_time_ns,
                                               void* data);
+
+// |data| is vendor-specific.
+typedef magma_status_t (*msd_channel_send_callback_t)(msd_channel_t channel, void* data,
+                                                      uint64_t data_size);
 
 // The magma system driver... driver :)
 struct msd_driver_t {

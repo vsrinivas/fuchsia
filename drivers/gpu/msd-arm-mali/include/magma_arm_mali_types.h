@@ -23,10 +23,24 @@ enum AtomCoreRequirements {
     kAtomCoreRequirementTiler = (1 << 2),
 };
 
+enum ArmMaliResultCode { kArmMaliResultSuccess = 1 };
+
+// This is arbitrary user data that's used to identify an atom.
+struct magma_arm_mali_user_data {
+    uint64_t data[2];
+} __attribute__((packed));
+
 struct magma_arm_mali_atom {
     uint64_t job_chain_addr;
+    struct magma_arm_mali_user_data data;
     uint32_t core_requirements; // a set of AtomCoreRequirements.
     uint8_t atom_number;
+} __attribute__((packed));
+
+struct magma_arm_mali_status {
+    uint32_t result_code;
+    uint8_t atom_number;
+    magma_arm_mali_user_data data;
 } __attribute__((packed));
 
 #endif

@@ -521,6 +521,9 @@ void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, registe
 void MsdArmDevice::AtomCompleted(MsdArmAtom* atom)
 {
     address_manager_->AtomFinished(register_io_.get(), atom);
+    auto connection = atom->connection().lock();
+    if (connection)
+        connection->SendNotificationData(atom, kArmMaliResultSuccess);
 }
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)

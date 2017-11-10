@@ -28,12 +28,12 @@ TEST(JobScheduler, RunBasic)
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
     EXPECT_EQ(0u, owner.run_list().size());
     JobScheduler scheduler(&owner, 1);
-    auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
     MsdArmAtom* atom1_ptr = atom1.get();
     scheduler.EnqueueAtom(std::move(atom1));
     EXPECT_EQ(0u, owner.run_list().size());
 
-    auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
     MsdArmAtom* atom2_ptr = atom2.get();
     scheduler.EnqueueAtom(std::move(atom2));
     EXPECT_EQ(0u, owner.run_list().size());
@@ -53,10 +53,10 @@ TEST(JobScheduler, CancelJob)
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
     JobScheduler scheduler(&owner, 1);
 
-    auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
     scheduler.EnqueueAtom(std::move(atom1));
 
-    auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    auto atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
     scheduler.EnqueueAtom(std::move(atom2));
 
     // Neither is scheduled, so they should be canceled immediately.
@@ -66,11 +66,11 @@ TEST(JobScheduler, CancelJob)
     EXPECT_EQ(0u, owner.run_list().size());
     EXPECT_EQ(0u, scheduler.GetAtomListSize());
 
-    atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
     MsdArmAtom* atom1_ptr = atom1.get();
     scheduler.EnqueueAtom(std::move(atom1));
 
-    atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+    atom2 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
     scheduler.EnqueueAtom(std::move(atom2));
     scheduler.TryToSchedule();
 

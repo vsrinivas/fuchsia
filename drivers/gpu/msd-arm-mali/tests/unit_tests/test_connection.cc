@@ -10,6 +10,21 @@
 #include "msd_arm_buffer.h"
 #include "msd_arm_connection.h"
 
+namespace {
+
+uint32_t g_test_channel;
+uint64_t g_test_data_size;
+magma_arm_mali_status g_status;
+
+magma_status_t TestSendCallback(msd_channel_t channel, void* data, uint64_t data_size)
+{
+    g_test_channel = channel;
+    g_test_data_size = data_size;
+    memcpy(&g_status, data, data_size);
+    return MAGMA_STATUS_OK;
+}
+}
+
 class TestConnection {
 public:
     void MapUnmap()
@@ -70,10 +85,41 @@ public:
         // Mapping should already have been removed by buffer deletion.
         EXPECT_FALSE(connection->RemoveMapping(1100 * PAGE_SIZE));
     }
+
+    void Notification()
+    {
+        auto connection = MsdArmConnection::Create(0, nullptr);
+        EXPECT_TRUE(connection);
+        MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8});
+
+        // Shouldn't do anything.
+        connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(10));
+
+        connection->SetNotificationChannel(&TestSendCallback, 100);
+        connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(20));
+        EXPECT_EQ(sizeof(g_status), g_test_data_size);
+        EXPECT_EQ(100u, g_test_channel);
+
+        EXPECT_EQ(7u, g_status.data.data[0]);
+        EXPECT_EQ(8u, g_status.data.data[1]);
+        EXPECT_EQ(20u, g_status.result_code);
+        EXPECT_EQ(5u, g_status.atom_number);
+
+        connection->SetNotificationChannel(nullptr, 0);
+        connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(20));
+
+        EXPECT_EQ(20u, g_status.result_code);
+    }
 };
 
 TEST(TestConnection, MapUnmap)
 {
     TestConnection test;
     test.MapUnmap();
+}
+
+TEST(TestConnection, Notification)
+{
+    TestConnection test;
+    test.Notification();
 }
