@@ -175,7 +175,7 @@ $(MODULE_PKG_FILE): $(MODULE_SRCDIR)/rules.mk make/module-userlib.mk
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
 	@$(MKDIR) ;\
 	if [ -f "$@" ]; then \
-		if ! cmp "$<" "$@" >/dev/null 2>1; then \
+		if ! cmp "$<" "$@" >/dev/null 2>&1; then \
 			$(if $(BUILDECHO),echo installing $@ ;)\
 			cp -f $< $@; \
 		fi \
