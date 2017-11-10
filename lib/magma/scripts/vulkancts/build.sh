@@ -11,8 +11,7 @@ platform=${1:-pc-x86-64}
 build_dir=$fuchsia_root/out/build-vulkancts-$platform
 cc=$fuchsia_root/`find buildtools -type l -name "clang"`
 cxx=$fuchsia_root/`find buildtools -type l -name "clang++"`
-ranlib=$fuchsia_root/`find buildtools -name "ranlib"`
-strip=$fuchsia_root/`find buildtools -name "strip"`
+objcopy=$fuchsia_root/`find buildtools -name "llvm-objcopy"`
 ar=$fuchsia_root/`find buildtools -name "llvm-ar"`
 ranlib=$fuchsia_root/`find buildtools -name "llvm-ranlib"`
 sysroot=$fuchsia_root/out/build-zircon/build-zircon-$platform/sysroot
@@ -42,5 +41,5 @@ mkdir -p $build_dir
 pushd $build_dir
 cmake $fuchsia_root/third_party/vulkan-cts -GNinja  -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=$tools_path/ninja -DFUCHSIA_SYSROOT=$sysroot -DCMAKE_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake -DDE_OS=DE_OS_FUCHSIA -DDEQP_TARGET=fuchsia $extra_args
 $tools_path/ninja
-$strip $build_dir/external/vulkancts/modules/vulkan/deqp-vk -o $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped
+$objcopy --strip-sections $build_dir/external/vulkancts/modules/vulkan/deqp-vk $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped
 popd
