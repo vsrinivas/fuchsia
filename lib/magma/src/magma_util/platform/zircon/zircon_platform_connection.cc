@@ -6,6 +6,7 @@
 #include "platform_connection.h"
 
 #include "zx/channel.h"
+#include <fdio/io.h>
 #include <list>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -156,12 +157,17 @@ class ZirconPlatformConnection : public PlatformConnection,
                                   public std::enable_shared_from_this<ZirconPlatformConnection> {
 public:
     ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, zx::channel local_endpoint,
-                              zx::channel remote_endpoint,
-                              std::unique_ptr<magma::PlatformEvent> shutdown_event)
+                             zx::channel remote_endpoint, zx::channel local_notification_endpoint,
+                             zx::channel remote_notification_endpoint,
+                             std::unique_ptr<magma::PlatformEvent> shutdown_event)
         : magma::PlatformConnection(std::move(shutdown_event)), delegate_(std::move(delegate)),
-          local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint))
+          local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint)),
+          local_notification_endpoint_(std::move(local_notification_endpoint)),
+          remote_notification_endpoint_(std::move(remote_notification_endpoint))
     {
     }
+
+    ~ZirconPlatformConnection() { delegate_->SetNotificationChannel(nullptr, 0); }
 
     bool HandleRequest() override
     {
@@ -278,6 +284,12 @@ public:
     {
         DASSERT(remote_endpoint_);
         return remote_endpoint_.release();
+    }
+
+    uint32_t GetNotificationChannel() override
+    {
+        DASSERT(remote_notification_endpoint_);
+        return remote_notification_endpoint_.release();
     }
 
 private:
@@ -450,11 +462,16 @@ private:
     zx::channel local_endpoint_;
     zx::channel remote_endpoint_;
     magma_status_t error_{};
+    zx::channel local_notification_endpoint_;
+    zx::channel remote_notification_endpoint_;
 };
 
 class ZirconPlatformIpcConnection : public PlatformIpcConnection {
 public:
-    ZirconPlatformIpcConnection(zx::channel channel) : channel_(std::move(channel)) {}
+    ZirconPlatformIpcConnection(zx::channel channel, zx::channel notification_channel)
+        : channel_(std::move(channel)), notification_channel_(std::move(notification_channel))
+    {
+    }
 
     // Imports a buffer for use in the system driver
     magma_status_t ImportBuffer(PlatformBuffer* buffer) override
@@ -703,6 +720,31 @@ public:
         }
     }
 
+    int GetNotificationChannelFd() override
+    {
+        return fdio_handle_fd(notification_channel_.get(), ZX_CHANNEL_READABLE, 0, true);
+    }
+
+    magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
+                                           size_t* buffer_size_out) override
+    {
+        uint32_t buffer_actual_size;
+        zx_status_t status = notification_channel_.read(0, buffer, buffer_size, &buffer_actual_size,
+                                                        nullptr, 0, nullptr);
+        *buffer_size_out = buffer_actual_size;
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            *buffer_size_out = 0;
+            return MAGMA_STATUS_OK;
+        } else if (status == ZX_OK) {
+            return MAGMA_STATUS_OK;
+        } else if (status == ZX_ERR_PEER_CLOSED) {
+            return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "channel, closed");
+        } else {
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to wait on channel status %u",
+                            status);
+        }
+    }
+
 private:
     magma_status_t channel_write(const void* bytes, uint32_t num_bytes, const zx_handle_t* handles,
                                  uint32_t num_handles)
@@ -719,14 +761,24 @@ private:
     }
 
     zx::channel channel_;
+    zx::channel notification_channel_;
     uint32_t next_context_id_{};
     magma_status_t error_{};
 };
 
-std::unique_ptr<PlatformIpcConnection> PlatformIpcConnection::Create(uint32_t device_handle)
+std::unique_ptr<PlatformIpcConnection>
+PlatformIpcConnection::Create(uint32_t device_handle, uint32_t device_notification_handle)
 {
-    return std::unique_ptr<ZirconPlatformIpcConnection>(
-        new ZirconPlatformIpcConnection(zx::channel(device_handle)));
+    return std::unique_ptr<ZirconPlatformIpcConnection>(new ZirconPlatformIpcConnection(
+        zx::channel(device_handle), zx::channel(device_notification_handle)));
+}
+
+static magma_status_t channel_send_callback(msd_channel_t channel, void* data, uint64_t size)
+{
+    zx_status_t status = zx_channel_write(channel, 0, data, size, nullptr, 0);
+    if (status != ZX_OK)
+        return DRETF(MAGMA_STATUS_INTERNAL_ERROR, "Failed writing to channel %d", status);
+    return MAGMA_STATUS_OK;
 }
 
 std::shared_ptr<PlatformConnection>
@@ -741,12 +793,20 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (status != ZX_OK)
         return DRETP(nullptr, "zx::channel::create failed");
 
+    zx::channel local_notification_endpoint;
+    zx::channel remote_notification_endpoint;
+    status = zx::channel::create(0, &local_notification_endpoint, &remote_notification_endpoint);
+    if (status != ZX_OK)
+        return DRETP(nullptr, "zx::channel::create failed");
+    delegate->SetNotificationChannel(&channel_send_callback, local_notification_endpoint.get());
+
     auto shutdown_event = magma::PlatformEvent::Create();
     DASSERT(shutdown_event);
 
-    return std::shared_ptr<ZirconPlatformConnection>(
-        new ZirconPlatformConnection(std::move(delegate), std::move(local_endpoint),
-                                      std::move(remote_endpoint), std::move(shutdown_event)));
+    return std::shared_ptr<ZirconPlatformConnection>(new ZirconPlatformConnection(
+        std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint),
+        std::move(local_notification_endpoint), std::move(remote_notification_endpoint),
+        std::move(shutdown_event)));
 }
 
 } // namespace magma

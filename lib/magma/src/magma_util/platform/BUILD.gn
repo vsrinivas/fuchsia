@@ -79,6 +79,10 @@ source_set("connection") {
     "platform_connection.h",
   ]
 
+  public_deps = [
+    "//garnet/lib/magma/include:msd_abi"
+  ]
+
   deps = [
     ":thread",
     "zircon:connection",

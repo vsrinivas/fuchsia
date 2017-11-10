@@ -37,6 +37,15 @@ void magma_release_buffer(struct magma_connection_t* connection, magma_buffer_t 
 uint64_t magma_get_buffer_id(magma_buffer_t buffer);
 uint64_t magma_get_buffer_size(magma_buffer_t buffer);
 
+// Creates a new fd representing the notification channel for the connection.
+// The fd can be polled.
+int magma_get_notification_channel_fd(struct magma_connection_t* connection);
+
+// Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
+// messages pending.
+magma_status_t magma_read_notification_channel(struct magma_connection_t* connection, void* buffer,
+                                               uint64_t buffer_size, uint64_t* buffer_size_out);
+
 // Clean the cache for a region of memory and write the contents to ram. If
 // invalidate is true, then invalidates the cache lines, so reads will be from
 // memory.

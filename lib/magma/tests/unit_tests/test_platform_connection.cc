@@ -117,6 +117,25 @@ public:
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
 
+    void TestNotificationChannel()
+    {
+        uint32_t out_data;
+        uint64_t out_data_size;
+        // Data was written when the channel was created, so it should be
+        // available.
+        magma_status_t status =
+            ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+        EXPECT_EQ(MAGMA_STATUS_OK, status);
+        EXPECT_EQ(sizeof(out_data), out_data_size);
+        EXPECT_EQ(5u, out_data);
+
+        // No more data to read.
+        status =
+            ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+        EXPECT_EQ(MAGMA_STATUS_OK, status);
+        EXPECT_EQ(0u, out_data_size);
+    }
+
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
     static uint64_t test_semaphore_id;
@@ -241,6 +260,17 @@ public:
         EXPECT_EQ(2000lu, page_count);
         return true;
     }
+
+    void SetNotificationChannel(msd_channel_send_callback_t callback,
+                                msd_channel_t channel) override
+    {
+        if (!channel) {
+            TestPlatformConnection::test_complete = true;
+        } else {
+            uint32_t data = 5;
+            callback(channel, &data, sizeof(data));
+        }
+    }
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
@@ -255,7 +285,8 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
     auto connection = magma::PlatformConnection::Create(std::move(delegate));
     if (!connection)
         return DRETP(nullptr, "failed to create PlatformConnection");
-    auto ipc_connection = magma::PlatformIpcConnection::Create(connection->GetHandle());
+    auto ipc_connection = magma::PlatformIpcConnection::Create(
+        connection->GetHandle(), connection->GetNotificationChannel());
     if (!ipc_connection)
         return DRETP(nullptr, "failed to create PlatformIpcConnection");
 
@@ -340,4 +371,11 @@ TEST(PlatformConnection, MapUnmapBuffer)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestMapUnmapBuffer();
+}
+
+TEST(PlatformConnection, NotificationChannel)
+{
+    auto Test = TestPlatformConnection::Create();
+    ASSERT_NE(Test, nullptr);
+    Test->TestNotificationChannel();
 }

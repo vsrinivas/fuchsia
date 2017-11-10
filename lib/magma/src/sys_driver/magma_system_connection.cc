@@ -197,6 +197,12 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
     return true;
 }
 
+void MagmaSystemConnection::SetNotificationChannel(msd_channel_send_callback_t callback,
+                                                   msd_channel_t channel)
+{
+    msd_connection_set_notification_channel(msd_connection(), callback, channel);
+}
+
 bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject::Type object_type)
 {
     auto device = device_.lock();

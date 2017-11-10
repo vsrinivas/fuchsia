@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <poll.h>
 
 #include "magma.h"
 #include "magma_util/dlog.h"
@@ -71,6 +72,26 @@ public:
 
         magma_release_context(connection_, context_id[1]);
         EXPECT_NE(magma_get_error(connection_), 0);
+    }
+
+    void NotificationChannel()
+    {
+        int fd1 = magma_get_notification_channel_fd(connection_);
+        EXPECT_LE(0, fd1);
+
+        int fd2 = magma_get_notification_channel_fd(connection_);
+        EXPECT_LE(0, fd1);
+        EXPECT_NE(fd1, fd2);
+
+        struct pollfd fds[2] = {{fd1, POLLIN, 0}, {fd2, POLLOUT, 0}};
+        int result = poll(fds, 2, 0);
+
+        // No events should exist.
+        EXPECT_EQ(0, result);
+        EXPECT_EQ(0, fds[0].revents);
+        EXPECT_EQ(0, fds[1].revents);
+        close(fd1);
+        close(fd2);
     }
 
     void Buffer()
@@ -345,6 +366,12 @@ TEST(MagmaAbi, Context)
 {
     TestConnection test;
     test.Context();
+}
+
+TEST(MagmaAbi, NotificationChannel)
+{
+    TestConnection test;
+    test.NotificationChannel();
 }
 
 TEST(MagmaAbi, WaitRendering)

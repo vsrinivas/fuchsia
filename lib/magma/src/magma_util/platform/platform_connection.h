@@ -8,6 +8,7 @@
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "magma_util/status.h"
+#include "msd_defs.h"
 #include "platform_buffer.h"
 #include "platform_event.h"
 #include "platform_object.h"
@@ -23,7 +24,8 @@ class PlatformIpcConnection : public magma_connection_t {
 public:
     virtual ~PlatformIpcConnection() {}
 
-    static std::unique_ptr<PlatformIpcConnection> Create(uint32_t device_handle);
+    static std::unique_ptr<PlatformIpcConnection> Create(uint32_t device_handle,
+                                                         uint32_t device_return_handle);
 
     // Imports a buffer for use in the system driver
     virtual magma_status_t ImportBuffer(PlatformBuffer* buffer) = 0;
@@ -61,6 +63,10 @@ public:
 
     virtual magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
                                         uint64_t page_count) = 0;
+
+    virtual int GetNotificationChannelFd() = 0;
+    virtual magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
+                                                   size_t* buffer_size_out) = 0;
 
     static PlatformIpcConnection* cast(magma_connection_t* connection)
     {
@@ -104,6 +110,8 @@ public:
         virtual bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
         virtual bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
                                   uint64_t page_count) = 0;
+        virtual void SetNotificationChannel(msd_channel_send_callback_t callback,
+                                            msd_channel_t channel) = 0;
     };
 
     PlatformConnection(std::unique_ptr<magma::PlatformEvent> shutdown_event)
@@ -115,6 +123,8 @@ public:
 
     static std::shared_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
     virtual uint32_t GetHandle() = 0;
+    // This handle is used to asynchronously return information to the client.
+    virtual uint32_t GetNotificationChannel() = 0;
 
     // handles a single request, returns false if anything has put it into an illegal state
     // or if the remote has closed

@@ -19,14 +19,14 @@ magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
     request.client_id = magma::PlatformThreadId().id();
     request.capabilities = capabilities;
 
-    uint32_t device_handle;
-    int ioctl_ret = fdio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), &device_handle,
-                               sizeof(device_handle));
+    uint32_t device_handles[2];
+    int ioctl_ret = fdio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), device_handles,
+                               sizeof(device_handles));
     if (ioctl_ret < 0)
         return DRETP(nullptr, "fdio_ioctl failed: %d", ioctl_ret);
 
     // Here we release ownership of the connection to the client
-    return magma::PlatformIpcConnection::Create(device_handle).release();
+    return magma::PlatformIpcConnection::Create(device_handles[0], device_handles[1]).release();
 }
 
 void magma_release_connection(magma_connection_t* connection)
@@ -97,6 +97,18 @@ uint64_t magma_get_buffer_id(magma_buffer_t buffer)
 uint64_t magma_get_buffer_size(magma_buffer_t buffer)
 {
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
+}
+
+int magma_get_notification_channel_fd(magma_connection_t* connection)
+{
+    return magma::PlatformIpcConnection::cast(connection)->GetNotificationChannelFd();
+}
+
+magma_status_t magma_read_notification_channel(magma_connection_t* connection, void* buffer,
+                                               uint64_t buffer_size, uint64_t* buffer_size_out)
+{
+    return magma::PlatformIpcConnection::cast(connection)
+        ->ReadNotificationChannel(buffer, buffer_size, buffer_size_out);
 }
 
 magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_t size,
