@@ -143,7 +143,8 @@ FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
     hlt
     jmp 0b
 
-# Get the cpu into 64-bit mode with interrupts disabled and no TSS
+# Get the cpu into 64-bit mode with interrupts disabled and no TSS.  This must
+# only be called on the bootstrap processor.
 FUNCTION_LABEL(_x86_suspend_wakeup)
     # Retrieve the new PML4 address before our data page becomes unreachable
     mov BCD_PHYS_KERNEL_PML4_OFFSET(%esi), %ecx

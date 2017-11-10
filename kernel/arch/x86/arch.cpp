@@ -113,6 +113,10 @@ void arch_resume(void) {
     x86_pat_sync(cpu_num_to_mask(0));
 
     apic_local_init();
+
+    // Ensure the CPU that resumed was assigned the correct percpu object.
+    DEBUG_ASSERT(apic_local_id() == x86_get_percpu()->apic_id);
+
     apic_io_restore();
 }
 
