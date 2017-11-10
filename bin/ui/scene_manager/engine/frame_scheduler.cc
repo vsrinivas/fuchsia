@@ -4,13 +4,13 @@
 
 #include "garnet/bin/ui/scene_manager/engine/frame_scheduler.h"
 
-#include <zircon/syscalls.h>
 #include <trace/event.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace scene_manager {
 
@@ -20,7 +20,8 @@ constexpr uint64_t kPredictedFrameRenderTime = 8'000'000;  // 8ms
 
 FrameScheduler::FrameScheduler(Display* display)
     : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner().get()),
-      display_(display) {
+      display_(display),
+      weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 }
 
@@ -97,8 +98,12 @@ void FrameScheduler::MaybeScheduleFrame() {
   auto time_to_start_rendering =
       fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(
           next_presentation_time_ - kPredictedFrameRenderTime));
-  task_runner_->PostTaskForTime([this] { MaybeRenderFrame(); },
-                                time_to_start_rendering);
+  task_runner_->PostTaskForTime(
+      [weak = weak_factory_.GetWeakPtr()] {
+        if (weak)
+          weak->MaybeRenderFrame();
+      },
+      time_to_start_rendering);
 }
 
 void FrameScheduler::MaybeRenderFrame() {

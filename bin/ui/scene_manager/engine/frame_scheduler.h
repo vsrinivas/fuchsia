@@ -9,6 +9,7 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace fxl {
 class TaskRunner;
@@ -104,6 +105,8 @@ class FrameScheduler {
   constexpr static size_t kMaxOutstandingFrames = 2;
   std::vector<FrameTimingsPtr> outstanding_frames_;
   bool back_pressure_applied_ = false;
+
+  fxl::WeakPtrFactory<FrameScheduler> weak_factory_;  // must be last
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameScheduler);
 };

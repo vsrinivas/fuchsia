@@ -12,6 +12,7 @@
 #include "garnet/bin/ui/scene_manager/resources/memory.h"
 #include "garnet/bin/ui/scene_manager/sync/fence_set_listener.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
 
