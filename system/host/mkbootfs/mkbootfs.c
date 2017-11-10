@@ -1022,7 +1022,6 @@ void usage(void) {
     "\n"
     "options: -o <filename>         output bootdata file name\n"
     "         --depfile <filename>  output make/ninja dependencies file name\n"
-    "         -k <filename>         include kernel (must be first)\n"
     "         -C <filename>         include kernel command line\n"
     "         -c                    compress bootfs image (default)\n"
     "         -v                    verbose output\n"
@@ -1056,7 +1055,6 @@ int main(int argc, char **argv) {
     const char* output_file = "user.bootfs";
 
     bool compressed = true;
-    bool have_kernel = false;
     bool have_cmdline = false;
     const char* vid_arg = NULL;
     const char* pid_arg = NULL;
@@ -1084,25 +1082,6 @@ int main(int argc, char **argv) {
                 return -1;
             }
             output_file = argv[1];
-            argc--;
-            argv++;
-        } else if (!strcmp(cmd,"-k")) {
-            if (have_kernel) {
-                fprintf(stderr, "error: only one kernel may be included\n");
-                return -1;
-            }
-            if (argc < 2) {
-                fprintf(stderr, "error: no kernel filename given\n");
-                return -1;
-            }
-            if (first_item != NULL) {
-                fprintf(stderr, "error: kernel must be the first input\n");
-                return -1;
-            }
-            have_kernel = 1;
-            if (import_file_as(argv[1], ITEM_KERNEL, 0, NULL) < 0) {
-                return -1;
-            }
             argc--;
             argv++;
         } else if (!strcmp(cmd, "-C")) {
