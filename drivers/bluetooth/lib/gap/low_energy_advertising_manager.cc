@@ -51,7 +51,7 @@ LowEnergyAdvertisingManager::~LowEnergyAdvertisingManager() {
   }
 }
 
-bool LowEnergyAdvertisingManager::StartAdvertising(
+void LowEnergyAdvertisingManager::StartAdvertising(
     const AdvertisingData& data,
     const AdvertisingData& scan_rsp,
     const ConnectionCallback& connect_callback,
@@ -61,19 +61,8 @@ bool LowEnergyAdvertisingManager::StartAdvertising(
   // Can't be anonymous and connectable
   if (anonymous && connect_callback) {
     FXL_LOG(WARNING) << "Can't advertise anonymously and connectable!";
-    return false;
-  }
-  // See if there are any advertising slots left
-  if (advertisements_.size() >= advertiser_->GetMaxAdvertisements()) {
-    task_runner_->PostTask(
-        std::bind(result_callback, "", hci::kConnectionLimitExceeded));
-    return true;
-  }
-  // See if the advertisement is within the size limit
-  if (data.CalculateBlockSize() > advertiser_->GetSizeLimit()) {
-    task_runner_->PostTask(
-        std::bind(result_callback, "", hci::kMemoryCapacityExceeded));
-    return true;
+    result_callback("", hci::kInvalidHCICommandParameters);
+    return;
   }
   // Generate the DeviceAddress and id
   // TODO(jamuraa): Generate resolvable private addresses instead if they're
@@ -102,8 +91,8 @@ bool LowEnergyAdvertisingManager::StartAdvertising(
         result_callback(id, status);
       });
   // Call StartAdvertising, with the callback
-  return advertiser_->StartAdvertising(address, data, scan_rsp, adv_conn_cb,
-                                       interval_ms, anonymous, result_cb);
+  advertiser_->StartAdvertising(address, data, scan_rsp, adv_conn_cb,
+                                interval_ms, anonymous, result_cb);
 }
 
 bool LowEnergyAdvertisingManager::StopAdvertising(

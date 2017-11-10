@@ -124,9 +124,8 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 
   // Should accept ads that are of reasonable size
   ad.SetServiceData(common::UUID((uint16_t)0xfeaa), reasonable_data);
-  EXPECT_TRUE(advertiser()->StartAdvertising(kPublicAddress, ad, scan_data,
-                                             nullptr, 1000, false,
-                                             GetSuccessCallback()));
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr, 1000,
+                                 false, GetSuccessCallback());
 
   RunMessageLoop();
 
@@ -136,8 +135,8 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 
   // And reject ads that are too big
   ad.SetServiceData(common::UUID((uint16_t)0xfeaa), oversize_data);
-  EXPECT_FALSE(advertiser()->StartAdvertising(
-      kPublicAddress, ad, scan_data, nullptr, 1000, false, GetErrorCallback()));
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr, 1000,
+                                 false, GetErrorCallback());
   RunMessageLoop();
 
   EXPECT_TRUE(MoveLastStatus());
@@ -153,9 +152,8 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
 
   auto conn_cb = [&ref](auto conn_ref) { ref = std::move(conn_ref); };
 
-  EXPECT_TRUE(advertiser()->StartAdvertising(kPublicAddress, ad, scan_data,
-                                             conn_cb, 1000, false,
-                                             GetSuccessCallback()));
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
+                                 false, GetSuccessCallback());
 
   RunMessageLoop();
 
@@ -177,8 +175,8 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartAndStop) {
 
   common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
 
-  EXPECT_TRUE(advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000,
-                                             false, GetSuccessCallback()));
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetSuccessCallback());
 
   RunMessageLoop();
 
@@ -215,8 +213,8 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
 
   common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
 
-  EXPECT_TRUE(advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000,
-                                             false, GetSuccessCallback()));
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetSuccessCallback());
 
   RunMessageLoop();
 
@@ -269,15 +267,15 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
 
   common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
 
-  EXPECT_TRUE(advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000,
-                                             false, GetSuccessCallback()));
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetSuccessCallback());
   RunMessageLoop();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 
-  EXPECT_FALSE(advertiser()->StartAdvertising(addr, ad, scan_data, nullptr,
-                                              1000, false, GetErrorCallback()));
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetErrorCallback());
   RunMessageLoop();
 
   EXPECT_TRUE(MoveLastStatus());
@@ -291,8 +289,8 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
 
   common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
 
-  EXPECT_FALSE(advertiser()->StartAdvertising(addr, ad, scan_data, nullptr,
-                                              1000, true, GetErrorCallback()));
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, true,
+                                 GetErrorCallback());
   RunMessageLoop();
 
   EXPECT_TRUE(MoveLastStatus());

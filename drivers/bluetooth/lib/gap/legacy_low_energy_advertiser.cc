@@ -73,7 +73,7 @@ size_t LegacyLowEnergyAdvertiser::GetSizeLimit() {
   return hci::kMaxLEAdvertisingDataLength - kFlagsSize;
 }
 
-bool LegacyLowEnergyAdvertiser::StartAdvertising(
+void LegacyLowEnergyAdvertiser::StartAdvertising(
     const bluetooth::common::DeviceAddress& address,
     const AdvertisingData& data,
     const AdvertisingData& scan_rsp,
@@ -81,19 +81,24 @@ bool LegacyLowEnergyAdvertiser::StartAdvertising(
     uint32_t interval_ms,
     bool anonymous,
     const AdvertisingResultCallback& callback) {
-  if ((advertised_ != common::DeviceAddress()) || anonymous) {
+  if (anonymous) {
     callback(0, hci::kUnsupportedFeatureOrParameter);
-    return false;
+    return;
+  }
+
+  if (advertised_ != common::DeviceAddress()) {
+    callback(0, hci::kConnectionLimitExceeded);
+    return;
   }
 
   if (data.CalculateBlockSize() > GetSizeLimit()) {
-    callback(0, hci::kInvalidHCICommandParameters);
-    return false;
+    callback(0, hci::kMemoryCapacityExceeded);
+    return;
   }
 
   if (scan_rsp.CalculateBlockSize() > GetSizeLimit()) {
-    callback(0, hci::kInvalidHCICommandParameters);
-    return false;
+    callback(0, hci::kMemoryCapacityExceeded);
+    return;
   }
 
   hci::LEAdvertisingType type = hci::LEAdvertisingType::kAdvNonConnInd;
@@ -186,7 +191,6 @@ bool LegacyLowEnergyAdvertiser::StartAdvertising(
       callback(0, hci::kUnspecifiedError);
     }
   });
-  return true;
 }
 
 bool LegacyLowEnergyAdvertiser::StopAdvertising(

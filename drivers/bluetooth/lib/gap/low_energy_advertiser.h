@@ -34,16 +34,26 @@ class LowEnergyAdvertiser {
   // If |connect_callback| is provided, the advertisement will be connectable,
   // and the provided callback will be called with a connection reference
   // when this advertisement is connected to and the advertisement has been
-  // stopped. Returns true if the advertisement is being processed, and false
-  // otherwise.
+  // stopped.
   //
-  // Calls |callback| when the advertisement setup is complete with
-  // the actual interval used and status of the advertising command.
-  // |callback| will be called before any calls to |connect_callback|.
+  // Provides results in |callback|. If advertising is setup, the expected
+  // interval of advertising is provided in |interval_ms| and |status|
+  // is hci::kSuccess.
+  // Otherwise, |status| will indicate the type of error:
+  //  - hci::kInvalidHCICommandParameters if the parameters are invalid
+  //  - hci::kConnectionLimitExceeded if no more advertisements can be made
+  //  - hci::kMemoryCapacityExceeded if the data provided is too large
+  //  - hci::kUnsupportedFeatureOrParameter if anonymous or connectable
+  //    advertising is requested but unsupported
+  //  - another error if the Controller provides one
+  // |callback| may be called before this function returns, but will
+  // be called before any calls to |connect_callback|.
+  // TODO(jamuraa): In the future, use stack-based error codes instead
+  // of coopting the HCI error statuses.
   using AdvertisingResultCallback =
       std::function<void(uint32_t interval_ms, hci::Status status)>;
   using ConnectionCallback = std::function<void(LowEnergyConnectionRefPtr)>;
-  virtual bool StartAdvertising(const bluetooth::common::DeviceAddress& address,
+  virtual void StartAdvertising(const bluetooth::common::DeviceAddress& address,
                                 const AdvertisingData& data,
                                 const AdvertisingData& scan_rsp,
                                 const ConnectionCallback& connect_callback,

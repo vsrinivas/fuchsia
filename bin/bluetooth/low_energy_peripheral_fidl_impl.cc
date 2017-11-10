@@ -109,15 +109,10 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
         self->delegates_[advertisement_id] = std::move(delegate_ptr);
         callback(::btfidl::Status::New(), advertisement_id);
       });
-  bool result = advertising_manager->StartAdvertising(
-      ad_data, scan_data, connect_cb, interval, anonymous,
-      advertising_result_cb);
-  if (!result) {
-    auto fidlerror =
-        fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::INVALID_ARGUMENTS,
-                                     "Can't advertise connectable anonymously");
-    callback(std::move(fidlerror), "");
-  }
+
+  advertising_manager->StartAdvertising(ad_data, scan_data, connect_cb,
+                                        interval, anonymous,
+                                        advertising_result_cb);
 }
 
 void LowEnergyPeripheralFidlImpl::StopAdvertising(

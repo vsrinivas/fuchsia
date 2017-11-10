@@ -25,7 +25,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
 
   size_t GetMaxAdvertisements() const override { return 1; }
 
-  bool StartAdvertising(const bluetooth::common::DeviceAddress& address,
+  void StartAdvertising(const bluetooth::common::DeviceAddress& address,
                         const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         const ConnectionCallback& connect_callback,

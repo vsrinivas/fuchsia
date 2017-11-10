@@ -44,12 +44,17 @@ class LowEnergyAdvertisingManager {
   // Returns false if the parameters represent an invalid advertisement:
   //  * if |anonymous| is true but |callback| is set
   //
-  // result_callback is called:
-  //  - with an |advertisement_id| which can be used to stop advertising
-  //    or disambiguate calls to |callback|, and an empty |error|
-  //  - with an empty |advertisement_id| and one of these statuses:
+  // |result_callback| may be called synchronously within this function.
+  // |result_callback| provides one of:
+  //  - an |advertisement_id| which can be used to stop advertising
+  //    or disambiguate calls to |callback|, and |status| of hci::kSuccess
+  //  - an empty |advertisement_id| and an error indication in |status|:
+  //    * hci::kHCIInvalidHCICommandParameters if the advertising parameters are
+  //    invalid
   //    * hci::kConnectionLimitExceeded if another set cannot be advertised
   //    * hci::kMemoryCapacityExceeded if the |data| is too large
+  //    * hci::kUnsupportedFeatureOrParameter if a feature is requested but
+  //      unsupported
   //    * the actual hci error reported from the controller, otherwise.
   // TODO(jamuraa): Introduce stack error codes that are separate from HCI error
   // codes.
@@ -57,7 +62,7 @@ class LowEnergyAdvertisingManager {
                                                 LowEnergyConnectionRefPtr)>;
   using AdvertisingResultCallback =
       std::function<void(std::string advertisement_id, hci::Status status)>;
-  bool StartAdvertising(const AdvertisingData& data,
+  void StartAdvertising(const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
