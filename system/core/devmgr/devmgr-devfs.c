@@ -230,6 +230,9 @@ static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
     if (mask & VFS_WATCH_MASK_EXISTING) {
         devnode_t* child;
         list_for_every_entry(&dn->children, child, devnode_t, node) {
+            if (child->device && (child->device->flags & DEV_CTX_INVISIBLE)) {
+                continue;
+            }
             //TODO: send multiple per write
             devfs_notify(dn, child->name, VFS_WATCH_EVT_EXISTING);
         }
