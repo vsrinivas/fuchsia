@@ -30,6 +30,7 @@ package("netstack_manual_tests") {
   deps = [
     "//garnet/go/src/netstack/tests/manual:keepalivetest",
     "//garnet/go/src/netstack/tests/manual:closetest",
+    "//garnet/go/src/netstack/tests/manual:getaddrinfo_test",
     "//garnet/go/src/netstack/tests/manual:gethostbyname_test",
     "//garnet/go/src/netstack/tests/manual:mctest",
     "//garnet/go/src/netstack/tests/manual:nbiotest",
@@ -44,6 +45,10 @@ package("netstack_manual_tests") {
   binaries = [
     {
       name = "closetest"
+    },
+
+    {
+      name = "getaddrinfo_test"
     },
 
     {

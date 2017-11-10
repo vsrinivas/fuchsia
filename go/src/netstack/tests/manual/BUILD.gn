@@ -146,3 +146,16 @@ executable("gethostbyname_test") {
     "zircon",
   ]
 }
+
+executable("getaddrinfo_test") {
+  testonly = true
+
+  sources = [
+    "getaddrinfo_test.c",
+  ]
+
+  libs = [
+    "fdio",
+    "zircon",
+  ]
+}
