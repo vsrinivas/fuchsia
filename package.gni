@@ -185,6 +185,7 @@ template("package") {
         package_manifest_contents += [ "bin/app=$source" ]
       }
       foreach(binary, pkg.binaries) {
+        assert(pkg.system_image, "Binaries cannot be used in archived packages. Consider using 'binary'.")
         # Binary paths are relative to the root of the build dir.
         if (defined(binary.source)) {
           source = rebase_path("$root_build_dir/${binary.source}")
