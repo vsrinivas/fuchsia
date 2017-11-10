@@ -35,7 +35,7 @@ cpu_mask_t percpu_exec(percpu_task_t task, void* context) {
 }
 
 cpu_num_t cpu_of(uint16_t vpid) {
-    return vpid % arch_max_num_cpus();
+    return (vpid - 1) % arch_max_num_cpus();
 }
 
 thread_t* pin_thread(uint16_t vpid) {
