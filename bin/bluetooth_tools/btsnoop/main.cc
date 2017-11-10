@@ -10,11 +10,13 @@
 
 namespace {
 
+const char kDefaultPath[] = "/tmp/btsnoop.log";
 const char kUsageString[] =
     "Usage: btsnoop [options]\n"
     "Options:\n"
     "    --help            Show this help message\n"
-    "    --path=<path>     The path to the snoop log file\n"
+    "    --path=<path>     The path to the snoop log file (default: "
+    "/tmp/btsnoop.log)\n"
     "    --dev=<hci-dev>   Path to the HCI device (default: "
     "/dev/class/bt-hci/000)\n";
 
@@ -32,9 +34,7 @@ int main(int argc, char* argv[]) {
 
   std::string log_file_path;
   if (!cl.GetOptionValue("path", &log_file_path)) {
-    std::cout << "A path is required" << std::endl;
-    std::cout << kUsageString << std::endl;
-    return EXIT_FAILURE;
+    log_file_path = kDefaultPath;
   }
 
   std::string hci_dev_path = kDefaultHCIDev;
