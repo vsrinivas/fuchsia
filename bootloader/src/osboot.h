@@ -38,3 +38,12 @@ int boot_deprecated(efi_handle img, efi_system_table* sys,
 
 int zedboot(efi_handle img, efi_system_table* sys,
             void* image, size_t sz);
+
+#define IMAGE_INVALID 0
+#define IMAGE_EMPTY   1
+#define IMAGE_KERNEL  2
+#define IMAGE_RAMDISK 3
+#define IMAGE_COMBO   4
+
+
+unsigned identify_image(void* image, size_t sz);

@@ -401,9 +401,40 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     size_t zedboot_size = 0;
     void* zedboot_kernel = xefi_load_file(L"zedboot.bin", &zedboot_size, 0);
 
+    switch (identify_image(zedboot_kernel, zedboot_size)) {
+    case IMAGE_COMBO:
+        printf("zedboot.bin is a valid kernel+ramdisk combo image\n");
+        break;
+    case IMAGE_EMPTY:
+        break;
+    default:
+        zedboot_kernel = NULL;
+        zedboot_size = 0;
+    }
+
     // Look for a kernel image on disk
     size_t ksz = 0;
+    unsigned ktype = IMAGE_INVALID;
     void* kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
+
+    switch ((ktype = identify_image(kernel, ksz))) {
+    case IMAGE_EMPTY:
+        break;
+    case IMAGE_KERNEL:
+        printf("zircon.bin is a kernel image\n");
+        break;
+    case IMAGE_COMBO:
+        printf("zircon.bin is a kernel+ramdisk combo image\n");
+        break;
+    case IMAGE_RAMDISK:
+        printf("zircon.bin is a ramdisk?!\n");
+    case IMAGE_INVALID:
+        printf("zircon.bin is not a valid kernel or combo image\n");
+        ktype = IMAGE_INVALID;
+        ksz = 0;
+        kernel = NULL;
+    }
+
     if (!have_network && zedboot_kernel == NULL && kernel == NULL) {
         goto fail;
     }
@@ -469,26 +500,29 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         case 'n':
             do_netboot();
             break;
-        case 'm': {
-            size_t rsz = 0;
-            void* ramdisk = NULL;
-            efi_file_protocol* ramdisk_file = xefi_open_file(L"bootdata.bin");
-            const char* ramdisk_name = "bootdata.bin";
-            if (ramdisk_file == NULL) {
-                ramdisk_file = xefi_open_file(L"ramdisk.bin");
-                ramdisk_name = "ramdisk.bin";
+        case 'm':
+            if (ktype == IMAGE_COMBO) {
+                zedboot(img, sys, kernel, ksz);
+            } else {
+                size_t rsz = 0;
+                void* ramdisk = NULL;
+                efi_file_protocol* ramdisk_file = xefi_open_file(L"bootdata.bin");
+                const char* ramdisk_name = "bootdata.bin";
+                if (ramdisk_file == NULL) {
+                    ramdisk_file = xefi_open_file(L"ramdisk.bin");
+                    ramdisk_name = "ramdisk.bin";
+                }
+                if (ramdisk_file) {
+                    printf("Loading %s...\n", ramdisk_name);
+                    ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
+                    ramdisk_file->Close(ramdisk_file);
+                }
+                boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
             }
-            if (ramdisk_file) {
-                printf("Loading %s...\n", ramdisk_name);
-                ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
-                ramdisk_file->Close(ramdisk_file);
-            }
-            boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
-            break;
-        }
-        case 'z': {
+            goto fail;
+        case 'z':
             zedboot(img, sys, zedboot_kernel, zedboot_size);
-        }
+            goto fail;
         default:
             goto fail;
         }

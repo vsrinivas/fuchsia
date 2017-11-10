@@ -116,6 +116,69 @@ static int header_check(void* image, size_t sz, uint64_t* _entry,
     return 0;
 }
 
+static int item_check(bootdata_t* bd, size_t sz) {
+    if (sz > 0x7FFFFFFF) {
+        // disallow 2GB+ items to avoid wrap on align issues
+        return -1;
+    }
+    if ((bd->magic != BOOTITEM_MAGIC) ||
+        ((bd->flags & BOOTDATA_FLAG_V2) == 0) ||
+        (BOOTDATA_ALIGN(bd->length) > sz)) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+//TODO: verify crc32 when present
+unsigned identify_image(void* image, size_t sz) {
+    if (sz == 0) {
+        return IMAGE_EMPTY;
+    }
+    if (sz < sizeof(bootdata_t)) {
+        printf("image is too small\n");
+        return IMAGE_INVALID;
+    }
+    bootdata_t* bd = image;
+    sz -= sizeof(bootdata_t);
+    if ((bd->type != BOOTDATA_CONTAINER) ||
+        item_check(bd, sz)) {
+        printf("image has invalid header\n");
+        return IMAGE_INVALID;
+    }
+    image += sizeof(bootdata_t);
+    unsigned n = 0;
+    unsigned r = 0;
+    while (sz > sizeof(bootdata_t)) {
+        bd = image;
+        sz -= sizeof(bootdata_t);
+        if (item_check(image, sz)) {
+            printf("image has invalid bootitem\n");
+            return IMAGE_INVALID;
+        }
+        if (bd->type == BOOTDATA_KERNEL) {
+            if (n != 0) {
+                printf("image has kernel in middle\n");
+                return IMAGE_INVALID;
+            } else {
+                r = IMAGE_KERNEL;
+            }
+        }
+        if (bd->type == BOOTDATA_BOOTFS_BOOT) {
+            if ((r == IMAGE_KERNEL) || (r == IMAGE_COMBO)) {
+                r = IMAGE_COMBO;
+            } else {
+                r = IMAGE_RAMDISK;
+            }
+        }
+        image += BOOTDATA_ALIGN(bd->length) + sizeof(bootdata_t);
+        sz -= BOOTDATA_ALIGN(bd->length);
+        n++;
+    }
+
+    return r;
+}
+
 int boot_zircon(efi_handle img, efi_system_table* sys,
                  void* image, size_t isz, void* ramdisk, size_t rsz,
                  void* cmdline, size_t csz) {
