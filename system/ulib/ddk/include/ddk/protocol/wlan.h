@@ -199,7 +199,7 @@ typedef struct wlanmac_protocol_ops {
     // Sets the BSS the station is joining
     zx_status_t (*set_bss)(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type);
 
-    // Specify a key for frame protection. Callee must free allocated key_config.
+    // Specify a key for frame protection.
     zx_status_t (*set_key)(void* ctx, uint32_t options, wlan_key_config_t* key_config);
 } wlanmac_protocol_ops_t;
 
