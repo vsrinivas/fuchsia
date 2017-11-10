@@ -215,6 +215,8 @@ bool test_access_opath(void) {
         // ASSERT_EQ(linkat(fd, "baz", fd, "bar", 0), 0);
         ASSERT_EQ(link("::foo/baz", filename), 0);
         ASSERT_EQ(unlinkat(fd, "baz", 0), 0);
+    } else {
+        ASSERT_EQ(renameat(fd, "baz", fd, "bar"), 0);
     }
 
     // Readdir is not allowed
