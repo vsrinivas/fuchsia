@@ -43,14 +43,14 @@ void AdapterManagerFidlImpl::SetDelegate(
     ::fidl::InterfaceHandle<::btfidl::control::AdapterManagerDelegate>
         delegate) {
   if (!delegate) {
-    FXL_LOG(ERROR) << "Cannot set a null delegate";
+    FXL_VLOG(1) << "Cannot set a null delegate";
     return;
   }
 
   delegate_ =
       ::btfidl::control::AdapterManagerDelegatePtr::Create(std::move(delegate));
   delegate_.set_connection_error_handler([this] {
-    FXL_LOG(INFO) << "AdapterManager delegate disconnected";
+    FXL_VLOG(1) << "AdapterManager delegate disconnected";
     delegate_ = nullptr;
   });
 
@@ -82,7 +82,7 @@ void AdapterManagerFidlImpl::GetAdapter(
   if (adapter) {
     CreateAdapterFidlImpl(adapter, std::move(request));
   } else {
-    FXL_LOG(WARNING) << "Adapter not found: " << identifier;
+    FXL_VLOG(1) << "Adapter not found: " << identifier;
   }
 }
 
@@ -106,7 +106,7 @@ void AdapterManagerFidlImpl::GetActiveAdapter(
   if (adapter) {
     CreateAdapterFidlImpl(adapter, std::move(request));
   } else {
-    FXL_LOG(WARNING) << "No active adapter";
+    FXL_VLOG(1) << "No active adapter";
   }
 }
 
@@ -137,7 +137,7 @@ void AdapterManagerFidlImpl::OnAdapterFidlImplDisconnected(
     AdapterFidlImpl* adapter_fidl_impl) {
   FXL_DCHECK(adapter_fidl_impl);
 
-  FXL_LOG(INFO) << "AdapterFidlImpl disconnected";
+  FXL_VLOG(1) << "AdapterFidlImpl disconnected";
   auto iter = adapter_fidl_impls_.begin();
   for (; iter != adapter_fidl_impls_.end(); ++iter) {
     if (iter->get() == adapter_fidl_impl)

@@ -46,7 +46,7 @@ void AdapterFidlImpl::SetDelegate(
   }
   if (delegate_) {
     delegate_.set_connection_error_handler([this] {
-      FXL_LOG(INFO) << "Adapter delegate disconnected";
+      FXL_VLOG(1) << "Adapter delegate disconnected";
       delegate_ = nullptr;
 
       // TODO(armansito): Define a function for terminating all procedures that
@@ -79,17 +79,17 @@ void AdapterFidlImpl::SetPowered(bool powered,
 }
 
 void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
-  FXL_LOG(INFO) << "Adapter StartDiscovery()";
+  FXL_VLOG(1) << "Adapter StartDiscovery()";
 
   if (!adapter_) {
-    FXL_LOG(WARNING) << "Adapter not available";
+    FXL_VLOG(1) << "Adapter not available";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND,
                                           "Adapter not available"));
     return;
   }
 
   if (le_discovery_session_ || requesting_discovery_) {
-    FXL_LOG(WARNING) << "Discovery already in progress";
+    FXL_VLOG(1) << "Discovery already in progress";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::IN_PROGRESS,
                                           "Discovery already in progress"));
     return;
@@ -107,7 +107,7 @@ void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
     self->requesting_discovery_ = false;
 
     if (!session) {
-      FXL_LOG(ERROR) << "Failed to start discovery session";
+      FXL_VLOG(1) << "Failed to start discovery session";
       callback(fidl_helpers::NewErrorStatus(
           ::btfidl::ErrorCode::FAILED, "Failed to start discovery session"));
       return;
@@ -127,9 +127,9 @@ void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
 }
 
 void AdapterFidlImpl::StopDiscovery(const StopDiscoveryCallback& callback) {
-  FXL_LOG(INFO) << "Adapter StopDiscovery()";
+  FXL_VLOG(1) << "Adapter StopDiscovery()";
   if (!le_discovery_session_) {
-    FXL_LOG(ERROR) << "No active discovery session";
+    FXL_VLOG(1) << "No active discovery session";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::BAD_STATE,
                                           "No discovery session in progress"));
     return;
@@ -147,7 +147,7 @@ void AdapterFidlImpl::OnDiscoveryResult(
 
   auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
   if (!fidl_device) {
-    FXL_LOG(WARNING) << "Ignoring malformed discovery result";
+    FXL_VLOG(1) << "Ignoring malformed discovery result";
     return;
   }
 

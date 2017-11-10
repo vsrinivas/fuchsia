@@ -40,14 +40,14 @@ LowEnergyCentralFidlImpl::~LowEnergyCentralFidlImpl() {
 void LowEnergyCentralFidlImpl::SetDelegate(
     ::fidl::InterfaceHandle<::btfidl::low_energy::CentralDelegate> delegate) {
   if (!delegate) {
-    FXL_LOG(ERROR) << "Cannot set a null delegate";
+    FXL_VLOG(1) << "Cannot set a null delegate";
     return;
   }
 
   delegate_ =
       ::btfidl::low_energy::CentralDelegatePtr::Create(std::move(delegate));
   delegate_.set_connection_error_handler([this] {
-    FXL_LOG(INFO) << "LowEnergyCentral delegate disconnected";
+    FXL_VLOG(1) << "LowEnergyCentral delegate disconnected";
     delegate_ = nullptr;
   });
 }
@@ -69,10 +69,10 @@ void LowEnergyCentralFidlImpl::GetPeripheral(
 void LowEnergyCentralFidlImpl::StartScan(
     ::btfidl::low_energy::ScanFilterPtr filter,
     const StartScanCallback& callback) {
-  FXL_LOG(INFO) << "Low Energy Central StartScan()";
+  FXL_VLOG(1) << "Low Energy Central StartScan()";
 
   if (!adapter_manager_->GetActiveAdapter()) {
-    FXL_LOG(ERROR) << "Adapter not available";
+    FXL_VLOG(1) << "Adapter not available";
     callback(fidl_helpers::NewErrorStatus(
         ::btfidl::ErrorCode::BLUETOOTH_NOT_AVAILABLE,
         "Bluetooth not available on the current system"));
@@ -80,14 +80,14 @@ void LowEnergyCentralFidlImpl::StartScan(
   }
 
   if (requesting_scan_) {
-    FXL_LOG(ERROR) << "Scan request already in progress";
+    FXL_VLOG(1) << "Scan request already in progress";
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::IN_PROGRESS,
                                           "Scan request in progress"));
     return;
   }
 
   if (filter && !fidl_helpers::IsScanFilterValid(*filter)) {
-    FXL_LOG(ERROR) << "Invalid scan filter given";
+    FXL_VLOG(1) << "Invalid scan filter given";
     callback(
         fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::INVALID_ARGUMENTS,
                                      "ScanFilter contains an invalid UUID"));
@@ -114,7 +114,7 @@ void LowEnergyCentralFidlImpl::StartScan(
         self->requesting_scan_ = false;
 
         if (!session) {
-          FXL_LOG(ERROR) << "Failed to start discovery session";
+          FXL_VLOG(1) << "Failed to start discovery session";
           callback(fidl_helpers::NewErrorStatus(
               ::btfidl::ErrorCode::FAILED,
               "Failed to start discovery session"));
@@ -137,10 +137,10 @@ void LowEnergyCentralFidlImpl::StartScan(
 }
 
 void LowEnergyCentralFidlImpl::StopScan() {
-  FXL_LOG(INFO) << "Low Energy Central StopScan()";
+  FXL_VLOG(1) << "Low Energy Central StopScan()";
 
   if (!scan_session_) {
-    FXL_LOG(WARNING) << "No active discovery session; nothing to do";
+    FXL_VLOG(1) << "No active discovery session; nothing to do";
     return;
   }
 
@@ -151,10 +151,10 @@ void LowEnergyCentralFidlImpl::StopScan() {
 void LowEnergyCentralFidlImpl::ConnectPeripheral(
     const ::fidl::String& identifier,
     const ConnectPeripheralCallback& callback) {
-  FXL_LOG(INFO) << "Low Energy Central ConnectPeripheral()";
+  FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
 
   if (!adapter_manager_->GetActiveAdapter()) {
-    FXL_LOG(ERROR) << "Adapter not available";
+    FXL_VLOG(1) << "Adapter not available";
     callback(fidl_helpers::NewErrorStatus(
         ::btfidl::ErrorCode::BLUETOOTH_NOT_AVAILABLE,
         "Bluetooth not available on the current system"));
@@ -192,7 +192,7 @@ void LowEnergyCentralFidlImpl::ConnectPeripheral(
       FXL_DCHECK(!conn_ref);
       auto msg =
           fxl::StringPrintf("Failed to connect to device (id: %s)", id.c_str());
-      FXL_LOG(ERROR) << msg;
+      FXL_VLOG(1) << msg;
 
       // TODO(armansito): Report PROTOCOL_ERROR only if |status| correspond to
       // an actual HCI error reported from the controller. LE conn mgr currently
@@ -234,7 +234,7 @@ void LowEnergyCentralFidlImpl::ConnectPeripheral(
           identifier.get(), conn_cb)) {
     auto msg = fxl::StringPrintf("Cannot connect to unknown device id: %s",
                                  identifier.get().c_str());
-    FXL_LOG(ERROR) << msg;
+    FXL_VLOG(1) << msg;
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND, msg));
     return;
   }
@@ -249,7 +249,7 @@ void LowEnergyCentralFidlImpl::DisconnectPeripheral(
   if (iter == connections_.end()) {
     auto msg = fxl::StringPrintf("Client not connected to device (id: %s)",
                                  identifier.get().c_str());
-    FXL_LOG(ERROR) << msg;
+    FXL_VLOG(1) << msg;
     callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND, msg));
     return;
   }
@@ -269,8 +269,8 @@ void LowEnergyCentralFidlImpl::DisconnectPeripheral(
 
 void LowEnergyCentralFidlImpl::OnActiveAdapterChanged(
     bluetooth::gap::Adapter* adapter) {
-  FXL_LOG(INFO) << "The active adapter has changed; terminating all running LE "
-                   "Central procedures";
+  FXL_VLOG(1) << "The active adapter has changed; terminating all running LE "
+                 "Central procedures";
 
   if (scan_session_)
     StopScan();
@@ -288,7 +288,7 @@ void LowEnergyCentralFidlImpl::OnScanResult(
 
   auto fidl_device = fidl_helpers::NewLERemoteDevice(remote_device);
   if (!fidl_device) {
-    FXL_LOG(WARNING) << "Ignoring malformed scan result";
+    FXL_VLOG(1) << "Ignoring malformed scan result";
     return;
   }
 

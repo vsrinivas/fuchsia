@@ -165,7 +165,7 @@ bool PopulateDiscoveryFilter(
     for (const auto& uuid_str : fidl_filter.service_uuids) {
       ::bluetooth::common::UUID uuid;
       if (!::bluetooth::common::StringToUuid(uuid_str, &uuid)) {
-        FXL_LOG(WARNING) << "Invalid parameters given to scan filter";
+        FXL_VLOG(1) << "Invalid parameters given to scan filter";
         return false;
       }
       uuids.push_back(uuid);
