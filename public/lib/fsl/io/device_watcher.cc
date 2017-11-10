@@ -10,6 +10,7 @@
 #include <fdio/io.h>
 #include <sys/types.h>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace fsl {
@@ -20,16 +21,12 @@ DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd,
     : dir_fd_(std::move(dir_fd)),
       dir_watch_(std::move(dir_watch)),
       callback_(std::move(callback)),
+      wait_(MessageLoop::GetCurrent()->async(), dir_watch_.get(),
+            ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       weak_ptr_factory_(this) {
-  MessageLoop* message_loop = MessageLoop::GetCurrent();
-  FXL_DCHECK(message_loop);
-
-  handler_key_ = message_loop->AddHandler(
-      this, dir_watch_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-}
-
-DeviceWatcher::~DeviceWatcher() {
-  MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
+  wait_.set_handler(fbl::BindMember(this, &DeviceWatcher::Handler));
+  auto status = wait_.Begin();
+  FXL_DCHECK(status == ZX_OK);
 }
 
 std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
@@ -65,10 +62,9 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
       std::move(dir_fd), std::move(dir_watch), std::move(callback)));
 }
 
-void DeviceWatcher::OnHandleReady(zx_handle_t handle,
-                                  zx_signals_t pending,
-                                  uint64_t count) {
-  if (pending & ZX_CHANNEL_READABLE) {
+async_wait_result_t DeviceWatcher::Handler(
+    async_t* async, zx_status_t status, const zx_packet_signal* signal) {
+  if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;
     uint8_t buf[VFS_WATCH_MSG_MAX];
     zx_status_t status =
@@ -88,22 +84,23 @@ void DeviceWatcher::OnHandleReady(zx_handle_t handle,
             callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg), namelen));
             // Note: Callback may have destroyed the DeviceWatcher before returning.
             if (!weak) {
-                break;
+                return ASYNC_WAIT_FINISHED;
             }
         }
         msg += namelen;
         size -= namelen;
     }
-    return;
+    return ASYNC_WAIT_AGAIN;
   }
 
-  if (pending & ZX_CHANNEL_PEER_CLOSED) {
+  if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     // TODO(jeffbrown): Should we tell someone about this?
     dir_watch_.reset();
-    return;
+    return ASYNC_WAIT_FINISHED;
   }
 
   FXL_CHECK(false);
+  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace fsl
