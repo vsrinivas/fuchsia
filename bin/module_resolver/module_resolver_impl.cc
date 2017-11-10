@@ -193,8 +193,8 @@ void ModuleResolverImpl::OnNewManifestEntry(
   // Add this new entry info to our local index.
   auto ret = entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
   if (!ret.second) {
-    FXL_LOG(INFO) << "Ignoring manifest entry I already know about: "
-                  << ret.first->first;
+    // Remove this existing entry first, then add it back in.
+    OnRemoveManifestEntry(source_name, id_in);
   }
 
   const auto& id = ret.first->first;
