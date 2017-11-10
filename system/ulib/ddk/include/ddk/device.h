@@ -28,6 +28,7 @@ typedef struct zx_protocol_device zx_protocol_device_t;
 // with the system bus device.
 #define DEVICE_SUSPEND_FLAG_REBOOT      0xdcdc0001
 #define DEVICE_SUSPEND_FLAG_POWEROFF    0xdcdc0002
+#define DEVICE_SUSPEND_FLAG_MEXEC       0xdcdc0003
 
 //@doc(docs/ddk/device-ops.md)
 

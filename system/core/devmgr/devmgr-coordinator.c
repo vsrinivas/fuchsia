@@ -157,6 +157,11 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
         return ZX_OK;
     }
+    if ((len == 17) && !memcmp(cmd, "suspend-for-mexec", 17)) {
+        devmgr_vfs_exit();
+        dc_suspend(DEVICE_SUSPEND_FLAG_MEXEC);
+        return ZX_OK;
+    }
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
         return zx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
@@ -1558,14 +1563,18 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
         if (ctx->dh != NULL) {
             process_suspend_list(ctx);
         } else {
-            // should never get here on x86
-            // on arm, if the platform driver does not implement
-            // suspend go to the kernel fallback
-            dc_suspend_fallback(ctx->sflags);
+            if (ctx->sflags != DEVICE_SUSPEND_FLAG_MEXEC) {
+                // should never get here on x86
+                // on arm, if the platform driver does not implement
+                // suspend go to the kernel fallback
+                dc_suspend_fallback(ctx->sflags);
+            }
             // this handle is leaked on the shutdown path for x86
             if (ctx->socket) {
                 zx_handle_close(ctx->socket);
             }
+            // if we get here the system did not suspend successfully
+            ctx->flags = RUNNING;
         }
     }
 }

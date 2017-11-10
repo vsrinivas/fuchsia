@@ -22,6 +22,7 @@
 #include <zircon/syscalls.h>
 
 #include <zircon/boot/netboot.h>
+#include <zircon/device/dmctl.h>
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;
@@ -209,6 +210,29 @@ static void nb_close(uint32_t cookie,
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
+static zx_status_t do_dmctl_mexec(void) {
+    int fd = open("/dev/misc/dmctl", O_WRONLY);
+    if (fd < 0) {
+        return fd;
+    }
+    zx_handle_t h;
+    dmctl_cmd_t cmd;
+    zx_status_t st = zx_socket_create(0, &cmd.h, &h);
+    if (st != ZX_OK) {
+        return st;
+    }
+    snprintf(cmd.name, sizeof("suspend-for-mexec"), "suspend-for-mexec");
+    int r = ioctl_dmctl_command(fd, &cmd);
+    close(fd);
+    if (r < 0) {
+        zx_handle_close(h);
+        return r;
+    }
+    st = zx_object_wait_one(h, ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+    zx_handle_close(h);
+    return st;
+}
+
 static void bootloader_recv(void* data, size_t len,
                             const ip6_addr_t* daddr, uint16_t dport,
                             const ip6_addr_t* saddr, uint16_t sport) {
@@ -320,8 +344,12 @@ transmit:
     }
 
     if (do_boot) {
-        zx_system_mexec(nbkernel.data, nbbootdata.data, (char*)nbcmdline.file.data,
-                        nbcmdline.file.size);
+        // this is a gross way to suspend devices and block until it's done
+        if (do_dmctl_mexec() == ZX_OK) {
+            zx_system_mexec(nbkernel.data, nbbootdata.data, (char*)nbcmdline.file.data,
+                            nbcmdline.file.size);
+        }
+        printf("netboot: Boot failed\n");
     }
 }
 
