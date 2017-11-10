@@ -8,6 +8,7 @@ package svcfs
 import (
 	"strings"
 
+	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
 )
@@ -39,7 +40,7 @@ func errStatus(err error) zx.Status {
 
 // TODO(abarth): Switch to msg.Pipelined() once that exists.
 func pipelined(msg *fdio.Msg) bool {
-	return msg.Arg&0x10000000 != 0
+	return uint32(msg.Arg)&syscall.FsFlagPipeline != 0
 }
 
 func (n *Namespace) opClone(msg *fdio.Msg, h zx.Handle) zx.Status {
