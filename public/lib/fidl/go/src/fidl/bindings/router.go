@@ -38,6 +38,8 @@ type routerWorker struct {
 	requestChan <-chan routeRequest
 	// The channel that indicates that the worker should terminate.
 	done <-chan struct{}
+	// The channel to notify that the worker is exiting.
+	workerDone chan<- struct{}
 	// Implementation of async waiter.
 	waiter   AsyncWaiter
 	waitChan chan WaitResponse
@@ -140,6 +142,8 @@ type Router struct {
 	closeOnce sync.Once
 	// Channel to stop the worker.
 	done chan<- struct{}
+	// Channel that indicates that the worker exits.
+	workerDone <-chan struct{}
 }
 
 // NewRouter returns a new Router instance that sends and receives messages
@@ -147,17 +151,20 @@ type Router struct {
 func NewRouter(handle zx.Handle, waiter AsyncWaiter) *Router {
 	requestChan := make(chan routeRequest, 10)
 	doneChan := make(chan struct{})
+	workerDoneChan := make(chan struct{})
 	channel := &zx.Channel{handle}
 	router := &Router{
 		channel:     channel,
 		requestChan: requestChan,
 		done:        doneChan,
+		workerDone:  workerDoneChan,
 	}
 	router.runWorker(&routerWorker{
 		channel,
 		make(map[uint64]chan<- MessageReadResult),
 		requestChan,
 		doneChan,
+		workerDoneChan,
 		waiter,
 		make(chan WaitResponse, 1),
 		0,
@@ -170,6 +177,7 @@ func NewRouter(handle zx.Handle, waiter AsyncWaiter) *Router {
 func (r *Router) Close() {
 	r.closeOnce.Do(func() {
 		close(r.done)
+		<- r.workerDone
 	})
 }
 
@@ -218,6 +226,8 @@ func (r *Router) runWorker(worker *routerWorker) {
 		// We can safely close the requestChan.
 		close(r.requestChan)
 		r.mu.Unlock()
+		// Router.Close waits for this signal.
+		worker.workerDone <- struct{}{}
 	}()
 }
 
