@@ -865,12 +865,7 @@ zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, int32_t flags
 
 zx_status_t zxrio_open(fdio_t* io, const char* path, int32_t flags, uint32_t mode, fdio_t** out) {
     zxrio_t* rio = (void*)io;
-    zxrio_object_t info;
-    zx_status_t r = zxrio_getobject(rio->h, ZXRIO_OPEN, path, flags, mode, &info);
-    if (r < 0) {
-        return r;
-    }
-    return fdio_from_handles(info.type, info.handle, info.hcount, info.extra, info.esize, out);
+    return zxrio_open_handle(rio->h, path, flags, mode, out);
 }
 
 static zx_status_t zxrio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
