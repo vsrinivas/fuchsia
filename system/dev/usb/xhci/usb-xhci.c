@@ -158,10 +158,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
     }
 }
 
-static void xhci_unbind(void* ctx) {
-    zxlogf(INFO, "xhci_unbind\n");
-    xhci_t* xhci = ctx;
-
+static void xhci_shutdown(xhci_t* xhci) {
     // stop the controller and our device thread
     xhci_stop(xhci);
 
@@ -171,7 +168,24 @@ static void xhci_unbind(void* ctx) {
         thrd_join(xhci->completer_threads[i], NULL);
         zx_handle_close(xhci->irq_handles[i]);
     }
+}
 
+static zx_status_t xhci_suspend(void* ctx, uint32_t flags) {
+    zxlogf(INFO, "xhci_suspend %u\n", flags);
+    xhci_t* xhci = ctx;
+
+    // TODO(voydanoff) do different things based on the flags.
+    // for now we shutdown the driver in preparation for mexec
+    xhci_shutdown(xhci);
+
+    return ZX_OK;
+}
+
+static void xhci_unbind(void* ctx) {
+    zxlogf(INFO, "xhci_unbind\n");
+    xhci_t* xhci = ctx;
+
+    xhci_shutdown(xhci);
     device_remove(xhci->zxdev);
 }
 
@@ -188,6 +202,7 @@ static void xhci_release(void* ctx) {
 
 static zx_protocol_device_t xhci_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .suspend = xhci_suspend,
     .unbind = xhci_unbind,
     .release = xhci_release,
 };
