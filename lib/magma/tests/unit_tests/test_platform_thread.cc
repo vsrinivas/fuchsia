@@ -11,6 +11,10 @@ public:
     static void ThreadFunc(magma::PlatformThreadId* thread_id)
     {
         EXPECT_FALSE(thread_id->IsCurrent());
+
+        std::string name("thread name");
+        magma::PlatformThreadHelper::SetCurrentThreadName(name);
+        EXPECT_EQ(name, magma::PlatformThreadHelper::GetCurrentThreadName());
     }
 
     static void Test()

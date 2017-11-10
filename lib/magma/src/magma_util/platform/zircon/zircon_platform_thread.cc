@@ -24,4 +24,12 @@ void PlatformThreadHelper::SetCurrentThreadName(const std::string& name)
                            name.size());
 }
 
+std::string PlatformThreadHelper::GetCurrentThreadName()
+{
+    char name[ZX_MAX_NAME_LEN];
+    zx_status_t status = zx_object_get_property(thrd_get_zx_handle(thrd_current()), ZX_PROP_NAME,
+                                                name, sizeof(name));
+    return (status == ZX_OK) ? std::string(name) : std::string();
+}
+
 } // namespace

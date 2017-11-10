@@ -119,6 +119,10 @@ source_set("thread") {
     "zircon_platform_thread.cc",
   ]
 
+  deps = [
+    ":object",
+  ]
+
   libs = [ "zircon" ]
 }
 

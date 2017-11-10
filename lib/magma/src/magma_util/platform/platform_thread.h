@@ -30,6 +30,7 @@ private:
 class PlatformThreadHelper {
 public:
     static void SetCurrentThreadName(const std::string& name);
+    static std::string GetCurrentThreadName();
 };
 
 } // namespace magma
