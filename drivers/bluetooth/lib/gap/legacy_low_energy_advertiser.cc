@@ -143,7 +143,7 @@ uint16_t TimeslicesToMilliseconds(uint16_t timeslices) {
 
 LegacyLowEnergyAdvertiser::LegacyLowEnergyAdvertiser(
     fxl::RefPtr<hci::Transport> hci)
-    : hci_(hci), connect_callback_(nullptr) {
+    : hci_(hci), starting_(false), connect_callback_(nullptr) {
   hci_cmd_runner_ = std::make_unique<hci::SequentialCommandRunner>(
       fsl::MessageLoop::GetCurrent()->task_runner(), hci_);
 }
@@ -165,8 +165,6 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     uint32_t interval_ms,
     bool anonymous,
     const AdvertisingResultCallback& callback) {
-  // TODO(armansito): Handle the case when this gets called while a request to
-  // start advertising is already pending.
   FXL_DCHECK(callback);
   FXL_DCHECK(address.type() != common::DeviceAddress::Type::kBREDR);
 
@@ -179,11 +177,6 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
 
   if (advertised_ != common::DeviceAddress()) {
     FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already advertising";
-    callback(0, hci::kUnsupportedFeatureOrParameter);
-    return;
-  }
-
-  if (advertised_ != common::DeviceAddress()) {
     callback(0, hci::kConnectionLimitExceeded);
     return;
   }
@@ -199,6 +192,22 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     callback(0, hci::kMemoryCapacityExceeded);
     return;
   }
+
+  if (!hci_cmd_runner_->IsReady()) {
+    if (starting_) {
+      FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already starting";
+      callback(0, hci::kRepeatedAttempts);
+      return;
+    }
+
+    // Abort any remaining commands from the current stop sequence. If we got
+    // here then the controller MUST receive our request to disable advertising,
+    // so the commands that we send next will overwrite the current advertising
+    // settings and re-enable it.
+    hci_cmd_runner_->Cancel();
+  }
+
+  starting_ = true;
 
   // Set advertising and scan response data. If either data is empty then it
   // will be cleared accordingly.
@@ -235,6 +244,13 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
 
   hci_cmd_runner_->RunCommands([this, address, interval_slices, callback,
                                 connect_callback](bool success) {
+    FXL_DCHECK(starting_);
+    starting_ = false;
+
+    FXL_VLOG(1)
+        << "gap: LegacyLowEnergyAdvertiser: advertising started (success: "
+        << std::boolalpha << success << ")";
+
     if (success) {
       advertised_ = address;
       connect_callback_ = connect_callback;
@@ -242,6 +258,9 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     } else {
       // Clear out the advertising data if it partially succeeded.
       StopAdvertisingInternal();
+
+      // TODO(armansito): hci::SequentialCommandRunner should return the HCI
+      // status so that |callback| can report the actual error (NET-273).
       callback(0, hci::kUnspecifiedError);
     }
   });
@@ -261,13 +280,24 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
   connect_callback_ = nullptr;
 
   if (!hci_cmd_runner_->IsReady()) {
-    if (advertised_ != common::DeviceAddress()) {
-      // Pending stop running, nothing to do here.
+    if (!starting_) {
+      FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already stopping";
+
+      // The advertised address must have been cleared in this state.
+      FXL_DCHECK(advertised_ == common::DeviceAddress());
       return;
     }
-    // Cancel a pending start
+
+    // Cancel the pending start
+    FXL_DCHECK(starting_);
     hci_cmd_runner_->Cancel();
+    starting_ = false;
   }
+
+  // Even on failure, we want to consider us not advertising. Clear the
+  // advertised address here so that new advertisements can be requested right
+  // away.
+  advertised_ = {};
 
   // Disable advertising
   hci_cmd_runner_->QueueCommand(
@@ -287,16 +317,20 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
   scan_rsp_packet->mutable_view()->mutable_payload_data().SetToZeros();
   hci_cmd_runner_->QueueCommand(std::move(scan_rsp_packet));
 
-  hci_cmd_runner_->RunCommands([this](bool) {
-    // Even on failure, we want to consider us not advertising.
-    advertised_ = common::DeviceAddress();
+  hci_cmd_runner_->RunCommands([](bool success) {
+    FXL_VLOG(1)
+        << "gap: LegacyLowEnergyAdvertiser: advertising stopped (success: "
+        << std::boolalpha << success << ")";
   });
 }
 
 void LegacyLowEnergyAdvertiser::OnIncomingConnection(
     LowEnergyConnectionRefPtr connection) {
-  if (connect_callback_) {
-    connect_callback_(std::move(connection));
+  auto callback = std::move(connect_callback_);
+  StopAdvertisingInternal();
+
+  if (callback) {
+    callback(std::move(connection));
   }
 }
 

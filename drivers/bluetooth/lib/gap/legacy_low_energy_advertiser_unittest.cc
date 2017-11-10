@@ -27,6 +27,8 @@ const common::DeviceAddress kPublicAddress(
 
 constexpr size_t kDefaultAdSize = 20;
 
+void NopConnectionCallback(LowEnergyConnectionRefPtr) {}
+
 class GAP_LegacyLowEnergyAdvertiserTest : public TestingBase {
  public:
   GAP_LegacyLowEnergyAdvertiserTest() = default;
@@ -142,26 +144,92 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 
 // - Stops the advertisement when an incoming connection comes
 // - Calls the connectioncallback correctly when it's setup
+// - Checks that advertising state is cleaned up.
+// - Checks that it is possible to restart advertising.
 TEST_F(GAP_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
   LowEnergyConnectionRefPtr ref;
-
   auto conn_cb = [&ref](auto conn_ref) { ref = std::move(conn_ref); };
-
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
-
   RunMessageLoop();
-
   EXPECT_TRUE(MoveLastStatus());
 
   // When a connection is created, the ConnectionManager will call this.
+  // TODO(armansito): Introduce a FakeLowEnergyConnectionRef or make the
+  // existing one available to tests and remove this hack (see NET-277).
   LowEnergyConnectionRefPtr result((LowEnergyConnectionRef*)0xF00DFACE);
   advertiser()->OnIncomingConnection(std::move(result));
-
   EXPECT_EQ((LowEnergyConnectionRef*)0xF00DFACE, ref.release());
+
+  // Advertising state should get cleared.
+  bool disabling = true;
+  auto disabled_cb = [this, &disabling] {
+    // StopAdvertising() sends multiple HCI commands. We only check that the
+    // first one succeeded. StartAdvertising cancels the rest of the sequence
+    // below.
+    if (disabling && !test_device()->le_advertising_state().enabled &&
+        test_device()->le_advertising_state().data_length == 0u) {
+      message_loop()->QuitNow();
+    }
+  };
+  test_device()->SetAdvertisingStateCallback(disabled_cb,
+                                             message_loop()->task_runner());
+  RunMessageLoop();
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+
+  disabling = false;
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
+                                 false, GetSuccessCallback());
+  RunMessageLoop();
+  EXPECT_TRUE(MoveLastStatus());
+}
+
+// Tests that advertising can be restarted right away in a connection callback.
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
+  AdvertisingData ad = GetExampleData();
+  AdvertisingData scan_data;
+
+  LowEnergyConnectionRefPtr ref;
+  auto conn_cb = [&, this](auto conn_ref) {
+    ref = std::move(conn_ref);
+    advertiser()->StartAdvertising(kPublicAddress, ad, scan_data,
+                                   NopConnectionCallback, 1000, false,
+                                   GetSuccessCallback());
+  };
+
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
+                                 false, GetSuccessCallback());
+  RunMessageLoop();
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+
+  bool enabled = true;
+  test_device()->SetAdvertisingStateCallback(
+      [this, &enabled] {
+        // Quit the message loop if the advertising state changes.
+        if (enabled != test_device()->le_advertising_state().enabled) {
+          enabled = !enabled;
+          message_loop()->QuitNow();
+        }
+      },
+      message_loop()->task_runner());
+
+  // When a connection is created, the ConnectionManager will call this.
+  // TODO(armansito): Introduce a FakeLowEnergyConnectionRef or make the
+  // existing one available to tests and remove this hack (see NET-277).
+  LowEnergyConnectionRefPtr result((LowEnergyConnectionRef*)0xF00DFACE);
+  advertiser()->OnIncomingConnection(std::move(result));
+  EXPECT_EQ((LowEnergyConnectionRef*)0xF00DFACE, ref.release());
+
+  // Advertising should get disabled and re-enabled.
+  RunMessageLoop();
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+
+  RunMessageLoop();
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 }
 
 // - Starts the advertisement when asked and verifies that the parameters have
@@ -206,6 +274,61 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartAndStop) {
   RunMessageLoop();
 
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+}
+
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartWhileStarting) {
+  AdvertisingData ad = GetExampleData();
+  AdvertisingData scan_data;
+  common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
+
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 [](auto, auto) {});
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetErrorCallback());
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+  auto status = MoveLastStatus();
+  ASSERT_TRUE(status);
+  EXPECT_EQ(hci::Status::kRepeatedAttempts, *status);
+}
+
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
+  AdvertisingData ad = GetExampleData();
+  AdvertisingData scan_data;
+  common::DeviceAddress addr = RandomAddressGenerator::PrivateAddress();
+
+  // Get to a started state.
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetSuccessCallback());
+  RunMessageLoop();
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+
+  // Initiate a request to Stop and wait until it's partially in progress.
+  bool disabling = true;
+  auto disabled_cb = [this, &disabling] {
+    if (disabling && !test_device()->le_advertising_state().enabled) {
+      message_loop()->QuitNow();
+    }
+  };
+  test_device()->SetAdvertisingStateCallback(disabled_cb,
+                                             message_loop()->task_runner());
+
+  EXPECT_TRUE(advertiser()->StopAdvertising(addr));
+  RunMessageLoop();
+
+  // Stop should still be in progress.
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+  EXPECT_NE(0u, test_device()->le_advertising_state().data_length);
+
+  // Starting now should cancel the stop sequence and succeed.
+  disabling = false;
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                 GetSuccessCallback());
+  RunMessageLoop();
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 }
 
 // - StopAdvertisement noops when the advertisement address is wrong

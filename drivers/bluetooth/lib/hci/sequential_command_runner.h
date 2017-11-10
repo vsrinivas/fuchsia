@@ -53,6 +53,9 @@ class SequentialCommandRunner final {
   // Once RunCommands() has been called this instance will not be ready for
   // re-use until |result_callback| gets run. At that point new commands can be
   // queued and run (see IsReady()).
+  //
+  // RunCommands() will always send the first queued HCI command to
+  // CommandChannel even if it is followed by a call to Cancel().
   using ResultCallback = std::function<void(bool success)>;
   void RunCommands(const ResultCallback& result_callback);
 
