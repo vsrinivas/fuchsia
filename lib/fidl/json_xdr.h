@@ -617,7 +617,7 @@ bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterType<V> const filter) {
     // when there's already existing data in the Ledger.
     FXL_DCHECK(false)
         << "This indicates a structure version mismatch in the "
-           "Framework. Please submit a high priority bug in JIRA under FW.";
+           "Framework. Please submit a high priority bug in JIRA under MI4.";
     return false;
   }
 
