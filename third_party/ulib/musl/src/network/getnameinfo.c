@@ -46,83 +46,6 @@ static void mkptr6(char* s, const unsigned char* ip) {
     strcpy(s, "ip6.arpa");
 }
 
-static void reverse_hosts(char* buf, const unsigned char* a, unsigned scopeid, int family) {
-    char line[512], *p, *z;
-    unsigned char _buf[1032], atmp[16];
-    struct address iplit;
-    FILE _f, *f = __fopen_rb_ca("/etc/hosts", &_f, _buf, sizeof _buf);
-    if (!f)
-        return;
-    if (family == AF_INET) {
-        memcpy(atmp + 12, a, 4);
-        memcpy(atmp, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12);
-        a = atmp;
-    }
-    while (fgets(line, sizeof line, f)) {
-        if ((p = strchr(line, '#')))
-            *p++ = '\n', *p = 0;
-
-        for (p = line; *p && !isspace(*p); p++)
-            ;
-        *p++ = 0;
-        if (__lookup_ipliteral(&iplit, line, AF_UNSPEC) <= 0)
-            continue;
-
-        if (iplit.family == AF_INET) {
-            memcpy(iplit.addr + 12, iplit.addr, 4);
-            memcpy(iplit.addr, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12);
-            iplit.scopeid = 0;
-        }
-
-        if (memcmp(a, iplit.addr, 16) || iplit.scopeid != scopeid)
-            continue;
-
-        for (; *p && isspace(*p); p++)
-            ;
-        for (z = p; *z && !isspace(*z); z++)
-            ;
-        *z = 0;
-        if (z - p < 256) {
-            memcpy(buf, p, z - p + 1);
-            break;
-        }
-    }
-    __fclose_ca(f);
-}
-
-static void reverse_services(char* buf, int port, int dgram) {
-    unsigned long svport;
-    char line[128], *p, *z;
-    unsigned char _buf[1032];
-    FILE _f, *f = __fopen_rb_ca("/etc/services", &_f, _buf, sizeof _buf);
-    if (!f)
-        return;
-    while (fgets(line, sizeof line, f)) {
-        if ((p = strchr(line, '#')))
-            *p++ = '\n', *p = 0;
-
-        for (p = line; *p && !isspace(*p); p++)
-            ;
-        if (!*p)
-            continue;
-        *p++ = 0;
-        svport = strtoul(p, &z, 10);
-
-        if (svport != port || z == p)
-            continue;
-        if (dgram && strncmp(z, "/udp", 4))
-            continue;
-        if (!dgram && strncmp(z, "/tcp", 4))
-            continue;
-        if (p - line > 32)
-            continue;
-
-        memcpy(buf, line, p - line);
-        break;
-    }
-    __fclose_ca(f);
-}
-
 static int dns_parse_callback(void* c, int rr, const void* data, int len, const void* packet) {
     if (rr != RR_PTR)
         return 0;
@@ -163,9 +86,6 @@ int getnameinfo(const struct sockaddr* restrict sa, socklen_t sl, char* restrict
 
     if (node && nodelen) {
         buf[0] = 0;
-        if (!(flags & NI_NUMERICHOST)) {
-            reverse_hosts(buf, a, scopeid, af);
-        }
         if (!*buf && !(flags & NI_NUMERICHOST)) {
             unsigned char query[18 + PTR_MAX], reply[512];
             int qlen = __res_mkquery(0, ptr, 1, RR_PTR, 0, 0, 0, query, sizeof query);
@@ -198,8 +118,6 @@ int getnameinfo(const struct sockaddr* restrict sa, socklen_t sl, char* restrict
         char* p = buf;
         int port = ntohs(((struct sockaddr_in*)sa)->sin_port);
         buf[0] = 0;
-        if (!(flags & NI_NUMERICSERV))
-            reverse_services(buf, port, flags & NI_DGRAM);
         if (!*p)
             p = itoa(num, port);
         if (strlen(p) >= servlen)
