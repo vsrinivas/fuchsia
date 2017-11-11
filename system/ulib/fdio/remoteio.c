@@ -81,8 +81,7 @@ static bool is_message_valid(zxrio_msg_t* msg) {
 }
 
 static bool is_message_reply_valid(zxrio_msg_t* msg, uint32_t size) {
-    if ((size < ZXRIO_HDR_SZ) ||
-        (msg->datalen != (size - ZXRIO_HDR_SZ))) {
+    if ((size < ZXRIO_HDR_SZ) || (msg->datalen != (size - ZXRIO_HDR_SZ))) {
         return false;
     }
     return is_message_valid(msg);
@@ -114,8 +113,7 @@ zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, voi
 
     bool is_close = (ZXRIO_OP(msg->op) == ZXRIO_CLOSE);
 
-    xprintf("handle_rio: op=%s arg=%d len=%u hsz=%d\n",
-            fdio_opname(msg->op), msg->arg, msg->datalen, msg->hcount);
+    xprintf("handle_rio: op=%s arg=%d", fdio_opname(msg->op), msg->arg);
 
     if ((msg->arg = cb(msg, cookie)) == ERR_DISPATCHER_INDIRECT) {
         // callback is handling the reply itself
@@ -481,8 +479,9 @@ zx_status_t zxrio_close(fdio_t* io) {
     return r;
 }
 
-static zx_status_t zxrio_reply_channel_call(zx_handle_t rio_h, zxrio_msg_t* msg,
-                                            zxrio_object_t* info) {
+// Synchronously (non-pipelined) open an object
+static zx_status_t zxrio_sync_open_connection(zx_handle_t rio_h, zxrio_msg_t* msg,
+                                              zxrio_describe_t* info, zx_handle_t* out) {
     zx_status_t r;
     zx_handle_t h;
     if ((r = zx_channel_create(0, &h, &msg->handle[0])) < 0) {
@@ -498,30 +497,34 @@ static zx_status_t zxrio_reply_channel_call(zx_handle_t rio_h, zxrio_msg_t* msg,
         return r;
     }
 
-    // Wait
-    zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+    zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                       ZX_TIME_INFINITE, NULL);
 
-    // Attempt to read the callback response
-    memset(info, 0xfe, sizeof(*info));
-    uint32_t dsize = ZXRIO_OBJECT_MAXSIZE;
-    info->hcount = FDIO_MAX_HANDLES;
-    r = zx_channel_read(h, 0, info, &info->handle[1], dsize,
-                        info->hcount, &dsize, &info->hcount);
-    if (r < 0) {
+    // Attempt to read the description from open
+    uint32_t dsize = sizeof(*info);
+    uint32_t actual_handles;
+    r = zx_channel_read(h, 0, info, &info->handle, dsize, 1,
+                        &dsize, &actual_handles);
+    if (r != ZX_OK) {
         zx_handle_close(h);
         return r;
     }
-    info->handle[0] = h;
-    info->hcount++;
-    if (dsize < ZXRIO_OBJECT_MINSIZE) {
+    if (actual_handles == 0) {
+        info->handle = ZX_HANDLE_INVALID;
+    }
+    if (dsize != sizeof(zxrio_describe_t) || info->op != ZXRIO_ON_OPEN) {
         r = ZX_ERR_IO;
     } else {
-        info->esize = dsize - ZXRIO_OBJECT_MINSIZE;
         r = info->status;
     }
-    if (r < 0) {
-        discard_handles(info->handle, info->hcount);
+    if (r != ZX_OK) {
+        if (info->handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->handle);
+        }
+        zx_handle_close(h);
+        h = ZX_HANDLE_INVALID;
     }
+    *out = h;
     return r;
 }
 
@@ -535,12 +538,16 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
         zx_handle_close(cnxn);
         return ZX_ERR_BAD_PATH;
     }
+    if (flags & ZX_FS_FLAG_DESCRIBE) {
+        zx_handle_close(cnxn);
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     zxrio_msg_t msg;
     memset(&msg, 0, ZXRIO_HDR_SZ);
     msg.op = op;
     msg.datalen = len;
-    msg.arg = ZX_FS_FLAG_PIPELINE | flags;
+    msg.arg = flags;
     msg.arg2.mode = mode;
     msg.hcount = 1;
     msg.handle[0] = cnxn;
@@ -697,7 +704,7 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
         goto fail;
     }
 
-    if ((r = fdio_from_handles(type, handles, hcount, NULL, 0, &io)) != ZX_OK) {
+    if ((r = fdio_from_handles(type, handles, hcount, NULL, &io)) != ZX_OK) {
         goto fail;
     }
 
@@ -718,7 +725,7 @@ fail:
 }
 
 zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
-                              void* extra, uint32_t esize, fdio_t** out) {
+                              const zxrio_object_info_t* extra, fdio_t** out) {
     // All failure cases which require discard_handles set r and break
     // to the end. All other cases in which handle ownership is moved
     // on return locally.
@@ -763,14 +770,14 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
             return ZX_OK;
         }
     case FDIO_PROTOCOL_VMOFILE: {
-        zx_off_t* args = extra;
-        if ((hcount != 2) || (esize != (sizeof(zx_off_t) * 2))) {
+        if (hcount != 2) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
         // Currently, VMO Files don't use a client-side control channel.
         zx_handle_close(handles[0]);
-        if ((*out = fdio_vmofile_create(handles[1], args[0], args[1])) == NULL) {
+        *out = fdio_vmofile_create(handles[1], extra->vmofile.offset, extra->vmofile.length);
+        if (*out == NULL) {
             return ZX_ERR_NO_RESOURCES;
         } else {
             return ZX_OK;
@@ -817,7 +824,7 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
 
 zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
                             uint32_t flags, uint32_t mode,
-                            zxrio_object_t* info) {
+                            zxrio_describe_t* info, zx_handle_t* out) {
     if (name == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -827,7 +834,16 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
         return ZX_ERR_BAD_PATH;
     }
 
-    if (flags & ZX_FS_FLAG_PIPELINE) {
+    if (flags & ZX_FS_FLAG_DESCRIBE) {
+        zxrio_msg_t msg;
+        memset(&msg, 0, ZXRIO_HDR_SZ);
+        msg.op = op;
+        msg.datalen = len;
+        msg.arg = flags;
+        msg.arg2.mode = mode;
+        memcpy(msg.data, name, len);
+        return zxrio_sync_open_connection(rio_h, &msg, info, out);
+    } else {
         zx_handle_t h0, h1;
         zx_status_t r;
         if ((r = zx_channel_create(0, &h0, &h1)) < 0) {
@@ -840,50 +856,46 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
         // fake up a reply message since pipelined opens don't generate one
         info->status = ZX_OK;
         info->type = FDIO_PROTOCOL_REMOTE;
-        info->esize = 0;
-        info->hcount = 1;
-        info->handle[0] = h0;
+        info->handle = ZX_HANDLE_INVALID;
+        *out = h0;
         return ZX_OK;
-    } else {
-        zxrio_msg_t msg;
-        memset(&msg, 0, ZXRIO_HDR_SZ);
-        msg.op = op;
-        msg.datalen = len;
-        msg.arg = flags;
-        msg.arg2.mode = mode;
-        memcpy(msg.data, name, len);
-
-        return zxrio_reply_channel_call(rio_h, &msg, info);
     }
 }
 
 zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out) {
-    zxrio_object_t info;
-    zx_status_t r = zxrio_getobject(h, ZXRIO_OPEN, path, flags, mode, &info);
+    zx_handle_t control_channel;
+    zxrio_describe_t info;
+    zx_status_t r = zxrio_getobject(h, ZXRIO_OPEN, path, flags, mode, &info, &control_channel);
     if (r < 0) {
         return r;
     }
-    return fdio_from_handles(info.type, info.handle, info.hcount, info.extra, info.esize, out);
+    zx_handle_t handles[2];
+    size_t hcount = (info.handle != ZX_HANDLE_INVALID) ? 2 : 1;
+    handles[0] = control_channel;
+    handles[1] = info.handle;
+    return fdio_from_handles(info.type, handles, hcount, &info.extra, out);
 }
 
 zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, uint32_t flags,
                                   uint32_t mode, zx_handle_t *out) {
-    zxrio_object_t info;
-    zx_status_t r = zxrio_getobject(h, ZXRIO_OPEN, path, flags, mode, &info);
+    zx_handle_t control_channel;
+    zxrio_describe_t info;
+    zx_status_t r = zxrio_getobject(h, ZXRIO_OPEN, path, flags, mode, &info, &control_channel);
     if (r < 0) {
         return r;
     }
-    if ((info.type == FDIO_PROTOCOL_REMOTE) && (info.hcount > 0)) {
-        for (unsigned n = 1; n < info.hcount; n++) {
-            zx_handle_close(info.handle[n]);
+    if (info.type == FDIO_PROTOCOL_REMOTE) {
+        if (info.handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(info.handle);
         }
-        *out = info.handle[0];
+        *out = control_channel;
         return ZX_OK;
     }
-    for (unsigned n = 0; n < info.hcount; n++) {
-        zx_handle_close(info.handle[n]);
+    if (info.handle != ZX_HANDLE_INVALID) {
+        zx_handle_close(info.handle);
     }
+    zx_handle_close(control_channel);
     return ZX_ERR_WRONG_TYPE;
 }
 
@@ -894,16 +906,19 @@ zx_status_t zxrio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mo
 
 static zx_status_t zxrio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zxrio_t* rio = (void*)io;
-    zxrio_object_t info;
-    zx_status_t r = zxrio_getobject(rio->h, ZXRIO_CLONE, "", 0, 0, &info);
+    zx_handle_t h;
+    zxrio_describe_t info;
+    zx_status_t r = zxrio_getobject(rio->h, ZXRIO_CLONE, "", ZX_FS_FLAG_DESCRIBE, 0, &info, &h);
     if (r < 0) {
         return r;
     }
-    for (unsigned i = 0; i < info.hcount; i++) {
-        types[i] = PA_FDIO_REMOTE;
+    handles[0] = h;
+    types[0] = PA_FDIO_REMOTE;
+    if (info.handle != ZX_HANDLE_INVALID) {
+        handles[1] = info.handle;
+        types[1] = PA_FDIO_REMOTE;
     }
-    memcpy(handles, info.handle, info.hcount * sizeof(zx_handle_t));
-    return info.hcount;
+    return (info.handle != ZX_HANDLE_INVALID) ? 2 : 1;
 }
 
 zx_status_t __zxrio_clone(zx_handle_t h, zx_handle_t* handles, uint32_t* types) {

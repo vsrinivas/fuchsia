@@ -6,6 +6,7 @@
 
 #include <zircon/types.h>
 #include <fdio/limits.h>
+#include <fdio/remoteio.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -145,7 +146,7 @@ int fdio_pipe_pair(fdio_t** a, fdio_t** b);
 
 // create a fdio (if possible) from type, handles and extradata
 zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
-                              void* extra, uint32_t esize, fdio_t** out);
+                              const zxrio_object_info_t* extra, fdio_t** out);
 
 void fdio_free(fdio_t* io);
 

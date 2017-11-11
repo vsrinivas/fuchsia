@@ -14,6 +14,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 #include <fdio/debug.h>
@@ -192,7 +193,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     fdio_t* io2;
     zx_status_t r;
     for (;;) {
-        r = io->ops->open(io, ZXRIO_SOCKET_DIR_ACCEPT, 0, 0, &io2);
+        r = io->ops->open(io, ZXRIO_SOCKET_DIR_ACCEPT, ZX_FS_FLAG_DESCRIBE, 0, &io2);
         if (r == ZX_ERR_SHOULD_WAIT) {
             if (io->flags & FDIO_FLAG_NONBLOCK) {
                 fdio_release(io);

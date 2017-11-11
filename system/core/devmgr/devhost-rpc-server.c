@@ -34,6 +34,32 @@
 #define CAN_WRITE(ios) (ios->flags & ZX_FS_RIGHT_WRITABLE)
 #define CAN_READ(ios) (ios->flags & ZX_FS_RIGHT_READABLE)
 
+void describe_error(zx_handle_t h, zx_status_t status) {
+    zxrio_describe_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.op = ZXRIO_ON_OPEN;
+    msg.status = status;
+    zx_channel_write(h, 0, &msg, sizeof(msg), NULL, 0);
+    zx_handle_close(h);
+}
+
+static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg) {
+    memset(msg, 0, sizeof(*msg));
+    msg->op = ZXRIO_ON_OPEN;
+    msg->type = FDIO_PROTOCOL_REMOTE;
+    msg->status = ZX_OK;
+    if (dev->event != ZX_HANDLE_INVALID) {
+        //TODO: read only?
+        zx_status_t r;
+        if ((r = zx_handle_duplicate(dev->event, ZX_RIGHT_SAME_RIGHTS,
+                                     &msg->handle)) < 0) {
+            msg->status = r;
+            return r;
+        }
+    }
+    return ZX_OK;
+}
+
 devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
     devhost_iostate_t* ios;
     if ((ios = calloc(1, sizeof(devhost_iostate_t))) == NULL) {
@@ -46,96 +72,60 @@ devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
 static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
                                        const char* path, uint32_t flags) {
     zx_status_t r;
-    zxrio_object_t obj;
     devhost_iostate_t* newios;
+    // detect response directives and discard all other
+    // protocol flags
+    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
+    flags &= (~ZX_FS_FLAG_DESCRIBE);
 
     if ((newios = create_devhost_iostate(dev)) == NULL) {
-        zx_handle_close(rh);
+        if (describe) {
+            describe_error(rh, ZX_ERR_NO_MEMORY);
+        }
         return ZX_ERR_NO_MEMORY;
     }
-
-    // detect pipeline directive and discard all other
-    // protocol flags
-    bool pipeline = flags & ZX_FS_FLAG_PIPELINE;
-    flags &= (~ZX_FS_FLAG_PIPELINE);
 
     newios->flags = flags;
 
     if ((r = device_open_at(dev, &dev, path, flags)) < 0) {
         printf("devhost_get_handles(%p:%s) open path='%s', r=%d\n",
                dev, dev->name, path ? path : "", r);
-        if (pipeline) {
-            goto fail_openat_pipelined;
-        } else {
-            goto fail_openat;
-        }
+        goto fail;
     }
     newios->dev = dev;
 
-    if (!pipeline) {
-        if (dev->event > 0) {
-            //TODO: read only?
-            if ((r = zx_handle_duplicate(dev->event, ZX_RIGHT_SAME_RIGHTS, &obj.handle[0])) < 0) {
-                goto fail_duplicate;
+    if (describe) {
+        zxrio_describe_t info;
+        if ((r = create_description(dev, &info)) != ZX_OK) {
+            goto fail_open;
+        }
+        uint32_t hcount = (info.handle != ZX_HANDLE_INVALID) ? 1 : 0;
+        r = zx_channel_write(rh, 0, &info, sizeof(info), &info.handle, hcount);
+        if (r != ZX_OK) {
+            if (hcount) {
+                zx_handle_close(info.handle);
             }
-            r = 1;
-        } else {
-            r = 0;
-        }
-        goto done;
-fail_duplicate:
-        device_close(dev, flags);
-fail_openat:
-        free(newios);
-done:
-        if (r < 0) {
-            obj.status = r;
-            obj.hcount = 0;
-        } else {
-            obj.status = ZX_OK;
-            obj.type = FDIO_PROTOCOL_REMOTE;
-            obj.hcount = r;
-        }
-        r = zx_channel_write(rh, 0, &obj, ZXRIO_OBJECT_MINSIZE,
-                             obj.handle, obj.hcount);
-
-        // Regardless of obj.status, if the zx_channel_write fails
-        // we must close the handles that didn't get transmitted.
-        if (r < 0) {
-            for (size_t i = 0; i < obj.hcount; i++) {
-                zx_handle_close(obj.handle[i]);
-            }
-        }
-
-        // If we were reporting an error, we've already closed
-        // the device and destroyed the iostate, so no matter
-        // what we close the handle and return
-        if (obj.status < 0) {
-            zx_handle_close(rh);
-            return obj.status;
-        }
-
-        // If we succeeded but the write failed, we have to
-        // tear down because the channel is now dead
-        if (r < 0) {
-            goto fail;
+            goto fail_open;
         }
     }
 
-    // Similarly, if we can't add the new ios and handle to the
-    // dispatcher our only option is to give up and tear down.
-    // In practice, this should never happen.
+    // If we can't add the new ios and handle to the dispatcher our only option
+    // is to give up and tear down.  In practice, this should never happen.
     if ((r = devhost_start_iostate(newios, rh)) < 0) {
         printf("devhost_get_handles: failed to start iostate\n");
         goto fail;
     }
     return ZX_OK;
 
-fail:
+fail_open:
     device_close(dev, flags);
-fail_openat_pipelined:
+fail:
     free(newios);
-    zx_handle_close(rh);
+    if (describe) {
+        describe_error(rh, r);
+    } else {
+        zx_handle_close(rh);
+    }
     return r;
 }
 
@@ -339,7 +329,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             }
         } else {
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
-            flags = ios->flags | (flags & ZX_FS_FLAG_PIPELINE);
+            flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
         }
         devhost_get_handles(msg->handle[0], dev, path, flags);
         return ERR_DISPATCHER_INDIRECT;

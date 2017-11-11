@@ -22,6 +22,11 @@ __BEGIN_CDECLS
 #define ZXRIO_ONE_HANDLE    0x00000100
 #define ZXRIO_TWO_HANDLES   0x00000200
 
+// Control Ordinals; unsolicited messages from
+// the server to the client.
+#define ZXRIO_ON_OPEN      0x80000001
+
+// RIO Ordinals
 #define ZXRIO_STATUS       0x00000000
 #define ZXRIO_CLOSE        0x00000001
 #define ZXRIO_CLONE       (0x00000002 | ZXRIO_ONE_HANDLE)
@@ -112,31 +117,36 @@ zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie);
 // If the write to the server fails, an error reply is sent to the reply channel.
 zx_status_t zxrio_txn_handoff(zx_handle_t server, zx_handle_t reply, zxrio_msg_t* msg);
 
-
 // OPEN and CLONE ops do not return a reply
 // Instead they receive a channel handle that they write their status
 // and (if successful) type, extra data, and handles to.
 
-#define ZXRIO_OBJECT_EXTRA 32
-#define ZXRIO_OBJECT_MINSIZE (2 * sizeof(uint32_t))
-#define ZXRIO_OBJECT_MAXSIZE (ZXRIO_OBJECT_MINSIZE + ZXRIO_OBJECT_EXTRA)
-
-typedef struct {
-    // Required Header
-    zx_status_t status;
-    uint32_t type;
-
-    // Optional Extra Data
-    uint8_t extra[ZXRIO_OBJECT_EXTRA];
-
-    // OOB Data
-    uint32_t esize;
-    uint32_t hcount;
-    zx_handle_t handle[FDIO_MAX_HANDLES];
-} zxrio_object_t;
-
 static_assert(sizeof(zx_txid_t) == 4,
         "If the size of txid changes to 8 bytes then reserved0 should be removed from zxrio_msg");
+
+typedef union {
+    struct {
+        uint64_t offset;
+        uint64_t length;
+    } vmofile;
+} zxrio_object_info_t;
+
+// A one-way message which may be emitted by the server without an
+// accompanying request. Optionally used as a part of the Open handshake.
+typedef struct {
+    zx_txid_t txid;                    // FIDL2 message header
+    uint32_t reserved0;                // Padding
+    uint32_t flags;
+    uint32_t op;
+
+    zx_status_t status;
+    zx_handle_t handle;                 // Handle is optional
+
+    uint32_t type;
+    uint32_t reserved;
+
+    zxrio_object_info_t extra;
+} zxrio_describe_t;
 
 struct zxrio_msg {
     zx_txid_t txid;                    // FIDL2 message header
@@ -149,7 +159,6 @@ struct zxrio_msg {
     union {
         int64_t off;                   // tx/rx: offset where needed
         uint32_t mode;                 // tx: Open
-        uint32_t protocol;             // rx: Open
         uint32_t op;                   // tx: Ioctl
     } arg2;
     int32_t reserved1;

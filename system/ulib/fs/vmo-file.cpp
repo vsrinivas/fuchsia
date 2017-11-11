@@ -122,8 +122,8 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
     return ZX_OK;
 }
 
-zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
-                                uint32_t* type, void* extra, uint32_t* esize) {
+zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                                zxrio_object_info_t* extra) {
     ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_); // checked by the VFS
 
     zx::vmo vmo;
@@ -133,13 +133,11 @@ zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcoun
         return status;
     }
 
-    hnds[0] = vmo.release();
-    *hcount = 1u;
+    *hnd = vmo.release();
     *type = FDIO_PROTOCOL_VMOFILE;
-    zx_off_t* info = static_cast<zx_off_t*>(extra);
+    zx_off_t* info = reinterpret_cast<zx_off_t*>(extra);
     info[0] = offset;
     info[1] = length_;
-    *esize = sizeof(zx_off_t) * 2;
     return ZX_OK;
 }
 

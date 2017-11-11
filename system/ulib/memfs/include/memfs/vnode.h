@@ -151,8 +151,8 @@ private:
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
-                           uint32_t* type, void* extra, uint32_t* esize) final;
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                           zxrio_object_info_t* extra) final;
 
     zx_handle_t vmo_;
     zx_off_t offset_;

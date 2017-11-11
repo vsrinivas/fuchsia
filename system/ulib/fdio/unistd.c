@@ -161,11 +161,10 @@ static_assert(O_TRUNC == ZX_FS_FLAG_TRUNCATE, "Open Flag mismatch");
 static_assert(O_DIRECTORY == ZX_FS_FLAG_DIRECTORY, "Open Flag mismatch");
 static_assert(O_APPEND == ZX_FS_FLAG_APPEND, "Open Flag mismatch");
 static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
-static_assert(O_PIPELINE == ZX_FS_FLAG_PIPELINE, "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
 #define ZXIO_FS_MASK (O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | \
-                      O_DIRECTORY | O_APPEND | O_NOREMOTE | O_PIPELINE)
+                      O_DIRECTORY | O_APPEND | O_NOREMOTE)
 
 // Verify that the remaining O_* flags don't overlap with the ZXIO mask.
 static_assert(!(O_RDONLY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
@@ -183,6 +182,7 @@ static_assert(!(O_DIRECT & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MAS
 static_assert(!(O_LARGEFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 static_assert(!(O_NOATIME & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 static_assert(!(O_TMPFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_PIPELINE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 
 static uint32_t fdio_flags_to_zxio(uint32_t flags) {
     uint32_t result = 0;
@@ -196,6 +196,10 @@ static uint32_t fdio_flags_to_zxio(uint32_t flags) {
     case O_RDWR:
         result |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
         break;
+    }
+
+    if (!(flags & O_PIPELINE)) {
+        result |= ZX_FS_FLAG_DESCRIBE;
     }
 
     result |= (flags & ZXIO_FS_MASK);

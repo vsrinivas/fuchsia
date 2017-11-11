@@ -47,18 +47,14 @@ bool test_vmofs_file() {
 
     // get handles
     zx_handle_t handle = ZX_HANDLE_INVALID;
-    size_t handle_count;
     uint32_t type = 0;
-    zx_off_t info[2];
-    uint32_t info_size;
-    EXPECT_EQ(ZX_OK, file->GetHandles(0, &handle, &handle_count, &type, info, &info_size));
-    EXPECT_EQ(1, handle_count);
+    zxrio_object_info_t info;
+    EXPECT_EQ(ZX_OK, file->GetHandles(0, &handle, &type, &info));
     EXPECT_NE(ZX_HANDLE_INVALID, handle);
     EXPECT_EQ(ZX_OK, zx_handle_close(handle));
     EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
-    EXPECT_EQ(sizeof(info), info_size);
-    EXPECT_EQ(0, info[0]);
-    EXPECT_EQ(3, info[1]);
+    EXPECT_EQ(0, info.vmofile.offset);
+    EXPECT_EQ(3, info.vmofile.length);
 
     END_TEST;
 }

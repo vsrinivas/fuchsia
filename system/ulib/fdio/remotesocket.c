@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
+#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -193,16 +194,19 @@ static zx_status_t zxsio_clone_stream(fdio_t* io, zx_handle_t* handles, uint32_t
         return ZX_ERR_BAD_STATE;
     }
     zxrio_t* rio = (void*)io;
-    zxrio_object_t info;
-    zx_status_t r = zxrio_getobject(rio->h, ZXRIO_CLONE, "", 0, 0, &info);
+    zxrio_describe_t info;
+    zx_handle_t h;
+    zx_status_t r = zxrio_getobject(rio->h, ZXRIO_CLONE, "", ZX_FS_FLAG_DESCRIBE, 0, &info, &h);
     if (r < 0) {
         return r;
     }
-    for (unsigned i = 0; i < info.hcount; i++) {
-        types[i] = PA_FDIO_SOCKET;
+    handles[0] = h;
+    types[0] = PA_FDIO_SOCKET;
+    if (info.handle != ZX_HANDLE_INVALID) {
+        handles[1] = info.handle;
+        types[1] = PA_FDIO_SOCKET;
     }
-    memcpy(handles, info.handle, info.hcount * sizeof(zx_handle_t));
-    return info.hcount;
+    return (info.handle != ZX_HANDLE_INVALID) ? 2 : 1;
 }
 
 static zx_status_t zxsio_unwrap_stream(fdio_t* io, zx_handle_t* handles, uint32_t* types) {

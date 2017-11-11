@@ -144,8 +144,8 @@ private:
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
 
     // Vnode I/O operations
-    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount, uint32_t* type,
-                           void* extra, uint32_t* esize) final;
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                           zxrio_object_info_t* extra) final;
     zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                         size_t* out_actual) final;

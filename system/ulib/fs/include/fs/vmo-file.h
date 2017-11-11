@@ -77,8 +77,8 @@ public:
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
-    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
-                           uint32_t* type, void* extra, uint32_t* esize) final;
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                           zxrio_object_info_t* extra) final;
     zx_status_t Mmap(int flags, size_t length, size_t* offset, zx_handle_t* out) final;
 
 private:

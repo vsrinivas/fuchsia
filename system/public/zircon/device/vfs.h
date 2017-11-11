@@ -35,9 +35,9 @@
 #define ZX_FS_FLAG_NOREMOTE       0x00200000
 // The file underlying file should not be opened, just a reference to the file.
 #define ZX_FS_FLAG_VNODE_REF_ONLY 0x00400000
-// The file is opened asynchronously, and no object description is
-// returned for the caller.
-#define ZX_FS_FLAG_PIPELINE       0x80000000
+// When the file has been opened, the server should transmit a description event.
+// This event will be transmitted either on success or failure.
+#define ZX_FS_FLAG_DESCRIBE       0x00800000
 
 #define MAX_FS_NAME_LEN 32
 

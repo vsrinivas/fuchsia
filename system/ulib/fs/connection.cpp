@@ -24,12 +24,25 @@
 namespace fs {
 namespace {
 
-void WriteErrorReply(zx::channel channel, zx_status_t status) {
-    struct {
-        zx_status_t status;
-        uint32_t type;
-    } reply = {status, 0};
-    channel.write(0, &reply, ZXRIO_OBJECT_MINSIZE, nullptr, 0);
+void WriteDescribeError(zx::channel channel, zx_status_t status) {
+    zxrio_describe_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.op = ZXRIO_ON_OPEN;
+    msg.status = status;
+    channel.write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+}
+
+void Describe(const fbl::RefPtr<Vnode>& vn, zxrio_describe_t* response,
+              uint32_t flags) {
+    response->op = ZXRIO_ON_OPEN;
+    response->handle = ZX_HANDLE_INVALID;
+    zx_status_t r;
+    if (IsPathOnly(flags)) {
+        r = vn->Vnode::GetHandles(flags, &response->handle, &response->type, &response->extra);
+    } else {
+        r = vn->GetHandles(flags, &response->handle, &response->type, &response->extra);
+    }
+    response->status = r;
 }
 
 // Performs a path walk and opens a connection to another node.
@@ -38,21 +51,15 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
             fbl::StringPiece path, uint32_t flags, uint32_t mode) {
     // Filter out flags that are invalid when combined with REF_ONLY.
     if (IsPathOnly(flags)) {
-        flags &= ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_PIPELINE;
+        flags &= ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_DESCRIBE;
     }
 
-    // The pipeline directive instructs the VFS layer to open the vnode
-    // immediately, rather than describing the VFS object to the caller.
-    // We check it early so we can throw away the protocol part of flags.
-    bool pipeline = flags & ZX_FS_FLAG_PIPELINE;
-    uint32_t open_flags = flags & (~ZX_FS_FLAG_PIPELINE);
-    size_t hcount = 0;
+    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
+    uint32_t open_flags = flags & (~ZX_FS_FLAG_DESCRIBE);
 
     fbl::RefPtr<Vnode> vnode;
     zx_status_t r = vfs->Open(fbl::move(parent), &vnode, path, &path, open_flags, mode);
 
-    zxrio_object_t obj;
-    memset(&obj, 0, sizeof(obj));
     if (r != ZX_OK) {
         xprintf("vfs: open: r=%d\n", r);
     } else if (!(open_flags & ZX_FS_FLAG_NOREMOTE) && vnode->IsRemote()) {
@@ -66,42 +73,26 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
         memcpy(msg.data, path.begin(), path.length());
         vfs->ForwardMessageRemote(fbl::move(vnode), fbl::move(channel), &msg);
         return;
-    } else if (IsPathOnly(open_flags)) {
-        vnode->Vnode::GetHandles(flags, obj.handle, &hcount, &obj.type, obj.extra, &obj.esize);
-    } else {
-        // Acquire the handles to the VFS object
-        r = vnode->GetHandles(flags, obj.handle, &hcount, &obj.type, obj.extra, &obj.esize);
+    }
+
+    if (describe) {
+        // Regardless of the error code, in the 'describe' case, we
+        // should respond to the client.
         if (r != ZX_OK) {
-            vnode->Close();
+            WriteDescribeError(fbl::move(channel), r);
+            return;
         }
+
+        zxrio_describe_t response;
+        memset(&response, 0, sizeof(response));
+        Describe(vnode, &response, flags);
+        uint32_t hcount = (response.handle != ZX_HANDLE_INVALID) ? 1 : 0;
+        channel.write(0, &response, sizeof(zxrio_describe_t), &response.handle, hcount);
+    } else if (r != ZX_OK) {
+        return;
     }
 
     // If r == ZX_OK, then we hold a reference to vn from open.
-    // Otherwise, vn is closed, and we're simply responding to the client.
-
-    if (pipeline && hcount > 0) {
-        // If a pipeline open was requested, but extra handles are required, then
-        // we cannot complete the open in a pipelined fashion.
-        while (hcount-- > 0) {
-            zx_handle_close(obj.handle[hcount]);
-        }
-        vnode->Close();
-        return;
-    }
-
-    if (!pipeline) {
-        // Describe the VFS object to the caller in the non-pipelined case.
-        obj.status = r;
-        obj.hcount = static_cast<uint32_t>(hcount);
-        channel.write(0, &obj, static_cast<uint32_t>(ZXRIO_OBJECT_MINSIZE + obj.esize),
-                      obj.handle, obj.hcount);
-    }
-
-    if (r != ZX_OK) {
-        return;
-    }
-
-    // We don't care about the result because we are handing off the channel.
     if (IsPathOnly(open_flags)) {
         vnode->Vnode::Serve(vfs, fbl::move(channel), open_flags);
     } else {
@@ -201,11 +192,16 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_OPEN: {
         TRACE_DURATION("vfs", "ZXRIO_OPEN");
         char* path = (char*)msg->data;
+        bool describe = arg & ZX_FS_FLAG_DESCRIBE;
         zx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
-            WriteErrorReply(fbl::move(channel), ZX_ERR_INVALID_ARGS);
+            if (describe) {
+                WriteDescribeError(fbl::move(channel), ZX_ERR_INVALID_ARGS);
+            }
         } else if ((arg & ZX_FS_RIGHT_ADMIN) && !(flags_ & ZX_FS_RIGHT_ADMIN)) {
-            WriteErrorReply(fbl::move(channel), ZX_ERR_ACCESS_DENIED);
+            if (describe) {
+                WriteDescribeError(fbl::move(channel), ZX_ERR_ACCESS_DENIED);
+            }
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
@@ -226,13 +222,16 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         zx::channel channel(msg->handle[0]); // take ownership
         fbl::RefPtr<Vnode> vn(vnode_);
         zx_status_t status = OpenVnode(flags_, &vn);
-        bool describe = !(arg & ZX_FS_FLAG_PIPELINE);
+        bool describe = arg & ZX_FS_FLAG_DESCRIBE;
         if (describe) {
-            zxrio_object_t obj;
-            memset(&obj, 0, ZXRIO_OBJECT_MINSIZE);
-            obj.type = FDIO_PROTOCOL_REMOTE;
-            obj.status = status;
-            channel.write(0, &obj, ZXRIO_OBJECT_MINSIZE, 0, 0);
+            zxrio_describe_t response;
+            memset(&response, 0, sizeof(response));
+            response.status = status;
+            if (status == ZX_OK) {
+                Describe(vnode_, &response, flags_);
+            }
+            uint32_t hcount = (response.handle != ZX_HANDLE_INVALID) ? 1 : 0;
+            channel.write(0, &response, sizeof(zxrio_describe_t), &response.handle, hcount);
         }
         if (status == ZX_OK) {
             vn->Serve(vfs_, fbl::move(channel), flags_);

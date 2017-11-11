@@ -20,11 +20,10 @@ zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
         vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
 }
 
-zx_status_t Vnode::GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
-                              uint32_t* type, void* extra, uint32_t* esize) {
+zx_status_t Vnode::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                              zxrio_object_info_t* extra) {
     *type = FDIO_PROTOCOL_REMOTE;
-    *hcount = 0;
-    return 0;
+    return ZX_OK;
 }
 
 zx_status_t Vnode::WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) {

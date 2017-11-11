@@ -85,20 +85,18 @@ public:
     // |flags| are the flags which were previously provided to |Open()|.
     virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
-    // Extract handle(s), type, and extra info from a vnode.
+    // Extract handle, type, and extra info from a vnode.
     //
     // On success, the following output parameters are set:
     //
-    // |hnds| is an array of FDIO_MAX_HANDLES handles representing the Vnode.
-    // |hcount| indicates how many |hnds| are being returned.
-    // |type| is an optional output FDIO_PROTOCOL type indicating how the
-    // handles should be interpreted.
-    // |extra| is an output buffer holding ZXRIO_OBJECT_EXTRA bytes.
+    // |hnd| is an optional output extra handle representing the Vnode.
+    // |type| is an output FDIO_PROTOCOL type indicating how the
+    // handle should be interpreted.
+    // |extra| is an output buffer holding a union of extra data which
+    // may be returned by this vnode.
     // The usage of this field is dependent on the |type|.
-    // |esize| is an output parameter indicating how many bytes in extra
-    // have been used.
-    virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
-                                   uint32_t* type, void* extra, uint32_t* esize);
+    virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                                   zxrio_object_info_t* extra);
 
     virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd);
 #endif

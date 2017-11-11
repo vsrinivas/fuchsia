@@ -124,6 +124,15 @@ static void prepopulate_protocol_dirs(void) {
     }
 }
 
+void describe_error(zx_handle_t h, zx_status_t status) {
+    zxrio_describe_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.op = ZXRIO_ON_OPEN;
+    msg.status = status;
+    zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), NULL, 0);
+    zx_handle_close(h);
+}
+
 static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
     iostate_t* ios = calloc(1, sizeof(iostate_t));
     if (ios == NULL) {
@@ -474,7 +483,7 @@ static void devfs_open(devnode_t* dirdn, zx_handle_t h, char* path, uint32_t fla
     devnode_t* dn = dirdn;
     zx_status_t r = devfs_walk(&dn, path, &path);
 
-    bool pipeline = flags & ZX_FS_FLAG_PIPELINE;
+    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
 
     if (r == ZX_ERR_NEXT) {
         // we only partially matched -- there's more path to walk
@@ -493,13 +502,11 @@ static void devfs_open(devnode_t* dirdn, zx_handle_t h, char* path, uint32_t fla
 
     if (r < 0) {
 fail:
-        if (!pipeline) {
-            zxrio_object_t obj;
-            obj.status = r;
-            obj.type = 0;
-            zx_channel_write(h, 0, &obj, ZXRIO_OBJECT_MINSIZE, NULL, 0);
+        if (describe) {
+            describe_error(h, r);
+        } else {
+            zx_handle_close(h);
         }
-        zx_handle_close(h);
         return;
     }
 
@@ -509,11 +516,13 @@ fail:
         if ((r = iostate_create(dn, h)) < 0) {
             goto fail;
         }
-        if (!pipeline) {
-            zxrio_object_t obj;
-            obj.status = ZX_OK;
-            obj.type = FDIO_PROTOCOL_REMOTE;
-            zx_channel_write(h, 0, &obj, ZXRIO_OBJECT_MINSIZE, NULL, 0);
+        if (describe) {
+            zxrio_describe_t msg;
+            memset(&msg, 0, sizeof(msg));
+            msg.op = ZXRIO_ON_OPEN;
+            msg.status = ZX_OK;
+            msg.type = FDIO_PROTOCOL_REMOTE;
+            zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), NULL, 0);
         }
         return;
     }

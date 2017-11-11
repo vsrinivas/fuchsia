@@ -52,4 +52,4 @@ ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
 
 zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
                             uint32_t flags, uint32_t mode,
-                            zxrio_object_t* info);
+                            zxrio_describe_t* info, zx_handle_t* out);
