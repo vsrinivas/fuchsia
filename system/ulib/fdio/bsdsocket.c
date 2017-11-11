@@ -46,9 +46,11 @@ int socket(int domain, int type, int protocol) {
     fdio_t* io = NULL;
     zx_status_t r;
 
+    // SOCK_NONBLOCK and SOCK_CLOEXEC in type are handled locally rather than
+    // remotely so do not include them in path.
     char path[1024];
     int n = snprintf(path, sizeof(path), "%s/%d/%d/%d", ZXRIO_SOCKET_DIR_SOCKET,
-                     domain, type & ~SOCK_NONBLOCK, protocol);
+                     domain, type & ~(SOCK_NONBLOCK|SOCK_CLOEXEC), protocol);
     if (n < 0 || n >= (int)sizeof(path)) {
         return ERRNO(EINVAL);
     }
@@ -77,6 +79,10 @@ int socket(int domain, int type, int protocol) {
     if (type & SOCK_NONBLOCK) {
         io->flags |= FDIO_FLAG_NONBLOCK;
     }
+
+    // TODO(ZX-973): Implement CLOEXEC.
+    // if (type & SOCK_CLOEXEC) {
+    // }
 
     int fd;
     if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
