@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 
-#include <zircon/device/intel-pt.h>
+#include <zircon/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>
 
 #include "lib/fxl/macros.h"

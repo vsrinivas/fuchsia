@@ -4,7 +4,7 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 
 #include "lib/fxl/logging.h"
 
@@ -15,7 +15,7 @@ const IpmCategory kCategories[] = {
   // |kProgrammableCategoryMap|.
 #define DEF_CATEGORY(symbol, ordinal, name, counters...) \
   { "cpu:" name, ordinal },
-#include "zircon/device/intel-pm-categories.inc"
+#include "zircon/device/cpu-trace/intel-pm-categories.inc"
   {"cpu:fixed:all", (IPM_CATEGORY_FIXED_CTR0 |
                      IPM_CATEGORY_FIXED_CTR1 |
                      IPM_CATEGORY_FIXED_CTR2) },
@@ -40,7 +40,7 @@ const IpmCategory kCategories[] = {
 const uint32_t kProgrammableCategoryMap[] = {
 #define DEF_CATEGORY(symbol, id, name, counters...) \
   [id] = symbol,
-#include "zircon/device/intel-pm-categories.inc"
+#include "zircon/device/cpu-trace/intel-pm-categories.inc"
 };
 
 static_assert(countof(kProgrammableCategoryMap) <=

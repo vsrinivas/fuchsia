@@ -5,7 +5,7 @@
 #include "garnet/bin/cpuperf_provider/events.h"
 
 #include <assert.h>
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 #include <unordered_map>
 
 #include "lib/fxl/logging.h"
@@ -15,13 +15,13 @@ namespace cpuperf_provider {
 const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
   { event, umask, flags, name },
-#include <zircon/device/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 };
 
 const EventDetails g_skl_event_details[] = {
 #define DEF_SKL_EVENT(symbol, event, umask, flags, name) \
   { event, umask, flags, name },
-#include <zircon/device/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 };
 
 using EventSelectMap = std::unordered_map<uint32_t, const EventDetails*>;
@@ -86,7 +86,7 @@ const EventDetails* GetFixedEventDetails(int n) {
   enum {
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
   EVENT_ ## symbol,
-#include <zircon/device/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
   };
 
   switch (n) {

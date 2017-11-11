@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_CPUPERF_PROVIDER_READER_H_
 #define GARNET_BIN_CPUPERF_PROVIDER_READER_H_
 
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 #include <zx/vmo.h>
 
 #include "lib/fxl/macros.h"

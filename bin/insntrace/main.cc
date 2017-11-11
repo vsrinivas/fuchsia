@@ -25,7 +25,7 @@
 
 #ifdef __x86_64__  // for other arches we're just a stub, TO-128
 
-#include <zircon/device/intel-pt.h>
+#include <zircon/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/debugger_utils/util.h"

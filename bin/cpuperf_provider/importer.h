@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include <trace-engine/context.h>
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 
 #include "garnet/bin/cpuperf_provider/events.h"
 #include "lib/fxl/macros.h"

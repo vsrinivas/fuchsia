@@ -10,7 +10,7 @@
 #include <iostream>
 #include <limits>
 
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 #include <zircon/syscalls/log.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>

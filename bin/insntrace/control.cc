@@ -15,7 +15,7 @@
 
 #include <iostream>
 
-#include <zircon/device/intel-pt.h>
+#include <zircon/device/cpu-trace/intel-pt.h>
 #include <zircon/device/ktrace.h>
 #include <zircon/ktrace.h>
 #include <zircon/syscalls.h>
