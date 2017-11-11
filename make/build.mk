@@ -149,6 +149,26 @@ ADDITIONAL_BOOTDATA_ITEMS += $(BUILDDIR)/platform-id.bin
 GENERATED += $(BUILDDIR)/platform-id.bin
 endif
 
+.PHONY: user-manifest additional-bootdata
+user-manifest: $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
+additional-bootdata: $(ADDITIONAL_BOOTDATA_ITEMS)
+
+.PHONY: user-only
+user-only: user-manifest
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
+user-only: sysroot
+endif
+
+KERNEL_BOOTDATA := $(BUILDDIR)/kernel-bootdata.bin
+$(KERNEL_BOOTDATA): $(MKBOOTFS) $(ADDITIONAL_BOOTDATA_ITEMS)
+	$(call BUILDECHO,generating $@)
+	@$(MKDIR)
+	$(NOECHO)$(MKBOOTFS) -o $@ $(or $(ADDITIONAL_BOOTDATA_ITEMS),--empty)
+
+.PHONY: kernel-only kernel-bootdata
+kernel-only: kernel kernel-bootdata
+kernel-bootdata: $(KERNEL_BOOTDATA)
+
 $(USER_BOOTDATA): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)

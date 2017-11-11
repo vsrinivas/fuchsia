@@ -1024,6 +1024,7 @@ void usage(void) {
     "         --depfile <filename>  output make/ninja dependencies file name\n"
     "         -C <filename>         include kernel command line\n"
     "         -c                    compress bootfs image (default)\n"
+    "         --empty               create output even if empty\n"
     "         -v                    verbose output\n"
     "         -t <filename>         dump bootdata contents\n"
     "         -g <group>            select allowed groups for manifest items\n"
@@ -1055,6 +1056,7 @@ int main(int argc, char **argv) {
     const char* output_file = "user.bootfs";
 
     bool compressed = true;
+    bool empty_ok = false;
     bool have_cmdline = false;
     const char* vid_arg = NULL;
     const char* pid_arg = NULL;
@@ -1174,6 +1176,8 @@ int main(int argc, char **argv) {
             fprintf(depfile, "%s:", output_file);
             argc--;
             argv++;
+        } else if (!strcmp(cmd,"--empty")) {
+            empty_ok = true;
         } else if (cmd[0] == '-') {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
@@ -1233,7 +1237,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (first_item == NULL) {
+    if (first_item == NULL && !empty_ok) {
         fprintf(stderr, "error: no inputs given\n");
         return -1;
     }
