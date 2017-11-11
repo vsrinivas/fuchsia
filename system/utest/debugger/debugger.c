@@ -224,7 +224,7 @@ static bool handle_thread_exiting(zx_handle_t inferior,
     zx_status_t status = zx_object_get_child(inferior, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
     // If the process has exited then the kernel may have reaped the
     // thread already. Check.
-    if (status != ZX_ERR_NOT_FOUND) {
+    if (status == ZX_OK) {
         zx_info_thread_t info = tu_thread_get_info(thread);
         // The thread could still transition to DEAD here (if the
         // process exits), so check for either DYING or DEAD.
@@ -243,6 +243,7 @@ static bool handle_thread_exiting(zx_handle_t inferior,
                     info.wait_exception_port_type == ZX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
         tu_handle_close(thread);
     } else {
+        EXPECT_EQ(status, ZX_ERR_NOT_FOUND, "");
         EXPECT_TRUE(tu_process_has_exited(inferior), "");
     }
     unittest_printf("wait-inf: thread %" PRId64 " exited\n", tid);
