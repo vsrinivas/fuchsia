@@ -110,6 +110,7 @@ executable("dev_user_shell_bin") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
   ]

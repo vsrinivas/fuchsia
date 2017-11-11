@@ -5,7 +5,9 @@
 #include <memory>
 #include <string>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_reader.fidl.h"
@@ -157,20 +159,14 @@ class ContextListenerImpl : maxwell::ContextListener {
 // story, then set context to work, start another story. The we compute story
 // importance and verify that the importance of the first story is lower than
 // the importance of the second story.
-class TestApp : modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  // The app instance must be dynamic, because it needs to do several things
-  // after its own constructor is invoked. It accomplishes that by being able to
-  // call delete this. Cf. Terminate().
-  static void New() {
-    new TestApp;  // will delete itself in Terminate().
-  }
-
- private:
-  TestApp() { TestInit(__FILE__); }
+  TestApp(app::ApplicationContext* const application_context)
+      : ComponentBase(application_context) { TestInit(__FILE__); }
 
   ~TestApp() override = default;
 
+ private:
   using TestPoint = modular::testing::TestPoint;
 
   TestPoint initialize_{"Initialize()"};
@@ -362,14 +358,6 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
   void Logout() { user_shell_context_->Logout(); }
 
-  TestPoint terminate_{"Terminate()"};
-
-  // |UserShell|
-  void Terminate() override {
-    terminate_.Pass();
-    DeleteAndQuit();
-  }
-
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
 
@@ -396,11 +384,16 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
+int main(int /* argc */, const char** /* argv */) {
   fsl::MessageLoop loop;
-  TestApp::New();
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<TestApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<TestApp>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
+
 }

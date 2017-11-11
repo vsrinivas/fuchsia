@@ -5,7 +5,9 @@
 #include <memory>
 #include <utility>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/service_provider.fidl.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -260,23 +262,18 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 // as a user shell from device runner and executes a predefined sequence of
 // steps, rather than to expose a UI to be driven by user interaction, as a user
 // shell normally would.
-class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
+class TestUserShellApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  // The app instance must be dynamic, because it needs to do several things
-  // after its own constructor is invoked. It accomplishes that by being able to
-  // call delete this. Cf. Terminate().
-  static void New(const Settings& settings) {
-    new TestUserShellApp(settings);  // will delete itself in Terminate().
-  }
-
- private:
-  explicit TestUserShellApp(Settings settings)
-      : settings_(std::move(settings)) {
+  explicit TestUserShellApp(app::ApplicationContext* const application_context,
+                            Settings settings)
+      : ComponentBase(application_context),
+        settings_(std::move(settings)) {
     TestInit(__FILE__);
   }
 
   ~TestUserShellApp() override = default;
 
+ private:
   using TestPoint = modular::testing::TestPoint;
 
   TestPoint create_view_{"CreateView()"};
@@ -541,14 +538,6 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->Logout();
   }
 
-  TestPoint terminate_{"Terminate"};
-
-  // |UserShell|
-  void Terminate() override {
-    terminate_.Pass();
-    DeleteAndQuit();
-  }
-
   void TeardownStoryController() {
     story_done_watcher_.Reset();
     story_modules_watcher_.Reset();
@@ -579,7 +568,13 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   fsl::MessageLoop loop;
-  TestUserShellApp::New(settings);
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<TestUserShellApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<TestUserShellApp>(app_context.get(), std::move(settings)),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

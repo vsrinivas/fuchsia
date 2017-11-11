@@ -35,7 +35,10 @@ void ModuleView::OnPropertiesChanged(
   InvalidateScene();
 }
 
-ModuleApp::ModuleApp(CreateViewCallback create) : create_(std::move(create)) {}
+ModuleApp::ModuleApp(app::ApplicationContext* const application_context,
+                     CreateViewCallback create)
+    : SingleServiceApp(application_context),
+      create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -48,9 +51,5 @@ void ModuleApp::CreateView(
 void ModuleApp::Initialize(
     fidl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
     fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
-
-void ModuleApp::Terminate() {
-  fsl::MessageLoop::GetCurrent()->QuitNow();
-}
 
 }  // namespace modular_example

@@ -4,7 +4,9 @@
 
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -53,17 +55,14 @@ class LinkWatcherImpl : modular::LinkWatcher {
 };
 
 // Tests how data are updated in a Link.
-class TestApp : modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  static void New() {
-    new TestApp;  // will delete itself in Terminate().
-  }
-
- private:
-  TestApp() { TestInit(__FILE__); }
+  TestApp(app::ApplicationContext* const application_context)
+      : ComponentBase(application_context) { TestInit(__FILE__); }
 
   ~TestApp() override = default;
 
+ private:
   using TestPoint = modular::testing::TestPoint;
 
   TestPoint initialize_{"Initialize()"};
@@ -182,14 +181,6 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
   void Logout() { user_shell_context_->Logout(); }
 
-  TestPoint terminate_{"Terminate"};
-
-  // |UserShell|
-  void Terminate() override {
-    terminate_.Pass();
-    DeleteAndQuit();
-  }
-
   LinkWatcherImpl link_watcher_;
 
   modular::UserShellContextPtr user_shell_context_;
@@ -206,7 +197,13 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  TestApp::New();
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<TestApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<TestApp>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

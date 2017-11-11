@@ -115,6 +115,7 @@ executable("dev_device_shell_bin") {
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/testing",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/device/fidl",
   ]
 }

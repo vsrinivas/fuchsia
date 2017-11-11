@@ -26,6 +26,7 @@ executable("test_link_update") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/user/fidl",
   ]
 }

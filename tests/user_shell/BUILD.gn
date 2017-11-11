@@ -26,6 +26,7 @@ executable("test_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
   ]

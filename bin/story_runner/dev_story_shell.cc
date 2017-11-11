@@ -8,6 +8,8 @@
 
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -18,9 +20,11 @@
 
 namespace {
 
-class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShell> {
+class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
  public:
-  DevStoryShellApp() = default;
+  DevStoryShellApp(app::ApplicationContext* const application_context)
+      : SingleServiceApp(application_context) {}
+
   ~DevStoryShellApp() override = default;
 
  private:
@@ -61,12 +65,6 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShell> {
     callback();
   }
 
-  // |Lifecycle|
-  void Terminate() override {
-    FXL_LOG(INFO) << "StoryShell::Terminate()";
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  }
-
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {
       view_ = std::make_unique<modular::ViewHost>(
@@ -94,7 +92,13 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShell> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  DevStoryShellApp app;
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<DevStoryShellApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<DevStoryShellApp>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

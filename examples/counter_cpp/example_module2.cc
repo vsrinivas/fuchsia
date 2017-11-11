@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -90,7 +92,9 @@ class Module2View : public mozart::BaseView {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module2App : public modular::SingleServiceApp<modular::Module> {
  public:
-  explicit Module2App() : store_(kModuleName), weak_ptr_factory_(this) {
+  explicit Module2App(app::ApplicationContext* const application_context) :
+      SingleServiceApp(application_context),
+      store_(kModuleName), weak_ptr_factory_(this) {
     store_.AddCallback([this] {
       if (view_) {
         view_->InvalidateScene();
@@ -100,6 +104,12 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
   }
 
   ~Module2App() override = default;
+
+  // |SingleServiceApp|
+  void Terminate(std::function<void()> done) override {
+    store_.Stop();
+    done();
+  }
 
  private:
   // |SingleServiceApp|
@@ -124,12 +134,6 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
     store_.Initialize(std::move(link));
 
     module_context_->Ready();
-  }
-
-  // |Lifecycle|
-  void Terminate() override {
-    store_.Stop();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void IncrementCounterAction() {
@@ -170,7 +174,13 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  Module2App app;
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<Module2App> driver(
+      app_context->outgoing_services(),
+      std::make_unique<Module2App>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

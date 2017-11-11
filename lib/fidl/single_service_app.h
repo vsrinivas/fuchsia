@@ -11,24 +11,22 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 
 namespace modular {
 
 // Base class for a simple application which provides a single instance of a
-// single service, the ViewProvider service, and the Lifecycle service.
+// single service and the ViewProvider service. It also implements a Terminate()
+// method that makes it suitable to be used as an Impl class of AppDriver.
 template <class Service>
 class SingleServiceApp : protected Service,
-                         private mozart::ViewProvider,
-                         private Lifecycle {
+                         private mozart::ViewProvider {
  public:
-  SingleServiceApp()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+  SingleServiceApp(app::ApplicationContext* const application_context)
+      : application_context_(application_context),
         service_binding_(new fidl::Binding<Service>(this)),
-        view_provider_binding_(this),
-        lifecycle_binding_(this) {
+        view_provider_binding_(this) {
     application_context_->outgoing_services()->AddService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
           FXL_DCHECK(!service_binding_->is_bound());
@@ -39,26 +37,15 @@ class SingleServiceApp : protected Service,
           FXL_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));
         });
-    application_context_->outgoing_services()->AddService<Lifecycle>(
-        [this](fidl::InterfaceRequest<Lifecycle> request) {
-          FXL_DCHECK(!lifecycle_binding_.is_bound());
-          lifecycle_binding_.Bind(std::move(request));
-        });
   }
 
   ~SingleServiceApp() override = default;
 
- protected:
-  app::ApplicationContext* application_context() {
-    return application_context_.get();
-  }
+  virtual void Terminate(std::function<void()> done) { done(); }
 
-  // Allows the service binding to survive the destructor invocation, thus
-  // allowing a callback of a Terminate() method to be invoked after |this| is
-  // deleted. Cf. TestUserShellApp::Terminate() in test_user_shell.cc for an
-  // example.
-  std::unique_ptr<fidl::Binding<Service>> PassBinding() {
-    return std::move(service_binding_);
+ protected:
+  app::ApplicationContext* application_context() const {
+    return application_context_;
   }
 
  private:
@@ -67,13 +54,9 @@ class SingleServiceApp : protected Service,
       fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
 
-  // |Lifecycle|
-  void Terminate() override {}
-
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  app::ApplicationContext* const application_context_;
   std::unique_ptr<fidl::Binding<Service>> service_binding_;
   fidl::Binding<mozart::ViewProvider> view_provider_binding_;
-  fidl::Binding<Lifecycle> lifecycle_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
 };

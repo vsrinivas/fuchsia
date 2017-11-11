@@ -5,7 +5,9 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -170,9 +172,11 @@ class AdderImpl : public modular::examples::Adder {
 // Module implementation that acts as a recipe. There is one instance
 // per application; the story runner creates new application instances
 // to run more module instances.
-class RecipeApp : modular::SingleServiceApp<modular::Module> {
+class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  RecipeApp() = default;
+  RecipeApp(app::ApplicationContext* const application_context)
+      : SingleServiceApp(application_context) {}
+
   ~RecipeApp() override = default;
 
  private:
@@ -350,17 +354,6 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
     });
   }
 
-  // |Lifecycle|
-  void Terminate() override {
-    // TODO(mesch): This is tentative. Not sure what the right amount
-    // of cleanup it is to ask from a module implementation, but this
-    // disconnects all the watchers and thus prevents any further
-    // state change of the module.
-    connections_.clear();
-    module_monitors_.clear();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  }
-
   modular::LinkPtr link_;
   modular::ModuleContextPtr module_context_;
 
@@ -397,7 +390,13 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  RecipeApp app;
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<RecipeApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<RecipeApp>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

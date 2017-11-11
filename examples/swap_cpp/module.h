@@ -33,7 +33,8 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
       mozart::ViewManagerPtr,
       fidl::InterfaceRequest<mozart::ViewOwner>)>;
 
-  explicit ModuleApp(CreateViewCallback create);
+  explicit ModuleApp(app::ApplicationContext* const application_context,
+                     CreateViewCallback create);
 
  private:
   // |SingleServiceApp|
@@ -45,9 +46,6 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
-
-  // |Lifecycle|
-  void Terminate() override;
 
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;

@@ -15,22 +15,18 @@
 namespace modular {
 namespace testing {
 
-// A base class for components used in tests. It helps them to implement a
-// proper life cycle and to exit the application at the end of the life cycle
-// while properly posting test points and calling TestRunner::Done().
-//
-// Requirements for using this base class:
-//
-// 1. The derived class instance MUST be created with new, because
-//    DeleteAndQuit() calls delete this.
-//
-// 2. Callbacks posted to the run loop that invoke DeleteAndQuit() MUST invoke
-//    it on a weak pointer obtained from GetWeakPtr(). This can be done by
-//    wrapping them in a Protect() call (cf. below).
+// A base class for components used in tests. It helps them to exit the
+// application at the end of the life cycle while properly posting test points
+// and calling TestRunner::Done().
 //
 // Component is modular::Module, modular::Agent, modular::UserShell, etc.
 template <typename Component>
 class ComponentBase : protected SingleServiceApp<Component> {
+ public:
+  void Terminate(std::function<void()> done) override {
+    modular::testing::Done(done);
+  }
+
  protected:
   // Invocations of methods of the base class must be unambiguously recognizable
   // by the compiler as method invocations at the point of template definition,
@@ -42,7 +38,8 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
   using Base = modular::SingleServiceApp<Component>;
 
-  ComponentBase() : weak_factory_(this) {}
+  ComponentBase(app::ApplicationContext* const application_context) :
+      Base(application_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
 
@@ -62,37 +59,6 @@ class ComponentBase : protected SingleServiceApp<Component> {
         callback();
       }
     };
-  }
-
-  // Delete alone is used to simulate the "unstoppable agent".
-  void Delete(const std::function<void()>& done) {
-    Base::PassBinding()->Close();
-    modular::testing::Done([this, done] {
-      delete this;
-      done();
-    });
-  }
-
-  // Used by non-Agents.
-  // TODO(vardhan): Once all components convert to using |Lifecycle|,
-  // don't PassBinding() here anymore, replace this with
-  // DeleteAndQuitWithoutBinding.
-  void DeleteAndQuit(const std::function<void()>& done = [] {}) {
-    modular::testing::Done([this, done] {
-      auto binding =
-          Base::PassBinding();  // To invoke done() after delete this.
-      delete this;
-      done();
-      fsl::MessageLoop::GetCurrent()->QuitNow();
-    });
-  }
-
-  void DeleteAndQuitAndUnbind() {
-    Base::PassBinding()->Close();
-    modular::testing::Done([this] {
-      delete this;
-      fsl::MessageLoop::GetCurrent()->QuitNow();
-    });
   }
 
  private:

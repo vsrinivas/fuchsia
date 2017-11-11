@@ -5,6 +5,8 @@
 #include <array>
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -61,7 +63,9 @@ class RecipeView : public mozart::BaseView {
 
 class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  RecipeApp() = default;
+  RecipeApp(app::ApplicationContext* const application_context)
+      : SingleServiceApp(application_context) {}
+
   ~RecipeApp() override = default;
 
  private:
@@ -84,9 +88,6 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module_context_.Bind(std::move(module_context));
     SwapModule();
   }
-
-  // |Lifecycle|
-  void Terminate() override { fsl::MessageLoop::GetCurrent()->QuitNow(); }
 
   void SwapModule() {
     StartModule(kModuleQueries[query_index_]);
@@ -131,7 +132,13 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  RecipeApp app;
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<RecipeApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<RecipeApp>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

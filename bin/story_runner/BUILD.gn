@@ -87,6 +87,7 @@ executable("dev_story_shell_bin") {
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/story/fidl",
   ]
 }

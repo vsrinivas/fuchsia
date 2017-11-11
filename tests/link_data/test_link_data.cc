@@ -5,7 +5,9 @@
 #include <memory>
 #include <utility>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -163,22 +165,17 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
 // TODO(mesch): The example modules that this test uses should be converted to
 // actual test modules that make assertions on their own, and copied or moved
 // here.
-class TestApp : modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  // The app instance must be dynamic, because it needs to do several things
-  // after its own constructor is invoked. It accomplishes that by being able to
-  // call delete this. Cf. Terminate().
-  static void New(const Settings& settings) {
-    new TestApp(settings);  // will delete itself in Terminate().
-  }
-
- private:
-  explicit TestApp(Settings settings) : settings_(std::move(settings)) {
+  explicit TestApp(app::ApplicationContext* const application_context, Settings settings)
+      : ComponentBase(application_context),
+        settings_(std::move(settings)) {
     TestInit(__FILE__);
   }
 
   ~TestApp() override = default;
 
+ private:
   using TestPoint = modular::testing::TestPoint;
 
   TestPoint initialize_{"Initialize()"};
@@ -309,14 +306,6 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     });
   }
 
-  TestPoint terminate_{"Terminate"};
-
-  // |UserShell|
-  void Terminate() override {
-    terminate_.Pass();
-    DeleteAndQuit();
-  }
-
   void TeardownStoryController() {
     story_state_watcher_.Reset();
     link_change_count_watcher_.Reset();
@@ -345,7 +334,13 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   fsl::MessageLoop loop;
-  TestApp::New(settings);
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<TestApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<TestApp>(app_context.get(), std::move(settings)),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

@@ -27,6 +27,7 @@ executable("test_story_importance") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",

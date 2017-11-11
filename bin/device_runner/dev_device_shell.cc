@@ -9,6 +9,8 @@
 #include <memory>
 #include <utility>
 
+#include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/device/fidl/device_shell.fidl.h"
 #include "lib/device/fidl/user_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -43,13 +45,26 @@ class Settings {
 class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
                           modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(Settings settings)
-      : settings_(std::move(settings)), user_watcher_binding_(this) {
+  explicit DevDeviceShellApp(app::ApplicationContext* const application_context,
+                             Settings settings)
+      : SingleServiceApp(application_context),
+        settings_(std::move(settings)),
+        user_watcher_binding_(this) {
     if (settings_.test) {
-      modular::testing::Init(application_context(), __FILE__);
+      modular::testing::Init(this->application_context(), __FILE__);
     }
   }
+
   ~DevDeviceShellApp() override = default;
+
+  // |SingleServiceApp|
+  void Terminate(std::function<void()> done) override {
+    if (settings_.test) {
+      modular::testing::Teardown(done);
+    } else {
+      done();
+    }
+  }
 
  private:
   // |SingleServiceApp|
@@ -69,17 +84,6 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
     Connect();
   }
-
-  // |Lifecycle|
-  void Terminate() override {
-    if (settings_.test) {
-      modular::testing::Teardown([this] { Exit(); });
-    } else {
-      Exit();
-    }
-  }
-
-  void Exit() { fsl::MessageLoop::GetCurrent()->QuitNow(); }
 
   // |DeviceShell|
   void GetAuthenticationContext(
@@ -159,7 +163,13 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   fsl::MessageLoop loop;
-  DevDeviceShellApp app(settings);
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<DevDeviceShellApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<DevDeviceShellApp>(app_context.get(), settings),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

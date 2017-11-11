@@ -10,8 +10,10 @@
 
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -46,10 +48,15 @@ class Settings {
 
 class DevUserShellApp : modular::StoryWatcher,
                         maxwell::SuggestionListener,
-                        modular::SingleServiceApp<modular::UserShell> {
+                        public modular::SingleServiceApp<modular::UserShell> {
  public:
-  explicit DevUserShellApp(Settings settings)
-      : settings_(std::move(settings)), story_watcher_binding_(this) {}
+  explicit DevUserShellApp(
+      app::ApplicationContext* const application_context,
+      Settings settings)
+      : SingleServiceApp(application_context),
+        settings_(std::move(settings)),
+        story_watcher_binding_(this) {}
+
   ~DevUserShellApp() override = default;
 
  private:
@@ -79,9 +86,6 @@ class DevUserShellApp : modular::StoryWatcher,
 
     Connect();
   }
-
-  // |Lifecycle|
-  void Terminate() override { fsl::MessageLoop::GetCurrent()->QuitNow(); };
 
   void Connect() {
     if (!view_owner_request_ || !story_provider_) {
@@ -202,7 +206,13 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   fsl::MessageLoop loop;
-  DevUserShellApp app(settings);
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<DevUserShellApp> driver(
+      app_context->outgoing_services(),
+      std::make_unique<DevUserShellApp>(app_context.get(), std::move(settings)),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

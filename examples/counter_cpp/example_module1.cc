@@ -4,7 +4,9 @@
 
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -107,7 +109,9 @@ class MultiplierImpl : public modular::examples::Multiplier {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module1App : modular::SingleServiceApp<modular::Module> {
  public:
-  explicit Module1App() : store_(kModuleName), weak_ptr_factory_(this) {
+  explicit Module1App(app::ApplicationContext* const application_context)
+      : SingleServiceApp(application_context),
+        store_(kModuleName), weak_ptr_factory_(this) {
     // TODO(mesch): The callbacks seem to have a sequential relationship.
     // It seems to me there should be a single callback that does all three
     // things in a sequence. Since the result InvalidateScene() happens only
@@ -123,6 +127,12 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   }
 
   ~Module1App() override = default;
+
+  // |SingleServiceApp|
+  void Terminate(std::function<void()> done) override {
+    store_.Stop();
+    done();
+  }
 
  private:
   // |SingleServiceApp|
@@ -155,12 +165,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         });
 
     module_context_->Ready();
-  }
-
-  // |Lifecycle|
-  void Terminate() override {
-    store_.Stop();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void CheckForDone() {
@@ -213,7 +217,13 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  Module1App app;
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<Module1App> driver(
+      app_context->outgoing_services(),
+      std::make_unique<Module1App>(app_context.get()),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

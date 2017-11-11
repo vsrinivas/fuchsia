@@ -42,6 +42,7 @@ source_set("module") {
 
   deps = [
     "//garnet/public/lib/ui/view_framework",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
   ]
@@ -55,6 +56,7 @@ executable("swap_recipe") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/view_framework",
     "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
   ]
