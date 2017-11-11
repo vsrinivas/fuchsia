@@ -35,12 +35,13 @@
 #define FIXED_CTR_ENABLE_USR 2
 
 typedef enum {
-// N.B. The order of fixed/arch/nonarch here must match |perf_events|.
-#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
-  symbol,
-#define DEF_SKL_EVENT(symbol, event, umask, flags, name) \
+// N.B. The order of arch/nonarch here must match |kPerfEvents|.
+#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name, description) \
   symbol,
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
+#define DEF_SKL_EVENT(symbol, event, umask, flags, name, description) \
+  symbol,
+#include <zircon/device/cpu-trace/skylake-pm-events.inc>
 } perf_event_kind_t;
 
 typedef struct {
@@ -50,12 +51,13 @@ typedef struct {
 } perf_event_t;
 
 static const perf_event_t kPerfEvents[] = {
-// N.B. The order of fixed/arch/nonarch here must match perf_event_kind_t.
-#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, description) \
-  { event, umask, flags },
-#define DEF_SKL_EVENT(symbol, event, umask, flags, description) \
+// N.B. The order of arch/nonarch here must match |perf_event_kind_t|.
+#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name, description) \
   { event, umask, flags },
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
+#define DEF_SKL_EVENT(symbol, event, umask, flags, name, description) \
+  { event, umask, flags },
+#include <zircon/device/cpu-trace/skylake-pm-events.inc>
 };
 
 // All configuration data is staged here before writing any MSRs, etc.
@@ -159,7 +161,7 @@ static const category_spec_t kCategorySpecs[] = {
 #include <zircon/device/cpu-trace/intel-pm-categories.inc>
 };
 
-// Map programmable category ids to indices in |category_specs|.
+// Map programmable category ids to indices in |kCategorySpecs|.
 static const uint32_t kProgrammableCategoryMap[] = {
 #define DEF_CATEGORY(symbol, id, name, counters...) \
   [id] = symbol,
