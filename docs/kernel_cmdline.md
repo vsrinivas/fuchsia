@@ -241,6 +241,22 @@ will never be launched.
 Any `+` characters in *command* are treated as argument separators, allowing
 you to pass arguments to an executable.
 
+## zircon.system.blobstore-init=\<command>
+
+This option requests that *command* be run once the blobstore partition is
+mounted. The given command is expected to mount /system, and then signal its
+process handle with `ZX_SIGNAL_USER0`.
+
+*command* may not assume that any other filesystem has been mounted. If
+`zircon.system.blobstore-init-arg` is set, it will be provided as the first
+argument.
+
+A ramdisk containing `/system` takes precedence over
+`zircon.system.blobstore-init` and *command* will not be run if a system
+ramdisk is present. blobstore init will take precendence over a minfs
+partition with the system GUID, and the minfs partition will not be mounted
+if `zircon.system.blobstore-init` is set.
+
 ## zircon.system.writable=\<bool>
 
 This option requests that if a minfs partition with the system type GUID is

@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "block-watcher.h"
+
 // When adding VMOs to the boot filesystem, add them under the directory
 // /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
 #define VMO_SUBDIR "kernel/"

@@ -111,10 +111,6 @@ void do_autorun(const char* name, const char* env) {
 
 static zx_handle_t fuchsia_event;
 
-void fuchsia_start(void) {
-    zx_object_signal(fuchsia_event, 0, ZX_USER_SIGNAL_0);
-}
-
 static int fuchsia_starter(void* arg) {
     bool appmgr_started = false;
     bool autorun_started = false;

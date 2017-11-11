@@ -11,12 +11,55 @@
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
+#include <zircon/syscalls.h>
 #include <fdio/watcher.h>
 
 #include "devmgr.h"
+#include "block-watcher.h"
 
 static zx_handle_t job;
 static bool netboot;
+
+void launch_blobstore_init() {
+    const char* blobstore_init = getenv("zircon.system.blobstore-init");
+    if (blobstore_init == NULL) {
+        return;
+    }
+    if (secondary_bootfs_ready()) {
+        printf("fshost: zircon.system.blobstore-init ignored due to secondary bootfs\n");
+        return;
+    }
+    const char *argv[2];
+    argv[0] = blobstore_init;
+    const char* blobstore_init_arg = getenv("zircon.system.blobstore-init-arg");
+    int argc = 1;
+    if (blobstore_init_arg != NULL) {
+        argc++;
+        argv[1] = blobstore_init_arg;
+    }
+
+    zx_handle_t proc;
+    zx_status_t status = devmgr_launch(job, "blobstore:init", argc, &argv[0],
+                                       NULL, -1, NULL, NULL, 0, &proc);
+    if (status != ZX_OK) {
+        printf("fshost: '%s' failed to launch: %d\n", blobstore_init, status);
+        return;
+    }
+
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
+    zx_signals_t observed;
+    status = zx_object_wait_one(proc, ZX_USER_SIGNAL_0|ZX_PROCESS_TERMINATED, deadline, &observed);
+    if (status == ZX_OK) {
+        if (observed & ZX_USER_SIGNAL_0) {
+            fuchsia_start();
+        } else {
+            printf("fshost: '%s' terminated prematurely\n", blobstore_init);
+        }
+    } else {
+        printf("fshost: '%s' did not signal completion: %d\n", blobstore_init, status);
+    }
+    zx_handle_close(proc);
+}
 
 static zx_status_t launch_blobstore(int argc, const char** argv, zx_handle_t* hnd,
                                     uint32_t* ids, size_t len) {
@@ -58,6 +101,10 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
     if (read_sz == GPT_GUID_LEN) {
         if (gpt_is_sys_guid(type_guid, read_sz)) {
             if (secondary_bootfs_ready()) {
+                return ZX_ERR_ALREADY_BOUND;
+            }
+            if (getenv("zircon.system.blobstore-init") != NULL) {
+                printf("fshost: minfs system partition ignored due to zircon.system.blobstore-init\n");
                 return ZX_ERR_ALREADY_BOUND;
             }
             const char* volume = getenv("zircon.system.volume");
@@ -180,6 +227,7 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
                 printf("devmgr: Failed to mount blobstore partition %s at %s: %d. Please run fixfs to reformat.\n", device_path, PATH_BLOBSTORE, status);
             } else {
                 blobstore_mounted = true;
+                launch_blobstore_init();
             }
         }
 

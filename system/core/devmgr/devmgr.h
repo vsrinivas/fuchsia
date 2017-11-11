@@ -31,7 +31,6 @@ void devmgr_launch_devhost(zx_handle_t job,
                            zx_handle_t hdevice, zx_handle_t hrpc);
 ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo);
 bool secondary_bootfs_ready(void);
-void fuchsia_start(void);
 void fshost_start(void);
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 
