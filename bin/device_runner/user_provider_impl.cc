@@ -21,7 +21,7 @@ namespace {
 
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
-auth::AccountPtr Convert(const UserStorage* user) {
+auth::AccountPtr Convert(const UserStorage* const user) {
   FXL_DCHECK(user);
   auto account = auth::Account::New();
   account->id = user->id()->str();

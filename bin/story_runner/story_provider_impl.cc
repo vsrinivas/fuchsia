@@ -146,8 +146,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
     ledger_->GetPage(
         nullptr, story_page_.NewRequest(), [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << "CreateStoryCall()"
-                           << " Ledger.GetPage() " << status;
+            FXL_LOG(ERROR) << trace_name() << " "
+                           << "Ledger.GetPage() " << status;
             return;
           }
 
@@ -255,7 +255,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
                       // Deleting a key that doesn't exist is OK, not
                       // KEY_NOT_FOUND.
                       if (status != ledger::Status::OK) {
-                        FXL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
+                        FXL_LOG(ERROR) << trace_name() << " "
                                        << " Page.Delete() " << status;
                       }
 

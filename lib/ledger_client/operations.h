@@ -52,8 +52,8 @@ class ReadDataCall : Operation<DataPtr> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "ReadDataCall() " << key_
-                                          << " Page.GetSnapshot() " << status;
+                           FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                                          << "Page.GetSnapshot() " << status;
                            return;
                          }
 
@@ -66,20 +66,20 @@ class ReadDataCall : Operation<DataPtr> {
         to_array(key_), [this, flow](ledger::Status status, zx::vmo value) {
           if (status != ledger::Status::OK) {
             if (status != ledger::Status::KEY_NOT_FOUND || !not_found_is_ok_) {
-              FXL_LOG(ERROR) << "ReadDataCall() " << key_
-                             << " PageSnapshot.Get() " << status;
+              FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                             << "PageSnapshot.Get() " << status;
             }
             return;
           }
 
           if (!value) {
-            FXL_LOG(ERROR) << "ReadDataCall() " << key_
-                           << " PageSnapshot.Get() null vmo";
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                           << "PageSnapshot.Get() null vmo";
           }
 
           std::string value_as_string;
           if (!fsl::StringFromVmo(value, &value_as_string)) {
-            FXL_LOG(ERROR) << "ReadDataCall() " << key_
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_
                            << " Unable to extract data.";
             return;
           }
@@ -135,7 +135,7 @@ class ReadAllDataCall : Operation<DataArray> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_), nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "ReadAllDataCall() "
+                           FXL_LOG(ERROR) << this->trace_name() << " "
                                           << "Page.GetSnapshot() " << status;
                            return;
                          }
@@ -148,7 +148,7 @@ class ReadAllDataCall : Operation<DataArray> {
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR) << "ReadAllDataCall() "
+                   FXL_LOG(ERROR) << this->trace_name() << " "
                                   << "GetEntries() " << status;
                    return;
                  }
@@ -161,7 +161,7 @@ class ReadAllDataCall : Operation<DataArray> {
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!fsl::StringFromVmo(entry->value, &value_as_string)) {
-        FXL_LOG(ERROR) << "ReadAllDataCall() "
+        FXL_LOG(ERROR) << this->trace_name() << " "
                        << "Unable to extract data.";
         continue;
       }
@@ -216,8 +216,8 @@ class WriteDataCall : Operation<> {
     page_->Put(to_array(key_), to_array(json),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR) << "WriteDataCall() key =" << key_
-                                  << ", Page.Put() " << status;
+                   FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                                  << "Page.Put() " << status;
                  }
                });
   }
@@ -249,7 +249,7 @@ class DumpPageSnapshotCall : Operation<std::string> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "DumpPageSnapshotCall() "
+                           FXL_LOG(ERROR) << this->trace_name() << " "
                                           << "Page.GetSnapshot() " << status;
                            return;
                          }
@@ -262,7 +262,7 @@ class DumpPageSnapshotCall : Operation<std::string> {
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR) << "DumpPageSnapshotCall() "
+                   FXL_LOG(ERROR) << this->trace_name() << " "
                                   << "GetEntries() " << status;
                    return;
                  }
@@ -278,7 +278,7 @@ class DumpPageSnapshotCall : Operation<std::string> {
 
       std::string value_as_string;
       if (!fsl::StringFromVmo(entry->value, &value_as_string)) {
-        FXL_LOG(ERROR) << "DumpPageSnapshotCall() "
+        FXL_LOG(ERROR) << this->trace_name() << " "
                        << "Unable to extract data.";
         continue;
       }

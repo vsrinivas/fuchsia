@@ -131,7 +131,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
         rapidjson::Document doc;
         doc.Parse(data_->json.get());
         if (doc.HasParseError()) {
-          FXL_LOG(ERROR) << "LinkImpl::IncrementalChangeCall::Run() "
+          FXL_LOG(ERROR) << trace_name() << " "
                          << EncodeLinkPath(impl_->link_path_)
                          << " JSON parse failed error #" << doc.GetParseError()
                          << std::endl
@@ -160,8 +160,8 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
         impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
                               data_->json);
       } else {
-        FXL_LOG(WARNING)
-            << "IncrementalChangeCall::Run - ApplyChange() failed ";
+        FXL_LOG(WARNING) << trace_name() << " "
+                         << "ApplyChange() failed ";
       }
       impl_->latest_key_ = data_->key;
       Cont1(flow, src_);

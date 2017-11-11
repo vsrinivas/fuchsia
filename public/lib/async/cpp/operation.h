@@ -164,6 +164,9 @@ class OperationBase {
   // be scheduled by their container.
   void Ready();
 
+  // Useful in log messages.
+  const char* trace_name() const { return trace_name_; }
+
   class FlowTokenBase;
 
  private:

@@ -39,7 +39,7 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::String> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                           FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
                                           << " Page.GetSnapshot() " << status;
                            return;
                          }
@@ -55,7 +55,7 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::String> {
         if (status != ledger::Status::KEY_NOT_FOUND) {
           // It's expected that the key is not found when the link is
           // accessed for the first time. Don't log an error then.
-          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+          FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
                          << " PageSnapshot.Get() " << status;
         }
         return;
@@ -64,8 +64,8 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::String> {
       std::string value_as_string;
       if (value) {
         if (!fsl::StringFromVmo(value, &value_as_string)) {
-          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                         << " Unable to extract data.";
+          FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                         << "VMO could not be copied.";
           return;
         }
       }
@@ -105,9 +105,8 @@ class LinkImpl::WriteLinkDataCall : Operation<> {
     page_->Put(to_array(link_key_), to_array(data_),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR)
-                       << "WriteLinkDataCall() link key =" << link_key_
-                       << ", Page.Put() " << status;
+                   FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                                  << " Page.Put() " << status;
                  }
                });
   }
@@ -143,14 +142,14 @@ class LinkImpl::FlushWatchersCall : Operation<> {
 
     page_->StartTransaction([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FXL_LOG(ERROR) << "FlushWatchersCall()"
+        FXL_LOG(ERROR) << trace_name() << " "
                        << " Page.StartTransaction() " << status;
         return;
       }
 
       page_->Commit([this, flow](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << "FlushWatchersCall()"
+          FXL_LOG(ERROR) << trace_name() << " "
                          << " Page.Commit() " << status;
           return;
         }
@@ -242,7 +241,7 @@ class LinkImpl::SetSchemaCall : Operation<> {
     rapidjson::Document doc;
     doc.Parse(json_schema_.get());
     if (doc.HasParseError()) {
-      FXL_LOG(ERROR) << "LinkImpl::SetSchema() "
+      FXL_LOG(ERROR) << trace_name() << " "
                      << EncodeLinkPath(impl_->link_path_)
                      << " JSON parse failed error #" << doc.GetParseError()
                      << std::endl

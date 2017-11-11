@@ -75,9 +75,8 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
                                  fidl::Array<uint8_t> next_token) {
           if (status != ledger::Status::OK &&
               status != ledger::Status::PARTIAL_RESULT) {
-            FXL_LOG(INFO)
-                << "Getting diff from MergeResultProvider failed with status "
-                << status;
+            FXL_LOG(INFO) << trace_name() << " "
+                          << "MergeResultProvider.Get{Left,Right}Diff() " << status;
             return;
           }
           for (auto& change : change->changes) {
@@ -100,8 +99,8 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
     }
     result_provider_->Done([this](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FXL_LOG(INFO) << "MergeResultProvider::Done failed with status "
-                      << status;
+        FXL_LOG(INFO) << trace_name() << " "
+                      << "MergeResultProvider.Done() " << status;
       }
       Done();
     });

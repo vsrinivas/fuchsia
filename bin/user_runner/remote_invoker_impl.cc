@@ -60,7 +60,8 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
     ledger_->GetPage(std::move(page_id), device_page_.NewRequest(),
                      [this, flow](ledger::Status status) {
                        if (status != ledger::Status::OK) {
-                         FXL_LOG(ERROR) << "Ledger.GetPage() status=" << status;
+                         FXL_LOG(ERROR) << trace_name() << " "
+                                        << "Ledger.GetPage() " << status;
                          return;
                        }
 
@@ -71,7 +72,8 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
   void Cont1(FlowToken flow) {
     device_page_->StartTransaction([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FXL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
+        FXL_LOG(ERROR) << trace_name() << " "
+                       << "Page.StartTransaction() " << status;
         return;
       }
 
@@ -91,7 +93,8 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
         to_array(timestamp_), to_array(json), ledger::Priority::EAGER,
         [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << "Page.PutWithPriority() status=" << status;
+            FXL_LOG(ERROR) << trace_name() << " "
+                           << "Page.PutWithPriority() " << status;
             return;
           }
 
@@ -102,7 +105,8 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
   void Cont3(FlowToken flow) {
     device_page_->Commit([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FXL_LOG(ERROR) << "Page.Commit() status=" << status;
+        FXL_LOG(ERROR) << trace_name() << " "
+                       << "Page.Commit() " << status;
         return;
       }
 
@@ -112,7 +116,8 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
 
   void Cont4(FlowToken flow) {
     device_page_->GetId([this, flow](fidl::Array<uint8_t> page_id) {
-      FXL_LOG(INFO) << "Retrieved page " << to_string(page_id);
+      FXL_LOG(INFO) << trace_name() << " "
+                    << "Retrieved page " << to_string(page_id);
       page_id_ = to_string(page_id);
     });
   }

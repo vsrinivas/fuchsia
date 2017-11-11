@@ -56,7 +56,7 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
     GetEntries((*snapshot_).get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR) << "InitializeCall() "
+                   FXL_LOG(ERROR) << trace_name() << " "
                                   << "GetEntries() " << status;
                    return;
                  }
@@ -76,7 +76,8 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
                       entry->key.size());
       std::string value;
       if (!fsl::StringFromVmo(entry->value, &value)) {
-        FXL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
+        FXL_LOG(ERROR) << trace_name() << " " << key << " "
+                       << "VMO could nt be copied.";
         continue;
       }
 
@@ -118,9 +119,10 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
 
     storage_->page()->PutWithPriority(
         to_array(key), to_array(value), ledger::Priority::EAGER,
-        [this, flow](ledger::Status status) {
+        [this, key, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << "Ledger operation returned status: " << status;
+            FXL_LOG(ERROR) << trace_name() << " " << key << " "
+                           << "Page.PutWithPriority() " << status;
             return;
           }
 
@@ -156,12 +158,13 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
 
     std::string key = MakeTriggerKey(agent_url_, task_id_);
     storage_->page()->Delete(
-        to_array(key), [this, flow](ledger::Status status) {
+        to_array(key), [this, key, flow](ledger::Status status) {
           // ledger::Status::INVALID_TOKEN is okay because we might have gotten
           // a request to delete a token which does not exist. This is okay.
           if (status != ledger::Status::OK &&
               status != ledger::Status::INVALID_TOKEN) {
-            FXL_LOG(ERROR) << "Ledger operation returned status: " << status;
+            FXL_LOG(ERROR) << trace_name() << " " << key << " "
+                           << "Page.Delete() " << status;
             return;
           }
           success_result_ = true;
