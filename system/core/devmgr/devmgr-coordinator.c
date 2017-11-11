@@ -728,6 +728,12 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     }
     dev->parent = parent;
 
+    // We must mark the device as invisible before publishing so
+    // that we don't send "device added" notifications.
+    if (invisible) {
+        dev->flags |= DEV_CTX_INVISIBLE;
+    }
+
     zx_status_t r;
     if ((r = devfs_publish(parent, dev)) < 0) {
         free(dev);
@@ -760,9 +766,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
         dev, dev->name, dev->prop_count, dev->args, dev->parent);
 
-    if (invisible) {
-        dev->flags |= DEV_CTX_INVISIBLE;
-    } else {
+    if (!invisible) {
         dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
         queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
     }
