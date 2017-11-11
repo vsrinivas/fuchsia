@@ -265,6 +265,12 @@ public:
         DASSERT(val <= 0x1ff);
         reg_io->Write32(kOffset, val << 23);
     }
+
+    static uint32_t read(RegisterIo* reg_io)
+    {
+        // Register in units of 16.66Mhz on skylake
+        return ((reg_io->Read32(kOffset) >> 23) & 0x1ff) * 50 / 3;
+    }
 };
 
 class RenderPerformanceStatus {

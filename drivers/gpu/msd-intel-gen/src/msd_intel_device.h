@@ -159,6 +159,7 @@ private:
     void FormatDump(DumpState& dump_state, std::string& dump_string);
 
     int DeviceThreadLoop();
+    void FrequencyMonitorDeviceThreadLoop();
     int InterruptThreadLoop();
     void WaitThreadLoop();
 
@@ -181,6 +182,7 @@ private:
     magma_display_size display_size_{};
 
     std::thread device_thread_;
+    std::thread freq_monitor_device_thread_;
     std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
     std::atomic_bool device_thread_quit_flag_{false};
     std::atomic_bool interrupt_thread_quit_flag_{false};
@@ -217,6 +219,12 @@ private:
     std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
     std::mutex device_request_mutex_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
+
+    struct FreqMonitorContext {
+        std::unique_ptr<magma::PlatformSemaphore> semaphore{magma::PlatformSemaphore::Create()};
+        std::atomic_bool tracing_enabled{false};
+    };
+    std::shared_ptr<FreqMonitorContext> freq_monitor_context_;
 
     std::mutex pageflip_request_mutex_;
     std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_queue_;

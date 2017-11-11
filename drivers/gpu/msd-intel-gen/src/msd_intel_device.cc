@@ -184,9 +184,17 @@ void MsdIntelDevice::Destroy()
     if (device_request_semaphore_)
         device_request_semaphore_->Signal();
 
+    if (freq_monitor_context_)
+        freq_monitor_context_->semaphore->Signal();
+
     if (device_thread_.joinable()) {
         DLOG("joining device thread");
         device_thread_.join();
+        DLOG("joined");
+    }
+    if (freq_monitor_device_thread_.joinable()) {
+        DLOG("joining freq monitor thread");
+        freq_monitor_device_thread_.join();
         DLOG("joined");
     }
 }
@@ -334,6 +342,22 @@ void MsdIntelDevice::StartDeviceThread()
 {
     DASSERT(!device_thread_.joinable());
     device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
+
+    if (MAGMA_ENABLE_TRACING) {
+        freq_monitor_context_ = std::make_shared<FreqMonitorContext>();
+        freq_monitor_device_thread_ =
+            std::thread([this] { this->FrequencyMonitorDeviceThreadLoop(); });
+
+        magma::PlatformTrace::Get()->SetObserver([weak_context = std::weak_ptr<FreqMonitorContext>(
+                                                      freq_monitor_context_)](bool is_enabled) {
+            auto context = weak_context.lock();
+            if (context && context->tracing_enabled != is_enabled) {
+                context->tracing_enabled = is_enabled;
+                if (context->tracing_enabled)
+                    context->semaphore->Signal();
+            }
+        });
+    }
 
     // TODO: move interrupt thread processing into device thread.
     // However for now, we need a separate interrupt thread and it
@@ -574,6 +598,30 @@ int MsdIntelDevice::DeviceThreadLoop()
 
     DLOG("DeviceThreadLoop exit");
     return 0;
+}
+
+void MsdIntelDevice::FrequencyMonitorDeviceThreadLoop()
+{
+    magma::PlatformThreadHelper::SetCurrentThreadName("FrequencyMonitorDeviceThread");
+
+    while (!device_thread_quit_flag_ && freq_monitor_context_->semaphore->Wait()) {
+        DLOG("begin frequency monitoring");
+
+        while (!device_thread_quit_flag_ && freq_monitor_context_->tracing_enabled) {
+            auto registers = register_io_.get(); // bypass thread id check
+            uint32_t actual_mhz =
+                registers::RenderPerformanceStatus::read_current_frequency_gen9(registers);
+            uint32_t requested_mhz =
+                registers::RenderPerformanceNormalFrequencyRequest::read(registers);
+            TRACE_COUNTER("magma", "gpu freq", 0, "request_mhz", requested_mhz, "actual_mhz",
+                          actual_mhz);
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+
+        DLOG("stop frequency monitoring");
+    }
+
+    DLOG("FrequencyMonitorDeviceThreadLoop exit");
 }
 
 void MsdIntelDevice::ProcessCompletedCommandBuffers()
