@@ -10,12 +10,12 @@
 
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
-#include "channel.h"
 #include "element.h"
 #include "enum.h"
 #include "logging.h"
 #include "mac_frame.h"
 
+#include "garnet/drivers/wlan/common/channel.h"
 #include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <unordered_map>

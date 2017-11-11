@@ -14,7 +14,6 @@ source_set("mlme") {
     "action_frame.h",
     "bss.cpp",
     "bss.h",
-    "channel.h",
     "client_mlme.cpp",
     "client_mlme.h",
     "clock.h",
