@@ -56,7 +56,6 @@ ModuleControllerImpl::ModuleControllerImpl(
   ConnectToService(app_client_.services(), module_service_.NewRequest());
   module_service_.set_connection_error_handler([this] { OnConnectionError(); });
   module_service_->Initialize(std::move(module_context),
-                              std::move(outgoing_services),
                               std::move(incoming_services));
 
   ConnectToService(app_client_.services(), std::move(view_provider_request));

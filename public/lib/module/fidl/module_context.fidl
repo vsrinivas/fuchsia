@@ -15,6 +15,8 @@ import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
+// TODO(alhaad): All instances of |outgoing_services| below are unused and shall
+// be removed soon.
 [ServiceName="modular.ModuleContext"]
 interface ModuleContext {
   // Gets a Link instance with the given name.

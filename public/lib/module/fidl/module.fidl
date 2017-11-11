@@ -43,16 +43,13 @@ interface Module {
   // exchange data.
   //
   // Additionally, this module may provide its services to the calling module by
-  // implementing its |outgoing_services|, and consume the calling module's
-  // |incoming_services|.
+  // implementing its |outgoing_services|.
   //
   // The ModuleContext instance can be used to start more Module instances, and
   // to create Link instances to share data with those Module instances. Calling
   // ModuleContext.Done() signals this module requests to be stopped.
   //
-  // TODO(vardhan): Move incoming_services/outgoing_services as getters into
-  // ModuleContext.
+  // TODO(vardhan): Move outgoing_services as getter into ModuleContext.
   Initialize(ModuleContext module_context,
-             app.ServiceProvider? incoming_services,
              app.ServiceProvider&? outgoing_services);
 };

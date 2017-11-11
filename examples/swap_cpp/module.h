@@ -44,7 +44,6 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   // |Lifecycle|

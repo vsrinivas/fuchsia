@@ -111,7 +111,6 @@ TodoApp::TodoApp()
 
 void TodoApp::Initialize(
     fidl::InterfaceHandle<modular::ModuleContext> module_context,
-    fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
     fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
   module_context_.Bind(std::move(module_context));
   module_context_->GetComponentContext(component_context_.NewRequest());

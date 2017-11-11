@@ -31,7 +31,6 @@ class TodoApp : public modular::Module,
   // modular::Module:
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   // ledger::PageWatcher:

@@ -139,9 +139,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    FXL_CHECK(incoming_services.is_valid());
     FXL_CHECK(outgoing_services.is_pending());
 
     module_context_.Bind(std::move(module_context));
@@ -155,23 +153,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         [this](fidl::InterfaceRequest<modular::examples::Multiplier> req) {
           multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
         });
-
-    // This exercises the incoming services we get from the recipe.
-    FXL_CHECK(incoming_services.is_valid());
-    auto recipe_services =
-        app::ServiceProviderPtr::Create(std::move(incoming_services));
-
-    auto adder_service =
-        app::ConnectToService<modular::examples::Adder>(recipe_services.get());
-    adder_service.set_connection_error_handler([] {
-      FXL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
-    });
-    adder_service->Add(4, 4,
-                       fxl::MakeCopyable([adder_service = std::move(
-                                              adder_service)](int32_t result) {
-                         FXL_CHECK(result == 8);
-                         FXL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
-                       }));
 
     module_context_->Ready();
   }

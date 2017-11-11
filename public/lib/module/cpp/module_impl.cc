@@ -18,9 +18,7 @@ ModuleImpl::ModuleImpl(app::ServiceNamespace* service_namespace,
 // |Module|
 void ModuleImpl::Initialize(
     fidl::InterfaceHandle<ModuleContext> module_context,
-    fidl::InterfaceHandle<app::ServiceProvider> /* incoming_services */,
     fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
-  // TODO(vardhan): Deprecate |incoming_services|.
   delegate_->ModuleInit(std::move(module_context),
                         std::move(outgoing_services));
 }

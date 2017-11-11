@@ -34,7 +34,6 @@ class ModuleImpl : public Module {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   Delegate* const delegate_;
