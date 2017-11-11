@@ -415,6 +415,18 @@ static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
         memcpy(out_buf, &irq, sizeof(irq));
         *out_actual = sizeof(irq);
         return ZX_OK;
+    } else if (slave->chip_address == 0x10) {
+        // Acer12
+        zx_handle_t irq;
+        zx_status_t status = zx_interrupt_create(get_root_resource(), 0x1f,
+                                                 ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
+
+        if (status != ZX_OK) {
+            return status;
+        }
+        memcpy(out_buf, &irq, sizeof(irq));
+        *out_actual = sizeof(irq);
+        return ZX_OK;
     }
 
     return ZX_ERR_NOT_FOUND;
