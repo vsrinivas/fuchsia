@@ -10,6 +10,8 @@ import (
 	"flag"
 	"log"
 
+	"syscall/zx"
+
 	"fuchsia.googlesource.com/pm/pkgfs"
 )
 
@@ -34,6 +36,10 @@ func main() {
 	}
 
 	log.Printf("pkgsvr mounted at %s", *path)
+
+	if err := zx.ProcHandle.Signal(zx.SignalNone, zx.SignalUser0); err != nil {
+		log.Printf("pkgsvr: failed to SignalUser0 on ProcHandle, fuchsia may not start: %s", err)
+	}
 
 	select {}
 }
