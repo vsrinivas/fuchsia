@@ -20,6 +20,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
@@ -55,14 +56,13 @@ class VisibleStoriesHandler;
 class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher,
                        UserRunnerDebug {
  public:
-  UserRunnerImpl(std::shared_ptr<app::ApplicationContext> application_context,
+  UserRunnerImpl(app::ApplicationContext* application_context,
                  bool test);
 
   ~UserRunnerImpl() override;
 
-  void Connect(fidl::InterfaceRequest<UserRunner> request);
-
-  void Connect(fidl::InterfaceRequest<UserRunnerDebug> request);
+  // |AppDriver| calls this.
+  void Terminate(std::function<void()> done);
 
  private:
   // |UserRunner|
@@ -73,7 +73,6 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
-  void Terminate() override;
 
   // |UserShellContext|
   void GetAccount(const GetAccountCallback& callback) override;
@@ -120,11 +119,12 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher,
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
 
-  std::unique_ptr<fidl::Binding<UserRunner>> binding_;
-  std::shared_ptr<app::ApplicationContext> application_context_;
+  app::ApplicationContext* const application_context_;
   const bool test_;
-  fidl::Binding<UserShellContext> user_shell_context_binding_;
+
+  fidl::BindingSet<UserRunner> bindings_;
   fidl::BindingSet<UserRunnerDebug> user_runner_debug_bindings_;
+  fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;

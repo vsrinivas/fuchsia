@@ -10,8 +10,6 @@
 #include "lib/agent/fidl/agent_provider.fidl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/config/fidl/config.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -86,26 +84,28 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    std::shared_ptr<app::ApplicationContext> const application_context,
+    app::ApplicationContext* const application_context,
     const bool test)
-    : binding_(new fidl::Binding<UserRunner>(this)),
-      application_context_(application_context),
+    : application_context_(application_context),
       test_(test),
       user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
-  binding_->set_connection_error_handler([this] { Terminate(); });
+
+  application_context_->outgoing_services()->AddService<UserRunner>(
+      [this](fidl::InterfaceRequest<UserRunner> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+
+  // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
+  // to filesystem instead of this indirection.
+  application_context_->outgoing_services()->AddService<UserRunnerDebug>(
+      [this](fidl::InterfaceRequest<UserRunnerDebug> request) {
+        user_runner_debug_bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
-
-void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunner> request) {
-  binding_->Bind(std::move(request));
-}
-
-void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunnerDebug> request) {
-  user_runner_debug_bindings_.AddBinding(this, std::move(request));
-}
 
 void UserRunnerImpl::Initialize(
     auth::AccountPtr account,
@@ -322,7 +322,7 @@ void UserRunnerImpl::Initialize(
       user_shell_context_binding_.NewBinding());
 }
 
-void UserRunnerImpl::Terminate() {
+void UserRunnerImpl::Terminate(std::function<void()> done) {
   FXL_LOG(INFO) << "UserRunner::Terminate()";
 
   // We need to Terminate() every member that has life cycle here. In addition,
@@ -350,7 +350,7 @@ void UserRunnerImpl::Terminate() {
   //
   // This list is the reverse from the initialization order executed in
   // Initialize() above.
-  user_shell_->Teardown(kBasicTimeout, [this] {
+  user_shell_->Teardown(kBasicTimeout, [this, done] {
     FXL_DLOG(INFO) << "- UserShell down";
     user_shell_.reset();
 
@@ -361,19 +361,19 @@ void UserRunnerImpl::Terminate() {
     // modules running in a story might freak out if agents they are connected
     // to go away while they are still running. On the other hand agents are
     // meant to outlive story lifetimes.
-    story_provider_impl_.Teardown(kStoryProviderTimeout, [this] {
+    story_provider_impl_.Teardown(kStoryProviderTimeout, [this, done] {
       FXL_DLOG(INFO) << "- StoryProvider down";
 
       user_intelligence_provider_.reset();
-      maxwell_->Teardown(kBasicTimeout, [this] {
-        module_resolver_->Teardown(kBasicTimeout, [this] {
+      maxwell_->Teardown(kBasicTimeout, [this, done] {
+        module_resolver_->Teardown(kBasicTimeout, [this, done] {
           FXL_DLOG(INFO) << "- Maxwell down";
           maxwell_.reset();
 
           maxwell_component_context_binding_.reset();
           maxwell_component_context_impl_.reset();
 
-          agent_runner_.Teardown(kAgentRunnerTimeout, [this] {
+          agent_runner_.Teardown(kAgentRunnerTimeout, [this, done] {
             FXL_DLOG(INFO) << "- AgentRunner down";
             agent_runner_storage_.reset();
 
@@ -385,11 +385,10 @@ void UserRunnerImpl::Terminate() {
             ledger_client_.reset();
             ledger_repository_.reset();
             ledger_repository_factory_.reset();
-            // As the Ledger Dashboard needs the ledger, so it needs to be
-            // terminated first.
-            ledger_dashboard_client_->Teardown(kBasicTimeout, [this] {
+            ledger_dashboard_client_->Teardown(kBasicTimeout, [this, done] {
               ledger_dashboard_client_.reset();
-              ledger_app_client_->Teardown(kBasicTimeout, [this] {
+
+              ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
                 FXL_DLOG(INFO) << "- Ledger down";
                 ledger_app_client_.reset();
 
@@ -400,7 +399,7 @@ void UserRunnerImpl::Terminate() {
                 token_provider_factory_.reset();
 
                 FXL_LOG(INFO) << "UserRunner::Terminate(): done";
-                fsl::MessageLoop::GetCurrent()->QuitNow();
+                done();
               });
             });
           });

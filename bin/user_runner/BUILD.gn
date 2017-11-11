@@ -52,6 +52,7 @@ executable("user_runner") {
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/agent/fidl/agent_controller",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl/account",
     "//peridot/public/lib/config/fidl",

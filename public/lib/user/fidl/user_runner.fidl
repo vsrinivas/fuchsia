@@ -24,10 +24,6 @@ interface UserRunner {
              auth.TokenProviderFactory token_provider_factory,
              UserContext user_context,
              mozart.ViewOwner&? view_owner);
-
-  // This signals |UserRunner| to teardown itself. Upon response, the caller may
-  // terminate the |UserRunner| process if it hasn't done so already.
-  Terminate();
 };
 
 // This interface is provided by device runner to |UserRunner|.

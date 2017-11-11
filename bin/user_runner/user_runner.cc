@@ -3,52 +3,28 @@
 // found in the LICENSE file.
 
 #include <memory>
-
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/user_runner_impl.h"
-
-namespace modular {
-
-// Implementation of the user runner app.
-class UserRunnerApp {
- public:
-  explicit UserRunnerApp(const bool test)
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        user_runner_impl_(application_context_, test) {
-    application_context_->outgoing_services()->AddService<UserRunner>(
-        [this](fidl::InterfaceRequest<UserRunner> request) {
-          user_runner_impl_.Connect(std::move(request));
-        });
-    // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
-    // to filesystem instead of this indirection.
-    application_context_->outgoing_services()->AddService<UserRunnerDebug>(
-        [this](fidl::InterfaceRequest<UserRunnerDebug> request) {
-          user_runner_impl_.Connect(std::move(request));
-        });
-  }
-
- private:
-  std::shared_ptr<app::ApplicationContext> application_context_;
-  UserRunnerImpl user_runner_impl_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
-};
-
-}  // namespace modular
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const bool test = command_line.HasOption("test");
+
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  modular::UserRunnerApp app(test);
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<modular::UserRunnerImpl> driver(
+      app_context->outgoing_services(),
+      std::make_unique<modular::UserRunnerImpl>(app_context.get(), test),
+      [&loop] { loop.QuitNow(); });
+
   loop.Run();
   return 0;
 }

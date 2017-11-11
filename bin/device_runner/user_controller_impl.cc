@@ -53,11 +53,12 @@ UserControllerImpl::UserControllerImpl(
   }
 
   // 1. Launch UserRunner in the current environment.
-  user_runner_ = std::make_unique<AppClient<UserRunner>>(
+  user_runner_app_ = std::make_unique<AppClient<Lifecycle>>(
       application_launcher, std::move(user_runner), data_origin);
 
   // 2. Initialize the UserRunner service.
-  user_runner_->primary_service()->Initialize(
+  ConnectToService(user_runner_app_->services(), user_runner_.NewRequest());
+  user_runner_->Initialize(
       std::move(account), std::move(user_shell), std::move(story_shell),
       std::move(token_provider_factory), user_context_binding_.NewBinding(),
       std::move(view_owner_request));
@@ -65,7 +66,7 @@ UserControllerImpl::UserControllerImpl(
 
 std::string UserControllerImpl::DumpState() {
   UserRunnerDebugSyncPtr debug;
-  ConnectToService(user_runner_->services(), fidl::GetSynchronousProxy(&debug));
+  ConnectToService(user_runner_app_->services(), fidl::GetSynchronousProxy(&debug));
   fidl::String output;
   debug->DumpState(&output);
   return output;
@@ -83,7 +84,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
   user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
-  user_runner_->Teardown(kUserRunnerTimeout, [this] {
+  user_runner_app_->Teardown(kUserRunnerTimeout, [this] {
     for (const auto& done : logout_response_callbacks_) {
       done();
     }

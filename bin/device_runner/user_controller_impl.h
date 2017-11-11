@@ -17,6 +17,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
@@ -66,7 +67,8 @@ class UserControllerImpl : UserController, UserContext {
       fidl::InterfaceRequest<mozart::Presentation> presentation) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
-  std::unique_ptr<AppClient<UserRunner>> user_runner_;
+  std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;
+  UserRunnerPtr user_runner_;
 
   fidl::Binding<UserContext> user_context_binding_;
   fidl::Binding<UserController> user_controller_binding_;
