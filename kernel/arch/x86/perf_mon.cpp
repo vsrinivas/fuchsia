@@ -39,7 +39,7 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <lib/ktrace.h>
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 #include <zircon/ktrace.h>
 #include <zircon/mtrace.h>
 #include <zircon/thread_annotations.h>

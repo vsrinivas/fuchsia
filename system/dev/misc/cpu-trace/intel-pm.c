@@ -10,7 +10,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 #include <zircon/mtrace.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
@@ -40,7 +40,7 @@ typedef enum {
   symbol,
 #define DEF_SKL_EVENT(symbol, event, umask, flags, name) \
   symbol,
-#include <zircon/device/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 } perf_event_kind_t;
 
 typedef struct {
@@ -55,7 +55,7 @@ static const perf_event_t kPerfEvents[] = {
   { event, umask, flags },
 #define DEF_SKL_EVENT(symbol, event, umask, flags, description) \
   { event, umask, flags },
-#include <zircon/device/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 };
 
 // All configuration data is staged here before writing any MSRs, etc.
@@ -148,7 +148,7 @@ typedef struct {
 
 #define DEF_CATEGORY(symbol, id, name, counters...) \
   static const perf_event_kind_t symbol ## _events[] = { counters };
-#include "zircon/device/intel-pm-categories.inc"
+#include <zircon/device/cpu-trace/intel-pm-categories.inc>
 
 static const category_spec_t kCategorySpecs[] = {
 #define DEF_CATEGORY(symbol, id, name, counters...) \
@@ -156,14 +156,14 @@ static const category_spec_t kCategorySpecs[] = {
     countof(symbol ## _events), \
     &symbol ## _events[0] \
   },
-#include "zircon/device/intel-pm-categories.inc"
+#include <zircon/device/cpu-trace/intel-pm-categories.inc>
 };
 
 // Map programmable category ids to indices in |category_specs|.
 static const uint32_t kProgrammableCategoryMap[] = {
 #define DEF_CATEGORY(symbol, id, name, counters...) \
   [id] = symbol,
-#include <zircon/device/intel-pm-categories.inc>
+#include <zircon/device/cpu-trace/intel-pm-categories.inc>
 };
 
 static_assert(countof(kCategorySpecs) == IPM_CATEGORY_MAX, "");

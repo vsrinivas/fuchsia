@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include <zircon/compiler.h>
-#include <zircon/device/intel-pt.h>
+#include <zircon/device/cpu-trace/intel-pt.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS

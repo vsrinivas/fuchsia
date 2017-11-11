@@ -18,7 +18,7 @@
 
 // TODO(dje): For zx_x86_ipm_perf_config_t. To be revisited when we switch to
 // "resources".
-#include <zircon/device/intel-pm.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 
 __BEGIN_CDECLS
 
