@@ -3,5 +3,11 @@
         "pmd": "//garnet/go/src/pm:pmd",
         "pkgsvr": "//garnet/go/src/pm:pkgsvr",
         "installblob": "//garnet/go/src/pm:installblob"
-    }
+    },
+    "resources": [
+        {
+            "bootfs_path": "data/bootstrap/pmd.config",
+            "file": "garnet/go/src/pm/startup.config"
+        }
+    ]
 }
