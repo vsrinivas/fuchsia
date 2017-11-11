@@ -54,7 +54,7 @@ class AppClientBase : public AsyncHolderBase {
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this
   // application stops or crashes. |error_handler| will be deregistered when
-  // attempting graceful termination via |AppTerminate|.
+  // attempting graceful termination via |AsyncHolderBase::Teardown()|.
   void SetAppErrorHandler(const std::function<void()>& error_handler);
 
  private:
@@ -94,7 +94,7 @@ class AppClient : public AppClientBase {
  private:
   void ServiceTerminate(const std::function<void()>& done) override {
     // The service is expected to acknowledge the Terminate() request by
-    // closing its connection within the timeout set in AppTerminate().
+    // closing its connection within the timeout set in Teardown().
     service_.set_connection_error_handler(done);
     service_->Terminate();
   }
