@@ -9,11 +9,11 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 // Note: GTest uses the top-level "testing" namespace while the Bluetooth test
-// utilities are in "::bluetooth::testing".
+// utilities are in "::btlib::testing".
 class TestBase : public ::testing::Test {
  public:
   TestBase() = default;
@@ -55,4 +55,4 @@ class TestBase : public ::testing::Test {
 };
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

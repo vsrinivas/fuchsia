@@ -16,7 +16,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 // Abstract base for implementing a fake HCI controller endpoint. This can
@@ -93,4 +93,4 @@ class FakeControllerBase {
 };
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

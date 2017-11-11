@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 namespace {
 
@@ -168,4 +168,4 @@ ErrorCode Database::ReadByGroupType(
 }
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

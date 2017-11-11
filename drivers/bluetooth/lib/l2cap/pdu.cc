@@ -6,7 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 PDU::Reader::Reader(const PDU* pdu)
@@ -179,4 +179,4 @@ void PDU::AppendFragment(hci::ACLDataPacketPtr fragment) {
 }
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

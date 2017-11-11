@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace internal {
 constexpr size_t kSlabOverhead = 16;
@@ -26,7 +26,7 @@ using SlabAllocatorTraits =
                                        internal::kSlabOverhead>;
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
 namespace fbl {
 namespace internal {

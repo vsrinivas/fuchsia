@@ -12,7 +12,7 @@
 
 #include "device_wrapper.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // static
@@ -180,4 +180,4 @@ void Transport::NotifyClosedCallback() {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

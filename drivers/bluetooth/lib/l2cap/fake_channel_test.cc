@@ -6,7 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace testing {
 
@@ -40,4 +40,4 @@ bool FakeChannelTest::ReceiveAndExpect(
 
 }  // namespace testing
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

@@ -8,7 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
@@ -636,4 +636,4 @@ TEST(GAP_DiscoveryFilterTest, Combined) {
 
 }  // namespace
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

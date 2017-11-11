@@ -23,7 +23,10 @@
 #include "bt_intel.h"
 #include "intel_firmware_loader.h"
 
-using namespace bluetooth;
+using btlib::hci::CommandPacket;
+using btlib::hci::EventPacket;
+using btlib::hci::GenericEnableParam;
+using btlib::hci::Status;
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -54,21 +57,21 @@ class MfgModeEnabler {
   CommandChannel* channel_;
   bool patch_reset_needed_;
 
-  std::unique_ptr<hci::CommandPacket> MakeMfgModePacket(
+  std::unique_ptr<CommandPacket> MakeMfgModePacket(
       bool enable,
       MfgDisableMode disable_mode = MfgDisableMode::kNoPatches) {
-    auto packet = hci::CommandPacket::New(
-        kMfgModeChange, sizeof(IntelMfgModeChangeCommandParams));
+    auto packet = CommandPacket::New(kMfgModeChange,
+                                     sizeof(IntelMfgModeChangeCommandParams));
     auto params = packet->mutable_view()
                       ->mutable_payload<IntelMfgModeChangeCommandParams>();
-    params->enable = enable ? bluetooth::hci::GenericEnableParam::kEnable
-                            : bluetooth::hci::GenericEnableParam::kDisable;
+    params->enable =
+        enable ? GenericEnableParam::kEnable : GenericEnableParam::kDisable;
     params->disable_mode = disable_mode;
     return packet;
   }
 };
 
-void LogCommandComplete(hci::Status status) {
+void LogCommandComplete(Status status) {
   std::cout << "  Command Complete - status: "
             << fxl::StringPrintf("0x%02x", status) << std::endl;
 }
@@ -78,8 +81,8 @@ std::string PrintByte(uint8_t byte) {
   return fxl::StringPrintf("%u (0x%02x)", byte, byte);
 }
 
-std::string EnableParamToString(hci::GenericEnableParam param) {
-  return (param == hci::GenericEnableParam::kEnable) ? "enabled" : "disabled";
+std::string EnableParamToString(GenericEnableParam param) {
+  return (param == GenericEnableParam::kEnable) ? "enabled" : "disabled";
 }
 
 std::string FirmwareVariantToString(uint8_t fw_variant) {
@@ -102,7 +105,7 @@ bool HandleReadVersion(CommandChannel* cmd_channel,
     return false;
   }
 
-  auto cb = [cmd_line](const hci::EventPacket& event) {
+  auto cb = [cmd_line](const EventPacket& event) {
     auto params = event.return_params<IntelVersionReturnParams>();
     LogCommandComplete(params->status);
 
@@ -138,7 +141,7 @@ bool HandleReadVersion(CommandChannel* cmd_channel,
     }
   };
 
-  auto packet = hci::CommandPacket::New(kReadVersion);
+  auto packet = CommandPacket::New(kReadVersion);
   std::cout << "  Sending HCI Vendor (Intel) Read Version" << std::endl;
   cmd_channel->SendCommandSync(packet->view(), cb);
 
@@ -153,7 +156,7 @@ bool HandleReadBootParams(CommandChannel* cmd_channel,
     return false;
   }
 
-  auto cb = [](const hci::EventPacket& event) {
+  auto cb = [](const EventPacket& event) {
     auto params = event.return_params<IntelReadBootParamsReturnParams>();
     LogCommandComplete(params->status);
 
@@ -180,7 +183,7 @@ bool HandleReadBootParams(CommandChannel* cmd_channel,
               << std::endl;
   };
 
-  auto packet = hci::CommandPacket::New(kReadBootParams);
+  auto packet = CommandPacket::New(kReadBootParams);
   std::cout << "  Sending HCI Vendor (Intel) Read Boot Params" << std::endl;
   cmd_channel->SendCommandSync(packet->view(), cb);
 
@@ -195,8 +198,7 @@ bool HandleReset(CommandChannel* cmd_channel,
     return false;
   }
 
-  auto packet =
-      hci::CommandPacket::New(kReset, sizeof(IntelResetCommandParams));
+  auto packet = CommandPacket::New(kReset, sizeof(IntelResetCommandParams));
   auto params =
       packet->mutable_view()->mutable_payload<IntelResetCommandParams>();
   params->data[0] = 0x00;
@@ -266,7 +268,7 @@ bool HandleLoadSecure(CommandChannel* cmd_channel,
 }  // namespace
 
 void RegisterCommands(CommandChannel* data,
-                      bluetooth::tools::CommandDispatcher* dispatcher) {
+                      ::bluetooth_tools::CommandDispatcher* dispatcher) {
 #define BIND(handler) \
   std::bind(&handler, data, std::placeholders::_1, std::placeholders::_2)
 

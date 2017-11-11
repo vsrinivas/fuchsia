@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 // Represents a remote Bluetooth device that is known to the current system due
@@ -161,4 +161,4 @@ class RemoteDevice final {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

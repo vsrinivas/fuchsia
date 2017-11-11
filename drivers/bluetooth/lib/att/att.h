@@ -14,7 +14,7 @@
 
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 // v5.0, Vol 3, Part G, 5.1.2
@@ -326,4 +326,4 @@ constexpr OpCode kConfirmation = 0x1E;
 using IndicationParams = AttributeData;
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

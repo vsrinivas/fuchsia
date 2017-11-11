@@ -14,12 +14,12 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
-using ::bluetooth::testing::FakeController;
-using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
+using ::btlib::testing::FakeController;
+using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
 const common::DeviceAddress kPublicAddress(
     common::DeviceAddress::Type::kLEPublic,
@@ -299,4 +299,4 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
 
 }  // namespace
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

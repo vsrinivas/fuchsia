@@ -20,7 +20,7 @@
 #include "low_energy_connection_manager.h"
 #include "low_energy_discovery_manager.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci)
@@ -495,4 +495,4 @@ void Adapter::OnTransportClosed() {
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

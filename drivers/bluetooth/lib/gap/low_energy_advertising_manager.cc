@@ -12,7 +12,7 @@
 #include "lib/fxl/random/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 namespace internal {
@@ -108,4 +108,4 @@ bool LowEnergyAdvertisingManager::StopAdvertising(
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

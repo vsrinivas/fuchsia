@@ -8,7 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // Default implementations do nothing.
@@ -41,4 +41,4 @@ LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

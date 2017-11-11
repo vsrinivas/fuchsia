@@ -20,7 +20,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 class FakeDevice;
@@ -290,4 +290,4 @@ class FakeController : public FakeControllerBase {
 };
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

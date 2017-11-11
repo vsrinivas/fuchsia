@@ -12,7 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 // Stores controller settings and state information.
@@ -108,4 +108,4 @@ class AdapterState final {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

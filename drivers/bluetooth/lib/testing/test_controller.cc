@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 CommandTransaction::CommandTransaction(
@@ -104,4 +104,4 @@ void TestController::OnACLDataPacketReceived(
 }
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

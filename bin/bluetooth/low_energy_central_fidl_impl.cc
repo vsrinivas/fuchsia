@@ -11,9 +11,7 @@
 #include "app.h"
 #include "fidl_helpers.h"
 
-// The internal library components and the generated FIDL bindings are both
-// declared under the "bluetooth" namespace. We define an alias here to
-// disambiguate.
+// Make the FIDL namespace explicit.
 namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
@@ -188,7 +186,7 @@ void LowEnergyCentralFidlImpl::ConnectPeripheral(
       return;
     }
 
-    if (status != ::bluetooth::hci::Status::kSuccess) {
+    if (status != ::btlib::hci::Status::kSuccess) {
       FXL_DCHECK(!conn_ref);
       auto msg =
           fxl::StringPrintf("Failed to connect to device (id: %s)", id.c_str());
@@ -268,7 +266,7 @@ void LowEnergyCentralFidlImpl::DisconnectPeripheral(
 }
 
 void LowEnergyCentralFidlImpl::OnActiveAdapterChanged(
-    bluetooth::gap::Adapter* adapter) {
+    ::btlib::gap::Adapter* adapter) {
   FXL_VLOG(1) << "The active adapter has changed; terminating all running LE "
                  "Central procedures";
 
@@ -282,7 +280,7 @@ void LowEnergyCentralFidlImpl::OnActiveAdapterChanged(
 }
 
 void LowEnergyCentralFidlImpl::OnScanResult(
-    const ::bluetooth::gap::RemoteDevice& remote_device) {
+    const ::btlib::gap::RemoteDevice& remote_device) {
   if (!delegate_)
     return;
 
@@ -292,7 +290,7 @@ void LowEnergyCentralFidlImpl::OnScanResult(
     return;
   }
 
-  if (remote_device.rssi() != ::bluetooth::hci::kRSSIInvalid) {
+  if (remote_device.rssi() != ::btlib::hci::kRSSIInvalid) {
     fidl_device->rssi = ::btfidl::Int8::New();
     fidl_device->rssi->value = remote_device.rssi();
   }

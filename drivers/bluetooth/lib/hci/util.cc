@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 std::string HCIVersionToString(hci::HCIVersion version) {
@@ -175,4 +175,4 @@ common::DeviceAddress::Type AddressTypeFromHCI(LEPeerAddressType type) {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

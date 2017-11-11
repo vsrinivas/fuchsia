@@ -22,7 +22,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace hci {
 class Transport;
@@ -135,4 +135,4 @@ class ChannelManager final {
 };
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

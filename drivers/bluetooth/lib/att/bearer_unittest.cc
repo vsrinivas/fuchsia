@@ -8,7 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 namespace {
 
@@ -1139,4 +1139,4 @@ TEST_F(ATT_BearerTest, RemotePDUWithoutResponse) {
 
 }  // namespace
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

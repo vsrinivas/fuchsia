@@ -9,7 +9,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -108,24 +108,24 @@ std::string DeviceAddress::ToString() const {
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
 namespace std {
 
-hash<::bluetooth::common::DeviceAddress>::result_type
-hash<::bluetooth::common::DeviceAddress>::operator()(
+hash<::btlib::common::DeviceAddress>::result_type
+hash<::btlib::common::DeviceAddress>::operator()(
     argument_type const& value) const {
   return value.Hash();
 }
 
 // Stream operators for easy logging
 ostream& operator<<(ostream& os,
-                    const ::bluetooth::common::DeviceAddressBytes& db) {
+                    const ::btlib::common::DeviceAddressBytes& db) {
   os << db.ToString();
   return os;
 };
 
-ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddress& d) {
+ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddress& d) {
   os << d.ToString();
   return os;
 };

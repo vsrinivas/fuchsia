@@ -30,9 +30,9 @@ class App final : public AdapterManager::Observer {
 
  private:
   // AdapterManager::Delegate overrides:
-  void OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) override;
-  void OnAdapterCreated(bluetooth::gap::Adapter* adapter) override;
-  void OnAdapterRemoved(bluetooth::gap::Adapter* adapter) override;
+  void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) override;
+  void OnAdapterCreated(::btlib::gap::Adapter* adapter) override;
+  void OnAdapterRemoved(::btlib::gap::Adapter* adapter) override;
 
   // Called when there is an interface request for the AdapterManager FIDL
   // service.

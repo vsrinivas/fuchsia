@@ -9,7 +9,7 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 class ByteBuffer;
@@ -57,4 +57,4 @@ class BTSnoopLogger final {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

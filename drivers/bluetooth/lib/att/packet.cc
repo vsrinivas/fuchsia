@@ -4,7 +4,7 @@
 
 #include "packet.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 PacketReader::PacketReader(const common::ByteBuffer* buffer)
@@ -17,4 +17,4 @@ PacketWriter::PacketWriter(OpCode opcode, common::MutableByteBuffer* buffer)
 }
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

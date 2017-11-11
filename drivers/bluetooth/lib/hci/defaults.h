@@ -10,7 +10,7 @@
 // for certain commands. These are informational and for testing purposes only;
 // each higher-layer library defines its own defaults.
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace defaults {
 
@@ -31,4 +31,4 @@ constexpr uint16_t kLESupervisionTimeout = 0x002A;
 
 }  // namespace defaults
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

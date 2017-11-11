@@ -8,7 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace hci {
 class Transport;
@@ -24,15 +24,14 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   // LowEnergyAdvertiser overrides:
   size_t GetSizeLimit() override;
   size_t GetMaxAdvertisements() const override { return 1; }
-  void StartAdvertising(const bluetooth::common::DeviceAddress& address,
+  void StartAdvertising(const common::DeviceAddress& address,
                         const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
                         const AdvertisingResultCallback& callback) override;
-  bool StopAdvertising(
-      const bluetooth::common::DeviceAddress& address) override;
+  bool StopAdvertising(const common::DeviceAddress& address) override;
   void OnIncomingConnection(LowEnergyConnectionRefPtr connection) override;
 
  private:
@@ -55,4 +54,4 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
 
 }  // namespace gap
 
-}  // namespace bluetooth
+}  // namespace btlib

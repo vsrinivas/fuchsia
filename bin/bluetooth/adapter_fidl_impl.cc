@@ -11,15 +11,13 @@
 
 #include "fidl_helpers.h"
 
-// The internal library components and the generated FIDL bindings are both
-// declared under the "bluetooth" namespace. We define an alias here to
-// disambiguate.
+// Make the FIDL namespace explicit.
 namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
 
 AdapterFidlImpl::AdapterFidlImpl(
-    const fxl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
+    const fxl::WeakPtr<::btlib::gap::Adapter>& adapter,
     ::fidl::InterfaceRequest<::btfidl::control::Adapter> request,
     const ConnectionErrorHandler& connection_error_handler)
     : adapter_(adapter),
@@ -141,7 +139,7 @@ void AdapterFidlImpl::StopDiscovery(const StopDiscoveryCallback& callback) {
 }
 
 void AdapterFidlImpl::OnDiscoveryResult(
-    const ::bluetooth::gap::RemoteDevice& remote_device) {
+    const ::btlib::gap::RemoteDevice& remote_device) {
   if (!delegate_)
     return;
 

@@ -6,7 +6,7 @@
 
 #include "slab_buffer.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 using SmallBufferTraits =
@@ -28,11 +28,11 @@ common::MutableByteBufferPtr NewSlabBuffer(size_t size) {
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::bluetooth::common::LargeBufferTraits,
-                                      ::bluetooth::common::kMaxNumSlabs,
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::btlib::common::LargeBufferTraits,
+                                      ::btlib::common::kMaxNumSlabs,
                                       true);
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::bluetooth::common::SmallBufferTraits,
-                                      ::bluetooth::common::kMaxNumSlabs,
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::btlib::common::SmallBufferTraits,
+                                      ::btlib::common::kMaxNumSlabs,
                                       true);

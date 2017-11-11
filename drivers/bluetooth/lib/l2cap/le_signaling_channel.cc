@@ -9,7 +9,7 @@
 #include "channel.h"
 #include "logical_link.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace internal {
 
@@ -108,4 +108,4 @@ bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {
 
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

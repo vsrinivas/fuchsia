@@ -14,25 +14,23 @@
 #include "app.h"
 #include "fidl_helpers.h"
 
-// The internal library components and the generated FIDL bindings are both
-// declared under the "bluetooth" namespace. We define an alias here to
-// disambiguate.
+// Make the FIDL namespace explicit.
 namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
 
 namespace {
 
-std::string ErrorToString(btfidl::hci::Status error) {
+std::string ErrorToString(btlib::hci::Status error) {
   switch (error) {
-    case ::btfidl::hci::kSuccess:
+    case ::btlib::hci::kSuccess:
       return "Success";
-    case ::btfidl::hci::kConnectionLimitExceeded:
+    case ::btlib::hci::kConnectionLimitExceeded:
       return "Maximum advertisement amount reached";
-    case ::btfidl::hci::kMemoryCapacityExceeded:
+    case ::btlib::hci::kMemoryCapacityExceeded:
       return "Advertisement exceeds maximum allowed length";
     default:
-      return ::btfidl::hci::StatusToString(error);
+      return ::btlib::hci::StatusToString(error);
   }
 }
 
@@ -75,12 +73,14 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
     callback(std::move(fidlerror), "");
     return;
   }
-  bluetooth::gap::AdvertisingData ad_data, scan_data;
-  bluetooth::gap::AdvertisingData::FromFidl(advertising_data, &ad_data);
+
+  ::btlib::gap::AdvertisingData ad_data, scan_data;
+  ::btlib::gap::AdvertisingData::FromFidl(advertising_data, &ad_data);
   if (scan_result) {
-    bluetooth::gap::AdvertisingData::FromFidl(scan_result, &scan_data);
+    ::btlib::gap::AdvertisingData::FromFidl(scan_result, &scan_data);
   }
-  bluetooth::gap::LowEnergyAdvertisingManager::ConnectionCallback connect_cb;
+
+  ::btlib::gap::LowEnergyAdvertisingManager::ConnectionCallback connect_cb;
   if (delegate) {
     connect_cb =
         fbl::BindMember(this, &LowEnergyPeripheralFidlImpl::OnConnected);
@@ -90,11 +90,11 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
   auto advertising_result_cb = fxl::MakeCopyable(
       [self = weak_ptr_factory_.GetWeakPtr(), callback,
        delegate = std::move(delegate)](std::string advertisement_id,
-                                       ::btfidl::hci::Status status) mutable {
+                                       ::btlib::hci::Status status) mutable {
         if (!self)
           return;
 
-        if (status != ::btfidl::hci::kSuccess) {
+        if (status != ::btlib::hci::kSuccess) {
           auto fidlerror = fidl_helpers::NewErrorStatus(
               ::btfidl::ErrorCode::PROTOCOL_ERROR, ErrorToString(status));
           fidlerror->error->protocol_error_code = status;
@@ -130,14 +130,14 @@ void LowEnergyPeripheralFidlImpl::StopAdvertising(
 }
 
 void LowEnergyPeripheralFidlImpl::OnActiveAdapterChanged(
-    bluetooth::gap::Adapter* adapter) {
+    ::btlib::gap::Adapter* adapter) {
   // TODO(jamuraa): re-add the advertisements that have been started here?
   FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyPeripheralFidlImpl::OnConnected(
     std::string advertisement_id,
-    bluetooth::gap::LowEnergyConnectionRefPtr connection) {
+    ::btlib::gap::LowEnergyConnectionRefPtr connection) {
   auto it = delegates_.find(advertisement_id);
   if (it == delegates_.end() || !it->second)
     return;
@@ -150,7 +150,7 @@ void LowEnergyPeripheralFidlImpl::OnConnected(
   it->second->OnCentralConnected(advertisement_id, std::move(fidl_device));
 }
 
-bluetooth::gap::LowEnergyAdvertisingManager*
+::btlib::gap::LowEnergyAdvertisingManager*
 LowEnergyPeripheralFidlImpl::GetAdvertisingManager() const {
   auto adapter = adapter_manager_->GetActiveAdapter();
   if (!adapter)

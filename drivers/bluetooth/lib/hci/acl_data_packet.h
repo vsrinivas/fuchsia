@@ -12,7 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/packet.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // Packet template specialization for ACL data packets. This cannot be directly
@@ -54,4 +54,4 @@ class Packet<ACLDataHeader> : public PacketBase<ACLDataHeader, ACLDataPacket> {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // All LE connection parameters in this file are given in terms of a
@@ -91,4 +91,4 @@ class LEPreferredConnectionParameters final {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

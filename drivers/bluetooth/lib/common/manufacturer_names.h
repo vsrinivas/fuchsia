@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Returns a manufacturer name as a string for the given company identifier. If
@@ -16,4 +16,4 @@ namespace common {
 std::string GetManufacturerName(uint16_t manufacturer_id);
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

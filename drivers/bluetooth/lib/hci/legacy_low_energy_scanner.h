@@ -16,7 +16,7 @@
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // LegacyLowEnergyScanner implements the LowEnergyScanner interface for
@@ -88,4 +88,4 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

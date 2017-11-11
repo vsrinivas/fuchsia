@@ -10,7 +10,7 @@
 
 #include "slab_allocators.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace slab_allocators {
 
@@ -119,17 +119,17 @@ void ACLDataPacket::WriteHeader(ConnectionHandle connection_handle,
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib
 
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::bluetooth::hci::slab_allocators::LargeACLTraits,
-    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    ::btlib::hci::slab_allocators::LargeACLTraits,
+    ::btlib::hci::slab_allocators::kMaxNumSlabs,
     true);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::bluetooth::hci::slab_allocators::MediumACLTraits,
-    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    ::btlib::hci::slab_allocators::MediumACLTraits,
+    ::btlib::hci::slab_allocators::kMaxNumSlabs,
     true);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::bluetooth::hci::slab_allocators::SmallACLTraits,
-    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    ::btlib::hci::slab_allocators::SmallACLTraits,
+    ::btlib::hci::slab_allocators::kMaxNumSlabs,
     true);

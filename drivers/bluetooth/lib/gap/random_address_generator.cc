@@ -7,7 +7,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace gap {
 
@@ -50,4 +50,4 @@ common::DeviceAddress RandomAddressGenerator::PrivateAddress() {
 
 }  // namespace gap
 
-}  // namespace bluetooth
+}  // namespace btlib

@@ -15,7 +15,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 // This class provides a simple attribute database abstraction. Attributes can
@@ -125,4 +125,4 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
 };
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

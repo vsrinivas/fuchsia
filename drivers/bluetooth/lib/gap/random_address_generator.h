@@ -6,7 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace gap {
 
@@ -33,4 +33,4 @@ class RandomAddressGenerator {
 };
 }  // namespace gap
 
-}  // namespace bluetooth
+}  // namespace btlib

@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Represents a 128-bit Bluetooth UUID. This class allows UUID values to be
@@ -220,16 +220,14 @@ inline bool operator!=(const UInt128& lhs, const UUID& rhs) {
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
 // Specialization of std::hash for std::unordered_set, std::unordered_map, etc.
 namespace std {
 
 template <>
-struct hash<::bluetooth::common::UUID> {
-  size_t operator()(const ::bluetooth::common::UUID& k) const {
-    return k.Hash();
-  }
+struct hash<::btlib::common::UUID> {
+  size_t operator()(const ::btlib::common::UUID& k) const { return k.Hash(); }
 };
 
 }  // namespace std

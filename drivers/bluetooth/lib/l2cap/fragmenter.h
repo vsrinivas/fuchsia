@@ -9,7 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 // A Fragmenter is used to construct L2CAP PDUs composed of fragments that can
@@ -62,4 +62,4 @@ class Fragmenter final {
 };
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

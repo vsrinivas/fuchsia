@@ -36,15 +36,15 @@ class Sniffer final {
 
   fxl::UniqueFD hci_dev_;
   zx::channel snoop_channel_;
-  bluetooth::common::BTSnoopLogger logger_;
+  ::btlib::common::BTSnoopLogger logger_;
 
   std::unique_ptr<async::AutoWait> wait_;
   fsl::MessageLoop message_loop_;
 
   // For now we only sniff command and event packets so make the buffer large
   // enough to fit the largest command packet plus 1-byte for the snoop flags.
-  uint8_t buffer_[sizeof(bluetooth::hci::CommandHeader) +
-                  bluetooth::hci::kMaxCommandPacketPayloadSize + 1];
+  uint8_t buffer_[sizeof(::btlib::hci::CommandHeader) +
+                  ::btlib::hci::kMaxCommandPacketPayloadSize + 1];
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Sniffer);
 };

@@ -12,7 +12,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace {
 
@@ -107,4 +107,4 @@ std::string Connection::ToString() const {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

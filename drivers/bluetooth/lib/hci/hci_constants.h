@@ -11,7 +11,7 @@
 
 // This file contains constants and numbers used in HCI packet payloads.
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // HCI_Version Assigned Values See the "Assigned Numbers" document for
@@ -1198,4 +1198,4 @@ constexpr uint16_t kConnectionHandleMax = 0x0EFF;
 constexpr uint8_t kAdvertisingHandleMax = 0xEF;
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

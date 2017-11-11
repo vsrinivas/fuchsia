@@ -14,7 +14,7 @@
 #include "lib/fxl/synchronization/sleep.h"
 #include "lib/fxl/time/stopwatch.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -101,4 +101,4 @@ TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
 
 }  // namespace
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

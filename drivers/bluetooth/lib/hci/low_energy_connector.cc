@@ -13,7 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 LowEnergyConnector::PendingRequest::PendingRequest(
@@ -252,4 +252,4 @@ void LowEnergyConnector::OnCreateConnectionTimeout() {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

@@ -18,7 +18,7 @@
 #include "slab_allocators.h"
 #include "transport.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 CommandChannel::QueuedCommand::QueuedCommand(
@@ -568,4 +568,4 @@ async_wait_result_t CommandChannel::OnChannelReady(
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

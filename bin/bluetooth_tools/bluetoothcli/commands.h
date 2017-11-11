@@ -6,13 +6,9 @@
 
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
-namespace tools {
-
+namespace bluetooth_tools {
 class CommandDispatcher;
-
-}  // namespace tools
-}  // namespace bluetooth
+}  // namespace bluetooth_tools
 
 namespace bluetoothcli {
 
@@ -20,8 +16,7 @@ class App;
 
 namespace commands {
 
-void RegisterCommands(App* app,
-                      bluetooth::tools::CommandDispatcher* dispatcher);
+void RegisterCommands(App* app, bluetooth_tools::CommandDispatcher* dispatcher);
 
 }  // namespace commands
 }  // namespace bluetoothcli

@@ -9,11 +9,11 @@
 
 namespace bt_intel {
 
-constexpr bluetooth::hci::OpCode kReadVersion =
-    bluetooth::hci::VendorOpCode(0x0005);
+constexpr ::btlib::hci::OpCode kReadVersion =
+    ::btlib::hci::VendorOpCode(0x0005);
 
 struct IntelVersionReturnParams {
-  bluetooth::hci::Status status;
+  ::btlib::hci::Status status;
   uint8_t hw_platform;
   uint8_t hw_variant;
   uint8_t hw_revision;
@@ -25,40 +25,37 @@ struct IntelVersionReturnParams {
   uint8_t fw_patch_num;
 } __PACKED;
 
-constexpr bluetooth::hci::OpCode kSecureSend =
-    bluetooth::hci::VendorOpCode(0x0009);
-
-constexpr bluetooth::hci::OpCode kReadBootParams =
-    bluetooth::hci::VendorOpCode(0x000D);
+constexpr btlib::hci::OpCode kSecureSend = ::btlib::hci::VendorOpCode(0x0009);
+constexpr ::btlib::hci::OpCode kReadBootParams =
+    ::btlib::hci::VendorOpCode(0x000D);
 
 struct IntelReadBootParamsReturnParams {
-  bluetooth::hci::Status status;
+  ::btlib::hci::Status status;
   uint8_t otp_format;
   uint8_t otp_content;
   uint8_t otp_patch;
   uint16_t dev_revid;
-  bluetooth::hci::GenericEnableParam secure_boot;
+  ::btlib::hci::GenericEnableParam secure_boot;
   uint8_t key_from_hdr;
   uint8_t key_type;
-  bluetooth::hci::GenericEnableParam otp_lock;
-  bluetooth::hci::GenericEnableParam api_lock;
-  bluetooth::hci::GenericEnableParam debug_lock;
-  bluetooth::common::DeviceAddressBytes otp_bdaddr;
+  ::btlib::hci::GenericEnableParam otp_lock;
+  ::btlib::hci::GenericEnableParam api_lock;
+  ::btlib::hci::GenericEnableParam debug_lock;
+  ::btlib::common::DeviceAddressBytes otp_bdaddr;
   uint8_t min_fw_build_num;
   uint8_t min_fw_build_week;
   uint8_t min_fw_build_year;
-  bluetooth::hci::GenericEnableParam limited_cce;
+  ::btlib::hci::GenericEnableParam limited_cce;
   uint8_t unlocked_state;
 } __PACKED;
 
-constexpr bluetooth::hci::OpCode kReset = bluetooth::hci::VendorOpCode(0x0001);
+constexpr ::btlib::hci::OpCode kReset = ::btlib::hci::VendorOpCode(0x0001);
 
 struct IntelResetCommandParams {
   uint8_t data[8];
 } __PACKED;
 
-constexpr bluetooth::hci::OpCode kMfgModeChange =
-    bluetooth::hci::VendorOpCode(0x0011);
+constexpr btlib::hci::OpCode kMfgModeChange = btlib::hci::VendorOpCode(0x0011);
 
 enum class MfgDisableMode : uint8_t {
   kNoPatches = 0x00,
@@ -67,7 +64,7 @@ enum class MfgDisableMode : uint8_t {
 };
 
 struct IntelMfgModeChangeCommandParams {
-  bluetooth::hci::GenericEnableParam enable;
+  btlib::hci::GenericEnableParam enable;
   MfgDisableMode disable_mode;
 } __PACKED;
 

@@ -13,7 +13,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 // A CommandTransaction is used to set up an expectation for a command channel
@@ -81,4 +81,4 @@ class TestController : public FakeControllerBase {
 };
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

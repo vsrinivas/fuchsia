@@ -6,7 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 // TODO(armansito): For now we only support basic mode in which 1 SDU = 1 PDU.
@@ -14,4 +14,4 @@ namespace l2cap {
 using SDU = PDU;
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

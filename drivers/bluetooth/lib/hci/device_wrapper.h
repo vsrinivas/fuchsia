@@ -9,7 +9,7 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // A DeviceWrapper abstracts over a Bluetooth HCI device object and its ioctls.
@@ -68,4 +68,4 @@ class DummyDeviceWrapper : public DeviceWrapper {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

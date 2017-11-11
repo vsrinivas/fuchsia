@@ -10,7 +10,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Base class-template for generic packets that contain a header and a payload.
@@ -166,4 +166,4 @@ class MutablePacketView : public PacketView<HeaderType> {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

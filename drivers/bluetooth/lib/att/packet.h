@@ -8,7 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 // Utilities for processing ATT protocol Packets.
@@ -27,4 +27,4 @@ class PacketWriter : public common::MutablePacketView<Header> {
 };
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

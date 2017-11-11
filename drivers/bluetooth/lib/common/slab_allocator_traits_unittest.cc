@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 namespace {
@@ -57,9 +57,9 @@ TEST(SlabAllocatedBufferTest, Basic) {
 
 }  // namespace
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
 // Creates no more than one slab.
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::bluetooth::common::test::TestTraits,
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::btlib::common::test::TestTraits,
                                       1,
                                       true);

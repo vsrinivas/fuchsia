@@ -27,21 +27,20 @@ class CommandChannel {
   // Sets the event callback to be called when an HCI Event arrives on the
   // channel.
   using EventCallback =
-      std::function<void(const bluetooth::hci::EventPacket& event_packet)>;
+      std::function<void(const ::btlib::hci::EventPacket& event_packet)>;
   void SetEventCallback(const EventCallback& callback);
 
   // Sends the command in |command| to the controller. The channel must
   // be Ready when this is called.
   void SendCommand(
-      const bluetooth::common::PacketView<bluetooth::hci::CommandHeader>&
-          command);
+      const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command);
 
   // Sends the command in |command| to the controller and waits for
   // an Event, which is delivered to |callback| before this function
   // returns.
-  void SendCommandSync(const bluetooth::common::PacketView<
-                           bluetooth::hci::CommandHeader>& command,
-                       const EventCallback& callback);
+  void SendCommandSync(
+      const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
+      const EventCallback& callback);
 
  private:
   // Common read handler implemntation

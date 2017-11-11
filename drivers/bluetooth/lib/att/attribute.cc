@@ -4,7 +4,7 @@
 
 #include "attribute.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 AccessRequirements::AccessRequirements() : value_(0u) {}
@@ -106,4 +106,4 @@ Attribute* AttributeGrouping::AddAttribute(
 }
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

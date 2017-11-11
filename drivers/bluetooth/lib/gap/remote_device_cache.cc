@@ -10,7 +10,7 @@
 
 #include "remote_device.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
@@ -43,4 +43,4 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

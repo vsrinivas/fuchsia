@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 // FakeDevice is used to emulate remote Bluetooth devices.
@@ -130,4 +130,4 @@ class FakeDevice {
 };
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

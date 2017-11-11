@@ -90,7 +90,7 @@ async_wait_result_t Sniffer::OnHandleReady(async_t* async,
   }
 
   uint8_t flags = buffer_[0];
-  logger_.WritePacket(bluetooth::common::BufferView(buffer_ + 1, read_size - 1),
+  logger_.WritePacket(::btlib::common::BufferView(buffer_ + 1, read_size - 1),
                       flags & BT_HCI_SNOOP_FLAG_RECEIVED,
                       flags & BT_HCI_SNOOP_FLAG_DATA);
   return ASYNC_WAIT_AGAIN;

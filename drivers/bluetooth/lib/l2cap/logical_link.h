@@ -26,7 +26,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace l2cap {
 
@@ -132,4 +132,4 @@ class LogicalLink final {
 
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

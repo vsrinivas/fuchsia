@@ -47,9 +47,9 @@ class AdapterManagerFidlImpl : public ::bluetooth::control::AdapterManager,
       ::fidl::InterfaceRequest<::bluetooth::control::Adapter> adapter) override;
 
   // AdapterManager::Delegate overrides:
-  void OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) override;
-  void OnAdapterCreated(bluetooth::gap::Adapter* adapter) override;
-  void OnAdapterRemoved(bluetooth::gap::Adapter* adapter) override;
+  void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) override;
+  void OnAdapterCreated(::btlib::gap::Adapter* adapter) override;
+  void OnAdapterRemoved(::btlib::gap::Adapter* adapter) override;
 
   // Called when a AdapterFidlImpl that we own notifies its connection error
   // handler.
@@ -57,7 +57,7 @@ class AdapterManagerFidlImpl : public ::bluetooth::control::AdapterManager,
 
   // Creates an AdapterFidlImpl for |adapter| and binds it to |request|.
   void CreateAdapterFidlImpl(
-      fxl::WeakPtr<bluetooth::gap::Adapter> adapter,
+      fxl::WeakPtr<::btlib::gap::Adapter> adapter,
       ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request);
 
   // The App instance that owns us. We keep a raw pointer as we expect |app_| to

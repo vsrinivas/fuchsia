@@ -14,13 +14,13 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace {
 
-using ::bluetooth::testing::FakeController;
-using ::bluetooth::testing::FakeDevice;
-using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
+using ::btlib::testing::FakeController;
+using ::btlib::testing::FakeDevice;
+using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
                                          "00:00:00:00:00:01");
@@ -420,4 +420,4 @@ TEST_F(HCI_LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
 
 }  // namespace
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

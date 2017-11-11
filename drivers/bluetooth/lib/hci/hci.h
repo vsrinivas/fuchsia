@@ -24,7 +24,7 @@
 // common::MutableBufferView::mutable_payload() instead. Take extra care when
 // accessing flexible array members.
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // HCI opcode as used in command packets.
@@ -2699,4 +2699,4 @@ constexpr OpCode VendorOpCode(const uint8_t ocf) {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

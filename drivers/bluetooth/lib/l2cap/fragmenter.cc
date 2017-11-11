@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 Fragmenter::Fragmenter(hci::ConnectionHandle connection_handle,
@@ -107,4 +107,4 @@ PDU Fragmenter::BuildBasicFrame(ChannelId channel_id,
 }
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

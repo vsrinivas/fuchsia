@@ -8,7 +8,7 @@
 
 #include "lib/fxl/arraysize.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -1213,4 +1213,4 @@ std::string GetManufacturerName(uint16_t manufacturer_id) {
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

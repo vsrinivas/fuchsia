@@ -21,7 +21,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace hci {
 class Connection;
@@ -336,4 +336,4 @@ class LowEnergyConnectionManager final {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

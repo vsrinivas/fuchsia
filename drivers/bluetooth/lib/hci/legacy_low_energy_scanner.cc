@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace {
 
@@ -329,4 +329,4 @@ void LegacyLowEnergyScanner::NotifyDeviceFound(
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

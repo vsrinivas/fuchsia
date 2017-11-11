@@ -11,7 +11,7 @@
 
 #include "lib/fxl/random/rand.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
@@ -421,4 +421,4 @@ TEST(GAP_AdvertisingDataTest, WriteField) {
 
 }  // namespace
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

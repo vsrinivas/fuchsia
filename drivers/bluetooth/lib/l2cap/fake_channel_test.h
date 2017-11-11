@@ -14,7 +14,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace testing {
 
@@ -23,7 +23,7 @@ namespace testing {
 //
 //   * A simple way to initialize and access a FakeChannel.
 //   * Basic command<->response expectation.
-class FakeChannelTest : public ::bluetooth::testing::TestBase {
+class FakeChannelTest : public ::btlib::testing::TestBase {
  public:
   FakeChannelTest() = default;
   ~FakeChannelTest() override = default;
@@ -64,4 +64,4 @@ class FakeChannelTest : public ::bluetooth::testing::TestBase {
 
 }  // namespace testing
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

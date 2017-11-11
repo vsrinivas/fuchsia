@@ -8,7 +8,7 @@
 
 #include "control_packets.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
@@ -70,4 +70,4 @@ bool AdvertisingReportParser::HasMoreReports() {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

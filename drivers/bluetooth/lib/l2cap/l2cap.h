@@ -10,7 +10,7 @@
 
 #include <zircon/compiler.h>
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 // L2CAP channel identifier uniquely identifies fixed and connection-oriented channels over a
@@ -157,4 +157,4 @@ struct LEFlowControlCreditParams {
 } __PACKED;
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

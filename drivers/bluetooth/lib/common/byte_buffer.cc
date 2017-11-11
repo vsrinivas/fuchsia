@@ -4,7 +4,7 @@
 
 #include "byte_buffer.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 size_t ByteBuffer::Copy(MutableByteBuffer* out_buffer,
@@ -192,4 +192,4 @@ void MutableBufferView::Fill(uint8_t value) {
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

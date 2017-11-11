@@ -48,10 +48,10 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
       const DisconnectPeripheralCallback& callback) override;
 
   // AdapterManager::Delegate overrides:
-  void OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) override;
+  void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) override;
 
   // Called by |scan_session_| when a device is discovered.
-  void OnScanResult(const ::bluetooth::gap::RemoteDevice& remote_device);
+  void OnScanResult(const ::btlib::gap::RemoteDevice& remote_device);
 
   // Notifies the delegate that the scan state for this Central has changed.
   void NotifyScanStateChanged(bool scanning);
@@ -66,14 +66,14 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
   // The currently active LE discovery session. This is initialized when a
   // client requests to perform a scan.
   bool requesting_scan_;
-  std::unique_ptr<::bluetooth::gap::LowEnergyDiscoverySession> scan_session_;
+  std::unique_ptr<::btlib::gap::LowEnergyDiscoverySession> scan_session_;
 
   // This client's connection references. A client can hold a connection to
   // multiple peers. Each key is a remote device identifier. Each value is
   //   a. nullptr, if a connect request to this device is currently pending.
   //   b. a valid reference if this Central is holding a connection reference to
   //   this device.
-  std::unordered_map<std::string, ::bluetooth::gap::LowEnergyConnectionRefPtr>
+  std::unordered_map<std::string, ::btlib::gap::LowEnergyConnectionRefPtr>
       connections_;
 
   // The interface binding that represents the connection to the client

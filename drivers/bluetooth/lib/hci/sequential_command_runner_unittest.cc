@@ -8,16 +8,16 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace {
 
 constexpr OpCode kTestOpCode = 0xFFFF;
 
-using ::bluetooth::testing::CommandTransaction;
+using ::btlib::testing::CommandTransaction;
 
-using TestingBase = ::bluetooth::testing::FakeControllerTest<
-    ::bluetooth::testing::TestController>;
+using TestingBase =
+    ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
 
 class SequentialCommandRunnerTest : public TestingBase {
  public:
@@ -322,4 +322,4 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
 
 }  // namespace
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

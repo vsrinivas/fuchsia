@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // Returns a user-friendly string representation of |version|.
@@ -28,4 +28,4 @@ common::DeviceAddress::Type AddressTypeFromHCI(LEAddressType type);
 common::DeviceAddress::Type AddressTypeFromHCI(LEPeerAddressType type);
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

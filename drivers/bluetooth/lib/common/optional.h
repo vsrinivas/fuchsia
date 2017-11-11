@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // This class provides functionality that is similar to that of C++17's
@@ -107,4 +107,4 @@ class Optional final {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

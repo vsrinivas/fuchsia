@@ -10,7 +10,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/intrusive_pointer_traits.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // TODO(armansito): Use this in more places where it makes sense (see NET-176).
@@ -31,4 +31,4 @@ template <typename T>
 using LinkedListable = fbl::DoublyLinkedListable<std::unique_ptr<T>>;
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

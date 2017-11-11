@@ -4,7 +4,7 @@
 
 #include "adapter_state.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 AdapterState::AdapterState() : max_lmp_feature_page_index_(0) {
@@ -13,4 +13,4 @@ AdapterState::AdapterState() : max_lmp_feature_page_index_(0) {
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

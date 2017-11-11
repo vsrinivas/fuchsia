@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 namespace {
 
@@ -972,4 +972,4 @@ void FakeController::OnACLDataPacketReceived(
 }
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

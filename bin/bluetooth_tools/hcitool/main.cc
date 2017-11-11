@@ -22,8 +22,6 @@
 
 #include "commands.h"
 
-using namespace bluetooth;
-
 namespace {
 
 const char kUsageString[] =
@@ -64,13 +62,13 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto hci_dev =
-      std::make_unique<hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
-  auto hci = hci::Transport::Create(std::move(hci_dev));
+  auto hci_dev = std::make_unique<::btlib::hci::ZirconDeviceWrapper>(
+      std::move(hci_dev_fd));
+  auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
   hci->Initialize();
   fsl::MessageLoop message_loop;
 
-  tools::CommandDispatcher dispatcher;
+  bluetooth_tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(hci->command_channel(),
                                 message_loop.task_runner());
   RegisterCommands(&cmd_data, &dispatcher);

@@ -4,7 +4,7 @@
 
 #include "connection_parameters.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 LEConnectionParameters::LEConnectionParameters(uint16_t interval,
@@ -47,4 +47,4 @@ bool LEPreferredConnectionParameters::operator==(
          supervision_timeout_ == other.supervision_timeout_;
 }
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

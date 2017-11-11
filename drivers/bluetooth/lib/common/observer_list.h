@@ -71,7 +71,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 template <class ObserverType>
@@ -346,6 +346,6 @@ class ObserverList : public ObserverListBase<ObserverType> {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_

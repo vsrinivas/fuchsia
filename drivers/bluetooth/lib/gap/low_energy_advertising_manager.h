@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace hci {
 class Transport;
@@ -94,5 +94,4 @@ class LowEnergyAdvertisingManager {
 };
 
 }  // namespace gap
-
-}  // namespace bluetooth
+}  // namespace btlib

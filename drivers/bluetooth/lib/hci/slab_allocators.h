@@ -48,7 +48,7 @@
 // If the header type provided to PacketTraits would correspond to an explicit
 // specialization of the Packet template, then the specialization MUST provide a
 // default constructor that is visible to all of its subclasses.
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace slab_allocators {
 
@@ -144,4 +144,4 @@ class SlabPacket : public FixedSizePacket<HeaderType, BufferSize>,
 
 }  // namespace slab_allocators
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

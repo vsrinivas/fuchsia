@@ -45,15 +45,15 @@ class LowEnergyPeripheralFidlImpl : public ::bluetooth::low_energy::Peripheral,
                        const StopAdvertisingCallback& callback) override;
 
   // AdapterManager::Delegate overrides:
-  void OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) override;
+  void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) override;
 
   // Called when a central connects to us.  When this is called, the
   // advertisement in |advertisement_id| has been stopped.
   void OnConnected(std::string advertisement_id,
-                   ::bluetooth::gap::LowEnergyConnectionRefPtr connection);
+                   ::btlib::gap::LowEnergyConnectionRefPtr connection);
 
   // Helper function to the current advertisement manager or nullptr.
-  bluetooth::gap::LowEnergyAdvertisingManager* GetAdvertisingManager() const;
+  ::btlib::gap::LowEnergyAdvertisingManager* GetAdvertisingManager() const;
 
   // We keep a raw pointer as we expect this to outlive us.
   AdapterManager* adapter_manager_;  // weak

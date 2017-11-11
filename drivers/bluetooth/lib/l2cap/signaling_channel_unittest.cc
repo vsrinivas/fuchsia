@@ -8,7 +8,7 @@
 
 #include "fake_channel_test.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace internal {
 namespace {
@@ -210,4 +210,4 @@ TEST_F(L2CAP_SignalingChannelTest, HandlePacket) {
 }  // namespace
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

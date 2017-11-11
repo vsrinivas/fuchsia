@@ -14,7 +14,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 class Transport;
@@ -180,4 +180,4 @@ class LowEnergyScanner {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

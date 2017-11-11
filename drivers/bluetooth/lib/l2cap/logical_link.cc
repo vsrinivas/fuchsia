@@ -11,7 +11,7 @@
 #include "channel.h"
 #include "le_signaling_channel.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace internal {
 namespace {
@@ -260,4 +260,4 @@ void LogicalLink::Close() {
 
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

@@ -4,11 +4,11 @@
 
 #include "low_energy_state.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 LowEnergyState::LowEnergyState()
     : supported_features_(0u), supported_states_(0u) {}
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

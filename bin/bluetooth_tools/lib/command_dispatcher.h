@@ -11,8 +11,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
-namespace tools {
+namespace bluetooth_tools {
 
 // CommandDispatcher is a mapping between commands (identified by a string and
 // arguments) and handler functions that should be executed.
@@ -73,5 +72,4 @@ class CommandDispatcher final {
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
 };
 
-}  // namespace tools
-}  // namespace bluetooth
+}  // namespace bluetooth_tools

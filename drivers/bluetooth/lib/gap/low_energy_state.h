@@ -9,7 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 // Stores Bluetooth Low Energy settings and state information.
@@ -43,4 +43,4 @@ class LowEnergyState final {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

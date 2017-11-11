@@ -9,7 +9,7 @@
 // This file contains constants and numbers that are part of the Generic Access
 // Profile specification.
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 // Bluetooth technologies that a device can support.
@@ -129,4 +129,4 @@ constexpr uint16_t kLEInitialConnIntervalCodedMin = 0x0048;  // 90 ms
 constexpr uint16_t kLEInitialConnIntervalCodedMax = 0x0078;  // 150 ms
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

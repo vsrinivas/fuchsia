@@ -21,7 +21,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 // Represents a L2CAP channel. Each instance is owned by a service
@@ -183,4 +183,4 @@ class ChannelImpl : public Channel {
 
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

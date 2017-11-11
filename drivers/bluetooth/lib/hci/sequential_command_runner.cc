@@ -8,7 +8,7 @@
 #include "hci.h"
 #include "transport.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 SequentialCommandRunner::SequentialCommandRunner(
@@ -136,4 +136,4 @@ void SequentialCommandRunner::NotifyResultAndReset(bool result) {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

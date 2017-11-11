@@ -13,7 +13,7 @@
 
 #include "gatt.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gatt {
 
 Server::Server(fxl::RefPtr<att::Database> database,
@@ -136,4 +136,4 @@ void Server::OnReadByGroupType(att::Bearer::TransactionId tid,
 }
 
 }  // namespace gatt
-}  // namespace bluetooth
+}  // namespace btlib

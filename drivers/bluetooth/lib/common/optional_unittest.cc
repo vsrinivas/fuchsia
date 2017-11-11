@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -159,4 +159,4 @@ TEST(OptionalTest, CopyAssignFromConst) {
 
 }  // namespace
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

@@ -15,7 +15,7 @@
 #include "slab_allocators.h"
 #include "transport.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 DataBufferInfo::DataBufferInfo(size_t max_data_length, size_t max_num_packets)
@@ -440,4 +440,4 @@ async_wait_result_t ACLDataChannel::OnChannelReady(
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

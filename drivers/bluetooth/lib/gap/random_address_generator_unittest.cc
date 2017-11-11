@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
@@ -71,4 +71,4 @@ TEST_F(GAP_RandomAddressGeneratorTest, PrivateAddressRandomness) {
 
 }  // namespace gap
 
-}  // namespace bluetooth
+}  // namespace btlib

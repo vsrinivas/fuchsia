@@ -12,9 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
 
-// The internal library components and the generated FIDL bindings are both
-// declared under the "bluetooth" namespace. We define an alias here to
-// disambiguate.
+// Make the FIDL namespace explicit.
 namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
@@ -22,13 +20,13 @@ namespace fidl_helpers {
 namespace {
 
 ::btfidl::control::TechnologyType TechnologyTypeToFidl(
-    ::bluetooth::gap::TechnologyType type) {
+    ::btlib::gap::TechnologyType type) {
   switch (type) {
-    case ::bluetooth::gap::TechnologyType::kLowEnergy:
+    case ::btlib::gap::TechnologyType::kLowEnergy:
       return ::btfidl::control::TechnologyType::LOW_ENERGY;
-    case ::bluetooth::gap::TechnologyType::kClassic:
+    case ::btlib::gap::TechnologyType::kClassic:
       return ::btfidl::control::TechnologyType::CLASSIC;
-    case ::bluetooth::gap::TechnologyType::kDualMode:
+    case ::btlib::gap::TechnologyType::kDualMode:
       return ::btfidl::control::TechnologyType::DUAL_MODE;
     default:
       FXL_NOTREACHED();
@@ -52,7 +50,7 @@ namespace {
 }
 
 ::btfidl::control::AdapterInfoPtr NewAdapterInfo(
-    const ::bluetooth::gap::Adapter& adapter) {
+    const ::btlib::gap::Adapter& adapter) {
   auto adapter_info = ::btfidl::control::AdapterInfo::New();
   adapter_info->state = ::btfidl::control::AdapterState::New();
 
@@ -70,7 +68,7 @@ namespace {
 }
 
 ::btfidl::control::RemoteDevicePtr NewRemoteDevice(
-    const ::bluetooth::gap::RemoteDevice& device) {
+    const ::btlib::gap::RemoteDevice& device) {
   auto fidl_device = ::btfidl::control::RemoteDevice::New();
   fidl_device->identifier = device.identifier();
   fidl_device->address = device.address().value().ToString();
@@ -83,18 +81,17 @@ namespace {
   // Set default value for device appearance.
   fidl_device->appearance = ::btfidl::control::Appearance::UNKNOWN;
 
-  if (device.rssi() != ::bluetooth::hci::kRSSIInvalid) {
+  if (device.rssi() != ::btlib::hci::kRSSIInvalid) {
     fidl_device->rssi = ::btfidl::Int8::New();
     fidl_device->rssi->value = device.rssi();
   }
 
-  ::bluetooth::gap::AdvertisingData adv_data;
-  if (!::bluetooth::gap::AdvertisingData::FromBytes(device.advertising_data(),
-                                                    &adv_data))
+  ::btlib::gap::AdvertisingData adv_data;
+  if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
+                                                &adv_data))
     return nullptr;
 
-  std::unordered_set<::bluetooth::common::UUID> uuids =
-      adv_data.service_uuids();
+  std::unordered_set<::btlib::common::UUID> uuids = adv_data.service_uuids();
 
   // |service_uuids| is not a nullable field, so we need to assign something to
   // it.
@@ -122,10 +119,10 @@ namespace {
 }
 
 ::btfidl::low_energy::RemoteDevicePtr NewLERemoteDevice(
-    const ::bluetooth::gap::RemoteDevice& device) {
-  ::bluetooth::gap::AdvertisingData ad;
-  if (!::bluetooth::gap::AdvertisingData::FromBytes(device.advertising_data(),
-                                                    &ad))
+    const ::btlib::gap::RemoteDevice& device) {
+  ::btlib::gap::AdvertisingData ad;
+  if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
+                                                &ad))
     return nullptr;
 
   auto fidl_device = ::btfidl::low_energy::RemoteDevice::New();
@@ -133,7 +130,7 @@ namespace {
   fidl_device->connectable = device.connectable();
   fidl_device->advertising_data = ad.AsLEAdvertisingData();
 
-  if (device.rssi() != ::bluetooth::hci::kRSSIInvalid) {
+  if (device.rssi() != ::btlib::hci::kRSSIInvalid) {
     fidl_device->rssi = ::btfidl::Int8::New();
     fidl_device->rssi->value = device.rssi();
   }
@@ -148,7 +145,7 @@ bool IsScanFilterValid(const ::btfidl::low_energy::ScanFilter& fidl_filter) {
     return true;
 
   for (const auto& uuid_str : fidl_filter.service_uuids) {
-    if (!::bluetooth::common::IsStringValidUuid(uuid_str))
+    if (!::btlib::common::IsStringValidUuid(uuid_str))
       return false;
   }
 
@@ -157,14 +154,14 @@ bool IsScanFilterValid(const ::btfidl::low_energy::ScanFilter& fidl_filter) {
 
 bool PopulateDiscoveryFilter(
     const ::btfidl::low_energy::ScanFilter& fidl_filter,
-    ::bluetooth::gap::DiscoveryFilter* out_filter) {
+    ::btlib::gap::DiscoveryFilter* out_filter) {
   FXL_DCHECK(out_filter);
 
   if (fidl_filter.service_uuids) {
-    std::vector<::bluetooth::common::UUID> uuids;
+    std::vector<::btlib::common::UUID> uuids;
     for (const auto& uuid_str : fidl_filter.service_uuids) {
-      ::bluetooth::common::UUID uuid;
-      if (!::bluetooth::common::StringToUuid(uuid_str, &uuid)) {
+      ::btlib::common::UUID uuid;
+      if (!::btlib::common::StringToUuid(uuid_str, &uuid)) {
         FXL_VLOG(1) << "Invalid parameters given to scan filter";
         return false;
       }

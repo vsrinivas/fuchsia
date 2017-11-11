@@ -21,8 +21,7 @@
 template <typename T>
 struct fidl::TypeConverter<fidl::Array<unsigned char>, T> {
   static fidl::Array<unsigned char> Convert(const T& input) {
-    static_assert(std::is_base_of<::bluetooth::common::ByteBuffer, T>::value,
-                  "");
+    static_assert(std::is_base_of<::btlib::common::ByteBuffer, T>::value, "");
 
     Array<unsigned char> result = Array<unsigned char>::New(input.size());
     memcpy(result.data(), input.data(), input.size());
@@ -30,14 +29,14 @@ struct fidl::TypeConverter<fidl::Array<unsigned char>, T> {
   }
 };
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 namespace {
 
 using UuidFunction = std::function<void(const common::UUID&)>;
 
-bool ParseUuids(const ::bluetooth::common::BufferView& data,
+bool ParseUuids(const common::BufferView& data,
                 size_t uuid_size,
                 UuidFunction func) {
   FXL_DCHECK(func);
@@ -52,10 +51,10 @@ bool ParseUuids(const ::bluetooth::common::BufferView& data,
 
   size_t uuid_count = data.size() / uuid_size;
   for (size_t i = 0; i < uuid_count; i++) {
-    const ::bluetooth::common::BufferView uuid_bytes(
-        data.data() + (i * uuid_size), uuid_size);
-    ::bluetooth::common::UUID uuid;
-    if (!::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid))
+    const common::BufferView uuid_bytes(data.data() + (i * uuid_size),
+                                        uuid_size);
+    common::UUID uuid;
+    if (!common::UUID::FromBytes(uuid_bytes, &uuid))
       return false;
 
     func(uuid);
@@ -163,7 +162,7 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
     return false;
 
   DataType type;
-  ::bluetooth::common::BufferView field;
+  common::BufferView field;
   while (reader.GetNextField(&type, &field)) {
     switch (type) {
       case DataType::kTxPowerLevel: {
@@ -214,10 +213,10 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
       case DataType::kServiceData16Bit:
       case DataType::kServiceData32Bit:
       case DataType::kServiceData128Bit: {
-        ::bluetooth::common::UUID uuid;
+        common::UUID uuid;
         size_t uuid_size = SizeForType(type);
         const common::BufferView uuid_bytes(field.data(), uuid_size);
-        if (!::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid))
+        if (!common::UUID::FromBytes(uuid_bytes, &uuid))
           return false;
         const common::BufferView service_data(field.data() + uuid_size,
                                               field.size() - uuid_size);
@@ -723,4 +722,4 @@ bool AdvertisingDataWriter::WriteField(DataType type,
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

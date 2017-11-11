@@ -12,7 +12,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // A Packet is a move-only object that can be used to hold sent and received HCI
@@ -124,4 +124,4 @@ class Packet : public PacketBase<HeaderType, Packet<HeaderType>> {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

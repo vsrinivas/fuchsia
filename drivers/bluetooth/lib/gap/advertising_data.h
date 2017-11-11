@@ -20,7 +20,7 @@
 // disambiguate.
 namespace btfidl = ::bluetooth;
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 // A helper to build Adversiting Data, Scan Response Data, or Extended Inquiry
@@ -214,4 +214,4 @@ class AdvertisingDataWriter {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

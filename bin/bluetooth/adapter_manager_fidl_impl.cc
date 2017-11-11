@@ -11,9 +11,7 @@
 #include "app.h"
 #include "fidl_helpers.h"
 
-// The internal library components and the generated FIDL bindings are both
-// declared under the "bluetooth" namespace. We define an alias here to
-// disambiguate.
+// Make the FIDL namespace explicit.
 namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
@@ -111,7 +109,7 @@ void AdapterManagerFidlImpl::GetActiveAdapter(
 }
 
 void AdapterManagerFidlImpl::OnActiveAdapterChanged(
-    bluetooth::gap::Adapter* adapter) {
+    ::btlib::gap::Adapter* adapter) {
   if (!delegate_)
     return;
 
@@ -121,14 +119,12 @@ void AdapterManagerFidlImpl::OnActiveAdapterChanged(
   delegate_->OnActiveAdapterChanged(std::move(adapter_info));
 }
 
-void AdapterManagerFidlImpl::OnAdapterCreated(
-    bluetooth::gap::Adapter* adapter) {
+void AdapterManagerFidlImpl::OnAdapterCreated(::btlib::gap::Adapter* adapter) {
   if (delegate_)
     delegate_->OnAdapterAdded(fidl_helpers::NewAdapterInfo(*adapter));
 }
 
-void AdapterManagerFidlImpl::OnAdapterRemoved(
-    bluetooth::gap::Adapter* adapter) {
+void AdapterManagerFidlImpl::OnAdapterRemoved(::btlib::gap::Adapter* adapter) {
   if (delegate_)
     delegate_->OnAdapterRemoved(adapter->identifier());
 }
@@ -150,7 +146,7 @@ void AdapterManagerFidlImpl::OnAdapterFidlImplDisconnected(
 }
 
 void AdapterManagerFidlImpl::CreateAdapterFidlImpl(
-    fxl::WeakPtr<bluetooth::gap::Adapter> adapter,
+    fxl::WeakPtr<::btlib::gap::Adapter> adapter,
     ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request) {
   FXL_DCHECK(adapter);
 

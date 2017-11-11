@@ -22,8 +22,6 @@
 #include "command_channel.h"
 #include "commands.h"
 
-using namespace bluetooth;
-
 namespace {
 
 const char kUsageString[] =
@@ -65,7 +63,7 @@ int main(int argc, char* argv[]) {
   fsl::MessageLoop message_loop;
   CommandChannel channel(hci_dev_path);
 
-  tools::CommandDispatcher dispatcher;
+  bluetooth_tools::CommandDispatcher dispatcher;
   bt_intel::RegisterCommands(&channel, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {

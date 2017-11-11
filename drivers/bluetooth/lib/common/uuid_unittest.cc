@@ -9,7 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -288,4 +288,4 @@ TEST(UUIDTest, Hash) {
 
 }  // namespace
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

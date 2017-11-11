@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace {
 
@@ -101,4 +101,4 @@ bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {
 }
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

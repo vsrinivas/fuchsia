@@ -11,7 +11,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -573,4 +573,4 @@ TEST(ObserverListTest, AddObserverInTheLastObserve) {
 
 }  // namespace
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

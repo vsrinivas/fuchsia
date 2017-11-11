@@ -8,7 +8,7 @@
 #include <initializer_list>
 #include <string>
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Represents a 48-bit BD_ADDR. This data structure can be directly serialized
@@ -119,23 +119,22 @@ class DeviceAddress {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
 
 // Custom specialization of std::hash to support unordered associative
 // containers.
 namespace std {
 
 template <>
-struct hash<::bluetooth::common::DeviceAddress> {
-  using argument_type = ::bluetooth::common::DeviceAddress;
+struct hash<::btlib::common::DeviceAddress> {
+  using argument_type = ::btlib::common::DeviceAddress;
   using result_type = std::size_t;
 
   result_type operator()(argument_type const& value) const;
 };
 
 // Stream operators for easy logging
-ostream& operator<<(ostream& os,
-                    const ::bluetooth::common::DeviceAddressBytes& db);
-ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddress& d);
+ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddressBytes& db);
+ostream& operator<<(ostream& os, const ::btlib::common::DeviceAddress& d);
 
 }  // namespace std

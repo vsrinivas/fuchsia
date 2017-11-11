@@ -12,14 +12,14 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 class Adapter;
 class RemoteDevice;
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib
 
 namespace bluetooth_service {
 
@@ -28,7 +28,7 @@ class AdapterFidlImpl : public ::bluetooth::control::Adapter {
  public:
   using ConnectionErrorHandler = std::function<void(AdapterFidlImpl*)>;
   AdapterFidlImpl(
-      const fxl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
+      const fxl::WeakPtr<::btlib::gap::Adapter>& adapter,
       ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request,
       const ConnectionErrorHandler& connection_error_handler);
   ~AdapterFidlImpl() override = default;
@@ -47,18 +47,18 @@ class AdapterFidlImpl : public ::bluetooth::control::Adapter {
   void StopDiscovery(const StopDiscoveryCallback& callback) override;
 
   // Called by |le_discovery_session_| when devices are discovered.
-  void OnDiscoveryResult(const ::bluetooth::gap::RemoteDevice& remote_device);
+  void OnDiscoveryResult(const ::btlib::gap::RemoteDevice& remote_device);
 
   // Notifies the delegate that the Adapter's "discovering" state changed.
   void NotifyDiscoveringChanged();
 
   // The underlying Adapter object.
-  fxl::WeakPtr<::bluetooth::gap::Adapter> adapter_;
+  fxl::WeakPtr<::btlib::gap::Adapter> adapter_;
 
   // The currently active LE discovery session. This is initialized when a
   // client requests to perform discovery.
   bool requesting_discovery_;
-  std::unique_ptr<::bluetooth::gap::LowEnergyDiscoverySession>
+  std::unique_ptr<::btlib::gap::LowEnergyDiscoverySession>
       le_discovery_session_;
 
   // The interface binding that represents the connection to the client

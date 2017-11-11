@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 namespace {
@@ -158,7 +158,7 @@ size_t LegacyLowEnergyAdvertiser::GetSizeLimit() {
 }
 
 void LegacyLowEnergyAdvertiser::StartAdvertising(
-    const bluetooth::common::DeviceAddress& address,
+    const common::DeviceAddress& address,
     const AdvertisingData& data,
     const AdvertisingData& scan_rsp,
     const ConnectionCallback& connect_callback,
@@ -248,7 +248,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
 }
 
 bool LegacyLowEnergyAdvertiser::StopAdvertising(
-    const bluetooth::common::DeviceAddress& address) {
+    const common::DeviceAddress& address) {
   if (advertised_ != address) {
     // not advertising, or not on this address.
     return false;
@@ -301,4 +301,4 @@ void LegacyLowEnergyAdvertiser::OnIncomingConnection(
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

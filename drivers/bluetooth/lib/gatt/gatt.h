@@ -6,27 +6,23 @@
 
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gatt {
 
 // 16-bit Attribute Types defined by the GATT profile (Vol 3, Part G, 3.4).
 namespace types {
 
-constexpr ::bluetooth::common::UUID kPrimaryService((uint16_t)0x2800);
-constexpr ::bluetooth::common::UUID kSecondaryService((uint16_t)0x2801);
-constexpr ::bluetooth::common::UUID kIncludeDeclaration((uint16_t)0x2802);
-constexpr ::bluetooth::common::UUID kCharacteristicDeclaration(
-    (uint16_t)0x2803);
-constexpr ::bluetooth::common::UUID kCharacteristicExtProperties(
-    (uint16_t)0x2900);
-constexpr ::bluetooth::common::UUID kCharacteristicUserDescription(
+constexpr ::btlib::common::UUID kPrimaryService((uint16_t)0x2800);
+constexpr ::btlib::common::UUID kSecondaryService((uint16_t)0x2801);
+constexpr ::btlib::common::UUID kIncludeDeclaration((uint16_t)0x2802);
+constexpr ::btlib::common::UUID kCharacteristicDeclaration((uint16_t)0x2803);
+constexpr ::btlib::common::UUID kCharacteristicExtProperties((uint16_t)0x2900);
+constexpr ::btlib::common::UUID kCharacteristicUserDescription(
     (uint16_t)0x2901);
-constexpr ::bluetooth::common::UUID kClientCharacteristicConfig(
-    (uint16_t)0x2902);
-constexpr ::bluetooth::common::UUID kServerCharacteristicConfig(
-    (uint16_t)0x2903);
-constexpr ::bluetooth::common::UUID kCharacteristicFormat((uint16_t)0x2904);
-constexpr ::bluetooth::common::UUID kCharacteristicAggregateFormat(
+constexpr ::btlib::common::UUID kClientCharacteristicConfig((uint16_t)0x2902);
+constexpr ::btlib::common::UUID kServerCharacteristicConfig((uint16_t)0x2903);
+constexpr ::btlib::common::UUID kCharacteristicFormat((uint16_t)0x2904);
+constexpr ::btlib::common::UUID kCharacteristicAggregateFormat(
     (uint16_t)0x2905);
 
 }  // namespace types
@@ -52,4 +48,4 @@ enum ExtendedProperty : uint16_t {
 };
 
 }  // namespace gatt
-}  // namespace bluetooth
+}  // namespace btlib

@@ -16,7 +16,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace gap {
 
@@ -90,8 +90,7 @@ class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
     callback(interval_ms, hci::kSuccess);
   }
 
-  bool StopAdvertising(
-      const bluetooth::common::DeviceAddress& address) override {
+  bool StopAdvertising(const btlib::common::DeviceAddress& address) override {
     ads_->erase(address);
     return true;
   }
@@ -119,7 +118,7 @@ class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLowEnergyAdvertiser);
 };
 
-using TestingBase = ::bluetooth::testing::TestBase;
+using TestingBase = ::btlib::testing::TestBase;
 
 class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
  public:
@@ -369,4 +368,4 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
 
 }  // namespace
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

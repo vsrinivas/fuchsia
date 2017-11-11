@@ -12,7 +12,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 // Represents a L2CAP PDU. Each PDU contains a complete L2CAP frame that can be
@@ -142,4 +142,4 @@ class PDU final {
 };
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

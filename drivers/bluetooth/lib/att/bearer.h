@@ -27,7 +27,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 // Implements an ATT data bearer with the following features:
@@ -322,4 +322,4 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 };
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

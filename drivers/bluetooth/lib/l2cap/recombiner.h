@@ -14,7 +14,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 // A Recombiner can be used to obtain complete L2CAP frames from received
@@ -76,4 +76,4 @@ class Recombiner final {
 };
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

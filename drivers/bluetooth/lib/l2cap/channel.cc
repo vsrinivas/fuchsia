@@ -10,7 +10,7 @@
 
 #include "logical_link.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 Channel::Channel(ChannelId id, hci::Connection::LinkType link_type)
@@ -159,4 +159,4 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
 
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

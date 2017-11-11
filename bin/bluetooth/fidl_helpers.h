@@ -12,13 +12,13 @@
 
 // Helpers for implementing the Bluetooth FIDL interfaces.
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 class DiscoveryFilter;
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib
 
 namespace bluetooth_service {
 namespace fidl_helpers {
@@ -26,14 +26,14 @@ namespace fidl_helpers {
 ::bluetooth::StatusPtr NewErrorStatus(::bluetooth::ErrorCode error_code,
                                       const std::string& description);
 ::bluetooth::control::AdapterInfoPtr NewAdapterInfo(
-    const ::bluetooth::gap::Adapter& adapter);
+    const ::btlib::gap::Adapter& adapter);
 ::bluetooth::control::RemoteDevicePtr NewRemoteDevice(
-    const ::bluetooth::gap::RemoteDevice& device);
+    const ::btlib::gap::RemoteDevice& device);
 
 ::bluetooth::low_energy::AdvertisingDataPtr NewAdvertisingData(
-    const ::bluetooth::common::ByteBuffer& advertising_data);
+    const ::btlib::common::ByteBuffer& advertising_data);
 ::bluetooth::low_energy::RemoteDevicePtr NewLERemoteDevice(
-    const ::bluetooth::gap::RemoteDevice& device);
+    const ::btlib::gap::RemoteDevice& device);
 
 // Validates the contents of a ScanFilter.
 bool IsScanFilterValid(const ::bluetooth::low_energy::ScanFilter& fidl_filter);
@@ -43,7 +43,7 @@ bool IsScanFilterValid(const ::bluetooth::low_energy::ScanFilter& fidl_filter);
 // unmodified.
 bool PopulateDiscoveryFilter(
     const ::bluetooth::low_energy::ScanFilter& fidl_filter,
-    ::bluetooth::gap::DiscoveryFilter* out_filter);
+    ::btlib::gap::DiscoveryFilter* out_filter);
 
 }  // namespace fidl_helpers
 }  // namespace bluetooth_service

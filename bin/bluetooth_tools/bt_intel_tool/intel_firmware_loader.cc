@@ -52,7 +52,7 @@ class MemoryFile {
       mapped = nullptr;
     }
 
-    view_ = bluetooth::common::BufferView(mapped, size);
+    view_ = ::btlib::common::BufferView(mapped, size);
   };
 
   ~MemoryFile() {
@@ -67,11 +67,11 @@ class MemoryFile {
 
   const uint8_t* at(size_t offset) const { return view_.data() + offset; }
 
-  bluetooth::common::BufferView view(
+  ::btlib::common::BufferView view(
       size_t offset,
       size_t length = std::numeric_limits<size_t>::max()) const {
     if (!is_valid()) {
-      return bluetooth::common::BufferView();
+      return ::btlib::common::BufferView();
     }
     return view_.view(offset, length);
   }
@@ -81,28 +81,28 @@ class MemoryFile {
   fbl::unique_fd fd_;
 
   // The view of the whole memory mapped file.
-  bluetooth::common::BufferView view_;
+  ::btlib::common::BufferView view_;
 };
 
 constexpr size_t kMaxSecureSendArgLen = 252;
 
 bool SecureSend(CommandChannel* channel,
                 uint8_t type,
-                const bluetooth::common::BufferView& bytes) {
+                const ::btlib::common::BufferView& bytes) {
   size_t left = bytes.size();
   bool abort = false;
   while (left > 0 && !abort) {
     size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
-    auto cmd = bluetooth::hci::CommandPacket::New(kSecureSend, frag_len + 1);
+    auto cmd = ::btlib::hci::CommandPacket::New(kSecureSend, frag_len + 1);
     auto data = cmd->mutable_view()->mutable_payload_data();
     data[0] = type;
     data.Write(bytes.view(bytes.size() - left, frag_len), 1);
 
     channel->SendCommandSync(cmd->view(), [&abort](const auto& event) {
-      if (event.event_code() == bluetooth::hci::kCommandCompleteEventCode) {
+      if (event.event_code() == ::btlib::hci::kCommandCompleteEventCode) {
         const auto& event_params =
             event.view()
-                .template payload<bluetooth::hci::CommandCompleteEventParams>();
+                .template payload<::btlib::hci::CommandCompleteEventParams>();
         if (le16toh(event_params.command_opcode) != kSecureSend) {
           std::cerr << "\nIntelFirmwareLoader: Received command complete for "
                        "something else!"
@@ -117,7 +117,7 @@ bool SecureSend(CommandChannel* channel,
         return;
       }
       if (event.event_code() ==
-          bluetooth::hci::kVendorDebugEventCode) {  // Vendor Event Code
+          ::btlib::hci::kVendorDebugEventCode) {  // Vendor Event Code
         const auto& params =
             event.view().template payload<IntelSecureSendEventParams>();
         printf(
@@ -159,7 +159,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
   // A bseq file consists of a sequence of:
   // - [0x01] [command w/params]
   // - [0x02] [expected event w/params]
-  while (file.size() - ptr > sizeof(bluetooth::hci::CommandHeader)) {
+  while (file.size() - ptr > sizeof(::btlib::hci::CommandHeader)) {
     // Parse the next items
     if (*file.at(ptr) != 0x01) {
       std::cerr << "IntelFirmwareLoader: Error: malformed file, expected "
@@ -168,10 +168,10 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
       return LoadStatus::kError;
     }
     ptr++;
-    bluetooth::common::BufferView command_view = file.view(ptr);
-    bluetooth::common::PacketView<bluetooth::hci::CommandHeader> command(
+    ::btlib::common::BufferView command_view = file.view(ptr);
+    ::btlib::common::PacketView<::btlib::hci::CommandHeader> command(
         &command_view);
-    command = bluetooth::common::PacketView<bluetooth::hci::CommandHeader>(
+    command = ::btlib::common::PacketView<::btlib::hci::CommandHeader>(
         &command_view, command.header().parameter_total_size);
     ptr += command.size();
     if ((file.size() <= ptr) || (*file.at(ptr) != 0x02)) {
@@ -180,12 +180,12 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
                 << std::endl;
       return LoadStatus::kError;
     }
-    std::deque<bluetooth::common::BufferView> events;
+    std::deque<::btlib::common::BufferView> events;
     while ((file.size() <= ptr) || (*file.at(ptr) == 0x02)) {
       ptr++;
-      auto event = bluetooth::hci::EventPacket::New(0u);
+      auto event = ::btlib::hci::EventPacket::New(0u);
       memcpy(event->mutable_view()->mutable_header(), file.at(ptr),
-             sizeof(bluetooth::hci::EventHeader));
+             sizeof(::btlib::hci::EventHeader));
       event->InitializeFromBuffer();
       size_t event_size = event->view().size();
       events.emplace_back(file.view(ptr, event_size));
@@ -239,9 +239,8 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   // param size can be a multiple of 4 bytes]
   while (ptr < file.size()) {
     auto next_cmd = file.view(ptr + frag_len);
-    bluetooth::common::PacketView<bluetooth::hci::CommandHeader> header(
-        &next_cmd);
-    size_t cmd_size = sizeof(bluetooth::hci::CommandHeader) +
+    ::btlib::common::PacketView<::btlib::hci::CommandHeader> header(&next_cmd);
+    size_t cmd_size = sizeof(::btlib::hci::CommandHeader) +
                       header.header().parameter_total_size;
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
@@ -258,11 +257,11 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
 }
 
 bool IntelFirmwareLoader::RunCommandAndExpect(
-    const bluetooth::common::PacketView<bluetooth::hci::CommandHeader>& command,
-    std::deque<bluetooth::common::BufferView>& events) {
+    const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
+    std::deque<::btlib::common::BufferView>& events) {
   bool failed = false;
   auto event_cb = [&events,
-                   &failed](const bluetooth::hci::EventPacket& evt_packet) {
+                   &failed](const ::btlib::hci::EventPacket& evt_packet) {
     auto expected = events.front();
     if (evt_packet.view().size() != expected.size()) {
       failed = true;

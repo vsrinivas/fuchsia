@@ -8,7 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 // Convenience class for extracting the contents of a HCI LE Advertising Report
@@ -57,4 +57,4 @@ class AdvertisingReportParser final {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

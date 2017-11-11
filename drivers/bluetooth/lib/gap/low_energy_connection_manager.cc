@@ -16,7 +16,7 @@
 #include "remote_device.h"
 #include "remote_device_cache.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 LowEnergyConnectionRef::LowEnergyConnectionRef(
@@ -728,4 +728,4 @@ LowEnergyConnectionManager::FindConnectionStateIter(
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

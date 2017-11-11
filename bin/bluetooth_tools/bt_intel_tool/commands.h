@@ -13,6 +13,6 @@
 namespace bt_intel {
 
 void RegisterCommands(CommandChannel* data,
-                      bluetooth::tools::CommandDispatcher* dispatcher);
+                      ::bluetooth_tools::CommandDispatcher* dispatcher);
 
 }  // namespace bt_intel

@@ -14,13 +14,13 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
-using ::bluetooth::testing::FakeController;
+using ::btlib::testing::FakeController;
 
-using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
+using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
 class AdapterTest : public TestingBase {
  public:
@@ -182,4 +182,4 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
 
 }  // namespace
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

@@ -22,9 +22,9 @@ const char kBluetoothDeviceDir[] = "/dev/class/bt-hci";
 
 // Default no-op implementations for optional Observer methods.
 void AdapterManager::Observer::OnAdapterCreated(
-    bluetooth::gap::Adapter* adapter) {}
+    ::btlib::gap::Adapter* adapter) {}
 void AdapterManager::Observer::OnAdapterRemoved(
-    bluetooth::gap::Adapter* adapter) {}
+    ::btlib::gap::Adapter* adapter) {}
 
 AdapterManager::AdapterManager() : weak_ptr_factory_(this) {
   device_watcher_ = fsl::DeviceWatcher::Create(
@@ -40,11 +40,11 @@ AdapterManager::~AdapterManager() {
   adapters_.clear();
 }
 
-fxl::WeakPtr<bluetooth::gap::Adapter> AdapterManager::GetAdapter(
+fxl::WeakPtr<::btlib::gap::Adapter> AdapterManager::GetAdapter(
     const std::string& identifier) const {
   auto iter = adapters_.find(identifier);
   if (iter == adapters_.end())
-    return fxl::WeakPtr<bluetooth::gap::Adapter>();
+    return fxl::WeakPtr<::btlib::gap::Adapter>();
   return iter->second->AsWeakPtr();
 }
 
@@ -66,10 +66,10 @@ void AdapterManager::RemoveObserver(Observer* observer) {
   observers_.RemoveObserver(observer);
 }
 
-fxl::WeakPtr<bluetooth::gap::Adapter> AdapterManager::GetActiveAdapter() {
+fxl::WeakPtr<::btlib::gap::Adapter> AdapterManager::GetActiveAdapter() {
   if (active_adapter_)
     return active_adapter_->AsWeakPtr();
-  return fxl::WeakPtr<bluetooth::gap::Adapter>();
+  return fxl::WeakPtr<::btlib::gap::Adapter>();
 }
 
 bool AdapterManager::SetActiveAdapter(const std::string& identifier) {
@@ -82,8 +82,7 @@ bool AdapterManager::SetActiveAdapter(const std::string& identifier) {
   return SetActiveAdapterInternal(adapter);
 }
 
-bool AdapterManager::SetActiveAdapterInternal(
-    bluetooth::gap::Adapter* adapter) {
+bool AdapterManager::SetActiveAdapterInternal(::btlib::gap::Adapter* adapter) {
   // Return true if the adapter is already assigned.
   if (active_adapter_ == adapter)
     return true;
@@ -108,10 +107,10 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
     return;
   }
 
-  auto hci_dev = std::make_unique<bluetooth::hci::ZirconDeviceWrapper>(
+  auto hci_dev = std::make_unique<::btlib::hci::ZirconDeviceWrapper>(
       std::move(hci_dev_fd));
-  auto hci = bluetooth::hci::Transport::Create(std::move(hci_dev));
-  auto adapter = std::make_unique<bluetooth::gap::Adapter>(std::move(hci));
+  auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
+  auto adapter = std::make_unique<::btlib::gap::Adapter>(std::move(hci));
 
   auto self = weak_ptr_factory_.GetWeakPtr();
 
@@ -150,7 +149,7 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
 }
 
 void AdapterManager::RegisterAdapter(
-    std::unique_ptr<bluetooth::gap::Adapter> adapter) {
+    std::unique_ptr<::btlib::gap::Adapter> adapter) {
   FXL_DCHECK(adapters_.find(adapter->identifier()) == adapters_.end());
 
   auto ptr = adapter.get();

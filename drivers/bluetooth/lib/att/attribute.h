@@ -14,7 +14,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 // Defines the read or write access permissions for an attribute.
@@ -235,4 +235,4 @@ class AttributeGrouping final {
 };
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

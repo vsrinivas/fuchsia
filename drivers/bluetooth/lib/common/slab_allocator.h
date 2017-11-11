@@ -6,7 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // NOTE: Tweak these as needed.
@@ -19,4 +19,4 @@ constexpr size_t kSlabSize = 32767;
 common::MutableByteBufferPtr NewSlabBuffer(size_t size);
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

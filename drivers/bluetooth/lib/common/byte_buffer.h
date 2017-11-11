@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 class BufferView;
@@ -270,4 +270,4 @@ class MutableBufferView final : public MutableByteBuffer {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

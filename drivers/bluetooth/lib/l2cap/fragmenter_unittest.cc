@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace {
 
@@ -207,4 +207,4 @@ TEST(L2CAP_FragmenterTest, ManyFragmentsOffByOne) {
 
 }  // namespace
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

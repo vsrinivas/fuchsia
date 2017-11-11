@@ -15,10 +15,10 @@
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
-using bluetooth::common::ContainersEqual;
-using bluetooth::common::StaticByteBuffer;
+using btlib::common::ContainersEqual;
+using btlib::common::StaticByteBuffer;
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace test {
 namespace {
@@ -262,4 +262,4 @@ TEST(HCI_PacketTest, ACLDataPacketFromBuffer) {
 }  // namespace
 }  // namespace test
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

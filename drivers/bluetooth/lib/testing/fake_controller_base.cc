@@ -12,7 +12,7 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 
 FakeControllerBase::FakeControllerBase(zx::channel cmd_channel,
@@ -181,4 +181,4 @@ void FakeControllerBase::CloseACLDataChannelInternal() {
 }
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

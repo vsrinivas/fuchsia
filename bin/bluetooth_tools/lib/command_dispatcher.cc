@@ -9,8 +9,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
-namespace tools {
+namespace bluetooth_tools {
 
 CommandDispatcher::CommandHandlerData::CommandHandlerData(
     const std::string& description,
@@ -68,5 +67,4 @@ std::vector<std::string> CommandDispatcher::GetCommandsThatMatch(
   return result;
 }
 
-}  // namespace tools
-}  // namespace bluetooth
+}  // namespace bluetooth_tools

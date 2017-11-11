@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace {
 
@@ -20,10 +20,10 @@ const LEConnectionParameters kTestParams(1, 1, 1);
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
                                          "00:00:00:00:00:01");
 
-using ::bluetooth::testing::CommandTransaction;
+using ::btlib::testing::CommandTransaction;
 
-using TestingBase = ::bluetooth::testing::FakeControllerTest<
-    ::bluetooth::testing::TestController>;
+using TestingBase =
+    ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
 
 class ConnectionTest : public TestingBase {
  public:
@@ -128,4 +128,4 @@ TEST_F(HCI_ConnectionTest, CloseError) {
 
 }  // namespace
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

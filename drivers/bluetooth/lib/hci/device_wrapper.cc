@@ -10,7 +10,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 ZirconDeviceWrapper::ZirconDeviceWrapper(fxl::UniqueFD device_fd)
@@ -60,4 +60,4 @@ zx::channel DummyDeviceWrapper::GetACLDataChannel() {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace test {
 namespace {
@@ -291,4 +291,4 @@ TEST(HCI_AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
 }  // namespace
 }  // namespace test
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

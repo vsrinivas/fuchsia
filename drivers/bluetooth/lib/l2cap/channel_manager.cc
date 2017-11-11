@@ -9,7 +9,7 @@
 
 #include "logical_link.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 
 ChannelManager::ChannelManager(fxl::RefPtr<hci::Transport> hci,
@@ -175,4 +175,4 @@ internal::LogicalLink* ChannelManager::RegisterInternalLocked(
 }
 
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

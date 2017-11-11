@@ -136,7 +136,7 @@ bool HandleListDevices(const App* app,
 }  // namespace
 
 void RegisterCommands(App* app,
-                      bluetooth::tools::CommandDispatcher* dispatcher) {
+                      bluetooth_tools::CommandDispatcher* dispatcher) {
   FXL_DCHECK(dispatcher);
 
 #define BIND(handler) \

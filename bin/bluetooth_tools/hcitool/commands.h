@@ -13,19 +13,19 @@ namespace hcitool {
 
 class CommandData final {
  public:
-  CommandData(bluetooth::hci::CommandChannel* cmd_channel,
+  CommandData(::btlib::hci::CommandChannel* cmd_channel,
               fxl::RefPtr<fxl::TaskRunner> task_runner)
       : cmd_channel_(cmd_channel), task_runner_(task_runner) {}
 
-  bluetooth::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }
+  ::btlib::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }
   fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
 
  private:
-  bluetooth::hci::CommandChannel* cmd_channel_;
+  ::btlib::hci::CommandChannel* cmd_channel_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
 };
 
 void RegisterCommands(const CommandData* data,
-                      bluetooth::tools::CommandDispatcher* dispatcher);
+                      ::bluetooth_tools::CommandDispatcher* dispatcher);
 
 }  // namespace hcitool

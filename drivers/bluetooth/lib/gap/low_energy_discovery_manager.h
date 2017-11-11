@@ -19,7 +19,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace hci {
 class Transport;
@@ -69,12 +69,12 @@ class RemoteDeviceCache;
 // during a scan period can receive previously processed results.
 //
 // EXAMPLE:
-//     bluetooth::gap::LowEnergyDiscoveryManager discovery_manager(
-//         bluetooth::gap::LowEnergyDiscoveryManager::Mode::kLegacy,
+//     btlib::gap::LowEnergyDiscoveryManager discovery_manager(
+//         btlib::gap::LowEnergyDiscoveryManager::Mode::kLegacy,
 //         transport, task_runner);
 //     ...
 //
-//     std::unique_ptr<bluetooth::gap::LowEnergyDiscoverySession> session;
+//     std::unique_ptr<btlib::gap::LowEnergyDiscoverySession> session;
 //     discovery_manager.StartDiscovery([&session](auto new_session) {
 //       // Take ownership of the session to make sure it isn't terminated when
 //       // this callback returns.
@@ -82,10 +82,10 @@ class RemoteDeviceCache;
 //
 //       // Only scan for devices advertising the "Heart Rate" GATT Service.
 //       uint16_t uuid = 0x180d;
-//       session->filter()->set_service_uuids({bluetooth::common::UUID(uuid)});
+//       session->filter()->set_service_uuids({btlib::common::UUID(uuid)});
 //       session->SetResultCallback([](const
-//       bluetooth::hci::LowEnergyScanResult& result,
-//                                     const bluetooth::common::ByteBuffer&
+//       btlib::hci::LowEnergyScanResult& result,
+//                                     const btlib::common::ByteBuffer&
 //                                     advertising_data) {
 //         // Do stuff with |result| and |advertising_data|. (|advertising_data|
 //         // contains any received Scan Response data as well).
@@ -253,4 +253,4 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

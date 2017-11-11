@@ -15,16 +15,16 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace {
 
 constexpr hci::ConnectionHandle kTestHandle1 = 0x0001;
 constexpr hci::ConnectionHandle kTestHandle2 = 0x0002;
 
-using ::bluetooth::testing::TestController;
+using ::btlib::testing::TestController;
 
-using TestingBase = ::bluetooth::testing::FakeControllerTest<TestController>;
+using TestingBase = ::btlib::testing::FakeControllerTest<TestController>;
 
 class L2CAP_ChannelManagerTest : public TestingBase {
  public:
@@ -681,4 +681,4 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
 
 }  // namespace
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

@@ -8,7 +8,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Posts |callback| on |task_runner| and waits for it to finish running.
@@ -22,4 +22,4 @@ void RunTaskSync(const fxl::Closure& callback,
                  fxl::RefPtr<fxl::TaskRunner> task_runner);
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace common {
 class ByteBuffer;
@@ -73,4 +73,4 @@ class RemoteDeviceCache final {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

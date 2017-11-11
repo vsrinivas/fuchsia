@@ -10,7 +10,7 @@
 #include "control_packets.h"
 #include "slab_allocators.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace slab_allocators {
 namespace {
@@ -84,4 +84,4 @@ TEST(HCI_SlabAllocatorsTest, ACLDataPacketFallBack) {
 }  // namespace
 }  // namespace slab_allocators
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

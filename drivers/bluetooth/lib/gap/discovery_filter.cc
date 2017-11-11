@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
@@ -190,4 +190,4 @@ void DiscoveryFilter::Reset() {
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

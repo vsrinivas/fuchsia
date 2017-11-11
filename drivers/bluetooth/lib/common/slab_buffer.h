@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 template <size_t BackingBufferSize>
@@ -73,4 +73,4 @@ class SlabBufferImpl
 }  // namespace internal
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

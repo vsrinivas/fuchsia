@@ -8,7 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 // TODO(jamuraa): consolidate these into a common header
@@ -53,7 +53,7 @@ class LowEnergyAdvertiser {
   using AdvertisingResultCallback =
       std::function<void(uint32_t interval_ms, hci::Status status)>;
   using ConnectionCallback = std::function<void(LowEnergyConnectionRefPtr)>;
-  virtual void StartAdvertising(const bluetooth::common::DeviceAddress& address,
+  virtual void StartAdvertising(const common::DeviceAddress& address,
                                 const AdvertisingData& data,
                                 const AdvertisingData& scan_rsp,
                                 const ConnectionCallback& connect_callback,
@@ -63,8 +63,7 @@ class LowEnergyAdvertiser {
 
   // Stops any advertisement currently active on |address|. Idempotent and
   // asynchronous. Returns true if advertising will be stopped, false otherwise.
-  virtual bool StopAdvertising(
-      const bluetooth::common::DeviceAddress& address) = 0;
+  virtual bool StopAdvertising(const common::DeviceAddress& address) = 0;
 
   // Callback for an incoming connection.  |connection| should be an LE
   // connection that has been remotely-intiated.  This function should be called
@@ -75,4 +74,4 @@ class LowEnergyAdvertiser {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

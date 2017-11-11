@@ -92,8 +92,7 @@ void CommandChannel::SetEventCallback(const EventCallback& callback) {
 }
 
 void CommandChannel::SendCommand(
-    const bluetooth::common::PacketView<bluetooth::hci::CommandHeader>&
-        command) {
+    const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command) {
   zx::channel* channel = &cmd_channel_;
   // Bootloader Secure Send commands are sent and responded to via the bulk
   // endpoint (ACL channel)
@@ -110,7 +109,7 @@ void CommandChannel::SendCommand(
 }
 
 void CommandChannel::SendCommandSync(
-    const bluetooth::common::PacketView<bluetooth::hci::CommandHeader>& command,
+    const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
     const EventCallback& callback) {
   bool received = false;
   auto previous_cb = event_callback_;
@@ -170,8 +169,8 @@ async_wait_result_t CommandChannel::HandleChannelReady(
     uint32_t read_size;
     // Allocate a buffer for the event. Since we don't know the size
     // beforehand we allocate the largest possible buffer.
-    auto packet = bluetooth::hci::EventPacket::New(
-        bluetooth::hci::slab_allocators::kLargeControlPayloadSize);
+    auto packet = ::btlib::hci::EventPacket::New(
+        ::btlib::hci::slab_allocators::kLargeControlPayloadSize);
     if (!packet) {
       std::cerr << "CommandChannel: Failed to allocate event packet!"
                 << std::endl;
@@ -188,16 +187,16 @@ async_wait_result_t CommandChannel::HandleChannelReady(
       return ASYNC_WAIT_FINISHED;
     }
 
-    if (read_size < sizeof(bluetooth::hci::EventHeader)) {
+    if (read_size < sizeof(::btlib::hci::EventHeader)) {
       std::cerr << "CommandChannel: Malformed event packet - "
-                << "expected at least " << sizeof(bluetooth::hci::EventHeader)
+                << "expected at least " << sizeof(::btlib::hci::EventHeader)
                 << " bytes, got " << read_size << std::endl;
       continue;
     }
 
     // Compare the received payload size to what is in the header.
     const size_t rx_payload_size =
-        read_size - sizeof(bluetooth::hci::EventHeader);
+        read_size - sizeof(::btlib::hci::EventHeader);
     const size_t size_from_header =
         packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {

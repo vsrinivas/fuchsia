@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/packet.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 using CommandPacket = Packet<CommandHeader>;
@@ -87,4 +87,4 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

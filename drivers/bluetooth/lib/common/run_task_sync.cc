@@ -9,7 +9,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 void RunTaskSync(const fxl::Closure& callback,
@@ -38,4 +38,4 @@ void RunTaskSync(const fxl::Closure& callback,
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

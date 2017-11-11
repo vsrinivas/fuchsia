@@ -8,7 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace testing {
 namespace {
 
@@ -177,4 +177,4 @@ void FakeDevice::WriteScanResponseReport(
 }
 
 }  // namespace testing
-}  // namespace bluetooth
+}  // namespace btlib

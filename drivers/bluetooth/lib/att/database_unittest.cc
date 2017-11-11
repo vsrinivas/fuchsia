@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 namespace {
 
@@ -387,4 +387,4 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeFirstValueExceedsMTU) {
 
 }  // namespace
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

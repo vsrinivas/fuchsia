@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
-namespace bluetooth {
+namespace btlib {
 
 namespace common {
 class ByteBuffer;
@@ -119,4 +119,4 @@ class DiscoveryFilter final {
 };
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

@@ -28,7 +28,7 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
     return active_adapter_.get();
   }
 
-  const bluetooth::tools::CommandDispatcher& command_dispatcher() const {
+  const bluetooth_tools::CommandDispatcher& command_dispatcher() const {
     return command_dispatcher_;
   }
 
@@ -52,7 +52,7 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
       bluetooth::control::AdapterStatePtr state) override;
   void OnDeviceDiscovered(bluetooth::control::RemoteDevicePtr device) override;
 
-  bluetooth::tools::CommandDispatcher command_dispatcher_;
+  bluetooth_tools::CommandDispatcher command_dispatcher_;
 
   std::unique_ptr<app::ApplicationContext> context_;
   bluetooth::control::AdapterManagerPtr adapter_manager_;

@@ -17,7 +17,7 @@
 
 #include "byte_buffer.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -150,4 +150,4 @@ bool BTSnoopLogger::WritePacket(const ByteBuffer& packet_data,
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

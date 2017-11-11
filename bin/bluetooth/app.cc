@@ -32,18 +32,18 @@ App::~App() {
   adapter_manager_.RemoveObserver(this);
 }
 
-void App::OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) {
+void App::OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) {
   FXL_LOG(INFO) << "Active adapter changed: "
                 << (adapter ? adapter->identifier() : "(null)");
   // TODO(armansito): Do something meaningful here.
 }
 
-void App::OnAdapterCreated(bluetooth::gap::Adapter* adapter) {
+void App::OnAdapterCreated(::btlib::gap::Adapter* adapter) {
   FXL_LOG(INFO) << "Adapter added: " << adapter->identifier();
   // TODO(armansito): Do something meaningful here.
 }
 
-void App::OnAdapterRemoved(bluetooth::gap::Adapter* adapter) {
+void App::OnAdapterRemoved(::btlib::gap::Adapter* adapter) {
   FXL_LOG(INFO) << "Adapter removed: " << adapter->identifier();
   // TODO(armansito): Do something meaningful here.
 }

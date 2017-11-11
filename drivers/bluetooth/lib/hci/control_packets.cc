@@ -8,7 +8,7 @@
 
 #include "slab_allocators.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 namespace slab_allocators {
 
@@ -79,17 +79,17 @@ void EventPacket::InitializeFromBuffer() {
 }
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib
 
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::bluetooth::hci::slab_allocators::LargeCommandTraits,
-    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    ::btlib::hci::slab_allocators::LargeCommandTraits,
+    ::btlib::hci::slab_allocators::kMaxNumSlabs,
     true);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::bluetooth::hci::slab_allocators::SmallCommandTraits,
-    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    ::btlib::hci::slab_allocators::SmallCommandTraits,
+    ::btlib::hci::slab_allocators::kMaxNumSlabs,
     true);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::bluetooth::hci::slab_allocators::EventTraits,
-    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    ::btlib::hci::slab_allocators::EventTraits,
+    ::btlib::hci::slab_allocators::kMaxNumSlabs,
     true);

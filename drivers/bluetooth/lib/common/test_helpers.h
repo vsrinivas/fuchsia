@@ -11,7 +11,7 @@
 
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Function-template for comparing contents of two iterable byte containers for
@@ -56,4 +56,4 @@ common::MutableByteBufferPtr NewBuffer(T... bytes) {
 }
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

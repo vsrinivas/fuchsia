@@ -11,7 +11,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 
 LowEnergyDiscoverySession::LowEnergyDiscoverySession(
@@ -268,4 +268,4 @@ void LowEnergyDiscoveryManager::StartScan() {
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

@@ -14,7 +14,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace hci {
 
 class Transport;
@@ -121,4 +121,4 @@ class Connection final {
 };
 
 }  // namespace hci
-}  // namespace bluetooth
+}  // namespace btlib

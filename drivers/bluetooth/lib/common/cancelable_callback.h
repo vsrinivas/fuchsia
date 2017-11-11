@@ -13,7 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // CancelableCallback provides a way to run cancelable tasks on any thread.
@@ -165,4 +165,4 @@ class CancelableCallbackFactory<void(Args...)> final {
 };
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

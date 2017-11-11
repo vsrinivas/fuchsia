@@ -8,7 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
@@ -99,4 +99,4 @@ std::string RemoteDevice::ToString() const {
 }
 
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

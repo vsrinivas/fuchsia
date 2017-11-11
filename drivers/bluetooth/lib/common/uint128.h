@@ -7,7 +7,7 @@
 #include <array>
 #include <cstdint>
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 
 // Represents a 128-bit (16-octet) unsigned integer. This is commonly used for
@@ -17,4 +17,4 @@ using UInt128 = std::array<uint8_t, 16>;
 static_assert(sizeof(UInt128) == 16, "UInt128 must take up exactly 16 bytes");
 
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib

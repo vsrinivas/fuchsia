@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gatt {
 namespace {
 
@@ -360,4 +360,4 @@ TEST_F(GATT_ServerTest, ReadByGroupTypeMultiple) {
 
 }  // namespace
 }  // namespace gatt
-}  // namespace bluetooth
+}  // namespace btlib

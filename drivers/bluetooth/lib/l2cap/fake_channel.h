@@ -14,7 +14,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace testing {
 
@@ -65,4 +65,4 @@ class FakeChannel : public Channel {
 
 }  // namespace testing
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

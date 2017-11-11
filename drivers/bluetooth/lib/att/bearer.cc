@@ -13,7 +13,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace att {
 
 // static
@@ -668,4 +668,4 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
 }
 
 }  // namespace att
-}  // namespace bluetooth
+}  // namespace btlib

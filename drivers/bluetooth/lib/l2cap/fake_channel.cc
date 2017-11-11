@@ -6,7 +6,7 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace testing {
 
@@ -58,4 +58,4 @@ void FakeChannel::SetRxHandler(const RxCallback& rx_cb,
 
 }  // namespace testing
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

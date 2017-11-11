@@ -9,7 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "gtest/gtest.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace gap {
 namespace {
 
@@ -97,4 +97,4 @@ TEST(GAP_RemoteDeviceCacheTest, TryMakeNonTemporarySuccess) {
 
 }  // namespace
 }  // namespace gap
-}  // namespace bluetooth
+}  // namespace btlib

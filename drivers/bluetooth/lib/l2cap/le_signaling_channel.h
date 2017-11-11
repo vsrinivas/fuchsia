@@ -9,7 +9,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace l2cap {
 namespace internal {
 
@@ -50,4 +50,4 @@ class LESignalingChannel : public SignalingChannel {
 
 }  // namespace internal
 }  // namespace l2cap
-}  // namespace bluetooth
+}  // namespace btlib

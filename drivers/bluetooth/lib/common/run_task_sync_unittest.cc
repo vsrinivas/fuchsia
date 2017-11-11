@@ -10,7 +10,7 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/synchronization/sleep.h"
 
-namespace bluetooth {
+namespace btlib {
 namespace common {
 namespace {
 
@@ -39,4 +39,4 @@ TEST(RunTaskSyncTest, RunTaskSync) {
 
 }  // namespace
 }  // namespace common
-}  // namespace bluetooth
+}  // namespace btlib
