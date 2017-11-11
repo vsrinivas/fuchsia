@@ -49,6 +49,8 @@ static void pcie_tolud_quirk(const fbl::RefPtr<PcieDevice>& dev) {
         { .match = 0x808629c0, .mask = 0xFFFFFFFF, .offset = 0x0 },
         // PIIX4
         { .match = 0x80861237, .mask = 0xFFFFFFFF, .offset = 0x0 },
+        // Second/Third gen core family
+        { .match = 0x80860100, .mask = 0xFFFFFF00, .offset = 0xBC },
         // Intel 6th Generation Core Family (Skylake)
         { .match = 0x80861900, .mask = 0xFFFFFF00, .offset = 0xBC },
 
