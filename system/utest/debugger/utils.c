@@ -501,7 +501,7 @@ bool resume_inferior(zx_handle_t inferior, zx_koid_t tid)
     if (status == ZX_ERR_BAD_STATE) {
         // If the process has exited then the thread may have exited
         // ExceptionHandlerExchange already. Check.
-        if (tu_thread_is_dying_or_dead(inferior)) {
+        if (tu_thread_is_dying_or_dead(thread)) {
             tu_handle_close(thread);
             return true;
         }
