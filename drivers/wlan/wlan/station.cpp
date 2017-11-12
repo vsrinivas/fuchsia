@@ -665,6 +665,7 @@ zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>* frame) {
     auto buffer = GetBuffer(wlan_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
+    wlan_tx_info_t txinfo = {};
     auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
     // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
     // the payload
@@ -676,6 +677,7 @@ zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>* frame) {
     // Ensure all outgoing data frames are protected when RSNA is established.
     if (!bss_->rsn.is_null() && controlled_port_ == PortState::kOpen) {
         hdr->fc.set_protected_frame(1);
+        txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
     }
 
     hdr->addr1 = common::MacAddr(bss_->bssid.data());
@@ -698,6 +700,7 @@ zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>* frame) {
     llc->protocol_id = eth->ether_type;
 
     std::memcpy(llc->payload, eth->payload, frame->body_len);
+    wlan_packet->CopyCtrlFrom(txinfo);
 
     zx_status_t status = device_->SendWlan(std::move(wlan_packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
