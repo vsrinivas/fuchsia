@@ -5,9 +5,8 @@
 #pragma once
 
 #include <set>
-#include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
-#include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 #include "lib/escher/geometry/bounding_box.h"
@@ -24,8 +23,7 @@ class StrokeGroup final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  StrokeGroup(scenic_lib::Session* session,
-              escher::BufferFactory* buffer_factory);
+  explicit StrokeGroup(scenic_lib::Session* session);
 
   // Record the stroke to add.
   bool AddStroke(StrokePtr stroke);

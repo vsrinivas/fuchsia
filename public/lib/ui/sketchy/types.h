@@ -26,7 +26,7 @@ class CubicBezier2 {
 // C++ wrapper for sketchy::StrokePath.
 class StrokePath {
  public:
-  StrokePath(std::vector<CubicBezier2> segments);
+  explicit StrokePath(std::vector<CubicBezier2> segments);
   sketchy::StrokePathPtr NewSketchyStrokePath();
 
  private:

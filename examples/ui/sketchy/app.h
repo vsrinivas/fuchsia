@@ -23,6 +23,8 @@ class App {
  private:
   // Called asynchronously by constructor.
   void Init(scenic::DisplayInfoPtr display_info);
+  // Canvas callback for animation
+  void CanvasCallback(scenic::PresentationInfoPtr info);
 
   fsl::MessageLoop* const loop_;
   const std::unique_ptr<app::ApplicationContext> context_;
@@ -30,6 +32,13 @@ class App {
   const std::unique_ptr<scenic_lib::Session> session_;
   const std::unique_ptr<Canvas> canvas_;
   std::unique_ptr<Scene> scene_;
+
+  // Animated stroke for demo
+  std::unique_ptr<ImportNode> import_node_;
+  bool is_animated_stroke_at_top_ = true;
+  std::unique_ptr<Stroke> animated_stroke_;
+  StrokePath animated_path_at_top_;
+  StrokePath animated_path_at_bottom_;
 };
 
 }  // namespace sketchy_example

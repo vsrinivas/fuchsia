@@ -5,8 +5,8 @@
 #include "lib/escher/flib/fence_listener.h"
 
 #include <zx/time.h>
-#include "garnet/public/lib/fxl/functional/closure.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

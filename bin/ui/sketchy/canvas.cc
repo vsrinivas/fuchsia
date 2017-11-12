@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/canvas.h"
+
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
@@ -13,8 +14,7 @@ namespace sketchy_service {
 
 CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
     : session_(session),
-      escher_(escher),
-      buffer_factory_(escher),
+      shared_buffer_pool_(session, escher),
       stroke_manager_(escher) {}
 
 void CanvasImpl::Init(fidl::InterfaceHandle<sketchy::CanvasListener> listener) {
@@ -66,7 +66,7 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   };
   callbacks_.clear();
 
-  auto frame = Frame(&buffer_factory_);
+  auto frame = Frame(&shared_buffer_pool_);
   if (frame.init_failed()) {
     session_->Present(presentation_time, std::move(session_callback));
     return;
@@ -120,15 +120,14 @@ bool CanvasImpl::ApplyCreateResourceOp(
 bool CanvasImpl::CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke) {
   return resource_map_.AddResource(
       id,
-      fxl::MakeRefCounted<Stroke>(escher_,
-                                  stroke_manager_.stroke_tessellator()));
+      fxl::MakeRefCounted<Stroke>(stroke_manager_.stroke_tessellator()));
 }
 
 bool CanvasImpl::CreateStrokeGroup(
     ResourceId id,
     const sketchy::StrokeGroupPtr& stroke_group) {
   return resource_map_.AddResource(
-      id, fxl::MakeRefCounted<StrokeGroup>(session_, &buffer_factory_));
+      id, fxl::MakeRefCounted<StrokeGroup>(session_));
 }
 
 bool CanvasImpl::ApplyReleaseResourceOp(
@@ -176,7 +175,6 @@ bool CanvasImpl::ApplyScenicImportResourceOp(
 }
 
 bool CanvasImpl::ScenicImportNode(ResourceId id, zx::eventpair token) {
-  FXL_LOG(INFO) << "CanvasImpl::ScenicImportNode()";
   // As a client of Scenic, Canvas creates an ImportNode given token.
   auto node = fxl::MakeRefCounted<ImportNode>(session_, std::move(token));
   resource_map_.AddResource(id, std::move(node));

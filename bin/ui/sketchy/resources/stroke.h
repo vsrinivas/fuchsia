@@ -6,9 +6,8 @@
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
-#include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
-#include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_path.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_tessellator.h"
@@ -24,14 +23,17 @@ class Stroke final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Stroke(escher::Escher* escher, StrokeTessellator* tessellator);
+  explicit Stroke(StrokeTessellator* tessellator);
   bool SetPath(std::unique_ptr<StrokePath> path);
 
   // Record the command to tessellate and merge the mesh into a larger
   // |mesh_buffer|.
-  void TessellateAndMergeWithGpu(Frame* frame, MeshBuffer* mesh_buffer);
-  // TODO(MZ-269): Remove this when Gpu tessellation is stable.
-  void TessellateAndMergeWithCpu(Frame* frame, MeshBuffer* mesh_buffer);
+  void TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer);
+
+  // Record the command to re-tessellate and merge the mesh into a larger
+  // |mesh_buffer|. More specifically, base vertex index will be changed due to
+  // re-tessellation.
+  void ReTessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer);
 
   uint32_t vertex_count() const { return vertex_count_; }
   uint32_t index_count() const { return index_count_; }
@@ -49,7 +51,6 @@ class Stroke final : public Resource {
   // This is a workaround solution to avoid dynamic branching in shader.
   void PrepareDivisionSegmentIndices();
 
-  escher::Escher* const escher_;
   StrokeTessellator* const tessellator_;
 
   std::unique_ptr<StrokePath> path_;

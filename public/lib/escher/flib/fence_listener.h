@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include <async/auto_wait.h>
+#include <zircon/syscalls/port.h>
 #include <zx/event.h>
 
-#include <async/auto_wait.h>
 #include "lib/escher/flib/fence.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -14,7 +15,7 @@
 
 namespace escher {
 
-// Provides access to the consumption fence associated with a call to |Present|.
+// Provides access to the consumption fence.
 class FenceListener {
  public:
   // Takes ownership of the fence.

@@ -3,16 +3,18 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/frame.h"
+
+#include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/util/fuchsia_utils.h"
 
 namespace sketchy_service {
 
-Frame::Frame(escher::BufferFactory* buffer_factory,
+Frame::Frame(SharedBufferPool* shared_buffer_pool,
              bool enable_profiler)
-    : buffer_factory_(buffer_factory),
-      escher_(buffer_factory->escher()),
+    : shared_buffer_pool_(shared_buffer_pool),
+      escher_(shared_buffer_pool->escher()),
       command_(escher_->command_buffer_pool()->GetCommandBuffer()) {
   auto acquire_semaphore_pair =
       escher::NewSemaphoreEventPair(escher_);

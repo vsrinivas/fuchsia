@@ -12,11 +12,13 @@
 
 namespace sketchy_service {
 
+class SharedBufferPool;
+
 // Manages the compute commands of a Canvas::Present() request, and its
 // corresponding synchronization semantics.
 class Frame final {
  public:
-  explicit Frame(escher::BufferFactory* buffer_factory,
+  explicit Frame(SharedBufferPool* shared_buffer_pool,
                  bool enable_profiler = false);
 
   zx::event DuplicateReleaseFence();
@@ -25,14 +27,13 @@ class Frame final {
       uint64_t presentation_time,
       const scenic_lib::Session::PresentCallback& callback);
 
+  SharedBufferPool* shared_buffer_pool() const { return shared_buffer_pool_; }
   escher::impl::CommandBuffer* command() const { return command_; }
-  escher::BufferFactory* buffer_factory() const { return buffer_factory_; }
-  escher::SemaphorePtr acquire_semaphore() const { return acquire_semaphore_; }
   escher::TimestampProfiler* profiler() const { return profiler_.get(); }
   bool init_failed() const { return init_failed_; }
 
  private:
-  escher::BufferFactory* buffer_factory_;
+  SharedBufferPool* shared_buffer_pool_;
   escher::Escher* escher_;
   escher::impl::CommandBuffer* command_;
   escher::TimestampProfilerPtr profiler_;

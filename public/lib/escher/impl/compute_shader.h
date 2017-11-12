@@ -29,6 +29,7 @@ class ComputeShader {
   // constructor, or nullptr if that size was 0.
   //
   // TODO: avoid reffing/unreffing textures and buffers.
+  // TODO(ES-45): Support ranges in buffers.
   void Dispatch(std::vector<TexturePtr> textures,
                 std::vector<BufferPtr> buffers,
                 CommandBuffer* command_buffer,

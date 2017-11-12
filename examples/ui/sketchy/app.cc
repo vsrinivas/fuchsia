@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/sketchy/app.h"
+
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include "lib/ui/sketchy/types.h"
 
 namespace {
@@ -18,7 +21,7 @@ sketchy_lib::StrokePath MockWavePath(glm::vec2 start, uint32_t seg_count) {
                         {start + glm::vec2{80, 0}}});
     start += glm::vec2{80, 0};
   }
-  return segments;
+  return sketchy_lib::StrokePath(segments);
 }
 
 }  // namespace
@@ -31,7 +34,9 @@ App::App()
       scene_manager_(
           context_->ConnectToEnvironmentService<scenic::SceneManager>()),
       session_(std::make_unique<scenic_lib::Session>(scene_manager_.get())),
-      canvas_(std::make_unique<Canvas>(context_.get())) {
+      canvas_(std::make_unique<Canvas>(context_.get())),
+      animated_path_at_top_(MockWavePath({570, 350}, 13)),
+      animated_path_at_bottom_(MockWavePath({50, 1050}, 26)) {
   session_->set_connection_error_handler([this] {
     FXL_LOG(INFO) << "sketchy_example: lost connection to scenic::Session.";
     loop_->QuitNow();
@@ -74,21 +79,31 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   group.AddStroke(stroke1);
   group.AddStroke(stroke2);
 
-  // Draw waves
-  for (uint32_t i = 0; i < 4; i++) {
-    glm::vec2 start = {50, 50 + i * 100};
-    StrokePath path = MockWavePath(start, 26);
-    Stroke stroke(canvas_.get());
-    stroke.SetPath(path);
-    group.AddStroke(stroke);
-  }
+  animated_stroke_ = std::make_unique<Stroke>(canvas_.get());
+  animated_stroke_->SetPath(animated_path_at_top_);
+  group.AddStroke(*animated_stroke_.get());
 
-  ImportNode node(canvas_.get(), scene_->stroke_group_holder());
-  node.AddChild(group);
+  import_node_ = std::make_unique<ImportNode>(
+      canvas_.get(), scene_->stroke_group_holder());
+  import_node_->AddChild(group);
 
   uint64_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
-  canvas_->Present(time, [](scenic::PresentationInfoPtr info) {});
+  canvas_->Present(
+      time, std::bind(&App::CanvasCallback, this, std::placeholders::_1));
   session_->Present(time, [](scenic::PresentationInfoPtr info) {});
+}
+
+void App::CanvasCallback(scenic::PresentationInfoPtr info) {
+  zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+  uint64_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
+  is_animated_stroke_at_top_ = !is_animated_stroke_at_top_;
+  if (is_animated_stroke_at_top_) {
+    animated_stroke_->SetPath(animated_path_at_top_);
+  } else {
+    animated_stroke_->SetPath(animated_path_at_bottom_);
+  }
+  canvas_->Present(
+      time, std::bind(&App::CanvasCallback, this, std::placeholders::_1));
 }
 
 }  // namespace sketchy_example

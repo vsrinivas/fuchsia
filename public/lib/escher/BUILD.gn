@@ -67,6 +67,7 @@ source_set("escher") {
 
   public_deps = [
     "//garnet/public/lib/escher/base:escher_base",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]
 

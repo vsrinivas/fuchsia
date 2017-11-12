@@ -6,11 +6,20 @@
 
 #include "lib/ui/scenic/fidl_helpers.h"
 
-#include "lib/escher/escher.h"
-#include "lib/escher/geometry/tessellation.h"
-#include "lib/escher/profiling/timestamp_profiler.h"
-#include "lib/escher/shape/mesh.h"
-#include "lib/escher/vk/gpu_mem.h"
+namespace {
+
+std::pair<uint32_t, uint32_t> EstimateDeltaCounts(
+    std::set<sketchy_service::StrokePtr> strokes) {
+  uint32_t vertex_count = 0;
+  uint32_t index_count = 0;
+  for (auto it = strokes.begin(); it != strokes.end(); it++) {
+    vertex_count += (*it)->vertex_count();
+    index_count += (*it)->index_count();
+  }
+  return {vertex_count, index_count};
+};
+
+}  // namespace
 
 namespace sketchy_service {
 
@@ -18,12 +27,10 @@ const ResourceTypeInfo StrokeGroup::kTypeInfo("StrokeGroup",
                                               ResourceType::kStrokeGroup,
                                               ResourceType::kResource);
 
-StrokeGroup::StrokeGroup(scenic_lib::Session* session,
-                         escher::BufferFactory* buffer_factory)
+StrokeGroup::StrokeGroup(scenic_lib::Session* session)
     : shape_node_(session),
       mesh_(session),
-      material_(session),
-      mesh_buffer_(session, buffer_factory) {
+      material_(session) {
   material_.SetColor(255, 0, 255, 255);
   shape_node_.SetMaterial(material_);
   shape_node_.SetShape(mesh_);
@@ -38,6 +45,7 @@ bool StrokeGroup::AddStroke(StrokePtr stroke) {
   if (!needs_re_tessellation_) {
     strokes_to_add_.insert(stroke);
   }
+  strokes_.insert(stroke);
   return true;
 }
 
@@ -51,21 +59,27 @@ void StrokeGroup::UpdateMesh(Frame* frame) {
 }
 
 void StrokeGroup::MergeStrokes(Frame* frame) {
-  // TODO: Estimate size before starting to save extra copy's.
+  if (strokes_to_add_.empty()) {
+    FXL_LOG(WARNING) << "No stroke to add.";
+    return;
+  }
+  auto pair = EstimateDeltaCounts(strokes_to_add_);
+  mesh_buffer_.Prepare(
+      frame, /* from_scratch= */ false, pair.first, pair.second);
   while (!strokes_to_add_.empty()) {
     const auto& stroke = *strokes_to_add_.begin();
     strokes_to_add_.erase(stroke);
-    strokes_.insert(stroke);
-    stroke->TessellateAndMergeWithGpu(frame, &mesh_buffer_);
+    stroke->TessellateAndMerge(frame, &mesh_buffer_);
   }
   mesh_buffer_.ProvideBuffersToScenicMesh(&mesh_);
 }
 
 void StrokeGroup::ReTessellateStrokes(Frame* frame) {
-  // TODO: Estimate size before starting to save extra copy's.
-  mesh_buffer_.Reset();
+  auto pair = EstimateDeltaCounts(strokes_);
+  mesh_buffer_.Prepare(
+      frame, /* from_scratch= */ true, pair.first, pair.second);
   for (auto it = strokes_.begin(); it != strokes_.end(); it++) {
-    (*it)->TessellateAndMergeWithGpu(frame, &mesh_buffer_);
+    (*it)->ReTessellateAndMerge(frame, &mesh_buffer_);
   }
   mesh_buffer_.ProvideBuffersToScenicMesh(&mesh_);
   needs_re_tessellation_ = false;

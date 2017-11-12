@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
+
+#include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
+#include "garnet/bin/ui/sketchy/frame.h"
 #include "lib/escher/escher.h"
-#include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/shape/mesh_builder.h"
 #include "lib/escher/util/trace_macros.h"
 
 namespace {
@@ -30,9 +31,8 @@ const ResourceTypeInfo Stroke::kTypeInfo("Stroke",
                                          ResourceType::kStroke,
                                          ResourceType::kResource);
 
-Stroke::Stroke(escher::Escher* escher, StrokeTessellator* tessellator)
-    : escher_(escher),
-      tessellator_(tessellator) {}
+Stroke::Stroke(StrokeTessellator* tessellator)
+    : tessellator_(tessellator) {}
 
 bool Stroke::SetPath(std::unique_ptr<StrokePath> path) {
   path_ = std::move(path);
@@ -76,6 +76,7 @@ bool Stroke::SetPath(std::unique_ptr<StrokePath> path) {
   re_params_buffer_ = nullptr;
   division_counts_buffer_ = nullptr;
   cumulative_division_counts_buffer_ = nullptr;
+  division_segment_index_buffer_ = nullptr;
   return true;
 }
 
@@ -91,18 +92,19 @@ void Stroke::PrepareDivisionSegmentIndices() {
   }
 }
 
-void Stroke::TessellateAndMergeWithGpu(Frame* frame, MeshBuffer* mesh_buffer) {
+void Stroke::TessellateAndMerge(
+    Frame* frame, MeshBuffer* mesh_buffer) {
   if (path_->empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;
   }
   auto command = frame->command();
-  auto buffer_factory = frame->buffer_factory();
+  auto buffer_factory = frame->shared_buffer_pool()->factory();
   auto profiler = frame->profiler();
 
   uint32_t base_vertex_index = mesh_buffer->vertex_count();
   auto pair = mesh_buffer->Preserve(
-      command, buffer_factory, vertex_count_, index_count_, bbox_);
+      frame, vertex_count_, index_count_, bbox_);
   auto vertex_buffer = std::move(pair.first);
   auto index_buffer = std::move(pair.second);
 
@@ -145,6 +147,11 @@ void Stroke::TessellateAndMergeWithGpu(Frame* frame, MeshBuffer* mesh_buffer) {
   // output of the compute command. Therefore, a barrier is not required here.
 }
 
+void Stroke::ReTessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
+  stroke_info_buffer_ = nullptr;
+  TessellateAndMerge(frame, mesh_buffer);
+}
+
 escher::BufferPtr Stroke::GetOrCreateUniformBuffer(
     escher::impl::CommandBuffer* command,
     escher::BufferFactory* buffer_factory,
@@ -185,100 +192,6 @@ escher::BufferPtr Stroke::GetOrCreateStorageBuffer(
     command->CopyBuffer(staging_buffer, buffer, {0, 0, size});
   }
   return buffer;
-}
-
-// TODO(MZ-269): The scenic mesh API takes position, uv, normal in order. For
-// now only the position is used. The code that are commented out will be useful
-// when we support wobble.
-void Stroke::TessellateAndMergeWithCpu(Frame* frame, MeshBuffer* mesh_buffer) {
-  TRACE_DURATION(
-      "gfx", "sketchy_service::Stroke::TessellateAndMergeWithCpu");
-  if (path_->empty()) {
-    FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
-    return;
-  }
-  auto command = frame->command();
-  auto buffer_factory = frame->buffer_factory();
-
-  auto builder = escher_->NewMeshBuilder(
-      escher::MeshSpec{
-          escher::MeshAttribute::kPosition2D |
-          escher::MeshAttribute::kPositionOffset
-          //                       escher::MeshAttribute::kUV |
-          //                       escher::MeshAttribute::kPerimeterPos
-      },
-      vertex_count_, index_count_);
-
-  //  const float total_length_recip = 1.f / length_;
-
-  // Use CPU to generate vertices for each Path segment.
-  float segment_start_length = 0.f;
-  for (size_t ii = 0; ii < path_->segment_count(); ++ii) {
-    auto& bez = path_->control_points()[ii];
-    auto& reparam = path_->re_params()[ii];
-
-    const int seg_vert_count = vertex_counts_[ii];
-
-    // On all segments but the last, we don't want the Bezier parameter to
-    // reach 1.0, because this would evaluate to the same thing as a parameter
-    // of 0.0 on the next segment.
-    const float param_incr = (ii == path_->segment_count() - 1)
-                                 ? 1.0 / (seg_vert_count - 2)
-                                 : 1.0 / seg_vert_count;
-
-    for (int i = 0; i < seg_vert_count; i += 2) {
-      // We increment index by 2 each loop iteration, so the last iteration will
-      // have "index == kVertexCount - 2", and therefore a parameter value of
-      // "i * incr == 1.0".
-      const float t = i * param_incr;
-      // Use arc-length reparameterization before evaluating the segment's
-      // curve.
-      auto point_and_normal = EvaluatePointAndNormal(bez, reparam.Evaluate(t));
-      //      const float cumulative_length = segment_start_length + (t *
-      //      seg.length());
-
-      struct StrokeVertex {
-        glm::vec2 pos;
-        // TODO(MZ-269): It's supposed to be normal here, but ok now, as it's
-        // not used. It will be helpful later when we support wobble.
-        glm::vec2 pos_offset;
-        //        glm::vec2 uv;
-        //        float perimeter_pos;
-      } vertex;
-
-      vertex.pos_offset = point_and_normal.second * kStrokeHalfWidth;
-      vertex.pos = point_and_normal.first + vertex.pos_offset;
-      //      vertex.perimeter_pos = cumulative_length * total_length_recip;
-      //      vertex.uv = glm::vec2(vertex.perimeter_pos, 1.f);
-      builder->AddVertex(vertex);
-
-      vertex.pos_offset *= -1.f;
-      vertex.pos = point_and_normal.first + vertex.pos_offset;
-      //      vertex.uv = glm::vec2(vertex.perimeter_pos, 0.f);
-      builder->AddVertex(vertex);
-    }
-
-    // Prepare for next segment.
-    segment_start_length += path_->segment_lengths()[ii];
-  }
-
-  // Generate indices.
-  for (int i = 0; i < static_cast<int>(vertex_count_) - 2; i += 2) {
-    uint32_t j = i + mesh_buffer->vertex_count_;
-    builder->AddIndex(j).AddIndex(j + 1).AddIndex(j + 3);
-    builder->AddIndex(j).AddIndex(j + 3).AddIndex(j + 2);
-  }
-
-  auto mesh = builder->Build();
-
-  // Start merging.
-  mesh_buffer->vertex_buffer_->Merge(
-      command, buffer_factory, mesh->vertex_buffer());
-  mesh_buffer->index_buffer_->Merge(
-      command, buffer_factory, mesh->index_buffer());
-  mesh_buffer->vertex_count_ += mesh->num_vertices();
-  mesh_buffer->index_count_ += mesh->num_indices();
-  mesh_buffer->bbox_.Join(mesh->bounding_box());
 }
 
 }  // namespace sketchy_service
