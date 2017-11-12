@@ -17,6 +17,7 @@
 // TODO(dje): Eventually may wish to virtualize some/all of the MSRs,
 //            some have multiple disparate uses.
 // TODO(dje): vmo management
+// TODO(dje): check hyperthread handling
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
@@ -516,7 +517,6 @@ static zx_status_t x86_ipm_map_buffers_locked(perfmon_state_t* state) {
         // Pass true for |commit| so that we get our pages mapped up front.
         // Otherwise we'll need to allow for a page fault to happen in the
         // PMI handler.
-        // TODO(dje): Still getting page faults in PMI handler.
         status = data->buffer_mapping->MapRange(data->start_offset, size, true);
         if (status != ZX_OK) {
             TRACEF("error %d mapping range: cpu %u, start 0x%" PRIx64 ", end 0x%" PRIx64 "\n",
@@ -530,12 +530,6 @@ static zx_status_t x86_ipm_map_buffers_locked(perfmon_state_t* state) {
         data->buffer_end = reinterpret_cast<char*>(data->buffer_start) + size;
         TRACEF("buffer mapped: cpu %u, start %p, end %p\n",
                cpu, data->buffer_start, data->buffer_end);
-
-        // TODO(dje): While we're having problems with segfaults in PMI when
-        // writing to the trace buffer, ensure we could at least write to the
-        // the buffer before we started. While we're at it, write something
-        // that says "uninitialized".
-        memset(data->buffer_start, 0xee, size);
 
         auto info = reinterpret_cast<zx_x86_ipm_buffer_info_t*>(data->buffer_start);
         info->version = (state->sample_freq != 0
@@ -678,6 +672,8 @@ zx_status_t x86_ipm_stop() {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipm_stop_cpu_task, perfmon_state.get());
     ktrace(TAG_IPM_STOP, 0, 0, 0, 0);
 
+    // TODO(dje): Fetch last value of counters.
+
     // x86_ipm_start currently maps the buffers in, so we unmap them here.
     // Make sure to do this after we've turned everything off so that we
     // don't get another PMI after this.
@@ -733,9 +729,6 @@ zx_status_t x86_ipm_fini() {
 
 static void write_record(zx_x86_ipm_sample_record_t* rec,
                          zx_time_t time, uint32_t counter, uint64_t pc) {
-    // TODO(dje): Still seeing page faults on accessing |*rec|.
-    // Alas we can't call VmAspace::kernel_aspace()->arch_aspace().Query()
-    // from interrupt handlers (as a debugging tool).
     rec->time = time;
     rec->counter = counter;
     rec->pc = pc;
@@ -744,9 +737,6 @@ static void write_record(zx_x86_ipm_sample_record_t* rec,
 // Helper function so that there is only one place where we enable/disable
 // interrupts (our caller).
 // Returns true if success, false if buffer is full.
-// TODO(dje): This function runs with interrupts enabled. This is suboptimal,
-// but we're seeing page faults when writing trace records (even when
-// passing true for |commit| to MapRange()). Need to track this down.
 
 static bool pmi_interrupt_handler(x86_iframe_t *frame, perfmon_state_t* state) {
     // This is done here instead of in the caller so that it is done *after*
