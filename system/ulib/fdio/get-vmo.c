@@ -135,9 +135,8 @@ zx_status_t fdio_get_vmo(int fd, zx_handle_t* out_vmo) {
     if (status == ZX_OK) {
         status = zx_handle_replace(
             vmo,
-            ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP |
-            ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |
-            ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY,
+            ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
+            ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
             out_vmo);
         if (status != ZX_OK)
             zx_handle_close(vmo);

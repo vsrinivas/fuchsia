@@ -206,7 +206,7 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
             return ZX_ERR_INVALID_ARGS;
         }
         zx_handle_t* out = (zx_handle_t*) out_buf;
-        if ((r = zx_handle_duplicate(fb->event, ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE, out)) < 0) {
+        if ((r = zx_handle_duplicate(fb->event, ZX_RIGHTS_BASIC | ZX_RIGHT_READ, out)) < 0) {
             return r;
         } else {
             *out_actual = sizeof(zx_handle_t);

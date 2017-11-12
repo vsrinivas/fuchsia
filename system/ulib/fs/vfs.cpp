@@ -247,7 +247,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
 
 #ifdef __Fuchsia__
 
-#define TOKEN_RIGHTS (ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER)
+#define TOKEN_RIGHTS (ZX_RIGHTS_BASIC)
 
 void Vfs::TokenDiscard(zx::event ios_token) {
     fbl::AutoLock lock(&vfs_lock_);

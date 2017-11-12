@@ -56,7 +56,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return ZX_ERR_BAD_HANDLE;
-        if (!handle->HasRights(ZX_RIGHT_READ))
+        if (!handle->HasRights(ZX_RIGHT_WAIT))
             return ZX_ERR_ACCESS_DENIED;
 
         result = wait_state_observer.Begin(&event, handle, signals);
@@ -126,7 +126,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, uint
                 result = ZX_ERR_BAD_HANDLE;
                 break;
             }
-            if (!handle->HasRights(ZX_RIGHT_READ)) {
+            if (!handle->HasRights(ZX_RIGHT_WAIT)) {
                 result = ZX_ERR_ACCESS_DENIED;
                 break;
             }
@@ -179,7 +179,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return ZX_ERR_BAD_HANDLE;
-        if (!handle->HasRights(ZX_RIGHT_READ))
+        if (!handle->HasRights(ZX_RIGHT_WAIT))
             return ZX_ERR_ACCESS_DENIED;
 
         return port->MakeObserver(options, handle, key, signals);

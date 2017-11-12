@@ -18,7 +18,7 @@ namespace {
 constexpr uint64_t kVmoFileBlksize = PAGE_SIZE;
 
 zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
-    zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP;
+    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
     switch (flags & O_ACCMODE) {
     case O_RDONLY:
         rights |= ZX_RIGHT_READ | ZX_RIGHT_EXECUTE;
@@ -37,7 +37,7 @@ zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
 }
 
 zx_rights_t GetVmoRightsForMmapFlags(uint32_t flags) {
-    zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP;
+    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
     if (flags & FDIO_MMAP_FLAG_READ) {
         rights |= ZX_RIGHT_READ;
     }

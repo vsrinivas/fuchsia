@@ -61,7 +61,7 @@ of packet and their semantics.
 
 **ZX_ERR_WRONG_TYPE**  *port* is not a Port handle.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ** or *port*
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WAIT** or *port*
 does not have **ZX_RIGHT_WRITE**.
 
 **ZX_ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.

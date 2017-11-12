@@ -392,8 +392,7 @@ bool test_get_handles() {
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
                   GetRights(vmo.get()));
         EXPECT_EQ(1u, handle_count);
         EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
@@ -420,8 +419,7 @@ bool test_get_handles() {
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(1u, handle_count);
         EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
@@ -455,8 +453,7 @@ bool test_get_handles() {
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(1u, handle_count);
         EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
@@ -487,8 +484,7 @@ bool test_get_handles() {
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
                   GetRights(vmo.get()));
         EXPECT_EQ(1u, handle_count);
         EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
@@ -515,8 +511,7 @@ bool test_get_handles() {
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(1u, handle_count);
         EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
@@ -549,8 +544,7 @@ bool test_get_handles() {
                                          &handle_count, &type, info, &info_size));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(1u, handle_count);
         EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
@@ -595,8 +589,7 @@ bool test_mmap() {
                                    PAGE_SIZE, &offset, vmo.reset_and_get_address()));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
                   GetRights(vmo.get()));
         EXPECT_EQ(PAGE_1 - 5u, offset);
 
@@ -616,8 +609,7 @@ bool test_mmap() {
                                    PAGE_SIZE, &offset, vmo.reset_and_get_address()));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(PAGE_1 - 5u, offset);
 
@@ -644,8 +636,7 @@ bool test_mmap() {
                                    &offset, vmo.reset_and_get_address()));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(PAGE_1 - 5u, offset);
 
@@ -669,8 +660,7 @@ bool test_mmap() {
                                    PAGE_SIZE, &offset, vmo.reset_and_get_address()));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
                   GetRights(vmo.get()));
         EXPECT_EQ(PAGE_SIZE - 5u, offset);
 
@@ -690,8 +680,7 @@ bool test_mmap() {
                                    PAGE_SIZE, &offset, vmo.reset_and_get_address()));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(PAGE_SIZE - 5u, offset);
 
@@ -717,8 +706,7 @@ bool test_mmap() {
                                    &offset, vmo.reset_and_get_address()));
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP |
-                      ZX_RIGHT_WRITE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
         EXPECT_EQ(PAGE_SIZE - 5u, offset);
 

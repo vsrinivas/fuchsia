@@ -347,7 +347,7 @@ zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
             readable_event_.signal(0u, ZX_USER_SIGNAL_0);
         }
     }
-    status = zx_handle_duplicate(readable_event_.get(), ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ, out);
+    status = zx_handle_duplicate(readable_event_.get(), ZX_RIGHTS_BASIC | ZX_RIGHT_READ, out);
     if (status != ZX_OK) {
         return status;
     }

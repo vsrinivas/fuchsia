@@ -197,7 +197,7 @@ typedef uint32_t zx_rights_t;
 #define ZX_RIGHT_GET_POLICY       ((zx_rights_t)1u << 11)
 #define ZX_RIGHT_SIGNAL           ((zx_rights_t)1u << 12)
 #define ZX_RIGHT_SIGNAL_PEER      ((zx_rights_t)1u << 13)
-#define ZX_RIGHT_WAIT             ((zx_rights_t)0u << 14) // Coming Soon!
+#define ZX_RIGHT_WAIT             ((zx_rights_t)1u << 14)
 
 #define ZX_RIGHT_SAME_RIGHTS      ((zx_rights_t)1u << 31)
 

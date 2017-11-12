@@ -371,6 +371,7 @@ bool vmo_rights_test() {
     static const zx_rights_t kExpectedRights =
         ZX_RIGHT_DUPLICATE |
         ZX_RIGHT_TRANSFER |
+        ZX_RIGHT_WAIT |
         ZX_RIGHT_READ |
         ZX_RIGHT_WRITE |
         ZX_RIGHT_EXECUTE |

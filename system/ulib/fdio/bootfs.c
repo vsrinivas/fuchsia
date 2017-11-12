@@ -111,9 +111,8 @@ found:;
     // Drop unnecessary ZX_RIGHT_WRITE rights.
     // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_clone.
     if ((r = zx_handle_replace(vmo,
-                               ZX_RIGHT_READ | ZX_RIGHT_EXECUTE |
-                               ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
-                               ZX_RIGHT_DUPLICATE | ZX_RIGHT_GET_PROPERTY,
+                               ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE |
+                               ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
                                &vmo)) != ZX_OK) {
         return r;
     }

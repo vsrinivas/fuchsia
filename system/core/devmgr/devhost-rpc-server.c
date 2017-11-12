@@ -214,7 +214,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
         zx_handle_t* event = out_buf;
-        r = zx_handle_duplicate(dev->event, ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ, event);
+        r = zx_handle_duplicate(dev->event, ZX_RIGHTS_BASIC | ZX_RIGHT_READ, event);
         if (r == ZX_OK) {
             r = sizeof(zx_handle_t);
         }

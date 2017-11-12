@@ -105,7 +105,7 @@ zx_status_t VnodeFile::GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hco
     status = zx_handle_duplicate(
         vmo_,
         ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP |
-        ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY,
+        ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
         &vmo);
     if (status < 0) {
         return status;

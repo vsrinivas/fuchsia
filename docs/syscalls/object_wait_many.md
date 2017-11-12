@@ -60,7 +60,7 @@ For any other return value, the *pending* fields of *items* are undefined.
 **ZX_ERR_BAD_HANDLE**  one of *items* contains an invalid handle.
 
 **ZX_ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
-have **ZX_RIGHT_READ** and may not be waited upon.
+have **ZX_RIGHT_WAIT** and may not be waited upon.
 
 **ZX_ERR_CANCELED**  One or more of the provided *handles* was invalidated
 (e.g., closed) during the wait.

@@ -136,8 +136,7 @@ static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t m
             return ZX_ERR_INVALID_ARGS;
         }
         zxrio_mmap_data_t* data = ptr;
-        zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP |
-                             ZX_RIGHT_DUPLICATE | ZX_RIGHT_GET_PROPERTY;
+        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
         if (data->flags & FDIO_MMAP_FLAG_WRITE) {
             return ZX_ERR_ACCESS_DENIED;
         }

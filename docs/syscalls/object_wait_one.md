@@ -48,7 +48,7 @@ For any other return value, *observed* is undefined.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ** and may
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WAIT** and may
 not be waited upon.
 
 **ZX_ERR_CANCELED**  *handle* was invalidated (e.g., closed) during the wait.

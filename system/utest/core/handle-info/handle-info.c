@@ -32,7 +32,7 @@ static bool handle_info_test(void) {
     status = zx_object_get_info(duped, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
     ASSERT_EQ(status, ZX_OK, "handle should be valid");
 
-    const zx_rights_t evr = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER |
+    const zx_rights_t evr = ZX_RIGHTS_BASIC |
                             ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL;
 
     EXPECT_GT(info.koid, 0ULL, "object id should be positive");
