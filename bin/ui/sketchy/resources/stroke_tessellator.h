@@ -11,7 +11,7 @@ namespace sketchy_service {
 // Provides kernel to tessellate strokes on GPU.
 class StrokeTessellator final {
  public:
-  StrokeTessellator(escher::Escher* escher);
+  explicit StrokeTessellator(escher::Escher* escher);
   void Dispatch(escher::BufferPtr stroke_info_buffer,
                 escher::BufferPtr control_points_buffer,
                 escher::BufferPtr re_params_buffer,
@@ -21,7 +21,7 @@ class StrokeTessellator final {
                 escher::BufferPtr vertex_buffer,
                 escher::BufferPtr index_buffer,
                 escher::impl::CommandBuffer* command,
-                const escher::TimestampProfilerPtr& profiler,
+                escher::TimestampProfiler* profiler,
                 uint32_t division_count);
 
  private:

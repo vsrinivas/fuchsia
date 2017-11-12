@@ -6,6 +6,7 @@
 
 #include <set>
 #include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
@@ -34,22 +35,16 @@ class StrokeGroup final : public Resource {
   void SetNeedsReTessellation() { needs_re_tessellation_ = true; }
 
   // Record the command to update the mesh.
-  void UpdateMesh(escher::impl::CommandBuffer* command,
-                  escher::TimestampProfilerPtr profiler,
-                  escher::BufferFactory* buffer_factory);
+  void UpdateMesh(Frame* frame);
 
   const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
 
  private:
   // Record the command to merge the strokes to add.
-  void MergeStrokes(escher::impl::CommandBuffer* command,
-                    escher::TimestampProfilerPtr profiler,
-                    escher::BufferFactory* buffer_factory);
+  void MergeStrokes(Frame* frame);
 
   // Record the command to re-tessellate the strokes.
-  void ReTessellateStrokes(escher::impl::CommandBuffer* command,
-                           escher::TimestampProfilerPtr profiler,
-                           escher::BufferFactory* buffer_factory);
+  void ReTessellateStrokes(Frame* frame);
 
   scenic_lib::ShapeNode shape_node_;
   scenic_lib::Mesh mesh_;

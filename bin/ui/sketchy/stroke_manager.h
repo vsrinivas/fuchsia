@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
@@ -19,9 +20,7 @@ class StrokeManager {
   bool AddStrokeToGroup(StrokePtr stroke, StrokeGroupPtr group);
   bool SetStrokePath(StrokePtr stroke, std::unique_ptr<StrokePath> path);
 
-  void Update(escher::impl::CommandBuffer* command,
-              escher::TimestampProfilerPtr profiler,
-              escher::BufferFactory* buffer_factory);
+  void Update(Frame* frame);
 
   StrokeTessellator* stroke_tessellator() { return &stroke_tessellator_; }
 

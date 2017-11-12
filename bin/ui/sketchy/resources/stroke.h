@@ -7,6 +7,7 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_path.h"
@@ -28,14 +29,9 @@ class Stroke final : public Resource {
 
   // Record the command to tessellate and merge the mesh into a larger
   // |mesh_buffer|.
-  void TessellateAndMergeWithGpu(escher::impl::CommandBuffer* command,
-                                 escher::TimestampProfilerPtr profiler,
-                                 escher::BufferFactory* buffer_factory,
-                                 MeshBuffer* mesh_buffer);
+  void TessellateAndMergeWithGpu(Frame* frame, MeshBuffer* mesh_buffer);
   // TODO(MZ-269): Remove this when Gpu tessellation is stable.
-  void TessellateAndMergeWithCpu(escher::impl::CommandBuffer* command,
-                                 escher::BufferFactory* buffer_factory,
-                                 MeshBuffer* mesh_buffer);
+  void TessellateAndMergeWithCpu(Frame* frame, MeshBuffer* mesh_buffer);
 
   uint32_t vertex_count() const { return vertex_count_; }
   uint32_t index_count() const { return index_count_; }

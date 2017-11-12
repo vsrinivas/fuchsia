@@ -177,7 +177,7 @@ void StrokeTessellator::Dispatch(
     escher::BufferPtr vertex_buffer,
     escher::BufferPtr index_buffer,
     escher::impl::CommandBuffer* command,
-    const escher::TimestampProfilerPtr& profiler,
+    escher::TimestampProfiler* profiler,
     uint32_t division_count) {
   if (profiler) {
     profiler->AddTimestamp(

@@ -33,13 +33,11 @@ bool StrokeManager::SetStrokePath(StrokePtr stroke,
   return true;
 }
 
-void StrokeManager::Update(escher::impl::CommandBuffer* command,
-                           escher::TimestampProfilerPtr profiler,
-                           escher::BufferFactory* buffer_factory) {
+void StrokeManager::Update(Frame* frame) {
   while (!dirty_stroke_groups_.empty()) {
     const auto& stroke_group = *dirty_stroke_groups_.begin();
     dirty_stroke_groups_.erase(stroke_group);
-    stroke_group->UpdateMesh(command, profiler, buffer_factory);
+    stroke_group->UpdateMesh(frame);
   }
 }
 

@@ -41,39 +41,31 @@ bool StrokeGroup::AddStroke(StrokePtr stroke) {
   return true;
 }
 
-void StrokeGroup::UpdateMesh(escher::impl::CommandBuffer* command,
-                             escher::TimestampProfilerPtr profiler,
-                             escher::BufferFactory* buffer_factory) {
+void StrokeGroup::UpdateMesh(Frame* frame) {
   if (needs_re_tessellation_) {
     strokes_to_add_.clear();
-    ReTessellateStrokes(command, std::move(profiler), buffer_factory);
+    ReTessellateStrokes(frame);
   } else {
-    MergeStrokes(command, std::move(profiler), buffer_factory);
+    MergeStrokes(frame);
   }
 }
 
-void StrokeGroup::MergeStrokes(escher::impl::CommandBuffer* command,
-                               escher::TimestampProfilerPtr profiler,
-                               escher::BufferFactory* buffer_factory) {
+void StrokeGroup::MergeStrokes(Frame* frame) {
   // TODO: Estimate size before starting to save extra copy's.
   while (!strokes_to_add_.empty()) {
     const auto& stroke = *strokes_to_add_.begin();
     strokes_to_add_.erase(stroke);
     strokes_.insert(stroke);
-    stroke->TessellateAndMergeWithGpu(
-        command, profiler, buffer_factory, &mesh_buffer_);
+    stroke->TessellateAndMergeWithGpu(frame, &mesh_buffer_);
   }
   mesh_buffer_.ProvideBuffersToScenicMesh(&mesh_);
 }
 
-void StrokeGroup::ReTessellateStrokes(escher::impl::CommandBuffer* command,
-                                      escher::TimestampProfilerPtr profiler,
-                                      escher::BufferFactory* buffer_factory) {
+void StrokeGroup::ReTessellateStrokes(Frame* frame) {
   // TODO: Estimate size before starting to save extra copy's.
   mesh_buffer_.Reset();
   for (auto it = strokes_.begin(); it != strokes_.end(); it++) {
-    (*it)->TessellateAndMergeWithGpu(
-        command, profiler, buffer_factory, &mesh_buffer_);
+    (*it)->TessellateAndMergeWithGpu(frame, &mesh_buffer_);
   }
   mesh_buffer_.ProvideBuffersToScenicMesh(&mesh_);
   needs_re_tessellation_ = false;

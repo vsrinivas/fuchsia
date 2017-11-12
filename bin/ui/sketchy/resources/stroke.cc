@@ -91,14 +91,14 @@ void Stroke::PrepareDivisionSegmentIndices() {
   }
 }
 
-void Stroke::TessellateAndMergeWithGpu(escher::impl::CommandBuffer* command,
-                                       escher::TimestampProfilerPtr profiler,
-                                       escher::BufferFactory* buffer_factory,
-                                       MeshBuffer* mesh_buffer) {
+void Stroke::TessellateAndMergeWithGpu(Frame* frame, MeshBuffer* mesh_buffer) {
   if (path_->empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;
   }
+  auto command = frame->command();
+  auto buffer_factory = frame->buffer_factory();
+  auto profiler = frame->profiler();
 
   uint32_t base_vertex_index = mesh_buffer->vertex_count();
   auto pair = mesh_buffer->Preserve(
@@ -190,15 +190,15 @@ escher::BufferPtr Stroke::GetOrCreateStorageBuffer(
 // TODO(MZ-269): The scenic mesh API takes position, uv, normal in order. For
 // now only the position is used. The code that are commented out will be useful
 // when we support wobble.
-void Stroke::TessellateAndMergeWithCpu(escher::impl::CommandBuffer* command,
-                                       escher::BufferFactory* buffer_factory,
-                                       MeshBuffer* mesh_buffer) {
+void Stroke::TessellateAndMergeWithCpu(Frame* frame, MeshBuffer* mesh_buffer) {
   TRACE_DURATION(
       "gfx", "sketchy_service::Stroke::TessellateAndMergeWithCpu");
   if (path_->empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;
   }
+  auto command = frame->command();
+  auto buffer_factory = frame->buffer_factory();
 
   auto builder = escher_->NewMeshBuilder(
       escher::MeshSpec{

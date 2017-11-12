@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/canvas.h"
+#include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
-#include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/profiling/timestamp_profiler.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -43,57 +42,6 @@ void CanvasImpl::Present(uint64_t presentation_time,
     }
   }
   ops_.reset();
-
-  auto command = escher_->command_buffer_pool()->GetCommandBuffer();
-
-  escher::TimestampProfilerPtr profiler;
-  if (escher_->supports_timer_queries()) {
-    profiler = fxl::MakeRefCounted<escher::TimestampProfiler>(
-        escher_->vk_device(), escher_->timestamp_period());
-    // Intel/Mesa workaround. See the submit callback underneath.
-    profiler->AddTimestamp(
-        command, vk::PipelineStageFlagBits::eBottomOfPipe, "Throwaway");
-    profiler->AddTimestamp(
-        command, vk::PipelineStageFlagBits::eBottomOfPipe, "Start");
-  }
-
-  stroke_manager_.Update(command, profiler, &buffer_factory_);
-
-  if (profiler) {
-    profiler->AddTimestamp(
-        command, vk::PipelineStageFlagBits::eBottomOfPipe, "End");
-  }
-
-  auto pair = escher::NewSemaphoreEventPair(escher_);
-  command->AddSignalSemaphore(std::move(pair.first));
-  session_->EnqueueAcquireFence(std::move(pair.second));
-
-  command->Submit(
-      escher_->device()->vk_main_queue(),
-      [profiler]() {
-        if (!profiler) {
-          return;
-        }
-        FXL_LOG(INFO) << "----------------------------------------------------";
-        FXL_LOG(INFO) << "Total (ms)\t | \tSince previous (ms)";
-        FXL_LOG(INFO) << "----------------------------------------------------";
-        auto timestamps = profiler->GetQueryResults();
-
-        // Workaround: Intel/Mesa gives a screwed-up value for the second time.
-        // So, we add a throwaway value first (see BeginFrame()), and then fix
-        // up the first value that we actually print.
-        timestamps[1].time = 0;
-        timestamps[1].elapsed = 0;
-        timestamps[2].elapsed = timestamps[2].time;
-
-        for (size_t i = 1; i < timestamps.size(); ++i) {
-          FXL_LOG(INFO) << timestamps[i].time * 1e-3 << "\t | \t"
-                        << timestamps[i].elapsed * 1e-3 << "   \t"
-                        << timestamps[i].name;
-        }
-        FXL_LOG(INFO) << "----------------------------------------------------";
-      });
-
   callbacks_.push_back(std::move(callback));
   RequestScenicPresent(presentation_time);
 }
@@ -117,7 +65,14 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
     RequestScenicPresent(info->presentation_time + info->presentation_interval);
   };
   callbacks_.clear();
-  session_->Present(presentation_time, std::move(session_callback));
+
+  auto frame = Frame(&buffer_factory_);
+  if (!frame.success()) {
+    return;
+  }
+  stroke_manager_.Update(&frame);
+  frame.RequestScenicPresent(
+      session_, presentation_time, std::move(session_callback));
 }
 
 bool CanvasImpl::ApplyOp(const sketchy::OpPtr& op) {
