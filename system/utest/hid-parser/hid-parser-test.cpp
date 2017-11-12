@@ -6,11 +6,137 @@
 #include <stdio.h>
 
 #include <hid-parser/item.h>
+#include <hid-parser/parser.h>
 
 #include <unistd.h>
 #include <unittest/unittest.h>
 
 namespace {
+
+// A mouse as defined in the HID documentation (appendix B.2)
+// Note that it does not have a report id.
+const uint8_t boot_mouse_r_desc[] = {
+    0x05, 0x01,       // Usage Page (generic Desktop)
+    0x09, 0x02,       // Usage (mouse)
+    0xa1, 0x01,       // Collection (application)
+    0x09, 0x01,       //   Usage (pointer)
+    0xa1, 0x00,       //   Collection (physical)
+    0x05, 0x09,       //     Usage Page (button)
+    0x19, 0x01,       //     Usage_minimum (button 1)
+    0x29, 0x03,       //     Usage_maximum (button 3)
+    0x15, 0x00,       //     Logical Minimum (0)
+    0x25, 0x01,       //     Logical Maximum (1)
+    0x95, 0x03,       //     Report Count (3)
+    0x75, 0x01,       //     Report_size (1)
+    0x81, 0x02,       //     Input (data,var,abs)
+    0x95, 0x01,       //     Report Count (1)
+    0x75, 0x05,       //     Report_size (5)
+    0x81, 0x03,       //     Input (cnst,var,abs)
+    0x05, 0x01,       //     Usage Page (generic Desktop)
+    0x09, 0x30,       //     Usage (x)
+    0x09, 0x31,       //     Usage (y)
+    0x15, 0x81,       //     Logical Minimum (-127)
+    0x25, 0x7f,       //     Logical Minimum (127)
+    0x75, 0x08,       //     Report_size (8)
+    0x95, 0x02,       //     Report Count (2)
+    0x81, 0x06,       //     Input (data,var,rel)
+    0xc0,             //   End Collection
+    0xc0              // End Collection
+};
+
+// Composite device by Adafruit.
+const uint8_t trinket_r_desc[] = {
+    0x05, 0x01,        // Usage_page (generic Desktop)
+    0x09, 0x02,        // Usage (mouse)
+    0xa1, 0x01,        // Collection (application)
+    0x09, 0x01,        //   Usage (pointer)
+    0xa1, 0x00,        //   Collection (physical)
+    0x85, 0x01,        //     Report_id (1)
+    0x05, 0x09,        //     Usage_page (button)
+    0x19, 0x01,        //     Usage_minimum (1)
+    0x29, 0x03,        //     Usage_maximum (3)
+    0x15, 0x00,        //     Logical_minimum (0)
+    0x25, 0x01,        //     Logical_maximum (1)
+    0x95, 0x03,        //     Report_count (3)
+    0x75, 0x01,        //     Report_size (1)
+    0x81, 0x02,        //     Input (data,var,abs)
+    0x95, 0x01,        //     Report_count (1)
+    0x75, 0x05,        //     Report_size (5)
+    0x81, 0x03,        //     Input (const,var,abs)
+    0x05, 0x01,        //     Usage_page (generic Desktop)
+    0x09, 0x30,        //     Usage (x)
+    0x09, 0x31,        //     Usage (y)
+    0x15, 0x81,        //     Logical_minimum (-127)
+    0x25, 0x7f,        //     Logical_maximum (127)
+    0x75, 0x08,        //     Report_size (8)
+    0x95, 0x02,        //     Report_count (2)
+    0x81, 0x06,        //     Input (data,var,rel)
+    0xc0,              //   End_collection
+    0xc0,              // End Collection
+// ========================================================================================
+    0x05, 0x01,        // Usage_page (generic Desktop)
+    0x09, 0x06,        // Usage (keyboard)
+    0xa1, 0x01,        // Collection (application)
+    0x85, 0x02,        //   Report_id (2)
+    0x75, 0x01,        //   Report_size (1)
+    0x95, 0x08,        //   Report_count (8)
+    0x05, 0x07,        //   Usage_page (keyboard)(key Codes)
+    0x19, 0xe0,        //   Usage_minimum (keyboard Leftcontrol)(224)
+    0x29, 0xe7,        //   Usage_maximum (keyboard Right Gui)(231)
+    0x15, 0x00,        //   Logical_minimum (0)
+    0x25, 0x01,        //   Logical_maximum (1)
+    0x81, 0x02,        //   Input (data,var,abs) ; Modifier Byte
+    0x95, 0x01,        //   Report_count (1)
+    0x75, 0x08,        //   Report_size (8)
+    0x81, 0x03,        //   Input (cnst,var,abs) ; Reserved Byte
+    0x95, 0x05,        //   Report_count (5)
+    0x75, 0x01,        //   Report_size (1)
+    0x05, 0x08,        //   Usage_page (leds)
+    0x19, 0x01,        //   Usage_minimum (num Lock)
+    0x29, 0x05,        //   Usage_maximum (kana)
+    0x91, 0x02,        //   Output (data,var,abs) ; Led Report
+    0x95, 0x01,        //   Report_count (1)
+    0x75, 0x03,        //   Report_size (3)
+    0x91, 0x03,        //   Output (cnst,var,abs) ; Led Report Padding
+    0x95, 0x05,        //   Report_count (5)
+    0x75, 0x08,        //   Report_size (8)
+    0x15, 0x00,        //   Logical_minimum (0)
+    0x26, 0xa4, 0x00,  //   Logical_maximum (164)
+    0x05, 0x07,        //   Usage_page (keyboard)(key Codes)
+    0x19, 0x00,        //   Usage_minimum (reserved (no Event Indicated))(0)
+    0x2a, 0xa4, 0x00,  //   Usage_maximum (keyboard Application)(164)
+    0x81, 0x00,        //   Input (data,ary,abs)
+    0xc0,              // End_collection
+// ==== Multimedia Keys ======================================================================
+    0x05, 0x0c,        // Usage_page (consumer Devices)
+    0x09, 0x01,        // Usage (consumer Control)
+    0xa1, 0x01,        // Collection (application)
+    0x85, 0x03,        //   Report_id (3)
+    0x19, 0x00,        //   Usage_minimum (unassigned)
+    0x2a, 0x3c, 0x02,  //   Usage_maximum
+    0x15, 0x00,        //   Logical_minimum (0)
+    0x26, 0x3c, 0x02,  //   Logical_maximum
+    0x95, 0x01,        //   Report_count (1)
+    0x75, 0x10,        //   Report_size (16)
+    0x81, 0x00,        //   Input (data,ary,abs)
+    0xc0,              // End_collection
+// ======== Power Controls ==================================================================
+    0x05, 0x01,        // Usage_page (generic Desktop)
+    0x09, 0x80,        // Usage (system Control)
+    0xa1, 0x01,        // Collection (application)
+    0x85, 0x04,        //   Report_id (4)
+    0x95, 0x01,        //   Report_count (1)
+    0x75, 0x02,        //   Report_size (2)
+    0x15, 0x01,        //   Logical_minimum (1)
+    0x25, 0x03,        //   Logical_maximum (3)
+    0x09, 0x82,        //   Usage (system Sleep)
+    0x09, 0x81,        //   Usage (system Power)
+    0x09, 0x83,        //   Usage (system Wakeup)
+    0x81, 0x60,        //   Input
+    0x75, 0x06,        //   Report_size (6)
+    0x81, 0x03,        //   Input (cnst,var,abs)
+    0xc0,              // End_collection
+};
 
 const uint8_t acer12_touch_r_desc[] = {
     0x05, 0x0D,        // Usage Page (Digitizer)
@@ -241,9 +367,7 @@ const uint8_t acer12_touch_r_desc[] = {
     0x96, 0x00, 0x01,  //   Report Count (256)
     0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
     0xC0,              // End Collection
-
 // ===========================================================================================
-
     0x06, 0xFF, 0x01,  // Usage Page (Reserved 0x01FF)
     0x09, 0x01,        // Usage (0x01)
     0xA1, 0x01,        // Collection (Application)
@@ -255,6 +379,7 @@ const uint8_t acer12_touch_r_desc[] = {
     0x09, 0x00,        //   Usage (0x00)
     0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0xC0,              // End Collection
+// ===========================================================================================
     0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
     0x09, 0x01,        // Usage (0x01)
     0xA1, 0x01,        // Collection (Application)
@@ -264,6 +389,7 @@ const uint8_t acer12_touch_r_desc[] = {
     0x09, 0x01,        //   Usage (0x01)
     0x91, 0x02,        //   Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
     0xC0,              // End Collection
+// ===========================================================================================
     0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
     0x09, 0x01,        // Usage (0x01)
     0xA1, 0x01,        // Collection (Application)
@@ -277,6 +403,7 @@ const uint8_t acer12_touch_r_desc[] = {
     0x95, 0x03,        //   Report Count (3)
     0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
     0xC0,              // End Collection
+// ===========================================================================================
     0x06, 0x01, 0xFF,  // Usage Page (Vendor Defined 0xFF01)
     0x09, 0x01,        // Usage (0x01)
     0xA1, 0x01,        // Collection (Application)
@@ -288,6 +415,7 @@ const uint8_t acer12_touch_r_desc[] = {
     0x09, 0x00,        //   Usage (0x00)
     0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0xC0,              // End Collection
+// ===========================================================================================
     0x05, 0x0D,        // Usage Page (Digitizer)
     0x09, 0x02,        // Usage (Pen)
     0xA1, 0x01,        // Collection (Application)
@@ -328,6 +456,7 @@ const uint8_t acer12_touch_r_desc[] = {
     0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0xC0,              //   End Collection
     0xC0,              // End Collection
+// ===========================================================================================
     0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
     0x09, 0x01,        // Usage (0x01)
     0xA1, 0x01,        // Collection (Application)
@@ -337,7 +466,6 @@ const uint8_t acer12_touch_r_desc[] = {
     0x09, 0x05,        //   Usage (0x05)
     0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0xC0,              // End Collection
-
     // 660 bytes
 };
 
@@ -346,7 +474,7 @@ struct Stats {
     int collection[2];
 };
 
-size_t ParseHIDReportDesc(const uint8_t* rpt_desc, size_t desc_len, Stats* stats) {
+size_t ItemizeHIDReportDesc(const uint8_t* rpt_desc, size_t desc_len, Stats* stats) {
     const uint8_t* buf = rpt_desc;
     size_t len = desc_len;
     while (len > 0) {
@@ -369,14 +497,15 @@ size_t ParseHIDReportDesc(const uint8_t* rpt_desc, size_t desc_len, Stats* stats
 
     return (desc_len - len);
 }
+
 }  // namespace.
 
-static bool parse_acer12_rpt1() {
+static bool itemize_acer12_rpt1() {
     BEGIN_TEST;
 
     Stats stats = {};
     auto len = sizeof(acer12_touch_r_desc);
-    auto consumed = ParseHIDReportDesc(acer12_touch_r_desc, len, &stats);
+    auto consumed = ItemizeHIDReportDesc(acer12_touch_r_desc, len, &stats);
 
     ASSERT_EQ(consumed, len);
     ASSERT_EQ(stats.input_count, 45);
@@ -386,9 +515,44 @@ static bool parse_acer12_rpt1() {
     END_TEST;
 }
 
+static bool parse_boot_mouse() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dd = nullptr;
+    auto res = hid::ParseReportDescriptor(
+        boot_mouse_r_desc, sizeof(boot_mouse_r_desc), &dd);
+
+    EXPECT_EQ(res, hid::ParseResult::kParseOk);
+    END_TEST;
+}
+
+static bool parse_adaf_trinket() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dd = nullptr;
+    auto res = hid::ParseReportDescriptor(
+        trinket_r_desc, sizeof(trinket_r_desc), &dd);
+
+    EXPECT_EQ(res, hid::ParseResult::kParseOk);
+    END_TEST;
+}
+
+static bool parse_acer12_touch() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dd = nullptr;
+    auto res = hid::ParseReportDescriptor(
+        acer12_touch_r_desc, sizeof(acer12_touch_r_desc), &dd);
+
+    EXPECT_EQ(res, hid::ParseResult::kParseOk);
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(hidparser_tests)
-RUN_TEST(parse_acer12_rpt1)
+RUN_TEST(itemize_acer12_rpt1)
+RUN_TEST(parse_boot_mouse)
+RUN_TEST(parse_adaf_trinket)
+RUN_TEST(parse_acer12_touch)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {

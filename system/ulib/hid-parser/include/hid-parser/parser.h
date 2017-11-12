@@ -1,0 +1,227 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <stdint.h>
+#include <stdlib.h>
+
+namespace hid {
+
+// The hid report descriptor parser consists of a single function
+// ParseReportDescriptor() that takes as input a USB report descriptor
+// byte stream and on success returns a heap-allocated DeviceDescriptor
+// structure. When not needed it can be freed by standard C++ delete.
+//
+// The DeviceDescriptor data is organized at the first level by the
+// array |report[rep_count]| in which each entry points to the first
+// field of each report.
+//
+// report[0] --->  ReportField
+//                 +report_id
+//                 +field_type
+//                 +col ---------> Collection
+//                                 +type
+//                                 +parent ------> Collection
+//                             1
+// The structure describes all the information returned by the device;
+// no information information present in the original stream is lost.
+//
+// When using it to parse reports sent by the device, two scenarios
+// are important:
+//   1 -  |rep_count| is 1 and report[0]->report_id is 0:
+//      in this case the reports don't have a report id tag and the
+//      first byte in the stream contains the first field.
+//   2 - report[0]->report_id is not 0:
+//      in this case each report first byte is the report_id tag
+//      and must be matched to properly decode the report.
+//
+// Once the right starting ReportField has been matched then extracting
+// each field is done by inspecting bit_sz and flags and using |next|
+// to move to the following field. Reaching |next| == null means the
+// end of the report.
+//
+// An example will enlighten. Assume |report| array as follows,
+// with most fields omitted for brevity:
+//
+//    report[0] --->  [0] report_id:      1
+//                        usage           button,1
+//                        flags           data,var
+//                        bit_sz          1
+//
+//                    [1] report_id:      1
+//                        usage           button,2
+//                        flags           data,var
+//                        bit_sz          1
+//
+//                    [2] report_id:      1
+//                        usage           button,none
+//                        flags           const
+//                        bit_sz          6
+//
+//    report[1] --->  [3] report_id:      3
+//                        usage           desktop,X
+//                        flags           data,var
+//                        bit_sz          8
+//
+//                    [4] report_id:      3
+//                        usage           desktop,Y
+//                        flags           data,var
+//                        bit_sz          8
+//
+//    report[2] --->  [5] report_id:      4
+//                        usage           desktop,wheel
+//                        flags           data,var
+//                        bit_sz          5
+//
+//                    [6] report_id:      4
+//                        usage           desktop,none
+//                        flags           const
+//                        bit_sz          3
+//
+// Now given the following report stream, with byte-order
+// left to right:
+//
+//   03 b4 67 01 02 03 13 02 b5 6a
+//   ------>--------->----------->
+//
+//  Can be parsed as the following 4 reports:
+//
+//  - 03 is report id, so Node [3] and Node [4] are in play
+//       b4 is X-coord/desktop  (8-bits)
+//       67 is Y-coord/desktop  (8-bits)
+//
+//  - 01 is report id, so Node [0], Node [1] and Node [3] are in play
+//       02 is split into bits
+//          0 is 1/button (1-bit)
+//          1 is 2/button (1-bit)
+//          0 is none/button (7-bit)       padding
+//
+//  - 03 is report id, so Node [5] and Node [6] are in play
+//       13 is split into bits
+//          13 is desktop/wheel (5-bit)
+//           0 is desktop/none  (3-bit)    padding
+//
+//  - 03 is report id, so Node [3] and Node [4] are in play
+//       b5 is X-coord/desktop  (8-bits)
+//       6a is Y-coord/desktop  (8-bits)
+//
+//
+
+// Logical minimum and maximum per hid spec.
+struct MinMax {
+    int32_t min;
+    int32_t max;
+};
+
+// Physical units descriptor.
+struct Unit {
+    uint32_t type;
+    int32_t exp;
+};
+
+// Describes the semantic meaning of fields. See the "HID Usage tables"
+// document from usb.org.
+struct Usage {
+    uint16_t page;
+    uint16_t usage;
+};
+
+enum class CollectionType : uint32_t {
+    kPhysical,
+    kApplication,
+    kLogical,
+    kReport,
+    kNamedArray,
+    kUsageSwitch,
+    kUsageModifier,
+    kReserved,
+    kVendor
+};
+
+enum NodeType : uint32_t {
+    kInput,
+    kOutput,
+    kFeature
+};
+
+enum FieldTypeFlags : uint8_t {
+    kData,
+    kConstant,
+    kArray,
+    kVariable,
+    kAbsolute,
+    kRelative,
+    kNoWrap,
+    kWrap,
+    kLinear,
+    kNonLinear,
+    kPreferredState,
+    kNoPreferred,
+    kNoNullPosition,
+    kNullState,
+    kNonVolatile,
+    kVolatile,
+    kBitField,
+    kBufferedBytes,
+    kReserved,
+};
+
+struct ReportField;
+
+struct Collection {
+    CollectionType type;
+    Usage usage;
+    Collection* parent;            // Enclosing collection or null.
+    ReportField* node;             // First field or null.
+};
+
+struct Attributes {
+    Usage usage;
+    Unit unit;
+    MinMax logc_mm;
+    MinMax phys_mm;
+    uint8_t bit_sz;
+};
+
+struct ReportField {
+    uint8_t report_id;
+    Attributes attr;
+    NodeType type;
+    uint32_t field_type;
+    Collection* col;
+    ReportField* next;          // Next field in same report or null.
+};
+
+struct DeviceDescriptor {
+    size_t rep_count;
+    ReportField* report[];
+};
+
+enum ParseResult : uint32_t {
+    kParseOk                 = 0,
+    kParseNoMemory           = 1,
+    kParseMoreNeeded         = 2,
+    kParseUnsuported         = 3,
+    kParseInvalidTag         = 4,
+    kParseInvalidItemType    = 5,
+    kParseInvalidItemValue   = 6,
+    kParseUsageLimit         = 7,
+    kParseInvalidRange       = 8,
+    kParseOverflow           = 9,
+    kParseLeftovers          = 10,
+    kParseUnexpectedCol      = 11,
+    kParseUnexectedItem      = 12,
+    kParseInvalidUsage       = 13,
+    kParseMissingUsage       = 14,
+    kParserMissingPage       = 15,
+    kParserUnexpectedPop     = 16,
+    kParserInvalidID         = 17
+};
+
+ParseResult ParseReportDescriptor(
+    const uint8_t* rpt_desc, size_t desc_len,
+    DeviceDescriptor** dev_desc);
+
+}  // namespace hid

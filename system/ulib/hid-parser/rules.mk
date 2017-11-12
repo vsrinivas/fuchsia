@@ -9,7 +9,12 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/item.cpp
+    $(LOCAL_DIR)/item.cpp \
+    $(LOCAL_DIR)/parser.cpp
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zxcpp
 
 MODULE_LIBS := \
     system/ulib/c \

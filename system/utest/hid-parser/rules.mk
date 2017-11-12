@@ -14,9 +14,13 @@ MODULE_SRCS += \
 MODULE_NAME := hidparse-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/hid-parser
+    system/ulib/hid-parser \
+    system/ulib/fbl \
+    system/ulib/zxcpp
 
 MODULE_LIBS := \
-    system/ulib/fdio system/ulib/unittest system/ulib/c
+    system/ulib/fdio \
+    system/ulib/unittest \
+    system/ulib/c
 
 include make/module.mk
