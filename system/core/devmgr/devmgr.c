@@ -75,7 +75,6 @@ zx_handle_t get_sysinfo_job_root(void) {
 }
 
 static const char* argv_sh[] = { "/boot/bin/sh" };
-static const char* argv_autorun0[] = { "/boot/bin/sh", "/boot/autorun" };
 static const char* argv_appmgr[] = { "/system/bin/appmgr" };
 
 void do_autorun(const char* name, const char* env) {
@@ -279,13 +278,6 @@ int service_starter(void* arg) {
     }
 
     do_autorun("autorun:boot", "zircon.autorun.boot");
-    struct stat s;
-    if (stat(argv_autorun0[1], &s) == 0) {
-        printf("devmgr: starting /boot/autorun ...\n");
-        devmgr_launch(svcs_job_handle, "sh:autorun0",
-                      countof(argv_autorun0), argv_autorun0,
-                      NULL, -1, NULL, NULL, 0, NULL);
-    }
 
     thrd_t t;
     if ((thrd_create_with_name(&t, fuchsia_starter, NULL, "fuchsia-starter")) == thrd_success) {

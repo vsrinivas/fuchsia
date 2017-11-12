@@ -34,10 +34,10 @@ If this option is set, the crashlogger will attempt to generate a
 "processor trace" dump along with the crash report. The dump files
 are written as /tmp/crash-pt.*. This option requires processor tracing
 to be enabled in the kernel. This can be done by running "ipt" program after
-the system has booted. E.g., add this to /system/autorun
+the system has booted. E.g., set zircon.autorun.system like this
 
 ```
-ipt --circular --control init start
+zircon.autorun.system=ipt+--circular+--control+init+start
 ```
 
 After the files are written, copy them to the host and print them
