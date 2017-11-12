@@ -139,8 +139,7 @@ struct perfmon_cpu_data_t {
 
     // The trace buffer, passed in from userspace.
     fbl::RefPtr<VmObject> buffer_vmo;
-    uint64_t start_offset = 0;
-    uint64_t end_offset = 0;
+    size_t buffer_size = 0;
 
     // The trace buffer when mapped into kernel space.
     // This is only done while the trace is running.
@@ -340,19 +339,16 @@ zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo,
     if (cpu >= num_cpus)
         return ZX_ERR_INVALID_ARGS;
 
-    // TODO(dje): KISS for now
-    if (buffer->start_offset != 0)
-        return ZX_ERR_INVALID_ARGS;
-    const size_t size = buffer->end_offset - buffer->start_offset;
-    if (size > vmo->size())
-        return ZX_ERR_INVALID_ARGS;
-    if (size < sizeof(zx_x86_ipm_counters_t))
+    // A simple safe approximation of the minimum size needed.
+    size_t min_size_needed = (sizeof(zx_x86_ipm_buffer_info_t) +
+                              sizeof(zx_x86_ipm_counters_t) +
+                              sizeof(zx_x86_ipm_sample_record_t));
+    if (vmo->size() < min_size_needed)
         return ZX_ERR_INVALID_ARGS;
 
     auto data = &perfmon_state->cpu_data[cpu];
     data->buffer_vmo = vmo;
-    data->start_offset = buffer->start_offset;
-    data->end_offset = buffer->end_offset;
+    data->buffer_size = vmo->size();
     // The buffer is mapped into kernelspace later.
 
     return ZX_OK;
@@ -500,33 +496,33 @@ static zx_status_t x86_ipm_map_buffers_locked(perfmon_state_t* state) {
     zx_status_t status = ZX_OK;
     for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
         auto data = &state->cpu_data[cpu];
-        // Heads up: The logic is off if this isn't true.
-        DEBUG_ASSERT(data->start_offset == 0);
-        const size_t size = data->end_offset - data->start_offset;
+        // Heads up: The logic is off if |vmo_offset| is non-zero.
+        const uint64_t vmo_offset = 0;
+        const size_t size = data->buffer_size;
         const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         const char* name = "ipm-buffer";
         status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
             0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
-            data->buffer_vmo, data->start_offset, arch_mmu_flags, name,
+            data->buffer_vmo, vmo_offset, arch_mmu_flags, name,
             &data->buffer_mapping);
         if (status != ZX_OK) {
-            TRACEF("error %d mapping buffer: cpu %u, start 0x%" PRIx64 ", end 0x%" PRIx64 "\n",
-                   status, cpu, data->start_offset, data->end_offset);
+            TRACEF("error %d mapping buffer: cpu %u, size 0x%zx\n",
+                   status, cpu, size);
             break;
         }
         // Pass true for |commit| so that we get our pages mapped up front.
         // Otherwise we'll need to allow for a page fault to happen in the
         // PMI handler.
-        status = data->buffer_mapping->MapRange(data->start_offset, size, true);
+        status = data->buffer_mapping->MapRange(vmo_offset, size, true);
         if (status != ZX_OK) {
-            TRACEF("error %d mapping range: cpu %u, start 0x%" PRIx64 ", end 0x%" PRIx64 "\n",
-                   status, cpu, data->start_offset, data->end_offset);
+            TRACEF("error %d mapping range: cpu %u, size 0x%zx\n",
+                   status, cpu, size);
             data->buffer_mapping->Destroy();
             data->buffer_mapping.reset();
             break;
         }
         data->buffer_start = reinterpret_cast<void*>(
-            data->buffer_mapping->base() + data->start_offset);
+            data->buffer_mapping->base() + vmo_offset);
         data->buffer_end = reinterpret_cast<char*>(data->buffer_start) + size;
         TRACEF("buffer mapped: cpu %u, start %p, end %p\n",
                cpu, data->buffer_start, data->buffer_end);

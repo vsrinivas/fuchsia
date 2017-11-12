@@ -296,12 +296,8 @@ typedef struct {
 
 // This is for passing buffer specs to the kernel (for setting up the
 // debug store MSRs, or for directly writing in "counting mode").
-// TODO(dje): First pass. Pass vmo? Need to rework for tracing jobs/processes
-// anyway.
 typedef struct {
     zx_handle_t vmo;
-    uint64_t start_offset;
-    uint64_t end_offset;
 } zx_x86_ipm_buffer_t;
 
 typedef struct {

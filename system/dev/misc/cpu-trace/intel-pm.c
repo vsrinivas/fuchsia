@@ -628,8 +628,6 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
         zx_x86_ipm_buffer_t buffer;
         io_buffer_t* io_buffer = &per_trace->buffers[cpu];
         buffer.vmo = io_buffer->vmo_handle;
-        buffer.start_offset = 0;
-        buffer.end_offset = io_buffer->size;
         status = zx_mtrace_control(resource, MTRACE_KIND_IPM,
                                    MTRACE_IPM_ASSIGN_BUFFER, cpu,
                                    &buffer, sizeof(buffer));
