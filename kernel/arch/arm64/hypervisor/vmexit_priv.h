@@ -9,6 +9,12 @@
 #include <fbl/atomic.h>
 #include <zircon/types.h>
 
+typedef struct zx_port_packet zx_port_packet_t;
+
+class GuestPhysicalAddressSpace;
+struct GuestState;
+class TrapMap;
+
 // clang-format off
 
 // Exception class of an exception syndrome.
@@ -28,25 +34,23 @@ struct ExceptionSyndrome {
 };
 
 enum class SystemRegister : uint16_t {
+    MAIR_EL1            = 0b11000000 << 8 /* op */ | 0b10100010 /* cr */,
     SCTLR_EL1           = 0b11000000 << 8 /* op */ | 0b00010000 /* cr */,
+    TCR_EL1             = 0b11010000 << 8 /* op */ | 0b00100000 /* cr */,
+    TTBR0_EL1           = 0b11000000 << 8 /* op */ | 0b00100000 /* cr */,
+    TTBR1_EL1           = 0b11001000 << 8 /* op */ | 0b00100000 /* cr */,
 };
 
 // System instruction that caused a VM exit.
 struct SystemInstruction {
-    SystemRegister sr;
-    uint8_t xt;
+    SystemRegister sysreg;
+    uint64_t* reg;
     bool read;
 
-    SystemInstruction(uint32_t iss);
+    SystemInstruction(uint32_t iss, GuestState* guest_state);
 };
 
 // clang-format on
-
-typedef struct zx_port_packet zx_port_packet_t;
-
-class GuestPhysicalAddressSpace;
-struct GuestState;
-class TrapMap;
 
 zx_status_t vmexit_handler(GuestState* guest_state, fbl::atomic<uint64_t>* hcr,
                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,

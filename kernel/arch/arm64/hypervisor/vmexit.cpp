@@ -18,14 +18,22 @@
 
 #define LOCAL_TRACE 0
 
+#define SET_SYSREG(sysreg) \
+({ \
+    guest_state->system_state.sysreg = *si.reg; \
+    LTRACEF("guest_state " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
+    next_pc(guest_state); \
+    ZX_OK; \
+})
+
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
     iss = BITS(esr, 24, 0);
 }
 
-SystemInstruction::SystemInstruction(uint32_t iss) {
-    sr = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
-    xt = static_cast<uint8_t>(BITS_SHIFT(iss, 9, 5));
+SystemInstruction::SystemInstruction(uint32_t iss, GuestState* guest_state) {
+    sysreg = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
+    reg = &guest_state->x[BITS_SHIFT(iss, 9, 5)];
     read = BIT(iss, 0);
 }
 
@@ -35,8 +43,11 @@ static void next_pc(GuestState* guest_state) {
 
 static zx_status_t handle_system_instruction(uint32_t iss, GuestState* guest_state,
                                              fbl::atomic<uint64_t>* hcr) {
-    SystemInstruction si(iss);
-    switch (si.sr) {
+    SystemInstruction si(iss, guest_state);
+
+    switch (si.sysreg) {
+    case SystemRegister::MAIR_EL1:
+        return SET_SYSREG(mair_el1);
     case SystemRegister::SCTLR_EL1: {
         if (si.read)
             return ZX_ERR_NOT_SUPPORTED;
@@ -49,19 +60,27 @@ static zx_status_t handle_system_instruction(uint32_t iss, GuestState* guest_sta
         // We do not set HCR_EL2.TGE, so we only need to modify HCR_EL2.DC.
         //
         // TODO(abdulla): Investigate clean of cache and invalidation of TLB.
-        uint32_t sctrlr_el1 = guest_state->x[si.xt] & UINT32_MAX;
-        if (sctrlr_el1 & SCTLR_ELX_M) {
+        uint32_t sctlr_el1 = *si.reg & UINT32_MAX;
+        if (sctlr_el1 & SCTLR_ELX_M) {
             hcr->fetch_and(~HCR_EL2_DC);
         } else {
             hcr->fetch_or(HCR_EL2_DC);
         }
-        guest_state->system_state.sctlr_el1 = sctrlr_el1;
+        guest_state->system_state.sctlr_el1 = sctlr_el1;
 
-        LTRACEF("guest sctrlr_el1: %#x\n", sctrlr_el1);
+        LTRACEF("guest sctlr_el1: %#x\n", sctlr_el1);
         LTRACEF("guest hcr_el2: %#lx\n", hcr->load());
         next_pc(guest_state);
         return ZX_OK;
-    }}
+    }
+    case SystemRegister::TCR_EL1:
+        return SET_SYSREG(tcr_el1);
+    case SystemRegister::TTBR0_EL1:
+        return SET_SYSREG(ttbr0_el1);
+    case SystemRegister::TTBR1_EL1:
+        return SET_SYSREG(ttbr1_el1);
+    }
+
     return ZX_ERR_NOT_SUPPORTED;
 }
 
