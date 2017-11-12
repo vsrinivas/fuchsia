@@ -267,7 +267,7 @@ __BEGIN_CDECLS
 #define IPM_MAX_FIXED_COUNTERS 3
 
 // API version number (useful when doing incompatible upgrades)
-#define IPM_API_VERSION 1
+#define IPM_API_VERSION 2
 
 // Buffer format version
 #define IPM_BUFFER_COUNTING_MODE_VERSION 0
@@ -313,6 +313,13 @@ typedef struct {
     // IA32_DEBUGCTL
     uint64_t debug_ctrl;
 
+    // IPM_MISC_CTRL_*
+    // These are not part of IPM but are additional data we can collect.
+    uint32_t misc_ctrl;
+#define IPM_MISC_CTRL_MASK       0x1
+// Collect aspace+pc values.
+#define IPM_MISC_CTRL_PROFILE_PC 0x1
+
     // Sampling frequency. If zero then do simple counting (collect a tally
     // of all counts and report at the end).
     // When a counter gets this many hits an interrupt is generated.
@@ -345,23 +352,67 @@ typedef struct {
     uint64_t fixed_counters[IPM_MAX_FIXED_COUNTERS];
 } zx_x86_ipm_counters_t;
 
-// Sampling mode data in the buffer.
-// This does not include the counter value (e.g., the sample frequency)
-// in order to keep the size small: The user should know what value was
-// configured for each counter (currently they all get the same value but
-// that could change).
+// The type of "sampling mode" record.
+typedef enum {
+  // Reserved, unused.
+  IPM_RECORD_RESERVED = 0,
+  // The record is an |zx_x86_ipm_tick_record_t|.
+  IPM_RECORD_TICK = 1,
+  // The record is an |zx_x86_ipm_value_record_t|.
+  IPM_RECORD_VALUE = 2,
+  // The record is an |zx_x86_ipm_pc_record_t|.
+  IPM_RECORD_PC = 3,
+} zx_x86_ipm_record_type_t;
+
+// Sampling mode data header.
 typedef struct {
-    zx_time_t time;
-    uint32_t counter;
+    uint8_t type;
+
+    // A possible usage of this field is to add some type-specific flags.
+    uint8_t reserved_flags;
+
+    uint16_t counter;
 // OR'd to the value in |counter| to indicate a fixed counter.
 #define IPM_COUNTER_NUMBER_FIXED 0x100
-    uint32_t padding_reserved;
+
+    // TODO(dje): Remove when |time| becomes 32 bits.
+    uint32_t reserved;
+
+    // TODO(dje): Reduce this to 32 bits (e.g., by adding clock records to
+    // the buffer).
+    zx_time_t time;
+} zx_x86_ipm_record_header_t;
+
+// Record the time a counter was sampled.
+// This does not include the counter value in order to keep the size small.
+// This is for use when the counter is its own trigger so the user should know
+// what value was: it's the sample frequency.
+typedef struct {
+    zx_x86_ipm_record_header_t header;
+} zx_x86_ipm_tick_record_t;
+
+// Record the value of a counter at a particular time.
+// This is used when another timebase is driving the sampling, e.g., another
+// counter.
+typedef struct {
+    zx_x86_ipm_record_header_t header;
+    uint64_t value;
+} zx_x86_ipm_value_record_t;
+
+// Record the aspace+pc values.
+// This is used when doing gprof-like profiling.
+// There is no point in recording the counter's value here as the counter
+// must be its own trigger.
+typedef struct {
+    zx_x86_ipm_record_header_t header;
+    // In the case of x86 this is the cr3 value.
+    uint64_t aspace;
     uint64_t pc;
-} zx_x86_ipm_sample_record_t;
+} zx_x86_ipm_pc_record_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Flags for the counters in intel-pm.inc.
+// Flags for the counters in *-pm-events.inc.
 // See for example Intel Volume 3, Table 19-3.
 // "Non-Architectural Performance Events of the Processor Core Supported by
 // Skylake Microarchitecture and Kaby Lake Microarchitecture"
@@ -423,8 +474,11 @@ typedef struct {
 
 // One or both of these must be added.
 // If both are elided then no data collection is done.
-#define IPM_CATEGORY_OS  0x10000
-#define IPM_CATEGORY_USR 0x20000
+#define IPM_CATEGORY_OS         0x10000
+#define IPM_CATEGORY_USR        0x20000
+
+// Collect aspace+pc data.
+#define IPM_CATEGORY_PROFILE_PC 0x40000
 
 // Only one of the following may be specified.
 // A better way would be to provide numeric arguments to categories, but

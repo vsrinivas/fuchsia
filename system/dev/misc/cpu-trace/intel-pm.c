@@ -241,6 +241,14 @@ static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_
     return ZX_OK; // TODO(dje): Maybe remove, but later.
 }
 
+static zx_status_t misc_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
+                                  zx_x86_ipm_perf_config_t* config) {
+    config->misc_ctrl = 0;
+    if (simple_config->categories & IPM_CATEGORY_PROFILE_PC)
+        config->misc_ctrl |= IPM_MISC_CTRL_PROFILE_PC;
+    return ZX_OK; // TODO(dje): Maybe remove, but later.
+}
+
 static zx_status_t category_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
                                       const category_spec_t* spec,
                                       zx_x86_ipm_perf_config_t* config) {
@@ -290,6 +298,10 @@ static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_confi
         if (status != ZX_OK)
             return status;
     }
+
+    status = misc_to_config(simple_config, config);
+    if (status != ZX_OK)
+        return status;
 
     if (programmable_category >= countof(kProgrammableCategoryMap)) {
         zxlogf(ERROR, "ipm: bad programmable category %u\n", programmable_category);

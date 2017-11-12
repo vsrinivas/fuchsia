@@ -87,6 +87,8 @@
 static uint64_t kGlobalCtrlWritableBits;
 static uint64_t kFixedCounterCtrlWritableBits;
 
+static constexpr size_t kMaxRecordSize = sizeof(zx_x86_ipm_pc_record_t);
+
 // Commented out values represent currently unsupported features.
 // They remain present for documentation purposes.
 static constexpr uint64_t kDebugCtrlWritableBits =
@@ -148,7 +150,7 @@ struct perfmon_cpu_data_t {
     void* buffer_end = 0;
 
     // In sampling mode, the next record to fill.
-    zx_x86_ipm_sample_record_t* buffer_next = nullptr;
+    zx_x86_ipm_record_header_t* buffer_next = nullptr;
 };
 
 struct perfmon_state_t {
@@ -163,6 +165,10 @@ struct perfmon_state_t {
 
     // IA32_DEBUGCTL
     uint64_t debug_ctrl = 0;
+
+    // Misc flags driving data collection.
+    // Values are from IPM_MISC_CTRL_*.
+    uint32_t misc_ctrl = 0;
 
     // The sample frequency or zero for "counting mode".
     // TODO(dje): Move more intelligence into the driver.
@@ -341,8 +347,7 @@ zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo,
 
     // A simple safe approximation of the minimum size needed.
     size_t min_size_needed = (sizeof(zx_x86_ipm_buffer_info_t) +
-                              sizeof(zx_x86_ipm_counters_t) +
-                              sizeof(zx_x86_ipm_sample_record_t));
+                              sizeof(zx_x86_ipm_counters_t));
     if (vmo->size() < min_size_needed)
         return ZX_ERR_INVALID_ARGS;
 
@@ -426,6 +431,10 @@ zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config) {
         TRACEF("|sample_freq| is larger than the max counter value\n");
         return ZX_ERR_INVALID_ARGS;
     }
+    if (config->misc_ctrl & ~IPM_MISC_CTRL_MASK) {
+        TRACEF("Reserved bits set in |misc_ctrl|\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     unsigned num_cpus = ipm_num_cpus();
 
@@ -434,6 +443,7 @@ zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config) {
     memcpy(perfmon_state->events, config->programmable_events, sizeof(perfmon_state->events));
     perfmon_state->fixed_counter_ctrl = config->fixed_counter_ctrl;
     perfmon_state->debug_ctrl = config->debug_ctrl;
+    perfmon_state->misc_ctrl = config->misc_ctrl;
     perfmon_state->sample_freq = config->sample_freq;
 
     if (perfmon_state->sample_freq == 0) {
@@ -534,7 +544,7 @@ static zx_status_t x86_ipm_map_buffers_locked(perfmon_state_t* state) {
         info->padding = 0;
         info->ticks_per_second = ticks_per_second();
         info->capture_end = sizeof(*info);
-        data->buffer_next = reinterpret_cast<zx_x86_ipm_sample_record_t*>(
+        data->buffer_next = reinterpret_cast<zx_x86_ipm_record_header_t*>(
             reinterpret_cast<char*>(data->buffer_start) + info->capture_end);
     }
     if (status != ZX_OK) {
@@ -723,11 +733,37 @@ zx_status_t x86_ipm_fini() {
 
 // Interrupt handling.
 
-static void write_record(zx_x86_ipm_sample_record_t* rec,
-                         zx_time_t time, uint32_t counter, uint64_t pc) {
-    rec->time = time;
-    rec->counter = counter;
+static void write_header(zx_x86_ipm_record_header_t* hdr,
+                         zx_x86_ipm_record_type_t type,
+                         uint16_t counter, zx_time_t time) {
+    hdr->type = type;
+    hdr->reserved_flags = 0;
+    hdr->counter = counter;
+    hdr->reserved = 0;
+    hdr->time = time;
+}
+
+static zx_x86_ipm_record_header_t* write_tick_record(
+        zx_x86_ipm_record_header_t* hdr,
+        uint16_t counter, zx_time_t time) {
+    zx_x86_ipm_tick_record_t* rec =
+        reinterpret_cast<zx_x86_ipm_tick_record_t*>(hdr);
+    write_header(&rec->header, IPM_RECORD_TICK, counter, time);
+    ++rec;
+    return reinterpret_cast<zx_x86_ipm_record_header_t*>(rec);
+}
+
+static zx_x86_ipm_record_header_t* write_pc_record(
+        zx_x86_ipm_record_header_t* hdr,
+        uint16_t counter, zx_time_t time,
+        uint64_t cr3, uint64_t pc) {
+    zx_x86_ipm_pc_record_t* rec =
+        reinterpret_cast<zx_x86_ipm_pc_record_t*>(hdr);
+    write_header(&rec->header, IPM_RECORD_PC, counter, time);
+    rec->aspace = cr3;
     rec->pc = pc;
+    ++rec;
+    return reinterpret_cast<zx_x86_ipm_record_header_t*>(rec);
 }
 
 // Helper function so that there is only one place where we enable/disable
@@ -750,10 +786,17 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, perfmon_state_t* state) {
     // for the maximum amount we'll need.
     size_t space_needed =
         (perfmon_num_programmable_counters + perfmon_num_fixed_counters) *
-        sizeof(*data->buffer_next);
+        sizeof(kMaxRecordSize);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
         TRACEF("cpu %u: @%" PRIu64 " pmi buffer full\n", cpu, now);
         return false;
+    }
+
+    zx_x86_ipm_record_type_t record_type = IPM_RECORD_TICK;
+    uint64_t cr3 = 0;
+    if (state->misc_ctrl & IPM_MISC_CTRL_PROFILE_PC) {
+        record_type = IPM_RECORD_PC;
+        cr3 = x86_get_cr3();
     }
 
     const uint64_t status = read_msr(IA32_PERF_GLOBAL_STATUS);
@@ -770,25 +813,45 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, perfmon_state_t* state) {
             LTRACEF("Eh? status.CTR_FRZ is set\n");
 #endif
 
-        zx_x86_ipm_sample_record_t* next = data->buffer_next;
+        zx_x86_ipm_record_header_t* next = data->buffer_next;
 
-        for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i) {
+        for (uint16_t i = 0; i < perfmon_num_programmable_counters; ++i) {
             if (status & IA32_PERF_GLOBAL_STATUS_PMC_OVF_MASK(i)) {
-                write_record(next, now, i, frame->ip);
-                ++next;
+                switch (record_type) {
+                    case IPM_RECORD_TICK:
+                        next = write_tick_record(next, i, now);
+                        break;
+                    case IPM_RECORD_PC:
+                        next = write_pc_record(next, i, now, cr3, frame->ip);
+                        break;
+                    default:
+                        __UNREACHABLE;
+                }
                 LTRACEF("cpu %u: resetting PMC %u to 0x%" PRIx64 "\n",
                         cpu, i, state->programmable_initial_value);
                 write_msr(IA32_PMC_FIRST + i, state->programmable_initial_value);
             }
         }
 
-        for (unsigned i = 0; i < perfmon_num_fixed_counters; ++i) {
+        for (uint16_t i = 0; i < perfmon_num_fixed_counters; ++i) {
             if (status & IA32_PERF_GLOBAL_STATUS_FIXED_OVF_MASK(i)) {
-                write_record(next, now, i | IPM_COUNTER_NUMBER_FIXED, frame->ip);
-                ++next;
+                switch (record_type) {
+                    case IPM_RECORD_TICK:
+                        next = write_tick_record(next,
+                                                 i | IPM_COUNTER_NUMBER_FIXED,
+                                                 now);
+                        break;
+                    case IPM_RECORD_PC:
+                        next = write_pc_record(next,
+                                               i | IPM_COUNTER_NUMBER_FIXED,
+                                               now, cr3, frame->ip);
+                        break;
+                    default:
+                        __UNREACHABLE;
+                }
                 LTRACEF("cpu %u: resetting FIXED %u to 0x%" PRIx64 "\n",
-                        cpu, i, state->programmable_initial_value);
-                write_msr(IA32_FIXED_CTR0 + i, state->programmable_initial_value);
+                        cpu, i, state->fixed_initial_value);
+                write_msr(IA32_FIXED_CTR0 + i, state->fixed_initial_value);
             }
         }
 
