@@ -13,15 +13,26 @@
 namespace cpuperf_provider {
 
 const EventDetails g_arch_event_details[] = {
+#if IPM_API_VERSION == 0
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
   { event, umask, flags, name },
+#else
+#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name, description) \
+  { event, umask, flags, name " (" description ")" },
+#endif
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
 };
 
 const EventDetails g_skl_event_details[] = {
+#if IPM_API_VERSION == 0
 #define DEF_SKL_EVENT(symbol, event, umask, flags, name) \
   { event, umask, flags, name },
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
+#else
+#define DEF_SKL_EVENT(symbol, event, umask, flags, name, description) \
+  { event, umask, flags, name " (" description ")" },
+#include <zircon/device/cpu-trace/skylake-pm-events.inc>
+#endif
 };
 
 using EventSelectMap = std::unordered_map<uint32_t, const EventDetails*>;
@@ -84,8 +95,13 @@ bool EventSelectToEventDetails(uint64_t event_select,
 
 const EventDetails* GetFixedEventDetails(int n) {
   enum {
+#if IPM_API_VERSION == 0
 #define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name) \
   EVENT_ ## symbol,
+#else
+#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name, description) \
+  EVENT_ ## symbol,
+#endif
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
   };
 

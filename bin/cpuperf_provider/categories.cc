@@ -13,8 +13,8 @@ namespace cpuperf_provider {
 const IpmCategory kCategories[] = {
   // The categories from intel-pm-categories.inc must appear first for
   // |kProgrammableCategoryMap|.
-#define DEF_CATEGORY(symbol, ordinal, name, counters...) \
-  { "cpu:" name, ordinal },
+#define DEF_CATEGORY(symbol, id, name, counters...) \
+  { "cpu:" name, id },
 #include "zircon/device/cpu-trace/intel-pm-categories.inc"
   {"cpu:fixed:all", (IPM_CATEGORY_FIXED_CTR0 |
                      IPM_CATEGORY_FIXED_CTR1 |
