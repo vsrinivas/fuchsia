@@ -40,10 +40,10 @@ zx_status_t sleep_for(zx_duration_t t) {
     return zx::nanosleep(zx::deadline_after(t));
 }
 
-constexpr size_t kReadReqCount = 32;
-constexpr size_t kReadBufSize = 4096;
-constexpr size_t kWriteReqCount = 8;
-constexpr size_t kWriteBufSize = 4096;  // todo: use endpt max size
+constexpr size_t kReadReqCount = 128;
+constexpr size_t kReadBufSize = 2048;
+constexpr size_t kWriteReqCount = 128;
+constexpr size_t kWriteBufSize = 2048;  // todo: use endpt max size
 
 constexpr char kFirmwareFile[] = "rt2870.bin";
 
