@@ -83,7 +83,7 @@ zx_status_t El2CpuState::OnTask(void* context, uint cpu_num) {
     El2TranslationTable& table = cpu_state->table_;
     El2Stack& stack = cpu_state->stacks_[cpu_num];
 
-    zx_status_t status = arm64_el2_on(stack.Top(), table.Base());
+    zx_status_t status = arm64_el2_on(table.Base(), stack.Top());
     if (status != ZX_OK) {
         dprintf(CRITICAL, "Failed to turn EL2 on for CPU %u\n", cpu_num);
         return status;

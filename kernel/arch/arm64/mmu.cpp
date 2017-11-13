@@ -422,8 +422,8 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
             fbl::atomic_signal_fence();
             if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-                auto vmid = static_cast<uint8_t>(asid_);
-                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vmid, vaddr >> 12);
+                paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr >> 12);
                 DEBUG_ASSERT(status == ZX_OK);
             } else if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
@@ -581,8 +581,8 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 
             fbl::atomic_signal_fence();
             if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-                auto vmid = static_cast<uint8_t>(asid_);
-                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vmid, vaddr >> 12);
+                paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr >> 12);
                 DEBUG_ASSERT(status == ZX_OK);
             } else if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
@@ -906,8 +906,8 @@ zx_status_t ArmArchVmAspace::Destroy() {
     pmm_free_page(page);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-        auto vmid = static_cast<uint8_t>(asid_);
-        __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vmid);
+        paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+        __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
         DEBUG_ASSERT(status == ZX_OK);
     } else {
         ARM64_TLBI(ASIDE1IS, asid_);

@@ -105,4 +105,8 @@ private:
     size_t size_ = 0;
 };
 
+static inline paddr_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {
+    return static_cast<paddr_t>(vmid) << 48 | baddr;
+}
+
 using ArchVmAspace = ArmArchVmAspace;

@@ -52,6 +52,6 @@ struct SystemInstruction {
 
 // clang-format on
 
-zx_status_t vmexit_handler(GuestState* guest_state, fbl::atomic<uint64_t>* hcr,
+zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                            zx_port_packet_t* packet);

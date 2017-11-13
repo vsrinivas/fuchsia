@@ -50,7 +50,7 @@ static_assert(__offsetof(GicH, elsr) == 0x30, "");
 static_assert(__offsetof(GicH, apr) == 0xf0, "");
 static_assert(__offsetof(GicH, lr) == 0x100, "");
 
-static zx_status_t gich_of(uint8_t vpid, GicH** gich) {
+static zx_status_t get_gich(uint8_t vpid, GicH** gich) {
     // Check for presence of GICv2 virtualisation extensions.
     //
     // TODO(abdulla): Support GICv3 virtualisation.
@@ -59,10 +59,6 @@ static zx_status_t gich_of(uint8_t vpid, GicH** gich) {
 
     *gich = reinterpret_cast<GicH*>(GICH_ADDRESS + 0x1000 + (vpid << 9));
     return ZX_OK;
-}
-
-static zx_paddr_t vttbr_of(uint8_t vmid, zx_paddr_t table) {
-    return static_cast<zx_paddr_t>(vmid) << 48 | table;
 }
 
 // static
@@ -83,7 +79,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
         return ZX_ERR_NO_MEMORY;
     auto_call.cancel();
 
-    status = gich_of(vpid, &vcpu->gich_);
+    status = get_gich(vpid, &vcpu->gich_);
     if (status != ZX_OK)
         return status;
 
@@ -113,17 +109,17 @@ Vcpu::~Vcpu() {
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return ZX_ERR_BAD_STATE;
+    zx_paddr_t vttbr = arm64_vttbr(vmid_, gpas_->table_phys());
     zx_paddr_t state = vaddr_to_paddr(&el2_state_);
-    zx_paddr_t vttbr = vttbr_of(vmid_, gpas_->table_phys());
     zx_status_t status;
     do {
         uint64_t hcr = hcr_.fetch_and(~HCR_EL2_VI);
-        status = arm64_el2_resume(state, vttbr, hcr);
+        status = arm64_el2_resume(vttbr, state, hcr);
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
             status = ZX_OK;
         } else if (status == ZX_OK) {
-            status = vmexit_handler(&el2_state_.guest_state, &hcr_, gpas_, traps_, packet);
+            status = vmexit_handler(&hcr_, &el2_state_.guest_state, gpas_, traps_, packet);
         } else {
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }

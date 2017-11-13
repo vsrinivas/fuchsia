@@ -107,6 +107,16 @@
     str x10, [x9, #GS_HPFAR_EL2]
 .endm
 
+.macro switch_to_guest
+    msr vttbr_el2, x0
+    isb
+.endm
+
+.macro switch_to_host
+    msr vttbr_el2, xzr
+    isb
+.endm
+
 .macro exception_return literal
     mov x0, \literal
     eret
@@ -238,7 +248,7 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
     entry_invalid_exception
 
-// zx_status_t arm64_el2_on(zx_paddr_t stack_top, zx_paddr_t ttbr0);
+// zx_status_t arm64_el2_on(zx_paddr_t ttbr0, zx_paddr_t stack_top);
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
@@ -268,7 +278,7 @@ FUNCTION_LABEL(el2_hvc_on)
     msr mair_el2, x9
 
     // Setup the EL2 translation table.
-    msr ttbr0_el2, x1
+    msr ttbr0_el2, x0
     isb
 
     // Enable the MMU, I-cache, D-cache, and all alignment checking.
@@ -282,7 +292,7 @@ FUNCTION_LABEL(el2_hvc_on)
     isb
 
     // Setup the EL2 stack pointer.
-    mov sp, x0
+    mov sp, x1
 
     // Setup the exec vector table for EL2.
     mrs x9, vbar_el2
@@ -319,15 +329,13 @@ FUNCTION_LABEL(el2_hvc_off)
 
     exception_return ZX_OK
 
-// void arm64_el2_tlbi_ipa(uint8_t vmid, zx_vaddr_t addr);
+// void arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr);
 FUNCTION(arm64_el2_tlbi_ipa)
     hvc #2
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
 FUNCTION_LABEL(el2_hvc_tlbi_ipa)
-    // Switch to the guest.
-    msr vttbr_el2, x0
-    isb
+    switch_to_guest
 
     // Invalidate IPA. Based on ARM DEN 0024A, page 12-5.
     dsb ishst
@@ -335,21 +343,16 @@ FUNCTION_LABEL(el2_hvc_tlbi_ipa)
     dsb ish
     isb
 
-    // Switch to the host.
-    msr vttbr_el2, xzr
-    isb
-
+    switch_to_host
     exception_return ZX_OK
 
-// void arm64_el2_tlbi_vmid(uint8_t vmid);
+// void arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
     hvc #3
     ret
 END_FUNCTION(arm64_el2_tlbi_vmid)
 FUNCTION_LABEL(el2_hvc_tlbi_vmid)
-    // Switch to the guest.
-    msr vttbr_el2, x0
-    isb
+    switch_to_guest
 
     // Invalidate VMID. Based on ARM DEN 0024A, page 12-5.
     dsb ishst
@@ -357,25 +360,20 @@ FUNCTION_LABEL(el2_hvc_tlbi_vmid)
     dsb ish
     isb
 
-    // Switch to the host.
-    msr vttbr_el2, xzr
-    isb
-
+    switch_to_host
     exception_return ZX_OK
 
-// zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr, uint64_t hcr);
+// zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
 FUNCTION(arm64_el2_resume)
     hvc #4
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)
-    // Save El2State into tpidr_el2.
-    msr tpidr_el2, x0
-    mov x9, x0
+    switch_to_guest
 
-    // Turn on virtualisation translation table to return to guest.
-    msr vttbr_el2, x1
-    isb
+    // Save El2State into tpidr_el2.
+    msr tpidr_el2, x1
+    mov x9, x1
 
     // If the guest is being run for the first time, invalidate all VMID TLB
     // entries in case the VMID has been used previously.
@@ -420,9 +418,7 @@ FUNCTION_LABEL(el2_guest_exit)
     msr hcr_el2, x9
     isb
 
-    // Turn off virtualisation translation table to return to host.
-    msr vttbr_el2, xzr
-    isb
+    switch_to_host
 
     // Return to host.
     ldr x0, [sp, #8]

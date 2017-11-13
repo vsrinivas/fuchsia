@@ -21,7 +21,7 @@
 #define SET_SYSREG(sysreg) \
 ({ \
     guest_state->system_state.sysreg = *si.reg; \
-    LTRACEF("guest_state " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
+    LTRACEF("guest " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
     next_pc(guest_state); \
     ZX_OK; \
 })
@@ -41,8 +41,8 @@ static void next_pc(GuestState* guest_state) {
     guest_state->system_state.elr_el2 += 4;
 }
 
-static zx_status_t handle_system_instruction(uint32_t iss, GuestState* guest_state,
-                                             fbl::atomic<uint64_t>* hcr) {
+static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>* hcr,
+                                             GuestState* guest_state) {
     SystemInstruction si(iss, guest_state);
 
     switch (si.sysreg) {
@@ -61,10 +61,12 @@ static zx_status_t handle_system_instruction(uint32_t iss, GuestState* guest_sta
         //
         // TODO(abdulla): Investigate clean of cache and invalidation of TLB.
         uint32_t sctlr_el1 = *si.reg & UINT32_MAX;
-        if (sctlr_el1 & SCTLR_ELX_M) {
-            hcr->fetch_and(~HCR_EL2_DC);
-        } else {
-            hcr->fetch_or(HCR_EL2_DC);
+        if ((guest_state->system_state.sctlr_el1 ^ sctlr_el1) & SCTLR_ELX_M) {
+            if (sctlr_el1 & SCTLR_ELX_M) {
+                hcr->fetch_and(~HCR_EL2_DC);
+            } else {
+                hcr->fetch_or(HCR_EL2_DC);
+            }
         }
         guest_state->system_state.sctlr_el1 = sctlr_el1;
 
@@ -133,7 +135,7 @@ static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddre
     return ZX_ERR_NEXT;
 }
 
-zx_status_t vmexit_handler(GuestState* guest_state, fbl::atomic<uint64_t>* hcr,
+zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                            zx_port_packet_t* packet) {
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
@@ -145,7 +147,7 @@ zx_status_t vmexit_handler(GuestState* guest_state, fbl::atomic<uint64_t>* hcr,
     switch (syndrome.ec) {
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
-        return handle_system_instruction(syndrome.iss, guest_state, hcr);
+        return handle_system_instruction(syndrome.iss, hcr, guest_state);
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
         return handle_instruction_abort(guest_state, gpas);
