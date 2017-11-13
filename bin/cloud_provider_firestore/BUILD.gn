@@ -2,10 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/*" ]
+import("//packages/package.gni")
 
-group("cloud_provider_firestore") {
-  public_deps = [
-    "//peridot/bin/cloud_provider_firestore/app",
+package("cloud_provider_firestore") {
+  system_image = true
+
+  deps = [
+    "app",
+  ]
+
+  binaries = [
+    {
+      name = "cloud_provider_firestore"
+    },
   ]
 }

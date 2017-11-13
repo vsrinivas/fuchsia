@@ -5,12 +5,15 @@
     "imports": [
         "garnet/packages/boringssl_libssl",
         "garnet/packages/cobalt_client",
-        "garnet/packages/fxl",
         "garnet/packages/fsl",
+        "garnet/packages/fxl",
         "garnet/packages/url"
     ],
     "packages": {
-        "ledger": "//peridot:ledger",
-        "ledger_tests": "//peridot:ledger_tests"
+        "cloud_provider_firebase": "//peridot/bin/cloud_provider_firebase",
+        "cloud_provider_firestore": "//peridot/bin/cloud_provider_firestore",
+        "ledger_tests": "//peridot/bin/ledger:ledger_tests",
+        "ledger_tool": "//peridot/bin/ledger:ledger_tool",
+        "ledger": "//peridot/bin/ledger"
     }
 }

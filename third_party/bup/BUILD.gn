@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 visibility = [ "//peridot/*" ]
 
 source_set("bup") {
@@ -28,5 +30,20 @@ executable("unittests") {
     ":bup",
     "//third_party/gtest",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
+  ]
+}
+
+package("bup_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":unittests",
+  ]
+
+  tests = [
+    {
+      name = "bup_unittests"
+    },
   ]
 }

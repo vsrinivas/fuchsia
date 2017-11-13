@@ -1,6 +1,7 @@
 {
     "imports": [
         "garnet/packages/default",
+        "peridot/packages/bup",
         "peridot/packages/ledger",
         "peridot/packages/leveldb",
         "peridot/packages/maxwell",

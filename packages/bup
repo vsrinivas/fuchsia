@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "bup_tests": "//peridot/third_party/bup:bup_tests"
+    }
+}

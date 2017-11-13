@@ -2,32 +2,148 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 visibility = [ "//peridot/*" ]
 
-group("ledger") {
-  public_deps = [
-    "//peridot/bin/ledger/app",
-    "//peridot/bin/ledger/backoff",
-    "//peridot/bin/ledger/callback",
-    "//peridot/bin/ledger/cloud_sync",
-    "//peridot/bin/ledger/convert",
-    "//peridot/bin/ledger/encryption",
-    "//peridot/bin/ledger/environment",
-    "//peridot/bin/ledger/glue/crypto",
-    "//peridot/bin/ledger/storage",
-    "//peridot/bin/ledger/tool",
+package("ledger") {
+  system_image = true
+
+  deps = [
+    "app",
+  ]
+
+  binaries = [
+    {
+      name = "ledger"
+    },
   ]
 }
 
-group("tests") {
-  testonly = true
+package("ledger_tool") {
+  system_image = true
 
-  public_deps = [
+  deps = [
+    "tool",
+  ]
+
+  binaries = [
+    {
+      name = "ledger_tool"
+    },
+  ]
+}
+
+package("ledger_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
     ":ledger_unittests",
-    "//peridot/bin/ledger/test/benchmark",
-    "//peridot/bin/ledger/test/e2e_local",
-    "//peridot/bin/ledger/test/e2e_sync",
-    "//peridot/bin/ledger/test/integration",
+    "//peridot/bin/cloud_provider_firebase:tests",
+    "test/benchmark",
+    "test/e2e_local",
+    "test/e2e_sync",
+    "test/integration",
+  ]
+
+  binaries = [
+    {
+      name = "launch_benchmark"
+    },
+
+    {
+      name = "ledger_benchmark_convergence"
+    },
+
+    {
+      name = "ledger_benchmark_put"
+    },
+
+    {
+      name = "ledger_benchmark_sync"
+    },
+  ]
+  tests = [
+    {
+      name = "cloud_provider_firebase_unittests"
+    },
+    {
+      name = "ledger_integration_tests"
+    },
+
+    {
+      name = "ledger_unittests"
+    },
+
+    {
+      name = "ledger_e2e_local"
+    },
+
+    {
+      name = "ledger_e2e_sync"
+
+      # This puts ledger_e2e_sync in /system/test/disabled/.
+      disabled = true
+    },
+    {
+      name = "run_ledger_benchmarks.sh"
+      disabled = true
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/convergence/convergence.tspec")
+      dest = "ledger/benchmark/convergence.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/put/transaction.tspec")
+      dest = "ledger/benchmark/transaction.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/put/entry_count.tspec")
+      dest = "ledger/benchmark/entry_count.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/put/entry_count_update.tspec")
+      dest = "ledger/benchmark/entry_count_update.tspec"
+    },
+
+    {
+      path =
+          rebase_path("//peridot/bin/ledger/test/benchmark/put/key_size.tspec")
+      dest = "ledger/benchmark/key_size.tspec"
+    },
+
+    {
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/put.tspec")
+      dest = "ledger/benchmark/put.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/put/transaction_size.tspec")
+      dest = "ledger/benchmark/transaction_size.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/put/value_size.tspec")
+      dest = "ledger/benchmark/value_size.tspec"
+    },
+
+    {
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/sync/sync.tspec")
+      dest = "ledger/benchmark/sync.tspec"
+    },
   ]
 }
 
@@ -75,7 +191,6 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/storage/impl/btree:unittests",
     "//peridot/bin/ledger/storage/public:unittests",
     "//peridot/bin/ledger/test:unittests",
-    "//peridot/third_party/bup:unittests",
   ]
 
   configs += [ ":ledger_config" ]
