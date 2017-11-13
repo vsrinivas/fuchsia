@@ -51,12 +51,12 @@ persistent instance of `fx log` to capture console output).
 
 ## Useful Information
 
-+ [HiKey960 Development Board User Manual](http://www.96boards.org/documentation/ConsumerEdition/HiKey960/HardwareDocs/HardwareUserManual.md/)
++ [HiKey960 Development Board User Manual](https://www.96boards.org/documentation/ConsumerEdition/HiKey960/HardwareDocs/HardwareUserManual.md.html)
 + [96boards-hikey github page](https://github.com/96boards-hikey)
-+ [96boards Getting Started page](http://www.96boards.org/documentation/ConsumerEdition/HiKey960/GettingStarted/README.md/)
++ [96boards Getting Started page](https://www.96boards.org/documentation/ConsumerEdition/HiKey960/GettingStarted/)
 + [SoC Reference](https://github.com/96boards/documentation/raw/master/ConsumerEdition/HiKey960/HardwareDocs/HiKey960_SoC_Reference_Manual.pdf)
 + [AOSP HiKey960 Information](https://source.android.com/source/devices#hikey960)
-
++ [HiKey960 Schematic](http://www.lemaker.org/product-hikeysecond-download-62.html)
 
 ## Building the Zircon boot image
 
