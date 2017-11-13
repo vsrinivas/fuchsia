@@ -14,6 +14,9 @@ packages:
   - package: libatk1.0-0
   - package: libatk1.0-dev
   - package: libatomic1
+  - package: lib32atomic1
+    arch:
+      - amd64
   - package: libatspi2.0-0
   - package: libatspi2.0-dev
   - package: libattr1
@@ -28,7 +31,13 @@ packages:
   - package: libbz2-1.0
   - package: libbz2-dev
   - package: libc6
+  - package: libc6-i386
+    arch:
+      - amd64
   - package: libc6-dev
+  - package: libc6-dev-i386
+    arch:
+      - amd64
   - package: libcairo2
   - package: libcairo2-dev
   - package: libcairo-gobject2
@@ -64,7 +73,13 @@ packages:
   - package: libgbm1
   - package: libgbm-dev
   - package: libgcc-4.8-dev
+  - package: lib32gcc-4.8-dev
+    arch:
+      - amd64
   - package: libgcc1
+  - package: lib32gcc1
+    arch:
+      - amd64
   - package: libgconf-2-4
   - package: libgconf2-4
   - package: libgconf2-dev
@@ -86,6 +101,9 @@ packages:
   - package: libgnutlsxx28
   - package: libgnutls28-dev
   - package: libgomp1
+  - package: lib32gomp1
+    arch:
+      - amd64
   - package: libgpg-error0
   - package: libgpg-error-dev
   - package: libgpm2
@@ -235,6 +253,9 @@ packages:
   - package: libasan0
     arch:
       - amd64
+  - package: lib32asan0
+    arch:
+      - amd64
   - package: libcilkrts5
     arch:
       - amd64
@@ -244,16 +265,28 @@ packages:
   - package: libitm1
     arch:
       - amd64
+  - package: lib32itm1
+    arch:
+      - amd64
   - package: liblsan0
     arch:
       - amd64
+  - package: lib32lsan0
+    arch:
+      - amd64
   - package: libquadmath0
+    arch:
+      - amd64
+  - package: lib32quadmath0
     arch:
       - amd64
   - package: libtsan0
     arch:
       - amd64
   - package: libubsan0
+    arch:
+      - amd64
+  - package: lib32ubsan0
     arch:
       - amd64
   - package: libdatrie1

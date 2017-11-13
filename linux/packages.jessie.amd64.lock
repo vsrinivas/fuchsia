@@ -1,5 +1,5 @@
-hash: 8bb634009923a14e59a62989dfbfed02f2e1cbd9090c2b5d8bb1358c4ea15ebc
-updated: 2017-10-09T17:50:52.384993272-07:00
+hash: a20dc36d27b70f45bef9870ca97c866df4d15397ab18ba164ef56908196959b7
+updated: 2017-11-12T17:42:17.5908784-08:00
 packages:
 - package: comerr-dev
   version: 2.1-1.42.12-2+b1
@@ -9,6 +9,42 @@ packages:
   version: 1.12.1+dfsg-19+deb8u2
   filename: pool/main/k/krb5/krb5-multidev_1.12.1+dfsg-19+deb8u2_amd64.deb
   hash: 42e4e0edcc419adde841db4dc4e643c2878e80fc4b722889bdfc7319800c6e0e
+- package: lib32asan0
+  version: 4.8.4-1
+  filename: pool/main/g/gcc-4.8/lib32asan0_4.8.4-1_amd64.deb
+  hash: 7f7783bf72b04544d0909bcfe8eac1eb626c257a2cc13cd84abbafedb1788e1d
+- package: lib32atomic1
+  version: 4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32atomic1_4.9.2-10_amd64.deb
+  hash: f20fb4b11aba823235f31a25fdfa62968ae55b35875800eef4188af196426b56
+- package: lib32gcc-4.8-dev
+  version: 4.8.4-1
+  filename: pool/main/g/gcc-4.8/lib32gcc-4.8-dev_4.8.4-1_amd64.deb
+  hash: 646bae4c8d9c0452097f8178f8ec47dc16066d0f793dbd52e94953fecaedcab4
+- package: lib32gcc1
+  version: 1:4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32gcc1_4.9.2-10_amd64.deb
+  hash: 906529b9231e7acbd0cdec3ea44304eca4cd6aa223537844ee0b707022390130
+- package: lib32gomp1
+  version: 4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32gomp1_4.9.2-10_amd64.deb
+  hash: ffbf5c576498e6713e18b20abb1766e4df3ee88063c2015e994b08faa7b7e412
+- package: lib32itm1
+  version: 4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32itm1_4.9.2-10_amd64.deb
+  hash: fd4cc47fca68257680bfd1729585e2d50888d82dd581a757534b28a9f65eac6a
+- package: lib32lsan0
+  version: 4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32lsan0_4.9.2-10_amd64.deb
+  hash: 7f4634ad1fb656a459c63a9ad1e0dd6a9342800b1cd21d6cedc8f5383dee6e78
+- package: lib32quadmath0
+  version: 4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32quadmath0_4.9.2-10_amd64.deb
+  hash: eddf6e0e794d46659c9081716190cb0e0cf8b696741ab35937ceb8784882048d
+- package: lib32ubsan0
+  version: 4.9.2-10
+  filename: pool/main/g/gcc-4.9/lib32ubsan0_4.9.2-10_amd64.deb
+  hash: 5e2c1721643310067c1d844d027f9a5004edf1fa09eea188f4364eec545d6581
 - package: libasan0
   version: 4.8.4-1
   filename: pool/main/g/gcc-4.8/libasan0_4.8.4-1_amd64.deb
@@ -105,6 +141,14 @@ packages:
   version: 2.19-18+deb8u10
   filename: pool/main/g/glibc/libc6-dev_2.19-18+deb8u10_amd64.deb
   hash: 00ba98ce8879bdfde13eac699da718d3aaba904ea6a88d5e21e77d1e298d65eb
+- package: libc6-dev-i386
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6-dev-i386_2.19-18+deb8u10_amd64.deb
+  hash: ce01ec9d55bad3c98699ce80458d8b0a32004eed3aeb8623ce931f761d87bd1f
+- package: libc6-i386
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6-i386_2.19-18+deb8u10_amd64.deb
+  hash: ad1e53ee3464aa771be1fbdd13f9e616ebf2bcd76f716ec9d5e37039ae8827cf
 - package: libcairo-gobject2
   version: 1.14.0-2.1+deb8u2
   filename: pool/main/c/cairo/libcairo-gobject2_1.14.0-2.1+deb8u2_amd64.deb
