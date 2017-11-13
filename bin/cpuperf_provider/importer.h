@@ -14,10 +14,9 @@
 
 #include "garnet/bin/cpuperf_provider/events.h"
 #include "lib/fxl/macros.h"
+#include "reader.h"
 
 namespace cpuperf_provider {
-
-class Reader;
 
 class Importer {
 public:
@@ -46,7 +45,7 @@ private:
   void ImportProgrammableSampleRecord(trace_cpu_number_t cpu,
                                       const zx_x86_ipm_state_t& state,
                                       const zx_x86_ipm_perf_config_t& config,
-                                      const zx_x86_ipm_sample_record_t& record,
+                                      const Reader::SampleRecord& record,
                                       trace_ticks_t previous_time,
                                       uint64_t ticks_per_second,
                                       uint64_t counter_value,
@@ -54,7 +53,7 @@ private:
   void ImportFixedSampleRecord(trace_cpu_number_t cpu,
                                const zx_x86_ipm_state_t& state,
                                const zx_x86_ipm_perf_config_t& config,
-                               const zx_x86_ipm_sample_record_t& record,
+                               const Reader::SampleRecord& record,
                                trace_ticks_t previous_time,
                                uint64_t ticks_per_second,
                                uint64_t counter_value,
@@ -66,7 +65,8 @@ private:
 
   void EmitSampleRecord(trace_cpu_number_t cpu, const EventDetails* details,
                         const trace_string_ref_t& category_ref,
-                        trace_ticks_t start_time, trace_ticks_t end_time,
+                        const Reader::SampleRecord& record,
+                        trace_ticks_t start_time,
                         uint64_t ticks_per_second, uint64_t value);
 
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu);
@@ -83,6 +83,8 @@ private:
   trace_string_ref_t const fixed_category_ref_;
   trace_string_ref_t const value_name_ref_;
   trace_string_ref_t const rate_name_ref_;
+  trace_string_ref_t const aspace_name_ref_;
+  trace_string_ref_t const pc_name_ref_;
 
   trace_thread_ref_t cpu_thread_refs_[kMaxNumCpus];
 

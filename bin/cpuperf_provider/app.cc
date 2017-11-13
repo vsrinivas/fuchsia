@@ -252,10 +252,15 @@ void App::StopTracing() {
 
   stop_time_ = zx_ticks_get();
 
-  Reader reader(fd.get());
-  Importer importer(context_, current_category_mask_, start_time_, stop_time_);
-  if (!importer.Import(reader)) {
-    FXL_LOG(ERROR) << "Errors encountered while importing cpuperf data";
+  Reader reader(fd.get(), buffer_size_);
+  if (reader.is_valid()) {
+    Importer importer(context_, current_category_mask_,
+                      start_time_, stop_time_);
+    if (!importer.Import(reader)) {
+      FXL_LOG(ERROR) << "Errors encountered while importing cpuperf data";
+    }
+  } else {
+    FXL_LOG(ERROR) << "Unable to initialize reader";
   }
 
   if (fd.is_valid()) {

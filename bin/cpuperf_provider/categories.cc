@@ -24,6 +24,9 @@ const IpmCategory kCategories[] = {
   {"cpu:fixed:unhalted_reference_cycles", IPM_CATEGORY_FIXED_CTR2 },
   {"cpu:os", IPM_CATEGORY_OS},
   {"cpu:usr", IPM_CATEGORY_USR},
+#if IPM_API_VERSION >= 2
+  {"cpu:profile_pc", IPM_CATEGORY_PROFILE_PC},
+#endif
   // Only one of the following is allowed.
   // TODO(dje): Error checking.
   {"cpu:tally", IPM_CATEGORY_TALLY},
