@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("action_log") {
+import("//packages/package.gni")
+
+package("action_log") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "action_log"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "action_log"
+
   sources = [
     "action_log_data.cc",
     "action_log_data.h",

@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("context_engine") {
+import("//packages/package.gni")
+
+package("context_engine") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "context_engine"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "context_engine"
+
   sources = [
     "context_engine_main.cc",
   ]

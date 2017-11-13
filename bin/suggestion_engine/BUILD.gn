@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("suggestion_engine") {
+import("//packages/package.gni")
+
+package("suggestion_engine") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "suggestion_engine"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "suggestion_engine"
+
   sources = [
     "proposal_publisher_impl.cc",
     "proposal_publisher_impl.h",

@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("module_resolver") {
+import("//packages/package.gni")
+
+package("module_resolver") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "module_resolver"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "module_resolver"
+
   sources = [
     "module_resolver_main.cc",
   ]

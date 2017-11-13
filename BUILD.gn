@@ -11,49 +11,6 @@ config("internal") {
   ]
 }
 
-package("maxwell") {
-  system_image = true
-
-  deps = [
-    "//peridot/bin/action_log",
-    "//peridot/bin/context_engine",
-    "//peridot/bin/module_resolver",
-    "//peridot/bin/suggestion_engine",
-    "//peridot/bin/user",
-    "//peridot/bin/user:maxwell_main",
-  ]
-
-  binaries = [
-    {
-      name = "action_log"
-    },
-    {
-      name = "context_engine"
-    },
-    {
-      name = "maxwell"
-      source = "maxwell_main"
-    },
-    {
-      name = "module_resolver"
-    },
-    {
-      name = "suggestion_engine"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//peridot/bin/user/resources/default_config.json")
-      dest = "maxwell/default_config.json"
-    },
-    {
-      path = rebase_path("//peridot/bin/user/resources/test_config.json")
-      dest = "maxwell/test_config.json"
-    },
-  ]
-}
-
 package("maxwell_agents") {
   testonly = true
   system_image = true

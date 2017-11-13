@@ -3,8 +3,12 @@
         "cpp"
     ],
     "packages": {
-        "maxwell": "//peridot:maxwell",
+        "action_log": "//peridot/bin/action_log",
+        "context_engine": "//peridot/bin/context_engine",
         "maxwell_agents": "//peridot:maxwell_agents",
-        "maxwell_tests": "//peridot:maxwell_tests"
+        "maxwell_tests": "//peridot:maxwell_tests",
+        "maxwell": "//peridot/bin/user:maxwell",
+        "module_resolver": "//peridot/bin/module_resolver",
+        "suggestion_engine": "//peridot/bin/suggestion_engine"
     }
 }
