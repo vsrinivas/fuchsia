@@ -72,7 +72,6 @@ source_set("bindings") {
     "internal/message_validation.cc",
     "internal/message_validation.h",
     "internal/message_validator.cc",
-    "internal/no_interface.cc",
     "internal/router.cc",
     "internal/router.h",
     "internal/shared_data.h",
@@ -81,7 +80,6 @@ source_set("bindings") {
     "internal/template_util.h",
     "message.h",
     "message_validator.h",
-    "no_interface.h",
     "synchronous_interface_ptr.h",
   ]
 
