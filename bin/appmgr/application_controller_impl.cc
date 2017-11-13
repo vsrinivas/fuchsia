@@ -66,7 +66,6 @@ ApplicationControllerImpl::ApplicationControllerImpl(
 }
 
 ApplicationControllerImpl::~ApplicationControllerImpl() {
-  wait_.Cancel();
   // Two ways we end up here:
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be
