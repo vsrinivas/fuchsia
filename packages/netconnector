@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "netconnector": "//garnet/bin/netconnector:package"
+        "netconnector": "//garnet/bin/netconnector"
     }
 }

@@ -4,7 +4,9 @@
 
 import("//packages/package.gni")
 
-executable("netconnector") {
+executable("bin") {
+  output_name = "netconnector"
+
   sources = [
     "device_service_provider.cc",
     "device_service_provider.h",
@@ -84,6 +86,7 @@ executable("netconnector") {
 
   deps = [
     "//garnet/bin/media/util",
+    "//garnet/bin/mdns",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
@@ -96,34 +99,15 @@ executable("netconnector") {
   ]
 }
 
-group("tools") {
-  public_deps = [
-    "//garnet/bin/mdns",
-  ]
-}
-
-package("package") {
-  system_image = true
-
-  package_name = "netconnector"
-
+package("netconnector") {
   deps = [
-    ":netconnector",
-    ":tools",
+    ":bin",
   ]
 
-  binaries = [
-    {
-      name = "netconnector"
-    },
-
-    {
-      name = "mdns"
-    },
-  ]
+  binary = "netconnector"
 
   resources = [ {
         path = rebase_path("netconnector.config")
-        dest = "netconnector/netconnector.config"
+        dest = "netconnector.config"
       } ]
 }

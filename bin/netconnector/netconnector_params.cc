@@ -18,7 +18,7 @@ namespace {
 constexpr char kConfigServices[] = "services";
 constexpr char kConfigDevices[] = "devices";
 constexpr char kDefaultConfigFileName[] =
-    "/system/data/netconnector/netconnector.config";
+    "/pkg/data/netconnector.config";
 }  // namespace
 
 NetConnectorParams::NetConnectorParams(const fxl::CommandLine& command_line) {

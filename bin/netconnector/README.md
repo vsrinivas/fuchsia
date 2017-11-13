@@ -87,7 +87,7 @@ instance that requestors will get when they connect to the service.
 
 The option `--config=<path>` controls which config file
 `netconnector` reads. The default config file is located at
-`/system/data/netconnector/netconnector.config`.
+`/pkg/data/netconnector.config`.
 
 The config file provides a means of registering services and devices. A config
 file looks like this:
