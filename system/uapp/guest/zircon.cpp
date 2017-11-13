@@ -43,12 +43,21 @@ static bool is_mz(const MzHeader* header) {
            header->pe_off >= sizeof(MzHeader);
 }
 
-static bool is_bootdata(const bootdata_t* container) {
-    return container->type == BOOTDATA_CONTAINER &&
-           container->length > sizeof(bootdata_t) &&
-           container->extra == BOOTDATA_MAGIC &&
-           container->flags & BOOTDATA_FLAG_V2 &&
-           container->magic == BOOTITEM_MAGIC;
+static bool is_bootdata(const bootdata_t* header) {
+    return header->type == BOOTDATA_CONTAINER &&
+           header->length > sizeof(bootdata_t) &&
+           header->extra == BOOTDATA_MAGIC &&
+           header->flags & BOOTDATA_FLAG_V2 &&
+           header->magic == BOOTITEM_MAGIC;
+}
+
+static void set_bootdata(bootdata_t* header, uint32_t type, uint32_t len) {
+    // Guest memory is initially zeroed, so we skip fields that must be zero.
+    header->type = type;
+    header->length = len;
+    header->flags = BOOTDATA_FLAG_V2;
+    header->magic = BOOTITEM_MAGIC;
+    header->crc32 = BOOTITEM_NO_CRC32;
 }
 
 static zx_status_t load_zircon(const int fd, const uintptr_t addr, const uintptr_t first_page,
@@ -77,22 +86,15 @@ static zx_status_t load_cmdline(const char* cmdline, const uintptr_t addr,
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    bootdata_t* bootdata_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
-    uintptr_t data_off = bootdata_off + sizeof(bootdata_t) + BOOTDATA_ALIGN(bootdata_hdr->length);
+    bootdata_t* container_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
+    uintptr_t data_off = bootdata_off + sizeof(bootdata_t) + BOOTDATA_ALIGN(container_hdr->length);
 
     bootdata_t* cmdline_hdr = reinterpret_cast<bootdata_t*>(addr + data_off);
-    cmdline_hdr->type = BOOTDATA_CMDLINE;
-    cmdline_hdr->length = cmdline_len & UINT32_MAX;
-    cmdline_hdr->extra = 0;
-    cmdline_hdr->flags = BOOTDATA_FLAG_V2;
-    cmdline_hdr->reserved0 = 0;
-    cmdline_hdr->reserved1 = 0;
-    cmdline_hdr->magic = BOOTITEM_MAGIC;
-    cmdline_hdr->crc32 = BOOTITEM_NO_CRC32;
+    set_bootdata(cmdline_hdr, BOOTDATA_CMDLINE, static_cast<uint32_t>(cmdline_len));
     memcpy(cmdline_hdr + 1, cmdline, cmdline_len);
 
-    bootdata_hdr->length += BOOTDATA_ALIGN(cmdline_hdr->length) +
-                            static_cast<uint32_t>(sizeof(bootdata_t));
+    container_hdr->length += static_cast<uint32_t>(sizeof(bootdata_t)) +
+                             BOOTDATA_ALIGN(cmdline_hdr->length);
     return ZX_OK;
 }
 
@@ -104,12 +106,12 @@ static zx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
         return ZX_ERR_IO;
     }
     if (!is_bootdata(&ramdisk_hdr)) {
-        fprintf(stderr, "Invalid BOOTFS container\n");
+        fprintf(stderr, "Invalid BOOTFS image header\n");
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    bootdata_t* bootdata_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
-    uintptr_t data_off = bootdata_off + sizeof(bootdata_t) + BOOTDATA_ALIGN(bootdata_hdr->length);
+    bootdata_t* container_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
+    uintptr_t data_off = bootdata_off + sizeof(bootdata_t) + BOOTDATA_ALIGN(container_hdr->length);
 
     ret = read(fd, reinterpret_cast<void*>(addr + data_off), ramdisk_hdr.length);
     if (ret < 0 || (size_t)ret != ramdisk_hdr.length) {
@@ -117,7 +119,7 @@ static zx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
         return ZX_ERR_IO;
     }
 
-    bootdata_hdr->length += BOOTDATA_ALIGN(ramdisk_hdr.length) +
+    container_hdr->length += BOOTDATA_ALIGN(ramdisk_hdr.length) +
                             static_cast<uint32_t>(sizeof(bootdata_t));
     return ZX_OK;
 }
@@ -136,27 +138,21 @@ static zx_status_t create_bootdata(const uintptr_t addr, const size_t size,
         return ZX_ERR_OUT_OF_RANGE;
 
     // Bootdata container.
-    bootdata_t* header = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
-    header->type = BOOTDATA_CONTAINER;
-    header->length = static_cast<uint32_t>(bootdata_len);
-    header->extra = BOOTDATA_MAGIC;
+    bootdata_t* container_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
+    set_bootdata(container_hdr, BOOTDATA_CONTAINER, static_cast<uint32_t>(bootdata_len));
+    container_hdr->extra = BOOTDATA_MAGIC;
 
     // ACPI root table pointer.
     bootdata_off += sizeof(bootdata_t);
-    bootdata_t* bootdata = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
-    bootdata->type = BOOTDATA_ACPI_RSDP;
-    bootdata->length = sizeof(uint64_t);
-
+    bootdata_t* acpi_rsdp_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
+    set_bootdata(acpi_rsdp_hdr, BOOTDATA_ACPI_RSDP, sizeof(uint64_t));
     bootdata_off += sizeof(bootdata_t);
-    uint64_t* acpi_rsdp = reinterpret_cast<uint64_t*>(addr + bootdata_off);
-    *acpi_rsdp = acpi_off;
+    *reinterpret_cast<uint64_t*>(addr + bootdata_off) = acpi_off;
 
     // E820 memory map.
     bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
-    bootdata = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
-    bootdata->type = BOOTDATA_E820_TABLE;
-    bootdata->length = static_cast<uint32_t>(e820_size);
-
+    bootdata_t* e820_table_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
+    set_bootdata(e820_table_hdr, BOOTDATA_E820_TABLE, static_cast<uint32_t>(e820_size));
     bootdata_off += sizeof(bootdata_t);
     return guest_create_e820(addr, size, bootdata_off);
 }
@@ -171,8 +167,7 @@ static zx_status_t is_zircon(const size_t size, const uintptr_t first_page, uint
         }
         *guest_ip = kernel_header->data_kernel.entry64;
         *kernel_off = kKernelOffset;
-        *kernel_len = BOOTDATA_ALIGN(kernel_header->hdr_kernel.length) +
-                      __offsetof(zircon_kernel_t, data_kernel);
+        *kernel_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(kernel_header->hdr_file.length);
         return ZX_OK;
     }
 
