@@ -6,9 +6,3 @@
 
 void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer) {}
 
-magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out)
-{
-    return MAGMA_STATUS_OK;
-}
-
-void msd_semaphore_release(msd_semaphore_t* semaphore) {}
