@@ -171,9 +171,9 @@ uint32_t App::GetCategoryMask() {
     }
   }
 
-  // If neither OS,USR are specified, track both.
-  if ((mask & (IPM_CATEGORY_OS | IPM_CATEGORY_USR)) == 0)
-    mask |= IPM_CATEGORY_OS | IPM_CATEGORY_USR;
+  // If neither OS,USER are specified, track both.
+  if ((mask & (IPM_CATEGORY_OS | IPM_CATEGORY_USER)) == 0)
+    mask |= IPM_CATEGORY_OS | IPM_CATEGORY_USER;
 
   return mask;
 }
