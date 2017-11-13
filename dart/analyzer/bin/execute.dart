@@ -9,6 +9,7 @@ import 'package:analysis_server_lib/analysis_server_lib.dart';
 import 'package:args/args.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
+import 'package:yaml/yaml.dart';
 
 /// Runs Dart analysis through the analysis server.
 /// This enables effective caching of analysis results.
@@ -67,11 +68,19 @@ Future<Null> main(List<String> args) async {
     clientId: 'Fuchsia Dart build analyzer',
     clientVersion: '0.1',
     serverArgs: [
-        '--cache',
-        path.canonicalize(argResults[_optionCachePath]),
-        '--new-analysis-driver-log',
-        logFile.toString(),
+      '--cache',
+      path.canonicalize(argResults[_optionCachePath]),
+      '--new-analysis-driver-log',
+      logFile.toString(),
+      '--internal-print-to-console',
     ],
+    // Useful mostly for debugging the analysis server itself.
+    onRead: (String message) {
+      if (!message.startsWith("{")) {
+        // This is a log from the server, print it out.
+        print(message);
+      }
+    },
   );
 
   final completer = new Completer();
@@ -185,10 +194,28 @@ Future<Null> main(List<String> args) async {
         'in ${secondsFormat.format(seconds)}s.');
   }
 
+  // Gather options files.
+  final List<String> optionsFiles = <String>[];
+  for (String optionsFile = path.canonicalize(
+      path.join(argResults[_optionPackageRoot], 'analysis_options.yaml'));;) {
+    optionsFiles.add(optionsFile);
+    final YamlMap content =
+        loadYaml(await new File(optionsFile).readAsString()) as YamlMap;
+    if (!content.containsKey('include')) {
+      break;
+    }
+    String included = content['include'];
+    if (!path.isAbsolute(included)) {
+      included =
+          path.canonicalize(path.join(path.dirname(optionsFile), included));
+    }
+    optionsFile = included;
+  }
+
   // Write the depfile.
   final depname = argResults[_optionDepName];
-  new File(argResults[_optionDepFile])
-      .writeAsStringSync('$depname: ${sources.join(" ")}');
+  new File(argResults[_optionDepFile]).writeAsStringSync(
+      '$depname: ${sources.join(" ")} ${optionsFiles.join(" ")}');
 
   if (errors.isEmpty) {
     // Write the stamp file.

@@ -15,6 +15,7 @@ dart_tool("analyzer") {
     "//third_party/dart-pkg/pub/analysis_server_lib",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/path",
+    "//third_party/dart-pkg/pub/yaml",
     "//third_party/dart/third_party/pkg/intl",
   ]
 }

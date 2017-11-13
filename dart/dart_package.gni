@@ -4,6 +4,11 @@
 
 import("//build/dart/toolchain.gni")
 
+declare_args() {
+  # Whether to use the analysis server instead of the CLI.
+  use_analysis_server = false
+}
+
 # Defines a Dart package
 #
 # Parameters
@@ -154,7 +159,8 @@ template("dart_package") {
 
     dart_sdk_label = "//third_party/dart:create_host_sdk"
     dart_sdk_dir = "$dart_sdk_root_out_dir/dart-sdk"
-    dart_analyzer_binary = "$dart_sdk_dir/bin/dartanalyzer"
+    dart_bin = "$dart_sdk_dir/bin"
+    dart_analyzer_binary = "$dart_bin/dartanalyzer"
 
     action(invocation_target_name) {
       script = "//build/dart/gen_analyzer_invocation.py"
@@ -204,44 +210,96 @@ template("dart_package") {
       }
     }
 
-    action(target_name) {
-      script = "//build/dart/run_analysis.py"
+    if (use_analysis_server) {
+      action(target_name) {
+        runner_label = "//build/dart/analyzer($host_toolchain)"
+        runner_out_dir = get_label_info(runner_label, "root_out_dir")
+        script = "$runner_out_dir/dart-tools/analyzer"
 
-      depfile = "$target_gen_dir/$target_name.analysis.d"
+        server_snaphost = "$dart_bin/snapshots/analysis_server.dart.snapshot"
 
-      output_file = "$target_gen_dir/$target_name.analyzed"
+        depfile = "$target_gen_dir/$target_name.analysis.d"
 
-      inputs = [
-        options_file,
-      ]
+        output_file = "$target_gen_dir/$target_name.analyzed"
 
-      outputs = [
-        output_file,
-      ]
+        log_file = "$target_gen_dir/$target_name.analysis_logs"
 
-      args = [
-        "--source-dir",
-        rebase_path(source_dir),
-        "--dot-packages",
-        rebase_path(dot_packages_file),
-        "--dartanalyzer",
-        rebase_path(dart_analyzer_binary),
-        "--dart-sdk",
-        rebase_path(dart_sdk_dir),
-        "--options",
-        rebase_path(options_file),
-        "--stamp",
-        rebase_path(output_file),
-        "--depname",
-        rebase_path(output_file, root_build_dir),
-        "--depfile",
-        rebase_path(depfile),
-      ]
+        inputs = [
+          options_file,
+        ]
 
-      deps = [
-        ":$invocation_target_name",
-        dart_sdk_label,
-      ]
+        # TODO(pylaligand): restore this pool.
+        # pool = "//build/dart:analysis_pool($dart_toolchain)"
+
+        outputs = [
+          output_file,
+        ]
+
+        args = [
+          "--package-root",
+          rebase_path("."),
+          "--source-dir",
+          rebase_path(source_dir, "."),
+          "--server-snapshot",
+          rebase_path(server_snaphost),
+          "--stamp",
+          rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
+          "--cache-path",
+          rebase_path("$root_out_dir/analysis-cache"),
+          "--log-file",
+          rebase_path(log_file),
+        ]
+
+        deps = [
+          ":$invocation_target_name",
+          dart_sdk_label,
+          runner_label,
+        ]
+      }
+    } else {  # Use the analyzer CLI.
+      action(target_name) {
+        script = "//build/dart/run_analysis.py"
+
+        depfile = "$target_gen_dir/$target_name.analysis.d"
+
+        output_file = "$target_gen_dir/$target_name.analyzed"
+
+        inputs = [
+          options_file,
+        ]
+
+        outputs = [
+          output_file,
+        ]
+
+        args = [
+          "--source-dir",
+          rebase_path(source_dir),
+          "--dot-packages",
+          rebase_path(dot_packages_file),
+          "--dartanalyzer",
+          rebase_path(dart_analyzer_binary),
+          "--dart-sdk",
+          rebase_path(dart_sdk_dir),
+          "--options",
+          rebase_path(options_file),
+          "--stamp",
+          rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
+        ]
+
+        deps = [
+          ":$invocation_target_name",
+          dart_sdk_label,
+        ]
+      }
     }
   }
 }
