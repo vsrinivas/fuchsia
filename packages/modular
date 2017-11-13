@@ -3,10 +3,14 @@
         "cpp"
     ],
     "packages": {
-        "modular": "//peridot:modular",
-        "modular_dev": "//peridot:modular_dev",
+        "dev_device_shell": "//peridot/bin/device_runner:dev_device_shell",
+        "dev_story_shell": "//peridot/bin/story_runner:dev_story_shell",
+        "dev_user_shell": "//peridot/bin/user_runner:dev_user_shell",
+        "device_runner_monitor": "//peridot/bin/device_runner_monitor",
+        "device_runner": "//peridot/bin/device_runner",
         "modular_tests": "//peridot/tests:modular_tests",
-        "modular_unittests": "//peridot:modular_unittests"
+        "modular_unittests": "//peridot:modular_unittests",
+        "user_runner": "//peridot/bin/user_runner"
     },
     "resources": [
         {

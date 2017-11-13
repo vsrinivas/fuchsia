@@ -2,10 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("all") {
-  public_deps = [
-    ":dev_story_shell",
-    ":story_runner",
+import("//packages/package.gni")
+
+package("dev_story_shell") {
+  system_image = true
+
+  deps = [
+    ":dev_story_shell_bin",
+  ]
+
+  binaries = [
+    {
+      name = "dev_story_shell"
+    },
   ]
 }
 
@@ -65,7 +74,9 @@ source_set("story_runner") {
   ]
 }
 
-executable("dev_story_shell") {
+executable("dev_story_shell_bin") {
+  output_name = "dev_story_shell"
+
   sources = [
     "dev_story_shell.cc",
   ]

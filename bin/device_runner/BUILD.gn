@@ -2,13 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-group("all") {
-  public_deps = [
-    ":dev_device_shell",
-    ":device_runner",
-    ":device_runner_monitor",
+package("device_runner") {
+  system_image = true
+
+  deps = [
+    ":device_runner_bin",
+  ]
+
+  binaries = [
+    {
+      name = "device_runner"
+    },
+  ]
+}
+
+package("dev_device_shell") {
+  system_image = true
+
+  deps = [
+    ":dev_device_shell_bin",
+  ]
+
+  binaries = [
+    {
+      name = "dev_device_shell"
+    },
   ]
 }
 
@@ -18,7 +40,9 @@ flatbuffer("users") {
   ]
 }
 
-executable("device_runner") {
+executable("device_runner_bin") {
+  output_name = "device_runner"
+
   sources = [
     "device_runner.cc",
   ]
@@ -78,21 +102,9 @@ source_set("lib") {
   ]
 }
 
-executable("device_runner_monitor") {
-  sources = [
-    "device_runner_monitor.cc",
-  ]
+executable("dev_device_shell_bin") {
+  output_name = "dev_device_shell"
 
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//peridot/public/lib/device/fidl",
-  ]
-}
-
-executable("dev_device_shell") {
   sources = [
     "dev_device_shell.cc",
   ]

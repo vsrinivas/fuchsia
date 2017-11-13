@@ -1,0 +1,37 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+package("device_runner_monitor") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "device_runner_monitor"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "device_runner_monitor"
+
+  sources = [
+    "device_runner_monitor.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/device/fidl",
+  ]
+}

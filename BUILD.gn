@@ -223,52 +223,15 @@ group("modular_all") {
   testonly = true
 
   deps = [
-    ":modular",
-    ":modular_dev",
-    ":modular_unittests_bin",
+    ":modular_unittests",
+    "bin/device_runner_monitor",
+    "bin/device_runner:dev_device_shell",
+    "bin/device_runner",
+    "bin/story_runner:dev_story_shell",
+    "bin/user_runner:dev_user_shell",
+    "bin/user_runner",
     "examples:modular_examples",
     "tests:modular_tests",
-  ]
-}
-
-package("modular") {
-  system_image = true
-
-  deps = [
-    "bin",
-  ]
-
-  binaries = [
-    {
-      name = "device_runner"
-    },
-    {
-      name = "device_runner_monitor"
-    },
-    {
-      name = "user_runner"
-    },
-  ]
-}
-
-package("modular_dev") {
-  testonly = true
-  system_image = true
-
-  deps = [
-    "bin",
-  ]
-
-  binaries = [
-    {
-      name = "dev_user_shell"
-    },
-    {
-      name = "dev_device_shell"
-    },
-    {
-      name = "dev_story_shell"
-    },
   ]
 }
 
