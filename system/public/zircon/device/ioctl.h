@@ -26,6 +26,10 @@
 // plain data afterwards.
 #define IOCTL_KIND_SET_HANDLE       0x3
 
+// SET_TWO_HANDLES ioctls accepts two handles, and
+// optionally plain data afterwards.
+#define IOCTL_KIND_SET_TWO_HANDLES  0x5
+
 // core device/vfs ioctl families
 #define IOCTL_FAMILY_RESERVED       0x00
 #define IOCTL_FAMILY_DEVICE         0x01

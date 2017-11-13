@@ -43,8 +43,13 @@ typedef struct {
     uint32_t sflags;    // suspend flags
     uint32_t count;     // outstanding msgs
     devhost_t* dh;      // next devhost to process
-    zx_handle_t socket; // socket to notify on
     list_node_t devhosts;
+
+    zx_handle_t socket; // socket to notify on for 'dm reboot' and 'dm poweroff'
+
+    // mexec arguments
+    zx_handle_t kernel;
+    zx_handle_t bootdata;
 } suspend_context_t;
 static suspend_context_t suspend_ctx = {
     .devhosts = LIST_INITIAL_VALUE(suspend_ctx.devhosts),
@@ -54,6 +59,7 @@ static bool dc_in_suspend(void) {
     return !!suspend_ctx.flags;
 }
 static void dc_suspend(uint32_t flags);
+static void dc_mexec(zx_handle_t* h);
 static void dc_continue_suspend(suspend_context_t* ctx);
 
 static device_t root_device = {
@@ -155,11 +161,6 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
-        return ZX_OK;
-    }
-    if ((len == 17) && !memcmp(cmd, "suspend-for-mexec", 17)) {
-        devmgr_vfs_exit();
-        dc_suspend(DEVICE_SUSPEND_FLAG_MEXEC);
         return ZX_OK;
     }
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
@@ -934,9 +935,9 @@ static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
 
 static zx_status_t dc_handle_device_read(device_t* dev) {
     dc_msg_t msg;
-    zx_handle_t hin[2];
+    zx_handle_t hin[3];
     uint32_t msize = sizeof(msg);
-    uint32_t hcount = 2;
+    uint32_t hcount = 3;
 
     if (dev->flags & DEV_CTX_DEAD) {
         log(ERROR, "devcoord: dev %p already dead (in read)\n", dev);
@@ -1058,6 +1059,15 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
             goto fail_wrong_hcount;
         }
         dc_watch(hin[0]);
+        r = ZX_OK;
+        break;
+
+    case DC_OP_DM_MEXEC:
+        if (hcount != 2) {
+            log(ERROR, "devcoord: rpc: mexec wrong hcount %d\n", hcount);
+            goto fail_wrong_hcount;
+        }
+        dc_mexec(hin);
         r = ZX_OK;
         break;
 
@@ -1486,15 +1496,26 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     return ZX_OK;
 }
 
-static void build_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
+static void append_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
     // suspend order is children first
     devhost_t* child = NULL;
     list_for_every_entry(&dh->children, child, devhost_t, node) {
         list_add_head(&ctx->devhosts, &child->snode);
     }
     list_for_every_entry(&dh->children, child, devhost_t, node) {
-        build_suspend_list(ctx, child);
+        append_suspend_list(ctx, child);
     }
+}
+
+static void build_suspend_list(suspend_context_t* ctx) {
+    // sys_device must suspend last as on x86 it invokes
+    // ACPI S-state transition
+    list_add_head(&ctx->devhosts, &sys_device.proxy->host->snode);
+    append_suspend_list(ctx, sys_device.proxy->host);
+    list_add_head(&ctx->devhosts, &root_device.proxy->host->snode);
+    append_suspend_list(ctx, root_device.proxy->host);
+    list_add_head(&ctx->devhosts, &misc_device.proxy->host->snode);
+    append_suspend_list(ctx, misc_device.proxy->host);
 }
 
 static void process_suspend_list(suspend_context_t* ctx) {
@@ -1540,14 +1561,33 @@ static void dc_suspend(uint32_t flags) {
     dmctl_socket = ZX_HANDLE_INVALID;   // to prevent the rpc handler from closing this handle
     list_initialize(&ctx->devhosts);
 
-    // sys_device must suspend last as on x86 it invokes
-    // ACPI S-state transition
-    list_add_head(&ctx->devhosts, &sys_device.proxy->host->snode);
-    build_suspend_list(ctx, sys_device.proxy->host);
-    list_add_head(&ctx->devhosts, &root_device.proxy->host->snode);
-    build_suspend_list(ctx, root_device.proxy->host);
-    list_add_head(&ctx->devhosts, &misc_device.proxy->host->snode);
-    build_suspend_list(ctx, misc_device.proxy->host);
+    build_suspend_list(ctx);
+
+    ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
+    process_suspend_list(ctx);
+}
+
+static void dc_mexec(zx_handle_t* h) {
+    // these top level devices should all have proxies. if not,
+    // the system hasn't fully initialized yet and cannot mexec.
+    if (!sys_device.proxy || !root_device.proxy || !misc_device.proxy) {
+        return;
+    }
+
+    suspend_context_t* ctx = &suspend_ctx;
+    if (ctx->flags) {
+        return;
+    }
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->status = ZX_OK;
+    ctx->flags = SUSPEND;
+    ctx->sflags = DEVICE_SUSPEND_FLAG_MEXEC;
+    list_initialize(&ctx->devhosts);
+
+    ctx->kernel = *h;
+    ctx->bootdata = *(h + 1);
+
+    build_suspend_list(ctx);
 
     ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
     process_suspend_list(ctx);
@@ -1563,6 +1603,10 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
         if (ctx->socket) {
             zx_handle_close(ctx->socket);
         }
+        if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
+            zx_object_signal(ctx->kernel, 0, ZX_USER_SIGNAL_0);
+        }
+        ctx->flags = 0;
         return;
     }
 
@@ -1570,13 +1614,13 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
     if (ctx->count == 0) {
         if (ctx->dh != NULL) {
             process_suspend_list(ctx);
+        } else if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
+            zx_system_mexec(ctx->kernel, ctx->bootdata);
         } else {
-            if (ctx->sflags != DEVICE_SUSPEND_FLAG_MEXEC) {
-                // should never get here on x86
-                // on arm, if the platform driver does not implement
-                // suspend go to the kernel fallback
-                dc_suspend_fallback(ctx->sflags);
-            }
+            // should never get here on x86
+            // on arm, if the platform driver does not implement
+            // suspend go to the kernel fallback
+            dc_suspend_fallback(ctx->sflags);
             // this handle is leaked on the shutdown path for x86
             if (ctx->socket) {
                 zx_handle_close(ctx->socket);

@@ -21,6 +21,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <zircon/boot/bootdata.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/device/dmctl.h>
 
@@ -211,26 +212,70 @@ static void nb_close(uint32_t cookie,
 }
 
 static zx_status_t do_dmctl_mexec(void) {
+    // append the cmdline to the bootdata
+    uint32_t section_length = BOOTDATA_ALIGN(nbcmdline.file.size) + sizeof(bootdata_t);
+    uint64_t new_size = nbbootdata.file.size + section_length;
+    zx_status_t st = zx_vmo_set_size(nbbootdata.data, new_size);
+    if (st != ZX_OK) {
+        printf("netbootloader: failed to allocate space to append cmdline to bootdata\n");
+        return st;
+    }
+
+    bootdata_t new_hdr = {
+        .type = BOOTDATA_CMDLINE,
+        .length = nbcmdline.file.size,
+        .extra = 0,
+        .flags = BOOTDATA_FLAG_V2,
+        .reserved0 = 0,
+        .reserved1 = 0,
+        .magic = BOOTITEM_MAGIC,
+        .crc32 = BOOTITEM_NO_CRC32,
+    };
+    bootdata_t* hdr = (bootdata_t*)nbbootdata.file.data;
+
+    size_t actual;
+    st = zx_vmo_write(nbbootdata.data, &new_hdr, hdr->length + sizeof(bootdata_t),
+                      sizeof(bootdata_t), &actual);
+    if ((st != ZX_OK) || (actual != sizeof(bootdata_t))) {
+        printf("netbootloader: failed to write cmdline header\n");
+        return st;
+    }
+    st = zx_vmo_write(nbbootdata.data, nbcmdline.file.data,
+                      hdr->length + 2 * sizeof(bootdata_t), nbcmdline.file.size, &actual);
+    if ((st != ZX_OK) || (actual != nbcmdline.file.size)) {
+        printf("netbootloader: failed to write cmdline\n");
+        return st;
+    }
+
+    hdr->length += section_length;
+
+    zx_handle_t wait_handle;
+    st = zx_handle_duplicate(nbkernel.data, ZX_RIGHT_SAME_RIGHTS, &wait_handle);
+    if (st != ZX_OK) {
+        return st;
+    }
+
     int fd = open("/dev/misc/dmctl", O_WRONLY);
     if (fd < 0) {
         return fd;
     }
-    zx_handle_t h;
-    dmctl_cmd_t cmd;
-    zx_status_t st = zx_socket_create(0, &cmd.h, &h);
-    if (st != ZX_OK) {
-        return st;
-    }
-    snprintf(cmd.name, sizeof("suspend-for-mexec"), "suspend-for-mexec");
-    int r = ioctl_dmctl_command(fd, &cmd);
+    dmctl_mexec_args_t args = {
+        .kernel = nbkernel.data,
+        .bootdata = nbbootdata.data,
+    };
+    int r = ioctl_dmctl_mexec(fd, &args);
     close(fd);
     if (r < 0) {
-        zx_handle_close(h);
         return r;
     }
-    st = zx_object_wait_one(h, ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
-    zx_handle_close(h);
-    return st;
+
+    r = zx_object_wait_one(wait_handle, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
+    zx_handle_close(wait_handle);
+    if (r != ZX_OK) {
+        return r;
+    }
+    // if we get here, mexec failed
+    return ZX_ERR_INTERNAL;
 }
 
 static void bootloader_recv(void* data, size_t len,
@@ -344,12 +389,13 @@ transmit:
     }
 
     if (do_boot) {
-        // this is a gross way to suspend devices and block until it's done
-        if (do_dmctl_mexec() == ZX_OK) {
-            zx_system_mexec(nbkernel.data, nbbootdata.data, nbcmdline.data,
-                            nbcmdline.file.size);
+        if (do_dmctl_mexec() != ZX_OK) {
+            // TODO: This will return before the system actually mexecs.
+            // We can't pass an event to wait on here because fdio
+            // has a limit of 3 handles, and we're already using
+            // all 3 to pass boot parameters.
+            printf("netboot: Boot failed\n");
         }
-        printf("netboot: Boot failed\n");
     }
 }
 

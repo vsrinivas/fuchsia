@@ -207,67 +207,8 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
     return ZX_OK;
 }
 
-static zx_status_t bootdata_append_cmdline(zx_handle_t cmdline_hdl,
-                                           const size_t cmdline_size,
-                                           uint8_t* bootimage_buffer,
-                                           const size_t bootimage_buflen) {
-    // Bootdata section header length fields are uint32_ts. Make sure we're not
-    // truncating the command line length by casting it from size_t to a uint32_t.
-    static_assert(CMDLINE_MAX <= UINT32_MAX, "cmdline max must fit into bootdata header");
 
-    // If the user passes us a command line that's longer than our limit, we
-    // fail immediately.
-    if (cmdline_size > CMDLINE_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // No command line provided, nothing to be done.
-    if (cmdline_size == 0) {
-        return ZX_OK;
-    }
-
-    // Allocate a buffer large enough to accomodate the whole command line.
-    // Use brace initializers to initialize this buffer to 0.
-    fbl::AllocChecker ac;
-    auto deleter = fbl::unique_ptr<char[]>(new (&ac) char[CMDLINE_MAX]{});
-    char* buffer = deleter.get();
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
-    zx_status_t st =
-        up->GetDispatcherWithRights(cmdline_hdl, ZX_RIGHT_READ, &vmo_dispatcher);
-    if (st != ZX_OK)
-        return st;
-
-    fbl::RefPtr<VmObject> vmo = vmo_dispatcher->vmo();
-    size_t bytes_read;
-
-    // Copy contents from VMO to the local kernel buffer.
-    st = vmo->Read(buffer, 0, cmdline_size, &bytes_read);
-    if (st != ZX_OK || bytes_read != cmdline_size) {
-        return st;
-    }
-
-    // Ensure that the user provided string buffer is either already null
-    // terminated or that it can be null terminated without blowing the buffer.
-    // Add 1 to the result of strnlen to ensure that we account for the null
-    // terminator.
-    const size_t cmdline_len = strnlen(buffer, cmdline_size) + 1;
-    if (cmdline_len > CMDLINE_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    return bootdata_append_section(bootimage_buffer, bootimage_buflen,
-                                   reinterpret_cast<const uint8_t*>(buffer),
-                                   static_cast<uint32_t>(cmdline_len),
-                                   BOOTDATA_CMDLINE, 0, 0);
-}
-
-zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
-                             zx_handle_t cmdline_vmo, uint32_t cmdline_len) {
+zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) {
     zx_status_t result;
 
     paddr_t new_kernel_addr;
@@ -285,17 +226,10 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
     paddr_t new_bootimage_addr;
     uint8_t* bootimage_buffer;
     size_t new_bootimage_len;
-    result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes + cmdline_len,
+    result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes,
                                 &new_bootimage_addr, &bootimage_buffer,
                                 &new_bootimage_len);
     if (result != ZX_OK) {
-        return result;
-    }
-
-    result = bootdata_append_cmdline(cmdline_vmo, cmdline_len, bootimage_buffer,
-                                     new_bootimage_len);
-    if (result != ZX_OK) {
-        printf("mexec: could not append cmdline\n");
         return result;
     }
 

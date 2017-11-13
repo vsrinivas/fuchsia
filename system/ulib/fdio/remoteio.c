@@ -285,6 +285,15 @@ ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
         msg.hcount = 1;
         msg.handle[0] = *((zx_handle_t*) in_buf);
         break;
+    case IOCTL_KIND_SET_TWO_HANDLES:
+        msg.op = ZXRIO_IOCTL_2H;
+        if (in_len < 2 * sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        msg.hcount = 2;
+        msg.handle[0] = *((zx_handle_t*) in_buf);
+        msg.handle[1] = *(((zx_handle_t*) in_buf) + 1);
+        break;
     }
 
     memcpy(msg.data, data, in_len);

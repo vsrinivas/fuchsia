@@ -33,6 +33,18 @@ typedef struct {
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DMCTL, 3)
 
 typedef struct {
+    zx_handle_t kernel;
+    zx_handle_t bootdata;
+} dmctl_mexec_args_t;
+
+// Soft reboot the system with a new kernel and bootdata.
+// Passes a handle to the kernel vmo and a handle to the bootdata vmo.
+// The bootdata vmo should contain the cmdline.
+// If successful, this ioctl does not return.
+#define IOCTL_DMCTL_MEXEC \
+    IOCTL(IOCTL_KIND_SET_TWO_HANDLES, IOCTL_FAMILY_DMCTL, 4)
+
+typedef struct {
     uint32_t opcode;
     uint32_t flags;
     uint64_t id;
@@ -64,8 +76,11 @@ typedef struct {
 // ssize_t ioctl_dmctl_command(int fd, dmctl_cmd_t* cmd);
 IOCTL_WRAPPER_IN(ioctl_dmctl_command, IOCTL_DMCTL_COMMAND, dmctl_cmd_t);
 
-// ssize_t ioctl_dmctl_open_virtcon(int fd, dmctl_cmd_t* cmd);
+// ssize_t ioctl_dmctl_open_virtcon(int fd, zx_handle_t* h);
 IOCTL_WRAPPER_IN(ioctl_dmctl_open_virtcon, IOCTL_DMCTL_OPEN_VIRTCON, zx_handle_t);
 
-// ssize_t ioctl_dmctl_watch_devmgr(int fd, dmctl_cmd_t* cmd);
+// ssize_t ioctl_dmctl_watch_devmgr(int fd, zx_handle_t* h);
 IOCTL_WRAPPER_IN(ioctl_dmctl_watch_devmgr, IOCTL_DMCTL_WATCH_DEVMGR, zx_handle_t);
+
+// ssize_t ioctl_dmctl_mexec(int fd, dmctl_mexec_args_t* args);
+IOCTL_WRAPPER_IN(ioctl_dmctl_mexec, IOCTL_DMCTL_MEXEC, dmctl_mexec_args_t);

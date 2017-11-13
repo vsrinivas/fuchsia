@@ -19,7 +19,8 @@ __BEGIN_CDECLS
 
 #define ZXRIO_HDR_SZ       (__builtin_offsetof(zxrio_msg_t, data))
 
-#define ZXRIO_ONE_HANDLE   0x00000100
+#define ZXRIO_ONE_HANDLE    0x00000100
+#define ZXRIO_TWO_HANDLES   0x00000200
 
 #define ZXRIO_STATUS       0x00000000
 #define ZXRIO_CLOSE        0x00000001
@@ -33,6 +34,7 @@ __BEGIN_CDECLS
 #define ZXRIO_READDIR      0x00000009
 #define ZXRIO_IOCTL        0x0000000a
 #define ZXRIO_IOCTL_1H    (0x0000000a | ZXRIO_ONE_HANDLE)
+#define ZXRIO_IOCTL_2H    (0x0000000a | ZXRIO_TWO_HANDLES)
 #define ZXRIO_UNLINK       0x0000000b
 #define ZXRIO_READ_AT      0x0000000c
 #define ZXRIO_WRITE_AT     0x0000000d

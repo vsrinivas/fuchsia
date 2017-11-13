@@ -428,6 +428,33 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXRIO_SYNC: {
         return do_ioctl(dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
     }
+    case ZXRIO_IOCTL_2H: {
+        if ((len > FDIO_IOCTL_MAX_INPUT) ||
+            (arg > (ssize_t)sizeof(msg->data)) ||
+            (IOCTL_KIND(msg->arg2.op) != IOCTL_KIND_SET_TWO_HANDLES)) {
+            zx_handle_close(msg->handle[0]);
+            zx_handle_close(msg->handle[1]);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        size_t hsize = 2 * sizeof(zx_handle_t);
+        if (len < hsize) {
+            len = hsize;
+        }
+
+        char in_buf[FDIO_IOCTL_MAX_INPUT];
+        memcpy(in_buf, msg->handle, hsize);
+        memcpy(in_buf + hsize, msg->data + hsize, len - hsize);
+
+        zx_status_t r = do_ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
+
+        if (r == ZX_ERR_NOT_SUPPORTED) {
+            zx_handle_close(msg->handle[0]);
+            zx_handle_close(msg->handle[1]);
+        } else if (r >= 0) {
+            msg->datalen = r;
+        }
+        return r;
+    }
     case ZXRIO_IOCTL_1H: {
         if ((len > FDIO_IOCTL_MAX_INPUT) ||
             (arg > (ssize_t)sizeof(msg->data)) ||

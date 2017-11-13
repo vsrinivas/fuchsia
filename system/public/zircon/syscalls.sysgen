@@ -679,7 +679,7 @@ syscall vcpu_write_state
 # System Control
 
 syscall system_mexec
-   (kernel: zx_handle_t, bootimage: zx_handle_t, cmdline: zx_handle_t, cmdline_len: uint32_t)
+   (kernel: zx_handle_t, bootimage: zx_handle_t)
    returns (zx_status_t);
 
 syscall system_powerctl
