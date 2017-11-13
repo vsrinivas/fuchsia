@@ -51,8 +51,8 @@ class StoryInfoAcquirer : public modular::Agent,
                       visible_stories_provider) override;
 
   // |Agent|
-  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
-                  const InitializeCallback& callback) override;
+  void Initialize(
+      fidl::InterfaceHandle<modular::AgentContext> agent_context) override;
 
   // |Agent|
   void Connect(const fidl::String& requestor_url,

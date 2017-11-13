@@ -37,8 +37,7 @@ void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
 }
 
 void StoryInfoAcquirer::Initialize(
-    fidl::InterfaceHandle<modular::AgentContext> agent_context_handle,
-    const InitializeCallback& callback) {
+    fidl::InterfaceHandle<modular::AgentContext> agent_context_handle) {
   // Initialize |context_publiser_| using IntelligenceServices.
   auto agent_context =
       modular::AgentContextPtr::Create(std::move(agent_context_handle));
@@ -46,7 +45,6 @@ void StoryInfoAcquirer::Initialize(
   agent_context->GetIntelligenceServices(intelligence_services.NewRequest());
   intelligence_services->GetContextWriter(context_writer_.NewRequest());
   intelligence_services->GetContextReader(context_reader_.NewRequest());
-  callback();
 }
 
 void StoryInfoAcquirer::Connect(

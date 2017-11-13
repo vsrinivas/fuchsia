@@ -76,12 +76,10 @@ class AgentContextImpl::InitializeCall : Operation<> {
           agent_context_impl->MaybeStopAgent();
         });
 
-    // TODO(alhaad): We should have a timer for an agent which does not return
-    // its callback within some timeout.
     agent_context_impl_->agent_->Initialize(
         agent_context_impl_->agent_context_bindings_.AddBinding(
-            agent_context_impl_),
-        [this, flow] { agent_context_impl_->state_ = State::RUNNING; });
+            agent_context_impl_));
+    agent_context_impl_->state_ = State::RUNNING;
   }
 
   AgentContextImpl* const agent_context_impl_;

@@ -98,10 +98,8 @@ class MyDummyAgent : Agent,
 
   // |Agent|
   void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> /*agent_context*/,
-      const InitializeCallback& callback) override {
+      fidl::InterfaceHandle<modular::AgentContext> /*agent_context*/) override {
     ++counts["Initialize"];
-    callback();
   }
 
   // |Agent|

@@ -22,13 +22,13 @@ import "lib/agent/fidl/agent_context.fidl";
 [ServiceName="modular.Agent"]  // Created by each agent.
 interface Agent {
   // Called when this Agent is first instantiated i.e. a process is created and
-  // this interface is requested from the application. All requests to connect to
-  // this agent will pend until Initialize() responds back.
+  // this interface is requested from the application. Any call of Connect() or
+  // RunTask() will only be made after the Initialize() call.
   //
   // An Agent is instantiated when it is not running and if:
   // (1) Some component calls ComponentContext::ConnectToAgent() or
   // (2) A trigger causes a task to be run.
-  Initialize(AgentContext agent_context) => ();
+  Initialize(AgentContext agent_context);
 
   // Called when some component tries to connect to this agent.
   // |requestor_url| is the identifier for the component which called
