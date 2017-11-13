@@ -485,13 +485,15 @@ typedef struct {
 // this is for the "simple mode" of driving the device, so we KISS for now.
 #define IPM_CATEGORY_MODE_MASK      0xff00000
 #define IPM_CATEGORY_TALLY          0x0000000 // cpu:tally
-#define IPM_CATEGORY_SAMPLE_1000    0x0100000 // cpu:sample-1000
-#define IPM_CATEGORY_SAMPLE_5000    0x0200000 // cpu:sample-5000
-#define IPM_CATEGORY_SAMPLE_10000   0x0300000 // cpu:sample-10000
-#define IPM_CATEGORY_SAMPLE_50000   0x0400000 // cpu:sample-50000
-#define IPM_CATEGORY_SAMPLE_100000  0x0500000 // cpu:sample-100000
-#define IPM_CATEGORY_SAMPLE_500000  0x0600000 // cpu:sample-500000
-#define IPM_CATEGORY_SAMPLE_1000000 0x0700000 // cpu:sample-1000000
+#define IPM_CATEGORY_SAMPLE_100     0x0100000 // cpu:sample:100
+#define IPM_CATEGORY_SAMPLE_500     0x0200000 // cpu:sample:500
+#define IPM_CATEGORY_SAMPLE_1000    0x0300000 // cpu:sample:1000
+#define IPM_CATEGORY_SAMPLE_5000    0x0400000 // cpu:sample:5000
+#define IPM_CATEGORY_SAMPLE_10000   0x0500000 // cpu:sample:10000
+#define IPM_CATEGORY_SAMPLE_50000   0x0600000 // cpu:sample:50000
+#define IPM_CATEGORY_SAMPLE_100000  0x0700000 // cpu:sample:100000
+#define IPM_CATEGORY_SAMPLE_500000  0x0800000 // cpu:sample:500000
+#define IPM_CATEGORY_SAMPLE_1000000 0x0900000 // cpu:sample:1000000
 
 // TODO(dje): Provide values for old versions of macros.
 #define IPM_CATEGORY_COUNT              IPM_CATEGORY_TALLY

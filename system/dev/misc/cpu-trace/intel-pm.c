@@ -186,6 +186,12 @@ static zx_status_t get_simple_config_sample_freq(
     case IPM_CATEGORY_TALLY:
         *sample_freq = 0;
         break;
+    case IPM_CATEGORY_SAMPLE_100:
+        *sample_freq = 100;
+        break;
+    case IPM_CATEGORY_SAMPLE_500:
+        *sample_freq = 500;
+        break;
     case IPM_CATEGORY_SAMPLE_1000:
         *sample_freq = 1000;
         break;
