@@ -71,7 +71,8 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 
 }  // namespace
 
-ModuleResolverImpl::ModuleResolverImpl() = default;
+ModuleResolverImpl::ModuleResolverImpl()
+    : already_checking_if_sources_are_ready_(false), weak_factory_(this) {}
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
 void ModuleResolverImpl::AddSource(
@@ -89,12 +90,13 @@ void ModuleResolverImpl::AddSource(
                 OnRemoveManifestEntry(name, std::move(id));
               });
 
-  sources_.push_back(std::move(repo));
+  sources_.emplace(name, std::move(repo));
 }
 
 void ModuleResolverImpl::Connect(
     fidl::InterfaceRequest<modular::ModuleResolver> request) {
   if (!AllSourcesAreReady()) {
+    PeriodicCheckIfSourcesAreReady();
     pending_bindings_.push_back(std::move(request));
   } else {
     bindings_.AddBinding(this, std::move(request));
@@ -191,7 +193,8 @@ void ModuleResolverImpl::OnNewManifestEntry(
     std::string id_in,
     modular::ModuleManifestSource::Entry new_entry) {
   // Add this new entry info to our local index.
-  auto ret = entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
+  auto ret =
+      entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
   if (!ret.second) {
     // Remove this existing entry first, then add it back in.
     OnRemoveManifestEntry(source_name, id_in);
@@ -228,6 +231,28 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   }
 
   entries_.erase(id);
+}
+
+void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
+  if (!AllSourcesAreReady()) {
+    for (const auto& it : sources_) {
+      if (ready_sources_.count(it.first) == 0) {
+        FXL_LOG(WARNING) << "Still waiting on source: " << it.first;
+      }
+    }
+
+    if (already_checking_if_sources_are_ready_)
+      return;
+    already_checking_if_sources_are_ready_ = true;
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [weak_this = weak_factory_.GetWeakPtr()]() {
+          if (weak_this) {
+            weak_this->already_checking_if_sources_are_ready_ = false;
+            weak_this->PeriodicCheckIfSourcesAreReady();
+          }
+        },
+        fxl::TimeDelta::FromSeconds(10));
+  }
 }
 
 }  // namespace maxwell

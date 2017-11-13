@@ -12,6 +12,7 @@
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace maxwell {
@@ -24,7 +25,7 @@ class ModuleResolverImpl : modular::ModuleResolver {
   // Adds a source of Module manifests to index. It is not allowed to call
   // AddSource() after Connect(). |name| must be unique.
   void AddSource(std::string name,
-                     std::unique_ptr<modular::ModuleManifestSource> repo);
+                 std::unique_ptr<modular::ModuleManifestSource> repo);
 
   void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
 
@@ -43,6 +44,8 @@ class ModuleResolverImpl : modular::ModuleResolver {
                           modular::ModuleManifestSource::Entry entry);
   void OnRemoveManifestEntry(const std::string& source_name, std::string id);
 
+  void PeriodicCheckIfSourcesAreReady();
+
   bool AllSourcesAreReady() const {
     return ready_sources_.size() == sources_.size();
   }
@@ -50,7 +53,8 @@ class ModuleResolverImpl : modular::ModuleResolver {
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules
   // Ask handler.
-  std::vector<std::unique_ptr<modular::ModuleManifestSource>> sources_;
+  std::map<std::string, std::unique_ptr<modular::ModuleManifestSource>>
+      sources_;
   // Set of sources that have told us they are idle, meaning they have
   // sent us all entries they knew about at construction time.
   std::set<std::string> ready_sources_;
@@ -67,6 +71,9 @@ class ModuleResolverImpl : modular::ModuleResolver {
   // These are buffered until AllSourcesAreReady() == true.
   std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
+  bool already_checking_if_sources_are_ready_;
+
+  fxl::WeakPtrFactory<ModuleResolverImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);
 };
 

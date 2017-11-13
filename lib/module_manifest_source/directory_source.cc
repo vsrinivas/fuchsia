@@ -150,6 +150,7 @@ void DirectoryModuleManifestSource::Watch(
     if (dirfd < 0) {
       FXL_LOG(ERROR) << "Could not open " << weak_this->dir_ << ": "
                      << strerror(errno) << std::endl;
+      idle_fn();
       return;
     }
 

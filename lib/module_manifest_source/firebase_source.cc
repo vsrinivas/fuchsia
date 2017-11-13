@@ -91,6 +91,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
   void OnMalformedEvent() override {}
 
   void OnConnectionError() override {
+    idle_fn_();
     if (owner_)
       owner_->OnConnectionError();
   }
