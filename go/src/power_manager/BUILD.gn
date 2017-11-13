@@ -77,14 +77,15 @@ go_test("power_manager_test") {
 }
 
 package("power_manager") {
-  system_image = true
-
   deps = [
     ":power_manager_bin",
   ]
 
-  binaries = [ {
-        name = "power_manager"
+  binary = "power_manager"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
       } ]
 }
 
