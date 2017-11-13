@@ -89,9 +89,9 @@ for other flags you can pass to QEMU.
 To build a fuchsia image for a particular ARM hardware target, you must also
 provide the zircon project name for that particular target to gen.py via the
 zircon_project argument. For example, to build a fuchsia image for the
-Raspberry Pi 3, you might invoke gen.py as follows:
+HiKey 960, you might invoke gen.py as follows:
 
 ```
-./packages/gn/gen.py --zircon_project=zircon-rpi3-arm64 --target_cpu=aarch64
+./packages/gn/gen.py --zircon_project=zircon-hikey960-arm64 --target_cpu=aarch64
 ./buildtools/ninja -C out/debug-aarch64
 ```

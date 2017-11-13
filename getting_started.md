@@ -124,13 +124,8 @@ you can use the [build-bootable-usb-gigaboot.sh script](https://fuchsia.googleso
 If you plan to netboot, pass the `-m` and `-f` options to skip copying over the
 Zircon kernel and Fuchsia system images since the bootserver will supply these.
 
-It may be useful to look at some of the hardware specific instructions. The
-Raspberry Pi 3 requires very different procedures and the other guides may help
-with hardware-specific firmware configuration.
-
 * [Acer Switch Alpha 12](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md)
 * [Intel NUC](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md)
-* [Raspberry Pi 3](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/rpi3.md)
 
 Once your hardware is configured, you can run `fx boot` to start the bootserver.
 
