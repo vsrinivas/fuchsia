@@ -87,11 +87,30 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 }
 
 func (ifs *ifState) stateChange(s eth.State) {
-	if s == eth.StateClosed {
+	switch s {
+	case eth.StateClosed, eth.StateDown:
 		ifs.stop()
+	case eth.StateStarted:
+		// Only restart if we are not in the initial state (which means we're still starting).
+		if ifs.state != eth.StateUnknown {
+			ifs.restart()
+		}
 	}
 	ifs.state = s
+	// Note: This will fire again once DHCP succeeds.
 	OnInterfacesChanged()
+}
+
+func (ifs *ifState) restart() {
+	log.Printf("NIC %d: restarting", ifs.nic.ID)
+	ifs.ns.mu.Lock()
+	ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
+	ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, "")
+	ifs.ns.mu.Unlock()
+
+	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+
+	go ifs.dhcp.Run(ifs.ctx)
 }
 
 func (ifs *ifState) stop() {
@@ -101,12 +120,13 @@ func (ifs *ifState) stop() {
 	}
 
 	// TODO(crawshaw): more cleanup to be done here:
-	//	- remove addresses
 	// 	- remove link endpoint
 	//	- reclaim NICID?
 
 	ifs.ns.mu.Lock()
 	ifs.nic.Routes = nil
+	ifs.nic.Netmask = ""
+	ifs.nic.Addr = ""
 	ifs.nic.DNSServers = nil
 	ifs.ns.mu.Unlock()
 

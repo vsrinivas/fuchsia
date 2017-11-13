@@ -1131,7 +1131,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) zx.Status {
 	if service != "" {
 		port, err = serviceLookup(service, t)
 		if err != nil {
-			log.Printf("getAddrInfo: %v", err)
+			log.Printf("getaddrinfo: %v", err)
 			return zx.ErrNotSupported
 		}
 	}
@@ -1146,6 +1146,10 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) zx.Status {
 				addr = "\x7f\x00\x00\x01"
 			} else {
 				addr = tcpip.Parse(node)
+
+				if debug2 {
+					log.Printf("getaddrinfo: addr=%v, err=%v", addr, err)
+				}
 			}
 		} else {
 			for _, ip := range dnsLookupIPs {
