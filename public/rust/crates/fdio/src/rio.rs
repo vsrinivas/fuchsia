@@ -385,4 +385,41 @@ mod test {
             ::std::slice::from_raw_parts(ptr.offset(8) as *const u8, 4)
         });
     }
+
+    #[test]
+    fn test_fdio_service_connect_and_serve() {
+        use zircon::{AsHandleRef, DurationNum};
+
+        let (client, server) = zircon::Channel::create().unwrap();
+
+        std::thread::spawn(move || {
+            let mut buf = zircon::MessageBuf::new();
+
+            server.wait_handle(
+                zircon::Signals::CHANNEL_READABLE|zircon::Signals::CHANNEL_PEER_CLOSED,
+                10.seconds().after_now()).expect("server wait");
+            server.read(&mut buf).expect("server channel read");
+
+            let mut msg : Message = buf.into();
+
+            assert_eq!(msg.op(), ZXRIO_OPEN);
+            assert_eq!(msg.hcount(), 1);
+            assert!(msg.is_pipelined());
+
+            let svc_chan = zircon::Channel::from(msg.take_handle(0).expect("server take handle"));
+            svc_chan.write(b"hello", &mut vec![]).expect("server channel write");
+        });
+
+        let (svc_cli, svc_conn) = zircon::Channel::create().expect("client service channel create");
+
+        // TODO(raggi): create a safe wrapper for this function
+        let status = unsafe { fdio_sys::fdio_service_connect_at(client.raw_handle(), ".".as_ptr() as *const _, svc_conn.raw_handle()) };
+        zircon::Status::ok(status).expect("service connect at ok");
+        let mut buf = zircon::MessageBuf::new();
+        svc_cli.wait_handle(
+            zircon::Signals::CHANNEL_READABLE|zircon::Signals::CHANNEL_PEER_CLOSED,
+            10.seconds().after_now()).expect("client wait readable");
+        svc_cli.read(&mut buf).expect("service client read");
+        assert_eq!(b"hello", buf.bytes());
+    }
 }

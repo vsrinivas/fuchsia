@@ -4,6 +4,8 @@
 
 //! Bindings for the Zircon fdio library
 
+#![deny(warnings)]
+
 extern crate fuchsia_zircon as zircon;
 extern crate bytes;
 
