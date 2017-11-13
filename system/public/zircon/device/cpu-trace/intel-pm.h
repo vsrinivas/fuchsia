@@ -475,7 +475,9 @@ typedef struct {
 // One or both of these must be added.
 // If both are elided then no data collection is done.
 #define IPM_CATEGORY_OS         0x10000
-#define IPM_CATEGORY_USR        0x20000
+#define IPM_CATEGORY_USER       0x20000
+// TODO(dje): For backward compatibility for now.
+#define IPM_CATEGORY_USR        IPM_CATEGORY_USER
 
 // Collect aspace+pc data.
 #define IPM_CATEGORY_PROFILE_PC 0x40000

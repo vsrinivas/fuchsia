@@ -173,7 +173,7 @@ static_assert(countof(kProgrammableCategoryMap) <=
               IPM_CATEGORY_PROGRAMMABLE_MAX, "");
 
 static uint32_t get_simple_config_os_usr_mask(const ioctl_ipm_simple_perf_config_t* simple_config) {
-    uint32_t os_usr_mask = simple_config->categories & (IPM_CATEGORY_OS | IPM_CATEGORY_USR);
+    uint32_t os_usr_mask = simple_config->categories & (IPM_CATEGORY_OS | IPM_CATEGORY_USER);
     // TODO(dje): Maybe convert no bits specified -> both os+usr. Later.
     return os_usr_mask;
 }
@@ -226,7 +226,7 @@ static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_
     uint32_t enable = 0;
     if (os_usr_mask & IPM_CATEGORY_OS)
         enable |= FIXED_CTR_ENABLE_OS;
-    if (os_usr_mask & IPM_CATEGORY_USR)
+    if (os_usr_mask & IPM_CATEGORY_USER)
         enable |= FIXED_CTR_ENABLE_USR;
     // Indexed by fixed counter number.
     static const uint32_t event_mask[] = {
@@ -267,7 +267,7 @@ static zx_status_t category_to_config(const ioctl_ipm_simple_perf_config_t* simp
         evtsel |= event->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
         if (os_usr_mask & IPM_CATEGORY_OS)
             evtsel |= IA32_PERFEVTSEL_OS_MASK;
-        if (os_usr_mask & IPM_CATEGORY_USR)
+        if (os_usr_mask & IPM_CATEGORY_USER)
             evtsel |= IA32_PERFEVTSEL_USR_MASK;
         if (event->flags & IPM_REG_FLAG_EDG)
             evtsel |= IA32_PERFEVTSEL_E_MASK;
