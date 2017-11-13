@@ -135,6 +135,7 @@ GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-error=deprecate
 GLOBAL_COMPILEFLAGS += -Wno-unused-parameter -Wno-unused-function -Werror=unused-label -Werror=return-type
 GLOBAL_COMPILEFLAGS += -fno-common
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+GLOBAL_COMPILEFLAGS += -fcolor-diagnostics
 GLOBAL_COMPILEFLAGS += -no-canonical-prefixes
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 GLOBAL_COMPILEFLAGS += -Wthread-safety
@@ -150,6 +151,9 @@ GLOBAL_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics 
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS :=
 GLOBAL_LDFLAGS := -nostdlib --build-id
+ifeq ($(call TOBOOL,$(USE_LLD)),true)
+GLOBAL_LDFLAGS += -color-diagnostics
+endif
 # $(addprefix -L,$(LKINC)) XXX
 GLOBAL_MODULE_LDFLAGS :=
 
