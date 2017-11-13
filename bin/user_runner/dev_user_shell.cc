@@ -18,6 +18,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
@@ -79,7 +80,7 @@ class DevUserShellApp : modular::StoryWatcher,
     Connect();
   }
 
-  // |UserShell|
+  // |Lifecycle|
   void Terminate() override { fsl::MessageLoop::GetCurrent()->QuitNow(); };
 
   void Connect() {

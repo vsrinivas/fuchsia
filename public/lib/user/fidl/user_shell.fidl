@@ -17,15 +17,12 @@ import "lib/story/fidl/story_provider.fidl";
 import "lib/ui/presentation/fidl/presentation.fidl";
 import "lib/user/fidl/focus.fidl";
 
-// This interface is implemented by a User Shell. Dependencies are
-// passed to it in Initialize() on startup.
+// This interface is implemented by a user shell. Dependencies are passed to it
+// in Initialize() on startup. The user shell is also expected to implement
+// Lifecycle in order to receive a Terminate() call on teardown.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
   Initialize(UserShellContext user_shell_context);
-
-  // Signals UserShell to teardown itself. Upon response, the caller
-  // may terminate the UserShell process if it hasn't done so already.
-  Terminate();
 };
 
 // This interface allows the |UserShell| to request capabilities from the

@@ -142,7 +142,8 @@ class UserRunnerImpl : UserRunner,
 
   std::unique_ptr<AppClient<maxwell::UserIntelligenceProviderFactory>> maxwell_;
   std::unique_ptr<AppClient<Lifecycle>> module_resolver_;
-  std::unique_ptr<AppClient<UserShell>> user_shell_;
+  std::unique_ptr<AppClient<Lifecycle>> user_shell_app_;
+  UserShellPtr user_shell_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;

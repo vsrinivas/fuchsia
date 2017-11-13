@@ -120,9 +120,10 @@ void UserRunnerImpl::Initialize(
   user_scope_ = std::make_unique<Scope>(
       application_context_->environment(),
       std::string(kUserScopeLabelPrefix) + GetAccountId(account_));
-  user_shell_ = std::make_unique<AppClient<UserShell>>(
+  user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), user_shell.Clone());
-  user_shell_->SetAppErrorHandler([this] {
+  ConnectToService(user_shell_app_->services(), user_shell_.NewRequest());
+  user_shell_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
                    << "Logging out.";
     Logout();
@@ -133,7 +134,7 @@ void UserRunnerImpl::Initialize(
 
   // Show user shell.
   mozart::ViewProviderPtr view_provider;
-  ConnectToService(user_shell_->services(), view_provider.NewRequest());
+  ConnectToService(user_shell_app_->services(), view_provider.NewRequest());
   view_provider->CreateView(std::move(view_owner_request), nullptr);
 
   // DeviceMap service
@@ -317,8 +318,7 @@ void UserRunnerImpl::Initialize(
   visible_stories_handler_->AddProviderBinding(
       std::move(visible_stories_provider_request));
 
-  user_shell_->primary_service()->Initialize(
-      user_shell_context_binding_.NewBinding());
+  user_shell_->Initialize(user_shell_context_binding_.NewBinding());
 }
 
 void UserRunnerImpl::Terminate(std::function<void()> done) {
@@ -349,9 +349,10 @@ void UserRunnerImpl::Terminate(std::function<void()> done) {
   //
   // This list is the reverse from the initialization order executed in
   // Initialize() above.
-  user_shell_->Teardown(kBasicTimeout, [this, done] {
+  user_shell_app_->Teardown(kBasicTimeout, [this, done] {
     FXL_DLOG(INFO) << "- UserShell down";
     user_shell_.reset();
+    user_shell_app_.reset();
 
     visible_stories_handler_.reset();
     focus_handler_.reset();
@@ -391,7 +392,6 @@ void UserRunnerImpl::Terminate(std::function<void()> done) {
                 FXL_DLOG(INFO) << "- Ledger down";
                 ledger_app_client_.reset();
 
-                user_shell_.reset();
                 user_scope_.reset();
                 account_.reset();
                 user_context_.reset();
