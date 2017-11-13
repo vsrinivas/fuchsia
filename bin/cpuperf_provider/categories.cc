@@ -30,6 +30,8 @@ const IpmCategory kCategories[] = {
   // Only one of the following is allowed.
   // TODO(dje): Error checking.
   {"cpu:tally", IPM_CATEGORY_TALLY},
+  {"cpu:sample:100", IPM_CATEGORY_SAMPLE_100},
+  {"cpu:sample:500", IPM_CATEGORY_SAMPLE_500},
   {"cpu:sample:1000", IPM_CATEGORY_SAMPLE_1000},
   {"cpu:sample:5000", IPM_CATEGORY_SAMPLE_5000},
   {"cpu:sample:10000", IPM_CATEGORY_SAMPLE_10000},
