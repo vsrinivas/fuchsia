@@ -63,23 +63,16 @@ impl Channel {
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zircon::Status::SHOULD_WAIT`.
     pub fn recv_from(&self, buf: &mut MessageBuf) -> io::Result<()> {
-        let signals = self.evented.poll_ready(FuchsiaReady::from(
-                          zircon::Signals::CHANNEL_READABLE |
-                          zircon::Signals::CHANNEL_PEER_CLOSED).into());
+        let signals = self.evented.poll_read();
 
         match signals {
             Async::NotReady => Err(would_block()),
             Async::Ready(ready) => {
-                let signals = FuchsiaReady::from(ready).into_signals();
-                if zircon::Signals::CHANNEL_PEER_CLOSED.intersects(signals) {
-                    Err(io::ErrorKind::ConnectionAborted.into())
-                } else {
-                    let res = self.channel.read(buf);
-                    if res == Err(zircon::Status::SHOULD_WAIT) {
-                        self.evented.need_read();
-                    }
-                    res.map_err(io::Error::from)
+                let res = self.channel.read(buf);
+                if res == Err(zircon::Status::SHOULD_WAIT) {
+                    self.evented.need_read();
                 }
+                res.map_err(io::Error::from)
             }
         }
     }
@@ -236,6 +229,7 @@ mod tests {
     use tokio_core::reactor::{Core, Timeout};
     use std::time::Duration;
     use zircon::{self, MessageBuf};
+    use futures;
     use super::*;
 
     #[test]
@@ -300,6 +294,37 @@ mod tests {
         core.run(done).unwrap();
     }
 
+    #[test]
+    fn chain_server_pre_write() {
+        let (tx, rx) = zircon::Channel::create().unwrap();
+        tx.write(b"txidhelloworld", &mut vec![]).unwrap();
+
+        let mut core = Core::new().unwrap();
+        let handle = core.handle();
+
+        let f_rx = Channel::from_channel(rx, &handle).unwrap();
+
+
+        let (completer, completion) = futures::sync::oneshot::channel();
+
+        let mut maybe_completer = Some(completer);
+
+        let receiver = f_rx.chain_server(move |(chan, buf)| {
+            maybe_completer.take().unwrap().send(buf.bytes().to_owned()).unwrap();
+            futures::future::ok((chan, buf))
+        });
+        handle.spawn(receiver.map_err(|e| assert_eq!(e.kind(), io::ErrorKind::ConnectionAborted) ));
+
+        let mut got_result = false;
+        core.run(completion.map(|b|{
+            assert_eq!(b"txidhelloworld".to_vec(), b);
+            got_result = true;
+        } ).map_err(|e| {
+            assert!(false, format!("unexpected error {:?}", e))
+        })).unwrap();
+
+        assert!(got_result);
+    }
 
     #[test]
     fn repeat_server() {
