@@ -99,6 +99,9 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
     } else if (feature == "root-ssl-certificates") {
       PushDirectoryFromPath("/system/data/boringssl", O_RDONLY);
       PushDirectoryFromPathAs("/system/data/boringssl", "/etc/ssl", O_RDONLY);
+      // TODO(flowerhack): Make this feature more fine-grained.
+    } else if (feature == "persistent-storage") {
+      PushDirectoryFromPath("/data", O_RDWR);
     }
   }
 }

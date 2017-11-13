@@ -28,17 +28,27 @@ rust_binary("bin") {
 }
 
 package("device_settings_manager") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "device_settings_manager"
-      } ]
+  binary = "device_settings_manager"
+
+  meta = [{
+    path = rebase_path("meta/sandbox")
+    dest = "sandbox"
+  }]
+}
+
+package ("device_settings_manager_tests") {
+  system_image = true
+  testonly = true
+
+  deps = [
+    ":bin"
+  ]
 
   tests = [ {
-        name = "device_settings_manager-bin-test"
-      } ]
+      name = "device_settings_manager-bin-test"
+  } ]
 }

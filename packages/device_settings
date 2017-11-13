@@ -3,6 +3,7 @@
         "rust"
     ],
     "packages": {
-        "device_settings_manager": "//garnet/bin/device_settings:device_settings_manager"
+        "device_settings_manager": "//garnet/bin/device_settings:device_settings_manager",
+        "device_settings_manager_tests": "//garnet/bin/device_settings:device_settings_manager_tests"
     }
 }
