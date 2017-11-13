@@ -51,8 +51,7 @@ class DirectoryModuleManifestSourceTest : public testing::TestWithMessageLoop {
         [this](std::string id) { removed_ids_.push_back(std::move(id)); });
   }
 
-  void WriteManifestFile(const std::string& name,
-                         const char* contents) {
+  void WriteManifestFile(const std::string& name, const char* contents) {
     const auto path = repo_dir_ + '/' + name;
     FXL_CHECK(files::WriteFile(path, contents, strlen(contents))) << path;
     manifests_written_.push_back(path);

@@ -262,10 +262,11 @@ void PageDownload::GetObject(
                                << "GetObject() failed due to a connection "
                                   "error or stale auth token, retrying.";
               current_get_object_calls_--;
-              RetryWithBackoff([
-                this, object_digest = std::move(object_digest_str),
-                callback = std::move(callback)
-              ] { GetObject(object_digest, callback); });
+              RetryWithBackoff([this,
+                                object_digest = std::move(object_digest_str),
+                                callback = std::move(callback)] {
+                GetObject(object_digest, callback);
+              });
               return;
             }
 

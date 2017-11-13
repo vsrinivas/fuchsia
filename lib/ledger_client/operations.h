@@ -52,8 +52,9 @@ class ReadDataCall : Operation<DataPtr> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                                          << "Page.GetSnapshot() " << status;
+                           FXL_LOG(ERROR)
+                               << this->trace_name() << " " << key_ << " "
+                               << "Page.GetSnapshot() " << status;
                            return;
                          }
 
@@ -235,9 +236,7 @@ class DumpPageSnapshotCall : Operation<std::string> {
   DumpPageSnapshotCall(OperationContainer* const container,
                        ledger::Page* const page,
                        ResultCall result_call)
-      : Operation("DumpPageSnapshotCall",
-                  container,
-                  std::move(result_call)),
+      : Operation("DumpPageSnapshotCall", container, std::move(result_call)),
         page_(page) {
     Ready();
   }
@@ -294,7 +293,6 @@ class DumpPageSnapshotCall : Operation<std::string> {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DumpPageSnapshotCall);
 };
-
 
 }  // namespace modular
 

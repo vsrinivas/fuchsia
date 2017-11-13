@@ -102,16 +102,16 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
                               std::string key,
                               ModuleDataPtr module_data,
                               ResultCall result_call)
-  : Operation("StoryControllerImpl::BlockingModuleDataWriteCall",
-              container,
-              std::move(result_call)),
-    story_controller_impl_(story_controller_impl),
-    key_(std::move(key)),
-    module_data_(std::move(module_data)) {
-      story_controller_impl_->blocked_operations_.push_back(
-          std::make_pair<ModuleDataPtr, BlockingModuleDataWriteCall*>(
-              module_data_.Clone(), this));
-      Ready();
+      : Operation("StoryControllerImpl::BlockingModuleDataWriteCall",
+                  container,
+                  std::move(result_call)),
+        story_controller_impl_(story_controller_impl),
+        key_(std::move(key)),
+        module_data_(std::move(module_data)) {
+    story_controller_impl_->blocked_operations_.push_back(
+        std::make_pair<ModuleDataPtr, BlockingModuleDataWriteCall*>(
+            module_data_.Clone(), this));
+    Ready();
   }
 
   void Continue() {
@@ -454,9 +454,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   void WriteModuleData(FlowToken flow) {
     std::string key{MakeModuleKey(module_path_)};
-    new BlockingModuleDataWriteCall(
-         &operation_queue_, story_controller_impl_, std::move(key),
-         module_data_.Clone(), [this, flow] { Launch(flow); });
+    new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
+                                    std::move(key), module_data_.Clone(),
+                                    [this, flow] { Launch(flow); });
   }
 
   void Launch(FlowToken flow) {
@@ -464,7 +464,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
                          std::move(module_data_), std::move(outgoing_services_),
                          std::move(incoming_services_),
                          std::move(module_controller_request_),
-                         std::move(view_owner_request_), [flow] { });
+                         std::move(view_owner_request_), [flow] {});
   }
 
   // Passed in:
@@ -641,9 +641,9 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
     module_data_->module_stopped = false;
 
     std::string key{MakeModuleKey(module_path_)};
-    new BlockingModuleDataWriteCall(
-        &operation_queue_, story_controller_impl_, std::move(key),
-        module_data_.Clone(), [this, flow] { Cont(flow); });
+    new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
+                                    std::move(key), module_data_.Clone(),
+                                    [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -901,9 +901,9 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
     // TODO(alhaad: This call may never continue if the data we're writing to
     // the ledger is the same as the data already in there as that will not
     // trigger an OnPageChange().
-    new BlockingModuleDataWriteCall(
-        &operation_queue_, story_controller_impl_, std::move(key),
-        module_data_->Clone(), [this] { Kill(); });
+    new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
+                                    std::move(key), module_data_->Clone(),
+                                    [this] { Kill(); });
   }
 
   void Kill() {
@@ -1409,10 +1409,9 @@ void StoryControllerImpl::OnPageChange(const std::string& key,
   }
 
   // Check if we already have a blocked operation for this update.
-  auto i = std::find_if(blocked_operations_.begin(), blocked_operations_.end(),
-                        [&module_data](const auto& p) {
-                          return p.first.Equals(module_data);
-                        });
+  auto i = std::find_if(
+      blocked_operations_.begin(), blocked_operations_.end(),
+      [&module_data](const auto& p) { return p.first.Equals(module_data); });
   if (i != blocked_operations_.end()) {
     // For an already blocked operation, we simply continue the operation.
     auto op = i->second;

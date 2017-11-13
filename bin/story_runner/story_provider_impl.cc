@@ -527,22 +527,19 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
     output_ << "=================Begin story provider info=======" << std::endl;
 
     new DumpPageSnapshotCall(&operation_queue_, story_provider_impl_->page(),
-                             [this, flow] (auto dump) {
-                               output_ << dump;
-                             });
+                             [this, flow](auto dump) { output_ << dump; });
     new ReadAllDataCall<StoryData>(
-      &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
-      XdrStoryData, [this, flow](fidl::Array<StoryDataPtr> data) {
-        for (auto& story_data : data) {
-          DumpStoryPage(std::move(story_data), flow);
-        }
+        &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
+        XdrStoryData, [this, flow](fidl::Array<StoryDataPtr> data) {
+          for (auto& story_data : data) {
+            DumpStoryPage(std::move(story_data), flow);
+          }
 
-        // This needs to be the last operations on |operation_queue_| since we
-        // need to get all the content from |output_| into |dump_|.
-        new SyncCall(&operation_queue_, [this, flow] {
-          dump_ = output_.str();
+          // This needs to be the last operations on |operation_queue_| since we
+          // need to get all the content from |output_| into |dump_|.
+          new SyncCall(&operation_queue_,
+                       [this, flow] { dump_ = output_.str(); });
         });
-      });
   }
 
   void DumpStoryPage(StoryDataPtr story_data, FlowToken flow) {
@@ -550,15 +547,15 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
     auto page_id = std::move(story_data->story_page_id);
     ledger::PagePtr story_page;
     story_provider_impl_->ledger_client_->ledger()->GetPage(
-        std::move(page_id), story_page.NewRequest(), [] (auto s) {});
+        std::move(page_id), story_page.NewRequest(), [](auto s) {});
     story_pages_.push_back(std::move(story_page));
-    new DumpPageSnapshotCall(
-        &operation_queue_, story_pages_.back().get(),
-        [this, story_id, flow] (auto dump) {
-          output_ << "=================Story id: " << story_id << "==========="
-                  << std::endl;
-          output_ << dump;
-        });
+    new DumpPageSnapshotCall(&operation_queue_, story_pages_.back().get(),
+                             [this, story_id, flow](auto dump) {
+                               output_
+                                   << "=================Story id: " << story_id
+                                   << "===========" << std::endl;
+                               output_ << dump;
+                             });
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
@@ -704,9 +701,7 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
 void StoryProviderImpl::DumpState(
     const std::function<void(const std::string&)>& callback) {
   new DumpStateCall(&operation_queue_, this,
-                    [callback] (auto dump) {
-                      callback(dump);
-                    });
+                    [callback](auto dump) { callback(dump); });
 }
 
 // |StoryProvider|

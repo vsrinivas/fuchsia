@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
-#include <memory>
 #include <map>
+#include <memory>
 #include <set>
 
 #include "lib/async/cpp/operation.h"

@@ -357,8 +357,8 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
     }
   } else {
     bool inserted = false;
-    std::tie(found_it, inserted) = running_alarms_.emplace(
-        agent_url, std::map<std::string, uint32_t>());
+    std::tie(found_it, inserted) =
+        running_alarms_.emplace(agent_url, std::map<std::string, uint32_t>());
     FXL_DCHECK(inserted);
   }
 
@@ -422,10 +422,10 @@ void AgentRunner::UpdateWatchers() {
     return;
   }
 
-  agent_provider_watchers_.ForAllPtrs([agent_urls = GetAllAgents()](
-      AgentProviderWatcher* watcher) {
-    watcher->OnUpdate(agent_urls.Clone());
-  });
+  agent_provider_watchers_.ForAllPtrs(
+      [agent_urls = GetAllAgents()](AgentProviderWatcher* watcher) {
+        watcher->OnUpdate(agent_urls.Clone());
+      });
 }
 
 void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {

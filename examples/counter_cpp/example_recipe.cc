@@ -25,8 +25,8 @@
 
 namespace {
 
-using modular::examples::Adder;
 using modular::to_array;
+using modular::examples::Adder;
 
 // JSON data
 constexpr char kInitialJson[] =

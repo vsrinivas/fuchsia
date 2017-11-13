@@ -93,7 +93,7 @@ class AgentContextImpl : AgentContext, AgentController {
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   // |AgentContext|
   void GetEntityReferenceFactory(
-    fidl::InterfaceRequest<EntityReferenceFactory> request) override;
+      fidl::InterfaceRequest<EntityReferenceFactory> request) override;
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active

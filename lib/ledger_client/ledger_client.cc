@@ -219,10 +219,8 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
   }
 
   void CollectConflicts(ledger::PageChange* const change, const bool left) {
-
     for (auto& entry : change->changes) {
       const std::string key = to_string(entry->key);
-
 
       if (!entry->value.is_valid()) {
         // TODO(mesch)
@@ -238,7 +236,6 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
         conflicts_[key].reset(new PageClient::Conflict);
         conflicts_[key]->key = key;
       }
-
 
       if (left) {
         conflicts_[key]->has_left = true;

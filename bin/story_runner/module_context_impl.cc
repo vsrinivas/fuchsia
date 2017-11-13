@@ -18,7 +18,7 @@ namespace modular {
 namespace {
 
 void CopyResolverNounsToLink(const ModuleResolverResultPtr& module_result,
-    LinkPtr* link_ptr) {
+                             LinkPtr* link_ptr) {
   auto& link = *link_ptr;
 
   for (auto entry : module_result->initial_nouns) {

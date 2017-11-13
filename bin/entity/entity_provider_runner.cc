@@ -8,8 +8,8 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "peridot/lib/util/string_escape.h"
 #include "peridot/bin/entity/entity_provider_controller.h"
+#include "peridot/lib/util/string_escape.h"
 
 namespace modular {
 namespace {

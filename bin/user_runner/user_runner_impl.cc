@@ -91,7 +91,6 @@ UserRunnerImpl::UserRunnerImpl(
       user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
-
   application_context_->outgoing_services()->AddService<UserRunner>(
       [this](fidl::InterfaceRequest<UserRunner> request) {
         bindings_.AddBinding(this, std::move(request));

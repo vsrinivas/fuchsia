@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"

@@ -5,8 +5,8 @@
 #ifndef PERIDOT_LIB_TESTING_FAKE_APPLICATION_LAUNCHER_H_
 #define PERIDOT_LIB_TESTING_FAKE_APPLICATION_LAUNCHER_H_
 
-#include <string>
 #include <map>
+#include <string>
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

@@ -6,10 +6,10 @@
 #define PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <queue>
 #include <string>
-#include <map>
 #include <utility>
 
 #include "lib/async/cpp/operation.h"

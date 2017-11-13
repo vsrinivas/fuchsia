@@ -197,7 +197,7 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler,
       std::function<void(Args...)> callback) {
     handlers_.insert(handler);
-    return [ this, handler, callback = std::move(callback) ](Args... args) {
+    return [this, handler, callback = std::move(callback)](Args... args) {
       // Remove the handler before calling the final callback. Otherwise the
       // handler might be unnecessarily interrupted, if this PageStorage
       // destructor is called in the callback.

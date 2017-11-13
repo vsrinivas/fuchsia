@@ -12,7 +12,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <map>
 
 #include "lib/context/fidl/metadata.fidl.h"
 #include "lib/context/fidl/value.fidl.h"

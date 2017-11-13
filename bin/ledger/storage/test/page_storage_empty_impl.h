@@ -108,11 +108,11 @@ class PageStorageEmptyImpl : public PageStorage {
                              std::function<void(Status)> on_done) override;
 
   void GetThreeWayContentsDiff(const Commit& base_commit,
-                           const Commit& left_commit,
-                           const Commit& right_commit,
-                           std::string min_key,
-                           std::function<bool(ThreeWayChange)> on_next_diff,
-                           std::function<void(Status)> on_done) override;
+                               const Commit& left_commit,
+                               const Commit& right_commit,
+                               std::string min_key,
+                               std::function<bool(ThreeWayChange)> on_next_diff,
+                               std::function<void(Status)> on_done) override;
 };
 
 }  // namespace test

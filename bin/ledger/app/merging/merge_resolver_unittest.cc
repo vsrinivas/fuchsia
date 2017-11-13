@@ -561,7 +561,8 @@ TEST_F(MergeResolverTest, DelayedUntilEmpty) {
 
   // Check that callback wasn't called (callback queue cleared after all the
   // callbacks in it were called).
-  EXPECT_FALSE(RunLoopUntil([&] { return callback_calls > 0; }, fxl::TimeDelta::FromMilliseconds(50)));
+  EXPECT_FALSE(RunLoopUntil([&] { return callback_calls > 0; },
+                            fxl::TimeDelta::FromMilliseconds(50)));
 }
 
 }  // namespace

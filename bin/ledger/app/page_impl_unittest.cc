@@ -1358,12 +1358,11 @@ TEST_F(PageImplTest, SerializedOperations) {
 TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
   bool callback_called = false;
 
-  auto conflicts_resolved_callback =
-      [this, &callback_called]() {
-        EXPECT_TRUE(resolver_->IsEmpty());
-        callback_called = true;
-        message_loop_.PostQuitTask();
-      };
+  auto conflicts_resolved_callback = [this, &callback_called]() {
+    EXPECT_TRUE(resolver_->IsEmpty());
+    callback_called = true;
+    message_loop_.PostQuitTask();
+  };
 
   page_ptr_->WaitForConflictResolution(conflicts_resolved_callback);
   EXPECT_FALSE(RunLoopWithTimeout());

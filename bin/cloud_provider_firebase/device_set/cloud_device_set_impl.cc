@@ -120,14 +120,14 @@ void CloudDeviceSetImpl::UpdateTimestampAssociatedWithFingerprint(
     std::string fingerprint) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
-  user_firebase_->Put(
-      GetDeviceMapKey(fingerprint), query_params, kUpdateTimestampValue,
-      [](firebase::Status status) {
-        if (status != firebase::Status::OK) {
-          FXL_LOG(WARNING) << "Firebase timestamp update returned status:"
-                           << status;
-        }
-      });
+  user_firebase_->Put(GetDeviceMapKey(fingerprint), query_params,
+                      kUpdateTimestampValue, [](firebase::Status status) {
+                        if (status != firebase::Status::OK) {
+                          FXL_LOG(WARNING)
+                              << "Firebase timestamp update returned status:"
+                              << status;
+                        }
+                      });
 }
 
 void CloudDeviceSetImpl::OnPut(const std::string& /*path*/,

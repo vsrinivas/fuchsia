@@ -66,7 +66,8 @@ UserControllerImpl::UserControllerImpl(
 
 std::string UserControllerImpl::DumpState() {
   UserRunnerDebugSyncPtr debug;
-  ConnectToService(user_runner_app_->services(), fidl::GetSynchronousProxy(&debug));
+  ConnectToService(user_runner_app_->services(),
+                   fidl::GetSynchronousProxy(&debug));
   fidl::String output;
   debug->DumpState(&output);
   return output;

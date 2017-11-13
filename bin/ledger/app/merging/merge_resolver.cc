@@ -107,8 +107,7 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
           // early.
           if (s != storage::Status::OK) {
             FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
-          }
-          else {
+          } else {
             for (auto& callback : no_conflict_callbacks_) {
               callback();
             }

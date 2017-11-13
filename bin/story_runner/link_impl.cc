@@ -39,8 +39,9 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::String> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
-                                          << " Page.GetSnapshot() " << status;
+                           FXL_LOG(ERROR)
+                               << trace_name() << " " << link_key_ << " "
+                               << " Page.GetSnapshot() " << status;
                            return;
                          }
 
@@ -241,8 +242,7 @@ class LinkImpl::SetSchemaCall : Operation<> {
     rapidjson::Document doc;
     doc.Parse(json_schema_.get());
     if (doc.HasParseError()) {
-      FXL_LOG(ERROR) << trace_name() << " "
-                     << EncodeLinkPath(impl_->link_path_)
+      FXL_LOG(ERROR) << trace_name() << " " << EncodeLinkPath(impl_->link_path_)
                      << " JSON parse failed error #" << doc.GetParseError()
                      << std::endl
                      << json_schema_;

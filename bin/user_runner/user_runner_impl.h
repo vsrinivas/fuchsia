@@ -53,11 +53,12 @@ class RemoteInvokerImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
-class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher,
+class UserRunnerImpl : UserRunner,
+                       UserShellContext,
+                       EntityProviderLauncher,
                        UserRunnerDebug {
  public:
-  UserRunnerImpl(app::ApplicationContext* application_context,
-                 bool test);
+  UserRunnerImpl(app::ApplicationContext* application_context, bool test);
 
   ~UserRunnerImpl() override;
 

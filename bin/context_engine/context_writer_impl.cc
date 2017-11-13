@@ -48,7 +48,8 @@ void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
     FXL_LOG(WARNING) << "Invalid JSON in value: " << value;
     return;
   }
-  if (types.empty()) return;
+  if (types.empty())
+    return;
 
   auto new_types = fidl::Array<fidl::String>::From(types);
   if (!value->meta) {
