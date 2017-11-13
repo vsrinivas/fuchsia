@@ -26,13 +26,13 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
     fd_.reset(open(path, O_CREAT | O_RDWR, 0666));
 
     if (!fd_) {
-        printf("Failed to open sparse data path\n");
+        fprintf(stderr, "Failed to open sparse data path\n");
         exit(-1);
     }
 
     struct stat s;
     if (fstat(fd_.get(), &s) < 0) {
-        printf("Failed to stat %s\n", path);
+        fprintf(stderr, "Failed to stat %s\n", path);
         exit(-1);
     }
 
@@ -62,7 +62,7 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
             }
         }
 
-        printf("Successfully read from existing sparse data container.\n");
+        xprintf("Successfully read from existing sparse data container.\n");
     }
 }
 
@@ -76,7 +76,7 @@ zx_status_t SparseContainer::Init() {
     image_.header_length = sizeof(fvm::sparse_image_t);
     partitions_.reset();
     dirty_ = true;
-    printf("Initialized new sparse data container.\n");
+    xprintf("Initialized new sparse data container.\n");
     return ZX_OK;
 }
 
@@ -86,8 +86,8 @@ zx_status_t SparseContainer::Verify() const {
         return ZX_ERR_IO;
     }
 
-    printf("Slice size is %" PRIu64 "\n", image_.slice_size);
-    printf("Found %" PRIu64 " partitions\n", image_.partition_count);
+    xprintf("Slice size is %" PRIu64 "\n", image_.slice_size);
+    xprintf("Found %" PRIu64 " partitions\n", image_.partition_count);
 
     off_t start = 0;
     off_t end = image_.header_length;
@@ -95,7 +95,7 @@ zx_status_t SparseContainer::Verify() const {
     for (unsigned i = 0; i < image_.partition_count; i++) {
         fbl::Vector<size_t> extent_lengths;
         start = end;
-        printf("Found partition %u with %u extents\n", i,
+        xprintf("Found partition %u with %u extents\n", i,
                partitions_[i].descriptor.extent_count);
 
         for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
@@ -126,7 +126,7 @@ zx_status_t SparseContainer::Verify() const {
 
 zx_status_t SparseContainer::Commit() {
     if (!dirty_ || image_.partition_count == 0) {
-        printf("Commit: Nothing to write.\n");
+        fprintf(stderr, "Commit: Nothing to write.\n");
         return ZX_OK;
     }
 
@@ -134,13 +134,13 @@ zx_status_t SparseContainer::Commit() {
     uint64_t header_length = 0;
 
     if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
-        printf("Seek reset failed\n");
+        fprintf(stderr, "Seek reset failed\n");
         return ZX_ERR_IO;
     }
 
     header_length += sizeof(fvm::sparse_image_t);
     if (write(fd_.get(), &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
-        printf("Write sparse image header failed\n");
+        fprintf(stderr, "Write sparse image header failed\n");
         return ZX_ERR_IO;
     }
 
@@ -150,7 +150,7 @@ zx_status_t SparseContainer::Commit() {
         header_length += sizeof(fvm::partition_descriptor_t);
         if (write(fd_.get(), &partition, sizeof(fvm::partition_descriptor_t)) !=
                 sizeof(fvm::partition_descriptor_t)) {
-            printf("Write partition failed\n");
+            fprintf(stderr, "Write partition failed\n");
             return ZX_ERR_IO;
         }
 
@@ -159,14 +159,14 @@ zx_status_t SparseContainer::Commit() {
             header_length += sizeof(fvm::extent_descriptor_t);
             if (write(fd_.get(), &extent, sizeof(fvm::extent_descriptor_t)) !=
                     sizeof(fvm::extent_descriptor_t)) {
-                printf("Write extent failed\n");
+                fprintf(stderr, "Write extent failed\n");
                 return ZX_ERR_IO;
             }
         }
     }
 
     if (header_length != image_.header_length) {
-        printf("Header length does not match!\n");
+        fprintf(stderr, "Header length does not match!\n");
         return ZX_ERR_INTERNAL;
     }
 
@@ -179,7 +179,7 @@ zx_status_t SparseContainer::Commit() {
         // Write out each extent in the partition
         for (unsigned j = 0; j < partition.extent_count; j++) {
             if (format->GetVsliceRange(j, &vslice_info) != ZX_OK) {
-                printf("Unable to access partition extent\n");
+                fprintf(stderr, "Unable to access partition extent\n");
                 return ZX_ERR_OUT_OF_RANGE;
             }
 
@@ -199,7 +199,7 @@ zx_status_t SparseContainer::Commit() {
         }
     }
 
-    printf("Successfully wrote sparse data to disk.\n");
+    xprintf("Successfully wrote sparse data to disk.\n");
     return ZX_OK;
 }
 
@@ -212,12 +212,12 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
     zx_status_t status;
 
     if ((status = Format::Create(path, type_name, &format)) != ZX_OK) {
-        printf("Failed to initialize partition\n");
+        fprintf(stderr, "Failed to initialize partition\n");
         return status;
     }
 
     if ((status = AllocatePartition(fbl::move(format))) != ZX_OK) {
-        printf("Sparse partition allocation failed\n");
+        fprintf(stderr, "Sparse partition allocation failed\n");
         return status;
     }
 
@@ -271,7 +271,7 @@ zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
 zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_start,
                                             uint64_t slice_count, uint64_t extent_length) {
     if (part_index >= image_.partition_count) {
-        printf("Partition is not yet allocated\n");
+        fprintf(stderr, "Partition is not yet allocated\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
 

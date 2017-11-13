@@ -23,6 +23,23 @@ int usage(void) {
     exit(-1);
 }
 
+int add_partitions(Container* container, int argc, char** argv) {
+    for (unsigned i = 0; i < argc; i += 2) {
+        if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
+            usage();
+        }
+
+        char* partition_type = argv[i] + 2;
+        char* partition_path = argv[i + 1];
+        if ((container->AddPartition(partition_path, partition_type)) != ZX_OK) {
+            fprintf(stderr, "Failed to add partition\n");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
         usage();
@@ -35,12 +52,20 @@ int main(int argc, char** argv) {
     size_t slice_size = 64lu * (1 << 20);
 
     if (!strcmp(command, "create")) {
-        FvmContainer fvmContainer(path, slice_size);
-        if (fvmContainer.Init() != ZX_OK) {
+        fbl::unique_ptr<FvmContainer> fvmContainer;
+        if (FvmContainer::Create(path, slice_size, &fvmContainer) != ZX_OK) {
             return -1;
         }
 
-        if (fvmContainer.Commit() != ZX_OK) {
+        if (fvmContainer->Init() != ZX_OK) {
+            return -1;
+        }
+
+        if (add_partitions(fvmContainer.get(), argc - 3, argv + 3) < 0) {
+            return -1;
+        }
+
+        if (fvmContainer->Commit() != ZX_OK) {
             return -1;
         }
     } else if (!strcmp(command, "verify")) {
@@ -58,17 +83,8 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        for (unsigned i = 3; i < argc; i += 2) {
-            if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
-                usage();
-            }
-
-            char* partition_type = argv[i] + 2;
-            char* partition_path = argv[i + 1];
-            if ((fvmContainer->AddPartition(partition_path, partition_type)) != ZX_OK) {
-                printf("Failed to add partition\n");
-                return -1;
-            }
+        if (add_partitions(fvmContainer.get(), argc - 3, argv + 3) < 0) {
+            return -1;
         }
 
         if (fvmContainer->Commit() != ZX_OK) {
@@ -80,17 +96,8 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        for (unsigned i = 3; i < argc; i += 2) {
-            if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
-                usage();
-            }
-
-            char* partition_type = argv[i] + 2;
-            char* partition_path = argv[i + 1];
-            if ((sparseContainer->AddPartition(partition_path, partition_type)) != ZX_OK) {
-                printf("Failed to create sparse partition\n");
-                return -1;
-            }
+        if (add_partitions(sparseContainer.get(), argc - 3, argv + 3) < 0) {
+            return -1;
         }
 
         if (sparseContainer->Commit() != ZX_OK) {

@@ -35,7 +35,7 @@ BlobfsFormat::~BlobfsFormat() = default;
 
 zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     memcpy(&fvm_blk_, &blk_, BlockSize());
-    printf("fvm_info has block count %" PRIu64 "\n", fvm_info_.block_count);
+    xprintf("fvm_info has block count %" PRIu64 "\n", fvm_info_.block_count);
     fvm_info_.slice_size = slice_size;
 
     if (fvm_info_.slice_size % BlockSize()) {
@@ -51,14 +51,14 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
     fvm_info_.vslice_count = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices +
                              fvm_info_.dat_slices;
 
-    printf("Blobfs: slice_size is %" PRIu64 ", kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
-           kBlocksPerSlice);
-    printf("Blobfs: abm_blocks: %" PRIu64 ", abm_slices: %u\n", BlockMapBlocks(info_),
-           fvm_info_.abm_slices);
-    printf("Blobfs: ino_blocks: %" PRIu64 ", ino_slices: %u\n", NodeMapBlocks(info_),
-           fvm_info_.ino_slices);
-    printf("Blobfs: dat_blocks: %" PRIu64 ", dat_slices: %u\n", DataBlocks(info_),
-           fvm_info_.dat_slices);
+    xprintf("Blobfs: slice_size is %" PRIu64 ", kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
+            kBlocksPerSlice);
+    xprintf("Blobfs: abm_blocks: %" PRIu64 ", abm_slices: %u\n", BlockMapBlocks(info_),
+            fvm_info_.abm_slices);
+    xprintf("Blobfs: ino_blocks: %" PRIu64 ", ino_slices: %u\n", NodeMapBlocks(info_),
+            fvm_info_.ino_slices);
+    xprintf("Blobfs: dat_blocks: %" PRIu64 ", dat_slices: %u\n", DataBlocks(info_),
+            fvm_info_.dat_slices);
 
     fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
                                                   blobstore::kBlobstoreInodeSize);
@@ -112,6 +112,12 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
     }
 
     return ZX_ERR_OUT_OF_RANGE;
+}
+
+zx_status_t BlobfsFormat::GetSliceCount(uint32_t* slices_out) const {
+    CheckFvmReady();
+    *slices_out = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices + fvm_info_.dat_slices;
+    return ZX_OK;
 }
 
 zx_status_t BlobfsFormat::FillBlock(size_t block_offset) {

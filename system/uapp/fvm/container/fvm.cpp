@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "fvm/container.h"
+#include <errno.h>
 
 zx_status_t FvmContainer::Create(const char* path, size_t slice_size,
                                  fbl::unique_ptr<FvmContainer>* out) {
@@ -26,51 +27,67 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
       vpart_hint_(1), pslice_hint_(1) {
     fd_.reset(open(path, O_RDWR, 0644));
     if (!fd_) {
-        printf("Failed to open path %s\n", path);
-        exit(-1);
+        if (errno == ENOENT) {
+            fd_.reset(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+
+            if (!fd_) {
+                fprintf(stderr, "Failed to create path %s\n", path);
+                exit(-1);
+            }
+
+            xprintf("Created path %s\n", path);
+        } else {
+            fprintf(stderr, "Failed to open path %s\n", path);
+            exit(-1);
+        }
     }
 
     struct stat s;
     if (fstat(fd_.get(), &s) < 0) {
-        printf("Failed to stat %s\n", path);
+        fprintf(stderr, "Failed to stat %s\n", path);
         exit(-1);
     }
 
     disk_size_ = s.st_size;
     block_size_ = s.st_blksize;
     block_count_ = s.st_blocks;
-    metadata_size_ = fvm::MetadataSize(disk_size_, slice_size);
+
+    // Even if disk size is 0, this will default to at least FVM_BLOCK_SIZE
+    metadata_size_ = fvm::MetadataSize(disk_size_, slice_size_);
 
     fbl::AllocChecker ac;
     metadata_.reset(new (&ac) uint8_t[metadata_size_ * 2]);
     if (!ac.check()) {
-        printf("Unable to acquire resources for metadata\n");
-        exit(-1);
-    }
-
-    if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
-        printf("Seek reset failed\n");
+        fprintf(stderr, "Unable to acquire resources for metadata\n");
         exit(-1);
     }
 
     // Clear entire primary copy of metadata
     memset(metadata_.get(), 0, metadata_size_);
 
-    ssize_t rd = read(fd_.get(), metadata_.get(), metadata_size_ * 2);
-    if (rd != static_cast<ssize_t>(metadata_size_ * 2)) {
-        printf("Metadata read failed: expected %ld, actual %ld\n", metadata_size_, rd);
-        exit(-1);
-    }
+    // If Container already exists, read metadata from disk.
+    if (disk_size_ > 0) {
+        if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
+            fprintf(stderr, "Seek reset failed\n");
+            exit(-1);
+        }
 
-    const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(metadata_.get()) +
-                                                 metadata_size_);
+        ssize_t rd = read(fd_.get(), metadata_.get(), metadata_size_ * 2);
+        if (rd != static_cast<ssize_t>(metadata_size_ * 2)) {
+            fprintf(stderr, "Metadata read failed: expected %ld, actual %ld\n", metadata_size_, rd);
+            exit(-1);
+        }
 
-    // For now we always assume that primary metadata is primary
-    if (fvm_validate_header(metadata_.get(), backup, metadata_size_, nullptr) == ZX_OK) {
-        valid_ = true;
+        const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(metadata_.get()) +
+                                                     metadata_size_);
 
-        if (memcmp(metadata_.get(), backup, metadata_size_)) {
-            printf("Warning: primary and backup metadata do not match\n");
+        // For now we always assume that primary metadata is primary
+        if (fvm_validate_header(metadata_.get(), backup, metadata_size_, nullptr) == ZX_OK) {
+            valid_ = true;
+
+            if (memcmp(metadata_.get(), backup, metadata_size_)) {
+                fprintf(stderr, "Warning: primary and backup metadata do not match\n");
+            }
         }
     }
 }
@@ -96,15 +113,15 @@ zx_status_t FvmContainer::Init() {
     dirty_ = true;
     valid_ = true;
 
-    printf("fvm_init: Success\n");
-    printf("fvm_init: Slice Count: %" PRIu64 ", size: %" PRIu64 "\n", sb->pslice_count, sb->slice_size);
-    printf("fvm_init: Vpart offset: %zu, length: %zu\n",
+    xprintf("fvm_init: Success\n");
+    xprintf("fvm_init: Slice Count: %" PRIu64 ", size: %" PRIu64 "\n", sb->pslice_count, sb->slice_size);
+    xprintf("fvm_init: Vpart offset: %zu, length: %zu\n",
            fvm::kVPartTableOffset, fvm::kVPartTableLength);
-    printf("fvm_init: Atable offset: %zu, length: %zu\n",
+    xprintf("fvm_init: Atable offset: %zu, length: %zu\n",
            fvm::kAllocTableOffset, fvm::AllocTableLength(disk_size_, slice_size_));
-    printf("fvm_init: Backup meta starts at: %zu\n",
+    xprintf("fvm_init: Backup meta starts at: %zu\n",
            fvm::BackupStart(disk_size_, slice_size_));
-    printf("fvm_init: Slices start at %zu, there are %zu of them\n",
+    xprintf("fvm_init: Slices start at %zu, there are %zu of them\n",
            fvm::SlicesStart(disk_size_, slice_size_),
            fvm::UsableSlicesCount(disk_size_, slice_size_));
     return ZX_OK;
@@ -116,16 +133,16 @@ zx_status_t FvmContainer::Verify() const {
                                                  metadata_size_);
 
     if (fvm_validate_header(metadata_.get(), backup, metadata_size_, nullptr) != ZX_OK) {
-        printf("Failed to validate header\n");
+        fprintf(stderr, "Failed to validate header\n");
         return ZX_ERR_BAD_STATE;
     }
 
     fvm::fvm_t* sb = SuperBlock();
 
-    printf("Total size is %zu\n", disk_size_);
-    printf("Metadata size is %zu\n", metadata_size_);
-    printf("Slice size is %" PRIu64 "\n", sb->slice_size);
-    printf("Slice count is %" PRIu64 "\n", sb->pslice_count);
+    xprintf("Total size is %zu\n", disk_size_);
+    xprintf("Metadata size is %zu\n", metadata_size_);
+    xprintf("Slice size is %" PRIu64 "\n", sb->slice_size);
+    xprintf("Slice count is %" PRIu64 "\n", sb->pslice_count);
 
     off_t start = 0;
     off_t end = metadata_size_ * 2;
@@ -191,28 +208,81 @@ zx_status_t FvmContainer::Verify() const {
 
 zx_status_t FvmContainer::Commit() {
     if (!dirty_) {
-        printf("Commit: Nothing to write\n");
+        fprintf(stderr, "Commit: Nothing to write\n");
         return ZX_OK;
+    }
+
+    // If the FVM container has just been created, truncate it to an appropriate size
+    if (disk_size_ == 0) {
+        if (partitions_.is_empty()) {
+            fprintf(stderr, "Cannot create new FVM container with 0 partitions\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        size_t required_size = 0;
+        for (unsigned i = 0; i < partitions_.size(); i++) {
+            required_size += partitions_[i].slice_count * slice_size_;
+        }
+
+        size_t total_size = required_size;
+        size_t metadata_size = 0;
+
+        while (total_size - (metadata_size * 2) < required_size || metadata_size < metadata_size_) {
+            total_size = required_size + (metadata_size * 2);
+            metadata_size = fvm::MetadataSize(total_size, slice_size_);
+        }
+
+        zx_status_t status;
+        if ((status = GrowMetadata(metadata_size)) != ZX_OK) {
+            return status;
+        }
+
+        if (ftruncate(fd_.get(), total_size) != 0) {
+            fprintf(stderr, "Failed to truncate fvm container");
+            return ZX_ERR_IO;
+        }
+
+        struct stat s;
+        if (fstat(fd_.get(), &s) < 0) {
+            fprintf(stderr, "Failed to stat container\n");
+            return ZX_ERR_IO;
+        }
+
+        disk_size_ = s.st_size;
+        block_size_ = s.st_blksize;
+        block_count_ = s.st_blocks;
+
+        if (disk_size_ != total_size) {
+            fprintf(stderr, "Truncated to incorrect size\n");
+            return ZX_ERR_IO;
+        }
     }
 
     fvm_update_hash(metadata_.get(), metadata_size_);
 
     if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
-        printf("Error seeking disk\n");
+        fprintf(stderr, "Error seeking disk\n");
         return ZX_ERR_IO;
     }
 
     if (write(fd_.get(), metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
-        printf("Error writing metadata to disk\n");
+        fprintf(stderr, "Error writing metadata to disk\n");
         return ZX_ERR_IO;
     }
 
     if (write(fd_.get(), metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
-        printf("Error writing metadata to disk\n");
+        fprintf(stderr, "Error writing metadata to disk\n");
         return ZX_ERR_IO;
     }
 
-    printf("Successfully wrote metadata to disk\n");
+    for (unsigned i = 0; i < partitions_.size(); i++) {
+        zx_status_t status;
+        if ((status = WritePartition(i)) != ZX_OK) {
+            return status;
+        }
+    }
+
+    xprintf("Successfully wrote FVM data to disk\n");
     return ZX_OK;
 }
 
@@ -225,7 +295,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     fbl::unique_ptr<Format> format;
     zx_status_t status;
     if ((status = Format::Create(path, type_name, &format)) != ZX_OK) {
-        printf("Failed to initialize partition\n");
+        fprintf(stderr, "Failed to initialize partition\n");
         return status;
     }
 
@@ -246,16 +316,64 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
         return status;
     }
 
-    unsigned i = 0;
+    uint32_t slice_count = 0;
+    if ((status = format->GetSliceCount(&slice_count)) != ZX_OK) {
+        return status;
+    }
+
+    // If allocated metadata is too small, grow it to an appropriate size
+    size_t required_size = fvm::kAllocTableOffset + (pslice_hint_ + slice_count)
+                           * sizeof(fvm::slice_entry_t);
+    if ((status = GrowMetadata(required_size)) != ZX_OK) {
+        return status;
+    }
+
+    // Allocate all slices for this partition
+    uint32_t pslice_start = 0;
+    uint32_t pslice_total = 0;
+    unsigned extent_index = 0;
     while (true) {
-        if ((status = WriteExtent(i++, format.get())) != ZX_OK) {
-            if (status != ZX_ERR_OUT_OF_RANGE) {
+        vslice_info_t vslice_info;
+        zx_status_t status;
+        if ((status = format->GetVsliceRange(extent_index, &vslice_info)) != ZX_OK) {
+            if (status == ZX_ERR_OUT_OF_RANGE) {
+                break;
+            }
+            return status;
+        }
+
+        uint32_t vslice = vslice_info.vslice_start / format->BlocksPerSlice();
+
+        for (unsigned i = 0; i < vslice_info.slice_count; i++) {
+            uint32_t pslice;
+
+            if ((status = AllocateSlice(format->VpartIndex(), vslice + i, &pslice)) != ZX_OK) {
                 return status;
             }
 
-            return ZX_OK;
+            if (!pslice_start) {
+                pslice_start = pslice;
+            }
+
+            // On a new FVM container, pslice allocation is expected to be contiguous.
+            if (pslice != pslice_start + pslice_total) {
+                fprintf(stderr, "Unexpected error during slice allocation\n");
+                return ZX_ERR_INTERNAL;
+            }
+
+            pslice_total++;
         }
+
+        extent_index++;
     }
+
+    partition_info_t partition;
+    partition.format = fbl::move(format);
+    partition.vpart_index = vpart_index;
+    partition.pslice_start = pslice_start;
+    partition.slice_count = slice_count;
+    partitions_.push_back(fbl::move(partition));
+    return ZX_OK;
 }
 
 void FvmContainer::CheckValid() const {
@@ -263,6 +381,29 @@ void FvmContainer::CheckValid() const {
         fprintf(stderr, "Error: FVM is invalid\n");
         exit(-1);
     }
+}
+
+zx_status_t FvmContainer::GrowMetadata(size_t new_size) {
+    if (new_size <= metadata_size_) {
+        return ZX_OK;
+    } else if (disk_size_ > 0) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    xprintf("Growing metadata from %lu to %lu\n", metadata_size_, new_size);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> new_metadata(new (&ac) uint8_t[new_size * 2]);
+    if (!ac.check()) {
+        fprintf(stderr, "Unable to acquire resources for new metadata\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    memcpy(new_metadata.get(), metadata_.get(), metadata_size_);
+    memset(new_metadata.get() + metadata_size_, 0, new_size - metadata_size_);
+
+    metadata_ = fbl::move(new_metadata);
+    metadata_size_ = new_size;
+    return ZX_OK;
 }
 
 zx_status_t FvmContainer::AllocatePartition(uint8_t* type, uint8_t* guid, const char* name,
@@ -346,23 +487,42 @@ zx_status_t FvmContainer::GetSlice(size_t index, fvm::slice_entry_t** out) const
     return ZX_OK;
 }
 
-zx_status_t FvmContainer::WriteExtent(unsigned vslice_count, Format* format) {
+zx_status_t FvmContainer::WritePartition(unsigned part_index) {
+    CheckValid();
+    if (part_index > partitions_.size()) {
+        fprintf(stderr, "Error: Tried to access partition %u / %lu\n",
+                part_index, partitions_.size());
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    unsigned extent_index = 0;
+    partition_info_t* partition = &partitions_[part_index];
+    Format* format = partition->format.get();
+    uint32_t pslice_start = partition->pslice_start;
+
+    while (true) {
+        zx_status_t status;
+        if ((status = WriteExtent(extent_index++, format, &pslice_start)) != ZX_OK) {
+            if (status != ZX_ERR_OUT_OF_RANGE) {
+                return status;
+            }
+
+            return ZX_OK;
+        }
+    }
+}
+
+zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uint32_t* pslice) {
     vslice_info_t vslice_info;
     zx_status_t status;
-    if ((status = format->GetVsliceRange(vslice_count, &vslice_info)) != ZX_OK) {
+    if ((status = format->GetVsliceRange(extent_index, &vslice_info)) != ZX_OK) {
         return status;
     }
 
+    // Write each slice in the given extent
     uint32_t current_block = 0;
-    uint32_t vslice = vslice_info.vslice_start / format->BlocksPerSlice();
-
     for (unsigned i = 0; i < vslice_info.slice_count; i++) {
-        uint32_t pslice;
-
-        if ((status = AllocateSlice(format->VpartIndex(), vslice + i, &pslice)) != ZX_OK) {
-            return status;
-        }
-
+        // Write each block in this slice
         for (uint32_t j = 0; j < format->BlocksPerSlice(); j++) {
             // If we have gone beyond the blocks written to partition file, write empty block
             if (current_block >= vslice_info.block_count) {
@@ -380,23 +540,23 @@ zx_status_t FvmContainer::WriteExtent(unsigned vslice_count, Format* format) {
                 current_block++;
             }
 
-            if ((status = WriteData(format->VpartIndex(), pslice, format->Data(), j,
-                                    format->BlockSize())) != ZX_OK) {
+            if ((status = WriteData(*pslice, j, format->BlockSize(), format->Data())) != ZX_OK) {
                 fprintf(stderr, "Failed to write data to FVM\n");
                 return status;
             }
         }
+        (*pslice)++;
     }
 
     return ZX_OK;
 }
 
-zx_status_t FvmContainer::WriteData(uint32_t vpart, uint32_t pslice, void* data, uint32_t block_offset,
-                                    size_t block_size) {
+zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size_t block_size,
+                                    void* data) {
     CheckValid();
 
     if (block_offset * block_size > slice_size_) {
-        printf("Not enough space in slice\n");
+        fprintf(stderr, "Not enough space in slice\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
 
@@ -407,7 +567,7 @@ zx_status_t FvmContainer::WriteData(uint32_t vpart, uint32_t pslice, void* data,
 
     ssize_t r = write(fd_.get(), data, block_size);
     if (r != block_size) {
-        printf("Failed to write data to FVM\n");
+        fprintf(stderr, "Failed to write data to FVM\n");
         return ZX_ERR_BAD_STATE;
     }
 

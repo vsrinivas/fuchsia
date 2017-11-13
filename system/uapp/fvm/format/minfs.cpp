@@ -71,12 +71,12 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     fvm_info_.vslice_count = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices +
                              fvm_info_.ino_slices + fvm_info_.dat_slices;
 
-    printf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %lu\n", fvm_info_.slice_size,
-           kBlocksPerSlice);
-    printf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
-    printf("Minfs: abm_blocks: %u, abm_slices: %u\n", abm_blocks, fvm_info_.abm_slices);
-    printf("Minfs: ino_blocks: %u, ino_slices: %u\n", ino_blocks, fvm_info_.ino_slices);
-    printf("Minfs: dat_blocks: %u, dat_slices: %u\n", dat_blocks, fvm_info_.dat_slices);
+    xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %lu\n", fvm_info_.slice_size,
+            kBlocksPerSlice);
+    xprintf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
+    xprintf("Minfs: abm_blocks: %u, abm_slices: %u\n", abm_blocks, fvm_info_.abm_slices);
+    xprintf("Minfs: ino_blocks: %u, ino_slices: %u\n", ino_blocks, fvm_info_.ino_slices);
+    xprintf("Minfs: dat_blocks: %u, dat_slices: %u\n", dat_blocks, fvm_info_.dat_slices);
 
     fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
                                                   minfs::kMinfsInodeSize);
@@ -142,6 +142,13 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
     }
 
     return ZX_ERR_OUT_OF_RANGE;
+}
+
+zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {
+    CheckFvmReady();
+    *slices_out = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices + fvm_info_.ino_slices
+                  + fvm_info_.dat_slices;
+    return ZX_OK;
 }
 
 zx_status_t MinfsFormat::FillBlock(size_t block_offset) {

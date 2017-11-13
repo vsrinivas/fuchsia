@@ -7,7 +7,7 @@
 zx_status_t Format::Detect(int fd, off_t offset, disk_format_t* out) {
     uint8_t data[HEADER_SIZE];
     if (lseek(fd, offset, SEEK_SET) < 0) {
-        printf("Error seeking block device\n");
+        fprintf(stderr, "Error seeking block device\n");
         return ZX_ERR_IO;
     }
 
@@ -61,7 +61,7 @@ zx_status_t Format::Create(const char* path, const char* type, fbl::unique_ptr<F
         return ZX_OK;
     }
 
-    printf("Disk format not supported\n");
+    fprintf(stderr, "Disk format not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
 

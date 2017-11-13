@@ -39,6 +39,7 @@ static uint32_t gFileFlags = 0;
 typedef enum {
     SPARSE,
     FVM,
+    FVM_NEW,
 } container_t;
 
 bool CreateFile(const char* path, size_t size, uint32_t type) {
@@ -113,7 +114,7 @@ bool AddPartitions(Container* container) {
 
 bool CreateSparse() {
     BEGIN_HELPER;
-    printf("Creating sparse container\n");
+    printf("Creating sparse container: %s\n", sparse_path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
     ASSERT_EQ(SparseContainer::Create(sparse_path, SLICE_SIZE, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
@@ -134,15 +135,22 @@ bool ReportSparse() {
     return ReportContainer(sparse_path);
 }
 
-bool CreateFvm() {
+bool CreateFvm(bool create_before) {
     BEGIN_HELPER;
     printf("Creating fvm container: %s\n", fvm_path);
-    ASSERT_TRUE(CreateFile(fvm_path, CONTAINER_SIZE, kFvm));
+
+    if (create_before) {
+        ASSERT_TRUE(CreateFile(fvm_path, CONTAINER_SIZE, kFvm));
+    }
     fbl::unique_ptr<FvmContainer> fvmContainer;
     ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, &fvmContainer), ZX_OK,
                  "Failed to initialize fvm container");
+    if (!create_before) {
+        gFileFlags |= kFvm;
+    }
     ASSERT_TRUE(AddPartitions(fvmContainer.get()));
     ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
+
     END_HELPER;
 }
 
@@ -322,7 +330,12 @@ bool CreateAndReport(container_t type) {
             break;
         }
         case FVM: {
-            ASSERT_TRUE(CreateFvm());
+            ASSERT_TRUE(CreateFvm(true));
+            ASSERT_TRUE(ReportFvm());
+            break;
+        }
+        case FVM_NEW: {
+            ASSERT_TRUE(CreateFvm(false));
             ASSERT_TRUE(ReportFvm());
             break;
         }
@@ -393,8 +406,10 @@ bool Cleanup() {
 BEGIN_TEST_CASE(fvm_host_tests)
 RUN_TEST_MEDIUM(TestEmptyPartitions<SPARSE>)
 RUN_TEST_MEDIUM(TestEmptyPartitions<FVM>)
+RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_NEW>)
 RUN_TEST_MEDIUM((TestPartitions<SPARSE, 10, 100, (1 << 20)>))
 RUN_TEST_MEDIUM((TestPartitions<FVM, 10, 100, (1 << 20)>))
+RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, 10, 100, (1 << 20)>))
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {

@@ -9,13 +9,13 @@
 zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* container) {
     fbl::unique_fd fd(open(path, O_RDONLY));
     if (!fd) {
-        printf("Unable to open path %s\n", path);
+        fprintf(stderr, "Unable to open path %s\n", path);
         return -1;
     }
 
     uint8_t data[HEADER_SIZE];
     if (lseek(fd.get(), 0, SEEK_SET) < 0) {
-        printf("Error seeking block device\n");
+        fprintf(stderr, "Error seeking block device\n");
         return -1;
     }
 
@@ -52,6 +52,6 @@ zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* cont
         return ZX_OK;
     }
 
-    printf("File format not supported\n");
+    fprintf(stderr, "File format not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
 }

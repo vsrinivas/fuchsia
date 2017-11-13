@@ -14,6 +14,16 @@
 #include <minfs/minfs.h>
 #include <fbl/vector.h>
 
+#define TRACE 0
+
+#if TRACE
+#define xprintf(fmt...) printf(fmt)
+#else
+#define xprintf(fmt...) \
+    do {                \
+    } while (0)
+#endif
+
 typedef struct {
     size_t vslice_start;
     uint32_t slice_count;
@@ -39,6 +49,8 @@ public:
     virtual zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index) = 0;
     // Get FVM data for each extent
     virtual zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const = 0;
+    // Get total number of slices required for this partition
+    virtual zx_status_t GetSliceCount(uint32_t* slices_out) const = 0;
     // Fill the in-memory data block with data from the specified block on disk
     virtual zx_status_t FillBlock(size_t block_offset) = 0;
     // Empty the data block (i.e. fill with all 0's)
@@ -88,6 +100,7 @@ public:
     MinfsFormat(fbl::unique_fd fd, const char* type);
     zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index) final;
     zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
+    zx_status_t GetSliceCount(uint32_t* slices_out) const final;
     zx_status_t FillBlock(size_t block_offset) final;
     zx_status_t EmptyBlock() final;
     void* Data() final;
@@ -118,6 +131,7 @@ public:
     ~BlobfsFormat();
     zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index) final;
     zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
+    zx_status_t GetSliceCount(uint32_t* slices_out) const final;
     zx_status_t FillBlock(size_t block_offset) final;
     zx_status_t EmptyBlock() final;
     void* Data() final;

@@ -47,6 +47,13 @@ protected:
 };
 
 class FvmContainer final : public Container {
+    typedef struct {
+        uint32_t vpart_index;
+        uint32_t pslice_start;
+        uint32_t slice_count;
+        fbl::unique_ptr<Format> format;
+    } partition_info_t;
+
 public:
     static zx_status_t Create(const char* path, size_t slice_size,
                               fbl::unique_ptr<FvmContainer>* out);
@@ -67,16 +74,30 @@ private:
     uint32_t vpart_hint_;
     uint32_t pslice_hint_;
     fbl::unique_ptr<uint8_t[]> metadata_;
+    fbl::Vector<partition_info_t> partitions_;
 
     void CheckValid() const;
+
+    // Grow in-memory metadata representation to the specified size
+    zx_status_t GrowMetadata(size_t metadata_size);
+
+    // Allocate new partition (in memory)
     zx_status_t AllocatePartition(uint8_t* type, uint8_t* guid, const char* name, uint32_t slices,
                                   uint32_t* vpart_index);
+    // Allocate new slice for given partition (in memory)
     zx_status_t AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice);
+
+    // Helpers to grab reference to partition/slice from metadata
     zx_status_t GetPartition(size_t index, fvm::vpart_entry_t** out) const;
     zx_status_t GetSlice(size_t index, fvm::slice_entry_t** out) const;
-    zx_status_t WriteExtent(unsigned vslice_count, Format* format);
-    zx_status_t WriteData(uint32_t vpart, uint32_t pslice, void* data, uint32_t block_offset,
-                          size_t block_size);
+
+    // Write the |part_index|th partition to disk
+    zx_status_t WritePartition(unsigned part_index);
+    // Write a partition's |extent_index|th extent to disk. |*pslice| is the starting pslice, and
+    // is updated to reflect the latest written pslice.
+    zx_status_t WriteExtent(unsigned extent_index, Format* format, uint32_t* pslice);
+    // Write one data block of size |block_size| to disk at |block_offset| within pslice |pslice|
+    zx_status_t WriteData(uint32_t pslice, uint32_t block_offset, size_t block_size, void* data);
     fvm::fvm_t* SuperBlock() const;
 };
 
