@@ -23,7 +23,7 @@ namespace maxwell {
 namespace {
 
 constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
-    3, fxl::TimeDelta::FromSeconds(8)};
+    3, fxl::TimeDelta::FromSeconds(45)};
 
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
 // InterfaceHandle<>.
@@ -180,12 +180,14 @@ void UserIntelligenceProviderImpl::StartActionLog(
 }
 
 void UserIntelligenceProviderImpl::StartKronk() {
-  component_context_->ConnectToAgent(kronk_url_,
-                                     kronk_services_.NewRequest(),
+  component_context_->ConnectToAgent(kronk_url_, kronk_services_.NewRequest(),
                                      kronk_controller_.NewRequest());
   auto kronk_stt = app::ConnectToService<SpeechToText>(kronk_services_.get());
   suggestion_engine_->SetSpeechToText(kronk_stt.PassInterfaceHandle());
-  kronk_services_.set_connection_error_handler([=] {
+  kronk_services_.set_connection_error_handler([this] {
+    kronk_services_.reset();
+    kronk_controller_.reset();
+
     if (kronk_restart_.ShouldRetry()) {
       FXL_LOG(INFO) << "Restarting Kronk...";
       StartKronk();
