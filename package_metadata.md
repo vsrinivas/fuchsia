@@ -90,4 +90,8 @@ The set of currently known features are as follows:
   `/system/data/boringssl` directories in the package's namespace. (The latter
   of which will be removed once all clients transition to the former.)
 
+- `persistent-storage`, which requests access to persistent storage for the
+  device, located in `/data` in the package's namespace. (Future work will
+  likely make this access more fine-grained than just the `/data` directory.)
+
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
