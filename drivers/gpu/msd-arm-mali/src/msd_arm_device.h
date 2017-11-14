@@ -80,6 +80,7 @@ public:
 
     // MsdArmConnection::Owner implementation.
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
+    void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override;
     AddressSpaceObserver* GetAddressSpaceObserver() override { return address_manager_.get(); }
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
@@ -99,6 +100,7 @@ private:
     class GpuInterruptRequest;
     class JobInterruptRequest;
     class ScheduleAtomRequest;
+    class CancelAtomsRequest;
 
     RegisterIo* register_io() override
     {
@@ -121,12 +123,14 @@ private:
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
     magma::Status ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom);
+    magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
 
     void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
 
     void RunAtom(MsdArmAtom* atom) override;
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
     void HardStopAtom(MsdArmAtom* atom) override;
+    magma::PlatformPort* GetPlatformPort() override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -140,6 +144,7 @@ private:
     std::thread mmu_interrupt_thread_;
 
     std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
+    std::unique_ptr<magma::PlatformPort> device_port_;
     std::mutex device_request_mutex_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 

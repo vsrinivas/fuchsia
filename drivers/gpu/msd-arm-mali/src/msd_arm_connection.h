@@ -5,6 +5,7 @@
 #ifndef MSD_ARM_CONNECTION_H
 #define MSD_ARM_CONNECTION_H
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -14,6 +15,7 @@
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "msd_arm_atom.h"
+#include "msd_arm_semaphore.h"
 
 struct magma_arm_mali_atom;
 
@@ -25,6 +27,7 @@ public:
     class Owner {
     public:
         virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
+        virtual void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) = 0;
         virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
     };
 
@@ -39,7 +42,10 @@ public:
     bool RemoveMapping(uint64_t gpu_va) override;
 
     bool AddMapping(std::unique_ptr<GpuMapping> mapping);
-    void ExecuteAtom(volatile magma_arm_mali_atom* atom);
+    // If |atom| is a soft atom, then the first element from
+    // |signal_semaphores| will be removed and used for it.
+    bool ExecuteAtom(volatile magma_arm_mali_atom* atom,
+                     std::deque<std::shared_ptr<magma::PlatformSemaphore>>* signal_semaphores);
 
     void SetNotificationChannel(msd_channel_send_callback_t send_callback, msd_channel_t channel);
     void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status);

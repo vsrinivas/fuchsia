@@ -20,6 +20,7 @@ public:
         virtual void RunAtom(MsdArmAtom* atom) = 0;
         virtual void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) = 0;
         virtual void HardStopAtom(MsdArmAtom* atom) {}
+        virtual magma::PlatformPort* GetPlatformPort() { return nullptr; }
     };
     using Clock = std::chrono::steady_clock;
 
@@ -27,9 +28,9 @@ public:
 
     void EnqueueAtom(std::shared_ptr<MsdArmAtom> atom);
     void TryToSchedule();
+    void PlatformPortSignaled(uint64_t key);
 
-    void CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection,
-                                  std::function<void()> finished);
+    void CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
     void JobCompleted(uint64_t slot, ArmMaliResultCode result_code);
 
@@ -45,6 +46,7 @@ public:
 
 private:
     MsdArmAtom* executing_atom() const { return executing_atom_.get(); }
+    void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);
 
     void set_timeout_duration(uint64_t timeout_duration_ms)
     {
@@ -57,9 +59,9 @@ private:
 
     uint64_t timeout_duration_ms_ = 1000;
 
+    std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
     std::shared_ptr<MsdArmAtom> executing_atom_;
     std::list<std::shared_ptr<MsdArmAtom>> atoms_;
-    std::vector<std::function<void()>> finished_callbacks_;
 
     friend class TestJobScheduler;
 

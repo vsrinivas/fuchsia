@@ -15,6 +15,7 @@
 #include "msd_arm_buffer.h"
 #include "msd_arm_context.h"
 #include "msd_arm_device.h"
+#include "msd_arm_semaphore.h"
 #include "platform_semaphore.h"
 
 void msd_connection_close(msd_connection_t* connection)
@@ -47,20 +48,40 @@ void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_
 {
 }
 
-void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
+bool MsdArmConnection::ExecuteAtom(
+    volatile magma_arm_mali_atom* atom,
+    std::deque<std::shared_ptr<magma::PlatformSemaphore>>* semaphores)
 {
     uint8_t atom_number = atom->atom_number;
     uint32_t flags = atom->flags;
-    uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
-    if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
-        magma::log(magma::LOG_WARNING, "Invalid atom flags 0x%x\n", flags);
-        return;
-    }
     magma_arm_mali_user_data user_data;
     user_data.data[0] = atom->data.data[0];
     user_data.data[1] = atom->data.data[1];
-    auto msd_atom = std::make_shared<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
-                                                 atom_number, user_data);
+    std::shared_ptr<MsdArmAtom> msd_atom;
+    if (flags & kAtomFlagSoftware) {
+        if (flags != kAtomFlagSemaphoreSet && flags != kAtomFlagSemaphoreReset &&
+            flags != kAtomFlagSemaphoreWait && flags != kAtomFlagSemaphoreWaitAndReset) {
+            magma::log(magma::LOG_WARNING, "Invalid soft atom flags 0x%x\n", flags);
+            return false;
+        }
+        if (semaphores->empty()) {
+            magma::log(magma::LOG_WARNING, "No remaining semaphores");
+            return false;
+        }
+
+        msd_atom =
+            std::make_shared<MsdArmSoftAtom>(shared_from_this(), static_cast<AtomFlags>(flags),
+                                             semaphores->front(), atom_number, user_data);
+        semaphores->pop_front();
+    } else {
+        uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
+        if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
+            magma::log(magma::LOG_WARNING, "Invalid atom flags 0x%x\n", flags);
+            return false;
+        }
+        msd_atom = std::make_shared<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
+                                                atom_number, user_data);
+    }
 
     {
         // Hold lock for using outstanding_atoms_.
@@ -81,6 +102,7 @@ void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
         outstanding_atoms_[atom_number] = msd_atom;
     }
     owner_->ScheduleAtom(std::move(msd_atom));
+    return true;
 }
 
 magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer_t* cmd_buf,
@@ -92,6 +114,18 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
     auto connection = context->connection().lock();
     if (!connection)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Connection not valid");
+
+    std::deque<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
+    auto command_buffer = MsdArmAbiBuffer::cast(cmd_buf)->ptr();
+    void* command_buffer_addr;
+    if (!command_buffer->platform_buffer()->MapCpu(&command_buffer_addr))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Can't map buffer");
+    auto* command_buffer_data = static_cast<magma_system_command_buffer*>(command_buffer_addr);
+    for (size_t i = 0; i < command_buffer_data->signal_semaphore_count; i++) {
+        semaphores.push_back(MsdArmAbiSemaphore::cast(signal_semaphores[i])->ptr());
+    }
+
+    command_buffer->platform_buffer()->UnmapCpu();
 
     auto buffer = MsdArmAbiBuffer::cast(exec_resources[0])->ptr();
     void* addr;
@@ -118,7 +152,10 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
     volatile magma_arm_mali_atom* atom =
         reinterpret_cast<volatile magma_arm_mali_atom*>(atom_count_ptr + 1);
     for (uint64_t i = 0; i < atom_count; i++) {
-        connection->ExecuteAtom(&atom[i]);
+        if (!connection->ExecuteAtom(&atom[i], &semaphores)) {
+            buffer->platform_buffer()->UnmapCpu();
+            return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+        }
     }
 
     buffer->platform_buffer()->UnmapCpu();
@@ -251,6 +288,8 @@ void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode 
 
 void MsdArmConnection::MarkDestroyed()
 {
+    owner_->CancelAtoms(shared_from_this());
+
     std::lock_guard<std::mutex> lock(channel_lock_);
     if (!return_channel_)
         return;

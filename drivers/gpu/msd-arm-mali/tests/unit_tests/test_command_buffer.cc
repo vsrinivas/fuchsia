@@ -28,7 +28,7 @@ public:
         auto command_buffer = MakeCommandBuffer(buffer.id);
 
         magma::Status status = ctx->ExecuteCommandBuffer(std::move(command_buffer));
-        EXPECT_EQ(MAGMA_STATUS_OK, status.get());
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
     }
 
     void TestEmpty()

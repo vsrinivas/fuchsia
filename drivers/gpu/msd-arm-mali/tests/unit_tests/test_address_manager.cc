@@ -23,7 +23,9 @@ private:
 class TestConnectionOwner : public MsdArmConnection::Owner {
 public:
     TestConnectionOwner(AddressManager* manager) : manager_(manager) {}
+
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
+    void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override {}
     AddressSpaceObserver* GetAddressSpaceObserver() override { return manager_; }
 
 private:

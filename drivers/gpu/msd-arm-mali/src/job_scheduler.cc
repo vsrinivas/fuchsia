@@ -17,49 +17,43 @@ void JobScheduler::EnqueueAtom(std::shared_ptr<MsdArmAtom> atom)
 
 void JobScheduler::TryToSchedule()
 {
-    if (executing_atom_)
-        return;
-    if (atoms_.empty())
-        return;
-    for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
-        if ((*it)->AreDependenciesFinished()) {
-            executing_atom_ = *it;
-            atoms_.erase(it);
-            break;
-        } else {
-            DLOG("Skipping atom %lx due to dependency", (*it)->gpu_address());
+    while (!executing_atom_) {
+        if (atoms_.empty())
+            return;
+        for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
+            if ((*it)->AreDependenciesFinished()) {
+                executing_atom_ = *it;
+                atoms_.erase(it);
+                break;
+            } else {
+                DLOG("Skipping atom %lx due to dependency", (*it)->gpu_address());
+            }
         }
-    }
 
-    if (executing_atom_) {
-        executing_atom_->SetExecutionStarted();
-        owner_->RunAtom(executing_atom_.get());
+        if (executing_atom_) {
+            executing_atom_->SetExecutionStarted();
+            auto soft_atom = MsdArmSoftAtom::cast(executing_atom_);
+            if (soft_atom) {
+                ProcessSoftAtom(soft_atom);
+                continue;
+            }
+            owner_->RunAtom(executing_atom_.get());
+        }
+        return;
     }
 }
 
-void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection,
-                                            std::function<void()> finished)
+void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection)
 {
-    DASSERT(connection);
-    if (atoms_.empty()) {
-        finished();
-        return;
-    }
+    auto removal_function = [connection](auto it) {
+        auto locked = it->connection().lock();
+        return !locked || locked == connection;
+    };
+    waiting_atoms_.erase(
+        std::remove_if(waiting_atoms_.begin(), waiting_atoms_.end(), removal_function),
+        waiting_atoms_.end());
 
-    auto it = atoms_.begin();
-    while (it != atoms_.end()) {
-        if ((*it)->connection().lock() == connection)
-            it = atoms_.erase(it);
-        else
-            ++it;
-    }
-
-    if (!executing_atom_ || executing_atom_->connection().lock() != connection) {
-        finished();
-        return;
-    }
-
-    finished_callbacks_.push_back(finished);
+    atoms_.remove_if(removal_function);
 }
 
 void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
@@ -68,11 +62,35 @@ void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
     DASSERT(executing_atom_);
     owner_->AtomCompleted(executing_atom_.get(), result_code);
     executing_atom_.reset();
-    for (auto x : finished_callbacks_) {
-        x();
-    }
-    finished_callbacks_.clear();
     TryToSchedule();
+}
+
+void JobScheduler::PlatformPortSignaled(uint64_t key)
+{
+    std::vector<std::shared_ptr<MsdArmSoftAtom>> unfinished_atoms;
+    bool completed_atom = false;
+    for (auto& atom : waiting_atoms_) {
+        bool wait_succeeded;
+        if (atom->soft_flags() == kAtomFlagSemaphoreWait) {
+            wait_succeeded = atom->platform_semaphore()->WaitNoReset(0);
+        } else {
+            DASSERT(atom->soft_flags() == kAtomFlagSemaphoreWaitAndReset);
+            wait_succeeded = atom->platform_semaphore()->Wait(0);
+        }
+
+        if (wait_succeeded) {
+            completed_atom = true;
+            owner_->AtomCompleted(atom.get(), kArmMaliResultSuccess);
+        } else {
+            if (atom->platform_semaphore()->id() == key)
+                atom->platform_semaphore()->WaitAsync(owner_->GetPlatformPort());
+            unfinished_atoms.push_back(atom);
+        }
+    }
+    if (completed_atom) {
+        waiting_atoms_ = unfinished_atoms;
+        TryToSchedule();
+    }
 }
 
 size_t JobScheduler::GetAtomListSize() { return atoms_.size(); }
@@ -91,5 +109,36 @@ void JobScheduler::KillTimedOutAtoms()
         DASSERT(executing_atom_.get());
         executing_atom_->set_hard_stopped();
         owner_->HardStopAtom(executing_atom_.get());
+    }
+}
+
+void JobScheduler::ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom)
+{
+    DASSERT(owner_->GetPlatformPort());
+    DASSERT(atom == executing_atom_);
+    if (atom->soft_flags() == kAtomFlagSemaphoreSet) {
+        atom->platform_semaphore()->Signal();
+        JobCompleted(atom->slot(), kArmMaliResultSuccess);
+    } else if (atom->soft_flags() == kAtomFlagSemaphoreReset) {
+        atom->platform_semaphore()->Reset();
+        JobCompleted(atom->slot(), kArmMaliResultSuccess);
+    } else if ((atom->soft_flags() == kAtomFlagSemaphoreWait) ||
+               (atom->soft_flags() == kAtomFlagSemaphoreWaitAndReset)) {
+        bool wait_succeeded;
+        if (atom->soft_flags() == kAtomFlagSemaphoreWait) {
+            wait_succeeded = atom->platform_semaphore()->WaitNoReset(0);
+        } else {
+            wait_succeeded = atom->platform_semaphore()->Wait(0);
+        }
+
+        if (wait_succeeded) {
+            JobCompleted(atom->slot(), kArmMaliResultSuccess);
+        } else {
+            waiting_atoms_.push_back(atom);
+            executing_atom_.reset();
+            atom->platform_semaphore()->WaitAsync(owner_->GetPlatformPort());
+        }
+    } else {
+        DASSERT(false);
     }
 }

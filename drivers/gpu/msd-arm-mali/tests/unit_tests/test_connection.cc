@@ -16,11 +16,21 @@ namespace {
 class FakeConnectionOwner : public MsdArmConnection::Owner {
 public:
     FakeConnectionOwner() : address_manager_(nullptr, 8) {}
-    void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
+
+    void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override { atoms_list_.push_back(atom); }
+    void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override
+    {
+        cancel_atoms_list_.push_back(connection.get());
+    }
     AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_manager_; }
+
+    const std::vector<MsdArmConnection*>& cancel_atoms_list() { return cancel_atoms_list_; }
+    const std::vector<std::shared_ptr<MsdArmAtom>>& atoms_list() { return atoms_list_; }
 
 private:
     AddressManager address_manager_;
+    std::vector<MsdArmConnection*> cancel_atoms_list_;
+    std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
 };
 
 uint32_t g_test_channel;
@@ -146,6 +156,32 @@ public:
         EXPECT_EQ(kArmMaliResultTerminated, g_status.result_code);
 
         connection->SetNotificationChannel(nullptr, 0);
+
+        EXPECT_EQ(1u, owner.cancel_atoms_list().size());
+        EXPECT_EQ(connection.get(), owner.cancel_atoms_list()[0]);
+    }
+
+    void SoftwareAtom()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+
+        magma_arm_mali_atom client_atom;
+        client_atom.flags = kAtomFlagSemaphoreWait;
+        std::deque<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
+        EXPECT_FALSE(connection->ExecuteAtom(&client_atom, &semaphores));
+
+        std::shared_ptr<magma::PlatformSemaphore> semaphore(magma::PlatformSemaphore::Create());
+        semaphores.push_back(semaphore);
+        EXPECT_TRUE(connection->ExecuteAtom(&client_atom, &semaphores));
+
+        EXPECT_EQ(1u, owner.atoms_list().size());
+        std::shared_ptr<MsdArmAtom> atom = owner.atoms_list()[0];
+        std::shared_ptr<MsdArmSoftAtom> soft_atom = MsdArmSoftAtom::cast(atom);
+        EXPECT_TRUE(!!soft_atom);
+        EXPECT_EQ(kAtomFlagSemaphoreWait, soft_atom->soft_flags());
+        EXPECT_EQ(semaphore, soft_atom->platform_semaphore());
     }
 };
 
@@ -165,4 +201,10 @@ TEST(TestConnection, DestructionNotification)
 {
     TestConnection test;
     test.DestructionNotification();
+}
+
+TEST(TestConnection, SoftwareAtom)
+{
+    TestConnection test;
+    test.SoftwareAtom();
 }

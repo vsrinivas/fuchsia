@@ -21,6 +21,15 @@ enum AtomFlags {
     // Compute shaders also include vertex and geometry shaders.
     kAtomFlagRequireComputeShader = (1 << 1),
     kAtomFlagRequireTiler = (1 << 2),
+
+    // Atoms with this flag set are processed completely in the MSD and aren't
+    // sent to hardware.
+    kAtomFlagSoftware = (1 << 30),
+
+    kAtomFlagSemaphoreSet = kAtomFlagSoftware | 1,
+    kAtomFlagSemaphoreReset = kAtomFlagSoftware | 2,
+    kAtomFlagSemaphoreWait = kAtomFlagSoftware | 3,
+    kAtomFlagSemaphoreWaitAndReset = kAtomFlagSoftware | 4,
 };
 
 enum ArmMaliResultCodeFlags {
