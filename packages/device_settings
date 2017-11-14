@@ -1,9 +1,11 @@
 {
     "languages": [
-        "rust"
+        "rust",
+        "go"
     ],
     "packages": {
         "device_settings_manager": "//garnet/bin/device_settings:device_settings_manager",
-        "device_settings_manager_tests": "//garnet/bin/device_settings:device_settings_manager_tests"
+        "device_settings_manager_tests": "//garnet/bin/device_settings:device_settings_manager_tests",
+        "device_settings_gotests": "//garnet/go/src/device_settings:device_settings_gotests"
     }
 }

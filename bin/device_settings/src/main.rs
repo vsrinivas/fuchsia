@@ -38,9 +38,11 @@ struct DeviceSettingsManagerServer {
 
 impl DeviceSettingsManagerServer {
     fn initialize_keys(&mut self, data_dir: &str, keys: &[&str]) {
-        self.setting_file_map = keys.iter().map(|k|
-            (k.to_string(), format!("{}/{}", data_dir, k.to_lowercase()))
-        ).collect();
+        self.setting_file_map = keys.iter()
+            .map(|k| {
+                (k.to_string(), format!("{}/{}", data_dir, k.to_lowercase()))
+            })
+            .collect();
     }
 
     fn run_watchers(&mut self, key: &str, t: ValueType) {
@@ -191,12 +193,24 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
     }
 }
 
-// TODO(anmittal): Use log crate and use that for logging
 fn main() {
-    let mut core = reactor::Core::new().expect("Unable to create core");
+    if let Err(e) = main_ds() {
+        eprintln!("DeviceSetting: Error: {:?}", e);
+    }
+}
+
+// TODO(anmittal): Use log crate and use that for logging
+fn main_ds() -> Result<(), String> {
+    let mut core = reactor::Core::new().map_err(|e| {
+        format!("unable to create core: {:?}", e)
+    })?;
     let handle = core.handle();
 
     let watchers = Rc::new(RefCell::new(HashMap::new()));
+    // Attempt to create data directory
+    fs::create_dir_all(DATA_DIR).map_err(|e| {
+        format!("creating directory: {:?}", e)
+    })?;
     let server = bootstrap_server(handle.clone(), move || {
         let mut d = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
@@ -204,14 +218,13 @@ fn main() {
             handle: handle.clone(),
         };
 
-        d.initialize_keys(DATA_DIR, &["Timezone"]);
-        // Attempt to create data directory
-        let _ = fs::create_dir_all(DATA_DIR);
+        d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
 
         DeviceSettingsManager::Dispatcher(d)
-    }).unwrap();
-
-    core.run(server).unwrap();
+    }).map_err(|e| format!("running server: {:?}", e))?;
+    core.run(server).map_err({
+        |e| format!("running server: {:?}", e)
+    })
 }
 
 #[cfg(test)]
