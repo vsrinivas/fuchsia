@@ -35,6 +35,7 @@ void platform_mem_init(void);
 void platform_prep_suspend_timer(void);
 void platform_resume_timer(void);
 void platform_resume_debug(void);
+void platform_suspend_debug(void);
 
 zx_status_t x86_alloc_msi_block(uint requested_irqs, bool can_target_64bit,
                                 bool is_msix, pcie_msi_block_t* out_block);

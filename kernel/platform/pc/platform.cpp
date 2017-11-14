@@ -884,6 +884,7 @@ void platform_init(void)
 void platform_suspend(void)
 {
     platform_prep_suspend_timer();
+    platform_suspend_debug();
 }
 
 void platform_resume(void)

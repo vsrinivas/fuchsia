@@ -147,8 +147,13 @@ void platform_init_debug(void)
     }
 }
 
+void platform_suspend_debug(void) {
+    output_enabled = false;
+}
+
 void platform_resume_debug(void) {
     init_uart();
+    output_enabled = true;
 }
 
 static void debug_uart_putc(char c)
