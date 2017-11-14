@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("media_service") {
+import("//packages/package.gni")
+
+package("media_service") {
+  system_image = true
+
+  deps = [
+    ":media_service_bin",
+  ]
+
+  binaries = [
+    {
+        name = "media_service"
+    },
+  ]
+}
+
+executable("media_service_bin") {
+  output_name = "media_service"
+
   sources = [
     "audio_capturer_impl.cc",
     "audio_capturer_impl.h",

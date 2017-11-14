@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("flog_viewer") {
+import("//packages/package.gni")
+
+package("flog_viewer") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+        name = "flog_viewer"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "flog_viewer"
+
   sources = [
     "accumulator.cc",
     "accumulator.h",

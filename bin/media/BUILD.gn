@@ -20,41 +20,6 @@ group("tools") {
   ]
 }
 
-package("media") {
-  system_image = true
-
-  deps = [
-    ":services",
-    ":tools",
-  ]
-
-  binaries = [
-    {
-      name = "audio_policy_service"
-    },
-
-    {
-      name = "flog_service"
-    },
-
-    {
-      name = "flog_viewer"
-    },
-
-    {
-      name = "media_service"
-    },
-
-    {
-      name = "net_media_service"
-    },
-
-    {
-      name = "vol"
-    },
-  ]
-}
-
 package("audio_server") {
   system_image = true
 

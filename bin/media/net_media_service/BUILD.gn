@@ -3,8 +3,25 @@
 # found in the LICENSE file.
 
 import("//garnet/public/build/test.gni")
+import("//packages/package.gni")
 
-executable("net_media_service") {
+package("net_media_service") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "net_media_service"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "net_media_service"
+
   sources = [
     "main.cc",
     "net_media_player_impl.cc",

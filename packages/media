@@ -3,6 +3,11 @@
         "cpp"
     ],
     "packages": {
-        "media": "//garnet/bin/media"
+        "audio_policy_service": "//garnet/bin/media/audio_policy_service",
+        "flog_service": "//garnet/bin/media/flog_service",
+        "flog_viewer": "//garnet/bin/flog_viewer",
+        "media_service": "//garnet/bin/media/media_service",
+        "net_media_service": "//garnet/bin/media/net_media_service",
+        "vol": "//garnet/bin/media/vol"
     }
 }

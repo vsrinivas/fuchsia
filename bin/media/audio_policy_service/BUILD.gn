@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("audio_policy_service") {
+import("//packages/package.gni")
+
+package("audio_policy_service") {
+  system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "audio_policy_service"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "audio_policy_service"
+
   sources = [
     "audio_policy_service_impl.cc",
     "audio_policy_service_impl.h",

@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("vol") {
+import("//packages/package.gni")
+
+package("vol") {
+  system_image = true
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "vol"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "vol"
+
   sources = [
     "vol_app.cc",
   ]
