@@ -188,7 +188,9 @@ def main():
                         default=sys.stdin,
                         help="File to read from, stdin by default")
     parser.add_argument("--build-dir", "-b", nargs="*",
-                        help="List of additional build directories to search")
+                        help="List of build directories to search instead of"
+                             " the default Fuchsia build directory"
+                             " (out/<variant>-<arch>)")
     parser.add_argument("--disassemble", "-d", action="store_true",
                         help="Show disassembly of each function")
     parser.add_argument("--stack_size", "-s", type=int,
@@ -215,9 +217,18 @@ def main():
     if args.build_dir:
         build_dirs = args.build_dir + build_dirs
     else:
+        # Put the unstripped path ahead of the stripped one, we want the
+        # former searched first. This does mean the unstripped directory
+        # will get searched twice, but relative to the entire search time,
+        # the addition is small.
+        # Plus once a file is found its location is cached.
+        # Plus this is only used as a fallback in case the file isn't found
+        # in ids.txt.
         fuchsia_build_dir = os.path.abspath(os.path.join(
             os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
-        build_dirs.insert(0, fuchsia_build_dir)
+        fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir,
+            "exe.unstripped")
+        build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
 
     # Parsing vars
     arch = "x86_64"
