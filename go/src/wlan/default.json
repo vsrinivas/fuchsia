@@ -1,5 +1,6 @@
 {
     "SSID": "GoogleGuest-Legacy",
     "ScanInterval": 3,
-    "Password": ""
+    "Password": "",
+    "BSSID": ""
 }

@@ -27,7 +27,7 @@ func TestCollectResults(t *testing.T) {
 	addBss(1, "def", 1, 0x80, resp)
 	addBss(2, "abc", 6, 0x85, resp)
 
-	aps := CollectScanResults(resp, "abc")
+	aps := CollectScanResults(resp, "abc", "")
 	if len(aps) != 2 {
 		t.Fatalf("Failed to collect 2 results for SSID \"abc\" (found %d)", len(aps))
 	}
@@ -35,4 +35,12 @@ func TestCollectResults(t *testing.T) {
 	if ap.LastRSSI != 0x85 {
 		t.Fatalf("Failed to find AP with best RSSI")
 	}
+
+	bssid_to_search := "02:01:02:03:04:05"
+	aps = CollectScanResults(resp, "abc", bssid_to_search)
+	if len(aps) != 1 {
+		t.Fatalf("Failed to collect 1 results for SSID \"abc\" and BSSID %s (found %d)",
+			bssid_to_search, len(aps))
+	}
+
 }

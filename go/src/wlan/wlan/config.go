@@ -6,13 +6,15 @@ package wlan
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 )
 
 type Config struct {
-	SSID         string
-	ScanInterval int
-	Password     string
+	SSID         string `json:"SSID"`
+	ScanInterval int    `json:"ScanInternal"`
+	Password     string `json:"Password"`
+	BSSID        string `json:"BSSID"`
 }
 
 func NewConfig() *Config {
@@ -27,5 +29,6 @@ func ReadConfigFromFile(path string) (*Config, error) {
 
 	cfg := NewConfig()
 	err = json.Unmarshal(cfgBytes, cfg)
+	fmt.Printf("Done reading the config file: %s\n", path)
 	return cfg, err
 }

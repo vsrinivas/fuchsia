@@ -151,11 +151,11 @@ func (s *scanState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 		s.running = false
 
 		if s.cmdPending != nil && s.cmdPending.id == CmdScan {
-			aps := CollectScanResults(v, "")
+			aps := CollectScanResults(v, "", "")
 			s.cmdPending.respC <- &CommandResult{aps, nil}
 			s.cmdPending = nil
 		} else if c.cfg != nil && c.cfg.SSID != "" {
-			aps := CollectScanResults(v, c.cfg.SSID)
+			aps := CollectScanResults(v, c.cfg.SSID, c.cfg.BSSID)
 			if len(aps) > 0 {
 				c.ap = &aps[0]
 				return newJoinState(), nil
