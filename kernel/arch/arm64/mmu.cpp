@@ -44,6 +44,10 @@ static mutex_t asid_lock = MUTEX_INITIAL_VALUE(asid_lock);
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
     __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
 
+pte_t *arm64_get_kernel_ptable() {
+    return arm64_kernel_translation_table;
+}
+
 static zx_status_t arm64_mmu_alloc_asid(uint16_t* asid) {
 
     uint16_t new_asid;

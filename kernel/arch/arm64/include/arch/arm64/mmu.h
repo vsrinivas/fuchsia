@@ -325,14 +325,8 @@
 // Furthermore, this only covers what's required by ARMv8.0.
 #define MMU_VTCR_EL2_FLAGS (MMU_VTCR_EL2_RES1 | MMU_VTCR_EL2_SL0_DEFAULT | MMU_VTCR_FLAGS_GUEST)
 
-#if MMU_IDENT_SIZE_SHIFT > MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 2)
-#define MMU_PTE_IDENT_DESCRIPTOR MMU_PTE_L012_DESCRIPTOR_BLOCK
-#else
-#define MMU_PTE_IDENT_DESCRIPTOR MMU_PTE_L3_DESCRIPTOR_PAGE
-#endif
-#define MMU_PTE_IDENT_FLAGS \
-    (MMU_PTE_IDENT_DESCRIPTOR | \
-     MMU_PTE_ATTR_AF | \
+#define MMU_PTE_KERNEL_RWX_FLAGS \
+    (MMU_PTE_ATTR_AF | \
      MMU_PTE_ATTR_SH_INNER_SHAREABLE | \
      MMU_PTE_ATTR_NORMAL_MEMORY | \
      MMU_PTE_ATTR_AP_P_RW_U_NA)
@@ -366,6 +360,15 @@
      MMU_PTE_ATTR_DEVICE | \
      MMU_PTE_ATTR_AP_P_RW_U_NA)
 
+#if MMU_IDENT_SIZE_SHIFT > MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 2)
+#define MMU_PTE_IDENT_DESCRIPTOR MMU_PTE_L012_DESCRIPTOR_BLOCK
+#else
+#define MMU_PTE_IDENT_DESCRIPTOR MMU_PTE_L3_DESCRIPTOR_PAGE
+#endif
+#define MMU_PTE_IDENT_FLAGS \
+    (MMU_PTE_IDENT_DESCRIPTOR | \
+     MMU_PTE_KERNEL_RWX_FLAGS)
+
 #ifndef __ASSEMBLER__
 
 #include <sys/types.h>
@@ -394,6 +397,12 @@ __BEGIN_CDECLS
 
 #define MMU_ARM64_ASID_BITS (16U)
 
+pte_t *arm64_get_kernel_ptable();
+
+extern "C" zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
+                                 const paddr_t paddr,
+                                 const size_t len,
+                                 const pte_t flags);
 
 __END_CDECLS
 #endif /* __ASSEMBLER__ */

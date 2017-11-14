@@ -285,12 +285,14 @@ FUNCTION(arm_reset)
     str     tmp2, [page_table0, tmp, lsl #3]  /* tt_trampoline[paddr index] = pt entry */
 
     /* map the kernel to a fixed address */
-    /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len); */
+    /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len, pte_t flags); */
+    /* note: mapping the kernel here with full rwx, this will get locked down later in vm initialization; */
     mov     x0, page_table1
     movlit  x1, KERNEL_BASE
     adr_global x2, __code_start
     adr_global x3, _end
     sub     x3, x3, x2
+    mov     x4, MMU_PTE_KERNEL_RWX_FLAGS
     bl      arm64_boot_map
 
     /* mark page tables as set up, so secondary cpus can fall through */
