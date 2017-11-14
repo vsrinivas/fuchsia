@@ -346,7 +346,7 @@ transmit:
     if (do_boot) {
         // this is a gross way to suspend devices and block until it's done
         if (do_dmctl_mexec() == ZX_OK) {
-            zx_system_mexec(nbkernel.data, nbbootdata.data, (char*)nbcmdline.file.data,
+            zx_system_mexec(nbkernel.data, nbbootdata.data, nbcmdline.data,
                             nbcmdline.file.size);
         }
         printf("netboot: Boot failed\n");
