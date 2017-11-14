@@ -127,6 +127,21 @@ zx_status_t Device::DdkIoctl(uint32_t op,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Device::DdkSuspend(uint32_t flags) {
+    if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    fbl::AutoLock guard(&lock_);
+
+    zx_status_t status = ReleaseLocalityLocked(0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "tpm: Failed to release locality: %d\n", status);
+        return status;
+    }
+    return status;
+}
+
 zx_status_t Device::Bind() {
     zx_status_t status = DdkAdd("tpm", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
@@ -164,7 +179,7 @@ zx_status_t Device::Init() {
         // The system firmware performs the init, so it's safe to assume that
         // is 30 ms past.  If we're on systems where we need to do init,
         // we need to wait up to 30ms for the TPM_ACCESS register to be valid.
-        status = RequestUseLocked(0);
+        status = RequestLocalityLocked(0);
         if (status != ZX_OK) {
             zxlogf(ERROR, "tpm: Failed to request use: %d\n", status);
             return status;

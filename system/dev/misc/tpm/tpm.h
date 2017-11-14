@@ -52,7 +52,7 @@ public:
 };
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Ioctlable>;
+using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::Suspendable>;
 
 class Device : public DeviceType,
                public ddk::TpmProtocol<Device> {
@@ -69,6 +69,7 @@ public:
     void DdkRelease();
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* actual);
+    zx_status_t DdkSuspend(uint32_t flags);
 
     // Register this instance with devmgr and launch the deferred
     // initialization.
@@ -82,9 +83,11 @@ private:
     zx_status_t Init();
 
     // Request use of the given locality
-    zx_status_t RequestUseLocked(Locality loc) TA_REQ(lock_);
+    zx_status_t RequestLocalityLocked(Locality loc) TA_REQ(lock_);
     // Wait for access to the requested locality
     zx_status_t WaitForLocalityLocked(Locality loc) TA_REQ(lock_);
+    // Release the given locality
+    zx_status_t ReleaseLocalityLocked(Locality loc) TA_REQ(lock_);
 
     // Perform the transmit half of a command
     zx_status_t SendCmdLocked(Locality loc, const uint8_t* cmd, size_t len);

@@ -90,7 +90,7 @@ static zx_status_t GetAccessField(HardwareInterface* iface, Locality loc,
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t Device::RequestUseLocked(Locality loc) {
+zx_status_t Device::RequestLocalityLocked(Locality loc) {
     uint8_t val;
     zx_status_t status = GetAccessField(iface_.get(), loc, &val);
     if (status != ZX_OK) {
@@ -110,6 +110,29 @@ zx_status_t Device::RequestUseLocked(Locality loc) {
     }
 
     return iface_->WriteAccess(loc, TPM_ACCESS_REQUEST_USE);
+}
+
+zx_status_t Device::ReleaseLocalityLocked(Locality loc) {
+    uint8_t val;
+    zx_status_t status = GetAccessField(iface_.get(), loc, &val);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (!(val & TPM_ACCESS_REG_VALID)) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (val & TPM_ACCESS_REQUEST_USE) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (!(val & TPM_ACCESS_ACTIVE_LOCALITY)) {
+        // We're not the active locality
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Writing this bit triggers the release.
+    return iface_->WriteAccess(loc, TPM_ACCESS_ACTIVE_LOCALITY);
 }
 
 zx_status_t Device::WaitForLocalityLocked(Locality loc) {
