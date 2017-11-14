@@ -39,5 +39,12 @@
 
 #define ARCH_DEFAULT_STACK_SIZE 8192
 
-#define ARCH_PHYSMAP_SIZE MEMORY_APERTURE_SIZE
+/* map 512GB at the base of the kernel. this is the max that can be mapped with a
+ * single level 1 page table using 1GB pages.
+ */
+#ifndef __ASSEMBLER__
+#define ARCH_PHYSMAP_SIZE (1UL << 39)
+#else
+#define ARCH_PHYSMAP_SIZE (0x1 << 39)
+#endif
 

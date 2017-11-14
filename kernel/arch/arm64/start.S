@@ -10,7 +10,6 @@
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <arch/efi.h>
-#include <vm/initial_map.h>
 #include <zircon/tls.h>
 
 #ifndef __has_feature
@@ -34,11 +33,6 @@ new_page_table          .req x14
 cpuid                   .req x19
 page_table0             .req x20
 page_table1             .req x21
-mmu_initial_mapping     .req x22
-vaddr                   .req x23
-paddr                   .req x24
-size                    .req x25
-attr                    .req x26
 
 .section .text.boot, "ax", @progbits
 FUNCTION(arm_reset)
@@ -142,127 +136,25 @@ FUNCTION(arm_reset)
     cmp     tmp, #MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP
     bne     .Lclear_top_page_table_loop
 
-    /* load the address of the mmu_initial_mappings table and start processing */
-    adr_global mmu_initial_mapping, mmu_initial_mappings
+    /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len, pte_t flags); */
 
-.Linitial_mapping_loop:
-/* Read entry of mmu_initial_mappings (likely defined in platform.c) */
-    ldp     paddr, vaddr, [mmu_initial_mapping, #__MMU_INITIAL_MAPPING_PHYS_OFFSET]
-    ldp     size, tmp, [mmu_initial_mapping, #__MMU_INITIAL_MAPPING_SIZE_OFFSET]
+    /* map a large run of physical memory at the base of the kernel's address space */
+    mov     x0, page_table1
+    mov     x1, KERNEL_ASPACE_BASE
+    mov     x2, 0
+    mov     x3, ARCH_PHYSMAP_SIZE
+    movlit  x4, MMU_PTE_KERNEL_DATA_FLAGS
+    bl      arm64_boot_map
 
-    /* if size == 0, end of list, done with initial mapping */
-    cbz     size, .Linitial_mapping_done
-
-    /* set up the flags */
-    tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_UNCACHED, .Lnot_uncached
-    movlit  attr, MMU_INITIAL_MAP_STRONGLY_ORDERED
-    b       .Lmem_type_done
-
-.Lnot_uncached:
-    /* is this memory mapped to device/peripherals? */
-    tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_DEVICE, .Lnot_device
-    movlit  attr, MMU_INITIAL_MAP_DEVICE
-    b       .Lmem_type_done
-
-.Lnot_device:
-    /* regular read/write no execute kernel data */
-    movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
-
-.Lmem_type_done:
-    /* Check that paddr, vaddr and size are page aligned */
-    orr     tmp, vaddr, paddr
-    orr     tmp, tmp, size
-    tst     tmp, #(1 << MMU_KERNEL_PAGE_SIZE_SHIFT) - 1
-    bne     . /* Error: not page aligned */
-
-    /* Clear top bits of virtual address (should be all set) */
-    eor     vaddr, vaddr, #(~0 << MMU_KERNEL_SIZE_SHIFT)
-
-    /* Check that top bits were all set */
-    tst     vaddr, #(~0 << MMU_KERNEL_SIZE_SHIFT)
-    bne     . /* Error: vaddr out of range */
-
-.Lmap_range_top_loop:
-    /* Select top level page table */
-    mov     page_table, page_table1
-    mov     index_shift, #MMU_KERNEL_TOP_SHIFT
-
-    lsr     index, vaddr, index_shift
-
-
-/* determine the type of page table entry to use given alignment and size
- *  of the chunk of memory we are mapping
- */
-.Lmap_range_one_table_loop:
-    /* Check if current level allow block descriptors */
-    cmp     index_shift, #MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT
-    b.hi    .Lmap_range_need_page_table
-
-    /* Check if paddr and vaddr alignment allows a block descriptor */
-    orr     tmp2, vaddr, paddr
-    lsr     tmp, tmp2, index_shift
-    lsl     tmp, tmp, index_shift
-    cmp     tmp, tmp2
-    b.ne    .Lmap_range_need_page_table
-
-    /* Check if size is large enough for a block mapping */
-    lsr     tmp, size, index_shift
-    cbz     tmp, .Lmap_range_need_page_table
-
-    /* Select descriptor type, page for level 3, block for level 0-2 */
-    orr     tmp, attr, #MMU_PTE_L3_DESCRIPTOR_PAGE
-    cmp     index_shift, MMU_KERNEL_PAGE_SIZE_SHIFT
-    beq     .Lmap_range_l3
-    orr     tmp, attr, #MMU_PTE_L012_DESCRIPTOR_BLOCK
-.Lmap_range_l3:
-
-    /* Write page table entry */
-    orr     tmp, tmp, paddr
-    str     tmp, [page_table, index, lsl #3]
-
-    /* Move to next page table entry */
-    mov     tmp, #1
-    lsl     tmp, tmp, index_shift
-    add     vaddr, vaddr, tmp
-    add     paddr, paddr, tmp
-    subs    size, size, tmp
-    /* TODO: add local loop if next entry is in the same page table */
-    b.ne    .Lmap_range_top_loop /* size != 0 */
-
-    /* Move to next mmu_initial_mappings entry */
-    add     mmu_initial_mapping, mmu_initial_mapping, __MMU_INITIAL_MAPPING_SIZE
-    b       .Linitial_mapping_loop
-
-.Lmap_range_need_page_table:
-    /* Check if page table entry is unused */
-    ldr     new_page_table, [page_table, index, lsl #3]
-    cbnz    new_page_table, .Lmap_range_has_page_table
-
-    /* Allocate new page table */
-    bl      boot_alloc_ptable
-    mov     new_page_table, x0
-
-    /* Write page table entry (with allocated page table) */
-    orr     new_page_table, new_page_table, #MMU_PTE_L012_DESCRIPTOR_TABLE
-    str     new_page_table, [page_table, index, lsl #3]
-
-.Lmap_range_has_page_table:
-    /* Check descriptor type */
-    and     tmp, new_page_table, #MMU_PTE_DESCRIPTOR_MASK
-    cmp     tmp, #MMU_PTE_L012_DESCRIPTOR_TABLE
-    b.ne    . /* Error: entry already in use (as a block entry) */
-
-    /* switch to next page table level */
-    bic     page_table, new_page_table, #MMU_PTE_DESCRIPTOR_MASK
-    mov     tmp, #~0
-    lsl     tmp, tmp, index_shift
-    bic     tmp, vaddr, tmp
-    sub     index_shift, index_shift, #(MMU_KERNEL_PAGE_SIZE_SHIFT - 3)
-    lsr     index, tmp, index_shift
-
-    b       .Lmap_range_one_table_loop
-
-.Linitial_mapping_done:
+    /* map the kernel to a fixed address */
+    /* note: mapping the kernel here with full rwx, this will get locked down later in vm initialization; */
+    mov     x0, page_table1
+    mov     x1, KERNEL_BASE
+    adr_global x2, __code_start
+    adr_global x3, _end
+    sub     x3, x3, x2
+    mov     x4, MMU_PTE_KERNEL_RWX_FLAGS
+    bl      arm64_boot_map
 
     /* Prepare tt_trampoline page table.
      * this will identity map the 1GB page holding the physical address of this code.
@@ -283,17 +175,6 @@ FUNCTION(arm_reset)
     add     tmp2, tmp2, tmp, lsl #MMU_IDENT_TOP_SHIFT  /* tmp2 = pt entry */
 
     str     tmp2, [page_table0, tmp, lsl #3]  /* tt_trampoline[paddr index] = pt entry */
-
-    /* map the kernel to a fixed address */
-    /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len, pte_t flags); */
-    /* note: mapping the kernel here with full rwx, this will get locked down later in vm initialization; */
-    mov     x0, page_table1
-    movlit  x1, KERNEL_BASE
-    adr_global x2, __code_start
-    adr_global x3, _end
-    sub     x3, x3, x2
-    mov     x4, MMU_PTE_KERNEL_RWX_FLAGS
-    bl      arm64_boot_map
 
     /* mark page tables as set up, so secondary cpus can fall through */
     adr_global tmp, page_tables_not_ready

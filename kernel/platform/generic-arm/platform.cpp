@@ -35,7 +35,6 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 
-#include <vm/initial_map.h>
 #include <vm/vm_aspace.h>
 
 #include <lib/console.h>
@@ -67,29 +66,6 @@ static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
 static bool halt_on_panic = false;
 
-/* initial memory mappings. parsed by start.S */
-const struct mmu_initial_mapping mmu_initial_mappings[] = {
- /* sdram space */
- {
-     .phys = MEMBASE,
-     .virt = KERNEL_ASPACE_BASE,
-     .size = MEMORY_APERTURE_SIZE,
-     .flags = 0,
-     .name = "memory"
- },
-
- /* peripherals */
- {
-     .phys = PERIPH_BASE_PHYS,
-     .virt = PERIPH_BASE_VIRT,
-     .size = PERIPH_SIZE,
-     .flags = MMU_INITIAL_MAPPING_FLAG_DEVICE,
-     .name = "peripherals"
- },
- /* null entry to terminate the list */
- {}
-};
-
 static pmm_arena_info_t arena = {
     /* .name */     "sdram",
     /* .flags */    PMM_ARENA_FLAG_KMAP,
@@ -108,6 +84,10 @@ struct mem_bank {
 /* save a list of reserved bootloader regions */
 const size_t MAX_BOOT_RESERVE_BANKS = 8;
 static mem_bank boot_reserve_banks[MAX_BOOT_RESERVE_BANKS];
+
+/* save a list of peripheral memory banks */
+const size_t MAX_PERIPH_BANKS = 4;
+static mem_bank periph_banks[MAX_PERIPH_BANKS];
 
 static volatile int panic_started;
 
@@ -229,6 +209,9 @@ static void platform_preserve_ramdisk(void) {
     if (!ramdisk_start_phys || !ramdisk_end_phys) {
         return;
     }
+
+    dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
+            ramdisk_start_phys, ramdisk_end_phys - 1);
 
     struct list_node list = LIST_INITIAL_VALUE(list);
     size_t pages = (ramdisk_end_phys - ramdisk_start_phys + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -456,8 +439,22 @@ static void platform_mdi_init(const bootdata_t* section) {
 
     platform_cpu_early_init(&cpu_map);
 
-    // save a copy of all the boot reserve banks
+    // handle mapping peripheral banks
     mdi_node_ref_t mem_map;
+    if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
+        process_mdi_banks(mem_map, [](const auto& b) {
+            if (b.length == 0 || !is_kernel_address(b.base_virt))
+                return;
+
+            auto status = arm64_boot_map_v(b.base_virt, b.base_phys, b.length, MMU_INITIAL_MAP_DEVICE);
+            ASSERT(status == ZX_OK);
+
+            ASSERT(b.num < fbl::count_of(periph_banks));
+            periph_banks[b.num] = b;
+        });
+    }
+
+    // save a copy of all the boot reserve banks
     if (mdi_find_node(&root, MDI_BOOT_RESERVE_MEM_MAP, &mem_map) == ZX_OK) {
         process_mdi_banks(mem_map, [](const auto& b) {
             ASSERT(b.num < fbl::count_of(boot_reserve_banks));
@@ -636,6 +633,18 @@ void platform_init(void)
 {
     platform_cpu_init();
 }
+
+// after the fact create a region to reserve the peripheral map(s)
+static void platform_init_postvm(uint level) {
+    for (auto& b: periph_banks) {
+        if (b.length == 0)
+            break;
+
+        VmAspace::kernel_aspace()->ReserveSpace("periph", b.length, b.base_virt);
+    }
+}
+
+LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM);
 
 void platform_dputs(const char* str, size_t len)
 {

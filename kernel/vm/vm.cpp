@@ -19,7 +19,6 @@
 #include <trace.h>
 #include <vm/bootalloc.h>
 #include <vm/init.h>
-#include <vm/initial_map.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -199,53 +198,8 @@ void vm_init() {
         ASSERT(status == ZX_OK);
     }
 
-    // mmu_initial_mappings should reflect where we are now, use it to construct the actual
-    // mappings.  We will carve out the kernel code/data from any mappings and
-    // unmap any temporary ones.
-    const struct mmu_initial_mapping* map = mmu_initial_mappings;
-    for (map = mmu_initial_mappings; map->size > 0; ++map) {
-        LTRACEF("looking at mapping %p (%s)\n", map, map->name);
-        // Unmap temporary mappings except where they intersect with the
-        // kernel code/data regions.
-        vaddr_t vaddr = map->virt;
-        LTRACEF("vaddr %#" PRIxPTR ", virt + size %#" PRIxPTR "\n", vaddr, map->virt + map->size);
-        while (vaddr != map->virt + map->size) {
-            vaddr_t next_kernel_region = map->virt + map->size;
-            vaddr_t next_kernel_region_end = map->virt + map->size;
-
-            // Find the kernel code/data region with the lowest start address
-            // that is within this mapping.
-            for (uint i = 0; i < fbl::count_of(regions); ++i) {
-                temp_region* region = &regions[i];
-
-                if (region->base >= vaddr && region->base < map->virt + map->size &&
-                    region->base < next_kernel_region) {
-
-                    next_kernel_region = region->base;
-                    next_kernel_region_end = region->base + region->size;
-                }
-            }
-
-            // If vaddr isn't the start of a kernel code/data region, then we should make
-            // a mapping between it and the next closest one.
-            if (next_kernel_region != vaddr) {
-                zx_status_t status = aspace->ReserveSpace(map->name, next_kernel_region - vaddr, vaddr);
-                ASSERT(status == ZX_OK);
-
-                if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
-                    // If the region is part of a temporary mapping, immediately unmap it
-                    dprintf(INFO, "VM: freeing region [%#" PRIxPTR ", %#" PRIxPTR ")\n", vaddr, next_kernel_region);
-                    status = aspace->FreeRegion(vaddr);
-                    ASSERT(status == ZX_OK);
-                } else {
-                    // Otherwise, mark it no-exec since it's not explicitly code
-                    status = ProtectRegion(aspace, vaddr, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-                    ASSERT(status == ZX_OK);
-                }
-            }
-            vaddr = next_kernel_region_end;
-        }
-    }
+    // reserve the kernel aspace where the physmap is
+    aspace->ReserveSpace("physmap", PHYSMAP_SIZE, PHYSMAP_BASE);
 
     // Reserve random padding of up to 64GB after first mapping. It will make
     // the adjacent memory mappings (kstack_vmar, arena:handles and others) at
@@ -254,10 +208,7 @@ void vm_init() {
     crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
 
     size_t random_size = PAGE_ALIGN(entropy % (64ULL * GB));
-    const struct mmu_initial_mapping* first_mapping = mmu_initial_mappings;
-    vaddr_t end_first_mapping = first_mapping->virt + first_mapping->size;
-
-    zx_status_t status = aspace->ReserveSpace("random_padding", random_size, end_first_mapping);
+    zx_status_t status = aspace->ReserveSpace("random_padding", random_size, PHYSMAP_BASE + PHYSMAP_SIZE);
     ASSERT(status == ZX_OK);
     LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 }

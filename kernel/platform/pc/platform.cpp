@@ -36,7 +36,6 @@
 #include <assert.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
-#include <vm/initial_map.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
@@ -59,29 +58,6 @@ extern multiboot_info_t* _multiboot_info;
 extern bootdata_t* _bootdata_base;
 
 pc_bootloader_info_t bootloader;
-
-const struct mmu_initial_mapping mmu_initial_mappings[] = {
-    /* 64GB of memory mapped where the kernel lives */
-    {
-        .phys = MEMBASE,
-        .virt = KERNEL_ASPACE_BASE,
-        .size = 64ULL*GB, /* x86-64 maps first 64GB by default */
-        .flags = 0,
-        .name = "memory"
-    },
-    /* KERNEL_SIZE of memory mapped where the kernel lives.
-     * On x86-64, this only sticks around until the VM is brought up, after
-     * that this will be replaced with mappings of the correct privileges. */
-    {
-        .phys = MEMBASE,
-        .virt = KERNEL_BASE - KERNEL_LOAD_OFFSET,
-        .size = KERNEL_SIZE, /* x86 maps first KERNEL_SIZE by default */
-        .flags = MMU_INITIAL_MAPPING_TEMPORARY,
-        .name = "kernel_temp"
-    },
-    /* null entry to terminate the list */
-    {}
-};
 
 // convert from legacy format
 static unsigned pixel_format_fixup(unsigned pf) {
