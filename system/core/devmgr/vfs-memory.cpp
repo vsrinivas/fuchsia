@@ -563,11 +563,8 @@ zx_status_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         }
 
         vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
+        memset(info, 0, sizeof(*info));
         //TODO(planders): eventually report something besides 0.
-        info->total_bytes = 0;
-        info->used_bytes = 0;
-        info->total_nodes = 0;
-        info->used_nodes = 0;
         memcpy(info->name, kFsName, strlen(kFsName));
         *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
         return ZX_OK;

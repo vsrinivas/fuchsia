@@ -341,6 +341,28 @@ static bool GenerateBlob(size_t size_data, fbl::unique_ptr<blob_info_t>* out) {
     return true;
 }
 
+bool QueryInfo(size_t expected_nodes) {
+    int fd = open(MOUNT_PATH, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0);
+
+    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
+    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
+    ssize_t rv = ioctl_vfs_query_fs(fd, info, sizeof(buf) - 1);
+    ASSERT_EQ(close(fd), 0);
+
+    ASSERT_EQ(rv, sizeof(vfs_query_info_t) + strlen("blobstore"), "Failed to query filesystem");
+
+    buf[rv] = '\0';  // NULL terminate the name.
+    ASSERT_EQ(strncmp("blobstore", info->name, strlen("blobstore")), 0);
+    ASSERT_EQ(info->block_size, 8192);
+    ASSERT_EQ(info->max_filename_size, 64);
+
+    ASSERT_EQ(info->total_bytes, 128 * 1024);
+    ASSERT_EQ(info->total_nodes, 2048);
+    ASSERT_EQ(info->used_nodes, expected_nodes);
+    return true;
+}
+
 // Actual tests:
 template <fs_test_type_t TestType>
 static bool TestBasic(void) {
@@ -464,6 +486,32 @@ static bool TestReaddir(void) {
     ASSERT_NULL(readdir(dir), "Expected blobstore to end empty");
 
     ASSERT_EQ(closedir(dir), 0);
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
+    END_TEST;
+}
+
+template <fs_test_type_t TestType>
+static bool TestQueryInfo(void) {
+    BEGIN_TEST;
+    ASSERT_EQ(TestType, FS_TEST_FVM);
+
+    char ramdisk_path[PATH_MAX];
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0,
+              "Mounting Blobstore");
+
+    ASSERT_TRUE(QueryInfo(0));
+    for (size_t i = 10; i < 16; i++) {
+        fbl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
+
+        int fd;
+        ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
+                             info->data.get(), info->size_data, &fd));
+        ASSERT_EQ(close(fd), 0);
+    }
+
+    ASSERT_TRUE(QueryInfo(6));
     ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
@@ -1514,6 +1562,7 @@ BEGIN_TEST_CASE(blobstore_tests)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReaddir)
+RUN_TEST_MEDIUM(TestQueryInfo<FS_TEST_FVM>)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, UseAfterUnlink)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteAfterRead)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, ReadTooLarge)

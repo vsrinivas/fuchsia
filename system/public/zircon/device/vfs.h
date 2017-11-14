@@ -150,12 +150,14 @@ IOCTL_WRAPPER_OUT(ioctl_vfs_unmount_node, IOCTL_VFS_UNMOUNT_NODE, zx_handle_t);
 IOCTL_WRAPPER_IN(ioctl_vfs_mount_bootfs_vmo, IOCTL_VFS_MOUNT_BOOTFS_VMO, zx_handle_t);
 
 typedef struct vfs_query_info {
-    // these are the total/used # of data bytes, not # of entire disk bytes
+    // These are the total/used # of data bytes, not # of entire disk bytes.
     uint64_t total_bytes;
     uint64_t used_bytes;
     uint64_t total_nodes;
     uint64_t used_nodes;
-    char name[]; // Does not include null-terminator
+    uint32_t block_size;
+    uint32_t max_filename_size;
+    char name[];  // Does not include null-terminator.
 } vfs_query_info_t;
 
 // ssize_t ioctl_vfs_query_fs(int fd, vfs_query_info_t* out, size_t out_len);

@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <sys/uio.h>
 #include <utime.h>
 #include <threads.h>
@@ -2064,4 +2065,45 @@ int shutdown(int fd, int how) {
         return ERRNO(ENOTSOCK);
     }
     return STATUS(r);
+}
+
+int fstatfs(int fd, struct statfs* buf) {
+    char buffer[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
+    vfs_query_info_t* info = (vfs_query_info_t*)buffer;
+
+    ssize_t rv = ioctl_vfs_query_fs(fd, info, sizeof(buffer) - 1);
+    if (rv < 0) {
+        return ERRNO(fdio_status_to_errno(rv));
+    }
+
+    if ((size_t)rv < sizeof(vfs_query_info_t) || (size_t)rv >= sizeof(buffer)) {
+        return ERRNO(EIO);
+    }
+    buffer[rv] = '\0';
+
+    struct statfs stats = {};
+
+    // TODO(rvargas): Return some sensible f_type. Maybe get the FS return a type.
+    if (info->block_size) {
+        stats.f_bsize = info->block_size;
+        stats.f_blocks = info->total_bytes / stats.f_bsize;
+        stats.f_bfree = stats.f_blocks - info->used_bytes / stats.f_bsize;
+    }
+    stats.f_bavail = stats.f_bfree;
+    stats.f_files = info->total_nodes;
+    stats.f_ffree = info->total_nodes - info->used_nodes;
+    stats.f_namelen = info->max_filename_size;
+
+    *buf = stats;
+    return 0;
+}
+
+int statfs(const char* path, struct statfs* buf) {
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return fd;
+    }
+    int rv = fstatfs(fd, buf);
+    close(fd);
+    return rv;
 }

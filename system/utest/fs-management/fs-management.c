@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
@@ -446,6 +447,42 @@ static bool mount_readonly(void) {
     END_TEST;
 }
 
+static bool statfs_test(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_unmount";
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_OK, "");
+
+    struct statfs stats;
+    int rc = statfs("", &stats);
+    int err = errno;
+    ASSERT_EQ(rc, -1, "");
+    ASSERT_EQ(err, ENOENT, "");
+
+    rc = statfs(mount_path, &stats);
+    ASSERT_EQ(rc, 0, "");
+
+    // Verify that at least some values make sense, without making the test too brittle.
+    ASSERT_EQ(stats.f_type, 0u, "");
+    ASSERT_EQ(stats.f_bsize, 8192u, "");
+    ASSERT_EQ(stats.f_namelen, 255u, "");
+    ASSERT_GT(stats.f_bavail, 0u, "");
+    ASSERT_GT(stats.f_ffree, 0u, "");
+
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fs_management_tests)
 RUN_TEST_MEDIUM(mount_unmount)
 RUN_TEST_MEDIUM(mount_mkdir_unmount)
@@ -457,6 +494,7 @@ RUN_TEST_MEDIUM(mount_remount)
 RUN_TEST_MEDIUM(mount_fsck)
 RUN_TEST_MEDIUM(mount_get_device)
 RUN_TEST_MEDIUM(mount_readonly)
+RUN_TEST_MEDIUM(statfs_test)
 END_TEST_CASE(fs_management_tests)
 
 int main(int argc, char** argv) {
