@@ -336,6 +336,18 @@ class FrameControl : public common::BitField<uint16_t> {
     bool HasHtCtrl() const { return htc_order() != 0; }
 };
 
+// IEEE Std 802.11-2016, 9.2.3
+struct FrameHeader {
+    // Compatible with MgmtFrameHeader and DataFrameHeader, which is majority.
+    // Incompatible with Control frames.
+    FrameControl fc;
+    uint16_t duration;
+    common::MacAddr addr1;
+    common::MacAddr addr2;
+    common::MacAddr addr3;
+    SequenceControl sc;
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.3.3.2
 struct MgmtFrameHeader {
     FrameControl fc;

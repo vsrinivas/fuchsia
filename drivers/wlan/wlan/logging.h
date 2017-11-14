@@ -27,6 +27,7 @@ LOG_CATEGORY(kLogDataJoinTrace, 17);
 LOG_CATEGORY(kLogDataHeaderTrace, 18);
 LOG_CATEGORY(kLogDataPacketTrace, 19);
 LOG_CATEGORY(kLogDataBeaconTrace, 20);
+LOG_CATEGORY(kLogWlanFrameTrace, 21);
 
 #undef LOG_CATEGORY
 

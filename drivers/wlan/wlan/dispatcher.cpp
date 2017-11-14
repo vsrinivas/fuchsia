@@ -28,6 +28,42 @@ void DumpPacket(const Packet& packet) {
     }
     std::printf("\n");
 }
+
+void DumpRxInfo(const wlan_rx_info_t& rxinfo) {
+    std::printf(
+        "WLAN RxInfo: "
+        "flags %08x valid_fields %08x phy %u chan_width %u data_rate %u chan %u "
+        "mcs %u rssi %u rcpi %u snr %u \n",
+        rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.chan_width, rxinfo.data_rate,
+        rxinfo.chan.channel_num, rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
+}
+
+void DumpFrameHeader(const FrameHeader& hdr, size_t len) {
+    // TODO(porce): Introspect the frame type in general, and support Control Frames.
+    std::printf(
+        "WLAN Frame:  Len %zu"
+        "\n       "
+        "Proto %u Type %u Subtype %u ToDs %u FromDs %u Frag %u Retry %u PwrMgmt %u MoreData %u "
+        "Protected %u Htc %u Duration %u Seq [%u:%u]"
+        "\n       "
+        "[Addr1] %s  [Addr2] %s  [Addr3] %s"
+        "\n",
+        len, hdr.fc.protocol_version(), hdr.fc.type(), hdr.fc.subtype(), hdr.fc.to_ds(),
+        hdr.fc.from_ds(), hdr.fc.more_frag(), hdr.fc.retry(), hdr.fc.pwr_mgmt(), hdr.fc.more_data(),
+        hdr.fc.protected_frame(), hdr.fc.htc_order(), hdr.duration, hdr.sc.frag(), hdr.sc.seq(),
+        MACSTR(hdr.addr1), MACSTR(hdr.addr2), MACSTR(hdr.addr3));
+}
+
+#define DEBUG_DUMP_WLAN_FRAME(packet)                          \
+    do {                                                       \
+        if (kLogLevel & kLogWlanFrameTrace) {                  \
+            auto rxinfo = packet->ctrl_data<wlan_rx_info_t>(); \
+            DumpRxInfo(*rxinfo);                               \
+            auto hdr = packet->field<FrameHeader>(0);          \
+            DumpFrameHeader(*hdr, packet->len());              \
+        }                                                      \
+    } while (false)
+
 }  // namespace
 
 Dispatcher::Dispatcher(DeviceInterface* device) {
@@ -78,12 +114,14 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
 
         switch (fc->type()) {
         case FrameType::kManagement:
+            DEBUG_DUMP_WLAN_FRAME(packet);
             status = HandleMgmtPacket(packet);
             break;
         case FrameType::kControl:
             status = HandleCtrlPacket(packet);
             break;
         case FrameType::kData:
+            DEBUG_DUMP_WLAN_FRAME(packet);
             status = HandleDataPacket(packet);
             break;
         default:
