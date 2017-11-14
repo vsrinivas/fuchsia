@@ -4,7 +4,15 @@
 
 import("//packages/package.gni")
 
-executable("mdns") {
+package("mdns") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "mdns"
+}
+
+executable("bin") {
   output_name = "mdns"
 
   sources = [

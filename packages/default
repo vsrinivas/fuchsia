@@ -32,6 +32,7 @@
         "garnet/packages/media_audio",
         "garnet/packages/media_examples",
         "garnet/packages/media_tests",
+        "garnet/packages/mdns",
         "garnet/packages/mozart",
         "garnet/packages/mozart_examples",
         "garnet/packages/netconnector",
