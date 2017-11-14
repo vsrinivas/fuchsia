@@ -374,7 +374,7 @@ static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t 
         return status;
     }
 
-    status = zx_vmo_op_range(handle, ZX_VMO_OP_LOOKUP, 0, size, out_paddr, sizeof(*out_paddr));
+    status = zx_vmo_op_range(handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE, out_paddr, sizeof(*out_paddr));
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmo_op_range failed %d\n", status);
         zx_handle_close(handle);
