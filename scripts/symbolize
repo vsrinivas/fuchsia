@@ -269,7 +269,7 @@ def main():
     disasm_re = re.compile("^ *(0x[0-9a-f]+)( .+)$")
 
     # Zircon backtraces
-    zircon_crash_re = re.compile("^ZIRCON KERNEL PANIC$")
+    zircon_crash_re = re.compile(full_prefix + "ZIRCON KERNEL PANIC$")
     # TODO(cja): Add ARM to the regex
     zircon_pc_re = re.compile("RIP: (0x[0-9a-z]+)")
     zircon_bt_re = re.compile(full_prefix +
@@ -376,9 +376,13 @@ def main():
             else:
                 sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need to build "
                                   "zircon or specify the build directory with -b?\n")
+            continue
+
         m = zircon_pc_re.search(line)
         if m:
             zircon_pc = m.group(1)
+            continue
+
         m = zircon_bt_re.match(line)
         if m and zircon_bt:
             frame_num = m.group(2)
