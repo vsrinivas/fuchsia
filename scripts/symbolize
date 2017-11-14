@@ -38,6 +38,7 @@ PREBUILTS_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(SCRIPT_DIR), "
                                                   "downloads"))
 GCC_VERSION = '6.3.0'
 name_to_full_path = {}
+debug_mode = False
 
 
 def find_func(find_args, dirname, names):
@@ -148,6 +149,8 @@ def tool_path(arch, tool):
 
 def run_tool(arch, tool, *args):
     cmd = [tool_path(arch, tool)] + list(args)
+    if debug_mode:
+        print "Running: %s" % " ".join(cmd)
     try:
         output = subprocess.check_output(cmd)
     except Exception as e:
@@ -191,9 +194,13 @@ def main():
                         help="Echo lines of input (on by default)")
     parser.add_argument("--no-echo", dest="echo", action="store_false",
                         help="Don't echo lines of input")
+    parser.add_argument("--debug", "-D", action="store_true",
+                        help="Print messages for debugging symbolize")
     parser.add_argument("app", nargs="?", help="Name of primary application")
     parser.set_defaults(echo=True)
     args = parser.parse_args()
+    global debug_mode
+    debug_mode = args.debug
 
     zircon_build_dir = os.path.join(
         os.path.dirname(SCRIPT_DIR), "build-zircon-pc-x86-64")
