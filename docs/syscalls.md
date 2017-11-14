@@ -128,3 +128,16 @@
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one
 + [futex_wake_handle_close_thread_exit](syscalls/futex_wake_handle_close_thread_exit.md) - three-in-one
+
+## DDK
++ [cache_flush](syscalls/cache_flush.md) - Flush CPU data and/or instruction caches
++ [interrupt_create](syscalls/interrupt_create.md) - Create an interrupt handle
++ [interrupt_wait](syscalls/interrupt_wait.md) - Wait for an interrupt on an interrupt handle
++ [interrupt_complete](syscalls/interrupt_complete.md) - Clear and unmask an interrupt handle
++ [interrupt_signal](syscalls/interrupt_signal.md) - Unblocks the interupt_wait syscall
++ acpi_uefi_rsdp
++ mmap_device_io
++ set_framebuffer
++ set_framebuffer_vmo
++ vmo_create_contiguous
++ vmo_create_physical
