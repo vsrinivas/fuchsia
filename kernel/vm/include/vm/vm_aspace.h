@@ -210,7 +210,7 @@ private:
     // at a particular points in the bootup process
     static void KernelAspaceInitPreHeap();
     static VmAspace* kernel_aspace_;
-    friend void vm_init_preheap(uint level);
+    friend void vm_init_preheap();
 };
 
 void DumpAllAspaces(bool verbose);

@@ -21,6 +21,7 @@
 #include <platform.h>
 #include <string.h>
 #include <target.h>
+#include <vm/init.h>
 #include <zircon/compiler.h>
 
 extern void (*const __init_array_start[])();
@@ -59,13 +60,22 @@ void lk_main() {
 
     dprintf(INFO, "\nwelcome to lk/MP\n\n");
 
+    lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_VM_PREHEAP - 1);
+    dprintf(SPEW, "initializing vm pre-heap\n");
+    vm_init_preheap();
+
     // bring up the kernel heap
-    lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_HEAP - 1);
+    lk_primary_cpu_init_level(LK_INIT_LEVEL_VM_PREHEAP, LK_INIT_LEVEL_HEAP - 1);
     dprintf(SPEW, "initializing heap\n");
     heap_init();
 
+    lk_primary_cpu_init_level(LK_INIT_LEVEL_HEAP, LK_INIT_LEVEL_VM - 1);
+    dprintf(SPEW, "initializing vm\n");
+    vm_init();
+
     // initialize the kernel
-    lk_primary_cpu_init_level(LK_INIT_LEVEL_HEAP, LK_INIT_LEVEL_KERNEL - 1);
+    lk_primary_cpu_init_level(LK_INIT_LEVEL_VM, LK_INIT_LEVEL_KERNEL - 1);
+    dprintf(SPEW, "initializing kernel\n");
     kernel_init();
 
     lk_primary_cpu_init_level(LK_INIT_LEVEL_KERNEL, LK_INIT_LEVEL_THREADING - 1);
@@ -97,6 +107,7 @@ static int bootstrap2(void*) {
     lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_TARGET - 1);
     target_init();
 
+    dprintf(SPEW, "moving to last init level\n");
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET, LK_INIT_LEVEL_LAST);
 
     return 0;
