@@ -162,6 +162,23 @@ def run_tool(arch, tool, *args):
         return False
     return output
 
+
+# Note: addr2line requires hex addresses.
+# |addr_as_hex_string| must already be PIE-adjusted.
+def run_addr2line(arch, elf_path, addr_as_hex_string):
+    return run_tool(arch, "addr2line", "-Cipfe", elf_path, addr_as_hex_string)
+
+
+def get_call_location(arch, elf_path, addr_as_hex_string):
+    # Subtract 1 to convert from a return address to a call site
+    # address.  (To be more exact, this converts to an address that
+    # is within the call site instruction.)  This adjustment gives
+    # more correct results in the presence of inlining and
+    # 'noreturn' functions.  (See ZX-842.)
+    call_addr = "0x%x" % (int(addr_as_hex_string, 16) - 1)
+    return run_addr2line(arch, elf_path, call_addr)
+
+
 # On BSD platforms there are cases where writing to stdout can return EAGAIN.
 # In that event, retry the line again. This only manifests itself when piping
 # qemu's stdout directly to this script.
@@ -322,11 +339,10 @@ def main():
                 dso_full_path = find_dso_full_path(
                     dso, args.app, name_to_buildid, build_dirs)
                 if dso_full_path:
-                    addr2line_output = run_tool(arch, "addr2line", "-Cipfe",
-                                                dso_full_path, off)
-                    if addr2line_output:
+                    call_loc = get_call_location(arch, dso_full_path, off)
+                    if call_loc:
                         processed_lines.append(
-                            "#%s: %s" % (frame_num, addr2line_output))
+                            "#%s: %s" % (frame_num, call_loc))
                     if args.disassemble:
                         pc = int(off, 16)
                         disassembly = run_tool(
@@ -370,26 +386,17 @@ def main():
             # If we saw the instruction pointer for the fault/panic then use it once
             if zircon_pc:
                 prefix = "   pc: %s => " % zircon_pc
-                a2l_out = run_tool(arch, "addr2line", "-Cpife", zircon_elf_path,
-                        zircon_pc)
+                a2l_out = run_addr2line(arch, zircon_elf_path, zircon_pc)
                 processed_lines.append(prefix +
                         a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
                 zircon_pc = None
 
-
             prefix = "bt#%s: %s => " % (frame_num, addr)
-            # Subtract 1 to convert from a return address to a call site
-            # address.  (To be more exact, this converts to an address that
-            # is within the call site instruction.)  This adjustment gives
-            # more correct results in the presence of inlining and
-            # 'noreturn' functions.  (See ZX-842.)
-            call_addr = "0x%x" % (int(addr, 16) - 1)
-            a2l_out = run_tool(arch, "addr2line", "-Cpife", zircon_elf_path,
-                               call_addr)
+            call_loc = get_call_location(arch, zircon_elf_path, addr)
             # In the case of inlined methods, it is more readable if the
             # inlined lines are aligned to be to the right of "=>".
             processed_lines.append(prefix +
-                    a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
+                    call_loc.replace("(inlined", (" " * len(prefix)) + "(inlined"))
             continue
 
         # Exit if we've reached the end of stdin
