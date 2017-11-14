@@ -323,9 +323,12 @@ def main():
                                         line = "%s%#.16x%s" % (prefix, bias + addr, rest)
                                     processed_lines.append(line + "\n")
                     continue
-
-            # fallthru print if we don't recognize the format of the backtrace entry
-            processed_lines.append("#%s: (unknown)\n" % (frame_num,))
+                else:
+                    # can't find dso_full_path
+                    processed_lines.append("#%s: unknown, can't find full path for %s\n" % (frame_num, dso))
+            else:
+                # bt_with_offset_re failed
+                processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line\n" % (frame_num,))
 
         # Zircon Specific Handling
         if zircon_crash_re.search(line):
