@@ -91,6 +91,10 @@ def find_dso_full_path_uncached(dso, exe_name, name_to_buildid, build_dirs):
         found_path = buildid_to_full_path(name_to_buildid[dso], build_dirs)
         if found_path:
             return found_path
+        # This can be a bug in the generation of the ids.txt file, report it.
+        # It's not necessarily a bug though, so for now only report in debug mode.
+        if debug_mode:
+            print "WARNING: Unable to find %s in any ids.txt file." % dso
 
     # The name 'app' indicates the real app name is unknown.
     # If the process has a name property that will be printed, but
