@@ -4,6 +4,7 @@
 
 visibility = [
   "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firestore/*",
   "//peridot/bin/ledger/*",
 ]
 

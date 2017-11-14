@@ -50,8 +50,8 @@ executable("maxwell_unittests") {
 
   deps = [
     "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//peridot/bin/module_resolver:unittests",
     "//peridot/bin/context_engine:unittests",
+    "//peridot/bin/module_resolver:unittests",
   ]
 }
 
@@ -84,12 +84,17 @@ package("ledger") {
 
   deps = [
     "//peridot/bin/cloud_provider_firebase",
+    "//peridot/bin/cloud_provider_firestore",
     "//peridot/bin/ledger",
   ]
 
   binaries = [
     {
       name = "cloud_provider_firebase"
+    },
+
+    {
+      name = "cloud_provider_firestore"
     },
 
     {
@@ -224,12 +229,12 @@ group("modular_all") {
 
   deps = [
     ":modular_unittests",
-    "bin/device_runner_monitor",
-    "bin/device_runner:dev_device_shell",
     "bin/device_runner",
+    "bin/device_runner:dev_device_shell",
+    "bin/device_runner_monitor",
     "bin/story_runner:dev_story_shell",
-    "bin/user_runner:dev_user_shell",
     "bin/user_runner",
+    "bin/user_runner:dev_user_shell",
     "examples:modular_examples",
     "tests:modular_tests",
   ]
