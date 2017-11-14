@@ -11,7 +11,7 @@ object_wait_one - wait for signals on an object
 
 zx_status_t zx_object_wait_one(zx_handle_t handle,
                                zx_signals_t signals,
-                               zx_time deadline,
+                               zx_time_t deadline,
                                zx_signals_t* observed);
 ```
 
