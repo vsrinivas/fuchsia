@@ -62,6 +62,7 @@
         "garnet/packages/wlan_tests",
         "garnet/packages/wlanstack",
         "garnet/packages/zircon_benchmarks",
-        "garnet/packages/zlib"
+        "garnet/packages/zlib",
+        "packages/gn/build_info"
     ]
 }
