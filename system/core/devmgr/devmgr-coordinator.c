@@ -1559,6 +1559,10 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
         // do not continue to suspend as this indicates a driver suspend
         // problem and should show as a bug
         log(ERROR, "devcoord: failed to suspend\n");
+        // notify dmctl
+        if (ctx->socket) {
+            zx_handle_close(ctx->socket);
+        }
         return;
     }
 
