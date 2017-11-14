@@ -5,11 +5,10 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_
 
+#include <async/auto_wait.h>
 #include <zx/channel.h>
 
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/fidl/cpp/waiter/default.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/compiler_specific.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -28,8 +27,7 @@ namespace internal {
 class Connector : public MessageReceiver {
  public:
   // The Connector takes ownership of |channel|.
-  explicit Connector(zx::channel channel,
-                     const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
+  explicit Connector(zx::channel channel);
   ~Connector() override;
 
   // Sets the receiver to handle messages read from the channel.  The
@@ -83,13 +81,9 @@ class Connector : public MessageReceiver {
   zx_handle_t handle() const { return channel_.get(); }
 
  private:
-  static void CallOnHandleReady(zx_status_t result,
-                                zx_signals_t pending,
-                                uint64_t count,
-                                void* closure);
-  void OnHandleReady(zx_status_t result, zx_signals_t pending, uint64_t count);
-
-  void WaitToReadMore();
+  async_wait_result_t OnHandleReady(async_t* async,
+                                    zx_status_t status,
+                                    const zx_packet_signal_t* signal);
 
   // Returns false if |this| was destroyed during message dispatch.
   FXL_WARN_UNUSED_RESULT bool ReadSingleMessage(zx_status_t* read_result);
@@ -100,12 +94,10 @@ class Connector : public MessageReceiver {
   void CancelWait();
 
   fxl::Closure connection_error_handler_;
-  const FidlAsyncWaiter* waiter_;
-
   zx::channel channel_;
+  async::AutoWait wait_;
   MessageReceiver* incoming_receiver_;
 
-  FidlAsyncWaitID async_wait_id_;
   bool error_;
   bool drop_writes_;
   bool enforce_errors_from_incoming_receiver_;

@@ -11,7 +11,6 @@
 #include "lib/fidl/cpp/bindings/internal/shared_data.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -22,9 +21,7 @@ namespace internal {
 // response messages back to the sender.
 class Router : public MessageReceiverWithResponder {
  public:
-  Router(zx::channel channel,
-         MessageValidatorList validators,
-         const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
+  Router(zx::channel channel, MessageValidatorList validators);
   ~Router() override;
 
   // Sets the receiver to handle messages read from the channel that do

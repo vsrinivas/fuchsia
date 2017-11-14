@@ -85,5 +85,7 @@ source_set("bindings") {
 
   public_deps = [
     ":serialization",
+    "//zircon/system/ulib/async:default",
+    "//zircon/system/ulib/async",
   ]
 }

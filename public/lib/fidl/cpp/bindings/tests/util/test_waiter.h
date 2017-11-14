@@ -7,6 +7,8 @@
 
 namespace fidl {
 namespace test {
+// Initialize the async waiter for this thread.
+void InitAsyncWaiter();
 // Does a non-blocking wait on all async-waited handles, and dispatches all
 // the ones that are ready. Repeatedly does this until no handles are ready.
 void WaitForAsyncWaiter();

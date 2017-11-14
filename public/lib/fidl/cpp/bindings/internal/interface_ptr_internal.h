@@ -26,7 +26,7 @@ template <typename Interface>
 class InterfacePtrState {
  public:
   InterfacePtrState()
-      : proxy_(nullptr), router_(nullptr), waiter_(nullptr), version_(0u) {}
+      : proxy_(nullptr), router_(nullptr), version_(0u) {}
 
   ~InterfacePtrState() {
     // Destruction order matters here. We delete |proxy_| first, even though
@@ -50,20 +50,17 @@ class InterfacePtrState {
     swap(other->proxy_, proxy_);
     swap(other->router_, router_);
     handle_.swap(other->handle_);
-    swap(other->waiter_, waiter_);
     swap(other->version_, version_);
   }
 
-  void Bind(InterfaceHandle<Interface> info, const FidlAsyncWaiter* waiter) {
+  void Bind(InterfaceHandle<Interface> info) {
     FXL_DCHECK(!proxy_);
     FXL_DCHECK(!router_);
     FXL_DCHECK(!(bool)handle_);
-    FXL_DCHECK(!waiter_);
     FXL_DCHECK(version_ == 0u);
     FXL_DCHECK(info.is_valid());
 
     handle_ = info.PassHandle();
-    waiter_ = waiter;
     version_ = info.version();
   }
 
@@ -109,8 +106,7 @@ class InterfacePtrState {
       return;
     }
     // The object hasn't been bound.
-    if (!waiter_) {
-      FXL_DCHECK(!(bool)handle_);
+    if (!handle_) {
       return;
     }
 
@@ -120,9 +116,7 @@ class InterfacePtrState {
     validators.push_back(std::unique_ptr<MessageValidator>(
         new typename Interface::ResponseValidator_));
 
-    router_ = new Router(std::move(handle_), std::move(validators), waiter_);
-    waiter_ = nullptr;
-
+    router_ = new Router(std::move(handle_), std::move(validators));
     proxy_ = new Proxy(router_);
   }
 
@@ -130,10 +124,9 @@ class InterfacePtrState {
   Router* router_;
 
   // |proxy_| and |router_| are not initialized until read/write with the
-  // channel handle is needed. |handle_| and |waiter_| are valid between
-  // the Bind() call and the initialization of |proxy_| and |router_|.
+  // channel handle is needed. |handle_| is valid between the Bind() call
+  // and the initialization of |proxy_| and |router_|.
   zx::channel handle_;
-  const FidlAsyncWaiter* waiter_;
 
   uint32_t version_;
 

@@ -62,10 +62,11 @@ source_set("test_sources") {
     # "synchronous_interface_ptr_unittest.cc",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fidl/compiler/interfaces/tests:test_interfaces",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//third_party/gtest",
+    "//zircon/system/ulib/async:loop",
   ]
 }
 

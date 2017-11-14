@@ -4,45 +4,50 @@
 
 #include "lib/fidl/cpp/bindings/internal/connector.h"
 
+#include <async/default.h>
+#include <zx/time.h>
+
 #include "lib/fxl/compiler_specific.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-#include <zx/time.h>
-
 namespace fidl {
 namespace internal {
+namespace {
+
+constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+
+}  // namespace
 
 // ----------------------------------------------------------------------------
 
-Connector::Connector(zx::channel channel, const FidlAsyncWaiter* waiter)
-    : waiter_(waiter),
-      channel_(std::move(channel)),
+Connector::Connector(zx::channel channel)
+    : channel_(std::move(channel)),
+      wait_(async_get_default(), channel_.get(), kSignals),
       incoming_receiver_(nullptr),
-      async_wait_id_(0),
       error_(false),
       drop_writes_(false),
       enforce_errors_from_incoming_receiver_(true),
       destroyed_flag_(nullptr) {
+  wait_.set_handler(fbl::BindMember(this, &Connector::OnHandleReady));
   // Even though we don't have an incoming receiver, we still want to monitor
   // the channel to know if is closed or encounters an error.
-  WaitToReadMore();
+  zx_status_t status = wait_.Begin();
+  FXL_CHECK(status == ZX_OK);
 }
 
 Connector::~Connector() {
   if (destroyed_flag_)
     *destroyed_flag_ = true;
-
-  CancelWait();
 }
 
 void Connector::CloseChannel() {
-  CancelWait();
+  wait_.Cancel();
   channel_.reset();
 }
 
 zx::channel Connector::PassChannel() {
-  CancelWait();
+  wait_.Cancel();
   return std::move(channel_);
 }
 
@@ -51,7 +56,7 @@ bool Connector::WaitForIncomingMessage(fxl::TimeDelta timeout) {
     return false;
 
   zx_signals_t pending = ZX_SIGNAL_NONE;
-  zx_status_t rv = channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+  zx_status_t rv = channel_.wait_one(kSignals,
                                      timeout == fxl::TimeDelta::Max()
                                          ? ZX_TIME_INFINITE
                                          : zx::deadline_after(timeout.ToNanoseconds()),
@@ -110,55 +115,35 @@ bool Connector::Accept(Message* message) {
   return true;
 }
 
-// static
-void Connector::CallOnHandleReady(zx_status_t result,
-                                  zx_signals_t pending,
-                                  uint64_t count,
-                                  void* closure) {
-  Connector* self = static_cast<Connector*>(closure);
-  self->OnHandleReady(result, pending, count);
-}
-
-void Connector::OnHandleReady(zx_status_t result,
-                              zx_signals_t pending,
-                              uint64_t count) {
-  FXL_CHECK(async_wait_id_ != 0);
-  async_wait_id_ = 0;
-  if (result != ZX_OK) {
+async_wait_result_t Connector::OnHandleReady(
+    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
     NotifyError();
-    return;
+    return ASYNC_WAIT_FINISHED;
   }
   FXL_DCHECK(!error_);
 
-  if (pending & ZX_CHANNEL_READABLE) {
+  if (signal->observed & ZX_CHANNEL_READABLE) {
     // Return immediately if |this| was destroyed. Do not touch any members!
     zx_status_t rv;
-    for (uint64_t i = 0; i < count; i++) {
+    for (uint64_t i = 0; i < signal->count; i++) {
       if (!ReadSingleMessage(&rv))
-        return;
+        return ASYNC_WAIT_FINISHED;
 
       // If we get ZX_ERR_PEER_CLOSED (or another error), we'll already have
       // notified the error and likely been destroyed.
       FXL_DCHECK(rv == ZX_OK || rv == ZX_ERR_SHOULD_WAIT);
-      if (rv != ZX_OK) {
+      if (rv != ZX_OK)
         break;
-      }
     }
-    WaitToReadMore();
-
-  } else if (pending & ZX_CHANNEL_PEER_CLOSED) {
-    // Notice that we don't notify an error until we've drained all the messages
-    // out of the channel.
-    NotifyError();
-    // We're likely to be destroyed at this point.
+    return ASYNC_WAIT_AGAIN;
   }
-}
 
-void Connector::WaitToReadMore() {
-  FXL_CHECK(!async_wait_id_);
-  async_wait_id_ = waiter_->AsyncWait(
-      channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-      ZX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
+  FXL_DCHECK(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+  // Notice that we don't notify an error until we've drained all the messages
+  // out of the channel.
+  NotifyError();
+  return ASYNC_WAIT_FINISHED;
 }
 
 bool Connector::ReadSingleMessage(zx_status_t* read_result) {
@@ -191,14 +176,6 @@ bool Connector::ReadSingleMessage(zx_status_t* read_result) {
     return false;
   }
   return true;
-}
-
-void Connector::CancelWait() {
-  if (!async_wait_id_)
-    return;
-
-  waiter_->CancelWait(async_wait_id_);
-  async_wait_id_ = 0;
 }
 
 void Connector::NotifyError() {

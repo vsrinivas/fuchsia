@@ -9,6 +9,7 @@
 #include <zx/socket.h>
 
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
 

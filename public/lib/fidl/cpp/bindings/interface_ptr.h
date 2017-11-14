@@ -15,7 +15,6 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/interface_ptr_internal.h"
 #include "lib/fidl/cpp/bindings/macros.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
@@ -67,14 +66,11 @@ class InterfacePtr {
   ~InterfacePtr() {}
 
   // If |info| is valid (containing a valid channel handle), returns an
-  // InterfacePtr bound to it. Otherwise, returns an unbound InterfacePtr. The
-  // specified |waiter| will be used as in the InterfacePtr::Bind() method.
-  static InterfacePtr<Interface> Create(
-      InterfaceHandle<Interface> info,
-      const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
+  // InterfacePtr bound to it. Otherwise, returns an unbound InterfacePtr.
+  static InterfacePtr<Interface> Create(InterfaceHandle<Interface> info) {
     InterfacePtr<Interface> ptr;
     if (info.is_valid())
-      ptr.Bind(std::move(info), waiter);
+      ptr.Bind(std::move(info));
     return ptr;
   }
 
@@ -106,19 +102,15 @@ class InterfacePtr {
     return InterfaceRequest<Interface>(std::move(endpoint1));
   }
 
-  // Binds the InterfacePtr to a remote implementation of Interface. The
-  // |waiter| is used for receiving notifications when there is data to read
-  // from the channel. For most callers, the default |waiter| will be
-  // sufficient.
+  // Binds the InterfacePtr to a remote implementation of Interface.
   //
   // Calling with an invalid |info| (containing an invalid channel handle)
   // has the same effect as reset(). In this case, the InterfacePtr is not
   // considered as bound.
-  void Bind(InterfaceHandle<Interface> handle,
-            const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
+  void Bind(InterfaceHandle<Interface> handle) {
     reset();
     if (handle.is_valid())
-      internal_state_.Bind(std::move(handle), waiter);
+      internal_state_.Bind(std::move(handle));
   }
 
   // Returns whether or not this InterfacePtr is bound to a channel.

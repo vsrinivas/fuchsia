@@ -15,7 +15,6 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -43,16 +42,6 @@ namespace fidl {
 //     Binding<Foo> binding_;
 //   };
 //
-// The caller may specify a |FidlAsyncWaiter| to be used by the connection when
-// waiting for calls to arrive. Normally it is fine to use the default waiter.
-// However, the caller may provide their own implementation if needed. The
-// |Binding| will not take ownership of the waiter, and the waiter must outlive
-// the |Binding|. The provided waiter must be able to signal the implementation
-// which generally means it needs to be able to schedule work on the thread the
-// implementation runs on. If writing library code that has to work on different
-// types of threads callers may need to provide different waiter
-// implementations.
-//
 // The implementation type of the binding is also parameterized, allowing
 // the use of smart pointer types such as |std::unique_ptr<>| to reference
 // the implementation.
@@ -68,36 +57,27 @@ class Binding {
 
   // Constructs a completed binding of channel |handle| to implementation
   // |impl|. Does not take ownership of |impl|, which must outlive the binding.
-  // See class comment for definition of |waiter|.
-  Binding(ImplPtr impl,
-          zx::channel handle,
-          const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
+  Binding(ImplPtr impl, zx::channel handle)
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(std::move(handle), waiter);
+    Bind(std::move(handle));
   }
 
   // Constructs a completed binding of |impl| to a new channel, passing the
   // client end to |ptr|, which takes ownership of it. The caller is expected to
   // pass |ptr| on to the client of the service. Does not take ownership of any
   // of the parameters. |impl| must outlive the binding. |ptr| only needs to
-  // last until the constructor returns. See class comment for definition of
-  // |waiter|.
-  Binding(ImplPtr impl,
-          InterfaceHandle<Interface>* interface_handle,
-          const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
+  // last until the constructor returns.
+  Binding(ImplPtr impl, InterfaceHandle<Interface>* interface_handle)
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(interface_handle, waiter);
+    Bind(interface_handle);
   }
 
   // Constructs a completed binding of |impl| to the channel endpoint in
   // |request|, taking ownership of the endpoint. Does not take ownership of
-  // |impl|, which must outlive the binding. See class comment for definition of
-  // |waiter|.
-  Binding(ImplPtr impl,
-          InterfaceRequest<Interface> request,
-          const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
+  // |impl|, which must outlive the binding.
+  Binding(ImplPtr impl, InterfaceRequest<Interface> request)
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(request.PassChannel(), waiter);
+    Bind(request.PassChannel());
   }
 
   // Tears down the binding, closing the channel and leaving the interface
@@ -106,18 +86,16 @@ class Binding {
 
   // Completes a binding by creating a new pair of channels, binding one end to
   // the previously specified implementation and returning the other end.
-  InterfaceHandle<Interface> NewBinding(
-      const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
+  InterfaceHandle<Interface> NewBinding() {
     InterfaceHandle<Interface> client;
-    Bind(client.NewRequest().PassChannel(), waiter);
+    Bind(client.NewRequest().PassChannel());
     return client;
   }
 
   // Completes a binding that was constructed with only an interface
   // implementation. Takes ownership of |handle| and binds it to the previously
-  // specified implementation. See class comment for definition of |waiter|.
-  void Bind(zx::channel handle,
-            const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
+  // specified implementation.
+  void Bind(zx::channel handle) {
     FXL_DCHECK(!internal_router_);
 
     internal::MessageValidatorList validators;
@@ -127,7 +105,7 @@ class Binding {
         new typename Interface::RequestValidator_));
 
     internal_router_.reset(
-        new internal::Router(std::move(handle), std::move(validators), waiter));
+        new internal::Router(std::move(handle), std::move(validators)));
     internal_router_->set_incoming_receiver(&stub_);
     internal_router_->set_connection_error_handler([this]() {
       if (connection_error_handler_)
@@ -139,25 +117,21 @@ class Binding {
   // implementation by creating a new channel, binding one end of it to the
   // previously specified implementation, and passing the other to |ptr|, which
   // takes ownership of it. The caller is expected to pass |ptr| on to the
-  // eventual client of the service. Does not take ownership of |ptr|. See
-  // class comment for definition of |waiter|.
-  void Bind(InterfaceHandle<Interface>* interface_handle,
-            const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
+  // eventual client of the service. Does not take ownership of |ptr|.
+  void Bind(InterfaceHandle<Interface>* interface_handle) {
     zx::channel endpoint0;
     zx::channel endpoint1;
     zx::channel::create(0, &endpoint0, &endpoint1);
     *interface_handle =
         InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_);
-    Bind(std::move(endpoint1), waiter);
+    Bind(std::move(endpoint1));
   }
 
   // Completes a binding that was constructed with only an interface
   // implementation by removing the channel endpoint from |request| and
-  // binding it to the previously specified implementation. See class comment
-  // for definition of |waiter|.
-  void Bind(InterfaceRequest<Interface> request,
-            const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
-    Bind(request.PassChannel(), waiter);
+  // binding it to the previously specified implementation.
+  void Bind(InterfaceRequest<Interface> request) {
+    Bind(request.PassChannel());
   }
 
   // Blocks the calling thread until either a call arrives on the previously
