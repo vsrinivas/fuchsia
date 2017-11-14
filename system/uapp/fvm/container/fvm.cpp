@@ -5,10 +5,11 @@
 #include "fvm/container.h"
 #include <errno.h>
 
-zx_status_t FvmContainer::Create(const char* path, size_t slice_size,
+zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offset, off_t length,
                                  fbl::unique_ptr<FvmContainer>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size));
+    fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size, offset,
+                                                                      length));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -22,8 +23,8 @@ zx_status_t FvmContainer::Create(const char* path, size_t slice_size,
     return ZX_OK;
 }
 
-FvmContainer::FvmContainer(const char* path, size_t slice_size)
-    : Container(slice_size), valid_(false),
+FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length)
+    : Container(slice_size), valid_(false), disk_offset_(offset), disk_size_(length),
       vpart_hint_(1), pslice_hint_(1) {
     fd_.reset(open(path, O_RDWR, 0644));
     if (!fd_) {
@@ -48,9 +49,10 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
         exit(-1);
     }
 
-    disk_size_ = s.st_size;
-    block_size_ = s.st_blksize;
-    block_count_ = s.st_blocks;
+    if (s.st_size < disk_offset_ + disk_size_) {
+        fprintf(stderr, "Invalid file size for specified offset/length\n");
+        exit(-1);
+    }
 
     // Even if disk size is 0, this will default to at least FVM_BLOCK_SIZE
     metadata_size_ = fvm::MetadataSize(disk_size_, slice_size_);
@@ -67,7 +69,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
 
     // If Container already exists, read metadata from disk.
     if (disk_size_ > 0) {
-        if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
+        if (lseek(fd_.get(), disk_offset_, SEEK_SET) < 0) {
             fprintf(stderr, "Seek reset failed\n");
             exit(-1);
         }
@@ -95,6 +97,9 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size)
 FvmContainer::~FvmContainer() = default;
 
 zx_status_t FvmContainer::Init() {
+    // Clear entire primary copy of metadata
+    memset(metadata_.get(), 0, metadata_size_);
+
     // Superblock
     fvm::fvm_t* sb = SuperBlock();
     sb->magic = FVM_MAGIC;
@@ -145,7 +150,7 @@ zx_status_t FvmContainer::Verify() const {
     xprintf("Slice count is %" PRIu64 "\n", sb->pslice_count);
 
     off_t start = 0;
-    off_t end = metadata_size_ * 2;
+    off_t end = disk_offset_ + metadata_size_ * 2;
     size_t slice_index = 1;
     for (size_t vpart_index = 1; vpart_index < FVM_MAX_ENTRIES; ++vpart_index) {
         fvm::vpart_entry_t* vpart = nullptr;
@@ -249,8 +254,6 @@ zx_status_t FvmContainer::Commit() {
         }
 
         disk_size_ = s.st_size;
-        block_size_ = s.st_blksize;
-        block_count_ = s.st_blocks;
 
         if (disk_size_ != total_size) {
             fprintf(stderr, "Truncated to incorrect size\n");
@@ -260,7 +263,7 @@ zx_status_t FvmContainer::Commit() {
 
     fvm_update_hash(metadata_.get(), metadata_size_);
 
-    if (lseek(fd_.get(), 0, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), disk_offset_, SEEK_SET) < 0) {
         fprintf(stderr, "Error seeking disk\n");
         return ZX_ERR_IO;
     }
@@ -307,12 +310,10 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     format->Name(name);
     uint32_t vpart_index;
     if ((status = AllocatePartition(type, guid, name, 1, &vpart_index)) != ZX_OK) {
-        fprintf(stderr, "Failed to allocate partition\n");
         return status;
     }
 
     if ((status = format->MakeFvmReady(SliceSize(), vpart_index)) != ZX_OK) {
-        fprintf(stderr, "Failed to MakeFvmReady minfs partition\n");
         return status;
     }
 
@@ -387,6 +388,7 @@ zx_status_t FvmContainer::GrowMetadata(size_t new_size) {
     if (new_size <= metadata_size_) {
         return ZX_OK;
     } else if (disk_size_ > 0) {
+        fprintf(stderr, "Cannot grow metadata for disk with established size\n");
         return ZX_ERR_ACCESS_DENIED;
     }
 
@@ -456,6 +458,7 @@ zx_status_t FvmContainer::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_
         return ZX_OK;
     }
 
+    fprintf(stderr, "Unable to find any free slices\n");
     return ZX_ERR_INTERNAL;
 }
 
@@ -560,7 +563,7 @@ zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    if (lseek(fd_.get(), fvm::SliceStart(disk_size_, slice_size_, pslice) +
+    if (lseek(fd_.get(), disk_offset_ + fvm::SliceStart(disk_size_, slice_size_, pslice) +
                 block_offset * block_size, SEEK_SET) < 0) {
         return ZX_ERR_BAD_STATE;
     }

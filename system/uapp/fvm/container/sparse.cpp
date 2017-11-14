@@ -236,7 +236,6 @@ zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
 
     zx_status_t status;
     if ((status = format->MakeFvmReady(SliceSize(), part_index)) != ZX_OK) {
-        fprintf(stderr, "Failed to MakeFvmReady minfs partition\n");
         return status;
     }
 

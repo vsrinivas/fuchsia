@@ -6,7 +6,8 @@
 
 #include "fvm/container.h"
 
-zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* container) {
+zx_status_t Container::Create(const char* path, off_t offset, off_t length,
+                              fbl::unique_ptr<Container>* container) {
     fbl::unique_fd fd(open(path, O_RDONLY));
     if (!fd) {
         fprintf(stderr, "Unable to open path %s\n", path);
@@ -14,7 +15,7 @@ zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* cont
     }
 
     uint8_t data[HEADER_SIZE];
-    if (lseek(fd.get(), 0, SEEK_SET) < 0) {
+    if (lseek(fd.get(), offset, SEEK_SET) < 0) {
         fprintf(stderr, "Error seeking block device\n");
         return -1;
     }
@@ -30,17 +31,22 @@ zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* cont
         fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(data);
 
         // Found fvm container
-        fbl::unique_ptr<Container> fvmContainer(new (&ac) FvmContainer(path, sb->slice_size));
+        fbl::unique_ptr<Container> fvmContainer(new (&ac) FvmContainer(path, sb->slice_size,
+                                                                       offset, length));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-
         *container = fbl::move(fvmContainer);
         return ZX_OK;
     }
 
     fvm::sparse_image_t* image = reinterpret_cast<fvm::sparse_image_t*>(data);
     if (image->magic == fvm::kSparseFormatMagic) {
+        if (offset > 0) {
+            fprintf(stderr, "Invalid offset for sparse file\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
         // Found sparse container
         fbl::unique_ptr<Container> sparseContainer(new (&ac) SparseContainer(path,
                                                                              image->slice_size));

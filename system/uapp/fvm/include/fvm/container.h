@@ -14,9 +14,11 @@
 // FVM-recognizable format
 class Container {
 public:
-    // Returns a Container representation of the file at the given |path|. Will return an error if
-    // the file does not exist or is not a valid Container type.
-    static zx_status_t Create(const char* path, fbl::unique_ptr<Container>* out);
+    // Returns a Container representation of the FVM within the given |path|, starting at |offset|
+    // bytes of length |length| bytes. Will return an error if the file does not exist or is not a
+    // valid Container type.
+    static zx_status_t Create(const char* path, off_t offset, off_t length,
+                              fbl::unique_ptr<Container>* out);
 
     Container(size_t slice_size)
         : dirty_(false), slice_size_(slice_size) {}
@@ -55,9 +57,14 @@ class FvmContainer final : public Container {
     } partition_info_t;
 
 public:
-    static zx_status_t Create(const char* path, size_t slice_size,
+    // Creates an FVM container at the given path, creating a new file if one does not already
+    // exist. |offset| and |length| are provided to specify the offset (in bytes) and the length
+    // (in bytes) of the FVM within the file. For a file that has not yet been created, these
+    // should both be 0. For a file that exists, if not otherwise specified the offset should be 0
+    // and the length should be the size of the file.
+    static zx_status_t Create(const char* path, size_t slice_size, off_t offset, off_t length,
                               fbl::unique_ptr<FvmContainer>* out);
-    FvmContainer(const char* path, size_t slice_size);
+    FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length);
     ~FvmContainer();
     zx_status_t Init() final;
     zx_status_t Verify() const final;
@@ -68,9 +75,8 @@ public:
 private:
     bool valid_;
     size_t metadata_size_;
+    size_t disk_offset_;
     size_t disk_size_;
-    size_t block_size_;
-    size_t block_count_;
     uint32_t vpart_hint_;
     uint32_t pslice_hint_;
     fbl::unique_ptr<uint8_t[]> metadata_;

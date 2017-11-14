@@ -40,6 +40,7 @@ typedef enum {
     SPARSE,
     FVM,
     FVM_NEW,
+    FVM_OFFSET,
 } container_t;
 
 bool CreateFile(const char* path, size_t size, uint32_t type) {
@@ -124,27 +125,43 @@ bool CreateSparse() {
     END_HELPER;
 }
 
-bool ReportContainer(const char* path) {
+bool StatFile(const char* path, off_t* length) {
+    BEGIN_HELPER;
+    fbl::unique_fd fd(open(path, O_RDWR, 0755));
+    ASSERT_TRUE(fd, "Unable to open file");
+    struct stat s;
+    ASSERT_EQ(fstat(fd.get(), &s), 0, "Unable to stat file");
+    *length = s.st_size;
+    END_HELPER;
+}
+
+bool ReportContainer(const char* path, off_t offset) {
     fbl::unique_ptr<Container> container;
-    ASSERT_EQ(Container::Create(path, &container), ZX_OK, "Failed to initialize container");
+    off_t length;
+    ASSERT_TRUE(StatFile(path, &length));
+    ASSERT_EQ(Container::Create(path, offset, length - offset, &container), ZX_OK,
+              "Failed to initialize container");
     ASSERT_EQ(container->Verify(), ZX_OK, "File check failed\n");
     return true;
 }
 
 bool ReportSparse() {
-    return ReportContainer(sparse_path);
+    return ReportContainer(sparse_path, 0);
 }
 
-bool CreateFvm(bool create_before) {
+bool CreateFvm(bool create_before, off_t offset) {
     BEGIN_HELPER;
     printf("Creating fvm container: %s\n", fvm_path);
 
+    off_t length = 0;
     if (create_before) {
         ASSERT_TRUE(CreateFile(fvm_path, CONTAINER_SIZE, kFvm));
+        ASSERT_TRUE(StatFile(fvm_path, &length));
     }
+
     fbl::unique_ptr<FvmContainer> fvmContainer;
-    ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, &fvmContainer), ZX_OK,
-                 "Failed to initialize fvm container");
+    ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, offset, length - offset, &fvmContainer),
+              ZX_OK, "Failed to initialize fvm container");
     if (!create_before) {
         gFileFlags |= kFvm;
     }
@@ -154,8 +171,8 @@ bool CreateFvm(bool create_before) {
     END_HELPER;
 }
 
-bool ReportFvm() {
-    return ReportContainer(fvm_path);
+bool ReportFvm(off_t offset) {
+    return ReportContainer(fvm_path, offset);
 }
 
 void GenerateFilename(const char* dir, size_t len, char* out) {
@@ -330,13 +347,18 @@ bool CreateAndReport(container_t type) {
             break;
         }
         case FVM: {
-            ASSERT_TRUE(CreateFvm(true));
-            ASSERT_TRUE(ReportFvm());
+            ASSERT_TRUE(CreateFvm(true, 0));
+            ASSERT_TRUE(ReportFvm(0));
             break;
         }
         case FVM_NEW: {
-            ASSERT_TRUE(CreateFvm(false));
-            ASSERT_TRUE(ReportFvm());
+            ASSERT_TRUE(CreateFvm(false, 0));
+            ASSERT_TRUE(ReportFvm(0));
+            break;
+        }
+        case FVM_OFFSET: {
+            ASSERT_TRUE(CreateFvm(true, SLICE_SIZE));
+            ASSERT_TRUE(ReportFvm(SLICE_SIZE));
             break;
         }
         default: {
@@ -403,13 +425,16 @@ bool Cleanup() {
     END_HELPER;
 }
 
+//TODO(planders): add tests for FVM on GPT (with offset)
 BEGIN_TEST_CASE(fvm_host_tests)
 RUN_TEST_MEDIUM(TestEmptyPartitions<SPARSE>)
 RUN_TEST_MEDIUM(TestEmptyPartitions<FVM>)
 RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_NEW>)
+RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_OFFSET>)
 RUN_TEST_MEDIUM((TestPartitions<SPARSE, 10, 100, (1 << 20)>))
 RUN_TEST_MEDIUM((TestPartitions<FVM, 10, 100, (1 << 20)>))
 RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, 10, 100, (1 << 20)>))
+RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, 10, 100, (1 << 20)>))
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {
