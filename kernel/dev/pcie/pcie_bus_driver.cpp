@@ -646,6 +646,10 @@ void PcieBusDriver::RunQuirks(const fbl::RefPtr<PcieDevice>& dev) {
 // Workaround to disable all devices on the bus for mexec. This should not be
 // used for any other reason due to it intentionally leaving drivers in a bad
 // state (some may crash).
+// TODO(cja): The paradise serial workaround in particular may need a smarter
+// way of being handled in the future because it is not uncommon to have serial
+// bus devices initialized by the bios that we need to retain in zedboot/crash
+// situations.
 void PcieBusDriver::DisableBus() {
     fbl::AutoLock lock(&driver_lock_);
     ForeachDevice(
