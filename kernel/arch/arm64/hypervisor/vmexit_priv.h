@@ -19,6 +19,7 @@ class TrapMap;
 
 // Exception class of an exception syndrome.
 enum class ExceptionClass : uint8_t {
+    SMC_INSTRUCTION     = 0b010111,
     SYSTEM_INSTRUCTION  = 0b011000,
     INSTRUCTION_ABORT   = 0b100000,
     DATA_ABORT          = 0b100100,

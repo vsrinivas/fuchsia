@@ -145,6 +145,9 @@ zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
 
     ExceptionSyndrome syndrome(guest_state->esr_el2);
     switch (syndrome.ec) {
+    case ExceptionClass::SMC_INSTRUCTION:
+        LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
+        return ZX_ERR_NOT_SUPPORTED;
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
         return handle_system_instruction(syndrome.iss, hcr, guest_state);
