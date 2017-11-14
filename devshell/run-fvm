@@ -38,21 +38,10 @@ if [[ ! -f "${data_block}" ]]; then
   "${ZIRCON_TOOLS_DIR}/minfs" "${data_block}" create
 fi
 
-# Note: macos doesn't have -b, so use -k and multiply below.
-data_size=$(du -k "${data_block}" | cut -f 1)
-blob_size="$(du -k "${blobstore_block}" | cut -f 1)"
-# Add some slack on top of the base sizes, but not too much.
-# TODO(raggi): we could do with `fvm create` knowing how to start from an empty
-# file, and allocate enough space for all of the given inputs, as the *4 here
-# is large, and accounts for smaller images such as garnet only images.
-fvm_size=$(( (${blob_size} + ${data_size}) * 1024 * 4 ))
-# XXX(raggi): fvm create doesn't wipe the image, so remove it first.
 if [[ -f "${fvm_block}" ]]; then
   rm "${fvm_block}"
 fi
-fx-truncate "${fvm_block}" "${fvm_size}"
-"${ZIRCON_TOOLS_DIR}/fvm" "${fvm_block}" create
-"${ZIRCON_TOOLS_DIR}/fvm" "${fvm_block}" add --blobstore "${blobstore_block}" --data "${data_block}"
+"${ZIRCON_TOOLS_DIR}/fvm" "${fvm_block}" create --blobstore "${blobstore_block}" --data "${data_block}"
 
 exec "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -o "${ZIRCON_BUILD_DIR}" \
