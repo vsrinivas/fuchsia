@@ -20,6 +20,10 @@ import "lib/user/fidl/focus.fidl";
 // This interface is implemented by a user shell. Dependencies are passed to it
 // in Initialize() on startup. The user shell is also expected to implement
 // Lifecycle in order to receive a Terminate() call on teardown.
+//
+// Teardown may be initiated by the user shell calling
+// UserShellContext.Logout(), by the user runner being terminated, or by the
+// system shutting down.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
   Initialize(UserShellContext user_shell_context);

@@ -27,6 +27,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
@@ -252,11 +253,12 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
-    device_shell_ = std::make_unique<AppClient<DeviceShell>>(
+    device_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
         app_context_->launcher().get(), settings_.device_shell.Clone());
+    ConnectToService(device_shell_app_->services(), device_shell_.NewRequest());
 
     mozart::ViewProviderPtr device_shell_view_provider;
-    ConnectToService(device_shell_->services(),
+    ConnectToService(device_shell_app_->services(),
                      device_shell_view_provider.NewRequest());
 
     // We still need to pass a request for root view to device shell since
@@ -273,7 +275,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // Populate parameters and initialize the device shell.
     auto params = DeviceShellParams::New();
     params->presentation = std::move(presentation);
-    device_shell_->primary_service()->Initialize(
+    device_shell_->Initialize(
         device_shell_context_binding_.NewBinding(), std::move(params));
 
     // 2. Wait for persistent data to come up.
@@ -325,7 +327,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
       FXL_DLOG(INFO) << "- UserProvider down";
       token_manager_->Teardown(kBasicTimeout, [this] {
         FXL_DLOG(INFO) << "- AuthProvider down";
-        device_shell_->Teardown(kBasicTimeout, [this] {
+        device_shell_app_->Teardown(kBasicTimeout, [this] {
           FXL_DLOG(INFO) << "- DeviceShell down";
           FXL_LOG(INFO) << "Clean Shutdown";
           fsl::MessageLoop::GetCurrent()->QuitNow();
@@ -338,8 +340,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   void GetAuthenticationContext(
       const fidl::String& account_id,
       fidl::InterfaceRequest<AuthenticationContext> request) override {
-    device_shell_->primary_service()->GetAuthenticationContext(
-        account_id, std::move(request));
+    device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
   const Settings& settings_;  // Not owned nor copied.
@@ -352,7 +353,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   fidl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
 
   std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
-  std::unique_ptr<AppClient<DeviceShell>> device_shell_;
+  std::unique_ptr<AppClient<Lifecycle>> device_shell_app_;
+  DeviceShellPtr device_shell_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };

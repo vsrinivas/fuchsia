@@ -8,16 +8,17 @@ import "lib/device/fidl/user_provider.fidl";
 import "lib/ui/presentation/fidl/presentation.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
-// This interface is implemented by a device shell application.
+// This interface is implemented by a device shell. Dependencies and parameters
+// are passed to it in Initialize() on startup. The device shell is also
+// expected to implement Lifecycle in order to receive a Terminate() call on
+// teardown.
+//
+// Teardown may be initiated by the device shell calling
+// DeviceShellContext.Shutdown(), or by the system shutting down.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
   Initialize(DeviceShellContext device_shell_context,
              DeviceShellParams device_shell_params);
-
-  // This method may be invoked by the device runner in reaction to an
-  // invocation of DeviceShellContext.Shutdown(), or because of some other
-  // condition such as the device being powered off.
-  Terminate();
 
   // This method may be invoked by the device runner to request an
   // AuthenticationContext associated with |username|. |request| will then be
@@ -36,7 +37,7 @@ interface DeviceShell {
 interface DeviceShellContext {
   GetUserProvider(UserProvider& request);
 
-  // This requests the shutdown of the device.
+  // This requests the shutdown of the device runner.
   Shutdown();
 };
 

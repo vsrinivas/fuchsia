@@ -70,7 +70,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
     Connect();
   }
 
-  // |DeviceShell|
+  // |Lifecycle|
   void Terminate() override {
     if (settings_.test) {
       modular::testing::Teardown([this] { Exit(); });
