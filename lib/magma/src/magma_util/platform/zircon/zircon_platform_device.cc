@@ -21,7 +21,7 @@ ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy c
     DLOG("CpuMapMmio index %d", index);
 
     zx_status_t status;
-    pdev_mmio_buffer_t registers;
+    pdev_vmo_buffer_t registers;
 
     if ((status = pdev_map_mmio_buffer(&pdev_, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &registers)) != ZX_OK) {
