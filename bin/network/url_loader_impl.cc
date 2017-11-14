@@ -81,9 +81,14 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
     if (request->body->is_stream()) {
       request_body_reader = std::make_unique<SocketUploadElementReader>(
           std::move(request->body->get_stream()));
-    } else {
+    } else if (request->body->is_buffer()) {
       request_body_reader = std::make_unique<VmoUploadElementReader>(
           std::move(request->body->get_buffer()));
+    } else {
+      FXL_DCHECK(request->body->is_sized_buffer());
+      request_body_reader = std::make_unique<VmoUploadElementReader>(
+          std::move(request->body->get_sized_buffer()->buffer),
+          request->body->get_sized_buffer()->size);
     }
   }
 

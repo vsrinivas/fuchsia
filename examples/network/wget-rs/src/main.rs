@@ -115,6 +115,7 @@ fn main_res() -> Result<(), fidl::Error> {
                         .into_future())
             }
             Some(netsvc::URLBody::Buffer(_)) |
+            Some(netsvc::URLBody::SizedBuffer(_)) |
             None =>  None,
         }
     }).and_then(|socket_opt| {

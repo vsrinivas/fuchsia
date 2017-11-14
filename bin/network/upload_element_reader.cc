@@ -56,14 +56,17 @@ bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
 }
 
 VmoUploadElementReader::VmoUploadElementReader(zx::vmo vmo)
-    : vmo_(std::move(vmo)), offset_(0) {}
+    : vmo_(std::move(vmo)), offset_(0) {
+  err_ = vmo_.get_size(&size_);
+}
+
+VmoUploadElementReader::VmoUploadElementReader(zx::vmo vmo, uint64_t size)
+    : vmo_(std::move(vmo)), size_(size), offset_(0) {}
 
 VmoUploadElementReader::~VmoUploadElementReader() {}
 
 size_t VmoUploadElementReader::size() {
-  size_t size;
-  err_ = vmo_.get_size(&size);
-  return size;
+  return size_;
 }
 
 bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {

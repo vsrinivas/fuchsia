@@ -55,6 +55,7 @@ class SocketUploadElementReader : public UploadElementReader {
 class VmoUploadElementReader : public UploadElementReader {
  public:
   VmoUploadElementReader(zx::vmo vmo);
+  VmoUploadElementReader(zx::vmo vmo, uint64_t size);
   ~VmoUploadElementReader() override;
 
   size_t size() override;
@@ -62,6 +63,7 @@ class VmoUploadElementReader : public UploadElementReader {
 
  private:
   zx::vmo vmo_;
+  uint64_t size_;
   uint64_t offset_;
   std::array<char, BUFSIZE> buf_;
 };

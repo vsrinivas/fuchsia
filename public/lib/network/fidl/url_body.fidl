@@ -4,11 +4,20 @@
 
 module network;
 
+struct SizedBuffer {
+  // A shared buffer.
+  handle<vmo> buffer;
+  // The size of the buffer.
+  uint64 size;
+};
+
 union URLBody {
   // A socket that will contain the streaming request or response body.
   handle<socket> stream;
   // A shared buffer that will contain the complete request or response body.
   handle<vmo> buffer;
+  // A sized shared buffer that will contain the complete request or response body.
+  SizedBuffer sized_buffer;
 };
 
 
