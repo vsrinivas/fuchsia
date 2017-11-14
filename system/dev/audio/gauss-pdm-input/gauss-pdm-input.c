@@ -22,8 +22,8 @@ static zx_driver_ops_t gauss_pdm_input_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(gauss_pdm_input, gauss_pdm_input_driver_ops, "gauss-pdm-input", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GAUSS_AUDIO),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GAUSS),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GAUSS_AUDIO_IN),
 ZIRCON_DRIVER_END(gauss_pdm_input)
 // clang-format on

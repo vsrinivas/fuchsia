@@ -102,8 +102,8 @@ static const pbus_i2c_channel_t i2c_channels[] = {
 
 static const pbus_dev_t i2c_test_dev = {
     .name = "i2c-test",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_AMLOGIC_A113,
+    .vid = PDEV_VID_GOOGLE,
+    .pid = PDEV_PID_GAUSS,
     .did = PDEV_DID_GAUSS_I2C_TEST,
     .i2c_channels = i2c_channels,
     .i2c_channel_count = countof(i2c_channels),

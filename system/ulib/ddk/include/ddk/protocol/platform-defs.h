@@ -28,12 +28,11 @@ __BEGIN_CDECLS;
 #define PDEV_DID_HIKEY960_GPIO_TEST 1
 
 // Amlogic
-#define PDEV_VID_AMLOGIC            3
-#define PDEV_PID_AMLOGIC_S905       1
-#define PDEV_PID_AMLOGIC_A113       2
-// Device ID for Gauss audio
-#define PDEV_DID_AMLOGIC_GAUSS_AUDIO 1
-// I2C test driver
-#define PDEV_DID_GAUSS_I2C_TEST     2
+#define PDEV_VID_GOOGLE             3
+#define PDEV_PID_GAUSS              1
+
+#define PDEV_DID_GAUSS_AUDIO_IN     1
+#define PDEV_DID_GAUSS_AUDIO_OUT    2
+#define PDEV_DID_GAUSS_I2C_TEST     3
 
 __END_CDECLS;
