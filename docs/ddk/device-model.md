@@ -96,12 +96,12 @@ device interface.  In the future, Fuchsia's interface definition language and bi
 (FIDL2) will be supported.
 
 In many cases a Protocol is used to allow drivers to be simpler by taking advantage
-of a common implenentation of an Interface.  For example, the "block" driver implements
+of a common implementation of an Interface.  For example, the "block" driver implements
 the common block interface, and binds to devices implementing the Block Core Protocol,
 and the "ethernet" driver does the same thing for the Ethernet Interface and Ethermac
 Protocol.  Some protocols, such as the two cited here, make use of shared memory, and
 non-rpc signaling for more efficient, lower latency, and higher throughput than could
-be achived otherwise.
+be achieved otherwise.
 
 Classes represent a promise that a device implements an Interface or Protocol.
 Devices exist in the Device Filesystem under a topological path, like
