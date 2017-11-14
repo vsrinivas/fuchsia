@@ -5,17 +5,11 @@
 import("//packages/package.gni")
 
 package("context_engine") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "context_engine"
-    },
-  ]
+  binary = "context_engine"
 }
 
 executable("bin") {

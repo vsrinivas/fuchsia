@@ -5,17 +5,11 @@
 import("//packages/package.gni")
 
 package("suggestion_engine") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "suggestion_engine"
-    },
-  ]
+  binary = "suggestion_engine"
 }
 
 executable("bin") {
