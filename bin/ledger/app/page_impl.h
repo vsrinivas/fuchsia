@@ -49,7 +49,7 @@ class PageImpl : public Page {
       const CreateReferenceFromSocketCallback& callback) override;
 
   void CreateReferenceFromVmo(
-      zx::vmo data,
+      fsl::SizedVmoTransportPtr data,
       const CreateReferenceFromVmoCallback& callback) override;
 
   void StartTransaction(const StartTransactionCallback& callback) override;

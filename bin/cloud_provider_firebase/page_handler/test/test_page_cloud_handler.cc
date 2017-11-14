@@ -70,7 +70,7 @@ void TestPageCloudHandler::GetCommits(
 
 void TestPageCloudHandler::AddObject(const std::string& auth_token,
                                      ObjectDigestView object_digest,
-                                     zx::vmo data,
+                                     fsl::SizedVmo data,
                                      std::function<void(Status)> callback) {
   std::string data_str;
   if (!fsl::StringFromVmo(data, &data_str)) {

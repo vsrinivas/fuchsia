@@ -98,12 +98,12 @@ class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
     auto response = network::URLResponse::New();
     response->error = std::move(error);
     response->status_code = status;
-    zx::vmo buffer;
+    fsl::SizedVmo buffer;
     if (!fsl::VmoFromString(body, &buffer)) {
       ADD_FAILURE() << "Unable to convert string to Vmo.";
     }
     response->body = network::URLBody::New();
-    response->body->set_buffer(std::move(buffer));
+    response->body->set_sized_buffer(std::move(buffer).ToTransport());
     return response;
   }
 

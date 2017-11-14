@@ -222,7 +222,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
     for (auto& entry : change->changes) {
       const std::string key = to_string(entry->key);
 
-      if (!entry->value.is_valid()) {
+      if (!entry->value) {
         // TODO(mesch)
         continue;
       }

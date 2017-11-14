@@ -67,7 +67,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
   void GetCommits(fidl::Array<uint8_t> min_position_token,
                   const GetCommitsCallback& callback) override;
   void AddObject(fidl::Array<uint8_t> id,
-                 zx::vmo data,
+                 fsl::SizedVmoTransportPtr data,
                  const AddObjectCallback& callback) override;
   void GetObject(fidl::Array<uint8_t> id,
                  const GetObjectCallback& callback) override;

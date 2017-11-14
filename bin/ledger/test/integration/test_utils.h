@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "zx/vmo.h"
 
 namespace test {
 namespace integration {
@@ -45,9 +45,8 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
                                  int64_t offset,
                                  int64_t max_size);
 
-std::string ToString(const zx::vmo& vmo);
-
-fidl::Array<uint8_t> ToArray(const zx::vmo& vmo);
+std::string ToString(const fsl::SizedVmoTransportPtr& vmo);
+fidl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
 
 }  // namespace integration
 }  // namespace test

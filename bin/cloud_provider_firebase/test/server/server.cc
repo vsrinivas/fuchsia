@@ -17,7 +17,7 @@ Server::~Server() {}
 void Server::Serve(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
-  FXL_DCHECK(!request->body || request->body->is_buffer());
+  FXL_DCHECK(!request->body || request->body->is_sized_buffer());
 
   if (request->method == "GET") {
     for (const auto& header : request->headers) {

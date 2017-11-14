@@ -43,7 +43,7 @@ class PageCloudImplTest : public ::test::TestWithMessageLoop,
   }
 
   void OnNewObject(fidl::Array<uint8_t> id,
-                   zx::vmo data,
+                   fsl::SizedVmoTransportPtr data,
                    const OnNewObjectCallback& callback) override {
     FXL_NOTIMPLEMENTED();
   }
@@ -191,11 +191,11 @@ TEST_F(PageCloudImplTest, GetCommitsNetworkError) {
 }
 
 TEST_F(PageCloudImplTest, AddObject) {
-  zx::vmo data;
+  fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
 
   cloud_provider::Status status;
-  page_cloud_->AddObject(convert::ToArray("abc"), std::move(data),
+  page_cloud_->AddObject(convert::ToArray("abc"), std::move(data).ToTransport(),
                          callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
@@ -205,11 +205,11 @@ TEST_F(PageCloudImplTest, AddObject) {
 
 TEST_F(PageCloudImplTest, AddObjectNetworkError) {
   handler_->status_to_return = cloud_provider_firebase::Status::NETWORK_ERROR;
-  zx::vmo data;
+  fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
 
   cloud_provider::Status status;
-  page_cloud_->AddObject(convert::ToArray("abc"), std::move(data),
+  page_cloud_->AddObject(convert::ToArray("abc"), std::move(data).ToTransport(),
                          callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, status);

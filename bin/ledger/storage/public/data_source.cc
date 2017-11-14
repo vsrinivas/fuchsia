@@ -51,19 +51,18 @@ class StringLikeDataSource : public DataSource {
 
 class VmoDataChunk : public DataSource::DataChunk {
  public:
-  VmoDataChunk(zx::vmo vmo, uint64_t vmo_size)
-      : vmo_(std::move(vmo)), vmo_size_(vmo_size) {}
+  VmoDataChunk(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {}
 
   zx_status_t Init() {
     uintptr_t allocate_address;
     zx_status_t status = zx::vmar::root_self().allocate(
-        0, ToFullPages(vmo_size_), ZX_VM_FLAG_CAN_MAP_READ, &vmar_,
+        0, ToFullPages(vmo_.size()), ZX_VM_FLAG_CAN_MAP_READ, &vmar_,
         &allocate_address);
     if (status != ZX_OK) {
       return status;
     }
 
-    return vmar_.map(0, vmo_, 0, vmo_size_, ZX_VM_FLAG_PERM_READ,
+    return vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_FLAG_PERM_READ,
                      &mapped_address_);
   }
 
@@ -73,27 +72,23 @@ class VmoDataChunk : public DataSource::DataChunk {
   }
 
   fxl::StringView Get() override {
-    return fxl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_size_);
+    return fxl::StringView(reinterpret_cast<char*>(mapped_address_),
+                           vmo_.size());
   }
 
-  zx::vmo vmo_;
-  uint64_t vmo_size_;
+  fsl::SizedVmo vmo_;
   zx::vmar vmar_;
   uintptr_t mapped_address_;
 };
 
 class VmoDataSource : public DataSource {
  public:
-  explicit VmoDataSource(zx::vmo value) : vmo_(std::move(value)) {
+  explicit VmoDataSource(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {
     FXL_DCHECK(vmo_);
-    zx_status_t status = vmo_.get_size(&vmo_size_);
-    if (status != ZX_OK) {
-      vmo_.reset();
-    }
   }
 
  private:
-  uint64_t GetSize() override { return vmo_size_; }
+  uint64_t GetSize() override { return vmo_.size(); }
 
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
@@ -105,7 +100,7 @@ class VmoDataSource : public DataSource {
       callback(nullptr, Status::ERROR);
       return;
     }
-    auto data = std::make_unique<VmoDataChunk>(std::move(vmo_), vmo_size_);
+    auto data = std::make_unique<VmoDataChunk>(std::move(vmo_));
     if (data->Init() != ZX_OK) {
       callback(nullptr, Status::ERROR);
       return;
@@ -113,8 +108,7 @@ class VmoDataSource : public DataSource {
     callback(std::move(data), Status::DONE);
   }
 
-  zx::vmo vmo_;
-  uint64_t vmo_size_;
+  fsl::SizedVmo vmo_;
 #ifndef NDEBUG
   bool called_ = false;
 #endif
@@ -214,7 +208,7 @@ std::unique_ptr<DataSource> DataSource::Create(fidl::Array<uint8_t> value) {
       std::move(value));
 }
 
-std::unique_ptr<DataSource> DataSource::Create(zx::vmo vmo) {
+std::unique_ptr<DataSource> DataSource::Create(fsl::SizedVmo vmo) {
   return std::make_unique<VmoDataSource>(std::move(vmo));
 }
 

@@ -75,7 +75,7 @@ TEST_F(DataSourceTest, Array) {
 TEST_F(DataSourceTest, Vmo) {
   std::string value = "Hello World";
 
-  zx::vmo vmo;
+  fsl::SizedVmo vmo;
   EXPECT_TRUE(fsl::VmoFromString(value, &vmo));
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(vmo))));

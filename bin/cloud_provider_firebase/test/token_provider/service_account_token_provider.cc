@@ -327,7 +327,8 @@ network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
       api_key;
   request->method = "POST";
   request->auto_follow_redirects = true;
-  request->response_body_mode = network::URLRequest::ResponseBodyMode::BUFFER;
+  request->response_body_mode =
+      network::URLRequest::ResponseBodyMode::SIZED_BUFFER;
 
   // content-type header.
   network::HttpHeaderPtr content_type_header = network::HttpHeader::New();
@@ -341,12 +342,12 @@ network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
   accept_header->value = "application/json";
   request->headers.push_back(std::move(accept_header));
 
-  zx::vmo data;
+  fsl::SizedVmo data;
   bool result = fsl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
   FXL_DCHECK(result);
 
   request->body = network::URLBody::New();
-  request->body->set_buffer(std::move(data));
+  request->body->set_sized_buffer(std::move(data).ToTransport());
 
   return request;
 }
@@ -379,8 +380,9 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
 
   std::string response_body;
   if (!response->body.is_null()) {
-    FXL_DCHECK(response->body->is_buffer());
-    if (!fsl::StringFromVmo(response->body->get_buffer(), &response_body)) {
+    FXL_DCHECK(response->body->is_sized_buffer());
+    if (!fsl::StringFromVmo(response->body->get_sized_buffer(),
+                            &response_body)) {
       ResolveCallbacks(api_key, nullptr,
                        GetError(modular::auth::Status::INTERNAL_ERROR,
                                 "Unable to read from VMO."));

@@ -431,13 +431,14 @@ void PageStorageImpl::GetObject(
       return;
     }
 
-    zx::vmo vmo;
-    zx_status_t zx_status = zx::vmo::create(file_index->size(), 0, &vmo);
+    zx::vmo raw_vmo;
+    zx_status_t zx_status = zx::vmo::create(file_index->size(), 0, &raw_vmo);
     if (zx_status != ZX_OK) {
       callback(Status::INTERNAL_IO_ERROR, nullptr);
       return;
     }
 
+    fsl::SizedVmo vmo(std::move(raw_vmo), file_index->size());
     size_t offset = 0;
     auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
     for (const auto* child : *file_index->children()) {
@@ -445,9 +446,9 @@ void PageStorageImpl::GetObject(
         callback(Status::FORMAT_ERROR, nullptr);
         return;
       }
-      zx::vmo vmo_copy;
-      zx_status_t zx_status = vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE,
-          &vmo_copy);
+      fsl::SizedVmo vmo_copy;
+      zx_status_t zx_status =
+          vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
       if (zx_status != ZX_OK) {
         FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
         callback(Status::INTERNAL_IO_ERROR, nullptr);
@@ -869,7 +870,7 @@ void PageStorageImpl::ObjectIsUntracked(
 
 void PageStorageImpl::FillBufferWithObjectContent(
     ObjectDigestView object_digest,
-    zx::vmo vmo,
+    fsl::SizedVmo vmo,
     size_t offset,
     size_t size,
     std::function<void(Status)> callback) {
@@ -906,7 +907,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
                }
                size_t written_size;
                zx_status_t zx_status =
-                   vmo.write(content.data(), offset, size, &written_size);
+                   vmo.vmo().write(content.data(), offset, size, &written_size);
                if (zx_status != ZX_OK) {
                  FXL_LOG(ERROR)
                      << "Unable to write to vmo. Status: " << zx_status;
@@ -949,10 +950,9 @@ void PageStorageImpl::FillBufferWithObjectContent(
                  callback(Status::FORMAT_ERROR);
                  return;
                }
-               zx::vmo vmo_copy;
-               zx_status_t zx_status = vmo.duplicate(
-                   ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT | ZX_RIGHT_WRITE,
-                   &vmo_copy);
+               fsl::SizedVmo vmo_copy;
+               zx_status_t zx_status =
+                   vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
                if (zx_status != ZX_OK) {
                  FXL_LOG(ERROR)
                      << "Unable to duplicate vmo. Status: " << zx_status;

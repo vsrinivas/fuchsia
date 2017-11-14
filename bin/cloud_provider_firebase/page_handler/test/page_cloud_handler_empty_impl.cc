@@ -37,7 +37,7 @@ void PageCloudHandlerEmptyImpl::GetCommits(
 void PageCloudHandlerEmptyImpl::AddObject(
     const std::string& /*auth_token*/,
     ObjectDigestView /*object_digest*/,
-    zx::vmo /*data*/,
+    fsl::SizedVmo /*data*/,
     std::function<void(Status)> /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }

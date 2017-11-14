@@ -145,14 +145,14 @@ fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
   return result;
 }
 
-std::string ToString(const zx::vmo& vmo) {
+std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
 
-fidl::Array<uint8_t> ToArray(const zx::vmo& vmo) {
+fidl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
@@ -161,11 +161,12 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
                                  int64_t offset,
                                  int64_t max_size) {
   std::string result;
-  (*snapshot)->FetchPartial(std::move(key), offset, max_size,
-                            [&result](ledger::Status status, zx::vmo buffer) {
-                              EXPECT_EQ(status, ledger::Status::OK);
-                              EXPECT_TRUE(fsl::StringFromVmo(buffer, &result));
-                            });
+  (*snapshot)->FetchPartial(
+      std::move(key), offset, max_size,
+      [&result](ledger::Status status, fsl::SizedVmoTransportPtr buffer) {
+        EXPECT_EQ(status, ledger::Status::OK);
+        EXPECT_TRUE(fsl::StringFromVmo(buffer, &result));
+      });
   EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(1)));
   return result;

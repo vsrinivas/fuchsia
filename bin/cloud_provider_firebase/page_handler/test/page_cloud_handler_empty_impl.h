@@ -40,7 +40,7 @@ class PageCloudHandlerEmptyImpl : public PageCloudHandler {
 
   void AddObject(const std::string& auth_token,
                  ObjectDigestView object_digest,
-                 zx::vmo data,
+                 fsl::SizedVmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(

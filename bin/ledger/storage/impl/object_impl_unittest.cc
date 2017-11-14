@@ -43,7 +43,7 @@ std::string RandomString(size_t size) {
            << ", but got: " << convert::ToHex(found_data);
   }
 
-  zx::vmo vmo;
+  fsl::SizedVmo vmo;
   status = object.GetVmo(&vmo);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
@@ -113,7 +113,7 @@ TEST(ObjectImplTest, VmoObject) {
   std::string data = RandomString(256);
   std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
 
-  zx::vmo vmo;
+  fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(data, &vmo));
 
   VmoObject object(digest, std::move(vmo));

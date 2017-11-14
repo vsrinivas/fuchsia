@@ -38,7 +38,7 @@ void ComputePageChange(
     std::string next_token = "";
   };
 
-  auto waiter = callback::Waiter<Status, zx::vmo>::Create(Status::OK);
+  auto waiter = callback::Waiter<Status, fsl::SizedVmo>::Create(Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp();
@@ -120,7 +120,7 @@ void ComputePageChange(
     auto result_callback = fxl::MakeCopyable([context = std::move(context),
                                               callback = std::move(callback)](
                                                  Status status,
-                                                 std::vector<zx::vmo>
+                                                 std::vector<fsl::SizedVmo>
                                                      results) mutable {
       if (status != Status::OK) {
         FXL_LOG(ERROR)
@@ -131,7 +131,8 @@ void ComputePageChange(
       }
       FXL_DCHECK(results.size() == context->page_change->changes.size());
       for (size_t i = 0; i < results.size(); i++) {
-        context->page_change->changes[i]->value = std::move(results[i]);
+        context->page_change->changes[i]->value =
+            std::move(results[i]).ToTransport();
       }
       callback(Status::OK, std::make_pair(std::move(context->page_change),
                                           std::move(context->next_token)));

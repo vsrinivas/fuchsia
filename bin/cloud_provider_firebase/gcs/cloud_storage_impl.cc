@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fsl/socket/files.h"
 #include "lib/fsl/vmo/file.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/files/eintr_wrapper.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"
@@ -84,45 +85,41 @@ CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadObject(std::string auth_token,
                                     const std::string& key,
-                                    zx::vmo data,
+                                    fsl::SizedVmo data,
                                     std::function<void(Status)> callback) {
   std::string url = GetUploadUrl(key);
 
-  uint64_t data_size;
-  zx_status_t status = data.get_size(&data_size);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
-    callback(Status::INTERNAL_ERROR);
-    return;
-  }
+  auto request_factory = fxl::MakeCopyable([auth_token = std::move(auth_token),
+                                            url = std::move(url),
+                                            task_runner = task_runner_,
+                                            data = std::move(data)] {
+    network::URLRequestPtr request(network::URLRequest::New());
+    request->url = url;
+    request->method = "POST";
+    request->auto_follow_redirects = true;
 
-  auto request_factory = fxl::MakeCopyable(
-      [auth_token = std::move(auth_token), url = std::move(url),
-       task_runner = task_runner_, data = std::move(data), data_size] {
-        network::URLRequestPtr request(network::URLRequest::New());
-        request->url = url;
-        request->method = "POST";
-        request->auto_follow_redirects = true;
+    // Authorization header.
+    if (!auth_token.empty()) {
+      request->headers.push_back(MakeAuthorizationHeader(auth_token));
+    }
 
-        // Authorization header.
-        if (!auth_token.empty()) {
-          request->headers.push_back(MakeAuthorizationHeader(auth_token));
-        }
+    // Content-Length header.
+    network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
+    content_length_header->name = kContentLengthHeader;
+    content_length_header->value = fxl::NumberToString(data.size());
+    request->headers.push_back(std::move(content_length_header));
 
-        // Content-Length header.
-        network::HttpHeaderPtr content_length_header =
-            network::HttpHeader::New();
-        content_length_header->name = kContentLengthHeader;
-        content_length_header->value = fxl::NumberToString(data_size);
-        request->headers.push_back(std::move(content_length_header));
-
-        zx::vmo duplicated_data;
-        data.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ,
-                       &duplicated_data);
-        request->body = network::URLBody::New();
-        request->body->set_buffer(std::move(duplicated_data));
-        return request;
-      });
+    fsl::SizedVmo duplicated_data;
+    zx_status_t status =
+        data.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicated_data);
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Unable to duplicate a vmo. Status: " << status;
+      return network::URLRequestPtr();
+    }
+    request->body = network::URLBody::New();
+    request->body->set_sized_buffer(std::move(duplicated_data).ToTransport());
+    return request;
+  });
 
   Request(std::move(request_factory),
           [callback = std::move(callback)](

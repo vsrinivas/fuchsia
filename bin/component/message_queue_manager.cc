@@ -223,8 +223,9 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
 
           key_ = MakeMessageQueueTokenKey(component_namespace_,
                                           component_instance_id_, queue_name_);
-          snapshot_->Get(to_array(key_), [this, flow](ledger::Status status,
-                                                      zx::vmo value) {
+          snapshot_->Get(to_array(key_), [this, flow](
+                                             ledger::Status status,
+                                             fsl::SizedVmoTransportPtr value) {
             if (status == ledger::Status::KEY_NOT_FOUND) {
               // Key wasn't found, that's not an error.
               return;
@@ -296,8 +297,9 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
           }
 
           std::string key = MakeMessageQueueKey(token_);
-          snapshot_->Get(to_array(key), [this, flow](ledger::Status status,
-                                                     zx::vmo value) {
+          snapshot_->Get(to_array(key), [this, flow](
+                                            ledger::Status status,
+                                            fsl::SizedVmoTransportPtr value) {
             if (status != ledger::Status::OK) {
               if (status != ledger::Status::KEY_NOT_FOUND) {
                 // It's expected that the key is not found when the link

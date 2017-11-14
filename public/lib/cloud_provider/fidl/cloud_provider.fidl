@@ -5,6 +5,8 @@
 [DartPackage="cloud_provider"]
 module cloud_provider;
 
+import "lib/fsl/fidl/sized_vmo_transport.fidl";
+
 // This file defines a cloud service that can be used by Ledger to power cloud
 // sync.
 
@@ -127,7 +129,7 @@ interface PageCloud {
       => (Status status, array<Commit>? commits, array<uint8>? position_token);
 
   // Uploads the given object to the cloud under the given id.
-  AddObject(array<uint8> id, handle<vmo> data) => (Status status);
+  AddObject(array<uint8> id, fsl.SizedVmoTransport data) => (Status status);
 
   // Retrieves the object of the given id from the cloud.
   //
@@ -169,7 +171,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  OnNewObject(array<uint8> id, handle<vmo> data) => ();
+  OnNewObject(array<uint8> id, fsl.SizedVmoTransport data) => ();
 
   // Called when an error occurs.
   //

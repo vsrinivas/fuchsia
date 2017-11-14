@@ -180,7 +180,7 @@ void PageDownload::OnNewCommits(fidl::Array<cloud_provider::CommitPtr> commits,
 }
 
 void PageDownload::OnNewObject(fidl::Array<uint8_t> /*id*/,
-                               zx::vmo /*data*/,
+                               fsl::SizedVmoTransportPtr /*data*/,
                                const OnNewObjectCallback& /*callback*/) {
   // No known cloud provider implementations use this method.
   // TODO(ppi): implement this method when we have such cloud provider

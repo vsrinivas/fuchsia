@@ -388,7 +388,7 @@ void FirebaseServer::HandlePatch(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
   std::string body;
-  if (!fsl::StringFromVmo(request->body->get_buffer(), &body)) {
+  if (!fsl::StringFromVmo(request->body->get_sized_buffer(), &body)) {
     FXL_NOTREACHED();
   }
 
@@ -427,7 +427,7 @@ void FirebaseServer::HandlePut(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
   std::string body;
-  if (!fsl::StringFromVmo(request->body->get_buffer(), &body)) {
+  if (!fsl::StringFromVmo(request->body->get_sized_buffer(), &body)) {
     FXL_NOTREACHED();
   }
 

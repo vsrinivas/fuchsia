@@ -103,7 +103,7 @@ void BatchUpload::UploadNextObject() {
 }
 
 void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
-  zx::vmo data;
+  fsl::SizedVmo data;
   auto status = object->GetVmo(&data);
   // TODO(ppi): LE-225 Handle disk IO errors.
   FXL_DCHECK(status == storage::Status::OK);
@@ -111,7 +111,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   storage::ObjectDigest digest = object->GetDigest();
   (*page_cloud_)
       ->AddObject(
-          convert::ToArray(digest), std::move(data),
+          convert::ToArray(digest), std::move(data).ToTransport(),
           callback::MakeScoped(
               weak_ptr_factory_.GetWeakPtr(),
               [this, digest = std::move(digest)](

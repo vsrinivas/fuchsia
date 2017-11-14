@@ -30,7 +30,7 @@ class CloudStorageImpl : public CloudStorage {
   // CloudStorage implementation.
   void UploadObject(std::string auth_token,
                     const std::string& key,
-                    zx::vmo data,
+                    fsl::SizedVmo data,
                     std::function<void(Status)> callback) override;
 
   void DownloadObject(

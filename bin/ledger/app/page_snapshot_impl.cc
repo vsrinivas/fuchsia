@@ -62,7 +62,13 @@ size_t ComputeEntrySize(const InlinedEntryPtr& entry) {
 // Fills an Entry from the content of object.
 storage::Status FillSingleEntry(const storage::Object& object,
                                 EntryPtr* entry) {
-  return object.GetVmo(&(*entry)->value);
+  fsl::SizedVmo vmo;
+  storage::Status status = object.GetVmo(&vmo);
+  if (status != storage::Status::OK) {
+    return status;
+  }
+  (*entry)->value = std::move(vmo).ToTransport();
+  return storage::Status::OK;
 }
 
 // Fills an InlinedEntry from the content of object.
@@ -319,14 +325,17 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
           storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   zx::vmo());
+                   nullptr);
           return;
         }
         PageUtils::GetPartialReferenceAsBuffer(
             page_storage_, entry.object_digest, 0u,
             std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
-            std::move(callback));
+            [callback = std::move(callback)](Status status,
+                                             fsl::SizedVmo data) {
+              callback(status, std::move(data).ToTransport());
+            });
       });
 }
 
@@ -367,18 +376,21 @@ void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
-      [this, callback = std::move(timed_callback)](storage::Status status,
-                                                   storage::Entry entry) {
+      [this, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   zx::vmo());
+                   nullptr);
           return;
         }
         PageUtils::GetPartialReferenceAsBuffer(
             page_storage_, entry.object_digest, 0u,
             std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-            callback);
+            [callback = std::move(callback)](Status status,
+                                             fsl::SizedVmo data) {
+              callback(status, std::move(data).ToTransport());
+            });
       });
 }
 
@@ -392,17 +404,20 @@ void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
       [this, offset, max_size, callback = std::move(timed_callback)](
-          storage::Status status, storage::Entry entry) {
+          storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   zx::vmo());
+                   nullptr);
           return;
         }
 
         PageUtils::GetPartialReferenceAsBuffer(
             page_storage_, entry.object_digest, offset, max_size,
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-            callback);
+            [callback = std::move(callback)](Status status,
+                                             fsl::SizedVmo data) {
+              callback(status, std::move(data).ToTransport());
+            });
       });
 }
 

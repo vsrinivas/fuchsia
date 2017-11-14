@@ -42,7 +42,7 @@ void GcsServer::HandlePost(
   // doesn't do that either.
 
   std::string content;
-  if (!fsl::StringFromVmo(request->body->get_buffer(), &content)) {
+  if (!fsl::StringFromVmo(request->body->get_sized_buffer(), &content)) {
     FXL_NOTREACHED() << "Unable to read vmo.";
   }
   data_[std::move(path)] = std::move(content);

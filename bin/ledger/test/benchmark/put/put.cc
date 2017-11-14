@@ -113,10 +113,10 @@ void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
     page_->Put(std::move(key), std::move(value), put_callback);
     return;
   }
-  zx::vmo vmo;
-  FXL_CHECK(fsl::VmoFromString(convert::ToString(value), &vmo));
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
   page_->CreateReferenceFromVmo(
-      std::move(vmo),
+      std::move(vmo).ToTransport(),
       fxl::MakeCopyable(
           [this, key = std::move(key), put_callback = std::move(put_callback)](
               ledger::Status status, ledger::ReferencePtr reference) mutable {

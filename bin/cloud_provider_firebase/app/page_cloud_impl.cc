@@ -4,6 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
 #include "peridot/bin/ledger/convert/convert.h"
@@ -163,19 +164,24 @@ void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
 }
 
 void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
-                              zx::vmo data,
+                              fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable(
-      [this, id = convert::ToString(id), data = std::move(data), callback](
-          auth_provider::AuthStatus auth_status,
-          std::string auth_token) mutable {
+  fsl::SizedVmo vmo;
+  if (!fsl::SizedVmo::FromTransport(std::move(data), &vmo)) {
+    callback(cloud_provider::Status::ARGUMENT_ERROR);
+    return;
+  }
+  auto request = auth_provider_->GetFirebaseToken(
+      fxl::MakeCopyable([this, id = convert::ToString(id), vmo = std::move(vmo),
+                         callback](auth_provider::AuthStatus auth_status,
+                                   std::string auth_token) mutable {
         if (auth_status != auth_provider::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }
 
         handler_->AddObject(std::move(auth_token), std::move(id),
-                            std::move(data),
+                            std::move(vmo),
                             [callback = std::move(callback)](Status status) {
                               callback(ConvertInternalStatus(status));
                             });

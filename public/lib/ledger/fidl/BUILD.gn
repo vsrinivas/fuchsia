@@ -8,4 +8,8 @@ fidl("fidl") {
   sources = [
     "ledger.fidl",
   ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl/fidl",
+  ]
 }

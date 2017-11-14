@@ -83,14 +83,19 @@ void PageImpl::CreateReferenceFromSocket(
                              std::move(timed_callback));
 }
 
-// CreateReferenceFromVmo(handle<vmo> data)
+// CreateReferenceFromVmo(SizedVmoTransport data)
 //   => (Status status, Reference reference);
 void PageImpl::CreateReferenceFromVmo(
-    zx::vmo data,
+    fsl::SizedVmoTransportPtr data,
     const CreateReferenceFromSocketCallback& callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_vmo");
-  delegate_->CreateReference(storage::DataSource::Create(std::move(data)),
+  fsl::SizedVmo vmo;
+  if (!fsl::SizedVmo::FromTransport(std::move(data), &vmo)) {
+    callback(Status::INVALID_ARGUMENT, nullptr);
+    return;
+  }
+  delegate_->CreateReference(storage::DataSource::Create(std::move(vmo)),
                              std::move(timed_callback));
 }
 

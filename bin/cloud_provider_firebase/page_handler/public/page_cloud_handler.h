@@ -9,13 +9,13 @@
 #include <string>
 #include <vector>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/types.h"
 #include "zx/socket.h"
-#include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
 
@@ -80,7 +80,7 @@ class PageCloudHandler {
   // Uploads the given object to the cloud under the given id.
   virtual void AddObject(const std::string& auth_token,
                          ObjectDigestView object_digest,
-                         zx::vmo data,
+                         fsl::SizedVmo data,
                          std::function<void(Status)> callback) = 0;
 
   // Retrieves the object of the given id from the cloud. The size of the object

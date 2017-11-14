@@ -43,7 +43,7 @@ class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
   // gcs::CloudStorage:
   void UploadObject(std::string auth_token,
                     const std::string& key,
-                    zx::vmo data,
+                    fsl::SizedVmo data,
                     std::function<void(gcs::Status)> callback) override {
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
@@ -152,7 +152,7 @@ class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
   std::vector<std::string> download_keys_;
   std::vector<std::string> upload_auth_tokens_;
   std::vector<std::string> upload_keys_;
-  std::vector<zx::vmo> upload_data_;
+  std::vector<fsl::SizedVmo> upload_data_;
 
   // These members hold response data that GCS client is to return when called
   // by PageCloudHandlerImpl.
@@ -636,7 +636,7 @@ TEST_F(PageCloudHandlerImplTest, GetCommitsWhenThereAreNone) {
 }
 
 TEST_F(PageCloudHandlerImplTest, AddObject) {
-  zx::vmo data;
+  fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga", &data));
 
   Status status;

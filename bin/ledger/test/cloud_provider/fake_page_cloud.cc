@@ -149,7 +149,7 @@ void FakePageCloud::GetCommits(fidl::Array<uint8_t> min_position_token,
 }
 
 void FakePageCloud::AddObject(fidl::Array<uint8_t> id,
-                              zx::vmo data,
+                              fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
   std::string bytes;
   if (!fsl::StringFromVmo(data, &bytes)) {

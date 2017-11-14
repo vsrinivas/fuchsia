@@ -56,7 +56,7 @@ Status LevelDBObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-VmoObject::VmoObject(ObjectDigest digest, zx::vmo vmo)
+VmoObject::VmoObject(ObjectDigest digest, fsl::SizedVmo vmo)
     : digest_(std::move(digest)), vmo_(std::move(vmo)) {}
 
 VmoObject::~VmoObject() {
@@ -78,16 +78,16 @@ Status VmoObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-Status VmoObject::GetVmo(zx::vmo* vmo) const {
+Status VmoObject::GetVmo(fsl::SizedVmo* vmo) const {
   Status status = Initialize();
   if (status != Status::OK) {
     return status;
   }
 
-  zx_status_t zx_status = vmo_.duplicate(
-      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-      vmo);
+  zx_status_t zx_status =
+      vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to duplicate a vmo. Status: " << zx_status;
     return Status::INTERNAL_IO_ERROR;
   }
   return Status::OK;
@@ -98,19 +98,12 @@ Status VmoObject::Initialize() const {
     return Status::OK;
   }
 
-  size_t size;
-  zx_status_t zx_status = vmo_.get_size(&size);
-  if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to get VMO size. Error: " << zx_status;
-    return Status::INTERNAL_IO_ERROR;
-  }
-
   uintptr_t allocate_address;
-  zx_status = zx::vmar::root_self().allocate(0, ToFullPages(size),
-                                             ZX_VM_FLAG_CAN_MAP_READ |
-                                                 ZX_VM_FLAG_CAN_MAP_WRITE |
-                                                 ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                                             &vmar_, &allocate_address);
+  zx_status_t zx_status = zx::vmar::root_self().allocate(
+      0, ToFullPages(vmo_.size()),
+      ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
+          ZX_VM_FLAG_CAN_MAP_SPECIFIC,
+      &vmar_, &allocate_address);
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << zx_status;
     return Status::INTERNAL_IO_ERROR;
@@ -118,7 +111,7 @@ Status VmoObject::Initialize() const {
 
   char* mapped_address;
   zx_status = vmar_.map(
-      0, vmo_, 0, size,
+      0, vmo_.vmo(), 0, vmo_.size(),
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
       reinterpret_cast<uintptr_t*>(&mapped_address));
   if (zx_status != ZX_OK) {
@@ -127,7 +120,7 @@ Status VmoObject::Initialize() const {
     return Status::INTERNAL_IO_ERROR;
   }
 
-  data_ = fxl::StringView(mapped_address, size);
+  data_ = fxl::StringView(mapped_address, vmo_.size());
   initialized_ = true;
 
   return Status::OK;

@@ -8,10 +8,10 @@
 #include <functional>
 #include <string>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/status.h"
 #include "zx/socket.h"
-#include "zx/vmo.h"
 
 namespace gcs {
 
@@ -22,7 +22,7 @@ class CloudStorage {
 
   virtual void UploadObject(std::string auth_token,
                             const std::string& key,
-                            zx::vmo data,
+                            fsl::SizedVmo data,
                             std::function<void(Status)> callback) = 0;
 
   virtual void DownloadObject(

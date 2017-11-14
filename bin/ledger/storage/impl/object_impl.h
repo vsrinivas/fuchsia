@@ -5,10 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 
+#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
 #include "zx/vmar.h"
@@ -65,20 +64,20 @@ class LevelDBObject : public Object {
 // Object whose data is backed by a VMO.
 class VmoObject : public Object {
  public:
-  VmoObject(ObjectDigest digest, zx::vmo vmo);
+  VmoObject(ObjectDigest digest, fsl::SizedVmo vmo);
   ~VmoObject() override;
 
   // Object:
   ObjectDigest GetDigest() const override;
   Status GetData(fxl::StringView* data) const override;
-  Status GetVmo(zx::vmo* vmo) const override;
+  Status GetVmo(fsl::SizedVmo* vmo) const override;
 
  private:
   Status Initialize() const;
 
   mutable bool initialized_ = false;
   const ObjectDigest digest_;
-  zx::vmo vmo_;
+  fsl::SizedVmo vmo_;
   mutable zx::vmar vmar_;
   mutable fxl::StringView data_;
 };

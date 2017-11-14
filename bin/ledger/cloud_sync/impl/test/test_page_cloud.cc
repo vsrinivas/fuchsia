@@ -55,7 +55,7 @@ void TestPageCloud::GetCommits(fidl::Array<uint8_t> /*min_position_token*/,
 }
 
 void TestPageCloud::AddObject(fidl::Array<uint8_t> id,
-                              zx::vmo data,
+                              fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
   add_object_calls++;
   std::string received_data;

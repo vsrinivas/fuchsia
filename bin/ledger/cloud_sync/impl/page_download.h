@@ -55,7 +55,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
                     const OnNewCommitsCallback& callback) override;
 
   void OnNewObject(fidl::Array<uint8_t> id,
-                   zx::vmo data,
+                   fsl::SizedVmoTransportPtr data,
                    const OnNewObjectCallback& callback) override;
 
   void OnError(cloud_provider::Status status) override;

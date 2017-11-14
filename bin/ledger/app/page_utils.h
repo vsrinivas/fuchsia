@@ -7,12 +7,12 @@
 
 #include <functional>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "zx/vmo.h"
 
 namespace ledger {
 
@@ -42,7 +42,7 @@ class PageUtils {
       int64_t max_size,
       storage::PageStorage::Location location,
       Status not_found_status,
-      std::function<void(Status, zx::vmo)> callback);
+      std::function<void(Status, fsl::SizedVmo)> callback);
 
   // Returns true if a key matches the provided prefix, false otherwise.
   static bool MatchesPrefix(const std::string& key, const std::string& prefix);

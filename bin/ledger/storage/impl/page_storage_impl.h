@@ -10,6 +10,7 @@
 #include <queue>
 #include <set>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -176,7 +177,7 @@ class PageStorageImpl : public PageStorage {
       std::function<void(Status, std::unique_ptr<const Object>)> callback);
 
   void FillBufferWithObjectContent(ObjectDigestView object_digest,
-                                   zx::vmo vmo,
+                                   fsl::SizedVmo vmo,
                                    size_t offset,
                                    size_t size,
                                    std::function<void(Status)> callback);

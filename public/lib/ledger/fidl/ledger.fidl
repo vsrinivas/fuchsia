@@ -5,6 +5,8 @@
 [DartPackage="ledger"]
 module ledger;
 
+import "lib/fsl/fidl/sized_vmo_transport.fidl";
+
 /*
  * This file contains definitions of interfaces and data structures to access
  * the Fuchsia Ledger.
@@ -120,7 +122,7 @@ interface Page {
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the vmo.
-  CreateReferenceFromVmo(handle<vmo> data)
+  CreateReferenceFromVmo(fsl.SizedVmoTransport data)
       => (Status status, Reference? reference);
 
   // Transactions.
@@ -186,10 +188,10 @@ enum Priority {
 // A pair of key and value.
 struct Entry {
   array<uint8> key;
-  // |value| is null if the value requested has the LAZY priority and is not
-  // present on the device. Clients must use a Fetch call to retrieve the
-  // contents.
-  handle<vmo>? value;
+  // |value| is null and |size| is 0 if the value requested has the LAZY
+  // priority and is not present on the device. Clients must use a Fetch call
+  // to retrieve the contents.
+  fsl.SizedVmoTransport? value;
   Priority priority;
 };
 
@@ -246,7 +248,7 @@ interface PageSnapshot {
   // Only |EAGER| values are guaranteed to be returned. Calls when the value is
   // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
   // be retrieved over the network using a Fetch() call.
-  Get(array<uint8> key) => (Status status, handle<vmo>? value);
+  Get(array<uint8> key) => (Status status, fsl.SizedVmoTransport? data);
 
   // Returns the value of a given key if it fits in a FIDL message.
   // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
@@ -256,7 +258,7 @@ interface PageSnapshot {
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
   // is not available).
-  Fetch(array<uint8> key) => (Status status, handle<vmo>? value);
+  Fetch(array<uint8> key) => (Status status, fsl.SizedVmoTransport? data);
 
   // Fetches the value of a given key, over the network if not already present
   // locally, and returns a shared handle of a part of the value of a given
@@ -265,7 +267,7 @@ interface PageSnapshot {
   // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
   FetchPartial(array<uint8> key, int64 offset, int64 max_size)
-      => (Status status, handle<vmo>? buffer);
+      => (Status status, fsl.SizedVmoTransport? data);
 };
 
 enum ResultState {

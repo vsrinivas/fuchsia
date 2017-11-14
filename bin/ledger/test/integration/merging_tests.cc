@@ -373,10 +373,11 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
              << "Expected key \"" << expected_keys[i] << "\" but found \""
              << convert::ExtendedStringView(found_entries[i]->key) << "\"";
     }
-    if (expected_values[i] != ToString(found_entries[i]->value)) {
+    std::string found_entry = ToString(found_entries[i]->value);
+    if (expected_values[i] != found_entry) {
       return ::testing::AssertionFailure()
              << "Expected value \"" << expected_values[i] << "\" but found \""
-             << ToString(found_entries[i]->value) << "\"";
+             << found_entry << "\"";
     }
   }
   return ::testing::AssertionSuccess();

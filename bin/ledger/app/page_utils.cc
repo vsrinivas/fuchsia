@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/storage/public/object.h"
@@ -17,7 +18,7 @@ namespace {
 Status ToBuffer(convert::ExtendedStringView value,
                 int64_t offset,
                 int64_t max_size,
-                zx::vmo* buffer) {
+                fsl::SizedVmo* buffer) {
   size_t start = value.size();
   // Valid indices are between -N and N-1.
   if (offset >= -static_cast<int64_t>(value.size()) &&
@@ -88,18 +89,18 @@ void PageUtils::GetPartialReferenceAsBuffer(
     int64_t max_size,
     storage::PageStorage::Location location,
     Status not_found_status,
-    std::function<void(Status, zx::vmo)> callback) {
+    std::function<void(Status, fsl::SizedVmo)> callback) {
   GetReferenceAsStringView(
       storage, reference_id, location, not_found_status,
       [offset, max_size, callback](Status status, fxl::StringView data) {
         if (status != Status::OK) {
-          callback(status, zx::vmo());
+          callback(status, nullptr);
           return;
         }
-        zx::vmo buffer;
+        fsl::SizedVmo buffer;
         Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
         if (buffer_status != Status::OK) {
-          callback(buffer_status, zx::vmo());
+          callback(buffer_status, nullptr);
           return;
         }
         callback(Status::OK, std::move(buffer));

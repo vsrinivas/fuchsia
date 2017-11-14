@@ -178,7 +178,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(GetSynchronousProxy(&snapshot), nullptr, nullptr, &status);
   EXPECT_EQ(ledger::Status::OK, status);
-  zx::vmo value;
+  fsl::SizedVmoTransportPtr value;
   snapshot->Get(TestArray(), &status, &value);
   EXPECT_EQ(ledger::Status::OK, status);
   std::string value_as_string;

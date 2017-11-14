@@ -30,7 +30,7 @@ TEST(ObjectTest, GetVmo) {
   std::string content = "content";
   StringObject object(content);
 
-  zx::vmo vmo;
+  fsl::SizedVmo vmo;
   ASSERT_EQ(Status::OK, object.GetVmo(&vmo));
   std::string vmo_content;
   ASSERT_TRUE(fsl::StringFromVmo(vmo, &vmo_content));

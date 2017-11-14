@@ -79,7 +79,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
 
 TEST_F(CloudStorageImplTest, TestUpload) {
   std::string content = "Hello World\n";
-  zx::vmo data;
+  fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
@@ -94,10 +94,11 @@ TEST_F(CloudStorageImplTest, TestUpload) {
       "/v0/b/project.appspot.com/o/prefixhello-world",
       fake_network_service_.GetRequest()->url);
   EXPECT_EQ("POST", fake_network_service_.GetRequest()->method);
-  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
+  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_sized_buffer());
   std::string sent_content;
   EXPECT_TRUE(fsl::StringFromVmo(
-      fake_network_service_.GetRequest()->body->get_buffer(), &sent_content));
+      fake_network_service_.GetRequest()->body->get_sized_buffer(),
+      &sent_content));
   EXPECT_EQ(content, sent_content);
 
   network::HttpHeaderPtr content_length_header =
@@ -111,7 +112,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
 
 TEST_F(CloudStorageImplTest, TestUploadAuth) {
   std::string content = "Hello World\n";
-  zx::vmo data;
+  fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
@@ -128,7 +129,7 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
 
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   std::string content;
-  zx::vmo data;
+  fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
   SetResponse("", 0, 412);
 

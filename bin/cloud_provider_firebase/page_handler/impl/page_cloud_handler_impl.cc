@@ -84,7 +84,7 @@ void PageCloudHandlerImpl::GetCommits(
 
 void PageCloudHandlerImpl::AddObject(const std::string& auth_token,
                                      ObjectDigestView object_digest,
-                                     zx::vmo data,
+                                     fsl::SizedVmo data,
                                      std::function<void(Status)> callback) {
   // Even though this yields path to be used in GCS, we use Firebase key
   // encoding, as it happens to produce valid GCS object names. To be revisited

@@ -7,10 +7,10 @@
 
 #include <vector>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "zx/vmo.h"
 
 namespace storage {
 
@@ -27,7 +27,7 @@ class Object {
   virtual Status GetData(fxl::StringView* data) const = 0;
 
   // Returns a vmo containing the data.
-  virtual Status GetVmo(zx::vmo* vmo) const;
+  virtual Status GetVmo(fsl::SizedVmo* vmo) const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Object);

@@ -27,9 +27,15 @@ fidl::Array<uint8_t> DoubleToArray(double dbl) {
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const zx::vmo& vmo, double* dbl) {
+::testing::AssertionResult VmoToDouble(const fsl::SizedVmoTransportPtr& vmo,
+                                       double* dbl) {
+  if (vmo->size != sizeof(double)) {
+    return ::testing::AssertionFailure()
+           << "VMO has the wrong size: " << vmo->size << " instead of "
+           << sizeof(double) << ".";
+  }
   size_t num_read;
-  zx_status_t status = vmo.read(dbl, 0, sizeof(double), &num_read);
+  zx_status_t status = vmo->vmo.read(dbl, 0, sizeof(double), &num_read);
   if (status < 0) {
     return ::testing::AssertionFailure() << "Unable to read the VMO.";
   }

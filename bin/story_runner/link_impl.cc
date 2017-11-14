@@ -50,29 +50,30 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::String> {
   }
 
   void Cont(FlowToken flow) {
-    page_snapshot_->Get(to_array(link_key_), [this, flow](ledger::Status status,
-                                                          zx::vmo value) {
-      if (status != ledger::Status::OK) {
-        if (status != ledger::Status::KEY_NOT_FOUND) {
-          // It's expected that the key is not found when the link is
-          // accessed for the first time. Don't log an error then.
-          FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
-                         << " PageSnapshot.Get() " << status;
-        }
-        return;
-      }
+    page_snapshot_->Get(
+        to_array(link_key_),
+        [this, flow](ledger::Status status, fsl::SizedVmoTransportPtr value) {
+          if (status != ledger::Status::OK) {
+            if (status != ledger::Status::KEY_NOT_FOUND) {
+              // It's expected that the key is not found when the link is
+              // accessed for the first time. Don't log an error then.
+              FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                             << " PageSnapshot.Get() " << status;
+            }
+            return;
+          }
 
-      std::string value_as_string;
-      if (value) {
-        if (!fsl::StringFromVmo(value, &value_as_string)) {
-          FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
-                         << "VMO could not be copied.";
-          return;
-        }
-      }
+          std::string value_as_string;
+          if (value) {
+            if (!fsl::StringFromVmo(value, &value_as_string)) {
+              FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                             << "VMO could not be copied.";
+              return;
+            }
+          }
 
-      result_.Swap(&value_as_string);
-    });
+          result_.Swap(&value_as_string);
+        });
   }
 
   ledger::Page* const page_;  // not owned

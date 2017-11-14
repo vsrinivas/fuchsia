@@ -136,13 +136,13 @@ void SyncBenchmark::RunSingle(size_t i) {
   if (reference_strategy_ != ReferenceStrategy::OFF &&
       (reference_strategy_ == ReferenceStrategy::ON ||
        value_size_ > kMaxInlineDataSize)) {
-    zx::vmo vmo;
+    fsl::SizedVmo vmo;
     if (!fsl::VmoFromString(convert::ToStringView(value), &vmo)) {
       benchmark::QuitOnError(ledger::Status::IO_ERROR, "fsl::VmoFromString");
       return;
     }
     alpha_page_->CreateReferenceFromVmo(
-        std::move(vmo),
+        std::move(vmo).ToTransport(),
         fxl::MakeCopyable([this, key = std::move(key)](
                               ledger::Status status,
                               ledger::ReferencePtr reference) mutable {
