@@ -83,8 +83,25 @@ bool VmoFromString(const fxl::StringView& string, zx::vmo* handle_ptr) {
   return VmoFromContainer<fxl::StringView>(string, handle_ptr);
 }
 
+bool VmoFromString(const fxl::StringView& string, SizedVmo* sized_vmo) {
+  zx::vmo vmo;
+  bool result = VmoFromContainer<fxl::StringView>(string, &vmo);
+  if (result) {
+    *sized_vmo = SizedVmo(std::move(vmo), string.size());
+  }
+  return result;
+}
+
 bool StringFromVmo(const zx::vmo& shared_buffer, std::string* string_ptr) {
   return ContainerFromVmo<std::string>(shared_buffer, string_ptr);
+}
+
+bool StringFromVmo(const SizedVmo& shared_buffer, std::string* string_ptr) {
+  bool result = ContainerFromVmo<std::string>(shared_buffer.vmo(), string_ptr);
+  if (result) {
+    string_ptr->resize(shared_buffer.size());
+  }
+  return result;
 }
 
 bool VmoFromVector(const std::vector<char>& vector, zx::vmo* handle_ptr) {

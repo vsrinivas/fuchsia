@@ -10,6 +10,8 @@ source_set("vmo") {
     "file.h",
     "shared_vmo.cc",
     "shared_vmo.h",
+    "sized_vmo.cc",
+    "sized_vmo.h",
     "strings.h",
     "vector.h",
     "vmo.cc",
