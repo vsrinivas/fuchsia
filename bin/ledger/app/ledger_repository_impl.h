@@ -10,18 +10,19 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
-#include "peridot/bin/ledger/app/ledger_repository_debug_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace ledger {
 
-class LedgerRepositoryImpl : public LedgerRepository {
+class LedgerRepositoryImpl : public LedgerRepository,
+                             public LedgerRepositoryDebug {
  public:
   LedgerRepositoryImpl(std::string base_storage_dir,
                        Environment* environment,
@@ -56,6 +57,9 @@ class LedgerRepositoryImpl : public LedgerRepository {
 
   void CheckEmpty();
 
+  // LedgerRepositoryDebug:
+  void GetInstancesList(const GetInstancesListCallback& callback) override;
+
   const std::string base_storage_dir_;
   Environment* const environment_;
   std::unique_ptr<SyncWatcherSet> watchers_;
@@ -66,7 +70,7 @@ class LedgerRepositoryImpl : public LedgerRepository {
       ledger_managers_;
   fidl::BindingSet<LedgerRepository> bindings_;
   fxl::Closure on_empty_callback_;
-  std::unique_ptr<LedgerRepositoryDebugImpl> ledger_repository_debug_impl_;
+
   fidl::BindingSet<LedgerRepositoryDebug> ledger_repository_debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);

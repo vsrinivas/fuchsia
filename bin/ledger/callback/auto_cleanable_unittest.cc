@@ -125,5 +125,59 @@ TEST(AutoCleanableMap, CallsOnEmpty) {
   EXPECT_TRUE(empty_called);
 }
 
+TEST(AutoCleanableMap, GetSize) {
+  AutoCleanableMap<int, Cleanable> map;
+
+  EXPECT_EQ(0u, map.size());
+
+  auto& p1 = map.emplace(std::piecewise_construct, std::forward_as_tuple(0),
+                         std::forward_as_tuple())
+                 .first->second;
+  EXPECT_EQ(1u, map.size());
+
+  auto& p2 = map.emplace(std::piecewise_construct, std::forward_as_tuple(1),
+                         std::forward_as_tuple())
+                 .first->second;
+
+  auto& p3 = map.emplace(std::piecewise_construct, std::forward_as_tuple(2),
+                         std::forward_as_tuple())
+                 .first->second;
+
+  EXPECT_EQ(3u, map.size());
+
+  p1.Clean();
+  p2.Clean();
+  p3.Clean();
+  EXPECT_EQ(0u, map.size());
+}
+
+TEST(AutoCleanableMap, GetBegin) {
+  AutoCleanableMap<int, Cleanable> map;
+
+  const auto& p1 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(0),
+                  std::forward_as_tuple())
+          .first;
+
+  const auto& p2 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(1),
+                  std::forward_as_tuple())
+          .first;
+
+  const AutoCleanableMap<int, Cleanable>::iterator it1 = map.begin();
+
+  EXPECT_EQ(it1, p1);
+
+  EXPECT_NE(it1, p2);
+
+  p1->second.Clean();
+
+  EXPECT_EQ(map.begin(), p2);
+
+  p2->second.Clean();
+
+  EXPECT_EQ(map.begin(), map.end());
+}
+
 }  // namespace
 }  // namespace callback

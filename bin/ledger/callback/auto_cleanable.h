@@ -153,6 +153,10 @@ class AutoCleanableMap {
     return map_.find(x);
   }
 
+  iterator begin() { return map_.begin(); }
+
+  const_iterator begin() const { return map_.begin(); }
+
   iterator end() { return map_.end(); }
 
   template <class KR>
@@ -163,6 +167,8 @@ class AutoCleanableMap {
   void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
+
+  size_t size() const { return map_.size(); }
 
  private:
   void CheckEmpty() {

@@ -23,6 +23,8 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       user_sync_(std::move(user_sync)) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
+  ledger_repository_debug_bindings_.set_on_empty_set_handler(
+      [this] { CheckEmpty(); });
 }
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
@@ -91,23 +93,29 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(
   callback(Status::OK);
 }
 
-void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
-    fidl::InterfaceRequest<LedgerRepositoryDebug> request,
-    const GetLedgerRepositoryDebugCallback& callback) {
-  if (!ledger_repository_debug_impl_)
-    ledger_repository_debug_impl_ =
-        std::make_unique<LedgerRepositoryDebugImpl>();
-
-  ledger_repository_debug_bindings_.AddBinding(
-      ledger_repository_debug_impl_.get(), std::move(request));
-  callback(Status::OK);
-}
-
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;
-  if (ledger_managers_.empty() && bindings_.size() == 0)
+  if (ledger_managers_.empty() && bindings_.size() == 0 &&
+      ledger_repository_debug_bindings_.size() == 0)
     on_empty_callback_();
+}
+
+void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
+    fidl::InterfaceRequest<LedgerRepositoryDebug> request,
+    const GetLedgerRepositoryDebugCallback& callback) {
+  ledger_repository_debug_bindings_.AddBinding(this, std::move(request));
+  callback(Status::OK);
+}
+
+void LedgerRepositoryImpl::GetInstancesList(
+    const GetInstancesListCallback& callback) {
+  fidl::Array<fidl::String> result = fidl::Array<fidl::String>::New(0);
+
+  for (auto it = ledger_managers_.begin(); it != ledger_managers_.end(); ++it) {
+    result.push_back(it->first);
+  }
+  callback(std::move(result));
 }
 
 }  // namespace ledger

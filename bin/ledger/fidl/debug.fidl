@@ -7,5 +7,7 @@ module ledger;
 
 [ServiceName="ledger::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
-  GetInt() => (int64 result);
+
+  // Returns the instances list in LedgerRepository
+  GetInstancesList() => (array<string> result);
 };
