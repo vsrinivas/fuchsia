@@ -423,7 +423,7 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
     uint64_t last = first + blocks - 1;
 
     // check range
-    if (last <= first || first < priv->header.first || last > priv->header.last) {
+    if (last < first || first < priv->header.first || last > priv->header.last) {
         printf("partition must be in range of usable blocks[%" PRIu64", %" PRIu64"]\n",
                 priv->header.first, priv->header.last);
         return -1;
