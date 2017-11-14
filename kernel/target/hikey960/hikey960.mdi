@@ -36,6 +36,26 @@ boot-reserve-mem-map = {
         base-phys = 0x00000000
         length = 0x00080000
     }
+    {
+        // bl31
+        base-phys = 0x20200000
+        length = 0x200000
+    }
+    {
+        // pstore
+        base-phys = 0x20a00000
+        length = 0x100000
+    }
+    {
+        // lpmx-core
+        base-phys = 0x89b80000
+        length = 0x100000
+    }
+    {
+        // lpmcu
+        base-phys = 0x89c80000
+        length = 0x40000
+    }
 }
 
 kernel = {

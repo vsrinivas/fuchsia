@@ -98,6 +98,17 @@ static pmm_arena_info_t arena = {
     /* .size */     MEMSIZE,
 };
 
+struct mem_bank {
+    size_t num;
+    uint64_t base_phys;
+    uint64_t base_virt;
+    uint64_t length;
+};
+
+/* save a list of reserved bootloader regions */
+const size_t MAX_BOOT_RESERVE_BANKS = 8;
+static mem_bank boot_reserve_banks[MAX_BOOT_RESERVE_BANKS];
+
 static volatile int panic_started;
 
 static void halt_other_cpus(void)
@@ -399,13 +410,6 @@ static void ramdisk_from_bootdata_container(void* bootdata,
     *ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
 }
 
-struct mem_bank {
-    size_t num;
-    uint64_t base_phys;
-    uint64_t base_virt;
-    uint64_t length;
-};
-
 static void process_mdi_banks(mdi_node_ref &map, void (*func)(const mem_bank &)) {
     mdi_node_ref_t bank_node;
     if (mdi_first_child(&map, &bank_node) == ZX_OK) {
@@ -452,6 +456,15 @@ static void platform_mdi_init(const bootdata_t* section) {
 
     platform_cpu_early_init(&cpu_map);
 
+    // save a copy of all the boot reserve banks
+    mdi_node_ref_t mem_map;
+    if (mdi_find_node(&root, MDI_BOOT_RESERVE_MEM_MAP, &mem_map) == ZX_OK) {
+        process_mdi_banks(mem_map, [](const auto& b) {
+            ASSERT(b.num < fbl::count_of(boot_reserve_banks));
+            boot_reserve_banks[b.num] = b;
+        });
+    }
+
     // bring up kernel drivers
     if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
         panic("platform_mdi_init couldn't find kernel-drivers\n");
@@ -459,7 +472,6 @@ static void platform_mdi_init(const bootdata_t* section) {
     pdev_init(&kernel_drivers);
 
     // should be able to printf from here on out
-    mdi_node_ref_t mem_map;
     if (mdi_find_node(&root, MDI_MEM_MAP, &mem_map) == ZX_OK) {
         process_mdi_banks(mem_map, [](const auto& b) {
             dprintf(INFO, "mem bank %zu: base %#" PRIx64 " length %#" PRIx64 "\n", b.num, b.base_phys, b.length);
@@ -607,10 +619,15 @@ void platform_early_init(void)
         pmm_add_arena(&arena);
     }
 
-#ifdef BOOTLOADER_RESERVE_START
-    /* Allocate memory regions reserved by bootloaders for other functions */
-    pmm_alloc_range(BOOTLOADER_RESERVE_START, BOOTLOADER_RESERVE_SIZE / PAGE_SIZE, nullptr);
-#endif
+    // Allocate memory regions reserved by bootloaders for other functions
+    for (const auto& b: boot_reserve_banks) {
+        if (b.length == 0)
+            break;
+
+        dprintf(INFO, "reserving phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
+                b.base_phys, b.base_phys + b.length - 1);
+        pmm_alloc_range(b.base_phys, b.length / PAGE_SIZE, nullptr);
+    }
 
     platform_preserve_ramdisk();
 }
