@@ -273,30 +273,31 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   // Every five counter increments, we dehydrate and rehydrate the story, until
   // the story stops itself when it reaches 11 counter increments.
   void TestStory1_Cycle(const int round) {
-    // TODO(mesch): We want to test more decisively here.
     if (round == 0) {
       story1_cycle1_.Pass();
     } else if (round == 1) {
       story1_cycle2_.Pass();
+      // We don't cycle anymore and wait for DONE state to be reached.
+      return;
     }
 
     // When the story stops, we start it again.
     story_state_watcher_.Continue(modular::StoryState::STOPPED, [this, round] {
       story_state_watcher_.Continue(modular::StoryState::STOPPED, nullptr);
       story_provider_->GetStoryInfo(
-          story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
-            FXL_CHECK(story_info);
+        story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
+          FXL_CHECK(story_info);
 
-            // Can't use the StoryController here because we closed it
-            // in TeardownStoryController().
-            story_provider_->RunningStories(
-                [this, round](fidl::Array<fidl::String> story_ids) {
-                  auto n = count(story_ids.begin(), story_ids.end(),
-                                 story_info_->id);
-                  FXL_CHECK(n == 0);
-                  TestStory1_Run(round + 1);
-                });
-          });
+          // Can't use the StoryController here because we closed it
+          // in TeardownStoryController().
+          story_provider_->RunningStories(
+              [this, round](fidl::Array<fidl::String> story_ids) {
+                auto n = count(story_ids.begin(), story_ids.end(),
+                               story_info_->id);
+                FXL_CHECK(n == 0);
+                TestStory1_Run(round + 1);
+              });
+        });
     });
 
     story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,

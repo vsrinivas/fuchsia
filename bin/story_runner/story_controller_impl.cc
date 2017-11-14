@@ -441,7 +441,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // Read the module data.
     new ReadDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(),
-        MakeModuleKey(module_path_), false /* not_found_is_ok */, XdrModuleData,
+        MakeModuleKey(module_path_), true /* not_found_is_ok */, XdrModuleData,
         [this, flow](ModuleDataPtr data) {
           // If what we're about to write is already present on the ledger, just
           // launch the module.
@@ -674,6 +674,69 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
 };
 
+class StoryControllerImpl::ConnectLinkCall : Operation<> {
+ public:
+  ConnectLinkCall(OperationContainer* const container,
+                  StoryControllerImpl* const story_controller_impl,
+                  LinkPathPtr link_path,
+                  fidl::InterfaceRequest<Link> request,
+                  ResultCall done)
+      : Operation("StoryControllerImpl::ConnectLinkCall", container,
+                  std::move(done)),
+        story_controller_impl_(story_controller_impl),
+        link_path_(std::move(link_path)),
+        request_(std::move(request)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow {this};
+    auto i = std::find_if(story_controller_impl_->links_.begin(),
+                          story_controller_impl_->links_.end(),
+                          [this](const std::unique_ptr<LinkImpl>& l) {
+                            return l->link_path().Equals(link_path_);
+                          });
+    if (i != story_controller_impl_->links_.end()) {
+      (*i)->Connect(std::move(request_));
+      return;
+    }
+
+    link_impl_ = new LinkImpl(
+        story_controller_impl_->ledger_client_,
+        story_controller_impl_->story_page_id_.Clone(), std::move(link_path_));
+    link_impl_->Connect(std::move(request_));
+    story_controller_impl_->links_.emplace_back(link_impl_);
+    // This orphaned handler will be called after this operation has been
+    // deleted. So we need to take special care when depending on members.
+    // Copies of |story_controller_impl_| and |link_impl_| are ok.
+    link_impl_->set_orphaned_handler(
+        [link_impl = link_impl_, story_controller_impl = story_controller_impl_] {
+          story_controller_impl->DisposeLink(link_impl); });
+
+    link_impl_->Sync([this, flow] {
+      Cont(flow);
+    });
+  }
+
+  void Cont(FlowToken token) {
+    story_controller_impl_->links_watchers_.ForAllPtrs(
+        [this](StoryLinksWatcher* const watcher) {
+      watcher->OnNewLink(link_impl_->link_path().Clone());
+    });
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  LinkPathPtr link_path_;
+  fidl::InterfaceRequest<Link> request_;
+
+  LinkImpl* link_impl_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
+};
+
 class StoryControllerImpl::AddForCreateCall : Operation<> {
  public:
   AddForCreateCall(OperationContainer* const container,
@@ -712,13 +775,15 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
       LinkPathPtr link_path = LinkPath::New();
       link_path->module_path = fidl::Array<fidl::String>::New(0);
       link_path->link_name = link_name_;
-      story_controller_impl_->ConnectLinkPath(std::move(link_path),
-                                              link_.NewRequest());
-      link_->UpdateObject(nullptr, link_json_);
-      link_->Sync([flow] {});
+      new ConnectLinkCall(&operation_queue_, story_controller_impl_,
+                          std::move(link_path), link_.NewRequest(),
+                          [this, flow] {
+                            link_->UpdateObject(nullptr, link_json_);
+                            link_->Sync([flow] {});
+                          });
     }
 
-    new AddModuleCall(&operation_collection_, story_controller_impl_,
+    new AddModuleCall(&operation_queue_, story_controller_impl_,
                       fidl::Array<fidl::String>::New(0), module_name_,
                       module_url_, link_name_, SurfaceRelation::New(),
                       [flow] {});
@@ -732,7 +797,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
 
   LinkPtr link_;
 
-  OperationCollection operation_collection_;
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
 };
@@ -1310,30 +1375,11 @@ void StoryControllerImpl::RequestStoryFocus() {
   story_provider_impl_->RequestStoryFocus(story_id_);
 }
 
-// TODO(vardhan): Should this operation be queued here, or in |LinkImpl|?
-// Currently it is neither.
 void StoryControllerImpl::ConnectLinkPath(
     LinkPathPtr link_path,
     fidl::InterfaceRequest<Link> request) {
-  auto i = std::find_if(links_.begin(), links_.end(),
-                        [&link_path](const std::unique_ptr<LinkImpl>& l) {
-                          return l->link_path().Equals(link_path);
-                        });
-  if (i != links_.end()) {
-    (*i)->Connect(std::move(request));
-    return;
-  }
-
-  LinkImpl* const link_impl = new LinkImpl(
-      ledger_client_, story_page_id_.Clone(), std::move(link_path));
-  link_impl->Connect(std::move(request));
-  links_.emplace_back(link_impl);
-  link_impl->set_orphaned_handler(
-      [this, link_impl] { DisposeLink(link_impl); });
-
-  links_watchers_.ForAllPtrs([link_impl](StoryLinksWatcher* const watcher) {
-    watcher->OnNewLink(link_impl->link_path().Clone());
-  });
+  new ConnectLinkCall(&operation_queue_, this, std::move(link_path),
+                      std::move(request), [] {});
 }
 
 void StoryControllerImpl::StartModule(
@@ -1587,7 +1633,6 @@ void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = std::move(module_path);
   link_path->link_name = name;
-
   ConnectLinkPath(std::move(link_path), std::move(request));
 }
 

@@ -290,6 +290,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class StopCall;
   class StopModuleCall;
   class DeleteCall;
+  class ConnectLinkCall;
   class StartCall;
   class GetImportanceCall;
   class LedgerNotificationCall;

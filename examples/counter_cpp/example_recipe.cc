@@ -255,11 +255,6 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
     module_monitors_.emplace_back(
         new ModuleMonitor(module2_.get(), module_context_.get()));
 
-    // TODO(mesch): Good illustration of the remaining issue to
-    // restart a story: Here is how does this code look like when
-    // the Story is not new, but already contains existing Modules
-    // and Links from the previous execution that is continued here.
-    // Is that really enough?
     module1_link_->Get(nullptr, [this](const fidl::String& json) {
       if (json == "null") {
         // This must come last, otherwise LinkConnection gets a
@@ -269,6 +264,16 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
                                           modular_example::kDocId};
         module1_link_->Set(fidl::Array<fidl::String>::From(segments),
                            kInitialJson);
+      } else {
+        link_->Get(nullptr, [this](const fidl::String& json) {
+          // There is a possiblity that on re-inflation we start with a
+          // deadlocked state such that neither of the child modules make
+          // progress. This can happen because there is no synchronization
+          // between |LinkForwarder| and |ModuleMonitor|. So we ensure that
+          // ping-pong can re-start.
+          module1_link_->Set(nullptr, json);
+          module2_link_->Set(nullptr, json);
+        });
       }
     });
 
