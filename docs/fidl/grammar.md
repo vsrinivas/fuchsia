@@ -64,10 +64,12 @@ enum-member-value = IDENTIFIER | NUMERIC-LITERAL ;
 interface-declaration = "interface" , IDENTIFIER ,
                         "{" , ( interface-member , ";" )*  , "}" ;
 
-interface-member = method | const-declaration | enum-declaration ;
+interface-member = interface-method | const-declaration | enum-declaration ;
 
-interface-method = ordinal , ":" , IDENTIFIER , parameter-list ,
-                   ( "->" , parameter-list ) ;
+interface-method = ordinal , ":" , interface-parameters
+
+interface-parameters = parameter-list ( "->" , parameter-list )
+                     | "event" parameter-list
 
 parameter-list = "(" , parameters , ")" ;
 

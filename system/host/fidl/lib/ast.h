@@ -240,14 +240,16 @@ struct ParameterList {
 struct InterfaceMemberMethod {
     InterfaceMemberMethod(std::unique_ptr<NumericLiteral> ordinal,
                           std::unique_ptr<Identifier> identifier,
-                          std::unique_ptr<ParameterList> parameter_list,
+                          std::unique_ptr<ParameterList> maybe_parameter_list,
                           std::unique_ptr<ParameterList> maybe_response)
-        : ordinal(std::move(ordinal)), identifier(std::move(identifier)),
-          parameter_list(std::move(parameter_list)), maybe_response(std::move(maybe_response)) {}
+        : ordinal(std::move(ordinal)),
+          identifier(std::move(identifier)),
+          maybe_parameter_list(std::move(maybe_parameter_list)),
+          maybe_response(std::move(maybe_response)) {}
 
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<ParameterList> parameter_list;
+    std::unique_ptr<ParameterList> maybe_parameter_list;
     std::unique_ptr<ParameterList> maybe_response;
 };
 

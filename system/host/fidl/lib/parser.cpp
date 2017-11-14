@@ -631,36 +631,50 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
     ConsumeToken(Token::Kind::Colon);
     if (!Ok())
         return Fail();
-    auto identifier = ParseIdentifier();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::LeftParen);
-    if (!Ok())
-        return Fail();
-    auto parameter_list = ParseParameterList();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::RightParen);
-    if (!Ok())
-        return Fail();
 
+    std::unique_ptr<Identifier> method_name;
+    std::unique_ptr<ParameterList> maybe_parameter_list;
     std::unique_ptr<ParameterList> maybe_response;
-    if (MaybeConsumeToken(Token::Kind::Arrow)) {
-        if (!Ok())
-            return Fail();
+
+    auto parse_params = [this](std::unique_ptr<ParameterList>* params_out) {
         ConsumeToken(Token::Kind::LeftParen);
         if (!Ok())
-            return Fail();
-        maybe_response = ParseParameterList();
+            return false;
+        *params_out = ParseParameterList();
         if (!Ok())
-            return Fail();
+            return false;
         ConsumeToken(Token::Kind::RightParen);
         if (!Ok())
+            return false;
+        return true;
+    };
+
+    if (MaybeConsumeToken(Token::Kind::Event)) {
+        method_name = ParseIdentifier();
+        if (!Ok())
             return Fail();
+        if (!parse_params(&maybe_response))
+            return Fail();
+    } else {
+        method_name = ParseIdentifier();
+        if (!Ok())
+            return Fail();
+        if (!parse_params(&maybe_parameter_list))
+            return Fail();
+
+        if (MaybeConsumeToken(Token::Kind::Arrow)) {
+            if (!Ok())
+                return Fail();
+            if (!parse_params(&maybe_response))
+                return Fail();
+        }
     }
 
-    return std::make_unique<InterfaceMemberMethod>(std::move(ordinal), std::move(identifier),
-                                                   std::move(parameter_list),
+    assert(method_name);
+
+    return std::make_unique<InterfaceMemberMethod>(std::move(ordinal),
+                                                   std::move(method_name),
+                                                   std::move(maybe_parameter_list),
                                                    std::move(maybe_response));
 }
 
