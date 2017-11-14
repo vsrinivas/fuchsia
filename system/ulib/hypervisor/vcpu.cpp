@@ -139,7 +139,6 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
 
 static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
                                 uint64_t trap_key) {
-#if __x86_64__
     IoValue value = {};
     value.access_size = io->access_size;
     zx_status_t status = trap_key_to_mapping(trap_key)->Read(io->port, &value);
@@ -158,14 +157,10 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
     return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
-#else  // __x86_64__
-    return ZX_ERR_NOT_SUPPORTED;
-#endif // __x86_64__
 }
 
 static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
                                  uint64_t trap_key) {
-#if __x86_64__
     IoValue value;
     value.access_size = io->access_size;
     value.u32 = io->u32;
@@ -174,9 +169,6 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
         fprintf(stderr, "Failed to handle port out %#x: %d\n", io->port, status);
     }
     return status;
-#else  // __x86_64__
-    return ZX_ERR_NOT_SUPPORTED;
-#endif // __x86_64__
 }
 
 static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
@@ -219,8 +211,10 @@ zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) 
     switch (packet->type) {
     case ZX_PKT_TYPE_GUEST_MEM:
         return handle_mem(vcpu_ctx, &packet->guest_mem, packet->key);
+#if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
         return handle_io(vcpu_ctx, &packet->guest_io, packet->key);
+#endif // __x86_64__
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
         return ZX_ERR_NOT_SUPPORTED;

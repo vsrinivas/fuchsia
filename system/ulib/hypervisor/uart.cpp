@@ -65,8 +65,8 @@ zx_status_t Uart::RaiseNextInterrupt() {
     return ZX_OK;
 }
 
-zx_status_t Uart::Read(uint64_t port, IoValue* io) {
-    switch (port) {
+zx_status_t Uart::Read(uint64_t addr, IoValue* io) {
+    switch (addr) {
     case UART_MODEM_CONTROL_PORT:
     case UART_MODEM_STATUS_PORT:
     case UART_SCR_SCRATCH_PORT:
@@ -122,8 +122,8 @@ zx_status_t Uart::Read(uint64_t port, IoValue* io) {
     return ZX_OK;
 }
 
-zx_status_t Uart::Write(uint64_t port, const IoValue& io) {
-    switch (port) {
+zx_status_t Uart::Write(uint64_t addr, const IoValue& io) {
+    switch (addr) {
     case UART_TRANSMIT_PORT: {
         fbl::AutoLock lock(&mutex_);
         if (line_control_ & UART_LINE_CONTROL_DIV_LATCH)
@@ -231,16 +231,16 @@ zx_status_t Uart::FillRx() {
     return status;
 }
 
-zx_status_t Uart::Start(Guest* guest, uint16_t port, FILE* input, FILE* output) {
+zx_status_t Uart::Start(Guest* guest, uint64_t addr, FILE* input, FILE* output) {
     input_file_ = input;
     output_file_ = output;
 
     zx_status_t status;
-    status = guest->CreateMapping(TrapType::PIO_ASYNC, port + UART_ASYNC_BASE, UART_ASYNC_SIZE,
+    status = guest->CreateMapping(TrapType::PIO_ASYNC, addr + UART_ASYNC_BASE, UART_ASYNC_SIZE,
                                   UART_ASYNC_OFFSET, this);
     if (status != ZX_OK)
         return status;
-    status = guest->CreateMapping(TrapType::PIO_SYNC, port + UART_SYNC_BASE, UART_SYNC_SIZE,
+    status = guest->CreateMapping(TrapType::PIO_SYNC, addr + UART_SYNC_BASE, UART_SYNC_SIZE,
                                   UART_SYNC_OFFSET, this);
     if (status != ZX_OK)
         return status;

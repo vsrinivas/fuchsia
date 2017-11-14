@@ -64,18 +64,16 @@ public:
     Uart(const IoApic* io_apic);
     Uart(const IoApic* io_apic, InterruptFunc raise_interrupt);
 
-    zx_status_t Init(zx_handle_t guest);
-
     // Starts processing input using the file streams provided. If a UART is
     // unused then |nullptr| can be provided as the file stream.
     //
     // This method is *not* thread safe and must only be called during startup
     // before VCPU execution begins.
-    zx_status_t Start(Guest* guest, uint16_t port, FILE* input, FILE* output);
+    zx_status_t Start(Guest* guest, uint64_t addr, FILE* input, FILE* output);
 
     // IoHandler interface.
-    zx_status_t Read(uint64_t port, IoValue* io) override;
-    zx_status_t Write(uint64_t port, const IoValue& io) override;
+    zx_status_t Read(uint64_t addr, IoValue* io) override;
+    zx_status_t Write(uint64_t addr, const IoValue& io) override;
 
     zx_status_t FillRx();
     zx_status_t EmptyTx();
