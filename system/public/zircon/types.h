@@ -197,8 +197,23 @@ typedef uint32_t zx_rights_t;
 #define ZX_RIGHT_GET_POLICY       ((zx_rights_t)1u << 11)
 #define ZX_RIGHT_SIGNAL           ((zx_rights_t)1u << 12)
 #define ZX_RIGHT_SIGNAL_PEER      ((zx_rights_t)1u << 13)
+#define ZX_RIGHT_WAIT             ((zx_rights_t)0u << 14) // Coming Soon!
 
 #define ZX_RIGHT_SAME_RIGHTS      ((zx_rights_t)1u << 31)
+
+// Convenient names for commonly grouped rights
+#define ZX_RIGHTS_BASIC \
+    (ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT)
+
+#define ZX_RIGHTS_IO \
+    (ZX_RIGHT_READ | ZX_RIGHT_WRITE)
+
+#define ZX_RIGHTS_PROPERTY \
+    (ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY)
+
+#define ZX_RIGHTS_POLICY \
+    (ZX_RIGHT_GET_POLICY | ZX_RIGHT_SET_POLICY)
+
 
 // VM Object opcodes
 #define ZX_VMO_OP_COMMIT                 1u
