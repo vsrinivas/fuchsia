@@ -5,6 +5,7 @@
 #include "platform_object.h"
 #include "platform_thread.h"
 
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
@@ -29,6 +30,14 @@ std::string PlatformThreadHelper::GetCurrentThreadName()
     char name[ZX_MAX_NAME_LEN];
     zx_status_t status = zx_object_get_property(thrd_get_zx_handle(thrd_current()), ZX_PROP_NAME,
                                                 name, sizeof(name));
+    return (status == ZX_OK) ? std::string(name) : std::string();
+}
+
+std::string PlatformProcessHelper::GetCurrentProcessName()
+{
+    char name[ZX_MAX_NAME_LEN];
+    zx_status_t status =
+        zx_object_get_property(zx_process_self(), ZX_PROP_NAME, name, sizeof(name));
     return (status == ZX_OK) ? std::string(name) : std::string();
 }
 

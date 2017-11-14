@@ -33,6 +33,11 @@ public:
     static std::string GetCurrentThreadName();
 };
 
+class PlatformProcessHelper {
+public:
+    static std::string GetCurrentProcessName();
+};
+
 } // namespace magma
 
 #endif // PLATFORM_THREAD_H

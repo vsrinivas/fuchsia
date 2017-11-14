@@ -28,3 +28,9 @@ public:
 };
 
 TEST(PlatformThread, Test) { TestPlatformThread::Test(); }
+
+TEST(PlatformProcess, Test)
+{
+    // Exact name might depend on platform.
+    EXPECT_NE(std::string(""), magma::PlatformProcessHelper::GetCurrentProcessName());
+}
