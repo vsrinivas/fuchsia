@@ -1257,18 +1257,27 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		log.Printf("socketServer.fdio: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 
-	// if the remote side is closed, fdio.Handler synthesizes an opClose message with rh == 0.
-	if rh <= 0 && op != fdio.OpClose {
-		if debug2 {
-			log.Printf("socketServer.fdio invalid rh (op=%v)", op) // DEBUG
-		}
-		return zx.ErrInvalidArgs
-	}
 	s.mu.Lock()
 	ios := s.io[cookie]
 	s.mu.Unlock()
-	if ios == nil && op != fdio.OpOpen {
-		return zx.ErrBadState
+	if ios == nil {
+		if op == fdio.OpOpen {
+			// iostate has not been allocated if the open op is for "none" and "socket",
+			// continue to the switch below.
+			// TODO: return an error if the open op is for "accept".
+		} else if op == fdio.OpClose {
+			if rh == 0 || cookie == 0 {
+				// There are two special cases we can simply return here:
+				// 1. [rh == 0] the close op was synthesized by Dispatcher (because
+				//    the peer channel was closed).
+				// 2. [rh != 0 and cookie == 0] the close op was for the open handle
+				//    of netstack node in the namespace (which is not a socket).
+				return zx.ErrOk
+			}
+		} else {
+			log.Printf("fdioHandler: request (op:%v) dropped because of the state mismatch", op)
+			return zx.ErrBadState
+		}
 	}
 
 	switch op {
