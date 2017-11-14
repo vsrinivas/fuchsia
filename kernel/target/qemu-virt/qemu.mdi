@@ -8,16 +8,20 @@ cpu-map = {
     }
 }
 
+const MEMBASE = 0x40000000
+
 mem-map = {
     bank = {
-        base-phys = 0x40000000
+        base-phys = MEMBASE
         length = 0x08000000 // assume 512MB, FDT will provide the real number
     }
 }
 
+const PERIPH_VIRT = 0xffffffffc0000000
+
 periph-mem-map = {
     bank = {
-        base-virt = 0xffffffffc0000000
+        base-virt = PERIPH_VIRT
         base-phys = 0x0
         length = 0x40000000
     }
@@ -25,22 +29,22 @@ periph-mem-map = {
 
 boot-reserve-mem-map = {
     bank = {
-        base-phys = 0x0
+        base-phys = MEMBASE
         length = 0x10000 // FDT goes here
     }
 }
 
 kernel = {
     arm-pl011-uart = {
-        base-virt = 0xffffffffc9000000
         base-phys = 0x09000000
+        base-virt = PERIPH_VIRT + 0x09000000
         irq = 33
     }
     // qemu optionally implements either gic v3 or v2
     // put both devices here and mark them optional
     arm-gic-v3 = {
-        base-virt = 0xffffffffc8000000
         base-phys = 0x08000000
+        base-virt = PERIPH_VIRT + 0x08000000
         gicd-offset = 0x00000
         gicr-offset = 0xa0000
         gicr-stride = 0x20000
@@ -48,13 +52,13 @@ kernel = {
         optional = true
     }
     arm-gic-v2 = {
-        base-virt = 0xffffffffc8000000
         base-phys = 0x08000000
+        base-virt = PERIPH_VIRT + 0x08000000
         gicd-offset = 0x00000
         gicc-offset = 0x10000
         ipi-base = 13
         msi-frame-phys = 0x08020000
-        msi-frame-virt = 0xffffffffc8020000
+        msi-frame-virt = PERIPH_VIRT + 0x08020000
         optional = true
         msi = true
     }
