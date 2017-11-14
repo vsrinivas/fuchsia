@@ -15,6 +15,29 @@ cpu-map = {
     }
 }
 
+mem-map = {
+    bank = {
+        base-phys = 0
+        length = 0xc0000000 // 3GB
+    }
+}
+
+periph-mem-map = {
+    bank = {
+        base-virt = 0xffffffffc0000000
+        base-phys = 0xe8100000
+        length    = 0x17f00000
+    }
+}
+
+boot-reserve-mem-map = {
+    bank = {
+        // memory to reserve to avoid stomping on bootloader data
+        base-phys = 0x00000000
+        length = 0x00080000
+    }
+}
+
 kernel = {
     // Keep pll011 uart at top so it is initialized first
     //  (uart6)

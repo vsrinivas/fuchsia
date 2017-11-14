@@ -8,6 +8,35 @@ cpu-map = {
     }
 }
 
+mem-map = {
+    bank = {
+        base-phys = 0
+        length = 0x80000000 // 2GB
+    }
+}
+
+periph-mem-map = {
+    bank = {
+        base-virt = 0xffffffffc0000000
+        base-phys = 0xc0000000
+        length = 0x10200000
+    }
+}
+
+boot-reserve-mem-map = {
+    bank = {
+        // bl0-bl2 code
+        base-phys = 0
+        length = 0x01000000
+    }
+    {
+        // bl3 code
+        base-phys = 0x10000000
+        length = 0x00200000
+
+    }
+}
+
 kernel = {
     s905-uart = {
         irq = 225

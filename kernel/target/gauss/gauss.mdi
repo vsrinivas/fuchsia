@@ -8,6 +8,29 @@ cpu-map = {
     }
 }
 
+mem-map = {
+    bank = {
+        base-phys = 0
+        length = 0x40000000 // 1GB
+    }
+}
+
+periph-mem-map = {
+    bank = {
+        base-virt = 0xfffffffff9800000
+        base-phys = 0xf9800000
+        length = 0x06800000
+    }
+}
+
+boot-reserve-mem-map = {
+    bank = {
+        // reserve memory range used by the secure monitor
+        base-phys = 0x05000000
+        length = 0x02400000
+    }
+}
+
 kernel = {
     s905-uart = {
         irq = 225

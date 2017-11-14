@@ -399,6 +399,39 @@ static void ramdisk_from_bootdata_container(void* bootdata,
     *ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
 }
 
+struct mem_bank {
+    size_t num;
+    uint64_t base_phys;
+    uint64_t base_virt;
+    uint64_t length;
+};
+
+static void process_mdi_banks(mdi_node_ref &map, void (*func)(const mem_bank &)) {
+    mdi_node_ref_t bank_node;
+    if (mdi_first_child(&map, &bank_node) == ZX_OK) {
+        size_t bank_num = 0;
+        do {
+            mem_bank bank = {};
+            bank.num = bank_num;
+
+            mdi_node_ref ref;
+            if (mdi_find_node(&bank_node, MDI_BASE_PHYS, &ref) == ZX_OK) {
+                mdi_node_uint64(&ref, &bank.base_phys);
+            }
+            if (mdi_find_node(&bank_node, MDI_BASE_VIRT, &ref) == ZX_OK) {
+                mdi_node_uint64(&ref, &bank.base_virt);
+            }
+            if (mdi_find_node(&bank_node, MDI_LENGTH, &ref) == ZX_OK) {
+                mdi_node_uint64(&ref, &bank.length);
+            }
+
+            func(bank);
+
+            bank_num++;
+        } while (mdi_next_child(&bank_node, &bank_node) == ZX_OK);
+    }
+}
+
 static void platform_mdi_init(const bootdata_t* section) {
     mdi_node_ref_t  root;
     mdi_node_ref_t  cpu_map;
@@ -412,17 +445,38 @@ static void platform_mdi_init(const bootdata_t* section) {
         panic("mdi_init failed\n");
     }
 
-    // search top level nodes for CPU info and kernel drivers
+    // search top level nodes for CPU info
     if (mdi_find_node(&root, MDI_CPU_MAP, &cpu_map) != ZX_OK) {
         panic("platform_mdi_init couldn't find cpu-map\n");
-    }
-    if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
-        panic("platform_mdi_init couldn't find kernel-drivers\n");
     }
 
     platform_cpu_early_init(&cpu_map);
 
+    // bring up kernel drivers
+    if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
+        panic("platform_mdi_init couldn't find kernel-drivers\n");
+    }
     pdev_init(&kernel_drivers);
+
+    // should be able to printf from here on out
+    mdi_node_ref_t mem_map;
+    if (mdi_find_node(&root, MDI_MEM_MAP, &mem_map) == ZX_OK) {
+        process_mdi_banks(mem_map, [](const auto& b) {
+            dprintf(INFO, "mem bank %zu: base %#" PRIx64 " length %#" PRIx64 "\n", b.num, b.base_phys, b.length);
+        });
+    }
+    if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
+        process_mdi_banks(mem_map, [](const auto& b) {
+            dprintf(INFO, "periph mem bank %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
+                    b.num, b.base_phys, b.base_virt, b.length);
+        });
+    }
+    if (mdi_find_node(&root, MDI_BOOT_RESERVE_MEM_MAP, &mem_map) == ZX_OK) {
+        process_mdi_banks(mem_map, [](const auto& b) {
+            dprintf(INFO, "boot reserve mem range %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
+                    b.num, b.base_phys, b.base_virt, b.length);
+        });
+    }
 }
 
 static uint32_t process_bootsection(bootdata_t* section) {

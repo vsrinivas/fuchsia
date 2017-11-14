@@ -8,6 +8,28 @@ cpu-map = {
     }
 }
 
+mem-map = {
+    bank = {
+        base-phys = 0x40000000
+        length = 0x08000000 // assume 512MB, FDT will provide the real number
+    }
+}
+
+periph-mem-map = {
+    bank = {
+        base-virt = 0xffffffffc0000000
+        base-phys = 0x0
+        length = 0x40000000
+    }
+}
+
+boot-reserve-mem-map = {
+    bank = {
+        base-phys = 0x0
+        length = 0x10000 // FDT goes here
+    }
+}
+
 kernel = {
     arm-pl011-uart = {
         base-virt = 0xffffffffc9000000
