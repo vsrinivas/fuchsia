@@ -1,3 +1,4 @@
+
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -17,10 +18,9 @@
 
 namespace {
 
-class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
-                         modular::StoryShell {
+class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShell> {
  public:
-  DevStoryShellApp() : story_shell_binding_(this) {}
+  DevStoryShellApp() = default;
   ~DevStoryShellApp() override = default;
 
  private:
@@ -33,14 +33,9 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
     Connect();
   }
 
-  // |StoryShellFactory|
-  void Create(fidl::InterfaceHandle<modular::StoryContext> story_context,
-              fidl::InterfaceRequest<modular::StoryShell> request) override {
+  // |StoryShell|
+  void Initialize(fidl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
-
-    FXL_DCHECK(!story_shell_binding_.is_bound());
-    story_shell_binding_.Bind(std::move(request));
-
     Connect();
   }
 
@@ -66,7 +61,7 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
     callback();
   }
 
-  // |StoryShell|
+  // |Lifecycle|
   void Terminate() override {
     FXL_LOG(INFO) << "StoryShell::Terminate()";
     fsl::MessageLoop::GetCurrent()->QuitNow();
@@ -90,7 +85,6 @@ class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
   std::unique_ptr<modular::ViewHost> view_;
   std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
 
-  fidl::Binding<modular::StoryShell> story_shell_binding_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);

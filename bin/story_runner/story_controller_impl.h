@@ -38,6 +38,7 @@
 #include "lib/surface/fidl/surface.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/context.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -236,7 +237,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Everything for the story shell. Relationships between modules are conveyed
   // to the story shell using their instance IDs.
-  app::ApplicationControllerPtr story_shell_controller_;
+  std::unique_ptr<AppClient<Lifecycle>> story_shell_app_;
   StoryShellPtr story_shell_;
   fidl::Binding<StoryContext> story_context_binding_;
 

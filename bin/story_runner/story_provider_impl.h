@@ -29,6 +29,7 @@
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/story_runner/context_handler.h"
+#include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -83,12 +84,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // Called by StoryControllerImpl.
   //
-  // Returns an ApplicationControllerPtr rather than taking an interface request
+  // Returns an AppClient rather than taking an interface request
   // as an argument because the application is preloaded.
-  app::ApplicationControllerPtr StartStoryShell(
-      fidl::InterfaceHandle<StoryContext> story_context,
-      fidl::InterfaceRequest<StoryShell> story_shell_request,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_request);
+  std::unique_ptr<AppClient<Lifecycle>> StartStoryShell(
+      fidl::InterfaceRequest<mozart::ViewOwner> request);
 
   // Called by StoryControllerImpl.
   void SetStoryInfoExtra(const fidl::String& story_id,
@@ -192,8 +191,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Used to preload story shell before it is requested.
   AppConfigPtr story_shell_;
   struct StoryShellConnection {
-    app::ApplicationControllerPtr story_shell_controller;
-    app::ServiceProviderPtr story_shell_services;
+    std::unique_ptr<AppClient<Lifecycle>> story_shell_app;
     mozart::ViewOwnerPtr story_shell_view;
   };
   std::unique_ptr<StoryShellConnection> preloaded_story_shell_;

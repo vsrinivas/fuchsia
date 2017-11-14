@@ -21,6 +21,10 @@ import "lib/user/fidl/focus.fidl";
 // in Initialize() on startup. The user shell is also expected to implement
 // Lifecycle in order to receive a Terminate() call on teardown.
 //
+// In one component instance there can only be one UserShell service instance.
+// The ViewOwner request is sent to the separate ViewProvider service. This way,
+// the user shell may be implemented as a flutter app.
+//
 // Teardown may be initiated by the user shell calling
 // UserShellContext.Logout(), by the user runner being terminated, or by the
 // system shutting down.

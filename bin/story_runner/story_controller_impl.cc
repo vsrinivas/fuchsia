@@ -28,6 +28,7 @@
 #include "peridot/bin/story_runner/module_context_impl.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
+#include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
@@ -789,16 +790,15 @@ class StoryControllerImpl::StopCall : Operation<> {
   void StopStoryShell() {
     // It StopCall runs on a story that's not running, there is no story shell.
     if (story_controller_impl_->story_shell_) {
-      story_controller_impl_->story_shell_.set_connection_error_handler(
-          [this] { StoryShellDown(); });
-      story_controller_impl_->story_shell_->Terminate();
+      story_controller_impl_->story_shell_app_->Teardown(
+          kBasicTimeout, [this] { StoryShellDown(); });
     } else {
       StoryShellDown();
     }
   }
 
   void StoryShellDown() {
-    story_controller_impl_->story_shell_controller_.reset();
+    story_controller_impl_->story_shell_app_.reset();
     story_controller_impl_->story_shell_.reset();
     if (story_controller_impl_->story_context_binding_.is_bound()) {
       // Close() dchecks if called while not bound.
@@ -1593,9 +1593,9 @@ void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
 
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<mozart::ViewOwner> request) {
-  story_shell_controller_ = story_provider_impl_->StartStoryShell(
-      story_context_binding_.NewBinding(), story_shell_.NewRequest(),
-      std::move(request));
+  story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
+  ConnectToService(story_shell_app_->services(), story_shell_.NewRequest());
+  story_shell_->Initialize(story_context_binding_.NewBinding());
 }
 
 void StoryControllerImpl::NotifyStateChange() {

@@ -635,54 +635,41 @@ void StoryProviderImpl::Duplicate(
   Connect(std::move(request));
 }
 
-app::ApplicationControllerPtr StoryProviderImpl::StartStoryShell(
-    fidl::InterfaceHandle<StoryContext> story_context,
-    fidl::InterfaceRequest<StoryShell> story_shell_request,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_request) {
+std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
+    fidl::InterfaceRequest<mozart::ViewOwner> request) {
   if (!preloaded_story_shell_) {
     LoadStoryShell();
   }
 
   auto preloaded_story_shell = std::move(preloaded_story_shell_);
-  auto controller = std::move(preloaded_story_shell->story_shell_controller);
-  auto services = std::move(preloaded_story_shell->story_shell_services);
+  auto app_client = std::move(preloaded_story_shell->story_shell_app);
 
   proxies_.Connect(std::move(preloaded_story_shell->story_shell_view),
-                   std::move(view_request));
-
-  StoryShellFactoryPtr story_shell_factory;
-  ConnectToService(services.get(), story_shell_factory.NewRequest());
-
-  story_shell_factory->Create(std::move(story_context),
-                              std::move(story_shell_request));
+                   std::move(request));
 
   // Kickoff another StoryShell, to make it faster for next story. We optimize
   // even further by delaying the loading of the next story shell instance by
   // doing that on the operation queue.
   new SyncCall(&operation_queue_, [this] { LoadStoryShell(); });
 
-  return controller;
+  return app_client;
 }
 
 void StoryProviderImpl::LoadStoryShell() {
-  app::ApplicationControllerPtr story_shell_controller;
-  app::ServiceProviderPtr story_shell_services;
-  mozart::ViewOwnerPtr story_shell_view;
+  auto story_shell_app = std::make_unique<AppClient<Lifecycle>>(
+      user_scope_->GetLauncher(), story_shell_.Clone());
 
-  auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
-  story_shell_launch_info->services = story_shell_services.NewRequest();
-  story_shell_launch_info->url = story_shell_->url;
-  story_shell_launch_info->arguments = story_shell_->args.Clone();
-  user_scope_->GetLauncher()->CreateApplication(
-      std::move(story_shell_launch_info), story_shell_controller.NewRequest());
-  mozart::ViewProviderPtr view_provider;
-  ConnectToService(story_shell_services.get(), view_provider.NewRequest());
   // CreateView must be called in order to get the Flutter application to run
+
+  mozart::ViewProviderPtr view_provider;
+  ConnectToService(story_shell_app->services(), view_provider.NewRequest());
+
+  mozart::ViewOwnerPtr story_shell_view;
   view_provider->CreateView(story_shell_view.NewRequest(), nullptr);
 
   preloaded_story_shell_ =
       std::make_unique<StoryShellConnection>(StoryShellConnection{
-          std::move(story_shell_controller), std::move(story_shell_services),
+          std::move(story_shell_app),
           std::move(story_shell_view)});
 }
 
