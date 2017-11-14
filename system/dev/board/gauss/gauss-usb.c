@@ -6,8 +6,9 @@
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 
-#include "a113-bus.h"
-#include "a113-usb-phy.h"
+#include <soc/aml-a113/a113-usb-phy.h>
+
+#include "gauss.h"
 
 #define DWC3_MMIO_BASE      0xff500000
 #define DWC3_MMIO_LENGTH    0x100000
@@ -53,7 +54,7 @@ static const pbus_dev_t xhci_dev = {
     .irq_count = countof(dwc3_irqs),
 };
 
-zx_status_t a113_usb_init(a113_bus_t* bus) {
+zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     zx_status_t status;
 
     status = io_buffer_init_physical(&bus->usb_phy, 0xffe09000, 4096, get_root_resource(),
@@ -108,7 +109,7 @@ zx_status_t a113_usb_init(a113_bus_t* bus) {
     return ZX_OK;
 }
 
-zx_status_t a113_usb_set_mode(a113_bus_t* bus, usb_mode_t mode) {
+zx_status_t gauss_usb_set_mode(gauss_bus_t* bus, usb_mode_t mode) {
     // TODO(voydanoff) more work will be needed here for switching to peripheral mode
 
     // add or remove XHCI device

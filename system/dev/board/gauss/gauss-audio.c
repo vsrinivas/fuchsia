@@ -8,7 +8,7 @@
 #include <hw/reg.h>
 #include <zircon/assert.h>
 
-#include "a113-bus.h"
+#include "gauss.h"
 
 #define PDM_MMIO_BASE 0xff632000
 #define EE_AUDIO_MMIO_BASE 0xff642000
@@ -47,7 +47,7 @@ static const pbus_dev_t gauss_audio_out_dev = {
     .did = PDEV_DID_GAUSS_AUDIO_OUT,
 };
 
-zx_status_t a113_audio_init(a113_bus_t* bus) {
+zx_status_t gauss_audio_init(gauss_bus_t* bus) {
     ZX_DEBUG_ASSERT(bus);
     zx_status_t status;
 

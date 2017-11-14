@@ -14,8 +14,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include "aml-i2c.h"
-#include "a113-bus.h"
+#include <soc/aml-a113/a113-bus.h>
+#include <soc/aml-a113/aml-i2c.h>
 
 typedef struct {
     aml_i2c_port_t port;

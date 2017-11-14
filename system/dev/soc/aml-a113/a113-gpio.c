@@ -12,8 +12,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include "a113-bus.h"
-#include "a113-hw.h"
+#include <soc/aml-a113/a113-bus.h>
+#include <soc/aml-a113/a113-hw.h>
 
 #define PAGE_MASK (PAGE_SIZE - 1)
 
