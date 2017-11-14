@@ -53,7 +53,7 @@ It is not "sticky" -- if you reboot cleanly, it will be gone, and if you crash
 again it will be replaced.
 
 To disable reboot-on-panic, pass the kernel commandline argument
-[`kernel.halt_on_panic=true`](kernel_cmdline.md#kernel_halt_on_panic_bool).
+[`kernel.halt-on-panic=true`](kernel_cmdline.md#kernel_halt_on_panic_bool).
 
 ## Low level kernel development
 
