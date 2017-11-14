@@ -211,7 +211,8 @@ zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index, uint8_t* value) {
         *value = to_bcd(tm.tm_mday);
         break;
     case kRtcRegisterMonth:
-        *value = to_bcd(tm.tm_mon);
+        // struct tm represents months as 0-11, RTC uses 1-12.
+        *value = to_bcd(tm.tm_mon + 1);
         break;
     case kRtcRegisterYear: {
         // RTC expects the number of years since 2000.
