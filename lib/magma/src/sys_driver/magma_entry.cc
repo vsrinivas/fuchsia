@@ -336,7 +336,7 @@ static zx_status_t sysdrv_display_ioctl(void* ctx, uint32_t op, const void* in_b
                 return DRET(ZX_ERR_INVALID_ARGS);
 
             auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*device_handle_out))
+            if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
                 return DRET(ZX_ERR_INVALID_ARGS);
 
             if ((request->capabilities & MAGMA_CAPABILITY_RENDERING) ||
@@ -356,8 +356,9 @@ static zx_status_t sysdrv_display_ioctl(void* ctx, uint32_t op, const void* in_b
             if (!connection)
                 return DRET(ZX_ERR_INVALID_ARGS);
 
-            *device_handle_out = connection->GetHandle();
-            *out_actual = sizeof(*device_handle_out);
+            device_handle_out[0] = connection->GetHandle();
+            device_handle_out[1] = connection->GetNotificationChannel();
+            *out_actual = sizeof(*device_handle_out) * 2;
             result = ZX_OK;
 
             device->magma_system_device->StartConnectionThread(std::move(connection));
