@@ -78,7 +78,8 @@ vm_page_t* paddr_to_vm_page(paddr_t addr) TA_NO_THREAD_SAFETY_ANALYSIS {
 // We disable thread safety analysis here, since this function is only called
 // during early boot before threading exists.
 zx_status_t pmm_add_arena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_ANALYSIS {
-    LTRACEF("arena %p name '%s' base %#" PRIxPTR " size %#zx\n", info, info->name, info->base, info->size);
+    dprintf(INFO, "PMM: add arena '%s' [%#" PRIxPTR ", %#" PRIxPTR "]\n",
+            info->name, info->base, info->base + info->size - 1);
 
     // Make sure we're in early boot (ints disabled and no active CPUs according
     // to the scheduler).

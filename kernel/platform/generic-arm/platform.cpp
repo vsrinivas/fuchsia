@@ -66,14 +66,6 @@ static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
 static bool halt_on_panic = false;
 
-static pmm_arena_info_t arena = {
-    /* .name */     "sdram",
-    /* .flags */    PMM_ARENA_FLAG_KMAP,
-    /* .priority */ 0,
-    /* .base */     MEMBASE,
-    /* .size */     MEMSIZE,
-};
-
 struct mem_bank {
     size_t num;
     uint64_t base_phys;
@@ -81,13 +73,23 @@ struct mem_bank {
     uint64_t length;
 };
 
-/* save a list of reserved bootloader regions */
+// save a list of reserved bootloader regions
 const size_t MAX_BOOT_RESERVE_BANKS = 8;
 static mem_bank boot_reserve_banks[MAX_BOOT_RESERVE_BANKS];
 
-/* save a list of peripheral memory banks */
+// save a list of peripheral memory banks
 const size_t MAX_PERIPH_BANKS = 4;
 static mem_bank periph_banks[MAX_PERIPH_BANKS];
+
+// all of the configured memory arenas from the mdi/fdt
+// at the moment, only support 1 arena
+static pmm_arena_info_t mem_arena = {
+    /* .name */     "sdram",
+    /* .flags */    PMM_ARENA_FLAG_KMAP,
+    /* .priority */ 0,
+    /* .base */     0, // filled in by MDI
+    /* .size */     0, // filled in by MDI/FDT
+};
 
 static volatile int panic_started;
 
@@ -454,14 +456,6 @@ static void platform_mdi_init(const bootdata_t* section) {
         });
     }
 
-    // save a copy of all the boot reserve banks
-    if (mdi_find_node(&root, MDI_BOOT_RESERVE_MEM_MAP, &mem_map) == ZX_OK) {
-        process_mdi_banks(mem_map, [](const auto& b) {
-            ASSERT(b.num < fbl::count_of(boot_reserve_banks));
-            boot_reserve_banks[b.num] = b;
-        });
-    }
-
     // bring up kernel drivers
     if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
         panic("platform_mdi_init couldn't find kernel-drivers\n");
@@ -469,20 +463,28 @@ static void platform_mdi_init(const bootdata_t* section) {
     pdev_init(&kernel_drivers);
 
     // should be able to printf from here on out
+
+    // save a copy of the main memory arenas
     if (mdi_find_node(&root, MDI_MEM_MAP, &mem_map) == ZX_OK) {
         process_mdi_banks(mem_map, [](const auto& b) {
             dprintf(INFO, "mem bank %zu: base %#" PRIx64 " length %#" PRIx64 "\n", b.num, b.base_phys, b.length);
-        });
-    }
-    if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
-        process_mdi_banks(mem_map, [](const auto& b) {
-            dprintf(INFO, "periph mem bank %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
-                    b.num, b.base_phys, b.base_virt, b.length);
+            ASSERT(b.num == 0); // can only deal with one arena right now
+            mem_arena.base = b.base_phys;
+            mem_arena.size = b.length;
         });
     }
     if (mdi_find_node(&root, MDI_BOOT_RESERVE_MEM_MAP, &mem_map) == ZX_OK) {
         process_mdi_banks(mem_map, [](const auto& b) {
             dprintf(INFO, "boot reserve mem range %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
+                    b.num, b.base_phys, b.base_virt, b.length);
+            // only can handle so many reserve banks
+            ASSERT(b.num < fbl::count_of(boot_reserve_banks));
+            boot_reserve_banks[b.num] = b;
+        });
+    }
+    if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
+        process_mdi_banks(mem_map, [](const auto& b) {
+            dprintf(INFO, "periph mem bank %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
                     b.num, b.base_phys, b.base_virt, b.length);
         });
     }
@@ -586,13 +588,15 @@ void platform_early_init(void)
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");
     }
+
     process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
     // Read cmdline after processing bootdata, which may contain cmdline data.
     halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
 
     /* add the main memory arena */
     if (arena_size) {
-        arena.size = arena_size;
+        dprintf(INFO, "overriding mem arena 0 size from FDT: %#zx\n", arena_size);
+        mem_arena.size = arena_size;
     }
 
     // check if a memory limit was passed in via kernel.memory-limit-mb and
@@ -607,13 +611,13 @@ void platform_early_init(void)
         ctx.ramdisk_size = ramdisk_end_phys - ramdisk_start_phys;
 
         // Figure out and add arenas based on the memory limit and our range of DRAM
-        status = mem_limit_add_arenas_from_range(&ctx, arena.base, arena.size, arena);
+        status = mem_limit_add_arenas_from_range(&ctx, mem_arena.base, mem_arena.size, mem_arena);
     }
 
     // If no memory limit was found, or adding arenas from the range failed, then add
     // the existing global arena.
     if (status != ZX_OK) {
-        pmm_add_arena(&arena);
+        pmm_add_arena(&mem_arena);
     }
 
     // Allocate memory regions reserved by bootloaders for other functions
