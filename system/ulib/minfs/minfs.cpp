@@ -23,7 +23,8 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include <minfs/minfs-private.h>
+#include <minfs/fsck.h>
+#include <minfs/minfs.h>
 
 namespace minfs {
 

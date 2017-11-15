@@ -20,7 +20,7 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include <minfs/minfs-private.h>
+#include <minfs/minfs.h>
 
 namespace {
 

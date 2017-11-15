@@ -11,7 +11,9 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
-#include <minfs/minfs.h>
+#include <minfs/bcache.h>
+#include <minfs/format.h>
+#include <minfs/fsck.h>
 #include <fbl/vector.h>
 
 #define TRACE 0

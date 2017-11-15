@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_free_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
@@ -23,7 +24,8 @@
 #include <fs/trace.h>
 #endif
 
-#include <minfs/minfs-private.h>
+#include <minfs/fsck.h>
+#include <minfs/minfs.h>
 #ifndef __Fuchsia__
 #include <minfs/host.h>
 #endif

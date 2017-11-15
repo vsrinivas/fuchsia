@@ -20,8 +20,8 @@
 #include <fs/mapped-vmo.h>
 #include <fs/vfs.h>
 
-#include <minfs/minfs-private.h>
-#include <minfs/minfs-writeback.h>
+#include <minfs/minfs.h>
+#include <minfs/writeback.h>
 
 namespace minfs {
 

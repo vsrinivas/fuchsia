@@ -2,313 +2,497 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This file describes the in-memory structures which construct
+// a MinFS filesystem.
+
 #pragma once
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
-#include <fbl/intrusive_double_list.h>
+#include <inttypes.h>
+
+#ifdef __Fuchsia__
+#include <fbl/auto_lock.h>
+#include <fs/remote.h>
+#include <fs/watcher.h>
+#include <sync/completion.h>
+#include <zx/vmo.h>
+#endif
+
+#include <fbl/algorithm.h>
 #include <fbl/intrusive_hash_table.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
-#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_free_ptr.h>
+#include <fbl/unique_ptr.h>
+
+#include <fs/block-txn.h>
+#include <fs/mapped-vmo.h>
+#include <fs/trace.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 
 #include <zircon/misc/fnv1hash.h>
 
-#include <zircon/types.h>
+#include <minfs/format.h>
+#include "writeback.h"
 
-#include <assert.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
+#define EXTENT_COUNT 5
 
-#ifdef __Fuchsia__
-#include <block-client/client.h>
-using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
-#else
-#include <fbl/vector.h>
-using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
-#endif
+#define panic(fmt...)         \
+    do {                      \
+        fprintf(stderr, fmt); \
+        __builtin_trap();     \
+    } while (0)
 
-// clang-format off
+// A compile-time debug check, which, if enabled, causes
+// inline functions to be expanded to error checking code.
+// Since this may be expensive, it is typically turned
+// off, except for debugging.
+// #define MINFS_PARANOID_MODE
 
 namespace minfs {
 
-// Type of a reference to block number, either absolute (able to index
-// into disk directly) or relative to some entity (such as a file).
-typedef uint32_t blk_t;
-
-// The type of an inode number, which may be used as an
-// index into the inode table.
-typedef uint32_t ino_t;
-
-constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
-constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsVersion        = 0x00000005;
-
-constexpr ino_t kMinfsRootIno           = 1;
-constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
-constexpr uint32_t kMinfsFlagFVM        = 0x00000002; // Mounted on FVM
-constexpr uint32_t kMinfsBlockSize      = 8192;
-constexpr uint32_t kMinfsBlockBits      = (kMinfsBlockSize * 8);
-constexpr uint32_t kMinfsInodeSize      = 256;
-constexpr uint32_t kMinfsInodesPerBlock = (kMinfsBlockSize / kMinfsInodeSize);
-
-constexpr uint32_t kMinfsDirect         = 16;
-constexpr uint32_t kMinfsIndirect       = 31;
-constexpr uint32_t kMinfsDoublyIndirect = 1;
-
-constexpr uint32_t kMinfsDirectPerIndirect = (kMinfsBlockSize / sizeof(blk_t));
-// not possible to have a block at or past this one
-// due to the limitations of the inode and indirect blocks
-constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect)
-                                        + (kMinfsDoublyIndirect * kMinfsDirectPerIndirect
-                                        * kMinfsDirectPerIndirect));
-constexpr uint64_t kMinfsMaxFileSize  = kMinfsMaxFileBlock * kMinfsBlockSize;
-
-constexpr uint32_t kMinfsTypeFile = 8;
-constexpr uint32_t kMinfsTypeDir  = 4;
-
-constexpr uint32_t MinfsMagic(uint32_t T) { return 0xAA6f6e00 | T; }
-constexpr uint32_t kMinfsMagicDir  = MinfsMagic(kMinfsTypeDir);
-constexpr uint32_t kMinfsMagicFile = MinfsMagic(kMinfsTypeFile);
-constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
-
-constexpr size_t kFVMBlockInodeBmStart = 0x10000;
-constexpr size_t kFVMBlockDataBmStart  = 0x20000;
-constexpr size_t kFVMBlockInodeStart   = 0x30000;
-constexpr size_t kFVMBlockDataStart    = 0x40000;
-
-typedef struct {
-    uint64_t magic0;
-    uint64_t magic1;
-    uint32_t version;
-    uint32_t flags;
-    uint32_t block_size;    // 8K typical
-    uint32_t inode_size;    // 256
-    uint32_t block_count;   // total number of data blocks
-    uint32_t inode_count;   // total number of inodes
-    uint32_t alloc_block_count; // total number of allocated data blocks
-    uint32_t alloc_inode_count; // total number of allocated inodes
-    blk_t ibm_block;     // first blockno of inode allocation bitmap
-    blk_t abm_block;     // first blockno of block allocation bitmap
-    blk_t ino_block;     // first blockno of inode table
-    blk_t dat_block;     // first blockno available for file data
-    // The following flags are only valid with (flags & kMinfsFlagFVM):
-    uint64_t slice_size;    // Underlying slice size
-    uint64_t vslice_count;  // Number of allocated underlying slices
-    uint32_t ibm_slices;    // Slices allocated to inode bitmap
-    uint32_t abm_slices;    // Slices allocated to block bitmap
-    uint32_t ino_slices;    // Slices allocated to inode table
-    uint32_t dat_slices;    // Slices allocated to file data section
-} minfs_info_t;
-
-// Notes:
-// - the ibm, abm, ino, and dat regions must be in that order
-//   and may not overlap
-// - the abm has an entry for every block on the volume, including
-//   the info block (0), the bitmaps, etc
-// - data blocks referenced from direct and indirect block tables
-//   in inodes are also relative to (0), but it is not legal for
-//   a block number of less than dat_block (start of data blocks)
-//   to be used
-// - inode numbers refer to the inode in block:
-//     ino_block + ino / kMinfsInodesPerBlock
-//   at offset: ino % kMinfsInodesPerBlock
-// - inode 0 is never used, should be marked allocated but ignored
-
-typedef struct {
-    uint32_t magic;
-    uint32_t size;
-    uint32_t block_count;
-    uint32_t link_count;
-    uint64_t create_time;
-    uint64_t modify_time;
-    uint32_t seq_num;               // bumped when modified
-    uint32_t gen_num;               // bumped when deleted
-    uint32_t dirent_count;          // for directories
-    uint32_t rsvd[5];
-    blk_t dnum[kMinfsDirect];    // direct blocks
-    blk_t inum[kMinfsIndirect];  // indirect blocks
-    blk_t dinum[kMinfsDoublyIndirect]; // doubly indirect blocks
-} minfs_inode_t;
-
-static_assert(sizeof(minfs_inode_t) == kMinfsInodeSize,
-              "minfs inode size is wrong");
-
-typedef struct {
-    ino_t ino;                      // inode number
-    uint32_t reclen;                // Low 28 bits: Length of record
-                                    // High 4 bits: Flags
-    uint8_t namelen;                // length of the filename
-    uint8_t type;                   // kMinfsType*
-    char name[];                    // name does not have trailing \0
-} minfs_dirent_t;
-
-constexpr uint32_t MINFS_DIRENT_SIZE = sizeof(minfs_dirent_t);
-
-constexpr uint32_t DirentSize(uint8_t namelen) {
-    return MINFS_DIRENT_SIZE + ((namelen + 3) & (~3));
+#ifdef __Fuchsia__
+// Validate that |vmo| is large enough to access block |blk|,
+// relative to the start of the vmo.
+inline void validate_vmo_size(zx_handle_t vmo, blk_t blk) {
+#ifdef MINFS_PARANOID_MODE
+    uint64_t size;
+    size_t min = (blk + 1) * kMinfsBlockSize;
+    ZX_ASSERT(zx_vmo_get_size(vmo, &size) == ZX_OK);
+    ZX_ASSERT_MSG(size >= min, "VMO size %lu too small for access at block %u\n",
+                  size, blk);
+#endif // MINFS_PARANOID_MODE
 }
+#endif // __Fuchsia__
 
-constexpr uint8_t kMinfsMaxNameSize       = 255;
-// The largest acceptable value of DirentSize(dirent->namelen).
-// The 'dirent->reclen' field may be larger after coalescing
-// entries.
-constexpr uint32_t kMinfsMaxDirentSize    = DirentSize(kMinfsMaxNameSize);
-constexpr uint32_t kMinfsMaxDirectorySize = (((1 << 20) - 1) & (~3));
+// minfs_sync_vnode flags
+constexpr uint32_t kMxFsSyncDefault = 0; // default: no implicit time update
+constexpr uint32_t kMxFsSyncMtime = (1 << 0);
+constexpr uint32_t kMxFsSyncCtime = (1 << 1);
 
-static_assert(kMinfsMaxNameSize >= NAME_MAX,
-              "MinFS names must be large enough to hold NAME_MAX characters");
+constexpr uint32_t kMinfsBlockCacheSize = 64;
 
-constexpr uint32_t kMinfsReclenMask = 0x0FFFFFFF;
-constexpr uint32_t kMinfsReclenLast = 0x80000000;
+// Used by fsck
+class MinfsChecker;
+class VnodeMinfs;
 
-constexpr uint32_t MinfsReclen(minfs_dirent_t* de, size_t off) {
-    return (de->reclen & kMinfsReclenLast) ?
-           kMinfsMaxDirectorySize - static_cast<uint32_t>(off) :
-           de->reclen & kMinfsReclenMask;
-}
-
-static_assert(kMinfsMaxDirectorySize <= kMinfsReclenMask,
-              "MinFS directory size must be smaller than reclen mask");
-
-// Notes:
-// - dirents with ino of 0 are free, and skipped over on lookup
-// - reclen must be a multiple of 4
-// - the last record in a directory has the "kMinfsReclenLast" flag set. The
-//   actual size of this record can be computed from the offset at which this
-//   record starts. If the MAX_DIR_SIZE is increased, this 'last' record will
-//   also increase in size.
-
-
-// blocksize   8K    16K    32K
-// 16 dir =  128K   256K   512K
-// 32 ind =  512M  1024M  2048M
-
-//  1GB ->  128K blocks ->  16K bitmap (2K qword)
-//  4GB ->  512K blocks ->  64K bitmap (8K qword)
-// 32GB -> 4096K blocks -> 512K bitmap (64K qwords)
-
-// Block Cache (bcache.c)
-constexpr uint32_t kMinfsHashBits = (8);
-
-class Bcache {
+class Minfs {
 public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
-    friend class BlockNode;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
-    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax);
+    ~Minfs();
+    static zx_status_t Create(Minfs** out, fbl::unique_ptr<Bcache> bc,
+                              const minfs_info_t* info);
 
-    // Raw block read functions.
-    // These do not track blocks (or attempt to access the block cache)
-    zx_status_t Readblk(blk_t bno, void* data);
-    zx_status_t Writeblk(blk_t bno, const void* data);
+    zx_status_t Unmount();
 
-    // Returns the maximum number of available blocks,
-    // assuming the filesystem is non-resizable.
-    uint32_t Maxblk() const { return blockmax_; };
+    // instantiate a vnode from an inode
+    // the inode must exist in the file system
+    zx_status_t VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino);
+
+    // instantiate a vnode with a new inode
+    zx_status_t VnodeNew(WriteTxn* txn, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
+
+    // Insert, lookup, and remove vnode from hash map
+    void VnodeInsert(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
+    fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) __TA_EXCLUDES(hash_lock_);
+    void VnodeReleaseLocked(VnodeMinfs* vn) __TA_REQUIRES(hash_lock_);
+
+    // Allocate a new data block.
+    zx_status_t BlockNew(WriteTxn* txn, blk_t hint, blk_t* out_bno);
+
+    // free block in block bitmap
+    zx_status_t BlockFree(WriteTxn* txn, blk_t bno);
+
+    // free ino in inode bitmap, release all blocks held by inode
+    zx_status_t InoFree(VnodeMinfs* vn, WriteTxn* txn);
+
+    // Writes back an inode into the inode table on persistent storage.
+    // Does not modify inode bitmap.
+    zx_status_t InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
+
+    void ValidateBno(blk_t bno) const {
+        ZX_DEBUG_ASSERT(bno != 0);
+        ZX_DEBUG_ASSERT(bno < info_.block_count);
+    }
+
+    void EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
+#ifdef __Fuchsia__
+        writeback_->Enqueue(fbl::move(work));
+#else
+        work->Complete();
+#endif
+    }
 
 #ifdef __Fuchsia__
-    ssize_t GetDevicePath(char* out, size_t out_len);
-    zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
-    zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
-        return block_fifo_txn(fifo_client_, requests, count);
-    }
-
-    zx_status_t FVMQuery(fvm_info_t* info) {
-        ssize_t r = ioctl_block_fvm_query(fd_.get(), info);
-        if (r < 0) {
-            return static_cast<zx_status_t>(r);
-        }
-        return ZX_OK;
-    }
-
-    zx_status_t FVMVsliceQuery(const query_request_t* request, query_response_t* response) {
-        ssize_t r = ioctl_block_fvm_vslice_query(fd_.get(), request, response);
-        if (r != sizeof(query_response_t)) {
-            return r < 0 ? static_cast<zx_status_t>(r) : ZX_ERR_BAD_STATE;
-        }
-        return ZX_OK;
-    }
-
-    zx_status_t FVMExtend(const extend_request_t* request) {
-        ssize_t r = ioctl_block_fvm_extend(fd_.get(), request);
-        if (r < 0) {
-            return static_cast<zx_status_t>(r);
-        }
-        return ZX_OK;
-    }
-
-    zx_status_t FVMShrink(const extend_request_t* request) {
-        ssize_t r = ioctl_block_fvm_shrink(fd_.get(), request);
-        if (r < 0) {
-            return static_cast<zx_status_t>(r);
-        }
-        return ZX_OK;
-    }
-
-    // Acquires a Thread-local TxnId that can be used for sending messages
-    // over the block I/O FIFO.
-    txnid_t TxnId() const {
-        ZX_DEBUG_ASSERT(fd_);
-        thread_local txnid_t txnid_ = TXNID_INVALID;
-        if (txnid_ != TXNID_INVALID) {
-            return txnid_;
-        }
-        if (ioctl_block_alloc_txn(fd_.get(), &txnid_) < 0) {
-            return TXNID_INVALID;
-        }
-        return txnid_;
-    }
-
-    // Frees the TxnId allocated for the thread (if one was allocated).
-    // Must be called separately by all threads which access TxnId().
-    void FreeTxnId() {
-        txnid_t tid = TxnId();
-        if (tid == TXNID_INVALID) {
-            return;
-        }
-        ioctl_block_free_txn(fd_.get(), &tid);
-    }
-
-#else
-    // Lengths of each extent (in bytes)
-    fbl::Array<size_t> extent_lengths_;
-    // Tell the Bcache it is pointing at a sparse file
-    // |offset| indicates where the minfs partition begins within the file
-    // |extent_lengths| contains the length of each extent (in bytes)
-    zx_status_t SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths);
+    // Signals the completion object as soon as...
+    // (1) A sync probe has entered and exited the writeback queue, and
+    // (2) The block cache has sync'd with the underlying block device.
+    zx_status_t Sync(completion_t* completion);
 #endif
 
-    int Sync();
+    fbl::unique_ptr<Bcache> bc_{};
+    minfs_info_t info_{};
+#ifdef __Fuchsia__
+    fbl::Mutex hash_lock_;
+#endif
 
-    ~Bcache();
+    // The following methods are used to read one block from the specified extent,
+    // from relative block |bno|.
+    // |data| is an out parameter that must be a block in size, provided by the caller
+    // These functions are single-block and synchronous. On Fuchsia, using the batched read
+    // functions is preferred.
+    zx_status_t ReadIbm(blk_t bno, void* data);
+    zx_status_t ReadAbm(blk_t bno, void* data);
+    zx_status_t ReadIno(blk_t bno, void* data);
+    zx_status_t ReadDat(blk_t bno, void* data);
 
 private:
-    Bcache(fbl::unique_fd fd, uint32_t blockmax);
+    // Fsck can introspect Minfs
+    friend class MinfsChecker;
+    Minfs(fbl::unique_ptr<Bcache> bc_, const minfs_info_t* info_);
 
+    // Find a free inode, allocate it in the inode bitmap, and write it back to disk
+    zx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode,
+                       ino_t* ino_out);
+
+    // Enqueues an update for allocated inode/block counts
+    zx_status_t CountUpdate(WriteTxn* txn);
+
+    // If possible, attempt to resize the MinFS partition.
+    zx_status_t AddInodes();
+    zx_status_t AddBlocks();
+
+    uint32_t abmblks_{};
+    uint32_t ibmblks_{};
+    uint32_t inoblks_{};
+    RawBitmap inode_map_{};
+    RawBitmap block_map_{};
 #ifdef __Fuchsia__
-    fifo_client_t* fifo_client_{}; // Fast path to interact with block device
+    fbl::unique_ptr<MappedVmo> inode_table_{};
+    fbl::unique_ptr<MappedVmo> info_vmo_{};
+    vmoid_t inode_map_vmoid_{};
+    vmoid_t block_map_vmoid_{};
+    vmoid_t inode_table_vmoid_{};
+    vmoid_t info_vmoid_{};
+    fbl::unique_ptr<WritebackBuffer> writeback_;
 #else
-    off_t offset_{};
+    zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
+
+    // Store start block + length for all extents. These may differ from info block for
+    // sparse files.
+    blk_t ibm_start_block;
+    blk_t ibm_block_count;
+
+    blk_t abm_start_block;
+    blk_t abm_block_count;
+
+    blk_t ino_start_block;
+    blk_t ino_block_count;
+
+    blk_t dat_start_block;
+    blk_t dat_block_count;
 #endif
-    fbl::unique_fd fd_{};
-    uint32_t blockmax_{};
+
+    // Vnodes exist in the hash table as long as one or more reference exists;
+    // when the Vnode is deleted, it is immediately removed from the map.
+    using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
+    HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
 };
 
-void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
-zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc);
+struct DirArgs {
+    fbl::StringPiece name;
+    ino_t ino;
+    uint32_t type;
+    uint32_t reclen;
+    WritebackWork* wb;
+};
 
-#ifndef __Fuchsia__
-// Run fsck on a sparse minfs partition
-// |start| indicates where the minfs partition starts within the file (in bytes)
-// |end| indicates the end of the minfs partition (in bytes)
-// |extent_lengths| contains the length (in bytes) of each minfs extent: currently this includes
-// the superblock, inode bitmap, block bitmap, inode table, and data blocks.
-zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
-                       const fbl::Vector<size_t>& extent_lengths);
+struct DirectoryOffset {
+    size_t off;      // Offset in directory of current record
+    size_t off_prev; // Offset in directory of previous record
+};
+
+#define INO_HASH(ino) fnv1a_tiny(ino, kMinfsHashBits)
+
+class VnodeMinfs final : public fs::Vnode,
+                         public fbl::SinglyLinkedListable<VnodeMinfs*>,
+                         public fbl::Recyclable<VnodeMinfs> {
+public:
+    // Allocates a Vnode and initializes the inode given the type.
+    static zx_status_t Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out);
+    // Allocates a Vnode, but leaves the inode untouched, so it may be overwritten.
+    static zx_status_t AllocateHollow(Minfs* fs, fbl::RefPtr<VnodeMinfs>* out);
+
+    bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
+    bool IsUnlinked() const { return inode_.link_count == 0; }
+    zx_status_t CanUnlink() const;
+
+    ino_t GetKey() const { return ino_; }
+    static size_t GetHash(ino_t key) { return INO_HASH(key); }
+
+    zx_status_t UnlinkChild(WritebackWork* wb, fbl::RefPtr<VnodeMinfs> child,
+                            minfs_dirent_t* de, DirectoryOffset* offs);
+    // Remove the link to a vnode (referring to inodes exclusively).
+    // Has no impact on direntries (or parent inode).
+    void RemoveInodeLink(WriteTxn* txn);
+    zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
+    zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
+    zx_status_t WriteInternal(WriteTxn* txn, const void* data, size_t len,
+                              size_t off, size_t* actual);
+    zx_status_t WriteExactInternal(WriteTxn* txn, const void* data, size_t len,
+                                   size_t off);
+    zx_status_t TruncateInternal(WriteTxn* txn, size_t len);
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                      size_t out_len, size_t* out_actual) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+    // Lookup which can traverse '..'
+    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
+
+    Minfs* fs_{};
+    ino_t ino_{};
+    minfs_inode_t inode_{};
+
+    void fbl_recycle() final;
+    ~VnodeMinfs();
+
+private:
+    // Fsck can introspect Minfs
+    friend class MinfsChecker;
+    friend zx_status_t Minfs::InoFree(VnodeMinfs* vn, WriteTxn* txn);
+    VnodeMinfs(Minfs* fs);
+
+    // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized
+    // by the VFS library.
+    zx_status_t ValidateFlags(uint32_t flags) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Close() final;
+    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t offset,
+                      size_t* out_actual) final;
+    zx_status_t Append(const void* data, size_t len, size_t* out_end,
+                       size_t* out_actual) final;
+    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Setattr(const vnattr_t* a) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
+    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
+                       uint32_t mode) final;
+    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
+    zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir,
+                       fbl::StringPiece oldname, fbl::StringPiece newname,
+                       bool src_must_be_dir, bool dst_must_be_dir) final;
+    zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
+    zx_status_t Truncate(size_t len) final;
+#ifdef __Fuchsia__
+    zx_status_t Sync() final;
+    zx_status_t AttachRemote(fs::MountChannel h) final;
+    zx_status_t InitVmo();
+    zx_status_t InitIndirectVmo();
+    // Loads indirect blocks up to and including the doubly indirect block at |index|
+    zx_status_t LoadIndirectWithinDoublyIndirect(uint32_t index);
+    // Initializes the indirect VMO, grows it to |size| bytes, and reads |count| indirect
+    // blocks from |iarray| into the indirect VMO, starting at block offset |offset|.
+    zx_status_t LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32_t offset,
+                                   uint64_t size);
+#endif  // __Fuchsia__
+
+    // Although file sizes don't need to be block-aligned, the underlying VMO is
+    // always kept at a size which is a multiple of |kMinfsBlockSize|.
+    //
+    // When a Vnode is truncated to a size larger than |inode_.size|, it is
+    // assumed that any space between |inode_.size| and the nearest block is
+    // filled with zeroes in the internal VMO. This function validates that
+    // assumption.
+    inline void ValidateVmoTail() const {
+#if defined(MINFS_PARANOID_MODE) && defined(__Fuchsia__)
+        if (!vmo_.is_valid()) {
+            return;
+        }
+
+        // Verify that everything not allocated to "inode_.size" in the
+        // last block is filled with zeroes.
+        char buf[kMinfsBlockSize];
+        const size_t vmo_size = fbl::round_up(inode_.size, kMinfsBlockSize);
+        ZX_ASSERT(VmoReadExact(buf, inode_.size, vmo_size - inode_.size) == ZX_OK);
+        for (size_t i = 0; i < vmo_size - inode_.size; i++) {
+            ZX_ASSERT_MSG(buf[i] == 0, "vmo[%" PRIu64 "] != 0 (inode size = %u)\n",
+                          inode_.size + i, inode_.size);
+        }
+#endif  // MINFS_PARANOID_MODE && __Fuchsia__
+    }
+
+
+    // Get the disk block 'bno' corresponding to the 'nth' block relative to the start of the
+    // current direct/indirect/doubly indirect block section.
+    // Allocate the block if requested with a non-null "txn".
+    zx_status_t GetBno(WriteTxn* txn, blk_t n, blk_t* bno);
+    // Acquire (or allocate) a direct block |*bno|. If allocation occurs,
+    // |*dirty| is set to true, and the inode block is written to disk.
+    //
+    // Example call for accessing the 0th direct block in the inode:
+    // GetBnoDirect(txn, &inode_.dnum[0], &dirty);
+    zx_status_t GetBnoDirect(WriteTxn* txn, blk_t* bno, bool* dirty);
+    // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within an indirect
+    // block |*ibno|, which is allocated if necessary. If allocation of the indirect block occurs,
+    // |*dirty| is set to true, and the indirect and inode blocks are written to disk.
+    //
+    // On Fuchsia, |ib_vmo_offset| contains the block offset of |*ibno| within the cached
+    // indirect VMO. On other platforms, this argument may be ignored.
+    //
+    // Example call for accessing the 3rd direct block within the 2nd indirect block:
+    // GetBnoIndirect(txn, 3, 2, &inode_.inum[2], &bno, &dirty);
+    zx_status_t GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t ib_vmo_offset,
+                               blk_t* ibno, blk_t* bno, bool* dirty);
+    // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within a doubly
+    // indirect block |*dibno|, at index |ibindex| within that indirect block. If allocation occurs,
+    // |*dirty| is set to true, and the doubly indirect, indirect, and inode blocks are written to
+    // disk. |dib_vmo_offset| and |ib_vmo_offset| are the offset of the doubly indirect block and
+    // the doubly indirect block's indirect block set within the indirect VMO, respectively.
+    //
+    // Example call for accessing the 3rd direct block in the 2nd indirect block
+    // in the 0th doubly indirect block:
+    // GetBnoDoublyIndirect(txn, 2, 3, GetVmoOffsetForDoublyIndirect(0), GetVmoOffsetForIndirect(0),
+    //                      &inode_.dinum[0], &bno, &dirty);
+    zx_status_t GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, uint32_t bindex,
+                                     uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
+                                     blk_t* dibno, blk_t* bno, bool* dirty);
+
+    // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
+    // of the file. Does not update mtime/atime.
+    zx_status_t BlocksShrink(WriteTxn* txn, blk_t start);
+    // Shrink |count| direct blocks from the |barray| array of direct blocks. Sets |*dirty| to
+    // true if anything is deleted.
+    zx_status_t BlocksShrinkDirect(WriteTxn *txn, size_t count, blk_t* barray, bool* dirty);
+
+    // Shrink |count| indirect blocks from the |iarray| array of indirect blocks. Sets |*dirty| to
+    // true if anything is deleted.
+    //
+    // For the first indirect block in a set, only remove the blocks from index |bindex| up to the
+    // end of the  indirect block. Only deletes this first indirect block if |bindex| is zero.
+    //
+    // On Fuchsia |ib_vmo_offset| contains the block offset of the |iarray| buffer within the
+    // cached indirect VMO. On other platforms, this argument may be ignored.
+    zx_status_t BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, size_t count,
+                                     uint32_t ib_vmo_offset, blk_t* iarray, bool* dirty);
+    // Shrink |count| doubly indirect blocks from the |diarray| array of doubly indirect blocks.
+    // Sets |*dirty| to true if anything is deleted.
+    //
+    // For the first doubly indirect block in a set, only remove blocks from indirect blocks from
+    // index |ibindex| up to the end of the doubly indirect block. |bindex| is the first direct
+    // block to be deleted in the first indirect block of the first doubly indirect block. Only
+    // delete the doubly indirect block if |ibindex| is zero AND |bindex| is zero.
+    //
+    // On Fuchsia |dib_vmo_offset| contains the block offset of the |diarray| buffer within the
+    // cached indirect VMO, and |ib_vmo_offset| contains the block offset of the indirect blocks
+    // pointed to from the doubly indirect block at diarray[0]. On other platforms, this argument
+    // may be ignored.
+    zx_status_t BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibindex, uint32_t bindex,
+                                           size_t count, uint32_t dib_vmo_offset,
+                                           uint32_t ib_vmo_offset, blk_t* diarray, bool* dirty);
+
+#ifdef __Fuchsia__
+    // Reads the block at |offset| in memory
+    void ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry);
+    // Clears the block at |offset| in memory
+    void ClearIndirectVmoBlock(uint32_t offset);
+#else
+    // Reads the block at |bno| on disk
+    void ReadIndirectBlock(blk_t bno, uint32_t* entry);
+    // Clears the block at |bno| on disk
+    void ClearIndirectBlock(blk_t bno);
 #endif
+
+    // Update the vnode's inode and write it to disk
+    void InodeSync(WriteTxn* txn, uint32_t flags);
+
+    using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>,
+                                           minfs_dirent_t*, DirArgs*,
+                                           DirectoryOffset*);
+
+    // Directories only
+    zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
+
+    // Deletes this Vnode from disk, freeing the inode and blocks.
+    //
+    // Must only be called on Vnodes which
+    // - Have no open fds
+    // - Are fully unlinked (link count == 0)
+    void Purge(WriteTxn* txn);
+
+#ifdef __Fuchsia__
+    // The following functionality interacts with handles directly, and are not applicable outside
+    // Fuchsia (since there is no "handle-equivalent" in host-side tools).
+
+    zx_status_t VmoReadExact(void* data, uint64_t offset, size_t len) const;
+    zx_status_t VmoWriteExact(const void* data, uint64_t offset, size_t len);
+
+    // TODO(smklein): When we have can register MinFS as a pager service, and
+    // it can properly handle pages faults on a vnode's contents, then we can
+    // avoid reading the entire file up-front. Until then, read the contents of
+    // a VMO into memory when it is read/written.
+    zx::vmo vmo_{};
+
+    // vmo_indirect_ contains all indirect and doubly indirect blocks in the following order:
+    // First kMinfsIndirect blocks                                - initial set of indirect blocks
+    // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
+    // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
+    //                                                              by doubly indirect blocks
+    fbl::unique_ptr<MappedVmo> vmo_indirect_{};
+
+    vmoid_t vmoid_{};
+    vmoid_t vmoid_indirect_{};
+
+    // Use the watcher container to implement a directory watcher
+    void Notify(fbl::StringPiece name, unsigned event) final;
+    zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
+
+    // The vnode is acting as a mount point for a remote filesystem or device.
+    virtual bool IsRemote() const final;
+    virtual zx::channel DetachRemote() final;
+    virtual zx_handle_t GetRemote() const final;
+    virtual void SetRemote(zx::channel remote) final;
+
+    fs::RemoteContainer remoter_{};
+    fs::WatcherContainer watcher_{};
+#endif
+    // This field tracks the current number of file descriptors with
+    // an open reference to this Vnode. Notably, this is distinct from the
+    // VnodeMinfs's own refcount, since there may still be filesystem
+    // work to do after the last file descriptor has been closed.
+    uint32_t fd_count_{};
+};
+
+// Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect
+// block at dindex
+constexpr uint32_t GetVmoOffsetForIndirect(uint32_t dibindex) {
+    return kMinfsIndirect + kMinfsDoublyIndirect + (dibindex * kMinfsDirectPerIndirect);
+}
+
+// Return the required vmo size (in bytes) to store indirect blocks pointed to by doubly indirect
+// block dibindex
+constexpr size_t GetVmoSizeForIndirect(uint32_t dibindex) {
+    return GetVmoOffsetForIndirect(dibindex + 1) * kMinfsBlockSize;
+}
+
+// Return the block offset of doubly indirect blocks in vmo_indirect_
+constexpr uint32_t GetVmoOffsetForDoublyIndirect(uint32_t dibindex) {
+    ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
+    return kMinfsIndirect + dibindex;
+}
+
+// Return the required vmo size (in bytes) to store doubly indirect blocks in vmo_indirect_
+constexpr size_t GetVmoSizeForDoublyIndirect() {
+    return (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
+}
+
+// write the inode data of this vnode to disk (default does not update time values)
+void minfs_sync_vnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
+void minfs_dump_info(const minfs_info_t* info);
+void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
+
+void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
+int minfs_mkfs(fbl::unique_ptr<Bcache> bc);
+zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* root_out, fbl::unique_ptr<Bcache> bc);
+
 } // namespace minfs

@@ -20,8 +20,8 @@
 #include <zircon/assert.h>
 
 #include <minfs/host.h>
+#include <minfs/format.h>
 #include <minfs/minfs.h>
-#include <minfs/minfs-private.h>
 
 static zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
     vnattr_t a;

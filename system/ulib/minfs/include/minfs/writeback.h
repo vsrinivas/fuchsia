@@ -22,8 +22,9 @@
 
 #include <fs/vfs.h>
 
-#include <minfs/minfs.h>
-#include "queue.h"
+#include <minfs/bcache.h>
+#include <minfs/format.h>
+#include <minfs/queue.h>
 
 namespace minfs {
 

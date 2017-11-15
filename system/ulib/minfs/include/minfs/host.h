@@ -4,6 +4,10 @@
 
 #pragma once
 
+#ifdef __Fuchsia__
+#error Host-only Header
+#endif
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdbool.h>
