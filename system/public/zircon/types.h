@@ -307,6 +307,7 @@ typedef enum {
 // Flag bits for zx_cache_flush.
 #define ZX_CACHE_FLUSH_INSN         (1u << 0)
 #define ZX_CACHE_FLUSH_DATA         (1u << 1)
+#define ZX_CACHE_FLUSH_INVALIDATE   (1u << 2)
 
 // Timer options.
 #define ZX_TIMER_SLACK_CENTER       0u

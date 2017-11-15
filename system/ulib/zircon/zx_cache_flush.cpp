@@ -32,8 +32,20 @@ void for_each_icache_line(const void* addr, size_t len, T func) {
 }  // anonymous namespace
 
 zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
-    if (flags == 0 || (flags & ~(ZX_CACHE_FLUSH_INSN | ZX_CACHE_FLUSH_DATA)))
+    switch (flags) {
+    case ZX_CACHE_FLUSH_INSN:
+        break;
+    case ZX_CACHE_FLUSH_DATA:
+        break;
+    case ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INSN:
+        break;
+    case ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE:
+        break;
+    case ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_INSN:
+        break;
+    default:
         return ZX_ERR_INVALID_ARGS;
+    }
 
 #if defined(__x86_64__)
 
@@ -42,10 +54,17 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
 #elif defined(__aarch64__)
 
     if (flags & ZX_CACHE_FLUSH_DATA) {
-        for_each_dcache_line(addr, len, [](uintptr_t p) {
-                // Clean data cache (dc) to point of coherency (cvac).
-                __asm__ volatile("dc cvac, %0" :: "r"(p));
-            });
+        if (flags & ZX_CACHE_FLUSH_INVALIDATE) {
+            for_each_dcache_line(addr, len, [](uintptr_t p) {
+                    // Clean and invalidate data cache to point of coherency.
+                    __asm__ volatile("dc civac, %0" :: "r"(p));
+                });
+        } else {
+            for_each_dcache_line(addr, len, [](uintptr_t p) {
+                    // Clean data cache (dc) to point of coherency (cvac).
+                    __asm__ volatile("dc cvac, %0" :: "r"(p));
+                });
+        }
     }
 
     if (flags & ZX_CACHE_FLUSH_INSN) {
