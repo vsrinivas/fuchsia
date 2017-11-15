@@ -32,7 +32,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/uapp/blobstore/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fs-management/include \
-    -Isystem/uapp/minfs/include \
+    -Isystem/ulib/minfs/include \
     -Isystem/ulib/unittest/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fdio/include \
@@ -41,7 +41,7 @@ MODULE_HOST_LIBS := \
     system/uapp/fvm.hostlib \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib \
-    system/uapp/minfs.hostlib \
+    system/ulib/minfs.hostlib \
     system/ulib/fbl.hostlib \
     system/uapp/blobstore.hostlib \
 

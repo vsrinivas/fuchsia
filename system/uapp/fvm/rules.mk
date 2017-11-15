@@ -29,7 +29,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/gpt/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fvm/include \
-    -Isystem/uapp/minfs/include \
+    -Isystem/ulib/minfs/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/zircon/include \
@@ -38,10 +38,10 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
 
 MODULE_HOST_LIBS := \
-    system/uapp/minfs.hostlib \
     system/uapp/blobstore.hostlib \
     system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
+    system/ulib/minfs.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

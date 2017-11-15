@@ -16,7 +16,7 @@
 #include <zircon/device/device.h>
 
 #include <minfs/minfs.h>
-#include "minfs-private.h"
+#include <minfs/minfs-private.h>
 
 namespace minfs {
 

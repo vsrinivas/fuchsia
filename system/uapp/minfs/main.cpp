@@ -23,7 +23,7 @@
 #include <fs/trace.h>
 #endif
 
-#include "minfs-private.h"
+#include <minfs/minfs-private.h>
 #ifndef __Fuchsia__
 #include <minfs/host.h>
 #endif

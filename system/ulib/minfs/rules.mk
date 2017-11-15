@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,15 +6,20 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
-MODULE_GROUP := core
+MODULE_TYPE := userlib
 
-# app main
+COMMON_SRCS := \
+    $(LOCAL_DIR)/bcache.cpp \
+    $(LOCAL_DIR)/minfs.cpp \
+    $(LOCAL_DIR)/minfs-ops.cpp \
+    $(LOCAL_DIR)/minfs-writeback.cpp \
+    $(LOCAL_DIR)/minfs-check.cpp \
+
+# minfs implementation
 MODULE_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
+    $(COMMON_SRCS) \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/minfs \
     system/ulib/fs \
     system/ulib/async \
     system/ulib/async.loop \
@@ -34,7 +39,8 @@ MODULE_LIBS := \
 include make/module.mk
 
 MODULE_HOST_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
+    $(COMMON_SRCS) \
+    $(LOCAL_DIR)/host.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
@@ -47,24 +53,19 @@ MODULE_HOST_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
-    -Isystem/ulib/minfs/include \
 
-# host minfs tool
+# host minfs lib
 
-MODULE := $(LOCAL_DIR).host
+MODULE := $(LOCAL_DIR).hostlib
 
-MODULE_NAME := minfs
+MODULE_TYPE := hostlib
 
-MODULE_TYPE := hostapp
-
-MODULE_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
+MODULE_SRCS := $(MODULE_HOST_SRCS)
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 
 MODULE_HOST_LIBS := \
-    system/ulib/fbl.hostlib \
-    system/ulib/minfs.hostlib
+    system/ulib/fbl.hostlib
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

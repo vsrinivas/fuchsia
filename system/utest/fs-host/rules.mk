@@ -26,7 +26,7 @@ MODULE_COMPILEFLAGS := \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/unittest/include \
     -Isystem/ulib/fs-management/include \
-    -Isystem/uapp/minfs/include \
+    -Isystem/ulib/minfs/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/zxcpp/include \
@@ -37,7 +37,7 @@ MODULE_COMPILEFLAGS := \
 MODULE_HOST_LIBS := \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib \
-    system/uapp/minfs.hostlib \
+    system/ulib/minfs.hostlib \
     system/ulib/fbl.hostlib
 
 include make/module.mk

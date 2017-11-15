@@ -7,8 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "minfs-private.h"
 #include <minfs/minfs.h>
+#include <minfs/minfs-private.h>
 
 namespace minfs {
 
