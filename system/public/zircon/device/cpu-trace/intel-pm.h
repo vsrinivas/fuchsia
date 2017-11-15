@@ -267,7 +267,7 @@ __BEGIN_CDECLS
 #define IPM_MAX_FIXED_COUNTERS 3
 
 // API version number (useful when doing incompatible upgrades)
-#define IPM_API_VERSION 1
+#define IPM_API_VERSION 0
 
 // Buffer format version
 #define IPM_BUFFER_COUNTING_MODE_VERSION 0
