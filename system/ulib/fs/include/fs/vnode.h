@@ -61,8 +61,7 @@ public:
     // all following I/O operations on the opened file will be redirected to the
     // indicated vnode instead of being handled by this instance.
     //
-    // |flags| are the open flags to be validated, such as |ZX_FS_RIGHT_READABLE| and
-    // |ZX_FS_FLAG_DIRECTORY|.
+    // |flags| are the open flags to be validated, such as |O_RDONLY| and |O_DIRECTORY|.
     virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect);
 
     // METHODS FOR OPENED NODES

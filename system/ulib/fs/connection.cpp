@@ -47,16 +47,16 @@ zx_status_t HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
 void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
             zxrio_msg_t* msg, zx::channel channel,
             fbl::StringPiece path, uint32_t flags, uint32_t mode) {
-    // Filter out flags that are invalid when combined with REF_ONLY.
+    // Filter out flags that are invalid when combined with O_PATH
     if (IsPathOnly(flags)) {
-        flags &= ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_PIPELINE;
+        flags &= O_PATH | O_DIRECTORY | O_NOFOLLOW | O_PIPELINE;
     }
 
     // The pipeline directive instructs the VFS layer to open the vnode
     // immediately, rather than describing the VFS object to the caller.
     // We check it early so we can throw away the protocol part of flags.
-    bool pipeline = flags & ZX_FS_FLAG_PIPELINE;
-    uint32_t open_flags = flags & (~ZX_FS_FLAG_PIPELINE);
+    bool pipeline = flags & O_PIPELINE;
+    uint32_t open_flags = flags & (~O_PIPELINE);
     size_t hcount = 0;
 
     fbl::RefPtr<Vnode> vnode;
@@ -66,7 +66,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
     memset(&obj, 0, sizeof(obj));
     if (r != ZX_OK) {
         xprintf("vfs: open: r=%d\n", r);
-    } else if (!(open_flags & ZX_FS_FLAG_NOREMOTE) && vnode->IsRemote()) {
+    } else if (!(open_flags & O_NOREMOTE) && vnode->IsRemote()) {
         // Remote handoff to a remote filesystem node.
         //
         // TODO(smklein): There exists a race between multiple threads
@@ -217,7 +217,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         zx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
             WriteErrorReply(fbl::move(channel), ZX_ERR_INVALID_ARGS);
-        } else if ((arg & ZX_FS_RIGHT_ADMIN) && !(flags_ & ZX_FS_RIGHT_ADMIN)) {
+        } else if ((arg & O_ADMIN) && !(flags_ & O_ADMIN)) {
             WriteErrorReply(fbl::move(channel), ZX_ERR_ACCESS_DENIED);
         } else {
             path[len] = 0;
@@ -235,7 +235,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     }
     case ZXRIO_CLONE: {
         zx::channel channel(msg->handle[0]); // take ownership
-        if (!(arg & ZX_FS_FLAG_PIPELINE)) {
+        if (!(arg & O_PIPELINE)) {
             zxrio_object_t obj;
             memset(&obj, 0, ZXRIO_OBJECT_MINSIZE);
             obj.type = FDIO_PROTOCOL_REMOTE;
@@ -277,7 +277,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
 
         size_t actual;
         zx_status_t status;
-        if (flags_ & ZX_FS_FLAG_APPEND) {
+        if (flags_ & O_APPEND) {
             size_t end;
             status = vnode_->Append(msg->data, len, &end, &actual);
             if (status == ZX_OK) {
@@ -382,10 +382,10 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     }
     case ZXRIO_FCNTL: {
         uint32_t cmd = msg->arg;
-        constexpr uint32_t kStatusFlags = ZX_FS_FLAG_APPEND;
+        constexpr uint32_t kStatusFlags = O_APPEND;
         switch (cmd) {
         case F_GETFL:
-            msg->arg2.mode = flags_ & (kStatusFlags | ZX_FS_RIGHTS | ZX_FS_FLAG_VNODE_REF_ONLY);
+            msg->arg2.mode = flags_ & (kStatusFlags | O_ACCMODE);
             return ZX_OK;
         case F_SETFL:
             flags_ = (flags_ & ~kStatusFlags) | (msg->arg2.mode & kStatusFlags);
@@ -439,7 +439,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         case IOCTL_VFS_MOUNT_FS:
         case IOCTL_VFS_MOUNT_MKDIR_FS:
             // Mounting requires ADMIN privileges
-            if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
+            if (!(flags_ & O_ADMIN)) {
                 vfs_unmount_handle(msg->handle[0], 0);
                 zx_handle_close(msg->handle[0]);
                 return ZX_ERR_ACCESS_DENIED;
@@ -488,7 +488,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         case IOCTL_VFS_UNMOUNT_FS:
         case IOCTL_VFS_GET_DEVICE_PATH:
             // Unmounting ioctls require Connection privileges
-            if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
+            if (!(flags_ & O_ADMIN)) {
                 return ZX_ERR_ACCESS_DENIED;
             }
         // If our permissions validate, fall through to the VFS ioctl
@@ -569,7 +569,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return ZX_ERR_INVALID_ARGS;
         }
         zxrio_mmap_data_t* data = reinterpret_cast<zxrio_mmap_data_t*>(msg->data);
-        if ((flags_ & ZX_FS_FLAG_APPEND) && data->flags & FDIO_MMAP_FLAG_WRITE) {
+        if ((flags_ & O_APPEND) && data->flags & FDIO_MMAP_FLAG_WRITE) {
             return ZX_ERR_ACCESS_DENIED;
         } else if (!IsWritable(flags_) && (data->flags & FDIO_MMAP_FLAG_WRITE)) {
             return ZX_ERR_ACCESS_DENIED;

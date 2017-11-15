@@ -4,6 +4,7 @@
 
 #include <fs/pseudo-dir.h>
 
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <fbl/auto_lock.h>

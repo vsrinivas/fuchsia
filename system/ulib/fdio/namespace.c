@@ -270,7 +270,7 @@ done:
 // Expects a canonical path (no ..) with no leading
 // slash and no trailing slash
 static zx_status_t mxdir_open(fdio_t* io, const char* path,
-                              uint32_t flags, uint32_t mode,
+                              int32_t flags, uint32_t mode,
                               fdio_t** out) {
     mxdir_t* dir = (mxdir_t*) io;
     mxvn_t* vn = dir->vn;

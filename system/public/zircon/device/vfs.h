@@ -15,13 +15,12 @@
 #define ZX_FS_RIGHT_WRITABLE      0x00000002
 // The connection can mount and unmount filesystems.
 #define ZX_FS_RIGHT_ADMIN         0x00000004
-#define ZX_FS_RIGHTS              0x0000FFFF
 
 // Flags
 // If the file does not exist, it will be created.
 #define ZX_FS_FLAG_CREATE         0x00010000
-// The file must not exist, otherwise an error will be returned.
-// Ignored without ZX_FS_FLAG_CREATE.
+// The file must not exist, otherwise an error will be returned. Must be used
+// with ZX_FS_FLAG_CREATE.
 #define ZX_FS_FLAG_EXCLUSIVE      0x00020000
 // Truncates the file before using it.
 #define ZX_FS_FLAG_TRUNCATE       0x00040000

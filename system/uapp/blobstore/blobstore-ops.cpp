@@ -39,11 +39,13 @@ VnodeBlob::~VnodeBlob() {
 }
 
 zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {
-    if ((flags & ZX_FS_FLAG_DIRECTORY) && !IsDirectory()) {
+    if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     }
 
-    if (flags & ZX_FS_RIGHT_WRITABLE) {
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
         if (IsDirectory()) {
             return ZX_ERR_NOT_FILE;
         } else if (GetState() != kBlobStateEmpty) {

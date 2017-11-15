@@ -140,44 +140,6 @@ int emu_mount(const char* path) {
     return 0;
 }
 
-// Since this is a host-side tool, the client may be bringing
-// their own C library, and we do not have the guarantee that
-// our ZX_FS flags align with the O_* flags.
-uint32_t fdio_flags_to_zxio(uint32_t flags) {
-    uint32_t result = 0;
-    switch (flags & O_ACCMODE) {
-    case O_RDONLY:
-        result |= ZX_FS_RIGHT_READABLE;
-        break;
-    case O_WRONLY:
-        result |= ZX_FS_RIGHT_WRITABLE;
-        break;
-    case O_RDWR:
-        result |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-        break;
-    }
-    if (flags & O_PATH) {
-        result |= ZX_FS_FLAG_VNODE_REF_ONLY;
-    }
-    if (flags & O_CREAT) {
-        result |= ZX_FS_FLAG_CREATE;
-    }
-    if (flags & O_EXCL) {
-        result |= ZX_FS_FLAG_EXCLUSIVE;
-    }
-    if (flags & O_TRUNC) {
-        result |= ZX_FS_FLAG_TRUNCATE;
-    }
-    if (flags & O_DIRECTORY) {
-        result |= ZX_FS_FLAG_DIRECTORY;
-    }
-    if (flags & O_APPEND) {
-        result |= ZX_FS_FLAG_APPEND;
-    }
-
-    return result;
-}
-
 int emu_open(const char* path, int flags, mode_t mode) {
     //TODO: fdtab lock
     ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
@@ -190,7 +152,6 @@ int emu_open(const char* path, int flags, mode_t mode) {
         if (fdtab[fd].vn == nullptr) {
             fbl::RefPtr<fs::Vnode> vn_fs;
             fbl::StringPiece str(path + PREFIX_SIZE);
-            flags = fdio_flags_to_zxio(flags);
             zx_status_t status = fake_vfs.Open(fake_root, &vn_fs, str, &str, flags, mode);
             if (status < 0) {
                 STATUS(status);

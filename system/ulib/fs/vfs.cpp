@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
+#include <fcntl.h>
 #include <fdio/remoteio.h>
 #include <fdio/watcher.h>
 #include <stdlib.h>
@@ -68,16 +69,20 @@ zx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
 // Validate open flags as much as they can be validated
 // independently of the target node.
 zx_status_t vfs_prevalidate_flags(uint32_t flags) {
-    if (!(flags & ZX_FS_RIGHT_WRITABLE)) {
-        if (flags & ZX_FS_FLAG_TRUNCATE) {
+    switch (flags & O_ACCMODE) {
+    case O_PATH:
+        ZX_DEBUG_ASSERT((flags & (O_TRUNC | O_CREAT | O_RDWR)) == 0);
+        return ZX_OK;
+    case O_RDONLY:
+        if (flags & O_TRUNC) {
             return ZX_ERR_INVALID_ARGS;
         }
-    } else if (!(flags & ZX_FS_RIGHTS)) {
-        if (!IsPathOnly(flags)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+    case O_WRONLY:
+    case O_RDWR:
+        return ZX_OK;
+    default:
+        return ZX_ERR_INVALID_ARGS;
     }
-    return ZX_OK;
 }
 
 } // namespace
@@ -149,7 +154,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (flags & ZX_FS_FLAG_CREATE) {
+    if (flags & O_CREAT) {
         if (must_be_dir && !S_ISDIR(mode)) {
             return ZX_ERR_INVALID_ARGS;
         } else if (path == ".") {
@@ -158,7 +163,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             return ZX_ERR_ACCESS_DENIED;
         }
         if ((r = vndir->Create(&vn, path, mode)) < 0) {
-            if ((r == ZX_ERR_ALREADY_EXISTS) && (!(flags & ZX_FS_FLAG_EXCLUSIVE))) {
+            if ((r == ZX_ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
             }
             if (r == ZX_ERR_NOT_SUPPORTED) {
@@ -176,7 +181,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             return r;
         }
 #ifdef __Fuchsia__
-        if (!(flags & ZX_FS_FLAG_NOREMOTE) && vn->IsRemote()) {
+        if (!(flags & O_NOREMOTE) && vn->IsRemote()) {
             // Opening a mount point: Traverse across remote.
             *pathout = ".";
 
@@ -186,7 +191,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             }
         }
 
-        flags |= (must_be_dir ? ZX_FS_FLAG_DIRECTORY : 0);
+        flags |= (must_be_dir ? O_DIRECTORY : 0);
 #endif
         if (ReadonlyLocked() && IsWritable(flags)) {
             return ZX_ERR_ACCESS_DENIED;
@@ -194,13 +199,13 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
             return r;
         }
-        // VNODE_REF_ONLY requests that we don't actually open the underlying
+        // O_PATH requests that we don't actually open the underlying
         // Vnode.
         if (!IsPathOnly(flags)) {
             if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
                 return r;
             }
-            if ((flags & ZX_FS_FLAG_TRUNCATE) && ((r = vn->Truncate(0)) < 0)) {
+            if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
                 vn->Close();
                 return r;
             }
@@ -413,7 +418,7 @@ void Vfs::OnConnectionClosedRemotely(Connection* connection) {
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
-    uint32_t flags = ZX_FS_FLAG_DIRECTORY;
+    uint32_t flags = O_DIRECTORY;
     zx_status_t r;
     if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
         return r;
@@ -426,7 +431,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
         return r;
     }
 
-    return vn->Serve(this, fbl::move(channel), ZX_FS_RIGHT_ADMIN);
+    return vn->Serve(this, fbl::move(channel), O_ADMIN);
 }
 
 void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {

@@ -1076,12 +1076,16 @@ VnodeMinfs::~VnodeMinfs() {
 
 zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
     FS_TRACE(MINFS, "VnodeMinfs::ValidateFlags(0x%x) vn=%p(#%u)\n", flags, this, ino_);
-    if ((flags & ZX_FS_FLAG_DIRECTORY) && !IsDirectory()) {
+    if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     }
 
-    if ((flags & ZX_FS_RIGHT_WRITABLE) && IsDirectory()) {
-        return ZX_ERR_NOT_FILE;
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        if (IsDirectory()) {
+            return ZX_ERR_NOT_FILE;
+        }
     }
 
     return ZX_OK;

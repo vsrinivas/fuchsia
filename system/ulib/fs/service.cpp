@@ -4,6 +4,8 @@
 
 #include <fs/service.h>
 
+#include <fcntl.h>
+
 namespace fs {
 
 Service::Service(Connector connector)
@@ -12,7 +14,7 @@ Service::Service(Connector connector)
 Service::~Service() = default;
 
 zx_status_t Service::ValidateFlags(uint32_t flags) {
-    if (flags & ZX_FS_FLAG_DIRECTORY) {
+    if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
     return ZX_OK;
@@ -27,7 +29,7 @@ zx_status_t Service::Getattr(vnattr_t* attr) {
 }
 
 zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, uint32_t flags) {
-    ZX_DEBUG_ASSERT(!(flags & ZX_FS_FLAG_DIRECTORY)); // checked by Open
+    ZX_DEBUG_ASSERT(!(flags & O_DIRECTORY)); // checked by Open
 
     if (!connector_) {
         return ZX_ERR_NOT_SUPPORTED;

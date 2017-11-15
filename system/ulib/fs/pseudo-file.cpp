@@ -4,6 +4,8 @@
 
 #include <fs/pseudo-file.h>
 
+#include <fcntl.h>
+
 namespace fs {
 
 PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)
@@ -14,7 +16,7 @@ PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)
 PseudoFile::~PseudoFile() = default;
 
 zx_status_t PseudoFile::ValidateFlags(uint32_t flags) {
-    if (flags & ZX_FS_FLAG_DIRECTORY) {
+    if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
     if (IsReadable(flags) && !read_handler_) {
@@ -168,7 +170,7 @@ zx_status_t UnbufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_r
 
 UnbufferedPseudoFile::Content::Content(fbl::RefPtr<UnbufferedPseudoFile> file, uint32_t flags)
     : file_(fbl::move(file)), flags_(flags),
-      truncated_since_last_successful_write_(flags_ & (ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE)) {}
+      truncated_since_last_successful_write_(flags_ & (O_CREAT | O_TRUNC)) {}
 
 UnbufferedPseudoFile::Content::~Content() = default;
 

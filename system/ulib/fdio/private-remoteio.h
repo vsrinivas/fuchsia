@@ -25,17 +25,17 @@ struct zxrio {
 // which needs lower level access to remoteio internals
 
 // open operation directly on remoteio handle
-zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
+zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, int32_t flags,
                               uint32_t mode, fdio_t** out);
 
 // open operation directly on remoteio handle
 // returns new remoteio handle on success
 // fails and discards non-REMOTE protocols
-zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, uint32_t flags,
+zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, int32_t flags,
                                   uint32_t mode, zx_handle_t *out);
 
 // open operation directly on remoteio fdio_t
-zx_status_t zxrio_open(fdio_t* io, const char* path, uint32_t flags,
+zx_status_t zxrio_open(fdio_t* io, const char* path, int32_t flags,
                        uint32_t mode, fdio_t** out);
 
 // misc operation directly on remoteio fdio_t
@@ -51,5 +51,5 @@ ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
                     size_t in_len, void* out_buf, size_t out_len);
 
 zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
-                            uint32_t flags, uint32_t mode,
+                            int32_t flags, uint32_t mode,
                             zxrio_object_t* info);

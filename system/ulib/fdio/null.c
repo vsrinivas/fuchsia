@@ -59,7 +59,7 @@ zx_status_t fdio_default_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t arg
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out) {
+zx_status_t fdio_default_open(fdio_t* io, const char* path, int32_t flags, uint32_t mode, fdio_t** out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

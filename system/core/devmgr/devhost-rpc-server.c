@@ -31,8 +31,8 @@
 
 #define MXDEBUG 0
 
-#define CAN_WRITE(ios) (ios->flags & ZX_FS_RIGHT_WRITABLE)
-#define CAN_READ(ios) (ios->flags & ZX_FS_RIGHT_READABLE)
+#define CAN_WRITE(ios) (((03 & ios->flags) == O_RDWR) || ((03 & ios->flags) == O_WRONLY))
+#define CAN_READ(ios) (((03 & ios->flags) == O_RDWR) || ((03 & ios->flags) == O_RDONLY))
 
 devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
     devhost_iostate_t* ios;
@@ -56,8 +56,8 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
 
     // detect pipeline directive and discard all other
     // protocol flags
-    bool pipeline = flags & ZX_FS_FLAG_PIPELINE;
-    flags &= (~ZX_FS_FLAG_PIPELINE);
+    bool pipeline = flags & O_PIPELINE;
+    flags &= (~O_PIPELINE);
 
     newios->flags = flags;
 
@@ -317,7 +317,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             }
         } else {
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
-            flags = ios->flags | (flags & ZX_FS_FLAG_PIPELINE);
+            flags = ios->flags | (flags & O_PIPELINE);
         }
         devhost_get_handles(msg->handle[0], dev, path, flags);
         return ERR_DISPATCHER_INDIRECT;

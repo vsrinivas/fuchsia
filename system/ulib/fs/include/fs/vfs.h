@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,21 +34,36 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 
+// Ensure O_PATH and O_DIRECTORY are explicitly defined
+// for host-side tools. They are not a part of standard Posix,
+// so they are not guaranteed to exist in an arbitrary host-side
+// C library.
+
+#ifndef O_PATH
+#define O_PATH 010000000
+#endif
+
+#ifndef O_DIRECTORY
+#define O_DIRECTORY 0200000
+#endif
+
 namespace fs {
 
 class Connection;
 class Vnode;
 
 inline constexpr bool IsWritable(uint32_t flags) {
-    return flags & ZX_FS_RIGHT_WRITABLE;
+    uint32_t mode = flags & O_ACCMODE;
+    return mode == O_RDWR || mode == O_WRONLY;
 }
 
 inline constexpr bool IsReadable(uint32_t flags) {
-    return flags & ZX_FS_RIGHT_READABLE;
+    uint32_t mode = flags & O_ACCMODE;
+    return mode == O_RDWR || mode == O_RDONLY;
 }
 
 inline constexpr bool IsPathOnly(uint32_t flags) {
-    return flags & ZX_FS_FLAG_VNODE_REF_ONLY;
+    return flags & O_PATH;
 }
 
 // A storage class for a vdircookie which is passed to Readdir.
