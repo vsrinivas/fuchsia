@@ -77,7 +77,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
     FXL_LOG(ERROR) << "Failure while getting ledger.";
     return status;
   }
-  ledger_ptr->set_connection_error_handler([&loop] {
+  ledger_ptr->set_connection_error_handler([loop] {
     FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
     loop->PostQuitTask();
   });
