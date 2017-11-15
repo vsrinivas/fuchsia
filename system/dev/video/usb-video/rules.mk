@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/usb-video.cpp \
     $(LOCAL_DIR)/usb-video-stream.cpp \
+    $(LOCAL_DIR)/video-util.c \
 
 MODULE_LIBS := \
     system/ulib/driver \

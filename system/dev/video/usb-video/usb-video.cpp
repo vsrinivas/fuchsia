@@ -256,7 +256,9 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device, void** c
             const char* direction = (endp->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
                                      == USB_ENDPOINT_IN ? "IN" : "OUT";
             uint16_t max_packet_size = usb_ep_max_packet(endp);
-            int per_mf = usb_ep_add_mf_transactions(endp) + 1;
+            // The additional transactions per microframe value is extracted
+            // from bits 12..11 of wMaxPacketSize, so it fits in a uint8_t.
+            uint8_t per_mf = static_cast<uint8_t>(usb_ep_add_mf_transactions(endp) + 1);
             zxlogf(TRACE, "USB_DT_ENDPOINT %s bEndpointAddress 0x%x packet size %d, %d / mf\n",
                    direction, endp->bEndpointAddress, max_packet_size, per_mf);
 

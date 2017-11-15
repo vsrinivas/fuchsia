@@ -179,5 +179,38 @@ typedef struct {
     uint32_t dwFrameInterval[];
 } __PACKED usb_video_vs_uncompressed_video_frame_desc;
 
+// Stream negotiation
+#define USB_VIDEO_BM_HINT_FRAME_INTERVAL        (1 << 0)
+#define USB_VIDEO_BM_HINT_KEY_FRAME_RATE        (1 << 1)
+#define USB_VIDEO_BM_HINT_P_FRAME_RATE          (1 << 2)
+#define USB_VIDEO_BM_HINT_COMP_QUALITY          (1 << 3)
+#define USB_VIDEO_BM_HINT_COMP_WINDOW_SIZE      (1 << 4)
+
+typedef struct {
+   uint16_t bmHint;
+   uint8_t bFormatIndex;
+   uint8_t bFrameIndex;
+   uint32_t dwFrameInterval;
+   uint16_t wKeyFrameRate;
+   uint16_t wPFrameRate;
+   uint16_t wCompQuality;
+   uint16_t wCompWindowSize;
+   uint16_t wDelay;
+   uint32_t dwMaxVideoFrameSize;
+   uint32_t dwMaxPayloadTransferSize;
+   // The following fields are optional.
+   uint32_t dwClockFrequency;
+   uint8_t bmFramingInfo;
+   uint8_t bPreferedVersion;
+   uint8_t bMinVersion;
+   uint8_t bMaxVersion;
+   uint8_t bUsage;
+   uint8_t bBitDepthLuma;
+   uint8_t bmSettings;
+   uint8_t bMaxNumberOfRefFramesPlus1;
+   uint16_t bmRateControlModes;
+   uint32_t bmLayoutPerStream;
+} __PACKED usb_video_vc_probe_and_commit_controls;
+
 __END_CDECLS;
 

@@ -36,7 +36,7 @@ struct UsbVideoFormat {
 struct UsbVideoStreamingSetting {
     int alt_setting;
 
-    int transactions_per_microframe;
+    uint8_t transactions_per_microframe;
     uint16_t max_packet_size;
 };
 
