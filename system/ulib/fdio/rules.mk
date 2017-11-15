@@ -4,13 +4,14 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+ENABLE_NEW_SOCKET ?= false
+
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
-    $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/dispatcher.c \
     $(LOCAL_DIR)/get-vmo.c \
     $(LOCAL_DIR)/logger.c \
@@ -19,7 +20,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/output.c \
     $(LOCAL_DIR)/pipe.c \
     $(LOCAL_DIR)/remoteio.c \
-    $(LOCAL_DIR)/remotesocket.c \
     $(LOCAL_DIR)/service.c \
     $(LOCAL_DIR)/socketpair.c \
     $(LOCAL_DIR)/stubs.c \
@@ -29,9 +29,19 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
 
+ifeq ($(call TOBOOL,$(ENABLE_NEW_SOCKET)),false)
+MODULE_SRCS += \
+    $(LOCAL_DIR)/bsdsocket.c \
+    $(LOCAL_DIR)/remotesocket.c
+else
+MODULE_SRCS += $(LOCAL_DIR)/newsocket.c
+MODULE_DEFINES += WITH_NEW_SOCKET=1
+endif
+
 MODULE_EXPORT := so
 
 MODULE_SO_NAME := fdio
 MODULE_LIBS := system/ulib/zircon system/ulib/c
+
 
 include make/module.mk

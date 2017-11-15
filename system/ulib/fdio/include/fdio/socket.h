@@ -17,9 +17,15 @@
 
 __BEGIN_CDECLS
 
+#if WITH_NEW_SOCKET
+#define ZXRIO_SOCKET_DIR_NONE   "none-v2"
+#define ZXRIO_SOCKET_DIR_SOCKET "socket-v2"
+#define ZXRIO_SOCKET_DIR_ACCEPT "accept-v2"
+#else
 #define ZXRIO_SOCKET_DIR_NONE   "none"
 #define ZXRIO_SOCKET_DIR_SOCKET "socket"
 #define ZXRIO_SOCKET_DIR_ACCEPT "accept"
+#endif
 
 // fdio signals
 #define ZXSIO_SIGNAL_INCOMING ZX_USER_SIGNAL_0

@@ -494,6 +494,11 @@ void __libc_extensions_init(uint32_t handle_count,
             fdio_fdtab[arg_fd]->dupcount++;
             break;
         case PA_FDIO_SOCKET:
+#if WITH_NEW_SOCKET
+            fdio_fdtab[arg] = fdio_socket_create(h, FDIO_FLAG_SOCKET_CONNECTED);
+            fdio_fdtab[arg]->dupcount++;
+            break;
+#else
             // socket objects have a second handle
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
@@ -504,6 +509,7 @@ void __libc_extensions_init(uint32_t handle_count,
                 zx_handle_close(h);
             }
             break;
+#endif
         case PA_NS_DIR:
             // we always contine here to not steal the
             // handles from higher level code that may

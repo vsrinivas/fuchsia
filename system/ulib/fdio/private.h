@@ -132,9 +132,13 @@ zx_status_t fdio_pipe_posix_ioctl(fdio_t* io, int req, va_list va);
 // Takens ownership of h.
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len);
 
+#if WITH_NEW_SOCKET
+fdio_t* fdio_socket_create(zx_handle_t s, int flags);
+#else
 // Wraps a socket with an fdio_t using socket io.
 // Takes ownership of h and s.
 fdio_t* fdio_socket_create(zx_handle_t h, zx_handle_t s, int flags);
+#endif
 
 // creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);

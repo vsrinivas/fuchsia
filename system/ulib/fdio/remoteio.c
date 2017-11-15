@@ -777,6 +777,16 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
     case FDIO_PROTOCOL_SOCKET_CONNECTED:
     case FDIO_PROTOCOL_SOCKET: {
         int flags = (type == FDIO_PROTOCOL_SOCKET_CONNECTED) ? FDIO_FLAG_SOCKET_CONNECTED : 0;
+#if WITH_NEW_SOCKET
+        if (hcount != 1) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        } else if ((*out = fdio_socket_create(handles[0], flags)) == NULL) {
+            return ZX_ERR_NO_RESOURCES;
+        } else {
+            return ZX_OK;
+        }
+#else
         if (hcount == 1) {
             io = fdio_socket_create(handles[0], ZX_HANDLE_INVALID, flags);
         } else if (hcount == 2) {
@@ -791,6 +801,7 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
             *out = io;
             return ZX_OK;
         }
+#endif
     }
     default:
         r = ZX_ERR_NOT_SUPPORTED;
