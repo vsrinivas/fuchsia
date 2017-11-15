@@ -42,3 +42,19 @@ MODULE_LIBS := \
     system/ulib/zircon
 
 include make/module.mk
+
+
+MODULE := $(LOCAL_DIR).led
+
+MODULE_NAME := gauss-led
+
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/gauss-led.c
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+include make/module.mk

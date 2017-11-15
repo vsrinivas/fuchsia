@@ -27,7 +27,7 @@
 //#define I2C_TEST 1
 
 #if I2C_TEST
-static const pbus_i2c_channel_t i2c_channels[] = {
+static const pbus_i2c_channel_t i2c_test_channels[] = {
     {
         // Gauss accelerometer
         .bus_id = AML_I2C_B,
@@ -40,10 +40,26 @@ static const pbus_dev_t i2c_test_dev = {
     .vid = PDEV_VID_GOOGLE,
     .pid = PDEV_PID_GAUSS,
     .did = PDEV_DID_GAUSS_I2C_TEST,
-    .i2c_channels = i2c_channels,
+    .i2c_channels = i2c_test_channels,
     .i2c_channel_count = countof(i2c_channels),
 };
 #endif
+
+static const pbus_i2c_channel_t led_i2c_channels[] = {
+    {
+        .bus_id = AML_I2C_A,
+        .address = 0x3f,
+    },
+};
+
+static const pbus_dev_t led_dev = {
+    .name = "led",
+    .vid = PDEV_VID_GOOGLE,
+    .pid = PDEV_PID_GAUSS,
+    .did = PDEV_DID_GAUSS_LED,
+    .i2c_channels = led_i2c_channels,
+    .i2c_channel_count = countof(led_i2c_channels),
+};
 
 static zx_status_t gauss_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
     *out_mode = USB_MODE_HOST;
@@ -180,6 +196,11 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "a113_i2c_init could not add i2c_test_dev: %d\n", status);
     }
 #endif
+
+    if ((status = pbus_device_add(&bus->pbus, &led_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "a113_i2c_init could not add i2c_led_dev: %d\n", status);
+        return status;
+    }
 
     return ZX_OK;
 
