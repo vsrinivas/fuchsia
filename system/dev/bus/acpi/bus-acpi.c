@@ -20,6 +20,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/process.h>
+#include <zircon/syscalls/iommu.h>
 
 #include "errors.h"
 #include "init.h"
@@ -86,6 +87,7 @@ typedef struct {
 } pci_child_auxdata_ctx_t;
 
 zx_handle_t root_resource_handle;
+static zx_handle_t dummy_iommu_handle;
 
 static zx_device_t* publish_device(zx_device_t* parent, ACPI_HANDLE handle,
                                    ACPI_DEVICE_INFO* info, const char* name,
@@ -248,8 +250,15 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args,
     return ZX_OK;
 }
 
+static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, zx_handle_t* bti) {
+    // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
+    // the bti_ids correspond to PCI BDFs.
+    return zx_bti_create(dummy_iommu_handle, 0, bdf, bti);
+}
+
 static pciroot_protocol_ops_t pciroot_proto = {
     .get_auxdata = pciroot_op_get_auxdata,
+    .get_bti = pciroot_op_get_bti,
 };
 
 typedef struct {
@@ -728,6 +737,14 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     zx_status_t status = install_powerbtn_handlers();
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi-bus: error %d in install_powerbtn_handlers\n", status);
+        return status;
+    }
+
+    zx_iommu_desc_dummy_t desc;
+    status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                             &dummy_iommu_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi-bus: error %d in zx_iommu_create\n", status);
         return status;
     }
 
