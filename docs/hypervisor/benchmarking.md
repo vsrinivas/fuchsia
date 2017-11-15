@@ -42,7 +42,7 @@ In the example above, the correct device is `000`. Using that block device we ca
 create a guest:
 
 ```
-$ guest -b /dev/class/block/000 -c "root=/dev/vda2 ro console=ttyS0" /boot/data/bzImage
+$ guest -g -b /dev/class/block/000 -c "root=/dev/vda2 ro console=tty0" /boot/data/bzImage
 ```
 Upon a successful boot you should see a login prompt with default login
 credentials provided.

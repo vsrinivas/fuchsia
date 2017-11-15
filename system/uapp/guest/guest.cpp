@@ -34,9 +34,14 @@
 #include "linux.h"
 #include "zircon.h"
 
+#if __x86_64__
+static const size_t kNumUarts = 4;
+static const uint64_t kUartBases[kNumUarts] = { UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE };
+#endif
+
 static const uint64_t kVmoSize = 1u << 30;
 
-/* Unused memory above this threshold may be reclaimed by the balloon. */
+// Unused memory above this threshold may be reclaimed by the balloon.
 static uint32_t balloon_threshold_pages = 1024;
 
 static zx_status_t usage(const char* cmd) {
@@ -260,6 +265,17 @@ int main(int argc, char** argv) {
         return status;
     }
 
+#if __x86_64__
+    // Setup UARTs.
+    Uart uart[kNumUarts];
+    for (size_t i = 0; i < kNumUarts; i++) {
+        status = uart[i].Init(&guest, kUartBases[i]);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Failed to create UART at %#lx\n", kUartBases[i]);
+            return status;
+        }
+    }
+#endif
     // Setup IO APIC.
     IoApic io_apic;
     status = io_apic.Init(&guest);
@@ -292,31 +308,6 @@ int main(int argc, char** argv) {
     status = tpm.Init(&guest);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create TPM\n");
-        return status;
-    }
-    // Setup UARTs.
-    Uart uart0(&io_apic);
-    status = uart0.Start(&guest, UART0_BASE, stdin, stdout);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create UART0\n");
-        return status;
-    }
-    Uart uart1(&io_apic);
-    status = uart1.Start(&guest, UART1_BASE, nullptr, nullptr);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create UART1\n");
-        return status;
-    }
-    Uart uart2(&io_apic);
-    status = uart2.Start(&guest, UART2_BASE, nullptr, nullptr);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create UART2\n");
-        return status;
-    }
-    Uart uart3(&io_apic);
-    status = uart3.Start(&guest, UART3_BASE, nullptr, nullptr);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create UART3\n");
         return status;
     }
 #endif
