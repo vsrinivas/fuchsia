@@ -9,6 +9,13 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display.h>
 
+#include <fbl/unique_ptr.h>
+
+#include <zx/vmo.h>
+
+#include "gtt.h"
+#include "mmio-space.h"
+
 namespace i915 {
 
 class Device;
@@ -32,19 +39,20 @@ public:
 private:
     void EnableBacklight(bool enable);
 
-    uintptr_t regs_;
-    uint64_t regs_size_;
+    Gtt gtt_;
+
+    fbl::unique_ptr<MmioSpace> mmio_space_;
     zx_handle_t regs_handle_;
 
-    void* framebuffer_;
-    uint64_t framebuffer_size_;
-    zx_handle_t framebuffer_handle_;
+    uintptr_t framebuffer_;
+    uint32_t framebuffer_size_;
+    zx::vmo framebuffer_vmo_;
 
     zx_display_info_t info_;
     uint32_t flags_;
 };
 
-}
+} // namespace i915
 
 #endif // __cplusplus
 
