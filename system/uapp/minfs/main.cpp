@@ -6,6 +6,7 @@
 #define _XOPEN_SOURCE
 #include <dirent.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -140,7 +141,7 @@ void get_emu_path(const char* path, char* out) {
 
 // Process line in |manifest|, add directories as needed and copy src file to dst
 // Returns "ZX_ERR_OUT_OF_RANGE" when manifest has reached EOF.
-zx_status_t process_manifest_line(FILE* manifest) {
+zx_status_t process_manifest_line(FILE* manifest, const char* dir_path) {
     size_t size = 0;
     char* line = nullptr;
 
@@ -178,7 +179,9 @@ zx_status_t process_manifest_line(FILE* manifest) {
     char src[PATH_MAX];
     char dst[PATH_MAX];
     strncpy(dst, line, PATH_MAX);
-    strncpy(src, eq_ptr + 1, PATH_MAX);
+    strncpy(src, dir_path, PATH_MAX);
+    strncat(src, "/", PATH_MAX - strlen(src));
+    strncat(src, eq_ptr + 1, PATH_MAX - strlen(src));
 
     // Create directories if they don't exist
     char* sl_ptr = strchr(dst, '/');
@@ -229,10 +232,12 @@ int do_add_manifest(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return ZX_ERR_IO;
     }
 
+    char dir_path[PATH_MAX];
+    strncpy(dir_path, dirname(argv[0]), PATH_MAX);
     FILE* manifest = fdopen(fd.release(), "r");
 
     while (true) {
-        zx_status_t status = process_manifest_line(manifest);
+        zx_status_t status = process_manifest_line(manifest, dir_path);
         if (status == ZX_ERR_OUT_OF_RANGE) {
             fclose(manifest);
             return 0;

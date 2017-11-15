@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,7 +90,7 @@ int do_blobstore_add_blob(fbl::unique_fd fd, int argc, char** argv) {
     return r;
 }
 
-zx_status_t process_manifest_line(FILE* manifest, blobstore::Blobstore* bs) {
+zx_status_t process_manifest_line(FILE* manifest, const char* dir_path, blobstore::Blobstore* bs) {
     size_t size = 0;
     char* line = nullptr;
 
@@ -106,15 +107,19 @@ zx_status_t process_manifest_line(FILE* manifest, blobstore::Blobstore* bs) {
         return ZX_OK;
     }
 
-    char* src = strchr(line, '=');
-    if (src == nullptr) {
-        src = line;
+    char src[PATH_MAX];
+    strncpy(src, dir_path, PATH_MAX);
+    strncat(src, "/", PATH_MAX - strlen(src));
+
+    char* eq_ptr = strchr(line, '=');
+    if (eq_ptr == nullptr) {
+        strncat(src, line, PATH_MAX - strlen(src));
     } else {
-        src = src + 1;
-        if (strchr(src, '=') != nullptr) {
+        if (strchr(eq_ptr + 1, '=') != nullptr) {
             fprintf(stderr, "Too many '=' in input\n");
             return ZX_ERR_INVALID_ARGS;
         }
+        strncat(src, eq_ptr + 1, PATH_MAX - strlen(src));
     }
 
     char* nl_ptr = strchr(src, '\n');
@@ -154,9 +159,11 @@ int do_blobstore_add_manifest(fbl::unique_fd fd, int argc, char** argv) {
         return -1;
     }
 
+    char dir_path[PATH_MAX];
+    strncpy(dir_path, dirname(argv[0]), PATH_MAX);
     FILE* manifest = fdopen(manifest_fd.release(), "r");
     while (true) {
-        zx_status_t status = process_manifest_line(manifest, bs.get());
+        zx_status_t status = process_manifest_line(manifest, dir_path, bs.get());
         if (status == ZX_ERR_OUT_OF_RANGE) {
             fclose(manifest);
             return 0;
