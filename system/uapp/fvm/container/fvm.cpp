@@ -399,7 +399,7 @@ zx_status_t FvmContainer::GrowMetadata(size_t new_size) {
         return ZX_ERR_ACCESS_DENIED;
     }
 
-    xprintf("Growing metadata from %lu to %lu\n", metadata_size_, new_size);
+    xprintf("Growing metadata from %zu to %zu\n", metadata_size_, new_size);
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> new_metadata(new (&ac) uint8_t[new_size * 2]);
     if (!ac.check()) {
@@ -500,7 +500,7 @@ zx_status_t FvmContainer::GetSlice(size_t index, fvm::slice_entry_t** out) const
 zx_status_t FvmContainer::WritePartition(unsigned part_index) {
     CheckValid();
     if (part_index > partitions_.size()) {
-        fprintf(stderr, "Error: Tried to access partition %u / %lu\n",
+        fprintf(stderr, "Error: Tried to access partition %u / %zu\n",
                 part_index, partitions_.size());
         return ZX_ERR_OUT_OF_RANGE;
     }

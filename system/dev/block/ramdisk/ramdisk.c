@@ -302,7 +302,7 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         ramdev->blk_size = config->blk_size;
         ramdev->blk_count = config->blk_count;
         mtx_init(&ramdev->lock, mtx_plain);
-        sprintf(ramdev->name, "ramdisk-%lu", ramdisk_count++);
+        sprintf(ramdev->name, "ramdisk-%" PRIu64, ramdisk_count++);
         zx_status_t status;
         if ((status = zx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != ZX_OK) {
             goto fail;

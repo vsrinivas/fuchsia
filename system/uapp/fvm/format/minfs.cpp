@@ -71,7 +71,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     fvm_info_.vslice_count = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices +
                              fvm_info_.ino_slices + fvm_info_.dat_slices;
 
-    xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %lu\n", fvm_info_.slice_size,
+    xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
             kBlocksPerSlice);
     xprintf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
     xprintf("Minfs: abm_blocks: %u, abm_slices: %u\n", abm_blocks, fvm_info_.abm_slices);

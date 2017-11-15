@@ -114,7 +114,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
                                  block_fifo_request_t* request, int src_fd) {
     const size_t vmo_cap = mvmo->GetSize();
     for (size_t e = 0; e < part->pd->extent_count; e++) {
-        printf("[stream_fvm_partition] Writing extent %lu... \n", e);
+        printf("[stream_fvm_partition] Writing extent %zu... \n", e);
         fvm::extent_descriptor_t* ext = get_extent(part->pd, e);
         size_t offset = ext->slice_start * slice_size;
         size_t bytes_left = ext->extent_length;
@@ -132,7 +132,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
                 }
             }
             if (vmo_sz == 0) {
-                fprintf(stderr, "[stream_fvm_partition] Read nothing from src_fd; %lu bytes left\n",
+                fprintf(stderr, "[stream_fvm_partition] Read nothing from src_fd; %zu bytes left\n",
                         bytes_left);
                 return ZX_ERR_IO;
             }
@@ -157,7 +157,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
         // transfer).
         bytes_left = (ext->slice_count * slice_size) - ext->extent_length;
         if (bytes_left > 0) {
-            printf("[stream_fvm_partition] %lu bytes written, %lu zeroes left\n",
+            printf("[stream_fvm_partition] %zu bytes written, %zu zeroes left\n",
                    ext->extent_length, bytes_left);
             memset(mvmo->GetData(), 0, vmo_cap);
         }
@@ -318,7 +318,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         fprintf(stderr, "[fvm_stream_partitions] Couldn't query underlying FVM\n");
         return ZX_ERR_IO;
     } else if (info.slice_size != hdr.slice_size) {
-        fprintf(stderr, "[fvm_stream_partitions] Unexpected slice size (%lu vs %lu)\n",
+        fprintf(stderr, "[fvm_stream_partitions] Unexpected slice size (%zu vs %zu)\n",
                 info.slice_size, hdr.slice_size);
         return ZX_ERR_IO;
     }
@@ -397,7 +397,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             return ZX_ERR_IO;
         }
         memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
-        printf("[fvm_stream_partitions] allocating partition %s consisting of %lu slices\n",
+        printf("[fvm_stream_partitions] allocating partition %s consisting of %zu slices\n",
                alloc.name, alloc.slice_count);
         parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));
 
@@ -422,7 +422,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             extend_request_t request;
             request.offset = ext->slice_start;
             request.length = ext->slice_count;
-            printf("[fvm_stream_partitions] Extending partition[%lu] at offset %lu by length %lu\n",
+            printf("[fvm_stream_partitions] Extending partition[%zu] at offset %zu by length %zu\n",
                    p, request.offset, request.length);
             if (ioctl_block_fvm_extend(parts[p].new_part.get(), &request) < 0) {
                 fprintf(stderr, "[fvm_stream_partitions] Failed to extend partition\n");
@@ -462,10 +462,10 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         request.vmoid = vmoid;
         request.opcode = BLOCKIO_WRITE;
 
-        printf("[fvm_stream_partitions] streaming partition %lu\n", p);
+        printf("[fvm_stream_partitions] streaming partition %zu\n", p);
         status = stream_fvm_partition(&parts[p], mvmo.get(), client,
                                       hdr.slice_size, &request, src_fd.get());
-        printf("[fvm_stream_partitions] done streaming partition %lu\n", p);
+        printf("[fvm_stream_partitions] done streaming partition %zu\n", p);
         block_fifo_release_client(client);
         if (status != ZX_OK) {
             fprintf(stderr, "[fvm_stream_partitions] Failed to stream partition\n");
@@ -623,7 +623,7 @@ zx_status_t find_first_fit(const char* gpt_path, size_t bytes_requested,
         }
         partitions[partc].start = p->first;
         partitions[partc].length = p->last - p->first + 1;
-        printf("[find_first_fit] Partition seen with start %lu, end %lu (length %lu)\n",
+        printf("[find_first_fit] Partition seen with start %zu, end %zu (length %zu)\n",
                p->first, p->last, partitions[partc].length);
         partc++;
     }
@@ -639,8 +639,8 @@ zx_status_t find_first_fit(const char* gpt_path, size_t bytes_requested,
     // "between" partitions.
     for (size_t i = 0; i < partc - 1; i++) {
         size_t next = partitions[i].start + partitions[i].length;
-        printf("[find_first_fit] Partition[%lu] From Block [%lu, %lu) ..."
-                "(next partition starts at block %lu)\n",
+        printf("[find_first_fit] Partition[%zu] From Block [%zu, %zu) ..."
+                "(next partition starts at block %zu)\n",
                i, partitions[i].start, next, partitions[i + 1].start);
 
         if (next > partitions[i + 1].start) {
@@ -648,7 +648,7 @@ zx_status_t find_first_fit(const char* gpt_path, size_t bytes_requested,
             return ZX_ERR_IO;
         }
         size_t free_blocks = partitions[i + 1].start - next;
-        printf("[find_first_fit]    There are %lu free blocks (%lu requested)\n", free_blocks,
+        printf("[find_first_fit]    There are %zu free blocks (%zu requested)\n", free_blocks,
                 blocks_requested);
         if (free_blocks >= blocks_requested) {
             *start_out = next;
@@ -694,7 +694,7 @@ zx_status_t efi_find_or_add(fbl::unique_fd *efi_fd) {
         }
 
         if (memcmp(p->type, type, GPT_GUID_LEN) == 0) {
-            printf("[efi_find_or_add] Found EFI partition in GPT, partition %lu\n", i);
+            printf("[efi_find_or_add] Found EFI partition in GPT, partition %zu\n", i);
             efi_fd->reset(open_partition(p->guid, type, ZX_SEC(5), nullptr));
             if (!*efi_fd) {
                 fprintf(stderr, "[efi_find_or_add] Couldn't open EFI partition\n");
@@ -777,7 +777,7 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
         fprintf(stderr, "[fvm_add_to_gpt] Couldn't find space in GPT: %d\n", r);
         goto done;
     }
-    printf("[fvm_add_to_gpt] Found space in GPT - OK %lu @ %lu\n", length, start);
+    printf("[fvm_add_to_gpt] Found space in GPT - OK %zu @ %zu\n", length, start);
 
     // If can fulfill the requested size, and we still have space for the
     // optional reserve section, then we should shorten the amount of blocks
@@ -788,7 +788,7 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
         printf("[fvm_add_to_gpt] Space for reserve - OK\n");
         length -= kOptionalReserveBlocks;
     }
-    printf("[fvm_add_to_gpt] Final space in GPT - OK %lu @ %lu\n", length, start);
+    printf("[fvm_add_to_gpt] Final space in GPT - OK %zu @ %zu\n", length, start);
 
     if ((r = zx_cprng_draw(guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
         fprintf(stderr, "[fvm_add_to_gpt] Failed to get random GUID\n");

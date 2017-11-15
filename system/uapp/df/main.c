@@ -61,7 +61,7 @@ const char* hfmt = "%-10s %10s %10s %10s %3s%%  %-10s  %-10s\n";
 // Format for the human-readable header
 const char* hrfmt = "%-10s %5s %5s %5s %5s%%  %-10s  %-10s\n";
 // Format for the individual filesystems queried
-const char* ffmt = "%-10s %10lu %10lu %10lu %3lu%%  %-10s  %-10s\n";
+const char* ffmt = "%-10s %10zu %10zu %10zu %3zu%%  %-10s  %-10s\n";
 
 #define KB (1lu << 10)
 #define MB (1lu << 20)
@@ -74,11 +74,11 @@ const char* ffmt = "%-10s %10lu %10lu %10lu %3lu%%  %-10s  %-10s\n";
 // [1.0XX, 999XX]
 bool print_magnitude(int padding, size_t size, size_t magnitude, const char* mag_string) {
     if (size < 10 * magnitude) {
-        printf("%*lu.%lu%s ", padding - 4, size / magnitude,
+        printf("%*zu.%zu%s ", padding - 4, size / magnitude,
                size / (magnitude / 10) % 10, mag_string);
         return true;
     } else if (size < magnitude << 10) {
-        printf("%*lu%s ", padding - 2, size / magnitude, mag_string);
+        printf("%*zu%s ", padding - 2, size / magnitude, mag_string);
         return true;
     }
     return false;
@@ -93,7 +93,7 @@ void print_human_readable(int padding, size_t size) {
     } else if (print_magnitude(padding, size, TB, "TB")) {
     } else if (print_magnitude(padding, size, PB, "PB")) {
     } else {
-        printf("%*lu ", padding, size);
+        printf("%*zu ", padding, size);
     }
 }
 
@@ -124,7 +124,7 @@ void print_fs_type(const char* name, const df_options_t* options,
             print_human_readable(5, bytes_total);
             print_human_readable(5, bytes_used);
             print_human_readable(5, bytes_available);
-            printf("%5lu%%  ", use_percentage);
+            printf("%5zu%%  ", use_percentage);
             printf("%-10s  ", name);
             printf("%-10s\n", device_path ? device_path : "none");
         } else {

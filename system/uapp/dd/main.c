@@ -259,7 +259,7 @@ int main(int argc, const char** argv) {
             while (off != rlen) {
                 size_t wlen = MIN(options.output_bs, rlen - off);
                 if (write(out, buf + off, wlen) != (ssize_t) wlen) {
-                    fprintf(stderr, "Couldn't write %lu bytes to output\n", wlen);
+                    fprintf(stderr, "Couldn't write %zu bytes to output\n", wlen);
                     goto done;
                 }
                 if (wlen == options.output_bs) {
@@ -279,9 +279,9 @@ int main(int argc, const char** argv) {
     }
 
 done:
-    printf("%lu+%u records in\n", records_in, record_in_partial ? 1 : 0);
-    printf("%lu+%u records out\n", records_out, record_out_partial ? 1 : 0);
-    printf("%lu bytes copied\n", records_out * options.output_bs + record_out_partial);
+    printf("%zu+%u records in\n", records_in, record_in_partial ? 1 : 0);
+    printf("%zu+%u records out\n", records_out, record_out_partial ? 1 : 0);
+    printf("%zu bytes copied\n", records_out * options.output_bs + record_out_partial);
 
     if (in != -1) {
         close(in);

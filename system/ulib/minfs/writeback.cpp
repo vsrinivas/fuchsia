@@ -319,7 +319,7 @@ void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
     // calculated, and it should be proven that it will always fit within
     // the allocated writeback buffer.
     ZX_ASSERT_MSG(EnsureSpaceLocked(blocks) == ZX_OK,
-                  "Requested txn (%lu blocks) larger than writeback buffer", blocks);
+                  "Requested txn (%zu blocks) larger than writeback buffer", blocks);
     CopyToBufferLocked(work->txn());
 
     work_queue_.push(fbl::move(work));

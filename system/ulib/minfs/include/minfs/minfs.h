@@ -59,7 +59,7 @@ inline void validate_vmo_size(zx_handle_t vmo, blk_t blk) {
     uint64_t size;
     size_t min = (blk + 1) * kMinfsBlockSize;
     ZX_ASSERT(zx_vmo_get_size(vmo, &size) == ZX_OK);
-    ZX_ASSERT_MSG(size >= min, "VMO size %lu too small for access at block %u\n",
+    ZX_ASSERT_MSG(size >= min, "VMO size %" PRIu64 " too small for access at block %u\n",
                   size, blk);
 #endif // MINFS_PARANOID_MODE
 }

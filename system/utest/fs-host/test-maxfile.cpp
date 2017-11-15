@@ -48,7 +48,7 @@ bool test_maxfile(void) {
             break;
         }
         if ((sz + r) % PRINT_SIZE < (sz % PRINT_SIZE)) {
-            fprintf(stderr, "wrote %lu MB\n", static_cast<size_t>((sz + r) / MB));
+            fprintf(stderr, "wrote %zu MB\n", static_cast<size_t>((sz + r) / MB));
         }
         sz += r;
         if (r < (ssize_t)(sizeof(data_a))) {

@@ -221,7 +221,7 @@ zx_status_t VPartitionManager::Load() {
         if (GetVPartEntryLocked(i)->slices == 0) {
             continue;
         } else if ((status = VPartition::Create(this, i, &vpartitions[i])) != ZX_OK) {
-            fprintf(stderr, "FVM: Failed to Create vpartition %lu\n", i);
+            fprintf(stderr, "FVM: Failed to Create vpartition %zu\n", i);
             return status;
         }
     }
