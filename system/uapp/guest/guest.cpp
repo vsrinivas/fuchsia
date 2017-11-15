@@ -375,9 +375,11 @@ int main(int argc, char** argv) {
 
     zx_vcpu_state_t vcpu_state;
     memset(&vcpu_state, 0, sizeof(vcpu_state));
-#if __x86_64__
+#if __aarch64__
+    vcpu_state.x[0] = bootdata_off;
+#elif __x86_64__
     vcpu_state.rsi = bootdata_off;
-#endif // __x86_64__
+#endif
     status = zx_vcpu_write_state(vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to write VCPU state\n");
