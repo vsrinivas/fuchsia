@@ -14,8 +14,6 @@ source_set("lib") {
   sources = [
     "auth_db.h",
     "auth_db_file_impl.cc",
-
-    #    "auth_db.cc",
     "auth_db_file_impl.h",
   ]
 
@@ -26,7 +24,7 @@ source_set("lib") {
   ]
 }
 
-executable("auth_store_unittests") {
+source_set("unittests") {
   testonly = true
 
   sources = [

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "auth_db.h"
+#include "garnet/bin/auth/store/auth_db.h"
 #include "garnet/bin/auth/store/credentials_generated.h"
 
 namespace auth {

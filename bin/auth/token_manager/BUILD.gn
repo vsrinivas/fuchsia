@@ -1,0 +1,29 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("token_manager") {
+  output_name = "token_manager"
+
+  sources = [
+    "main.cc",
+    "token_manager_factory_impl.cc",
+    "token_manager_factory_impl.h",
+    "token_manager_impl.cc",
+    "token_manager_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/auth/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/bin/auth/cache",
+    "//garnet/bin/auth/store:credentials",
+    "//garnet/bin/auth/store:lib",
+    "//garnet/bin/auth/token_manager/test:dev_auth_provider",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+

@@ -1,0 +1,18 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="auth"]
+module auth;
+
+import "garnet/public/lib/auth/fidl/auth_provider.fidl";
+
+// AuthProviderFactory creates an Auth Provider that talks to a particular
+// backend OAuth service such as Google, Facebook, or Twitter that can generate
+// tokens as defined by |auth_provider.fidl|.
+[ServiceName="auth::AuthProviderFactory"]
+interface AuthProviderFactory {
+  // Creates an auth provider instance for the given OAuth provider.
+  GetAuthProvider@0(auth.AuthProvider& auth_provider) =>
+      (auth.AuthProviderStatus status);
+};

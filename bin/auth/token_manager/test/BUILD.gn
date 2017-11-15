@@ -1,0 +1,27 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//garnet/bin/auth/*" ]
+
+executable("dev_auth_provider") {
+  output_name = "dev_auth_provider"
+
+  sources = [
+    "dev_auth_provider_impl.h",
+    "dev_auth_provider_impl.cc",
+    "factory_impl.h",
+    "factory_impl.cc",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/auth/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+

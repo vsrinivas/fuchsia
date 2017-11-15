@@ -2,9 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("fidl") {
-  deps = [
-    "//garnet/public/lib/auth/fidl/account_manager",
-    "//garnet/public/lib/auth/fidl/token_manager",
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("fidl") {
+  sources = [
+    "auth_provider.fidl",
+    "auth_provider_factory.fidl",
+    "token_manager.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ui/views/fidl",
   ]
 }

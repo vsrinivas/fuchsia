@@ -14,7 +14,7 @@ source_set("lib") {
   ]
 }
 
-executable("auth_cache_unittests") {
+source_set("unittests") {
   testonly = true
 
   sources = [

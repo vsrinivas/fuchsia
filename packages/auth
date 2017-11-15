@@ -3,9 +3,10 @@
         "cpp"
     ],
     "labels": [
-        "//garnet/bin/auth"
+        "//garnet/bin/auth:token_manager"
     ],
     "packages": {
-        "auth_tests": "//garnet/bin/auth:tests"
+        "token_manager_tests": "//garnet/bin/auth:tests",
+        "token_manager": "//garnet/bin/auth:token_manager"
     }
 }

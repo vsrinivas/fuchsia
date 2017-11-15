@@ -4,31 +4,55 @@
 
 import("//build/package.gni")
 
-group("auth") {
+package("token_manager") {
   deps = [
-    "//garnet/public/lib/auth/fidl",
-    "//garnet/bin/auth/cache",
-    "//garnet/bin/auth/store",
+    "//garnet/bin/auth/token_manager",
   ]
+
+  binary = "token_manager"
+
+  meta = [ {
+    path = rebase_path("meta/sandbox")
+    dest = "sandbox"
+  } ]
 }
 
 package("tests") {
   testonly = true
   system_image = true
 
-  package_name = "auth_tests"
+  package_name = "token_manager_tests"
 
   deps = [
-    "//garnet/bin/auth/cache:auth_cache_unittests",
-    "//garnet/bin/auth/store:auth_store_unittests",
+    ":token_manager_unittests",
+    "//garnet/bin/auth/test:e2e_dev",
+    "//garnet/bin/auth/token_manager/test:dev_auth_provider",
+  ]
+
+  binaries = [
+    {
+      name = "dev_auth_provider"
+    },
   ]
 
   tests = [
     {
-      name = "auth_cache_unittests"
+      name = "token_manager_unittests"
     },
     {
-      name = "auth_store_unittests"
+      name = "dev_token_manager_e2e_test"
     },
+  ]
+}
+
+executable("token_manager_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//garnet/bin/auth/cache:unittests",
+    "//garnet/bin/auth/store:unittests",
+    "//garnet/bin/auth/test:unittests",
   ]
 }
