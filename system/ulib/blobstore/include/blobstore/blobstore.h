@@ -2,15 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This file contains Vnodes and global Blobstore structures
+// used for constructing a Blobstore filesystem in memory.
+
 #pragma once
 
-#include <blobstore/blobstore.h>
-
-#include <string.h>
+#ifndef __Fuchsia__
+#error Fuchsia-only Header
+#endif
 
 #include <bitmap/raw-bitmap.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -20,12 +25,15 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
-#ifdef __Fuchsia__
+#include <string.h>
+
 #include <block-client/client.h>
 #include <fs/mapped-vmo.h>
 #include <zx/event.h>
 #include <zx/vmo.h>
-#endif
+
+#include <blobstore/common.h>
+#include <blobstore/format.h>
 
 namespace blobstore {
 
@@ -59,7 +67,6 @@ constexpr BlobFlags kBlobFlagDirectory    = 0x00000400; // This node represents 
 constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
-#ifdef __Fuchsia__
 
 class VnodeBlob final : public fs::Vnode {
 public:
@@ -299,46 +306,9 @@ private:
     vmoid_t info_vmoid_{};
 };
 
-#endif
-
-class BlobstoreChecker {
-public:
-    BlobstoreChecker();
-    void Init(fbl::RefPtr<Blobstore> vnode);
-    void TraverseInodeBitmap();
-    void TraverseBlockBitmap();
-    zx_status_t CheckAllocatedCounts() const;
-
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BlobstoreChecker);
-    fbl::RefPtr<Blobstore> blobstore_;
-    uint32_t alloc_inodes_;
-    uint32_t alloc_blocks_;
-};
-
-// Exclusively host-side functionality
-#ifndef __Fuchsia__
-// Create a blobstore from a sparse file
-// |start| indicates where the blobstore partition starts within the file (in bytes)
-// |end| indicates the end of the blobstore partition (in bytes)
-// |extent_lengths| contains the length (in bytes) of each blobstore extent: currently this includes
-// the superblock, block bitmap, inode table, and data blocks.
-zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, int fd, off_t start, off_t end,
-                                    const fbl::Vector<size_t>& extent_lengths);
-#else
 zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd);
-#endif
 
 //TODO(planders): Update blobstore to use unique_fd.
 zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd);
-zx_status_t blobstore_check(fbl::RefPtr<Blobstore> vnode);
 
-uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode);
-
-// Get a pointer to the nth block of the bitmap.
-inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
-    assert(n * kBlobstoreBlockSize < bm.size());                  // Accessing beyond end of bitmap
-    assert(kBlobstoreBlockSize <= (n + 1) * kBlobstoreBlockSize); // Avoid overflow
-    return fs::GetBlock<kBlobstoreBlockSize>(bm.StorageUnsafe()->GetData(), n);
-}
 } // namespace blobstore

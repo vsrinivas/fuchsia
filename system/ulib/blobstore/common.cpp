@@ -17,10 +17,12 @@
 #include <fdio/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
+#include <fs/block-txn.h>
+#include <fs/trace.h>
 
 #define MXDEBUG 0
 
-#include "blobstore-private.h"
+#include <blobstore/common.h>
 
 using digest::Digest;
 using digest::MerkleTree;

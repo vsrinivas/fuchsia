@@ -13,14 +13,17 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
+#include <fs/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include "blobstore-private.h"
-#include <fs/vfs.h>
+#include <blobstore/fsck.h>
 
 #ifdef __Fuchsia__
 #include <async/loop.h>
+#include <blobstore/blobstore.h>
+#else
+#include <blobstore/host.h>
 #endif
 
 namespace {

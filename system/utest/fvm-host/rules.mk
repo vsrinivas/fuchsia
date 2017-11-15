@@ -16,7 +16,6 @@ MODULE_SRCS += \
     system/uapp/fvm/format/format.cpp \
     system/uapp/fvm/format/minfs.cpp \
     system/uapp/fvm/format/blobstore.cpp \
-    system/uapp/blobstore/blobstore-common.cpp \
 
 MODULE_NAME := fvm-host-test
 
@@ -29,7 +28,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/digest/include \
     -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/gpt/include \
-    -Isystem/uapp/blobstore/include \
+    -Isystem/ulib/blobstore/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fs-management/include \
     -Isystem/ulib/minfs/include \
@@ -43,7 +42,7 @@ MODULE_HOST_LIBS := \
     system/ulib/pretty.hostlib \
     system/ulib/minfs.hostlib \
     system/ulib/fbl.hostlib \
-    system/uapp/blobstore.hostlib \
+    system/ulib/blobstore.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

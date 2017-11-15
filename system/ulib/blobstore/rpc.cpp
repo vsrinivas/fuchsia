@@ -19,7 +19,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "blobstore-private.h"
+#include <blobstore/blobstore.h>
 
 namespace blobstore {
 

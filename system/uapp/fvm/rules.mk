@@ -34,11 +34,11 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/zircon/include \
     -Isystem/ulib/fs-management/include \
-    -Isystem/uapp/blobstore/include \
+    -Isystem/ulib/blobstore/include \
     -Isystem/ulib/fbl/include \
 
 MODULE_HOST_LIBS := \
-    system/uapp/blobstore.hostlib \
+    system/ulib/blobstore.hostlib \
     system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
     system/ulib/minfs.hostlib \

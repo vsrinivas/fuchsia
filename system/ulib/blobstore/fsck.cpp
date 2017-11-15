@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <blobstore/fsck.h>
 
-#include "blobstore-private.h"
+#ifdef __Fuchsia__
+#include <blobstore/blobstore.h>
+#else
+#include <blobstore/host.h>
+#endif
 
 //TODO(planders): Add more checks for fsck.
 namespace blobstore {
@@ -29,12 +34,16 @@ void BlobstoreChecker::TraverseBlockBitmap() {
 zx_status_t BlobstoreChecker::CheckAllocatedCounts() const {
     zx_status_t status = ZX_OK;
     if (alloc_blocks_ != blobstore_->info_.alloc_block_count) {
-        FS_TRACE_ERROR("check: incorrect allocated block count %" PRIu64 "u (should be %u)\n", blobstore_->info_.alloc_block_count, alloc_blocks_);
+        FS_TRACE_ERROR("check: incorrect allocated block count %" PRIu64
+                       " (should be %u)\n",
+                       blobstore_->info_.alloc_block_count, alloc_blocks_);
         status = ZX_ERR_BAD_STATE;
     }
 
     if (alloc_inodes_ != blobstore_->info_.alloc_inode_count) {
-        FS_TRACE_ERROR("check: incorrect allocated inode count %" PRIu64 "u (should be %u)\n", blobstore_->info_.alloc_inode_count, alloc_inodes_);
+        FS_TRACE_ERROR("check: incorrect allocated inode count %" PRIu64
+                       " (should be %u)\n",
+                       blobstore_->info_.alloc_inode_count, alloc_inodes_);
         status = ZX_ERR_BAD_STATE;
     }
 

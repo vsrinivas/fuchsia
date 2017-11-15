@@ -23,8 +23,9 @@
 
 #define MXDEBUG 0
 
-#include <blobstore/blobstore.h>
-#include "blobstore-private.h"
+#include <blobstore/format.h>
+#include <blobstore/fsck.h>
+#include <blobstore/host.h>
 
 using digest::Digest;
 using digest::MerkleTree;

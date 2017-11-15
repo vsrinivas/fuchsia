@@ -6,17 +6,22 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
-MODULE_GROUP := core
+MODULE_TYPE := userlib
 
 MODULE_NAME := blobstore
 
+COMMON_SRCS := \
+    $(LOCAL_DIR)/common.cpp \
+    $(LOCAL_DIR)/fsck.cpp \
+
 # app main
 MODULE_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
+    $(COMMON_SRCS) \
+    $(LOCAL_DIR)/blobstore.cpp \
+    $(LOCAL_DIR)/vnode.cpp \
+    $(LOCAL_DIR)/rpc.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/blobstore \
     system/ulib/fs \
     system/ulib/async \
     system/ulib/async.loop \
@@ -37,39 +42,26 @@ MODULE_LIBS := \
 
 include make/module.mk
 
-# host blobstore tool
+# host blobstore lib
 
-MODULE := $(LOCAL_DIR).host
+MODULE := $(LOCAL_DIR).hostlib
 
-MODULE_NAME := blobstore
-
-MODULE_TYPE := hostapp
+MODULE_TYPE := hostlib
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
-    system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/digest/digest.cpp \
-    system/ulib/digest/merkle-tree.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
-    third_party/ulib/cryptolib/cryptolib.c \
-
-MODULE_HOST_LIBS := \
-    system/ulib/blobstore.hostlib \
-    system/ulib/fbl.hostlib
+    $(COMMON_SRCS) \
+    $(LOCAL_DIR)/host.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
-    -Ithird_party/ulib/cryptolib/include \
-    -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/blobstore/include \
     -Isystem/ulib/digest/include \
-    -Isystem/ulib/zxcpp/include \
-    -Isystem/ulib/fdio/include \
+    -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
+    -Isystem/ulib/fdio/include \
+    -Isystem/ulib/bitmap/include \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
+MODULE_DEFINES := DISABLE_THREAD_ANNOTATIONS
 
 include make/module.mk

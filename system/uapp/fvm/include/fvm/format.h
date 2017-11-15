@@ -7,7 +7,9 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#include <blobstore/blobstore.h>
+#include <blobstore/format.h>
+#include <blobstore/fsck.h>
+#include <blobstore/host.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
