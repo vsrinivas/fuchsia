@@ -9,6 +9,7 @@ package main
 import (
 	"flag"
 	"log"
+	"path/filepath"
 
 	"syscall/zx"
 
@@ -23,6 +24,10 @@ var (
 
 func main() {
 	flag.Parse()
+
+	if *pkg == "" && len(flag.Args()) == 1 {
+		*pkg = filepath.Join(*blobstore, flag.Arg(0))
+	}
 
 	log.Printf("pkgsvr mounting %s at %s", *pkg, *path)
 
