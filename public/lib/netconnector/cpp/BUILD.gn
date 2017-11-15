@@ -4,8 +4,6 @@
 
 source_set("cpp") {
   sources = [
-    "async_wait.cc",
-    "async_wait.h",
     "message_relay.cc",
     "message_relay.h",
     "net_stub_responder.h",
@@ -13,7 +11,6 @@ source_set("cpp") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netconnector/fidl",

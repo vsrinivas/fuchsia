@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include <async/auto_wait.h>
+#include <zx/channel.h>
+
 #include <queue>
 #include <vector>
 
-#include <zx/channel.h>
-
-#include "lib/netconnector/cpp/async_wait.h"
+#include "lib/fxl/macros.h"
 
 namespace netconnector {
 
@@ -42,14 +43,18 @@ class MessageRelayBase {
 
  private:
   // Tries to read messages from channel_ and waits for more.
-  void ReadChannelMessages();
+  async_wait_result_t ReadChannelMessages(
+    async_t* async, zx_status_t status,
+    const zx_packet_signal_t* signal);
 
   // Writes all the messages in messages_to_write_.
-  void WriteChannelMessages();
+  async_wait_result_t WriteChannelMessages(
+    async_t* async, zx_status_t status,
+    const zx_packet_signal_t* signal);
 
   zx::channel channel_;
-  AsyncWait read_async_wait_;
-  AsyncWait write_async_wait_;
+  async::AutoWait read_wait_;
+  async::AutoWait write_wait_;
   std::queue<std::vector<uint8_t>> messages_to_write_;
 };
 
