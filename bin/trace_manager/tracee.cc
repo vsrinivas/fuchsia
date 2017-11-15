@@ -86,8 +86,7 @@ bool Tracee::Start(size_t buffer_size,
 
   zx::vmo buffer_vmo_for_provider;
   status =
-      buffer_vmo.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER |
-                               ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
+      buffer_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
                            &buffer_vmo_for_provider);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_

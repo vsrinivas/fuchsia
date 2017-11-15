@@ -29,7 +29,7 @@ std::pair<zx::vmo, fxl::RefPtr<HostData>> AllocateMemory(size_t size) {
   // Drop rights before we transfer the VMO to the session manager.
   zx::vmo remote_vmo;
   status = local_vmo.replace(
-      ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_MAP,
+      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
       &remote_vmo);
   FXL_CHECK(status == ZX_OK) << "replace rights failed: status=" << status;
   return std::make_pair(std::move(remote_vmo), std::move(data));

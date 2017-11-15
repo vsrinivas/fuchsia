@@ -87,7 +87,7 @@ uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
 TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
   SharedBufferSetAllocator under_test(
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
+      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   uint32_t buffer_id;
   void* region_0 = AllocateRegion(&under_test, kSmallAlloc, &buffer_id);
@@ -105,7 +105,7 @@ TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
 TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
   SharedBufferSetAllocator under_test(
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
+      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   uint32_t buffer_id_0;
   void* region_0 = AllocateRegion(&under_test, kLargeAlloc, &buffer_id_0);
@@ -125,7 +125,7 @@ TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
 TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
   SharedBufferSetAllocator under_test(
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
+      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   std::vector<void*> first_buffer_allocations;
   uint32_t first_buffer_id;
@@ -177,7 +177,7 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
 TEST(SharedBufferSetAllocatorTest, SetFixedBufferSize) {
   SharedBufferSetAllocator under_test(
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
+      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   EXPECT_TRUE(under_test.SetFixedBufferSize(kSmallAlloc * 3));
   uint32_t buffer_id = VerifyBufferAdd(&under_test);

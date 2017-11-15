@@ -10,8 +10,7 @@ namespace media {
 
 MediaPacketProducerBase::MediaPacketProducerBase()
     : allocator_(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                 ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ |
-                     ZX_RIGHT_MAP) {
+                 ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP) {
   // No demand initially.
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;

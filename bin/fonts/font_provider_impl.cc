@@ -23,7 +23,7 @@ constexpr char kFallback[] = "fallback";
 constexpr char kFamilies[] = "families";
 
 constexpr zx_rights_t kFontDataRights =
-    ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP;
+    ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP;
 
 }  // namespace
 

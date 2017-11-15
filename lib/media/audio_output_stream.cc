@@ -116,8 +116,7 @@ bool AudioOutputStream::CreateMemoryMapping() {
   buffer_ = reinterpret_cast<int16_t*>(mapped_address);
 
   zx::vmo duplicate_vmo;
-  status = vmo_.duplicate(
-      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+  status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
       &duplicate_vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::handle::duplicate failed - " << status;

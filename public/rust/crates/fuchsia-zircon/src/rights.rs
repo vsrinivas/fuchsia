@@ -16,7 +16,13 @@ bitflags! {
         const MAP          = sys::ZX_RIGHT_MAP;
         const GET_PROPERTY = sys::ZX_RIGHT_GET_PROPERTY;
         const SET_PROPERTY = sys::ZX_RIGHT_SET_PROPERTY;
-        const DEBUG        = sys::ZX_RIGHT_DEBUG;
+        const ENUMERATE    = sys::ZX_RIGHT_ENUMERATE;
+        const DESTROY      = sys::ZX_RIGHT_DESTROY;
+        const SET_POLICY   = sys::ZX_RIGHT_SET_POLICY;
+        const GET_POLICY   = sys::ZX_RIGHT_GET_POLICY;
+        const SIGNAL       = sys::ZX_RIGHT_SIGNAL;
+        const SIGNAL_PEER  = sys::ZX_RIGHT_SIGNAL_PEER;
+        const WAIT         = sys::ZX_RIGHT_WAIT;
         const SAME_RIGHTS  = sys::ZX_RIGHT_SAME_RIGHTS;
     }
 }

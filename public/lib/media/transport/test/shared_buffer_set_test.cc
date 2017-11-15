@@ -15,8 +15,7 @@ uint32_t CreateNewBuffer(SharedBufferSet* under_test, uint64_t size) {
   uint32_t buffer_id;
   zx::vmo vmo;
   zx_status_t status = under_test->CreateNewBuffer(
-      size, &buffer_id, ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ |
-                            ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
+      size, &buffer_id, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
       &vmo);
   EXPECT_EQ(ZX_OK, status);
   return buffer_id;

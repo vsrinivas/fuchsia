@@ -219,7 +219,7 @@ void FxProcessor::Startup() {
     output_buf_virt_ = reinterpret_cast<void*>(tmp);
 
     zx::vmo rend_vmo;
-    res = output_buf_vmo_.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP, &rend_vmo);
+    res = output_buf_vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, &rend_vmo);
     if (res != ZX_OK) {
         printf("Failed to duplicate output buffer vmo handle (res %d)\n", res);
         return;
