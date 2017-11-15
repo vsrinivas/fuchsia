@@ -249,8 +249,6 @@ int main(int argc, char** argv) {
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
 
-    printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
-
     if (failed_count) {
         printf("\nThe following tests failed:\n");
         failure_t* failure = NULL;
@@ -273,6 +271,10 @@ int main(int argc, char** argv) {
             free(failure);
         }
     }
+
+    // Print this last, since some infra recipes will shut down the fuchsia
+    // environment once it appears.
+    printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
 
     return failed_count ? 1 : 0;
 }
