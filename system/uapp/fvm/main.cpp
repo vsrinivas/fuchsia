@@ -69,20 +69,17 @@ int main(int argc, char** argv) {
 
     // If length was not specified, use length of file.
     if (i == 3) {
-        fbl::unique_fd fd(open(path, O_PATH, 0644));
+        fbl::unique_fd fd(open(path, O_RDONLY, 0644));
 
-        if (!fd) {
-            fprintf(stderr, "Unable to open path\n");
-            return -1;
+        if (fd) {
+            struct stat s;
+            if (fstat(fd.get(), &s) < 0) {
+                fprintf(stderr, "Failed to stat %s\n", path);
+                return -1;
+            }
+
+            length = s.st_size;
         }
-
-        struct stat s;
-        if (fstat(fd.get(), &s) < 0) {
-            fprintf(stderr, "Failed to stat %s\n", path);
-            return -1;
-        }
-
-        length = s.st_size;
     } else if (i != 7) {
         fprintf(stderr, "Invalid flags\n");
         return -1;
