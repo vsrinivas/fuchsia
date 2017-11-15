@@ -22,6 +22,16 @@
 
 #include "protocol.c"
 
+// Convenience method for simple replies
+static zx_status_t pci_rpc_reply_ok(zx_handle_t ch, pci_msg_t* req) {
+    pci_msg_t resp = {
+        .txid = req->txid,
+        .ordinal = ZX_OK,
+    };
+
+    return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
+};
+
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
 static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
     char args[32];
@@ -44,12 +54,16 @@ static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_ha
     return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 
-static void kpci_release(void* ctx) {
-    kpci_device_t* device = ctx;
-    if (device->handle != ZX_HANDLE_INVALID) {
-        zx_handle_close(device->handle);
+
+static zx_status_t kpci_enable_bus_master(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+    bool enable = req->data[0];
+
+    zx_status_t st = zx_pci_enable_bus_master(device->handle, enable);
+    if (st != ZX_OK) {
+        return st;
     }
-    free(device);
+
+    return pci_rpc_reply_ok(ch, req);
 }
 
 // All callbacks corresponding to protocol operations match this signature.
@@ -62,7 +76,7 @@ static void kpci_release(void* ctx) {
 typedef zx_status_t (*rxrpc_cbk_t)(pci_msg_t*, kpci_device_t*, zx_handle_t);
 rxrpc_cbk_t rxrpc_cbk_tbl[] = {
         [PCI_OP_RESET_DEVICE] = NULL,
-        [PCI_OP_ENABLE_BUS_MASTER] = NULL,
+        [PCI_OP_ENABLE_BUS_MASTER] = kpci_enable_bus_master,
         [PCI_OP_ENABLE_PIO] = NULL,
         [PCI_OP_CONFIG_READ] = NULL,
         [PCI_OP_GET_NEXT_CAPABILITY] = NULL,
@@ -79,30 +93,53 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
 #if PROXY_DEVICE
     return ZX_ERR_NOT_SUPPORTED;
 #else
+    kpci_device_t* device = ctx;
+    const char* name = device_get_name(device->zxdev);
     pci_msg_t req;
-    zx_status_t st = zx_channel_read(ch, 0, &req, NULL, sizeof(req), 0, NULL, NULL);
+    uint32_t actual_bytes;
+    zx_status_t st = zx_channel_read(ch, 0, &req, NULL, sizeof(req), 0, &actual_bytes, NULL);
     if (st != ZX_OK) {
         return st;
     }
 
-    if (req.ordinal >= PCI_OP_MAX || rxrpc_cbk_tbl[req.ordinal] == NULL) {
+    if (actual_bytes != sizeof(req)) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    uint32_t op = req.ordinal;
+    if (op >= PCI_OP_MAX || rxrpc_cbk_tbl[op] == NULL) {
         st = ZX_ERR_NOT_SUPPORTED;
         goto err;
     }
 
-    kpci_device_t* device = ctx;
-    zxlogf(SPEW, "pci[%s]: rpc-in op %d args '%s'\n", device_get_name(device->zxdev),
-           req.ordinal, req.data);
-    return rxrpc_cbk_tbl[req.ordinal](&req, device, ch);
+    zxlogf(SPEW, "pci[%s]: rpc-in op %d args '%#02x %#02x %#02x %#02x...'\n", name, op,
+        req.data[0], req.data[1], req.data[2], req.data[3]);
+    st = rxrpc_cbk_tbl[req.ordinal](&req, device, ch);
+    if (st != ZX_OK) {
+        goto err;
+    }
+
+    zxlogf(SPEW, "pci[%s]: rpc-in op %d returned success\n", name, op);
+    return st;
 
 err : {
     pci_msg_t resp = {
         .txid = req.txid,
+        .ordinal = st,
     };
-    resp.ordinal = st;
+
+    zxlogf(SPEW, "pci[%s]: rpc-in op %d error %d\n", name, req.ordinal, st);
     return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 #endif
+}
+
+static void kpci_release(void* ctx) {
+    kpci_device_t* device = ctx;
+    if (device->handle != ZX_HANDLE_INVALID) {
+        zx_handle_close(device->handle);
+    }
+    free(device);
 }
 
 static zx_protocol_device_t kpci_device_proto = {
