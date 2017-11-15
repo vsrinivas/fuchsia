@@ -24,84 +24,23 @@ def _get_file_len(path):
         os.close(fd)
 
 def process_manifest(manifest_path, disk_path, minfs_bin, created_dirs):
-    mkdir_cmd = [minfs_bin, disk_path, "mkdir", None]
-    cp_cmd = [minfs_bin, disk_path, "cp", None, None]
-    ls_cmd = [minfs_bin, disk_path, "ls", None]
+    manifest_cmd = [minfs_bin, disk_path, "manifest", manifest_path]
+
+    try:
+        subprocess.check_call(manifest_cmd)
+    except (subprocess.CalledProcessError):
+        print "Error adding files from manifest"
+        sys.exit(-1)
+    except (OSError):
+        print "Unable to execute minfs"
+        sys.exit(-1)
 
     file_count = 0
+
     with open(manifest_path, "r") as manifest_file:
-        working_dir = os.path.dirname(manifest_path)
         for line in manifest_file:
-            if "=" not in line:
-                continue
-
-            if line.count("=") != 1:
-                raise Exception("Unexpected format, too many equal signs: %d" %
-                                line.count("="))
-            targ_path, host_path = line.split("=")
-            targ_path = targ_path.strip()
-            host_path = host_path.strip()
-            if not os.path.isabs(host_path):
-                host_path = os.path.join(working_dir, host_path)
-
-            # first figure out if we need to make a directory for this file
-            # This should split file name off the past
-            dir_path = os.path.split(targ_path)[0]
-
-            # track the directories we need to make for this file
-            dirs_to_make = []
-
-            # see if the directory for this file has been created
-            while dir_path != "" and dir_path not in created_dirs:
-                dir_path, new_dir = os.path.split(dir_path)
-                dirs_to_make.append(new_dir)
-
-            # now create the directory path
-            while len(dirs_to_make) > 0:
-                dir_path = os.path.join(dir_path, dirs_to_make.pop())
-
-                mkdir_cmd[3] = "::%s" % dir_path
-                try:
-                    subprocess.check_call(mkdir_cmd)
-                except (subprocess.CalledProcessError):
-                    print "Error creating directory '%s'" % dir_path
-                    sys.exit(-1)
-                except (OSError):
-                    print "Unable to execute minfs"
-                    sys.exit(-1)
-
-                # record that we've created this directory
-                created_dirs.add(dir_path)
-
-            # some status output
-            sys.stdout.write("%s\r" % (" " * 100))
-            sys.stdout.write("Copying '%s' \r" % targ_path)
-            sys.stdout.flush()
-            remote_path = "::%s" % targ_path
-            ls_cmd[3] = remote_path
-
-            try:
-              subprocess.check_call(ls_cmd)
-              print "File '%s' from '%s' is included twice." % (targ_path, host_path)
-              sys.exit(-1)
-            except (subprocess.CalledProcessError):
-              pass
-            except (OSError):
-              print "Unable to execute minfs"
-              sys.exit(-1)
-
-            cp_cmd[3] = host_path
-            cp_cmd[4] = remote_path
-            try:
-                subprocess.check_call(cp_cmd)
-            except (subprocess.CalledProcessError):
-                print "Error copying file %s command %s" % (host_path, cp_cmd)
-                sys.exit(-1)
-            except (OSError):
-                print "Unable to execute minfs"
-                sys.exit(-1)
-
             file_count += 1
+
     return file_count
 
 def mkfs(minfs_bin, path):
