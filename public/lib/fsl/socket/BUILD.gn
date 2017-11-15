@@ -17,9 +17,9 @@ source_set("socket") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fidl/c/waiter",
-    "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/async:default",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
   ]
 }

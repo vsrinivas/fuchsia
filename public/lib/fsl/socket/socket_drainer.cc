@@ -14,65 +14,60 @@ namespace fsl {
 
 SocketDrainer::Client::~Client() = default;
 
-SocketDrainer::SocketDrainer(Client* client, const FidlAsyncWaiter* waiter)
+SocketDrainer::SocketDrainer(Client* client, async_t* async)
     : client_(client),
-      waiter_(waiter),
-      wait_id_(0),
+      async_(async),
       destruction_sentinel_(nullptr) {
   FXL_DCHECK(client_);
 }
 
 SocketDrainer::~SocketDrainer() {
-  if (wait_id_)
-    waiter_->CancelWait(wait_id_);
+  wait_.Cancel(async_);
   if (destruction_sentinel_)
     *destruction_sentinel_ = true;
 }
 
 void SocketDrainer::Start(zx::socket source) {
   source_ = std::move(source);
-  ReadData();
+  async_wait_result_t result = OnHandleReady(async_, ZX_OK, nullptr);
+  if (result == ASYNC_WAIT_AGAIN) {
+    wait_.set_object(source_.get());
+    wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED
+                      | ZX_SOCKET_PEER_CLOSED);
+    wait_.set_handler(fbl::BindMember(this, &SocketDrainer::OnHandleReady));
+    wait_.Begin(async_);
+  }
 }
 
-void SocketDrainer::ReadData() {
+async_wait_result_t SocketDrainer::OnHandleReady(
+    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    client_->OnDataComplete();
+    return ASYNC_WAIT_FINISHED;
+  }
+
   std::vector<char> buffer(64 * 1024);
   size_t num_bytes = 0;
-  zx_status_t rv = source_.read(0, buffer.data(), buffer.size(), &num_bytes);
-  if (rv == ZX_OK) {
+  status = source_.read(0, buffer.data(), buffer.size(), &num_bytes);
+  if (status == ZX_OK) {
     // Calling the user callback, and exiting early if this objects is
     // destroyed.
     bool is_destroyed = false;
     destruction_sentinel_ = &is_destroyed;
     client_->OnDataAvailable(buffer.data(), num_bytes);
     if (is_destroyed)
-      return;
+      return ASYNC_WAIT_FINISHED;
     destruction_sentinel_ = nullptr;
-
-    WaitForData();
-  } else if (rv == ZX_ERR_SHOULD_WAIT) {
-    WaitForData();
-  } else if (rv == ZX_ERR_PEER_CLOSED || rv == ZX_ERR_BAD_STATE) {
-    client_->OnDataComplete();
-  } else {
-    FXL_DCHECK(false) << "Unhandled zx_status_t: " << rv;
+    return ASYNC_WAIT_AGAIN;
   }
-}
 
-void SocketDrainer::WaitForData() {
-  FXL_DCHECK(!wait_id_);
-  wait_id_ = waiter_->AsyncWait(
-      source_.get(),
-      ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED | ZX_SOCKET_PEER_CLOSED,
-      ZX_TIME_INFINITE, &WaitComplete, this);
-}
+  if (status == ZX_ERR_SHOULD_WAIT)
+    return ASYNC_WAIT_AGAIN;
 
-void SocketDrainer::WaitComplete(zx_status_t result,
-                                 zx_signals_t pending,
-                                 uint64_t count,
-                                 void* context) {
-  SocketDrainer* drainer = static_cast<SocketDrainer*>(context);
-  drainer->wait_id_ = 0;
-  drainer->ReadData();
+  FXL_DCHECK(status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE)
+      << "Unhandled zx_status_t: " << status;
+  client_->OnDataComplete();
+  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace fsl

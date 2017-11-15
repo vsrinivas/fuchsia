@@ -5,10 +5,10 @@
 #ifndef LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 #define LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 
+#include <async/default.h>
+#include <async/wait.h>
 #include <zx/socket.h>
 
-#include "lib/fidl/c/waiter/async_waiter.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"
 
@@ -25,24 +25,20 @@ class FXL_EXPORT SocketDrainer {
     virtual ~Client();
   };
 
-  SocketDrainer(Client* client,
-                const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
+  explicit SocketDrainer(Client* client,
+                         async_t* async = async_get_default());
   ~SocketDrainer();
 
   void Start(zx::socket source);
 
  private:
-  void ReadData();
-  void WaitForData();
-  static void WaitComplete(zx_status_t result,
-                           zx_signals_t pending,
-                           uint64_t count,
-                           void* context);
+  async_wait_result_t OnHandleReady(async_t* async, zx_status_t status,
+                                    const zx_packet_signal_t* signal);
 
   Client* client_;
+  async_t* async_;
   zx::socket source_;
-  const FidlAsyncWaiter* waiter_;
-  FidlAsyncWaitID wait_id_;
+  async::Wait wait_;
   bool* destruction_sentinel_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainer);
