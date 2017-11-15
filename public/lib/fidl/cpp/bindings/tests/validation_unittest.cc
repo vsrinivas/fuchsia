@@ -343,7 +343,7 @@ TEST(ValidationTest, ResponseBoundsCheck) {
 TEST_F(ValidationIntegrationTest, InterfacePtr) {
   IntegrationTestInterfacePtr interface_ptr =
       IntegrationTestInterfacePtr::Create(
-          InterfaceHandle<IntegrationTestInterface>(testee_endpoint(), 0u));
+          InterfaceHandle<IntegrationTestInterface>(testee_endpoint()));
   interface_ptr.internal_state()->router_for_testing()->EnableTestingMode();
 
   fidl::internal::MessageValidatorList validators;

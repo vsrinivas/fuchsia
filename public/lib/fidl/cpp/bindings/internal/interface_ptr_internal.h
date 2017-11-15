@@ -26,7 +26,7 @@ template <typename Interface>
 class InterfacePtrState {
  public:
   InterfacePtrState()
-      : proxy_(nullptr), router_(nullptr), version_(0u) {}
+      : proxy_(nullptr), router_(nullptr) {}
 
   ~InterfacePtrState() {
     // Destruction order matters here. We delete |proxy_| first, even though
@@ -43,25 +43,20 @@ class InterfacePtrState {
     return proxy_;
   }
 
-  uint32_t version() const { return version_; }
-
   void Swap(InterfacePtrState* other) {
     using std::swap;
     swap(other->proxy_, proxy_);
     swap(other->router_, router_);
     handle_.swap(other->handle_);
-    swap(other->version_, version_);
   }
 
   void Bind(InterfaceHandle<Interface> info) {
     FXL_DCHECK(!proxy_);
     FXL_DCHECK(!router_);
     FXL_DCHECK(!(bool)handle_);
-    FXL_DCHECK(version_ == 0u);
     FXL_DCHECK(info.is_valid());
 
     handle_ = info.PassHandle();
-    version_ = info.version();
   }
 
   bool WaitForIncomingResponse(fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
@@ -75,7 +70,7 @@ class InterfacePtrState {
   // shouldn't be reused.
   InterfaceHandle<Interface> PassInterfaceHandle() {
     return InterfaceHandle<Interface>(
-        router_ ? router_->PassChannel() : std::move(handle_), version_);
+        router_ ? router_->PassChannel() : std::move(handle_));
   }
 
   bool is_bound() const { return (bool)handle_ || router_; }
@@ -127,8 +122,6 @@ class InterfacePtrState {
   // channel handle is needed. |handle_| is valid between the Bind() call
   // and the initialization of |proxy_| and |router_|.
   zx::channel handle_;
-
-  uint32_t version_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InterfacePtrState);
 };

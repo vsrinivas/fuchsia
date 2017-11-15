@@ -259,7 +259,7 @@ TEST_F(InterfacePtrTest, Resettable) {
   zx_handle_t handle = handle0.get();
 
   a = math::CalculatorPtr::Create(
-      InterfaceHandle<math::Calculator>(std::move(handle0), 0u));
+      InterfaceHandle<math::Calculator>(std::move(handle0)));
 
   EXPECT_FALSE(!a);
 
@@ -430,7 +430,7 @@ TEST(StrongConnectorTest, Math) {
                                &destroyed);
 
   math::CalculatorPtr calc;
-  calc.Bind(InterfaceHandle<math::Calculator>(std::move(handle1), 0u));
+  calc.Bind(InterfaceHandle<math::Calculator>(std::move(handle1)));
 
   {
     // Suppose this is instantiated in a process that has the other end of the
@@ -497,7 +497,7 @@ TEST(WeakConnectorTest, Math) {
   WeakMathCalculatorImpl impl(std::move(handle0), &error_received, &destroyed);
 
   math::CalculatorPtr calc;
-  calc.Bind(InterfaceHandle<math::Calculator>(std::move(handle1), 0u));
+  calc.Bind(InterfaceHandle<math::Calculator>(std::move(handle1)));
 
   {
     // Suppose this is instantiated in a process that has the other end of the

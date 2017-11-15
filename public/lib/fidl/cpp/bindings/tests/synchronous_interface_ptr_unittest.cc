@@ -117,7 +117,7 @@ TEST_F(SynchronousInterfacePtrTest, Resettable) {
   SynchronousInterfacePtr<math::Calculator> a;
   EXPECT_TRUE(!a);
   a = SynchronousInterfacePtr<math::Calculator>::Create(
-      InterfaceHandle<math::Calculator>(std::move(pipe.handle0), 0u));
+      InterfaceHandle<math::Calculator>(std::move(pipe.handle0)));
   EXPECT_FALSE(!a);
 
   a.reset();
@@ -130,7 +130,7 @@ TEST_F(SynchronousInterfacePtrTest, Resettable) {
 TEST_F(SynchronousInterfacePtrTest, SetNull) {
   MessagePipe pipe;
   auto a = SynchronousInterfacePtr<math::Calculator>::Create(
-      InterfaceHandle<math::Calculator>(std::move(pipe.handle0), 0u));
+      InterfaceHandle<math::Calculator>(std::move(pipe.handle0)));
 
   EXPECT_TRUE(a);
   a = nullptr;

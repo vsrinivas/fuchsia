@@ -37,8 +37,8 @@ template <typename Interface>
 class SynchronousInterfacePtr {
  public:
   // Constructs an unbound SynchronousInterfacePtr.
-  SynchronousInterfacePtr() : version_(0) {}
-  SynchronousInterfacePtr(std::nullptr_t) : SynchronousInterfacePtr() {}
+  SynchronousInterfacePtr() {}
+  SynchronousInterfacePtr(std::nullptr_t) {}
 
   // Takes over the binding of another SynchronousInterfacePtr, and closes any
   // channel already bound to this pointer.
@@ -71,21 +71,15 @@ class SynchronousInterfacePtr {
   bool is_bound() const { return connector_ && connector_->is_valid(); }
   explicit operator bool() const { return is_bound(); }
 
-  uint32_t version() const { return version_; }
-
   // Unbinds the SynchronousInterfacePtr and returns the underlying
   // InterfaceHandle for the interface.
   InterfaceHandle<Interface> PassInterfaceHandle() {
-    InterfaceHandle<Interface> handle(connector_->PassHandle(), version_);
+    InterfaceHandle<Interface> handle(connector_->PassHandle());
     reset();
     return handle;
   }
 
  private:
-  // We save the version_ here before we pass the underlying channel handle
-  // to |connector_|.
-  uint32_t version_;
-
   // A simple I/O interface we supply to the generated |proxy_| so it doesn't
   // have to know how to write mojo message.
   std::unique_ptr<internal::SynchronousConnector> connector_;
@@ -93,8 +87,7 @@ class SynchronousInterfacePtr {
   // order.
   std::unique_ptr<typename Interface::Synchronous_::Proxy_> proxy_;
 
-  SynchronousInterfacePtr(InterfaceHandle<Interface> handle)
-      : version_(handle.version()) {
+  SynchronousInterfacePtr(InterfaceHandle<Interface> handle) {
     connector_.reset(new internal::SynchronousConnector(handle.PassHandle()));
 
     fidl::internal::MessageValidatorList validators;

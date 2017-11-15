@@ -198,28 +198,6 @@ TEST_F(BindingTest, Unbind) {
   EXPECT_TRUE(called);
 }
 
-class IntegerAccessorImpl : public sample::IntegerAccessor {
- public:
-  IntegerAccessorImpl() {}
-  ~IntegerAccessorImpl() override {}
-
- private:
-  // sample::IntegerAccessor implementation.
-  void GetInteger(const GetIntegerCallback& callback) override {
-    callback(1, sample::Enum::VALUE);
-  }
-  void SetInteger(int64_t data, sample::Enum type) override {}
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(IntegerAccessorImpl);
-};
-
-TEST_F(BindingTest, SetInterfaceHandleVersion) {
-  IntegerAccessorImpl impl;
-  fidl::InterfaceHandle<sample::IntegerAccessor> handle;
-  Binding<sample::IntegerAccessor> binding(&impl, &handle);
-  EXPECT_EQ(3u, handle.version());
-}
-
 }  // namespace
 }  // namespace test
 }  // namespace fidl

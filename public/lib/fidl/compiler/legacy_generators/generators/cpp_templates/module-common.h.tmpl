@@ -82,7 +82,6 @@ class {{interface.name}}_Base {
 {%- if interface.service_name %}
   static const char Name_[];
 {%- endif %}
-  static const uint32_t Version_ = {{interface.version}};
 
   using RequestValidator_ = {{interface.name}}RequestValidator;
 {%- if interface|has_callbacks %}

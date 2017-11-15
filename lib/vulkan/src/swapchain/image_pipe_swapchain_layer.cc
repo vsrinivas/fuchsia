@@ -489,7 +489,7 @@ CreateMagmaSurfaceKHR(VkInstance instance,
                                    formats};
   surface->image_pipe =
       scenic::ImagePipeSyncPtr::Create(fidl::InterfaceHandle<scenic::ImagePipe>(
-          zx::channel(pCreateInfo->imagePipeHandle), 0u));
+          zx::channel(pCreateInfo->imagePipeHandle)));
   *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
   return VK_SUCCESS;
 }

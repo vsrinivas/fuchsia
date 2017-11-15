@@ -87,8 +87,7 @@ InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
   zx::channel endpoint0;
   zx::channel endpoint1;
   zx::channel::create(0, &endpoint0, &endpoint1);
-  *handle = InterfaceHandle<Interface>(std::move(endpoint0),
-                                       Interface::Version_);
+  *handle = InterfaceHandle<Interface>(std::move(endpoint0));
   return InterfaceRequest<Interface>(std::move(endpoint1));
 }
 

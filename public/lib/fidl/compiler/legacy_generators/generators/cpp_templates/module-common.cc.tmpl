@@ -92,7 +92,7 @@ namespace internal {
 {%-     endif %}
       retval = ::fidl::internal::ValidateMessagePayload<
                  internal::{{interface.name}}_{{method.name}}_Params_Data>(
-                    message, err); 
+                    message, err);
       if (retval != ::fidl::internal::ValidationError::NONE) {
          FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "request validation error for interface '{{interface.name}}', "
@@ -179,13 +179,12 @@ namespace internal {
   {{global_enum_operators_def(enum, class_name='')}}
 {%- endfor %}
 
-// Base interface definitions (Name_, Version_, Constants, Enums)
+// Base interface definitions (Name_, Constants, Enums)
 {%- for interface in interfaces %}
 {%- set base_name = "internal::%s_Base"|format(interface.name) -%}
 {%- if interface.service_name %}
 const char {{base_name}}::Name_[] = "{{interface.service_name}}";
 {%- endif %}
-const uint32_t {{base_name}}::Version_;
 
 // Constants
 {%-  for constant in interface.constants %}

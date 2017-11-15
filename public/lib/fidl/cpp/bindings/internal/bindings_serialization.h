@@ -76,14 +76,13 @@ template <typename T>
 inline void InterfaceHandleToData(InterfaceHandle<T> input,
                                   Interface_Data* output) {
   output->handle = WrappedHandle{input.PassHandle().release()};
-  output->version = input.version();
 }
 
 template <typename T>
 inline void InterfaceDataToHandle(Interface_Data* input,
                                   InterfaceHandle<T>* output) {
   *output = InterfaceHandle<T>(
-      UnwrapHandle<zx::channel>(FetchAndReset(&input->handle)), input->version);
+      UnwrapHandle<zx::channel>(FetchAndReset(&input->handle)));
 }
 
 }  // namespace internal

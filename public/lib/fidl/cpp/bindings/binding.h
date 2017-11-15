@@ -122,8 +122,7 @@ class Binding {
     zx::channel endpoint0;
     zx::channel endpoint1;
     zx::channel::create(0, &endpoint0, &endpoint1);
-    *interface_handle =
-        InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_);
+    *interface_handle = InterfaceHandle<Interface>(std::move(endpoint0));
     Bind(std::move(endpoint1));
   }
 
