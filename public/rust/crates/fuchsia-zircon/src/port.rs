@@ -31,6 +31,9 @@ pub enum PacketContents {
     SignalOne(SignalPacket),
     /// A repeating signal packet generated via `object_wait_async`.
     SignalRep(SignalPacket),
+
+    #[doc(hidden)]
+    __Nonexhaustive
 }
 
 /// Contents of a user packet (one sent by `port_queue`). This is a type-safe wrapper for
