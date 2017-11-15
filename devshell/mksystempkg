@@ -40,7 +40,8 @@ system_package_meta_far_merkle="$("${ZIRCON_TOOLS_DIR}/merkleroot" "${system_pac
 (
   # allow grep -v to fail (matches nothing / missing file)
   set +e
-  grep -v "zircon.autorun.blobstore=" "${cmdline}" || echo -n
-  echo "zircon.autorun.blobstore=/blobstore/${pkgsvr_merkleroot}+-package+/blobstore/${system_package_meta_far_merkle}"
+  grep -v "zircon.system.blobstore-init" "${cmdline}" || echo -n
+  echo "zircon.system.blobstore-init=/blobstore/${pkgsvr_merkleroot}"
+  echo "zircon.system.blobstore-init-arg=${system_package_meta_far_merkle}"
 ) > "${FUCHSIA_BUILD_DIR}/.cmdline"
 exec mv "${FUCHSIA_BUILD_DIR}/.cmdline" "${cmdline}"
