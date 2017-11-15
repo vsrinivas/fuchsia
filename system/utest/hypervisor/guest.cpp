@@ -146,7 +146,18 @@ static bool vcpu_read_write_state(void) {
     }
 
     zx_vcpu_state_t vcpu_state = {
-#if __x86_64__
+#if __aarch64__
+        // clang-format off
+        .x = {
+             0u,  1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u,
+            10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u,
+            20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u,
+            30u,
+        },
+        // clang-format on
+        .sp = 64u,
+        .cpsr = 0,
+#elif __x86_64__
         .rax = 1u,
         .rcx = 2u,
         .rdx = 3u,
@@ -164,17 +175,6 @@ static bool vcpu_read_write_state(void) {
         .r14 = 15u,
         .r15 = 16u,
         .rflags = 0,
-#elif __aarch64__
-        // clang-format off
-        .x = {
-             0u,  1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u,
-            10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u,
-            20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u,
-            30u,
-        },
-        // clang-format on
-        .sp = 64u,
-        .cpsr = 0,
 #endif
     };
 
@@ -188,25 +188,7 @@ static bool vcpu_read_write_state(void) {
 
     ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
-#if __x86_64__
-    EXPECT_EQ(vcpu_state.rax, 2u);
-    EXPECT_EQ(vcpu_state.rcx, 4u);
-    EXPECT_EQ(vcpu_state.rdx, 6u);
-    EXPECT_EQ(vcpu_state.rbx, 8u);
-    EXPECT_EQ(vcpu_state.rsp, 10u);
-    EXPECT_EQ(vcpu_state.rbp, 12u);
-    EXPECT_EQ(vcpu_state.rsi, 14u);
-    EXPECT_EQ(vcpu_state.rdi, 16u);
-    EXPECT_EQ(vcpu_state.r8, 18u);
-    EXPECT_EQ(vcpu_state.r9, 20u);
-    EXPECT_EQ(vcpu_state.r10, 22u);
-    EXPECT_EQ(vcpu_state.r11, 24u);
-    EXPECT_EQ(vcpu_state.r12, 26u);
-    EXPECT_EQ(vcpu_state.r13, 28u);
-    EXPECT_EQ(vcpu_state.r14, 30u);
-    EXPECT_EQ(vcpu_state.r15, 32u);
-    EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
-#elif __aarch64__
+#if __aarch64__
     EXPECT_EQ(vcpu_state.x[0], EXIT_TEST_ADDR);
     EXPECT_EQ(vcpu_state.x[1], 2u);
     EXPECT_EQ(vcpu_state.x[2], 4u);
@@ -240,6 +222,24 @@ static bool vcpu_read_write_state(void) {
     EXPECT_EQ(vcpu_state.x[30], 60u);
     EXPECT_EQ(vcpu_state.sp, 128u);
     EXPECT_EQ(vcpu_state.cpsr, 0b0110 << 28);
+#elif __x86_64__
+    EXPECT_EQ(vcpu_state.rax, 2u);
+    EXPECT_EQ(vcpu_state.rcx, 4u);
+    EXPECT_EQ(vcpu_state.rdx, 6u);
+    EXPECT_EQ(vcpu_state.rbx, 8u);
+    EXPECT_EQ(vcpu_state.rsp, 10u);
+    EXPECT_EQ(vcpu_state.rbp, 12u);
+    EXPECT_EQ(vcpu_state.rsi, 14u);
+    EXPECT_EQ(vcpu_state.rdi, 16u);
+    EXPECT_EQ(vcpu_state.r8, 18u);
+    EXPECT_EQ(vcpu_state.r9, 20u);
+    EXPECT_EQ(vcpu_state.r10, 22u);
+    EXPECT_EQ(vcpu_state.r11, 24u);
+    EXPECT_EQ(vcpu_state.r12, 26u);
+    EXPECT_EQ(vcpu_state.r13, 28u);
+    EXPECT_EQ(vcpu_state.r14, 30u);
+    EXPECT_EQ(vcpu_state.r15, 32u);
+    EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
 #endif // __x86_64__
 
     ASSERT_TRUE(teardown(&test));

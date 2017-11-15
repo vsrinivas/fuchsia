@@ -16,8 +16,9 @@ FUNCTION(vcpu_resume_end)
 
 // Test vcpu_interrupt.
 FUNCTION(vcpu_interrupt_start)
+    msr daifclr, #2
     b .
-.skip 0x27c
+.skip 0x278
     mov x0, EXIT_TEST_ADDR
     str xzr, [x0]
 FUNCTION(vcpu_interrupt_end)
