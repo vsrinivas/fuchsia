@@ -343,14 +343,15 @@ class ThreeWayIterator {
 
   bool Finished() const {
     return base_left_iterators_->Finished() &&
-           base_right_iterators_->Finished();
+           base_right_iterators_->Finished() && !base_left_ && !left_ &&
+           !base_right_ && !right_;
   }
 
   Status Advance() {
     FXL_DCHECK(!Finished());
-    if (base_left_iterators_->Finished()) {
+    if (base_left_iterators_->Finished() && !base_left_ && !left_) {
       RETURN_ON_ERROR(AdvanceRight());
-    } else if (base_right_iterators_->Finished()) {
+    } else if (base_right_iterators_->Finished() && !base_right_ && !right_) {
       RETURN_ON_ERROR(AdvanceLeft());
     } else if (GetLeftKey() < GetRightKey()) {
       RETURN_ON_ERROR(AdvanceLeft());
@@ -399,7 +400,7 @@ class ThreeWayIterator {
       }
       RETURN_ON_ERROR(base_left_iterators_->Advance());
     }
-    if (base_left_iterators_->Finished()) {
+    if (!left_advanced_ && base_left_iterators_->Finished()) {
       base_left_.reset();
       left_.reset();
     }
@@ -414,7 +415,7 @@ class ThreeWayIterator {
       }
       RETURN_ON_ERROR(base_right_iterators_->Advance());
     }
-    if (base_right_iterators_->Finished()) {
+    if (!right_advanced_ && base_right_iterators_->Finished()) {
       base_right_.reset();
       right_.reset();
     }

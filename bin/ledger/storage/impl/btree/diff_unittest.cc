@@ -458,6 +458,79 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   ASSERT_EQ(Status::OK, status);
 }
 
+TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
+  // Base tree.
+  std::vector<EntryChange> base_changes;
+  ObjectDigest base_root_digest = CreateTree(base_changes);
+
+  std::unique_ptr<const Object> object1, object2, object3, object4;
+  ASSERT_TRUE(AddObject("change1", &object1));
+  ObjectDigest object1_digest = object1->GetDigest();
+  ASSERT_TRUE(AddObject("change2", &object2));
+  ObjectDigest object2_digest = object2->GetDigest();
+  ASSERT_TRUE(AddObject("change3", &object3));
+  ObjectDigest object3_digest = object3->GetDigest();
+  ASSERT_TRUE(AddObject("change4", &object4));
+  ObjectDigest object4_digest = object4->GetDigest();
+
+  // Left tree.
+  std::vector<EntryChange> left_changes;
+  left_changes.push_back(
+      EntryChange{Entry{"key01", object1_digest, KeyPriority::EAGER}, false});
+  left_changes.push_back(
+      EntryChange{Entry{"key03", object3_digest, KeyPriority::EAGER}, false});
+
+  ObjectDigest left_root_digest;
+  ASSERT_TRUE(
+      CreateTreeFromChanges(base_root_digest, left_changes, &left_root_digest));
+
+  // Right tree.
+  std::vector<EntryChange> right_changes;
+  right_changes.push_back(
+      EntryChange{Entry{"key02", object2_digest, KeyPriority::EAGER}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key04", object4_digest, KeyPriority::EAGER}, false});
+
+  ObjectDigest right_root_digest;
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_digest, right_changes,
+                                    &right_root_digest));
+
+  std::vector<ThreeWayChange> expected_three_way_changes;
+  expected_three_way_changes.push_back(ThreeWayChange{
+      CreateEntryPtr(),
+      CreateEntryPtr("key01", object1_digest, KeyPriority::EAGER),
+      CreateEntryPtr()});
+  expected_three_way_changes.push_back(ThreeWayChange{
+      CreateEntryPtr(), CreateEntryPtr(),
+      CreateEntryPtr("key02", object2_digest, KeyPriority::EAGER)});
+  expected_three_way_changes.push_back(ThreeWayChange{
+      CreateEntryPtr(),
+      CreateEntryPtr("key03", object3_digest, KeyPriority::EAGER),
+      CreateEntryPtr()});
+  expected_three_way_changes.push_back(ThreeWayChange{
+      CreateEntryPtr(), CreateEntryPtr(),
+      CreateEntryPtr("key04", object4_digest, KeyPriority::EAGER)});
+
+  Status status;
+  unsigned int current_change = 0;
+  ForEachThreeWayDiff(
+      &coroutine_service_, &fake_storage_, base_root_digest, left_root_digest,
+      right_root_digest, "",
+      [&expected_three_way_changes, &current_change](ThreeWayChange e) {
+        EXPECT_LT(current_change, expected_three_way_changes.size());
+        if (current_change >= expected_three_way_changes.size()) {
+          return false;
+        }
+        EXPECT_EQ(expected_three_way_changes[current_change], e);
+        current_change++;
+        return true;
+      },
+      callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(current_change, expected_three_way_changes.size());
+}
+
 }  // namespace
 }  // namespace btree
 }  // namespace storage
