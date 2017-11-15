@@ -20,7 +20,7 @@
 
 #define SET_SYSREG(sysreg) \
 ({ \
-    guest_state->system_state.sysreg = *si.reg; \
+    guest_state->system_state.sysreg = reg; \
     LTRACEF("guest " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
     next_pc(guest_state); \
     ZX_OK; \
@@ -31,10 +31,17 @@ ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     iss = BITS(esr, 24, 0);
 }
 
-SystemInstruction::SystemInstruction(uint32_t iss, GuestState* guest_state) {
+SystemInstruction::SystemInstruction(uint32_t iss) {
     sysreg = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
-    reg = &guest_state->x[BITS_SHIFT(iss, 9, 5)];
+    xt = static_cast<uint8_t>(BITS_SHIFT(iss, 9, 5));
     read = BIT(iss, 0);
+}
+
+DataAbort::DataAbort(uint32_t iss) {
+    valid = BIT_SHIFT(iss, 24);
+    access_size = static_cast<uint8_t>(1u << BITS_SHIFT(iss, 23, 22));
+    xt = static_cast<uint8_t>(BITS_SHIFT(iss, 20, 16));
+    read = !BIT(iss, 6);
 }
 
 static void next_pc(GuestState* guest_state) {
@@ -43,7 +50,8 @@ static void next_pc(GuestState* guest_state) {
 
 static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>* hcr,
                                              GuestState* guest_state) {
-    SystemInstruction si(iss, guest_state);
+    const SystemInstruction si(iss);
+    const uint64_t reg = guest_state->x[si.xt];
 
     switch (si.sysreg) {
     case SystemRegister::MAIR_EL1:
@@ -60,7 +68,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>
         // We do not set HCR_EL2.TGE, so we only need to modify HCR_EL2.DC.
         //
         // TODO(abdulla): Investigate clean of cache and invalidation of TLB.
-        uint32_t sctlr_el1 = *si.reg & UINT32_MAX;
+        uint32_t sctlr_el1 = reg & UINT32_MAX;
         if ((guest_state->system_state.sctlr_el1 ^ sctlr_el1) & SCTLR_ELX_M) {
             if (sctlr_el1 & SCTLR_ELX_M) {
                 hcr->fetch_and(~HCR_EL2_DC);
@@ -96,8 +104,9 @@ static zx_status_t handle_instruction_abort(GuestState* guest_state,
     return handle_page_fault(guest_state->hpfar_el2, gpas);
 }
 
-static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddressSpace* gpas,
-                                     TrapMap* traps, zx_port_packet_t* packet) {
+static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
+                                     GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                                     zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
     Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
@@ -121,13 +130,21 @@ static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddre
             return trap->Queue(*packet, nullptr);
         // If there was no port for the range, then return to user-space.
         break;
-    case ZX_GUEST_TRAP_MEM:
+    case ZX_GUEST_TRAP_MEM: {
         *packet = {};
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
-        // TODO(abdulla): Fetch instruction, or consider an alternative.
+        const DataAbort data_abort(iss);
+        if (!data_abort.valid)
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        packet->guest_mem.access_size = data_abort.access_size;
+        packet->guest_mem.xt = data_abort.xt;
+        packet->guest_mem.read = data_abort.read;
+        if (!data_abort.read)
+            packet->guest_mem.data = guest_state->x[data_abort.xt];
         break;
+    }
     default:
         return ZX_ERR_BAD_STATE;
     }
@@ -156,7 +173,7 @@ zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
         return handle_instruction_abort(guest_state, gpas);
     case ExceptionClass::DATA_ABORT:
         LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
-        return handle_data_abort(guest_state, gpas, traps, packet);
+        return handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
     default:
         LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n",
             static_cast<uint32_t>(syndrome.ec), syndrome.iss);

@@ -65,17 +65,17 @@ typedef struct zx_packet_guest_bell {
 typedef struct zx_packet_guest_mem {
     zx_vaddr_t addr;
 #if __aarch64__
-    uint32_t inst;
-    uint32_t reserved0;
-    uint64_t reserved1;
-    uint64_t reserved2;
+    uint8_t access_size;
+    uint8_t xt;
+    bool read;
+    uint64_t data;
 #elif __x86_64__
 // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
 #define X86_MAX_INST_LEN 15u
     uint8_t inst_len;
     uint8_t inst_buf[X86_MAX_INST_LEN];
-    uint64_t reserved;
 #endif
+    uint64_t reserved;
 } zx_packet_guest_mem_t;
 
 typedef struct zx_packet_guest_io {

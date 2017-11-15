@@ -25,7 +25,6 @@ enum class ExceptionClass : uint8_t {
     DATA_ABORT          = 0b100100,
 };
 
-
 // Exception syndrome for a VM exit.
 struct ExceptionSyndrome {
     ExceptionClass ec;
@@ -34,6 +33,7 @@ struct ExceptionSyndrome {
     ExceptionSyndrome(uint32_t esr);
 };
 
+// System register associated with a system instruction.
 enum class SystemRegister : uint16_t {
     MAIR_EL1            = 0b11000000 << 8 /* op */ | 0b10100010 /* cr */,
     SCTLR_EL1           = 0b11000000 << 8 /* op */ | 0b00010000 /* cr */,
@@ -45,10 +45,20 @@ enum class SystemRegister : uint16_t {
 // System instruction that caused a VM exit.
 struct SystemInstruction {
     SystemRegister sysreg;
-    uint64_t* reg;
+    uint8_t xt;
     bool read;
 
-    SystemInstruction(uint32_t iss, GuestState* guest_state);
+    SystemInstruction(uint32_t iss);
+};
+
+// Data abort that caused a VM exit.
+struct DataAbort {
+    bool valid;
+    uint8_t access_size;
+    uint8_t xt;
+    bool read;
+
+    DataAbort(uint32_t iss);
 };
 
 // clang-format on
