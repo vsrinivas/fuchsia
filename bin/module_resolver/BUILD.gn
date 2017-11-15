@@ -57,6 +57,8 @@ source_set("module_resolver_impl") {
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
     "//peridot/lib/module_manifest_source",
   ]
 }

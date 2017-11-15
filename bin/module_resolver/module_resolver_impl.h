@@ -13,11 +13,12 @@
 
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/suggestion/fidl/query_handler.fidl.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace maxwell {
 
-class ModuleResolverImpl : modular::ModuleResolver {
+class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
  public:
   ModuleResolverImpl();
   ~ModuleResolverImpl() override;
@@ -29,6 +30,8 @@ class ModuleResolverImpl : modular::ModuleResolver {
 
   void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
 
+  void BindQueryHandler(fidl::InterfaceRequest<QueryHandler> request);
+
  private:
   // repo name, entry id
   using EntryId = std::pair<std::string, std::string>;
@@ -37,6 +40,9 @@ class ModuleResolverImpl : modular::ModuleResolver {
   void FindModules(modular::DaisyPtr daisy,
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
+
+  // |QueryHandler|
+  void OnQuery(UserInputPtr query, const OnQueryCallback& done) override;
 
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name,
@@ -68,6 +74,7 @@ class ModuleResolverImpl : modular::ModuleResolver {
       noun_type_to_entry_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
+  fidl::Binding<QueryHandler> query_handler_binding_;
   // These are buffered until AllSourcesAreReady() == true.
   std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 

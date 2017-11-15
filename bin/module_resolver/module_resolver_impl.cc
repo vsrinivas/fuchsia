@@ -6,6 +6,7 @@
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
+#include "garnet/public/lib/fxl/strings/split_string.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
@@ -72,7 +73,9 @@ std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
 }  // namespace
 
 ModuleResolverImpl::ModuleResolverImpl()
-    : already_checking_if_sources_are_ready_(false), weak_factory_(this) {}
+    : query_handler_binding_(this),
+      already_checking_if_sources_are_ready_(false),
+      weak_factory_(this) {}
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
 void ModuleResolverImpl::AddSource(
@@ -101,6 +104,11 @@ void ModuleResolverImpl::Connect(
   } else {
     bindings_.AddBinding(this, std::move(request));
   }
+}
+
+void ModuleResolverImpl::BindQueryHandler(
+    fidl::InterfaceRequest<QueryHandler> request) {
+  query_handler_binding_.Bind(std::move(request));
 }
 
 void ModuleResolverImpl::FindModules(
@@ -173,6 +181,66 @@ void ModuleResolverImpl::FindModules(
   }
 
   done(std::move(results));
+}
+
+namespace {
+bool StringStartsWith(const std::string& str, const std::string& prefix) {
+  return str.compare(0, prefix.length(), prefix) == 0;
+}
+}  // namespace
+
+void ModuleResolverImpl::OnQuery(UserInputPtr query,
+                                 const OnQueryCallback& done) {
+  // TODO(thatguy): This implementation is bare-bones. Don't judge.
+  // Before adding new member variables to support OnQuery() (and tying the
+  // ModuleResolverImpl internals up with what's needed for this method),
+  // please split the index-building & querying portion of ModuleResolverImpl
+  // out into its own class. Then, make a new class to handle OnQuery() and
+  // share the same index instance here and there.
+
+  fidl::Array<ProposalPtr> proposals = fidl::Array<ProposalPtr>::New(0);
+  for (const auto& id_entry : entries_) {
+    const auto& entry = id_entry.second;
+    // Simply prefix match on the last element of the verb.
+    // Verbs have a convention of being namespaced like java classes:
+    // com.google.subdomain.verb
+    auto parts = fxl::SplitString(entry.verb, ".", fxl::kKeepWhitespace,
+                                  fxl::kSplitWantAll);
+    const auto& last_part = parts.back();
+    if (StringStartsWith(entry.verb, query->text) ||
+        StringStartsWith(last_part.ToString(), query->text)) {
+      auto proposal = Proposal::New();
+      proposal->id = entry.binary;
+      auto create_story = CreateStory::New();
+      create_story->module_id = entry.binary;
+      auto action = Action::New();
+      action->set_create_story(std::move(create_story));
+      proposal->on_selected.push_back(std::move(action));
+
+      proposal->display = SuggestionDisplay::New();
+      proposal->display->headline =
+          std::string("Go go gadget ") + last_part.ToString();
+      proposal->display->subheadline = entry.binary;
+      proposal->display->details = "";
+      proposal->display->color = 0xffffffff;
+      proposal->display->image_url = "";
+      proposal->display->image_type = SuggestionImageType::OTHER;
+      proposal->display->icon_urls = fidl::Array<fidl::String>::New(0);
+      proposal->display->annoyance = AnnoyanceType::NONE;
+
+      proposal->confidence = 1.0;  // Yeah, super confident.
+
+      proposals.push_back(std::move(proposal));
+    }
+  }
+
+  if (proposals.size() > 10) {
+    proposals.resize(10);
+  }
+
+  auto response = QueryResponse::New();
+  response->proposals = std::move(proposals);
+  done(std::move(response));
 }
 
 void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {

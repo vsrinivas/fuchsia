@@ -11,6 +11,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "lib/suggestion/fidl/query_handler.fidl.h"
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"
@@ -30,6 +32,7 @@ constexpr char kRWModuleRepositoryPath[] = "/data/module_manifest_repository";
 class ModuleResolverApp {
  public:
   ModuleResolverApp(app::ApplicationContext* const context) {
+    // Set up |resolver_impl_|.
     resolver_impl_.AddSource(
         "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kROModuleRepositoryPath, false /* create */));
@@ -47,6 +50,13 @@ class ModuleResolverApp {
               return network_service;
             },
             "cloud-mods", "" /* prefix */));
+
+    // Make |resolver_impl_| a query (ask) handler.
+    IntelligenceServicesPtr intelligence_services;
+    context->ConnectToEnvironmentService(intelligence_services.NewRequest());
+    fidl::InterfaceHandle<QueryHandler> query_handler;
+    resolver_impl_.BindQueryHandler(query_handler.NewRequest());
+    intelligence_services->RegisterQueryHandler(std::move(query_handler));
 
     context->outgoing_services()->AddService<modular::ModuleResolver>(
         [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
