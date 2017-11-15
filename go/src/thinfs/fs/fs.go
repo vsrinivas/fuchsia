@@ -79,35 +79,33 @@ const (
 )
 
 // OpenFlags defines the options a client can request when opening a file or directory.
-type OpenFlags uint32
+type OpenFlags int
 
 const (
 	// OpenFlagRead indicates the file should be opened with read permissions
 	OpenFlagRead OpenFlags = 1 << iota
 	// OpenFlagWrite indicates the file should be opened with write permissions
 	OpenFlagWrite
-
-	// OpenFlagCreate indicates the file should be created if it does not exist (only valid with
-	// "write")
-	OpenFlagCreate OpenFlags = 1 << (iota + 14)
-	// OpenFlagExclusive indicates that the operation should fail if it already exists (only valid
-	// with "create")
-	OpenFlagExclusive
+	// OpenFlagAppend indicates all writes should append to the file (only valid with "write")
+	OpenFlagAppend
 	// OpenFlagTruncate indicates the file should be truncated before writing (only valid with
 	// "write")
 	OpenFlagTruncate
+	// OpenFlagCreate indicates the file should be created if it does not exist (only valid with
+	// "write")
+	OpenFlagCreate
+	// OpenFlagExclusive indicates that the operation should fail if it already exists (only valid
+	// with "create")
+	OpenFlagExclusive
+	// OpenFlagFile indicates the operation must act on a file
+	OpenFlagFile
 	// OpenFlagDirectory indicates the operation must act on a directory
 	OpenFlagDirectory
-	// OpenFlagAppend indicates all writes should append to the file (only valid with "write")
-	OpenFlagAppend
-	_ // NoRemote
 	// OpenFlagPath indicates the operation should only open the file descriptor,
 	// not actually opening the file.
 	OpenFlagPath
-	// OpenFlagFile indicates the operation must act on a file
-	OpenFlagFile
 	// OpenFlagPipeline indicates the open request should open immediately with no response
-	OpenFlagPipeline OpenFlags = (1 << 31)
+	OpenFlagPipeline
 )
 
 // Read returns if the Read permission is active

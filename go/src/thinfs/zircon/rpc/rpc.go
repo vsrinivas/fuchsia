@@ -175,14 +175,40 @@ func fileTypeToRIO(t fs.FileType) uint32 {
 	}
 }
 
-func openFlagsFromRIO(arg uint32, mode uint32) fs.OpenFlags {
-	mask := uint32(syscall.FdioAlignedFlags | syscall.FsRightReadable | syscall.FsRightWritable)
-	res := fs.OpenFlags(arg & mask)
+func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
+	res := fs.OpenFlags(0)
+
+	// File access mode
+	if arg&syscall.O_RDWR != 0 {
+		res |= fs.OpenFlagRead | fs.OpenFlagWrite
+	} else if arg&syscall.O_WRONLY != 0 {
+		res |= fs.OpenFlagWrite
+	} else {
+		res |= fs.OpenFlagRead
+	}
+	if arg&syscall.O_PATH != 0 {
+		res |= fs.OpenFlagPath
+	}
 
 	// Additional open flags
-	if arg&syscall.FsFlagCreate != 0 {
+	if arg&syscall.O_CREAT != 0 {
 		res |= fs.OpenFlagCreate
 		res |= fs.OpenFlagWrite | fs.OpenFlagRead
+	}
+	if arg&syscall.O_EXCL != 0 {
+		res |= fs.OpenFlagExclusive
+	}
+	if arg&syscall.O_TRUNC != 0 {
+		res |= fs.OpenFlagTruncate
+	}
+	if arg&syscall.O_APPEND != 0 {
+		res |= fs.OpenFlagAppend
+	}
+	if arg&syscall.O_DIRECTORY != 0 {
+		res |= fs.OpenFlagDirectory
+	}
+	if arg&syscall.O_PIPELINE != 0 {
+		res |= fs.OpenFlagPipeline
 	}
 
 	// Ad-hoc mechanism for additional file access mode flags
@@ -281,19 +307,26 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(f.Touch(atime, mtime))
 	case fdio.OpFcntl:
-		statusFlags := uint32(syscall.FsFlagAppend)
-		rightFlags := uint32(syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsFlagPath)
+		flags := openFlagsFromRIO(int32(msg.FcntlFlags()), 0)
+		statusFlags := fs.OpenFlagAppend
 		switch uint32(msg.Arg) {
 		case fdio.OpFcntlCmdGetFL:
 			var cflags uint32
-			oflags := uint32(f.GetOpenFlags())
-			cflags = oflags & (rightFlags | statusFlags)
+			oflags := f.GetOpenFlags()
+			if oflags.Append() {
+				cflags |= syscall.O_APPEND
+			}
+			if oflags.Read() && oflags.Write() {
+				cflags |= syscall.O_RDWR
+			} else if oflags.Write() {
+				cflags |= syscall.O_WRONLY
+			} else if oflags.Path() {
+				cflags |= syscall.O_PATH
+			}
 			msg.SetFcntlFlags(cflags)
 			return zx.ErrOk
 		case fdio.OpFcntlCmdSetFL:
-			flags := uint32(openFlagsFromRIO(msg.FcntlFlags(), 0))
-			uflags := (uint32(f.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
-			err := f.SetOpenFlags(fs.OpenFlags(uflags))
+			err := f.SetOpenFlags((f.GetOpenFlags() & ^statusFlags) | (flags & statusFlags))
 			return errorToRIO(err)
 		default:
 			msg.DiscardHandles()
@@ -349,7 +382,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			return fdio.IndirectError(msg.Handle[0], zx.ErrInvalidArgs)
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
-		flags := openFlagsFromRIO(uint32(msg.Arg), msg.Mode())
+		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
 		if flags.Path() {
 			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagPipeline
 		}
