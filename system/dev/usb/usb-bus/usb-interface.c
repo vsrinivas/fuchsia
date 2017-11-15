@@ -309,8 +309,12 @@ static zx_status_t usb_interface_set_configuration(void* ctx, int configuration)
 static zx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
 
-    usb_device_control(intf->device,  USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_ENDPOINT,
-                       USB_REQ_CLEAR_FEATURE, USB_ENDPOINT_HALT, ep_address, NULL, 0);
+    // calling USB_REQ_CLEAR_FEATURE on a stalled control endpoint will not work,
+    // so we only do this for the other endpoints
+    if (ep_address != 0) {
+        usb_device_control(intf->device,  USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_ENDPOINT,
+                           USB_REQ_CLEAR_FEATURE, USB_ENDPOINT_HALT, ep_address, NULL, 0);
+    }
     return usb_hci_reset_endpoint(&intf->hci, intf->device_id, ep_address);
 }
 
