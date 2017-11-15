@@ -227,8 +227,10 @@ ZIRCON_DRIVER_END(pci)
 static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent) {
     for (uint32_t index = 0;; index++) {
         zx_device_t* dev;
-        // don't hang onto the PCI handle - we don't need it any more
-        if (kpci_init_child(parent, index, false, ZX_HANDLE_INVALID, &dev) != ZX_OK) {
+        // TODO(cja): Once the protocol is entirely proxied we will need to
+        // revisit handle ownership. Top devhost should keep handles, proxy
+        // should not.
+        if (kpci_init_child(parent, index, true, ZX_HANDLE_INVALID, &dev) != ZX_OK) {
             break;
         }
     }
