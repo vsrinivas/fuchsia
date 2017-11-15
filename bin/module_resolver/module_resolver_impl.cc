@@ -245,7 +245,12 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
 
 void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {
   auto res = ready_sources_.insert(source_name);
-  FXL_CHECK(res.second) << "Got idle notification twice from " << source_name;
+  if (!res.second) {
+    // It's OK for us to get an idle notification twice from a repo. This
+    // happens, for instance, if there's a network problem and we have to
+    // re-establish it.
+    return;
+  }
 
   if (AllSourcesAreReady()) {
     // They are all ready. Bind any pending Connect() calls.
