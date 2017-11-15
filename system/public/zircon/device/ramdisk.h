@@ -12,6 +12,8 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 1)
 #define IOCTL_RAMDISK_UNLINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 2)
+#define IOCTL_RAMDISK_SET_FLAGS \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 3)
 
 typedef struct ramdisk_ioctl_config {
     uint64_t blk_size;
@@ -29,3 +31,8 @@ IOCTL_WRAPPER_INOUT(ioctl_ramdisk_config, IOCTL_RAMDISK_CONFIG, ramdisk_ioctl_co
 
 // ssize_t ioctl_ramdisk_unlink(int fd);
 IOCTL_WRAPPER(ioctl_ramdisk_unlink, IOCTL_RAMDISK_UNLINK);
+
+// ssize_t ioctl_ramdisk_set_flags(int fd, uint32_t* in);
+// The flags to set match block_info_t.flags. This is intended to simulate the behavior
+// of other block devices, so it should be used only for tests.
+IOCTL_WRAPPER_IN(ioctl_ramdisk_set_flags, IOCTL_RAMDISK_SET_FLAGS, uint32_t);

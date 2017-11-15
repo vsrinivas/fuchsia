@@ -383,60 +383,115 @@ static bool mount_get_device(void) {
     END_TEST;
 }
 
-static bool mount_readonly(void) {
-    char ramdisk_path[PATH_MAX];
-    const char* mount_path = "/tmp/mount_readonly";
-
-    BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK, "");
-    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
-    int fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(fd, 0, "");
-
+static bool MountMinfs(int block_fd, bool read_only, const char* mount_path) {
+    BEGIN_HELPER;
     mount_options_t options;
     memcpy(&options, &default_mount_options, sizeof(mount_options_t));
-    options.readonly = false;
+    options.readonly = read_only;
 
-    // Mount MinFS as writable
-    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
+    ASSERT_EQ(mount(block_fd, mount_path, DISK_FORMAT_MINFS, &options,
                     launch_stdio_async), ZX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+    END_HELPER;
+    return true;
+}
 
-    // Demonstrate we can modify the filesystem
+// TODO(rvargas): Convert to C++ and reorganize this a bit.
+static bool CreateTestFile(const char* ramdisk_path, const char* mount_path,
+                           const char* file_name) {
+    BEGIN_HELPER;
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_TRUE(MountMinfs(fd, false, mount_path), "");
+
     int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GE(root_fd, 0, "");
-    fd = openat(root_fd, "some_file", O_CREAT | O_RDWR);
+    fd = openat(root_fd, file_name, O_CREAT | O_RDWR);
     ASSERT_GE(fd, 0, "");
     ASSERT_EQ(write(fd, "hello", 6), 6, "");
 
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(close(root_fd), 0, "");
     ASSERT_EQ(umount(mount_path), ZX_OK, "");
+    END_HELPER;
+    return true;
+}
 
-    // Let's try mounting again, but as read-only
-    options.readonly = true;
-    fd = open(ramdisk_path, O_RDWR);
-    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
-                    launch_stdio_async), ZX_OK, "");
-    root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+static bool mount_readonly(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_readonly";
+    const char file_name[] = "some_file";
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
+    ASSERT_TRUE(CreateTestFile(ramdisk_path, mount_path, file_name), "");
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    bool read_only = true;
+    ASSERT_TRUE(MountMinfs(fd, read_only, mount_path), "");
+
+    int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GE(root_fd, 0, "");
-    fd = openat(root_fd, "some_file", O_CREAT | O_RDWR);
+    fd = openat(root_fd, file_name, O_CREAT | O_RDWR);
 
     // We can no longer open the file as writable
     ASSERT_LT(fd, 0, "");
 
     // We CAN open it as readable though
-    fd = openat(root_fd, "some_file", O_RDONLY);
+    fd = openat(root_fd, file_name, O_RDONLY);
     ASSERT_GT(fd, 0, "");
     ASSERT_LT(write(fd, "hello", 6), 0, "");
     char buf[6];
     ASSERT_EQ(read(fd, buf, 6), 6, "");
     ASSERT_EQ(memcmp(buf, "hello", 6), 0, "");
 
-    ASSERT_LT(renameat(root_fd, "some_file", root_fd, "new_file"), 0, "");
-    ASSERT_LT(unlinkat(root_fd, "some_file", 0), 0, "");
+    ASSERT_LT(renameat(root_fd, file_name, root_fd, "new_file"), 0, "");
+    ASSERT_LT(unlinkat(root_fd, file_name, 0), 0, "");
 
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(root_fd), 0, "");
+    ASSERT_EQ(umount(mount_path), ZX_OK, "");
+
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+
+    END_TEST;
+}
+
+static bool mount_block_readonly(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_readonly";
+    const char file_name[] = "some_file";
+
+    BEGIN_TEST;
+
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
+    ASSERT_TRUE(CreateTestFile(ramdisk_path, mount_path, file_name), "");
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    uint32_t flags = BLOCK_FLAG_READONLY;
+    ASSERT_EQ(0, ioctl_ramdisk_set_flags(fd, &flags), "");
+
+    bool read_only = false;
+    ASSERT_TRUE(MountMinfs(fd, read_only, mount_path), "");
+
+    // We can't modify the file.
+    int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GE(root_fd, 0, "");
+    fd = openat(root_fd, file_name, O_CREAT | O_RDWR);
+    ASSERT_LT(fd, 0, "");
+
+    // We can open it as read-only.
+    fd = openat(root_fd, file_name, O_RDONLY);
+    ASSERT_GT(fd, 0, "");
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(close(root_fd), 0, "");
     ASSERT_EQ(umount(mount_path), ZX_OK, "");
@@ -494,6 +549,7 @@ RUN_TEST_MEDIUM(mount_remount)
 RUN_TEST_MEDIUM(mount_fsck)
 RUN_TEST_MEDIUM(mount_get_device)
 RUN_TEST_MEDIUM(mount_readonly)
+RUN_TEST_MEDIUM(mount_block_readonly)
 RUN_TEST_MEDIUM(statfs_test)
 END_TEST_CASE(fs_management_tests)
 

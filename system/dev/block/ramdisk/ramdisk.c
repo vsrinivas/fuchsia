@@ -30,6 +30,7 @@ typedef struct ramdisk_device {
     zx_device_t* zxdev;
     uint64_t blk_size;
     uint64_t blk_count;
+    uint32_t flags;
     zx_handle_t vmo;
     uintptr_t mapped_addr;
     block_callbacks_t* cb;
@@ -108,6 +109,7 @@ static void ramdisk_get_info(void* ctx, block_info_t* info) {
     info->block_count = sizebytes(ramdev) / ramdev->blk_size;
     // Arbitrarily set, but matches the SATA driver for testing
     info->max_transfer_size = (1 << 25);
+    info->flags = ramdev->flags;
 }
 
 static void ramdisk_fifo_set_callbacks(void* ctx, block_callbacks_t* cb) {
@@ -178,8 +180,8 @@ static void ramdisk_unbind(void* ctx) {
     device_remove(ramdev->zxdev);
 }
 
-static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
-                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd_len,
+                                 void* reply, size_t max, size_t* out_actual) {
     ramdisk_device_t* ramdev = ctx;
     if (ramdev->dead) {
         return ZX_ERR_BAD_STATE;
@@ -188,6 +190,14 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
     switch (op) {
     case IOCTL_RAMDISK_UNLINK: {
         ramdisk_unbind(ramdev);
+        return ZX_OK;
+    }
+    case IOCTL_RAMDISK_SET_FLAGS: {
+        if (cmd_len < sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        uint32_t* flags = (uint32_t*)cmd;
+        ramdev->flags = *flags;
         return ZX_OK;
     }
     // Block Protocol

@@ -444,6 +444,16 @@ int main(int argc, char** argv) {
     fbl::unique_fd fd;
 #ifdef __Fuchsia__
     fd.reset(FS_FD_BLOCKDEVICE);
+    if (!readonly) {
+        block_info_t block_info;
+        zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
+        if (status < ZX_OK) {
+            fprintf(stderr, "minfs: Unable to query block device, fd: %d status: 0x%x\n", fd.get(),
+                    status);
+            return -1;
+        }
+        readonly = block_info.flags & BLOCK_FLAG_READONLY;
+    }
 #else
     uint32_t flags = O_RDWR;
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {

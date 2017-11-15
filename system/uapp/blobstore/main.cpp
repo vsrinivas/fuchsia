@@ -27,9 +27,20 @@ namespace {
 
 #ifdef __Fuchsia__
 
-int do_blobstore_mount(int fd, bool readonly) {
+int do_blobstore_mount(int block_fd, bool readonly) {
+    if (!readonly) {
+        block_info_t block_info;
+        zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(block_fd, &block_info));
+        if (status < ZX_OK) {
+            FS_TRACE_ERROR("blobstore: Unable to query block device, fd: %d status: 0x%x\n",
+                            block_fd, status);
+            return -1;
+        }
+        readonly = block_info.flags & BLOCK_FLAG_READONLY;
+    }
+
     fbl::RefPtr<blobstore::VnodeBlob> vn;
-    if (blobstore::blobstore_mount(&vn, fd) < 0) {
+    if (blobstore::blobstore_mount(&vn, block_fd) < 0) {
         return -1;
     }
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
