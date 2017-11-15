@@ -3,9 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if [[ -z $FUCHSIA_DIR ]]; then
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../devshell/lib/vars.sh
-fi
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../devshell/lib/vars.sh
+fx-config-read
 
 get-gcloud-config() {
   gcloud -q config get-value "$@" 2>/dev/null
