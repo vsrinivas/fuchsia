@@ -54,6 +54,9 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
 #elif defined(__aarch64__)
 
     if (flags & ZX_CACHE_FLUSH_DATA) {
+        // Flush data to the point of coherency which effectively means
+        // making sure cache data is written back to main mmemory and optionally
+        // invalidated.
         if (flags & ZX_CACHE_FLUSH_INVALIDATE) {
             for_each_dcache_line(addr, len, [](uintptr_t p) {
                     // Clean and invalidate data cache to point of coherency.
@@ -65,22 +68,26 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
                     __asm__ volatile("dc cvac, %0" :: "r"(p));
                 });
         }
+        // Ensure the cache flush has completed with regards to point of coherency
+        __asm__ volatile("dsb ish");
     }
 
     if (flags & ZX_CACHE_FLUSH_INSN) {
         // If we didn't already clean the dcache all the way to the point
         // of coherency, clean it the point to unification.
+        // Point of unification is the level within the cache heirarchy where the
+        // the instruction and data cache are no longer separate. This is usually L2.
         if (!(flags & ZX_CACHE_FLUSH_DATA)) {
             for_each_dcache_line(addr, len, [](uintptr_t p) {
                     // Clean data cache (dc) to point of unification (cvau).
                     __asm__ volatile("dc cvau, %0" :: "r"(p));
                 });
+            // Synchronize the dcache flush to before the icache flush.
+            __asm__ volatile("dsb ish");
         }
-        // Synchronize the dcache flush to before the icache flush.
-        __asm__ volatile("dsb ish");
 
         for_each_icache_line(addr, len, [](uintptr_t p) {
-                // Clean instruction cache (ic) to point of unification (ivau).
+                // Invalidate instruction cache (ic) to point of unification (ivau).
                 __asm__ volatile("ic ivau, %0" :: "r"(p));
             });
         // Synchronize the icache flush to before future instruction fetches.
