@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//packages/gn/packages.gni")
 import("//build/config/fuchsia/bootdata.gni")
 import("//build/toolchain/clang_toolchain.gni")
+import("//packages/gn/packages.gni")
 
 declare_args() {
   # path to autorun script
@@ -39,6 +39,18 @@ declare_args() {
   } else {
     zircon_platforms = [ "zircon-qemu-arm64" ]
   }
+
+  # Build a large ramdisk image based on `system.manifest` into `user.bootfs`.
+  build_ramdisk = true
+
+  # The package key to use for signing the system package. New keys can be
+  # generated with the `pm` host command.
+  system_package_key = "//packages/development.key"
+
+  # The size of the minfs data partition image to create. Normally this image
+  # is added to FVM, and can therefore expand as needed. It must be at least
+  # 10mb (the default) in order to be succesfully initialized.
+  data_image_size = "10m"
 }
 
 declare_args() {
@@ -110,6 +122,18 @@ zircon_devmgr_require_system_manifest = "require_system.manifest"
 
 final_boot_manifest = "$root_out_dir/boot.manifest"
 final_system_manifest = "$root_out_dir/system.manifest"
+
+# Keep the following in sync with the values in
+#   //scripts/devshell/lib/image_build_vars.sh
+images_dir = "$root_out_dir/images"
+efi_image_path = "$images_dir/efi.blk"
+system_package_dir = "$root_gen_dir/system.pkg"
+system_package_meta_far = "$system_package_dir/meta.far"
+system_package_cmdline = "$images_dir/cmdline.txt"
+blobstore_image_path = "$images_dir/blobstore.blk"
+data_image_path = "$images_dir/data.blk"
+fvm_image_path = "$images_dir/fvm.blk"
+fvm_sparse_image_path = "$images_dir/fvm.sparse.blk"
 
 action("finalize_manifests") {
   visibility = [ ":*" ]
@@ -250,6 +274,92 @@ action("finalize_manifests") {
   }
 }
 
+action("system.pkg") {
+  visibility = [ ":*" ]
+  pm_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
+  pkgsvr_label = "//garnet/go/src/pm:pkgsvr_bin"
+  deps = [
+    ":finalize_manifests",
+    pkgsvr_label,
+    pm_label,
+  ]
+
+  pm_out_dir = get_label_info(pm_label, "root_out_dir")
+  pkgsvr_out_dir = get_label_info(pkgsvr_label, "root_out_dir")
+
+  pm_bin = "$pm_out_dir/pm"
+  pkgsvr_bin = "$pkgsvr_out_dir/pkgsvr"
+  merkleroot_bin = "//out/build-zircon/tools/merkleroot"
+
+  inputs = [
+    merkleroot_bin,
+    pkgsvr_bin,
+    pm_bin,
+    system_package_key,
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path("system_package.py"),
+    "--system-manifest",
+    rebase_path(final_system_manifest),
+    "--system-package-dir",
+    rebase_path(system_package_dir),
+    "--system-package-key",
+    rebase_path(system_package_key),
+    "--pm",
+    rebase_path(pm_bin),
+    "--pkgsvr",
+    rebase_path(pkgsvr_bin),
+    "--merkleroot",
+    rebase_path(merkleroot_bin),
+    "--commandline",
+    rebase_path(system_package_cmdline),
+  ]
+  sources = [
+    final_system_manifest,
+  ]
+  outputs = [
+    system_package_cmdline,
+    system_package_dir,
+    system_package_meta_far,
+  ]
+}
+
+action("blobstore.blk") {
+  visibility = [ ":*" ]
+  blobstore_bin = "//out/build-zircon/tools/blobstore"
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path("blobstore.py"),
+    "--blobstore",
+    rebase_path(blobstore_bin),
+    "--image",
+    rebase_path(blobstore_image_path),
+    "--manifest",
+    rebase_path(final_system_manifest),
+    "--add",
+    rebase_path(system_package_meta_far),
+  ]
+  sources = [
+    final_system_manifest,
+    system_package_meta_far,
+  ]
+  inputs = [
+    blobstore_bin,
+  ]
+  outputs = [
+    blobstore_image_path,
+  ]
+  deps = [
+    ":finalize_manifests",
+    ":system.pkg",
+  ]
+}
+
 if (kernel_cmdline_file != "") {
   bootdata_cmdline("kernel_cmdline") {
     visibility = [ ":*" ]
@@ -259,6 +369,16 @@ if (kernel_cmdline_file != "") {
   }
 }
 
+bootdata_cmdline("systempkg_cmdline") {
+  visibility = [ ":*" ]
+  inputs = [
+    system_package_cmdline,
+  ]
+  deps = [
+    ":system.pkg",
+  ]
+}
+
 # Package up the /boot filesystem along with Zircon's kernel bootdata.
 # This `bootdata.bin` along with the Zircon kernel is enough to boot.
 foreach(platform, zircon_platforms) {
@@ -266,8 +386,7 @@ foreach(platform, zircon_platforms) {
     deps = [
       ":finalize_manifests",
     ]
-    kernel_build_dir =
-        "//out/build-zircon/build-${platform}"
+    kernel_build_dir = "//out/build-zircon/build-${platform}"
     inputs = [
       "$kernel_build_dir/kernel-bootdata.bin",
       final_boot_manifest,
@@ -276,6 +395,18 @@ foreach(platform, zircon_platforms) {
     if (kernel_cmdline_file != "") {
       deps += [ ":kernel_cmdline" ]
       inputs += get_target_outputs(":kernel_cmdline")
+    }
+  }
+
+  bootdata("bootdata-blobstore-${platform}") {
+    deps = [
+      ":bootdata-${platform}",
+      ":systempkg_cmdline",
+    ]
+    inputs = get_target_outputs(":systempkg_cmdline")
+
+    foreach(label, deps) {
+      inputs += get_target_outputs(label)
     }
   }
 }
@@ -290,12 +421,153 @@ bootdata("system_bootfs") {
   ]
 }
 
+# data.blk creates an empty but initialized minfs data partition. The partition
+# is included in fvm.blk and fvm-sparse.blk so that they contain the start of a
+# data partition, without which /data would not be mounted on target.
+action("data.blk") {
+  minfs_path = "//out/build-zircon/tools/minfs"
+  inputs = [
+    minfs_path,
+  ]
+
+  sized_path = rebase_path(data_image_path)
+  sized_path = "${sized_path}@${data_image_size}"
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path(minfs_path),
+    sized_path,
+    "create",
+  ]
+  outputs = [
+    data_image_path,
+  ]
+}
+
+# fvm.blk creates a non-sparse FVM partition image containing the blobstore
+# partition produced by blobstore.blk and the data partition produced by
+# data.blk. fvm.blk is primarily invoked and used by the qemu run, via `fx
+# run-fvm`.
+action("fvm.blk") {
+  visibility = [ ":*" ]
+  fvm_path = "//out/build-zircon/tools/fvm"
+  inputs = [
+    blobstore_image_path,
+    data_image_path,
+    fvm_path,
+  ]
+  deps = [
+    ":blobstore.blk",
+    ":data.blk",
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path(fvm_path),
+    rebase_path(fvm_image_path),
+    "create",
+    "--blobstore",
+    rebase_path(blobstore_image_path),
+    "--data",
+    rebase_path(data_image_path),
+  ]
+  outputs = [
+    fvm_image_path,
+  ]
+}
+
+# fvm.sparse.blk creates a sparse FVM partition image containing the blobstore
+# partition produced by blobstore.blk and the data partition produced by
+# data.blk. fvm.sparse.blk is primarily invoked and used by the paver boot, via
+# `fx boot-paver`.
+action("fvm.sparse.blk") {
+  visibility = [ ":*" ]
+  fvm_path = "//out/build-zircon/tools/fvm"
+  inputs = [
+    blobstore_image_path,
+    data_image_path,
+    fvm_path,
+  ]
+  deps = [
+    ":blobstore.blk",
+    ":data.blk",
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path(fvm_path),
+    rebase_path(fvm_sparse_image_path),
+    "sparse",
+    "--blobstore",
+    rebase_path(blobstore_image_path),
+    "--data",
+    rebase_path(data_image_path),
+  ]
+  outputs = [
+    fvm_sparse_image_path,
+  ]
+}
+
+# efi.blk is a partition image containing a a kernel and bootdata image, plus,
+# if appropriate, a bootloader. This target is not consumed by the default
+# build, but instead may be invoked by tools from //scripts and elsewhere that
+# need an EFI partition image.
+action("efi.blk") {
+  bootdata_label = ":bootdata-blobstore-${zircon_platforms[0]}"
+  deps = [
+    bootdata_label,
+  ]
+
+  bootdata_bins = get_target_outputs(bootdata_label)
+  bootdata_bin = bootdata_bins[0]
+  assert([ bootdata_bin ] == bootdata_bins)
+
+  kernel_build_dir = "//out/build-zircon/build-${zircon_platforms[0]}"
+  mkfs_msdosfs_bin = "//out/build-zircon/tools/mkfs-msdosfs"
+  zircon_bin = "$kernel_build_dir/zircon.bin"
+
+  inputs = [
+    mkfs_msdosfs_bin,
+    zircon_bin,
+  ]
+  inputs += get_target_outputs(bootdata_label)
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path("efi.py"),
+    "--output",
+    rebase_path(efi_image_path),
+    "--mkfs-msdosfs",
+    rebase_path(mkfs_msdosfs_bin),
+    "--zircon",
+    rebase_path(zircon_bin),
+    "--bootdata",
+    rebase_path(bootdata_bin),
+  ]
+
+  if (target_cpu == "x64") {
+    gigaboot_bin = "$kernel_build_dir/bootloader/bootx64.efi"
+    args += [
+      "--efi-bootloader",
+      rebase_path(gigaboot_bin),
+    ]
+    inputs += [ gigaboot_bin ]
+  }
+
+  outputs = [
+    efi_image_path,
+  ]
+}
+
 # DEPRECATED
 # Roll those together into the image for booting with /system from RAM disk.
 bootdata("mkbootfs") {
   output_name = "user"
   output_extension = "bootfs"
-
   deps = [
     ":bootdata-${zircon_platforms[0]}",
     ":system_bootfs",
@@ -304,7 +576,6 @@ bootdata("mkbootfs") {
   foreach(label, deps) {
     inputs += get_target_outputs(label)
   }
-
   deps += extra_bootdata
   foreach(label, extra_bootdata) {
     # get_target_outputs only works on labels defined in the same file.
@@ -315,13 +586,21 @@ bootdata("mkbootfs") {
 }
 
 group("default") {
-  deps = [
-    ":system_bootfs",
-  ]
-  foreach(platform, zircon_platforms) {
-    deps += [ ":bootdata-${platform}" ]
+  if (build_ramdisk) {
+    # TODO(mcgrathr): Remove dep when deprecated user.bootfs is gone.
+    deps = [
+      ":mkbootfs",
+      ":system_bootfs",
+    ]
+    foreach(platform, zircon_platforms) {
+      deps += [ ":bootdata-${platform}" ]
+    }
+  } else {
+    deps = [
+      ":blobstore.blk",
+    ]
+    foreach(platform, zircon_platforms) {
+      deps += [ ":bootdata-blobstore-${platform}" ]
+    }
   }
-
-  # TODO(mcgrathr): Remove dep when deprecated user.bootfs is gone.
-  deps += [ ":mkbootfs" ]
 }
