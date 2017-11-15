@@ -7,9 +7,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -20,7 +18,6 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
-#include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
@@ -262,16 +259,16 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 // as a user shell from device runner and executes a predefined sequence of
 // steps, rather than to expose a UI to be driven by user interaction, as a user
 // shell normally would.
-class TestUserShellApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  explicit TestUserShellApp(app::ApplicationContext* const application_context,
-                            Settings settings)
+  explicit TestApp(app::ApplicationContext* const application_context,
+                   Settings settings)
       : ComponentBase(application_context),
         settings_(std::move(settings)) {
     TestInit(__FILE__);
   }
 
-  ~TestUserShellApp() override = default;
+  ~TestApp() override = default;
 
  private:
   using TestPoint = modular::testing::TestPoint;
@@ -558,7 +555,7 @@ class TestUserShellApp : public modular::testing::ComponentBase<modular::UserShe
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestUserShellApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -566,15 +563,6 @@ class TestUserShellApp : public modular::testing::ComponentBase<modular::UserShe
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
-
-  fsl::MessageLoop loop;
-
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<TestUserShellApp> driver(
-      app_context->outgoing_services(),
-      std::make_unique<TestUserShellApp>(app_context.get(), std::move(settings)),
-      [&loop] { loop.QuitNow(); });
-
-  loop.Run();
+  modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
   return 0;
 }

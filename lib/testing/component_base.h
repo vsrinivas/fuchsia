@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/single_service_app.h"
@@ -43,10 +44,10 @@ class ComponentBase : protected SingleServiceApp<Component> {
 
   ~ComponentBase() override = default;
 
+  // We must not call modular::testing::Init() in the base class constructor,
+  // because that's before the test points are initialized. It's fine to call
+  // this from the derived class constructor.
   void TestInit(const char* const file) {
-    // We must not call testing::Init() in the base class constructor, because
-    // that's before the test points are initialized. It's fine to call this
-    // form the derived class constructor.
     modular::testing::Init(Base::application_context(), file);
   }
 
@@ -70,6 +71,42 @@ class ComponentBase : protected SingleServiceApp<Component> {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
 };
+
+// A main function for an application that only runs the implementation of a
+// single component used for integration testing. The component implementation
+// Impl usually derives from ComponentBase.
+//
+// Args are either nothing or the instance of a Settings class initialized from
+// the command line arguments.
+//
+// Example use with settings (TestApp and Settings are locally defined classes):
+//
+//   int main(int argc, const char** argv) {
+//     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+//     Settings settings(command_line);
+//     modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
+//     return 0;
+//   }
+//
+// Example use without settings (TestApp is a locally defined class):
+//
+//   int main(int, const char**) {
+//     modular::testing::ComponentMain<TestApp>();
+//     return 0;
+//   }
+//
+template<typename Impl, typename... Args>
+void ComponentMain(Args... args) {
+  fsl::MessageLoop loop;
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<Impl> driver(
+      app_context->outgoing_services(),
+      std::make_unique<Impl>(app_context.get(), std::move(args)...),
+      [&loop] { loop.QuitNow(); });
+
+  loop.Run();
+}
 
 }  // namespace testing
 }  // namespace modular

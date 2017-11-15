@@ -22,11 +22,9 @@ executable("test_link_update") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
     "//garnet/public/lib/ui/views/fidl",
-    "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/user/fidl",
   ]
 }

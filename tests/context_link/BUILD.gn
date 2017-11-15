@@ -28,7 +28,6 @@ executable("context_link_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
@@ -47,7 +46,7 @@ executable("context_link_module") {
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
   ]

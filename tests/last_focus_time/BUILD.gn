@@ -24,11 +24,9 @@ executable("test_last_focus_time") {
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/common:story_provider_watcher_base",
     "//peridot/lib/fidl:array_to_string",
-    "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/user/fidl",
   ]
 }

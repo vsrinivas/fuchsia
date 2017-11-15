@@ -5,19 +5,12 @@
 #include <memory>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include "lib/fxl/time/time_delta.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
-#include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
@@ -196,14 +189,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
-
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<TestApp> driver(
-      app_context->outgoing_services(),
-      std::make_unique<TestApp>(app_context.get()),
-      [&loop] { loop.QuitNow(); });
-
-  loop.Run();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

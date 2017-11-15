@@ -4,12 +4,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
@@ -20,22 +16,22 @@
 
 namespace {
 
-using modular::testing::TestPoint;
-
-class SuggestionTestUserShellApp
+class TestApp
     : modular::StoryWatcher,
       maxwell::SuggestionListener,
       public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  SuggestionTestUserShellApp(app::ApplicationContext* const application_context)
+  TestApp(app::ApplicationContext* const application_context)
       : ComponentBase(application_context),
         story_watcher_binding_(this) {
     TestInit(__FILE__);
   }
 
-  ~SuggestionTestUserShellApp() override = default;
+  ~TestApp() override = default;
 
  private:
+  using TestPoint = modular::testing::TestPoint;
+
   TestPoint initialized_{"SuggestionTestUserShell initialized"};
 
   // |UserShell|
@@ -120,20 +116,12 @@ class SuggestionTestUserShellApp
   maxwell::SuggestionProviderPtr suggestion_provider_;
   fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionTestUserShellApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
-
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<SuggestionTestUserShellApp> driver(
-      app_context->outgoing_services(),
-      std::make_unique<SuggestionTestUserShellApp>(app_context.get()),
-      [&loop] { loop.QuitNow(); });
-
-  loop.Run();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

@@ -29,6 +29,7 @@ source_set("component_base") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
   ]
 }
 
