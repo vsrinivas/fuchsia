@@ -22,7 +22,8 @@
 
 #include "protocol.c"
 
-// Convenience method for simple replies
+// Convenience method for simple replies. Will be expanded as more used
+// cases are found.
 static zx_status_t pci_rpc_reply_ok(zx_handle_t ch, pci_msg_t* req) {
     pci_msg_t resp = {
         .txid = req->txid,
@@ -33,6 +34,26 @@ static zx_status_t pci_rpc_reply_ok(zx_handle_t ch, pci_msg_t* req) {
 };
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
+static zx_status_t kpci_enable_bus_master(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+    bool enable = req->data[0];
+
+    zx_status_t st = zx_pci_enable_bus_master(device->handle, enable);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    return pci_rpc_reply_ok(ch, req);
+}
+
+static zx_status_t kpci_reset_device(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+    zx_status_t st = zx_pci_reset_device(device->handle);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    return pci_rpc_reply_ok(ch, req);
+}
+
 static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
     char args[32];
     snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req->data,
@@ -54,18 +75,6 @@ static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_ha
     return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 
-
-static zx_status_t kpci_enable_bus_master(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
-    bool enable = req->data[0];
-
-    zx_status_t st = zx_pci_enable_bus_master(device->handle, enable);
-    if (st != ZX_OK) {
-        return st;
-    }
-
-    return pci_rpc_reply_ok(ch, req);
-}
-
 // All callbacks corresponding to protocol operations match this signature.
 // Rather than passing the outgoing message back to kpci_rxrpc, the callback
 // itself is expected to write to the channel directly. This greatly simplifies
@@ -75,7 +84,7 @@ static zx_status_t kpci_enable_bus_master(pci_msg_t* req, kpci_device_t* device,
 // sending it back over the channel.
 typedef zx_status_t (*rxrpc_cbk_t)(pci_msg_t*, kpci_device_t*, zx_handle_t);
 rxrpc_cbk_t rxrpc_cbk_tbl[] = {
-        [PCI_OP_RESET_DEVICE] = NULL,
+        [PCI_OP_RESET_DEVICE] = kpci_reset_device,
         [PCI_OP_ENABLE_BUS_MASTER] = kpci_enable_bus_master,
         [PCI_OP_ENABLE_PIO] = NULL,
         [PCI_OP_CONFIG_READ] = NULL,

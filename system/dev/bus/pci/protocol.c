@@ -54,14 +54,44 @@ static zx_status_t kpci_op_enable_bus_master(void* ctx, bool enable) {
     return resp.ordinal;
 }
 
+// Resets the device.
+static zx_status_t kpci_op_reset_device(void* ctx) {
+    kpci_device_t* dev = ctx;
+    pci_msg_t resp = {};
+    pci_msg_t req = {
+        .txid = pci_next_txid(),
+        .ordinal = PCI_OP_RESET_DEVICE,
+    };
+
+    zx_channel_call_args_t cc_args = {
+        .wr_bytes = &req,
+        .rd_bytes = &resp,
+        .wr_num_bytes = sizeof(req),
+        .rd_num_bytes = sizeof(resp),
+    };
+
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    zx_status_t st = zx_channel_call(dev->pciroot_rpcch, 0, ZX_TIME_INFINITE,
+                                     &cc_args, &actual_bytes, &actual_handles, NULL);
+
+    // Validate that the syscall succeeded and that we received an appropriately
+    // sized response across the channel.
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    if (actual_bytes != sizeof(resp)) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    return resp.ordinal;
+}
+
+
 static zx_status_t kpci_op_enable_pio(void* ctx, bool enable) {
     kpci_device_t* device = ctx;
     return zx_pci_enable_pio(device->handle, enable);
-}
-
-static zx_status_t kpci_op_reset_device(void* ctx) {
-    kpci_device_t* device = ctx;
-    return zx_pci_reset_device(device->handle);
 }
 
 // TODO(cja): Figure out how to handle passing PIO privileges to other
