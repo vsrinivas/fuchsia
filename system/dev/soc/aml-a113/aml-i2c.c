@@ -210,78 +210,104 @@ static zx_status_t aml_i2c_wait_event(aml_i2c_dev_t* dev, uint32_t sig_mask) {
 
 
 zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
-
-    //temporary hack, only transactions that can fit in hw buffer
     ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
-
     uint32_t token_num = 0;
     uint64_t token_reg = 0;
 
     token_reg |= (uint64_t)TOKEN_START << (4*(token_num++));
     token_reg |= (uint64_t)TOKEN_SLAVE_ADDR_WR << (4*(token_num++));
 
-    for (uint32_t i=0; i < len; i++) {
-        token_reg |= (uint64_t)TOKEN_DATA << (4*(token_num++));
+    while (len > 0) {
+        bool is_last_iter = len <= 8;
+        uint32_t tx_size = is_last_iter ? len : 8;
+        for (uint32_t i=0; i < tx_size; i++) {
+            token_reg |= (uint64_t)TOKEN_DATA << (4*(token_num++));
+        }
+
+        if (is_last_iter) {
+            token_reg |= (uint64_t)TOKEN_STOP << (4*(token_num++));
+        }
+
+        dev->virt_regs->token_list_0 = (uint32_t)(token_reg & 0xffffffff);
+        dev->virt_regs->token_list_1 =
+            (uint32_t)((token_reg >> 32) & 0xffffffff);
+
+        uint64_t wdata = 0;
+        for (uint32_t i=0; i < tx_size; i++) {
+            wdata |= (uint64_t)buff[i] << (8*i);
+        }
+
+        dev->virt_regs->token_wdata_0 = (uint32_t)(wdata & 0xffffffff);
+        dev->virt_regs->token_wdata_1 = (uint32_t)((wdata >> 32) & 0xffffffff);
+
+        aml_i2c_start_xfer(dev);
+        //while (dev->virt_regs->control & 0x4) ;;    // wait for idle
+        zx_status_t status = aml_i2c_wait_event(dev, I2C_TXN_COMPLETE_SIGNAL);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        len -= tx_size;
+        buff += tx_size;
+        token_num = 0;
+        token_reg = 0;
     }
-    token_reg |= (uint64_t)TOKEN_STOP << (4*(token_num++));
 
-    dev->virt_regs->token_list_0 = (uint32_t)(token_reg & 0xffffffff);
-    dev->virt_regs->token_list_1 = (uint32_t)((token_reg >> 32) & 0xffffffff);
-
-    uint64_t wdata = 0;
-    for (uint32_t i=0; i < len; i++) {
-        wdata |= (uint64_t)buff[i] << (8*i);
-    }
-
-    dev->virt_regs->token_wdata_0 = (uint32_t)(wdata & 0xffffffff);
-    dev->virt_regs->token_wdata_1 = (uint32_t)((wdata >> 32) & 0xffffffff);
-
-    aml_i2c_start_xfer(dev);
-
-    //while (dev->virt_regs->control & 0x4) ;;    // wait for idle
-    return aml_i2c_wait_event(dev, I2C_TXN_COMPLETE_SIGNAL);
+    return ZX_OK;
 }
 
 zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
 
-    //temporary hack, only transactions that can fit in hw buffer
     ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
-
     uint32_t token_num = 0;
     uint64_t token_reg = 0;
 
     token_reg |= (uint64_t)TOKEN_START << (4*(token_num++));
     token_reg |= (uint64_t)TOKEN_SLAVE_ADDR_RD << (4*(token_num++));
 
-    for (uint32_t i=0; i < (len - 1); i++) {
-        token_reg |= (uint64_t)TOKEN_DATA << (4*(token_num++));
-    }
-    token_reg |= (uint64_t)TOKEN_DATA_LAST << (4*(token_num++));
-    token_reg |= (uint64_t)TOKEN_STOP << (4*(token_num++));
+    while (len > 0) {
+        bool is_last_iter = len <= 8;
+        uint32_t rx_size = is_last_iter ? len : 8;
 
-    dev->virt_regs->token_list_0 = (uint32_t)(token_reg & 0xffffffff);
-    token_reg = token_reg >> 32;
-    dev->virt_regs->token_list_1 = (uint32_t)(token_reg);
+        for (uint32_t i=0; i < (rx_size - 1); i++) {
+            token_reg |= (uint64_t)TOKEN_DATA << (4*(token_num++));
+        }
+        if (is_last_iter) {
+            token_reg |= (uint64_t)TOKEN_DATA_LAST << (4*(token_num++));
+            token_reg |= (uint64_t)TOKEN_STOP << (4*(token_num++));
+        } else {
+            token_reg |= (uint64_t)TOKEN_DATA << (4*(token_num++));
+        }
 
-    //clear registers to prevent data leaking from last xfer
-    dev->virt_regs->token_rdata_0 = 0;
-    dev->virt_regs->token_rdata_1 = 0;
+        dev->virt_regs->token_list_0 = (uint32_t)(token_reg & 0xffffffff);
+        token_reg = token_reg >> 32;
+        dev->virt_regs->token_list_1 = (uint32_t)(token_reg);
 
-    aml_i2c_start_xfer(dev);
+        //clear registers to prevent data leaking from last xfer
+        dev->virt_regs->token_rdata_0 = 0;
+        dev->virt_regs->token_rdata_1 = 0;
 
-    zx_status_t status = aml_i2c_wait_event(dev, I2C_TXN_COMPLETE_SIGNAL);
-    if (status != ZX_OK) {
-        return status;
-    }
+        aml_i2c_start_xfer(dev);
 
-    //while (dev->virt_regs->control & 0x4) ;;    // wait for idle
+        zx_status_t status = aml_i2c_wait_event(dev, I2C_TXN_COMPLETE_SIGNAL);
+        if (status != ZX_OK) {
+            return status;
+        }
 
-    uint64_t rdata;
-    rdata = dev->virt_regs->token_rdata_0;
-    rdata |= (uint64_t)(dev->virt_regs->token_rdata_1) << 32;
+        //while (dev->virt_regs->control & 0x4) ;;    // wait for idle
 
-    for (uint32_t i=0; i < sizeof(rdata); i++) {
-        buff[i] = (uint8_t)((rdata >> (8*i) & 0xff));
+        uint64_t rdata;
+        rdata = dev->virt_regs->token_rdata_0;
+        rdata |= (uint64_t)(dev->virt_regs->token_rdata_1) << 32;
+
+        for (uint32_t i=0; i < sizeof(rdata); i++) {
+            buff[i] = (uint8_t)((rdata >> (8*i) & 0xff));
+        }
+
+        len -= rx_size;
+        buff += rx_size;
+        token_num = 0;
+        token_reg = 0;
     }
 
     return ZX_OK;

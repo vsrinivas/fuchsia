@@ -19,7 +19,7 @@
 #define AML_I2C_CONTROL_REG_STATUS     (uint32_t)(1 << 2)
 #define AML_I2C_CONTROL_REG_ERR        (uint32_t)(1 << 3)
 
-#define AML_I2C_MAX_TRANSFER 8
+#define AML_I2C_MAX_TRANSFER 256
 
 typedef struct aml_i2c_dev aml_i2c_dev_t;
 
