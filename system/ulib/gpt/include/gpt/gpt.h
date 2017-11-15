@@ -97,6 +97,11 @@ int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_e
 // rescan partitions for the block device if needed
 int gpt_device_sync(gpt_device_t* dev);
 
+// perform all checks and computations on the in-memory representation, but DOES
+// NOT write it out to disk. To perform checks AND write to disk, use
+// gpt_device_sync
+int gpt_device_finalize(gpt_device_t* dev);
+
 // adds a partition
 int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid,
                       uint64_t offset, uint64_t blocks, uint64_t flags);

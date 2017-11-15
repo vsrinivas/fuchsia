@@ -276,7 +276,7 @@ static int gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header, gp
     return 0;
 }
 
-int gpt_device_sync(gpt_device_t* dev) {
+static int gpt_device_finalize_and_sync(gpt_device_t* dev, bool persist) {
     gpt_priv_t* priv = get_priv(dev);
 
     // write fake mbr if needed
@@ -367,16 +367,18 @@ int gpt_device_sync(gpt_device_t* dev) {
     header.crc32 = 0;
     header.crc32 = crc32(0, (const unsigned char*)&header, GPT_HEADER_SIZE);
 
-    // write backup to disk
-    rc = gpt_sync_current(priv->fd, priv->blocksize, &header, buf);
-    if (rc < 0) {
-        goto fail;
-    }
+    if (persist) {
+        // write backup to disk
+        rc = gpt_sync_current(priv->fd, priv->blocksize, &header, buf);
+        if (rc < 0) {
+            goto fail;
+        }
 
-    // write primary copy to disk
-    rc = gpt_sync_current(priv->fd, priv->blocksize, &priv->header, buf);
-    if (rc < 0) {
-        goto fail;
+        // write primary copy to disk
+        rc = gpt_sync_current(priv->fd, priv->blocksize, &priv->header, buf);
+        if (rc < 0) {
+            goto fail;
+        }
     }
 
     // align backup with new on-disk state
@@ -389,6 +391,14 @@ int gpt_device_sync(gpt_device_t* dev) {
 fail:
     free(buf);
     return -1;
+}
+
+int gpt_device_finalize(gpt_device_t* dev) {
+    return gpt_device_finalize_and_sync(dev, false);
+}
+
+int gpt_device_sync(gpt_device_t* dev) {
+    return gpt_device_finalize_and_sync(dev, true);
 }
 
 int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_end) {

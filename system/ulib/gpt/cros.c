@@ -17,7 +17,7 @@
 #define SUCCESSFUL_MASK (1ull << SUCCESSFUL_SHIFT)
 
 bool gpt_cros_is_kernel_guid(const uint8_t* guid, size_t len) {
-    static const uint8_t kernel_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL;
+    static const uint8_t kernel_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
     return len == GPT_GUID_LEN && !memcmp(guid, kernel_guid, GPT_GUID_LEN);
 }
 
