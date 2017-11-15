@@ -30,7 +30,7 @@ TEST(SocketAndFile, CopyToFileDescriptor) {
   bool success;
   CopyToFileDescriptor(
       fsl::WriteStringToSocket("Hello"), std::move(destination),
-      message_loop.task_runner(),
+      message_loop.async(),
       [&message_loop, &success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
         message_loop.PostQuitTask();
@@ -58,7 +58,7 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
 
   bool success;
   CopyFromFileDescriptor(
-      std::move(source), std::move(socket1), message_loop.task_runner(),
+      std::move(source), std::move(socket1), message_loop.async(),
       [&message_loop, &success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
         message_loop.PostQuitTask();

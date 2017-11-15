@@ -4,6 +4,7 @@
 
 #include "lib/fsl/socket/files.h"
 
+#include <async/auto_wait.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -12,8 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include "lib/fidl/c/waiter/async_waiter.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/files/file_descriptor.h"
 
 namespace fsl {
@@ -25,25 +24,20 @@ class CopyToFileHandler {
  public:
   CopyToFileHandler(zx::socket source,
                     fxl::UniqueFD destination,
-                    fxl::RefPtr<fxl::TaskRunner> task_runner,
+                    async_t* async,
                     const std::function<void(bool, fxl::UniqueFD)>& callback);
 
  private:
   ~CopyToFileHandler();
 
   void SendCallback(bool value);
-  void OnHandleReady(zx_status_t result);
-  static void WaitComplete(zx_status_t result,
-                           zx_signals_t pending,
-                           uint64_t count,
-                           void* context);
+  async_wait_result_t OnHandleReady(
+      async_t* async, zx_status_t status, const zx_packet_signal_t* signal);
 
   zx::socket source_;
   fxl::UniqueFD destination_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::function<void(bool, fxl::UniqueFD)> callback_;
-  const FidlAsyncWaiter* waiter_;
-  FidlAsyncWaitID wait_id_;
+  async::AutoWait wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CopyToFileHandler);
 };
@@ -51,63 +45,53 @@ class CopyToFileHandler {
 CopyToFileHandler::CopyToFileHandler(
     zx::socket source,
     fxl::UniqueFD destination,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     const std::function<void(bool, fxl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
-      task_runner_(std::move(task_runner)),
       callback_(callback),
-      waiter_(fidl::GetDefaultAsyncWaiter()),
-      wait_id_(0) {
-  task_runner_->PostTask([this]() { OnHandleReady(ZX_OK); });
+      wait_(async, source_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED) {
+  wait_.set_handler(fbl::BindMember(this, &CopyToFileHandler::OnHandleReady));
+  zx_status_t status = wait_.Begin();
+  FXL_CHECK(status == ZX_OK);
 }
 
-CopyToFileHandler::~CopyToFileHandler() {}
+CopyToFileHandler::~CopyToFileHandler() = default;
 
 void CopyToFileHandler::SendCallback(bool value) {
-  FXL_DCHECK(!wait_id_);
   auto callback = callback_;
   auto destination = std::move(destination_);
   delete this;
   callback(value, std::move(destination));
 }
 
-void CopyToFileHandler::OnHandleReady(zx_status_t result) {
-  if (result == ZX_OK) {
-    std::vector<char> buffer(64 * 1024);
-    size_t size = 0;
-    result = source_.read(0u, buffer.data(), buffer.size(), &size);
-    if (result == ZX_OK) {
-      bool write_success =
-          fxl::WriteFileDescriptor(destination_.get(), buffer.data(), size);
-      if (!write_success) {
-        SendCallback(false);
-      } else {
-        task_runner_->PostTask([this]() { OnHandleReady(ZX_OK); });
-      }
-      return;
-    }
-  }
-  if (result == ZX_ERR_PEER_CLOSED) {
+async_wait_result_t CopyToFileHandler::OnHandleReady(
+    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+  if (signal->observed & ZX_ERR_PEER_CLOSED) {
     SendCallback(true);
-    return;
+    return ASYNC_WAIT_FINISHED;
   }
-  if (result == ZX_ERR_SHOULD_WAIT) {
-    wait_id_ = waiter_->AsyncWait(source_.get(),
-                                  ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                  ZX_TIME_INFINITE, &WaitComplete, this);
-    return;
-  }
-  SendCallback(false);
-}
 
-void CopyToFileHandler::WaitComplete(zx_status_t result,
-                                     zx_signals_t pending,
-                                     uint64_t count,
-                                     void* context) {
-  CopyToFileHandler* handler = static_cast<CopyToFileHandler*>(context);
-  handler->wait_id_ = 0;
-  handler->OnHandleReady(result);
+  std::vector<char> buffer(64 * 1024);
+  size_t size = 0;
+  status = source_.read(0u, buffer.data(), buffer.size(), &size);
+
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    return ASYNC_WAIT_AGAIN;
+  }
+
+  if (status == ZX_ERR_PEER_CLOSED) {
+    SendCallback(true);
+    return ASYNC_WAIT_FINISHED;
+  }
+
+  if (status != ZX_OK
+      || !fxl::WriteFileDescriptor(destination_.get(), buffer.data(), size)) {
+    SendCallback(false);
+    return ASYNC_WAIT_FINISHED;
+  }
+
+  return ASYNC_WAIT_AGAIN;
 }
 
 // CopyFromFileHandler ---------------------------------------------------------
@@ -116,29 +100,23 @@ class CopyFromFileHandler {
  public:
   CopyFromFileHandler(fxl::UniqueFD source,
                       zx::socket destination,
-                      fxl::RefPtr<fxl::TaskRunner> task_runner,
+                      async_t* async,
                       const std::function<void(bool, fxl::UniqueFD)>& callback);
 
  private:
   ~CopyFromFileHandler();
 
   void SendCallback(bool value);
-  void FillBuffer();
-  void OnHandleReady(zx_status_t result);
-  static void WaitComplete(zx_status_t result,
-                           zx_signals_t pending,
-                           uint64_t count,
-                           void* context);
+  async_wait_result_t OnHandleReady(
+    async_t* async, zx_status_t status, const zx_packet_signal_t* signal);
 
   fxl::UniqueFD source_;
   zx::socket destination_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async::AutoWait wait_;
   std::function<void(bool, fxl::UniqueFD)> callback_;
-  const FidlAsyncWaiter* waiter_;
   std::vector<char> buffer_;
   size_t buffer_offset_;
   size_t buffer_end_;
-  FidlAsyncWaitID wait_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CopyFromFileHandler);
 };
@@ -146,71 +124,60 @@ class CopyFromFileHandler {
 CopyFromFileHandler::CopyFromFileHandler(
     fxl::UniqueFD source,
     zx::socket destination,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     const std::function<void(bool, fxl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
-      task_runner_(std::move(task_runner)),
+      wait_(async, destination_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED),
       callback_(callback),
-      waiter_(fidl::GetDefaultAsyncWaiter()),
-      buffer_(64 * 1024),
-      wait_id_(0) {
-  task_runner_->PostTask([this]() { FillBuffer(); });
+      buffer_(64 * 1024) {
+  wait_.set_handler(fbl::BindMember(this, &CopyFromFileHandler::OnHandleReady));
+  zx_status_t status = wait_.Begin();
+  FXL_CHECK(status == ZX_OK);
 }
 
-CopyFromFileHandler::~CopyFromFileHandler() {}
+CopyFromFileHandler::~CopyFromFileHandler() = default;
 
 void CopyFromFileHandler::SendCallback(bool value) {
-  FXL_DCHECK(!wait_id_);
   auto callback = callback_;
   auto source = std::move(source_);
   delete this;
   callback(value, std::move(source));
 }
 
-void CopyFromFileHandler::FillBuffer() {
-  ssize_t bytes_read =
-      fxl::ReadFileDescriptor(source_.get(), buffer_.data(), buffer_.size());
-  if (bytes_read <= 0) {
-    SendCallback(bytes_read == 0);
-    return;
+async_wait_result_t CopyFromFileHandler::OnHandleReady(
+    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+  if (signal->observed & ZX_ERR_PEER_CLOSED) {
+    SendCallback(false);
+    return ASYNC_WAIT_FINISHED;
   }
-  buffer_offset_ = 0;
-  buffer_end_ = bytes_read;
-  OnHandleReady(ZX_OK);
-}
 
-void CopyFromFileHandler::OnHandleReady(zx_status_t result) {
-  if (result == ZX_OK) {
-    size_t bytes_written = 0;
-    result = destination_.write(0u, buffer_.data() + buffer_offset_,
-                                buffer_end_ - buffer_offset_, &bytes_written);
-    if (result == ZX_OK) {
-      buffer_offset_ += bytes_written;
-      if (buffer_offset_ == buffer_end_) {
-        task_runner_->PostTask([this]() { FillBuffer(); });
-      } else {
-        task_runner_->PostTask([this]() { OnHandleReady(ZX_OK); });
-      }
-      return;
+  if (buffer_offset_ == buffer_end_) {
+    ssize_t bytes_read =
+    fxl::ReadFileDescriptor(source_.get(), buffer_.data(), buffer_.size());
+    if (bytes_read <= 0) {
+      SendCallback(bytes_read == 0);
+      return ASYNC_WAIT_FINISHED;
     }
+    buffer_offset_ = 0;
+    buffer_end_ = bytes_read;
   }
-  if (result == ZX_ERR_SHOULD_WAIT) {
-    wait_id_ = waiter_->AsyncWait(destination_.get(),
-                                  ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                                  ZX_TIME_INFINITE, &WaitComplete, this);
-    return;
-  }
-  SendCallback(false);
-}
 
-void CopyFromFileHandler::WaitComplete(zx_status_t result,
-                                       zx_signals_t pending,
-                                       uint64_t count,
-                                       void* context) {
-  CopyFromFileHandler* handler = static_cast<CopyFromFileHandler*>(context);
-  handler->wait_id_ = 0;
-  handler->OnHandleReady(result);
+  size_t bytes_written = 0;
+  status = destination_.write(0u, buffer_.data() + buffer_offset_,
+                              buffer_end_ - buffer_offset_, &bytes_written);
+
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    return ASYNC_WAIT_AGAIN;
+  }
+
+  if (status != ZX_OK) {
+    SendCallback(false);
+    return ASYNC_WAIT_FINISHED;
+  }
+
+  buffer_offset_ += bytes_written;
+  return ASYNC_WAIT_AGAIN;
 }
 
 }  // namespace
@@ -218,19 +185,19 @@ void CopyFromFileHandler::WaitComplete(zx_status_t result,
 void CopyToFileDescriptor(
     zx::socket source,
     fxl::UniqueFD destination,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     const std::function<void(bool, fxl::UniqueFD)>& callback) {
-  new CopyToFileHandler(std::move(source), std::move(destination), task_runner,
+  new CopyToFileHandler(std::move(source), std::move(destination), async,
                         callback);
 }
 
 void CopyFromFileDescriptor(
     fxl::UniqueFD source,
     zx::socket destination,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     const std::function<void(bool, fxl::UniqueFD)>& callback) {
   new CopyFromFileHandler(std::move(source), std::move(destination),
-                          task_runner, callback);
+                          async, callback);
 }
 
 }  // namespace fsl

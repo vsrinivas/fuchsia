@@ -116,8 +116,8 @@ class PostFileApp {
     request->body = network::URLBody::New();
     request->body->set_stream(std::move(consumer));
 
-    auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-    fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), task_runner,
+    async_t* async = fsl::MessageLoop::GetCurrent()->async();
+    fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), async,
                                 [](bool result, fxl::UniqueFD fd) {
                                   if (!result) {
                                     printf("file read error\n");
