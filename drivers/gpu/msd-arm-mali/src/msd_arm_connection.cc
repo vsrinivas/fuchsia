@@ -214,6 +214,33 @@ MsdArmConnection::MsdArmConnection(msd_client_id_t client_id, Owner* owner)
 
 MsdArmConnection::~MsdArmConnection() { DASSERT(buffers_.empty()); }
 
+static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
+                                    uint64_t* flags_out)
+{
+    uint64_t access_flags = 0;
+    if (mapping_flags & MAGMA_GPU_MAP_FLAG_READ)
+        access_flags |= kAccessFlagRead;
+    if (mapping_flags & MAGMA_GPU_MAP_FLAG_WRITE)
+        access_flags |= kAccessFlagWrite;
+    if (!(mapping_flags & MAGMA_GPU_MAP_FLAG_EXECUTE))
+        access_flags |= kAccessFlagNoExecute;
+    if (mapping_flags & kMagmaArmMaliGpuMapFlagInnerShareable)
+        access_flags |= kAccessFlagShareInner;
+    if (mapping_flags & kMagmaArmMaliGpuMapFlagBothShareable) {
+        if (!cache_coherent)
+            return DRETF(false, "Attempting to use cache coherency while disabled.");
+        access_flags |= kAccessFlagShareBoth;
+    }
+    if (mapping_flags &
+        ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
+          kMagmaArmMaliGpuMapFlagInnerShareable | kMagmaArmMaliGpuMapFlagBothShareable))
+        return DRETF(false, "Unsupported map flags %lx\n", mapping_flags);
+
+    if (flags_out)
+        *flags_out = access_flags;
+    return true;
+}
+
 bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
 {
     uint64_t gpu_va = mapping->gpu_va();
@@ -243,36 +270,18 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
     }
     auto buffer = mapping->buffer().lock();
     DASSERT(buffer);
-    if (!buffer->platform_buffer()->PinPages(mapping->page_offset(), page_count))
-        return DRETF(false, "Pages can't be pinned");
 
-    uint64_t access_flags = 0;
-    if (mapping->flags() & MAGMA_GPU_MAP_FLAG_READ)
-        access_flags |= kAccessFlagRead;
-    if (mapping->flags() & MAGMA_GPU_MAP_FLAG_WRITE)
-        access_flags |= kAccessFlagWrite;
-    if (!(mapping->flags() & MAGMA_GPU_MAP_FLAG_EXECUTE))
-        access_flags |= kAccessFlagNoExecute;
-    if (mapping->flags() & kMagmaArmMaliGpuMapFlagInnerShareable)
-        access_flags |= kAccessFlagShareInner;
-    if (mapping->flags() & kMagmaArmMaliGpuMapFlagBothShareable) {
-        if (owner_->cache_coherency_status() != kArmMaliCacheCoherencyAce)
-            return DRETF(false, "Attempting to use cache coherency while disabled.");
-        access_flags |= kAccessFlagShareBoth;
-    }
+    if (mapping->page_offset() + page_count > buffer->platform_buffer()->size() / PAGE_SIZE)
+        return DRETF(false, "Buffer size %lx too small for map start %lx count %lx",
+                     buffer->platform_buffer()->size(), mapping->page_offset(), page_count);
 
-    if (mapping->flags() &
-        ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
-          kMagmaArmMaliGpuMapFlagInnerShareable | kMagmaArmMaliGpuMapFlagBothShareable))
-        return DRETF(false, "Unsupported map flags %lx\n", mapping->flags());
+    if (!access_flags_from_flags(mapping->flags(),
+                                 owner_->cache_coherency_status() == kArmMaliCacheCoherencyAce,
+                                 nullptr))
+        return false;
 
-    if (!address_space_->Insert(gpu_va, buffer->platform_buffer(),
-                                mapping->page_offset() * PAGE_SIZE, mapping->size(),
-                                access_flags)) {
-        buffer->platform_buffer()->UnpinPages(start_page, page_count);
-        return DRETF(false, "Pages can't be inserted into address space");
-    }
-
+    if (!UpdateCommittedMemory(mapping.get()))
+        return false;
     gpu_mappings_[gpu_va] = std::move(mapping);
     return true;
 }
@@ -285,11 +294,62 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 
     address_space_->Clear(it->second->gpu_va(), it->second->size());
 
-    uint64_t page_count = magma::round_up(it->second->size(), PAGE_SIZE) >> PAGE_SHIFT;
     auto buffer = it->second->buffer().lock();
-    if (buffer && !buffer->platform_buffer()->UnpinPages(it->second->page_offset(), page_count))
-        DLOG("Unable to unpin pages");
+    if (buffer) {
+        bool unpin_success = buffer->platform_buffer()->UnpinPages(it->second->page_offset(),
+                                                                   it->second->pinned_page_count());
+        DASSERT(unpin_success);
+    }
     gpu_mappings_.erase(gpu_va);
+    return true;
+}
+
+bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping)
+{
+    uint64_t access_flags = 0;
+    if (!access_flags_from_flags(mapping->flags(),
+                                 owner_->cache_coherency_status() == kArmMaliCacheCoherencyAce,
+                                 &access_flags))
+        return false;
+
+    auto buffer = mapping->buffer().lock();
+    DASSERT(buffer);
+
+    if (buffer->start_committed_pages() != mapping->page_offset() &&
+        (buffer->committed_page_count() > 0 || mapping->pinned_page_count() > 0))
+        return DRETF(false, "start of commit should match page offset");
+
+    uint64_t prev_committed_page_count = mapping->pinned_page_count();
+    DASSERT(prev_committed_page_count <= mapping->size() / PAGE_SIZE);
+    uint64_t committed_page_count =
+        std::min(buffer->committed_page_count(), mapping->size() / PAGE_SIZE);
+    if (prev_committed_page_count == committed_page_count)
+        return true;
+
+    if (committed_page_count < prev_committed_page_count) {
+        uint64_t pages_to_remove = prev_committed_page_count - committed_page_count;
+        uint64_t page_offset_in_buffer = mapping->page_offset() + committed_page_count;
+        address_space_->Clear(mapping->gpu_va() + committed_page_count * PAGE_SIZE,
+                              pages_to_remove * PAGE_SIZE);
+        bool unpin_success =
+            buffer->platform_buffer()->UnpinPages(page_offset_in_buffer, pages_to_remove);
+        DASSERT(unpin_success);
+        mapping->set_pinned_page_count(committed_page_count);
+    } else {
+        uint64_t pages_to_add = committed_page_count - prev_committed_page_count;
+        uint64_t page_offset_in_buffer = mapping->page_offset() + prev_committed_page_count;
+        if (!buffer->platform_buffer()->PinPages(page_offset_in_buffer, pages_to_add))
+            return DRETF(false, "Pages can't be pinned");
+        if (!address_space_->Insert(mapping->gpu_va() + prev_committed_page_count * PAGE_SIZE,
+                                    buffer->platform_buffer(), page_offset_in_buffer * PAGE_SIZE,
+                                    pages_to_add * PAGE_SIZE, access_flags)) {
+            bool unpin_success =
+                buffer->platform_buffer()->UnpinPages(page_offset_in_buffer, pages_to_add);
+            DASSERT(unpin_success);
+            return DRETF(false, "Pages can't be inserted into address space");
+        }
+        mapping->set_pinned_page_count(committed_page_count);
+    }
     return true;
 }
 
@@ -370,9 +430,12 @@ void msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection, msd_buffe
     MsdArmAbiConnection::cast(abi_connection)->ptr()->RemoveMapping(gpu_va);
 }
 
-void msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* buffer,
+void msd_connection_commit_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
                                   uint64_t page_offset, uint64_t page_count)
 {
+    MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
+    connection->GetBuffer(MsdArmAbiBuffer::cast(abi_buffer))
+        ->SetCommittedPages(page_offset, page_count);
 }
 
 void msd_connection_set_notification_channel(msd_connection_t* abi_connection,

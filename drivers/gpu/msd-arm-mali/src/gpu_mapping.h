@@ -20,6 +20,7 @@ public:
     class Owner {
     public:
         virtual bool RemoveMapping(uint64_t address) = 0;
+        virtual bool UpdateCommittedMemory(GpuMapping* mapping) = 0;
     };
 
     GpuMapping(uint64_t addr, uint64_t page_offset, uint64_t size, uint64_t flags, Owner* owner,
@@ -31,16 +32,23 @@ public:
     uint64_t page_offset() const { return page_offset_; }
     uint64_t size() const { return size_; }
     uint64_t flags() const { return flags_; }
+    uint64_t pinned_page_count() const { return pinned_page_count_; }
+    void set_pinned_page_count(uint64_t pinned_page_count)
+    {
+        pinned_page_count_ = pinned_page_count;
+    }
 
     std::weak_ptr<MsdArmBuffer> buffer() const;
     void Remove() { owner_->RemoveMapping(addr_); }
+    bool UpdateCommittedMemory() { return owner_->UpdateCommittedMemory(this); }
 
 private:
-    uint64_t addr_;
-    uint64_t page_offset_;
-    uint64_t size_;
-    uint64_t flags_;
-    Owner* owner_;
+    const uint64_t addr_;
+    const uint64_t page_offset_;
+    const uint64_t size_;
+    const uint64_t flags_;
+    Owner* const owner_;
+    uint64_t pinned_page_count_ = 0;
     std::weak_ptr<MsdArmBuffer> buffer_;
 };
 

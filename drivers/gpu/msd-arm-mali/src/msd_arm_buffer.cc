@@ -61,6 +61,18 @@ std::shared_ptr<MsdArmBuffer> MsdArmAbiBuffer::CloneBuffer()
     return std::shared_ptr<MsdArmBuffer>(MsdArmBuffer::Import(buffer_handle));
 }
 
+bool MsdArmBuffer::SetCommittedPages(uint64_t start, uint64_t page_count)
+{
+    start_committed_pages_ = start;
+    committed_page_count_ = page_count;
+    bool success = true;
+    for (auto& mapping : gpu_mappings_) {
+        if (!mapping->UpdateCommittedMemory())
+            success = false;
+    }
+    return success;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer_t* msd_buffer_import(uint32_t handle)

@@ -117,6 +117,74 @@ public:
         EXPECT_FALSE(connection->RemoveMapping(1100 * PAGE_SIZE));
     }
 
+    void CommitMemory()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
+
+        std::shared_ptr<MsdArmBuffer> buffer(
+            MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
+        EXPECT_TRUE(buffer);
+
+        constexpr uint64_t kGpuOffset[] = {1000, 1100};
+
+        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
+            kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 99, 0, connection.get(), buffer)));
+
+        EXPECT_TRUE(buffer->SetCommittedPages(1, 1));
+        mali_pte_t pte;
+        constexpr uint64_t kInvalidPte = 2u;
+        // Only the first page should be committed.
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 1) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+
+        // Should be legal to map with pages already committed.
+        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
+            kGpuOffset[1] * PAGE_SIZE, 1, PAGE_SIZE * 2, 0, connection.get(), buffer)));
+
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting(kGpuOffset[1] * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+
+        EXPECT_TRUE(buffer->SetCommittedPages(1, 5));
+
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting((kGpuOffset[1] + 1) * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+        // The mapping should be truncated because it's only for 2 pages.
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting((kGpuOffset[1] + 2) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+
+        EXPECT_TRUE(connection->RemoveMapping(kGpuOffset[1] * PAGE_SIZE));
+
+        // Should unmap the last page.
+        EXPECT_TRUE(buffer->SetCommittedPages(1, 4));
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+
+        // Should be ignored because offset isn't supported.
+        EXPECT_FALSE(buffer->SetCommittedPages(0, 6));
+        EXPECT_TRUE(
+            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+
+        // Can decommit entire buffer.
+        EXPECT_TRUE(buffer->SetCommittedPages(1, 0));
+        EXPECT_FALSE(
+            connection->address_space()->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
+    }
+
     void Notification()
     {
         FakeConnectionOwner owner;
@@ -198,6 +266,12 @@ TEST(TestConnection, MapUnmap)
 {
     TestConnection test;
     test.MapUnmap();
+}
+
+TEST(TestConnection, CommitMemory)
+{
+    TestConnection test;
+    test.CommitMemory();
 }
 
 TEST(TestConnection, Notification)

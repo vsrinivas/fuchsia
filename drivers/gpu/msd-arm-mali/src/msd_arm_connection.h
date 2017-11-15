@@ -45,7 +45,9 @@ public:
 
     AddressSpace* address_space() { return address_space_.get(); }
 
+    // GpuMapping::Owner implementation.
     bool RemoveMapping(uint64_t gpu_va) override;
+    bool UpdateCommittedMemory(GpuMapping* mapping) override;
 
     bool AddMapping(std::unique_ptr<GpuMapping> mapping);
     // If |atom| is a soft atom, then the first element from

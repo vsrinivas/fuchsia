@@ -220,6 +220,12 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to commit invalid buffer id");
+    if (page_count + page_offset < page_count) {
+        return DRETF(false, "Offset overflows");
+    }
+    if (page_count + page_offset > iter->second.buffer->size() / PAGE_SIZE) {
+        return DRETF(false, "Page offset too large for buffer");
+    }
     msd_connection_commit_buffer(msd_connection(), iter->second.buffer->msd_buf(), page_offset,
                                  page_count);
 

@@ -31,12 +31,18 @@ public:
     void AddMapping(GpuMapping* mapping);
     void RemoveMapping(GpuMapping* mapping);
 
+    bool SetCommittedPages(uint64_t start_page, uint64_t pages);
+    uint64_t start_committed_pages() const { return start_committed_pages_; }
+    uint64_t committed_page_count() const { return committed_page_count_; }
+
 private:
     MsdArmBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
 
     std::unordered_set<GpuMapping*> gpu_mappings_;
+    uint64_t start_committed_pages_ = {};
+    uint64_t committed_page_count_ = {};
 };
 
 class MsdArmAbiBuffer : public msd_buffer_t {
