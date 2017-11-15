@@ -104,6 +104,18 @@ bool StringFromVmo(const SizedVmo& shared_buffer, std::string* string_ptr) {
   return result;
 }
 
+bool StringFromVmo(const SizedVmoTransportPtr& vmo_transport, std::string* string_ptr) {
+  SizedVmo vmo;
+  if (!SizedVmo::IsSizeValid(vmo_transport->vmo, vmo_transport->size)) {
+    return false;
+  }
+  bool result = ContainerFromVmo<std::string>(vmo_transport->vmo, string_ptr);
+  if (result) {
+    string_ptr->resize(vmo_transport->size);
+  }
+  return result;
+}
+
 bool VmoFromVector(const std::vector<char>& vector, zx::vmo* handle_ptr) {
   return VmoFromContainer<std::vector<char>>(vector, handle_ptr);
 }

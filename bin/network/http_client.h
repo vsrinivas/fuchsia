@@ -9,6 +9,7 @@
 
 #include "garnet/bin/network/net_errors.h"
 #include "garnet/bin/network/upload_element_reader.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 
@@ -434,7 +435,13 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       done += written;
     } while (done < size);
 
+    if (loader_->response_body_mode_ == URLRequest::ResponseBodyMode::BUFFER) {
     response_->body->set_buffer(std::move(vmo));
+    } else {
+      FXL_DCHECK(loader_->response_body_mode_ == URLRequest::ResponseBodyMode::SIZED_BUFFER);
+      response_->body->set_sized_buffer(
+          fsl::SizedVmo(std::move(vmo), size).ToTransport());
+    }
   }
   return ZX_OK;
 }
@@ -491,34 +498,39 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
 
       response->body = network::URLBody::New();
 
-      if (loader_->buffer_response_) {
-        response_ = std::move(response);
+      switch (loader_->response_body_mode_) {
+        case URLRequest::ResponseBodyMode::BUFFER:
+        case URLRequest::ResponseBodyMode::SIZED_BUFFER:
+          response_ = std::move(response);
 
-        asio::async_read(socket_, response_buf_,
-                         std::bind(&HTTPClient<T>::OnBufferBody, this,
-                                   std::placeholders::_1));
-      } else {
-        zx::socket consumer;
-        zx::socket producer;
-        zx_status_t status = zx::socket::create(0u, &producer, &consumer);
-        if (status != ZX_OK) {
-          FXL_VLOG(1) << "Unable to create socket:"
-                      << zx_status_get_string(status);
-          return;
-        }
-        response_body_stream_ = std::move(producer);
-        response->body->set_stream(std::move(consumer));
+          asio::async_read(socket_, response_buf_,
+                           std::bind(&HTTPClient<T>::OnBufferBody, this,
+                                     std::placeholders::_1));
+          break;
+        case URLRequest::ResponseBodyMode::STREAM:
+        case URLRequest::ResponseBodyMode::BUFFER_OR_STREAM:
+          zx::socket consumer;
+          zx::socket producer;
+          zx_status_t status = zx::socket::create(0u, &producer, &consumer);
+          if (status != ZX_OK) {
+            FXL_VLOG(1) << "Unable to create socket:"
+                        << zx_status_get_string(status);
+            return;
+          }
+          response_body_stream_ = std::move(producer);
+          response->body->set_stream(std::move(consumer));
 
-        loader_->SendResponse(std::move(response));
+          loader_->SendResponse(std::move(response));
 
-        if (SendStreamedBody() != ZX_OK) {
-          response_body_stream_.reset();
-          return;
-        }
+          if (SendStreamedBody() != ZX_OK) {
+            response_body_stream_.reset();
+            return;
+          }
 
-        asio::async_read(socket_, response_buf_, asio::transfer_at_least(1),
-                         std::bind(&HTTPClient<T>::OnStreamBody, this,
-                                   std::placeholders::_1));
+          asio::async_read(socket_, response_buf_, asio::transfer_at_least(1),
+                           std::bind(&HTTPClient<T>::OnStreamBody, this,
+                                     std::placeholders::_1));
+          break;
       }
     }
   } else {

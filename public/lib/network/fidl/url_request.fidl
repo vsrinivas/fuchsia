@@ -29,6 +29,9 @@ struct URLRequest {
     // The complete response body should be returned in the |buffer| field of
     // the response body.
     BUFFER,
+    // The complete response body should be returned in the |sized_buffer| field of
+    // the response body.
+    SIZED_BUFFER,
     // The response body should be streamed through the |stream| field of the
     // response body.
     STREAM,

@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "lib/fsl/fidl/sized_vmo_transport.fidl.h"
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fsl/vmo/sized_vmo.h"
@@ -34,6 +35,10 @@ FXL_EXPORT bool StringFromVmo(const zx::vmo& handle, std::string* string_ptr);
 
 // Copy the contents of a shared buffer into a string.
 FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
+
+// Copy the contents of a shared buffer into a string.
+FXL_EXPORT bool StringFromVmo(const SizedVmoTransportPtr& handle,
+                              std::string* string_ptr);
 
 }  // namespace fsl
 
