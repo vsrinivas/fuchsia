@@ -382,11 +382,13 @@ void UserRunnerImpl::Terminate(std::function<void()> done) {
             remote_invoker_impl_.reset();
             device_map_impl_.reset();
 
-            ledger_client_.reset();
-            ledger_repository_.reset();
-            ledger_repository_factory_.reset();
             ledger_dashboard_client_->Teardown(kBasicTimeout, [this, done] {
               ledger_dashboard_client_.reset();
+              ledger_dashboard_scope_.reset();
+
+              ledger_client_.reset();
+              ledger_repository_.reset();
+              ledger_repository_factory_.reset();
 
               ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
                 FXL_DLOG(INFO) << "- Ledger down";
