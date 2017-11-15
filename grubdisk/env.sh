@@ -3,9 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if [[ -z $FUCHSIA_DIR ]]; then
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../env.sh
-fi
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../devshell/lib/vars.sh
+fx-config-read
 
 export FUCHSIA_GRUB_SCRIPTS_DIR="$FUCHSIA_DIR/scripts/grubdisk"
 export FUCHSIA_GRUB_DIR="$FUCHSIA_OUT_DIR/build-grub"
