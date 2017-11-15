@@ -117,7 +117,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
         request->headers.push_back(std::move(content_length_header));
 
         zx::vmo duplicated_data;
-        data.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ,
+        data.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ,
                        &duplicated_data);
         request->body = network::URLBody::New();
         request->body->set_buffer(std::move(duplicated_data));

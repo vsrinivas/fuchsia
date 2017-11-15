@@ -446,8 +446,8 @@ void PageStorageImpl::GetObject(
         return;
       }
       zx::vmo vmo_copy;
-      zx_status_t zx_status =
-          vmo.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE, &vmo_copy);
+      zx_status_t zx_status = vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE,
+          &vmo_copy);
       if (zx_status != ZX_OK) {
         FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
         callback(Status::INTERNAL_IO_ERROR, nullptr);
@@ -951,7 +951,8 @@ void PageStorageImpl::FillBufferWithObjectContent(
                }
                zx::vmo vmo_copy;
                zx_status_t zx_status = vmo.duplicate(
-                   ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE, &vmo_copy);
+                   ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT | ZX_RIGHT_WRITE,
+                   &vmo_copy);
                if (zx_status != ZX_OK) {
                  FXL_LOG(ERROR)
                      << "Unable to duplicate vmo. Status: " << zx_status;

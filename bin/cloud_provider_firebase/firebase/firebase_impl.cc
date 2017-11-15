@@ -40,7 +40,7 @@ std::function<network::URLRequestPtr()> MakeRequest(
         request->auto_follow_redirects = true;
         if (body) {
           zx::vmo duplicated_body;
-          body.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ,
+          body.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ,
                          &duplicated_body);
           request->body = network::URLBody::New();
           request->body->set_buffer(std::move(duplicated_body));

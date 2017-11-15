@@ -85,7 +85,7 @@ Status VmoObject::GetVmo(zx::vmo* vmo) const {
   }
 
   zx_status_t zx_status = vmo_.duplicate(
-      ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER,
+      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
       vmo);
   if (zx_status != ZX_OK) {
     return Status::INTERNAL_IO_ERROR;
