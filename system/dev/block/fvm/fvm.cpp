@@ -101,6 +101,7 @@ zx_status_t VPartitionManager::Load() {
     fbl::AutoLock lock(&lock_);
 
     auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        fprintf(stderr, "fvm: Aborting Driver Load\n");
         DdkRemove();
         // "Load" is running in a background thread called by bind.
         // This thread will be joined when the fvm_device is released,
@@ -127,6 +128,7 @@ zx_status_t VPartitionManager::Load() {
     txn->length = FVM_BLOCK_SIZE;
     iotxn_synchronous_op(parent(), txn);
     if (txn->status != ZX_OK) {
+        fprintf(stderr, "fvm: Failed to read first block from underlying device\n");
         status = txn->status;
         iotxn_release(txn);
         return status;
@@ -139,10 +141,16 @@ zx_status_t VPartitionManager::Load() {
     // Validate the superblock, confirm the slice size
     slice_size_ = sb.slice_size;
     if (info_.block_size == 0 || SliceSize() % info_.block_size) {
+        fprintf(stderr, "fvm: Bad block (%u) or slice size (%zu)\n",
+                info_.block_size, SliceSize());
         return ZX_ERR_BAD_STATE;
     } else if (sb.vpartition_table_size != kVPartTableLength) {
+        fprintf(stderr, "fvm: Bad vpartition table size %zu (expected %zu)\n",
+                sb.vpartition_table_size, kVPartTableLength);
         return ZX_ERR_BAD_STATE;
     } else if (sb.allocation_table_size != AllocTableLength(DiskSize(), SliceSize())) {
+        fprintf(stderr, "fvm: Bad allocation table size %zu (expected %zu)\n",
+                sb.allocation_table_size, AllocTableLength(DiskSize(), SliceSize()));
         return ZX_ERR_BAD_STATE;
     }
 
@@ -176,16 +184,19 @@ zx_status_t VPartitionManager::Load() {
 
     fbl::unique_ptr<MappedVmo> mvmo;
     if ((status = make_metadata_vmo(0, &mvmo)) != ZX_OK) {
+        fprintf(stderr, "fvm: Failed to load metadata vmo: %d\n", status);
         return status;
     }
     fbl::unique_ptr<MappedVmo> mvmo_backup;
     if ((status = make_metadata_vmo(MetadataSize(), &mvmo_backup)) != ZX_OK) {
+        fprintf(stderr, "fvm: Failed to load backup metadata vmo: %d\n", status);
         return status;
     }
 
     const void* metadata;
     if ((status = fvm_validate_header(mvmo->GetData(), mvmo_backup->GetData(),
                                       MetadataSize(), &metadata)) != ZX_OK) {
+        fprintf(stderr, "fvm: Header validation failure: %d\n", status);
         return status;
     }
 
