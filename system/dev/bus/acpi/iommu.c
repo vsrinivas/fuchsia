@@ -633,3 +633,8 @@ zx_status_t iommu_manager_iommu_for_bdf(uint32_t bdf, zx_handle_t* iommu_h) {
     mtx_unlock(&iommu_mgr.lock);
     return ZX_OK;
 }
+
+zx_status_t iommu_manager_get_dummy_iommu(zx_handle_t* iommu) {
+    *iommu = iommu_mgr.dummy_iommu;
+    return ZX_OK;
+}

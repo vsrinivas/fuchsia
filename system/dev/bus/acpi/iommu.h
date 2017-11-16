@@ -17,3 +17,7 @@ zx_status_t iommu_manager_init(void);
 // returned handle is borrowed from the iommu_manager.  The caller
 // must not close the handle.
 zx_status_t iommu_manager_iommu_for_bdf(uint32_t bdf, zx_handle_t* iommu);
+
+// Returns a handle to the dummy IOMMU. The returned handle is BORROWED from
+// the iommu_manager.
+zx_status_t iommu_manager_get_dummy_iommu(zx_handle_t* iommu);

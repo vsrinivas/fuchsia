@@ -26,6 +26,7 @@
 #include "dev.h"
 #include "errors.h"
 #include "init.h"
+#include "iommu.h"
 #include "nhlt.h"
 #include "pci.h"
 #include "powerbtn.h"
@@ -88,7 +89,6 @@ typedef struct {
 } pci_child_auxdata_ctx_t;
 
 zx_handle_t root_resource_handle;
-static zx_handle_t dummy_iommu_handle;
 
 static zx_device_t* publish_device(zx_device_t* parent, ACPI_HANDLE handle,
                                    ACPI_DEVICE_INFO* info, const char* name,
@@ -275,7 +275,12 @@ static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, uint32_t inde
     }
     // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
     // the bti_ids correspond to PCI BDFs.
-    return zx_bti_create(dummy_iommu_handle, 0, bdf, bti);
+    zx_handle_t iommu_handle;
+    zx_status_t status = iommu_manager_iommu_for_bdf(bdf, &iommu_handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
 static pciroot_protocol_ops_t pciroot_proto = {
@@ -805,14 +810,6 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
         return status;
     }
 
-    zx_iommu_desc_dummy_t desc;
-    status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                             &dummy_iommu_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: error %d in zx_iommu_create\n", status);
-        return status;
-    }
-
     // Report current resources to kernel PCI driver
     status = pci_report_current_resources(get_root_resource());
     if (status != ZX_OK) {
@@ -851,6 +848,12 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
         return status;
     }
 
+    zx_handle_t dummy_iommu_handle;
+    status = iommu_manager_get_dummy_iommu(&dummy_iommu_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi-bus: error %d in iommu_manager_get_dummy_iommu()\n", status);
+        return status;
+    }
     zx_handle_t cpu_trace_bti;
     status = zx_bti_create(dummy_iommu_handle, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
     if (status != ZX_OK) {
