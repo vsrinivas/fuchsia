@@ -30,7 +30,7 @@ template <typename T> static inline constexpr zx_duration_t WLAN_TU(T n) {
 enum FrameType : uint8_t {
     kManagement = 0x00,
     kControl = 0x01,
-    kData = 0x02,
+    kData = 0x02,  // TODO(porce): Distinguish from DataSubtype's kData by enum class.
     kExtension = 0x03,
 };
 
@@ -66,16 +66,34 @@ enum ControlSubtype : uint8_t {
     kCfEndCfAck = 0x0f,
 };
 
-// The subtypes for Data frames are essentially composed from the following
-// bitmask.
-// clang-format off
-enum DataSubtype : uint8_t {
-    kCfAck =  (1 << 0),
-    kCfPoll = (1 << 1),
-    kNull =   (1 << 2),
-    kQos =    (1 << 3),
+// IEEE Std 802.11-2016, 9.2.4.1.3, Table 9-1
+enum DataSubtypeBitmask : uint8_t {
+    // This leads to enum DataSubtype
+    kBitmaskCfAck = (1 << 0),   // Bit 4
+    kBitmaskCfPoll = (1 << 1),  // Bit 5
+    kBitmaskNull = (1 << 2),    // Bit 6. If not Null, it means Data.
+    kBitmaskQos = (1 << 3),     // Bit 7
 };
-// clang-format on
+
+// IEEE Std 802.11-2016, 9.2.4.1.3, Table 9-1
+enum DataSubtype : uint8_t {
+    kDataSubtype = 0x00,  // TODO(porce): Avoid namespace collision with enum FrameType's kData.
+    kDataCfack = 0x01,
+    kDataCfpoll = 0x02,
+    kDataCfackCfpoll = 0x03,
+    kNull = 0x04,
+    kCfack = 0x05,
+    kCfpoll = 0x06,
+    kCfackCfpoll = 0x07,
+    kQosdata = 0x08,
+    kQosdataCfack = 0x09,
+    kQosdataCfpoll = 0x0a,
+    kQosdataCfackCfpoll = 0x0b,
+    kQosnull = 0x0c,
+    // Reserved 0x0d,
+    kQosCfpoll = 0x0e,
+    kQosCfackCfpoll = 0x0f,
+};
 
 // IEEE Std 802.11-2016, 9.2.4.4
 class SequenceControl : public common::BitField<uint16_t> {
@@ -501,7 +519,10 @@ struct DataFrameHeader {
     // HtControl* ht_ctrl;
 
     bool HasAddr4() const { return fc.to_ds() && fc.from_ds(); }
-    bool HasQosCtrl() const { return (0 != (fc.subtype() & kQos)); }
+    bool HasQosCtrl() const {
+        // Warning: Following bitmasking includes subtype 0x0d - Reserved.
+        return (0 != (fc.subtype() & kBitmaskQos));
+    }
 
     uint16_t len() const {
         uint16_t hdr_len = sizeof(DataFrameHeader);

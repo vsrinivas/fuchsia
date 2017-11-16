@@ -604,7 +604,12 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
-    if (frame.hdr->fc.subtype() != 0) {
+    switch (frame.hdr->fc.subtype()) {
+    case DataSubtype::kDataSubtype:
+        // Fall-through
+    case DataSubtype::kQosdata:  // For data frames within BlockAck session.
+        break;
+    default:
         warnf("unsupported data subtype %02x\n", frame.hdr->fc.subtype());
         return ZX_OK;
     }
@@ -837,7 +842,7 @@ zx_status_t Station::SendKeepAliveResponse() {
     packet->set_peer(Packet::Peer::kWlan);
     auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.set_type(kData);
-    hdr->fc.set_subtype(kNull);
+    hdr->fc.set_subtype(DataSubtype::kNull);
     hdr->fc.set_to_ds(1);
 
     common::MacAddr bssid(bss_->bssid.data());
@@ -1090,7 +1095,8 @@ zx_status_t Station::HandleMlmeSetKeysReq(const SetKeysRequest& req) {
         }
     }
 
-    // Once keys have been successfully configured, open controlled port and report link up status.
+    // Once keys have been successfully configured, open controlled port and report link up
+    // status.
     // TODO(hahnr): This is a very simplified assumption and we might need a little more logic to
     // correctly track the port's state.
     controlled_port_ = PortState::kOpen;

@@ -176,12 +176,15 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
     ZX_DEBUG_ASSERT(rxinfo);
 
-    if (hdr->fc.subtype() == kNull) {
+    switch (hdr->fc.subtype()) {
+    case DataSubtype::kNull:
         // TODO(hahnr): Use DataFrame with an empty body rather than the header directly.
         return mlme_->HandleFrame(*hdr, *rxinfo);
-    }
-
-    if (hdr->fc.subtype() != 0) {
+    case DataSubtype::kDataSubtype:
+        // Fall-through
+    case DataSubtype::kQosdata:
+        break;
+    default:
         warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
         return ZX_OK;
     }
