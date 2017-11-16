@@ -49,7 +49,7 @@ void LedgerRepositoryImpl::GetLedger(
   TRACE_DURATION("ledger", "repository_get_ledger");
 
   if (ledger_name.empty()) {
-    callback(Status::AUTHENTICATION_ERROR);
+    callback(Status::INVALID_ARGUMENT);
     return;
   }
 
