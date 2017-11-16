@@ -57,6 +57,8 @@ bool atomic_explicit_declarations_test() {
     [[gnu::unused]] fbl::atomic<int_fast64_t> zero_int_fast64_t(0);
     [[gnu::unused]] fbl::atomic<uint_fast64_t> zero_uint_fast64_t(0);
 
+    [[gnu::unused]] fbl::atomic<bool> zero_bool(false);
+
     END_TEST;
 }
 
@@ -108,6 +110,8 @@ bool atomic_using_declarations_test() {
     [[gnu::unused]] fbl::atomic_int_fast64_t zero_int_fast64_t(0);
     [[gnu::unused]] fbl::atomic_uint_fast64_t zero_uint_fast64_t(0);
 
+    [[gnu::unused]] fbl::atomic_bool zero_bool(false);
+
     END_TEST;
 }
 
@@ -128,7 +132,8 @@ constexpr bool IsSameAsSomeBuiltin() {
            fbl::is_same<T, fbl::atomic_long>::value ||
            fbl::is_same<T, fbl::atomic_ulong>::value ||
            fbl::is_same<T, fbl::atomic_llong>::value ||
-           fbl::is_same<T, fbl::atomic_ullong>::value;
+           fbl::is_same<T, fbl::atomic_ullong>::value ||
+           fbl::is_same<T, fbl::atomic_bool>::value;
 }
 
 static_assert(IsSameAsSomeBuiltin<fbl::atomic_intptr_t>(), "");
@@ -226,6 +231,11 @@ enum specified_enum_unsigned_long_long : unsigned long long {
 };
 __UNUSED fbl::atomic<specified_enum_unsigned_long_long> atomic_specified_enum_unsigned_long_long;
 
+enum specified_enum_bool : bool {
+    kSpecifiedValue_bool = true,
+};
+__UNUSED fbl::atomic<specified_enum_bool> atomic_specified_enum_bool;
+
 enum struct unspecified_struct_enum {
     kUnspecifiedValueStruct = 23,
 };
@@ -286,6 +296,11 @@ enum struct specified_struct_enum_unsigned_long_long : unsigned long long {
 };
 __UNUSED fbl::atomic<specified_struct_enum_unsigned_long_long> atomic_specified_struct_enum_unsigned_long_long;
 
+enum struct specified_struct_enum_bool : bool {
+    kSpecifiedStructValue_bool = true,
+};
+__UNUSED fbl::atomic<specified_struct_enum_bool> atomic_specified_struct_enum_bool;
+
 bool atomic_wont_compile_test() {
     BEGIN_TEST;
 
@@ -337,6 +352,15 @@ T test_values[] = {
     23,
     fbl::numeric_limits<T>::min() / 4,
     fbl::numeric_limits<T>::max() / 4,
+};
+
+template <>
+bool test_values<bool>[] = {
+    false,
+    true,
+    true,
+    false,
+    true,
 };
 
 template <typename T>
@@ -625,6 +649,26 @@ volatile_cas_function<T> volatile_cas_functions[] = {
      },
      false}};
 
+enum cas_slots {
+    kExpected = 0,
+    kActual = 1,
+    kDesired = 2,
+};
+
+template <typename T>
+T cas_test_values[] = {
+    22,
+    23,
+    24,
+};
+
+template <>
+bool cas_test_values<bool>[] = {
+    false,
+    true,
+    false,
+};
+
 template <typename T>
 bool compare_exchange_test() {
     for (auto cas : cas_functions<T>) {
@@ -632,10 +676,10 @@ bool compare_exchange_test() {
             for (const auto& failure_order : orders) {
                 {
                     // Failure case
-                    T actual = 23;
+                    T actual = cas_test_values<T>[kActual];
                     fbl::atomic<T> atomic_value(actual);
-                    T expected = 22;
-                    T desired = 24;
+                    T expected = cas_test_values<T>[kExpected];
+                    T desired = cas_test_values<T>[kDesired];
                     EXPECT_FALSE(cas.function(&atomic_value, &expected, desired,
                                               success_order, failure_order),
                                  "compare-exchange shouldn't have succeeded!");
@@ -643,10 +687,10 @@ bool compare_exchange_test() {
                 }
                 {
                     // Success case
-                    T actual = 23;
+                    T actual = cas_test_values<T>[kActual];
                     fbl::atomic<T> atomic_value(actual);
                     T expected = actual;
-                    T desired = 24;
+                    T desired = cas_test_values<T>[kDesired];
                     // Some compare-and-swap functions can spuriously fail.
                     bool succeeded = cas.function(&atomic_value, &expected, desired,
                                                   success_order, failure_order);
@@ -664,10 +708,10 @@ bool compare_exchange_test() {
             for (const auto& failure_order : orders) {
                 {
                     // Failure case
-                    T actual = 23;
+                    T actual = cas_test_values<T>[kActual];
                     fbl::atomic<T> atomic_value(actual);
-                    T expected = 22;
-                    T desired = 24;
+                    T expected = cas_test_values<T>[kExpected];
+                    T desired = cas_test_values<T>[kDesired];
                     EXPECT_FALSE(cas.function(&atomic_value, &expected, desired,
                                               success_order, failure_order),
                                  "compare-exchange shouldn't have succeeded!");
@@ -675,10 +719,10 @@ bool compare_exchange_test() {
                 }
                 {
                     // Success case
-                    T actual = 23;
+                    T actual = cas_test_values<T>[kActual];
                     fbl::atomic<T> atomic_value(actual);
                     T expected = actual;
-                    T desired = 24;
+                    T desired = cas_test_values<T>[kDesired];
                     // Compare-and-swap can spuriously fail.
                     // Some compare-and-swap functions can spuriously fail.
                     bool succeeded = cas.function(&atomic_value, &expected, desired,
@@ -728,6 +772,7 @@ bool atomic_load_store_test() {
     ASSERT_TRUE(load_store_test<unsigned long>());
     ASSERT_TRUE(load_store_test<long long>());
     ASSERT_TRUE(load_store_test<unsigned long long>());
+    ASSERT_TRUE(load_store_test<bool>());
 
     END_TEST;
 }
@@ -746,6 +791,7 @@ bool atomic_exchange_test() {
     ASSERT_TRUE(exchange_test<unsigned long>());
     ASSERT_TRUE(exchange_test<long long>());
     ASSERT_TRUE(exchange_test<unsigned long long>());
+    ASSERT_TRUE(exchange_test<bool>());
 
     END_TEST;
 }
@@ -764,6 +810,7 @@ bool atomic_compare_exchange_test() {
     ASSERT_TRUE(compare_exchange_test<unsigned long>());
     ASSERT_TRUE(compare_exchange_test<long long>());
     ASSERT_TRUE(compare_exchange_test<unsigned long long>());
+    ASSERT_TRUE(compare_exchange_test<bool>());
 
     END_TEST;
 }
@@ -783,6 +830,7 @@ static_assert(sizeof(fbl::atomic<long>) == sizeof(long), "");
 static_assert(sizeof(fbl::atomic<unsigned long>) == sizeof(unsigned long), "");
 static_assert(sizeof(fbl::atomic<long long>) == sizeof(long long), "");
 static_assert(sizeof(fbl::atomic<unsigned long long>) == sizeof(unsigned long long), "");
+static_assert(sizeof(fbl::atomic<bool>) == sizeof(bool), "");
 
 static_assert(alignof(fbl::atomic<char>) == alignof(char), "");
 static_assert(alignof(fbl::atomic<signed char>) == alignof(signed char), "");
@@ -795,6 +843,7 @@ static_assert(alignof(fbl::atomic<long>) == alignof(long), "");
 static_assert(alignof(fbl::atomic<unsigned long>) == alignof(unsigned long), "");
 static_assert(alignof(fbl::atomic<long long>) == alignof(long long), "");
 static_assert(alignof(fbl::atomic<unsigned long long>) == alignof(unsigned long long), "");
+static_assert(alignof(fbl::atomic<bool>) == alignof(bool), "");
 
 static_assert(fbl::is_standard_layout<fbl::atomic<char>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<signed char>>::value, "");
@@ -807,6 +856,7 @@ static_assert(fbl::is_standard_layout<fbl::atomic<long>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<unsigned long>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<long long>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<unsigned long long>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<bool>>::value, "");
 
 bool atomic_fence_test() {
     BEGIN_TEST;

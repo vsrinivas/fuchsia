@@ -11,14 +11,14 @@
 
 // fbl::atomic<T> provides typesafe C++ atomics on integral
 // types and enums. It does not support:
-// - bool, as the desired interface is rather different
 // - pointer types, though they could be easily added
 // - wide characters
 
 // The interface closely matches the underlying builtins and the
 // standard C and C++ interfaces. Member function and nonmember
 // function versions of operations are provided. No operator overloads
-// for e.g. += are provided.
+// for e.g. += are provided. Aggregate initialization syntax is not
+// supported, as fbl::atomic<T> is not an aggregate.
 
 // Only the compare-exchange overloads that require both memory orders
 // explicitly are provided. The rules around what values to use for
@@ -63,7 +63,6 @@ template <typename T>
 struct atomic {
     static_assert(is_integral<T>::value || is_enum<T>::value,
                   "fbl::atomic only support integral and enum types");
-    static_assert(!is_same<T, bool>::value, "fbl::atomic does not support bool");
     static_assert(!is_same<T, wchar_t>::value, "fbl::atomic does not support wide characters");
     static_assert(!is_same<T, char16_t>::value, "fbl::atomic does not support wide characters");
     static_assert(!is_same<T, char32_t>::value, "fbl::atomic does not support wide characters");
@@ -142,37 +141,47 @@ struct atomic {
     }
 
     T fetch_add(T value, memory_order order = memory_order_seq_cst) {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_add(&value_, value, order);
     }
     T fetch_add(T value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_add(&value_, value, order);
     }
 
     T fetch_sub(T value, memory_order order = memory_order_seq_cst) {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_sub(&value_, value, order);
     }
     T fetch_sub(T value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_sub(&value_, value, order);
     }
 
     T fetch_and(T value, memory_order order = memory_order_seq_cst) {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_and(&value_, value, order);
     }
     T fetch_and(T value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_and(&value_, value, order);
     }
 
     T fetch_or(T value, memory_order order = memory_order_seq_cst) {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_or(&value_, value, order);
     }
     T fetch_or(T value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_or(&value_, value, order);
     }
 
     T fetch_xor(T value, memory_order order = memory_order_seq_cst) {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_xor(&value_, value, order);
     }
     T fetch_xor(T value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!fbl::is_same<T, bool>::value, "no arithmetic on atomic<bool>!");
         return __atomic_fetch_xor(&value_, value, order);
     }
 
@@ -385,5 +394,7 @@ using atomic_int_fast32_t = atomic<int_fast32_t>;
 using atomic_uint_fast32_t = atomic<uint_fast32_t>;
 using atomic_int_fast64_t = atomic<int_fast64_t>;
 using atomic_uint_fast64_t = atomic<uint_fast64_t>;
+
+using atomic_bool = atomic<bool>;
 
 } // namespace fbl
