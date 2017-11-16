@@ -76,7 +76,6 @@ class AgentContextImpl::InitializeCall : Operation<> {
           agent_context_impl->MaybeStopAgent();
         });
 
-    agent_context_impl_->agent_->Initialize();
     agent_context_impl_->state_ = State::RUNNING;
   }
 

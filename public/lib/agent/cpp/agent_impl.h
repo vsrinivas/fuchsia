@@ -34,8 +34,6 @@ class AgentImpl : public Agent {
 
  private:
   // |Agent|
-  void Initialize() override;
-  // |Agent|
   void Connect(
       const fidl::String& requestor_url,
       fidl::InterfaceRequest<app::ServiceProvider> services_request) override;

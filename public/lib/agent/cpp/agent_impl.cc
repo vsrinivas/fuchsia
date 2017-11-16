@@ -16,9 +16,6 @@ AgentImpl::AgentImpl(app::ServiceNamespace* const service_namespace,
 }
 
 // |Agent|
-void AgentImpl::Initialize() {}
-
-// |Agent|
 void AgentImpl::Connect(
     const fidl::String& requestor_url,
     fidl::InterfaceRequest<app::ServiceProvider> services_request) {

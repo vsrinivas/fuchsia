@@ -97,11 +97,6 @@ class MyDummyAgent : Agent,
   void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Initialize() override {
-    ++counts["Initialize"];
-  }
-
-  // |Agent|
   void Connect(
       const fidl::String& /*requestor_url*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
@@ -122,9 +117,8 @@ class MyDummyAgent : Agent,
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
 };
 
-// Test that connecting to an agent will start it up and calls
-// Agent.Initialize(); once Initialize() responds, there should be an
-// Agent.Connect().
+// Test that connecting to an agent will start it up.
+// Then there should be an Agent.Connect().
 TEST_F(AgentRunnerTest, ConnectToAgent) {
   int agent_launch_count = 0;
   std::unique_ptr<MyDummyAgent> dummy_agent;
@@ -148,7 +142,6 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
 
   RunLoopUntil(
       [&dummy_agent] { return dummy_agent->GetCallCount("Connect") > 0; });
-  dummy_agent->ExpectCalledOnce("Initialize");
   dummy_agent->ExpectCalledOnce("Connect");
   dummy_agent->ExpectNoOtherCalls();
 
