@@ -23,7 +23,8 @@ constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
 Connector::Connector(zx::channel channel)
     : channel_(std::move(channel)),
-      wait_(async_get_default(), channel_.get(), kSignals),
+      wait_(async_get_default(), channel_.get(), kSignals,
+            ASYNC_FLAG_HANDLE_SHUTDOWN),
       incoming_receiver_(nullptr),
       error_(false),
       drop_writes_(false),
@@ -43,11 +44,13 @@ Connector::~Connector() {
 
 void Connector::CloseChannel() {
   wait_.Cancel();
+  wait_.set_object(ZX_HANDLE_INVALID);
   channel_.reset();
 }
 
 zx::channel Connector::PassChannel() {
   wait_.Cancel();
+  wait_.set_object(ZX_HANDLE_INVALID);
   return std::move(channel_);
 }
 
@@ -136,7 +139,7 @@ async_wait_result_t Connector::OnHandleReady(
       if (rv != ZX_OK)
         break;
     }
-    return ASYNC_WAIT_AGAIN;
+    return channel_ ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
   }
 
   FXL_DCHECK(signal->observed & ZX_CHANNEL_PEER_CLOSED);
