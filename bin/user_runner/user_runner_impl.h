@@ -120,6 +120,30 @@ class UserRunnerImpl : UserRunner,
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
 
+  // Called during initialization. Schedules the given action to be executed
+  // during termination. This allows to create something like an asynchronous
+  // destructor at initialization time. The sequence of actions thus scheduled
+  // is executed in reverse in Terminate().
+  //
+  // The AtEnd() calls for a field should happen next to the calls that
+  // initialize the field, for the following reasons:
+  //
+  // 1. It ensures the termination sequence corresponds to the initialization
+  //    sequence.
+  //
+  // 2. It is easy to audit that there is a termination action for every
+  //    initialization that needs one.
+  //
+  // 3. Conditional initialization also omits the termination (such as for
+  //    agents that are not started when runnign a test).
+  //
+  // See also the Reset() and Teardown() functions in the .cc file.
+  void AtEnd(std::function<void(std::function<void()>)> action);
+
+  // Recursively execute the termiation steps scheduled by AtEnd(). The
+  // execution steps are stored in at_end_.
+  void TerminateRecurse(int i);
+
   app::ApplicationContext* const application_context_;
   const bool test_;
 
@@ -129,9 +153,9 @@ class UserRunnerImpl : UserRunner,
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;
-  std::unique_ptr<AppClient<Lifecycle>> cloud_provider_client_;
+  std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
-  std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
+  std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_;
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ledger::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
@@ -185,7 +209,15 @@ class UserRunnerImpl : UserRunner,
 
   // For the Ledger Debug Dashboard
   std::unique_ptr<Scope> ledger_dashboard_scope_;
-  std::unique_ptr<AppClient<Lifecycle>> ledger_dashboard_client_;
+  std::unique_ptr<AppClient<Lifecycle>> ledger_dashboard_app_;
+
+  // Holds the actions scheduled by calls to the AtEnd() method.
+  std::vector<std::function<void(std::function<void()>)>> at_end_;
+
+  // Holds the done callback of Terminate() while the at_end_ actions are being
+  // executed. We can rely on Terminate() only being called once. (And if not,
+  // this could simply be made a vector as usual.)
+  std::function<void()> at_end_done_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

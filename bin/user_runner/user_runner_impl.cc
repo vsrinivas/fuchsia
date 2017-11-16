@@ -81,6 +81,37 @@ std::string GetAccountId(const auth::AccountPtr& account) {
   return account.is_null() ? "GUEST" : account->id;
 }
 
+// Creates a function that can be used as termination action passed to AtEnd(),
+// which when called invokes the reset() method on the object pointed to by the
+// argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
+template <typename X>
+std::function<void(std::function<void()>)> Reset(
+    X* const field) {
+  return [field](std::function<void()> cont) {
+    field->reset();
+    cont();
+  };
+}
+
+// Creates a function that can be used as termination action passed to AtEnd(),
+// which when called asynchronously invokes the Teardown() method on the object
+// pointed to by the argument. Used to teardown AppClient and AsyncHolder
+// members.
+template <typename X>
+std::function<void(std::function<void()>)> Teardown(
+    const fxl::TimeDelta timeout,
+    const char* const message,
+    X* const field) {
+  return [timeout, message, field](std::function<void()> cont) {
+    field->Teardown(timeout, [message, cont] {
+        if (message) {
+          FXL_DLOG(INFO) << "- " << message << " down.";
+        }
+        cont();
+      });
+  };
+}
+
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
@@ -115,27 +146,21 @@ void UserRunnerImpl::Initialize(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   token_provider_factory_ =
       auth::TokenProviderFactoryPtr::Create(std::move(token_provider_factory));
+  AtEnd(Reset(&token_provider_factory_));
+
   user_context_ = UserContextPtr::Create(std::move(user_context));
+  AtEnd(Reset(&user_context_));
+
   account_ = std::move(account);
+  AtEnd(Reset(&account_));
+
   user_scope_ = std::make_unique<Scope>(
       application_context_->environment(),
       std::string(kUserScopeLabelPrefix) + GetAccountId(account_));
-  user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), user_shell.Clone());
-  ConnectToService(user_shell_app_->services(), user_shell_.NewRequest());
-  user_shell_app_->SetAppErrorHandler([this] {
-    FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
-                   << "Logging out.";
-    Logout();
-  });
+  AtEnd(Reset(&user_scope_));
 
   SetupLedger();
   StartLedgerDashboard();
-
-  // Show user shell.
-  mozart::ViewProviderPtr view_provider;
-  ConnectToService(user_shell_app_->services(), view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_owner_request), nullptr);
 
   // DeviceMap service
   const std::string device_id = LoadDeviceID(GetAccountId(account_));
@@ -147,10 +172,12 @@ void UserRunnerImpl::Initialize(
       fidl::Array<uint8_t>::New(16));
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
+        // device_map_impl_ may be reset before user_scope_.
         if (device_map_impl_) {
           device_map_impl_->Connect(std::move(request));
         }
       });
+  AtEnd(Reset(&device_map_impl_));
 
   // RemoteInvoker
 
@@ -160,10 +187,12 @@ void UserRunnerImpl::Initialize(
       std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
   user_scope_->AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
+        // remote_invoker_impl_ may be reset before user_scope_.
         if (remote_invoker_impl_) {
           remote_invoker_impl_->Connect(std::move(request));
         }
       });
+  AtEnd(Reset(&remote_invoker_impl_));
 
   // Setup MessageQueueManager.
 
@@ -176,6 +205,7 @@ void UserRunnerImpl::Initialize(
 
   message_queue_manager_ = std::make_unique<MessageQueueManager>(
       ledger_client_.get(), to_array(kMessageQueuePageId), message_queue_path);
+  AtEnd(Reset(&message_queue_manager_));
 
   // Begin init maxwell.
   //
@@ -212,15 +242,18 @@ void UserRunnerImpl::Initialize(
 
   entity_provider_runner_ = std::make_unique<EntityProviderRunner>(
       static_cast<EntityProviderLauncher*>(this));
+  AtEnd(Reset(&entity_provider_runner_));
 
   agent_runner_storage_ = std::make_unique<AgentRunnerStorageImpl>(
       ledger_client_.get(), to_array(kAgentRunnerPageId));
+  AtEnd(Reset(&agent_runner_storage_));
 
   agent_runner_.reset(new AgentRunner(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
       token_provider_factory_.get(), user_intelligence_provider_.get(),
       entity_provider_runner_.get()));
+  AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   ComponentContextInfo component_context_info{
       message_queue_manager_.get(), agent_runner_.get(),
@@ -270,10 +303,12 @@ void UserRunnerImpl::Initialize(
         component_scope->set_global_scope(maxwell::GlobalScope::New());
         fidl::InterfaceHandle<maxwell::IntelligenceServices>
             intelligence_services;
-        user_intelligence_provider_->GetComponentIntelligenceServices(
-            std::move(component_scope), std::move(request));
-
+        if (user_intelligence_provider_) {
+          user_intelligence_provider_->GetComponentIntelligenceServices(
+              std::move(component_scope), std::move(request));
+        }
       });
+
   auto service_list = app::ServiceList::New();
   service_list->names.push_back(maxwell::IntelligenceServices::Name_);
   module_resolver_ns_services_.AddBinding(service_list->provider.NewRequest());
@@ -289,6 +324,15 @@ void UserRunnerImpl::Initialize(
       "" /* data_origin */, std::move(service_list));
   ConnectToService(module_resolver_->services(),
                    module_resolver_service_.NewRequest());
+
+  AtEnd(Reset(&maxwell_component_context_impl_));
+  AtEnd(Reset(&maxwell_component_context_binding_));
+  AtEnd(Reset(&module_resolver_service_));
+  AtEnd(Reset(&maxwell_));
+  AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_.get()));
+  AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_.get()));
+  AtEnd(Reset(&user_intelligence_provider_));
+
   // End kModuleResolverUrl
   // End init maxwell.
 
@@ -296,10 +340,17 @@ void UserRunnerImpl::Initialize(
       component_context_info, kUserShellComponentNamespace, user_shell->url,
       user_shell->url);
 
+  AtEnd(Reset(&user_shell_component_context_impl_));
+
   fidl::InterfacePtr<FocusProvider> focus_provider_story_provider;
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
+  // We create |story_provider_impl_| after |agent_runner_| so
+  // story_provider_impl_ is termiated before agent_runner_ because the modules
+  // running in a story might freak out if agents they are connected to go away
+  // while they are still running. On the other hand agents are meant to outlive
+  // story lifetimes.
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_id, ledger_client_.get(),
       fidl::Array<uint8_t>::New(16), std::move(story_shell),
@@ -307,6 +358,8 @@ void UserRunnerImpl::Initialize(
       intelligence_services_.get(), user_intelligence_provider_.get(),
       module_resolver_service_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
+
+  AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   focus_handler_ = std::make_unique<FocusHandler>(
       device_id, ledger_client_.get(), fidl::Array<uint8_t>::New(16));
@@ -318,96 +371,37 @@ void UserRunnerImpl::Initialize(
   visible_stories_handler_->AddProviderBinding(
       std::move(visible_stories_provider_request));
 
+  AtEnd(Reset(&focus_handler_));
+  AtEnd(Reset(&visible_stories_handler_));
+
+  // Show user shell.
+
+  user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
+      user_scope_->GetLauncher(), user_shell.Clone());
+  ConnectToService(user_shell_app_->services(), user_shell_.NewRequest());
+
+  AtEnd(Reset(&user_shell_app_));
+  AtEnd(Reset(&user_shell_));
+  AtEnd(Teardown(kBasicTimeout, "UserShell", user_shell_app_.get()));
+
+  user_shell_app_->SetAppErrorHandler([this] {
+    FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
+                   << "Logging out.";
+    Logout();
+  });
+
+  mozart::ViewProviderPtr view_provider;
+  ConnectToService(user_shell_app_->services(), view_provider.NewRequest());
+  view_provider->CreateView(std::move(view_owner_request), nullptr);
+
   user_shell_->Initialize(user_shell_context_binding_.NewBinding());
 }
 
 void UserRunnerImpl::Terminate(std::function<void()> done) {
   FXL_LOG(INFO) << "UserRunner::Terminate()";
+  at_end_done_ = std::move(done);
 
-  // We need to Terminate() every member that has life cycle here. In addition,
-  // everything that has fidl connections to something that is told to
-  // Terminate(), if it doesn't have a Terminate() on its own, must be reset()
-  // before the thing it connects to receives Terminate(). Specifically, all
-  // PageClient instances and the LedgerClient instance must be reset() before
-  // the ledger app is AppTerminate()d.
-  //
-  // TODO(mesch,alhaad): It would be nice if this dependency relationship graph
-  // would be created implicitly and automatically from the initialization
-  // sequence (which must reflect the same dependency semi-ordering in reverse)
-  // executed in Initialize(). I.e. it would be nice if we had the asynchronous
-  // analogue of what constructor/destructor order aligmnent does for
-  // synchronous initialization and termination.
-  //
-  // A few ideas in that direction:
-  //
-  // * Several members are kept here but used only by other members. Ownership
-  //   should be transferred accordingly.
-  //
-  // * We could use more structured holders than unqiue_ptr<>s which also hold
-  //   dependent pointers, and the asynchronously generically traverse the
-  //   resulting graph.
-  //
-  // This list is the reverse from the initialization order executed in
-  // Initialize() above.
-  user_shell_app_->Teardown(kBasicTimeout, [this, done] {
-    FXL_DLOG(INFO) << "- UserShell down";
-    user_shell_.reset();
-    user_shell_app_.reset();
-
-    visible_stories_handler_.reset();
-    focus_handler_.reset();
-
-    // We teardown |story_provider_impl_| before |agent_runner_| because the
-    // modules running in a story might freak out if agents they are connected
-    // to go away while they are still running. On the other hand agents are
-    // meant to outlive story lifetimes.
-    story_provider_impl_.Teardown(kStoryProviderTimeout, [this, done] {
-      FXL_DLOG(INFO) << "- StoryProvider down";
-
-      user_intelligence_provider_.reset();
-      maxwell_->Teardown(kBasicTimeout, [this, done] {
-        module_resolver_->Teardown(kBasicTimeout, [this, done] {
-          FXL_DLOG(INFO) << "- Maxwell down";
-          maxwell_.reset();
-
-          maxwell_component_context_binding_.reset();
-          maxwell_component_context_impl_.reset();
-
-          agent_runner_.Teardown(kAgentRunnerTimeout, [this, done] {
-            FXL_DLOG(INFO) << "- AgentRunner down";
-            agent_runner_storage_.reset();
-
-            entity_provider_runner_.reset();
-            message_queue_manager_.reset();
-            remote_invoker_impl_.reset();
-            device_map_impl_.reset();
-
-            ledger_dashboard_client_->Teardown(kBasicTimeout, [this, done] {
-              ledger_dashboard_client_.reset();
-              ledger_dashboard_scope_.reset();
-
-              ledger_client_.reset();
-              ledger_repository_.reset();
-              ledger_repository_factory_.reset();
-
-              ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
-                FXL_DLOG(INFO) << "- Ledger down";
-                ledger_app_client_.reset();
-
-                user_scope_.reset();
-                account_.reset();
-                user_context_.reset();
-                token_provider_factory_.reset();
-
-                FXL_LOG(INFO) << "UserRunner::Terminate(): done";
-                done();
-              });
-            });
-          });
-        });
-      });
-    });
-  });
+  TerminateRecurse(at_end_.size() - 1);
 }
 
 void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
@@ -536,13 +530,14 @@ void UserRunnerImpl::SetupLedger() {
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-  ledger_app_client_ = std::make_unique<AppClient<ledger::LedgerController>>(
+  ledger_app_ = std::make_unique<AppClient<ledger::LedgerController>>(
       user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
-  ledger_app_client_->SetAppErrorHandler([this] {
+  ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Logout();
   });
+  AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
   cloud_provider::CloudProviderPtr cloud_provider;
   if (account_) {
@@ -551,16 +546,19 @@ void UserRunnerImpl::SetupLedger() {
     AppConfigPtr cloud_provider_config = AppConfig::New();
     cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
     cloud_provider_config->args = fidl::Array<fidl::String>::New(0);
-    cloud_provider_client_ = std::make_unique<AppClient<Lifecycle>>(
+    cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(cloud_provider_config));
-    ConnectToService(cloud_provider_client_->services(),
+    ConnectToService(cloud_provider_app_->services(),
                      cloud_provider_factory_.NewRequest());
 
     cloud_provider = GetCloudProvider();
+
+    // TODO(mesch): Teardown cloud_provider_app_ ?
   }
 
-  ConnectToService(ledger_app_client_->services(),
+  ConnectToService(ledger_app_->services(),
                    ledger_repository_factory_.NewRequest());
+  AtEnd(Reset(&ledger_repository_factory_));
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
@@ -579,12 +577,14 @@ void UserRunnerImpl::SetupLedger() {
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
   ledger_repository_.set_connection_error_handler([this] { Logout(); });
+  AtEnd(Reset(&ledger_repository_));
 
   ledger_client_.reset(
       new LedgerClient(ledger_repository_.get(), kAppId, [this] {
         FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Logout();
       }));
+  AtEnd(Reset(&ledger_client_));
 }
 
 cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
@@ -607,25 +607,46 @@ cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
 void UserRunnerImpl::StartLedgerDashboard() {
   ledger_dashboard_scope_ = std::make_unique<Scope>(
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
+  AtEnd(Reset(&ledger_dashboard_scope_));
 
   ledger_dashboard_scope_->AddService<ledger::LedgerRepositoryDebug>(
       [this](fidl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
-        ledger_repository_->GetLedgerRepositoryDebug(
-            std::move(request), [](ledger::Status status) {
-              if (status != ledger::Status::OK) {
-                FXL_LOG(ERROR)
-                    << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
-                    << LedgerStatusToString(status);
-              }
-            });
+        if (ledger_repository_) {
+          ledger_repository_->GetLedgerRepositoryDebug(
+              std::move(request), [](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FXL_LOG(ERROR)
+                      << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
+                      << LedgerStatusToString(status);
+                }
+              });
+        }
       });
 
   auto ledger_dashboard_config = AppConfig::New();
   ledger_dashboard_config->url = kLedgerDashboardUrl;
-  ledger_dashboard_client_ = std::make_unique<AppClient<Lifecycle>>(
+
+  ledger_dashboard_app_ = std::make_unique<AppClient<Lifecycle>>(
       ledger_dashboard_scope_->GetLauncher(),
       std::move(ledger_dashboard_config));
+
+  AtEnd(Reset(&ledger_dashboard_app_));
+  AtEnd(Teardown(kBasicTimeout, "LedgerDashboard", ledger_dashboard_app_.get()));
+
   FXL_LOG(INFO) << "Starting Ledger dashboard " << kLedgerDashboardUrl;
+}
+
+void UserRunnerImpl::AtEnd(std::function<void(std::function<void()>)> action) {
+  at_end_.emplace_back(std::move(action));
+}
+
+void UserRunnerImpl::TerminateRecurse(const int i) {
+  if (i > 0) {
+    at_end_[i]([this, i] { TerminateRecurse(i - 1); });
+  } else {
+    FXL_LOG(INFO) << "UserRunner::Terminate(): done";
+    at_end_done_();
+  }
 }
 
 }  // namespace modular
