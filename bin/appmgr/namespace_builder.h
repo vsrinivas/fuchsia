@@ -46,10 +46,9 @@ class NamespaceBuilder {
   FlatNamespacePtr BuildForRunner();
 
  private:
-  void PushDirectoryFromPath(std::string path, int oflags);
+  void PushDirectoryFromPath(std::string path);
   void PushDirectoryFromPathAs(std::string src_path,
-                               std::string dst_path,
-                               int oflags);
+                               std::string dst_path);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);
   void Release();
 

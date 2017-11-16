@@ -53,7 +53,7 @@ void NamespaceBuilder::AddFlatNamespace(FlatNamespacePtr ns) {
 }
 
 void NamespaceBuilder::AddRoot() {
-  PushDirectoryFromPath("/", O_RDWR);
+  PushDirectoryFromPath("/");
 }
 
 void NamespaceBuilder::AddPackage(zx::channel package) {
@@ -72,7 +72,7 @@ void NamespaceBuilder::AddServices(zx::channel services) {
 }
 
 void NamespaceBuilder::AddDev() {
-  PushDirectoryFromPath("/dev", O_RDWR);
+  PushDirectoryFromPath("/dev");
 }
 
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
@@ -94,28 +94,27 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
 
   for (const auto& feature : sandbox.features()) {
     if (feature == "vulkan") {
-      PushDirectoryFromPath("/dev/class/display", O_RDWR);
-      PushDirectoryFromPath("/system/data/vulkan", O_RDONLY);
+      PushDirectoryFromPath("/dev/class/display");
+      PushDirectoryFromPath("/system/data/vulkan");
     } else if (feature == "root-ssl-certificates") {
-      PushDirectoryFromPath("/system/data/boringssl", O_RDONLY);
-      PushDirectoryFromPathAs("/system/data/boringssl", "/etc/ssl", O_RDONLY);
-      // TODO(flowerhack): Make this feature more fine-grained.
+      PushDirectoryFromPath("/system/data/boringssl");
+      PushDirectoryFromPathAs("/system/data/boringssl", "/etc/ssl");
     } else if (feature == "persistent-storage") {
-      PushDirectoryFromPath("/data", O_RDWR);
+      // TODO(flowerhack): Make this feature more fine-grained.
+      PushDirectoryFromPath("/data");
     }
   }
 }
 
-void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
-  PushDirectoryFromPathAs(path, path, oflags);
+void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
+  PushDirectoryFromPathAs(path, path);
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path,
-                                               std::string dst_path ,
-                                               int oflags) {
-if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end())
+                                               std::string dst_path) {
+  if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end())
     return;
-  fxl::UniqueFD dir(open(src_path.c_str(), O_DIRECTORY | oflags));
+  fxl::UniqueFD dir(open(src_path.c_str(), O_DIRECTORY | O_RDONLY));
   if (!dir.is_valid())
     return;
   zx::channel handle = CloneChannel(dir.get());
