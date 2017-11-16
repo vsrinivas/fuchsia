@@ -1058,6 +1058,43 @@ bool vmo_cache_test() {
     END_TEST;
 }
 
+bool vmo_cache_op_test() {
+    BEGIN_TEST;
+
+    zx_handle_t vmo;
+    const size_t size = 0x8000;
+
+    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "creation for cache op");
+
+    auto t = [vmo](uint32_t op) {
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0, 1, nullptr, 0), "0 1");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0, 1, nullptr, 0), "0 1");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 1, 1, nullptr, 0), "1 1");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0, size, nullptr, 0), "0 size");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 1, size - 1, nullptr, 0), "0 size");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0x5200, 1, nullptr, 0), "0x5200 1");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0x5200, 0x800, nullptr, 0), "0x5200 0x800");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0x5200, 0x1000, nullptr, 0), "0x5200 0x1000");
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, op, 0x5200, 0x1200, nullptr, 0), "0x5200 0x1200");
+
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_op_range(vmo, op, 0, 0, nullptr, 0), "0 0");
+        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, 1, size, nullptr, 0), "0 size");
+        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, size, 1, nullptr, 0), "size 1");
+        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, size+1, 1, nullptr, 0), "size+1 1");
+        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX-1, 1, nullptr, 0), "UINT64_MAX-1 1");
+        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX, 1, nullptr, 0), "UINT64_MAX 1");
+        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX, UINT64_MAX, nullptr, 0), "UINT64_MAX UINT64_MAX");
+    };
+
+    t(ZX_VMO_OP_CACHE_SYNC);
+    t(ZX_VMO_OP_CACHE_CLEAN);
+    t(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE);
+    t(ZX_VMO_OP_CACHE_INVALIDATE);
+
+    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "close handle");
+    END_TEST;
+}
+
 bool vmo_decommit_misaligned_test() {
     BEGIN_TEST;
 
@@ -1246,6 +1283,7 @@ RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
 RUN_TEST(vmo_decommit_misaligned_test);
 RUN_TEST(vmo_cache_test);
+RUN_TEST(vmo_cache_op_test);
 RUN_TEST(vmo_zero_page_test);
 RUN_TEST(vmo_clone_test_1);
 RUN_TEST(vmo_clone_test_2);
