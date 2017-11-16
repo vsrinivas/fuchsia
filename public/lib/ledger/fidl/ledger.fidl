@@ -87,7 +87,7 @@ interface Page {
   // progress, the list of mutations bundled together is tied to the current
   // transaction. If no transaction is in progress, mutations will be bundled
   // with the following rules:
-  // - A call to either |GetSnapshot()|, |Watch()| or |StartTransaction()| will
+  // - A call to either |GetSnapshot()| or |StartTransaction()| will
   //   commit any pending mutations.
   // - All pending mutations will regularly be bundled together and committed.
   //   They are guaranteed to be persisted as soon as the client receives a
