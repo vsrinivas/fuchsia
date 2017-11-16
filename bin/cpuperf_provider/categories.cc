@@ -76,6 +76,8 @@ uint64_t GetSampleFreq(uint32_t category_mask) {
   uint32_t mode = category_mask & IPM_CATEGORY_MODE_MASK;
   switch (mode) {
   case IPM_CATEGORY_TALLY: return 0;
+  case IPM_CATEGORY_SAMPLE_100: return 100;
+  case IPM_CATEGORY_SAMPLE_500: return 500;
   case IPM_CATEGORY_SAMPLE_1000: return 1000;
   case IPM_CATEGORY_SAMPLE_5000: return 5000;
   case IPM_CATEGORY_SAMPLE_10000: return 10000;
