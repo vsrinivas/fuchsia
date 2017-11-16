@@ -205,6 +205,9 @@ struct FindByTypeValueResponseParams {
 constexpr OpCode kReadByTypeRequest = 0x08;
 constexpr OpCode kReadByTypeResponse = 0x09;
 
+// (see Vol 3, Part F, 3.4.4.2)
+constexpr uint8_t kMaxReadByTypeValueLength = 253;
+
 template <UUIDType Format>
 struct ReadByTypeRequestParams {
   Handle start_handle;

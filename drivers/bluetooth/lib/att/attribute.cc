@@ -24,14 +24,17 @@ AccessRequirements::AccessRequirements(bool encryption,
   }
 }
 
-Attribute::Attribute(Handle handle,
+Attribute::Attribute(AttributeGrouping* group,
+                     Handle handle,
                      const common::UUID& type,
                      const AccessRequirements& read_reqs,
                      const AccessRequirements& write_reqs)
-    : handle_(handle),
+    : group_(group),
+      handle_(handle),
       type_(type),
       read_reqs_(read_reqs),
       write_reqs_(write_reqs) {
+  FXL_DCHECK(group_);
   FXL_DCHECK(is_initialized());
 }
 
@@ -82,10 +85,10 @@ AttributeGrouping::AttributeGrouping(const common::UUID& group_type,
   attributes_.reserve(attr_count + 1);
 
   // TODO(armansito): Allow callers to require at most encryption.
-  attributes_.emplace_back(
-      start_handle, group_type,
+  attributes_.push_back(Attribute(
+      this, start_handle, group_type,
       AccessRequirements(false, false, false),  // read allowed, no security
-      AccessRequirements());                    // write disallowed
+      AccessRequirements()));                   // write disallowed
 
   attributes_[0].SetValue(decl_value);
 }
@@ -100,7 +103,7 @@ Attribute* AttributeGrouping::AddAttribute(
   FXL_DCHECK(attributes_[attributes_.size() - 1].handle() < end_handle_);
 
   Handle handle = start_handle_ + attributes_.size();
-  attributes_.emplace_back(handle, type, read_reqs, write_reqs);
+  attributes_.push_back(Attribute(this, handle, type, read_reqs, write_reqs));
 
   return &attributes_[handle - start_handle_];
 }

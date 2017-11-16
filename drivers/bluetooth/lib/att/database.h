@@ -10,6 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/attribute.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
 #include "lib/fxl/macros.h"
@@ -31,7 +32,52 @@ namespace att {
 // This class is not thread-safe. The constructor/destructor and all public
 // methods must be called on the same thread.
 class Database final : public fxl::RefCountedThreadSafe<Database> {
+  using GroupingList = std::list<AttributeGrouping>;
+
  public:
+  // This type allows iteration over the attributes in a database. An iterator
+  // is always initialzed with a handle range and options to skip attributes or
+  // groupings based on attribute type. An iterator always skips
+  // inactive/incomplete groupings.
+  //
+  // Modifying a database invalidates its iterators.
+  class Iterator final {
+   public:
+    // Returns the current attribute. Returns nullptr if the end of the handle
+    // range has been reached.
+    const Attribute* get() const;
+
+    // Advances the iterator forward. Skips over non-matching attributes if a
+    // type filter has been set. Has no effect if the end of the range was
+    // reached.
+    void Advance();
+
+    // If set, |next()| will only return attributes with the given |type|. No
+    // filter is set by default.
+    void set_type_filter(const common::UUID& type) { type_filter_ = type; }
+
+    // Returns true if the iterator cannot be advanced any further.
+    inline bool AtEnd() const { return grp_iter_ == grp_end_; }
+
+   private:
+    inline void MarkEnd() { grp_iter_ = grp_end_; }
+
+    friend class Database;
+    Iterator(GroupingList* list,
+             Handle start,
+             Handle end,
+             const common::UUID* type,
+             bool groups_only);
+
+    Handle start_;
+    Handle end_;
+    bool grp_only_;
+    GroupingList::iterator grp_end_;
+    GroupingList::iterator grp_iter_;
+    uint8_t attr_offset_;
+    common::Optional<common::UUID> type_filter_;
+  };
+
   // Initializes this database to span the attribute handle range given by
   // |range_start| and |range_end|. This allows the upper layer to segment the
   // handle range into multiple contiguous regions by instantiating multiple
@@ -44,6 +90,19 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
                                              Handle range_end = kHandleMax) {
     return fxl::AdoptRef(new Database(range_start, range_end));
   }
+
+  // Returns an iterator that covers the handle range defined by |start| and
+  // |end| (inclusive). If |groups_only| is true, then the returned iterator
+  // will only return group declaration attributes (this allows quicker
+  // iteration over groupings while handling the ATT Read By Group Type
+  // request).
+  //
+  // If |type| is not a nullptr, it will be assigned as the iterator's type
+  // filter.
+  Iterator GetIterator(Handle start,
+                       Handle end,
+                       const common::UUID* type = nullptr,
+                       bool groups_only = false);
 
   // Creates a new attribute grouping with the given |type|. The grouping will
   // be initialized to contain |attr_count| attributes (excluding the
@@ -65,43 +124,7 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
   // false if no such grouping was found.
   bool RemoveGrouping(Handle start_handle);
 
-  // Finds attribute groupings within the range defined by |start_handle| and
-  // |end_handle| that match |group_type|. This method will include as many
-  // matching groupings as possible in accordance with the Read By Group Type
-  // Request specification (see Vol 3, Part F, 3.4.4.9).
-  //
-  // |max_data_list_length| is the maximum size of the "attribute data list"
-  // field of a Read By Group Type response. This is used to prevent unnecessary
-  // traversal by only including results that can be written in a single ATT
-  // packet.
-  //
-  // The size of each attribute value that should be included in a Read By
-  // Group Type response will be returned in |out_value_size|. This value is
-  // calculated based on |max_data_list_length|.
-  //
-  // If |out_results| contains a single entry and its value is larger than
-  // |out_value_size| then the response should contain a partial value.
-  // Otherwise it can be assumed that all included attribute values will fit
-  // within the response.
-  //
-  // The results are returned in ascending order of handle value.
-  //
-  // The returned error code can be used in an Error Response PDU.
-  ErrorCode ReadByGroupType(Handle start_handle,
-                            Handle end_handle,
-                            const common::UUID& group_type,
-                            uint16_t max_data_list_length,
-                            uint8_t* out_value_size,
-                            std::list<AttributeGrouping*>* out_results);
-
   const std::list<AttributeGrouping>& groupings() const { return groupings_; }
-
-  // TODO(armansito): Add lookup functions:
-  //   * FindAttribute(Handle);
-  //   * ReadByType
-  //   * FindByTypeValue
-  //   * FindInformation
-  //   * etc
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Database);
@@ -119,7 +142,7 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
   // Note: This uses a std::list because fbl::lower_bound doesn't work with a
   // common::LinkedList (aka fbl::DoublyLinkedList). This is only marginally
   // less space efficient.
-  std::list<AttributeGrouping> groupings_;
+  GroupingList groupings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Database);
 };

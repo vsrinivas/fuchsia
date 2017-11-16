@@ -13,14 +13,25 @@ namespace {
 constexpr Handle kTestRangeStart = 1;
 constexpr Handle kTestRangeEnd = 10;
 
-constexpr uint16_t kDefaultMTU = 23;
-
 constexpr common::UUID kTestType1((uint16_t)1);
 constexpr common::UUID kTestType2((uint16_t)2);
+constexpr common::UUID kTestType3((uint16_t)3);
 
 // Values with different lengths
 const auto kTestValue1 = common::CreateStaticByteBuffer('x', 'x');
 const auto kTestValue2 = common::CreateStaticByteBuffer('x', 'x', 'x');
+
+// Returns the handles of each attribute visited by advancing |iter| until the
+// end.
+std::vector<Handle> IterHandles(Database::Iterator* iter) {
+  FXL_DCHECK(iter);
+
+  std::vector<Handle> handles;
+  for (; !iter->AtEnd(); iter->Advance()) {
+    handles.push_back(iter->get()->handle());
+  }
+  return handles;
+}
 
 TEST(ATT_DatabaseTest, NewGroupingWhileEmptyError) {
   constexpr size_t kTooLarge = kTestRangeEnd - kTestRangeStart + 1;
@@ -131,258 +142,322 @@ TEST(ATT_DatabaseTest, RemoveWhileEmpty) {
   EXPECT_FALSE(db->RemoveGrouping(kTestRangeStart));
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeInvalidHandle) {
+TEST(ATT_DatabaseTest, IteratorEmpty) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd);
+  EXPECT_TRUE(iter.AtEnd());
+  EXPECT_FALSE(iter.get());
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-
-  // Handle is 0.
-  EXPECT_EQ(ErrorCode::kInvalidHandle,
-            db->ReadByGroupType(kInvalidHandle, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
-  EXPECT_EQ(ErrorCode::kInvalidHandle,
-            db->ReadByGroupType(kTestRangeStart, kInvalidHandle, kTestType1,
-                                kDefaultMTU, &value_size, &results));
-
-  // end > start
-  EXPECT_EQ(
-      ErrorCode::kInvalidHandle,
-      db->ReadByGroupType(kTestRangeStart + 1, kTestRangeStart, kTestType1,
-                          kDefaultMTU, &value_size, &results));
+  // Advance should have no effect.
+  iter.Advance();
+  EXPECT_TRUE(iter.AtEnd());
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeEmpty) {
+TEST(ATT_DatabaseTest, IteratorGroupOnlySingleInactive) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  db->NewGrouping(kTestType1, 0, kTestValue1);
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-
-  EXPECT_EQ(ErrorCode::kAttributeNotFound,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
+  // |grp| is not active
+  auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, nullptr,
+                              true /* groups_only */);
+  EXPECT_TRUE(iter.AtEnd());
+  EXPECT_FALSE(iter.get());
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeOutOfRange) {
-  constexpr size_t kPadding = 3;
+TEST(ATT_DatabaseTest, IteratorGroupOnlySingle) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
-
-  db->NewGrouping(kTestType1, kPadding, kTestValue1);
-  auto* grp = db->NewGrouping(kTestType2, 0, kTestValue1);
+  auto grp = db->NewGrouping(kTestType1, 0, kTestValue1);
   grp->set_active(true);
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
+  // Not within range.
+  auto iter = db->GetIterator(grp->start_handle() + 1, kTestRangeEnd, nullptr,
+                              true /* groups_only */);
+  EXPECT_TRUE(iter.AtEnd());
+  EXPECT_FALSE(iter.get());
 
-  // Search before
-  EXPECT_EQ(
-      ErrorCode::kAttributeNotFound,
-      db->ReadByGroupType(kTestRangeStart, grp->start_handle() - 1, kTestType2,
-                          kDefaultMTU, &value_size, &results));
+  iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, nullptr,
+                         true /* groups_only */);
+  EXPECT_FALSE(iter.AtEnd());
 
-  // Search after
-  EXPECT_EQ(
-      ErrorCode::kAttributeNotFound,
-      db->ReadByGroupType(grp->end_handle() + 1, kTestRangeEnd, kTestType2,
-                          kDefaultMTU, &value_size, &results));
+  auto handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(grp->start_handle(), handles[0]);
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeIncomplete) {
+TEST(ATT_DatabaseTest, IteratorGroupOnlyMultiple) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto grp1 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  auto grp2 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  auto grp3 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  auto grp4 = db->NewGrouping(kTestType1, 0, kTestValue1);
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-  db->NewGrouping(kTestType1, 2, kTestValue1);
+  // Leave |grp2| as inactive.
+  grp1->set_active(true);
+  grp3->set_active(true);
+  grp4->set_active(true);
 
-  EXPECT_EQ(ErrorCode::kAttributeNotFound,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
+  auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, nullptr,
+                              true /* groups_only */);
+  EXPECT_FALSE(iter.AtEnd());
+
+  // |grp2| should be omitted.
+  auto handles = IterHandles(&iter);
+  ASSERT_EQ(3u, handles.size());
+  EXPECT_EQ(grp1->start_handle(), handles[0]);
+  EXPECT_EQ(grp3->start_handle(), handles[1]);
+  EXPECT_EQ(grp4->start_handle(), handles[2]);
+
+  grp2->set_active(true);
+
+  // Pick a narrow range that excludes |grp1| and |grp4|.
+  iter = db->GetIterator(grp2->start_handle(), grp3->end_handle(), nullptr,
+                         true /* groups_only */);
+  handles = IterHandles(&iter);
+  ASSERT_EQ(2u, handles.size());
+  EXPECT_EQ(grp2->start_handle(), handles[0]);
+  EXPECT_EQ(grp3->start_handle(), handles[1]);
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeInactive) {
+TEST(ATT_DatabaseTest, IteratorGroupOnlySingleWithFilter) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-
-  // Complete but inactive
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  ASSERT_FALSE(grp->active());
-
-  EXPECT_EQ(ErrorCode::kAttributeNotFound,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
-}
-
-TEST(ATT_DatabaseTest, ReadByGroupTypeSingle) {
-  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
-
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
+  auto grp = db->NewGrouping(kTestType1, 0, kTestValue1);
   grp->set_active(true);
 
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
+  // No match.
+  auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType2,
+                              true /* groups_only */);
+  EXPECT_TRUE(iter.AtEnd());
 
-  EXPECT_EQ(kTestValue1.size(), value_size);
-  ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(grp->start_handle(), results.front()->start_handle());
-  EXPECT_EQ(grp->end_handle(), results.front()->end_handle());
-  EXPECT_EQ(kTestType1, results.front()->group_type());
+  iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType1,
+                         true /* groups_only */);
+  EXPECT_FALSE(iter.AtEnd());
+
+  auto handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(grp->start_handle(), handles[0]);
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeMultipleSameValueBasic) {
+TEST(ATT_DatabaseTest, IteratorGroupOnlyManyWithFilter) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
-  // Match
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
-  Handle match_handle1 = grp->start_handle();
+  auto grp1 = db->NewGrouping(kTestType1, 1, kTestValue1);  // match
+  grp1->AddAttribute(kTestType1);  // match but skipped - not group decl.
+  grp1->set_active(true);
 
-  // No match
-  grp = db->NewGrouping(kTestType2, 0, kTestValue1);
-  grp->set_active(true);
+  // Matching but inactive.
+  db->NewGrouping(kTestType1, 0, kTestValue1);
 
-  // Match
-  grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
-  Handle match_handle2 = grp->start_handle();
+  auto grp2 = db->NewGrouping(kTestType2, 0, kTestValue1);
+  grp2->set_active(true);
+  auto grp3 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp3->set_active(true);
+  auto grp4 = db->NewGrouping(kTestType2, 0, kTestValue1);
+  grp4->set_active(true);
+  auto grp5 = db->NewGrouping(kTestType2, 0, kTestValue1);
+  grp5->set_active(true);
+  auto grp6 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp6->set_active(true);
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
+  // Filter by |kTestType1|
+  auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType1,
+                              true /* groups_only */);
+  EXPECT_FALSE(iter.AtEnd());
 
-  EXPECT_EQ(kTestValue1.size(), value_size);
-  ASSERT_EQ(2u, results.size());
-  EXPECT_EQ(match_handle1, results.front()->start_handle());
-  EXPECT_EQ(kTestType1, results.front()->group_type());
-  EXPECT_EQ(match_handle2, results.back()->start_handle());
-  EXPECT_EQ(kTestType1, results.back()->group_type());
+  auto handles = IterHandles(&iter);
+  ASSERT_EQ(3u, handles.size());
+  EXPECT_EQ(grp1->start_handle(), handles[0]);
+  EXPECT_EQ(grp3->start_handle(), handles[1]);
+  EXPECT_EQ(grp6->start_handle(), handles[2]);
+
+  // Filter by |kTestType2|
+  iter = db->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType2,
+                         true /* groups_only */);
+  EXPECT_FALSE(iter.AtEnd());
+
+  handles = IterHandles(&iter);
+  ASSERT_EQ(3u, handles.size());
+  EXPECT_EQ(grp2->start_handle(), handles[0]);
+  EXPECT_EQ(grp4->start_handle(), handles[1]);
+  EXPECT_EQ(grp5->start_handle(), handles[2]);
+
+  // Search narrower range.
+  iter = db->GetIterator(grp1->end_handle(), grp5->end_handle(), &kTestType1,
+                         true /* groups_only */);
+  EXPECT_FALSE(iter.AtEnd());
+
+  handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(grp3->start_handle(), handles[0]);
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeNarrowerRange) {
+TEST(ATT_DatabaseTest, IteratorSingleInactive) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto grp = db->NewGrouping(kTestType1, 1, kTestValue1);
 
-  // Insert 10 matching results
-  for (Handle h = kTestRangeStart; h <= kTestRangeEnd; ++h) {
-    auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-    grp->set_active(true);
+  auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd);
+  EXPECT_TRUE(iter.AtEnd());
+  EXPECT_FALSE(iter.get());
+
+  // Complete but still inactive.
+  grp->AddAttribute(kTestType1);
+  iter = db->GetIterator(kTestRangeStart, kTestRangeEnd);
+  EXPECT_TRUE(iter.AtEnd());
+  EXPECT_FALSE(iter.get());
+}
+
+TEST(ATT_DatabaseTest, IteratorSingle) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto grp = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp->set_active(true);
+
+  // Not within range.
+  auto iter = db->GetIterator(grp->start_handle() + 1, kTestRangeEnd);
+  EXPECT_TRUE(iter.AtEnd());
+  EXPECT_FALSE(iter.get());
+
+  iter = db->GetIterator(kTestRangeStart, kTestRangeEnd);
+  EXPECT_FALSE(iter.AtEnd());
+
+  auto handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(grp->start_handle(), handles[0]);
+}
+
+class ATT_DatabaseIteratorManyTest : public ::testing::Test {
+ public:
+  ATT_DatabaseIteratorManyTest() = default;
+  ~ATT_DatabaseIteratorManyTest() override = default;
+
+ protected:
+  static constexpr size_t kActiveAttrCount = 8;
+
+  void SetUp() override {
+    db_ = Database::Create(kTestRangeStart, kTestRangeEnd);
+
+    auto grp1 = db()->NewGrouping(kTestType1, 3, kTestValue1);  // 1
+    grp1->AddAttribute(kTestType2);                             // 2
+    grp1->AddAttribute(kTestType2);                             // 3
+    grp1->AddAttribute(kTestType1);                             // 4
+    grp1->set_active(true);
+
+    auto grp2 = db()->NewGrouping(kTestType2, 2, kTestValue1);  // 5
+    grp2->AddAttribute(kTestType1);                             // 6
+    grp2->AddAttribute(kTestType2);                             // 7
+    grp2->set_active(true);
+
+    auto grp3 = db()->NewGrouping(kTestType1, 1, kTestValue1);  // 8 (inactive)
+    grp3->AddAttribute(kTestType2);                             // 9 (inactive)
+
+    auto grp4 = db()->NewGrouping(kTestType1, 0, kTestValue1);  // 10
+    grp4->set_active(true);
   }
 
-  constexpr Handle kStart = 5;
-  constexpr Handle kEnd = 8;
-  constexpr size_t kExpectedCount = kEnd - kStart + 1;
+  Database* db() const { return db_.get(); }
 
-  // Make this large enough to hold kExpectedCount results.
-  const uint16_t kMTU =
-      (kTestValue1.size() + sizeof(AttributeGroupDataEntry)) * kExpectedCount;
+ private:
+  fxl::RefPtr<Database> db_;
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kStart, kEnd, kTestType1, kMTU, &value_size,
-                                &results));
-  ASSERT_EQ(kExpectedCount, results.size());
+  FXL_DISALLOW_COPY_AND_ASSIGN(ATT_DatabaseIteratorManyTest);
+};
 
-  for (Handle h = kStart; h <= kEnd; ++h) {
-    ASSERT_TRUE(!results.empty());
-    EXPECT_EQ(h, results.front()->start_handle());
-    results.pop_front();
+// static
+const size_t ATT_DatabaseIteratorManyTest::kActiveAttrCount;
+
+TEST_F(ATT_DatabaseIteratorManyTest, NoFilter) {
+  auto iter = db()->GetIterator(kTestRangeStart, kTestRangeEnd);
+  EXPECT_FALSE(iter.AtEnd());
+
+  // Should cover all but the inactive attribute.
+  auto handles = IterHandles(&iter);
+
+  // All active attribute handles.
+  const std::array<Handle, kActiveAttrCount> kExpected = {1, 2, 3, 4,
+                                                          5, 6, 7, 10};
+  ASSERT_EQ(kExpected.size(), handles.size());
+
+  for (size_t i = 0; i < handles.size(); i++) {
+    EXPECT_EQ(kExpected[i], handles[i]);
   }
-
-  // Search for the last handle only. This should return the last group.
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kTestRangeEnd, kTestRangeEnd, kTestType1, kMTU,
-                                &value_size, &results));
-  EXPECT_EQ(kTestValue1.size(), value_size);
-  ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(kTestRangeEnd, results.front()->start_handle());
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeVaryingLengths) {
-  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+TEST_F(ATT_DatabaseIteratorManyTest, FilterTestType1) {
+  // Filter by |kTestType1|.
+  auto iter = db()->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType1);
+  EXPECT_FALSE(iter.AtEnd());
 
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue2);
-  grp->set_active(true);
-  Handle match_handle = grp->start_handle();
+  auto handles = IterHandles(&iter);
 
-  // Matching type but value of different size. The results will stop here.
-  grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
+  // Handles of attributes with type |kTestType1|.
+  const std::array<Handle, 4u> kExpected = {1, 4, 6, 10};
+  ASSERT_EQ(kExpected.size(), handles.size());
 
-  // Matching type and matching value length. This won't be included as the
-  // request will terminate at the second attribute.
-  grp = db->NewGrouping(kTestType1, 0, kTestValue2);
-  grp->set_active(true);
-
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &value_size, &results));
-
-  EXPECT_EQ(kTestValue2.size(), value_size);
-  ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(match_handle, results.front()->start_handle());
+  for (size_t i = 0; i < handles.size(); i++) {
+    EXPECT_EQ(kExpected[i], handles[i]);
+  }
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeExceedsMTU) {
-  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+TEST_F(ATT_DatabaseIteratorManyTest, FilterTestType2) {
+  // Filter by |kTestType2|.
+  auto iter = db()->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType2);
+  EXPECT_FALSE(iter.AtEnd());
 
-  // Add two group entries of equal type and value length. The second one will
-  // be omitted as it won't fit in the payload.
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
-  Handle match_handle = grp->start_handle();
+  auto handles = IterHandles(&iter);
 
-  grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
+  // Handles of attributes with type |kTestType2|.
+  const std::array<Handle, 4u> kExpected = {2, 3, 5, 7};
+  ASSERT_EQ(kExpected.size(), handles.size());
 
-  // Just one octet short.
-  const uint16_t kMTU =
-      (kTestValue1.size() + sizeof(AttributeGroupDataEntry)) * 2 - 1;
-
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kMTU, &value_size, &results));
-
-  EXPECT_EQ(kTestValue1.size(), value_size);
-  ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(match_handle, results.front()->start_handle());
+  for (size_t i = 0; i < handles.size(); i++) {
+    EXPECT_EQ(kExpected[i], handles[i]);
+  }
 }
 
-TEST(ATT_DatabaseTest, ReadByGroupTypeFirstValueExceedsMTU) {
-  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+TEST_F(ATT_DatabaseIteratorManyTest, FilterTestType3) {
+  // Filter by |kTestType3|.
+  auto iter = db()->GetIterator(kTestRangeStart, kTestRangeEnd, &kTestType3);
+  EXPECT_TRUE(iter.AtEnd());
+}
 
-  // Add two group entries of equal type and value length.
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
-  Handle match_handle = grp->start_handle();
+TEST_F(ATT_DatabaseIteratorManyTest, UnaryRange) {
+  // Test ranges with a single attribute. Test group begin, middle, and end
+  // cases.
+  constexpr Handle kBegin = 5;
+  constexpr Handle kMiddle = 6;
+  constexpr Handle kEnd = 7;
 
-  grp = db->NewGrouping(kTestType1, 0, kTestValue1);
-  grp->set_active(true);
+  auto iter = db()->GetIterator(kBegin, kBegin);
+  EXPECT_FALSE(iter.AtEnd());
+  auto handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(kBegin, handles[0]);
 
-  // Pick an MTU that is just one octet short of accomodating the first entry.
-  // The result should contain this entry regardless.
-  const uint16_t kMTU =
-      kTestValue1.size() + sizeof(AttributeGroupDataEntry) - 1;
+  iter = db()->GetIterator(kMiddle, kMiddle);
+  EXPECT_FALSE(iter.AtEnd());
+  handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(kMiddle, handles[0]);
 
-  uint8_t value_size;
-  std::list<AttributeGrouping*> results;
-  EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kMTU, &value_size, &results));
+  iter = db()->GetIterator(kEnd, kEnd);
+  EXPECT_FALSE(iter.AtEnd());
+  handles = IterHandles(&iter);
+  ASSERT_EQ(1u, handles.size());
+  EXPECT_EQ(kEnd, handles[0]);
+}
 
-  EXPECT_EQ(kTestValue1.size() - 1, value_size);
-  ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(match_handle, results.front()->start_handle());
+TEST_F(ATT_DatabaseIteratorManyTest, Range) {
+  auto iter = db()->GetIterator(4, 6);
+  EXPECT_FALSE(iter.AtEnd());
+
+  auto handles = IterHandles(&iter);
+
+  // All active attribute handles.
+  const std::array<Handle, 3> kExpected = {4, 5, 6};
+  ASSERT_EQ(kExpected.size(), handles.size());
+
+  for (size_t i = 0; i < handles.size(); i++) {
+    EXPECT_EQ(kExpected[i], handles[i]);
+  }
 }
 
 }  // namespace

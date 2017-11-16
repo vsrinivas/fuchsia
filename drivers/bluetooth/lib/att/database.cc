@@ -16,13 +16,136 @@ bool StartLessThan(const AttributeGrouping& grp, const Handle handle) {
   return grp.start_handle() < handle;
 }
 
+bool EndLessThan(const AttributeGrouping& grp, const Handle handle) {
+  return grp.end_handle() < handle;
+}
+
 }  // namespace
+
+Database::Iterator::Iterator(GroupingList* list,
+                             Handle start,
+                             Handle end,
+                             const common::UUID* type,
+                             bool groups_only)
+    : start_(start), end_(end), grp_only_(groups_only), attr_offset_(0u) {
+  FXL_DCHECK(list);
+  grp_end_ = list->end();
+
+  if (type)
+    type_filter_ = *type;
+
+  // Initialize the iterator by performing a binary search over the attributes.
+  // If we were asked to iterate over groupings only, then look strictly within
+  // the range. Otherwise we allow the first grouping to partially overlap the
+  // range.
+  grp_iter_ = std::lower_bound(list->begin(), grp_end_, start_,
+                               grp_only_ ? StartLessThan : EndLessThan);
+
+  if (AtEnd())
+    return;
+
+  // If the first grouping is out of range then the iterator is done.
+  if (grp_iter_->start_handle() > end) {
+    MarkEnd();
+    return;
+  }
+
+  if (start_ > grp_iter_->start_handle()) {
+    attr_offset_ = start_ - grp_iter_->start_handle();
+  }
+
+  // If the first is inactive or if it doesn't match the current filter then
+  // skip ahead.
+  if (!grp_iter_->active() ||
+      (type_filter_ &&
+       grp_iter_->attributes()[attr_offset_].type() != *type_filter_)) {
+    Advance();
+  }
+}
+
+const Attribute* Database::Iterator::get() const {
+  if (AtEnd() || !grp_iter_->active())
+    return nullptr;
+
+  FXL_DCHECK(attr_offset_ < grp_iter_->attributes().size());
+  return &grp_iter_->attributes()[attr_offset_];
+}
+
+void Database::Iterator::Advance() {
+  if (AtEnd())
+    return;
+
+  do {
+    if (!grp_only_ && grp_iter_->active()) {
+      // If this grouping has more attributes to look at.
+      if (attr_offset_ < grp_iter_->attributes().size() - 1) {
+        size_t end_offset = grp_iter_->end_handle() - grp_iter_->start_handle();
+        FXL_DCHECK(end_offset < grp_iter_->attributes().size());
+
+        // Advance.
+        attr_offset_++;
+
+        for (; attr_offset_ <= end_offset; ++attr_offset_) {
+          const auto& attr = grp_iter_->attributes()[attr_offset_];
+
+          // If |end_| is within this grouping and we go past it, the iterator
+          // is done.
+          if (attr.handle() > end_) {
+            MarkEnd();
+            return;
+          }
+
+          // If there is no filter then we're done. Otherwise, loop until an
+          // attribute is found that matches the filter.
+          if (!type_filter_ || attr.type() == *type_filter_)
+            return;
+        }
+      }
+
+      // We are done with the current grouping. Fall through and move to the
+      // next group below.
+      attr_offset_ = 0u;
+    } else {
+      FXL_DCHECK(attr_offset_ == 0u);
+    }
+
+    // Advance the group.
+    grp_iter_++;
+    if (AtEnd())
+      return;
+
+    if (grp_iter_->start_handle() > end_) {
+      MarkEnd();
+      return;
+    }
+
+    if (!grp_iter_->active() || !grp_iter_->complete())
+      continue;
+
+    // If there is no filter then we're done. Otherwise, loop until an
+    // attribute is found that matches the filter. (NOTE: the group type is the
+    // type of the first attribute).
+    if (!type_filter_ || (*type_filter_ == grp_iter_->group_type()))
+      return;
+  } while (true);
+}
 
 Database::Database(Handle range_start, Handle range_end)
     : range_start_(range_start), range_end_(range_end) {
   FXL_DCHECK(range_start_ < range_end_);
   FXL_DCHECK(range_start_ >= kHandleMin);
   FXL_DCHECK(range_end_ <= kHandleMax);
+}
+
+Database::Iterator Database::GetIterator(Handle start,
+                                         Handle end,
+                                         const common::UUID* type,
+                                         bool groups_only) {
+  FXL_DCHECK(start >= range_start_);
+  FXL_DCHECK(end <= range_end_);
+  FXL_DCHECK(start <= end);
+
+  return Iterator(&groupings_, start, end, type, groups_only);
 }
 
 AttributeGrouping* Database::NewGrouping(const common::UUID& group_type,
@@ -85,86 +208,6 @@ bool Database::RemoveGrouping(Handle start_handle) {
 
   groupings_.erase(iter);
   return true;
-}
-
-ErrorCode Database::ReadByGroupType(
-    Handle start_handle,
-    Handle end_handle,
-    const common::UUID& group_type,
-    uint16_t max_data_list_size,
-    uint8_t* out_value_size,
-    std::list<AttributeGrouping*>* out_results) {
-  FXL_DCHECK(out_results);
-  FXL_DCHECK(out_value_size);
-
-  // Should be large enough to accomodate at least one entry with a non-empty
-  // value (NOTE: in production this will be at least equal to
-  // l2cap::kMinLEMTU). Smaller values are allowed for unit tests.
-  FXL_DCHECK(max_data_list_size > sizeof(AttributeGroupDataEntry));
-
-  if (start_handle == kInvalidHandle || start_handle > end_handle)
-    return ErrorCode::kInvalidHandle;
-
-  std::list<AttributeGrouping*> results;
-
-  // Find the first grouping with start >= |start_handle|
-  auto iter = std::lower_bound(groupings_.begin(), groupings_.end(),
-                               start_handle, StartLessThan);
-  if (iter == groupings_.end() || iter->start_handle() > end_handle)
-    return ErrorCode::kAttributeNotFound;
-
-  // "If the attributes with the requested type within the handle range have
-  // attribute values with different lengths, then multiple Read By Group Type
-  // Requests must be made." (see Vol 3, Part F, 3.4.4.9).
-  //
-  // |value_size| is determined by the first match.
-  size_t value_size;
-  size_t entry_size;
-  for (; iter != groupings_.end(); ++iter) {
-    // Exit the loop if the grouping is out of range.
-    if (iter->start_handle() > end_handle)
-      break;
-
-    if (!iter->active() || !iter->complete())
-      continue;
-
-    if (iter->group_type() != group_type)
-      continue;
-
-    // TODO(armansito): Compare against actual connection security level here.
-    // We currently do not allow security at the service declaration level, so
-    // groupings are always readable.
-    FXL_DCHECK(iter->attributes()[0].read_reqs().allowed_without_security());
-
-    if (results.empty()) {
-      value_size = iter->decl_value().size();
-
-      // The actual size of the attribute group data entry that this attribute
-      // would produce. This is both bounded by |max_data_list_size| and the
-      // maximum value size that a Read By Group Type Response can accomodate.
-      entry_size = std::min(
-          value_size, static_cast<size_t>(kMaxReadByGroupTypeValueLength));
-      entry_size = std::min(entry_size + sizeof(AttributeGroupDataEntry),
-                            static_cast<size_t>(max_data_list_size));
-    } else if (iter->decl_value().size() != value_size ||
-               entry_size > max_data_list_size) {
-      // Stop the search if the value size is different or it wouldn't fit
-      // inside the PDU.
-      break;
-    }
-
-    results.push_back(&*iter);
-    max_data_list_size -= entry_size;
-  }
-
-  if (results.empty())
-    return ErrorCode::kAttributeNotFound;
-
-  // Return the potentially truncated value size.
-  *out_value_size = entry_size - sizeof(AttributeGroupDataEntry);
-  *out_results = std::move(results);
-
-  return ErrorCode::kNoError;
 }
 
 }  // namespace att

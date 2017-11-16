@@ -14,6 +14,21 @@ namespace btlib {
 namespace gatt {
 namespace {
 
+constexpr common::UUID kTestType16((uint16_t)0xBEEF);
+constexpr common::UUID kTestType128({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                                     13, 14, 15});
+
+const auto kTestValue1 = common::CreateStaticByteBuffer('f', 'o', 'o');
+const auto kTestValue2 = common::CreateStaticByteBuffer('b', 'a', 'r');
+const auto kTestValue3 = common::CreateStaticByteBuffer('b', 'a', 'z');
+const auto kTestValue4 = common::CreateStaticByteBuffer('l', 'o', 'l');
+
+const auto kTestValueLong = common::CreateStaticByteBuffer('l', 'o', 'n', 'g');
+
+inline att::AccessRequirements AllowedNoSecurity() {
+  return att::AccessRequirements(false, false, false);
+}
+
 class GATT_ServerTest : public l2cap::testing::FakeChannelTest {
  public:
   GATT_ServerTest() = default;
@@ -213,6 +228,11 @@ TEST_F(GATT_ServerTest, ReadByGroupTypeAttributeNotFound) {
   );
   // clang-format on
 
+  // Database is empty.
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+
+  // Group type does not match.
+  db()->NewGrouping(types::kSecondaryService, 0, kTestValue1)->set_active(true);
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
@@ -307,37 +327,32 @@ TEST_F(GATT_ServerTest, ReadByGroupTypeSingleTruncated) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
-TEST_F(GATT_ServerTest, ReadByGroupTypeMultiple) {
-  const auto kTestValue1 = common::CreateStaticByteBuffer('f', 'o', 'o');
-  const auto kTestValue2 = common::CreateStaticByteBuffer('b', 'a', 'r');
-  const auto kTestValue3 = common::CreateStaticByteBuffer('b', 'a', 'z');
-  const auto kTestValue4 = common::CreateStaticByteBuffer('l', 'o', 'l');
-
+TEST_F(GATT_ServerTest, ReadByGroupTypeMultipleSameValueSize) {
   // Start: 1, end: 1
-  auto* grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue1);
-  grp->set_active(true);
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
 
   // Start: 2, end: 2
-  grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue2);
-  grp->set_active(true);
+  auto* grp2 = db()->NewGrouping(types::kPrimaryService, 0, kTestValue2);
+  grp2->set_active(true);
 
   // Start: 3, end: 3
-  grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue3);
-  grp->set_active(true);
+  db()->NewGrouping(types::kSecondaryService, 0, kTestValue3)->set_active(true);
 
   // Start: 4, end: 4
-  grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue4);
-  grp->set_active(true);
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue3)->set_active(true);
+
+  // Start: 5, end: 5
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue4)->set_active(true);
 
   // clang-format off
-  const auto kRequest = common::CreateStaticByteBuffer(
+  const auto kRequest1 = common::CreateStaticByteBuffer(
       0x10,        // opcode: read by group type
       0x01, 0x00,  // start: 0x0001
       0xFF, 0xFF,  // end: 0xFFFF
       0x00, 0x28   // group type: 0x2800 (primary service)
   );
 
-  const auto kExpected = common::CreateStaticByteBuffer(
+  const auto kExpected1 = common::CreateStaticByteBuffer(
       0x11,           // opcode: read by group type response
       0x07,           // length: 7 (strlen("foo") + 4)
       0x01, 0x00,     // start: 0x0001
@@ -346,14 +361,639 @@ TEST_F(GATT_ServerTest, ReadByGroupTypeMultiple) {
       0x02, 0x00,     // start: 0x0002
       0x02, 0x00,     // end: 0x0002
       'b', 'a', 'r',  // value: "bar"
-      0x03, 0x00,     // start: 0x0003
-      0x03, 0x00,     // end: 0x0003
+      0x04, 0x00,     // start: 0x0004
+      0x04, 0x00,     // end: 0x0004
       'b', 'a', 'z'   // value: "baz"
   );
   // clang-format on
 
-  // Set the MTU to be one byte too short to include the 4th attribute group.
-  att()->set_mtu(kExpected.size() + 6);
+  // Set the MTU to be one byte too short to include the 5th attribute group.
+  // The 3rd group is omitted as its group type does not match.
+  att()->set_mtu(kExpected1.size() + 6);
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
+
+  // Search a narrower range. Only two groups should be returned even with room
+  // in MTU.
+  // clang-format off
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x10,        // opcode: read by group type
+      0x02, 0x00,  // start: 0x0002
+      0x04, 0x00,  // end: 0x0004
+      0x00, 0x28   // group type: 0x2800 (primary service)
+  );
+
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x11,           // opcode: read by group type response
+      0x07,           // length: 7 (strlen("foo") + 4)
+      0x02, 0x00,     // start: 0x0002
+      0x02, 0x00,     // end: 0x0002
+      'b', 'a', 'r',  // value: "bar"
+      0x04, 0x00,     // start: 0x0004
+      0x04, 0x00,     // end: 0x0004
+      'b', 'a', 'z'   // value: "baz"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected2));
+
+  // Make the second group inactive. It should get omitted.
+  // clang-format off
+  const auto kExpected3 = common::CreateStaticByteBuffer(
+      0x11,           // opcode: read by group type response
+      0x07,           // length: 7 (strlen("foo") + 4)
+      0x04, 0x00,     // start: 0x0004
+      0x04, 0x00,     // end: 0x0004
+      'b', 'a', 'z'   // value: "baz"
+  );
+  // clang-format on
+
+  grp2->set_active(false);
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected3));
+}
+
+TEST_F(GATT_ServerTest, ReadByGroupTypeMultipleVaryingLengths) {
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // Matching type but value of different size. The results will stop here.
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValueLong)
+      ->set_active(true);
+
+  // Matching type and matching value length. This won't be included as the
+  // request will terminate at the second attribute.
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x10,        // opcode: read by group type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0x00, 0x28   // group type: 0x2800 (primary service)
+  );
+
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x11,               // opcode: read by group type response
+      0x08,               // length: 8 (strlen("long") + 4)
+      0x01, 0x00,         // start: 0x0001
+      0x01, 0x00,         // end: 0x0001
+      'l', 'o', 'n', 'g'  // value: "bar"
+  );
+  // clang-format on
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeInvalidPDU) {
+  // Just opcode
+  // clang-format off
+  const auto kInvalidPDU = common::CreateStaticByteBuffer(0x08);
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x00, 0x00,  // handle: 0
+      0x04         // error: Invalid PDU
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidPDU, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeInvalidHandle) {
+  // Start handle is 0
+  // clang-format off
+  const auto kInvalidStartHandle = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x00, 0x00,  // start: 0x0000
+      0xFF, 0xFF,  // end: 0xFFFF
+      0x00, 0x28   // group type: 0x2800 (primary service)
+  );
+
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x00, 0x00,  // handle: 0x0000 (start handle in request)
+      0x01         // error: Invalid handle
+  );
+
+  // End handle is smaller than start handle
+  const auto kInvalidEndHandle = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x02, 0x00,  // start: 0x0002
+      0x01, 0x00,  // end: 0x0001
+      0x00, 0x28   // group type: 0x2800 (primary service)
+  );
+
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002 (start handle in request)
+      0x01         // error: Invalid handle
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidStartHandle, kExpected1));
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidEndHandle, kExpected2));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeAttributeNotFound) {
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x01, 0x00,  // handle: 0x0001 (start handle in request)
+      0x0A         // error: Attribute not found
+  );
+  // clang-format on
+
+  // Database is empty.
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+
+  // Attribute type does not match.
+  db()->NewGrouping(types::kSecondaryService, 0, kTestValue1)->set_active(true);
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeDynamicValueNoHandler) {
+  const auto kTestValue = common::CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                    att::AccessRequirements());
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002 (the attribute causing the error)
+      0x02         // error: Read not permitted
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeDynamicValue) {
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 2, kTestValue1);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity());
+  attr->set_read_handler(
+      [attr](auto handle, uint16_t offset, const auto& result_cb) {
+        EXPECT_EQ(attr->handle(), handle);
+        EXPECT_EQ(0u, offset);
+        result_cb(att::ErrorCode::kNoError,
+                  common::CreateStaticByteBuffer('f', 'o', 'r', 'k'));
+      });
+
+  // Add a second dynamic attribute, which should be omitted.
+  attr = grp->AddAttribute(kTestType16, AllowedNoSecurity());
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x09,               // opcode: read by type response
+      0x06,               // length: 6 (strlen("fork") + 2)
+      0x02, 0x00,         // handle: 0x0002
+      'f', 'o', 'r', 'k'  // value: "fork"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+
+  // Assign a cached value to the second attribute. It should still be omitted
+  // as the first attribute is dynamic.
+  attr->SetValue(kTestValue1);
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeDynamicValueError) {
+  const auto kTestValue = common::CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+  attr->set_read_handler(
+      [](auto handle, uint16_t offset, const auto& result_cb) {
+        result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
+      });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002 (the attribute causing the error)
+      0x0E         // error: Unlikely error
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeSingle) {
+  const auto kTestValue1 = common::CreateStaticByteBuffer('f', 'o', 'o');
+  const auto kTestValue2 = common::CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue1);
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(), att::AccessRequirements())
+      ->SetValue(kTestValue2);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x09,               // opcode: read by type response
+      0x06,               // length: 6 (strlen("test") + 2)
+      0x02, 0x00,         // handle: 0x0002
+      't', 'e', 's', 't'  // value: "test"
+  );
+
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeSingle128) {
+  const auto kTestValue1 = common::CreateStaticByteBuffer('f', 'o', 'o');
+  const auto kTestValue2 = common::CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue1);
+  grp->AddAttribute(kTestType128, AllowedNoSecurity(),
+                    att::AccessRequirements())
+      ->SetValue(kTestValue2);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+
+      // type: 0F0E0D0C-0B0A-0908-0706-050403020100
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+      0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F);
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x09,               // opcode: read by type response
+      0x06,               // length: 6 (strlen("test") + 2)
+      0x02, 0x00,         // handle: 0x0002
+      't', 'e', 's', 't'  // value: "test"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeSingleTruncated) {
+  const auto kVeryLongValue = common::CreateStaticByteBuffer(
+      't', 'e', 's', 't', 'i', 'n', 'g', ' ', 'i', 's', ' ', 'f', 'u', 'n');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue1);
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(), att::AccessRequirements())
+      ->SetValue(kVeryLongValue);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x09,          // opcode: read by type response
+      0x05,          // length: 5 (strlen("tes") + 2)
+      0x02, 0x00,    // handle: 0x0002
+      't', 'e', 's'  // value: "tes"
+  );
+  // clang-format on
+
+  // Force the MTU to exactly fit |kExpected| which partially contains
+  // |kTestValue2| (the packet is crafted so that both |kRequest| and
+  // |kExpected| fit within the MTU).
+  att()->set_mtu(kExpected.size());
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeErrorSecurity) {
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 4, kTestValue1);
+
+  // Reads not allowed (handle: 2)
+  grp->AddAttribute(kTestType16)->SetValue(kTestValue2);
+
+  // Requires encryption (handle: 3)
+  grp->AddAttribute(kTestType16, att::AccessRequirements(true, false, false))
+      ->SetValue(kTestValue2);
+
+  // Requires authentication (handle: 4)
+  grp->AddAttribute(kTestType16, att::AccessRequirements(false, true, false))
+      ->SetValue(kTestValue2);
+
+  // Requires authorization (handle: 5)
+  grp->AddAttribute(kTestType16, att::AccessRequirements(false, false, true))
+      ->SetValue(kTestValue2);
+
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest1 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x02, 0x00,  // start: 0x0002
+      0x02, 0x00,  // end: 0x0002
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x03, 0x00,  // start: 0x0003
+      0x03, 0x00,  // end: 0x0003
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kRequest3 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x04, 0x00,  // start: 0x0004
+      0x04, 0x00,  // end: 0x0004
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kRequest4 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x05, 0x00,  // start: 0x0005
+      0x05, 0x00,  // end: 0x0005
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002
+      0x02         // error: read not permitted
+  );
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x03, 0x00,  // handle: 0x0003
+      0x0F         // error: insuff. encryption
+  );
+  const auto kExpected3 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x04, 0x00,  // handle: 0x0004
+      0x05         // error: insuff. authentication
+  );
+  const auto kExpected4 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x05, 0x00,  // handle: 0x0005
+      0x08         // error: insuff. authorization
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected2));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest3, kExpected3));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest4, kExpected4));
+}
+
+// When there are more than one matching attributes, the list should end at the
+// first attribute that causes an error.
+TEST_F(GATT_ServerTest, ReadByTypeMultipleExcludeFirstError) {
+  // handle 1: readable
+  auto* grp = db()->NewGrouping(kTestType16, 1, kTestValue1);
+
+  // handle 2: not readable.
+  grp->AddAttribute(kTestType16)->SetValue(kTestValue1);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x09,          // opcode: read by type response
+      0x05,          // length: 5 (strlen("foo") + 2)
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadByTypeMultipleSameValueSize) {
+  // handle: 1, value: foo
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 2, kTestValue1);
+
+  // handle: 2, value: foo
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(), att::AccessRequirements())
+      ->SetValue(kTestValue1);
+
+  // handle: 3, value: bar
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(), att::AccessRequirements())
+      ->SetValue(kTestValue2);
+  grp->set_active(true);
+
+  // handle: 4, value: foo (new grouping)
+  grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue1);
+
+  // handle: 5, value: baz
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(), att::AccessRequirements())
+      ->SetValue(kTestValue3);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest1 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x09,           // opcode: read by type response
+      0x05,           // length: 5 (strlen("foo") + 2)
+      0x02, 0x00,     // handle: 0x0002
+      'f', 'o', 'o',  // value: "foo"
+      0x03, 0x00,     // handle: 0x0003
+      'b', 'a', 'r',  // value: "bar"
+      0x05, 0x00,     // handle: 0x0005
+      'b', 'a', 'z'   // value: "baz"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
+
+  // Set the MTU 1 byte too short for |kExpected1|.
+  att()->set_mtu(kExpected1.size() - 1);
+
+  // clang-format off
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x09,           // opcode: read by type response
+      0x05,           // length: 5 (strlen("foo") + 2)
+      0x02, 0x00,     // handle: 0x0002
+      'f', 'o', 'o',  // value: "foo"
+      0x03, 0x00,     // handle: 0x0003
+      'b', 'a', 'r'   // value: "bar"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected2));
+
+  // Try a different range.
+  // clang-format off
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x03, 0x00,  // start: 0x0003
+      0x05, 0x00,  // end: 0x0005
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+
+  const auto kExpected3 = common::CreateStaticByteBuffer(
+      0x09,           // opcode: read by type response
+      0x05,           // length: 5 (strlen("bar") + 2)
+      0x03, 0x00,     // handle: 0x0003
+      'b', 'a', 'r',  // value: "bar"
+      0x05, 0x00,     // handle: 0x0005
+      'b', 'a', 'z'   // value: "baz"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected3));
+
+  // Make the second group inactive.
+  grp->set_active(false);
+
+  // clang-format off
+  const auto kExpected4 = common::CreateStaticByteBuffer(
+      0x09,           // opcode: read by type response
+      0x05,           // length: 5 (strlen("bar") + 2)
+      0x03, 0x00,     // handle: 0x0003
+      'b', 'a', 'r'   // value: "bar"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected4));
+}
+
+// A response packet should only include consecutive attributes with the same
+// value size.
+TEST_F(GATT_ServerTest, ReadByTypeMultipleVaryingLengths) {
+  // handle: 1 - value: "foo"
+  auto* grp = db()->NewGrouping(kTestType16, 2, kTestValue1);
+
+  // handle: 2 - value: "long"
+  grp->AddAttribute(kTestType16, AllowedNoSecurity())->SetValue(kTestValueLong);
+
+  // handle: 3 - value: "foo"
+  grp->AddAttribute(kTestType16, AllowedNoSecurity())->SetValue(kTestValue1);
+  grp->set_active(true);
+
+  // Even though we have 3 attributes with a matching type, the requests below
+  // will always return one attribute at a time as their values have different
+  // sizes.
+
+  // clang-format off
+  const auto kRequest1 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x09,          // opcode: read by type response
+      0x05,          // length: 5 (strlen("foo") + 2)
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x02, 0x00,  // start: 0x0002
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x09,               // opcode: read by type response
+      0x06,               // length: 6 (strlen("long") + 2)
+      0x02, 0x00,         // handle: 0x0002
+      'l', 'o', 'n', 'g'  // value: "long"
+  );
+  const auto kRequest3 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x03, 0x00,  // start: 0x0003
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kExpected3 = common::CreateStaticByteBuffer(
+      0x09,          // opcode: read by type response
+      0x05,          // length: 5 (strlen("foo") + 2)
+      0x03, 0x00,    // handle: 0x0003
+      'f', 'o', 'o'  // value: "foo"
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected2));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest3, kExpected3));
+}
+
+// When there are more than one matching attributes, the list should end at the
+// first attribute with a dynamic value.
+TEST_F(GATT_ServerTest, ReadByTypeMultipleExcludeFirstDynamic) {
+  // handle: 1 - value: "foo"
+  auto* grp = db()->NewGrouping(kTestType16, 1, kTestValue1);
+
+  // handle: 2 - value: dynamic
+  grp->AddAttribute(kTestType16, AllowedNoSecurity());
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF,  // end: 0xFFFF
+      0xEF, 0xBE   // type: 0xBEEF
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x09,          // opcode: read by type response
+      0x05,          // length: 5 (strlen("foo") + 2)
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+  // clang-format on
 
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
