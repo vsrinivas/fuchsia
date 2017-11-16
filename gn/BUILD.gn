@@ -230,6 +230,22 @@ action("finalize_manifests") {
 
     args += [ "--optional-manifest=" + rebase_path(package_manifest) ]
   }
+
+  foreach(package, package_list) {
+    package_manifest = "$root_build_dir/package/$package/archive_manifest"
+    final_manifest = "$root_build_dir/package/$package/final_archive_manifest"
+
+    # GN won't let us make these sources because they're in the build
+    # directory but written implicitly at gen time rather than by a proper
+    # action.  We're relying on the depfile to notice their changes.
+    #sources += [ package_manifest ]
+
+    outputs += [ final_manifest ]
+    args += [
+      "--standalone-output=" + rebase_path(final_manifest, root_build_dir),
+      "--manifest=" + rebase_path(package_manifest),
+    ]
+  }
 }
 
 # Package up the /boot filesystem along with Zircon's additional bootdata.

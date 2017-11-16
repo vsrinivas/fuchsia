@@ -5,7 +5,7 @@
 
 """
 This tool takes in multiple manifest files:
- * manifest file from each package
+ * system image and archive manifest files from each package
  * Zircon's bootfs.manifest, optionally using a subset selected by the
    "group" syntax (e.g. could specify just "core", or "core,misc" or
    "core,misc,test").
@@ -15,7 +15,7 @@ This tool takes in multiple manifest files:
  ** the unselected parts of the "main" manifests (i.e. Zircon)
 
 It emits final /boot and /system manifests used to make the actual images,
-and the build ID map.
+final archive manifests used to make each package, and the build ID map.
 
 The "auxiliary" manifests just supply a pool of files that might be used to
 satisfy dependencies; their files are not included in the output a priori.
@@ -28,7 +28,8 @@ It then finds those dependencies and includes them in the output manifest,
 and iterates on their dependencies.  Each dependency is found either in the
 *-shared/ toolchain $root_out_dir for the same variant toolchain that built
 the root file, or among the files in auxiliary manifests (i.e. toolchain
-and Zircon libraries).  For things built in the asan variant, it finds the asan versions of the toolchain/Zircon libraries.
+and Zircon libraries).  For things built in the asan variant, it finds the
+asan versions of the toolchain/Zircon libraries.
 """
 
 from collections import namedtuple
@@ -233,7 +234,7 @@ def collect_binaries(manifest, aux_binaries, examined):
     return binaries.itervalues(), nonbinaries
 
 
-# Take an iterable of binary_entry, and return list of manifest_entry (all
+# Take an iterable of binary_entry, and return list of binary_entry (all
 # stripped files) and a list of binary_info (all debug files).
 def strip_binary_manifest(manifest, stripped_dir, examined):
     def find_debug_file(filename):
@@ -285,7 +286,7 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
             debug = find_debug_file(info.filename)
         else:
             entry, info, debug = make_debug_file(entry, info)
-        stripped_manifest.append(entry)
+        stripped_manifest.append(binary_entry(entry, info))
         if debug is None:
             print 'WARNING: no debug file found for %s' % info.filename
             continue
@@ -298,7 +299,7 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     return stripped_manifest, debug_list
 
 
-def emit_manifests(outputs, build_id_file, depfile, selected, unselected):
+def emit_manifests(args, selected, unselected, standalone_output):
     def update_file(file, contents):
         if os.path.exists(file) and os.path.getsize(file) == len(contents):
             with open(file, 'r') as f:
@@ -308,7 +309,7 @@ def emit_manifests(outputs, build_id_file, depfile, selected, unselected):
             f.write(contents)
 
     # The name of every file we examine to make decisions goes into this set.
-    examined = set()
+    examined = set(input.file for input in args.manifest)
 
     # Collect all the inputs and reify.
     aux_binaries = collect_auxiliaries(unselected, examined)
@@ -319,8 +320,9 @@ def emit_manifests(outputs, build_id_file, depfile, selected, unselected):
                                                   examined)
 
     # Collate groups.
-    outputs = [output_manifest(file, []) for file in outputs]
-    for entry in itertools.chain(binaries, nonbinaries):
+    outputs = [output_manifest(file, []) for file in args.output]
+    for entry in itertools.chain((binary.entry for binary in binaries),
+                                 nonbinaries):
         if entry.group is not None:
             outputs[entry.group].manifest.append(entry._replace(group=None))
 
@@ -328,18 +330,63 @@ def emit_manifests(outputs, build_id_file, depfile, selected, unselected):
     # Sort so that functionally identical output is textually identical.
     for output in outputs:
         output.manifest.sort(key=lambda entry: entry.target)
-        update_file(output.file, manifest.format_manifest_file(output.manifest))
+        update_file(output.file,
+                    manifest.format_manifest_file(output.manifest))
+
+    all_binaries = {binary.info.build_id: binary.entry for binary in binaries}
+    all_debug_files = {info.build_id: info for info in debug_files}
+
+    # Now handle the standalone outputs.  These reuse the same
+    # aux_binaries, but ignore all the work done for the system image
+    # manifests.  For some shared libraries it will be repeating the work
+    # already done, but doing so lets it get different results for
+    # variants, which can be fine in different standalone manifests,
+    # whereas everything in the system image has to agree about the
+    # shared library variants to install.
+    for output, selected in standalone_output.iteritems():
+        binaries, nonbinaries = collect_binaries(selected, aux_binaries,
+                                                 examined)
+        # Partition into binaries that have already been used in other
+        # output manifests and new binaries.  For the reused binaries,
+        # we can reuse the debug file discovery/stripping already done.
+        reused_binaries = []
+        new_binaries = []
+        for binary in binaries:
+            reused = all_binaries.get(binary.info.build_id, None)
+            if reused is None:
+                new_binaries.append(binary)
+            else:
+                reused_binaries.append(reused)
+
+        # Find (or make) debug files for new binaries and update
+        # the sets of binaries and debug files already processed.
+        binaries, debug_files = strip_binary_manifest(
+            new_binaries, 'stripped', examined)
+        all_binaries.update(
+            {binary.info.build_id: binary.entry for binary in binaries})
+        all_debug_files.update(
+            {info.build_id: info for info in debug_files})
+
+        # Finally, emit the standalone manifest.
+        update_file(output,
+                    manifest.format_manifest_file(sorted(
+                        (entry._replace(group=None) for entry in
+                         itertools.chain(reused_binaries,
+                                         (binary.entry for binary in binaries),
+                                         nonbinaries)),
+                        key=lambda entry: entry.target)))
 
     # Emit the build ID list.
     # Sort so that functionally identical output is textually identical.
-    debug_files.sort(key=lambda info: info.build_id)
-    update_file(build_id_file, ''.join(
+    debug_files = sorted(all_debug_files.itervalues(),
+                         key=lambda info: info.build_id)
+    update_file(args.build_id_file, ''.join(
         info.build_id + ' ' + os.path.abspath(info.filename) + '\n'
         for info in debug_files))
 
     # Emit the depfile.
-    if depfile:
-        with open(depfile, 'w') as f:
+    if args.depfile:
+        with open(args.depfile, 'w') as f:
             f.write(outputs[0].file + ':')
             for file in sorted(examined):
                 f.write(' ' + file)
@@ -357,6 +404,7 @@ class input_manifest_action(argparse.Action):
             inputs = []
             setattr(namespace, self.dest, inputs)
         outputs = getattr(namespace, 'output', None)
+        standalone_output = getattr(namespace, 'standalone_output', None)
 
         file = values
         if namespace.groups is None:
@@ -368,7 +416,12 @@ class input_manifest_action(argparse.Action):
                          for group in namespace.groups.split(','))
 
         cwd = getattr(namespace, 'cwd', '')
-        output_group = None if outputs is None else len(outputs) - 1
+        if standalone_output is not None:
+            output_group = standalone_output[-1]
+        elif outputs is not None:
+            output_group = len(outputs) - 1
+        else:
+            output_group = None
 
         if not self.optional or os.path.exists(file):
             inputs.append(input_manifest(file, cwd, groups, output_group))
@@ -385,11 +438,11 @@ def parse_args():
 Massage manifest files from the build to produce images.
 ''',
         epilog='''
-The --cwd and --group options apply to subsequent --manifest arguments.
-Each input --manifest is assigned to the preceding --output argument file.
-Any input --manifest that precedes all --output arguments just supplies
-auxiliary files implicitly required by other (later) input manifests, but
-does not add all its files to any --output manifest.  This is used for
+The --cwd and --group options apply to subsequent --manifest arguments.  Each
+input --manifest is assigned to the preceding --output/-standalone-output
+argument file.  Any input --manifest that precedes all --output arguments just
+supplies auxiliary files implicitly required by other (later) input manifests,
+but does not add all its files to any --output manifest.  This is used for
 shared libraries and the like.
 ''')
     parser.add_argument('--build-id-file', required=True,
@@ -398,6 +451,8 @@ shared libraries and the like.
                         help='Ninja depfile to write')
     parser.add_argument('--output', action='append', required=True,
                         help='Output manifest file')
+    parser.add_argument('--standalone-output', action='append',
+                        help='Standalone (archive) output manifest file')
     parser.add_argument('--cwd',
                         help='Input entries are relative to this directory')
     parser.add_argument('--groups',
@@ -415,6 +470,8 @@ def main():
 
     all_selected = []
     all_unselected = []
+    standalone_output = {}
+    standalone_unselected = {}
     for input in args.manifest:
         selected, unselected, groups_seen = manifest.ingest_manifest_file(
             input.file, input.cwd, input.groups, '.', input.output_group)
@@ -427,11 +484,20 @@ def main():
                     (', '.join(map(repr, unused_groups)), input.file,
                      ', '.join(map(repr, groups_seen - input.groups))))
 
-        all_selected += selected
-        all_unselected += unselected
+        if isinstance(input.output_group, str):
+            standalone_output[input.output_group] = selected
+            standalone_unselected[input.output_group] = unselected
+        else:
+            all_selected += selected
+            all_unselected += unselected
 
-    emit_manifests(args.output, args.build_id_file, args.depfile,
-                  all_selected, all_unselected)
+    for input in sorted(standalone_unselected.iterkeys()):
+        if standalone_unselected[input]:
+            print 'NOTE: unused files from %s' % input
+            for entry in standalone_unselected[input]:
+                print '\t' + repr(entry)
+
+    emit_manifests(args, all_selected, all_unselected, standalone_output)
 
 
 if __name__ == "__main__":
