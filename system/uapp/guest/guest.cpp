@@ -258,8 +258,8 @@ int main(int argc, char** argv) {
         apic_vmo,
 #endif // __x86_64__
     };
-    zx_handle_t vcpu;
-    status = zx_vcpu_create(guest.handle(), 0, &args, &vcpu);
+    Vcpu vcpu;
+    status = vcpu.Init(guest, &args);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create VCPU\n");
         return status;
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
     }
 #if __x86_64__
     // Setup local APIC.
-    LocalApic local_apic(vcpu, apic_addr);
+    LocalApic local_apic(&vcpu, apic_addr);
     status = local_apic.Init(&guest);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create local APIC\n");
@@ -364,19 +364,19 @@ int main(int argc, char** argv) {
             return status;
     }
 
-    zx_vcpu_state_t vcpu_state;
-    memset(&vcpu_state, 0, sizeof(vcpu_state));
+    // Setup initial VCPU state.
+    zx_vcpu_state_t vcpu_state = {};
 #if __aarch64__
     vcpu_state.x[0] = bootdata_off;
 #elif __x86_64__
     vcpu_state.rsi = bootdata_off;
 #endif
-    status = zx_vcpu_write_state(vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+    status = vcpu.WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to write VCPU state\n");
         return status;
     }
 
-    vcpu_ctx_t vcpu_ctx(vcpu);
-    return vcpu_loop(&vcpu_ctx);
+    // Begin VCPU execution.
+    return vcpu.Loop();
 }

@@ -33,10 +33,6 @@ public:
     // Associate a local APIC with an IO APIC.
     zx_status_t RegisterLocalApic(uint8_t local_apic_id, LocalApic* local_apic);
 
-    // Returns the redirected interrupt vector and target VCPU for the given
-    // global IRQ.
-    zx_status_t Redirect(uint32_t global_irq, uint8_t* vector, zx_handle_t* vcpu) const;
-
     // Writes the redirect entry for a global IRQ.
     zx_status_t SetRedirect(uint32_t global_irq, RedirectEntry& redirect);
 

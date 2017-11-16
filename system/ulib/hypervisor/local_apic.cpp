@@ -7,6 +7,7 @@
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/vcpu.h>
 #include <zircon/assert.h>
 
 // clang-format off
@@ -38,13 +39,55 @@ static const uint64_t kLocalApicInitialCount    = 0x0380;
 
 // clang-format on
 
+// From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
+// accessed using 128-bit aligned 32-bit loads or stores. Some processors
+// may support loads and stores of less than 32 bits to some of the APIC
+// registers. This is model specific behavior and is not guaranteed to work
+// on all processors.
+union Register {
+    volatile uint32_t u32;
+} __PACKED __ALIGNED(16);
+
+// Local APIC register map.
+struct LocalApic::Registers {
+    Register reserved0[2];
+
+    Register id;      // Read/Write.
+    Register version; // Read Only.
+
+    Register reserved1[4];
+
+    Register tpr;       // Read/Write.
+    Register apr;       // Read Only.
+    Register ppr;       // Read Only.
+    Register eoi;       // Write Only.
+    Register rrd;       // Read Only.
+    Register ldr;       // Read/Write.
+    Register dfr;       // Read/Write.
+    Register isr[8];    // Read Only.
+    Register tmr[8];    // Read Only.
+    Register irr[8];    // Read Only.
+    Register esr;       // Read Only.
+
+    Register reserved2[6];
+
+    Register lvt_cmci;  // Read/Write.
+} __PACKED;
+
 static_assert(__offsetof(LocalApic::Registers, id) == kLocalApicId, "");
 static_assert(__offsetof(LocalApic::Registers, ldr) == kLocalApicLdr, "");
 static_assert(__offsetof(LocalApic::Registers, dfr) == kLocalApicDfr, "");
 
+LocalApic::LocalApic(Vcpu* vcpu, uintptr_t apic_addr)
+    : vcpu_(vcpu), registers_(reinterpret_cast<Registers*>(apic_addr)) {}
+
 zx_status_t LocalApic::Init(Guest* guest) {
     return guest->CreateMapping(TrapType::MMIO_SYNC, LOCAL_APIC_PHYS_BASE, LOCAL_APIC_SIZE, 0,
                                 this);
+}
+
+zx_status_t LocalApic::Interrupt(uint32_t vector) {
+    return vcpu_->Interrupt(vector);
 }
 
 zx_status_t LocalApic::Read(uint64_t addr, IoValue* value) {

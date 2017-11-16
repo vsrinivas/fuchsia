@@ -6,24 +6,19 @@
 
 #include <zircon/types.h>
 
-typedef struct zx_port_packet zx_port_packet_t;
+typedef struct zx_vcpu_create_args zx_vcpu_create_args_t;
 
-/* Typedefs to abstract reading and writing VCPU state. */
-typedef struct vcpu_ctx vcpu_ctx_t;
-typedef zx_status_t (*read_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, void* buffer, uint32_t len);
-typedef zx_status_t (*write_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, const void* buffer, uint32_t len);
+class Guest;
 
-/* Stores the state associated with a single VCPU. */
-typedef struct vcpu_ctx {
-    vcpu_ctx(zx_handle_t vcpu_);
+class Vcpu {
+public:
+    zx_status_t Init(const Guest& guest, zx_vcpu_create_args_t* args);
+    zx_status_t Loop();
 
-    zx_handle_t vcpu;
-    read_state_fn_t read_state;
-    write_state_fn_t write_state;
-} vcpu_ctx_t;
+    zx_status_t Interrupt(uint32_t vector);
+    zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
+    zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
-/* Controls execution of a VCPU context, providing the main logic. */
-zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);
-
-/* Processes a single guest packet. */
-zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet);
+private:
+    zx_handle_t vcpu_ = ZX_HANDLE_INVALID;
+};

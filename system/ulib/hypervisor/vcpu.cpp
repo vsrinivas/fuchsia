@@ -90,15 +90,14 @@ static zx_status_t handle_mmio_x86(const zx_packet_guest_mem_t* mem, uint64_t tr
 }
 #endif
 
-static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
-                              uint64_t trap_key) {
+static zx_status_t handle_mem(Vcpu* vcpu, const zx_packet_guest_mem_t* mem, uint64_t trap_key) {
     zx_vcpu_state_t vcpu_state;
     zx_status_t status;
 #if __aarch64__
     if (mem->read)
 #endif
     {
-        status = vcpu_ctx->read_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+        status = vcpu->ReadState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
         if (status != ZX_OK)
             return status;
     }
@@ -123,15 +122,14 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
 #endif // __x86_64__
 
     if (status != ZX_OK) {
-        return zx_vcpu_interrupt(vcpu_ctx->vcpu, kGpFaultVector);
+        return vcpu->Interrupt(kGpFaultVector);
     } else if (do_write) {
-        return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+        return vcpu->WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     }
     return status;
 }
 
-static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
-                                uint64_t trap_key) {
+static zx_status_t handle_input(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_t trap_key) {
     IoValue value = {};
     value.access_size = io->access_size;
     zx_status_t status = trap_key_to_mapping(trap_key)->Read(io->port, &value);
@@ -149,11 +147,10 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
                 io->access_size, io->port);
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
+    return vcpu->WriteState(ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 }
 
-static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
-                                 uint64_t trap_key) {
+static zx_status_t handle_output(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_t trap_key) {
     IoValue value;
     value.access_size = io->access_size;
     value.u32 = io->u32;
@@ -164,33 +161,37 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     return status;
 }
 
-static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
-                             uint64_t trap_key) {
-    return io->input ? handle_input(vcpu_ctx, io, trap_key) : handle_output(vcpu_ctx, io, trap_key);
+static zx_status_t handle_io(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_t trap_key) {
+    return io->input ? handle_input(vcpu, io, trap_key) : handle_output(vcpu, io, trap_key);
 }
 
-static zx_status_t vcpu_state_read(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
-                                   uint32_t len) {
-    return zx_vcpu_read_state(vcpu_ctx->vcpu, kind, buffer, len);
+zx_status_t Vcpu::Init(const Guest& guest, zx_vcpu_create_args_t* args) {
+    return zx_vcpu_create(guest.handle(), 0, args, &vcpu_);
 }
 
-static zx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const void* buffer,
-                                    uint32_t len) {
-    return zx_vcpu_write_state(vcpu_ctx->vcpu, kind, buffer, len);
+static zx_status_t handle_packet(Vcpu* vcpu, zx_port_packet_t* packet) {
+    switch (packet->type) {
+    case ZX_PKT_TYPE_GUEST_MEM:
+        return handle_mem(vcpu, &packet->guest_mem, packet->key);
+#if __x86_64__
+    case ZX_PKT_TYPE_GUEST_IO:
+        return handle_io(vcpu, &packet->guest_io, packet->key);
+#endif // __x86_64__
+    default:
+        fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
-vcpu_ctx::vcpu_ctx(zx_handle_t vcpu_)
-    : vcpu(vcpu_), read_state(&vcpu_state_read), write_state(vcpu_state_write) {}
-
-zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
+zx_status_t Vcpu::Loop() {
+    zx_port_packet_t packet;
     while (true) {
-        zx_port_packet_t packet;
-        zx_status_t status = zx_vcpu_resume(vcpu_ctx->vcpu, &packet);
+        zx_status_t status = zx_vcpu_resume(vcpu_, &packet);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to resume VCPU %d\n", status);
             return status;
         }
-        status = vcpu_packet_handler(vcpu_ctx, &packet);
+        status = handle_packet(this, &packet);
         if (status == ZX_ERR_STOP)
             return ZX_OK;
         if (status != ZX_OK) {
@@ -200,16 +201,14 @@ zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
     }
 }
 
-zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) {
-    switch (packet->type) {
-    case ZX_PKT_TYPE_GUEST_MEM:
-        return handle_mem(vcpu_ctx, &packet->guest_mem, packet->key);
-#if __x86_64__
-    case ZX_PKT_TYPE_GUEST_IO:
-        return handle_io(vcpu_ctx, &packet->guest_io, packet->key);
-#endif // __x86_64__
-    default:
-        fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t Vcpu::Interrupt(uint32_t vector) {
+    return zx_vcpu_interrupt(vcpu_, vector);
+}
+
+zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
+    return zx_vcpu_read_state(vcpu_, kind, buffer, len);
+}
+
+zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
+    return zx_vcpu_write_state(vcpu_, kind, buffer, len);
 }

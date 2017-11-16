@@ -53,8 +53,15 @@ zx_status_t IoApic::RegisterLocalApic(uint8_t local_apic_id, LocalApic* local_ap
     return ZX_OK;
 }
 
-zx_status_t IoApic::Redirect(uint32_t global_irq, uint8_t* out_vector,
-                             zx_handle_t* out_vcpu) const {
+zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
+    if (global_irq >= kNumRedirects)
+        return ZX_ERR_OUT_OF_RANGE;
+    fbl::AutoLock lock(&mutex_);
+    redirect_[global_irq] = redirect;
+    return ZX_OK;
+}
+
+zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
     if (global_irq >= kNumRedirects)
         return ZX_ERR_OUT_OF_RANGE;
 
@@ -81,12 +88,10 @@ zx_status_t IoApic::Redirect(uint32_t global_irq, uint8_t* out_vector,
     uint8_t destmod = BIT_SHIFT(entry.lower, 11);
     if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
         uint32_t dest = bits_shift(entry.upper, 27, 24);
-        LocalApic* apic = dest < kMaxLocalApics ? local_apic_[dest] : nullptr;
-        if (apic == nullptr)
+        LocalApic* local_apic = dest < kMaxLocalApics ? local_apic_[dest] : nullptr;
+        if (local_apic == nullptr)
             return ZX_ERR_NOT_FOUND;
-        *out_vector = static_cast<uint8_t>(vector);
-        *out_vcpu = apic->vcpu();
-        return ZX_OK;
+        return local_apic->Interrupt(vector);
     }
 
     // Logical DESTMOD.
@@ -112,28 +117,9 @@ zx_status_t IoApic::Redirect(uint32_t global_irq, uint8_t* out_vector,
         // Note we're not currently respecting the DELMODE field and
         // instead are only delivering to the fist local APIC that is
         // targeted.
-        *out_vector = static_cast<uint8_t>(vector);
-        *out_vcpu = local_apic->vcpu();
-        return ZX_OK;
+        return local_apic->Interrupt(vector);
     }
     return ZX_ERR_NOT_FOUND;
-}
-
-zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
-    if (global_irq >= kNumRedirects)
-        return ZX_ERR_OUT_OF_RANGE;
-    fbl::AutoLock lock(&mutex_);
-    redirect_[global_irq] = redirect;
-    return ZX_OK;
-}
-
-zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
-    uint8_t vector;
-    zx_handle_t vcpu;
-    zx_status_t status = Redirect(global_irq, &vector, &vcpu);
-    if (status != ZX_OK)
-        return status;
-    return zx_vcpu_interrupt(vcpu, vector);
 }
 
 zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
