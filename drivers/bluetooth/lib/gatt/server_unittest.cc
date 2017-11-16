@@ -127,6 +127,186 @@ TEST_F(GATT_ServerTest, ExchangeMTURequest) {
   EXPECT_EQ(kClientMTU, att()->mtu());
 }
 
+TEST_F(GATT_ServerTest, FindInformationInvalidPDU) {
+  // Just opcode
+  // clang-format off
+  const auto kInvalidPDU = common::CreateStaticByteBuffer(0x04);
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x04,        // request: find information
+      0x00, 0x00,  // handle: 0
+      0x04         // error: Invalid PDU
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidPDU, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindInformationInvalidHandle) {
+  // Start handle is 0
+  // clang-format off
+  const auto kInvalidStartHandle = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information
+      0x00, 0x00,  // start: 0x0000
+      0xFF, 0xFF   // end: 0xFFFF
+  );
+
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x04,        // request: find information
+      0x00, 0x00,  // handle: 0x0000 (start handle in request)
+      0x01         // error: Invalid handle
+  );
+
+  // End handle is smaller than start handle
+  const auto kInvalidEndHandle = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information
+      0x02, 0x00,  // start: 0x0002
+      0x01, 0x00   // end: 0x0001
+  );
+
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x04,        // request: find information
+      0x02, 0x00,  // handle: 0x0002 (start handle in request)
+      0x01         // error: Invalid handle
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidStartHandle, kExpected1));
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidEndHandle, kExpected2));
+}
+
+TEST_F(GATT_ServerTest, FindInformationAttributeNotFound) {
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information request
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF   // end: 0xFFFF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x04,        // request: find information
+      0x01, 0x00,  // handle: 0x0001 (start handle in request)
+      0x0A         // error: Attribute not found
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindInformation16) {
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 2, kTestValue1);
+  grp->AddAttribute(kTestType16);
+  grp->AddAttribute(kTestType16);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information request
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF   // end: 0xFFFF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit
+      0x01, 0x00,  // handle: 0x0001
+      0x00, 0x28,  // uuid: primary service group type
+      0x02, 0x00,  // handle: 0x0002
+      0xEF, 0xBE,  // uuid: 0xBEEF
+      0x03, 0x00,  // handle: 0x0003
+      0xEF, 0xBE   // uuid: 0xBEEF
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindInformation128) {
+  auto* grp = db()->NewGrouping(kTestType128, 0, kTestValue1);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information request
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF   // end: 0xFFFF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x02,        // format: 128-bit
+      0x01, 0x00,  // handle: 0x0001
+
+      // uuid: 0F0E0D0C-0B0A-0908-0706-050403020100
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+      0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F);
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindInfomationInactive) {
+  // handle: 1 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // handle: 2, 3, 4 (inactive)
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 2, kTestValue1);
+  grp->AddAttribute(kTestType16);
+  grp->AddAttribute(kTestType16);
+
+  // handle: 5 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information request
+      0x01, 0x00,  // start: 0x0001
+      0xFF, 0xFF   // end: 0xFFFF
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit
+      0x01, 0x00,  // handle: 0x0001
+      0x00, 0x28,  // uuid: primary service group type
+      0x05, 0x00,  // handle: 0x0005
+      0x00, 0x28  // uuid: primary service group type
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindInfomationRange) {
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 2, kTestValue1);
+  grp->AddAttribute(kTestType16);
+  grp->AddAttribute(kTestType16);
+  grp->set_active(true);
+
+  // handle: 5 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x04,        // opcode: find information request
+      0x02, 0x00,  // start: 0x0002
+      0x02, 0x00   // end: 0x0002
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit
+      0x02, 0x00,  // handle: 0x0001
+      0xEF, 0xBE   // uuid: 0xBEEF
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
 TEST_F(GATT_ServerTest, ReadByGroupTypeInvalidPDU) {
   // Just opcode
   // clang-format off

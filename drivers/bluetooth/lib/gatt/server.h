@@ -38,6 +38,8 @@ class Server final {
   // ATT protocol request handlers:
   void OnExchangeMTU(att::Bearer::TransactionId tid,
                      const att::PacketReader& packet);
+  void OnFindInformation(att::Bearer::TransactionId tid,
+                         const att::PacketReader& packet);
   void OnReadByGroupType(att::Bearer::TransactionId tid,
                          const att::PacketReader& packet);
   void OnReadByType(att::Bearer::TransactionId tid,
@@ -70,6 +72,7 @@ class Server final {
 
   // ATT protocol request handler IDs
   att::Bearer::HandlerId exchange_mtu_id_;
+  att::Bearer::HandlerId find_information_id_;
   att::Bearer::HandlerId read_by_group_type_id_;
   att::Bearer::HandlerId read_by_type_id_;
 
