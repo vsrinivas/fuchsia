@@ -46,7 +46,7 @@ source_set("ssl") {
   ]
   configs += [ "//third_party/boringssl:internal_config" ]
   public_deps = [
-    "//third_party/boringssl/crypto",
+    "//third_party/boringssl:crypto",
   ]
 }
 
