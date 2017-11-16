@@ -55,9 +55,6 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
     buffer->virt = (void *)virt;
     buffer->phys = phys;
 
-    // ensure that the kernel finishes zeroing pages before we use buffer for DMA
-    io_buffer_cache_op(buffer, ZX_VMO_OP_CACHE_CLEAN, 0, size);
-
     return ZX_OK;
 }
 
@@ -165,6 +162,21 @@ zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
     } else {
         return ZX_OK;
     }
+}
+
+zx_status_t io_buffer_cache_flush(io_buffer_t* buffer, zx_off_t offset, size_t length) {
+    if (offset + length < offset || offset + length > buffer->size) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return zx_cache_flush(io_buffer_virt(buffer) + offset, length, ZX_CACHE_FLUSH_DATA);
+}
+
+zx_status_t io_buffer_cache_flush_invalidate(io_buffer_t* buffer, zx_off_t offset, size_t length) {
+    if (offset + length < offset || offset + length > buffer->size) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return zx_cache_flush(io_buffer_virt(buffer) + offset, length,
+                          ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 }
 
 zx_status_t io_buffer_physmap(io_buffer_t* buffer) {

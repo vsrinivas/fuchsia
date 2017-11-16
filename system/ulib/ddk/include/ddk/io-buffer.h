@@ -54,7 +54,14 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
                                     zx_handle_t resource, uint32_t cache_policy);
 
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
-                               const zx_off_t offset, const size_t size);
+                               const zx_off_t offset, const size_t size) __attribute__((__deprecated__));
+
+// io_buffer_cache_flush() performs a cache flush on a range of memory in the buffer
+zx_status_t io_buffer_cache_flush(io_buffer_t* buffer, zx_off_t offset, size_t length);
+
+// io_buffer_cache_flush_invalidate() performs a cache flush and invalidate on a range of memory
+// in the buffer
+zx_status_t io_buffer_cache_flush_invalidate(io_buffer_t* buffer, zx_off_t offset, size_t length);
 
 // Looks up the physical pages backing this buffer's vm object.
 // This is used for non contiguous buffers.

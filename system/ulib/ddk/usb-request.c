@@ -95,6 +95,14 @@ zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, 
     return io_buffer_cache_op(&req->buffer, op, offset, length);
 }
 
+zx_status_t usb_request_cache_flush(usb_request_t* req, zx_off_t offset, size_t length) {
+    return io_buffer_cache_flush(&req->buffer, offset, length);
+}
+
+zx_status_t usb_request_cache_flush_invalidate(usb_request_t* req, zx_off_t offset, size_t length) {
+    return io_buffer_cache_flush_invalidate(&req->buffer, offset, length);
+}
+
 zx_status_t usb_request_physmap(usb_request_t* req) {
     return io_buffer_physmap(&req->buffer);
 }

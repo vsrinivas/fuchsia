@@ -399,6 +399,27 @@ void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
 #endif
 }
 
+zx_status_t iotxn_cache_flush(iotxn_t* txn, zx_off_t offset, size_t length) {
+    if (!txn->virt) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (offset + length < offset || offset + length > txn->length) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return zx_cache_flush(txn->virt + offset, length, ZX_CACHE_FLUSH_DATA);
+}
+
+zx_status_t iotxn_cache_flush_invalidate(iotxn_t* txn, zx_off_t offset, size_t length) {
+    if (!txn->virt) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (offset + length < offset || offset + length > txn->length) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return zx_cache_flush(txn->virt + offset, length,
+                          ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+}
+
 zx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size) {
     //xprintf("iotxn_alloc: alloc_flags 0x%x data_size 0x%" PRIx64 "\n", alloc_flags, data_size);
 

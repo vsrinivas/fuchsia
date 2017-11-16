@@ -204,7 +204,14 @@ zx_status_t iotxn_mmap(iotxn_t* txn, void** data);
 
 // iotxn_cacheop() performs a cache maintenance op against the iotxn's internal
 // buffer.
-void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length);
+void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) __attribute__((__deprecated__));
+
+// iotxn_cache_flush() performs a cache flush on a range of memory in the iotxn's buffer
+zx_status_t iotxn_cache_flush(iotxn_t* txn, zx_off_t offset, size_t length);
+
+// iotxn_cache_flush_invalidate() performs a cache flush and invalidate on a range of memory
+// in the iotxn's buffer
+zx_status_t iotxn_cache_flush_invalidate(iotxn_t* txn, zx_off_t offset, size_t length);
 
 // iotxn_clone() creates a new iotxn which shares the vm object with this one,
 // suitable for a driver to use to make a request of a driver it is stacked on
