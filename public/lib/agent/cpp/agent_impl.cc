@@ -16,10 +16,7 @@ AgentImpl::AgentImpl(app::ServiceNamespace* const service_namespace,
 }
 
 // |Agent|
-void AgentImpl::Initialize(
-    fidl::InterfaceHandle<modular::AgentContext> agent_context) {
-  delegate_->AgentInit(std::move(agent_context));
-}
+void AgentImpl::Initialize() {}
 
 // |Agent|
 void AgentImpl::Connect(

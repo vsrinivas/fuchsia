@@ -99,6 +99,7 @@ class MyEntityProvider : AgentImpl::Delegate,
       : app_controller_(this, std::move(ctrl)),
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
+    FXL_CHECK(!launch_info_.is_null());
     outgoing_services_.AddService<EntityProvider>(
         [this](fidl::InterfaceRequest<EntityProvider> request) {
           entity_provider_binding_.Bind(std::move(request));
@@ -107,6 +108,17 @@ class MyEntityProvider : AgentImpl::Delegate,
     outgoing_services_.ServeDirectory(std::move(launch_info_->service_request));
     agent_impl_ = std::make_unique<AgentImpl>(
         &outgoing_services_, static_cast<AgentImpl::Delegate*>(this));
+
+    // Get |agent_context_| and |entity_resolver_| from incoming namespace.
+    FXL_CHECK(!launch_info_->additional_services.is_null());
+    FXL_CHECK(launch_info_->additional_services->provider.is_valid());
+    auto additional_services = app::ServiceProviderPtr::Create(
+        std::move(launch_info_->additional_services->provider));
+    app::ConnectToService(additional_services.get(),
+                          agent_context_.NewRequest());
+    ComponentContextPtr component_context;
+    agent_context_->GetComponentContext(component_context.NewRequest());
+    component_context->GetEntityResolver(entity_resolver_.NewRequest());
   }
 
   size_t GetCallCount(const std::string func) { return counts.count(func); }
@@ -120,16 +132,6 @@ class MyEntityProvider : AgentImpl::Delegate,
   void Detach() override { ++counts["Detach"]; }
   // |ApplicationController|
   void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
-
-  // |AgentImpl::Delegate|
-  void AgentInit(
-      fidl::InterfaceHandle<AgentContext> agent_context_handle) override {
-    agent_context_.Bind(std::move(agent_context_handle));
-    ComponentContextPtr component_context;
-    agent_context_->GetComponentContext(component_context.NewRequest());
-    component_context->GetEntityResolver(entity_resolver_.NewRequest());
-    ++counts["AgentInit"];
-  }
 
   // |AgentImpl::Delegate|
   void Connect(
@@ -161,7 +163,6 @@ class MyEntityProvider : AgentImpl::Delegate,
   app::ServiceNamespace outgoing_services_;
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
-  // only valid after AgentInit() is called.
   EntityResolverPtr entity_resolver_;
   fidl::Binding<app::ApplicationController> app_controller_;
   fidl::Binding<modular::EntityProvider> entity_provider_binding_;
@@ -190,10 +191,8 @@ TEST_F(EntityProviderRunnerTest, Basic) {
 
   RunLoopUntil([&dummy_agent] {
     return dummy_agent.get() != nullptr &&
-           dummy_agent->GetCallCount("AgentInit") == 1 &&
            dummy_agent->GetCallCount("Connect") == 1;
   });
-  dummy_agent->ExpectCalledOnce("AgentInit");
   dummy_agent->ExpectCalledOnce("Connect");
 
   // 2. Make an entity reference on behalf of this agent.

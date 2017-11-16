@@ -63,7 +63,10 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
         agent_impl_(std::make_unique<AgentImpl>(
             app_context->outgoing_services(),
             static_cast<AgentImpl::Delegate*>(this))),
-        on_terminated_(std::move(on_terminated)) {}
+        on_terminated_(std::move(on_terminated)),
+        agent_context_(
+            app_context_->ConnectToEnvironmentService<AgentContext>()),
+        impl_(std::make_unique<Impl>(static_cast<AgentHost*>(this))) {}
 
  private:
   // |AgentHost|
@@ -77,11 +80,6 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     return agent_context_.get();
   }
 
-  // |AgentImpl::Delegate|
-  void AgentInit(fidl::InterfaceHandle<AgentContext> agent_context) override {
-    agent_context_.Bind(std::move(agent_context));
-    impl_ = std::make_unique<Impl>(static_cast<AgentHost*>(this));
-  }
   // |AgentImpl::Delegate|
   void Connect(fidl::InterfaceRequest<app::ServiceProvider>
                    outgoing_services_request) override {

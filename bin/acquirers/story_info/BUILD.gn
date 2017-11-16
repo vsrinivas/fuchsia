@@ -28,6 +28,7 @@ executable("story_info") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:storage",
     "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",

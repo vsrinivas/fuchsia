@@ -97,8 +97,7 @@ class MyDummyAgent : Agent,
   void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> /*agent_context*/) override {
+  void Initialize() override {
     ++counts["Initialize"];
   }
 

@@ -17,11 +17,18 @@
 
 namespace maxwell {
 
-StoryInfoAcquirer::StoryInfoAcquirer()
+StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
     : initializer_binding_(this),
       visible_stories_watcher_binding_(this),
       story_provider_watcher_binding_(this),
       focus_watcher_binding_(this) {
+  // Initialize IntelligenceServices.
+  IntelligenceServicesPtr intelligence_services;
+  agent_host->agent_context()->GetIntelligenceServices(
+      intelligence_services.NewRequest());
+  intelligence_services->GetContextWriter(context_writer_.NewRequest());
+  intelligence_services->GetContextReader(context_reader_.NewRequest());
+
   // This ServiceProvider is handed out in Connect().
   agent_services_.AddService<StoryInfoInitializer>(
       [this](fidl::InterfaceRequest<StoryInfoInitializer> request) {
@@ -36,26 +43,18 @@ void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
   stories_.erase(story_id);
 }
 
-void StoryInfoAcquirer::Initialize(
-    fidl::InterfaceHandle<modular::AgentContext> agent_context_handle) {
-  // Initialize |context_publiser_| using IntelligenceServices.
-  auto agent_context =
-      modular::AgentContextPtr::Create(std::move(agent_context_handle));
-  IntelligenceServicesPtr intelligence_services;
-  agent_context->GetIntelligenceServices(intelligence_services.NewRequest());
-  intelligence_services->GetContextWriter(context_writer_.NewRequest());
-  intelligence_services->GetContextReader(context_reader_.NewRequest());
-}
-
 void StoryInfoAcquirer::Connect(
-    const fidl::String& requestor_url,
     fidl::InterfaceRequest<app::ServiceProvider> services) {
   agent_services_.AddBinding(std::move(services));
 }
 
 void StoryInfoAcquirer::RunTask(const fidl::String& task_id,
-                                const RunTaskCallback& callback) {
+                                const modular::Agent::RunTaskCallback& callback) {
   FXL_LOG(FATAL) << "Not implemented.";
+}
+
+void StoryInfoAcquirer::Terminate(const std::function<void()>& done) {
+  done();
 }
 
 void StoryInfoAcquirer::Initialize(

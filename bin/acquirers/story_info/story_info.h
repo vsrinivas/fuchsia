@@ -8,6 +8,7 @@
 #include <map>
 
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
@@ -31,14 +32,23 @@ class StoryWatcherImpl;
 // TODO(thatguy): Add Link value types to the Context engine and use them here.
 // Then update the resulting published value to remove its added JSON
 // structure, since it will all be represented in the metadata of the value.
-class StoryInfoAcquirer : public modular::Agent,
-                          public modular::VisibleStoriesWatcher,
+class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
                           public modular::StoryProviderWatcher,
                           public modular::FocusWatcher,
                           public StoryInfoInitializer {
  public:
-  StoryInfoAcquirer();
+  StoryInfoAcquirer(modular::AgentHost* agent_host);
   ~StoryInfoAcquirer() override;
+
+  // Called by AgentDriver.
+  void Connect(fidl::InterfaceRequest<app::ServiceProvider> services);
+
+  // Called by AgentDriver.
+  void RunTask(const fidl::String& task_id,
+               const modular::Agent::RunTaskCallback& callback);
+
+  // Called by AgentDriver.
+  void Terminate(const std::function<void()>& done);
 
   // Used by StoryWatcherImpl.
   void DropStoryWatcher(const std::string& story_id);
@@ -49,18 +59,6 @@ class StoryInfoAcquirer : public modular::Agent,
                   fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
                   fidl::InterfaceHandle<modular::VisibleStoriesProvider>
                       visible_stories_provider) override;
-
-  // |Agent|
-  void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> agent_context) override;
-
-  // |Agent|
-  void Connect(const fidl::String& requestor_url,
-               fidl::InterfaceRequest<app::ServiceProvider> services) override;
-
-  // |Agent|
-  void RunTask(const fidl::String& task_id,
-               const RunTaskCallback& callback) override;
 
   // |FocusWatcher|
   void OnFocusChange(modular::FocusInfoPtr info) override;

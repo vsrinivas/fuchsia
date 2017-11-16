@@ -24,8 +24,6 @@ class AgentImpl : public Agent {
   // framework.
   class Delegate {
    public:
-    virtual void AgentInit(
-        fidl::InterfaceHandle<AgentContext> agent_context) = 0;
     virtual void Connect(
         fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
     virtual void RunTask(const fidl::String& task_id,
@@ -36,8 +34,7 @@ class AgentImpl : public Agent {
 
  private:
   // |Agent|
-  void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> agent_context) override;
+  void Initialize() override;
   // |Agent|
   void Connect(
       const fidl::String& requestor_url,

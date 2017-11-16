@@ -28,7 +28,7 @@ interface Agent {
   // An Agent is instantiated when it is not running and if:
   // (1) Some component calls ComponentContext::ConnectToAgent() or
   // (2) A trigger causes a task to be run.
-  Initialize(AgentContext agent_context);
+  Initialize();
 
   // Called when some component tries to connect to this agent.
   // |requestor_url| is the identifier for the component which called
