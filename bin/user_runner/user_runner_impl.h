@@ -75,6 +75,23 @@ class UserRunnerImpl : UserRunner,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
 
+  // Sequence of Initialize() broken up into steps for clarity.
+  void InitializeUser(
+    auth::AccountPtr account,
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+    fidl::InterfaceHandle<UserContext> user_context);
+  void InitializeLedger();
+  void InitializeLedgerDashboard();
+  void InitializeDeviceMap();
+  void InitializeRemoteInvoker();
+  void InitializeMessageQueueManager();
+  void InitializeMaxwell(
+      const fidl::String& user_shell_url,
+      AppConfigPtr story_shell);
+  void InitializeUserShell(
+      AppConfigPtr user_shell,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+
   // |UserShellContext|
   void GetAccount(const GetAccountCallback& callback) override;
   void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;

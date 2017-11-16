@@ -144,6 +144,22 @@ void UserRunnerImpl::Initialize(
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  InitializeUser(std::move(account),
+                 std::move(token_provider_factory),
+                 std::move(user_context));
+  InitializeLedger();
+  InitializeLedgerDashboard();
+  InitializeDeviceMap();
+  InitializeRemoteInvoker();
+  InitializeMessageQueueManager();
+  InitializeMaxwell(user_shell->url, std::move(story_shell));
+  InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
+}
+
+void UserRunnerImpl::InitializeUser(
+    auth::AccountPtr account,
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+    fidl::InterfaceHandle<UserContext> user_context) {
   token_provider_factory_ =
       auth::TokenProviderFactoryPtr::Create(std::move(token_provider_factory));
   AtEnd(Reset(&token_provider_factory_));
@@ -158,10 +174,103 @@ void UserRunnerImpl::Initialize(
       application_context_->environment(),
       std::string(kUserScopeLabelPrefix) + GetAccountId(account_));
   AtEnd(Reset(&user_scope_));
+}
 
-  SetupLedger();
-  StartLedgerDashboard();
+void UserRunnerImpl::InitializeLedger() {
+  AppConfigPtr ledger_config = AppConfig::New();
+  ledger_config->url = kLedgerAppUrl;
+  ledger_config->args = fidl::Array<fidl::String>::New(1);
+  ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
+  ledger_app_ = std::make_unique<AppClient<ledger::LedgerController>>(
+      user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
+  ledger_app_->SetAppErrorHandler([this] {
+    FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
+                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+    Logout();
+  });
+  AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
+  cloud_provider::CloudProviderPtr cloud_provider;
+  if (account_) {
+    // If not running in Guest mode, spin up a cloud provider for Ledger to use
+    // for syncing.
+    AppConfigPtr cloud_provider_config = AppConfig::New();
+    cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
+    cloud_provider_config->args = fidl::Array<fidl::String>::New(0);
+    cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
+        user_scope_->GetLauncher(), std::move(cloud_provider_config));
+    ConnectToService(cloud_provider_app_->services(),
+                     cloud_provider_factory_.NewRequest());
+
+    cloud_provider = GetCloudProvider();
+
+    // TODO(mesch): Teardown cloud_provider_app_ ?
+  }
+
+  ConnectToService(ledger_app_->services(),
+                   ledger_repository_factory_.NewRequest());
+  AtEnd(Reset(&ledger_repository_factory_));
+
+  // The directory "/data" is the data root "/data/LEDGER" that the ledger app
+  // client is configured to.
+  ledger_repository_factory_->GetRepository(
+      "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
+      [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR)
+              << "LedgerRepositoryFactory.GetRepository() failed: "
+              << LedgerStatusToString(status) << std::endl
+              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+          Logout();
+        }
+      });
+
+  // If ledger state is erased from underneath us (happens when the cloud store
+  // is cleared), ledger will close the connection to |ledger_repository_|.
+  ledger_repository_.set_connection_error_handler([this] { Logout(); });
+  AtEnd(Reset(&ledger_repository_));
+
+  ledger_client_.reset(
+      new LedgerClient(ledger_repository_.get(), kAppId, [this] {
+        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+        Logout();
+      }));
+  AtEnd(Reset(&ledger_client_));
+}
+
+void UserRunnerImpl::InitializeLedgerDashboard() {
+  ledger_dashboard_scope_ = std::make_unique<Scope>(
+      user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
+  AtEnd(Reset(&ledger_dashboard_scope_));
+
+  ledger_dashboard_scope_->AddService<ledger::LedgerRepositoryDebug>(
+      [this](fidl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
+        if (ledger_repository_) {
+          ledger_repository_->GetLedgerRepositoryDebug(
+              std::move(request), [](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FXL_LOG(ERROR)
+                      << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
+                      << LedgerStatusToString(status);
+                }
+              });
+        }
+      });
+
+  auto ledger_dashboard_config = AppConfig::New();
+  ledger_dashboard_config->url = kLedgerDashboardUrl;
+
+  ledger_dashboard_app_ = std::make_unique<AppClient<Lifecycle>>(
+      ledger_dashboard_scope_->GetLauncher(),
+      std::move(ledger_dashboard_config));
+
+  AtEnd(Reset(&ledger_dashboard_app_));
+  AtEnd(Teardown(kBasicTimeout, "LedgerDashboard", ledger_dashboard_app_.get()));
+
+  FXL_LOG(INFO) << "Starting Ledger dashboard " << kLedgerDashboardUrl;
+}
+
+void UserRunnerImpl::InitializeDeviceMap() {
   // DeviceMap service
   const std::string device_id = LoadDeviceID(GetAccountId(account_));
   device_name_ = LoadDeviceName(GetAccountId(account_));
@@ -178,9 +287,9 @@ void UserRunnerImpl::Initialize(
         }
       });
   AtEnd(Reset(&device_map_impl_));
+}
 
-  // RemoteInvoker
-
+void UserRunnerImpl::InitializeRemoteInvoker() {
   // TODO(planders) Do not create RemoteInvoker until service is actually
   // requested.
   remote_invoker_impl_ =
@@ -193,9 +302,9 @@ void UserRunnerImpl::Initialize(
         }
       });
   AtEnd(Reset(&remote_invoker_impl_));
+}
 
-  // Setup MessageQueueManager.
-
+void UserRunnerImpl::InitializeMessageQueueManager() {
   std::string message_queue_path = kMessageQueuePath;
   message_queue_path.append(GetAccountId(account_));
   if (!files::CreateDirectory(message_queue_path)) {
@@ -206,9 +315,10 @@ void UserRunnerImpl::Initialize(
   message_queue_manager_ = std::make_unique<MessageQueueManager>(
       ledger_client_.get(), to_array(kMessageQueuePageId), message_queue_path);
   AtEnd(Reset(&message_queue_manager_));
+}
 
-  // Begin init maxwell.
-  //
+void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
+                                       AppConfigPtr story_shell) {
   // NOTE: There is an awkward service exchange here between
   // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
   // FocusHandler, VisibleStoriesHandler.
@@ -334,11 +444,10 @@ void UserRunnerImpl::Initialize(
   AtEnd(Reset(&user_intelligence_provider_));
 
   // End kModuleResolverUrl
-  // End init maxwell.
 
   user_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
-      component_context_info, kUserShellComponentNamespace, user_shell->url,
-      user_shell->url);
+      component_context_info, kUserShellComponentNamespace, user_shell_url,
+      user_shell_url);
 
   AtEnd(Reset(&user_shell_component_context_impl_));
 
@@ -352,7 +461,7 @@ void UserRunnerImpl::Initialize(
   // while they are still running. On the other hand agents are meant to outlive
   // story lifetimes.
   story_provider_impl_.reset(new StoryProviderImpl(
-      user_scope_.get(), device_id, ledger_client_.get(),
+      user_scope_.get(), device_map_impl_->current_device_id(), ledger_client_.get(),
       fidl::Array<uint8_t>::New(16), std::move(story_shell),
       component_context_info, std::move(focus_provider_story_provider),
       intelligence_services_.get(), user_intelligence_provider_.get(),
@@ -362,7 +471,8 @@ void UserRunnerImpl::Initialize(
   AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   focus_handler_ = std::make_unique<FocusHandler>(
-      device_id, ledger_client_.get(), fidl::Array<uint8_t>::New(16));
+      device_map_impl_->current_device_id(),
+      ledger_client_.get(), fidl::Array<uint8_t>::New(16));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -373,11 +483,13 @@ void UserRunnerImpl::Initialize(
 
   AtEnd(Reset(&focus_handler_));
   AtEnd(Reset(&visible_stories_handler_));
+}
 
-  // Show user shell.
-
+void UserRunnerImpl::InitializeUserShell(
+    AppConfigPtr user_shell,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), user_shell.Clone());
+      user_scope_->GetLauncher(), std::move(user_shell));
   ConnectToService(user_shell_app_->services(), user_shell_.NewRequest());
 
   AtEnd(Reset(&user_shell_app_));
@@ -524,69 +636,6 @@ void UserRunnerImpl::ConnectToEntityProvider(
                                          std::move(agent_controller_request));
 }
 
-void UserRunnerImpl::SetupLedger() {
-  // Start the ledger.
-  AppConfigPtr ledger_config = AppConfig::New();
-  ledger_config->url = kLedgerAppUrl;
-  ledger_config->args = fidl::Array<fidl::String>::New(1);
-  ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-  ledger_app_ = std::make_unique<AppClient<ledger::LedgerController>>(
-      user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
-  ledger_app_->SetAppErrorHandler([this] {
-    FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
-                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Logout();
-  });
-  AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
-
-  cloud_provider::CloudProviderPtr cloud_provider;
-  if (account_) {
-    // If not running in Guest mode, spin up a cloud provider for Ledger to use
-    // for syncing.
-    AppConfigPtr cloud_provider_config = AppConfig::New();
-    cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
-    cloud_provider_config->args = fidl::Array<fidl::String>::New(0);
-    cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
-        user_scope_->GetLauncher(), std::move(cloud_provider_config));
-    ConnectToService(cloud_provider_app_->services(),
-                     cloud_provider_factory_.NewRequest());
-
-    cloud_provider = GetCloudProvider();
-
-    // TODO(mesch): Teardown cloud_provider_app_ ?
-  }
-
-  ConnectToService(ledger_app_->services(),
-                   ledger_repository_factory_.NewRequest());
-  AtEnd(Reset(&ledger_repository_factory_));
-
-  // The directory "/data" is the data root "/data/LEDGER" that the ledger app
-  // client is configured to.
-  ledger_repository_factory_->GetRepository(
-      "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
-      [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR)
-              << "LedgerRepositoryFactory.GetRepository() failed: "
-              << LedgerStatusToString(status) << std::endl
-              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-          Logout();
-        }
-      });
-
-  // If ledger state is erased from underneath us (happens when the cloud store
-  // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_connection_error_handler([this] { Logout(); });
-  AtEnd(Reset(&ledger_repository_));
-
-  ledger_client_.reset(
-      new LedgerClient(ledger_repository_.get(), kAppId, [this] {
-        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-        Logout();
-      }));
-  AtEnd(Reset(&ledger_client_));
-}
-
 cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
@@ -602,38 +651,6 @@ cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
         }
       });
   return cloud_provider;
-}
-
-void UserRunnerImpl::StartLedgerDashboard() {
-  ledger_dashboard_scope_ = std::make_unique<Scope>(
-      user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
-  AtEnd(Reset(&ledger_dashboard_scope_));
-
-  ledger_dashboard_scope_->AddService<ledger::LedgerRepositoryDebug>(
-      [this](fidl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
-        if (ledger_repository_) {
-          ledger_repository_->GetLedgerRepositoryDebug(
-              std::move(request), [](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FXL_LOG(ERROR)
-                      << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
-                      << LedgerStatusToString(status);
-                }
-              });
-        }
-      });
-
-  auto ledger_dashboard_config = AppConfig::New();
-  ledger_dashboard_config->url = kLedgerDashboardUrl;
-
-  ledger_dashboard_app_ = std::make_unique<AppClient<Lifecycle>>(
-      ledger_dashboard_scope_->GetLauncher(),
-      std::move(ledger_dashboard_config));
-
-  AtEnd(Reset(&ledger_dashboard_app_));
-  AtEnd(Teardown(kBasicTimeout, "LedgerDashboard", ledger_dashboard_app_.get()));
-
-  FXL_LOG(INFO) << "Starting Ledger dashboard " << kLedgerDashboardUrl;
 }
 
 void UserRunnerImpl::AtEnd(std::function<void(std::function<void()>)> action) {

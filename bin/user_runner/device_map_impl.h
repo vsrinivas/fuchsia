@@ -32,6 +32,8 @@ class DeviceMapImpl : DeviceMap, PageClient {
                 LedgerPageId page_id);
   ~DeviceMapImpl() override;
 
+  const std::string& current_device_id() const { return current_device_id_; }
+
   void Connect(fidl::InterfaceRequest<DeviceMap> request);
 
  private:
