@@ -265,6 +265,9 @@ void ModuleResolverImpl::OnNewManifestEntry(
     const std::string& source_name,
     std::string id_in,
     modular::ModuleManifestSource::Entry new_entry) {
+  FXL_LOG(INFO) << "New Module manifest " << id_in
+                << ": verb = " << new_entry.verb
+                << ", binary = " << new_entry.binary;
   // Add this new entry info to our local index.
   auto ret =
       entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));

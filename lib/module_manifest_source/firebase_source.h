@@ -50,7 +50,7 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
  private:
   class Watcher;
 
-  void OnConnectionError();
+  void StartWatching(Watcher* watcher);
 
   // Only used for logging.
   const std::string db_id_;

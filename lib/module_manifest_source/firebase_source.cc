@@ -43,18 +43,24 @@ void XdrEntry(modular::XdrContext* const xdr,
 
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
-  Watcher(ModuleManifestSource::IdleFn idle_fn,
+  Watcher(fxl::RefPtr<fxl::TaskRunner> task_runner,
+          ModuleManifestSource::IdleFn idle_fn,
           ModuleManifestSource::NewEntryFn new_fn,
           ModuleManifestSource::RemovedEntryFn removed_fn,
           fxl::WeakPtr<FirebaseModuleManifestSource> owner)
-      : idle_fn_(idle_fn),
+      : task_runner_(task_runner),
+        idle_fn_(idle_fn),
         new_fn_(new_fn),
         removed_fn_(removed_fn),
+        reconnect_wait_seconds_(0),
         owner_(owner) {}
   ~Watcher() override = default;
 
  private:
   void OnPut(const std::string& path, const rapidjson::Value& value) override {
+    // Successful connection established. Reset our reconnect counter.
+    reconnect_wait_seconds_ = 0;
+
     // The first time we're called, we get a dump of all existing values as a
     // JSON object at path "/".
     //
@@ -92,8 +98,25 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 
   void OnConnectionError() override {
     idle_fn_();
-    if (owner_)
-      owner_->OnConnectionError();
+
+    // Simple exponential backoff counter.
+    if (reconnect_wait_seconds_ == 0) {
+      reconnect_wait_seconds_ = 1;
+    } else {
+      reconnect_wait_seconds_ *= 2;
+      if (reconnect_wait_seconds_ > 60)
+        reconnect_wait_seconds_ = 60;
+    }
+
+    // Try to reconnect.
+    FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_ << " seconds.";
+    task_runner_->PostDelayedTask(
+        [owner = owner_, this]() {
+          if (!owner)
+            return;
+          owner->StartWatching(this);
+        },
+        fxl::TimeDelta::FromSeconds(reconnect_wait_seconds_));
   }
 
   void ProcessEntry(const std::string& name, const rapidjson::Value& value) {
@@ -118,9 +141,13 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     new_fn_(name, entry);
   }
 
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+
   ModuleManifestSource::IdleFn idle_fn_;
   ModuleManifestSource::NewEntryFn new_fn_;
   ModuleManifestSource::RemovedEntryFn removed_fn_;
+
+  int reconnect_wait_seconds_;
 
   fxl::WeakPtr<FirebaseModuleManifestSource> owner_;
 };
@@ -151,16 +178,15 @@ void FirebaseModuleManifestSource::Watch(
     NewEntryFn new_fn,
     RemovedEntryFn removed_fn) {
   auto watcher = std::make_unique<Watcher>(
-      std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
+      task_runner, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
       weak_factory_.GetWeakPtr());
-  client_->Watch("/manifests", {}, watcher.get());
 
+  StartWatching(watcher.get());
   watchers_.push_back(std::move(watcher));
 }
 
-void FirebaseModuleManifestSource::OnConnectionError() {
-  FXL_LOG(ERROR) << db_id_ << " " << prefix_
-                 << ": Connection error. No more updates will be processed.";
+void FirebaseModuleManifestSource::StartWatching(Watcher* watcher) {
+  client_->Watch("/manifests", {}, watcher);
 }
 
 }  // namespace modular
