@@ -210,5 +210,24 @@ bool Database::RemoveGrouping(Handle start_handle) {
   return true;
 }
 
+const Attribute* Database::FindAttribute(Handle handle) {
+  if (handle == kInvalidHandle)
+    return nullptr;
+
+  // Do a binary search to find the grouping that this handle is in.
+  auto iter = std::lower_bound(groupings_.begin(), groupings_.end(), handle,
+                               EndLessThan);
+  if (iter == groupings_.end() || iter->start_handle() > handle)
+    return nullptr;
+
+  if (!iter->active() || !iter->complete())
+    return nullptr;
+
+  size_t index = handle - iter->start_handle();
+  FXL_DCHECK(index < iter->attributes().size());
+
+  return &iter->attributes()[index];
+}
+
 }  // namespace att
 }  // namespace btlib

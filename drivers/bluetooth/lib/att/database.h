@@ -126,6 +126,11 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
 
   const std::list<AttributeGrouping>& groupings() const { return groupings_; }
 
+  // Finds and returns the attribute with the given handle. Returns nullptr if
+  // the attribute cannot be found or is part of a grouping that is inactive
+  // or incomplete.
+  const Attribute* FindAttribute(Handle handle);
+
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Database);
 

@@ -142,6 +142,65 @@ TEST(ATT_DatabaseTest, RemoveWhileEmpty) {
   EXPECT_FALSE(db->RemoveGrouping(kTestRangeStart));
 }
 
+TEST(ATT_DatabaseTest, FindAttributeInvalidHandle) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  EXPECT_EQ(nullptr, db->FindAttribute(kInvalidHandle));
+}
+
+TEST(ATT_DatabaseTest, FindAttributeGroupingNotFound) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+
+  // Create the following layout:
+  //
+  // handle 0x0001: occupied
+  // handle 0x0002: empty
+  // handle 0x0003: occupied
+  db->NewGrouping(kTestType1, 0, kTestValue1)->set_active(true);
+  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp->set_active(true);
+  db->NewGrouping(kTestType1, 0, kTestValue1)->set_active(true);
+  db->RemoveGrouping(grp->start_handle());
+
+  EXPECT_EQ(nullptr, db->FindAttribute(0xFFFF));
+  EXPECT_EQ(nullptr, db->FindAttribute(0x0002));
+  EXPECT_NE(nullptr, db->FindAttribute(0x0001));
+  EXPECT_NE(nullptr, db->FindAttribute(0x0003));
+}
+
+TEST(ATT_DatabaseTest, FindAttributeIncompleteGrouping) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto* grp = db->NewGrouping(kTestType1, 1, kTestValue1);
+  EXPECT_EQ(nullptr, db->FindAttribute(grp->start_handle()));
+}
+
+TEST(ATT_DatabaseTest, FindAttributeInactiveGrouping) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
+  EXPECT_EQ(nullptr, db->FindAttribute(grp->start_handle()));
+}
+
+TEST(ATT_DatabaseTest, FindAttributeOnePerGrouping) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+  auto* grp1 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp1->set_active(true);
+  auto* grp2 = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp2->set_active(true);
+
+  EXPECT_EQ(&grp1->attributes()[0], db->FindAttribute(grp1->start_handle()));
+  EXPECT_EQ(&grp2->attributes()[0], db->FindAttribute(grp2->start_handle()));
+}
+
+TEST(ATT_DatabaseTest, FindAttributeIndexIntoGrouping) {
+  auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
+
+  auto* grp = db->NewGrouping(kTestType1, 1, kTestValue1);
+  auto* attr =
+      grp->AddAttribute(kTestType2, AccessRequirements(), AccessRequirements());
+  grp->set_active(true);
+
+  EXPECT_EQ(attr, db->FindAttribute(grp->end_handle()));
+}
+
 TEST(ATT_DatabaseTest, IteratorEmpty) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
   auto iter = db->GetIterator(kTestRangeStart, kTestRangeEnd);
