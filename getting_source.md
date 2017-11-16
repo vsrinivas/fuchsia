@@ -24,8 +24,9 @@ curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT
 
 This script will bootstrap a development environment for the given layer in a
 directory named after the layer. Upon success, the script should print a message
-recommending that you add the `.jiri_root/bin` directory to your PATH (which
-you should do).
+recommending that you add the `.jiri_root/bin` directory to your PATH. Adding
+**jiri** to your PATH is strongly recommended and is assumed by other parts of the
+Fuchsia toolchain.
 
 ### Working without altering your PATH
 
@@ -45,4 +46,5 @@ To use the `fx` tool, you can either symlink it into your `~/bin` directory:
 ln -s `pwd`/scripts/fx ~/bin
 ```
 
-or just run the tool directly as `scripts/fx`.
+or just run the tool directly as `scripts/fx`. Make sure you have **jiri** in
+your PATH.
