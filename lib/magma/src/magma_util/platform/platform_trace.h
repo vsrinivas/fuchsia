@@ -5,6 +5,8 @@
 #ifndef PLATFORM_TRACE_H
 #define PLATFORM_TRACE_H
 
+#include <functional>
+
 #if MAGMA_ENABLE_TRACING
 #include <trace/event.h>
 #define TRACE_NONCE_DECLARE(x) uint64_t x = TRACE_NONCE()
@@ -27,7 +29,15 @@ namespace magma {
 
 class PlatformTrace {
 public:
-    static void Initialize();
+    virtual ~PlatformTrace() {}
+
+    virtual bool Initialize() = 0;
+
+    // Invokes the given |callback| (on a different thread) when the tracing state changes.
+    virtual void SetObserver(std::function<void(bool trace_enabled)> callback) = 0;
+
+    // Returns null if tracing is not enabled
+    static PlatformTrace* Get();
 };
 
 } // namespace magma

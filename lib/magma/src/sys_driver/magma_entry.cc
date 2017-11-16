@@ -466,7 +466,8 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
     if (status != ZX_OK)
         magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to zircon: %d", status);
 
-    magma::PlatformTrace::Initialize();
+    if (magma::PlatformTrace::Get())
+        magma::PlatformTrace::Get()->Initialize();
 
     device->magma_driver = MagmaDriver::Create();
     if (!device->magma_driver)

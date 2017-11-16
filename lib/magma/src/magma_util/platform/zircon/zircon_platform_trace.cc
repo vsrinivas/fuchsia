@@ -15,23 +15,40 @@ namespace magma {
 
 static std::unique_ptr<ZirconPlatformTrace> g_platform_trace;
 
-ZirconPlatformTrace::ZirconPlatformTrace() : trace_provider_(loop_.async())
+ZirconPlatformTrace::ZirconPlatformTrace() : trace_provider_(loop_.async()) {}
+
+bool ZirconPlatformTrace::Initialize()
 {
     zx_status_t status = loop_.StartThread();
-    if (status != ZX_OK) {
-        DLOG("Failed to start async loop, magma platform tracing will not work");
-    }
+    if (status != ZX_OK)
+        return DRETF(false, "Failed to start async loop");
+    return true;
 }
 
-void PlatformTrace::Initialize()
+void ZirconPlatformTrace::SetObserver(std::function<void(bool)> callback)
+{
+    observer_.Stop();
+    enabled_ = false;
+
+    observer_.Start(loop_.async(), [this, callback] {
+        bool enabled = trace_state() == TRACE_STARTED;
+        if (this->enabled_ != enabled) {
+            this->enabled_ = enabled;
+            callback(enabled);
+        }
+    });
+}
+
+PlatformTrace* PlatformTrace::Get()
 {
     if (!g_platform_trace)
         g_platform_trace = std::make_unique<ZirconPlatformTrace>();
+    return g_platform_trace.get();
 }
 
 #else
 
-void PlatformTrace::Initialize() {}
+PlatformTrace* PlatformTrace::Get() { return nullptr; }
 
 #endif
 
