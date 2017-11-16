@@ -4,8 +4,19 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <sys/ioctl.h>
 
 #include "fvm/container.h"
+
+#if defined(__APPLE__)
+#include <sys/disk.h>
+#define IOCTL_GET_BLOCK_COUNT DKIOCGETBLOCKCOUNT
+#endif
+
+#if defined(__linux__)
+#include <linux/fs.h>
+#define IOCTL_GET_BLOCK_COUNT BLKGETSIZE
+#endif
 
 zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offset, off_t length,
                                  fbl::unique_ptr<FvmContainer>* out) {
@@ -40,7 +51,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
 
             xprintf("Created path %s\n", path);
         } else {
-            fprintf(stderr, "Failed to open path %s\n", path);
+            fprintf(stderr, "Failed to open path %s: %s\n", path, strerror(errno));
             exit(-1);
         }
     }
@@ -51,8 +62,17 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
         exit(-1);
     }
 
-    if (s.st_size < disk_offset_ + disk_size_) {
-        fprintf(stderr, "Invalid file size for specified offset/length\n");
+    uint64_t size = s.st_size;
+
+    if (s.st_mode & S_IFBLK) {
+        uint64_t block_count;
+        if (ioctl(fd_.get(), IOCTL_GET_BLOCK_COUNT, &block_count) >= 0) {
+            size = block_count * 512;
+        }
+    }
+
+    if (size < disk_offset_ + disk_size_) {
+        fprintf(stderr, "Invalid file size %" PRIu64 " for specified offset+length\n", size);
         exit(-1);
     }
 
