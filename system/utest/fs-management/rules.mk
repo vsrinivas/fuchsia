@@ -11,7 +11,7 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := fs
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/fs-management.c
+    $(LOCAL_DIR)/fs-management.cpp
 
 MODULE_NAME := fs-management-test
 
