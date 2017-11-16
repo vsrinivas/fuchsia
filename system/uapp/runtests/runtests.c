@@ -55,7 +55,51 @@ static const char* default_test_dirs[] = {
 };
 #define DEFAULT_NUM_TEST_DIRS 5
 
-static bool run_tests(const char* dirn, const char* test_name) {
+static bool parse_test_names(char* input, char*** output, int* output_len) {
+    // Count number of names via delimiter ','.
+    int num_test_names = 0;
+    for (char* tmp = input; tmp != NULL; tmp = strchr(tmp, ',')) {
+        num_test_names++;
+        tmp++;
+    }
+
+    // Allocate space for names.
+    char** test_names = (char**) malloc(sizeof(char*) * num_test_names);
+    if (test_names == NULL) {
+        return false;
+    }
+
+    // Tokenize the input string into names.
+    char *next_token;
+    test_names[0] = strtok_r(input, ",", &next_token);
+    for (int i = 1; i < num_test_names; i++) {
+        char* tmp = strtok_r(NULL, ",", &next_token);
+        if (tmp == NULL) {
+            free(test_names);
+            return false;
+        }
+        test_names[i] = tmp;
+    }
+    *output = test_names;
+    *output_len = num_test_names;
+    return true;
+}
+
+static bool match_test_names(const char* dirent_name, const char** test_names,
+                             const int num_test_names) {
+    // Always match when there are no test names to filter by.
+    if (num_test_names <= 0) {
+        return true;
+    }
+    for (int i = 0; i < num_test_names; i++) {
+        if (!strncmp(test_names[i], dirent_name, NAME_MAX)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool run_tests(const char* dirn, const char** test_names, const int num_test_names) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
         return false;
@@ -70,8 +114,7 @@ static bool run_tests(const char* dirn, const char* test_name) {
         if (stat(name, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
             continue;
         }
-
-        if ((test_name != NULL) && strncmp(test_name, de->d_name, NAME_MAX)) {
+        if (!match_test_names(de->d_name, test_names, num_test_names)) {
             continue;
         }
 
@@ -138,7 +181,7 @@ static bool run_tests(const char* dirn, const char* test_name) {
 
 int usage(char* name) {
     fprintf(stderr,
-            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a] [-t test name] [directories ...]\n"
+            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a] [-t test names] [directories ...]\n"
             "\n"
             "The optional [directories ...] is a list of           \n"
             "directories containing tests to run, non-recursively. \n"
@@ -158,13 +201,16 @@ int usage(char* name) {
             "   -l: Turn OFF Large tests                           \n"
             "   -P: Turn ON Performance tests    (off by default)  \n"
             "   -p: Turn OFF Performance tests                     \n"
-            "   -a: Turn on All tests                              \n", name);
+            "   -a: Turn on All tests                              \n"
+            "   -t: Filter tests by name                           \n"
+            "       (accepts a comma-separated list)               \n", name);
     return -1;
 }
 
 int main(int argc, char** argv) {
     test_type_t test_type = TEST_DEFAULT;
-    const char* test_name = NULL;
+    int num_test_names = 0;
+    const char** test_names = NULL;
     int num_test_dirs = 0;
     const char** test_dirs = NULL;
 
@@ -196,12 +242,14 @@ int main(int argc, char** argv) {
         } else if (strcmp(argv[i], "-h") == 0) {
             return usage(argv[0]);
         } else if (strcmp(argv[i], "-t") == 0) {
-            if (i + 1 < argc) {
-                test_name = argv[i + 1];
-                i++;
-            } else {
+            if (i + 1 >= argc) {
                 return usage(argv[0]);
+            } else if (!parse_test_names(argv[i + 1], (char***)&test_names,
+                                         &num_test_names)) {
+                printf("Failed: Could not parse test names\n");
+                return -1;
             }
+            i++;
         } else if (argv[i][0] != '-') {
             num_test_dirs = argc - i;
             test_dirs = (const char**)&argv[i];
@@ -240,11 +288,12 @@ int main(int argc, char** argv) {
         }
 
         // Don't continue running tests if one directory failed.
-        success = run_tests(test_dirs[i], test_name);
+        success = run_tests(test_dirs[i], test_names, num_test_names);
         if (!success) {
             break;
         }
     }
+    free(test_names);
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
