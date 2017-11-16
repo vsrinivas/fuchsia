@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "garnet/packages/sbase",
+        "garnet/packages/sbase"
     ],
     "packages": {
         "magma-dev": "//garnet/lib/magma:magma-dev",
