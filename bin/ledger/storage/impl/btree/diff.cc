@@ -39,7 +39,7 @@ class IteratorPair {
     return Status::OK;
   }
 
-  bool Finished() {
+  bool Finished() const {
     FXL_DCHECK(IsNormalized());
     return right_.Finished();
   }
@@ -254,33 +254,23 @@ class IteratorPair {
   }
 
   // Send a diff using the right iterator.
-  bool SendRight() {
-    std::unique_ptr<Entry> left_entry, right_entry;
-    right_entry = std::make_unique<Entry>(right_.CurrentEntry());
-    if (!left_.Finished() && left_.HasValue() &&
-        left_.CurrentEntry().key == right_.CurrentEntry().key) {
-      left_entry = std::make_unique<Entry>(left_.CurrentEntry());
-    }
-    if (diff_from_left_to_right_) {
-      return on_next_(std::move(left_entry), std::move(right_entry));
-    } else {
-      return on_next_(std::move(right_entry), std::move(left_entry));
-    }
-  }
+  bool SendRight() { return Send(&right_, &left_, !diff_from_left_to_right_); }
 
-  bool SendLeft() {
-    std::unique_ptr<Entry> left_entry, right_entry;
-    left_entry = std::make_unique<Entry>(left_.CurrentEntry());
-    if (!right_.Finished() && right_.HasValue() &&
-        left_.CurrentEntry().key == right_.CurrentEntry().key) {
-      right_entry = std::make_unique<Entry>(right_.CurrentEntry());
+  // Send a diff using the left iterator.
+  bool SendLeft() { return Send(&left_, &right_, diff_from_left_to_right_); }
+
+  bool Send(BTreeIterator* it1, BTreeIterator* it2, bool it1_to_it2) {
+    std::unique_ptr<Entry> it1_entry, it2_entry;
+    it1_entry = std::make_unique<Entry>(it1->CurrentEntry());
+    if (!it2->Finished() && it2->HasValue() &&
+        it1->CurrentEntry().key == it2->CurrentEntry().key) {
+      it2_entry = std::make_unique<Entry>(it2->CurrentEntry());
     }
 
-    if (diff_from_left_to_right_) {
-      return on_next_(std::move(left_entry), std::move(right_entry));
-    } else {
-      return on_next_(std::move(right_entry), std::move(left_entry));
+    if (it1_to_it2) {
+      return on_next_(std::move(it1_entry), std::move(it2_entry));
     }
+    return on_next_(std::move(it2_entry), std::move(it1_entry));
   }
 
   std::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)> on_next_;
@@ -317,7 +307,7 @@ class IteratorPair {
 //     in the base revision and it is an addition.
 class ThreeWayIterator {
  public:
-  ThreeWayIterator(SynchronousStorage* storage) {
+  explicit ThreeWayIterator(SynchronousStorage* storage) {
     base_left_iterators_ = std::make_unique<IteratorPair>(
         storage,
         [this](std::unique_ptr<Entry> base, std::unique_ptr<Entry> left) {
@@ -351,7 +341,7 @@ class ThreeWayIterator {
     return Status::OK;
   }
 
-  bool Finished() {
+  bool Finished() const {
     return base_left_iterators_->Finished() &&
            base_right_iterators_->Finished();
   }
@@ -377,8 +367,8 @@ class ThreeWayIterator {
     FXL_DCHECK(!Finished());
     ThreeWayChange change;
     change.base = GetBase();
-    change.left = GetLeft(change);
-    change.right = GetRight(change);
+    change.left = GetEntry(change.base, base_left_iterators_, left_, right_);
+    change.right = GetEntry(change.base, base_right_iterators_, right_, left_);
     return change;
   }
 
@@ -437,54 +427,39 @@ class ThreeWayIterator {
         return std::make_unique<Entry>(*base_left_);
       }
       return std::make_unique<Entry>(*base_right_);
-
-    } else if (!base_right_ && base_left_ &&
-               (!right_ || base_left_->key < right_->key)) {
+    }
+    if (!base_right_ && base_left_ &&
+        (!right_ || base_left_->key < right_->key)) {
       return std::make_unique<Entry>(*base_left_);
-    } else if (!base_left_ && base_right_ &&
-               (!left_ || base_right_->key < left_->key)) {
+    }
+    if (!base_left_ && base_right_ &&
+        (!left_ || base_right_->key < left_->key)) {
       return std::make_unique<Entry>(*base_right_);
-    } else {
-      return std::unique_ptr<Entry>();
     }
+    return std::unique_ptr<Entry>();
   }
 
-  std::unique_ptr<Entry> GetLeft(const ThreeWayChange& change) {
-    if (change.base) {
-      if (left_ && change.base->key == left_->key) {
-        return std::make_unique<Entry>(*left_);
+  std::unique_ptr<Entry> GetEntry(
+      const std::unique_ptr<Entry>& base,
+      const std::unique_ptr<IteratorPair>& this_iterator,
+      const std::unique_ptr<Entry>& this_entry,
+      const std::unique_ptr<Entry>& other_entry) {
+    if (base) {
+      if (this_entry && base->key == this_entry->key) {
+        return std::make_unique<Entry>(*this_entry);
       }
-      if (left_ && change.base->key < left_->key) {
-        return std::make_unique<Entry>(*change.base);
+      if (this_entry && base->key < this_entry->key) {
+        return std::make_unique<Entry>(*base);
       }
-      if (base_left_iterators_->Finished()) {
-        return std::make_unique<Entry>(*change.base);
-      }
-      return std::unique_ptr<Entry>();
-    }
-    if (!left_ || (right_ && right_->key < left_->key)) {
-      return std::unique_ptr<Entry>();
-    }
-    return std::make_unique<Entry>(*left_);
-  }
-
-  std::unique_ptr<Entry> GetRight(const ThreeWayChange& change) {
-    if (change.base) {
-      if (right_ && change.base->key == right_->key) {
-        return std::make_unique<Entry>(*right_);
-      }
-      if (right_ && change.base->key < right_->key) {
-        return std::make_unique<Entry>(*change.base);
-      }
-      if (base_right_iterators_->Finished()) {
-        return std::make_unique<Entry>(*change.base);
+      if (this_iterator->Finished()) {
+        return std::make_unique<Entry>(*base);
       }
       return std::unique_ptr<Entry>();
     }
-    if (!right_ || (left_ && left_->key < right_->key)) {
+    if (!this_entry || (other_entry && other_entry->key < this_entry->key)) {
       return std::unique_ptr<Entry>();
     }
-    return std::make_unique<Entry>(*right_);
+    return std::make_unique<Entry>(*this_entry);
   }
 
   bool left_advanced_ = false;
@@ -511,9 +486,9 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
   auto wrapped_next = [on_next](std::unique_ptr<Entry> base,
                                 std::unique_ptr<Entry> other) {
     if (other) {
-      return on_next({*other, false});
+      return on_next({std::move(*other), false});
     }
-    return on_next({*base, true});
+    return on_next({std::move(*base), true});
 
   };
 
