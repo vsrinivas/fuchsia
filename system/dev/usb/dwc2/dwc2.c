@@ -290,7 +290,7 @@ static void complete_request(
     // Invalidate caches over this region since the DMA engine may have moved
     // data below us.
     if (status == ZX_OK) {
-        usb_request_cacheop(usb_req, USB_REQUEST_CACHE_INVALIDATE, 0, length);
+        usb_request_cache_flush_invalidate(usb_req, 0, length);
     }
 
     usb_request_complete(usb_req, status, length);
@@ -442,7 +442,7 @@ static void dwc_usb_request_queue_hw(dwc_usb_t* dwc,
 
     // Writeback any items pending on the cache. We don't want these to be
     // flushed during a DMA op.
-    usb_request_cacheop(usb_req, USB_REQUEST_CACHE_CLEAN, 0, usb_req->header.length);
+    usb_request_cache_flush_invalidate(usb_req, 0, usb_req->header.length);
 
     // Append this transaction to the end of the Device/Endpoint's pending
     // transaction queue.
@@ -1196,7 +1196,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
             transfer.size = usb_req->header.length - req->bytes_transferred;
 
-            usb_request_cacheop(usb_req, USB_REQUEST_CACHE_CLEAN_INVALIDATE, 0, transfer.size);
+            usb_request_cache_flush_invalidate(usb_req, 0, transfer.size);
 
             if (req->bytes_transferred == 0) {
                 transfer.packet_id = DWC_TOGGLE_DATA1;
@@ -1593,7 +1593,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                 usb_request_t* setup_req = req->setup_req;
                 // Copy the setup data into the setup usb request.
                 usb_request_copyto(setup_req, &setup_req->setup, sizeof(usb_setup_t), 0);
-                usb_request_cacheop(setup_req, USB_REQUEST_CACHE_CLEAN, 0, sizeof(usb_setup_t));
+                usb_request_cache_flush(setup_req, 0, sizeof(usb_setup_t));
                 setup_req->header.length = sizeof(usb_setup_t);
 
                 // Perform the SETUP phase of the control transfer.
