@@ -182,14 +182,7 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     }
 
     usb_request_phys_iter_init(&state->phys_iter, req, XHCI_MAX_DATA_BUFFER);
-    const xhci_endpoint_context_t* epc = ep->epc;
-#if XHCI_USE_CACHE_OPS
-    io_buffer_cache_op(&slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE,
-                       (ep_index + 1) * xhci->context_size, sizeof(xhci_endpoint_context_t));
-#endif
-    uint32_t ep_type = XHCI_GET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS);
-    if (ep_type >= 4) ep_type -= 4;
-    state->ep_type = ep_type;
+
     usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : NULL);
     if (setup) {
         state->direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
@@ -201,7 +194,7 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     // Zero length bulk transfers are allowed. We should have at least one transfer TRB
     // to avoid consecutive event data TRBs on a transfer ring.
     // See XHCI spec, section 4.11.5.2
-    state->needs_transfer_trb = state->ep_type == USB_ENDPOINT_BULK;
+    state->needs_transfer_trb = ep->ep_type == USB_ENDPOINT_BULK;
 
     size_t length = req->header.length;
     uint32_t interrupter_target = 0;
@@ -246,7 +239,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
     size_t length = header->length;
     size_t free_trbs = xhci_transfer_ring_free_trbs(&ep->transfer_ring);
     uint8_t direction = state->direction;
-    bool isochronous = (state->ep_type == USB_ENDPOINT_ISOCHRONOUS);
+    bool isochronous = (ep->ep_type == USB_ENDPOINT_ISOCHRONOUS);
     uint64_t frame = header->frame;
 
     uint32_t interrupter_target = 0;
@@ -275,10 +268,12 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
         }
     }
 
-#if XHCI_USE_CACHE_OPS
-    // need to clean the cache for both IN and OUT transfers
-    usb_request_cacheop(req, USB_REQUEST_CACHE_CLEAN, 0, header->length);
-#endif
+    // need to clean the cache for both IN and OUT transfers, invalidate only for IN
+    if (direction == USB_DIR_IN) {
+        usb_request_cache_flush_invalidate(req, 0, header->length);
+    } else {
+        usb_request_cache_flush(req, 0, header->length);
+    }
 
     // Data Stage
     zx_paddr_t paddr;
@@ -838,20 +833,6 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     // call complete callbacks out of the lock
     while ((req = list_remove_head_type(&completed_reqs, usb_request_t, node)) != NULL) {
-#if XHCI_USE_CACHE_OPS
-        if (req->response.actual > 0) {
-            uint8_t direction;
-
-            if (req->header.ep_address == 0) {
-                direction = req->setup.bmRequestType & USB_ENDPOINT_DIR_MASK;
-            } else {
-                direction = req->header.ep_address & USB_ENDPOINT_DIR_MASK;
-            }
-            if (direction == USB_DIR_IN) {
-                usb_request_cacheop(req, ZX_VMO_OP_CACHE_INVALIDATE, 0, req->response.actual);
-            }
-        }
-#endif
         usb_request_complete(req, req->response.status, req->response.actual);
     }
 }

@@ -23,13 +23,6 @@
 #include "xhci-root-hub.h"
 #include "xhci-trb.h"
 
-#if __x86_64__
-// cache is coherent on x86
-#define XHCI_USE_CACHE_OPS  0
-#else
-#define XHCI_USE_CACHE_OPS  1
-#endif
-
 // choose ring sizes to allow each ring to fit in a single page
 #define COMMAND_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
 #define TRANSFER_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
@@ -46,7 +39,6 @@
 typedef struct {
     phys_iter_t         phys_iter;
     uint32_t            packet_count;       // remaining packets to send
-    uint8_t             ep_type;
     uint8_t             direction;
     bool                needs_data_event;   // true if we still need to queue data event TRB
     bool                needs_status;       // true if we still need to queue status TRB
@@ -70,6 +62,7 @@ typedef struct {
     xhci_transfer_state_t* transfer_state;  // transfer state for current_req
     mtx_t lock;
     xhci_ep_state_t state;
+    uint8_t ep_type;
 } xhci_endpoint_t;
 
 typedef struct xhci_slot {
@@ -204,6 +197,20 @@ struct xhci {
     // pool of control requests that can be reused
     usb_request_pool_t free_reqs;
 };
+
+#if __x86_64__
+// cache is coherent on x86
+static inline void xhci_cache_flush(volatile const void* addr, size_t len) {}
+static inline void xhci_cache_flush_invalidate(volatile const void* addr, size_t len) {}
+#else
+static inline void xhci_cache_flush(volatile const void* addr, size_t len) {
+    zx_cache_flush((void *)addr, len, ZX_CACHE_FLUSH_DATA);
+}
+
+static inline void xhci_cache_flush_invalidate(volatile const void* addr, size_t len) {
+    zx_cache_flush((void *)addr, len, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+}
+#endif
 
 zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts);
 int xhci_get_ep_ctx_state(xhci_slot_t* slot, xhci_endpoint_t* ep);

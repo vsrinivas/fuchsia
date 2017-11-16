@@ -36,10 +36,7 @@ static uint32_t xhci_get_route_string(xhci_t* xhci, uint32_t hub_address, uint32
     }
 
     xhci_slot_t* hub_slot = &xhci->slots[hub_address];
-#if XHCI_USE_CACHE_OPS
-    io_buffer_cache_op(&hub_slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0,
-                       sizeof(xhci_slot_context_t));
-#endif
+    xhci_cache_flush_invalidate(&hub_slot->sc->sc0, sizeof(hub_slot->sc->sc0));
     uint32_t route = XHCI_GET_BITS32(&hub_slot->sc->sc0, SLOT_CTX_ROUTE_STRING_START,
                                      SLOT_CTX_ROUTE_STRING_BITS);
     int shift = 0;
@@ -92,6 +89,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         return ZX_ERR_NO_MEMORY;
     }
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
+    ep->ep_type = USB_ENDPOINT_CONTROL;
 
     mtx_lock(&xhci->input_context_lock);
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
@@ -127,10 +125,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     if (hub_address != 0 && (speed == USB_SPEED_LOW || speed == USB_SPEED_FULL)) {
         xhci_slot_t* hub_slot = &xhci->slots[hub_address];
         if (hub_slot->speed == USB_SPEED_HIGH) {
-#if XHCI_USE_CACHE_OPS
-            io_buffer_cache_op(&slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0,
-                               sizeof(xhci_slot_context_t));
-#endif
+            xhci_cache_flush_invalidate(&slot->sc->sc0, sizeof(slot->sc->sc0));
             mtt = XHCI_GET_BITS32(&slot->sc->sc0, SLOT_CTX_MTT_START, SLOT_CTX_MTT_BITS);
             tt_hub_slot_id = hub_address;
             tt_port_number = port;
@@ -171,11 +166,10 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     // install our device context for the slot
     xhci_set_dbcaa(xhci, slot_id, io_buffer_phys(&slot->buffer));
 
-#if XHCI_USE_CACHE_OPS
     // flush icc, sc and ep0c
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN, 0,
-                       3 * xhci->context_size);
-#endif
+    xhci_cache_flush(icc, sizeof(*icc));
+    xhci_cache_flush(sc, sizeof(*sc));
+    xhci_cache_flush(ep0c, sizeof(*ep0c));
 
     // then send the address device command
     for (int i = 0; i < 5; i++) {
@@ -435,10 +429,8 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
     memset((void*)icc, 0, xhci->context_size);
     XHCI_WRITE32(&icc->drop_context_flags, drop_flags);
 
-#if XHCI_USE_CACHE_OPS
     // flush icc
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, xhci->context_size);
-#endif
+    xhci_cache_flush(icc, sizeof(*icc));
 
     zx_status_t status = xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
                                            (slot_id << TRB_SLOT_ID_START));
@@ -551,14 +543,12 @@ zx_status_t xhci_queue_start_root_hubs(xhci_t* xhci) {
 
 static zx_status_t xhci_update_input_context(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     zx_paddr_t icc_phys = xhci->input_context_phys;
-#if XHCI_USE_CACHE_OPS
+
     // flush icc and sc
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN, 0,
-                       2 * xhci->context_size);
+    xhci_cache_flush(xhci->input_context, 2 * xhci->context_size);
+
     // flush epc
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN,
-                       (ep_index + 2) * xhci->context_size, xhci->context_size);
-#endif
+    xhci_cache_flush(xhci->input_context + (ep_index + 2) * xhci->context_size, xhci->context_size);
 
     return xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys, (slot_id << TRB_SLOT_ID_START));
 }
@@ -574,6 +564,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     usb_speed_t speed = slot->speed;
     uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
     xhci_endpoint_t* ep = &slot->eps[index];
+    ep->ep_type = usb_ep_type(ep_desc);
 
     mtx_lock(&ep->lock);
 
@@ -649,10 +640,9 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
                         EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS, max_esit_payload);
 
         XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG | XHCI_ICC_EP_FLAG(index));
-#if XHCI_USE_CACHE_OPS
-        io_buffer_cache_op(&slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0,
-                           sizeof(xhci_slot_context_t));
-#endif
+
+        xhci_cache_flush_invalidate(slot->sc, sizeof(*slot->sc));
+
         XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0));
         XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
         XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
@@ -711,9 +701,9 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     memset((void*)sc, 0, xhci->context_size);
 
     XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG);
-#if XHCI_USE_CACHE_OPS
-     io_buffer_cache_op(&slot->buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(xhci_slot_context_t));
-#endif
+
+    xhci_cache_flush_invalidate(slot->sc, sizeof(*slot->sc));
+
     XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0) | SLOT_CTX_HUB);
     XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
     XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
@@ -722,11 +712,9 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
                     num_ports);
     XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TTT_START, SLOT_CTX_TTT_BITS, ttt);
 
-#if XHCI_USE_CACHE_OPS
     // flush icc and sc
-    io_buffer_cache_op(&xhci->input_context_buffer, ZX_VMO_OP_CACHE_CLEAN, 0,
-                       2 * xhci->context_size);
-#endif
+    xhci_cache_flush(icc, sizeof(*icc));
+    xhci_cache_flush(sc, sizeof(*sc));
 
     zx_status_t status = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
                                            (slot_id << TRB_SLOT_ID_START));
