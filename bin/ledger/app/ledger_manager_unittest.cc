@@ -13,6 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/callback/capture.h"
+#import "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
@@ -119,6 +120,7 @@ class LedgerManagerTest : public test::TestWithMessageLoop {
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, std::move(storage), std::move(sync));
     ledger_manager_->BindLedger(ledger.NewRequest());
+    ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
 
  protected:
@@ -127,6 +129,7 @@ class LedgerManagerTest : public test::TestWithMessageLoop {
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger;
+  LedgerDebugPtr ledger_debug_;
 };
 
 // Verifies that LedgerImpl proxies vended by LedgerManager work correctly,
@@ -252,6 +255,40 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
   EXPECT_FALSE(sync_ptr->called);
+}
+
+// Verifies that LedgerDebugImpl proxy vended by LedgerManager works correctly.
+TEST_F(LedgerManagerTest, CallGetPagesList) {
+  std::vector<PagePtr> pages(3);
+  std::vector<storage::PageId> ids;
+
+  for (size_t i = 0; i < pages.size(); ++i)
+    ids.push_back(RandomId());
+
+  Status status;
+
+  fidl::Array<fidl::Array<uint8_t>> actual_pages_list;
+
+  EXPECT_EQ(0u, actual_pages_list.size());
+
+  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  for (size_t i = 0; i < pages.size(); ++i)
+    ledger->GetPage(convert::ToArray(ids[i]), pages[i].NewRequest(),
+                    waiter->NewCallback());
+
+  waiter->Finalize(callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  ledger_debug_->GetPagesList(
+      callback::Capture(MakeQuitTask(), &actual_pages_list));
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(pages.size(), actual_pages_list.size());
+
+  std::sort(ids.begin(), ids.end());
+  for (size_t i = 0; i < ids.size(); i++)
+    EXPECT_EQ(ids[i], convert::ToString(actual_pages_list[i]));
 }
 
 }  // namespace

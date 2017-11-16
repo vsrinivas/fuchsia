@@ -60,6 +60,10 @@ class LedgerRepositoryImpl : public LedgerRepository,
   // LedgerRepositoryDebug:
   void GetInstancesList(const GetInstancesListCallback& callback) override;
 
+  void GetLedgerDebug(fidl::Array<uint8_t> ledger_name,
+                      fidl::InterfaceRequest<LedgerDebug> request,
+                      const GetLedgerDebugCallback& callback) override;
+
   const std::string base_storage_dir_;
   Environment* const environment_;
   std::unique_ptr<SyncWatcherSet> watchers_;

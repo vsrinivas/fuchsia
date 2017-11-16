@@ -5,9 +5,19 @@
 [DartPackage="ledger"]
 module ledger;
 
+import "lib/ledger/fidl/ledger.fidl";
+
 [ServiceName="ledger::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
 
-  // Returns the instances list in LedgerRepository
+  // Returns the instances list in LedgerRepository.
   GetInstancesList() => (array<string> result);
+
+  // Returns the debugging interface for the given |ledger_name|.
+  GetLedgerDebug(array<uint8> ledger_name, LedgerDebug& ledger_debug) => (Status status);
+};
+
+interface LedgerDebug {
+  // Returns the pages list in Ledger.
+  GetPagesList() => (array<array<uint8>> result);
 };

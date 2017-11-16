@@ -197,13 +197,29 @@ std::unique_ptr<PageManager> LedgerManager::NewPageManager(
 void LedgerManager::CheckEmpty() {
   if (!on_empty_callback_)
     return;
-  if (bindings_.size() == 0 && page_managers_.empty())
+  if (bindings_.size() == 0 && page_managers_.empty() &&
+      ledger_debug_bindings_.size() == 0)
     on_empty_callback_();
 }
 
 void LedgerManager::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory) {
   merge_manager_.SetFactory(std::move(factory));
+}
+
+void LedgerManager::BindLedgerDebug(
+    fidl::InterfaceRequest<LedgerDebug> request) {
+  ledger_debug_bindings_.AddBinding(this, std::move(request));
+}
+
+// TODO(ayaelattar): See LE-370: Inspect ledgers and pages not currently active.
+void LedgerManager::GetPagesList(const GetPagesListCallback& callback) {
+  fidl::Array<fidl::Array<uint8_t>> result =
+      fidl::Array<fidl::Array<uint8_t>>::New(0);
+  for (auto it = page_managers_.begin(); it != page_managers_.end(); ++it) {
+    result.push_back(convert::ToArray(it->first));
+  }
+  callback(std::move(result));
 }
 
 }  // namespace ledger

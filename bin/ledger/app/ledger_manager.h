@@ -19,6 +19,7 @@
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace ledger {
@@ -29,7 +30,7 @@ namespace ledger {
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
-class LedgerManager : public LedgerImpl::Delegate {
+class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
  public:
   LedgerManager(Environment* environment,
                 std::unique_ptr<storage::LedgerStorage> storage,
@@ -51,6 +52,9 @@ class LedgerManager : public LedgerImpl::Delegate {
     on_empty_callback_ = on_empty_callback;
   }
 
+  // Creates a new proxy for the LedgerDebug implemented by this LedgerManager.
+  void BindLedgerDebug(fidl::InterfaceRequest<LedgerDebug> request);
+
  private:
   class PageManagerContainer;
 
@@ -70,6 +74,9 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   void CheckEmpty();
 
+  // LedgerDebug:
+  void GetPagesList(const GetPagesListCallback& callback) override;
+
   Environment* const environment_;
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
@@ -85,6 +92,8 @@ class LedgerManager : public LedgerImpl::Delegate {
                              convert::StringViewComparator>
       page_managers_;
   fxl::Closure on_empty_callback_;
+
+  fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };

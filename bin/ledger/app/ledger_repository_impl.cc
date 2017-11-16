@@ -118,4 +118,17 @@ void LedgerRepositoryImpl::GetInstancesList(
   callback(std::move(result));
 }
 
+void LedgerRepositoryImpl::GetLedgerDebug(
+    fidl::Array<uint8_t> ledger_name,
+    fidl::InterfaceRequest<LedgerDebug> request,
+    const GetLedgerDebugCallback& callback) {
+  auto it = ledger_managers_.find(ledger_name);
+  if (it == ledger_managers_.end()) {
+    callback(Status::KEY_NOT_FOUND);
+  } else {
+    it->second.BindLedgerDebug(std::move(request));
+    callback(Status::OK);
+  }
+}
+
 }  // namespace ledger
