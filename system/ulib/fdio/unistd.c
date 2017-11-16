@@ -469,15 +469,8 @@ void __libc_extensions_init(uint32_t handle_count,
         unsigned arg = PA_HND_ARG(handle_info[n]);
         zx_handle_t h = handle[n];
 
-        // FDIO uses this bit as a flag to say
-        // that an fd should be duped into 0/1/2
-        // and become all of stdin/out/err
-        if (arg & FDIO_FLAG_USE_FOR_STDIO) {
-            arg &= (~FDIO_FLAG_USE_FOR_STDIO);
-            if (arg < FDIO_MAX_FD) {
-                stdio_fd = arg;
-            }
-        }
+        // precalculate the fd from |arg|, for FDIO cases to use.
+        unsigned arg_fd = arg & (~FDIO_FLAG_USE_FOR_STDIO);
 
         switch (PA_HND_TYPE(handle_info[n])) {
         case PA_FDIO_REMOTE:
@@ -485,28 +478,28 @@ void __libc_extensions_init(uint32_t handle_count,
             // which is for signaling events
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
-                fdio_fdtab[arg] = fdio_remote_create(h, handle[n + 1]);
+                fdio_fdtab[arg_fd] = fdio_remote_create(h, handle[n + 1]);
                 handle_info[n + 1] = 0;
             } else {
-                fdio_fdtab[arg] = fdio_remote_create(h, 0);
+                fdio_fdtab[arg_fd] = fdio_remote_create(h, 0);
             }
-            fdio_fdtab[arg]->dupcount++;
+            fdio_fdtab[arg_fd]->dupcount++;
             break;
         case PA_FDIO_PIPE:
-            fdio_fdtab[arg] = fdio_pipe_create(h);
-            fdio_fdtab[arg]->dupcount++;
+            fdio_fdtab[arg_fd] = fdio_pipe_create(h);
+            fdio_fdtab[arg_fd]->dupcount++;
             break;
         case PA_FDIO_LOGGER:
-            fdio_fdtab[arg] = fdio_logger_create(h);
-            fdio_fdtab[arg]->dupcount++;
+            fdio_fdtab[arg_fd] = fdio_logger_create(h);
+            fdio_fdtab[arg_fd]->dupcount++;
             break;
         case PA_FDIO_SOCKET:
             // socket objects have a second handle
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
-                fdio_fdtab[arg] = fdio_socket_create(h, handle[n + 1], FDIO_FLAG_SOCKET_CONNECTED);
+                fdio_fdtab[arg_fd] = fdio_socket_create(h, handle[n + 1], FDIO_FLAG_SOCKET_CONNECTED);
                 handle_info[n + 1] = 0;
-                fdio_fdtab[arg]->dupcount++;
+                fdio_fdtab[arg_fd]->dupcount++;
             } else {
                 zx_handle_close(h);
             }
@@ -531,6 +524,13 @@ void __libc_extensions_init(uint32_t handle_count,
         }
         handle[n] = 0;
         handle_info[n] = 0;
+
+        // If we reach here then the handle is a PA_FDIO_* type (an fd), so
+        // check for a bit flag indicating that it should be duped into 0/1/2 to
+        // become all of stdin/out/err
+        if ((arg & FDIO_FLAG_USE_FOR_STDIO) && (arg_fd < FDIO_MAX_FD)) {
+          stdio_fd = arg_fd;
+        }
     }
 
     // Set up thread local storage for rchannels.
