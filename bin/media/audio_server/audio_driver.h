@@ -15,6 +15,7 @@
 
 #include "garnet/bin/media/audio_server/audio_device.h"
 #include "garnet/bin/media/audio_server/driver_ring_buffer.h"
+#include "garnet/bin/media/audio_server/utils.h"
 
 namespace media {
 namespace audio {
@@ -35,10 +36,6 @@ class AudioDriver {
     Stopping,
     Shutdown,
   };
-
-  // A compile time constant which is guaranteed to never be used as a ring
-  // buffer state generation.
-  static constexpr uint32_t kInvalidRingBufferStateGeneration = 0;
 
   AudioDriver(AudioDevice* owner);
   virtual ~AudioDriver() {}
@@ -171,11 +168,6 @@ class AudioDriver {
     return clock_mono_to_ring_pos_bytes_;
   }
 
-  // Helper method used to generate the next valid ring buffer state generation
-  // ID.
-  void AdvanceRingBufferStateGeneration()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(ring_buffer_state_lock_);
-
   AudioDevice* const owner_;
 
   State state_ = State::Uninitialized;
@@ -207,7 +199,7 @@ class AudioDriver {
       FXL_GUARDED_BY(ring_buffer_state_lock_);
   TimelineFunction clock_mono_to_ring_pos_bytes_
       FXL_GUARDED_BY(ring_buffer_state_lock_);
-  uint32_t ring_buffer_state_gen_ FXL_GUARDED_BY(ring_buffer_state_lock_) = 1;
+  GenerationId ring_buffer_state_gen_ FXL_GUARDED_BY(ring_buffer_state_lock_);
 
   // Plug detection state.
   bool pd_enabled_ = false;

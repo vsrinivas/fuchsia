@@ -21,7 +21,6 @@ namespace audio {
 
 static constexpr fxl::TimeDelta kMaxTrimPeriod =
     fxl::TimeDelta::FromMilliseconds(10);
-constexpr uint32_t StandardOutputBase::MixJob::kInvalidGeneration;
 
 StandardOutputBase::RendererBookkeeping::RendererBookkeeping() {}
 StandardOutputBase::RendererBookkeeping::~RendererBookkeeping() {}
@@ -513,7 +512,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
 
   // Update the generation, and invalidate the output to renderer generation.
   local_time_to_renderer_subframes_gen = gen;
-  out_frames_to_renderer_subframes_gen = MixJob::kInvalidGeneration;
+  out_frames_to_renderer_subframes_gen = kInvalidGenerationId;
 }
 
 void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
@@ -522,7 +521,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
   // view, this means that we have a job which supplies a valid transformation
   // from local time to output frames.
   FXL_DCHECK(job.local_to_output);
-  FXL_DCHECK(job.local_to_output_gen != MixJob::kInvalidGeneration);
+  FXL_DCHECK(job.local_to_output_gen != kInvalidGenerationId);
 
   // If our generations match, we don't need to re-compute anything.  Just use
   // what we have already.

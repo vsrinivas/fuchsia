@@ -8,6 +8,7 @@
 #include <limits>
 
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/mixer_utils.h"
 #include "lib/fxl/logging.h"
 
@@ -74,7 +75,7 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
       uint32_t src_iter;
       int32_t* out;
 
-      src_iter = (soff >> AudioRendererImpl::PTS_FRACTIONAL_BITS) * SChCount;
+      src_iter = (soff >> kPtsFractionalBits) * SChCount;
       out = dst + (doff * DChCount);
 
       for (size_t dst_iter = 0; dst_iter < DChCount; ++dst_iter) {

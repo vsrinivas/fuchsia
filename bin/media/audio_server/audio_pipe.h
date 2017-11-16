@@ -27,9 +27,8 @@ class AudioPipe : public MediaPacketConsumerBase {
 
     // Accessors for starting and ending presentation time stamps expressed in
     // units of audio frames (note, not media time), as signed 51.12 fixed point
-    // integers (see AudioRendererImpl:PTS_FRACTIONAL_BITS).  At 192KHz, this
-    // allows for ~372.7 years of usable range when starting from a media time
-    // of 0.
+    // integers (see kPtsFractionalBits).  At 192KHz, this allows for ~372.7
+    // years of usable range when starting from a media time of 0.
     //
     // AudioPackets consumed by the AudioServer are all expected to have
     // explicit presentation time stamps.  If packets sent by the user are

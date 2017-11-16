@@ -10,6 +10,7 @@
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
+#include "garnet/bin/media/audio_server/constants.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
@@ -18,8 +19,6 @@
 
 namespace media {
 namespace audio {
-
-constexpr size_t AudioRendererImpl::PTS_FRACTIONAL_BITS;
 
 // TODO(johngro): If there is ever a better way to do this type of static-table
 // initialization using fidl generated structs, we should switch to it.
@@ -336,7 +335,7 @@ void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
 
   if (packet->supplied_packet()->packet()->flags & MediaPacket::kFlagEos) {
     timeline_control_point_.SetEndOfStreamPts(
-        (packet->end_pts() >> PTS_FRACTIONAL_BITS) /
+        (packet->end_pts() >> kPtsFractionalBits) /
         format_info_->frames_per_ns());
   }
 }

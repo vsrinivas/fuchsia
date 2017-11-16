@@ -8,6 +8,7 @@
 
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
+#include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
@@ -26,8 +27,6 @@ class StandardOutputBase : public AudioOutput {
 
  protected:
   struct MixJob {
-    static constexpr uint32_t kInvalidGeneration = 0;
-
     // State for the job set up once by the output implementation and then used
     // by all renderers.
     void* buf;
@@ -52,8 +51,8 @@ class StandardOutputBase : public AudioOutput {
     TimelineFunction local_time_to_renderer_frames;
     TimelineFunction output_frames_to_renderer_frames;
 
-    uint32_t local_time_to_renderer_subframes_gen = 0;
-    uint32_t out_frames_to_renderer_subframes_gen = MixJob::kInvalidGeneration;
+    uint32_t local_time_to_renderer_subframes_gen = kInvalidGenerationId;
+    uint32_t out_frames_to_renderer_subframes_gen = kInvalidGenerationId;
     uint32_t step_size;
     Gain::AScale amplitude_scale;
     MixerPtr mixer;

@@ -190,7 +190,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   job->buf_frames = to_mix;
   job->start_pts_of = frames_sent_;
   job->local_to_output = &cm2rd_pos;
-  job->local_to_output_gen = 1;
+  job->local_to_output_gen = clock_mono_to_ring_buf_pos_id_.get();
 
   return true;
 }
@@ -359,23 +359,24 @@ void DriverOutput::OnDriverStartComplete() {
   int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
   const TimelineFunction bytes_to_frames(offset, 0, bytes_per_frame, 1);
   const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();
-  TimelineFunction& t_frames = clock_mono_to_ring_buf_pos_frames_;
 
-  t_frames = TimelineFunction::Compose(bytes_to_frames, t_bytes);
+  clock_mono_to_ring_buf_pos_frames_ =
+      TimelineFunction::Compose(bytes_to_frames, t_bytes);
+  clock_mono_to_ring_buf_pos_id_.Next();
 
+  const TimelineFunction& trans = clock_mono_to_ring_buf_pos_frames_;
   uint32_t fd_frames = driver_->fifo_depth_frames();
-  low_water_frames_ = fd_frames + t_frames.rate().Scale(kDefaultLowWaterNsec);
+  low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec);
   frames_sent_ = low_water_frames_;
   frames_to_mix_ = 0;
 
   if (VERBOSE_TIMING_DEBUG) {
     FXL_LOG(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames "
                   << std::fixed << std::setprecision(3)
-                  << t_frames.rate().Inverse().Scale(fd_frames) / 1000000.0
+                  << trans.rate().Inverse().Scale(fd_frames) / 1000000.0
                   << " mSec) Low Water (" << low_water_frames_ << " frames "
                   << std::fixed << std::setprecision(3)
-                  << t_frames.rate().Inverse().Scale(low_water_frames_) /
-                         1000000.0
+                  << trans.rate().Inverse().Scale(low_water_frames_) / 1000000.0
                   << " mSec)";
   }
 

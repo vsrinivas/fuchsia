@@ -10,6 +10,7 @@
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
+#include "garnet/bin/media/audio_server/constants.h"
 
 namespace media {
 namespace audio {
@@ -122,8 +123,8 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
     return;
   }
 
-  static constexpr uint32_t kMaxFrames = std::numeric_limits<uint32_t>::max() >>
-                                         AudioRendererImpl::PTS_FRACTIONAL_BITS;
+  static constexpr uint32_t kMaxFrames =
+      std::numeric_limits<uint32_t>::max() >> kPtsFractionalBits;
   uint32_t frame_count = (supplied_packet->payload_size() / frame_size);
   if (frame_count > kMaxFrames) {
     FXL_LOG(ERROR) << "Audio frame count (" << frame_count
@@ -147,8 +148,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
 
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.
-  int64_t pts_delta = (static_cast<int64_t>(frame_count)
-                       << AudioRendererImpl::PTS_FRACTIONAL_BITS);
+  int64_t pts_delta = (static_cast<int64_t>(frame_count) << kPtsFractionalBits);
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
@@ -157,9 +157,8 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   // Send the packet along unless it falls outside the program range.
   if (next_pts_ >= min_pts_) {
     owner_->OnPacketReceived(AudioPacketRefPtr(new AudioPacketRef(
-        std::move(supplied_packet), server_,
-        frame_count << AudioRendererImpl::PTS_FRACTIONAL_BITS, start_pts,
-        next_pts_, frame_count)));
+        std::move(supplied_packet), server_, frame_count << kPtsFractionalBits,
+        start_pts, next_pts_, frame_count)));
   }
 
   if (prime_callback_ && (end_of_stream || supplied_packets_outstanding() >=

@@ -29,10 +29,6 @@ class AudioRendererImpl
       public AudioRenderer,
       public MediaRenderer {
  public:
-  // TODO(johngro): Find a better place for this constant.  It affects the
-  // behavior of more than just the Audio Renderer implementation.
-  static constexpr size_t PTS_FRACTIONAL_BITS = 12;
-
   ~AudioRendererImpl() override;
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,

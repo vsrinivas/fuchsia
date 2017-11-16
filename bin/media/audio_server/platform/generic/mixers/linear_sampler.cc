@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/mixer_utils.h"
 #include "lib/fxl/logging.h"
 
@@ -45,7 +46,7 @@ class LinearSamplerImpl : public LinearSampler {
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
     return ((A * static_cast<int32_t>(FRAC_ONE - alpha)) +
             (B * static_cast<int32_t>(alpha))) >>
-           AudioRendererImpl::PTS_FRACTIONAL_BITS;
+           kPtsFractionalBits;
   }
 
   int32_t filter_data_[2 * DChCount];
@@ -99,7 +100,7 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     }
 
     while ((doff < dst_frames) && (soff < send)) {
-      uint32_t S = (soff >> AudioRendererImpl::PTS_FRACTIONAL_BITS) * SChCount;
+      uint32_t S = (soff >> kPtsFractionalBits) * SChCount;
       int32_t* out = dst + (doff * DChCount);
 
       for (size_t D = 0; D < DChCount; ++D) {
@@ -131,7 +132,7 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   // the final frame into the output buffer.
   if ((doff < dst_frames) && (soff == send)) {
     if (ScaleType != ScalerType::MUTED) {
-      uint32_t S = (soff >> AudioRendererImpl::PTS_FRACTIONAL_BITS) * SChCount;
+      uint32_t S = (soff >> kPtsFractionalBits) * SChCount;
       int32_t* out = dst + (doff * DChCount);
 
       for (size_t D = 0; D < DChCount; ++D) {
@@ -148,7 +149,7 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   *frac_src_offset = soff;
 
   if (soff >= send) {
-    uint32_t S = (send >> AudioRendererImpl::PTS_FRACTIONAL_BITS) * SChCount;
+    uint32_t S = (send >> kPtsFractionalBits) * SChCount;
     for (size_t D = 0; D < DChCount; ++D) {
       filter_data_[D] = SR::Read(src + S + (D / SR::DstPerSrc));
     }

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/constants.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
@@ -20,8 +21,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 
   // Figure out the rate we need to scale by in order to produce our fixed
   // point timestamps.
-  frame_to_media_ratio_ =
-      TimelineRate(1 << AudioRendererImpl::PTS_FRACTIONAL_BITS, 1);
+  frame_to_media_ratio_ = TimelineRate(1 << kPtsFractionalBits, 1);
 
   // Figure out the total number of bytes in a packed frame.
   switch (format_->sample_format) {

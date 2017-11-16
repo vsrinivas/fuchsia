@@ -13,8 +13,6 @@
 namespace media {
 namespace audio {
 
-constexpr uint32_t AudioDriver::kInvalidRingBufferStateGeneration;
-
 static constexpr zx_txid_t TXID = 1;
 static constexpr zx_duration_t kDefaultShortCmdTimeout = ZX_MSEC(250);
 static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(3);
@@ -92,7 +90,7 @@ void AudioDriver::Cleanup() {
     fxl::MutexLocker lock(&ring_buffer_state_lock_);
     ring_buffer = std::move(ring_buffer_);
     clock_mono_to_ring_pos_bytes_ = TimelineFunction();
-    AdvanceRingBufferStateGeneration();
+    ring_buffer_state_gen_.Next();
   }
   ring_buffer.reset();
 
@@ -278,7 +276,7 @@ zx_status_t AudioDriver::Stop() {
   {
     fxl::MutexLocker lock(&ring_buffer_state_lock_);
     clock_mono_to_ring_pos_bytes_ = TimelineFunction();
-    AdvanceRingBufferStateGeneration();
+    ring_buffer_state_gen_.Next();
   }
 
   // Send the command to stop the ring buffer.
@@ -721,7 +719,7 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(
     }
     FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertable());
 
-    AdvanceRingBufferStateGeneration();
+    ring_buffer_state_gen_.Next();
   }
 
   // We are now configured.  Let our owner know about this important milestone.
@@ -770,7 +768,7 @@ zx_status_t AudioDriver::ProcessStartResponse(
     FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertable());
     FXL_DCHECK(ring_buffer_ != nullptr);
     clock_mono_to_ring_pos_bytes_ = func;
-    AdvanceRingBufferStateGeneration();
+    ring_buffer_state_gen_.Next();
   }
 
   // We are now configured.  Let our owner know about this important milestone.
@@ -847,12 +845,6 @@ void AudioDriver::ReportPlugStateChange(bool plugged, zx_time_t plug_time) {
   if (pd_enabled_) {
     owner_->OnDriverPlugStateChange(plugged, plug_time);
   }
-}
-
-void AudioDriver::AdvanceRingBufferStateGeneration() {
-  do {
-    ++ring_buffer_state_gen_;
-  } while (ring_buffer_state_gen_ == kInvalidRingBufferStateGeneration);
 }
 
 }  // namespace audio

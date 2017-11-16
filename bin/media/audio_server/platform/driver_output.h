@@ -70,6 +70,7 @@ class DriverOutput : public StandardOutputBase {
   uint32_t frames_to_mix_ = 0;
   int64_t low_water_frames_ = 0;
   TimelineFunction clock_mono_to_ring_buf_pos_frames_;
+  GenerationId clock_mono_to_ring_buf_pos_id_;
   zx_time_t underflow_start_time_ = 0;
   zx_time_t underflow_cooldown_deadline_ = 0;
 };
