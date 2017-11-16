@@ -340,7 +340,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 }
 
 bool DriverOutput::FinishMixJob(const MixJob& job) {
-  // TODO(johngro): Flush cache here!
+  size_t buf_len = job.buf_frames * kDefaultFrameSize;
+  zx_cache_flush(job.buf, buf_len, ZX_CACHE_FLUSH_DATA);
 
   if (VERBOSE_TIMING_DEBUG) {
     int64_t now = fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
