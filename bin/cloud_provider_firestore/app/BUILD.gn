@@ -16,13 +16,9 @@ executable("app") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/firestore",
     "//peridot/bin/ledger/callback",
     "//peridot/public/lib/lifecycle/fidl",
-    "//third_party/googleapis/google/firestore/v1beta1",
-    "//third_party/googleapis/google/firestore/v1beta1:service",
-    "//third_party/grpc:grpc++",
     "//zircon/system/ulib/trace-provider",
   ]
-
-  configs += [ "//third_party/googleapis:googleapis_config" ]
 }
