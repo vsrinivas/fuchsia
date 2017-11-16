@@ -71,14 +71,6 @@ void Device::Flush() {
     // no-op
 }
 
-void Device::AcquireOrReleaseDisplay(bool acquire) {
-    // no-op
-}
-
-void Device::SetOwnershipChangeCallback(zx_display_cb_t callback, void* cookie) {
-    // no-op
-}
-
 // implement device protocol
 
 zx_status_t Device::DdkOpen(zx_device_t** dev_out, uint32_t flags) {

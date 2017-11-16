@@ -20,8 +20,6 @@ class DisplayProtocol : public internal::base_protocol {
         ops_.get_mode = GetMode;
         ops_.get_framebuffer = GetFramebuffer;
         ops_.flush = FlushThunk;
-        ops_.acquire_or_release_display = AcquireOrReleaseDisplay;
-        ops_.set_ownership_change_callback = SetOwnershipChangeCallback;
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_ops_ == nullptr);
@@ -44,14 +42,6 @@ class DisplayProtocol : public internal::base_protocol {
 
     static void FlushThunk(void* ctx) {
         static_cast<D*>(ctx)->Flush();
-    }
-
-    static void AcquireOrReleaseDisplay(void* ctx, bool acquire) {
-        static_cast<D*>(ctx)->AcquireOrReleaseDisplay(acquire);
-    }
-
-    static void SetOwnershipChangeCallback(void* ctx, zx_display_cb_t callback, void* cookie) {
-        static_cast<D*>(ctx)->SetOwnershipChangeCallback(callback, cookie);
     }
 
     display_protocol_ops_t ops_ = {};

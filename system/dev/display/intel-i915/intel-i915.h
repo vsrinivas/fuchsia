@@ -28,8 +28,6 @@ public:
     zx_status_t GetMode(zx_display_info_t* info);
     zx_status_t GetFramebuffer(void** framebuffer);
     void Flush();
-    void AcquireOrReleaseDisplay(bool acquire);
-    void SetOwnershipChangeCallback(zx_display_cb_t callback, void* cookie);
 
 private:
     void EnableBacklight(bool enable);

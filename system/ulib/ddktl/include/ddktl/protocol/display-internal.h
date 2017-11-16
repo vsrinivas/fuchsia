@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <ddk/protocol/display.h>
 #include <ddktl/device-internal.h>
-#include <zircon/types.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/types.h>
 
 #include <stdint.h>
 
@@ -55,22 +56,6 @@ constexpr void CheckDisplayProtocolSubclass() {
                   "'void Flush()', and be visible to "
                   "ddk::DisplayProtocol<D> (either because they are public, or because of "
                   "friendship).");
-    static_assert(internal::has_acquire_or_release_display<D>::value,
-                  "DisplayProtocol subclasses must implement AcquireOrReleaseDisplay");
-    static_assert(fbl::is_same<decltype(&D::AcquireOrReleaseDisplay),
-                                void (D::*)(bool)>::value,
-                  "AcquireOrReleaseDisplay must be a non-static member function with signature "
-                  "'void AcquireOrReleaseDisplay(bool acquire)', and be visible to "
-                  "ddk::DisplayProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-    static_assert(internal::has_set_ownership_change_callback<D>::value,
-                  "DisplayProtocol subclasses must implement SetOwnershipChangeCallback");
-    static_assert(fbl::is_same<decltype(&D::SetOwnershipChangeCallback),
-                                void (D::*)(zx_display_cb_t, void*)>::value,
-                  "SetOwnershipChangeCallback must be a non-static member function with signature "
-                  "'void SetOwnershipChangeCallback(zx_display_cb_t cb, void* cookie)', and be "
-                  "visible to ddk::DisplayProtocol<D> (either because they are public, or because "
-                  "of friendship).");
 }
 
 }  // namespace internal
