@@ -13,6 +13,13 @@
 #include <fdio/namespace.h>
 #include <zircon/syscalls.h>
 
+void print_namespace(fdio_flat_namespace_t* flat) {
+    for (size_t n = 0; n < flat->count; n++) {
+        fprintf(stderr, "{ .handle = 0x%08x, type = 0x%08x, .path = '%s' },\n",
+                flat->handle[n], flat->type[n], flat->path[n]);
+    }
+}
+
 int run_in_namespace(const char* bin, size_t count, char** mapping) {
     fdio_ns_t* ns;
     zx_status_t r;
@@ -49,10 +56,7 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
         return -1;
     }
 
-    for (size_t n = 0; n < flat->count; n++) {
-        fprintf(stderr, "{ .handle = 0x%08x, type = 0x%08x, .path = '%s' },\n",
-                flat->handle[n], flat->type[n], flat->path[n]);
-    }
+    print_namespace(flat);
 
     launchpad_t* lp;
     launchpad_create(0, bin, &lp);
@@ -73,11 +77,30 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
     return 0;
 }
 
+int dump_current_namespace(void) {
+    fdio_flat_namespace_t* flat;
+    zx_status_t r = fdio_ns_export_root(&flat);
+
+    if (r < 0) {
+        fprintf(stderr, "error: cannot export namespace: %d\n", r);
+        return -1;
+    }
+
+    print_namespace(flat);
+    return 0;
+}
+
 int main(int argc, char** argv) {
+    if (argc == 2 && strcmp(argv[1], "--dump") == 0) {
+        return dump_current_namespace();
+    }
+
     if (argc > 1) {
         return run_in_namespace("/boot/bin/sh", argc - 1, argv + 1);
     }
 
-    printf("Usage: %s [dst=src]+, to run a shell with src mapped to dst\n", argv[0]);
+    printf("Usage: %s [ --dump | [dst=src]+ ]\n"
+           "Dumps the current namespace or runs a shell with src mapped to dst\n",
+           argv[0]);
     return -1;
 }
