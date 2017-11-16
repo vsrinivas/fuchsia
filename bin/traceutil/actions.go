@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -76,10 +75,9 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection) error {
 	return conn.RunCommand(strings.Join(cmd, " "))
 }
 
-func convertTrace(inputPath string, outputPath string) error {
+func convertTrace(generator string, inputPath string, outputPath string) error {
 	fmt.Printf("Converting %s to %s... ", inputPath, outputPath)
-	err := runCommand(path.Join(fuchsiaRoot, "third_party", "catapult",
-		"tracing", "bin", "trace2html"), "--output", outputPath, inputPath)
+	err := runCommand(generator, "--output", outputPath, inputPath)
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())
 	} else {

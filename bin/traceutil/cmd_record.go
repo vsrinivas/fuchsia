@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/subcommands"
@@ -14,8 +15,20 @@ type cmdRecord struct {
 
 	targetHostname string
 	filePrefix     string
+	reportType     string
 	captureConfig  *captureTraceConfig
 }
+
+type reportGenerator struct {
+	generatorPath    string
+	outputFileSuffix string
+}
+
+var (
+	builtinReports = map[string]reportGenerator{
+		"html": {getHtmlGenerator(), "html"},
+	}
+)
 
 func NewCmdRecord() *cmdRecord {
 	cmd := &cmdRecord{
@@ -24,6 +37,7 @@ func NewCmdRecord() *cmdRecord {
 	cmd.flags.StringVar(&cmd.filePrefix, "file-prefix", "",
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
 	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname.")
+	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
 
 	cmd.captureConfig = newCaptureTraceConfig(cmd.flags)
 	return cmd
@@ -38,7 +52,7 @@ func (*cmdRecord) Synopsis() string {
 }
 
 func (cmd *cmdRecord) Usage() string {
-	usage := "traceuitl record <options>\n"
+	usage := "traceutil record <options>\n"
 	cmd.flags.Visit(func(flag *flag.Flag) {
 		usage += flag.Usage
 	})
@@ -52,6 +66,24 @@ func (cmd *cmdRecord) SetFlags(f *flag.FlagSet) {
 
 func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	_ ...interface{}) subcommands.ExitStatus {
+
+	// Flag errors in report type early.
+	reportGenerator := builtinReports[cmd.reportType]
+	generatorPath := ""
+	outputFileSuffix := ""
+	if reportGenerator.generatorPath != "" {
+		generatorPath = reportGenerator.generatorPath
+		outputFileSuffix = reportGenerator.outputFileSuffix
+	} else {
+		generatorPath = getExternalReportGenerator(cmd.reportType)
+		outputFileSuffix = cmd.reportType
+	}
+	if _, err := os.Stat(generatorPath); os.IsNotExist(err) {
+		fmt.Printf("No generator for report type \"%s\"\n",
+			cmd.reportType)
+		return subcommands.ExitFailure
+	}
+
 	conn, err := NewTargetConnection(cmd.targetHostname)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -67,7 +99,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 
 	prefix := cmd.getFilenamePrefix()
 	jsonFilename := prefix + ".json"
-	htmlFilename := prefix + ".html"
+	outputFilename := prefix + "." + outputFileSuffix
 
 	if len(cmd.captureConfig.BenchmarkResultsFile) > 0 {
 		fmt.Printf(
@@ -94,7 +126,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 
 	// TODO(TO-403): Remove remote file.  Add command line option to leave it.
 
-	err = convertTrace(jsonFilename, htmlFilename)
+	err = convertTrace(generatorPath, jsonFilename, outputFilename)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure

@@ -49,11 +49,17 @@ func getFuchsiaRoot() string {
 	panic("Can not determine Fuchsia source root based on executable path.")
 }
 
-func getBuildRoot(fxRoot string) string {
+func getTraceutilBuildDir() string {
 	execPath, err := os.Executable()
 	if err != nil {
 		panic(err.Error())
 	}
+	dir, _ := path.Split(execPath)
+	return dir
+}
+
+func getBuildRoot(fxRoot string) string {
+	execPath := getTraceutilBuildDir()
 
 	outPath := path.Join(fxRoot, "out")
 	dir, file := path.Split(execPath)
@@ -66,4 +72,14 @@ func getBuildRoot(fxRoot string) string {
 	}
 
 	panic("Can not determine output directory based on executable path.")
+}
+
+func getHtmlGenerator() string {
+	return path.Join(fuchsiaRoot, "third_party", "catapult",
+		"tracing", "bin", "trace2html")
+}
+
+func getExternalReportGenerator(reportType string) string {
+	return path.Join(getTraceutilBuildDir(),
+		"traceutil-generate-"+reportType)
 }
