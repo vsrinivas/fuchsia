@@ -30,41 +30,6 @@ Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     ZX_DEBUG_ASSERT(timer_.get());
 }
 
-zx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
-    debugfn();
-    resp_ = std::move(resp);
-    resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
-    resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
-
-    if (IsRunning()) { return ZX_ERR_UNAVAILABLE; }
-    ZX_DEBUG_ASSERT(req_.is_null());
-    ZX_DEBUG_ASSERT(channel_index_ == 0);
-    ZX_DEBUG_ASSERT(channel_start_ == 0);
-
-    if (req->channel_list.size() == 0) { return ZX_ERR_INVALID_ARGS; }
-    if (req->max_channel_time < req->min_channel_time) { return ZX_ERR_INVALID_ARGS; }
-    if (!BSSTypes_IsValidValue(req->bss_type) || !ScanTypes_IsValidValue(req->scan_type)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
-    // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
-    resp_->result_code = ScanResultCodes::SUCCESS;
-    req_ = std::move(req);
-
-    channel_start_ = timer_->Now();
-    zx_time_t timeout;
-    if (req_->scan_type == ScanTypes::PASSIVE) {
-        timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
-    } else {
-        timeout = channel_start_ + WLAN_TU(req_->probe_delay);
-    }
-    zx_status_t status = timer_->SetTimer(timeout);
-    if (status != ZX_OK) { errorf("could not start scan timer: %d\n", status); }
-
-    return status;
-}
-
 zx_status_t Scanner::Start(ScanRequestPtr req) {
     debugfn();
     if (IsRunning()) { return ZX_ERR_UNAVAILABLE; }

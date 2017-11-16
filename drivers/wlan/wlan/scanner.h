@@ -30,7 +30,6 @@ class Scanner {
         kActive,
     };
 
-    zx_status_t Start(ScanRequestPtr req, ScanResponsePtr resp);
     void Reset();
 
     bool IsRunning() const;
