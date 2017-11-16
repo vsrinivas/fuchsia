@@ -2,10 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "garnet/packages/icu",
-        "garnet/packages/fsl"
-    ],
     "packages": {
         "appmgr": "//garnet/bin/appmgr",
         "appmgr_tests": "//garnet/bin/appmgr:appmgr_tests",

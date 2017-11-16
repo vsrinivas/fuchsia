@@ -2,10 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "garnet/packages/fxl",
-        "garnet/packages/fsl"
-    ],
     "packages": {
         "listen": "//garnet/bin/listen"
     }

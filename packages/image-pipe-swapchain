@@ -1,8 +1,6 @@
 {
     "imports": [
         "garnet/packages/vulkan",
-        "garnet/packages/fxl",
-        "garnet/packages/fsl",
         "garnet/packages/runtime_config"
     ],
     "packages": {

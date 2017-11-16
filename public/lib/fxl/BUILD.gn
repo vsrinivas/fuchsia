@@ -273,31 +273,6 @@ executable("fxl_unittests") {
 }
 
 if (is_fuchsia) {
-  package("package") {
-    system_image = true
-    package_name = "fxl"
-
-    deps = [
-      ":fxl",
-    ]
-
-    libraries = [ {
-          name = "libfxl.so"
-        } ]
-  }
-
-  package("logging_package") {
-    system_image = true
-    package_name = "fxl_logging"
-
-    deps = [
-      ":fxl_logging",
-    ]
-    libraries = [ {
-          name = "libfxl_logging.so"
-        } ]
-  }
-
   package("unittests_package") {
     testonly = true
     system_image = true

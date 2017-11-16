@@ -4,8 +4,7 @@
     ],
     "imports": [
         "garnet/packages/boringssl",
-        "garnet/packages/listen",
-        "garnet/packages/zlib"
+        "garnet/packages/listen"
     ],
     "packages": {
         "openssh-portable": "//third_party/openssh-portable"

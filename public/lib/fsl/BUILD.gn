@@ -61,13 +61,8 @@ package("package") {
   package_name = "fsl"
 
   deps = [
-    ":fsl",
     ":fsl_unittests",
   ]
-
-  libraries = [ {
-        name = "libfsl.so"
-      } ]
 
   tests = [ {
         name = "fsl_unittests"

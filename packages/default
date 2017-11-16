@@ -17,10 +17,7 @@
         "garnet/packages/fidl_tests",
         "garnet/packages/fonts",
         "garnet/packages/fortune",
-        "garnet/packages/fsl",
-        "garnet/packages/fxl",
         "garnet/packages/go_stdlib_tests",
-        "garnet/packages/icu",
         "garnet/packages/icu_data",
         "garnet/packages/image-pipe-swapchain",
         "garnet/packages/insntrace",
@@ -63,7 +60,6 @@
         "garnet/packages/wlan_tests",
         "garnet/packages/wlanstack",
         "garnet/packages/zircon_benchmarks",
-        "garnet/packages/zlib",
         "packages/gn/build_info"
     ]
 }

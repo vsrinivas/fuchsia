@@ -2,9 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "garnet/packages/fxl"
-    ],
     "labels": [
         "//garnet/bin/auth"
     ],

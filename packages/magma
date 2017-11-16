@@ -2,10 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "garnet/packages/fxl",
-        "garnet/packages/zlib"
-    ],
     "packages": {
         "magma": "//garnet/lib/magma",
         "magma-test-build-only": "//garnet/lib/magma/tests:magma-test-build-only",

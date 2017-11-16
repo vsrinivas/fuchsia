@@ -3,11 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "garnet/packages/fxl",
-        "garnet/packages/fsl",
         "garnet/packages/tracing",
-        "garnet/packages/vulkan",
-        "garnet/packages/zlib"
+        "garnet/packages/vulkan"
     ],
     "packages": {
         "ime_service": "//garnet/bin/ui:ime_service",
