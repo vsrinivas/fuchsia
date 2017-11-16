@@ -336,9 +336,11 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
 #elif defined(__aarch64__)
     output_frame_arm64(context.arch.u.arm_64, *regs);
 
-    // Only output the Fault address register if there's a data fault.
-    if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type)
-        printf(" far %#18" PRIx64 "\n", context.arch.u.arm_64.far);
+    // Only output the Fault address register and ESR if there's a data fault.
+    if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type) {
+        printf(" far %#18" PRIx64 " esr %#18x\n",
+               context.arch.u.arm_64.far, context.arch.u.arm_64.esr);
+    }
 #else
     __UNREACHABLE;
 #endif
