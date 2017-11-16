@@ -34,7 +34,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/remotesocket.c
 else
-MODULE_SRCS += $(LOCAL_DIR)/newsocket.c
+MODULE_SRCS += \
+	$(LOCAL_DIR)/bsdsocket.c \
+	$(LOCAL_DIR)/newsocket.c
 MODULE_DEFINES += WITH_NEW_SOCKET=1
 endif
 

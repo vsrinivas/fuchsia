@@ -185,6 +185,10 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EBADF);
     }
 
+#if WITH_NEW_SOCKET
+    //TODO use share/accept transport
+    return -1;
+#else
     fdio_t* io2;
     zx_status_t r;
     for (;;) {
@@ -242,6 +246,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EMFILE);
     }
     return fd2;
+#endif
 }
 
 int getaddrinfo(const char* __restrict node,

@@ -13,6 +13,6 @@ struct zxsio {
     fdio_t io;
 
     // socket handle
-    zx_handle_t h;
+    zx_handle_t s;
 };
 
