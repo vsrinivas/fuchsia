@@ -28,6 +28,7 @@ enum x86_cpuid_leaf_num {
     X86_CPUID_MODEL_FEATURES = 0x1,
     X86_CPUID_CACHE_V1 = 0x2,
     X86_CPUID_CACHE_V2 = 0x4,
+    X86_CPUID_MON = 0x5,
     X86_CPUID_THERMAL_AND_POWER = 0x6,
     X86_CPUID_EXTENDED_FEATURE_FLAGS = 0x7,
     X86_CPUID_PERFORMANCE_MONITORING = 0xa,
@@ -103,6 +104,7 @@ void x86_feature_debug(void);
 /* add feature bits to test here */
 /* format: X86_CPUID_BIT(cpuid leaf, register (eax-edx:0-3), bit) */
 #define X86_FEATURE_SSE3         X86_CPUID_BIT(0x1, 2, 0)
+#define X86_FEATURE_MON          X86_CPUID_BIT(0x1, 2, 3)
 #define X86_FEATURE_VMX          X86_CPUID_BIT(0x1, 2, 5)
 #define X86_FEATURE_SSSE3        X86_CPUID_BIT(0x1, 2, 9)
 #define X86_FEATURE_PDCM         X86_CPUID_BIT(0x1, 2, 15)

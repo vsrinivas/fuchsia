@@ -73,6 +73,10 @@ static const uint32_t kGuestXxAccessRightsL             = 1u << 13;
 // See Volume 3, Section 3.5 for valid system selectors types.
 static const uint32_t kGuestTrAccessRightsTssBusy       = 11u << 0;
 
+// GUEST_INTERRUPTIBILITY_STATE flags.
+static const uint32_t kInterruptibilityStiBlocking      = 1u << 0;
+static const uint32_t kInterruptibilityMovSsBlocking    = 1u << 1;
+
 // VMCS fields.
 enum class VmcsField16 : uint64_t {
     VPID                                                = 0x0000,

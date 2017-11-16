@@ -105,6 +105,14 @@ EptViolationInfo::EptViolationInfo(uint64_t qualification) {
 
 static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
+
+    // Clear any flags blocking interrupt injection for a single instruction.
+    uint32_t guest_interruptibility = vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
+    uint32_t new_interruptibility = guest_interruptibility &
+        ~(kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking);
+    if (new_interruptibility != guest_interruptibility) {
+        vmcs->Write(VmcsField32::GUEST_INTERRUPTIBILITY_STATE, new_interruptibility);
+    }
 }
 
 /* Removes the highest priority interrupt from the bitmap, and returns it. */
@@ -127,12 +135,9 @@ static void local_apic_pending_interrupt(LocalApicState* local_apic_state, uint3
 }
 
 /* Attempts to issue an interrupt from the bitmap, returning true if it did. */
-static bool local_apic_issue_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-    uint32_t vector = local_apic_pop_interrupt(local_apic_state);
-    if (vector == kNumInterrupts)
-        return false;
-    vmcs->IssueInterrupt(vector);
-    return true;
+static bool local_apic_has_pending_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+    AutoSpinLock lock(&local_apic_state->interrupt_lock);
+    return kNumInterrupts != local_apic_state->interrupt_bitmap.Scan(0, kNumInterrupts, false);
 }
 
 // Injects an interrupt into the guest, if there is one pending.
@@ -236,6 +241,8 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
             // Disable the x2APIC bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
+            // Disable MONITOR/MWAIT.
+            guest_state->rcx &= ~(1u << X86_FEATURE_MON.bit);
             // Disable the SEP (SYSENTER support).
             guest_state->rdx &= ~(1u << X86_FEATURE_SEP.bit);
             // Disable the Thermal Monitor bit.
@@ -268,6 +275,13 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rdx = 0;
             break;
         }
+        case X86_CPUID_MON:
+            // MONITOR/MWAIT are not implemented.
+            guest_state->rax = 0;
+            guest_state->rbx = 0;
+            guest_state->rcx = 0;
+            guest_state->rdx = 0;
+            break;
         case X86_CPUID_EXTENDED_FEATURE_FLAGS:
             // Disable the Processor Trace bit.
             guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
@@ -304,7 +318,7 @@ static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
         vmcs->Reload();
         if (status != ZX_OK)
             return ZX_ERR_CANCELED;
-    } while (!local_apic_issue_interrupt(vmcs, local_apic_state));
+    } while (!local_apic_has_pending_interrupt(vmcs, local_apic_state));
     next_rip(exit_info, vmcs);
     return ZX_OK;
 }
