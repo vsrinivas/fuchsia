@@ -16,7 +16,6 @@
 #include "lib/fidl/cpp/bindings/message_validator.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
-#include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
 #include "{{module.path}}-internal.h"
 #include "{{module.path}}-common.h"
 
@@ -35,7 +34,7 @@ class {{interface.name}}_Synchronous
   : public internal::{{interface.name}}_Base {
  public:
   virtual ~{{interface.name}}_Synchronous() override {}
-  
+
   using Proxy_ = {{interface.name}}_SynchronousProxy;
 
 {%-   for method in interface.methods %}
@@ -50,8 +49,11 @@ class {{interface.name}}_SynchronousProxy
     : public {{interface.name}}_Synchronous {
  public:
   explicit {{interface.name}}_SynchronousProxy(
-      ::fidl::internal::SynchronousConnector* connector,
+      ::zx::channel channel,
       ::fidl::internal::MessageValidatorList&& validators);
+
+  bool is_bound() const { return !!channel_; }
+  zx::channel PassHandle_();
 
 {%-   for method in interface.methods %}
   bool {{method.name}}({{interface_macros.declare_sync_request_params(method)}})
@@ -59,8 +61,7 @@ class {{interface.name}}_SynchronousProxy
 {%-   endfor %}
 
  private:
-  // |connector_| is passed to us, and is not owned by us.
-  ::fidl::internal::SynchronousConnector* const connector_;
+  ::zx::channel channel_;
   ::fidl::internal::MessageValidatorList const validators_;
 };
 {% endfor %}

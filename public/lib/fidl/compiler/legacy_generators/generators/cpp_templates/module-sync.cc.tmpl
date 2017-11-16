@@ -22,7 +22,6 @@
 #include "lib/fidl/cpp/bindings/internal/message_builder.h"
 #include "lib/fidl/cpp/bindings/internal/message_validation.h"
 #include "lib/fidl/cpp/bindings/internal/string_serialization.h"
-#include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
 #include "lib/fidl/cpp/bindings/internal/validate_params.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/internal/validation_util.h"
@@ -40,9 +39,13 @@ namespace {{namespace}} {
 {% for interface in interfaces %}
 {%- set base_name = "internal::%s_Base"|format(interface.name) -%}
 {{interface.name}}_SynchronousProxy::{{interface.name}}_SynchronousProxy(
-      ::fidl::internal::SynchronousConnector* connector,
+      ::zx::channel channel,
       ::fidl::internal::MessageValidatorList&& validators)
-          : connector_(connector), validators_(std::move(validators)) {
+          : channel_(std::move(channel)), validators_(std::move(validators)) {
+}
+
+zx::channel {{interface.name}}_SynchronousProxy::PassHandle_() {
+  return std::move(channel_);
 }
 
 {% for method in interface.methods %}
@@ -67,36 +70,39 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
                             "{{interface.name}}::{{method.name}}", "in_%s",
                             "out_params", "builder.buffer()", false)}}
   out_params->EncodePointersAndHandles(builder.message()->mutable_handles());
-  
-  if (!connector_->Write(builder.message()))
+
+{%-   if method.response_parameters == None %}
+  if (::fidl::WriteMessage(channel_, builder.message()) != ZX_OK)
     return false;
-  
-{%-   if method.response_parameters != None %}
+
+{%-   else %}
   ::fidl::Message response_msg;
-  if (!connector_->BlockingRead(&response_msg))
-    return false; 
-  
+  if (::fidl::CallMessage(channel_, builder.message(), &response_msg)
+      != ZX_OK) {
+    return false;
+  }
+
   // Validate the incoming message.
   std::string response_err;
   if (::fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
-                                             &response_err)
+                                               &response_err)
         != ::fidl::internal::ValidationError::NONE) {
     FXL_LOG(WARNING) << response_err;
     return false;
   }
-  
-{#- TODO(vardhan): Add support for synchronous control messages. #} 
+
+{#- TODO(vardhan): Add support for synchronous control messages. #}
   if (response_msg.name() != msg_name) {
     FXL_LOG(ERROR) << "Expecting response for message = " << msg_name <<
                        ", but received message = " << response_msg.name();
     return false;
   }
-  
+
   internal::{{interface.name}}_{{method.name}}_ResponseParams_Data*
       response_params = reinterpret_cast<internal::{{interface.name}}_{{method.name}}_ResponseParams_Data*>(
           response_msg.mutable_payload());
   response_params->DecodePointersAndHandles(response_msg.mutable_handles());
-  
+
   {{struct_macros.deserialize(method.response_param_struct, "response_params",
                               "(*out_%s)")}}
 {%-   endif %}

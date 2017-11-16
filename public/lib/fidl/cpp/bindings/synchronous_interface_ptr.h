@@ -11,7 +11,6 @@
 
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
-#include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
 #include "lib/fxl/logging.h"
@@ -61,43 +60,35 @@ class SynchronousInterfacePtr {
   typename Interface::Synchronous_* get() { return proxy_.get(); }
 
   typename Interface::Synchronous_* operator->() {
-    FXL_DCHECK(connector_);
     FXL_DCHECK(proxy_);
     return proxy_.get();
   }
   typename Interface::Synchronous_& operator*() { return *operator->(); }
 
   // Returns whether or not this SynchronousInterfacePtr is bound to a channel.
-  bool is_bound() const { return connector_ && connector_->is_valid(); }
+  bool is_bound() const { return proxy_ && proxy_->is_bound(); }
   explicit operator bool() const { return is_bound(); }
 
   // Unbinds the SynchronousInterfacePtr and returns the underlying
   // InterfaceHandle for the interface.
   InterfaceHandle<Interface> PassInterfaceHandle() {
-    InterfaceHandle<Interface> handle(connector_->PassHandle());
+    InterfaceHandle<Interface> handle(proxy_->PassHandle_());
     reset();
     return handle;
   }
 
  private:
-  // A simple I/O interface we supply to the generated |proxy_| so it doesn't
-  // have to know how to write mojo message.
-  std::unique_ptr<internal::SynchronousConnector> connector_;
-  // |proxy_| must outlive |connector_|, so make sure it is declared in this
-  // order.
   std::unique_ptr<typename Interface::Synchronous_::Proxy_> proxy_;
 
   SynchronousInterfacePtr(InterfaceHandle<Interface> handle) {
-    connector_.reset(new internal::SynchronousConnector(handle.PassHandle()));
-
     fidl::internal::MessageValidatorList validators;
     validators.push_back(std::unique_ptr<fidl::internal::MessageValidator>(
         new fidl::internal::MessageHeaderValidator));
     validators.push_back(std::unique_ptr<fidl::internal::MessageValidator>(
         new typename Interface::ResponseValidator_));
 
-    proxy_.reset(new typename Interface::Synchronous_::Proxy_(
-        connector_.get(), std::move(validators)));
+        proxy_.reset(new typename Interface::Synchronous_::Proxy_(
+      handle.PassHandle(), std::move(validators)));
   }
 
   FIDL_MOVE_ONLY_TYPE(SynchronousInterfacePtr);

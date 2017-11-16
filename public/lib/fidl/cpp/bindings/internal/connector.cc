@@ -89,33 +89,23 @@ bool Connector::Accept(Message* message) {
   if (drop_writes_)
     return true;
 
-  zx_status_t rv =
-      channel_.write(0, message->data(), message->data_num_bytes(),
-                     message->mutable_handles()->empty()
-                         ? nullptr
-                         : reinterpret_cast<const zx_handle_t*>(
-                               &message->mutable_handles()->front()),
-                     static_cast<uint32_t>(message->mutable_handles()->size()));
+  zx_status_t status = WriteMessage(channel_, message);
 
-  switch (rv) {
-    case ZX_OK:
-      // The handles were successfully transferred, so we don't need the message
-      // to track their lifetime any longer.
-      message->mutable_handles()->clear();
-      break;
-    case ZX_ERR_BAD_STATE:
-      // There's no point in continuing to write to this channel since the other
-      // end is gone. Avoid writing any future messages. Hide write failures
-      // from the caller since we'd like them to continue consuming any backlog
-      // of incoming messages before regarding the channel as closed.
-      drop_writes_ = true;
-      break;
-    default:
-      // This particular write was rejected, presumably because of bad input.
-      // The channel is not necessarily in a bad state.
-      return false;
+  if (status == ZX_OK)
+    return true;
+
+  if (status == ZX_ERR_BAD_STATE) {
+    // There's no point in continuing to write to this channel since the other
+    // end is gone. Avoid writing any future messages. Hide write failures
+    // from the caller since we'd like them to continue consuming any backlog
+    // of incoming messages before regarding the channel as closed.
+    drop_writes_ = true;
+    return true;
   }
-  return true;
+
+  // This particular write was rejected, presumably because of bad input.
+  // The channel is not necessarily in a bad state.
+  return false;
 }
 
 async_wait_result_t Connector::OnHandleReady(

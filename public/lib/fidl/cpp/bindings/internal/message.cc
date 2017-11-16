@@ -68,8 +68,8 @@ void Message::FreeDataAndCloseHandles() {
   }
 }
 
-zx_status_t ReadMessage(const zx::channel& handle, Message* message) {
-  FXL_DCHECK(handle);
+zx_status_t ReadMessage(const zx::channel& channel, Message* message) {
+  FXL_DCHECK(channel);
   FXL_DCHECK(message);
   FXL_DCHECK(message->handles()->empty());
   FXL_DCHECK(message->data_num_bytes() == 0);
@@ -77,7 +77,7 @@ zx_status_t ReadMessage(const zx::channel& handle, Message* message) {
   uint32_t num_bytes = 0;
   uint32_t num_handles = 0;
   zx_status_t rv =
-      handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
+  channel.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
   if (rv != ZX_ERR_BUFFER_TOO_SMALL)
     return rv;
 
@@ -86,7 +86,7 @@ zx_status_t ReadMessage(const zx::channel& handle, Message* message) {
 
   uint32_t num_bytes_actual = num_bytes;
   uint32_t num_handles_actual = num_handles;
-  rv = handle.read(0, message->mutable_data(), num_bytes, &num_bytes_actual,
+  rv = channel.read(0, message->mutable_data(), num_bytes, &num_bytes_actual,
                    message->mutable_handles()->empty()
                        ? nullptr
                        : reinterpret_cast<zx_handle_t*>(
@@ -99,15 +99,60 @@ zx_status_t ReadMessage(const zx::channel& handle, Message* message) {
   return rv;
 }
 
-zx_status_t ReadAndDispatchMessage(const zx::channel& handle,
+zx_status_t ReadAndDispatchMessage(const zx::channel& channel,
                                    MessageReceiver* receiver,
                                    bool* receiver_result) {
   Message message;
-  zx_status_t rv = ReadMessage(handle, &message);
+  zx_status_t rv = ReadMessage(channel, &message);
   if (receiver && rv == ZX_OK)
     *receiver_result = receiver->Accept(&message);
 
   return rv;
+}
+
+zx_status_t WriteMessage(const zx::channel& channel, Message* message) {
+  FXL_DCHECK(channel);
+  FXL_DCHECK(message);
+
+  zx_status_t status = channel.write(
+      0, message->data(), message->data_num_bytes(),
+      message->mutable_handles()->empty()
+          ? nullptr
+          : reinterpret_cast<const zx_handle_t*>(
+            message->mutable_handles()->data()),
+      static_cast<uint32_t>(message->mutable_handles()->size()));
+
+  if (status == ZX_OK) {
+    // The handles were successfully transferred, so we don't need the message
+    // to track their lifetime any longer.
+    message->mutable_handles()->clear();
+  }
+
+  return status;
+}
+
+zx_status_t CallMessage(const zx::channel& channel, Message* message,
+                        Message* response) {
+  // TODO(abarth): Once we convert to the FIDL2 wire format, switch this code
+  // to use zx_channel_call.
+
+  FXL_DCHECK(response);
+  zx_status_t status = WriteMessage(channel, message);
+  if (status != ZX_OK)
+    return status;
+
+  zx_signals_t observed;
+  status = channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                            ZX_TIME_INFINITE, &observed);
+
+  if (status != ZX_OK)
+    return status;
+
+  if (observed & ZX_CHANNEL_READABLE)
+    return ReadMessage(channel, response);
+
+  FXL_DCHECK(observed & ZX_CHANNEL_PEER_CLOSED);
+  return ZX_ERR_PEER_CLOSED;
 }
 
 }  // namespace fidl

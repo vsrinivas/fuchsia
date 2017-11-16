@@ -45,7 +45,6 @@ source_set("test_sources") {
     "serialization_warning_unittest.cc",
     "string_unittest.cc",
     "struct_unittest.cc",
-    "synchronous_connector_unittest.cc",
     "union_unittest.cc",
     "util/container_test_util.cc",
     "util/container_test_util.h",

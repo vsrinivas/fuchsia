@@ -75,8 +75,6 @@ source_set("bindings") {
     "internal/router.cc",
     "internal/router.h",
     "internal/shared_data.h",
-    "internal/synchronous_connector.cc",
-    "internal/synchronous_connector.h",
     "internal/template_util.h",
     "message.h",
     "message_validator.h",

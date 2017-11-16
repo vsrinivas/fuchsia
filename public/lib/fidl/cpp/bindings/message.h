@@ -146,21 +146,28 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
       FXL_WARN_UNUSED_RESULT = 0;
 };
 
-// Read a single message from the channel into the supplied |message|. |handle|
+// Read a single message from the channel into the supplied |message|. |channel|
 // must be valid. |message| must be non-null and empty (i.e., clear of any data
 // and handles).
 //
 // NOTE: The message isn't validated and may be malformed!
-zx_status_t ReadMessage(const zx::channel& handle, Message* message);
+zx_status_t ReadMessage(const zx::channel& channel, Message* message);
 
 // Read a single message from the channel and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read
 // message is simply discarded. If |receiver| is not null, then
 // |receiver_result| should be non-null, and will be set the receiver's return
 // value.
-zx_status_t ReadAndDispatchMessage(const zx::channel& handle,
+zx_status_t ReadAndDispatchMessage(const zx::channel& channel,
                                    MessageReceiver* receiver,
                                    bool* receiver_result);
+
+zx_status_t WriteMessage(const zx::channel& channel,
+                         Message* message);
+
+zx_status_t CallMessage(const zx::channel& channel,
+                        Message* message,
+                        Message* response);
 
 }  // namespace fidl
 
