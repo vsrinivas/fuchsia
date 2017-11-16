@@ -95,6 +95,8 @@ Data for each counter is collected at a rate specified by the user.
 Eventually specifying a random rate will be possible. In the meantime
 the following set of rates are supported:
 
+- cpu:sample:100
+- cpu:sample:500
 - cpu:sample:1000
 - cpu:sample:5000
 - cpu:sample:10000
