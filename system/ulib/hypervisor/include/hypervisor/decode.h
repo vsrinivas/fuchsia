@@ -26,7 +26,7 @@ typedef struct zx_vcpu_state zx_vcpu_state_t;
 /* Stores info from a decoded instruction. */
 typedef struct instruction {
     uint8_t type;
-    uint8_t mem;
+    uint8_t access_size;
     uint32_t imm;
     uint64_t* reg;
     uint64_t* flags;
@@ -46,7 +46,7 @@ DEFINE_INST_VAL(8);
 
 #define DEFINE_INST_READ(size)                                                                   \
     static inline zx_status_t inst_read##size(const instruction_t* inst, uint##size##_t value) { \
-        if (inst->type != INST_MOV_READ || inst->mem != (size / 8))                              \
+        if (inst->type != INST_MOV_READ || inst->access_size != (size / 8))                              \
             return ZX_ERR_NOT_SUPPORTED;                                                         \
         *inst->reg = value;                                                                      \
         return ZX_OK;                                                                            \
@@ -58,7 +58,7 @@ DEFINE_INST_READ(8);
 
 #define DEFINE_INST_WRITE(size)                                                                    \
     static inline zx_status_t inst_write##size(const instruction_t* inst, uint##size##_t* value) { \
-        if (inst->type != INST_MOV_WRITE || inst->mem != (size / 8))                               \
+        if (inst->type != INST_MOV_WRITE || inst->access_size != (size / 8))                               \
             return ZX_ERR_NOT_SUPPORTED;                                                           \
         *value = inst_val##size(inst);                                                             \
         return ZX_OK;                                                                              \
@@ -86,7 +86,7 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
 #endif
 
 static inline zx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val, uint8_t value) {
-    if (inst->type != INST_TEST || inst->mem != 1u || inst_val8(inst) != inst_val)
+    if (inst->type != INST_TEST || inst->access_size != 1u || inst_val8(inst) != inst_val)
         return ZX_ERR_NOT_SUPPORTED;
 #if __x86_64__
     *inst->flags &= ~X86_FLAGS_STATUS;

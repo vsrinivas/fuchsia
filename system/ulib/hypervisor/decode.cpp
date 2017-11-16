@@ -196,9 +196,9 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
             return ZX_ERR_OUT_OF_RANGE;
         const bool w = opcode & kWMask;
         inst->type = INST_MOV_WRITE;
-        inst->mem = operand_size(h66, rex_w, w);
+        inst->access_size = operand_size(h66, rex_w, w);
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->access_size, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }
@@ -210,9 +210,9 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
             return ZX_ERR_OUT_OF_RANGE;
         const bool w = opcode & kWMask;
         inst->type = INST_MOV_READ;
-        inst->mem = operand_size(h66, rex_w, w);
+        inst->access_size = operand_size(h66, rex_w, w);
         inst->imm = 0;
-        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->mem, rex);
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->access_size, rex);
         inst->flags = NULL;
         return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }
@@ -227,7 +227,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         if ((mod_rm & kModRMRegMask) != 0)
             return ZX_ERR_INVALID_ARGS;
         inst->type = INST_MOV_WRITE;
-        inst->mem = operand_size(h66, rex_w, w);
+        inst->access_size = operand_size(h66, rex_w, w);
         inst->imm = 0;
         inst->reg = NULL;
         inst->flags = NULL;
@@ -248,10 +248,10 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         // extend. The 'w' bit determines if we're reading 8 or 16 bits out of
         // memory while the h66/rex_w bits are used to select the destination
         // register size.
-        const uint8_t mem_size = w ? 2 : 1;
+        const uint8_t access_size = w ? 2 : 1;
         const uint8_t reg_size = operand_size(h66, rex_w, true);
         inst->type = INST_MOV_READ;
-        inst->mem = mem_size;
+        inst->access_size = access_size;
         inst->imm = 0;
         inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), reg_size, rex);
         inst->flags = NULL;
@@ -266,7 +266,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         if ((mod_rm & kModRMRegMask) != 0)
             return ZX_ERR_INVALID_ARGS;
         inst->type = INST_TEST;
-        inst->mem = 1;
+        inst->access_size = 1;
         inst->imm = 0;
         inst->reg = NULL;
         inst->flags = &vcpu_state->rflags;

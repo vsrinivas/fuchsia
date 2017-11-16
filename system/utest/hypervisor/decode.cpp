@@ -42,7 +42,7 @@ static bool decode_mov_89(void) {
     instruction_t inst;
     EXPECT_EQ(inst_decode(mov, 2, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rcx);
     EXPECT_NULL(inst.flags);
@@ -51,7 +51,7 @@ static bool decode_mov_89(void) {
     uint8_t rex_mov[] = {0b01000100, 0x89, 0b00010000};
     EXPECT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r10);
     EXPECT_NULL(inst.flags);
@@ -60,7 +60,7 @@ static bool decode_mov_89(void) {
     uint8_t mov_disp_1[] = {0x89, 0b01011000, 0x10};
     EXPECT_EQ(inst_decode(mov_disp_1, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -69,7 +69,7 @@ static bool decode_mov_89(void) {
     uint8_t mov_disp_4[] = {0x89, 0b10011000, 0, 0, 0, 0x1};
     EXPECT_EQ(inst_decode(mov_disp_4, 6, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -78,7 +78,7 @@ static bool decode_mov_89(void) {
     uint8_t rex_mov_disp[] = {0b01001100, 0x89, 0b01100000, 0x11};
     EXPECT_EQ(inst_decode(rex_mov_disp, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 8u);
+    EXPECT_EQ(inst.access_size, 8u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r12);
     EXPECT_NULL(inst.flags);
@@ -87,7 +87,7 @@ static bool decode_mov_89(void) {
     uint8_t h66_mov_disp[] = {0x66, 0b01000100, 0x89, 0b01110000, 0x13};
     EXPECT_EQ(inst_decode(h66_mov_disp, 5, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r14);
     EXPECT_NULL(inst.flags);
@@ -118,7 +118,7 @@ static bool decode_mov_88(void) {
     uint8_t rex_mov[] = {0x40, 0x88, 0x3e};
     EXPECT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rdi);
     EXPECT_NULL(inst.flags);
@@ -144,7 +144,7 @@ static bool decode_mov_8b(void) {
     instruction_t inst;
     EXPECT_EQ(inst_decode(mov, 2, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rcx);
     EXPECT_NULL(inst.flags);
@@ -153,7 +153,7 @@ static bool decode_mov_8b(void) {
     uint8_t rex_mov[] = {0b01000100, 0x8b, 0b00010000};
     EXPECT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r10);
     EXPECT_NULL(inst.flags);
@@ -162,7 +162,7 @@ static bool decode_mov_8b(void) {
     uint8_t mov_disp_1[] = {0x8b, 0b01011000, 0x10};
     EXPECT_EQ(inst_decode(mov_disp_1, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -171,7 +171,7 @@ static bool decode_mov_8b(void) {
     uint8_t mov_disp_4[] = {0x8b, 0b10011000, 0, 0, 0, 0x1};
     EXPECT_EQ(inst_decode(mov_disp_4, 6, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -180,7 +180,7 @@ static bool decode_mov_8b(void) {
     uint8_t rex_mov_disp[] = {0b01001100, 0x8b, 0b01100000, 0x11};
     EXPECT_EQ(inst_decode(rex_mov_disp, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 8u);
+    EXPECT_EQ(inst.access_size, 8u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r12);
     EXPECT_NULL(inst.flags);
@@ -189,7 +189,7 @@ static bool decode_mov_8b(void) {
     uint8_t h66_mov_disp[] = {0x66, 0b01000100, 0x8b, 0b01110000, 0x13};
     EXPECT_EQ(inst_decode(h66_mov_disp, 5, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r14);
     EXPECT_NULL(inst.flags);
@@ -220,7 +220,7 @@ static bool decode_mov_8a(void) {
     uint8_t rex_mov[] = {0x40, 0x8a, 0x3e};
     EXPECT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rdi);
     EXPECT_NULL(inst.flags);
@@ -247,7 +247,7 @@ static bool decode_mov_c7(void) {
     instruction_t inst;
     EXPECT_EQ(inst_decode(mov, 6, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0x1u);
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
@@ -256,7 +256,7 @@ static bool decode_mov_c7(void) {
     uint8_t rex_mov[] = {0b01001000, 0xc7, 0, 0, 0, 0, 0x1};
     EXPECT_EQ(inst_decode(rex_mov, 7, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 8u);
+    EXPECT_EQ(inst.access_size, 8u);
     EXPECT_EQ(inst.imm, 0x1000000u);
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
@@ -265,7 +265,7 @@ static bool decode_mov_c7(void) {
     uint8_t mov_disp_1[] = {0xc7, 0b01000011, 0xff, 0x10, 0, 0, 0};
     EXPECT_EQ(inst_decode(mov_disp_1, 7, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0x10u);
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
@@ -274,7 +274,7 @@ static bool decode_mov_c7(void) {
     uint8_t mov_disp_4[] = {0xc7, 0b10000011, 0, 0, 0, 0xff, 0, 0, 0, 0x1};
     EXPECT_EQ(inst_decode(mov_disp_4, 10, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 4u);
+    EXPECT_EQ(inst.access_size, 4u);
     EXPECT_EQ(inst.imm, 0x1000000u);
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
@@ -283,7 +283,7 @@ static bool decode_mov_c7(void) {
     uint8_t h66_mov_disp[] = {0x66, 0b01000100, 0xc7, 0b01000000, 0xff, 0, 0x1};
     EXPECT_EQ(inst_decode(h66_mov_disp, 7, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0x100u);
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
@@ -301,7 +301,7 @@ static bool decode_mov_c6(void) {
     uint8_t mov[] = {0xc6, 0, 0x1};
     EXPECT_EQ(inst_decode(mov, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_WRITE);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0x1u);
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
@@ -324,7 +324,7 @@ static bool decode_movz_0f_b6(void) {
     instruction_t inst;
     EXPECT_EQ(inst_decode(movz, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rcx);
     EXPECT_NULL(inst.flags);
@@ -333,7 +333,7 @@ static bool decode_movz_0f_b6(void) {
     uint8_t rex_movz[] = {0b01000100, 0x0f, 0xb6, 0b00010000};
     EXPECT_EQ(inst_decode(rex_movz, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r10);
     EXPECT_NULL(inst.flags);
@@ -342,7 +342,7 @@ static bool decode_movz_0f_b6(void) {
     uint8_t movz_disp_1[] = {0x0f, 0xb6, 0b01011000, 0x10};
     EXPECT_EQ(inst_decode(movz_disp_1, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -351,7 +351,7 @@ static bool decode_movz_0f_b6(void) {
     uint8_t movz_disp_4[] = {0x0f, 0xb6, 0b10011000, 0, 0, 0, 0x1};
     EXPECT_EQ(inst_decode(movz_disp_4, 7, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -360,7 +360,7 @@ static bool decode_movz_0f_b6(void) {
     uint8_t rex_movz_disp[] = {0b01001100, 0x0f, 0xb6, 0b01100000, 0x11};
     EXPECT_EQ(inst_decode(rex_movz_disp, 5, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r12);
     EXPECT_NULL(inst.flags);
@@ -369,7 +369,7 @@ static bool decode_movz_0f_b6(void) {
     uint8_t has_h66[] = {0x66, 0x0f, 0xb6, 0b00001000};
     EXPECT_EQ(inst_decode(has_h66, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rcx);
     EXPECT_NULL(inst.flags);
@@ -378,7 +378,7 @@ static bool decode_movz_0f_b6(void) {
     uint8_t mov_to_esi[] = {0x0f, 0xb6, 0x30};
     EXPECT_EQ(inst_decode(mov_to_esi, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rsi);
     EXPECT_NULL(inst.flags);
@@ -404,7 +404,7 @@ static bool decode_movz_0f_b7(void) {
     instruction_t inst;
     EXPECT_EQ(inst_decode(movz, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rcx);
     EXPECT_NULL(inst.flags);
@@ -413,7 +413,7 @@ static bool decode_movz_0f_b7(void) {
     uint8_t rex_movz[] = {0b01000100, 0x0f, 0xb7, 0b00010000};
     EXPECT_EQ(inst_decode(rex_movz, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r10);
     EXPECT_NULL(inst.flags);
@@ -422,7 +422,7 @@ static bool decode_movz_0f_b7(void) {
     uint8_t movz_disp_1[] = {0x0f, 0xb7, 0b01011000, 0x10};
     EXPECT_EQ(inst_decode(movz_disp_1, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -431,7 +431,7 @@ static bool decode_movz_0f_b7(void) {
     uint8_t movz_disp_4[] = {0x0f, 0xb7, 0b10011000, 0, 0, 0, 0x1};
     EXPECT_EQ(inst_decode(movz_disp_4, 7, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rbx);
     EXPECT_NULL(inst.flags);
@@ -440,7 +440,7 @@ static bool decode_movz_0f_b7(void) {
     uint8_t rex_movz_disp[] = {0b01001100, 0x0f, 0xb7, 0b01100000, 0x11};
     EXPECT_EQ(inst_decode(rex_movz_disp, 5, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.r12);
     EXPECT_NULL(inst.flags);
@@ -449,7 +449,7 @@ static bool decode_movz_0f_b7(void) {
     uint8_t mov_to_esi[] = {0x0f, 0xb7, 0x30};
     EXPECT_EQ(inst_decode(mov_to_esi, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_MOV_READ);
-    EXPECT_EQ(inst.mem, 2u);
+    EXPECT_EQ(inst.access_size, 2u);
     EXPECT_EQ(inst.imm, 0u);
     EXPECT_EQ(inst.reg, &vcpu_state.rsi);
     EXPECT_NULL(inst.flags);
@@ -477,7 +477,7 @@ static bool decode_test_f6(void) {
     instruction_t inst;
     EXPECT_EQ(inst_decode(test, 3, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_TEST);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0x1u);
     EXPECT_NULL(inst.reg);
     EXPECT_EQ(inst.flags, &vcpu_state.rflags);
@@ -486,7 +486,7 @@ static bool decode_test_f6(void) {
     uint8_t test_disp_1[] = {0xf6, 0b01000011, 0xff, 0x10};
     EXPECT_EQ(inst_decode(test_disp_1, 4, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_TEST);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0x10u);
     EXPECT_NULL(inst.reg);
     EXPECT_EQ(inst.flags, &vcpu_state.rflags);
@@ -495,7 +495,7 @@ static bool decode_test_f6(void) {
     uint8_t test_disp_4[] = {0xf6, 0b10000011, 0, 0, 0, 0xff, 0x11};
     EXPECT_EQ(inst_decode(test_disp_4, 7, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_TEST);
-    EXPECT_EQ(inst.mem, 1u);
+    EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0x11u);
     EXPECT_NULL(inst.reg);
     EXPECT_EQ(inst.flags, &vcpu_state.rflags);

@@ -50,7 +50,7 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
     zx_status_t status;
     zx_vcpu_io_t mmio;
     if (inst->type == INST_MOV_WRITE) {
-        switch (inst->mem) {
+        switch (inst->access_size) {
         case 1:
             status = inst_write8(inst, &mmio.u8);
             break;
@@ -65,15 +65,15 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
         }
         if (status != ZX_OK)
             return status;
-        mmio.access_size = inst->mem;
+        mmio.access_size = inst->access_size;
         return handle_mmio_write(vcpu_ctx, trap_key, mem->addr, &mmio);
     }
 
     if (inst->type == INST_MOV_READ) {
-        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->mem, &mmio);
+        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->access_size, &mmio);
         if (status != ZX_OK)
             return status;
-        switch (inst->mem) {
+        switch (inst->access_size) {
         case 1:
             return inst_read8(inst, mmio.u8);
         case 2:
@@ -86,10 +86,10 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
     }
 
     if (inst->type == INST_TEST) {
-        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->mem, &mmio);
+        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->access_size, &mmio);
         if (status != ZX_OK)
             return status;
-        switch (inst->mem) {
+        switch (inst->access_size) {
         case 1:
             return inst_test8(inst, static_cast<uint8_t>(inst->imm), mmio.u8);
         default:
