@@ -4,6 +4,7 @@
 
 #include <hypervisor/vcpu.h>
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -14,42 +15,32 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
-/* Interrupt vectors. */
-#define X86_INT_GP_FAULT 13u
+// Interrupt vectors.
+// TODO(abdulla): Pick the right vector for ARM.
+static const uint32_t kGpFaultVector = 13u;
 
-static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
-    fprintf(stderr, "Unhandled address %#lx\n", mem->addr);
-    if (inst->type == INST_MOV_READ)
-        *inst->reg = UINT64_MAX;
-    return ZX_OK;
-}
+#if __aarch64__
+static zx_status_t handle_mmio_arm(const zx_packet_guest_mem_t* mem, uint64_t trap_key,
+                                   uint64_t* reg) {
+    IoValue mmio = { mem->access_size, { .u64 = mem->data } };
+    if (!mem->read)
+        return trap_key_to_mapping(trap_key)->Write(mem->addr, mmio);
 
-static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
-                                    uint8_t access_size, zx_vcpu_io_t* io) {
-    IoValue value = {};
-    value.access_size = access_size;
-    zx_status_t status = trap_key_to_mapping(trap_key)->Read(addr, &value);
+    zx_status_t status = trap_key_to_mapping(trap_key)->Read(mem->addr, &mmio);
     if (status != ZX_OK)
         return status;
-
-    io->access_size = value.access_size;
-    io->u32 = value.u32;
+    *reg = mmio.u64;
+    if (mem->sign_extend && *reg & (1ul << (mmio.access_size * CHAR_BIT - 1)))
+        *reg |= UINT64_MAX << mmio.access_size;
     return ZX_OK;
 }
-
-static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
-                                     zx_vcpu_io_t* io) {
-    IoValue value;
-    value.access_size = io->access_size;
-    value.u32 = io->u32;
-    return trap_key_to_mapping(trap_key)->Write(addr, value);
-}
-
-static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
-                               uint64_t trap_key, const instruction_t* inst) {
+#elif __x86_64__
+static zx_status_t handle_mmio_x86(const zx_packet_guest_mem_t* mem, uint64_t trap_key,
+                                   const instruction_t* inst) {
     zx_status_t status;
-    zx_vcpu_io_t mmio;
-    if (inst->type == INST_MOV_WRITE) {
+    IoValue mmio = { inst->access_size, { .u64 = 0 } };
+    switch (inst->type) {
+    case INST_MOV_WRITE:
         switch (inst->access_size) {
         case 1:
             status = inst_write8(inst, &mmio.u8);
@@ -65,12 +56,10 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
         }
         if (status != ZX_OK)
             return status;
-        mmio.access_size = inst->access_size;
-        return handle_mmio_write(vcpu_ctx, trap_key, mem->addr, &mmio);
-    }
+        return trap_key_to_mapping(trap_key)->Write(mem->addr, mmio);
 
-    if (inst->type == INST_MOV_READ) {
-        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->access_size, &mmio);
+    case INST_MOV_READ:
+        status = trap_key_to_mapping(trap_key)->Read(mem->addr, &mmio);
         if (status != ZX_OK)
             return status;
         switch (inst->access_size) {
@@ -83,10 +72,9 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
         default:
             return ZX_ERR_NOT_SUPPORTED;
         }
-    }
 
-    if (inst->type == INST_TEST) {
-        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->access_size, &mmio);
+    case INST_TEST:
+        status = trap_key_to_mapping(trap_key)->Read(mem->addr, &mmio);
         if (status != ZX_OK)
             return status;
         switch (inst->access_size) {
@@ -95,43 +83,48 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
         default:
             return ZX_ERR_NOT_SUPPORTED;
         }
-    }
 
-    return ZX_ERR_INVALID_ARGS;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
 }
+#endif
 
 static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
                               uint64_t trap_key) {
     zx_vcpu_state_t vcpu_state;
-    zx_status_t status = vcpu_ctx->read_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state,
-                                              sizeof(vcpu_state));
-    if (status != ZX_OK)
-        return status;
-
-    instruction_t inst;
-#if __x86_64__
-    status = inst_decode(mem->inst_buf, mem->inst_len, &vcpu_state, &inst);
-#else
-    status = ZX_ERR_NOT_SUPPORTED;
+    zx_status_t status;
+#if __aarch64__
+    if (mem->read)
 #endif
-
-    if (status != ZX_OK) {
-        fprintf(stderr, "Unsupported instruction:");
-#if __x86_64__
-        for (uint8_t i = 0; i < mem->inst_len; i++)
-            fprintf(stderr, " %x", mem->inst_buf[i]);
-#endif // __x86_64__
-        fprintf(stderr, "\n");
-    } else {
-        status = handle_mmio(vcpu_ctx, mem, trap_key, &inst);
-        if (status == ZX_ERR_NOT_FOUND)
-            status = unhandled_mem(mem, &inst);
+    {
+        status = vcpu_ctx->read_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+        if (status != ZX_OK)
+            return status;
     }
 
+    bool do_write;
+#if __aarch64__
+    do_write = mem->read;
+    status = handle_mmio_arm(mem, trap_key, &vcpu_state.x[mem->xt]);
+#elif __x86_64__
+    instruction_t inst;
+    status = inst_decode(mem->inst_buf, mem->inst_len, &vcpu_state, &inst);
     if (status != ZX_OK) {
-        return zx_vcpu_interrupt(vcpu_ctx->vcpu, X86_INT_GP_FAULT);
-    } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
+        fprintf(stderr, "Unsupported instruction:");
+        for (uint8_t i = 0; i < mem->inst_len; i++)
+            fprintf(stderr, " %x", mem->inst_buf[i]);
+        fprintf(stderr, "\n");
+    } else {
+        status = handle_mmio_x86(mem, trap_key, &inst);
         // If there was an attempt to read or test memory, update the GPRs.
+        do_write = inst.type == INST_MOV_READ || inst.type == INST_TEST;
+    }
+#endif // __x86_64__
+
+    if (status != ZX_OK) {
+        return zx_vcpu_interrupt(vcpu_ctx->vcpu, kGpFaultVector);
+    } else if (do_write) {
         return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     }
     return status;

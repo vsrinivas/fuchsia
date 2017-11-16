@@ -66,6 +66,7 @@ typedef struct zx_packet_guest_mem {
     zx_vaddr_t addr;
 #if __aarch64__
     uint8_t access_size;
+    bool sign_extend;
     uint8_t xt;
     bool read;
     uint64_t data;

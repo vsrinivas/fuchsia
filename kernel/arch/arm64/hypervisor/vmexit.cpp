@@ -40,6 +40,7 @@ SystemInstruction::SystemInstruction(uint32_t iss) {
 DataAbort::DataAbort(uint32_t iss) {
     valid = BIT_SHIFT(iss, 24);
     access_size = static_cast<uint8_t>(1u << BITS_SHIFT(iss, 23, 22));
+    sign_extend = BIT(iss, 21);
     xt = static_cast<uint8_t>(BITS_SHIFT(iss, 20, 16));
     read = !BIT(iss, 6);
 }
@@ -139,6 +140,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
         if (!data_abort.valid)
             return ZX_ERR_IO_DATA_INTEGRITY;
         packet->guest_mem.access_size = data_abort.access_size;
+        packet->guest_mem.sign_extend = data_abort.sign_extend;
         packet->guest_mem.xt = data_abort.xt;
         packet->guest_mem.read = data_abort.read;
         if (!data_abort.read)

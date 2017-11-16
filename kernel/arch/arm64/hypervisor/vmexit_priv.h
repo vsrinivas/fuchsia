@@ -55,6 +55,7 @@ struct SystemInstruction {
 struct DataAbort {
     bool valid;
     uint8_t access_size;
+    bool sign_extend;
     uint8_t xt;
     bool read;
 
