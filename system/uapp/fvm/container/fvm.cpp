@@ -259,6 +259,11 @@ zx_status_t FvmContainer::Commit() {
             fprintf(stderr, "Truncated to incorrect size\n");
             return ZX_ERR_IO;
         }
+
+        fvm::fvm_t* sb = SuperBlock();
+        sb->pslice_count = (disk_size_ - metadata_size_ * 2) / slice_size_;
+        sb->fvm_partition_size = disk_size_;
+        sb->allocation_table_size = fvm::AllocTableLength(disk_size_, slice_size_);
     }
 
     fvm_update_hash(metadata_.get(), metadata_size_);
