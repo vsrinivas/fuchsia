@@ -4,11 +4,11 @@
 
 #include "lib/media/c/audio.h"
 
-#include "lib/fxl/logging.h"
+#include "garnet/lib/media/client/audio_output_device.h"
+#include "garnet/lib/media/client/audio_output_manager.h"
+#include "garnet/lib/media/client/audio_output_stream.h"
 
-#include "audio_output_device.h"
-#include "audio_output_manager.h"
-#include "audio_output_stream.h"
+#include "lib/fxl/logging.h"
 
 struct _fuchsia_audio_output_stream {};
 struct _fuchsia_audio_manager {};

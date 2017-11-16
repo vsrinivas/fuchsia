@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/media/audio_output_stream.h"
+#include "garnet/lib/media/client/audio_output_stream.h"
 
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/media/audio_output_device.h"
-#include "garnet/lib/media/audio_output_manager.h"
-#include "garnet/lib/media/limits.h"
-#include "garnet/public/lib/app/cpp/environment_services.h"
-#include "garnet/public/lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "garnet/lib/media/client/audio_output_device.h"
+#include "garnet/lib/media/client/audio_output_manager.h"
+#include "garnet/lib/media/client/limits.h"
+
+#include "lib/app/cpp/environment_services.h"
+#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
@@ -117,7 +118,7 @@ bool AudioOutputStream::CreateMemoryMapping() {
 
   zx::vmo duplicate_vmo;
   status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-      &duplicate_vmo);
+                          &duplicate_vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::handle::duplicate failed - " << status;
     return false;

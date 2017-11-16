@@ -5,7 +5,7 @@
 import("//garnet/public/build/test.gni")
 import("//packages/package.gni")
 
-source_set("media") {
+source_set("client") {
   sources = [
     "//garnet/public/lib/media/c/audio.h",
     "audio.cc",

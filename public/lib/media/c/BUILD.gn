@@ -11,7 +11,7 @@ shared_library("c") {
   ]
 
   deps = [
-    "//garnet/lib/media",
+    "//garnet/lib/media/client",
   ]
 
   output_name = "media_client"

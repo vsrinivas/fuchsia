@@ -6,7 +6,8 @@
 
 #include <zircon/types.h>
 
-#include "garnet/lib/media/audio_output_device.h"
+#include "garnet/lib/media/client/audio_output_device.h"
+
 #include "lib/media/c/audio.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
