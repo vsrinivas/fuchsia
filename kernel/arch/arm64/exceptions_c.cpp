@@ -168,9 +168,12 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
     uint32_t iss = BITS(esr, 24, 0);
     bool is_user = !BIT(ec, 0);
+    bool WnR = BIT(iss, 6); // Write not Read
+    bool CM = BIT(iss, 8); // cache maintenance op
 
     uint pf_flags = 0;
-    pf_flags |= BIT(iss, 6) ? VMM_PF_FLAG_WRITE : 0;
+    // if it was marked Write but the cache maintenance bit was set, treat it as read
+    pf_flags |= (WnR && !CM) ? VMM_PF_FLAG_WRITE : 0;
     pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
     /* Check if this was not permission fault */
     if ((iss & 0b111100) != 0b001100) {

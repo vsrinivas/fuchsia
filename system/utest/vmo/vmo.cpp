@@ -1095,6 +1095,44 @@ bool vmo_cache_op_test() {
     END_TEST;
 }
 
+bool vmo_cache_flush_test() {
+    BEGIN_TEST;
+
+    zx_handle_t vmo;
+    const size_t size = 0x8000;
+
+    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "creation for cache op");
+
+    uintptr_t ptr_ro;
+    EXPECT_EQ(ZX_OK,
+            zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ, &ptr_ro),
+            "map");
+    EXPECT_NONNULL(ptr_ro, "map address");
+    void *pro = (void*)ptr_ro;
+
+    uintptr_t ptr_rw;
+    EXPECT_EQ(ZX_OK,
+            zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr_rw),
+            "map");
+    EXPECT_NONNULL(ptr_rw, "map address");
+    void *prw = (void*)ptr_rw;
+
+    zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
+
+    EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_INSN), "rw flush insn");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_DATA), "rw clean");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE), "rw clean/invalidate");
+
+    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_INSN), "ro flush insn");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA), "ro clean");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE), "ro clean/invalidate");
+
+    zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size);
+    zx_vmar_unmap(zx_vmar_root_self(), ptr_ro, size);
+    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "close handle");
+    END_TEST;
+}
+
 bool vmo_decommit_misaligned_test() {
     BEGIN_TEST;
 
@@ -1284,6 +1322,7 @@ RUN_TEST(vmo_commit_test);
 RUN_TEST(vmo_decommit_misaligned_test);
 RUN_TEST(vmo_cache_test);
 RUN_TEST(vmo_cache_op_test);
+RUN_TEST(vmo_cache_flush_test);
 RUN_TEST(vmo_zero_page_test);
 RUN_TEST(vmo_clone_test_1);
 RUN_TEST(vmo_clone_test_2);
