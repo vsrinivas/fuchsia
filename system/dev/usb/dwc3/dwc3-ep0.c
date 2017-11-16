@@ -14,6 +14,7 @@
 #define EP0_LOCK(dwc)   (&(dwc)->eps[EP0_OUT].lock)
 
 static void dwc3_queue_setup_locked(dwc3_t* dwc) {
+    pdev_vmo_buffer_cache_flush_invalidate(&dwc->ep0_buffer, 0, sizeof(usb_setup_t));
     dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_SETUP, dwc->ep0_buffer.paddr,
                            sizeof(usb_setup_t));
     dwc->ep0_state = EP0_STATE_SETUP;
@@ -159,7 +160,6 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
     case EP0_STATE_SETUP: {
         usb_setup_t* setup = &dwc->cur_setup;
 
-        pdev_vmo_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(*setup));
         memcpy(setup, dwc->ep0_buffer.vaddr, sizeof(*setup));
 
         zxlogf(TRACE, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d\n",
@@ -185,7 +185,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
 
             if (setup->wLength > 0) {
                 // queue a write for the data phase
-                pdev_vmo_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, actual);
+                pdev_vmo_buffer_cache_flush(&dwc->ep0_buffer, 0, actual);
                 dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA, dwc->ep0_buffer.paddr,
                                        actual);
                 dwc->ep0_state = EP0_STATE_DATA_IN;

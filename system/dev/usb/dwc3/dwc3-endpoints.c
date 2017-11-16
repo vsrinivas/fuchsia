@@ -59,8 +59,7 @@ zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
     trb->ptr_high = (uint32_t)(trb_phys >> 32);
     trb->status = 0;
     trb->control = TRB_TRBCTL_LINK | TRB_HWO;
-    io_buffer_cache_op(&ep->fifo.buffer, ZX_VMO_OP_CACHE_CLEAN,
-                           (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
+    io_buffer_cache_flush(&ep->fifo.buffer, (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
 
     return ZX_OK;
 }
@@ -91,8 +90,7 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_padd
     trb->ptr_high = (uint32_t)(buffer >> 32);
     trb->status = TRB_BUFSIZ(length);
     trb->control = type | TRB_LST | TRB_IOC | TRB_HWO;
-    io_buffer_cache_op(&ep->fifo.buffer, ZX_VMO_OP_CACHE_CLEAN,
-                           (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
+    io_buffer_cache_flush(&ep->fifo.buffer, (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
 
     dwc3_cmd_ep_start_transfer(dwc, ep_num, dwc3_ep_trb_phys(ep, trb));
 }
@@ -105,7 +103,9 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
         ep->current_req = req;
         ep->got_not_ready = false;
         if (EP_IN(ep->ep_num)) {
-            usb_request_cacheop(req, USB_REQUEST_CACHE_CLEAN, 0, req->header.length);
+            usb_request_cache_flush(req, 0, req->header.length);
+        } else {
+            usb_request_cache_flush_invalidate(req, 0, req->header.length);
         }
 
         // TODO(voydanoff) scatter/gather support
@@ -238,8 +238,8 @@ void dwc3_start_eps(dwc3_t* dwc) {
 
 static void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* out_trb) {
     if (trb >= ep->fifo.first && trb < ep->fifo.last) {
-        io_buffer_cache_op(&ep->fifo.buffer, ZX_VMO_OP_CACHE_INVALIDATE,
-                           (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
+        io_buffer_cache_flush_invalidate(&ep->fifo.buffer, (trb - ep->fifo.first) * sizeof(*trb),
+                                         sizeof(*trb));
         memcpy((void *)out_trb, (void *)trb, sizeof(*trb));
     } else {
         zxlogf(ERROR, "dwc_ep_read_trb: bad trb\n");
@@ -298,9 +298,6 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
 
             mtx_unlock(&ep->lock);
 
-            if (EP_OUT(ep_num)) {
-                usb_request_cacheop(req, USB_REQUEST_CACHE_INVALIDATE, 0, actual);
-            }
             usb_request_complete(req, ZX_OK, actual);
         } else {
             mtx_unlock(&ep->lock);

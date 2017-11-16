@@ -75,9 +75,15 @@ static inline zx_status_t pdev_map_contig_buffer(platform_device_protocol_t* pde
                                &buffer->handle);
 }
 
-static inline zx_status_t pdev_vmo_buffer_cache_op(pdev_vmo_buffer_t* buffer, uint32_t op,
-                                                   zx_off_t offset, size_t size) {
-    return zx_vmo_op_range(buffer->handle, op, offset, size, NULL, 0);
+static inline zx_status_t pdev_vmo_buffer_cache_flush(pdev_vmo_buffer_t* buffer, zx_off_t offset,
+                                                      size_t length) {
+    return zx_cache_flush((uint8_t *)buffer->vaddr + offset, length, ZX_CACHE_FLUSH_DATA);
+}
+
+static inline zx_status_t pdev_vmo_buffer_cache_flush_invalidate(pdev_vmo_buffer_t* buffer,
+                                                                 zx_off_t offset, size_t length) {
+    return zx_cache_flush((uint8_t *)buffer->vaddr + offset, length,
+                          ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 }
 
 static inline void pdev_vmo_buffer_release(pdev_vmo_buffer_t* buffer) {

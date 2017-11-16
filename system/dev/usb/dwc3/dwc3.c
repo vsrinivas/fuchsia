@@ -429,7 +429,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "dwc3_bind: pdev_map_contig_buffer failed\n");
         goto fail;
     }
-    pdev_vmo_buffer_cache_op(&dwc->event_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, EVENT_BUFFER_SIZE);
+    pdev_vmo_buffer_cache_flush(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
 
     status = pdev_map_contig_buffer(&dwc->pdev, 65536, 0,
                                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &dwc->ep0_buffer);
