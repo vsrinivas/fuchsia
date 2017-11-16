@@ -6,6 +6,7 @@
 #include <string.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <zircon/crashlogger.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
@@ -67,7 +68,14 @@ char* tu_asprintf(const char* fmt, ...)
 void tu_fatal(const char *what, zx_status_t status)
 {
     const char* reason = zx_status_get_string(status);
-    unittest_printf_critical("%s failed, rc %d (%s)\n", what, status, reason);
+    unittest_printf_critical("\nFATAL: %s failed, rc %d (%s)\n", what, status, reason);
+
+    // Request a backtrace to assist debugging.
+    unittest_printf_critical("FATAL: backtrace follows:\n");
+    unittest_printf_critical("       (using sw breakpoint request to crashlogger)\n");
+    crashlogger_request_backtrace();
+
+    unittest_printf_critical("FATAL: exiting process\n");
     exit(TU_FAIL_ERRCODE);
 }
 
