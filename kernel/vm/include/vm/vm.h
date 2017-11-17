@@ -40,6 +40,27 @@ static inline bool is_user_address_range(vaddr_t va, size_t len) {
            (len == 0 || is_user_address(va + len - 1));
 }
 
+// linker script provided variables for various virtual kernel addresses
+extern char __code_start[];
+extern char __code_end[];
+extern char __rodata_start[];
+extern char __rodata_end[];
+extern char __data_start[];
+extern char __data_end[];
+extern char __bss_start[];
+extern char _end[];
+
+// return the physical address corresponding to _start
+static inline paddr_t get_kernel_base_phys(void) {
+    extern paddr_t kernel_base_phys;
+
+    return kernel_base_phys;
+}
+
+static size_t get_kernel_size(void) {
+    return _end - __code_start;
+}
+
 __BEGIN_CDECLS
 
 // C friendly opaque handle to the internals of the VMM.

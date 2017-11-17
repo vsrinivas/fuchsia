@@ -399,10 +399,14 @@ __BEGIN_CDECLS
 
 pte_t *arm64_get_kernel_ptable();
 
-extern "C" zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
+zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
                                  const paddr_t paddr,
                                  const size_t len,
                                  const pte_t flags);
+
+// use built-in virtual to physical translation instructions to query
+// the physical address of a virtual address
+zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t *pa, bool user, bool write);
 
 __END_CDECLS
 #endif /* __ASSEMBLER__ */

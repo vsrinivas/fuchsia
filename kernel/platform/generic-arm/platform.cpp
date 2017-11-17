@@ -340,7 +340,7 @@ void platform_halt_secondary_cpus(void) {
 }
 
 static void platform_start_cpu(uint cluster, uint cpu) {
-    uint32_t ret = psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+    uint32_t ret = psci_cpu_on(cluster, cpu, get_kernel_base_phys());
     dprintf(INFO, "Trying to start cpu %u:%u returned: %d\n", cluster, cpu, (int)ret);
 }
 
@@ -546,13 +546,16 @@ static void process_bootdata(bootdata_t* root) {
         panic("No MDI found in ramdisk\n");
     }
 }
-extern int _end;
+
 void platform_early_init(void)
 {
-    // QEMU does not put device tree pointer in the boot-time x2 register,
-    // so set it here before calling read_device_tree.
+    // QEMU does not put device tree pointer in the boot-time x0 register if loaded
+    // as a ELF file. so set it here before calling read_device_tree.
     if (boot_structure_paddr == 0) {
-        boot_structure_paddr = MEMBASE;
+        // TODO: remove this hard coded constant
+        // one possible solution is to start booting qemu via the .bin file instead of .elf
+        // which seems to cause qemu to pass this pointer via x0
+        boot_structure_paddr = 0x40000000;
     }
 
     void* boot_structure_kvaddr = paddr_to_physmap(boot_structure_paddr);
@@ -605,8 +608,8 @@ void platform_early_init(void)
     zx_status_t status = mem_limit_init(&ctx);
     if (status == ZX_OK) {
         // For these ranges we're using the base physical values
-        ctx.kernel_base = MEMBASE + KERNEL_LOAD_OFFSET;
-        ctx.kernel_size = (uintptr_t)&_end - ctx.kernel_base;
+        ctx.kernel_base = get_kernel_base_phys();
+        ctx.kernel_size = get_kernel_size();
         ctx.ramdisk_base = ramdisk_start_phys;
         ctx.ramdisk_size = ramdisk_end_phys - ramdisk_start_phys;
 
@@ -758,5 +761,5 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                     uintptr_t new_bootimage_addr, size_t new_bootimage_len,
                     uintptr_t entry64_addr) {
     mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, arm64_get_boot_el(),
-                   ops, (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
+                   ops, (void*)(get_kernel_base_phys()));
 }

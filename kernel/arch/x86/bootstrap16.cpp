@@ -19,10 +19,10 @@
 #include <fbl/mutex.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
-extern const int __code_start;
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
 static fbl::Mutex bootstrap_lock;
 
@@ -150,8 +150,8 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace> *te
         static_cast<uint16_t>(&_gdt_end - &_gdt - 1);
     bootstrap_data->phys_gdtr_base =
         reinterpret_cast<uintptr_t>(&_gdt) -
-        reinterpret_cast<uintptr_t>(&__code_start) +
-        MEMBASE + KERNEL_LOAD_OFFSET;
+        reinterpret_cast<uintptr_t>(__code_start) +
+        get_kernel_base_phys();
     bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);
     bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 

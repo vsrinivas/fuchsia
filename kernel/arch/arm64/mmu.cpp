@@ -10,6 +10,7 @@
 #include <arch/aspace.h>
 #include <arch/mmu.h>
 #include <assert.h>
+#include <bits.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
@@ -1056,6 +1057,40 @@ void arch_zero_page(void* _ptr) {
         __asm volatile("dc zva, %0" ::"r"(ptr));
         ptr += zva_size;
     } while (ptr != end_ptr);
+}
+
+zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t *pa, bool user, bool write) {
+    // disable interrupts around this operation to make the at/par instruction combination atomic
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+
+    if (user) {
+        if (write) {
+            __asm__ volatile("at s1e0w, %0" :: "r"(va) : "memory");
+        } else {
+            __asm__ volatile("at s1e0r, %0" :: "r"(va) : "memory");
+        }
+    } else {
+        if (write) {
+            __asm__ volatile("at s1e1w, %0" :: "r"(va) : "memory");
+        } else {
+            __asm__ volatile("at s1e1r, %0" :: "r"(va) : "memory");
+        }
+    }
+
+    uint64_t par;
+    par = ARM64_READ_SYSREG(par_el1);
+
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+
+    // if bit 0 is clear, the translation succeeded
+    if (BIT(par, 0))
+        return ZX_ERR_NO_MEMORY;
+
+    // physical address is stored in bits [51..12], naturally aligned
+    *pa = BITS(par, 51, 12) | (va & (PAGE_SIZE - 1));
+
+    return ZX_OK;
 }
 
 ArmArchVmAspace::ArmArchVmAspace() {}

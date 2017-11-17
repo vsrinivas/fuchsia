@@ -32,10 +32,8 @@ paddr_t boot_alloc_end;
 // kernel.
 __NO_SAFESTACK
 void boot_alloc_init() {
-    extern int _end;
-
-    boot_alloc_start = reinterpret_cast<paddr_t>(&_end);
-    boot_alloc_end = reinterpret_cast<paddr_t>(&_end);
+    boot_alloc_start = reinterpret_cast<paddr_t>(_end);
+    boot_alloc_end = reinterpret_cast<paddr_t>(_end);
 }
 
 void boot_alloc_reserve(paddr_t start, size_t len) {

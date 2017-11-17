@@ -126,6 +126,11 @@ FUNCTION(arm_reset)
      * we are loaded in physical memory. */
     bl      boot_alloc_init
 
+    /* save the physical address the kernel is loaded at */
+    adr_global x0, __code_start
+    adr_global x1, kernel_base_phys
+    str     x0, [x1]
+
     /* set up the mmu according to mmu_initial_mappings */
 
     /* clear out the kernel translation table */

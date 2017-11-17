@@ -27,66 +27,29 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-extern int __code_start;
-extern int __code_end;
-extern int __rodata_start;
-extern int __rodata_end;
-extern int __data_start;
-extern int __data_end;
-extern int __bss_start;
-extern int _end;
-
 // boot time allocated page full of zeros
 vm_page_t* zero_page;
 paddr_t zero_page_paddr;
 
+// set early in arch code to record the start address of the kernel
+paddr_t kernel_base_phys;
+
 namespace {
 
-// mark the physical pages backing a range of virtual as in use.
-// allocate the physical pages and throw them away
-void MarkPagesInUse(vaddr_t va, size_t len) {
-    LTRACEF("va %#" PRIxPTR ", len %#zx\n", va, len);
+// mark a range of physical pages as WIRED
+void MarkPagesInUsePhys(paddr_t pa, size_t len) {
+    LTRACEF("pa %#" PRIxPTR ", len %#zx\n", pa, len);
 
     // make sure we are inclusive of all of the pages in the address range
-    len = PAGE_ALIGN(len + (va & (PAGE_SIZE - 1)));
-    va = ROUNDDOWN(va, PAGE_SIZE);
+    len = PAGE_ALIGN(len + (pa & (PAGE_SIZE - 1)));
+    pa = ROUNDDOWN(pa, PAGE_SIZE);
 
-    LTRACEF("aligned va %#" PRIxPTR ", len 0x%zx\n", va, len);
+    LTRACEF("aligned pa %#" PRIxPTR ", len %#zx\n", pa, len);
 
     list_node list = LIST_INITIAL_VALUE(list);
 
-    paddr_t start_pa = ULONG_MAX;
-    paddr_t runlen = 0;
-    for (size_t offset = 0; offset < len; offset += PAGE_SIZE) {
-        uint flags;
-        paddr_t pa;
-
-        zx_status_t err = VmAspace::kernel_aspace()->arch_aspace().Query(va + offset, &pa, &flags);
-        if (err >= 0) {
-            LTRACEF("va %#" PRIxPTR ", pa %#" PRIxPTR ", flags %#x, err %d, start_pa %#" PRIxPTR
-                    " runlen %#" PRIxPTR "\n",
-                    va + offset, pa, flags, err, start_pa, runlen);
-
-            // see if we continue the run
-            if (pa == start_pa + runlen) {
-                runlen += PAGE_SIZE;
-            } else {
-                if (start_pa != ULONG_MAX) {
-                    // we just completed the run
-                    pmm_alloc_range(start_pa, runlen / PAGE_SIZE, &list);
-                }
-
-                // starting a new run
-                start_pa = pa;
-                runlen = PAGE_SIZE;
-            }
-        } else {
-            panic("Could not find pa for va %#" PRIxPTR "\n", va);
-        }
-    }
-
-    if (start_pa != ULONG_MAX && runlen > 0)
-        pmm_alloc_range(start_pa, runlen / PAGE_SIZE, &list);
+    auto allocated = pmm_alloc_range(pa, len / PAGE_SIZE, &list);
+    ASSERT(allocated == len / PAGE_SIZE);
 
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
@@ -114,16 +77,16 @@ void vm_init_preheap() {
     VmAspace::KernelAspaceInitPreHeap();
 
     // mark all of the kernel pages in use
-    LTRACEF("marking all kernel pages as used\n");
-    MarkPagesInUse((vaddr_t)&__code_start,
-                   (uintptr_t)&_end - (uintptr_t)&__code_start);
+    dprintf(INFO, "VM: kernel physical range [%#" PRIxPTR ", %#" PRIxPTR ")\n", get_kernel_base_phys(),
+            get_kernel_base_phys() + get_kernel_size());
+    MarkPagesInUsePhys(get_kernel_base_phys(), get_kernel_size());
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {
         dprintf(INFO, "VM: marking boot alloc used range [%#" PRIxPTR ", %#" PRIxPTR ")\n", boot_alloc_start,
                 boot_alloc_end);
 
-        MarkPagesInUse((vaddr_t)paddr_to_physmap(boot_alloc_start), boot_alloc_end - boot_alloc_start);
+        MarkPagesInUsePhys(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
 
     // Reserve up to 15 pages as a random padding in the kernel physical mapping
@@ -161,26 +124,26 @@ void vm_init() {
     } regions[] = {
         {
             .name = "kernel_code",
-            .base = (vaddr_t)&__code_start,
-            .size = ROUNDUP((size_t)&__code_end - (size_t)&__code_start, PAGE_SIZE),
+            .base = (vaddr_t)__code_start,
+            .size = ROUNDUP((uintptr_t)__code_end - (uintptr_t)__code_start, PAGE_SIZE),
             .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
         },
         {
             .name = "kernel_rodata",
-            .base = (vaddr_t)&__rodata_start,
-            .size = ROUNDUP((size_t)&__rodata_end - (size_t)&__rodata_start, PAGE_SIZE),
+            .base = (vaddr_t)__rodata_start,
+            .size = ROUNDUP((uintptr_t)__rodata_end - (uintptr_t)__rodata_start, PAGE_SIZE),
             .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ,
         },
         {
             .name = "kernel_data",
-            .base = (vaddr_t)&__data_start,
-            .size = ROUNDUP((size_t)&__data_end - (size_t)&__data_start, PAGE_SIZE),
+            .base = (vaddr_t)__data_start,
+            .size = ROUNDUP((uintptr_t)__data_end - (uintptr_t)__data_start, PAGE_SIZE),
             .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
         {
             .name = "kernel_bss",
-            .base = (vaddr_t)&__bss_start,
-            .size = ROUNDUP((size_t)&_end - (size_t)&__bss_start, PAGE_SIZE),
+            .base = (vaddr_t)__bss_start,
+            .size = ROUNDUP((uintptr_t)_end - (uintptr_t)__bss_start, PAGE_SIZE),
             .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
     };

@@ -84,9 +84,6 @@ static void efi_print(const char *str)
 #define efi_printf(args...)
 #endif
 
-extern uint64_t _start;
-extern uint64_t _end;
-
 uint64_t efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr) {
 
     efi_status_t status;
@@ -105,7 +102,7 @@ uint64_t efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr
     }
 
     // Allocate space for new kernel location (+bss)
-    uint64_t kern_pages = (uint64_t)&_end - (uint64_t)&_start;
+    uint64_t kern_pages = get_kernel_size();
     kern_pages = ROUNDUP(kern_pages, EFI_ALLOC_ALIGN) / EFI_PAGE_SIZE;
     efi_physical_addr_t target_addr = MEMBASE + KERNEL_LOAD_OFFSET;
     status = systable->boottime->allocate_pages( EFI_ALLOCATE_ADDRESS,

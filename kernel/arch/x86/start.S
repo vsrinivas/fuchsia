@@ -220,6 +220,10 @@ high_entry:
     // Don't leak that value to other code.
     xor %ecx, %ecx
 
+    // configure the kernel base address
+    // TODO: dynamically figure this out once we allow the x86 kernel to be loaded anywhere
+    movl $PHYS_LOAD_ADDRESS, kernel_base_phys(%rip)
+
     /* call the main module */
     call lk_main
 
