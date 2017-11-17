@@ -556,7 +556,14 @@ endif
 
 # meta rule for building just packages
 .PHONY: packages
-packages: $(ALLPKGS)
+packages: $(ALLPKGS) $(BUILDDIR)/export/manifest
+
+$(BUILDDIR)/export/manifest: FORCE
+	@$(call BUILDECHO,generating $@ ;)\
+	$(MKDIR) ;\
+	rm -f $@.tmp ;\
+	(for p in $(sort $(notdir $(ALLPKGS))) ; do echo $$p ; done) > $@.tmp ;\
+	$(call TESTANDREPLACEFILE,$@.tmp,$@)
 
 # build depends on all packages
 all:: packages

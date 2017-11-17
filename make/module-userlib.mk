@@ -27,6 +27,15 @@ $(MODULE_LIBNAME).a: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 # always build all libraries
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
 GENERATED += $(MODULE_LIBNAME).a
+
+# exported modules get packaged
+ifeq ($(filter so,$(MODULE_EXPORT)),so)
+MODULE_PACKAGE += $(sort $(MODULE_PACKAGE) shared)
+endif
+ifeq ($(filter a,$(MODULE_EXPORT)),a)
+MODULE_PACKAGE += $(sort $(MODULE_PACKAGE) static)
+endif
+
 endif
 
 # modules that declare a soname or install name desire to be shared libs as well
@@ -135,9 +144,16 @@ endif
 endif
 endif
 
+MODULE_RULESMK := $(MODULE_SRCDIR)/rules.mk
+
+# Hack to work around libc/libmusl aliasing
+# TODO(swetland): a long-term fix
+ifeq ($(MODULE_SRCDIR),system/ulib/c)
+MODULE_SRCDIR := third_party/ulib/musl
+endif
 
 # process packages exported to sdk as source
-ifeq ($(filter src,$(MODULE_PACKAGE)),src)
+ifneq ($(strip $(MODULE_PACKAGE)),)
 MODULE_PKG_FILE := $(MODULE_BUILDDIR)/$(MODULE_NAME).pkg
 MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
 
@@ -147,29 +163,45 @@ MODULE_PKG_FILES := $(sort $(shell find $(MODULE_SRCDIR) -type f))
 
 # split based on include/... and everything else
 MODULE_PKG_INCS := $(filter %.h,$(filter $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
+MODULE_PKG_INCS := "[includes]" $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
+
+ifeq ($(filter src,$(MODULE_PACKAGE)),src)
 MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
+MODULE_PKG_SRCS := "[src]" $(foreach inc,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(inc))=SOURCE/$(inc))
+MODULE_PKG_ARCH := src
+else
+MODULE_PKG_SRCS := "[lib]"
+MODULE_PKG_ARCH := $(ARCH)
 
-MODULE_PKG_INCS := $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
-MODULE_PKG_SRCS := $(foreach inc,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(inc))=SOURCE/$(inc))
+ifneq ($(filter shared,$(MODULE_PACKAGE)),)
+ifneq ($(MODULE_SO_NAME),)
+MODULE_PKG_SRCS += lib/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.abi
+MODULE_PKG_SRCS += lib/debug/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so
+endif
+endif
 
-MODULE_PKG_DEPS := $(foreach dep,$(MODULE_LIBS) $(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
+ifneq ($(filter static,$(MODULE_PACKAGE)),)
+MODULE_PKG_SRCS += lib/lib$(MODULE_NAME).a=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).a
+endif
+
+endif
+
+MODULE_PKG_DEPS := "[deps]" $(foreach dep,$(MODULE_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
 
 $(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
 $(MODULE_PKG_FILE): _INCS := $(MODULE_PKG_INCS)
 $(MODULE_PKG_FILE): _SRCS := $(MODULE_PKG_SRCS)
 $(MODULE_PKG_FILE): _DEPS := $(MODULE_PKG_DEPS)
-$(MODULE_PKG_FILE): $(MODULE_SRCDIR)/rules.mk make/module-userlib.mk
+$(MODULE_PKG_FILE): _ARCH := $(MODULE_PKG_ARCH)
+$(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-userlib.mk
 	@$(call BUILDECHO,creating package $@ ;)\
 	$(MKDIR) ;\
 	echo "[package]" > $@ ;\
 	echo "name=$(_NAME)" >> $@ ;\
 	echo "type=lib" >> $@ ;\
-	echo "arch=src" >> $@ ;\
-	echo "[includes]" >> $@ ;\
+	echo "arch=$(_ARCH)" >> $@ ;\
 	for i in $(_INCS) ; do echo $$i >> $@ ; done ;\
-	echo "[src]" >> $@ ;\
 	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
-	echo "[deps]" >> $@ ;\
 	for i in $(_DEPS) ; do echo $$i >> $@ ; done
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
@@ -229,12 +261,6 @@ ifneq ($(MODULE_EXPORT),)
 # for now, unify all headers in one pile
 # TODO: ddk, etc should be packaged separately
 MODULE_INSTALL_HEADERS := $(BUILDSYSROOT)/include
-
-# Hack to work around libc/libmusl aliasing
-# TODO(swetland): a long-term fix
-ifeq ($(MODULE_SRCDIR),system/ulib/c)
-MODULE_SRCDIR := third_party/ulib/musl
-endif
 
 # locate headers from module source public include dir
 MODULE_PUBLIC_HEADERS :=\
