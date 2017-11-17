@@ -728,28 +728,20 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    const pci_config_t* config;
-    size_t config_size;
-    zx_handle_t config_handle;
-    status = pci_map_resource(&device->pci,
-                              PCI_RESOURCE_CONFIG,
-                              ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              (void**)&config,
-                              &config_size, &config_handle);
+    zx_pcie_device_info_t config;
+    status = pci_get_device_info(&device->pci, &config);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d getting pci config\n", status);
+        zxlogf(ERROR, "ahci: error getting config information\n");
         goto fail;
     }
 
-    if (config->sub_class != 0x06 && config->base_class == 0x01) { // SATA
+    if (config.sub_class != 0x06 && config.base_class == 0x01) { // SATA
         status = ZX_ERR_NOT_SUPPORTED;
-        zxlogf(ERROR, "ahci: device class 0x%x unsupported!\n", config->sub_class);
-        zx_handle_close(config_handle);
+        zxlogf(ERROR, "ahci: device class 0x%x unsupported!\n", config.sub_class);
         goto fail;
     }
-    // FIXME intel devices need to set SATA port enable at config + 0x92
-    zx_handle_close(config_handle);
 
+    // FIXME intel devices need to set SATA port enable at config + 0x92
     // ahci controller is bus master
     status = pci_enable_bus_master(&device->pci, true);
     if (status < 0) {
@@ -757,9 +749,30 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    // set msi irq mode
-    status = pci_set_irq_mode(&device->pci, ZX_PCIE_IRQ_MODE_MSI, 1);
-    if (status < 0) {
+    // Query and configure IRQ modes by trying MSI first and falling back to
+    // legacy if necessary.
+    uint32_t irq_cnt;
+    zx_pci_irq_mode_t irq_mode = ZX_PCIE_IRQ_MODE_MSI;
+    status = pci_query_irq_mode_caps(&device->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+        status = pci_query_irq_mode_caps(&device->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported\n");
+            goto fail;
+        } else {
+            irq_mode = ZX_PCIE_IRQ_MODE_LEGACY;
+        }
+    }
+
+    if (irq_cnt == 0) {
+        zxlogf(ERROR, "ahci: no interrupts available\n");
+        status = ZX_ERR_NO_RESOURCES;
+        goto fail;
+    }
+
+    zxlogf(INFO, "ahci: using %s interrupt\n", (irq_mode == ZX_PCIE_IRQ_MODE_MSI) ? "MSI" : "legacy");
+    status = pci_set_irq_mode(&device->pci, irq_mode, 1);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "ahci: error %d setting irq mode\n", status);
         goto fail;
     }
