@@ -269,12 +269,13 @@ void ModuleResolverImpl::OnNewManifestEntry(
                 << ": verb = " << new_entry.verb
                 << ", binary = " << new_entry.binary;
   // Add this new entry info to our local index.
-  auto ret =
-      entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
-  if (!ret.second) {
+  if (entries_.count(EntryId(source_name, id_in)) > 0) {
     // Remove this existing entry first, then add it back in.
     OnRemoveManifestEntry(source_name, id_in);
   }
+  auto ret =
+      entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
+  FXL_CHECK(ret.second);
 
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;

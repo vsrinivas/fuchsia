@@ -98,6 +98,25 @@ class DaisyBuilder {
   modular::DaisyPtr daisy;
 };
 
+class TestManifestSource : public modular::ModuleManifestSource {
+ public:
+  ~TestManifestSource() override {}
+
+  IdleFn idle;
+  NewEntryFn add;
+  RemovedEntryFn remove;
+
+ private:
+  void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+             IdleFn idle_fn,
+             NewEntryFn new_fn,
+             RemovedEntryFn removed_fn) override {
+    idle = std::move(idle_fn);
+    add = std::move(new_fn);
+    remove = std::move(removed_fn);
+  }
+};
+
 class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
  public:
   void SetUp() override {
@@ -110,7 +129,6 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
       WriteManifestFile(std::string("manifest") + std::to_string(i),
                         kManifests[i]);
     }
-    Reset();
   }
 
   void TearDown() override {
@@ -127,12 +145,26 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   }
 
  protected:
-  void Reset() {
+  void ResetResolver() {
     impl_.reset(new ModuleResolverImpl);
-    impl_->AddSource("test",
+    // TODO(thatguy): Remove this source now that we have TestManifestSource.
+    impl_->AddSource("__test_dir",
                      std::make_unique<modular::DirectoryModuleManifestSource>(
                          repo_dir_, false));
+    for (auto entry : test_sources_) {
+      impl_->AddSource(
+          entry.first,
+          std::unique_ptr<modular::ModuleManifestSource>(entry.second));
+    }
+    test_sources_.clear();
     impl_->Connect(resolver_.NewRequest());
+  }
+
+  TestManifestSource* AddSource(std::string name) {
+    // Ownership given to |impl_| in ResetResolver().
+    auto ptr = new TestManifestSource;
+    test_sources_.emplace(name, ptr);
+    return ptr;
   }
 
   void WriteManifestFile(const std::string& name, const char* contents) {
@@ -164,6 +196,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   std::string repo_dir_;
   std::unique_ptr<ModuleResolverImpl> impl_;
 
+  std::map<std::string, modular::ModuleManifestSource*> test_sources_;
   modular::ModuleResolverPtr resolver_;
 
   modular::FindModulesResultPtr result_;
@@ -174,6 +207,8 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   EXPECT_EQ("resolution_failed", results[0]->module_id);
 
 TEST_F(ModuleResolverImplTest, Null) {
+  ResetResolver();
+
   auto daisy = DaisyBuilder("no matchy!").build();
 
   FindModules(std::move(daisy));
@@ -183,6 +218,8 @@ TEST_F(ModuleResolverImplTest, Null) {
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
+  ResetResolver();
+
   auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1").build();
   FindModules(std::move(daisy));
   ASSERT_EQ(2lu, results().size());
@@ -201,6 +238,8 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
 }
 
 TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
+  ResetResolver();
+
   // Either 'foo' or 'tangoTown' would be acceptible types. Only 'foo' will
   // actually match.
   auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
@@ -221,6 +260,8 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
 }
 
 TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
+  ResetResolver();
+
   // Same thing as above, but we'll use JSON with embedded type information and
   // should see the same exactly results.
   auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
@@ -238,6 +279,31 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
   EXPECT_EQ("module1", results()[0]->module_id);
   // TODO(thatguy): Validate that the initial_nouns content is correct.
 }
+
+TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
+  // Add the same entry twice, to simulate what could happen during a network
+  // reconnect, and show that the Module is still available.
+  auto source = AddSource("test1");
+  ResetResolver();
+
+  modular::ModuleManifestSource::Entry entry;
+  entry.binary = "id1";
+  entry.verb = "verb1";
+
+  source->add("1", entry);
+  source->idle();
+  FindModules(DaisyBuilder("verb1").build());
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("id1", results()[0]->module_id);
+
+  source->add("1", entry);
+  FindModules(DaisyBuilder("verb1").build());
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("id1", results()[0]->module_id);
+}
+
+// TODO(thatguy): Add tests for:
+//   * Delaying Connect() call until all sources have reported idle.
 
 }  // namespace
 }  // namespace maxwell
