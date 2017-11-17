@@ -20,13 +20,13 @@ class ApplicationRunnerHolder {
  public:
   ApplicationRunnerHolder(
       ServiceProviderPtr services,
-      ApplicationControllerPtr controller,
-      fxl::RefPtr<ApplicationNamespace> application_namespace);
+      ApplicationControllerPtr controller);
   ~ApplicationRunnerHolder();
 
   void StartApplication(
       ApplicationPackagePtr package,
       ApplicationStartupInfoPtr startup_info,
+      fxl::RefPtr<ApplicationNamespace> application_namespace,
       fidl::InterfaceRequest<ApplicationController> controller);
 
  private:

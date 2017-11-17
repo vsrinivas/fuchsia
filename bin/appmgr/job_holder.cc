@@ -368,13 +368,13 @@ void JobHolder::CreateApplicationWithRunner(
   startup_info->launch_info = std::move(launch_info);
   startup_info->flat_namespace = builder.BuildForRunner();
 
-  auto* runner_ptr =
-      GetOrCreateRunner(runner, std::move(application_namespace));
+  auto* runner_ptr = GetOrCreateRunner(runner);
   if (runner_ptr == nullptr) {
     FXL_LOG(ERROR) << "Could not create runner " << runner << " to run "
                    << launch_info->url;
   }
   runner_ptr->StartApplication(std::move(package), std::move(startup_info),
+                               std::move(application_namespace),
                                std::move(controller));
 }
 
@@ -481,14 +481,14 @@ void JobHolder::CreateApplicationFromArchive(
         application_namespace->services().OpenAsDirectory();
     startup_info->flat_namespace = std::move(flat_namespace);
 
-    auto* runner =
-        GetOrCreateRunner(runtime.runner(), std::move(application_namespace));
+    auto* runner = GetOrCreateRunner(runtime.runner());
     if (runner == nullptr) {
       FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
                      << launch_info->url;
       return;
     }
     runner->StartApplication(std::move(inner_package), std::move(startup_info),
+                             std::move(application_namespace),
                              std::move(controller));
   } else {
     const std::string url = launch_info->url;  // Keep a copy before moving it.
@@ -510,22 +510,10 @@ void JobHolder::CreateApplicationFromArchive(
 }
 
 ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
-    const std::string& runner,
-    fxl::RefPtr<ApplicationNamespace> application_namespace) {
+    const std::string& runner) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
-
-  // HACK(thatguy): We key runners by |name| and also the pointer to
-  // |application_namespace| to avoid a problem where a new isolate
-  // within a runner was adopting an |application_namespace| from a
-  // previous application's startup info.
-  //
-  // Luckily, all of this code will go away with the "hub" work.
-  // That's good because this wastes a ton of RAM.
-  auto name_with_namespace =
-      runner +
-      std::to_string(reinterpret_cast<uintptr_t>(application_namespace.get()));
-  auto result = runners_.emplace(name_with_namespace, nullptr);
+  auto result = runners_.emplace(runner, nullptr);
   if (result.second) {
     ServiceProviderPtr runner_services;
     ApplicationControllerPtr runner_controller;
@@ -536,11 +524,10 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
                       runner_controller.NewRequest());
 
     runner_controller.set_connection_error_handler(
-        [this, name_with_namespace] { runners_.erase(name_with_namespace); });
+        [this, runner] { runners_.erase(runner); });
 
     result.first->second = std::make_unique<ApplicationRunnerHolder>(
-        std::move(runner_services), std::move(runner_controller),
-        std::move(application_namespace));
+        std::move(runner_services), std::move(runner_controller));
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.
     FXL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner

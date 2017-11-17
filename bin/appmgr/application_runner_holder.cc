@@ -16,10 +16,8 @@ namespace app {
 
 ApplicationRunnerHolder::ApplicationRunnerHolder(
     ServiceProviderPtr services,
-    ApplicationControllerPtr controller,
-    fxl::RefPtr<ApplicationNamespace> application_namespace)
+    ApplicationControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
-  namespaces_.push_back(std::move(application_namespace));
   services_->ConnectToService(ApplicationRunner::Name_,
                               runner_.NewRequest().PassChannel());
 }
@@ -29,7 +27,9 @@ ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;
 void ApplicationRunnerHolder::StartApplication(
     ApplicationPackagePtr package,
     ApplicationStartupInfoPtr startup_info,
+    fxl::RefPtr<ApplicationNamespace> application_namespace,
     fidl::InterfaceRequest<ApplicationController> controller) {
+  namespaces_.push_back(std::move(application_namespace));
   runner_->StartApplication(std::move(package), std::move(startup_info),
                             std::move(controller));
 }

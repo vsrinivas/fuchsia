@@ -71,9 +71,7 @@ class JobHolder {
  private:
   static uint32_t next_numbered_label_;
 
-  ApplicationRunnerHolder* GetOrCreateRunner(
-      const std::string& runner,
-      fxl::RefPtr<ApplicationNamespace> application_namespace);
+  ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithRunner(
       ApplicationPackagePtr package,
