@@ -80,17 +80,13 @@ template("go_build") {
       current_cpu,
       "--current-os",
       current_os,
+      "--go-tool",
+      rebase_path("//buildtools/go"),
       "--binname",
       output_name,
       "--toolchain-prefix",
       rebase_path(clang_prefix, "", root_build_dir),
     ]
-
-    if (current_toolchain == target_toolchain) {
-      args += [ "--go-tool", rebase_path("$root_out_dir/goroot/bin/go") ]
-    } else {
-      args += [ "--go-tool", rebase_path("//buildtools/go") ]
-    }
 
     if (use_strip) {
       args += [ "--unstripped-binname", "exe.unstripped/${output_name}" ]

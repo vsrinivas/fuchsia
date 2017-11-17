@@ -88,7 +88,6 @@ def main():
     env['GOOS'] = goos
     env['GOPATH'] = gopath
     env['ZIRCON_BUILD_DIR'] = args.zircon_build_dir
-    env['ZIRCON'] = os.path.join(args.fuchsia_root, 'zircon')
 
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from
