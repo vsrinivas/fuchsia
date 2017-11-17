@@ -30,4 +30,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/unittest \
 
+MODULE_COMPILEFLAGS := \
+    -Isystem/ulib/blobstore/include \
+
 include make/module.mk

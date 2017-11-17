@@ -68,4 +68,10 @@ MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/zircon \
 
+MODULE_COMPILEFLAGS := \
+    -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/block-client/include \
+    -Isystem/ulib/minfs/include \
+    -Isystem/ulib/zx/include \
+
 include make/module.mk

@@ -152,8 +152,13 @@ typedef struct vfs_query_info {
     uint64_t used_nodes;
     uint32_t block_size;
     uint32_t max_filename_size;
-    char name[];  // Does not include null-terminator.
+    uint32_t fs_type;   // An identifier suitable for statfs.
+    uint32_t padding;   // Required so that name has the correct offset.
+    char name[];        // Does not include null-terminator.
 } vfs_query_info_t;
+
+#define VFS_TYPE_BLOBSTORE 0x9e694d21
+#define VFS_TYPE_MINFS 0x6e694d21
 
 // ssize_t ioctl_vfs_query_fs(int fd, vfs_query_info_t* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_vfs_query_fs, IOCTL_VFS_QUERY_FS, vfs_query_info_t);

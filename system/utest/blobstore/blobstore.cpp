@@ -39,6 +39,8 @@
 
 #define MOUNT_PATH "/tmp/zircon-blobstore-test"
 
+namespace {
+
 using digest::Digest;
 using digest::MerkleTree;
 
@@ -397,13 +399,16 @@ bool QueryInfo(size_t expected_nodes) {
     buf[rv] = '\0';  // NULL terminate the name.
     ASSERT_EQ(strncmp("blobstore", info->name, strlen("blobstore")), 0);
     ASSERT_EQ(info->block_size, blobstore::kBlobstoreBlockSize);
-    ASSERT_EQ(info->max_filename_size, 64);
+    ASSERT_EQ(info->max_filename_size, Digest::kLength * 2);
+    ASSERT_EQ(info->fs_type, VFS_TYPE_BLOBSTORE);
 
     ASSERT_EQ(info->total_bytes, TEST_FVM_SLICE_SIZE);
     ASSERT_EQ(info->total_nodes, TEST_FVM_SLICE_SIZE / blobstore::kBlobstoreInodeSize);
     ASSERT_EQ(info->used_nodes, expected_nodes);
     return true;
 }
+
+}  // namespace
 
 // Actual tests:
 template <fs_test_type_t TestType>

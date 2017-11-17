@@ -164,6 +164,7 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
         memset(info, 0, sizeof(*info));
         info->block_size = kBlobstoreBlockSize;
         info->max_filename_size = Digest::kLength * 2;
+        info->fs_type = VFS_TYPE_BLOBSTORE;
         info->total_bytes = blobstore_->info_.block_count * blobstore_->info_.block_size;
         info->used_bytes = blobstore_->info_.alloc_block_count * blobstore_->info_.block_size;
         info->total_nodes = blobstore_->info_.inode_count;

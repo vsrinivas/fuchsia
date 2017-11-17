@@ -9,10 +9,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <zircon/device/vfs.h>
+#include <minfs/format.h>
 #include <unittest/unittest.h>
+#include <zircon/device/vfs.h>
 
 #include "filesystems.h"
+
+namespace {
 
 bool QueryInfo(size_t expected_nodes) {
     int fd = open(MOUNT_PATH, O_RDONLY | O_DIRECTORY);
@@ -27,17 +30,20 @@ bool QueryInfo(size_t expected_nodes) {
 
     buf[rv] = '\0';  // NULL terminate the name.
     ASSERT_EQ(strncmp("minfs", info->name, strlen("minfs")), 0);
-    ASSERT_EQ(info->block_size, 8192);
-    ASSERT_EQ(info->max_filename_size, 255);
+    ASSERT_EQ(info->block_size, minfs::kMinfsBlockSize);
+    ASSERT_EQ(info->max_filename_size, minfs::kMinfsMaxNameSize);
+    ASSERT_EQ(info->fs_type, VFS_TYPE_MINFS);
 
     ASSERT_EQ(info->total_bytes, 8 * 1024 * 1024);
 
     // TODO(ZX-1372): Adjust this once minfs accounting on truncate is fixed.
-    ASSERT_EQ(info->used_bytes, 8192);
+    ASSERT_EQ(info->used_bytes, minfs::kMinfsBlockSize);
     ASSERT_EQ(info->total_nodes, 32 * 1024);
     ASSERT_EQ(info->used_nodes, expected_nodes + 1);
     return true;
 }
+
+}  // namespace
 
 bool TestQueryInfo(void) {
     BEGIN_TEST;
@@ -46,7 +52,6 @@ bool TestQueryInfo(void) {
     for (int i = 0; i < 16; i++) {
         char path[128];
         snprintf(path, sizeof(path) - 1, "%s/file_%d", MOUNT_PATH, i);
-        printf("Filename: %s\n", path);
 
         int fd = open(path, O_CREAT | O_RDWR);
         ASSERT_GT(fd, 0, "Failed to create file");
