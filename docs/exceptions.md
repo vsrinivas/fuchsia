@@ -20,7 +20,7 @@ handling" is at a high level (though it certainly can if there is a need).
 
 Exceptions are handled by binding a Zircon Port to the Exception Port
 of the desired object: thread, process, or job. This is done with the
-[**task_bind_exception_port**() system call](syscalls/task_bind_exception_port.md].
+[**task_bind_exception_port**() system call](syscalls/task_bind_exception_port.md).
 
 Example:
 
