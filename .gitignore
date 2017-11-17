@@ -53,3 +53,4 @@
 /sysroot
 /toolchain
 /win/gn.exe
+*.DS_Store
