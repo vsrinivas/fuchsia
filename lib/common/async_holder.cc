@@ -9,19 +9,27 @@
 
 namespace modular {
 
-AsyncHolderBase::AsyncHolderBase(std::string name) : name_(std::move(name)) {}
+AsyncHolderBase::AsyncHolderBase(std::string name)
+    : name_(std::move(name)),
+      down_(std::make_shared<bool>(false)) {}
 
-AsyncHolderBase::~AsyncHolderBase() = default;
+AsyncHolderBase::~AsyncHolderBase() {
+  if (!*down_) {
+    // This is not a warning because it happens because of an outer timeout, for
+    // which there already is a warning issued.
+    FXL_DLOG(INFO) << "Delete without teardown: " << name_;
+  }
+  *down_ = true;
+}
 
 void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
                                std::function<void()> done) {
-  auto called = std::make_shared<bool>(false);
-  auto cont = [this, called, done = std::move(done)](const bool from_timeout) {
-    if (*called) {
+  auto cont = [this, down = down_, done = std::move(done)](const bool from_timeout) {
+    if (*down) {
       return;
     }
 
-    *called = true;
+    *down = true;
 
     if (from_timeout) {
       FXL_LOG(WARNING) << "Teardown() timed out for " << name_;

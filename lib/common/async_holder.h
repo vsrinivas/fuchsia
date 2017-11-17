@@ -41,7 +41,16 @@ class AsyncHolderBase {
   // ImplTeardown().
   virtual void ImplReset() = 0;
 
-  const std::string name_;  // For log messages only.
+  // For log messages only.
+  const std::string name_;
+
+  // This is the flag shared with the done and timeout callbacks of Teardown()
+  // that prevents double invocation. The destructor sets it to true to prevent
+  // pending callbacks from executing if the instance is deleted while a
+  // teardown is pending. This may happen when the Teardown() of the instance
+  // this holder is a member of runs into a timeout on its own.
+  std::shared_ptr<bool> down_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncHolderBase);
 };
 
