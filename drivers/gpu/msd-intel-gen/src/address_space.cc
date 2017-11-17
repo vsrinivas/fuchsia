@@ -47,8 +47,7 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
          "0x%lx",
          offset, length, alignment, static_cast<uint32_t>(align_pow2), gpu_addr);
 
-    if (!address_space->Insert(gpu_addr, buffer->platform_buffer(), offset, length,
-                               buffer->caching_type()))
+    if (!address_space->Insert(gpu_addr, buffer->platform_buffer(), offset, length, CACHING_LLC))
         return DRETP(nullptr, "failed to insert into address_space");
 
     return std::unique_ptr<GpuMapping>(

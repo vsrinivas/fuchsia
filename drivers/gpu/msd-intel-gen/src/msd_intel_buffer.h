@@ -30,10 +30,6 @@ public:
         return platform_buf_.get();
     }
 
-    uint32_t read_domains() { return read_domains_bitfield_; }
-
-    uint32_t write_domain() { return write_domain_bitfield_; }
-
     // connection thread
     void IncrementInflightCounter() { ++inflight_counter_; }
 
@@ -44,8 +40,6 @@ public:
     void WaitRendering();
 
     uint32_t inflight_counter() { return inflight_counter_ & 0xFFFFFFFF; }
-
-    CachingType caching_type() { return caching_type_; }
 
     // Retains a weak reference to the given mapping so it can be reused.
     std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
@@ -67,11 +61,6 @@ private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
-
-    CachingType caching_type_ = CACHING_LLC;
-
-    uint32_t read_domains_bitfield_ = MEMORY_DOMAIN_CPU;
-    uint32_t write_domain_bitfield_ = MEMORY_DOMAIN_CPU;
 
     std::atomic_uint64_t inflight_counter_{};
     std::unique_ptr<magma::PlatformEvent> wait_rendering_event_;

@@ -291,8 +291,6 @@ private:
 bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer,
                                               AddressSpace* address_space) const
 {
-    DASSERT(buffer->write_domain() == MEMORY_DOMAIN_CPU);
-
     auto platform_buf = buffer->platform_buffer();
     void* addr;
     if (!platform_buf->MapCpu(&addr))

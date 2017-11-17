@@ -35,8 +35,6 @@ std::unique_ptr<GpuMapping> RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer
     if (!mapping)
         return DRETP(nullptr, "failed to pin buffer");
 
-    DASSERT(mapping->buffer()->write_domain() == MEMORY_DOMAIN_CPU);
-
     void* dst;
     if (!platform_buffer->MapCpu(&dst))
         return DRETP(nullptr, "failed to map buffer");
