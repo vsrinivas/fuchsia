@@ -165,7 +165,7 @@ visualizations of the build process:
    build iteration you’re about to run;
 1. Run a build as you would normally do;
 1. Get <https://github.com/nico/ninjatracing>;
-1. Run `ninjatracing <output directory>`;
+1. Run `ninjatracing <output directory>/.ninja_log > trace.json`;
 1. Load the resulting json file in Chrome in `about:tracing`.
 
 
