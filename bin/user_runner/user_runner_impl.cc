@@ -85,8 +85,7 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
 template <typename X>
-std::function<void(std::function<void()>)> Reset(
-    X* const field) {
+std::function<void(std::function<void()>)> Reset(X* const field) {
   return [field](std::function<void()> cont) {
     field->reset();
     cont();
@@ -104,11 +103,11 @@ std::function<void(std::function<void()>)> Teardown(
     X* const field) {
   return [timeout, message, field](std::function<void()> cont) {
     field->Teardown(timeout, [message, cont] {
-        if (message) {
-          FXL_DLOG(INFO) << "- " << message << " down.";
-        }
-        cont();
-      });
+      if (message) {
+        FXL_DLOG(INFO) << "- " << message << " down.";
+      }
+      cont();
+    });
   };
 }
 
@@ -144,8 +143,7 @@ void UserRunnerImpl::Initialize(
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  InitializeUser(std::move(account),
-                 std::move(token_provider_factory),
+  InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(user_context));
   InitializeLedger();
   InitializeLedgerDashboard();
@@ -239,6 +237,8 @@ void UserRunnerImpl::InitializeLedger() {
 }
 
 void UserRunnerImpl::InitializeLedgerDashboard() {
+  if (test_)
+    return;
   ledger_dashboard_scope_ = std::make_unique<Scope>(
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
   AtEnd(Reset(&ledger_dashboard_scope_));
@@ -265,7 +265,8 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
       std::move(ledger_dashboard_config));
 
   AtEnd(Reset(&ledger_dashboard_app_));
-  AtEnd(Teardown(kBasicTimeout, "LedgerDashboard", ledger_dashboard_app_.get()));
+  AtEnd(
+      Teardown(kBasicTimeout, "LedgerDashboard", ledger_dashboard_app_.get()));
 
   FXL_LOG(INFO) << "Starting Ledger dashboard " << kLedgerDashboardUrl;
 }
@@ -461,18 +462,19 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   // while they are still running. On the other hand agents are meant to outlive
   // story lifetimes.
   story_provider_impl_.reset(new StoryProviderImpl(
-      user_scope_.get(), device_map_impl_->current_device_id(), ledger_client_.get(),
-      fidl::Array<uint8_t>::New(16), std::move(story_shell),
-      component_context_info, std::move(focus_provider_story_provider),
-      intelligence_services_.get(), user_intelligence_provider_.get(),
-      module_resolver_service_.get()));
+      user_scope_.get(), device_map_impl_->current_device_id(),
+      ledger_client_.get(), fidl::Array<uint8_t>::New(16),
+      std::move(story_shell), component_context_info,
+      std::move(focus_provider_story_provider), intelligence_services_.get(),
+      user_intelligence_provider_.get(), module_resolver_service_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
+  AtEnd(
+      Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   focus_handler_ = std::make_unique<FocusHandler>(
-      device_map_impl_->current_device_id(),
-      ledger_client_.get(), fidl::Array<uint8_t>::New(16));
+      device_map_impl_->current_device_id(), ledger_client_.get(),
+      fidl::Array<uint8_t>::New(16));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));

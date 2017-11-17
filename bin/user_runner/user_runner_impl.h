@@ -77,17 +77,16 @@ class UserRunnerImpl : UserRunner,
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
-    auth::AccountPtr account,
-    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-    fidl::InterfaceHandle<UserContext> user_context);
+      auth::AccountPtr account,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      fidl::InterfaceHandle<UserContext> user_context);
   void InitializeLedger();
   void InitializeLedgerDashboard();
   void InitializeDeviceMap();
   void InitializeRemoteInvoker();
   void InitializeMessageQueueManager();
-  void InitializeMaxwell(
-      const fidl::String& user_shell_url,
-      AppConfigPtr story_shell);
+  void InitializeMaxwell(const fidl::String& user_shell_url,
+                         AppConfigPtr story_shell);
   void InitializeUserShell(
       AppConfigPtr user_shell,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
@@ -131,9 +130,6 @@ class UserRunnerImpl : UserRunner,
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
-
-  void SetupLedger();
-  void StartLedgerDashboard();
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
 
