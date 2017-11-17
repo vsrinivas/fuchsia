@@ -15,8 +15,6 @@ AsyncHolderBase::~AsyncHolderBase() = default;
 
 void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
                                std::function<void()> done) {
-  // TODO(mesch): There is duplication with code in
-  // AppClientBase::AppTerminate(). Should be unified.
   auto called = std::make_shared<bool>(false);
   auto cont = [this, called, done = std::move(done)](const bool from_timeout) {
     if (*called) {
