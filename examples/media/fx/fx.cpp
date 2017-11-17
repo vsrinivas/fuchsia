@@ -22,40 +22,51 @@
 #include "lib/media/fidl/audio_server.fidl.h"
 #include "lib/media/timeline/timeline_function.h"
 
+#include "garnet/lib/media/wav_writer/wav_writer.h"
+constexpr bool kWavWriterEnabled = false;
+
 using media::TimelineFunction;
 
-static constexpr uint32_t INPUT_FRAMES_PER_SEC = 48000u;
-static constexpr uint32_t INPUT_BUFFER_LENGTH_MSEC = 10u;
-static constexpr uint32_t INPUT_BUFFER_LENGTH_FRAMES =
+constexpr uint32_t NUM_CHANNELS = 2u;
+constexpr uint32_t INPUT_FRAMES_PER_SEC = 48000u;
+constexpr uint32_t INPUT_BUFFER_LENGTH_MSEC = 10u;
+constexpr uint32_t INPUT_BUFFER_LENGTH_FRAMES =
     (INPUT_FRAMES_PER_SEC * INPUT_BUFFER_LENGTH_MSEC) / 1000u;
-static constexpr zx_time_t PROCESS_CHUNK_TIME = ZX_MSEC(1);
-static constexpr uint32_t OUTPUT_BUF_MSEC = 1000;
-static constexpr zx_time_t OUTPUT_BUF_TIME = ZX_MSEC(1000);
-static constexpr uint32_t OUTPUT_BUFFER_ID = 0;
+constexpr zx_time_t PROCESS_CHUNK_TIME = ZX_MSEC(1);
+constexpr uint32_t OUTPUT_BUF_MSEC = 1000;
+constexpr zx_time_t OUTPUT_BUF_TIME = ZX_MSEC(OUTPUT_BUF_MSEC);
+constexpr uint32_t OUTPUT_BUFFER_ID = 0;
+constexpr zx_time_t OUTPUT_LEAD_TIME = ZX_MSEC(30);
 
-static constexpr int32_t MIN_REVERB_DEPTH_MSEC = 1;
-static constexpr int32_t MAX_REVERB_DEPTH_MSEC = OUTPUT_BUF_MSEC - 100;
-static constexpr int32_t SMALL_REVERB_DEPTH_STEP = 1;
-static constexpr int32_t LARGE_REVERB_DEPTH_STEP = 10;
-static constexpr float MIN_REVERB_FEEDBACK_GAIN = -60.0f;
-static constexpr float MAX_REVERB_FEEDBACK_GAIN = -3.0f;
-static constexpr float SMALL_REVERB_GAIN_STEP = 0.5;
-static constexpr float LARGE_REVERB_GAIN_STEP = 2.5;
+constexpr int32_t MIN_REVERB_DEPTH_MSEC = 1;
+constexpr int32_t MAX_REVERB_DEPTH_MSEC = OUTPUT_BUF_MSEC - 10;
+constexpr int32_t SMALL_REVERB_DEPTH_STEP = 1;
+constexpr int32_t LARGE_REVERB_DEPTH_STEP = 10;
+constexpr float MIN_REVERB_FEEDBACK_GAIN = -60.0f;
+constexpr float MAX_REVERB_FEEDBACK_GAIN = -3.0f;
+constexpr float SMALL_REVERB_GAIN_STEP = 0.5;
+constexpr float LARGE_REVERB_GAIN_STEP = 2.5;
 
-static constexpr float MIN_FUZZ_GAIN = 1.0;
-static constexpr float MAX_FUZZ_GAIN = 50.0;
-static constexpr float SMALL_FUZZ_GAIN_STEP = 0.1;
-static constexpr float LARGE_FUZZ_GAIN_STEP = 1.0;
-static constexpr float MIN_FUZZ_MIX = 0.0;
-static constexpr float MAX_FUZZ_MIX = 1.0;
-static constexpr float SMALL_FUZZ_MIX_STEP = 0.01;
-static constexpr float LARGE_FUZZ_MIX_STEP = 0.1;
+constexpr float MIN_FUZZ_GAIN = 1.0;
+constexpr float MAX_FUZZ_GAIN = 50.0;
+constexpr float SMALL_FUZZ_GAIN_STEP = 0.1;
+constexpr float LARGE_FUZZ_GAIN_STEP = 1.0;
+constexpr float MIN_FUZZ_MIX = 0.0;
+constexpr float MAX_FUZZ_MIX = 1.0;
+constexpr float SMALL_FUZZ_MIX_STEP = 0.01;
+constexpr float LARGE_FUZZ_MIX_STEP = 0.1;
 
-static constexpr float MIN_PREAMP_GAIN = -30.0f;
-static constexpr float MAX_PREAMP_GAIN = 20.0f;
-static constexpr float SMALL_PREAMP_GAIN_STEP = 0.1f;
-static constexpr float LARGE_PREAMP_GAIN_STEP = 1.0f;
-static constexpr uint32_t PREAMP_GAIN_FRAC_BITS = 12;
+constexpr float MIN_PREAMP_GAIN = -30.0f;
+constexpr float MAX_PREAMP_GAIN = 20.0f;
+constexpr float SMALL_PREAMP_GAIN_STEP = 0.1f;
+constexpr float LARGE_PREAMP_GAIN_STEP = 1.0f;
+constexpr uint32_t PREAMP_GAIN_FRAC_BITS = 12;
+
+constexpr int32_t DEFAULT_REVERB_DEPTH_MSEC = 200;
+constexpr float DEFAULT_REVERB_FEEDBACK_GAIN = -4.0f;
+constexpr float DEFAULT_FUZZ_GAIN = 0.0;
+constexpr float DEFAULT_FUZZ_MIX = 1.0;
+constexpr float DEFAULT_PREAMP_GAIN = -5.0f;
 
 using audio::utils::AudioInput;
 
@@ -127,17 +138,17 @@ class FxProcessor {
   bool shutting_down_ = false;
 
   bool reverb_enabled_ = false;
-  int32_t reverb_depth_msec_ = 100;
-  float reverb_feedback_gain_ = -8.0;
+  int32_t reverb_depth_msec_ = DEFAULT_REVERB_DEPTH_MSEC;
+  float reverb_feedback_gain_ = DEFAULT_REVERB_FEEDBACK_GAIN;
   uint32_t reverb_depth_frames_;
   uint16_t reverb_feedback_gain_fixed_;
 
   bool fuzz_enabled_ = false;
-  float fuzz_gain_ = 15.0;
-  float fuzz_mix_ = 1.0;
+  float fuzz_gain_ = DEFAULT_FUZZ_GAIN;
+  float fuzz_mix_ = DEFAULT_FUZZ_MIX;
   float fuzz_mix_inv_;
 
-  float preamp_gain_ = 5.0;
+  float preamp_gain_ = DEFAULT_PREAMP_GAIN;
   uint16_t preamp_gain_fixed_;
 
   fbl::unique_ptr<AudioInput> input_;
@@ -149,6 +160,7 @@ class FxProcessor {
   media::TimelineConsumerPtr output_timeline_consumer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
+  media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
 };
 
 void FxProcessor::Startup() {
@@ -156,6 +168,12 @@ void FxProcessor::Startup() {
 
   if (input_->sample_size() != 2) {
     printf("Invalid input sample size %u\n", input_->sample_size());
+    return;
+  }
+
+  if (!wav_writer_.Initialize("/tmp/fx.wav", input_->channel_cnt(),
+                              input_->frame_rate(), 16)) {
+    printf("Unable to initialize WAV file for recording.\n");
     return;
   }
 
@@ -317,8 +335,9 @@ void FxProcessor::RequestKeystrokeMessage() {
 }
 
 void FxProcessor::HandleKeystroke(zx_status_t status, uint32_t events) {
-  if (shutting_down_)
+  if (shutting_down_) {
     return;
+  }
 
   if (status != ZX_OK) {
     printf("Bad status in HandleKeystroke (status %d)\n", status);
@@ -431,6 +450,9 @@ media::MediaPacketPtr FxProcessor::CreateOutputPacket() {
 }
 
 void FxProcessor::Shutdown(const char* reason) {
+  // We're done (for good or bad): flush (save) the headers; close the WAV file.
+  wav_writer_.Close();
+
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
   output_timeline_cp_.reset();
@@ -446,12 +468,12 @@ void FxProcessor::Shutdown(const char* reason) {
 void FxProcessor::ProcessInput(bool first_time) {
   media::MediaPacketPtr pkt1, pkt2;
 
-  // Produce the output packet(s)  If we do not produce any packets, something
-  // is very wrong and we are in the process of shutting down, so just get out
-  // now.
+  // Produce output packet(s)  If we do not produce any packets, something is
+  // very wrong and we are in the process of shutting down, so just get out now.
   ProduceOutputPackets(&pkt1, &pkt2);
-  if (pkt1.is_null())
+  if (pkt1.is_null()) {
     return;
+  }
 
   // Send the packet(s)
   output_consumer_->SupplyPacket(std::move(pkt1),
@@ -466,7 +488,7 @@ void FxProcessor::ProcessInput(bool first_time) {
     // TODO(johngro) : this lead time amount should not be arbitrary... it
     // needs to be based on the requirements of the renderer at the moment.
     media::TimelineTransformPtr start = media::TimelineTransform::New();
-    start->reference_time = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(8);
+    start->reference_time = zx_time_get(ZX_CLOCK_MONOTONIC) + OUTPUT_LEAD_TIME;
     start->subject_time = 0;
     start->reference_delta = 1u;
     start->subject_delta = 1u;
@@ -560,6 +582,16 @@ void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
                 &FxProcessor::ReverbMixEffect);
   }
 
+  // After running our processing chain, save the resultant audio to WAV file.
+  if (wav_writer_.Write(reinterpret_cast<void* const>(
+                            reinterpret_cast<uint8_t*>(output_buf_virt_) +
+                            (*out_pkt1)->payload_offset),
+                        (*out_pkt1)->payload_size)) {
+    if (pkt1_frames < todo) {
+      wav_writer_.Write(output_buf_virt_, (*out_pkt2)->payload_size);
+    }
+  }
+
   // Finally, update our input read pointer and our output write pointer.
   input_rp_ += todo;
   output_buf_wp_ += todo;
@@ -585,7 +617,8 @@ void FxProcessor::ApplyEffect(int16_t* src,
     // here when we switch to C++17.  The syntax for invoking a pointer to
     // non-static method on an object is ugly and hard to understand, and
     // people should not be forced to look at it.
-    ((*this).*(effect))(src + src_offset, dst + dst_offset, todo);
+    ((*this).*(effect))(src + (src_offset * NUM_CHANNELS),
+                        dst + (dst_offset * NUM_CHANNELS), todo);
 
     src_offset = (src_space > todo) ? (src_offset + todo) : 0;
     dst_offset = (dst_space > todo) ? (dst_offset + todo) : 0;
@@ -594,13 +627,13 @@ void FxProcessor::ApplyEffect(int16_t* src,
 }
 
 void FxProcessor::CopyInputEffect(int16_t* src, int16_t* dst, uint32_t frames) {
-  ::memcpy(dst, src, frames * sizeof(*dst));
+  ::memcpy(dst, src, frames * sizeof(*dst) * NUM_CHANNELS);
 }
 
 void FxProcessor::PreampInputEffect(int16_t* src,
                                     int16_t* dst,
                                     uint32_t frames) {
-  for (uint32_t i = 0; i < frames; ++i) {
+  for (uint32_t i = 0; i < frames * NUM_CHANNELS; ++i) {
     int32_t tmp = src[i];
     tmp *= preamp_gain_fixed_;
     tmp >>= PREAMP_GAIN_FRAC_BITS;
@@ -613,7 +646,7 @@ void FxProcessor::PreampInputEffect(int16_t* src,
 void FxProcessor::ReverbMixEffect(int16_t* src, int16_t* dst, uint32_t frames) {
   // TODO(johngro): We should probably process everything into an intermediate
   // 32 bit (or even 64 bit or float) buffer, and clamp after the fact.
-  for (uint32_t i = frames; i > 0;) {
+  for (uint32_t i = frames * NUM_CHANNELS; i > 0;) {
     --i;
 
     int32_t tmp = src[i];
@@ -627,7 +660,7 @@ void FxProcessor::ReverbMixEffect(int16_t* src, int16_t* dst, uint32_t frames) {
 }
 
 void FxProcessor::FuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
-  for (uint32_t i = 0; i < frames; ++i) {
+  for (uint32_t i = 0; i < frames * NUM_CHANNELS; ++i) {
     float norm = FuzzNorm(Norm(src[i]), fuzz_gain_);
     dst[i] =
         (src[i] < 0)
@@ -637,7 +670,7 @@ void FxProcessor::FuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
 }
 
 void FxProcessor::MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
-  for (uint32_t i = 0; i < frames; ++i) {
+  for (uint32_t i = 0; i < frames * NUM_CHANNELS; ++i) {
     float norm = Norm(src[i]);
     float fnorm = FuzzNorm(norm, fuzz_gain_);
     float mixed = ((fnorm * fuzz_mix_) + (norm * fuzz_mix_inv_));
@@ -718,18 +751,21 @@ int main(int argc, char** argv) {
   auto input = AudioInput::Create(input_num);
 
   res = input->Open();
-  if (res != ZX_OK)
+  if (res != ZX_OK) {
     return res;
+  }
 
   // TODO(johngro) : Fetch the supported formats from the audio
   // input itself and select from them, do not hardcode this.
-  res = input->SetFormat(48000u, 1u, AUDIO_SAMPLE_FORMAT_16BIT);
-  if (res != ZX_OK)
+  res = input->SetFormat(48000u, NUM_CHANNELS, AUDIO_SAMPLE_FORMAT_16BIT);
+  if (res != ZX_OK) {
     return res;
+  }
 
   res = input->GetBuffer(INPUT_BUFFER_LENGTH_FRAMES, 0u);
-  if (res != ZX_OK)
+  if (res != ZX_OK) {
     return res;
+  }
 
   fsl::MessageLoop loop;
 

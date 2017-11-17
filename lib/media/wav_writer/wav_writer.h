@@ -38,9 +38,6 @@ namespace audio {
 template <bool enabled = true>
 class WavWriter {
  public:
-  WavWriter() {}
-  ~WavWriter() {}
-
   bool Initialize(const char* const file_name,
                   uint32_t channel_count,
                   uint32_t frame_rate,
