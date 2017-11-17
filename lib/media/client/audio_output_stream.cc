@@ -9,7 +9,6 @@
 
 #include "garnet/lib/media/client/audio_output_device.h"
 #include "garnet/lib/media/client/audio_output_manager.h"
-#include "garnet/lib/media/client/limits.h"
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
@@ -33,11 +32,6 @@ AudioOutputStream::~AudioOutputStream() {
 
 bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
                                    AudioOutputDevice* device) {
-  FXL_DCHECK(params->num_channels >= kMinNumChannels);
-  FXL_DCHECK(params->num_channels <= kMaxNumChannels);
-  FXL_DCHECK(params->sample_rate >= kMinSampleRate);
-  FXL_DCHECK(params->sample_rate <= kMaxSampleRate);
-
   num_channels_ = params->num_channels;
   sample_rate_ = params->sample_rate;
   device_ = device;
@@ -78,6 +72,15 @@ bool AudioOutputStream::AcquireRenderer() {
 }
 
 bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
+  if ((num_channels < static_cast<int>(media::kMinLpcmChannelCount)) ||
+      (num_channels > static_cast<int>(media::kMaxLpcmChannelCount)) ||
+      (sample_rate < static_cast<int>(media::kMinLpcmFramesPerSecond)) ||
+      (sample_rate > static_cast<int>(media::kMaxLpcmFramesPerSecond))) {
+    FXL_LOG(ERROR) << "Media type (" << num_channels << "-chan, " << sample_rate
+                   << " Hz) out of range";
+    return false;
+  }
+
   FXL_DCHECK(media_renderer_);
 
   auto details = media::AudioMediaTypeDetails::New();

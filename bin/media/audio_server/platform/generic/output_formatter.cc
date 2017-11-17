@@ -63,11 +63,11 @@ class SilenceMaker<
 
 // A templated class which implements the ProduceOutput and FillWithSilence
 // methods of OutputFormatter
-template <typename DType, uint32_t DChCount>
+template <typename DType>
 class OutputFormatterImpl : public OutputFormatter {
  public:
   explicit OutputFormatterImpl(const AudioMediaTypeDetailsPtr& format)
-      : OutputFormatter(format, sizeof(DType), DChCount) {}
+      : OutputFormatter(format, sizeof(DType)) {}
 
   void ProduceOutput(const int32_t* source,
                      void* dest_void,
@@ -75,7 +75,7 @@ class OutputFormatterImpl : public OutputFormatter {
     using DC = DstConverter<DType>;
     DType* dest = static_cast<DType*>(dest_void);
 
-    for (size_t i = 0; i < (static_cast<size_t>(frames) * DChCount); ++i) {
+    for (size_t i = 0; i < (static_cast<size_t>(frames) * channels_); ++i) {
       int32_t val = source[i];
       if (val > std::numeric_limits<int16_t>::max()) {
         dest[i] = DC::Convert(std::numeric_limits<int16_t>::max());
@@ -88,44 +88,29 @@ class OutputFormatterImpl : public OutputFormatter {
   }
 
   void FillWithSilence(void* dest, uint32_t frames) const override {
-    SilenceMaker<DType>::Fill(dest, frames * DChCount);
+    SilenceMaker<DType>::Fill(dest, frames * channels_);
   }
 };
 
 // Constructor/destructor for the common OutputFormatter base class.
 OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
-                                 uint32_t bytes_per_sample,
-                                 uint32_t channels)
+                                 uint32_t bytes_per_sample)
     : format_(format.Clone()),
-      channels_(channels),
+      channels_(format->channels),
       bytes_per_sample_(bytes_per_sample),
-      bytes_per_frame_(bytes_per_sample * channels) {}
+      bytes_per_frame_(bytes_per_sample * format->channels) {}
 
-// Selection routines which will instantiate a particular templatized version of
+// Selection routine which will instantiate a particular templatized version of
 // the output formatter.
-template <typename DType>
-static inline OutputFormatterPtr SelectOF(
-    const AudioMediaTypeDetailsPtr& format) {
-  switch (format->channels) {
-    case 1:
-      return OutputFormatterPtr(new OutputFormatterImpl<DType, 1>(format));
-    case 2:
-      return OutputFormatterPtr(new OutputFormatterImpl<DType, 2>(format));
-    default:
-      FXL_LOG(ERROR) << "Unsupported output channels " << format->channels;
-      return nullptr;
-  }
-}
-
 OutputFormatterPtr OutputFormatter::Select(
     const AudioMediaTypeDetailsPtr& format) {
   FXL_DCHECK(format);
 
   switch (format->sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
-      return SelectOF<uint8_t>(format);
+      return OutputFormatterPtr(new OutputFormatterImpl<uint8_t>(format));
     case AudioSampleFormat::SIGNED_16:
-      return SelectOF<int16_t>(format);
+      return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
     default:
       FXL_LOG(ERROR) << "Unsupported output sample format "
                      << format->sample_format;

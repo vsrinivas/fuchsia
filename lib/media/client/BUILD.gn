@@ -17,7 +17,6 @@ source_set("client") {
     "audio_output_stream.h",
     "hw_stub.cc",
     "hw_stub.h",
-    "limits.h",
   ]
 
   public_deps = [

@@ -87,7 +87,7 @@ struct AudioMediaTypeDetails {
 
 // TODO(dalesat): Change these once the mixer supports broader ranges.
 const uint32 kMinLpcmChannelCount = 1;
-const uint32 kMaxLpcmChannelCount = 2;
+const uint32 kMaxLpcmChannelCount = 8;
 const uint32 kMinLpcmFramesPerSecond = 1000;
 const uint32 kMaxLpcmFramesPerSecond = 48000;
 

@@ -58,8 +58,7 @@ class OutputFormatter {
 
  protected:
   OutputFormatter(const AudioMediaTypeDetailsPtr& output_format,
-                  uint32_t bytes_per_sample,
-                  uint32_t channels);
+                  uint32_t bytes_per_sample);
 
   AudioMediaTypeDetailsPtr format_;
   uint32_t channels_ = 0;

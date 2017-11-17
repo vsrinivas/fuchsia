@@ -164,7 +164,9 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
       Mixer::Select(packet_link.format_info().format(),
                     output_formatter_ ? &output_formatter_->format() : nullptr);
   if (bk->mixer == nullptr) {
-    FXL_LOG(WARNING) << "Failed to select mixer core while linking to output";
+    FXL_LOG(ERROR) << "*** Audio system mixer cannot convert between formats "
+                      "*** (could not select mixer while linking to output). "
+                      "Usually, this indicates a 'num_channels' mismatch.";
     return ZX_ERR_NOT_SUPPORTED;
   }
 

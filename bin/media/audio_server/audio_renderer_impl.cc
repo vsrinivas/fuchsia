@@ -31,17 +31,17 @@ static const struct {
 } kSupportedAudioTypeSets[] = {
     {
         .sample_format = AudioSampleFormat::UNSIGNED_8,
-        .min_channels = 1,
-        .max_channels = 2,
-        .min_frames_per_second = 1000,
-        .max_frames_per_second = 48000,
+        .min_channels = media::kMinLpcmChannelCount,
+        .max_channels = media::kMaxLpcmChannelCount,
+        .min_frames_per_second = media::kMinLpcmFramesPerSecond,
+        .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
     },
     {
         .sample_format = AudioSampleFormat::SIGNED_16,
-        .min_channels = 1,
-        .max_channels = 2,
-        .min_frames_per_second = 1000,
-        .max_frames_per_second = 48000,
+        .min_channels = media::kMinLpcmChannelCount,
+        .max_channels = media::kMaxLpcmChannelCount,
+        .min_frames_per_second = media::kMinLpcmFramesPerSecond,
+        .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
     },
 };
 
@@ -158,9 +158,9 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   if ((media_type->medium != MediaTypeMedium::AUDIO) ||
       (media_type->encoding != MediaType::kAudioEncodingLpcm) ||
       (!media_type->details->is_audio())) {
-    FXL_LOG(ERROR)
-        << "Unsupported configuration requested in "
-           "AudioRenderer::Configure.  Media type must be LPCM audio.";
+    FXL_LOG(ERROR) << "Unsupported configuration requested in "
+                   << "AudioRenderer::SetMediaType.  "
+                   << "Media type must be LPCM audio.";
     Shutdown();
     return;
   }
@@ -183,7 +183,7 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
 
   if (i >= arraysize(kSupportedAudioTypeSets)) {
     FXL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
-                   << "AudioRenderer::Configure.  "
+                   << "AudioRenderer::SetMediaType.  "
                    << "(format = " << cfg->sample_format
                    << ", channels = " << static_cast<uint32_t>(cfg->channels)
                    << ", frames_per_second = " << cfg->frames_per_second << ")";

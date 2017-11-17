@@ -113,7 +113,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 
   zx::vmo duplicate_vmo;
   status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-      &duplicate_vmo);
+                          &duplicate_vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::handle::duplicate failed - " << status;
     return status;

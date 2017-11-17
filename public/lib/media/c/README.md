@@ -391,7 +391,7 @@ When used by *fuchsia_audio_manager_create_output_stream()* as a client opens
 an output stream, this represents the sample rate of the audio data that will
 be written to the stream.
 
-For now there is a soft limit of 96000 (96kHz) for this value.
+For now there is a soft limit of 48000 (48kHz) for this value.
 
 ##### num_channels
 When used by *fuchsia_audio_manager_get_output_device_default_parameters()* to
@@ -402,7 +402,11 @@ When used by *fuchsia_audio_manager_create_output_stream()* as a client opens
 an output stream, this represents the number of channels in the audio data
 that client will write to the stream.
 
-For this release, the system expects only mono (1) or stereo (2) values.
+For this release, the system expects mono (1) or stereo (2), as that is what is
+supported by the vast majority of audio output devices. If the system contains
+an audio output device that supports a higher number of output channels, then
+that precise value is expected (i.e. if the audio output device is 4-channel,
+then a *num_channels* value of 4 is required).
 
 ##### buffer_size
 When used by *fuchsia_audio_manager_get_output_device_default_parameters()* to
