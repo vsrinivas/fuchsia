@@ -660,7 +660,7 @@ void UserRunnerImpl::AtEnd(std::function<void(std::function<void()>)> action) {
 }
 
 void UserRunnerImpl::TerminateRecurse(const int i) {
-  if (i > 0) {
+  if (i >= 0) {
     at_end_[i]([this, i] { TerminateRecurse(i - 1); });
   } else {
     FXL_LOG(INFO) << "UserRunner::Terminate(): done";
