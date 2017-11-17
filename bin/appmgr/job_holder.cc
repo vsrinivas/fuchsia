@@ -278,10 +278,9 @@ void JobHolder::CreateApplication(
   // launch_info is moved before LoadApplication() gets at its first argument.
   fidl::String url = launch_info->url;
   loader_->LoadApplication(
-      url, fxl::MakeCopyable([
-        this, launch_info = std::move(launch_info),
-        controller = std::move(controller)
-      ](ApplicationPackagePtr package) mutable {
+      url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
+                              controller = std::move(controller)](
+                                 ApplicationPackagePtr package) mutable {
         fxl::RefPtr<ApplicationNamespace> application_namespace =
             default_namespace_;
         if (!launch_info->additional_services.is_null()) {
@@ -515,7 +514,18 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
-  auto result = runners_.emplace(runner, nullptr);
+
+  // HACK(thatguy): We key runners by |name| and also the pointer to
+  // |application_namespace| to avoid a problem where a new isolate
+  // within a runner was adopting an |application_namespace| from a
+  // previous application's startup info.
+  //
+  // Luckily, all of this code will go away with the "hub" work.
+  // That's good because this wastes a ton of RAM.
+  auto name_with_namespace =
+      runner +
+      std::to_string(reinterpret_cast<uintptr_t>(application_namespace.get()));
+  auto result = runners_.emplace(name_with_namespace, nullptr);
   if (result.second) {
     ServiceProviderPtr runner_services;
     ApplicationControllerPtr runner_controller;
@@ -526,7 +536,7 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
                       runner_controller.NewRequest());
 
     runner_controller.set_connection_error_handler(
-        [this, runner] { runners_.erase(runner); });
+        [this, name_with_namespace] { runners_.erase(name_with_namespace); });
 
     result.first->second = std::make_unique<ApplicationRunnerHolder>(
         std::move(runner_services), std::move(runner_controller),

@@ -68,7 +68,7 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
   }
 
   return std::make_unique<ApplicationContext>(
-      subtle::CreateStaticServiceRootHandle(),
+      std::move(service_root),
       std::move(startup_info->launch_info->service_request),
       std::move(startup_info->launch_info->services));
 }
