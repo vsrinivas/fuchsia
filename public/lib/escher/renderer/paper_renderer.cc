@@ -69,7 +69,7 @@ PaperRenderer::PaperRenderer(Escher* escher, impl::ModelDataPtr model_data)
                                      escher->gpu_uploader(),
                                      impl::SsdoSampler::kNoiseSize,
                                      impl::SsdoSampler::kNoiseSize,
-                                     vk::ImageUsageFlagBits::eStorage),
+                                     vk::ImageUsageFlagBits::eSampled),
           model_data_.get())),
       ssdo_accelerator_(
           std::make_unique<impl::SsdoAccelerator>(escher, image_cache_)),
