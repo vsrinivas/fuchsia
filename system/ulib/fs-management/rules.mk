@@ -10,10 +10,10 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fsck.c \
-    $(LOCAL_DIR)/launch.c \
+    $(LOCAL_DIR)/launch.cpp \
     $(LOCAL_DIR)/mkfs.c \
     $(LOCAL_DIR)/mount.c \
-    $(LOCAL_DIR)/ramdisk.c \
+    $(LOCAL_DIR)/ramdisk.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
