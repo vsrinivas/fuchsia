@@ -31,6 +31,11 @@ void ConfigureDisplay(uint32_t width_in_px,
     FXL_LOG(INFO) << "SceneManager: treating device as a Google Pixelbook.";
     model->display_info().density_in_px_per_mm = 9.252f;
     model->environment_info().usage = DisplayModel::Usage::kClose;
+  } else if (width_in_px == 3840 && height_in_px == 2160) {
+    // Assume the display is a 24in 4K monitor.
+    FXL_LOG(INFO) << "SceneManager: treating display as a 24in 4K monitor.";
+    model->display_info().density_in_px_per_mm = 7.323761f;
+    model->environment_info().usage = DisplayModel::Usage::kNear;
   } else {
     // TODO(MZ-384): Don't lie.
     FXL_LOG(WARNING) << "SceneManager: unrecognized display.";

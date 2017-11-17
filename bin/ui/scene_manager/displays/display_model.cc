@@ -36,8 +36,8 @@ float Quantize(float f) {
 constexpr float kDefaultPixelVisualAngleDegrees = 0.0213;
 
 // The ideal visual angle of a grid unit in degrees assuming default
-// settings.
-constexpr float kIdealGridVisualAngleDegrees = 0.025;
+// settings. Empirically determined to be around 0.255 and then quantized.
+constexpr float kIdealGridVisualAngleDegrees = 0.025390625;
 
 constexpr float GetDefaultViewingDistanceInMm(DisplayModel::Usage usage) {
   switch (usage) {
@@ -99,10 +99,16 @@ DisplayMetrics DisplayModel::GetMetrics() {
     pvsize_in_mm_per_mm = tanf(kDefaultPixelVisualAngleDegrees * M_PI / 180);
   }
 
+  // Compute the adaptation factor. This is a empirically-derived fudge factor
+  // to take into account human perceptual differences for objects at varying
+  // distances, even if those objects are adjusted to be the same size to the
+  // eye.
+  float adaptation_factor = (vdist * 0.5f + 180.f) / vdist;
+
   // Compute the grid visual size as a function of viewing distance in
   // millimeters per millimeter.
   float gvsize_in_mm_per_mm = tanf(kIdealGridVisualAngleDegrees * M_PI / 180) *
-                              user_info_.user_scale_factor;
+                              adaptation_factor * user_info_.user_scale_factor;
 
   // Compute the quantized grid scale factor.
   float scale_in_px_per_gr =
