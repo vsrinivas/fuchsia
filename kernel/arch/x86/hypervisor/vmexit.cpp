@@ -406,11 +406,13 @@ static uint32_t* apic_reg(LocalApicState* local_apic_state, uint16_t reg) {
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
     uint32_t* lvt_timer = apic_reg(local_apic_state, kLocalApicLvtTimer);
-    if (!(*lvt_timer & LVT_MASKED)) {
-        uint8_t vector = *lvt_timer & LVT_TIMER_VECTOR_MASK;
-        local_apic_signal_interrupt(local_apic_state, vector, false);
-    }
-    return INT_NO_RESCHEDULE;
+
+    if (*lvt_timer & LVT_MASKED)
+        return INT_NO_RESCHEDULE;
+
+    uint8_t vector = *lvt_timer & LVT_TIMER_VECTOR_MASK;
+    bool signaled = local_apic_signal_interrupt(local_apic_state, vector, false);
+    return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
 static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
