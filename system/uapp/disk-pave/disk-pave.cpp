@@ -563,8 +563,20 @@ zx_status_t initialize_gpt(const char* gpt_path, fbl::unique_fd* out_fd, gpt_dev
         fprintf(stderr, "[initialize_gpt] Failed to get GPT info\n");
         return ZX_ERR_IO;
     } else if (!(*out_gpt)->valid) {
-        gpt_device_release(*out_gpt);
-        return ZX_ERR_IO;
+        fprintf(stderr, "[initialize_gpt] Located GPT is invalid; Attempting to initialize\n");
+        if (gpt_partition_remove_all(*out_gpt)) {
+            fprintf(stderr, "[initialize_gpt] Failed to create empty GPT\n");
+            gpt_device_release(*out_gpt);
+            return ZX_ERR_IO;
+        } else if (gpt_device_sync(*out_gpt)) {
+            fprintf(stderr, "[initialize_gpt] Failed to sync empty GPT\n");
+            gpt_device_release(*out_gpt);
+            return ZX_ERR_IO;
+        } else if ((rc = ioctl_block_rr_part(fd.get())) != ZX_OK) {
+            fprintf(stderr, "[initialize_gpt] Failed to re-read GPT\n");
+            gpt_device_release(*out_gpt);
+            return static_cast<zx_status_t>(rc);
+        }
     }
     *out_fd = fbl::move(fd);
     return ZX_OK;
