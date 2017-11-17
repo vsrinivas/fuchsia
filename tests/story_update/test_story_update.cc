@@ -103,20 +103,27 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     });
   }
 
-  TestPoint module1_starting_{"Module1 STARTING"};
   TestPoint module1_stopped_{"Module1 STOPPED"};
   TestPoint module1_gone_{"Module1 gone"};
 
   void PipelinedAddGetStop() {
     // Tests two invariants:
     //
-    // 1. Pipelined AddModule(), GetModuleController(), then
-    //    ModuleController.Stop() transitions through module states STARTING and
-    //    STOPPED.
+    // 1. Pipelined AddModule(), GetModuleController(), ModuleController.Stop()
+    //    transitions to the module state STOPPED.
     //
-    // 2. After ModuleController.Stop() completes, GetActiveModules() shows the
-    //    module as not running. (This cannot be pipelined because the requests
-    //    are on different existing connections.)
+    // 2. After ModuleController.Stop() completes (as observed by reaching teh
+    //    STOPPED state), GetActiveModules() shows the module as not running.
+    //    (This cannot be pipelined because the requests are on different
+    //    existing connections.)
+    //
+    // TODO(mesch): The API as it is defined now does not allow to guarantee to
+    // observe a transition through the STARTING and RUNNING states. The
+    // implementation also makes no guarantees in the first place to await the
+    // module reaching RUNNING before it gets stopped, irrespective of
+    // observability of the state transitions.
+    //
+    // The observability of the STOPPED state, however, is guaranteed.
     story_controller_->AddModule(nullptr, "module1", kNullModuleUrl, "root",
                                  nullptr);
 
@@ -127,16 +134,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     module1_watcher_.Watch(&module1_controller_);
     module1_watcher_.Continue([this](modular::ModuleState module_state) {
-      // Does not pass through RUNNING because we stop it too quick.
-      //
-      // TODO(mesch): It seems as if the watcher would get connected always
-      // before the controller can process any state changes from the context,
-      // but there may be a race here so it may get connected only after the
-      // context receives Ready() or even Done(). We then would not see STARTING
-      // as the initial state of the watcher.
-      if (module_state == modular::ModuleState::STARTING) {
-        module1_starting_.Pass();
-      } else if (module_state == modular::ModuleState::STOPPED) {
+      if (module_state == modular::ModuleState::STOPPED) {
         module1_stopped_.Pass();
       }
     });
@@ -155,19 +153,33 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         });
   }
 
-  TestPoint module2_starting_{"Module2 STARTING"};
   TestPoint module2_running_{"Module2 RUNNING"};
   TestPoint module2_stopped_{"Module2 STOPPED"};
   TestPoint module2_gone_{"Module2 gone"};
 
   void SequentialAddGetStop() {
-    // Tests two invariants:
+    // Tests these invariants:
     //
-    // 1. Sequential AddModule(), GetModuleController(), ModuleController.Stop()
-    //    transitions through module states STARTING, RUNNING, and STOPPED.
+    // 1. Pipelined AddModule(), GetModuleController() transitions to the
+    //    module state RUNNING.
     //
-    // 2. Sequential ModuleController.Stop(), then GetActiveModules() shows the
-    //    module as not running.
+    // 2. Sequential (sequenced after RUNNING state is reached)
+    //    ModuleController.Stop() transitions to the module state STOPPED.
+    //
+    // 3. Sequential GetActiveModules() (sequenced after STOPPED state is
+    //    reached) shows the module as not running.
+    //
+    // TODO(mesch): Like above, the API does not make guarantees to be able to
+    // observe the STARTING state. It only guarantees to observe the RUNNING
+    // state, and only if the module doesn't call Done() in its own.
+    //
+    // TODO(mesch): If the module calls Done() on its context (as done_module,
+    // for example, would), it is stopped by the story runner because it's a top
+    // level module. If this happens at the same time as this call, the callback
+    // may never invoked because it's preempted by the story runner handling the
+    // Done() request from the module. Instead, the controller connection is
+    // just closed, and flow of control would need to resume from the connection
+    // error handler of the module controller.
     story_controller_->AddModule(nullptr, "module2", kNullModuleUrl, "root",
                                  nullptr);
 
@@ -178,18 +190,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     module2_watcher_.Watch(&module2_controller_);
     module2_watcher_.Continue([this](modular::ModuleState module_state) {
-      if (module_state == modular::ModuleState::STARTING) {
-        module2_starting_.Pass();
-
-      } else if (module_state == modular::ModuleState::RUNNING) {
+      if (module_state == modular::ModuleState::RUNNING) {
         module2_running_.Pass();
-
-        // TODO(mesch): If the module calls Done() on its context (as
-        // done_module, for example, would), it is stopped by the story runner
-        // because it's a top level module. If this happens at the same time as
-        // this call, the callback may never invoked because it's preempted by
-        // the story runner handling the Done() request from the module.
-        // Instead, the controller connection is just closed.
         module2_controller_->Stop([this] { GetActiveModules2(); });
 
       } else if (module_state == modular::ModuleState::STOPPED) {
