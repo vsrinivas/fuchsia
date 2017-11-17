@@ -30,6 +30,9 @@ class WaterfallDemo : public Demo {
   virtual ~WaterfallDemo();
 
   bool HandleKeyPress(std::string key) override;
+  void BeginTouch(uint64_t touch_id,
+                  double x_position,
+                  double y_position) override;
 
   void DrawFrame() override;
 

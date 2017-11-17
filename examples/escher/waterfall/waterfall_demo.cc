@@ -17,7 +17,7 @@
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 100.f;
-static constexpr float kFar = 0.f;
+static constexpr float kFar = -1.f;
 static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
@@ -282,4 +282,31 @@ void WaterfallDemo::DrawFrame() {
     FXL_LOG(INFO) << "---- Total GPU memory: "
                   << (escher()->GetNumGpuBytesAllocated() / 1024) << "kB";
   }
+}
+
+void WaterfallDemo::BeginTouch(uint64_t touch_id,
+                               double x_position,
+                               double y_position) {
+  if (camera_projection_mode_ == 0)
+    return;
+
+  escher::Camera camera =
+      GenerateCamera(camera_projection_mode_, stage_.viewing_volume());
+  // See GenerateCamera().
+  float fovy = glm::radians(camera_projection_mode_ == 1 ? 8.f : 15.f);
+
+  auto ray =
+      escher::Camera::ScreenPointToRay(x_position, y_position, kDemoWidth,
+                                       kDemoHeight, fovy, camera.transform());
+
+  float intersection_multiple = ray.origin.z / ray.direction.z;
+  escher::vec4 intersection =
+      ray.origin - intersection_multiple * ray.direction;
+
+  FXL_LOG(INFO) << "x: " << x_position << "  y: " << y_position
+                << "\nray: " << ray.origin.x << "," << ray.origin.y << ","
+                << ray.origin.z << "/" << ray.direction.x << ","
+                << ray.direction.y << "," << ray.direction.z
+                << "\nintersection: " << intersection.x << ","
+                << intersection.y;
 }

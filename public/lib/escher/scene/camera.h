@@ -27,6 +27,20 @@ class Camera {
   const mat4& transform() const { return transform_; }
   const mat4& projection() const { return projection_; }
 
+  // Compute a ray from the eye to a point on a unit-height virtual screen with
+  // the specified resolution (assuming square pixels).  The distance to this
+  // screen is computed so that the specified field-of-view in the y direction
+  // (i.e. fovy) is met.
+  //
+  // NOTE: this corresponds to a perspective projection; another approach is
+  // required for orthographic projections.
+  static ray4 ScreenPointToRay(float x,
+                               float y,
+                               float screen_width,
+                               float screen_height,
+                               float fovy,
+                               const mat4& camera_transform);
+
  private:
   mat4 transform_;
   mat4 projection_;

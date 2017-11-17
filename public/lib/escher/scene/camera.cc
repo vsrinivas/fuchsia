@@ -16,13 +16,14 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
     const mat4& camera_transform) {
   float width = volume.width();
   float height = volume.height();
-  float depth = volume.top() - volume.bottom();
-  FXL_DCHECK(volume.bottom() == 0);
+  float bottom = volume.bottom();
+  float top = volume.top();
+  FXL_DCHECK(bottom < top);
 
-  vec3 corners[] = {{0, 0, 0},          {width, 0, 0},
-                    {0, 0, depth},      {width, 0, depth},
-                    {0, height, 0},     {width, height, 0},
-                    {0, height, depth}, {width, height, depth}};
+  vec3 corners[] = {{0, 0, bottom},      {width, 0, bottom},
+                    {0, 0, top},         {width, 0, top},
+                    {0, height, bottom}, {width, height, bottom},
+                    {0, height, top},    {width, height, top}};
 
   // Transform the corners into eye space, throwing away everything except the
   // negated Z-coordinate.  There are two reasons that we do this; both rely on
@@ -62,13 +63,6 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
   }
 #endif
 
-  // Add a small fudge-factor so that we don't clip objects resting on the
-  // stage floor.  It can't be much smaller than this (0.00075 is too small for
-  // 16-bit depth formats).
-  constexpr float kStageFloorFudgeFactor = 0.0001f;
-  near *= (1.f - kStageFloorFudgeFactor);
-  far *= (1.f + kStageFloorFudgeFactor);
-
   return std::make_pair(near, far);
 }
 
@@ -101,6 +95,32 @@ Camera Camera::NewPerspective(const ViewingVolume& volume,
       glm::perspective(fovy, aspect, near_and_far.first, near_and_far.second);
 
   return Camera(transform, projection);
+}
+
+ray4 Camera::ScreenPointToRay(float x,
+                              float y,
+                              float screen_width,
+                              float screen_height,
+                              float fovy,
+                              const mat4& camera_transform) {
+  // NOTE: we divide both by screen_height intentionally; this causes the screen
+  // aspect ratio to automatically be taken into account.
+  float canonical_x = (x - 0.5f * screen_width) / screen_height;
+  float canonical_y = (y - 0.5f * screen_height) / screen_height;
+
+  // Compute the distance from a virtual screen of unit height, such that the
+  // view frustum is fovy radians.
+  float screen_dist = 0.5f / tan(fovy * 0.5f);
+
+  vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+  vec4 ray_passthrough(canonical_x, canonical_y, -screen_dist, 1.f);
+
+  mat4 inverse_transform = glm::inverse(camera_transform);
+  vec4 transformed_origin = inverse_transform * ray_origin;
+  vec4 transformed_passthrough = inverse_transform * ray_passthrough;
+
+  return ray4{transformed_origin,
+              glm::normalize(transformed_passthrough - transformed_origin)};
 }
 
 }  // namespace escher
