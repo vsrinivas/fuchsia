@@ -60,6 +60,10 @@ package("ledger_tests") {
     {
       name = "ledger_benchmark_sync"
     },
+
+    {
+      name = "ledger_benchmark_update_entry"
+    },
   ]
   tests = [
     {
@@ -143,6 +147,18 @@ package("ledger_tests") {
     {
       path = rebase_path("//peridot/bin/ledger/test/benchmark/sync/sync.tspec")
       dest = "ledger/benchmark/sync.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/update_entry/update_entry.tspec")
+      dest = "ledger/benchmark/update_entry.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/update_entry/update_entry_transactions.tspec")
+      dest = "ledger/benchmark/update_entry_transactions.tspec"
     },
   ]
 }

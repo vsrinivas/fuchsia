@@ -14,6 +14,7 @@ group("benchmark") {
     "//peridot/bin/ledger/test/benchmark/lib",
     "//peridot/bin/ledger/test/benchmark/put",
     "//peridot/bin/ledger/test/benchmark/sync",
+    "//peridot/bin/ledger/test/benchmark/update_entry",
   ]
 }
 
