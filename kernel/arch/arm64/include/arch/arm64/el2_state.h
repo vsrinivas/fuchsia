@@ -70,7 +70,8 @@
 #define GS_NUM_REGS         31
 #define GS_SYSTEM_STATE     GS_X(GS_NUM_REGS)
 #define GS_ESR_EL2          (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
-#define GS_HPFAR_EL2        (GS_ESR_EL2 + 8)
+#define GS_FAR_EL2          (GS_ESR_EL2 + 8)
+#define GS_HPFAR_EL2        (GS_FAR_EL2 + 8)
 
 // clang-format on
 
@@ -116,6 +117,7 @@ struct GuestState {
 
     // Exit state.
     algn32_t esr_el2;
+    uint64_t far_el2;
     uint64_t hpfar_el2;
 };
 
@@ -153,6 +155,7 @@ static_assert(__offsetof(El2State, guest_state.x) == GS_X0, "");
 static_assert(__offsetof(El2State, guest_state.x[30]) == GS_X(30), "");
 static_assert(__offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE, "");
 static_assert(__offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2, "");
+static_assert(__offsetof(El2State, guest_state.far_el2) == GS_FAR_EL2, "");
 static_assert(__offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2, "");
 
 __BEGIN_CDECLS

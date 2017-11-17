@@ -100,6 +100,8 @@
 .macro guest_exit_state
     mrs x10, esr_el2
     str x10, [x9, #GS_ESR_EL2]
+    mrs x10, far_el2
+    str x10, [x9, #GS_FAR_EL2]
     mrs x10, hpfar_el2
     // This is not described well in the manual, but HPFAR_EL2 does not contain
     // the lower 8 bits of the IPA, so it must be shifted.

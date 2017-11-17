@@ -121,6 +121,10 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     }
     next_pc(guest_state);
 
+    // Combine the lower bits of FAR_EL2 with HPFAR_EL2 to get the exact IPA.
+    guest_paddr |= guest_state->far_el2 & (PAGE_SIZE - 1);
+    LTRACEF("guest far_el2: %#lx\n", guest_state->far_el2);
+
     switch (trap->kind()) {
     case ZX_GUEST_TRAP_BELL:
         *packet = {};
