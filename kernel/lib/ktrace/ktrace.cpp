@@ -18,13 +18,8 @@
 #include <zircon/thread_annotations.h>
 #include <object/thread_dispatcher.h>
 
-#if __x86_64__
-#define ktrace_timestamp() rdtsc();
+#define ktrace_timestamp() current_ticks();
 #define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
-#else
-#define ktrace_timestamp() current_time()
-#define ktrace_ticks_per_ms() (1000000)
-#endif
 
 static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
 

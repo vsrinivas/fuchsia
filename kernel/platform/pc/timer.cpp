@@ -172,6 +172,11 @@ uint64_t ticks_per_second(void)
     return tsc_ticks_per_ms * 1000;
 }
 
+uint64_t current_ticks(void)
+{
+    return rdtsc();
+}
+
 zx_time_t ticks_to_nanos(uint64_t ticks) {
     return u64_mul_u64_fp32_64(ticks, ns_per_tsc);
 }

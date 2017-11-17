@@ -239,6 +239,11 @@ zx_time_t current_time(void)
     return cntpct_to_zx_bigtime(read_ct());
 }
 
+uint64_t current_ticks(void)
+{
+    return read_ct();
+}
+
 uint64_t ticks_per_second(void)
 {
     return u64_mul_u32_fp32_64(1000 * 1000 * 1000, cntpct_per_ns);
