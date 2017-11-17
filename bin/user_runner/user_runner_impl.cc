@@ -341,6 +341,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   // A similar relationship holds between FocusHandler and
   // UserIntelligenceProvider.
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
+  AtEnd(Reset(&user_intelligence_provider_));
 
   fidl::InterfaceHandle<StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
@@ -373,10 +374,12 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
       kMaxwellUrl);
+  AtEnd(Reset(&maxwell_component_context_impl_));
 
   maxwell_component_context_binding_ =
       std::make_unique<fidl::Binding<ComponentContext>>(
           maxwell_component_context_impl_.get());
+  AtEnd(Reset(&maxwell_component_context_binding_));
 
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
@@ -385,15 +388,18 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
         "--config=/system/data/maxwell/test_config.json");
   }
 
-  maxwell_ =
+  maxwell_app_ =
       std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
           user_scope_->GetLauncher(), std::move(maxwell_config));
 
-  maxwell_->primary_service()->GetUserIntelligenceProvider(
+  maxwell_app_->primary_service()->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
       std::move(story_provider), std::move(focus_provider_maxwell),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
+
+  AtEnd(Reset(&maxwell_app_));
+  AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_app_.get()));
 
   auto component_scope = maxwell::ComponentScope::New();
   component_scope->set_global_scope(maxwell::GlobalScope::New());
@@ -430,19 +436,15 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   // /data. This is appropriate for the module_resolver, for now. We can in the
   // future isolate the data it reads to a subdir of /data and map that in
   // here.
-  module_resolver_ = std::make_unique<AppClient<Lifecycle>>(
+  module_resolver_app_ = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), std::move(module_resolver_config),
       "" /* data_origin */, std::move(service_list));
-  ConnectToService(module_resolver_->services(),
-                   module_resolver_service_.NewRequest());
+  AtEnd(Reset(&module_resolver_app_));
+  AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
 
-  AtEnd(Reset(&maxwell_component_context_impl_));
-  AtEnd(Reset(&maxwell_component_context_binding_));
+  ConnectToService(module_resolver_app_->services(),
+                   module_resolver_service_.NewRequest());
   AtEnd(Reset(&module_resolver_service_));
-  AtEnd(Reset(&maxwell_));
-  AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_.get()));
-  AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_.get()));
-  AtEnd(Reset(&user_intelligence_provider_));
 
   // End kModuleResolverUrl
 
