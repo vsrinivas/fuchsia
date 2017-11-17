@@ -817,6 +817,21 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
     // remove from devfs, preventing further OPEN attempts
     devfs_unpublish(dev);
 
+    if (dev->proxy) {
+        dc_msg_t msg;
+        uint32_t mlen;
+        zx_status_t r;
+        if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+            log(ERROR, "devcoord: dc_msg_pack failed in dc_remove_device\n");
+        } else {
+            msg.txid = 0;
+            msg.op = DC_OP_REMOVE_DEVICE;
+            if ((r = zx_channel_write(dev->proxy->hrpc, 0, &msg, mlen, NULL, 0)) != ZX_OK) {
+            log(ERROR, "devcoord: zx_channel_write failed in dc_remove_devicey\n");
+            }
+        }
+    }
+
     // detach from devhost
     devhost_t* dh = dev->host;
     if (dh != NULL) {

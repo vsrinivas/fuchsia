@@ -204,7 +204,7 @@ typedef struct {
 #define DC_OP_STATUS                0x80000010
 #define DC_OP_ADD_DEVICE            0x80000011
 #define DC_OP_ADD_DEVICE_INVISIBLE  0x80000012
-#define DC_OP_REMOVE_DEVICE         0x80000013
+#define DC_OP_REMOVE_DEVICE         0x80000013  // also Coord->Host
 #define DC_OP_MAKE_VISIBLE          0x80000014
 #define DC_OP_BIND_DEVICE           0x80000015
 #define DC_OP_GET_TOPO_PATH         0x80000016

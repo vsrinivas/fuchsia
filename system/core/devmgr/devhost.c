@@ -440,6 +440,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         dh_send_status(h, r);
         return ZX_OK;
 
+    case DC_OP_REMOVE_DEVICE:
+        if (hcount != 0) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        device_remove(ios->dev);
+        return ZX_OK;
+
     default:
         log(ERROR, "devhost[%s] invalid rpc op %08x\n", path, msg.op);
         r = ZX_ERR_NOT_SUPPORTED;
