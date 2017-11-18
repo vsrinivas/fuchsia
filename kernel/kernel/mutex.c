@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
+#include <lib/ktrace.h>
 #include <trace.h>
 #include <zircon/types.h>
 
@@ -155,6 +156,8 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
     if (!atomic_cmpxchg_u64(&m->val, &oldval, newval)) {
         panic("bad state in mutex release %p, current thread %p\n", m, ct);
     }
+
+    ktrace(TAG_KWAIT_WAKE, (uintptr_t)&m->wait >> 32, (uintptr_t)&m->wait, 1, 0);
 
     // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
     // cpu run queue was modified

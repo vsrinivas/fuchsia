@@ -24,6 +24,7 @@ KTRACE_DEF(0x032,16B,SYSCALL_ENTER,IRQ) // (n << 8) | cpu
 KTRACE_DEF(0x033,16B,SYSCALL_EXIT,IRQ) // (n << 8) | cpu
 
 KTRACE_DEF(0x034,32B,PAGE_FAULT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
+KTRACE_DEF(0x035,32B,PAGE_FAULT_EXIT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
 
 KTRACE_DEF(0x040,32B,CONTEXT_SWITCH,SCHEDULER) // to-tid, (state<<16|cpu), from-kt, to-kt
 
@@ -50,6 +51,10 @@ KTRACE_DEF(0x143,32B,PORT_QUEUE,IPC) // id, size
 
 KTRACE_DEF(0x150,32B,WAIT_ONE,IPC) // id, signals, timeoutlo, timeouthi
 KTRACE_DEF(0x151,32B,WAIT_ONE_DONE,IPC) // id, status, pending
+
+KTRACE_DEF(0x160,32B,KWAIT_BLOCK,SCHEDULER) // queue_hi, queue_hi
+KTRACE_DEF(0x161,32B,KWAIT_WAKE,SCHEDULER) // queue_hi, queue_hi, is_mutex
+KTRACE_DEF(0x162,32B,KWAIT_UNBLOCK,SCHEDULER) // queue_hi, queue_hi, blocked_status
 
 // events from 0x200-0x2ff are for arch-specific needs
 

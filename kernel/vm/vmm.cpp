@@ -69,6 +69,8 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
         DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8 * 256);
     }
 
+    ktrace(TAG_PAGE_FAULT_EXIT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
+
     return status;
 }
 

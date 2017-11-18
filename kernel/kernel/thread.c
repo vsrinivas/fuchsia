@@ -1338,7 +1338,11 @@ static zx_status_t wait_queue_block_worker(wait_queue_t* wait, zx_time_t deadlin
         timer_set_oneshot(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
     }
 
+    ktrace(TAG_KWAIT_BLOCK, (uintptr_t)wait >> 32, (uintptr_t)wait, 0, 0);
+
     sched_block();
+
+    ktrace(TAG_KWAIT_UNBLOCK, (uintptr_t)wait >> 32, (uintptr_t)wait, current_thread->blocked_status, 0);
 
     /* we don't really know if the timer fired or not, so it's better safe to try to cancel it */
     if (deadline != ZX_TIME_INFINITE) {
@@ -1424,6 +1428,8 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
         t->blocked_status = wait_queue_error;
         t->blocking_wait_queue = NULL;
 
+        ktrace(TAG_KWAIT_WAKE, (uintptr_t)wait >> 32, (uintptr_t)wait, 0, 0);
+
         /* wake up the new thread, putting it in a run queue on a cpu. reschedule if the local */
         /* cpu run queue was modified */
         bool local_resched = sched_unblock(t);
@@ -1496,6 +1502,8 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
 
     DEBUG_ASSERT(ret > 0);
     DEBUG_ASSERT(wait->count == 0);
+
+    ktrace(TAG_KWAIT_WAKE, (uintptr_t)wait >> 32, (uintptr_t)wait, 0, 0);
 
     /* wake up the new thread(s), putting it in a run queue on a cpu. reschedule if the local */
     /* cpu run queue was modified */
