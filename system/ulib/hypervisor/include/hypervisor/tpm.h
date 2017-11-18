@@ -10,7 +10,7 @@
 #include <zircon/types.h>
 
 // Stub TPM implementation.
-class TpmHandler : public IoHandler {
+class Tpm : public IoHandler {
 public:
     zx_status_t Init(Guest* guest) {
         return guest->CreateMapping(TrapType::MMIO_SYNC, TPM_PHYS_BASE, TPM_SIZE, 0, this);

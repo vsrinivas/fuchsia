@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
         return status;
     }
     // Setup TPM
-    TpmHandler tpm;
+    Tpm tpm;
     status = tpm.Init(&guest);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create TPM\n");
