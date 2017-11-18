@@ -3,7 +3,8 @@
         "cpp"
     ],
     "labels": [
-        "//garnet/bin/traceutil"
+        "//garnet/bin/traceutil",
+        "//garnet/bin/cpuperf_provider:report_generators"
     ],
     "packages": {
         "trace": "//garnet/bin/trace",

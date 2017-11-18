@@ -75,11 +75,19 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection) error {
 	return conn.RunCommand(strings.Join(cmd, " "))
 }
 
-func convertTrace(generator string, inputPath string, outputPath string) error {
+func convertTrace(generator string, inputPath string, outputPath string,
+		title string) error {
 	fmt.Printf("Converting %s to %s... ", inputPath, outputPath)
-	err := runCommand(generator, "--output", outputPath, inputPath)
+	var args []string
+	args = append(args, "--output=" + outputPath)
+	if title != "" {
+		args = append(args, "--title=" + title)
+	}
+	args = append(args, inputPath)
+	err := runCommand(generator, args)
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())
+		fmt.Printf("Invoked as: %s %s\n", generator, args);
 	} else {
 		fmt.Println("done.")
 	}

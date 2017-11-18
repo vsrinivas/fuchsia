@@ -82,6 +82,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		generatorPath = getExternalReportGenerator(cmd.reportType)
 		outputFileSuffix = cmd.reportType
 	}
+	fmt.Printf("generator path: %s\n", generatorPath);
 	if _, err := os.Stat(generatorPath); os.IsNotExist(err) {
 		fmt.Printf("No generator for report type \"%s\"\n",
 			cmd.reportType)
@@ -130,7 +131,9 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 
 	// TODO(TO-403): Remove remote file.  Add command line option to leave it.
 
-	err = convertTrace(generatorPath, jsonFilename, outputFilename)
+	title := cmd.getReportTitle()
+
+	err = convertTrace(generatorPath, jsonFilename, outputFilename, title)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
@@ -159,4 +162,22 @@ func (cmd *cmdRecord) getFilenamePrefix() string {
 	} else {
 		return cmd.filePrefix
 	}
+}
+
+func (cmd *cmdRecord) getReportTitle() string {
+	conf := cmd.captureConfig
+	have_categories := conf.Categories != "" && conf.Categories != ""
+	have_duration := conf.Duration != 0
+	text := ""
+	if have_categories {
+		text = text + ", categories " + conf.Categories
+	}
+	if have_duration {
+		text = text + ", duration " + conf.Duration.String()
+	}
+	text = text[2:]
+	if text == "" {
+		return ""
+	}
+	return fmt.Sprintf("Report for %s", text)
 }

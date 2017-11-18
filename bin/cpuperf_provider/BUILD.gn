@@ -48,3 +48,9 @@ package("cpuperf_provider") {
         dest = "sandbox"
       } ]
 }
+
+group("report_generators") {
+  deps = [
+    "//garnet/bin/cpuperf_provider/report-generators/tally",
+  ]
+}

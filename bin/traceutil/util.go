@@ -10,8 +10,9 @@ import (
 var fuchsiaRoot = getFuchsiaRoot()
 var buildRoot = getBuildRoot(fuchsiaRoot)
 
-func runCommand(command string, args ...string) error {
-	cmd := exec.Command(command, args...)
+func runCommand(command string, args []string) error {
+	cmd := exec.Command(command)
+	cmd.Args = append(cmd.Args, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s failed.  Output:\n%s", command, output)
