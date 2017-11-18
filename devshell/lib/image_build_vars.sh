@@ -5,22 +5,11 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/vars.sh
 fx-config-read
 
-images_dir="${FUCHSIA_BUILD_DIR}/gen/image_builds"
-mkdir -p "${images_dir}"
+zircon_bin="zircon.bin"
+ramdisk_bin="bootdata-blobstore-${ZIRCON_PROJECT}.bin"
 
-system_package_dir="${images_dir}/system.pkg"
-system_package_meta_far="${system_package_dir}/meta.far"
-
-boot_manifest="${FUCHSIA_BUILD_DIR}/boot.manifest"
-system_manifest="${FUCHSIA_BUILD_DIR}/system.manifest"
-
-cmdline="${FUCHSIA_BUILD_DIR}/cmdline"
-
-ramdisk_bin="${images_dir}/ramdisk.bin"
-zircon_bin="${images_dir}/zircon.bin"
-
-blobstore_block="${images_dir}/blobstore.blk"
-data_block="${images_dir}/data.blk"
+images_dir="images"
+cmdline_txt="${images_dir}/cmdline.txt"
 efi_block="${images_dir}/efi.blk"
 fvm_block="${images_dir}/fvm.blk"
-fvm_sparse_block="${images_dir}/fvm-sparse.blk"
+fvm_sparse_block="${images_dir}/fvm.sparse.blk"

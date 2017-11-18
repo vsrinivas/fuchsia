@@ -7,12 +7,9 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
-for f in "${fvm_sparse_block}" "${efi_block}" "${zircon_bin}" "${ramdisk_bin}" "${cmdline}"; do
-  if [[ ! -s "$f" ]]; then
-    echo >&2 "Required file \"$f\" is missing, run \"fx mkpaver\""
-    exit 1
-  fi
-done
+fx-command-run build "${efi_block}" "${fvm_sparse_block}" "${ramdisk_bin}"
 
-exec "${ZIRCON_TOOLS_DIR}/bootserver" --efi "${efi_block}" --fvm "${fvm_sparse_block}" \
-  "${zircon_bin}" "${ramdisk_bin}" -- $(<"${cmdline}")
+exec "${ZIRCON_TOOLS_DIR}/bootserver" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}" \
+  --fvm "${FUCHSIA_BUILD_DIR}/${fvm_sparse_block}" \
+    "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
+    "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" "$@"
