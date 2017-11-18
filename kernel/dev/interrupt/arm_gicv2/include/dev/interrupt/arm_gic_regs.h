@@ -13,11 +13,13 @@ extern uint64_t arm_gicv2_gic_base;
 extern uint64_t arm_gicv2_gicd_offset;
 extern uint64_t arm_gicv2_gicc_offset;
 extern uint64_t arm_gicv2_gich_offset;
+extern uint64_t arm_gicv2_gicv_offset;
 
 #define GICREG(gic, reg)    (*REG32(arm_gicv2_gic_base + (reg)))
 #define GICD_OFFSET         arm_gicv2_gicd_offset
 #define GICC_OFFSET         arm_gicv2_gicc_offset
 #define GICH_OFFSET         arm_gicv2_gich_offset
+#define GICV_OFFSET         arm_gicv2_gicv_offset
 
 // CPU interface registers.
 #define GICC_CTLR               (GICC_OFFSET + 0x0000)
@@ -69,6 +71,9 @@ extern uint64_t arm_gicv2_gich_offset;
 
 // Virtual interface control registers.
 #define GICH_ADDRESS            (GICH_OFFSET + arm_gicv2_gic_base)
+
+// Virtual CPU interface registers.
+#define GICV_ADDRESS            (GICV_OFFSET + arm_gicv2_gic_base)
 
 #define MAX_INT 1024
 #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))

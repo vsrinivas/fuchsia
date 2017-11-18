@@ -43,6 +43,7 @@ uint64_t arm_gicv2_gic_base = 0;
 uint64_t arm_gicv2_gicd_offset = 0;
 uint64_t arm_gicv2_gicc_offset = 0;
 uint64_t arm_gicv2_gich_offset = 0;
+uint64_t arm_gicv2_gicv_offset = 0;
 static uint32_t ipi_base = 0;
 
 uint max_irqs = 0;
@@ -384,6 +385,9 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
             break;
         case MDI_ARM_GIC_V2_GICH_OFFSET:
             mdi_node_uint64(&child, &arm_gicv2_gich_offset);
+            break;
+        case MDI_ARM_GIC_V2_GICV_OFFSET:
+            mdi_node_uint64(&child, &arm_gicv2_gicv_offset);
             break;
         case MDI_ARM_GIC_V2_IPI_BASE:
             got_ipi_base = mdi_node_uint32(&child, &ipi_base) == ZX_OK;
