@@ -20,7 +20,7 @@ def main():
                         required=True)
     parser.add_argument('--root-out-dir', help='Path to root of build output',
                         required=True)
-    parser.add_argument('--zircon-build-dir', help='The Zircon build dir to use',
+    parser.add_argument('--zircon-sysroot', help='The Zircon sysroot to use',
                         required=True)
     parser.add_argument('--depfile', help='The path to the depfile',
                         required=True)
@@ -87,7 +87,7 @@ def main():
     env['GOARCH'] = goarch
     env['GOOS'] = goos
     env['GOPATH'] = gopath
-    env['ZIRCON_BUILD_DIR'] = args.zircon_build_dir
+    env['ZIRCON_SYSROOT'] = args.zircon_sysroot
 
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from
