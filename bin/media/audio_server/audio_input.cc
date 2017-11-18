@@ -52,6 +52,10 @@ void AudioInput::OnDriverGetFormatsComplete() {
 
   // TODO(johngro) : select the best valid driver mode, do not hardcode this.
   driver_->Configure(48000, 2, AudioSampleFormat::SIGNED_16, kMaxFenceDistance);
+
+  int64_t dist = TimelineRate(48000, ZX_SEC(1)).Scale(kMinFenceDistance);
+  FXL_DCHECK(dist < std::numeric_limits<uint32_t>::max());
+  driver_->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 }
 
 void AudioInput::OnDriverConfigComplete() {

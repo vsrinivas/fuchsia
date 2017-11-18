@@ -37,11 +37,21 @@ class AudioDriver {
     Shutdown,
   };
 
+  struct RingBufferSnapshot {
+    fbl::RefPtr<DriverRingBuffer> ring_buffer;
+    TimelineFunction clock_mono_to_ring_pos_bytes;
+    uint32_t position_to_end_fence_frames;
+    uint32_t end_fence_to_start_fence_frames;
+    uint32_t gen_id;
+  };
+
   AudioDriver(AudioDevice* owner);
   virtual ~AudioDriver() {}
 
   zx_status_t Init(zx::channel stream_channel);
   void Cleanup();
+  void SnapshotRingBuffer(RingBufferSnapshot* snapshot) const;
+  AudioMediaTypeDetailsPtr GetSourceFormat() const;
 
   bool plugged() const {
     fbl::AutoLock lock(&plugged_lock_);
@@ -68,6 +78,11 @@ class AudioDriver {
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
   uint32_t fifo_depth_bytes() const { return fifo_depth_bytes_; }
   uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
+
+  void SetEndFenceToStartFenceFrames(uint32_t dist) {
+    fxl::MutexLocker lock(&ring_buffer_state_lock_);
+    end_fence_to_start_fence_frames_ = dist;
+  }
 
   zx_status_t GetSupportedFormats();
   zx_status_t Configure(uint32_t frames_per_second,
@@ -190,15 +205,24 @@ class AudioDriver {
   uint32_t fifo_depth_frames_;
   zx_time_t configuration_timeout_ = ZX_TIME_INFINITE;
 
+  // A stashed copy of the currently configured format which may be queried by
+  // destintions (either outputs or capturers) when determining what mixer to
+  // use.
+  mutable fxl::Mutex configured_format_lock_;
+  AudioMediaTypeDetailsPtr configured_format_
+      FXL_GUARDED_BY(configured_format_lock_);
+
   // Ring buffer state.  Note, the details of the ring buffer state are
   // protected by a lock and changes are tracked with a generation counter.
   // This is importatnt as it allows capturer clients to take a snapshot of the
   // ring buffer state during mixing/resampling operations.
-  fxl::Mutex ring_buffer_state_lock_;
+  mutable fxl::Mutex ring_buffer_state_lock_;
   fbl::RefPtr<DriverRingBuffer> ring_buffer_
       FXL_GUARDED_BY(ring_buffer_state_lock_);
   TimelineFunction clock_mono_to_ring_pos_bytes_
       FXL_GUARDED_BY(ring_buffer_state_lock_);
+  uint32_t end_fence_to_start_fence_frames_
+      FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
   GenerationId ring_buffer_state_gen_ FXL_GUARDED_BY(ring_buffer_state_lock_);
 
   // Plug detection state.

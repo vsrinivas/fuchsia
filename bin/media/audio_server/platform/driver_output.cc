@@ -28,7 +28,8 @@ static constexpr AudioSampleFormat kDefaultAudioFmt =
     AudioSampleFormat::SIGNED_16;
 static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(20);
 static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(30);
-static constexpr int64_t kDefaultBufferOverheadNsec = ZX_MSEC(1);
+static constexpr int64_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
+static constexpr int64_t kDefaultRetentionGapNsec = ZX_MSEC(10);
 static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
 
 static fbl::atomic<zx_txid_t> TXID_GEN(1);
@@ -263,7 +264,15 @@ void DriverOutput::OnDriverGetFormatsComplete() {
   desired_frames_per_sec = kDefaultFramesPerSec;
   desired_channel_count = kDefaultChannelCount;
   desired_sample_format = kDefaultAudioFmt;
-  min_rb_duration = kDefaultHighWaterNsec + kDefaultBufferOverheadNsec;
+  min_rb_duration = kDefaultHighWaterNsec + kDefaultMaxRetentionNsec +
+                    kDefaultRetentionGapNsec;
+
+  TimelineRate ns_to_frames(desired_frames_per_sec, ZX_SEC(1));
+  int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);
+  FXL_DCHECK(retention_frames != TimelineRate::kOverflow);
+  FXL_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
+  driver_->SetEndFenceToStartFenceFrames(
+      static_cast<uint32_t>(retention_frames));
 
   // Select our output formatter
   AudioMediaTypeDetailsPtr config(AudioMediaTypeDetails::New());

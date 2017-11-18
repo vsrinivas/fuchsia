@@ -55,6 +55,31 @@ class AudioDevice : public AudioObject {
   //             changed.
   bool plugged() const { return plugged_; }
   zx_time_t plug_time() const { return plug_time_; }
+  const std::unique_ptr<AudioDriver>& driver() const { return driver_; }
+
+  // NotifyDestFormatPreference
+  //
+  // Called by clients who are destinations of ours to inform us of their
+  // preferred format.
+  //
+  // TODO(johngro) : Remove this once device driver format selection is under
+  // control of the policy manager layer instead of here.
+  virtual void NotifyDestFormatPreference(const AudioMediaTypeDetailsPtr& fmt)
+      FXL_LOCKS_EXCLUDED(mix_domain_->token()) {}
+
+  // GetSourceFormatPreference
+  //
+  // Returns the format that this AudioDevice prefers to use when acting as a
+  // source of audio (either an input, or an output being looped back)
+  //
+  // TODO(johngro) : Remove this once we have policy in place.  Users should be
+  // talking to the policy manager to know what inputs and outputs exist, and
+  // what formats they support, and to influence what their capturers can be
+  // bound to or not.  "Preference" of an audio device is not a concept which
+  // belongs in the mixer.
+  virtual AudioMediaTypeDetailsPtr GetSourceFormatPreference() {
+    return nullptr;
+  }
 
  protected:
   friend class fbl::RefPtr<AudioDevice>;

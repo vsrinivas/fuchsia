@@ -99,6 +99,27 @@ void AudioDriver::Cleanup() {
   cmd_timeout_->Deactivate();
 }
 
+void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
+  FXL_DCHECK(snapshot);
+  fxl::MutexLocker lock(&ring_buffer_state_lock_);
+
+  snapshot->ring_buffer = ring_buffer_;
+  snapshot->clock_mono_to_ring_pos_bytes = clock_mono_to_ring_pos_bytes_;
+  snapshot->position_to_end_fence_frames =
+      owner_->is_input() ? fifo_depth_frames() : 0;
+  snapshot->end_fence_to_start_fence_frames = end_fence_to_start_fence_frames_;
+  snapshot->gen_id = ring_buffer_state_gen_.get();
+}
+
+AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
+  fxl::MutexLocker lock(&configured_format_lock_);
+
+  if (configured_format_.is_null())
+    return nullptr;
+
+  return configured_format_.Clone();
+}
+
 zx_status_t AudioDriver::GetSupportedFormats() {
   // TODO(johngro) : Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
@@ -205,6 +226,14 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second,
   req.frames_per_second = frames_per_sec_;
   req.channels = channel_count_;
   req.sample_format = sample_format_;
+
+  {
+    fxl::MutexLocker lock(&configured_format_lock_);
+    configured_format_ = AudioMediaTypeDetails::New();
+    configured_format_->sample_format = fmt;
+    configured_format_->channels = channels;
+    configured_format_->frames_per_second = frames_per_second;
+  }
 
   zx_status_t res = stream_channel_->Write(&req, sizeof(req));
   if (res != ZX_OK) {
