@@ -8,6 +8,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/pixelformat.h>
 
 #include <stdbool.h>
 #include <sys/types.h>
@@ -19,14 +20,14 @@ int display_enable(bool enable);
 void display_pre_freq_change(void);
 void display_post_freq_change(void);
 
-#define DISPLAY_FORMAT_NONE         (-1)
-#define DISPLAY_FORMAT_RGB_565      (1)
-#define DISPLAY_FORMAT_RGB_332      (2)
-#define DISPLAY_FORMAT_RGB_2220     (3)
-#define DISPLAY_FORMAT_ARGB_8888    (4)
-#define DISPLAY_FORMAT_RGB_x888     (5)
-#define DISPLAY_FORMAT_MONO_1       (6)
-#define DISPLAY_FORMAT_MONO_8       (7)
+#define DISPLAY_FORMAT_NONE         (0)
+#define DISPLAY_FORMAT_RGB_565      (ZX_PIXEL_FORMAT_RGB_565)
+#define DISPLAY_FORMAT_RGB_332      (ZX_PIXEL_FORMAT_RGB_332)
+#define DISPLAY_FORMAT_RGB_2220     (ZX_PIXEL_FORMAT_RGB_2220)
+#define DISPLAY_FORMAT_ARGB_8888    (ZX_PIXEL_FORMAT_ARGB_8888)
+#define DISPLAY_FORMAT_RGB_x888     (ZX_PIXEL_FORMAT_RGB_x888)
+#define DISPLAY_FORMAT_MONO_1       (ZX_PIXEL_FORMAT_MONO_1)
+#define DISPLAY_FORMAT_MONO_8       (ZX_PIXEL_FORMAT_MONO_8)
 
 #define DISPLAY_FLAG_HW_FRAMEBUFFER    (1<<0)
 #define DISPLAY_FLAG_NEEDS_CACHE_FLUSH (1<<1)

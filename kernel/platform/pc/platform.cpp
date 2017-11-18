@@ -27,6 +27,7 @@
 #include <platform/keyboard.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/boot/multiboot.h>
+#include <zircon/pixelformat.h>
 #include <zircon/types.h>
 #include <arch/mmu.h>
 #include <arch/mp.h>
@@ -82,13 +83,25 @@ const struct mmu_initial_mapping mmu_initial_mappings[] = {
     {}
 };
 
+// convert from legacy format
+static unsigned pixel_format_fixup(unsigned pf) {
+    switch (pf) {
+    case 1: return ZX_PIXEL_FORMAT_RGB_565;
+    case 2: return ZX_PIXEL_FORMAT_RGB_332;
+    case 3: return ZX_PIXEL_FORMAT_RGB_2220;
+    case 4: return ZX_PIXEL_FORMAT_ARGB_8888;
+    case 5: return ZX_PIXEL_FORMAT_RGB_x888;
+    default: return pf;
+    }
+}
+
 static bool early_console_disabled;
 
 static int process_bootitem(bootdata_t* bd, void* item) {
     switch (bd->type) {
     case BOOTDATA_ACPI_RSDP:
         if (bd->length >= sizeof(uint64_t)) {
-            bootloader.acpi_rsdp = *((uint64_t*)item);
+        bootloader.acpi_rsdp = *((uint64_t*)item);
         }
         break;
     case BOOTDATA_SMBIOS:
@@ -105,6 +118,7 @@ static int process_bootitem(bootdata_t* bd, void* item) {
         if (bd->length >= sizeof(bootdata_swfb_t)) {
             memcpy(&bootloader.fb, item, sizeof(bootdata_swfb_t));
         }
+        bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
         break;
     }
     case BOOTDATA_CMDLINE:
