@@ -607,7 +607,6 @@ zx_status_t Station::HandleNullDataFrame(const DataFrameHeader& hdr, const wlan_
 zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
                                      const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == 0);
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);

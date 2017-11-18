@@ -189,7 +189,31 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
         return ZX_OK;
     }
 
-    auto llc = packet->field<LlcHeader>(hdr->len());
+    auto llc_offset = hdr->len();
+    {  // TODO(porce): Factor out as a function.
+
+        // Ralink aligns the Mac frame header in 4 bytes,
+        // before passing it to the device driver.
+        // The rx frame's rx_descriptor has l2pad boolean flag
+        // to indicate if the frame was zero-padded.
+        // In case of data frame with subtype kQosData(8),
+        // two bytes of QoS Control field is appended
+        // after the Addr3, and BEFORE LLC header.
+        // This offset calculation should compensate that
+        // before the frame may be passed to next level.
+
+        // TODO(porce): Replace the conditional by rxinfo's upcoming field: l2pad
+        // Alignment size is 4 bytes. This is the case for Ralink implementation.
+        // Not necessarilly generally applicable to all chipsets.
+        constexpr size_t l2padding_align = 4;  // bytes
+        if ((llc_offset % l2padding_align) != 0) { llc_offset += llc_offset % l2padding_align; }
+
+        // Alternative implementation:
+        // constexpr size_t l2padding_bytes = 2;
+        // if (hdr->fc.subtype() == kQosdata) { llc_offset += l2padding_bytes; }
+    }
+
+    auto llc = packet->field<LlcHeader>(llc_offset);
     if (llc == nullptr) {
         errorf("short data packet len=%zu\n", packet->len());
         return ZX_ERR_IO;
@@ -198,7 +222,7 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
         errorf("short LLC packet len=%zu\n", packet->len());
         return ZX_ERR_IO;
     }
-    size_t llc_len = packet->len() - hdr->len();
+    size_t llc_len = packet->len() - llc_offset;
     auto frame = DataFrame<LlcHeader>(hdr, llc, llc_len);
     return mlme_->HandleFrame(frame, *rxinfo);
 }
