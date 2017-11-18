@@ -87,10 +87,10 @@ found in [examples/benchmark](../examples/benchmark/).
 
 This example can be run with the following command:
 ```{shell}
-trace record --spec-file=/system/data/benchmark_example/benchmark_example.json
+trace record --spec-file=/system/data/benchmark_example/benchmark_example.tspec
 ```
 
-[benchmark_example.json](../examples/benchmark/benchmark_example.json) can
+[benchmark_example.json](../examples/benchmark/benchmark_example.tspec) can
 be broken up into three sections.
 
 The first section defines the top level parameters listed above:
