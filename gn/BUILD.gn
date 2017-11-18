@@ -38,6 +38,10 @@ declare_args() {
   # to roll into the final bootable image.  These targets must use the
   # default `output_name` and `output_extension`.
   extra_bootdata = []
+
+  # File containing kernel command line arguments to roll into the
+  # bootdata image used for booting.
+  kernel_cmdline_file = ""
 }
 
 declare_args() {
@@ -248,6 +252,13 @@ action("finalize_manifests") {
   }
 }
 
+if (kernel_cmdline_file != "") {
+  bootdata_cmdline("kernel_cmdline") {
+    visibility = [ ":*" ]
+    inputs = [ kernel_cmdline_file ]
+  }
+}
+
 # Package up the /boot filesystem along with Zircon's additional bootdata.
 # This `boot_bootfs.bin` along with the Zircon kernel is enough to boot.
 bootdata("boot_bootfs") {
@@ -258,6 +269,11 @@ bootdata("boot_bootfs") {
     final_boot_manifest,
   ]
   boot = true
+
+  if (kernel_cmdline_file != "") {
+    deps += [ ":kernel_cmdline" ]
+    inputs += get_target_outputs(":kernel_cmdline")
+  }
 
   foreach(item, zircon_additional_bootdata) {
     inputs += [ "$zircon_out_dir/$item" ]
