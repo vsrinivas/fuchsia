@@ -85,7 +85,17 @@ def color(string, color_name):
   if color_name.upper() not in COLORS:
     return string
 
-  return COLORS[color_name.upper()] + string + RESET
+  ends_in_newline = string.endswith('\n')
+
+  if ends_in_newline:
+    string = string[:-1]
+
+  result = '{}{}{}'.format(COLORS[color_name.upper()], string, RESET)
+
+  if ends_in_newline:
+    result += '\n'
+
+  return result
 
 
 @static_vars(is_in_session=False)
