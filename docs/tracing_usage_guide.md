@@ -85,6 +85,11 @@ Performance benchmarks can be defined in the tracing specification file as
 measurements to be performed on the captured trace events.  A example can be
 found in [examples/benchmark](../examples/benchmark/).
 
+This example can be run with the following command:
+```{shell}
+trace record --spec-file=/system/data/benchmark_example/benchmark_example.json
+```
+
 [benchmark_example.json](../examples/benchmark/benchmark_example.json) can
 be broken up into three sections.
 

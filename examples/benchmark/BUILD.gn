@@ -26,4 +26,8 @@ package("benchmark") {
   binaries = [ {
         name = "benchmark_example"
       } ]
+  resources = [ {
+        path = rebase_path("benchmark_example.json")
+        dest = "benchmark_example/benchmark_example.json"
+      } ]
 }
