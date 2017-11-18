@@ -665,6 +665,7 @@ zx_status_t IntelHDAStream::ProcessStopLocked(const audio_proto::RingBufStopReq&
 
         // Make sure that we have been stopped and that all interrupts have been acked.
         EnsureStoppedLocked();
+        running_ = false;
         resp.result = ZX_OK;
     } else {
         resp.result = ZX_ERR_BAD_STATE;
