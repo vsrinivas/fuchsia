@@ -37,7 +37,7 @@ public:
 
     // Release the resources associated with this page table.  |base| and |size|
     // are only used for debug checks that the page tables have no more mappings.
-    template <template <int> class PageTable>
+    template <typename PageTable>
     zx_status_t Destroy(vaddr_t base, size_t size);
 
     paddr_t phys() const { return phys_; }
@@ -46,15 +46,15 @@ public:
     size_t pages() const { return pages_; }
     void* ctx() const { return ctx_; }
 
-    template <template <int> class PageTable>
+    template <typename PageTable>
     zx_status_t MapPages(vaddr_t vaddr, paddr_t paddr, const size_t count,
                          uint mmu_flags, size_t* mapped);
-    template <template <int> class PageTable>
+    template <typename PageTable>
     zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
-    template <template <int> class PageTable>
+    template <typename PageTable>
     zx_status_t ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags);
 
-    template <template <int> class PageTable, typename F>
+    template <typename PageTable, typename F>
     zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags,
                            F arch_to_mmu);
 private:
@@ -62,7 +62,7 @@ private:
 
     template <typename PageTable>
     zx_status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags,
-                           const MappingCursor& start_cursor,
+                           page_table_levels level, const MappingCursor& start_cursor,
                            MappingCursor* new_cursor) TA_REQ(lock_);
     template <typename PageTable>
     zx_status_t AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
@@ -71,7 +71,7 @@ private:
 
     template <typename PageTable>
     bool RemoveMapping(volatile pt_entry_t* table,
-                       const MappingCursor& start_cursor,
+                       page_table_levels level, const MappingCursor& start_cursor,
                        MappingCursor* new_cursor) TA_REQ(lock_);
     template <typename PageTable>
     bool RemoveMappingL0(volatile pt_entry_t* table,
@@ -80,7 +80,7 @@ private:
 
     template <typename PageTable>
     zx_status_t UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
-                              const MappingCursor& start_cursor,
+                              page_table_levels level, const MappingCursor& start_cursor,
                               MappingCursor* new_cursor) TA_REQ(lock_);
     template <typename PageTable>
     zx_status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
@@ -89,6 +89,7 @@ private:
 
     template <typename PageTable>
     zx_status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
+                           page_table_levels level,
                            page_table_levels* ret_level,
                            volatile pt_entry_t** mapping) TA_REQ(lock_);
 
@@ -98,14 +99,15 @@ private:
                              volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     template <typename PageTable>
-    void UpdateEntry(vaddr_t vaddr, volatile pt_entry_t* pte, paddr_t paddr,
-                     arch_flags_t flags) TA_REQ(lock_);
+    void UpdateEntry(page_table_levels level, vaddr_t vaddr, volatile pt_entry_t* pte,
+                     paddr_t paddr, arch_flags_t flags) TA_REQ(lock_);
 
     template <typename PageTable>
-    zx_status_t SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte) TA_REQ(lock_);
+    zx_status_t SplitLargePage(page_table_levels level, vaddr_t vaddr,
+                               volatile pt_entry_t* pte) TA_REQ(lock_);
 
     template <typename PageTable>
-    void UnmapEntry(vaddr_t vaddr, volatile pt_entry_t* pte);
+    void UnmapEntry(page_table_levels level, vaddr_t vaddr, volatile pt_entry_t* pte) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("X86P")> canary_;
 
