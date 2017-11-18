@@ -77,18 +77,34 @@ def gather_dependency_infos(root_gen_dir, deps, fail_if_missing=True):
 # Write some metadata about the target.
 def write_target_info(label, gen_dir, package_name, native_libs,
                       has_generated_code=True):
-    _, target_name = get_target(label)
     # Note: gen_dir already contains the "target.rust" directory.
-    info_path = os.path.join(gen_dir, "%s.info.toml" % target_name)
-    create_base_directory(info_path)
     info = {
         "name": package_name,
         "native_libs": native_libs,
         "base_path": gen_dir,
         "has_generated_code": has_generated_code,
     }
-    with open(info_path, "w") as info_file:
-        pytoml.dump(info, info_file)
+
+    _, target_name = get_target(label)
+    info_path = os.path.join(gen_dir, "%s.info.toml" % target_name)
+
+    # Remove any output from previous runs in case we fail.
+    if os.path.exists(info_path):
+        os.remove(info_path)
+
+    # Write to a temporary file and atomically move to the final location once
+    # complete. Without this, the build may try to read an empty or incomplete
+    # .info.toml file.
+    tmp_info_path = info_path + ".TMP"
+    create_base_directory(tmp_info_path)
+    try:
+        with open(tmp_info_path, "w") as info_file:
+            pytoml.dump(info, info_file)
+        os.rename(tmp_info_path, info_path)
+    except (OSError, IOError) as e:
+        if os.path.exists(tmp_info_path):
+            os.remove(tmp_info_path)
+        raise Exception("Could not create %s: %s" % (info_path, repr(e)))
 
 
 # Returns the list of native libs inherited from the given dependencies.
