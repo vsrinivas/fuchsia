@@ -2831,9 +2831,7 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
     uint8_t rate = 0;            // Mbps * 2
     uint8_t rate_tbl_idx = 255;  // Init with invalid idx.
 
-    if (phy_mode >= fbl::count_of(kDataRates)) {
-        return rate;
-    }
+    if (phy_mode >= fbl::count_of(kDataRates)) { return rate; }
 
     switch (phy_mode) {
     case PhyMode::kLegacyCck:
@@ -2885,9 +2883,7 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
         constexpr uint8_t subcarriers_data_20 = 52;   // counts
         rate = rate * subcarriers_data_40 / subcarriers_data_20;
     }
-    if (is_sgi) {
-        rate = static_cast<uint8_t>((static_cast<uint16_t>(rate) * 10) / 9);
-    }
+    if (is_sgi) { rate = static_cast<uint8_t>((static_cast<uint16_t>(rate) * 10) / 9); }
 
     return rate;
 }
@@ -2940,7 +2936,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
     info->chan_width = rxwi1.bw() ? WLAN_CHAN_WIDTH_40MHZ : WLAN_CHAN_WIDTH_20MHZ;
 
     uint8_t phy_mode = rxwi1.phy_mode();
-    bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtMixMode;
+    bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtGreenfield;
     if (is_ht && rxwi1.mcs() < kMaxHtMcs) {
         info->valid_fields |= WLAN_RX_INFO_VALID_MCS;
         info->mcs = rxwi1.mcs();
@@ -3167,7 +3163,7 @@ void WritePayload(uint8_t* dest, wlan_tx_packet_t* pkt) {
     if (pkt->packet_tail != nullptr) {
         uint8_t* tail_data = static_cast<uint8_t*>(pkt->packet_tail->data);
         std::memcpy(dest + pkt->packet_head->len, tail_data + pkt->tail_offset,
-                pkt->packet_tail->len - pkt->tail_offset);
+                    pkt->packet_tail->len - pkt->tail_offset);
     }
 }
 
@@ -3176,9 +3172,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
 
     size_t len = pkt->packet_head->len;
     if (pkt->packet_tail != nullptr) {
-        if (pkt->packet_tail->len < pkt->tail_offset) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+        if (pkt->packet_tail->len < pkt->tail_offset) { return ZX_ERR_INVALID_ARGS; }
         len += pkt->packet_tail->len - pkt->tail_offset;
     }
 
@@ -3249,8 +3243,8 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     }
     txwi0.set_mcs(mcs);
 
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH
-            && pkt->info.chan_width == WLAN_CHAN_WIDTH_40MHZ) {
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH &&
+        pkt->info.chan_width == WLAN_CHAN_WIDTH_40MHZ) {
         txwi0.set_bw(1);  // for 40 Mhz
     } else {
         txwi0.set_bw(0);  // for 20 Mhz
@@ -3268,13 +3262,20 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
         txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
     }
 
+    // TODO(porce): Incorporate this into pkt->info
+    // txwi0.set_phy_mode(PhyMode::kHtMixMode);
+
     // The frame header is always in the packet head.
-    auto wcid = LookupTxWcid(static_cast<const uint8_t*>(pkt->packet_head->data),
-            pkt->packet_head->len);
+    auto wcid =
+        LookupTxWcid(static_cast<const uint8_t*>(pkt->packet_head->data), pkt->packet_head->len);
     Txwi1& txwi1 = packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);
-    txwi1.set_ba_win_size(0);
+
+    // TODO(porce): Study if BlockAck window size can change without resetting the radio
+    // upon completing the BlockAck session negotiation at MLME layer.
+    // Separate the workflow for the BlockAck originator case from the responder case.
+    txwi1.set_ba_win_size(64);
     txwi1.set_wcid(wcid);
     txwi1.set_mpdu_total_byte_count(len);
     txwi1.set_tx_packet_id(10);

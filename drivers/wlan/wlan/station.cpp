@@ -252,6 +252,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     // request.
     auto assoc = packet->mut_field<AssociationRequest>(sizeof(MgmtFrameHeader));
     assoc->cap.set_ess(1);
+    assoc->cap.set_short_preamble(1);
     assoc->listen_interval = 0;
     ElementWriter w(assoc->elements,
                     packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
@@ -548,17 +549,24 @@ zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>&
     resp->action = action::BaAction::kAddBaResponse;
     resp->dialog_token = addbar->dialog_token;
 
-    // TODO(porce): Research this.
-    // Use kSuccess to refuse, instead of kRefused.
-    // Aruba APs are persistent in asking again after refusal.
-    // resp->status_code = status_code::kRefused;
+    // TODO(porce): Implement DelBa as a response to AddBar for decline
+
+    // Note: Returning AddBaResponse with status_code::kRefused seems ineffective.
+    // ArubaAP is persistent not honoring that.
     resp->status_code = status_code::kSuccess;
 
+    // TODO(porce): Query the radio chipset capability to build the response.
     resp->params.set_amsdu(0);
     resp->params.set_policy(BlockAckParameters::kImmediate);
     resp->params.set_tid(addbar->params.tid());
-    resp->params.set_buffer_size(addbar->params.buffer_size());
-    resp->params.set_buffer_size(0);
+
+    // TODO(porce): Once chipset capability is ready, refactor below buffer_size
+    // calculation.
+    auto buffer_size_ap = addbar->params.buffer_size();
+    constexpr size_t buffer_size_ralink = 64;
+    auto buffer_size = (buffer_size_ap <= buffer_size_ralink) ? buffer_size_ap : buffer_size_ralink;
+    resp->params.set_buffer_size(buffer_size);
+
     resp->timeout = addbar->timeout;
 
     zx_status_t status = device_->SendWlan(std::move(packet));
@@ -1235,7 +1243,7 @@ HtCapabilities Station::BuildHtCapabilities() const {
     HtCapabilities htc;
     HtCapabilityInfo& hci = htc.ht_cap_info;
 
-    hci.set_ldpc_coding_cap(1);
+    hci.set_ldpc_coding_cap(0);  // Ralink RT5370 is incapable of LDPC.
     hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY);
     // hci.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
     hci.set_sm_power_save(HtCapabilityInfo::DISABLED);
