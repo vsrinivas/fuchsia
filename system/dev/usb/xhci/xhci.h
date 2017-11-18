@@ -71,6 +71,7 @@ typedef struct xhci_slot {
     const xhci_slot_context_t* sc;
     // epcs point into DMA memory past sc
     xhci_endpoint_t eps[XHCI_NUM_EPS];
+    usb_request_t* current_ctrl_req;
     uint32_t hub_address;
     uint32_t port;
     uint32_t rh_port;

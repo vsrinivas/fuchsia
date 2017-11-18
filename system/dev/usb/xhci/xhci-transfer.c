@@ -328,8 +328,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    // if data length is zero, we queue event data after the status TRB
-    if (state->needs_data_event && header->length > 0) {
+    if (state->needs_data_event) {
         if (free_trbs == 0) {
             // will need to do this later
             return ZX_ERR_SHOULD_WAIT;
@@ -362,34 +361,14 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
                         interrupter_target);
         uint32_t control_bits = (direction == USB_DIR_IN && length > 0 ? XFER_TRB_DIR_OUT
                                                                        : XFER_TRB_DIR_IN);
-        if (length == 0) {
-            control_bits |= TRB_CHAIN;
-        }
+        // generate an event for the status phase so we can catch stalls or other errors
+        // before completing control transfer requests
+        control_bits |= XFER_TRB_IOC;
         trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
         if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
         free_trbs--;
         state->needs_status = false;
-    }
-
-     // if data length is zero, we queue event data after the status TRB
-    if (state->needs_data_event && header->length == 0) {
-        if (free_trbs == 0) {
-            // will need to do this later
-            return ZX_ERR_SHOULD_WAIT;
-        }
-
-        // Queue event data TRB
-        xhci_trb_t* trb = ring->current;
-        xhci_clear_trb(trb);
-        trb_set_ptr(trb, req);
-        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
-                        interrupter_target);
-        trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-        if (driver_get_log_flags() & DDK_LOG_SPEW) print_trb(xhci, ring, trb);
-        xhci_increment_ring(ring);
-        free_trbs--;
-        state->needs_data_event = false;
     }
 
     // if we get here, then we are ready to ring the doorbell
@@ -760,17 +739,47 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
     }
 
+    bool req_status_set = false;
+
     if (trb_get_ptr(trb) && !list_is_empty(&ep->pending_reqs)) {
         if (control & EVT_TRB_ED) {
             req = (usb_request_t *)trb_get_ptr(trb);
+            if (ep_index == 0) {
+                // For control requests we are expecting a second transfer event to signal the end
+                // of the status phase. So here we record the status and actual for the data phase
+                // but wait for the status phase to complete before completing the request.
+                slot->current_ctrl_req = req;
+                if (result < 0) {
+                    req->response.status = result;
+                    req->response.actual = 0;
+                } else {
+                    req->response.status = 0;
+                    req->response.actual = result;
+                }
+                mtx_unlock(&ep->lock);
+                return;
+            }
         } else {
             trb = xhci_read_trb_ptr(ring, trb);
-            for (uint i = 0; i < TRANSFER_RING_SIZE && trb; i++) {
-                if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
-                    req = (usb_request_t *)trb_get_ptr(trb);
-                    break;
+            if (trb_get_type(trb) == TRB_TRANSFER_STATUS && slot->current_ctrl_req) {
+                // complete current control request
+                req = slot->current_ctrl_req;
+                slot->current_ctrl_req = NULL;
+                if (result < 0) {
+                    // sometimes we receive stall errors in the status phase so update
+                    // request status if necessary
+                    req->response.status = result;
+                    req->response.actual = 0;
                 }
-                trb = xhci_get_next_trb(ring, trb);
+                req_status_set = true;
+            } else {
+                for (uint i = 0; i < TRANSFER_RING_SIZE && trb; i++) {
+                    if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
+                        req = (usb_request_t *)trb_get_ptr(trb);
+                        break;
+                    }
+                    trb = xhci_get_next_trb(ring, trb);
+                }
             }
         }
     }
@@ -812,12 +821,14 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // remove request from pending_reqs
     list_delete(&req->node);
 
-    if (result < 0) {
-        req->response.status = result;
-        req->response.actual = 0;
-    } else {
-        req->response.status = 0;
-        req->response.actual = result;
+    if (!req_status_set) {
+        if (result < 0) {
+            req->response.status = result;
+            req->response.actual = 0;
+        } else {
+            req->response.status = 0;
+            req->response.actual = result;
+        }
     }
 
     list_node_t completed_reqs = LIST_INITIAL_VALUE(completed_reqs);
