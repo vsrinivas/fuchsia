@@ -63,6 +63,17 @@ SECTIONS
         PROVIDE_HIDDEN(__build_id_note_end = .);
     } :rodata :note
 
+    /*
+     * The named sections starting with kcountdesc are sorted
+     * by name so that tools can provide binary search lookup
+     * for k_counter_desc::name[] variables.
+     */
+    .kcounter.desc : {
+        PROVIDE_HIDDEN(__kcountdesc_start = .);
+        KEEP(*(SORT_BY_NAME(kcountdesc.*)))
+        PROVIDE_HIDDEN(__kcountdesc_stop = .);
+    } :rodata
+
     .rodata : {
         *(.rodata* .gnu.linkonce.r.*)
     } :rodata
@@ -154,6 +165,26 @@ SECTIONS
         *(.bss*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
+    }
+
+    /*
+     * The macro KCOUNTER generates one entry per invocation
+     * in this section, which each k_counter_desc::counters
+     * points at. See the .kcounter.desc section above.
+     */
+    .kcounter.offsets : {
+        KEEP(*(.kcounter.offsets))
+    }
+
+    /*
+     * The per-cpu arena keeps the actual kernel counters
+     * which are 8 bytes long each, one per core. How many
+     * counters is computed from how many counters offset
+     * entries exist in the .kcounter.offsets section.
+     */
+    .kcounter.percpu.arena : ALIGN(8) {
+        PROVIDE_HIDDEN(kcounters_arena = .);
+        . += (SIZEOF(.kcounter.offsets) / 4) * (SMP_MAX_CPUS * 8);
     }
 
     /*

@@ -10,6 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
+	kernel/lib/counters \
 	kernel/lib/debug \
 	kernel/lib/dpc \
 	kernel/lib/explicit-memory \

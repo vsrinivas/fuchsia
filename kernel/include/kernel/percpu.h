@@ -35,6 +35,9 @@ struct percpu {
 
     /* per cpu idle thread */
     thread_t idle_thread;
+
+    /* kernel counters arena */
+    uint64_t* counters;
 } __CPU_ALIGN;
 
 /* the kernel per-cpu structure */

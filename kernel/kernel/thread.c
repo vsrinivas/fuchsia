@@ -21,6 +21,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+
 #include <kernel/atomic.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
@@ -28,9 +29,12 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+
+#include <lib/counters.h>
 #include <lib/dpc.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
+
 #include <list.h>
 #include <malloc.h>
 #include <object/c_user_thread.h>
@@ -40,6 +44,18 @@
 #include <target.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
+
+// kernel counters. TODO(cpu): remove LK-era counters
+// The counters below never decrease.
+//
+// counts the number of thread_t succesfully created.
+KCOUNTER(thread_create_count, "kernel.thread.create");
+// counts the number of thread_t joined. Never decreases.
+KCOUNTER(thread_join_count, "kernel.thread.join");
+// counts the number of calls to suspend() that succeeded.
+KCOUNTER(thread_suspend_count, "kernel.thread.suspend");
+// counts the number of calls to resume() that succeeded.
+KCOUNTER(thread_resume_count, "kernel.thread.resume");
 
 /* global thread list */
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
@@ -72,6 +88,7 @@ static void initial_thread_func(void) {
 
     thread_exit(ret);
 }
+
 
 /**
  * @brief  Create a new thread
@@ -195,6 +212,7 @@ thread_t* thread_create_etc(
     list_add_head(&thread_list, &t->thread_list_node);
     THREAD_UNLOCK(state);
 
+    kcounter_add(thread_create_count, 1u);
     return t;
 }
 
@@ -290,6 +308,7 @@ zx_status_t thread_resume(thread_t* t) {
 
     THREAD_UNLOCK(state);
 
+    kcounter_add(thread_resume_count, 1u);
     return ZX_OK;
 }
 
@@ -357,6 +376,7 @@ zx_status_t thread_suspend(thread_t* t) {
 
     THREAD_UNLOCK(state);
 
+    kcounter_add(thread_suspend_count, 1u);
     return ZX_OK;
 }
 
@@ -411,6 +431,8 @@ zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
     THREAD_UNLOCK(state);
 
     free_thread_resources(t);
+
+    kcounter_add(thread_join_count, 1u);
 
     return ZX_OK;
 }

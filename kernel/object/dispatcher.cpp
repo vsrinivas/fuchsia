@@ -8,11 +8,25 @@
 
 #include <arch/ops.h>
 #include <lib/ktrace.h>
+#include <lib/counters.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
 using fbl::AutoLock;
+
+// kernel counters. The following counters never decrease.
+// counts the number of times a dispatcher has been created and destroyed.
+KCOUNTER(dispatcher_create_count, "kernel.dispatcher.create");
+KCOUNTER(dispatcher_destroy_count, "kernel.dispatcher.destroy");
+// counts the number of times observers have been added to a kernel object.
+KCOUNTER(dispatcher_observe_count, "kernel.dispatcher.observer.add");
+// counts the number of times observers have been canceled.
+KCOUNTER(dispatcher_cancel_bh_count, "kernel.dispatcher.observer.cancel.byhandle");
+KCOUNTER(dispatcher_cancel_bk_count, "kernel.dispatcher.observer.cancel.bykey");
+// counts the number of cookies set or changed (reset).
+KCOUNTER(dispatcher_cookie_set_count, "kernel.dispatcher.cookie.set");
+KCOUNTER(dispatcher_cookie_reset_count, "kernel.dispatcher.cookie.reset");
 
 namespace {
 // The first 1K koids are reserved.
@@ -28,12 +42,15 @@ Dispatcher::Dispatcher(zx_signals_t signals)
     : koid_(GenerateKernelObjectId()),
       handle_count_(0u),
       signals_(signals) {
+
+    kcounter_add(dispatcher_create_count, 1u);
 }
 
 Dispatcher::~Dispatcher() {
 #if WITH_LIB_KTRACE
     ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
 #endif
+    kcounter_add(dispatcher_destroy_count, 1u);
 }
 
 zx_status_t Dispatcher::add_observer(StateObserver* observer) {
@@ -116,6 +133,8 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
         observer->OnRemoved();
     if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
+
+    kcounter_add(dispatcher_observe_count, 1u);
 }
 
 void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
@@ -142,6 +161,8 @@ bool Dispatcher::Cancel(Handle* handle) {
         return obs->OnCancel(handle);
     });
 
+    kcounter_add(dispatcher_cancel_bh_count, 1u);
+
     // We could request a reschedule if kWokeThreads is asserted,
     // but cancellation is not likely to benefit from aggressive
     // rescheduling.
@@ -154,6 +175,8 @@ bool Dispatcher::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     StateObserver::Flags flags = CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
         return obs->OnCancelByKey(handle, port, key);
     });
+
+    kcounter_add(dispatcher_cancel_bk_count, 1u);
 
     // We could request a reschedule if kWokeThreads is asserted,
     // but cancellation is not likely to benefit from aggressive
@@ -218,11 +241,15 @@ zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
     if (cookiejar->scope_ == ZX_KOID_INVALID) {
         cookiejar->scope_ = scope;
         cookiejar->cookie_ = cookie;
+
+        kcounter_add(dispatcher_cookie_set_count, 1u);
         return ZX_OK;
     }
 
     if (cookiejar->scope_ == scope) {
         cookiejar->cookie_ = cookie;
+
+        kcounter_add(dispatcher_cookie_reset_count, 1u);
         return ZX_OK;
     }
 

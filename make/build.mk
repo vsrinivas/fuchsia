@@ -21,7 +21,7 @@ $(OUTLKBIN): $(OUTLKELF)
 
 # Generate an input linker script to define as symbols all the
 # variables set in makefiles that the linker script needs to use.
-LINKER_SCRIPT_VARS := KERNEL_BASE
+LINKER_SCRIPT_VARS := KERNEL_BASE SMP_MAX_CPUS
 DEFSYM_SCRIPT := $(BUILDDIR)/kernel-vars.ld
 $(DEFSYM_SCRIPT): FORCE
 	$(call BUILDECHO,generating $@)
