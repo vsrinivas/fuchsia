@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+_mkbootfs = "//out/build-zircon/tools/mkbootfs"
+
 # Template for assembling a Zircon `bootdata.bin` file from inputs.
 # The inputs can be either other `BOOTDATA` format files, or manifest files
 # in the trivial `target=source\n` format.
@@ -65,7 +67,7 @@ template("bootdata") {
                              "testonly",
                            ])
 
-    script = "//out/build-zircon/tools/mkbootfs"
+    script = _mkbootfs
 
     outputs = [
       output_file,
@@ -83,5 +85,65 @@ template("bootdata") {
     input_args = rebase_path(sources, root_build_dir)
 
     args = output_args + target_args + input_args
+  }
+}
+
+# Template for writing a Zircon `bootdata.bin` file containing a kernel
+# command line.
+#
+# Parameters
+#
+#   output_name (optional, default: target_name)
+#   output_extension (optional, default: "bin")
+#       Same as for `bootdata`, which see.
+#
+#   inputs (required)
+#       [list of single file] This is a list to match GN conventions, but
+#       it should name a single text file as input.  Any kind of whitespace
+#       (including line breaks) separates the argument strings.
+#
+template("bootdata_cmdline") {
+  assert(defined(invoker.inputs), "inputs required for $target_name")
+
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".bin"
+  }
+
+  output_file = "$root_out_dir/$output_file"
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                             "testonly",
+                           ])
+
+    script = _mkbootfs
+
+    outputs = [
+      output_file,
+    ]
+
+    inputs = invoker.inputs
+    assert(inputs == [inputs[0]],
+           "$target_name inputs must contain exactly one file name")
+
+    args = [
+      "-o",
+      rebase_path(output_file, root_build_dir),
+      "-C",
+      rebase_path(inputs[0]),
+    ]
   }
 }
