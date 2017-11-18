@@ -19,9 +19,9 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/audio-driver-proto \
     system/ulib/ddk \
     system/ulib/intel-hda \
+    system/ulib/audio-driver-proto \
     system/ulib/audio-proto-utils \
     system/ulib/dispatcher-pool \
     system/ulib/fbl \
