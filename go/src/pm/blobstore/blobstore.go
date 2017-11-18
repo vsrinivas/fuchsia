@@ -12,6 +12,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
+	"syscall/zx"
+	"syscall/zx/fdio"
 
 	"fuchsia.googlesource.com/pm/merkle"
 )
@@ -20,8 +23,9 @@ import (
 // tackle more complex problems such as managing reference counting and garbage
 // collection of blobs.
 type Manager struct {
-	root   string
-	tmpDir string
+	root    string
+	tmpDir  string
+	channel *zx.Channel
 }
 
 // New constructs a new Manager for the blobstore mount at the given root.
@@ -32,7 +36,26 @@ func New(root, tmpDir string) (*Manager, error) {
 	if tmpDir == "" {
 		tmpDir = os.TempDir()
 	}
-	return &Manager{root: root, tmpDir: tmpDir}, nil
+
+	rootFDIO, err := syscall.OpenPath(root, 0, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer rootFDIO.Close()
+	rootIO, ok := rootFDIO.(*fdio.RemoteIO)
+	if !ok {
+		return nil, fmt.Errorf("pkgfs: blobstore: can't open blobstore root %q with remoteio protocol, got %#v", root, rootFDIO)
+	}
+	handles, err := rootIO.Clone()
+	if err != nil {
+		return nil, err
+	}
+	for _, h := range handles[1:] {
+		h.Close()
+	}
+	channel := &zx.Channel{handles[0]}
+
+	return &Manager{root: root, tmpDir: tmpDir, channel: channel}, nil
 }
 
 // Create makes a new io for writing to the blobstore. If the given root looks
@@ -58,6 +81,11 @@ func (m *Manager) Create(root string, size int64) (io.WriteCloser, error) {
 // Open opens a blobstore blob for reading
 func (m *Manager) Open(root string) (*os.File, error) {
 	return os.Open(m.bpath(root))
+}
+
+// Channel returns an the FDIO directory handle for the blobstore root
+func (m *Manager) Channel() *zx.Channel {
+	return m.channel
 }
 
 // HasBlob returns true if the requested blob is available, false otherwise

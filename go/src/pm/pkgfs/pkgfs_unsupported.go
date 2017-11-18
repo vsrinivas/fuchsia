@@ -100,9 +100,9 @@ func (d unsupportedDirectory) Dup() (fs.Directory, error) {
 	return nil, fs.ErrNotSupported
 }
 
-func (d unsupportedDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d unsupportedDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	log.Printf("pkgfs:unsupported(%s): dir open: %s", string(d), name)
-	return nil, nil, fs.ErrNotSupported
+	return nil, nil, nil, fs.ErrNotSupported
 }
 
 func (d unsupportedDirectory) Read() ([]fs.Dirent, error) {

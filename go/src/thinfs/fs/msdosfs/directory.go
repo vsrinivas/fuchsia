@@ -136,29 +136,29 @@ func (d *directory) Read() ([]fs.Dirent, error) {
 	return readDir(d.node)
 }
 
-func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	d.fs.RLock()
 	defer d.fs.RUnlock()
 	if d.fs.unmounted {
-		return nil, nil, fs.ErrUnmounted
+		return nil, nil, nil, fs.ErrUnmounted
 	}
 	d.RLock()
 	defer d.RUnlock()
 	if d.closed {
-		return nil, nil, fs.ErrNotOpen
+		return nil, nil, nil, fs.ErrNotOpen
 	}
 
 	if (flags.Write() || flags.Create()) && d.fs.info.Readonly {
-		return nil, nil, fs.ErrPermission
+		return nil, nil, nil, fs.ErrPermission
 	} else if flags.Create() && !d.flags.Write() {
-		return nil, nil, fs.ErrPermission // Creation requires the parent directory to be writable
+		return nil, nil, nil, fs.ErrPermission // Creation requires the parent directory to be writable
 	} else if !flags.Read() && !flags.Write() && !flags.Path() {
-		return nil, nil, fs.ErrPermission // Cannot open a file with no permissions
+		return nil, nil, nil, fs.ErrPermission // Cannot open a file with no permissions
 	}
 
 	n, err := open(d.node, name, flags)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if n.IsDirectory() {
@@ -166,14 +166,14 @@ func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 			fs:    d.fs,
 			node:  n.(node.DirectoryNode),
 			flags: flags | fs.OpenFlagWrite | fs.OpenFlagRead,
-		}, nil
+		}, nil, nil
 	}
 	return &file{
 		fs:       d.fs,
 		node:     n.(node.FileNode),
 		flags:    flags,
 		position: &filePosition{},
-	}, nil, nil
+	}, nil, nil, nil
 }
 
 func (d *directory) Rename(dstparent fs.Directory, src, dst string) error {

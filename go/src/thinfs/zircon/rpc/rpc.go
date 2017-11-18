@@ -226,6 +226,45 @@ func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
 	return res
 }
 
+func openFlagsToRIO(f fs.OpenFlags) (arg int32, mode uint32) {
+	if f.Read() && f.Write() {
+		arg |= syscall.O_RDWR
+	} else if f.Write() {
+		arg |= syscall.O_WRONLY
+	}
+	if f.Path() {
+		arg |= syscall.O_PATH
+	}
+
+	if f.Create() {
+		arg |= syscall.O_CREAT
+		if !f.Directory() {
+			mode |= syscall.S_IFREG
+		}
+	}
+	if f.Exclusive() {
+		arg |= syscall.O_EXCL
+	}
+
+	if f.Truncate() {
+		arg |= syscall.O_TRUNC
+	}
+	if f.Append() {
+		arg |= syscall.O_APPEND
+	}
+	if f.Directory() {
+		arg |= syscall.O_DIRECTORY
+		mode |= syscall.S_IFDIR
+	}
+	if f.Pipeline() {
+		arg |= syscall.O_PIPELINE
+	}
+	if f.File() {
+		mode |= syscall.S_IFREG
+	}
+	return
+}
+
 func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
@@ -387,10 +426,22 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagPipeline
 		}
 
-		f, d, err := dir.Open(path, flags)
+		f, d, r, err := dir.Open(path, flags)
 		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return fdio.IndirectError(msg.Handle[0], mxErr)
 		}
+
+		if r != nil {
+			copy(msg.Data[:], r.Path)
+			msg.Datalen = uint32(len(r.Path))
+			msg.Data[msg.Datalen] = 0
+			arg, mode := openFlagsToRIO(r.Flags)
+			msg.Arg = arg
+			msg.SetMode(mode)
+			msg.WriteMsg(r.Channel)
+			return fdio.ErrIndirect.Status
+		}
+
 		var obj interface{}
 		if f != nil {
 			obj = f

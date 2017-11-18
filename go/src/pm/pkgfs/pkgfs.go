@@ -151,21 +151,21 @@ type rootDirectory struct {
 	dirs map[string]fs.Directory
 }
 
-func (d *rootDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d *rootDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	if name == "" {
-		return nil, d, nil
+		return nil, d, nil, nil
 	}
 
 	parts := strings.SplitN(name, "/", 2)
 
 	subdir, ok := d.dirs[parts[0]]
 	if !ok {
-		return nil, nil, fs.ErrNotFound
+		return nil, nil, nil, fs.ErrNotFound
 	}
 
 	if len(parts) == 1 {
-		return nil, subdir, nil
+		return nil, subdir, nil, nil
 	}
 
 	return subdir.Open(parts[1], flags)
@@ -203,20 +203,20 @@ func (d *inDirectory) Stat() (int64, time.Time, time.Time, error) {
 	return 0, d.fs.mountTime, d.fs.mountTime, nil
 }
 
-func (d *inDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d *inDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	debugLog("pkgfs:in:open %q", name)
 	if name == "" {
-		return nil, d, nil
+		return nil, d, nil, nil
 	}
 
 	if !(flags.Create() && flags.File()) {
-		return nil, nil, fs.ErrNotFound
+		return nil, nil, nil, fs.ErrNotFound
 	}
 	// TODO(raggi): validate/reject other flags
 
 	// TODO(raggi): create separate incoming directories for blobs and packages
-	return &inFile{unsupportedFile: unsupportedFile("/pkgfs/incoming/" + name), fs: d.fs, oname: name, name: ""}, nil, nil
+	return &inFile{unsupportedFile: unsupportedFile("/pkgfs/incoming/" + name), fs: d.fs, oname: name, name: ""}, nil, nil, nil
 }
 
 func (d *inDirectory) Close() error {
@@ -498,11 +498,11 @@ type packagesRoot struct {
 
 func (pr *packagesRoot) Close() error { return nil }
 
-func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	debugLog("pkgfs:packagesroot:open %q", name)
 	if name == "" {
-		return nil, pr, nil
+		return nil, pr, nil, nil
 	}
 
 	parts := strings.Split(name, "/")
@@ -510,13 +510,13 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 	pld, err := newPackageListDir(parts[0], pr.fs)
 	if err != nil {
 		log.Printf("pkgfs:packagesroot:open error reading package list dir for %q: %s", name, err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if len(parts) > 1 {
 		debugLog("pkgfs:packagesroot:open forwarding %v to %q", parts[1:], name)
 		return pld.Open(filepath.Join(parts[1:]...), flags)
 	}
-	return nil, pld, nil
+	return nil, pld, nil, nil
 }
 
 func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
@@ -571,7 +571,7 @@ func (pld *packageListDir) Close() error {
 	return nil
 }
 
-func (pld *packageListDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (pld *packageListDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	debugLog("pkgfs:packageListDir:open %q %s", pld.packageName, name)
 
@@ -579,13 +579,13 @@ func (pld *packageListDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Di
 
 	d, err := newPackageDir(pld.packageName, parts[0], pld.fs)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if len(parts) > 1 {
 		return d.Open(filepath.Join(parts[1:]...), flags)
 	}
-	return nil, d, nil
+	return nil, d, nil, nil
 }
 
 func (pld *packageListDir) Read() ([]fs.Dirent, error) {
@@ -713,7 +713,7 @@ func (d *packageDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
 	return d, nil
 }
 
-func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	debugLog("pkgfs:packagedir:open %q", name)
 
@@ -722,21 +722,16 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if name == "" {
-		return nil, d, nil
+		return nil, d, nil, nil
 	}
 
 	if flags.Create() || flags.Truncate() || flags.Write() || flags.Append() {
 		debugLog("pkgfs:packagedir:open %q unsupported flags", name)
-		return nil, nil, fs.ErrNotSupported
+		return nil, nil, nil, fs.ErrNotSupported
 	}
 
 	if root, ok := d.contents[name]; ok {
-		f, err := d.fs.blobstore.Open(root)
-		if err != nil {
-			debugLog("pkgfs: package file open failure: %q for %q/%q/%q", root, d.name, d.version, name)
-			return nil, nil, goErrToFSErr(err)
-		}
-		return &packageFile{f, unsupportedFile("packagefile:" + name)}, nil, nil
+		return nil, nil, &fs.Remote{Channel: d.fs.blobstore.Channel(), Path: root, Flags: flags}, nil
 	}
 
 	dirname := name + "/"
@@ -745,12 +740,12 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 			// subdir is a copy of d, but with subdir set
 			subdir := *d
 			subdir.subdir = &dirname
-			return nil, &subdir, nil
+			return nil, &subdir, nil, nil
 		}
 	}
 
 	debugLog("pkgfs:packagedir:open %q not found", name)
-	return nil, nil, fs.ErrNotFound
+	return nil, nil, nil, fs.ErrNotFound
 }
 
 func (d *packageDir) Read() ([]fs.Dirent, error) {
@@ -785,95 +780,6 @@ func (d *packageDir) Stat() (int64, time.Time, time.Time, error) {
 	return 0, d.fs.mountTime, d.fs.mountTime, nil
 }
 
-// TODO(raggi): turn this into a proper remoteio to the blobstore file instead.
-type packageFile struct {
-	*os.File
-	unsupportedFile
-}
-
-func (pf *packageFile) Close() error {
-	return goErrToFSErr(pf.File.Close())
-}
-
-func (pf *packageFile) Dup() (fs.File, error) {
-	debugLog("pkgfs:packageFile:dup")
-	return pf, nil
-}
-
-func (pf *packageFile) Read(p []byte, off int64, whence int) (int, error) {
-	// TODO(raggi): map os IO errors to fs errors
-	switch whence {
-	case fs.WhenceFromCurrent:
-		if off != 0 {
-			if _, err := pf.File.Seek(off, io.SeekCurrent); err != nil {
-				return 0, goErrToFSErr(err)
-			}
-		}
-		n, err := pf.File.Read(p)
-		return n, goErrToFSErr(err)
-	case fs.WhenceFromStart:
-		return pf.File.ReadAt(p, off)
-	}
-	return 0, fs.ErrNotSupported
-}
-
-func (pf *packageFile) Reopen(flags fs.OpenFlags) (fs.File, error) {
-	debugLog("pkgfs:packageFile:reopen")
-	return pf, nil
-}
-
-func (pf *packageFile) Seek(offset int64, whence int) (int64, error) {
-	debugLog("pkgfs:packageFile:seek")
-	var w int // os whence
-	switch whence {
-	case fs.WhenceFromCurrent:
-		w = io.SeekCurrent
-	case fs.WhenceFromStart:
-		w = io.SeekStart
-	case fs.WhenceFromEnd:
-		w = io.SeekEnd
-	default:
-		return 0, fs.ErrInvalidArgs
-	}
-	n, err := pf.File.Seek(offset, w)
-	return n, goErrToFSErr(err)
-}
-
-func (pf *packageFile) Stat() (int64, time.Time, time.Time, error) {
-	debugLog("pkgfs:packageFile:stat")
-	info, err := pf.File.Stat()
-	if err != nil {
-		// TODO(raggi): map errors
-		return 0, time.Time{}, time.Time{}, err
-	}
-	return info.Size(), time.Time{}, info.ModTime(), nil
-}
-
-func (pf *packageFile) Sync() error {
-	debugLog("pkgfs:packageFile:sync")
-	return goErrToFSErr(pf.File.Sync())
-}
-
-func (pf *packageFile) Tell() (int64, error) {
-	debugLog("pkgfs:packageFile:tell")
-	return 0, fs.ErrNotSupported
-}
-
-func (pf *packageFile) Touch(lastAccess, lastModified time.Time) error {
-	debugLog("pkgfs:packageFile:touch")
-	return fs.ErrNotSupported
-}
-
-func (pf *packageFile) Truncate(size uint64) error {
-	debugLog("pkgfs:packageFile:truncate")
-	return fs.ErrNotSupported
-}
-
-func (pf *packageFile) Write(p []byte, off int64, whence int) (int, error) {
-	debugLog("pkgfs:packageFile:write")
-	return 0, fs.ErrNotSupported
-}
-
 type dirDirEnt string
 
 func (d dirDirEnt) GetType() fs.FileType {
@@ -904,10 +810,10 @@ func (d *needsRoot) Close() error {
 	return nil
 }
 
-func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	if name == "" {
-		return nil, d, nil
+		return nil, d, nil, nil
 	}
 
 	parts := strings.SplitN(name, "/", 2)
@@ -918,10 +824,10 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 		if len(parts) > 1 {
 			return nbd.Open(parts[1], flags)
 		}
-		return nil, nbd, nil
+		return nil, nbd, nil, nil
 	default:
 		if len(parts) != 1 {
-			return nil, nil, fs.ErrNotSupported
+			return nil, nil, nil, fs.ErrNotSupported
 		}
 
 		idxPath := d.fs.index.NeedsFile(parts[0])
@@ -934,12 +840,12 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 			f, err = os.Open(idxPath)
 		}
 		if err != nil {
-			return nil, nil, goErrToFSErr(err)
+			return nil, nil, nil, goErrToFSErr(err)
 		}
 		if err := f.Close(); err != nil {
-			return nil, nil, goErrToFSErr(err)
+			return nil, nil, nil, goErrToFSErr(err)
 		}
-		return &needsFile{unsupportedFile: unsupportedFile(filepath.Join("/needs", name)), fs: d.fs}, nil, nil
+		return &needsFile{unsupportedFile: unsupportedFile(filepath.Join("/needs", name)), fs: d.fs}, nil, nil, nil
 	}
 }
 
@@ -991,22 +897,22 @@ func (d *needsBlobsDir) Close() error {
 	return nil
 }
 
-func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, error) {
+func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	if name == "" {
-		return nil, d, nil
+		return nil, d, nil, nil
 	}
 
 	if strings.Contains(name, "/") {
-		return nil, nil, fs.ErrNotFound
+		return nil, nil, nil, fs.ErrNotFound
 	}
 
 	if _, err := os.Stat(d.fs.index.NeedsBlob(name)); err != nil {
-		return nil, nil, goErrToFSErr(err)
+		return nil, nil, nil, goErrToFSErr(err)
 	}
 
 	debugLog("pkgfs:needsblob:%q open", name)
-	return &inFile{unsupportedFile: unsupportedFile("/needs/blobs/" + name), fs: d.fs, oname: name, name: name}, nil, nil
+	return &inFile{unsupportedFile: unsupportedFile("/needs/blobs/" + name), fs: d.fs, oname: name, name: name}, nil, nil, nil
 }
 
 func (d *needsBlobsDir) Read() ([]fs.Dirent, error) {

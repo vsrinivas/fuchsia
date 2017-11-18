@@ -492,7 +492,7 @@ func msCopyIn(srcpath string, root fs.Directory, destdir string) {
 	if destdir != "" && destdir != "/" {
 		for _, part := range strings.Split(destdir, "/") {
 			var err error
-			_, d, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
+			_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
 			if err != nil {
 				log.Fatalf("open/create %s: %#v %s", part, err, err)
 			}
@@ -503,7 +503,7 @@ func msCopyIn(srcpath string, root fs.Directory, destdir string) {
 
 	name := filepath.Base(srcpath)
 
-	to, _, err := d.Open(name, fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)
+	to, _, _, err := d.Open(name, fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)
 	if err != nil {
 		log.Fatalf("creating %s in msdosfs: %s", name, err)
 	}

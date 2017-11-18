@@ -250,7 +250,7 @@ type Directory interface {
 
 	// Open opens the file pointed to by "name".
 	// d is considered the current directory for the "name".
-	Open(name string, flags OpenFlags) (File, Directory, error)
+	Open(name string, flags OpenFlags) (File, Directory, *Remote, error)
 
 	// Rename renames the resource pointed to by src to dst.
 	// Renaming a file or directory will not affect any active references to that file/directory.
