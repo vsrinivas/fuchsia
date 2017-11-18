@@ -1,0 +1,28 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+function usage {
+  cat <<END
+usage: fx add-driver TARGET
+Builds the specified target (e.g., fxl_unittests), copies it to the target, and
+adds it to devmgr. Useful for tight iterations on drivers.
+END
+}
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+target="$1"
+
+fx-command-run build "${target}"
+fx-command-run cp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
+fx-command-run shell "dm add-driver:/tmp/${target}"
