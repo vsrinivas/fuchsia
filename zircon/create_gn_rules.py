@@ -20,6 +20,7 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 ZIRCON_ROOT = os.path.join(FUCHSIA_ROOT, 'zircon')
 
 sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "mako")]
+from mako.lookup import TemplateLookup
 from mako.template import Template
 
 
@@ -77,6 +78,22 @@ def parse_package(lines):
     return result
 
 
+def extract_file(name, path, context):
+    """Extracts file path and base folder path from a map entry."""
+    # name: foo/bar.h
+    # path: <SOURCE|BUILD>/somewhere/under/zircon/foo/bar.h
+    (full_path, changes) = re.subn('^SOURCE', context.source_base, path)
+    if not changes:
+        (full_path, changes) = re.subn('^BUILD', context.build_base, path)
+    if not changes:
+        raise Exception('Unknown pattern type: %s' % path)
+    folder = None
+    if full_path.endswith(name):
+        folder = os.path.relpath(full_path[:-len(name)], FUCHSIA_ROOT)
+    file = os.path.relpath(full_path, FUCHSIA_ROOT)
+    return (file, folder)
+
+
 class SourceLibrary(object):
     """Represents a library built from sources.
 
@@ -90,52 +107,95 @@ class SourceLibrary(object):
         self.libs = set()
 
 
-
-def generate_source_library(package, out_dir):
-    """Generates the build glue for the given library."""
+def generate_source_library(package, context):
+    """Generates the build glue for a library whose sources are provided."""
     lib_name = package['package']['name']
     data = SourceLibrary(lib_name)
-    source_exp = re.compile('^SOURCE')
 
     # Includes.
-    for name, path in package['includes'].iteritems():
-        # name: foo/bar.h
-        # path: SOURCE/somewhere/under/zircon/foo/bar.h
-        (full_path, _) = re.subn(source_exp, ZIRCON_ROOT, path)
-        data.sources.append('//%s' % os.path.relpath(full_path, FUCHSIA_ROOT))
-        if full_path.endswith(name):
-            include = os.path.relpath(full_path[:-len(name)], FUCHSIA_ROOT)
-            data.include_dirs.add('//%s' % include)
-        else:
-            raise Exception(
-                    '(%s) %s not found within %s' % (lib_name, name, full_path))
+    for name, path in package.get('includes', {}).iteritems():
+        (file, folder) = extract_file(name, path, context)
+        data.sources.append('//%s' % file)
+        data.include_dirs.add('//%s' % folder)
 
     # Source files.
-    for name, path in package['src'].iteritems():
-        # name: foo.cpp
-        # path: SOURCE/somewhere/under/zircon/foo.cpp
-        (file, _) = re.subn(source_exp, ZIRCON_ROOT, path)
-        data.sources.append('//%s' % os.path.relpath(full_path, FUCHSIA_ROOT))
+    for name, path in package.get('src', {}).iteritems():
+        (file, _) = extract_file(name, path, context)
+        data.sources.append('//%s' % file)
 
     # Dependencies.
-    data.deps.extend(package['deps'])
-    try_remove(data.deps, 'c')
-    if try_remove(data.deps, 'zircon'):
-        data.libs.add('zircon')
+    data.deps += package.get('deps', [])
 
     # Generate the build file.
-    build_path = os.path.join(out_dir, 'lib', lib_name, 'BUILD.gn')
+    build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
     make_dir(build_path)
-    template_path = os.path.join(SCRIPT_DIR, 'source_library.mako')
-    contents = Template(filename=template_path).render(data=data)
+    template = context.templates.get_template('source_library.mako')
+    contents = template.render(data=data)
     with open(build_path, 'w') as build_file:
         build_file.write(contents)
+
+
+class CompiledLibrary(object):
+    """Represents a library already compiled by the Zircon build.
+
+       Convenience storage object to be consumed by Mako templates."""
+
+    def __init__(self, name):
+        self.name = name
+        self.include_dirs = set()
+        self.deps = []
+        self.prebuilt = ''
+
+
+def generate_compiled_library(package, context):
+    """Generates the build glue for a prebuilt library."""
+    lib_name = package['package']['name']
+    data = CompiledLibrary(lib_name)
+
+    # TODO(pylaligand): record and use the architecture.
+
+    # Includes.
+    for name, path in package.get('includes', {}).iteritems():
+        (file, folder) = extract_file(name, path, context)
+        data.include_dirs.add('//%s' % folder)
+
+    # Lib.
+    for name, path in package.get('lib', {}).iteritems():
+        (file, folder) = extract_file(name, path, context)
+        # TODO(pylaligand): also handle the debug version.
+        if file.endswith('.so.abi'):
+            data.prebuilt = '//%s' % file
+            break
+
+    # Dependencies.
+    data.deps += package.get('deps', [])
+
+    # Generate the build file.
+    build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
+    make_dir(build_path)
+    template = context.templates.get_template('compiled_library.mako')
+    contents = template.render(data=data)
+    with open(build_path, 'w') as build_file:
+        build_file.write(contents)
+
+
+class GenerationContext(object):
+    """Describes the context in which GN rules should be generated."""
+
+    def __init__(self, out_dir, source_base, build_base, templates):
+        self.out_dir = out_dir
+        self.source_base = source_base
+        self.build_base = build_base
+        self.templates = templates
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--out',
                         help='Path to the output directory',
+                        required=True)
+    parser.add_argument('--zircon-build',
+                        help='Path to the Zircon build directory',
                         required=True)
     parser.add_argument('--debug',
                         help='Whether to print out debug information',
@@ -161,14 +221,11 @@ def main():
 
     # Parse package definitions.
     packages = []
-    for root, dirs, files in os.walk(os.path.join(zircon_dir, 'export')):
-        for file in files:
-            (path, ext) = os.path.splitext(file)
-            if not ext == '.pkg':
-                continue
-            with open(os.path.join(root, file), 'r') as pkg_file:
-                packages.append(parse_package(pkg_file.readlines()))
-        break
+    with open(os.path.join(zircon_dir, 'export', 'manifest'), 'r') as manifest:
+        package_files = map(lambda line: line.strip(), manifest.readlines())
+    for file in package_files:
+        with open(os.path.join(zircon_dir, 'export', file), 'r') as pkg_file:
+            packages.append(parse_package(pkg_file.readlines()))
     if debug:
         print('Found %s packages:' % len(packages))
         names = sorted(map(lambda p: p['package']['name'], packages))
@@ -179,14 +236,26 @@ def main():
         shutil.rmtree(zircon_dir)
 
     # Generate some GN glue for each package.
+    context = GenerationContext(
+        out_dir,
+        ZIRCON_ROOT,
+        os.path.abspath(args.zircon_build),
+        TemplateLookup(directories=[SCRIPT_DIR]),
+    )
     for package in packages:
         name = package['package']['name']
         type = package['package']['type']
         arch = package['package']['arch']
-        if type != 'lib' and arch != 'src':
+        if type != 'lib':
             print('(%s) Unsupported package type: %s/%s, skipping'
                   % (name, type, arch))
-        generate_source_library(package, out_dir)
+            continue
+        if debug:
+            print('Processing %s' % name)
+        if arch == 'src':
+            generate_source_library(package, context)
+        else:
+            generate_compiled_library(package, context)
 
 
 if __name__ == "__main__":
