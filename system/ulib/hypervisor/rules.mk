@@ -16,11 +16,15 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/vcpu.cpp \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
+    system/ulib/async.loop \
+    system/ulib/block-client \
     system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp \
