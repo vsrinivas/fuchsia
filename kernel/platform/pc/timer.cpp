@@ -373,6 +373,61 @@ outer:
             apic_ticks_per_ms, apic_divisor);
 }
 
+static uint64_t calibrate_tsc_count(uint16_t duration_ms)
+{
+    uint64_t best_time = UINT64_MAX;
+
+    for (int tries = 0; tries < 3; ++tries) {
+        switch (calibration_clock) {
+        case CLOCK_HPET:
+            hpet_calibration_cycle_preamble();
+            break;
+        case CLOCK_PIT:
+            pit_calibration_cycle_preamble(duration_ms);
+            break;
+        default: PANIC_UNIMPLEMENTED;
+        }
+
+        // Use CPUID to serialize the instruction stream
+        uint32_t _ignored;
+        cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+        uint64_t start = rdtsc();
+        cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+
+        switch (calibration_clock) {
+            case CLOCK_HPET:
+                hpet_calibration_cycle(duration_ms);
+                break;
+            case CLOCK_PIT:
+                pit_calibration_cycle(duration_ms);
+                break;
+            default: PANIC_UNIMPLEMENTED;
+        }
+
+        cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+        uint64_t end = rdtsc();
+        cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+
+        uint64_t tsc_ticks = end - start;
+        if (tsc_ticks < best_time) {
+            best_time = tsc_ticks;
+        }
+        LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
+                tries, tsc_ticks);
+        switch (calibration_clock) {
+            case CLOCK_HPET:
+                hpet_calibration_cycle_cleanup();
+                break;
+            case CLOCK_PIT:
+                pit_calibration_cycle_cleanup();
+                break;
+            default: PANIC_UNIMPLEMENTED;
+        }
+    }
+
+    return best_time;
+}
+
 static void calibrate_tsc(void)
 {
     ASSERT(arch_ints_disabled());
@@ -385,57 +440,20 @@ static void calibrate_tsc(void)
         printf("Could not find TSC frequency: Calibrating TSC with %s\n",
                clock_name[calibration_clock]);
 
-        uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
-        const uint16_t duration_ms[2] = { 1, 2 };
-        for (int trial = 0; trial < 2; ++trial) {
-            for (int tries = 0; tries < 3; ++tries) {
-                switch (calibration_clock) {
-                    case CLOCK_HPET:
-                        hpet_calibration_cycle_preamble();
-                        break;
-                    case CLOCK_PIT:
-                        pit_calibration_cycle_preamble(duration_ms[trial]);
-                        break;
-                    default: PANIC_UNIMPLEMENTED;
-                }
+        uint32_t duration_ms[2] = { 2, 4 };
+        uint64_t best_time[2] = {
+            calibrate_tsc_count(static_cast<uint16_t>(duration_ms[0])),
+            calibrate_tsc_count(static_cast<uint16_t>(duration_ms[1]))
+        };
 
-                // Use CPUID to serialize the instruction stream
-                uint32_t _ignored;
-                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-                uint64_t start = rdtsc();
-                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-
-                switch (calibration_clock) {
-                    case CLOCK_HPET:
-                        hpet_calibration_cycle(duration_ms[trial]);
-                        break;
-                    case CLOCK_PIT:
-                        pit_calibration_cycle(duration_ms[trial]);
-                        break;
-                    default: PANIC_UNIMPLEMENTED;
-                }
-
-                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-                uint64_t end = rdtsc();
-                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-
-                uint64_t tsc_ticks = end - start;
-                if (tsc_ticks < best_time[trial]) {
-                    best_time[trial] = tsc_ticks;
-                }
-                LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
-                        tries, tsc_ticks);
-                switch (calibration_clock) {
-                    case CLOCK_HPET:
-                        hpet_calibration_cycle_cleanup();
-                        break;
-                    case CLOCK_PIT:
-                        pit_calibration_cycle_cleanup();
-                        break;
-                    default: PANIC_UNIMPLEMENTED;
-                }
-            }
+        while (best_time[0] >= best_time[1] && 2 * duration_ms[1] < MAX_TIMER_INTERVAL) {
+            duration_ms[0] = duration_ms[1];
+            duration_ms[1] *= 2;
+            best_time[0] = best_time[1];
+            best_time[1] = calibrate_tsc_count(static_cast<uint16_t>(duration_ms[1]));
         }
+
+        ASSERT(best_time[0] < best_time[1]);
 
         tsc_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
 
