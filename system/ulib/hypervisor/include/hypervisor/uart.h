@@ -16,7 +16,7 @@ public:
     zx_status_t Init(Guest* guest, uint64_t addr);
 
     // IoHandler interface.
-    zx_status_t Read(uint64_t addr, IoValue* io) override;
+    zx_status_t Read(uint64_t addr, IoValue* io) const override;
     zx_status_t Write(uint64_t addr, const IoValue& io) override;
 
 private:

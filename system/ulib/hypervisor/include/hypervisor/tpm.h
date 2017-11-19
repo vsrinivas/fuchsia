@@ -16,6 +16,6 @@ public:
         return guest->CreateMapping(TrapType::MMIO_SYNC, TPM_PHYS_BASE, TPM_SIZE, 0, this);
     }
 
-    zx_status_t Read(uint64_t addr, IoValue* value) override { return ZX_OK; }
+    zx_status_t Read(uint64_t addr, IoValue* value) const override { return ZX_OK; }
     zx_status_t Write(uint64_t addr, const IoValue& value) override { return ZX_OK; }
 };

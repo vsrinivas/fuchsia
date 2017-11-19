@@ -22,7 +22,7 @@ public:
     zx_status_t Interrupt(uint32_t vector);
 
     // IoHandler interface.
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
     // Sets the value of the id register.

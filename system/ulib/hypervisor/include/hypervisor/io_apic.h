@@ -27,7 +27,7 @@ public:
     zx_status_t Init(Guest* guest);
 
     // IoHandler interface.
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
     // Associate a local APIC with an IO APIC.
@@ -40,7 +40,7 @@ public:
     zx_status_t Interrupt(uint32_t global_irq) const;
 
 private:
-    zx_status_t ReadRegister(uint32_t select_register, IoValue* value);
+    zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
     zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
 
     mutable fbl::Mutex mutex_;

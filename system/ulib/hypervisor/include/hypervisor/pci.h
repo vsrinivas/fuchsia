@@ -82,7 +82,7 @@ struct PciBar : public IoHandler {
     uint8_t n;
 
     // IoHandler interface.
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
     uint32_t aspace() const;
@@ -104,7 +104,7 @@ public:
     };
 
     // Read from a region mapped by a BAR register.
-    virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr, IoValue* value) {
+    virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr, IoValue* value) const {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -114,7 +114,7 @@ public:
     }
 
     // Handle accesses to this devics config space.
-    zx_status_t ReadConfig(uint64_t reg, IoValue* value);
+    zx_status_t ReadConfig(uint64_t reg, IoValue* value) const;
     zx_status_t WriteConfig(uint64_t reg, const IoValue& value);
 
     // Send the configured interrupt for this device.
@@ -149,13 +149,13 @@ private:
     // Setup traps and handlers for accesses to BAR regions.
     zx_status_t SetupBarTraps(Guest* guest);
 
-    zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value);
+    zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value) const;
 
     zx_status_t ReadCapability(uint8_t addr, uint32_t* out) const;
 
     const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index, uint32_t* cap_base) const;
 
-    fbl::Mutex mutex_;
+    mutable fbl::Mutex mutex_;
 
     // Static attributes for this device.
     const Attributes attrs_;
@@ -174,7 +174,7 @@ private:
 class PciPortHandler : public IoHandler {
 public:
     PciPortHandler(PciBus* bus);
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
@@ -184,7 +184,7 @@ private:
 class PciEcamHandler : public IoHandler {
 public:
     PciEcamHandler(PciBus* bus);
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
@@ -215,11 +215,11 @@ public:
     // Access devices via the ECAM region.
     //
     // |addr| is the offset from the start of the ECAM region for this bus.
-    zx_status_t ReadEcam(uint64_t addr, IoValue* value);
+    zx_status_t ReadEcam(uint64_t addr, IoValue* value) const;
     zx_status_t WriteEcam(uint64_t addr, const IoValue& value);
 
     // Handle access to the PC IO ports (0xcf8 - 0xcff).
-    zx_status_t ReadIoPort(uint64_t port, IoValue* value);
+    zx_status_t ReadIoPort(uint64_t port, IoValue* value) const;
     zx_status_t WriteIoPort(uint64_t port, const IoValue& value);
 
     // Raise an interrupt for the given device.
@@ -238,7 +238,7 @@ public:
     PciDevice& root_complex() { return root_complex_; }
 
 private:
-    fbl::Mutex mutex_;
+    mutable fbl::Mutex mutex_;
 
     Guest* guest_;
     PciEcamHandler ecam_handler_;

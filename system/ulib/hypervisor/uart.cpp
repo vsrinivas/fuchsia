@@ -45,7 +45,7 @@ zx_status_t Uart::Init(Guest* guest, uint64_t addr) {
                                 kUartSyncSize, kUartSyncOffset, this);
 }
 
-zx_status_t Uart::Read(uint64_t addr, IoValue* io) {
+zx_status_t Uart::Read(uint64_t addr, IoValue* io) const {
     switch (addr) {
     case kUartInterruptEnablePort:
         io->access_size = 1;

@@ -64,7 +64,7 @@ zx_status_t PicHandler::Init(Guest* guest, uint16_t base) {
     return guest->CreateMapping(TrapType::PIO_SYNC, base, PIC_SIZE, 0, this);
 }
 
-zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) {
+zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) const {
     if (addr == kPicDataPort) {
         value->access_size = 1;
         value->u8 = kPicInvalid;
@@ -81,7 +81,7 @@ zx_status_t PitHandler::Init(Guest* guest) {
     return guest->CreateMapping(TrapType::PIO_SYNC, PIT_BASE, PIT_SIZE, 0, this);
 }
 
-zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) {
+zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) const {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -99,7 +99,7 @@ zx_status_t Pm1Handler::Init(Guest* guest) {
                                 this);
 }
 
-zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) {
+zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
     switch (addr) {
     case kPm1StatusPort:
         value->access_size = 2;
@@ -154,7 +154,7 @@ zx_status_t RtcHandler::Init(Guest* guest) {
     return guest->CreateMapping(TrapType::PIO_SYNC, RTC_BASE, RTC_SIZE, 0, this);
 }
 
-zx_status_t RtcHandler::Read(uint64_t addr, IoValue* value) {
+zx_status_t RtcHandler::Read(uint64_t addr, IoValue* value) const {
     switch (addr) {
     case kRtcDataPort: {
         value->access_size = 1;
@@ -192,7 +192,7 @@ zx_status_t RtcHandler::Write(uint64_t addr, const IoValue& value) {
     }
 }
 
-zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index, uint8_t* value) {
+zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index, uint8_t* value) const {
     time_t now = time(nullptr);
     struct tm tm;
     if (localtime_r(&now, &tm) == nullptr)
@@ -270,7 +270,7 @@ zx_status_t I8042Handler::Init(Guest* guest) {
                                 1, kI8042CommandPort, this);
 }
 
-zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) {
+zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) const {
     switch (port) {
     case kI8042DataPort: {
         value->access_size = 1;

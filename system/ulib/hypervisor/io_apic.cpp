@@ -122,7 +122,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
+zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
     switch (addr) {
     case IO_APIC_IOREGSEL: {
         fbl::AutoLock lock(&mutex_);
@@ -166,7 +166,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
     }
 }
 
-zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) {
+zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) const {
     switch (select_register) {
     case IO_APIC_REGISTER_ID: {
         fbl::AutoLock lock(&mutex_);
@@ -188,7 +188,7 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) {
     case FIRST_REDIRECT_OFFSET... LAST_REDIRECT_OFFSET: {
         fbl::AutoLock lock(&mutex_);
         uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
-        RedirectEntry& entry = redirect_[redirect_offset / 2];
+        const RedirectEntry& entry = redirect_[redirect_offset / 2];
         uint32_t redirect_register = redirect_offset % 2 == 0 ? entry.lower : entry.upper;
         value->u32 = redirect_register;
         return ZX_OK;

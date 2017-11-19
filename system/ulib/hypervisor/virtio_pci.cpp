@@ -91,7 +91,7 @@ static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
 /* Handle reads to the common configuration structure as defined in
  * Virtio 1.0 Section 4.1.4.3.
  */
-zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) {
+zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
     switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
         fbl::AutoLock lock(&device_->mutex_);
@@ -200,7 +200,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) {
+zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
     switch (addr) {
     case kVirtioPciCommonCfgBase... kVirtioPciCommonCfgTop:
         return CommonCfgRead(addr - kVirtioPciCommonCfgBase, value);
@@ -414,7 +414,7 @@ static constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
     return virtio_pci_class_code(virtio_id) | kVirtioPciRevisionId;
 }
 
-virtio_queue_t* VirtioPci::selected_queue() {
+virtio_queue_t* VirtioPci::selected_queue() const {
     fbl::AutoLock lock(&device_->mutex_);
     if (device_->queue_sel_ >= device_->num_queues_)
         return nullptr;
@@ -434,7 +434,7 @@ VirtioPci::VirtioPci(VirtioDevice* device)
     SetupCaps();
 }
 
-zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset, IoValue* value) {
+zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset, IoValue* value) const {
     switch (bar) {
     case kVirtioPciBar:
         return ConfigBarRead(offset, value);

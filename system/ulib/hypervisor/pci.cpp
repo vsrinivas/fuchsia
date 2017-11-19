@@ -70,7 +70,7 @@ uint32_t PciBar::base() const {
     }
 }
 
-zx_status_t PciBar::Read(uint64_t addr, IoValue* value) {
+zx_status_t PciBar::Read(uint64_t addr, IoValue* value) const {
     if (device == nullptr)
         return ZX_ERR_BAD_STATE;
     return device->ReadBar(n, addr, value);
@@ -96,7 +96,7 @@ PciDevice::PciDevice(const Attributes attrs)
 PciPortHandler::PciPortHandler(PciBus* bus)
     : bus_(bus) {}
 
-zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) {
+zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) const {
     return bus_->ReadIoPort(addr, value);
 }
 
@@ -107,7 +107,7 @@ zx_status_t PciPortHandler::Write(uint64_t addr, const IoValue& value) {
 PciEcamHandler::PciEcamHandler(PciBus* bus)
     : bus_(bus) {}
 
-zx_status_t PciEcamHandler::Read(uint64_t addr, IoValue* value) {
+zx_status_t PciEcamHandler::Read(uint64_t addr, IoValue* value) const {
     return bus_->ReadEcam(addr, value);
 }
 
@@ -220,7 +220,7 @@ static inline zx_status_t pci_read_unimplemented_device(IoValue* value) {
     return ZX_OK;
 }
 
-zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) {
+zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) const {
     const uint8_t device = PCI_ECAM_DEVICE(addr);
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = is_addr_valid(PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
@@ -242,7 +242,7 @@ zx_status_t PciBus::WriteEcam(uint64_t addr, const IoValue& value) {
     return device_[device]->WriteConfig(reg, value);
 }
 
-zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) {
+zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) const {
     switch (port) {
     case kPciConfigAddressPortBase... kPciConfigAddressPortTop: {
         uint64_t bit_offset = (port - kPciConfigAddressPortBase) * 8;
@@ -386,7 +386,7 @@ zx_status_t PciDevice::ReadCapability(uint8_t addr, uint32_t* out) const {
 }
 
 /* Read a 4 byte aligned value from PCI config space. */
-zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
+zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     switch (reg) {
     //  ---------------------------------
     // |   (31..16)     |    (15..0)     |
@@ -474,7 +474,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
     }
 }
 
-zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) {
+zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) const {
     // Perform 4-byte aligned read and then shift + mask the result to get the
     // expected value.
     uint32_t word = 0;

@@ -90,7 +90,7 @@ zx_status_t LocalApic::Interrupt(uint32_t vector) {
     return vcpu_->Interrupt(vector);
 }
 
-zx_status_t LocalApic::Read(uint64_t addr, IoValue* value) {
+zx_status_t LocalApic::Read(uint64_t addr, IoValue* value) const {
     if (addr % sizeof(Register))
         return ZX_ERR_IO_DATA_INTEGRITY;
 

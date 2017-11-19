@@ -28,7 +28,7 @@ public:
     virtual ~IoHandler() = default;
 
     // Read |value.access_size| bytes from |addr| into |value|.
-    virtual zx_status_t Read(uint64_t addr, IoValue* value) = 0;
+    virtual zx_status_t Read(uint64_t addr, IoValue* value) const = 0;
 
     // Write |value.access_size| bytes to |addr| from |value|.
     virtual zx_status_t Write(uint64_t addr, const IoValue& value) = 0;
@@ -64,7 +64,7 @@ public:
         return size_;
     }
 
-    zx_status_t Read(uint64_t addr, IoValue* value) {
+    zx_status_t Read(uint64_t addr, IoValue* value) const {
         canary_.Assert();
         return handler_->Read(addr - base_ + offset_, value);
     }

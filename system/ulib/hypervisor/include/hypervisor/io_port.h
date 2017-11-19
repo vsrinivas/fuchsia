@@ -14,7 +14,7 @@ class PicHandler : public IoHandler {
 public:
     zx_status_t Init(Guest* guest, uint16_t base);
 
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 };
 
@@ -22,7 +22,7 @@ class PitHandler : public IoHandler {
 public:
     zx_status_t Init(Guest* guest);
 
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 };
 
@@ -30,11 +30,11 @@ class Pm1Handler : public IoHandler {
 public:
     zx_status_t Init(Guest* guest);
 
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
-    fbl::Mutex mutex_;
+    mutable fbl::Mutex mutex_;
     uint16_t enable_ TA_GUARDED(mutex_) = 0;
 };
 
@@ -42,13 +42,13 @@ class RtcHandler : public IoHandler {
 public:
     zx_status_t Init(Guest* guest);
 
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
-    zx_status_t ReadRtcRegister(uint8_t rtc_index, uint8_t* value);
+    zx_status_t ReadRtcRegister(uint8_t rtc_index, uint8_t* value) const;
     zx_status_t WriteRtcRegister(uint8_t rtc_index, uint8_t value);
-    fbl::Mutex mutex_;
+    mutable fbl::Mutex mutex_;
     uint8_t index_ TA_GUARDED(mutex_) = 0;
 };
 
@@ -56,11 +56,11 @@ class I8042Handler : public IoHandler {
 public:
     zx_status_t Init(Guest* guest);
 
-    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
-    fbl::Mutex mutex_;
+    mutable fbl::Mutex mutex_;
     uint8_t command_ TA_GUARDED(mutex_) = 0;
 };
 
