@@ -95,6 +95,7 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
                     printf("Error packing frames (res %d)\n", res);
                     break;
                 }
+                zx_cache_flush(buf + wr, done, ZX_CACHE_FLUSH_DATA);
                 wr += done;
 
                 if (source.finished()) {
