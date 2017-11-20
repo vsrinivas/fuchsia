@@ -14,17 +14,22 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/linux.cpp \
     $(LOCAL_DIR)/zircon.cpp \
 
+MODULE_HEADER_DEPS := \
+    system/ulib/hid \
+    system/ulib/virtio \
+
 MODULE_LIBS := \
     system/ulib/c \
+    system/ulib/fdio \
     system/ulib/hypervisor \
     system/ulib/zircon \
-    system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
-    system/ulib/hid \
-    system/ulib/virtio \
     system/ulib/zx \
     system/ulib/zxcpp \
+
+MODULE_CPPFLAGS += \
+    -Isystem/ulib/hypervisor/arch/$(ARCH)/include \
 
 include make/module.mk

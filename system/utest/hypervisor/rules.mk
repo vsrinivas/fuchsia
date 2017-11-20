@@ -6,44 +6,46 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
+MODULE_NAME := hypervisor-test
+
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/$(ARCH).S \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/input.cpp \
+    $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/virtio_queue.cpp \
     $(LOCAL_DIR)/virtio_queue_fake.cpp \
 
-ifeq ($(ARCH),arm64)
-MODULE_SRCS += \
-    $(LOCAL_DIR)/arm64.S
-else ifeq ($(SUBARCH),x86-64)
-MODULE_SRCS += \
-    $(LOCAL_DIR)/decode.cpp \
-    $(LOCAL_DIR)/page_table.cpp \
-    $(LOCAL_DIR)/pci.cpp \
-    $(LOCAL_DIR)/x86-64.S
-
-MODULE_STATIC_LIBS := \
-    system/ulib/pretty
-endif
-
-MODULE_NAME := hypervisor-test
+MODULE_HEADER_DEPS := \
+    system/ulib/ddk \
+    system/ulib/hid \
+    system/ulib/virtio \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/hid \
     system/ulib/hypervisor \
     system/ulib/unittest \
     system/ulib/zircon \
 
-MODULE_STATIC_LIBS += \
-    system/ulib/ddk \
+MODULE_STATIC_LIBS := \
     system/ulib/fbl \
-    system/ulib/virtio \
     system/ulib/zx \
+
+MODULE_CPPFLAGS := \
+    -Isystem/ulib/hypervisor/arch/$(ARCH)/include \
+
+ifeq ($(ARCH),x86)
+MODULE_SRCS += \
+    $(LOCAL_DIR)/decode.cpp \
+    $(LOCAL_DIR)/page_table.cpp \
+
+MODULE_STATIC_LIBS += \
+    system/ulib/pretty
+endif
 
 include make/module.mk

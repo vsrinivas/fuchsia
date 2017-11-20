@@ -58,9 +58,9 @@ done
 readonly ZIRCON BOOTDATA ZIRCON_DISK BZIMAGE INITRD ROOTFS HOST_BOOTFS
 
 echo "
-data/dsdt.aml=$ZIRCON_DIR/system/ulib/hypervisor/acpi/dsdt.aml
-data/madt.aml=$ZIRCON_DIR/system/ulib/hypervisor/acpi/madt.aml
-data/mcfg.aml=$ZIRCON_DIR/system/ulib/hypervisor/acpi/mcfg.aml
+data/dsdt.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/dsdt.aml
+data/madt.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/madt.aml
+data/mcfg.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/mcfg.aml
 data/zircon.bin=$ZIRCON
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
 

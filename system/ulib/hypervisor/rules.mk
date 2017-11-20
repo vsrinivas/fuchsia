@@ -10,18 +10,12 @@ MODULE_SO_NAME := hypervisor
 
 MODULE_TYPE := userlib
 
-MODULE_CPPFLAGS += \
-    -Ithird_party/lib/acpica/source/include
-
-MODULE_SRCS += \
-    $(LOCAL_DIR)/acpi.cpp \
+MODULE_SRCS := \
     $(LOCAL_DIR)/balloon.cpp \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/input.cpp \
-    $(LOCAL_DIR)/io_apic.cpp \
-    $(LOCAL_DIR)/local_apic.cpp \
     $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/phys_mem.cpp \
     $(LOCAL_DIR)/uart.cpp \
@@ -29,27 +23,25 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/virtio.cpp \
     $(LOCAL_DIR)/virtio_pci.cpp \
 
-ifeq ($(SUBARCH),x86-64)
-MODULE_SRCS += \
-    $(LOCAL_DIR)/decode.cpp \
-    $(LOCAL_DIR)/io_port.cpp
-endif
+MODULE_HEADER_DEPS := \
+    system/ulib/ddk \
+    system/ulib/virtio \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/hid \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
     system/ulib/block-client \
-    system/ulib/ddk \
     system/ulib/fbl \
-    system/ulib/fdio \
-    system/ulib/hid \
     system/ulib/sync \
-    system/ulib/virtio \
     system/ulib/zx \
     system/ulib/zxcpp \
-    third_party/ulib/acpica \
 
+MODULE_CPPFLAGS += \
+    -Isystem/ulib/hypervisor/arch/$(ARCH)/include \
+
+include system/ulib/hypervisor/arch/$(ARCH)/rules.mk
 include make/module.mk

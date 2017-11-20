@@ -12,18 +12,14 @@
 #include <unistd.h>
 
 #include <fbl/unique_ptr.h>
-#include <hypervisor/acpi.h>
 #include <hypervisor/address.h>
 #include <hypervisor/balloon.h>
 #include <hypervisor/block.h>
 #include <hypervisor/gpu.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/input.h>
-#include <hypervisor/io_apic.h>
-#include <hypervisor/io_port.h>
-#include <hypervisor/local_apic.h>
+#include <hypervisor/interrupt_controller.h>
 #include <hypervisor/pci.h>
-#include <hypervisor/tpm.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <virtio/balloon.h>
@@ -35,6 +31,11 @@
 #include "zircon.h"
 
 #if __x86_64__
+#include <hypervisor/acpi.h>
+#include <hypervisor/io_port.h>
+#include <hypervisor/local_apic.h>
+#include <hypervisor/tpm.h>
+
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = { UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE };
 #endif
@@ -264,8 +265,17 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to create VCPU\n");
         return status;
     }
+    InterruptController* interrupt_controller;
 
-#if __x86_64__
+#if __aarch64__
+    GicDistributor gic_distributor;
+    status = gic_distributor.Init(&guest);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create GIC distributor\n");
+        return status;
+    }
+    interrupt_controller = &gic_distributor;
+#elif __x86_64__
     // Setup UARTs.
     Uart uart[kNumUarts];
     for (size_t i = 0; i < kNumUarts; i++) {
@@ -275,7 +285,7 @@ int main(int argc, char** argv) {
             return status;
         }
     }
-#endif
+
     // Setup IO APIC.
     IoApic io_apic;
     status = io_apic.Init(&guest);
@@ -283,7 +293,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to create IO APIC\n");
         return status;
     }
-#if __x86_64__
+    interrupt_controller = &io_apic;
     // Setup local APIC.
     LocalApic local_apic(&vcpu, apic_addr);
     status = local_apic.Init(&guest);
@@ -311,8 +321,9 @@ int main(int argc, char** argv) {
         return status;
     }
 #endif
+
     // Setup PCI.
-    PciBus bus(&guest, &io_apic);
+    PciBus bus(&guest, interrupt_controller);
     status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus\n");

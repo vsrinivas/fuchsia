@@ -8,12 +8,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hypervisor/decode.h>
 #include <hypervisor/io.h>
 #include <hypervisor/guest.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
+
+#ifdef __x86_64__
+#include <hypervisor/decode.h>
+#endif
 
 // Interrupt vectors.
 // TODO(abdulla): Pick the right vector for ARM.

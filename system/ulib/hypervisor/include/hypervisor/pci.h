@@ -6,6 +6,7 @@
 
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/interrupt_controller.h>
 #include <hypervisor/io.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -45,7 +46,7 @@
 
 // clang-format on
 
-class IoApic;
+class Guest;
 class PciBus;
 class PciDevice;
 
@@ -199,7 +200,7 @@ public:
     // Base address in MMIO space to map device BAR registers.
     static const uint32_t kMmioBarBase = 0xf0000000;
 
-    PciBus(Guest* guest, const IoApic* io_apic);
+    PciBus(Guest* guest, const InterruptController* interrupt_controller);
 
     zx_status_t Init();
 
@@ -250,7 +251,7 @@ private:
     // Devices on the virtual PCI bus.
     PciDevice* device_[PCI_MAX_DEVICES] = {};
     // IO APIC for use with interrupt redirects.
-    const IoApic* io_apic_ = nullptr;
+    const InterruptController* interrupt_controller_ = nullptr;
     // Embedded root complex device.
     PciDevice root_complex_;
     // Next pio window to be allocated to connected devices.

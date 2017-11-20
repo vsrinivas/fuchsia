@@ -10,7 +10,7 @@
 #include <hw/pci.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
-#include <hypervisor/io_apic.h>
+#include <hypervisor/interrupt_controller.h>
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0 0x10
@@ -115,9 +115,9 @@ zx_status_t PciEcamHandler::Write(uint64_t addr, const IoValue& value) {
     return bus_->WriteEcam(addr, value);
 }
 
-PciBus::PciBus(Guest* guest, const IoApic* io_apic)
-    : guest_(guest), ecam_handler_(this), port_handler_(this), io_apic_(io_apic),
-      root_complex_(kRootComplexAttributes) {}
+PciBus::PciBus(Guest* guest, const InterruptController* interrupt_controller)
+    : guest_(guest), ecam_handler_(this), port_handler_(this),
+    interrupt_controller_(interrupt_controller), root_complex_(kRootComplexAttributes) {}
 
 zx_status_t PciBus::Init() {
     root_complex_.bar_[0].size = 0x10;
@@ -315,7 +315,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
 }
 
 zx_status_t PciBus::Interrupt(const PciDevice& device) const {
-    return io_apic_->Interrupt(device.global_irq_);
+    return interrupt_controller_->Interrupt(device.global_irq_);
 }
 
 // PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.
