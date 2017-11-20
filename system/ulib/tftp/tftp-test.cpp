@@ -11,13 +11,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 // For inspecting session state
 #include "internal.h"
 
-constexpr char kFilename[] = "filename";
+constexpr char kLocalFilename[] = "local-filename";
+constexpr char kRemoteFilename[] = "remote-filename";
 
 struct test_state {
     // Return value used by ulib/unittest
@@ -107,7 +109,14 @@ static bool test_tftp_session_options(void) {
 bool verify_write_request(const test_state& ts) {
     auto msg = reinterpret_cast<tftp_msg*>(ts.out);
     EXPECT_EQ(msg->opcode, htons(OPCODE_WRQ), "opcode should be 2 (WRQ)");
-    EXPECT_STR_EQ("filename", msg->data, ts.outlen, "bad filename");
+    EXPECT_STR_EQ(kRemoteFilename, msg->data, ts.outlen, "bad filename");
+    return true;
+}
+
+bool verify_read_request(const test_state& ts) {
+    auto msg = reinterpret_cast<tftp_msg*>(ts.out);
+    EXPECT_EQ(msg->opcode, htons(OPCODE_RRQ), "opcode should be 1 (RRQ)");
+    EXPECT_STR_EQ(kRemoteFilename, msg->data, ts.outlen, "bad filename");
     return true;
 }
 
@@ -123,167 +132,161 @@ static bool find_str_in_mem(const char* str, size_t str_len, const char* mem, si
     return false;
 }
 
-static bool test_tftp_generate_wrq_default(void) {
+static bool test_tftp_generate_request(tftp_file_direction dir,
+                                       size_t file_size,
+                                       const uint16_t* block_size,
+                                       const uint8_t* timeout,
+                                       const uint16_t* window_size,
+                                       const uint16_t* block_size_override,
+                                       const uint8_t* timeout_override,
+                                       const uint16_t* window_size_override) {
     BEGIN_TEST;
 
+    tftp_status status;
     test_state ts;
-    ts.reset(1024, 1024, 1500);
-
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-    EXPECT_TRUE(verify_write_request(ts), "bad write request");
+    ts.reset(1024, file_size, 1500);
 
     // Test TFTP state, but not internal session state
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session options: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session options: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session options: window size");
+    status = tftp_set_options(ts.session, block_size, timeout, window_size);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "error setting session options");
+    if (block_size) {
+        EXPECT_EQ(*block_size, ts.session->options.block_size, "bad session options: block size");
+    }
+    if (timeout) {
+        EXPECT_EQ(*timeout, ts.session->options.timeout, "bad session options: timeout");
+    }
+    if (window_size) {
+        EXPECT_EQ(*window_size, ts.session->options.window_size,
+                  "bad session options: window size");
+    }
 
-    EXPECT_EQ(SENT_WRQ, ts.session->state, "bad session: state");
-    EXPECT_EQ(ts.msg_size, ts.session->file_size, "bad session: file size");
+    size_t request_file_size = (dir == SEND_FILE) ? file_size : 0;
+    status = tftp_generate_request(ts.session, dir, kLocalFilename, kRemoteFilename,
+                                   MODE_OCTET, request_file_size, block_size_override,
+                                   timeout_override, window_size_override, ts.out, &ts.outlen,
+                                   &ts.timeout);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating request");
+    if (dir == SEND_FILE) {
+        EXPECT_TRUE(verify_write_request(ts), "bad write request");
+    } else {
+        EXPECT_TRUE(verify_read_request(ts), "bad read request");
+    }
+
+    EXPECT_EQ(REQ_SENT, ts.session->state, "bad session: state");
+    if (dir == SEND_FILE) {
+        EXPECT_EQ(file_size, ts.session->file_size, "bad session: file size");
+    }
     EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
     EXPECT_EQ(0, ts.session->offset, "bad session: offset");
     EXPECT_EQ(0, ts.session->block_number, "bad session: block number");
-    EXPECT_EQ(DEFAULT_TIMEOUT * 1000, ts.timeout, "timeout not set correctly");
 
-    // Verify that no options were specified in the request
+    // Verify the options that were set in the request
     const char* msg = static_cast<const char*>(ts.out);
-    const char block_sz_str[] = "BLKSIZE";
-    EXPECT_FALSE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                 "block size shouldn't appear in request");
-    const char timeout_str[] = "TIMEOUT";
-    EXPECT_FALSE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                 "timeout shouldn't appear in request");
-    const char win_sz_str[] = "WINDOWSIZE";
-    EXPECT_FALSE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                 "window size shouldn't appear in request");
+    char str[256];
+    size_t str_sz;
+
+    if (block_size_override) {
+        str_sz = snprintf(str, sizeof(str), "BLKSIZE!%c%d", '\0', *block_size_override) + 1;
+        EXPECT_TRUE(find_str_in_mem(str, str_sz, msg, ts.outlen), "block size not overridden");
+    } else if (block_size) {
+        str_sz = snprintf(str, sizeof(str), "BLKSIZE%c%d", '\0', *block_size) + 1;
+        EXPECT_TRUE(find_str_in_mem(str, str_sz, msg, ts.outlen),
+                    "block size not properly requested");
+    } else {
+        str_sz = snprintf(str, sizeof(str), "BLKSIZE") + 1;
+        EXPECT_FALSE(find_str_in_mem(str, str_sz, msg, ts.outlen),
+                     "block size shouldn't appear in request");
+    }
+
+    if (timeout_override) {
+        str_sz = snprintf(str, sizeof(str), "TIMEOUT!%c%d", '\0', *timeout_override) + 1;
+        EXPECT_TRUE(find_str_in_mem(str, str_sz, msg, ts.outlen), "timeout not overridden");
+    } else if (timeout) {
+        str_sz = snprintf(str, sizeof(str), "TIMEOUT%c%d", '\0', *timeout) + 1;
+        EXPECT_TRUE(find_str_in_mem(str, str_sz, msg, ts.outlen),
+                    "timeout not properly requested");
+    } else {
+        str_sz = snprintf(str, sizeof(str), "TIMEOUT") + 1;
+        EXPECT_FALSE(find_str_in_mem(str, str_sz, msg, ts.outlen),
+                     "timeout shouldn't appear in request");
+    }
+
+    if (window_size_override) {
+        str_sz = snprintf(str, sizeof(str), "WINDOWSIZE!%c%d", '\0', *window_size_override) + 1;
+        EXPECT_TRUE(find_str_in_mem(str, str_sz, msg, ts.outlen), "window size not overridden");
+    } else if (window_size) {
+        str_sz = snprintf(str, sizeof(str), "WINDOWSIZE%c%d", '\0', *window_size) + 1;
+        EXPECT_TRUE(find_str_in_mem(str, str_sz, msg, ts.outlen),
+                    "window size not properly requested");
+    } else {
+        str_sz = snprintf(str, sizeof(str), "WINDOWSIZE") + 1;
+        EXPECT_FALSE(find_str_in_mem(str, str_sz, msg, ts.outlen),
+                     "window size shouldn't appear in request");
+    }
 
     END_TEST;
 }
 
-static bool test_tftp_generate_wrq_settings(void) {
-    BEGIN_TEST;
+static bool test_tftp_generate_wrq_default(void) {
+    return test_tftp_generate_request(SEND_FILE, 1024, nullptr, nullptr, nullptr,
+                                                       nullptr, nullptr, nullptr);
+}
 
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-
-    tftp_status status;
-
+static bool test_tftp_generate_wrq_options(void) {
     constexpr uint16_t kBlockSize = 555;
     constexpr uint8_t kTimeout = 3;
     constexpr uint16_t kWindowSize = 44;
-    uint16_t new_block_size = kBlockSize;
-    uint8_t new_timeout = kTimeout;
-    uint16_t new_window_size = kWindowSize;
-
-    status = tftp_set_options(ts.session, &new_block_size, &new_timeout, &new_window_size);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "error setting session options");
-    EXPECT_EQ(kBlockSize, ts.session->options.block_size, "bad session options: block size");
-    EXPECT_EQ(kTimeout, ts.session->options.timeout, "bad session options: timeout");
-    EXPECT_EQ(kWindowSize, ts.session->options.window_size, "bad session options: window size");
-
-    status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-    EXPECT_TRUE(verify_write_request(ts), "bad write request");
-    const char* msg = static_cast<const char*>(ts.out);
-    const char block_sz_str[] = { 'B', 'L', 'K', 'S', 'I', 'Z', 'E', '\0', '5', '5', '5', '\0' };
-    EXPECT_TRUE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                "block size not properly requested");
-    const char timeout_str[] = { 'T', 'I', 'M', 'E', 'O', 'U', 'T', '\0', '3', '\0' };
-    EXPECT_TRUE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                "timeout not properly requested");
-    const char win_sz_str[] = { 'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '\0', '4', '4', '\0' };
-    EXPECT_TRUE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                "window size not properly requested");
-
-    END_TEST;
+    return test_tftp_generate_request(SEND_FILE, 1024, &kBlockSize, &kTimeout, &kWindowSize,
+                                                       nullptr, nullptr, nullptr);
 }
 
-static bool test_tftp_generate_wrq_blocksize(void) {
+static bool test_tftp_generate_wrq_override_blocksize(void) {
     constexpr uint16_t kBlockSize = 1000;
-
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, &kBlockSize, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-    EXPECT_TRUE(verify_write_request(ts), "bad write request");
-    EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
-    // Options we are requesting
-    EXPECT_EQ(BLOCKSIZE_OPTION, ts.session->client_sent_opts.mask, "bad session option mask");
-    EXPECT_EQ(kBlockSize, ts.session->client_sent_opts.block_size, "bad session options: block size");
-    // Default options
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session options: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session options: window size");
-
-    const char* msg = static_cast<const char*>(ts.out);
-    const char block_sz_str[] = { 'B', 'L', 'K', 'S', 'I', 'Z', 'E', '!', '\0', '1', '0', '0', '0', '\0' };
-    EXPECT_TRUE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                "block size not properly requested");
-
-    END_TEST;
+    return test_tftp_generate_request(SEND_FILE, 1024, nullptr, nullptr, nullptr,
+                                                       &kBlockSize, nullptr, nullptr);
 }
 
-static bool test_tftp_generate_wrq_timeout(void) {
+static bool test_tftp_generate_wrq_override_timeout(void) {
     uint8_t kTimeout = 60;
-
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, &kTimeout, NULL, ts.out, &ts.outlen, &ts.timeout);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-    EXPECT_TRUE(verify_write_request(ts), "bad write request");
-    EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
-    // Options we are requesting
-    EXPECT_EQ(TIMEOUT_OPTION, ts.session->client_sent_opts.mask, "bad session option mask");
-    EXPECT_EQ(kTimeout, ts.session->client_sent_opts.timeout, "bad session options: timeout");
-    // Default options
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session options: block size");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session options: window size");
-    // We still have to negotiate the timeout, so we use the default here.
-    EXPECT_EQ(DEFAULT_TIMEOUT * 1000, ts.timeout, "timeout not set correctly");
-
-    const char* msg = static_cast<const char*>(ts.out);
-    const char timeout_str[] = { 'T', 'I', 'M', 'E', 'O', 'U', 'T', '!', '\0', '6', '0', '\0' };
-    EXPECT_TRUE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                "timeout not properly requested");
-
-    END_TEST;
+    return test_tftp_generate_request(SEND_FILE, 1024, nullptr, nullptr, nullptr,
+                                                 nullptr, &kTimeout, nullptr);
 }
 
-static bool test_tftp_generate_wrq_windowsize(void) {
+static bool test_tftp_generate_wrq_override_windowsize(void) {
     uint16_t kWindowSize = 32;
+    return test_tftp_generate_request(SEND_FILE, 1024, nullptr, nullptr, nullptr,
+                                                 nullptr, nullptr, &kWindowSize);
+}
 
-    BEGIN_TEST;
+static bool test_tftp_generate_rrq_default(void) {
+    return test_tftp_generate_request(RECV_FILE, 1024, nullptr, nullptr, nullptr,
+                                                       nullptr, nullptr, nullptr);
+}
 
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
+static bool test_tftp_generate_rrq_options(void) {
+    constexpr uint16_t kBlockSize = 555;
+    constexpr uint8_t kTimeout = 3;
+    constexpr uint16_t kWindowSize = 44;
+    return test_tftp_generate_request(RECV_FILE, 1024, &kBlockSize, &kTimeout, &kWindowSize,
+                                                       nullptr, nullptr, nullptr);
+}
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, &kWindowSize, ts.out, &ts.outlen, &ts.timeout);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-    EXPECT_TRUE(verify_write_request(ts), "bad write request");
-    EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
-    // Options we are requesting
-    EXPECT_EQ(WINDOWSIZE_OPTION, ts.session->client_sent_opts.mask, "bad session option mask");
-    EXPECT_EQ(kWindowSize, ts.session->client_sent_opts.window_size, "bad session options: window size");
-    // Default options
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session options: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session options: timeout");
+static bool test_tftp_generate_rrq_override_blocksize(void) {
+    constexpr uint16_t kBlockSize = 1000;
+    return test_tftp_generate_request(RECV_FILE, 1024, nullptr, nullptr, nullptr,
+                                                       &kBlockSize, nullptr, nullptr);
+}
 
-    const char* msg = static_cast<const char*>(ts.out);
-    const char win_sz_str[] = { 'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '!', '\0', '3', '2', '\0' };
-    EXPECT_TRUE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                "window size not properly requested");
+static bool test_tftp_generate_rrq_override_timeout(void) {
+    uint8_t kTimeout = 60;
+    return test_tftp_generate_request(RECV_FILE, 1024, nullptr, nullptr, nullptr,
+                                                 nullptr, &kTimeout, nullptr);
+}
 
-    END_TEST;
+static bool test_tftp_generate_rrq_override_windowsize(void) {
+    uint16_t kWindowSize = 32;
+    return test_tftp_generate_request(RECV_FILE, 1024, nullptr, nullptr, nullptr,
+                                                 nullptr, nullptr, &kWindowSize);
 }
 
 bool verify_response_opcode(const test_state& ts, uint16_t opcode) {
@@ -294,54 +297,85 @@ bool verify_response_opcode(const test_state& ts, uint16_t opcode) {
     return true;
 }
 
-static bool test_tftp_receive_wrq_unexpected(void) {
+static bool test_tftp_receive_request_unexpected(tftp_file_direction dir) {
     BEGIN_TEST;
 
     test_state ts;
     ts.reset(1024, 1024, 1500);
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-            ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
-    ASSERT_EQ(TFTP_NO_ERROR, status, "could not generate write request");
-    ASSERT_TRUE(verify_write_request(ts), "bad write request");
+    size_t req_file_size = (dir == SEND_FILE) ? ts.msg_size : 0;
+    auto status = tftp_generate_request(ts.session, dir, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, req_file_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "could not generate request");
+    if (dir == SEND_FILE) {
+        ASSERT_TRUE(verify_write_request(ts), "bad write request");
+    } else {
+        ASSERT_TRUE(verify_read_request(ts), "bad read request");
+    }
 
     ASSERT_LE(ts.outlen, 1500, "outlen too large");
     uint8_t buf[1500];
     memcpy(buf, ts.out, ts.outlen);
 
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    // We are unprepared to service a request after we have sent one out
+    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout,
+                              nullptr);
     EXPECT_EQ(TFTP_ERR_BAD_STATE, status, "receive should fail");
     EXPECT_TRUE(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
 
     END_TEST;
 }
 
-static bool test_tftp_receive_wrq_too_large(void) {
+static bool test_tftp_receive_wrq_unexpected(void) {
+    return test_tftp_receive_request_unexpected(SEND_FILE);
+}
+
+static bool test_tftp_receive_rrq_unexpected(void) {
+    return test_tftp_receive_request_unexpected(RECV_FILE);
+}
+
+static bool test_tftp_receive_request_too_large(tftp_file_direction dir) {
     BEGIN_TEST;
 
     test_state ts;
     ts.reset(1024, 1024, 1500);
 
-    uint8_t buf[1024] = { 0, 2, };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    uint8_t buf[1024] = { 0 };
+    buf[1] = (dir == SEND_FILE) ? OPCODE_WRQ : OPCODE_RRQ;
+
+    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout,
+                                   nullptr);
     EXPECT_LT(status, 0, "receive should fail");
     EXPECT_TRUE(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
 
     END_TEST;
 }
 
-static bool test_tftp_receive_wrq_no_tsize(void) {
+static bool test_tftp_receive_wrq_too_large(void) {
+    return test_tftp_receive_request_too_large(SEND_FILE);
+}
+
+static bool test_tftp_receive_rrq_too_large(void) {
+    return test_tftp_receive_request_too_large(RECV_FILE);
+}
+
+static bool test_tftp_receive_request_no_tsize(tftp_file_direction dir) {
     BEGIN_TEST;
 
     test_state ts;
     ts.reset(1024, 1024, 1500);
 
-    uint8_t buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-    };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = (dir == SEND_FILE) ? OPCODE_WRQ : OPCODE_RRQ;
+    size_t buf_sz = 2 + snprintf(&buf[2], sizeof(buf) - 2,
+                                 "%s%cOCTET",
+                                 kRemoteFilename, '\0')
+                      + 1;
+
+    ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for message");
+    auto status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout,
+                                   nullptr);
     EXPECT_EQ(TFTP_ERR_BAD_STATE, status, "tftp session should fail");
     EXPECT_EQ(ERROR, ts.session->state, "tftp session in wrong state");
     EXPECT_EQ(0, ts.session->file_size, "tftp session bad file size");
@@ -350,316 +384,320 @@ static bool test_tftp_receive_wrq_no_tsize(void) {
     END_TEST;
 }
 
-static bool test_tftp_receive_wrq_send_oack(void) {
+static bool test_tftp_receive_wrq_no_tsize(void) {
+    return test_tftp_receive_request_no_tsize(SEND_FILE);
+}
+
+static bool test_tftp_receive_rrq_no_tsize(void) {
+    return test_tftp_receive_request_no_tsize(RECV_FILE);
+}
+
+static bool test_tftp_receive_request_send_oack(tftp_file_direction dir) {
     BEGIN_TEST;
 
     test_state ts;
     ts.reset(1024, 1024, 1500);
     tftp_file_open_write_cb open_write_cb =
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename),
+                              "bad remote filename in open_write callback");
                 EXPECT_EQ(size, 1024, "bad file size");
                 return 0;
             };
-    tftp_file_interface ifc = {NULL, open_write_cb, NULL, NULL, NULL};
+    tftp_file_open_read_cb open_read_cb =
+            [](const char* filename, void* cookie) -> ssize_t {
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename),
+                              "bad remote filename in open_read callback");
+                return 0;
+            };
+    tftp_file_interface ifc = {open_read_cb, open_write_cb, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
     uint16_t default_block_size = 13;
     uint8_t default_timeout = 2;
     uint16_t default_window_size = 42;
     tftp_set_options(ts.session, &default_block_size, &default_timeout, &default_window_size);
 
-    uint8_t buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
-    EXPECT_EQ(1024, ts.session->file_size, "tftp session bad file size");
+    size_t req_file_size = (dir == SEND_FILE) ? 1024 : 0;
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = (dir == SEND_FILE) ? OPCODE_WRQ : OPCODE_RRQ;
+    size_t buf_sz = 2 + snprintf(&buf[2], sizeof(buf) - 2,
+                                 "%s%cOCTET%cTSIZE%c%zu",
+                                 kRemoteFilename, '\0', '\0', '\0', req_file_size)
+                      + 1;
+
+    ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout,
+                                   nullptr);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "receive request failed");
+    EXPECT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
+    EXPECT_EQ(req_file_size, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
     EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
     EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
+    // The request was made from the client's perspective, so our state is the inverse
+    tftp_file_direction our_direction = (dir == SEND_FILE) ? RECV_FILE : SEND_FILE;
+    EXPECT_EQ(our_direction, ts.session->direction, "tftp session has bad direction");
+
     const char* msg = static_cast<const char*>(ts.out);
     const char win_sz_str[] = "WINDOWSIZE";
     EXPECT_FALSE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                 "window size in oack, but not in wrq");
+                 "window size in oack, but not in request");
     const char timeout_str[] = "TIMEOUT";
     EXPECT_FALSE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                 "timeout in oack, but not in wrq");
+                 "timeout in oack, but not in request");
     const char block_sz_str[] = "BLKSIZE";
     EXPECT_FALSE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                 "block size in oack, but not in wrq");
+                 "block size in oack, but not in request");
 
     END_TEST;
+}
+
+static bool test_tftp_receive_wrq_send_oack(void) {
+    return test_tftp_receive_request_send_oack(SEND_FILE);
+}
+
+static bool test_tftp_receive_rrq_send_oack(void) {
+    return test_tftp_receive_request_send_oack(RECV_FILE);
+}
+
+static ssize_t dummy_open_read(const char* filename, void* cookie) {
+    return 1024;
 }
 
 static tftp_status dummy_open_write(const char* filename, size_t size, void* cookie) {
     return 0;
 }
 
-static bool test_tftp_receive_wrq_blocksize(void) {
-    constexpr size_t kBlocksize = 1024;
-
+static bool test_tftp_receive_request_options(tftp_file_direction dir,
+                                              const uint16_t* server_block_size,
+                                              const uint8_t* server_timeout,
+                                              const uint16_t* server_window_size,
+                                              const uint16_t* client_block_size,
+                                              const uint8_t* client_timeout,
+                                              const uint16_t* client_window_size,
+                                              bool force_block_size,
+                                              bool force_timeout,
+                                              bool force_window_size) {
     BEGIN_TEST;
 
     test_state ts;
     ts.reset(1024, 1024, 1500);
-    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
+    tftp_file_interface ifc = {dummy_open_read, dummy_open_write, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
-    uint16_t window_size = 33;
-    tftp_status status = tftp_set_options(ts.session, NULL, NULL, &window_size);
+    tftp_status status = tftp_set_options(ts.session, server_block_size, server_timeout,
+                                          server_window_size);
     ASSERT_EQ(TFTP_NO_ERROR, status, "failed to set server options");
 
-    uint8_t buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-        'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '1', '0', '2', '4', 0x00,                     // BLKSIZE value
-    };
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    size_t req_file_size = (dir == SEND_FILE) ? 1024 : 0;
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = (dir == SEND_FILE) ? OPCODE_WRQ : OPCODE_RRQ;
+    size_t buf_sz = 2;
+    buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                       "%s%cOCTET%cTSIZE%c%zu",
+                       kRemoteFilename, '\0', '\0', '\0', req_file_size) + 1;
+    if (client_block_size) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "BLKSIZE%s%c%d",
+                           force_block_size ? "!" : "", '\0', *client_block_size) + 1;
+    }
+    if (client_timeout) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "TIMEOUT%s%c%d",
+                           force_timeout ? "!" : "", '\0', *client_timeout) + 1;
+    }
+    if (client_window_size) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "WINDOWSIZE%s%c%d",
+                           force_window_size ? "!" : "", '\0', *client_window_size) + 1;
+    }
+
+    ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for request");
+    status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(kBlocksize, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
-    // Verify that server options are ignored when the client doesn't specify them
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
     EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     const char* msg = static_cast<const char*>(ts.out);
-    const char block_sz_str[] = { 'B', 'L', 'K', 'S', 'I', 'Z', 'E', '\0', '1', '0', '2', '4', '\0' };
-    EXPECT_TRUE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                "block size not acknowledged");
+    char opt_str[256];
+    size_t opt_str_sz;
+
+    if (client_block_size) {
+        uint16_t negotiated_block_size = (server_block_size && !force_block_size)
+                                         ? *server_block_size
+                                         : *client_block_size;
+        opt_str_sz = snprintf(opt_str, sizeof(opt_str),
+                              "BLKSIZE%c%d",
+                              '\0', negotiated_block_size) + 1;
+        EXPECT_TRUE(find_str_in_mem(opt_str, opt_str_sz, msg, ts.outlen),
+                    "block size not correct in oack");
+        EXPECT_EQ(negotiated_block_size, ts.session->block_size, "bad session: block size");
+    } else {
+        opt_str_sz = snprintf(opt_str, sizeof(opt_str), "BLKSIZE") + 1;
+        EXPECT_FALSE(find_str_in_mem(opt_str, opt_str_sz, msg, ts.outlen),
+                     "block size appears in oack, but not in request");
+        EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
+    }
+
+    if (client_timeout) {
+        uint8_t negotiated_timeout = (server_timeout && !force_timeout)
+                                     ? *server_timeout
+                                     : *client_timeout;
+        opt_str_sz = snprintf(opt_str, sizeof(opt_str),
+                              "TIMEOUT%c%d",
+                              '\0', negotiated_timeout) + 1;
+        EXPECT_TRUE(find_str_in_mem(opt_str, opt_str_sz, msg, ts.outlen),
+                    "timeout not correct in oack");
+        EXPECT_EQ(negotiated_timeout, ts.session->timeout, "bad session: timeout");
+    } else {
+        opt_str_sz = snprintf(opt_str, sizeof(opt_str), "TIMEOUT") + 1;
+        EXPECT_FALSE(find_str_in_mem(opt_str, opt_str_sz, msg, ts.outlen),
+                     "timeout appears in oack, but not in request");
+        EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
+    }
+
+    if (client_window_size) {
+        uint16_t negotiated_window_size = (server_window_size && !force_window_size)
+                                          ? *server_window_size
+                                          : *client_window_size;
+        opt_str_sz = snprintf(opt_str, sizeof(opt_str),
+                              "WINDOWSIZE%c%d",
+                              '\0', negotiated_window_size) + 1;
+        EXPECT_TRUE(find_str_in_mem(opt_str, opt_str_sz, msg, ts.outlen),
+                    "window size not correct in oack");
+        EXPECT_EQ(negotiated_window_size, ts.session->window_size, "bad session: window size");
+    } else {
+        opt_str_sz = snprintf(opt_str, sizeof(opt_str), "WINDOWSIZE") + 1;
+        EXPECT_FALSE(find_str_in_mem(opt_str, opt_str_sz, msg, ts.outlen),
+                     "window size appears in oack, but not in request");
+        EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
+    }
 
     END_TEST;
+}
+
+static bool test_tftp_receive_wrq_blocksize(void) {
+    constexpr uint8_t kDefaultTimeout = 4;
+    constexpr uint16_t kBlocksize = 1024;
+    return test_tftp_receive_request_options(SEND_FILE, nullptr, &kDefaultTimeout, nullptr,
+                                                        &kBlocksize, nullptr, nullptr,
+                                                        false, false, false);
 }
 
 static bool test_tftp_receive_wrq_timeout(void) {
-    constexpr uint8_t kTimeout = 5;
-
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-
-    uint8_t buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-        'T', 'I', 'M', 'E', 'O', 'U', 'T', 0x00,      // Option
-        '5', 0x00,                                    // TIMEOUT value
-    };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(kTimeout, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
-    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
-
-    const char* msg = static_cast<const char*>(ts.out);
-    const char timeout_str[] = { 'T', 'I', 'M', 'E', 'O', 'U', 'T', '\0', '5', '\0' };
-    EXPECT_TRUE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                "timeout value not acknowledged");
-
-    END_TEST;
+    constexpr uint16_t kDefaultBlocksize = 115;
+    constexpr uint8_t kTimeout = 3;
+    return test_tftp_receive_request_options(SEND_FILE, &kDefaultBlocksize, nullptr, nullptr,
+                                                        nullptr, &kTimeout, nullptr,
+                                                        false, false, false);
 }
 
 static bool test_tftp_receive_wrq_windowsize(void) {
-    constexpr uint8_t kWindowsize = 32;
-
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-
-    uint8_t buf[] = {
-        0x00, 0x02,                                                  // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                               // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                               // Option
-        '1', '0', '2', '4', 0x00,                                    // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '3', '2', 0x00,                                              // WINDOWSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(kWindowsize, ts.session->window_size, "bad session: window size");
-    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
-
-    const char* msg = static_cast<const char*>(ts.out);
-    const char win_sz_str[] = { 'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '\0', '3', '2', '\0' };
-    EXPECT_TRUE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                "window size not acknowledged");
-
-    END_TEST;
+    constexpr uint16_t kWindowsize = 77;
+    return test_tftp_receive_request_options(SEND_FILE, nullptr, nullptr, nullptr,
+                                                        nullptr, nullptr, &kWindowsize,
+                                                        false, false, false);
 }
 
 // Verify that if override values are set, they supercede the values in a normal request
 static bool test_tftp_receive_wrq_have_overrides(void) {
-    constexpr uint16_t kWindowSize = 16;
-    constexpr uint8_t kTimeout = 7;
-    constexpr uint16_t kBlockSize = 302;
-
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-    uint16_t win_sz_override = kWindowSize;
-    uint8_t timeout_override = kTimeout;
-    uint16_t blk_sz_override = kBlockSize;
-    tftp_status status;
-    status = tftp_set_options(ts.session, &blk_sz_override, &timeout_override, &win_sz_override);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "unable to set override options");
-    EXPECT_EQ(kBlockSize, ts.session->options.block_size, "override block size not set");
-    EXPECT_EQ(kTimeout, ts.session->options.timeout, "override timeout not set");
-    EXPECT_EQ(kWindowSize, ts.session->options.window_size, "override window size not set");
-
-    uint8_t buf[] = {
-        0x00, 0x02,                                                  // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                               // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                               // Option
-        '1', '0', '2', '4', 0x00,                                    // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '3', '2', 0x00,                                              // WINDOWSIZE value
-        'T', 'I', 'M', 'E', 'O', 'U', 'T', 0x00,                     // Option
-        '9', 0x00,                                                   // TIMEOUT value
-        'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,                     // Option
-        '1', '4', '3', 0x00,                                         // BLKSIZE value
-    };
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(kBlockSize, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(kTimeout, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(kWindowSize, ts.session->window_size, "bad session: window size");
-    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
-
-    const char* msg = static_cast<const char*>(ts.out);
-    const char win_sz_str[] = { 'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '\0', '1', '6', '\0' };
-    EXPECT_TRUE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                "window size override value not in response");
-    const char timeout_str[] = { 'T', 'I', 'M', 'E', 'O', 'U', 'T', '\0', '7', '\0' };
-    EXPECT_TRUE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                "timeout override value not in response");
-    const char block_sz_str[] = { 'B', 'L', 'K', 'S', 'I', 'Z', 'E', '\0', '3', '0', '2', '\0' };
-    EXPECT_TRUE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                "block size override value not in response");
-
-    END_TEST;
+    constexpr uint16_t kServerBlockSize = 302;
+    constexpr uint8_t kServerTimeout = 7;
+    constexpr uint16_t kServerWindowSize = 16;
+    constexpr uint16_t kClientBlockSize = 32;
+    constexpr uint8_t kClientTimeout = 9;
+    constexpr uint16_t kClientWindowSize = 143;
+    return test_tftp_receive_request_options(
+                   SEND_FILE, &kServerBlockSize, &kServerTimeout, &kServerWindowSize,
+                              &kClientBlockSize, &kClientTimeout, &kClientWindowSize,
+                              false, false, false);
 }
 
 // Verify that if a WRQ has a '!' following an option it is honored, even if overrides are set
 static bool test_tftp_receive_force_wrq_no_overrides(void) {
-    BEGIN_TEST;
-
-    constexpr uint16_t kWindowSize = 55;
-    constexpr uint8_t kTimeout = 6;
-    constexpr uint16_t kBlockSize = 1111;
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-    uint16_t win_sz_override = kWindowSize;
-    uint8_t timeout_override = kTimeout;
-    uint16_t blk_sz_override = kBlockSize;
-    tftp_status status;
-    status = tftp_set_options(ts.session, &blk_sz_override, &timeout_override, &win_sz_override);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "unable to set override options");
-    EXPECT_EQ(kBlockSize, ts.session->options.block_size, "override block size not set");
-    EXPECT_EQ(kTimeout, ts.session->options.timeout, "override timeout not set");
-    EXPECT_EQ(kWindowSize, ts.session->options.window_size, "override window size not set");
-
-    uint8_t buf[] = {
-        0x00, 0x02,                                                    // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                  // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                                 // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                                 // Option
-        '1', '0', '2', '4', 0x00,                                      // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '!', 0x00,   // Option
-        '3', '2', 0x00,                                                // WINDOWSIZE value
-        'T', 'I', 'M', 'E', 'O', 'U', 'T', '!', 0x00,                  // Option
-        '9', 0x00,                                                     // TIMEOUT value
-        'B', 'L', 'K', 'S', 'I', 'Z', 'E', '!', 0x00,                  // Option
-        '1', '4', '3', 0x00,                                           // BLKSIZE value
-    };
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(32, ts.session->window_size, "bad session: window size");
-    EXPECT_EQ(9, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(143, ts.session->block_size, "bad session: block size");
-    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
-
-    const char* msg = static_cast<const char*>(ts.out);
-    const char win_sz_str[] = { 'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '\0', '3', '2', '\0' };
-    EXPECT_TRUE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                "window size confirmation not in response");
-    const char timeout_str[] = { 'T', 'I', 'M', 'E', 'O', 'U', 'T', '\0', '9', '\0' };
-    EXPECT_TRUE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                "timeout value confirmation not in response");
-    const char block_sz_str[] = { 'B', 'L', 'K', 'S', 'I', 'Z', 'E', '\0', '1', '4', '3', '\0' };
-    EXPECT_TRUE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                "block size confirmation not in response");
-
-    END_TEST;
+    constexpr uint16_t kServerBlockSize = 302;
+    constexpr uint8_t kServerTimeout = 7;
+    constexpr uint16_t kServerWindowSize = 16;
+    constexpr uint16_t kClientBlockSize = 32;
+    constexpr uint8_t kClientTimeout = 9;
+    constexpr uint16_t kClientWindowSize = 143;
+    return test_tftp_receive_request_options(
+                   SEND_FILE, &kServerBlockSize, &kServerTimeout, &kServerWindowSize,
+                              &kClientBlockSize, &kClientTimeout, &kClientWindowSize,
+                              true, true, true);
 }
 
 static bool test_tftp_receive_force_wrq_have_overrides(void) {
-    BEGIN_TEST;
+    constexpr uint16_t kClientBlockSize = 32;
+    constexpr uint8_t kClientTimeout = 9;
+    constexpr uint16_t kClientWindowSize = 143;
+    return test_tftp_receive_request_options(
+                   SEND_FILE, nullptr, nullptr, nullptr,
+                              &kClientBlockSize, &kClientTimeout, &kClientWindowSize,
+                              true, true, true);
+}
 
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
+static bool test_tftp_receive_rrq_blocksize(void) {
+    constexpr uint8_t kDefaultTimeout = 4;
+    constexpr uint16_t kBlocksize = 1024;
+    return test_tftp_receive_request_options(RECV_FILE, nullptr, &kDefaultTimeout, nullptr,
+                                                        &kBlocksize, nullptr, nullptr,
+                                                        false, false, false);
+}
 
-    // Option strings should be case insensitive
-    uint8_t buf[] = {
-        0x00, 0x02,                                                    // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                  // Filename
-        'o', 'c', 't', 'e', 't', 0x00,                                 // Mode
-        't', 's', 'i', 'z', 'e', 0x00,                                 // Option
-        '1', '0', '2', '4', 0x00,                                      // TSIZE value
-        'W', 'i', 'n', 'd', 'o', 'w', 'S', 'i', 'z', 'e', '!', 0x00,   // Option
-        '3', '2', 0x00,                                                // WINDOWSIZE value
-        'T', 'i', 'm', 'e', 'o', 'u', 't', '!', 0x00,                  // Option
-        '9', 0x00,                                                     // TIMEOUT value
-        'B', 'l', 'k', 'S', 'i', 'z', 'e', '!', 0x00,                  // Option
-        '1', '4', '3', 0x00,                                           // BLKSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
-    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(32, ts.session->window_size, "bad session: window size");
-    EXPECT_EQ(9, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(143, ts.session->block_size, "bad session: block size");
-    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+static bool test_tftp_receive_rrq_timeout(void) {
+    constexpr uint16_t kDefaultBlocksize = 115;
+    constexpr uint8_t kTimeout = 3;
+    return test_tftp_receive_request_options(RECV_FILE, &kDefaultBlocksize, nullptr, nullptr,
+                                                        nullptr, &kTimeout, nullptr,
+                                                        false, false, false);
+}
 
-    const char* msg = static_cast<const char*>(ts.out);
-    const char win_sz_str[] = { 'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '\0', '3', '2', '\0' };
-    EXPECT_TRUE(find_str_in_mem(win_sz_str, sizeof(win_sz_str), msg, ts.outlen),
-                "window size confirmation not in response");
-    const char timeout_str[] = { 'T', 'I', 'M', 'E', 'O', 'U', 'T', '\0', '9', '\0' };
-    EXPECT_TRUE(find_str_in_mem(timeout_str, sizeof(timeout_str), msg, ts.outlen),
-                "timeout value confirmation not in response");
-    const char block_sz_str[] = { 'B', 'L', 'K', 'S', 'I', 'Z', 'E', '\0', '1', '4', '3', '\0' };
-    EXPECT_TRUE(find_str_in_mem(block_sz_str, sizeof(block_sz_str), msg, ts.outlen),
-                "block size confirmation not in response");
+static bool test_tftp_receive_rrq_windowsize(void) {
+    constexpr uint16_t kWindowsize = 77;
+    return test_tftp_receive_request_options(RECV_FILE, nullptr, nullptr, nullptr,
+                                                        nullptr, nullptr, &kWindowsize,
+                                                        false, false, false);
+}
 
-    END_TEST;
+// Verify that if override values are set, they supercede the values in a normal request
+static bool test_tftp_receive_rrq_have_overrides(void) {
+    constexpr uint16_t kServerBlockSize = 302;
+    constexpr uint8_t kServerTimeout = 7;
+    constexpr uint16_t kServerWindowSize = 16;
+    constexpr uint16_t kClientBlockSize = 32;
+    constexpr uint8_t kClientTimeout = 9;
+    constexpr uint16_t kClientWindowSize = 143;
+    return test_tftp_receive_request_options(
+                   RECV_FILE, &kServerBlockSize, &kServerTimeout, &kServerWindowSize,
+                              &kClientBlockSize, &kClientTimeout, &kClientWindowSize,
+                              false, false, false);
+}
+
+// Verify that if a WRQ has a '!' following an option it is honored, even if overrides are set
+static bool test_tftp_receive_force_rrq_no_overrides(void) {
+    constexpr uint16_t kServerBlockSize = 302;
+    constexpr uint8_t kServerTimeout = 7;
+    constexpr uint16_t kServerWindowSize = 16;
+    constexpr uint16_t kClientBlockSize = 32;
+    constexpr uint8_t kClientTimeout = 9;
+    constexpr uint16_t kClientWindowSize = 143;
+    return test_tftp_receive_request_options(
+                   RECV_FILE, &kServerBlockSize, &kServerTimeout, &kServerWindowSize,
+                              &kClientBlockSize, &kClientTimeout, &kClientWindowSize,
+                              true, true, true);
+}
+
+static bool test_tftp_receive_force_rrq_have_overrides(void) {
+    constexpr uint16_t kClientBlockSize = 32;
+    constexpr uint8_t kClientTimeout = 9;
+    constexpr uint16_t kClientWindowSize = 143;
+    return test_tftp_receive_request_options(
+                   RECV_FILE, nullptr, nullptr, nullptr,
+                              &kClientBlockSize, &kClientTimeout, &kClientWindowSize,
+                              true, true, true);
 }
 
 struct tx_test_data {
@@ -702,6 +740,10 @@ bool verify_read_data(const test_state& ts, const tx_test_data& td) {
     END_HELPER;
 }
 
+tftp_status mock_open_write(const char* filename, size_t size, void* file_cookie) {
+    return TFTP_NO_ERROR;
+}
+
 tftp_status mock_read(void* data, size_t* len, off_t offset, void* cookie) {
     tx_test_data* td = static_cast<tx_test_data*>(cookie);
     td->actual.len = *len;
@@ -710,161 +752,187 @@ tftp_status mock_read(void* data, size_t* len, off_t offset, void* cookie) {
     return static_cast<tftp_status>(*len);
 }
 
-static bool test_tftp_receive_oack(void) {
+static bool test_tftp_receive_wrq_oack(const size_t file_size,
+                                       const uint16_t* block_size_ptr,
+                                       const uint8_t* timeout_ptr,
+                                       const uint16_t* window_size_ptr) {
     BEGIN_TEST;
 
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
+    uint16_t block_size = block_size_ptr ? *block_size_ptr : DEFAULT_BLOCKSIZE;
+    uint8_t timeout = timeout_ptr ? *timeout_ptr : DEFAULT_TIMEOUT;
+    uint16_t window_size = window_size_ptr ? *window_size_ptr : DEFAULT_WINDOWSIZE;
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
+    test_state ts;
+    ts.reset(1024, file_size, 1500);
+
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+                                        MODE_OCTET, ts.msg_size, block_size_ptr, timeout_ptr,
+                                        window_size_ptr, ts.out, &ts.outlen, &ts.timeout);
     ASSERT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     ASSERT_TRUE(verify_write_request(ts), "bad write request");
 
-    uint8_t buf[] = {
-        0x00, 0x06,                     // Opcode (OACK)
-        'T', 'S', 'I', 'Z', 'E', 0x00,  // Option
-        '1', '0', '2', '4', 0x00,       // TSIZE value
-    };
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = 0x06; // Opcode (OACK)
+    size_t buf_sz = 2;
+    buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                       "%s%cOCTET%cTSIZE%c%zu",
+                       kRemoteFilename, '\0', '\0', '\0', file_size) + 1;
+    if (block_size_ptr) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "BLKSIZE%c%d",
+                           '\0', block_size) + 1;
+    }
+    if (timeout_ptr) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "TIMEOUT%c%d",
+                           '\0', timeout) + 1;
+    }
+    if (window_size_ptr) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "WINDOWSIZE%c%d",
+                           '\0', window_size) + 1;
+    }
 
     tftp_file_interface ifc = {NULL, NULL, mock_read, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
     tx_test_data td;
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
+    td.expected.len = block_size;
+    td.expected.data[block_size - 1] = 'X';
+    status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout, &td);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "tftp_process_msg failed");
+    bool has_pending = (block_size < file_size) && (window_size > 1);
+    EXPECT_EQ(has_pending, tftp_session_has_pending(ts.session),
+              "Unexpected tftp_session_has_pending()");
+    EXPECT_EQ(FIRST_DATA, ts.session->state, "session should be in state FIRST_DATA");
+    EXPECT_EQ(file_size, ts.session->file_size, "tftp session bad file size");
+    EXPECT_EQ(block_size, ts.session->block_size, "bad session: block size");
+    EXPECT_EQ(timeout, ts.session->timeout, "bad session: timeout");
+    EXPECT_EQ(window_size, ts.session->window_size, "bad session: window size");
+
+    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + block_size, "bad outlen");
+    EXPECT_EQ(ts.timeout, timeout * 1000U, "timeout should be set");
+    EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
+
+    if (has_pending) {
+        // Since pending is true, call for a second data packet to transmit
+        // Updated the read offset and change a few bytes
+        td.expected.block = 2;
+        size_t second_block_size = fbl::min<size_t>(file_size - block_size, block_size);
+        td.expected.offset = block_size;
+        td.expected.data[0] = 'X';
+        if (second_block_size > 0) {
+            td.expected.data[second_block_size - 1] = 'F';
+        }
+
+        status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &ts.timeout, &td);
+        EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + block_size, "bad outlen");
+        EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
+        has_pending = (block_size + second_block_size < file_size) && (window_size > 2);
+        EXPECT_EQ(has_pending, tftp_session_has_pending(ts.session),
+                  "Unexpected tftp_session_has_pending()");
+    }
+    END_TEST;
+}
+
+static bool test_tftp_receive_wrq_oack(void) {
+    return test_tftp_receive_wrq_oack(1024, NULL, NULL, NULL);
+}
+
+static bool test_tftp_receive_wrq_oack_blocksize(void) {
+    constexpr uint16_t kBlockSize = 1024;
+    return test_tftp_receive_wrq_oack(2048, &kBlockSize, nullptr, nullptr);
+}
+
+static bool test_tftp_receive_wrq_oack_timeout(void) {
+    constexpr uint8_t kTimeout = 5;
+    return test_tftp_receive_wrq_oack(1024, nullptr, &kTimeout, nullptr);
+}
+
+static bool test_tftp_receive_wrq_oack_windowsize(void) {
+    constexpr uint16_t kWindowSize = 2;
+    return test_tftp_receive_wrq_oack(4096, nullptr, nullptr, &kWindowSize);
+}
+
+static bool test_tftp_receive_rrq_oack(size_t file_size,
+                                       const uint16_t* block_size_ptr,
+                                       const uint8_t* timeout_ptr,
+                                       const uint16_t* window_size_ptr) {
+    BEGIN_TEST;
+
+    uint16_t block_size = block_size_ptr ? *block_size_ptr : DEFAULT_BLOCKSIZE;
+    uint8_t timeout = timeout_ptr ? *timeout_ptr : DEFAULT_TIMEOUT;
+    uint16_t window_size = window_size_ptr ? *window_size_ptr : DEFAULT_WINDOWSIZE;
+
+    test_state ts;
+    ts.reset(1024, file_size, 1500);
+
+    auto status = tftp_generate_request(ts.session, RECV_FILE, kLocalFilename, kRemoteFilename,
+                                        MODE_OCTET, 0, block_size_ptr, timeout_ptr,
+                                        window_size_ptr, ts.out, &ts.outlen, &ts.timeout);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "error generating read request");
+    ASSERT_TRUE(verify_read_request(ts), "bad read request");
+
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = 0x06; // Opcode (OACK)
+    size_t buf_sz = 2;
+    buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                       "TSIZE%c%zu",
+                       '\0', file_size) + 1;
+    if (block_size_ptr) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "BLKSIZE%c%d",
+                           '\0', block_size) + 1;
+    }
+    if (timeout_ptr) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "TIMEOUT%c%d",
+                           '\0', timeout) + 1;
+    }
+    if (window_size_ptr) {
+        buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                           "WINDOWSIZE%c%d",
+                           '\0', window_size) + 1;
+    }
+    tftp_file_interface ifc = {NULL, mock_open_write, NULL, NULL, NULL};
+    tftp_session_set_file_interface(ts.session, &ifc);
+
+    status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout, NULL);
     EXPECT_FALSE(tftp_session_has_pending(ts.session), "session should not have pending data");
-    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
-    EXPECT_EQ(1024, ts.session->file_size, "tftp session bad file size");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
+    EXPECT_EQ(FIRST_DATA, ts.session->state, "session should be in state FIRST_DATA");
+    EXPECT_EQ(file_size, ts.session->file_size, "tftp session bad file size");
+    EXPECT_EQ(block_size, ts.session->block_size, "bad session: block size");
+    EXPECT_EQ(timeout, ts.session->timeout, "bad session: timeout");
+    EXPECT_EQ(window_size, ts.session->window_size, "bad session: window size");
 
-    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-    EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
-
+    uint8_t expected_ack[] = {
+        0x00, 0x04,  // Opcode (ACK)
+        0x00, 0x00   // Block
+    };
+    EXPECT_EQ(sizeof(expected_ack), ts.outlen, "response size mismatch");
+    EXPECT_EQ(0, memcmp(expected_ack, ts.out, sizeof(expected_ack)), "bad response");
     END_TEST;
 }
 
-static bool test_tftp_receive_oack_blocksize(void) {
-    uint16_t kBlockSize = 1024;
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 2048, 1500);
-
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, &kBlockSize, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
-    ASSERT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-
-    uint8_t buf[] = {
-        0x00, 0x06,                                   // Opcode (OACK)
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '2', '0', '4', '8', 0x00,                     // TSIZE value
-        'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '1', '0', '2', '4', 0x00,                     // BLKSIZE value
-    };
-
-    tftp_file_interface ifc = {NULL, NULL, mock_read, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-
-    tx_test_data td;
-    td.expected.len = kBlockSize;
-    td.expected.data[kBlockSize - 1] = 'X';
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
-    EXPECT_EQ(2048, ts.session->file_size, "tftp session bad file size");
-    EXPECT_EQ(kBlockSize, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
-
-    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + kBlockSize, "bad outlen");
-    EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
-    END_TEST;
+static bool test_tftp_receive_rrq_oack(void) {
+    return test_tftp_receive_rrq_oack(1024, nullptr, nullptr, nullptr);
 }
 
-static bool test_tftp_receive_oack_timeout(void) {
-    uint8_t kTimeout = 5;
-    BEGIN_TEST;
-
-    test_state ts;
-    ts.reset(1024, 1024, 1500);
-
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, &kTimeout, NULL, ts.out, &ts.outlen, &ts.timeout);
-    ASSERT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-
-    uint8_t buf[] = {
-        0x00, 0x06,                                   // Opcode (OACK)
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-        'T', 'I', 'M', 'E', 'O', 'U', 'T', 0x00,      // Option
-        '5', 0x00,                                    // TIMEOUT value
-    };
-
-    tftp_file_interface ifc = {NULL, NULL, mock_read, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-
-    tx_test_data td;
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
-    EXPECT_EQ(1024, ts.session->file_size, "tftp session bad file size");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(kTimeout, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
-
-    EXPECT_EQ(ts.timeout, kTimeout * 1000U, "timeout should be set");
-    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-    EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
-    END_TEST;
+static bool test_tftp_receive_rrq_oack_blocksize(void) {
+    constexpr uint16_t kBlockSize = 1024;
+    return test_tftp_receive_rrq_oack(2048, &kBlockSize, nullptr, nullptr);
 }
 
-static bool test_tftp_receive_oack_windowsize(void) {
-    uint16_t kWindowSize = 2;
-    BEGIN_TEST;
+static bool test_tftp_receive_rrq_oack_timeout(void) {
+    constexpr uint8_t kTimeout = 5;
+    return test_tftp_receive_rrq_oack(1024, nullptr, &kTimeout, nullptr);
+}
 
-    test_state ts;
-    ts.reset(1024, 4096, 1500);
-
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, &kWindowSize, ts.out, &ts.outlen, &ts.timeout);
-    ASSERT_EQ(TFTP_NO_ERROR, status, "error generating write request");
-
-    uint8_t buf[] = {
-        0x00, 0x06,                                   // Opcode (OACK)
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '4', '0', '9', '6', 0x00,                     // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '2', 0x00,                                              // WINDOWSIZE value
-    };
-
-    tftp_file_interface ifc = {NULL, NULL, mock_read, NULL, NULL};
-    tftp_session_set_file_interface(ts.session, &ifc);
-
-    tx_test_data td;
-    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
-    EXPECT_EQ(4096, ts.session->file_size, "tftp session bad file size");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
-    EXPECT_EQ(kWindowSize, ts.session->window_size, "bad session: window size");
-
-    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-    EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
-    ASSERT_TRUE(tftp_session_has_pending(ts.session), "session should have pending");
-
-    // Since pending is true, call for a second data packet to transmit
-    // Updated the read offset and change a few bytes
-    td.expected.block = 2;
-    td.expected.offset = DEFAULT_BLOCKSIZE;
-    td.expected.data[1] = 'X';
-    td.expected.data[DEFAULT_BLOCKSIZE - 2] = 'F';
-
-    status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-    EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
-    EXPECT_FALSE(tftp_session_has_pending(ts.session), "session should not have pending");
-
-    END_TEST;
+static bool test_tftp_receive_rrq_oack_windowsize(void) {
+    constexpr uint16_t kWindowSize = 412;
+    return test_tftp_receive_rrq_oack(1024, nullptr, nullptr, &kWindowSize);
 }
 
 // Verify that if the server overrides our settings we use the oack'd settings it provides
@@ -878,8 +946,9 @@ static bool test_tftp_receive_oack_overrides(void) {
     uint8_t kTimeout = 12;
     uint16_t kWindowSize = 6;
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, &kBlockSize, &kTimeout, &kWindowSize, ts.out, &ts.outlen, &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, ts.msg_size, &kBlockSize, &kTimeout, &kWindowSize, ts.out, &ts.outlen,
+        &ts.timeout);
     ASSERT_EQ(TFTP_NO_ERROR, status, "error generating write request");
 
     uint8_t buf[] = {
@@ -899,7 +968,7 @@ static bool test_tftp_receive_oack_overrides(void) {
 
     tx_test_data td;
     status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
+    EXPECT_EQ(FIRST_DATA, ts.session->state, "session should be in state FIRST_DATA");
     EXPECT_EQ(4096, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(55, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(3, ts.session->timeout, "bad session: timeout");
@@ -932,22 +1001,25 @@ static bool test_tftp_receive_data(void) {
     ts.reset(1024, 1024, 1500);
     tftp_file_interface ifc = {NULL,
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename), "bad filename");
                 EXPECT_EQ(size, 1024, "bad file size");
                 return 0;
             }, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
-    uint8_t req_buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char req_buf[256];
+    req_buf[0] = 0x00;
+    req_buf[1] = OPCODE_WRQ;
+    size_t req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                     "%s%cOCTET%cTSIZE%c%d",
+                                     kRemoteFilename, '\0', '\0', '\0', 1024)
+                          + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
+                                   &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -978,22 +1050,24 @@ static bool test_tftp_receive_data_final_block(void) {
     ts.reset(1024, 1024, 1500);
     tftp_file_interface ifc = {NULL,
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename), "bad filename");
                 EXPECT_EQ(size, 1024, "bad file size");
                 return 0;
             }, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
-    uint8_t req_buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char req_buf[256];
+    req_buf[0] = 0x00;
+    req_buf[1] = OPCODE_WRQ;
+    size_t req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                     "%s%cOCTET%cTSIZE%c%d",
+                                     kRemoteFilename, '\0', '\0', '\0', 1024)
+                          + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -1039,24 +1113,25 @@ static bool test_tftp_receive_data_blocksize(void) {
     ts.reset(1024, 2048, 1500);
     tftp_file_interface ifc = {NULL,
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename), "bad filename");
                 EXPECT_EQ(size, 2048, "bad file size");
                 return 0;
             }, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
-    uint8_t req_buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '2', '0', '4', '8', 0x00,                     // TSIZE value
-        'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '1', '0', '2', '4', 0x00,                     // BLKSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char req_buf[256];
+    req_buf[0] = 0x00;
+    req_buf[1] = OPCODE_WRQ;
+    size_t req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                     "%s%cOCTET%cTSIZE%c%d%cBLKSIZE%c%d",
+                                     kRemoteFilename, '\0', '\0', '\0', 2048, '\0', '\0', 1024)
+                          + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
+                                   &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[1028] = {
@@ -1088,24 +1163,25 @@ static bool test_tftp_receive_data_windowsize(void) {
     ts.reset(1024, 1025, 1500);
     tftp_file_interface ifc = {NULL,
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename), "bad filename");
                 EXPECT_EQ(size, 1025, "bad file size");
                 return 0;
             }, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
-    uint8_t req_buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '5', 0x00,                     // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '2', 0x00,                                              // WINDOWSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char req_buf[256];
+    req_buf[0] = 0x00;
+    req_buf[1] = OPCODE_WRQ;
+    size_t req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                     "%s%cOCTET%cTSIZE%c%d%cWINDOWSIZE%c%d",
+                                     kRemoteFilename, '\0', '\0', '\0', 1025, '\0', '\0', 2)
+                          + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
+                                   &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -1150,22 +1226,25 @@ static bool test_tftp_receive_data_skipped_block(void) {
     ts.reset(1024, 1024, 1500);
     tftp_file_interface ifc = {NULL,
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename), "bad filename");
                 EXPECT_EQ(size, 1024, "bad file size");
                 return 0;
             }, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
-    uint8_t req_buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '1', '0', '2', '4', 0x00,                     // TSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char req_buf[256];
+    req_buf[0] = 0x00;
+    req_buf[1] = OPCODE_WRQ;
+    size_t req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                     "%s%cOCTET%cTSIZE%c%d",
+                                     kRemoteFilename, '\0', '\0', '\0', 1024)
+                          + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
+                                   &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     // This is block 2, meaning we missed block 1 somehow.
@@ -1210,24 +1289,25 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     ts.reset(1024, 2048, 1500);
     tftp_file_interface ifc = {NULL,
             [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename), "bad filename");
                 EXPECT_EQ(size, 2048, "bad file size");
                 return 0;
             }, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
-    uint8_t req_buf[] = {
-        0x00, 0x02,                                   // Opcode (WRQ)
-        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00, // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                // Option
-        '2', '0', '4', '8', 0x00,                     // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
-        '3', 0x00,                                              // WINDOWSIZE value
-    };
-    auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    char req_buf[256];
+    req_buf[0] = 0x00;
+    req_buf[1] = OPCODE_WRQ;
+    size_t req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                     "%s%cOCTET%cTSIZE%c%d%cWINDOWSIZE%c%d",
+                                     kRemoteFilename, '\0', '\0', '\0', 2048, '\0', '\0', 3)
+                          + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
+                                   &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -1296,7 +1376,8 @@ static bool test_tftp_receive_data_block_wrapping(void) {
 
     tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
     ifc.open_write = [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                         EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                         EXPECT_STR_EQ(filename, kRemoteFilename, strlen(kRemoteFilename),
+                             "bad filename");
                          EXPECT_EQ(size, kFileSize, "bad file size");
                          return 0;
                      };
@@ -1313,15 +1394,18 @@ static bool test_tftp_receive_data_block_wrapping(void) {
 
     char req_buf[1024];
     req_buf[0] = 0x00;
-    req_buf[1] = 0x02;  // Opcode (WRQ)
+    req_buf[1] = OPCODE_WRQ;
     int req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
-                                  "%s%cOCTET%cTSIZE%c%lu%cBLKSIZE%c%d", kFilename,
-                                  '\0', '\0', '\0', kFileSize, '\0', '\0', kBlockSize) + 1;
-    ASSERT_LT(req_buf_sz, (int) sizeof(req_buf), "insufficient space for WRQ message");
+                                  "%s%cOCTET%cTSIZE%c%lu%cBLKSIZE%c%d",
+                                  kRemoteFilename, '\0', '\0', '\0', kFileSize, '\0', '\0',
+                                  kBlockSize)
+                       + 1;
+
+    ASSERT_LT(req_buf_sz, (int)sizeof(req_buf), "insufficient space for WRQ message");
     auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
                                    &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     // Artificially advance to force block wrapping
@@ -1356,8 +1440,8 @@ static bool test_tftp_send_data_receive_ack(void) {
     test_state ts;
     ts.reset(1024, 1024, 1500);
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
@@ -1386,7 +1470,7 @@ static bool test_tftp_send_data_receive_ack(void) {
     td.expected.data[1] = 'f';
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive error");
-    EXPECT_EQ(SENT_DATA, ts.session->state, "session should be in state SENT_DATA");
+    EXPECT_EQ(SENDING_DATA, ts.session->state, "session should be in state SENDING_DATA");
     // The block number will not advance until we see an ACK for block 2
     EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
     EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
@@ -1402,8 +1486,8 @@ static bool test_tftp_send_data_receive_final_ack(void) {
     test_state ts;
     ts.reset(1024, 1024, 1500);
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
@@ -1455,8 +1539,8 @@ static bool test_tftp_send_data_receive_ack_skipped_block(void) {
     test_state ts;
     ts.reset(1024, 1024, 1500);
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, ts.msg_size, NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
@@ -1483,7 +1567,7 @@ static bool test_tftp_send_data_receive_ack_skipped_block(void) {
     tx_test_data td2;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td2);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive error");
-    EXPECT_EQ(SENT_DATA, ts.session->state, "session should be in state SENT_DATA");
+    EXPECT_EQ(SENDING_DATA, ts.session->state, "session should be in state SENDING_DATA");
     EXPECT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
     EXPECT_EQ(1, ts.session->window_index, "tftp window index mismatch");
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
@@ -1498,8 +1582,8 @@ static bool test_tftp_send_data_receive_ack_window_size(void) {
     test_state ts;
     ts.reset(1024, 2048, 1500);
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET,
-        ts.msg_size, NULL, NULL, &kWindowSize, ts.out, &ts.outlen, &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, ts.msg_size, NULL, NULL, &kWindowSize, ts.out, &ts.outlen, &ts.timeout);
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
@@ -1545,7 +1629,7 @@ static bool test_tftp_send_data_receive_ack_window_size(void) {
     td.expected.data[1]++;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive error");
-    EXPECT_EQ(SENT_DATA, ts.session->state, "session should be in state SENT_DATA");
+    EXPECT_EQ(SENDING_DATA, ts.session->state, "session should be in state SENDING_DATA");
     EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
     EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
@@ -1568,9 +1652,8 @@ static bool test_tftp_send_data_receive_ack_block_wrapping(void) {
     test_state ts;
     ts.reset(1024, 2048, 2048);
 
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET, kFileSize,
-                                              &kBlockSize, NULL, NULL, ts.out, &ts.outlen,
-                                              &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, kFileSize, &kBlockSize, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
@@ -1579,8 +1662,10 @@ static bool test_tftp_send_data_receive_ack_block_wrapping(void) {
     oack_buf[1] = 0x06;
     size_t oack_buf_sz = 2 + snprintf(&oack_buf[2], sizeof(oack_buf) - 2,
                                       "TSIZE%c%lu%cBLKSIZE%c%d",
-                                      '\0', kFileSize, '\0', '\0', kBlockSize) + 1;
+                                      '\0', kFileSize, '\0', '\0', kBlockSize)
+                           + 1;
 
+    ASSERT_LT(oack_buf_sz, (int)sizeof(oack_buf), "insufficient space for OACK message");
     tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
     ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
                    EXPECT_EQ(0, offset, "incorrect initial read");
@@ -1635,9 +1720,8 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     ts.reset(1024, 2048, 2048);
 
     // Create a write request
-    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET, kFileSize,
-                                              &kBlockSize, NULL, NULL, ts.out, &ts.outlen,
-                                              &ts.timeout);
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+        MODE_OCTET, kFileSize, &kBlockSize, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
@@ -1647,8 +1731,10 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     oack_buf[1] = 0x06;
     size_t oack_buf_sz = 2 + snprintf(&oack_buf[2], sizeof(oack_buf) - 2,
                                       "TSIZE%c%lu%cBLKSIZE%c%d",
-                                      '\0', kFileSize, '\0', '\0', kBlockSize) + 1;
+                                      '\0', kFileSize, '\0', '\0', kBlockSize)
+                           + 1;
 
+    ASSERT_LT(oack_buf_sz, (int)sizeof(oack_buf), "insufficient space for OACK message");
     tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
     ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
                    EXPECT_EQ(0, offset, "incorrect initial read");
@@ -1739,11 +1825,19 @@ END_TEST_CASE(tftp_setup)
 
 BEGIN_TEST_CASE(tftp_generate_wrq)
 RUN_TEST(test_tftp_generate_wrq_default)
-RUN_TEST(test_tftp_generate_wrq_settings)
-RUN_TEST(test_tftp_generate_wrq_blocksize)
-RUN_TEST(test_tftp_generate_wrq_timeout)
-RUN_TEST(test_tftp_generate_wrq_windowsize)
+RUN_TEST(test_tftp_generate_wrq_options)
+RUN_TEST(test_tftp_generate_wrq_override_blocksize)
+RUN_TEST(test_tftp_generate_wrq_override_timeout)
+RUN_TEST(test_tftp_generate_wrq_override_windowsize)
 END_TEST_CASE(tftp_generate_wrq)
+
+BEGIN_TEST_CASE(tftp_generate_rrq)
+RUN_TEST(test_tftp_generate_rrq_default)
+RUN_TEST(test_tftp_generate_rrq_options)
+RUN_TEST(test_tftp_generate_rrq_override_blocksize)
+RUN_TEST(test_tftp_generate_rrq_override_timeout)
+RUN_TEST(test_tftp_generate_rrq_override_windowsize)
+END_TEST_CASE(tftp_generate_rrq)
 
 BEGIN_TEST_CASE(tftp_receive_wrq)
 RUN_TEST(test_tftp_receive_wrq_unexpected)
@@ -1758,11 +1852,28 @@ RUN_TEST(test_tftp_receive_force_wrq_no_overrides)
 RUN_TEST(test_tftp_receive_force_wrq_have_overrides)
 END_TEST_CASE(tftp_receive_wrq)
 
+BEGIN_TEST_CASE(tftp_receive_rrq)
+RUN_TEST(test_tftp_receive_rrq_unexpected)
+RUN_TEST(test_tftp_receive_rrq_too_large)
+RUN_TEST(test_tftp_receive_rrq_no_tsize)
+RUN_TEST(test_tftp_receive_rrq_send_oack)
+RUN_TEST(test_tftp_receive_rrq_blocksize)
+RUN_TEST(test_tftp_receive_rrq_timeout)
+RUN_TEST(test_tftp_receive_rrq_windowsize)
+RUN_TEST(test_tftp_receive_rrq_have_overrides)
+RUN_TEST(test_tftp_receive_force_rrq_no_overrides)
+RUN_TEST(test_tftp_receive_force_rrq_have_overrides)
+END_TEST_CASE(tftp_receive_rrq)
+
 BEGIN_TEST_CASE(tftp_receive_oack)
-RUN_TEST(test_tftp_receive_oack)
-RUN_TEST(test_tftp_receive_oack_blocksize)
-RUN_TEST(test_tftp_receive_oack_timeout)
-RUN_TEST(test_tftp_receive_oack_windowsize)
+RUN_TEST(test_tftp_receive_wrq_oack)
+RUN_TEST(test_tftp_receive_wrq_oack_blocksize)
+RUN_TEST(test_tftp_receive_wrq_oack_timeout)
+RUN_TEST(test_tftp_receive_wrq_oack_windowsize)
+RUN_TEST(test_tftp_receive_rrq_oack)
+RUN_TEST(test_tftp_receive_rrq_oack_blocksize)
+RUN_TEST(test_tftp_receive_rrq_oack_timeout)
+RUN_TEST(test_tftp_receive_rrq_oack_windowsize)
 RUN_TEST(test_tftp_receive_oack_overrides)
 END_TEST_CASE(tftp_receive_oack)
 

@@ -62,8 +62,15 @@ void file_init(file_info_t *file_info) {
 }
 
 static ssize_t file_open_read(const char* filename, void* cookie) {
-    printf("netsvc: tftp read file unimplemented\n");
-    return TFTP_ERR_INTERNAL;
+    file_info_t* file_info = cookie;
+    file_info->is_write = false;
+    strncpy(file_info->filename, filename, PATH_MAX);
+    file_info->filename[PATH_MAX] = '\0';
+    size_t file_size;
+    if (netfile_open(filename, O_RDONLY, &file_size) == 0) {
+        return (ssize_t)file_size;
+    }
+    return TFTP_ERR_NOT_FOUND;
 }
 
 static tftp_status file_open_write(const char* filename, size_t size,
@@ -117,7 +124,7 @@ static tftp_status file_open_write(const char* filename, size_t size,
         return TFTP_NO_ERROR;
     } else {
         // netcp
-        if (netfile_open(filename, O_WRONLY) == 0) {
+        if (netfile_open(filename, O_WRONLY, NULL) == 0) {
             return TFTP_NO_ERROR;
         }
     }
@@ -125,11 +132,21 @@ static tftp_status file_open_write(const char* filename, size_t size,
 }
 
 static tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
-    printf("netsvc: tftp read file unimplemented\n");
-    return TFTP_ERR_INTERNAL;
+    if (length == NULL) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    int read_len = netfile_offset_read(data, offset, *length);
+    if (read_len < 0) {
+        return TFTP_ERR_IO;
+    }
+    *length = read_len;
+    return TFTP_NO_ERROR;
 }
 
 static tftp_status file_write(const void* data, size_t* length, off_t offset, void* cookie) {
+    if (length == NULL) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
     file_info_t* file_info = cookie;
     if (file_info->type == netboot && file_info->netboot_file != NULL) {
         nbfile* nb_file = file_info->netboot_file;
@@ -188,6 +205,7 @@ static tftp_status transport_send(void* data, size_t len, void* transport_cookie
     // received packets we want to ignore (duplicate ACKs).
     if (transport_info->timeout_ms != 0) {
         tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
+        update_timeouts();
     }
     return TFTP_NO_ERROR;
 }
@@ -227,7 +245,7 @@ static void end_connection(void) {
 }
 
 void tftp_timeout_expired(void) {
-    tftp_status result = tftp_timeout(session, false, tftp_out_scratch, &last_msg_size,
+    tftp_status result = tftp_timeout(session, tftp_out_scratch, &last_msg_size,
                                       sizeof(tftp_out_scratch), &transport_info.timeout_ms,
                                       &file_info);
     if (result == TFTP_ERR_TIMED_OUT) {
@@ -284,5 +302,18 @@ void tftp_recv(void* data, size_t len,
                file_info.is_write ? "write" : "read",
                file_info.filename);
         end_connection();
+    }
+}
+
+bool tftp_has_pending(void) {
+    return session && tftp_session_has_pending(session);
+}
+
+void tftp_send_next(void) {
+    last_msg_size = sizeof(tftp_out_scratch);
+    tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, &transport_info.timeout_ms,
+                      &file_info);
+    if (last_msg_size) {
+        transport_send(tftp_out_scratch, last_msg_size, &transport_info);
     }
 }

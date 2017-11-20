@@ -407,20 +407,29 @@ static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
 
 int netifc_poll(void) {
     for (;;) {
+        // Handle any completed rx packets
         zx_status_t status;
         if ((status = eth_complete_rx(eth, NULL, rx_complete)) < 0) {
             printf("netifc: eth rx failed: %d\n", status);
             return -1;
         }
-        if (net_timer) {
-            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
-            if (now > net_timer) {
-                return 0;
-            }
-            status = eth_wait_rx(eth, net_timer + ZX_MSEC(1));
-        } else {
-            status = eth_wait_rx(eth, ZX_TIME_INFINITE);
+
+        // Timeout passed
+        if (net_timer && zx_time_get(ZX_CLOCK_MONOTONIC) > net_timer) {
+            return 0;
         }
+
+        if (netifc_send_pending()) {
+            continue;
+        }
+
+        zx_time_t deadline;
+        if (net_timer) {
+            deadline = net_timer + ZX_MSEC(1);
+        } else {
+            deadline = ZX_TIME_INFINITE;
+        }
+        status = eth_wait_rx(eth, deadline);
         if ((status < 0) && (status != ZX_ERR_TIMED_OUT)) {
             printf("netifc: eth rx wait failed: %d\n", status);
             return -1;

@@ -52,7 +52,7 @@ static int netfile_mkdir(const char* filename) {
     }
 }
 
-int netfile_open(const char *filename, uint32_t arg) {
+int netfile_open(const char *filename, uint32_t arg, size_t* file_size) {
     if (netfile.fd >= 0) {
         printf("netsvc: closing still-open '%s', replacing with '%s'\n", netfile.filename, filename);
         close(netfile.fd);
@@ -72,6 +72,9 @@ again: // label here to catch filename=/path/to/new/directory/
     case O_RDONLY:
         netfile.needs_rename = false;
         netfile.fd = open(filename, O_RDONLY);
+        if (file_size) {
+            *file_size = st.st_size;
+        }
         break;
     case O_WRONLY: {
         // If we're writing a file, actually write to "filename + TMP_SUFFIX",

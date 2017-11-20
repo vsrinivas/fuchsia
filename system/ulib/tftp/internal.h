@@ -55,38 +55,85 @@ typedef struct tftp_options_t {
 } tftp_options;
 
 /**
- Sender
- NONE -(tftp_generate_write_request)-> SENT_WRQ
- SENT_WRQ -(tftp_process_msg = OPCODE_OACK)-> SENT_FIRST_PKT
- SENT_WRQ -(tftp_process_msg = OPCODE_ERROR)-> ERROR
- SENT_FIRST_PKT -(tftp_process_msg = OPCODE_ACK)-> SENT_DATA
- SENT_FIRST_PKT -(tftp_process_msg = OPCODE_ERROR)-> ERROR
- SENT_DATA -(tftp_process_msg = OPCODE_ACK)-> SENT_DATA
- SENT_DATA -(tftp_process_msg = OPCODE_ERROR)-> ERROR
- SENT_DATA -(OPCODE_ACK is last packet)-> COMPLETED
- COMPLETED -(tftp_process_msg)-> ERROR
+  State transitions
 
- Receiver
- NONE -(tftp_process_msg = OPCODE_WRQ)-> RECV_WRQ
- NONE -(tftp_process_msg != OPCODE_WRQ)-> ERROR
- RECV_WRQ -(tftp_process_msg = OPCODE_DATA) -> RECV_DATA
- RECV_WRQ -(tftp_process_msg != OPCODE_DATA) -> ERROR
- RECV_DATA -(tftp_process_msg = OPCODE_DATA)-> RECV_DATA
- RECV_DATA -(tftp_process_msg != OPCODE_DATA)-> ERROR
- RECV_DATA -(last packet)-> COMPLETED
- COMPLETED -(tftp_process_msg)-> ERROR
+  ***** READ FILE *****
+
+    client                                                  server
+    ~~~~~~                                                  ~~~~~~
+    NONE                                                      NONE
+        generate_request (rrq)
+    REQ_SENT
+                                ---- RRQ ----->
+                                                 handle_rrq
+                                                      REQ_RECEIVED
+                               <---- OACK ---- 
+                  handle_oack
+    FIRST_DATA
+
++------+                                                      +-----+
+|      |                                                      |     |
+|      V                                                      V     |
+|                               ---- ACK ----->                     |
+|                                                handle_ack         |
+|                                                     SENDING_DATA  |
+|                              <---- DATA ----                |     |
+|                 handle_data                                 |     |
+|   RECEIVING_DATA                                            |     |
+|                                    ...                      |     |
+|                              <---- DATA ----                |     |
+|                 handle_data                                 |     |
+|      |                                                      |     |
++------+                                                      +-----+
+
+         COMPLETED                                    COMPLETED
+
+
+    ****** WRITE FILE *****
+
+    client                                                  server
+    ~~~~~~                                                  ~~~~~~
+    NONE                                                      NONE
+        generate_request (wrq)
+    REQ_SENT
+                                ---- WRQ ----->
+                                                 handle_wrq
+                                                      REQ_RECEIVED
+                               <---- OACK ---- 
+                  handle_oack
+    FIRST_DATA
+
++------+                                                        +-----+
+|      |                                                        |     |
+|      V                                                        V     |
+|                               ---- DATA ---->                       |
+|                                                handle_data          |
+|                                                     RECEIVING_DATA  |
+|                              <----- ACK ----                  |     |
+|                 handle_ack                                    |     |
+|   SENDING_DATA                                                |     |
+|      |                                                        |     |
++------+                                                        +-----+
+
+         COMPLETED                                    COMPLETED
+
 **/
 
 typedef enum {
     NONE = 0,
-    SENT_WRQ,
-    RECV_WRQ,
-    SENT_FIRST_DATA,
-    SENT_DATA,
-    RECV_DATA,
+    REQ_SENT,
+    REQ_RECEIVED,
+    FIRST_DATA,
+    SENDING_DATA,
+    RECEIVING_DATA,
     ERROR,
     COMPLETED,
 } tftp_state;
+
+typedef enum {
+    SEND_FILE,
+    RECV_FILE
+} tftp_file_direction;
 
 struct tftp_session_t {
 
@@ -104,6 +151,7 @@ struct tftp_session_t {
     tftp_mode mode;
 
     // General state values
+    tftp_file_direction direction;  // Not valid when state is NONE, ERROR, or COMPLETED.
     tftp_state state;
     size_t offset;
     uint32_t consecutive_timeouts;
@@ -137,31 +185,28 @@ struct tftp_session_t {
     tftp_transport_interface transport_interface;
 };
 
-// tftp_session_has_pending returns true if the tftp_session has more data to
-// send before waiting for an ack. It is recommended that the caller do a
-// non-blocking read to see if an out-of-order ACK was sent by the remote host
-// before sending additional data packets.
-bool tftp_session_has_pending(tftp_session* session);
-
-// Generates a write request to send to a tftp server. |filename| is the name
-// sent to the server. |datalen| is the size of the data to be sent.
-// If |block_size|, |timeout|, or |window_size| are set, those will be passed
-// to the server in such a way that they cannot be negotiated (normal,
-// negotiable settings can be set using tftp_set_options()). |outgoing| must
-// point to a scratch buffer the library can use to assemble the request.
-// |outlen| is the size of the outgoing scratch buffer, and will be set to
-// the size of the request. |timeout_ms| is set to the next timeout value the
-// user of the library should use when waiting for a response.
-tftp_status tftp_generate_write_request(tftp_session* session,
-                                        const char* filename,
-                                        tftp_mode mode,
-                                        size_t datalen,
-                                        const uint16_t* block_size,
-                                        const uint8_t* timeout,
-                                        const uint16_t* window_size,
-                                        void* outgoing,
-                                        size_t* outlen,
-                                        uint32_t* timeout_ms);
+// Generates a read or write request to send to a tftp server. |filename| is
+// the name sent to the server. |datalen| is the size of the data (should be
+// zero for read requests). If |block_size|, |timeout|, or |window_size| are
+// set, those will be passed to the server in such a way that they cannot be
+// negotiated (normal, negotiable settings can be set using
+// tftp_set_options()). |outgoing| must point to a scratch buffer the library
+// can use to assemble the request. |outlen| is the size of the outgoing
+// scratch buffer, and will be set to the size of the request. |timeout_ms| is
+// set to the next timeout value the user of the library should use when
+// waiting for a response.
+tftp_status tftp_generate_request(tftp_session* session,
+                                  tftp_file_direction direction,
+                                  const char* local_filename,
+                                  const char* remote_filename,
+                                  tftp_mode mode,
+                                  size_t datalen,
+                                  const uint16_t* block_size,
+                                  const uint8_t* timeout,
+                                  const uint16_t* window_size,
+                                  void* outgoing,
+                                  size_t* outlen,
+                                  uint32_t* timeout_ms);
 
 // Handle an incoming tftp packet. |incoming| must point to the packet of size
 // |inlen|. |outgoing| must point to a scratch buffer the library can use to
@@ -176,15 +221,6 @@ tftp_status tftp_process_msg(tftp_session* session,
                              size_t* outlen,
                              uint32_t* timeout_ms,
                              void* cookie);
-
-// Prepare a DATA packet to send to the remote host. This is only required when
-// tftp_session_has_pending(session) returns true, as tftp_process_msg() will
-// prepare the first DATA message in each window.
-tftp_status tftp_prepare_data(tftp_session* session,
-                              void* outgoing,
-                              size_t* outlen,
-                              uint32_t* timeout_ms,
-                              void* cookie);
 
 // Internal handlers
 tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, void* cookie);

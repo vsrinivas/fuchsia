@@ -24,4 +24,7 @@ int netifc_timer_expired(void);
 
 void netifc_recv(void* data, size_t len);
 
+// send out next pending packet, and return value indicating if more are available to send
+bool netifc_send_pending(void);
+
 void netifc_get_info(uint8_t* addr, uint16_t* mtu);

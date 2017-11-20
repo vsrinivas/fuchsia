@@ -151,6 +151,9 @@ zx_status_t eth_wait_rx(eth_client_t* eth, zx_time_t deadline) {
     if ((status = zx_object_wait_one(eth->rx_fifo,
                                      ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
                                      deadline, &signals)) < 0) {
+        if (signals & ZX_FIFO_READABLE) {
+            return ZX_OK;
+        }
         return status;
     }
     if (signals & ZX_FIFO_PEER_CLOSED) {

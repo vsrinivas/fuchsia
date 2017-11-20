@@ -146,7 +146,7 @@ static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
     m.magic = NB_MAGIC;
     m.cookie = cookie;
     m.cmd = NB_ACK;
-    m.arg = netfile_open(filename, arg);
+    m.arg = netfile_open(filename, arg, NULL);
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 

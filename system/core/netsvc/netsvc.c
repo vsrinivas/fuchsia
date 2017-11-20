@@ -86,6 +86,24 @@ void netifc_recv(void* data, size_t len) {
     eth_recv(data, len);
 }
 
+bool netifc_send_pending(void) {
+    if (!tftp_has_pending()) {
+        return false;
+    }
+    tftp_send_next();
+    return tftp_has_pending();
+}
+
+void update_timeouts(void) {
+    zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
+                             debuglog_next_timeout : tftp_next_timeout;
+    if (next_timeout != ZX_TIME_INFINITE) {
+        netifc_set_timer((next_timeout < now) ? 0 :
+                         ((next_timeout - now)/ZX_MSEC(1)));
+    }
+}
+
 static const char* zedboot_banner =
 "              _ _                 _   \n"
 "             | | |               | |  \n"
@@ -140,16 +158,11 @@ int main(int argc, char** argv) {
             if (netbootloader)
                 netboot_advertise(nodename);
 
-            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
-            zx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
-                                     debuglog_next_timeout : tftp_next_timeout;
-            if (next_timeout != ZX_TIME_INFINITE) {
-                netifc_set_timer((next_timeout < now) ? 0 :
-                                 ((next_timeout - now)/ZX_MSEC(1)));
-            }
+            update_timeouts();
+
             if (netifc_poll())
                 break;
-            now = zx_time_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
             if (now > debuglog_next_timeout) {
                 debuglog_timeout_expired();
             }

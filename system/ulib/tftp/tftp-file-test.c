@@ -14,7 +14,10 @@
 // This test simulates a tftp file transfer by running two threads. Both the
 // file and transport interfaces are implemented in memory buffers.
 
+typedef enum { DIR_SEND, DIR_RECEIVE } xfer_dir_t;
+
 struct test_params {
+    xfer_dir_t direction;
     uint32_t filesz;
     uint16_t winsz;
     uint16_t blksz;
@@ -245,7 +248,7 @@ int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
 
 /// SEND THREAD
 
-bool run_send_test(struct test_params* tp) {
+bool run_client_test(struct test_params* tp) {
     BEGIN_HELPER;
 
     // Configure TFTP session
@@ -298,22 +301,30 @@ bool run_send_test(struct test_params* tp) {
                                .outbuf_sz = buf_sz,
                                .err_msg = err_msg_buf,
                                .err_msg_sz = sizeof(err_msg_buf) };
-    status = tftp_push_file(session, &transport_info, &file_info, "abc.txt",
-                            "xyz.txt", &opts);
-    EXPECT_GE(status, 0, "failed to send file");
+
+    if (tp->direction == DIR_SEND) {
+        status = tftp_push_file(session, &transport_info, &file_info, "abc.txt",
+                                "xyz.txt", &opts);
+        EXPECT_GE(status, 0, "failed to send file");
+    } else {
+        status = tftp_pull_file(session, &transport_info, &file_info, "abc.txt",
+                                "xyz.txt", &opts);
+        EXPECT_GE(status, 0, "failed to receive file");
+    }
+
     free(session);
     END_HELPER;
 }
 
-void* tftp_send_main(void* arg) {
+void* tftp_client_main(void* arg) {
     struct test_params* tp = arg;
-    run_send_test(tp);
+    run_client_test(tp);
     pthread_exit(NULL);
 }
 
 /// RECV THREAD
 
-bool run_recv_test(struct test_params* tp) {
+bool run_server_test(struct test_params* tp) {
     BEGIN_HELPER;
 
     // Configure TFTP session
@@ -362,33 +373,33 @@ bool run_recv_test(struct test_params* tp) {
                                .err_msg = err_msg_buf,
                                .err_msg_sz = sizeof(err_msg_buf) };
     do {
-        status = tftp_handle_request(session, &transport_info, &file_info,
-                                     &opts);
+        status = tftp_service_request(session, &transport_info, &file_info,
+                                      &opts);
     } while (status == TFTP_NO_ERROR);
     EXPECT_EQ(status, TFTP_TRANSFER_COMPLETED, "failed to receive file");
     free(session);
     END_HELPER;
 }
 
-void* tftp_recv_main(void* arg) {
+void* tftp_server_main(void* arg) {
     struct test_params* tp = arg;
-    run_recv_test(tp);
+    run_server_test(tp);
     pthread_exit(NULL);
 }
 
-bool run_one_send_test(struct test_params *tp) {
+bool run_one_test(struct test_params* tp) {
     BEGIN_TEST;
     int init_result = initialize_files(tp);
     ASSERT_EQ(init_result, 0, "failure to initialize state");
 
     clear_sockets();
 
-    pthread_t send_thread, recv_thread;
-    pthread_create(&send_thread, NULL, tftp_send_main, tp);
-    pthread_create(&recv_thread, NULL, tftp_recv_main, tp);
+    pthread_t client_thread, server_thread;
+    pthread_create(&client_thread, NULL, tftp_client_main, tp);
+    pthread_create(&server_thread, NULL, tftp_server_main, tp);
 
-    pthread_join(send_thread, NULL);
-    pthread_join(recv_thread, NULL);
+    pthread_join(client_thread, NULL);
+    pthread_join(server_thread, NULL);
 
     int compare_result = compare_files(tp->filesz);
     EXPECT_EQ(compare_result, 0, "output file mismatch");
@@ -396,25 +407,48 @@ bool run_one_send_test(struct test_params *tp) {
 }
 
 bool test_tftp_send_file(void) {
-    struct test_params tp = {.filesz = 1000000, .winsz = 20, .blksz = 1000};
-    return run_one_send_test(&tp);
+    struct test_params tp = {.direction = DIR_SEND, .filesz = 1000000, .winsz = 20, .blksz = 1000};
+    return run_one_test(&tp);
 }
 
 bool test_tftp_send_file_wrapping_block_count(void) {
     // Wraps block count 4 times
-    struct test_params tp = {.filesz = 2100000, .winsz = 64, .blksz = 8};
-    return run_one_send_test(&tp);
+    struct test_params tp = {.direction = DIR_SEND, .filesz = 2100000, .winsz = 64, .blksz = 8};
+    return run_one_test(&tp);
 }
 
 bool test_tftp_send_file_lg_window(void) {
     // Make sure that a window size > 255 works properly
-    struct test_params tp = {.filesz = 1000000, .winsz = 1024, .blksz = 1024};
-    return run_one_send_test(&tp);
+    struct test_params tp = {.direction = DIR_SEND, .filesz = 1000000, .winsz = 1024,
+                             .blksz = 1024};
+    return run_one_test(&tp);
 }
 
-BEGIN_TEST_CASE(tftp_send_file)
+bool test_tftp_receive_file(void) {
+    struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 1000000, .winsz = 20,
+                             .blksz = 1000};
+    return run_one_test(&tp);
+}
+
+bool test_tftp_receive_file_wrapping_block_count(void) {
+    // Wraps block count 4 times
+    struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 2100000, .winsz = 64, .blksz = 8};
+    return run_one_test(&tp);
+}
+
+bool test_tftp_receive_file_lg_window(void) {
+    // Make sure that a window size > 255 works properly
+    struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 1000000, .winsz = 1024,
+                             .blksz = 1024};
+    return run_one_test(&tp);
+}
+
+BEGIN_TEST_CASE(tftp_transfer_file)
 RUN_TEST(test_tftp_send_file)
 RUN_TEST(test_tftp_send_file_wrapping_block_count)
 RUN_TEST(test_tftp_send_file_lg_window)
-END_TEST_CASE(tftp_send_file)
+RUN_TEST(test_tftp_receive_file)
+RUN_TEST(test_tftp_receive_file_wrapping_block_count)
+RUN_TEST(test_tftp_receive_file_lg_window)
+END_TEST_CASE(tftp_transfer_file)
 

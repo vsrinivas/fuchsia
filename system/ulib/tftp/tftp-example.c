@@ -259,7 +259,7 @@ int tftp_receive_file_wrapper(tftp_session* session,
 
     tftp_status status;
     do {
-        status = tftp_handle_request(session, connection, &file_cookie,
+        status = tftp_service_request(session, connection, &file_cookie,
                                      &options);
     } while (status == TFTP_NO_ERROR || status == TFTP_ERR_TIMED_OUT);
     if (status == TFTP_TRANSFER_COMPLETED)
