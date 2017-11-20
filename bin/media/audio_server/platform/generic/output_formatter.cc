@@ -32,7 +32,8 @@ class DstConverter<
     typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
-    return static_cast<DType>((sample >> 8) + 0x80);
+    // Convert to signed, round, reduce to 8-bit ==> +0x8000, +0x0080, >>8
+    return static_cast<DType>((sample + 0x8080) >> 8);
   }
 };
 
