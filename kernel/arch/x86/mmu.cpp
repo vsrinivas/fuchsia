@@ -279,18 +279,20 @@ struct PageTableBase {
     /**
      * @brief Return the x86 arch flags to use on intermediate page tables
      */
-    static arch_flags_t intermediate_arch_flags();
+    static X86PageTable::IntermediatePtFlags intermediate_flags();
 
     /**
      * @brief Return the x86 arch flags to use on an entry with the given mmu
      *        flags
      */
-    static arch_flags_t arch_flags(page_table_levels level, bool use_global_mappings, uint flags);
+    static X86PageTable::PtFlags terminal_flags(page_table_levels level, bool use_global_mappings,
+                                                uint flags);
 
     /**
      * @brief Return the x86 arch flags to split a large page into smaller pages
      */
-    static arch_flags_t split_arch_flags(page_table_levels level, arch_flags_t arch_flags);
+    static X86PageTable::PtFlags split_flags(page_table_levels level,
+                                             X86PageTable::PtFlags flags);
 
     /**
      * @brief Invalidate a single page at the given level
@@ -303,7 +305,7 @@ struct PageTable : PageTableBase {
     /**
      * @brief Return x86 arch flags for intermediate tables
      */
-    static arch_flags_t intermediate_arch_flags() {
+    static X86PageTable::IntermediatePtFlags intermediate_flags() {
         return X86_MMU_PG_RW | X86_MMU_PG_U;
     }
 
@@ -312,33 +314,34 @@ struct PageTable : PageTableBase {
      *
      * These are used for page mapping entries in the table.
      */
-    static arch_flags_t arch_flags(page_table_levels level, bool use_global_mappings, uint flags) {
-        arch_flags_t arch_flags = 0;
+    static X86PageTable::PtFlags terminal_flags(page_table_levels level, bool use_global_mappings,
+                                                uint flags) {
+        X86PageTable::PtFlags terminal_flags = 0;
 
         if (flags & ARCH_MMU_FLAG_PERM_WRITE)
-            arch_flags |= X86_MMU_PG_RW;
+            terminal_flags |= X86_MMU_PG_RW;
 
         if (flags & ARCH_MMU_FLAG_PERM_USER)
-            arch_flags |= X86_MMU_PG_U;
+            terminal_flags |= X86_MMU_PG_U;
 
         if (use_global_mappings) {
-            arch_flags |= X86_MMU_PG_G;
+            terminal_flags |= X86_MMU_PG_G;
         }
 
         if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE))
-            arch_flags |= X86_MMU_PG_NX;
+            terminal_flags |= X86_MMU_PG_NX;
 
         if (level > 0) {
             switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
             case ARCH_MMU_FLAG_CACHED:
-                arch_flags |= X86_MMU_LARGE_PAT_WRITEBACK;
+                terminal_flags |= X86_MMU_LARGE_PAT_WRITEBACK;
                 break;
             case ARCH_MMU_FLAG_UNCACHED_DEVICE:
             case ARCH_MMU_FLAG_UNCACHED:
-                arch_flags |= X86_MMU_LARGE_PAT_UNCACHABLE;
+                terminal_flags |= X86_MMU_LARGE_PAT_UNCACHABLE;
                 break;
             case ARCH_MMU_FLAG_WRITE_COMBINING:
-                arch_flags |= X86_MMU_LARGE_PAT_WRITE_COMBINING;
+                terminal_flags |= X86_MMU_LARGE_PAT_WRITE_COMBINING;
                 break;
             default:
                 PANIC_UNIMPLEMENTED;
@@ -346,39 +349,39 @@ struct PageTable : PageTableBase {
         } else {
             switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
             case ARCH_MMU_FLAG_CACHED:
-                arch_flags |= X86_MMU_PTE_PAT_WRITEBACK;
+                terminal_flags |= X86_MMU_PTE_PAT_WRITEBACK;
                 break;
             case ARCH_MMU_FLAG_UNCACHED_DEVICE:
             case ARCH_MMU_FLAG_UNCACHED:
-                arch_flags |= X86_MMU_PTE_PAT_UNCACHABLE;
+                terminal_flags |= X86_MMU_PTE_PAT_UNCACHABLE;
                 break;
             case ARCH_MMU_FLAG_WRITE_COMBINING:
-                arch_flags |= X86_MMU_PTE_PAT_WRITE_COMBINING;
+                terminal_flags |= X86_MMU_PTE_PAT_WRITE_COMBINING;
                 break;
             default:
                 PANIC_UNIMPLEMENTED;
             }
         }
 
-        return arch_flags;
+        return terminal_flags;
     }
 
-    static arch_flags_t split_arch_flags(page_table_levels level, arch_flags_t arch_flags) {
+    static X86PageTable::PtFlags split_flags(page_table_levels level, X86PageTable::PtFlags flags) {
         DEBUG_ASSERT(level != PML4_L && level != PT_L);
-        DEBUG_ASSERT(arch_flags & X86_MMU_PG_PS);
+        DEBUG_ASSERT(flags & X86_MMU_PG_PS);
         if (level == PD_L) {
             // Note: Clear PS before the check below; the PAT bit for a PTE is the
             // the same as the PS bit for a higher table entry.
-            arch_flags &= ~X86_MMU_PG_PS;
+            flags &= ~X86_MMU_PG_PS;
 
             /* If the larger page had the PAT flag set, make sure it's
              * transferred to the different index for a PTE */
-            if (arch_flags & X86_MMU_PG_LARGE_PAT) {
-                arch_flags &= ~X86_MMU_PG_LARGE_PAT;
-                arch_flags |= X86_MMU_PG_PTE_PAT;
+            if (flags & X86_MMU_PG_LARGE_PAT) {
+                flags &= ~X86_MMU_PG_LARGE_PAT;
+                flags |= X86_MMU_PG_PTE_PAT;
             }
         }
-        return arch_flags;
+        return flags;
     }
 
     static void tlb_invalidate_page(page_table_levels level, X86PageTable* pt, vaddr_t vaddr,
@@ -391,7 +394,7 @@ struct ExtendedPageTable : PageTableBase {
     /**
      * @brief Return EPT arch flags for intermediate tables
      */
-    static arch_flags_t intermediate_arch_flags() {
+    static X86PageTable::PtFlags intermediate_flags() {
         return X86_EPT_R | X86_EPT_W | X86_EPT_X;
     }
 
@@ -400,30 +403,32 @@ struct ExtendedPageTable : PageTableBase {
      *
      * These are used for page mapping entries in the table.
      */
-    static arch_flags_t arch_flags(page_table_levels level, bool use_global_mappings, uint flags) {
+    static X86PageTable::PtFlags terminal_flags(page_table_levels level, bool use_global_mappings,
+                                                uint flags) {
         DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHED) == ARCH_MMU_FLAG_CACHED);
         // Only the write-back memory type is supported.
-        arch_flags_t arch_flags = X86_EPT_WB;
+        X86PageTable::PtFlags terminal_flags = X86_EPT_WB;
 
         if (flags & ARCH_MMU_FLAG_PERM_READ)
-            arch_flags |= X86_EPT_R;
+            terminal_flags |= X86_EPT_R;
 
         if (flags & ARCH_MMU_FLAG_PERM_WRITE)
-            arch_flags |= X86_EPT_W;
+            terminal_flags |= X86_EPT_W;
 
         if (flags & ARCH_MMU_FLAG_PERM_EXECUTE)
-            arch_flags |= X86_EPT_X;
+            terminal_flags |= X86_EPT_X;
 
-        return arch_flags;
+        return terminal_flags;
     }
 
     /**
      * @brief Return the EPT arch flags to split a large page into smaller pages
      */
-    static arch_flags_t split_arch_flags(page_table_levels level, arch_flags_t arch_flags) {
+    static X86PageTable::PtFlags split_flags(page_table_levels level,
+                                             X86PageTable::PtFlags flags) {
         DEBUG_ASSERT(level != PML4_L && level != PT_L);
         // We don't need to relocate any flags on split for EPT.
-        return arch_flags;
+        return flags;
     }
 
     /**
@@ -438,7 +443,7 @@ struct ExtendedPageTable : PageTableBase {
 /**
  * @brief Return generic MMU flags from x86 arch flags
  */
-static uint x86_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
+static uint x86_mmu_flags(X86PageTable::PtFlags flags, enum page_table_levels level) {
     uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
 
     if (flags & X86_MMU_PG_RW)
@@ -485,7 +490,7 @@ static uint x86_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
 /**
  * @brief Return generic MMU flags from EPT arch flags
  */
-static uint ept_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
+static uint ept_mmu_flags(X86PageTable::PtFlags flags, enum page_table_levels level) {
     // Only the write-back memory type is supported.
     uint mmu_flags = ARCH_MMU_FLAG_CACHED;
 
@@ -527,7 +532,7 @@ public:
 
 template <typename PageTable>
 void X86PageTable::UpdateEntry(page_table_levels level, vaddr_t vaddr, volatile pt_entry_t* pte,
-                               paddr_t paddr, arch_flags_t flags) {
+                               paddr_t paddr, PtFlags flags) {
     DEBUG_ASSERT(pte);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
 
@@ -588,7 +593,7 @@ zx_status_t X86PageTable::SplitLargePage(page_table_levels level, vaddr_t vaddr,
     }
 
     paddr_t paddr_base = PageTable::paddr_from_pte(level, *pte);
-    arch_flags_t flags = PageTable::split_arch_flags(level, *pte & X86_LARGE_FLAGS_MASK);
+    PtFlags flags = PageTable::split_flags(level, *pte & X86_LARGE_FLAGS_MASK);
 
     DEBUG_ASSERT(PageTable::page_aligned(level, vaddr));
     vaddr_t new_vaddr = vaddr;
@@ -604,7 +609,7 @@ zx_status_t X86PageTable::SplitLargePage(page_table_levels level, vaddr_t vaddr,
     }
     DEBUG_ASSERT(new_vaddr == vaddr + PageTable::page_size(level));
 
-    flags = PageTable::intermediate_arch_flags();
+    flags = PageTable::intermediate_flags();
     UpdateEntry<PageTable>(level, vaddr, pte, X86_VIRT_TO_PHYS(m), flags);
     pages_++;
     return ZX_OK;
@@ -864,8 +869,9 @@ zx_status_t X86PageTable::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
         }
     });
 
-    arch_flags_t interm_arch_flags = PageTable::intermediate_arch_flags();
-    arch_flags_t arch_flags = PageTable::arch_flags(level, use_global_mappings_, mmu_flags);
+    X86PageTable::IntermediatePtFlags interm_flags = PageTable::intermediate_flags();
+    X86PageTable::PtFlags terminal_flags = PageTable::terminal_flags(level, use_global_mappings_,
+                                                                     mmu_flags);
 
     size_t ps = PageTable::page_size(level);
     bool level_supports_large_pages = PageTable::supports_page_size(level);
@@ -885,7 +891,7 @@ zx_status_t X86PageTable::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
             level_paligned && new_cursor->size >= ps) {
 
             UpdateEntry<PageTable>(level, new_cursor->vaddr, table + index,
-                                   new_cursor->paddr, arch_flags | X86_MMU_PG_PS);
+                                   new_cursor->paddr, terminal_flags | X86_MMU_PG_PS);
 
             new_cursor->paddr += ps;
             new_cursor->vaddr += ps;
@@ -902,7 +908,7 @@ zx_status_t X86PageTable::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
                 LTRACEF_LEVEL(2, "new table %p at level %d\n", m, level);
 
                 UpdateEntry<PageTable>(level, new_cursor->vaddr, e,
-                                       X86_VIRT_TO_PHYS(m), interm_arch_flags);
+                                       X86_VIRT_TO_PHYS(m), interm_flags);
                 pt_val = *e;
                 pages_++;
             }
@@ -930,7 +936,7 @@ zx_status_t X86PageTable::AddMappingL0(volatile pt_entry_t* table, uint mmu_flag
 
     *new_cursor = start_cursor;
 
-    arch_flags_t arch_flags = PageTable::arch_flags(PT_L, use_global_mappings_, mmu_flags);
+    X86PageTable::PtFlags terminal_flags = PageTable::terminal_flags(PT_L, use_global_mappings_, mmu_flags);
 
     uint index = PageTable::vaddr_to_index(PT_L, new_cursor->vaddr);
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
@@ -939,7 +945,7 @@ zx_status_t X86PageTable::AddMappingL0(volatile pt_entry_t* table, uint mmu_flag
             return ZX_ERR_ALREADY_EXISTS;
         }
 
-        UpdateEntry<PageTable>(PT_L, new_cursor->vaddr, e, new_cursor->paddr, arch_flags);
+        UpdateEntry<PageTable>(PT_L, new_cursor->vaddr, e, new_cursor->paddr, terminal_flags);
 
         new_cursor->paddr += PAGE_SIZE;
         new_cursor->vaddr += PAGE_SIZE;
@@ -977,7 +983,7 @@ zx_status_t X86PageTable::UpdateMapping(volatile pt_entry_t* table, uint mmu_fla
     zx_status_t ret = ZX_OK;
     *new_cursor = start_cursor;
 
-    arch_flags_t arch_flags = PageTable::arch_flags(level, use_global_mappings_, mmu_flags);
+    X86PageTable::PtFlags terminal_flags = PageTable::terminal_flags(level, use_global_mappings_, mmu_flags);
 
     size_t ps = PageTable::page_size(level);
     uint index = PageTable::vaddr_to_index(level, new_cursor->vaddr);
@@ -997,7 +1003,7 @@ zx_status_t X86PageTable::UpdateMapping(volatile pt_entry_t* table, uint mmu_fla
             if (vaddr_level_aligned && new_cursor->size >= ps) {
                 UpdateEntry<PageTable>(level, new_cursor->vaddr, e,
                                        PageTable::paddr_from_pte(level, pt_val),
-                                       arch_flags | X86_MMU_PG_PS);
+                                       terminal_flags | X86_MMU_PG_PS);
 
                 new_cursor->vaddr += ps;
                 new_cursor->size -= ps;
@@ -1048,7 +1054,7 @@ zx_status_t X86PageTable::UpdateMappingL0(volatile pt_entry_t* table,
 
     *new_cursor = start_cursor;
 
-    arch_flags_t arch_flags = PageTable::arch_flags(PT_L, use_global_mappings_, mmu_flags);
+    X86PageTable::PtFlags terminal_flags = PageTable::terminal_flags(PT_L, use_global_mappings_, mmu_flags);
 
     uint index = PageTable::vaddr_to_index(PT_L, new_cursor->vaddr);
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
@@ -1058,7 +1064,7 @@ zx_status_t X86PageTable::UpdateMappingL0(volatile pt_entry_t* table,
         if (IS_PAGE_PRESENT(pt_val)) {
             UpdateEntry<PageTable>(PT_L, new_cursor->vaddr, e,
                                    PageTable::paddr_from_pte(PT_L, pt_val),
-                                   arch_flags);
+                                   terminal_flags);
         }
 
         new_cursor->vaddr += PAGE_SIZE;

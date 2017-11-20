@@ -167,8 +167,6 @@ struct map_range {
 typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64
 
-typedef pt_entry_t arch_flags_t;
-
 bool x86_is_vaddr_canonical(vaddr_t vaddr);
 
 void x86_mmu_percpu_init(void);

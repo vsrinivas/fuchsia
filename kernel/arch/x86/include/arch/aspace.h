@@ -23,6 +23,15 @@ public:
     X86PageTable();
     ~X86PageTable();
 
+    // Type for flags used in the hardware page tables, for terminal entries.
+    // Note that some flags here may have meanings that depend on the level
+    // at which they occur (e.g. page size and PAT).
+    using PtFlags = uint64_t;
+
+    // Type for flags used in the hardware page tables, for non-terminal
+    // entries.
+    using IntermediatePtFlags = uint64_t;
+
     // Initialize an empty page table, assigning this given context to it.
     zx_status_t Init(void* ctx);
 
@@ -48,15 +57,15 @@ public:
 
     template <typename PageTable>
     zx_status_t MapPages(vaddr_t vaddr, paddr_t paddr, const size_t count,
-                         uint mmu_flags, size_t* mapped);
+                         uint flags, size_t* mapped);
     template <typename PageTable>
     zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
     template <typename PageTable>
-    zx_status_t ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags);
+    zx_status_t ProtectPages(vaddr_t vaddr, size_t count, uint flags);
 
     template <typename PageTable, typename F>
     zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags,
-                           F arch_to_mmu);
+                           F pt_flags_to_mmu);
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(X86PageTable);
 
@@ -100,7 +109,7 @@ private:
 
     template <typename PageTable>
     void UpdateEntry(page_table_levels level, vaddr_t vaddr, volatile pt_entry_t* pte,
-                     paddr_t paddr, arch_flags_t flags) TA_REQ(lock_);
+                     paddr_t paddr, PtFlags flags) TA_REQ(lock_);
 
     template <typename PageTable>
     zx_status_t SplitLargePage(page_table_levels level, vaddr_t vaddr,
