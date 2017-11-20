@@ -8,7 +8,7 @@
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
 #include <machina/interrupt_controller.h>
-#include <zircon/thread_annotations.h>
+#include <machina/thread_annotations.h>
 #include <zircon/types.h>
 
 // clang-format off

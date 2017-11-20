@@ -6,9 +6,9 @@
 
 #include <fbl/function.h>
 #include <fbl/mutex.h>
+#include <machina/thread_annotations.h>
 #include <machina/virtio.h>
 #include <virtio/balloon.h>
-#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 #define VIRTIO_BALLOON_Q_INFLATEQ 0

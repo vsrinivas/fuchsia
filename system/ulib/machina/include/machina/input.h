@@ -7,11 +7,11 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <hid/hid.h>
+#include <machina/thread_annotations.h>
 #include <machina/virtio.h>
 #include <virtio/input.h>
 #include <zircon/compiler.h>
 #include <zircon/device/input.h>
-#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 #define VIRTIO_INPUT_Q_EVENTQ 0

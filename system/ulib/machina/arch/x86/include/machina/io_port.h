@@ -7,7 +7,7 @@
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
-#include <zircon/thread_annotations.h>
+#include <machina/thread_annotations.h>
 #include <zircon/types.h>
 
 class PicHandler : public IoHandler {

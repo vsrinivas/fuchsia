@@ -6,9 +6,9 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <machina/thread_annotations.h>
 #include <machina/virtio_pci.h>
 #include <virtio/virtio.h>
-#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 struct vring_desc;
