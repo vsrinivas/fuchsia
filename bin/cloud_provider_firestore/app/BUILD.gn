@@ -22,3 +22,36 @@ executable("app") {
     "//zircon/system/ulib/trace-provider",
   ]
 }
+
+source_set("lib") {
+  sources = [
+    "page_cloud_impl.cc",
+    "page_cloud_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/cloud_provider/fidl",
+  ]
+
+  deps = [
+    "//peridot/bin/ledger/callback",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "page_cloud_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//peridot/bin/ledger/test:lib",
+  ]
+}

@@ -11,9 +11,26 @@ package("cloud_provider_firestore") {
     "app",
   ]
 
-  binaries = [
-    {
-      name = "cloud_provider_firestore"
-    },
+  binaries = [ {
+        name = "cloud_provider_firestore"
+      } ]
+}
+
+executable("unittests") {
+  testonly = true
+
+  output_name = "cloud_provider_firestore_unittests"
+
+  deps = [
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//peridot/bin/cloud_provider_firestore/app:unittests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":unittests",
   ]
 }

@@ -13,11 +13,9 @@ package("ledger") {
     "app",
   ]
 
-  binaries = [
-    {
-      name = "ledger"
-    },
-  ]
+  binaries = [ {
+        name = "ledger"
+      } ]
 }
 
 package("ledger_tool") {
@@ -27,11 +25,9 @@ package("ledger_tool") {
     "tool",
   ]
 
-  binaries = [
-    {
-      name = "ledger_tool"
-    },
-  ]
+  binaries = [ {
+        name = "ledger_tool"
+      } ]
 }
 
 package("ledger_tests") {
@@ -40,11 +36,12 @@ package("ledger_tests") {
 
   deps = [
     ":ledger_unittests",
-    "//peridot/bin/cloud_provider_firebase:tests",
     "test/benchmark",
     "test/e2e_local",
     "test/e2e_sync",
     "test/integration",
+    "//peridot/bin/cloud_provider_firebase:tests",
+    "//peridot/bin/cloud_provider_firestore:tests",
   ]
 
   binaries = [
@@ -67,6 +64,9 @@ package("ledger_tests") {
   tests = [
     {
       name = "cloud_provider_firebase_unittests"
+    },
+    {
+      name = "cloud_provider_firestore_unittests"
     },
     {
       name = "ledger_integration_tests"
