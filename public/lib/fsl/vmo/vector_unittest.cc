@@ -10,7 +10,7 @@ namespace {
 
 TEST(VmoVector, ShortVector) {
   std::vector<char> v(123, 'f');
-  zx::vmo sb;
+  fsl::SizedVmo sb;
   EXPECT_TRUE(VmoFromVector(v, &sb));
   std::vector<char> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
@@ -19,9 +19,27 @@ TEST(VmoVector, ShortVector) {
 
 TEST(VmoVector, EmptyVector) {
   std::vector<char> v;
-  zx::vmo sb;
+  fsl::SizedVmo sb;
   EXPECT_TRUE(VmoFromVector(v, &sb));
   std::vector<char> v_out;
+  EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
+  EXPECT_EQ(v, v_out);
+}
+
+TEST(VmoVector, ShortUnsignedVector) {
+  std::vector<uint8_t> v(123, 42);
+  fsl::SizedVmo sb;
+  EXPECT_TRUE(VmoFromVector(v, &sb));
+  std::vector<uint8_t> v_out;
+  EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
+  EXPECT_EQ(v, v_out);
+}
+
+TEST(VmoVector, EmptyUnsignedVector) {
+  std::vector<uint8_t> v;
+  fsl::SizedVmo sb;
+  EXPECT_TRUE(VmoFromVector(v, &sb));
+  std::vector<uint8_t> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
   EXPECT_EQ(v, v_out);
 }

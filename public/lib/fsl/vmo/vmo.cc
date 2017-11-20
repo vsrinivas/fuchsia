@@ -15,45 +15,41 @@ namespace fsl {
 namespace {
 
 template <typename Container>
-bool VmoFromContainer(const Container& container, zx::vmo* handle_ptr) {
-  FXL_CHECK(handle_ptr);
+bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
+  FXL_CHECK(sized_vmo_ptr);
 
   uint64_t num_bytes = container.size();
-  zx_status_t status = zx::vmo::create(num_bytes, 0u, handle_ptr);
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(num_bytes, 0u, &vmo);
   if (status < 0) {
     FXL_LOG(WARNING) << "zx::vmo::create failed: " << status;
     return false;
   }
 
-  if (num_bytes == 0) {
-    return true;
+  if (num_bytes > 0) {
+    size_t actual;
+    status = vmo.write(container.data(), 0, num_bytes, &actual);
+    if (status < 0) {
+      FXL_LOG(WARNING) << "zx::vmo::write failed: " << status;
+      return false;
+    }
+    if ((size_t)actual != num_bytes) {
+      FXL_LOG(WARNING) << "zx::vmo::write wrote " << actual
+                       << " bytes instead of " << num_bytes << " bytes.";
+      return false;
+    }
   }
 
-  size_t actual;
-  status = handle_ptr->write(container.data(), 0, num_bytes, &actual);
-  if (status < 0) {
-    FXL_LOG(WARNING) << "zx::vmo::write failed: " << status;
-    return false;
-  }
-  if ((size_t)actual != num_bytes) {
-    FXL_LOG(WARNING) << "zx::vmo::write wrote " << actual
-                     << " bytes instead of " << num_bytes << " bytes.";
-    return false;
-  }
+  *sized_vmo_ptr = SizedVmo(std::move(vmo), num_bytes);
 
   return true;
 }
 
 template <typename Container>
-bool ContainerFromVmo(const zx::vmo& buffer, Container* container_ptr) {
+bool ContainerFromVmo(const zx::vmo& buffer,
+                      uint64_t num_bytes,
+                      Container* container_ptr) {
   FXL_CHECK(container_ptr);
-
-  uint64_t num_bytes;
-  zx_status_t status = buffer.get_size(&num_bytes);
-  if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "zx::vmo::get_size failed: " << status;
-    return false;
-  }
 
   container_ptr->resize(num_bytes);
 
@@ -62,7 +58,8 @@ bool ContainerFromVmo(const zx::vmo& buffer, Container* container_ptr) {
   }
 
   size_t num_read;
-  status = buffer.read(&(*container_ptr)[0], 0, num_bytes, &num_read);
+  zx_status_t status =
+      buffer.read(&(*container_ptr)[0], 0, num_bytes, &num_read);
   if (status < 0) {
     FXL_LOG(WARNING) << "zx::vmo::read failed: " << status;
     return false;
@@ -79,59 +76,124 @@ bool ContainerFromVmo(const zx::vmo& buffer, Container* container_ptr) {
 
 }  // namespace
 
-bool VmoFromString(const fxl::StringView& string, zx::vmo* handle_ptr) {
-  return VmoFromContainer<fxl::StringView>(string, handle_ptr);
-}
-
 bool VmoFromString(const fxl::StringView& string, SizedVmo* sized_vmo) {
-  zx::vmo vmo;
-  bool result = VmoFromContainer<fxl::StringView>(string, &vmo);
-  if (result) {
-    *sized_vmo = SizedVmo(std::move(vmo), string.size());
-  }
-  return result;
-}
-
-bool StringFromVmo(const zx::vmo& shared_buffer, std::string* string_ptr) {
-  return ContainerFromVmo<std::string>(shared_buffer, string_ptr);
+  return VmoFromContainer<fxl::StringView>(string, sized_vmo);
 }
 
 bool StringFromVmo(const SizedVmo& shared_buffer, std::string* string_ptr) {
-  bool result = ContainerFromVmo<std::string>(shared_buffer.vmo(), string_ptr);
-  if (result) {
-    string_ptr->resize(shared_buffer.size());
-  }
-  return result;
+  return ContainerFromVmo<std::string>(shared_buffer.vmo(),
+                                       shared_buffer.size(), string_ptr);
 }
 
-bool StringFromVmo(const SizedVmoTransportPtr& vmo_transport, std::string* string_ptr) {
-  SizedVmo vmo;
+bool StringFromVmo(const SizedVmoTransportPtr& vmo_transport,
+                   std::string* string_ptr) {
   if (!SizedVmo::IsSizeValid(vmo_transport->vmo, vmo_transport->size)) {
     return false;
   }
-  bool result = ContainerFromVmo<std::string>(vmo_transport->vmo, string_ptr);
-  if (result) {
-    string_ptr->resize(vmo_transport->size);
+  return ContainerFromVmo<std::string>(vmo_transport->vmo, vmo_transport->size,
+                                       string_ptr);
+}
+
+bool VmoFromString(const fxl::StringView& string, zx::vmo* handle_ptr) {
+  SizedVmo sized_vmo;
+  if (!VmoFromContainer<fxl::StringView>(string, &sized_vmo)) {
+    return false;
   }
-  return result;
+  *handle_ptr = std::move(sized_vmo.vmo());
+  return true;
+}
+
+bool StringFromVmo(const zx::vmo& shared_buffer, std::string* string_ptr) {
+  uint64_t num_bytes;
+  zx_status_t status = shared_buffer.get_size(&num_bytes);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "zx::vmo::get_size failed: " << status;
+    return false;
+  }
+
+  return ContainerFromVmo<std::string>(shared_buffer, num_bytes, string_ptr);
+}
+
+bool VmoFromVector(const std::vector<char>& vector, SizedVmo* sized_vmo) {
+  return VmoFromContainer<std::vector<char>>(vector, sized_vmo);
+}
+
+bool VectorFromVmo(const SizedVmo& shared_buffer,
+                   std::vector<char>* vector_ptr) {
+  return ContainerFromVmo<std::vector<char>>(shared_buffer.vmo(),
+                                             shared_buffer.size(), vector_ptr);
+}
+
+bool VectorFromVmo(const SizedVmoTransportPtr& vmo_transport,
+                   std::vector<char>* vector_ptr) {
+  if (!SizedVmo::IsSizeValid(vmo_transport->vmo, vmo_transport->size)) {
+    return false;
+  }
+  return ContainerFromVmo<std::vector<char>>(vmo_transport->vmo,
+                                             vmo_transport->size, vector_ptr);
+}
+
+bool VmoFromVector(const std::vector<uint8_t>& vector, SizedVmo* sized_vmo) {
+  return VmoFromContainer<std::vector<uint8_t>>(vector, sized_vmo);
+}
+
+bool VectorFromVmo(const SizedVmo& shared_buffer,
+                   std::vector<uint8_t>* vector_ptr) {
+  return ContainerFromVmo<std::vector<uint8_t>>(
+      shared_buffer.vmo(), shared_buffer.size(), vector_ptr);
+}
+
+bool VectorFromVmo(const SizedVmoTransportPtr& vmo_transport,
+                   std::vector<uint8_t>* vector_ptr) {
+  if (!SizedVmo::IsSizeValid(vmo_transport->vmo, vmo_transport->size)) {
+    return false;
+  }
+  return ContainerFromVmo<std::vector<uint8_t>>(
+      vmo_transport->vmo, vmo_transport->size, vector_ptr);
 }
 
 bool VmoFromVector(const std::vector<char>& vector, zx::vmo* handle_ptr) {
-  return VmoFromContainer<std::vector<char>>(vector, handle_ptr);
+  SizedVmo sized_vmo;
+  if (!VmoFromContainer<std::vector<char>>(vector, &sized_vmo)) {
+    return false;
+  }
+  *handle_ptr = std::move(sized_vmo.vmo());
+  return true;
 }
 
 bool VectorFromVmo(const zx::vmo& shared_buffer,
                    std::vector<char>* vector_ptr) {
-  return ContainerFromVmo<std::vector<char>>(shared_buffer, vector_ptr);
+  uint64_t num_bytes;
+  zx_status_t status = shared_buffer.get_size(&num_bytes);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "zx::vmo::get_size failed: " << status;
+    return false;
+  }
+
+  return ContainerFromVmo<std::vector<char>>(shared_buffer, num_bytes,
+                                             vector_ptr);
 }
 
 bool VmoFromVector(const std::vector<uint8_t>& vector, zx::vmo* handle_ptr) {
-  return VmoFromContainer<std::vector<uint8_t>>(vector, handle_ptr);
+  SizedVmo sized_vmo;
+  if (!VmoFromContainer<std::vector<uint8_t>>(vector, &sized_vmo)) {
+    return false;
+  }
+  *handle_ptr = std::move(sized_vmo.vmo());
+  return true;
 }
 
 bool VectorFromVmo(const zx::vmo& shared_buffer,
                    std::vector<uint8_t>* vector_ptr) {
-  return ContainerFromVmo<std::vector<uint8_t>>(shared_buffer, vector_ptr);
+  uint64_t num_bytes;
+  zx_status_t status = shared_buffer.get_size(&num_bytes);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "zx::vmo::get_size failed: " << status;
+    return false;
+  }
+
+  return ContainerFromVmo<std::vector<uint8_t>>(shared_buffer, num_bytes,
+                                                vector_ptr);
 }
 
 }  // namespace fsl

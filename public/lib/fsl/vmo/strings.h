@@ -17,23 +17,8 @@
 namespace fsl {
 
 // Make a new shared buffer with the contents of a string.
-//
-// This function is deprecated because it loses the string size when the vmo is
-// always page aligned.
-FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
-                              zx::vmo* handle_ptr)
-    __attribute__((__deprecated__("Use the version with a SizedVmo.")));
-
-// Make a new shared buffer with the contents of a string.
 FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
                               SizedVmo* handle_ptr);
-
-// Copy the contents of a shared buffer into a string.
-//
-// This function is deprecated because it loses the string size when the vmo is
-// always page aligned.
-FXL_EXPORT bool StringFromVmo(const zx::vmo& handle, std::string* string_ptr)
-     __attribute__((__deprecated__("Use the version with a SizedVmo.")));
 
 // Copy the contents of a shared buffer into a string.
 FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
@@ -41,6 +26,21 @@ FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
 // Copy the contents of a shared buffer into a string.
 FXL_EXPORT bool StringFromVmo(const SizedVmoTransportPtr& handle,
                               std::string* string_ptr);
+
+// Make a new shared buffer with the contents of a string.
+//
+// This function is deprecated because it loses the string size when the vmo is
+// always page aligned.
+FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
+                              zx::vmo* handle_ptr)
+    __attribute__((__deprecated__("Use the version with a SizedVmo.")));
+
+// Copy the contents of a shared buffer into a string.
+//
+// This function is deprecated because it loses the string size when the vmo is
+// always page aligned.
+FXL_EXPORT bool StringFromVmo(const zx::vmo& handle, std::string* string_ptr)
+     __attribute__((__deprecated__("Use the version with a SizedVmo.")));
 
 }  // namespace fsl
 
