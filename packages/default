@@ -18,6 +18,7 @@
         "garnet/packages/fonts",
         "garnet/packages/fortune",
         "garnet/packages/go_stdlib_tests",
+        "garnet/packages/guest",
         "garnet/packages/icu_data",
         "garnet/packages/image-pipe-swapchain",
         "garnet/packages/insntrace",

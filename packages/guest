@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "guest": "//zircon/system/uapp/guest"
+    }
+}
