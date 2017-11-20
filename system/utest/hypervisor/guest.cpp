@@ -354,9 +354,3 @@ RUN_TEST(guest_set_trap_with_bell)
 RUN_TEST(guest_set_trap_with_io)
 #endif
 END_TEST_CASE(guest)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

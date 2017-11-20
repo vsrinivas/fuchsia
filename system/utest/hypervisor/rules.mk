@@ -12,29 +12,20 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/$(ARCH).S \
-    $(LOCAL_DIR)/block.cpp \
-    $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/guest.cpp \
-    $(LOCAL_DIR)/input.cpp \
-    $(LOCAL_DIR)/pci.cpp \
-    $(LOCAL_DIR)/virtio_queue.cpp \
-    $(LOCAL_DIR)/virtio_queue_fake.cpp \
-
-MODULE_HEADER_DEPS := \
-    system/ulib/ddk \
-    system/ulib/hid \
-    system/ulib/virtio \
+    $(LOCAL_DIR)/main.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/hypervisor \
     system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
+    system/ulib/hypervisor \
     system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_CPPFLAGS := \
     -Isystem/ulib/hypervisor/arch/$(ARCH)/include \

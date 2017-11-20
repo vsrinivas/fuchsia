@@ -13,15 +13,15 @@
 
 #include <fbl/unique_ptr.h>
 #include <hypervisor/address.h>
-#include <hypervisor/balloon.h>
-#include <hypervisor/block.h>
-#include <hypervisor/gpu.h>
 #include <hypervisor/guest.h>
-#include <hypervisor/input.h>
-#include <hypervisor/interrupt_controller.h>
-#include <hypervisor/pci.h>
-#include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
+#include <machina/balloon.h>
+#include <machina/block.h>
+#include <machina/gpu.h>
+#include <machina/input.h>
+#include <machina/interrupt_controller.h>
+#include <machina/pci.h>
+#include <machina/uart.h>
 #include <virtio/balloon.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -32,9 +32,9 @@
 
 #if __x86_64__
 #include <hypervisor/acpi.h>
-#include <hypervisor/io_port.h>
 #include <hypervisor/local_apic.h>
-#include <hypervisor/tpm.h>
+#include <machina/io_port.h>
+#include <machina/tpm.h>
 
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = { UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE };

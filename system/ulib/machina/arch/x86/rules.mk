@@ -5,9 +5,5 @@
 ARCH_DIR := $(GET_LOCAL_DIR)
 
 MODULE_SRCS += \
-    $(ARCH_DIR)/acpi.cpp \
-    $(ARCH_DIR)/decode.cpp \
-    $(ARCH_DIR)/local_apic.cpp \
-
-MODULE_CPPFLAGS += \
-    -Ithird_party/lib/acpica/source/include \
+    $(ARCH_DIR)/io_apic.cpp \
+    $(ARCH_DIR)/io_port.cpp \

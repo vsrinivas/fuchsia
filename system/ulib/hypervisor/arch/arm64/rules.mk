@@ -3,6 +3,3 @@
 # found in the LICENSE file.
 
 ARCH_DIR := $(GET_LOCAL_DIR)
-
-MODULE_SRCS += \
-    $(ARCH_DIR)/gic_distributor.cpp \
