@@ -23,8 +23,12 @@ static const char kMadtPath[] = "/boot/data/madt.aml";
 static const char kMcfgPath[] = "/boot/data/mcfg.aml";
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
-    auto checksum = UINT8_MAX - AcpiTbChecksum(static_cast<uint8_t*>(table), length) + 1;
-    return static_cast<uint8_t>(checksum);
+    uint8_t sum = 0;
+    uint8_t* start = reinterpret_cast<uint8_t*>(table);
+    uint8_t* end = start + length;
+    for (; start != end; ++start)
+        sum = static_cast<uint8_t>(sum + *start);
+    return static_cast<uint8_t>(UINT8_MAX - sum + 1);
 }
 
 static void acpi_header(ACPI_TABLE_HEADER* header, const char* signature, uint32_t length) {

@@ -11,8 +11,5 @@ MODULE_SRCS += \
     $(ARCH_DIR)/io_port.cpp \
     $(ARCH_DIR)/local_apic.cpp \
 
-MODULE_STATIC_LIBS += \
-    third_party/ulib/acpica \
-
 MODULE_CPPFLAGS += \
     -Ithird_party/lib/acpica/source/include \
