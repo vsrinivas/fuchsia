@@ -10,10 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include "identifier_table.h"
-#include "lexer.h"
-#include "parser.h"
-#include "source_manager.h"
+#include "lib/identifier_table.h"
+#include "lib/lexer.h"
+#include "lib/parser.h"
+#include "lib/source_manager.h"
 
 namespace fidl {
 namespace {

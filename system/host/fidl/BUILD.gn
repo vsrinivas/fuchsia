@@ -10,18 +10,18 @@ config("fidl_config") {
 source_set("compiler") {
   public_configs = [ ":fidl_config" ]
   sources = [
-    "ast.h",
-    "identifier_table.cpp",
-    "identifier_table.h",
-    "lexer.cpp",
-    "lexer.h",
-    "parser.cpp",
-    "parser.h",
-    "source_manager.cpp",
-    "source_manager.h",
-    "string_view.h",
-    "token.h",
-    "token_definitions.h",
+    "lib/ast.h",
+    "lib/identifier_table.cpp",
+    "lib/identifier_table.h",
+    "lib/lexer.cpp",
+    "lib/lexer.h",
+    "lib/parser.cpp",
+    "lib/parser.h",
+    "lib/source_manager.cpp",
+    "lib/source_manager.h",
+    "lib/string_view.h",
+    "lib/token.h",
+    "lib/token_definitions.h",
   ]
 }
 

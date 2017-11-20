@@ -11,10 +11,10 @@ MODULE_TYPE := hostapp
 MODULE_COMPILEFLAGS := -O0 -g
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/identifier_table.cpp \
-    $(LOCAL_DIR)/lexer.cpp \
+    $(LOCAL_DIR)/lib/identifier_table.cpp \
+    $(LOCAL_DIR)/lib/lexer.cpp \
+    $(LOCAL_DIR)/lib/parser.cpp \
+    $(LOCAL_DIR)/lib/source_manager.cpp \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/parser.cpp \
-    $(LOCAL_DIR)/source_manager.cpp \
 
 include make/module.mk
