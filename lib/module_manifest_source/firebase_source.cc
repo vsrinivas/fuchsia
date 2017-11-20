@@ -109,7 +109,8 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     }
 
     // Try to reconnect.
-    FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_ << " seconds.";
+    FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
+                  << " seconds.";
     task_runner_->PostDelayedTask(
         [owner = owner_, this]() {
           if (!owner)

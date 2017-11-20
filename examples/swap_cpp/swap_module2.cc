@@ -17,7 +17,8 @@ int main(int /*argc*/, const char** /*argv*/) {
           app_context.get(),
           [](auto view_manager, auto view_owner_request) {
             return new modular_example::ModuleView(
-                std::move(view_manager), std::move(view_owner_request), 0xFFFF00FF);
+                std::move(view_manager), std::move(view_owner_request),
+                0xFFFF00FF);
           }),
       [&loop] { loop.QuitNow(); });
 

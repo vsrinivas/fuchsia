@@ -20,8 +20,7 @@ namespace modular {
 // single service and the ViewProvider service. It also implements a Terminate()
 // method that makes it suitable to be used as an Impl class of AppDriver.
 template <class Service>
-class SingleServiceApp : protected Service,
-                         private mozart::ViewProvider {
+class SingleServiceApp : protected Service, private mozart::ViewProvider {
  public:
   SingleServiceApp(app::ApplicationContext* const application_context)
       : application_context_(application_context),

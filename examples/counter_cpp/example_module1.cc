@@ -111,7 +111,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
  public:
   explicit Module1App(app::ApplicationContext* const application_context)
       : SingleServiceApp(application_context),
-        store_(kModuleName), weak_ptr_factory_(this) {
+        store_(kModuleName),
+        weak_ptr_factory_(this) {
     // TODO(mesch): The callbacks seem to have a sequential relationship.
     // It seems to me there should be a single callback that does all three
     // things in a sequence. Since the result InvalidateScene() happens only

@@ -50,9 +50,8 @@ class DevUserShellApp : modular::StoryWatcher,
                         maxwell::SuggestionListener,
                         public modular::SingleServiceApp<modular::UserShell> {
  public:
-  explicit DevUserShellApp(
-      app::ApplicationContext* const application_context,
-      Settings settings)
+  explicit DevUserShellApp(app::ApplicationContext* const application_context,
+                           Settings settings)
       : SingleServiceApp(application_context),
         settings_(std::move(settings)),
         story_watcher_binding_(this) {}

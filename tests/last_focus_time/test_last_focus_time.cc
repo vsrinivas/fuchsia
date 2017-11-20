@@ -136,7 +136,9 @@ class FocusWatcherImpl : modular::FocusWatcher {
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(app::ApplicationContext* const application_context)
-      : ComponentBase(application_context) { TestInit(__FILE__); }
+      : ComponentBase(application_context) {
+    TestInit(__FILE__);
+  }
 
   ~TestApp() override = default;
 

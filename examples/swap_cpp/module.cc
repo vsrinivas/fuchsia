@@ -37,8 +37,7 @@ void ModuleView::OnPropertiesChanged(
 
 ModuleApp::ModuleApp(app::ApplicationContext* const application_context,
                      CreateViewCallback create)
-    : SingleServiceApp(application_context),
-      create_(std::move(create)) {}
+    : SingleServiceApp(application_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,

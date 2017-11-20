@@ -275,8 +275,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // Populate parameters and initialize the device shell.
     auto params = DeviceShellParams::New();
     params->presentation = std::move(presentation);
-    device_shell_->Initialize(
-        device_shell_context_binding_.NewBinding(), std::move(params));
+    device_shell_->Initialize(device_shell_context_binding_.NewBinding(),
+                              std::move(params));
 
     // 2. Wait for persistent data to come up.
     if (!settings_.no_minfs) {

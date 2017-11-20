@@ -161,9 +161,9 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
 // here.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  explicit TestApp(app::ApplicationContext* const application_context, Settings settings)
-      : ComponentBase(application_context),
-        settings_(std::move(settings)) {
+  explicit TestApp(app::ApplicationContext* const application_context,
+                   Settings settings)
+      : ComponentBase(application_context), settings_(std::move(settings)) {
     TestInit(__FILE__);
   }
 
@@ -276,19 +276,19 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_state_watcher_.Continue(modular::StoryState::STOPPED, [this, round] {
       story_state_watcher_.Continue(modular::StoryState::STOPPED, nullptr);
       story_provider_->GetStoryInfo(
-        story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
-          FXL_CHECK(story_info);
+          story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
+            FXL_CHECK(story_info);
 
-          // Can't use the StoryController here because we closed it
-          // in TeardownStoryController().
-          story_provider_->RunningStories(
-              [this, round](fidl::Array<fidl::String> story_ids) {
-                auto n = count(story_ids.begin(), story_ids.end(),
-                               story_info_->id);
-                FXL_CHECK(n == 0);
-                TestStory1_Run(round + 1);
-              });
-        });
+            // Can't use the StoryController here because we closed it
+            // in TeardownStoryController().
+            story_provider_->RunningStories(
+                [this, round](fidl::Array<fidl::String> story_ids) {
+                  auto n = count(story_ids.begin(), story_ids.end(),
+                                 story_info_->id);
+                  FXL_CHECK(n == 0);
+                  TestStory1_Run(round + 1);
+                });
+          });
     });
 
     story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,

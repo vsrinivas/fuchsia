@@ -39,8 +39,8 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
   using Base = modular::SingleServiceApp<Component>;
 
-  ComponentBase(app::ApplicationContext* const application_context) :
-      Base(application_context), weak_factory_(this) {}
+  ComponentBase(app::ApplicationContext* const application_context)
+      : Base(application_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
 
@@ -95,7 +95,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
 //     return 0;
 //   }
 //
-template<typename Impl, typename... Args>
+template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
   fsl::MessageLoop loop;
 

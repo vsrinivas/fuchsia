@@ -11,8 +11,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 #include "lib/suggestion/fidl/query_handler.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"

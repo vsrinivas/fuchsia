@@ -38,7 +38,8 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void Initialize(fidl::InterfaceHandle<modular::StoryContext> story_context) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
     Connect();
   }

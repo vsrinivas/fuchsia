@@ -92,9 +92,10 @@ class Module2View : public mozart::BaseView {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module2App : public modular::SingleServiceApp<modular::Module> {
  public:
-  explicit Module2App(app::ApplicationContext* const application_context) :
-      SingleServiceApp(application_context),
-      store_(kModuleName), weak_ptr_factory_(this) {
+  explicit Module2App(app::ApplicationContext* const application_context)
+      : SingleServiceApp(application_context),
+        store_(kModuleName),
+        weak_ptr_factory_(this) {
     store_.AddCallback([this] {
       if (view_) {
         view_->InvalidateScene();

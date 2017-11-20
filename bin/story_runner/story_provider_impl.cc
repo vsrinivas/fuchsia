@@ -669,8 +669,7 @@ void StoryProviderImpl::LoadStoryShell() {
 
   preloaded_story_shell_ =
       std::make_unique<StoryShellConnection>(StoryShellConnection{
-          std::move(story_shell_app),
-          std::move(story_shell_view)});
+          std::move(story_shell_app), std::move(story_shell_view)});
 }
 
 void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,

@@ -16,14 +16,12 @@
 
 namespace {
 
-class TestApp
-    : modular::StoryWatcher,
-      maxwell::SuggestionListener,
-      public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : modular::StoryWatcher,
+                maxwell::SuggestionListener,
+                public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(app::ApplicationContext* const application_context)
-      : ComponentBase(application_context),
-        story_watcher_binding_(this) {
+      : ComponentBase(application_context), story_watcher_binding_(this) {
     TestInit(__FILE__);
   }
 

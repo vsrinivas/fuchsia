@@ -223,34 +223,34 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
 
           key_ = MakeMessageQueueTokenKey(component_namespace_,
                                           component_instance_id_, queue_name_);
-          snapshot_->Get(to_array(key_), [this, flow](
-                                             ledger::Status status,
-                                             fsl::SizedVmoTransportPtr value) {
-            if (status == ledger::Status::KEY_NOT_FOUND) {
-              // Key wasn't found, that's not an error.
-              return;
-            }
+          snapshot_->Get(
+              to_array(key_), [this, flow](ledger::Status status,
+                                           fsl::SizedVmoTransportPtr value) {
+                if (status == ledger::Status::KEY_NOT_FOUND) {
+                  // Key wasn't found, that's not an error.
+                  return;
+                }
 
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                             << "PageSnapshot.Get() " << status;
-              return;
-            }
+                if (status != ledger::Status::OK) {
+                  FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                                 << "PageSnapshot.Get() " << status;
+                  return;
+                }
 
-            if (!value) {
-              FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                             << "Value is null.";
-              return;
-            }
+                if (!value) {
+                  FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                                 << "Value is null.";
+                  return;
+                }
 
-            std::string queue_token;
-            if (!fsl::StringFromVmo(value, &queue_token)) {
-              FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                             << "VMO could not be copied.";
-              return;
-            }
-            result_ = queue_token;
-          });
+                std::string queue_token;
+                if (!fsl::StringFromVmo(value, &queue_token)) {
+                  FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                                 << "VMO could not be copied.";
+                  return;
+                }
+                result_ = queue_token;
+              });
         });
   }
 
@@ -297,42 +297,42 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
           }
 
           std::string key = MakeMessageQueueKey(token_);
-          snapshot_->Get(to_array(key), [this, flow](
-                                            ledger::Status status,
-                                            fsl::SizedVmoTransportPtr value) {
-            if (status != ledger::Status::OK) {
-              if (status != ledger::Status::KEY_NOT_FOUND) {
-                // It's expected that the key is not found when the link
-                // is accessed for the first time. Don't log an error
-                // then.
-                FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
-                               << "PageSnapshot.Get() " << status;
-              }
-              return;
-            }
+          snapshot_->Get(
+              to_array(key), [this, flow](ledger::Status status,
+                                          fsl::SizedVmoTransportPtr value) {
+                if (status != ledger::Status::OK) {
+                  if (status != ledger::Status::KEY_NOT_FOUND) {
+                    // It's expected that the key is not found when the link
+                    // is accessed for the first time. Don't log an error
+                    // then.
+                    FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
+                                   << "PageSnapshot.Get() " << status;
+                  }
+                  return;
+                }
 
-            std::string value_as_string;
-            if (value) {
-              if (!fsl::StringFromVmo(value, &value_as_string)) {
-                FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
-                               << "VMO could not be copied.";
-                return;
-              }
-            }
+                std::string value_as_string;
+                if (value) {
+                  if (!fsl::StringFromVmo(value, &value_as_string)) {
+                    FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
+                                   << "VMO could not be copied.";
+                    return;
+                  }
+                }
 
-            if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
-              return;
-            }
+                if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
+                  return;
+                }
 
-            if (!result_.is_complete()) {
-              FXL_LOG(WARNING) << trace_name() << " " << token_ << " "
-                               << "Queue token not found in the ledger.";
-              return;
-            }
+                if (!result_.is_complete()) {
+                  FXL_LOG(WARNING) << trace_name() << " " << token_ << " "
+                                   << "Queue token not found in the ledger.";
+                  return;
+                }
 
-            message_queue_manager_->GetMessageQueueStorage(result_)
-                ->AddMessageSenderBinding(std::move(request_));
-          });
+                message_queue_manager_->GetMessageQueueStorage(result_)
+                    ->AddMessageSenderBinding(std::move(request_));
+              });
         });
   }
 

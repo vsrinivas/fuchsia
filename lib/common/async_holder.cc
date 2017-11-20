@@ -10,8 +10,7 @@
 namespace modular {
 
 AsyncHolderBase::AsyncHolderBase(std::string name)
-    : name_(std::move(name)),
-      down_(std::make_shared<bool>(false)) {}
+    : name_(std::move(name)), down_(std::make_shared<bool>(false)) {}
 
 AsyncHolderBase::~AsyncHolderBase() {
   if (!*down_) {
@@ -24,7 +23,8 @@ AsyncHolderBase::~AsyncHolderBase() {
 
 void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
                                std::function<void()> done) {
-  auto cont = [this, down = down_, done = std::move(done)](const bool from_timeout) {
+  auto cont = [this, down = down_,
+               done = std::move(done)](const bool from_timeout) {
     if (*down) {
       return;
     }

@@ -681,7 +681,8 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
                   LinkPathPtr link_path,
                   fidl::InterfaceRequest<Link> request,
                   ResultCall done)
-      : Operation("StoryControllerImpl::ConnectLinkCall", container,
+      : Operation("StoryControllerImpl::ConnectLinkCall",
+                  container,
                   std::move(done)),
         story_controller_impl_(story_controller_impl),
         link_path_(std::move(link_path)),
@@ -691,7 +692,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
 
  private:
   void Run() override {
-    FlowToken flow {this};
+    FlowToken flow{this};
     auto i = std::find_if(story_controller_impl_->links_.begin(),
                           story_controller_impl_->links_.end(),
                           [this](const std::unique_ptr<LinkImpl>& l) {
@@ -702,28 +703,28 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
       return;
     }
 
-    link_impl_ = new LinkImpl(
-        story_controller_impl_->ledger_client_,
-        story_controller_impl_->story_page_id_.Clone(), std::move(link_path_));
+    link_impl_ = new LinkImpl(story_controller_impl_->ledger_client_,
+                              story_controller_impl_->story_page_id_.Clone(),
+                              std::move(link_path_));
     link_impl_->Connect(std::move(request_));
     story_controller_impl_->links_.emplace_back(link_impl_);
     // This orphaned handler will be called after this operation has been
     // deleted. So we need to take special care when depending on members.
     // Copies of |story_controller_impl_| and |link_impl_| are ok.
     link_impl_->set_orphaned_handler(
-        [link_impl = link_impl_, story_controller_impl = story_controller_impl_] {
-          story_controller_impl->DisposeLink(link_impl); });
+        [link_impl = link_impl_,
+         story_controller_impl = story_controller_impl_] {
+          story_controller_impl->DisposeLink(link_impl);
+        });
 
-    link_impl_->Sync([this, flow] {
-      Cont(flow);
-    });
+    link_impl_->Sync([this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken token) {
     story_controller_impl_->links_watchers_.ForAllPtrs(
         [this](StoryLinksWatcher* const watcher) {
-      watcher->OnNewLink(link_impl_->link_path().Clone());
-    });
+          watcher->OnNewLink(link_impl_->link_path().Clone());
+        });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned

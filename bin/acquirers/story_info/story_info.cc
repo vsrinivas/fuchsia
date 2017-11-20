@@ -48,8 +48,9 @@ void StoryInfoAcquirer::Connect(
   agent_services_.AddBinding(std::move(services));
 }
 
-void StoryInfoAcquirer::RunTask(const fidl::String& task_id,
-                                const modular::Agent::RunTaskCallback& callback) {
+void StoryInfoAcquirer::RunTask(
+    const fidl::String& task_id,
+    const modular::Agent::RunTaskCallback& callback) {
   FXL_LOG(FATAL) << "Not implemented.";
 }
 
