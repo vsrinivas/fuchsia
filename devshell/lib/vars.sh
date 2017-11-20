@@ -8,12 +8,11 @@ else
   devshell_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-declare -r -x FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
-declare -r -x FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
-declare -r -x FUCHSIA_CONFIG="${FUCHSIA_CONFIG:-${FUCHSIA_DIR}/.config}"
-unset devshell_lib_dir
+export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
+export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
+export FUCHSIA_CONFIG="${FUCHSIA_CONFIG:-${FUCHSIA_DIR}/.config}"
 
-declare -r ZIRCON_TOOLS_DIR="${FUCHSIA_OUT_DIR}/build-zircon/tools"
+ZIRCON_TOOLS_DIR="${FUCHSIA_OUT_DIR}/build-zircon/tools"
 
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
   set -x
@@ -28,16 +27,16 @@ function fx-config-read-if-present {
 
   # Paths are relative to FUCHSIA_DIR unless they're absolute paths.
   if [[ "${FUCHSIA_BUILD_DIR:0:1}" == "/" ]]; then
-    declare -r -x FUCHSIA_BUILD_DIR="${FUCHSIA_BUILD_DIR}"
+    export FUCHSIA_BUILD_DIR="${FUCHSIA_BUILD_DIR}"
   else
-    declare -r -x FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
+    export FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
   fi
 
-  declare -r -x FUCHSIA_VARIANT="${FUCHSIA_VARIANT}"
-  declare -r -x FUCHSIA_ARCH="${FUCHSIA_ARCH}"
-  declare -r -x ZIRCON_PROJECT="${ZIRCON_PROJECT}"
+  export FUCHSIA_VARIANT="${FUCHSIA_VARIANT}"
+  export FUCHSIA_ARCH="${FUCHSIA_ARCH}"
+  export ZIRCON_PROJECT="${ZIRCON_PROJECT}"
 
-  declare -r -x ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${FUCHSIA_OUT_DIR}/build-zircon/build-${ZIRCON_PROJECT}}"
+  export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${FUCHSIA_OUT_DIR}/build-zircon/build-${ZIRCON_PROJECT}}"
   return 0
 }
 
