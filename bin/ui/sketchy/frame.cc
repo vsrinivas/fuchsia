@@ -17,7 +17,7 @@ Frame::Frame(escher::BufferFactory* buffer_factory,
   auto acquire_semaphore_pair =
       escher::NewSemaphoreEventPair(escher_);
   if (!acquire_semaphore_pair.first) {
-    success_ = false;
+    init_failed_ = true;
     return;
   }
   acquire_semaphore_ = std::move(acquire_semaphore_pair.first);
@@ -26,7 +26,7 @@ Frame::Frame(escher::BufferFactory* buffer_factory,
   auto status = zx::event::create(/* options= */ 0u, &release_fence_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create release fence.";
-    success_ = false;
+    init_failed_ = true;
   }
 
   if (enable_profiler && escher_->supports_timer_queries()) {
@@ -84,6 +84,7 @@ void Frame::RequestScenicPresent(
         FXL_LOG(INFO) << "----------------------------------------------------";
       });
   session->EnqueueAcquireFence(std::move(acquire_fence_));
+  session->EnqueueReleaseFence(std::move(release_fence_));
   session->Present(presentation_time, std::move(callback));
 }
 

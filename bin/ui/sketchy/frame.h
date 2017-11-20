@@ -29,7 +29,7 @@ class Frame final {
   escher::BufferFactory* buffer_factory() const { return buffer_factory_; }
   escher::SemaphorePtr acquire_semaphore() const { return acquire_semaphore_; }
   escher::TimestampProfiler* profiler() const { return profiler_.get(); }
-  bool success() const { return success_; }
+  bool init_failed() const { return init_failed_; }
 
  private:
   escher::BufferFactory* buffer_factory_;
@@ -39,7 +39,7 @@ class Frame final {
   escher::SemaphorePtr acquire_semaphore_;
   zx::event acquire_fence_;
   zx::event release_fence_;
-  bool success_;
+  bool init_failed_ = false;
 };
 
 }  // namespace sketchy_service

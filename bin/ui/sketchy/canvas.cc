@@ -67,9 +67,11 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   callbacks_.clear();
 
   auto frame = Frame(&buffer_factory_);
-  if (!frame.success()) {
+  if (frame.init_failed()) {
+    session_->Present(presentation_time, std::move(session_callback));
     return;
   }
+
   stroke_manager_.Update(&frame);
   frame.RequestScenicPresent(
       session_, presentation_time, std::move(session_callback));
