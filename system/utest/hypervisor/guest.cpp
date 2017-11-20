@@ -20,6 +20,8 @@ extern const char vcpu_resume_start[];
 extern const char vcpu_resume_end[];
 extern const char vcpu_interrupt_start[];
 extern const char vcpu_interrupt_end[];
+extern const char vcpu_hlt_start[];
+extern const char vcpu_hlt_end[];
 extern const char vcpu_read_write_state_start[];
 extern const char vcpu_read_write_state_end[];
 extern const char guest_set_trap_start[];
@@ -87,6 +89,24 @@ static bool setup(test_t* test, const char* start, const char* end) {
     return true;
 }
 
+static bool setup_interrupt_test(test_t* test, const char* start, const char* end) {
+    ASSERT_TRUE(setup(test, start, end));
+    if (!test->supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    thrd_t thread;
+    int ret = thrd_create(&thread, [](void* ctx) -> int {
+        test_t* test = static_cast<test_t*>(ctx);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+        return zx_vcpu_interrupt(test->vcpu, 0);
+    }, test);
+    ASSERT_EQ(ret, thrd_success);
+
+    return true;
+}
+
 static bool vcpu_resume(void) {
     BEGIN_TEST;
 
@@ -111,19 +131,31 @@ static bool vcpu_interrupt(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    ASSERT_TRUE(setup_interrupt_test(&test, vcpu_interrupt_start, vcpu_interrupt_end));
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
 
-    thrd_t thread;
-    int ret = thrd_create(&thread, [](void* ctx) -> int {
-        test_t* test = static_cast<test_t*>(ctx);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-        return zx_vcpu_interrupt(test->vcpu, 0);
-    }, &test);
-    ASSERT_EQ(ret, thrd_success);
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_hlt(void) {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup_interrupt_test(&test, vcpu_hlt_start, vcpu_hlt_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
@@ -352,5 +384,6 @@ RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
 #if __x86_64__
 RUN_TEST(guest_set_trap_with_io)
+RUN_TEST(vcpu_hlt)
 #endif
 END_TEST_CASE(guest)
