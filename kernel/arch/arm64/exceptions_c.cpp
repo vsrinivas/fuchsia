@@ -198,7 +198,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     // Check if the current thread was expecting a data fault and
     // we should return to its handler.
     thread_t *thr = get_current_thread();
-    if (thr->arch.data_fault_resume != NULL) {
+    if (thr->arch.data_fault_resume != NULL && is_user_address(far)) {
         iframe->elr = (uintptr_t)thr->arch.data_fault_resume;
         return;
     }

@@ -7,118 +7,55 @@
 #include <asm.h>
 #include <err.h>
 
-#define dst   x0
-#define src   x1
-#define len   x2
-#define len16 x4
-#define fault_return_ptr  x3
-#define temp  x9
-#define tempw w9
-#define temp2 x10
+lr .req x30
+dst .req x0
+src .req x1
+len .req x2
+fault_return_ptr .req x3
+temp .req x15
 
-# zx_status_t _arm64_copy_from_user(void *dst, const void *src, size_t len, void **fault_return)
-.align 4
-FUNCTION(_arm64_copy_from_user)
-    # do we have any work to do?
-    cbz     len, .Ldone_from_user
+// NOTE! We know here that the memcpy code doesn't touch these registers,
+// so we can use them to save values.  But they are call-clobbered in the
+// C ABI, so we don't need a stack frame.
+saved_fault_return_ptr .req x16
+saved_lr .req x17
 
-    # hint to the cpu what we're about to do
-    prfm    pldl1strm, [src]
-    prfm    pstl1keep, [dst]
+// zx_status_t _arm64_user_copy(void *dst, const void *src, size_t len, void **fault_return)
+.section .text._arm64_user_copy,"ax"
+.balign 64 // Align to cache line.  This code fits in one cache line.
+FUNCTION(_arm64_user_copy)
 
-    # Setup data fault return
-    adr     temp, .Lfault_from_user
-    str     temp, [fault_return_ptr]
+    adr temp, .Lfault_from_user
 
-    # is it < 16 bytes?
-    cmp     len, #16
-    b.lt    .Lcopy_byte_from_user
+    mov saved_fault_return_ptr, fault_return_ptr
+    .cfi_register fault_return_ptr, saved_fault_return_ptr
+    mov saved_lr, lr
+    .cfi_register lr, saved_lr
 
-    # copy 16 bytes at a time
-    lsr     len16, len, #4
-    .p2align 4
-.Lcopy_double_from_user:
-    ldtr    temp, [src]
-    ldtr    temp2, [src, #8]
-    stp     temp, temp2, [dst], #16
-    add     src, src, #16
-    sub     len16, len16, #1
-    cbnz    len16, .Lcopy_double_from_user
+    // Just call our normal memcpy.  The caller has ensured that the
+    // address range is in the user portion of the address space.
+    // While fault_return_ptr is set, userspace data faults will be
+    // redirected to .Lfault_from_user, below.
+    //
+    // NOTE! We make important assumptions here about what the memcpy
+    // code does: it never moves the stack pointer, and it never touches
+    // the registers we're using for saved_fault_return_ptr and saved_lr.
+    str temp, [fault_return_ptr]
+    bl memcpy
+    mov x0, #ZX_OK
 
-    # see if we have any left
-    and     len, len, #15
-    cbz     len, .Ldone_from_user
-
-    # bytewise copy
-.Lcopy_byte_from_user:
-    ldtrb   tempw, [src]
-    strb    tempw, [dst], #1
-    add     src, src, #1
-    sub     len, len, #1
-    cbnz    len, .Lcopy_byte_from_user
-
-.Ldone_from_user:
-    mov     x0, #ZX_OK
-.Lcleanup_from_user:
-    # Reset data fault return
-    str     xzr, [fault_return_ptr]
+.Luser_copy_return:
+    str xzr, [saved_fault_return_ptr]
+    mov lr, saved_lr
+    .cfi_same_value lr
     ret
+END_FUNCTION(_arm64_user_copy)
 
+.section .text.cold._arm64_user_copy,"ax"
 .Lfault_from_user:
-    mov     x0, #ZX_ERR_INVALID_ARGS
-    b       .Lcleanup_from_user
-END_FUNCTION(_arm64_copy_from_user)
-
-# zx_status_t _arm64_copy_to_user(void *dst, const void *src, size_t len, void **fault_return)
-.align 4
-FUNCTION(_arm64_copy_to_user)
-    # do we have any work to do?
-    cbz     len, .Ldone_to_user
-
-    # hint to the cpu what we're about to do
-    prfm    pldl1strm, [src]
-    prfm    pstl1keep, [dst]
-
-    # Setup data fault return
-    adr     temp, .Lfault_to_user
-    str     temp, [fault_return_ptr]
-
-    # is it < 16 bytes?
-    cmp     len, #16
-    b.lt    .Lcopy_byte_to_user
-
-    # copy 16 bytes at a time
-    lsr     len16, len, #4
-    .p2align 4
-.Lcopy_double_to_user:
-    ldp     temp, temp2, [src], #16
-    sttr    temp, [dst]
-    sttr    temp2, [dst, #8]
-    add     dst, dst, #16
-    sub     len16, len16, #1
-    cbnz    len16, .Lcopy_double_to_user
-
-    # see if we have any left
-    and     len, len, #15
-    cbz     len, .Ldone_to_user
-
-    # bytewise copy
-.Lcopy_byte_to_user:
-    ldrb    tempw, [src], #1
-    sttrb   tempw, [dst]
-    add     dst, dst, #1
-    sub     len, len, #1
-    cbnz    len, .Lcopy_byte_to_user
-
-.Ldone_to_user:
-    mov     x0, #ZX_OK
-.Lcleanup_to_user:
-    # Reset data fault return
-    str     xzr, [fault_return_ptr]
-    ret
-
-.Lfault_to_user:
-    mov     x0, #ZX_ERR_INVALID_ARGS
-    b       .Lcleanup_to_user
-END_FUNCTION(_arm64_copy_to_user)
-
+    .cfi_startproc
+    .cfi_register fault_return_ptr, saved_fault_return_ptr
+    .cfi_register lr, saved_lr
+    mov x0, #ZX_ERR_INVALID_ARGS
+    b .Luser_copy_return
+    .cfi_endproc
