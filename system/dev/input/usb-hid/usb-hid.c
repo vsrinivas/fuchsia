@@ -120,12 +120,11 @@ static void usb_hid_stop(void* ctx) {
     mtx_unlock(&hid->lock);
 }
 
-static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t direction, uint8_t request,
+static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint8_t request,
                                    uint16_t value, uint16_t index, void* data, size_t length,
                                    size_t* out_length) {
-    zx_status_t status = usb_control(&hid->usb, direction | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
-                                     request, value, index, data, length, ZX_TIME_INFINITE,
-                                     out_length);
+    zx_status_t status = usb_control(&hid->usb, req_type, request, value, index, data, length,
+                                     ZX_TIME_INFINITE, out_length);
     if (status == ZX_ERR_IO_REFUSED) {
         usb_reset_endpoint(&hid->usb, 0);
     }
@@ -148,7 +147,8 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
 
     size_t desc_len = hid->hid_desc->descriptors[desc_idx].wDescriptorLength;
     uint8_t* desc_buf = malloc(desc_len);
-    zx_status_t status = usb_hid_control(hid, USB_DIR_IN, USB_REQ_GET_DESCRIPTOR, desc_type << 8,
+    zx_status_t status = usb_hid_control(hid, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
+                                         USB_REQ_GET_DESCRIPTOR, desc_type << 8,
                                          hid->interface, desc_buf, desc_len, len);
     if (status < 0) {
         zxlogf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
@@ -167,27 +167,31 @@ static zx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_i
     }
 
     usb_hid_device_t* hid = ctx;
-    return usb_hid_control(hid, USB_DIR_IN, USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id),
+    return usb_hid_control(hid, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id),
                            hid->interface, data, len, out_len);
 }
 
 static zx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
                                       void* data, size_t len) {
     usb_hid_device_t* hid = ctx;
-    return usb_hid_control(hid, USB_DIR_OUT, USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id),
+    return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id),
                            hid->interface, data, len, NULL);
 }
 
 static zx_status_t usb_hid_get_idle(void* ctx, uint8_t rpt_id, uint8_t* duration) {
     usb_hid_device_t* hid = ctx;
-    return usb_hid_control(hid, USB_DIR_IN, USB_HID_GET_IDLE, rpt_id, hid->interface,
+    return usb_hid_control(hid, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_HID_GET_IDLE, rpt_id, hid->interface,
                            duration, sizeof(*duration), NULL);
 }
 
 static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration) {
     usb_hid_device_t* hid = ctx;
-    return usb_hid_control(hid, USB_DIR_OUT, USB_HID_SET_IDLE, (duration << 8) | rpt_id,
-                             hid->interface, NULL, 0, NULL);
+    return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_HID_SET_IDLE, (duration << 8) | rpt_id,
+                           hid->interface, NULL, 0, NULL);
 }
 
 static zx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
@@ -198,7 +202,8 @@ static zx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
 
 static zx_status_t usb_hid_set_protocol(void* ctx, uint8_t protocol) {
     usb_hid_device_t* hid = ctx;
-    return usb_hid_control(hid, USB_DIR_OUT, USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL,
+    return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL,
                            0, NULL);
 }
 
