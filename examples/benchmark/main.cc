@@ -26,10 +26,16 @@ int main(int argc, char** argv) {
     puts("Starting Benchmark...");
 
     zx_time_t start_time = now();
-    zx_time_t quit_time = start_time + ZX_SEC(2);
     async::Task task(start_time);
-    // This async task runs for two seconds until `quit_time` is reached.
-    task.set_handler([&task, &loop, quit_time](async_t* async, zx_status_t status) {
+
+    // Run the task for kIterationCount iterations.  We use a fixed number
+    // of iterations (rather than iterating the test until a fixed amount
+    // of time has elapsed) to avoid some statistical problems with using a
+    // variable sample size.
+    const uint32_t kIterationCount = 1000;
+    uint32_t iteration = 0;
+
+    task.set_handler([&task, &loop, &iteration](async_t* async, zx_status_t status) {
         // `task_start` and `task_end` are used to measure the time between
         // `example` benchmarks.  This is measured with a `time_between`
         // measurement type.
@@ -39,16 +45,15 @@ int main(int argc, char** argv) {
         TRACE_DURATION("benchmark", "example");
 
         // Simulate some kind of workload.
-        zx_nanosleep(now() + ZX_MSEC(10));
+        zx_nanosleep(now() + ZX_USEC(1500));
 
-        // Stop if quitting.
-        if (task.deadline() > quit_time) {
+        if (++iteration >= kIterationCount) {
             loop.Quit();
             return ASYNC_TASK_FINISHED;
         }
 
         // Schedule another benchmark.
-        task.set_deadline(now() + ZX_MSEC(5));
+        task.set_deadline(now() + ZX_USEC(500));
         TRACE_INSTANT("benchmark", "task_end", TRACE_SCOPE_PROCESS);
         return ASYNC_TASK_REPEAT;
     });
