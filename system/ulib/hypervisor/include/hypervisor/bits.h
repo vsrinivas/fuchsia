@@ -6,15 +6,8 @@
 
 #include <stdint.h>
 
-#define _ONE(x) (1 + ((x) - (x)))
-
-#define BIT(x, bit) ((x) & (_ONE(x) << (bit)))
-#define BIT_SHIFT(x, bit) (((x) >> (bit)) & 1)
-#define BITS(x, high, low) ((x) & (((_ONE(x) << ((high) + 1)) - 1) & ~((_ONE(x) << (low)) - 1)))
-#define BIT_SET(x, bit) (((x) & (_ONE(x) << (bit))) ? 1 : 0)
-
 // From: https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-static constexpr inline uint32_t round_up_pow2(uint32_t v) {
+static inline constexpr uint32_t round_up_pow2(uint32_t v) {
     v--;
     v |= v >> 1;
     v |= v >> 2;
@@ -34,6 +27,11 @@ static inline constexpr T bit_mask(size_t bits) {
 template <typename T>
 static inline constexpr T clear_bits(T x, size_t nbits, size_t shift) {
     return x & ~(bit_mask<T>(nbits) << shift);
+}
+
+template <typename T>
+static inline constexpr T set_bits(T x, size_t high, size_t low) {
+    return static_cast<T>((x & ((1 << (high - low)) - 1)) << low);
 }
 
 template <typename T>

@@ -85,7 +85,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
     //
     // See 82093AA (IOAPIC) Section 2.3.4.
     // See Intel Volume 3, Section 10.6.2.
-    uint8_t destmod = BIT_SHIFT(entry.lower, 11);
+    uint32_t destmod = bit_shift(entry.lower, 11);
     if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
         uint32_t dest = bits_shift(entry.upper, 27, 24);
         LocalApic* local_apic = dest < kMaxLocalApics ? local_apic_[dest] : nullptr;
