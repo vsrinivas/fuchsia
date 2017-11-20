@@ -22,9 +22,7 @@ public:
     // TODO(abdulla): Remove this function.
     zx_paddr_t table_phys() { return paspace_->arch_aspace().arch_table_phys(); }
 
-#if ARCH_X86_64
-    zx_status_t MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr);
-#endif
+    zx_status_t MapInterruptController(vaddr_t guest_paddr, paddr_t host_paddr, size_t size);
     zx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);
     zx_status_t GetPage(vaddr_t guest_paddr, paddr_t* host_paddr);
 

@@ -19,9 +19,9 @@ static const uint kMmuFlags =
     ARCH_MMU_FLAG_PERM_WRITE |
     ARCH_MMU_FLAG_PERM_EXECUTE;
 
-#if ARCH_X86_64
-static const uint kApicMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-#endif // ARCH_X86_64
+static const uint kInterruptMmuFlags =
+    ARCH_MMU_FLAG_PERM_READ |
+    ARCH_MMU_FLAG_PERM_WRITE;
 
 namespace {
 // Locate a VMO for a given vaddr.
@@ -79,10 +79,10 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
         paspace_->Destroy();
 }
 
-#if ARCH_X86_64
-zx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
+zx_status_t GuestPhysicalAddressSpace::MapInterruptController(vaddr_t guest_paddr,
+                                                              paddr_t host_paddr, size_t size) {
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
+    zx_status_t status = VmObjectPhysical::Create(host_paddr, size, &vmo);
     if (status != ZX_OK)
         return status;
 
@@ -95,7 +95,8 @@ zx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t 
     fbl::RefPtr<VmMapping> mapping;
     status = paspace_->RootVmar()->CreateVmMapping(guest_paddr, vmo->size(), /* align_pow2*/ 0,
                                                    VMAR_FLAG_SPECIFIC, vmo, /* vmo_offset */ 0,
-                                                   kApicMmuFlags, "guest_apic_vmo", &mapping);
+                                                   kInterruptMmuFlags, "guest_interrupt_vmo",
+                                                   &mapping);
     if (status != ZX_OK)
         return status;
 
@@ -107,7 +108,6 @@ zx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t 
     }
     return ZX_OK;
 }
-#endif // ARCH_X86_64
 
 zx_status_t GuestPhysicalAddressSpace::UnmapRange(vaddr_t guest_paddr, size_t size) {
     return paspace_->RootVmar()->Unmap(guest_paddr, size);

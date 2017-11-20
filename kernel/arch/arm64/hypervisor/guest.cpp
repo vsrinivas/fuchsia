@@ -5,10 +5,26 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/hypervisor.h>
+#include <dev/interrupt/arm_gic_regs.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <vm/pmm.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include "el2_cpu_state_priv.h"
+
+static const vaddr_t kGicvAddress = 0xe82b2000;
+static const size_t kGicvSize = 0x2000;
+
+static zx_status_t get_gicv(paddr_t* gicv_paddr) {
+    // Check for presence of GICv2 virtualisation extensions.
+    //
+    // TODO(abdulla): Support GICv3 virtualisation.
+    if (GICV_OFFSET == 0)
+        return ZX_ERR_NOT_SUPPORTED;
+
+    *gicv_paddr = vaddr_to_paddr(reinterpret_cast<void*>(GICV_ADDRESS));
+    return ZX_OK;
+}
 
 // static
 zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out) {
@@ -25,6 +41,14 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     }
 
     status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
+    if (status != ZX_OK)
+        return status;
+
+    paddr_t gicv_paddr;
+    status = get_gicv(&gicv_paddr);
+    if (status != ZX_OK)
+        return status;
+    status = guest->gpas_->MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
     if (status != ZX_OK)
         return status;
 

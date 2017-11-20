@@ -182,22 +182,22 @@ static bool guest_physical_address_space_map_apic_page(void* context) {
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(0, PAGE_SIZE, &vmo);
     EXPECT_EQ(status, ZX_OK, "vmobject creation\n");
-    EXPECT_NONNULL(vmo, "Failed to allocate VMO.\n");
+    EXPECT_NONNULL(vmo, "Failed to allocate VMO\n");
 
     // Setup GuestPhysicalAddressSpace.
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas;
     status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
-    EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
+    EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
 
     // Allocate a page to use as the APIC page.
     paddr_t paddr = 0;
     vm_page_t* vm_page = pmm_alloc_page(0, &paddr);
-    EXPECT_NONNULL(vm_page, "Uable to allocate a page\n");
+    EXPECT_NONNULL(vm_page, "Unable to allocate a page\n");
 
     // Map APIC page in an arbitrary location.
     const vaddr_t APIC_ADDRESS = 0xffff0000;
-    status = gpas->MapApicPage(APIC_ADDRESS, paddr);
-    EXPECT_EQ(ZX_OK, status, "Failed to map APIC page.\n");
+    status = gpas->MapInterruptController(APIC_ADDRESS, paddr, PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "Failed to map APIC page\n");
 
     // Cleanup
     pmm_free_page(vm_page);

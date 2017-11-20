@@ -90,8 +90,9 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
             // advantage of hardware acceleration where possible.
             if (len != PAGE_SIZE)
                 return ZX_ERR_INVALID_ARGS;
-            zx_status_t status = gpas_->MapApicPage(APIC_PHYS_BASE,
-                                                    apic_access_page_.PhysicalAddress());
+            zx_status_t status = gpas_->MapInterruptController(APIC_PHYS_BASE,
+                                                               apic_access_page_.PhysicalAddress(),
+                                                               PAGE_SIZE);
             if (status != ZX_OK)
                 return status;
         } else {
