@@ -21,7 +21,7 @@
 /* PL011 implementation */
 #define UART_DR    (0x00)
 #define UART_RSR   (0x04)
-#define UART_TFR   (0x18)
+#define UART_FR    (0x18)
 #define UART_ILPR  (0x20)
 #define UART_IBRD  (0x24)
 #define UART_FBRD  (0x28)
@@ -53,7 +53,7 @@ static enum handler_return pl011_uart_irq(void *arg)
 
     if (isr & ((1<<4) | (1<<6))) { // rxmis
         /* while fifo is not empty, read chars out of it */
-        while ((UARTREG(uart_base, UART_TFR) & (1<<4)) == 0) {
+        while ((UARTREG(uart_base, UART_FR) & (1<<4)) == 0) {
             /* if we're out of rx buffer, mask the irq instead of handling it */
             if (cbuf_space_avail(&uart_rx_buf) == 0) {
                 UARTREG(uart_base, UART_IMSC) &= ~((1<<4)|(1<<6)); // !rxim
@@ -98,7 +98,7 @@ static void pl011_uart_init(mdi_node_ref_t* node, uint level)
 static int pl011_uart_putc(char c)
 {
     /* spin while fifo is full */
-    while (UARTREG(uart_base, UART_TFR) & (1<<5))
+    while (UARTREG(uart_base, UART_FR) & (1<<5))
         ;
     UARTREG(uart_base, UART_DR) = c;
 
@@ -120,7 +120,7 @@ static int pl011_uart_getc(bool wait)
 static int pl011_uart_pputc(char c)
 {
     /* spin while fifo is full */
-    while (UARTREG(uart_base, UART_TFR) & (1<<5))
+    while (UARTREG(uart_base, UART_FR) & (1<<5))
         ;
     UARTREG(uart_base, UART_DR) = c;
 
@@ -129,7 +129,7 @@ static int pl011_uart_pputc(char c)
 
 static int pl011_uart_pgetc(void)
 {
-    if ((UARTREG(uart_base, UART_TFR) & (1<<4)) == 0) {
+    if ((UARTREG(uart_base, UART_FR) & (1<<4)) == 0) {
         return UARTREG(uart_base, UART_DR);
     } else {
         return -1;
