@@ -7,8 +7,8 @@
 
 #include <random>
 
+#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
 
 namespace backoff {
 
@@ -19,12 +19,12 @@ namespace backoff {
 class ExponentialBackoff : public Backoff {
  public:
   explicit ExponentialBackoff(
-      std::function<uint64_t()> seed_generator = glue::RandUint64);
+      std::function<uint64_t()> seed_generator = fxl::RandUint64);
   ExponentialBackoff(
       fxl::TimeDelta initial_delay,
       uint32_t retry_factor,
       fxl::TimeDelta max_delay,
-      std::function<uint64_t()> seed_generator = glue::RandUint64);
+      std::function<uint64_t()> seed_generator = fxl::RandUint64);
   ~ExponentialBackoff() override;
 
   fxl::TimeDelta GetNext() override;

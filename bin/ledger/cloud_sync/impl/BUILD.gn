@@ -37,6 +37,7 @@ source_set("impl") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//peridot/bin/ledger/glue/crypto",
     "//zircon/system/ulib/trace",
   ]
 
