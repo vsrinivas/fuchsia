@@ -31,8 +31,8 @@
 #include "zircon.h"
 
 #if __x86_64__
-#include <hypervisor/acpi.h>
-#include <hypervisor/local_apic.h>
+#include <hypervisor/x86/acpi.h>
+#include <hypervisor/x86/local_apic.h>
 #include <machina/io_port.h>
 #include <machina/tpm.h>
 

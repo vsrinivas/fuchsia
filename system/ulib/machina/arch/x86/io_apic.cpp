@@ -7,8 +7,8 @@
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
-#include <hypervisor/local_apic.h>
 #include <hypervisor/vcpu.h>
+#include <hypervisor/x86/local_apic.h>
 #include <machina/io_apic.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

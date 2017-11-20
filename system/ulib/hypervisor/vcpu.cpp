@@ -15,7 +15,7 @@
 #include <zircon/syscalls/port.h>
 
 #ifdef __x86_64__
-#include <hypervisor/decode.h>
+#include <hypervisor/x86/decode.h>
 #endif
 
 // Interrupt vectors.

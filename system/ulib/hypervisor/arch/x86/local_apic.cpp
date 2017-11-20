@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hypervisor/local_apic.h>
+#include <hypervisor/x86/local_apic.h>
 
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>

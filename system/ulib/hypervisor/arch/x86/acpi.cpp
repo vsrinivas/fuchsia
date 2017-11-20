@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hypervisor/x86/acpi.h>
+
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include <hypervisor/acpi.h>
 #include <hypervisor/address.h>
 #include <sys/stat.h>
 
-#if __x86_64__
 extern "C" {
 #include <acpica/acpi.h>
 #include <acpica/actables.h>
@@ -61,10 +61,8 @@ static zx_status_t load_file(const char* path, uintptr_t addr, size_t size, uint
     *actual = static_cast<uint32_t>(stat.st_size);
     return ZX_OK;
 }
-#endif // __x86_64__
 
 zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off) {
-#if __x86_64__
     if (size < acpi_off + PAGE_SIZE)
         return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -114,7 +112,4 @@ zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     rsdt->TableOffsetEntry[2] = mcfg_off;
     acpi_header(&rsdt->Header, ACPI_SIG_RSDT, rsdt_length);
     return ZX_OK;
-#else  // __x86_64__
-    return ZX_ERR_NOT_SUPPORTED;
-#endif // __x86_64__
 }

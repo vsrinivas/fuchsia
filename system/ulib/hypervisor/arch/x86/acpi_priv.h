@@ -4,10 +4,8 @@
 
 #pragma once
 
-#if __x86_64__
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
-#endif // __x86_64__
 
 /* PM register addresses. */
 #define PM1A_REGISTER_STATUS 0

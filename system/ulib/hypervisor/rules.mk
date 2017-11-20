@@ -23,8 +23,5 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
-MODULE_CPPFLAGS += \
-    -Isystem/ulib/hypervisor/arch/$(ARCH)/include \
-
 include system/ulib/hypervisor/arch/$(ARCH)/rules.mk
 include make/module.mk
