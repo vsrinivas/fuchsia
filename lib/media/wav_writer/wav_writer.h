@@ -38,7 +38,7 @@ namespace audio {
 template <bool enabled>
 class WavWriter {
  public:
-  WavWriter() { payload_written_.store(0ul); }
+  WavWriter() {}
   ~WavWriter() { Close(); }
 
   void Initialize(const char* const file_name,
