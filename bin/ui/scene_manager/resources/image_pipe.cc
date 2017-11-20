@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
 #include "garnet/bin/ui/scene_manager/resources/host_memory.h"
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
+#include "lib/escher/flib/fence.h"
 
 namespace scene_manager {
 
@@ -131,7 +131,7 @@ void ImagePipe::PresentImage(
   }
 
   auto acquire_fences_listener =
-      std::make_unique<FenceSetListener>(std::move(acquire_fences));
+      std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
   acquire_fences_listener->WaitReadyAsync(
       [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
         if (weak) {
@@ -162,7 +162,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
       // We're skipping a frame, so we can immediately signal its release
       // fences.
       for (auto& fence : next_release_fences) {
-        fence.signal(0u, kFenceSignalled);
+        fence.signal(0u, escher::kFenceSignalled);
       }
     }
     next_release_fences = std::move(frames_.front().release_fences);

@@ -30,7 +30,7 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
           escher->gpu_allocator())),
       rounded_rect_factory_(
           std::make_unique<escher::RoundedRectFactory>(escher)),
-      release_fence_signaller_(std::make_unique<ReleaseFenceSignaller>(
+      release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
       session_count_(0) {
   FXL_DCHECK(display_manager_);
@@ -40,8 +40,9 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
   paper_renderer_->set_sort_by_pipeline(false);
 }
 
-Engine::Engine(DisplayManager* display_manager,
-               std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller)
+Engine::Engine(
+    DisplayManager* display_manager,
+    std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller)
     : display_manager_(display_manager),
       escher_(nullptr),
       release_fence_signaller_(std::move(release_fence_signaller)) {

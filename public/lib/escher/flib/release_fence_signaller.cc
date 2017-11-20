@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
+#include "lib/escher/flib/release_fence_signaller.h"
 
-namespace scene_manager {
+namespace escher {
 
 ReleaseFenceSignaller::ReleaseFenceSignaller(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
@@ -68,4 +68,4 @@ void ReleaseFenceSignaller::OnCommandBufferFinished(uint64_t sequence_number) {
   }
 };
 
-}  // namespace scene_manager
+}  // namespace escher

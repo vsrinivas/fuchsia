@@ -70,9 +70,9 @@ TEST_F(SceneManagerTest, ScheduleUpdateInOrder) {
 
 bool IsFenceSignalled(const zx::event& fence) {
   zx_signals_t signals = 0u;
-  zx_status_t status = fence.wait_one(kFenceSignalled, 0, &signals);
+  zx_status_t status = fence.wait_one(escher::kFenceSignalled, 0, &signals);
   FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
-  return signals & kFenceSignalled;
+  return signals & escher::kFenceSignalled;
 }
 
 TEST_F(SceneManagerTest, ReleaseFences) {
@@ -175,7 +175,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence));
 
   // Now signal the acquire fence.
-  acquire_fence.signal(0u, kFenceSignalled);
+  acquire_fence.signal(0u, escher::kFenceSignalled);
 
   // Now expect that the first frame was presented, and its release fence was
   // signalled.

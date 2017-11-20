@@ -7,14 +7,13 @@
 #include <zx/event.h>
 
 #include <async/auto_wait.h>
+#include "lib/escher/flib/fence.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
-
-namespace scene_manager {
+namespace escher {
 
 // Allows notification of when a set of fences has been signalled.
 class FenceSetListener {
@@ -51,4 +50,4 @@ class FenceSetListener {
   FXL_DISALLOW_COPY_AND_ASSIGN(FenceSetListener);
 };
 
-}  // namespace scene_manager
+}  // namespace escher

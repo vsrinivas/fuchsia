@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "lib/escher/escher.h"
+#include "lib/escher/flib/release_fence_signaller.h"
 #include "lib/escher/impl/gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
@@ -18,7 +19,6 @@
 #include "garnet/bin/ui/scene_manager/engine/resource_linker.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/scene.h"
-#include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
 #include "garnet/bin/ui/scene_manager/util/event_timestamper.h"
 
 namespace scene_manager {
@@ -61,7 +61,7 @@ class Engine : private FrameSchedulerDelegate {
     return rounded_rect_factory_.get();
   }
 
-  ReleaseFenceSignaller* release_fence_signaller() {
+  escher::ReleaseFenceSignaller* release_fence_signaller() {
     return release_fence_signaller_.get();
   }
 
@@ -100,8 +100,9 @@ class Engine : private FrameSchedulerDelegate {
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(DisplayManager* display_manager,
-         std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller);
+  Engine(
+      DisplayManager* display_manager,
+      std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller);
 
  private:
   friend class SessionHandler;
@@ -144,7 +145,7 @@ class Engine : private FrameSchedulerDelegate {
   EventTimestamper event_timestamper_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
-  std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
+  std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::set<Compositor*> compositors_;
 

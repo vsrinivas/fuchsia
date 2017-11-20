@@ -70,6 +70,10 @@ source_set("escher") {
     "//garnet/public/lib/fxl",
   ]
 
+  if (is_fuchsia) {
+    public_deps += [ "//garnet/public/lib/fsl" ]
+  }
+
   sources = [
     "escher.cc",
     "escher.h",
@@ -241,6 +245,18 @@ source_set("escher") {
     "vk/vulkan_swapchain_helper.cc",
     "vk/vulkan_swapchain_helper.h",
   ]
+
+  if (is_fuchsia) {
+    sources += [
+      "flib/fence.h",
+      "flib/fence_listener.cc",
+      "flib/fence_listener.h",
+      "flib/fence_set_listener.cc",
+      "flib/fence_set_listener.h",
+      "flib/release_fence_signaller.cc",
+      "flib/release_fence_signaller.h",
+    ]
+  }
 
   include_dirs = [
     "//third_party/shaderc/third_party/glslang",

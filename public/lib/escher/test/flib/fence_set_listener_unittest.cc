@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+
+#include "lib/escher/flib/fence.h"
+#include "lib/escher/flib/fence_set_listener.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
+#include "lib/escher/test/flib/util.h"
+#include "lib/escher/test/flib/test_with_message_loop.h"
 
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
-#include "garnet/bin/ui/scene_manager/sync/fence_set_listener.h"
-#include "garnet/bin/ui/scene_manager/tests/util.h"
-#include "lib/ui/tests/test_with_message_loop.h"
-
-namespace scene_manager {
+namespace escher {
 namespace test {
 
 class FenceSetListenerTest : public ::testing::Test {};
@@ -51,7 +51,7 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
 
   // Expect that the set is not ready initially. Briefly pump the message loop,
   // although we don't expect anything to be handled.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_FALSE(fence_set_listener.ready());
   ASSERT_FALSE(signalled);
 
@@ -60,7 +60,7 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
 
   // Briefly pump the message loop, but we expect that the set is still not
   // ready.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::escher::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_FALSE(fence_set_listener.ready());
   ASSERT_FALSE(signalled);
 
@@ -92,7 +92,7 @@ TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
 
     // Expect that the set is not ready initially. Briefly pump the message
     // loop, although we don't expect anything to be handled.
-    ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+    ::escher::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
     ASSERT_FALSE(fence_set_listener.ready());
     ASSERT_FALSE(signalled);
 
@@ -101,7 +101,7 @@ TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
 
     // Briefly pump the message loop, but we expect that the set is still not
     // ready.
-    ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+    ::escher::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
     ASSERT_FALSE(fence_set_listener.ready());
     ASSERT_FALSE(signalled);
   }
@@ -109,4 +109,4 @@ TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace escher

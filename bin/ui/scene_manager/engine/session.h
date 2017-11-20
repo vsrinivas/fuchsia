@@ -10,8 +10,8 @@
 #include "garnet/bin/ui/scene_manager/engine/event_reporter.h"
 #include "garnet/bin/ui/scene_manager/engine/resource_map.h"
 #include "garnet/bin/ui/scene_manager/resources/memory.h"
-#include "garnet/bin/ui/scene_manager/sync/fence_set_listener.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
+#include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
@@ -257,7 +257,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     uint64_t presentation_time;
 
     ::fidl::Array<scenic::OpPtr> ops;
-    std::unique_ptr<FenceSetListener> acquire_fences;
+    std::unique_ptr<escher::FenceSetListener> acquire_fences;
     ::fidl::Array<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to

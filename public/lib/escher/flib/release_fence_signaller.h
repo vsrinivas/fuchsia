@@ -8,13 +8,12 @@
 #include <queue>
 
 #include <zx/event.h>
+#include "lib/escher/flib/fence.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/logging.h"
 
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
-
-namespace scene_manager {
+namespace escher {
 
 // Signals a fence when all CommandBuffers started before the time of the
 // fence's submission are finished. Used to ensure it is safe to release
@@ -64,4 +63,4 @@ class ReleaseFenceSignaller
   escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
 };
 
-}  // namespace scene_manager
+}  // namespace escher

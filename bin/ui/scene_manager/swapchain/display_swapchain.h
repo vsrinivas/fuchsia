@@ -14,7 +14,7 @@
 #include "garnet/bin/ui/scene_manager/swapchain/magma_buffer.h"
 #include "garnet/bin/ui/scene_manager/swapchain/magma_connection.h"
 #include "garnet/bin/ui/scene_manager/swapchain/magma_semaphore.h"
-#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
+#include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
@@ -47,7 +47,7 @@ class DisplaySwapchain : public Swapchain {
   };
 
   struct Semaphore {
-    std::unique_ptr<FenceListener> fence;
+    std::unique_ptr<escher::FenceListener> fence;
     escher::SemaphorePtr escher_semaphore;
     MagmaSemaphore magma_semaphore;
   };

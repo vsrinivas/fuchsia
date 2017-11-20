@@ -6,10 +6,10 @@
 #include "lib/escher/util/image_utils.h"
 
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "lib/escher/flib/fence.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
@@ -205,7 +205,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Signal on the acquire fence.
-  acquire_fence1.signal(0u, kFenceSignalled);
+  acquire_fence1.signal(0u, escher::kFenceSignalled);
 
   // Run until image1 is presented.
   for (int i = 0; !image_pipe->GetEscherImage() && i < 400; i++) {
@@ -234,7 +234,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // The first image should not have been released.
   ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
-  ASSERT_FALSE(IsEventSignalled(release_fence1, kFenceSignalled));
+  ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
 
   // Make gradient the currently displayed image.
   zx::event acquire_fence2 = CreateEvent();
@@ -249,7 +249,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ASSERT_EQ(image_pipe->GetEscherImage(), image1);
 
   // Signal on the acquire fence.
-  acquire_fence2.signal(0u, kFenceSignalled);
+  acquire_fence2.signal(0u, escher::kFenceSignalled);
 
   // There should be a new image presented.
   RUN_MESSAGE_LOOP_UNTIL(image1 != image_pipe->GetEscherImage());
@@ -260,8 +260,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // The first image should have been released.
   ASSERT_EQ(mock_release_fence_signaller_->num_calls_to_add_cpu_release_fence(),
             1u);
-  ASSERT_TRUE(IsEventSignalled(release_fence1, kFenceSignalled));
-  ASSERT_FALSE(IsEventSignalled(release_fence2, kFenceSignalled));
+  ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
+  ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
 }
 
 // TODO(MZ-151): More tests.

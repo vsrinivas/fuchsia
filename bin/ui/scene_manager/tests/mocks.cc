@@ -50,11 +50,11 @@ ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(
 void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   num_calls_to_add_cpu_release_fence_++;
   // Signal immediately for testing purposes.
-  fence.signal(0u, kFenceSignalled);
+  fence.signal(0u, escher::kFenceSignalled);
 }
 
 EngineForTest::EngineForTest(DisplayManager* display_manager,
-                             std::unique_ptr<ReleaseFenceSignaller> r)
+                             std::unique_ptr<escher::ReleaseFenceSignaller> r)
     : Engine(display_manager, std::move(r)) {}
 
 std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(

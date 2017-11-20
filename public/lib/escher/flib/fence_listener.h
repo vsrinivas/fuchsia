@@ -7,13 +7,12 @@
 #include <zx/event.h>
 
 #include <async/auto_wait.h>
+#include "lib/escher/flib/fence.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
-
-namespace scene_manager {
+namespace escher {
 
 // Provides access to the consumption fence associated with a call to |Present|.
 class FenceListener {
@@ -52,4 +51,4 @@ class FenceListener {
   FXL_DISALLOW_COPY_AND_ASSIGN(FenceListener);
 };
 
-}  // namespace scene_manager
+}  // namespace escher

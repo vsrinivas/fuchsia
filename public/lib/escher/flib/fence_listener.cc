@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
+#include "lib/escher/flib/fence_listener.h"
 
 #include <zx/time.h>
 #include "garnet/public/lib/fxl/functional/closure.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace escher {
 
 FenceListener::FenceListener(zx::event fence)
     : fence_(std::move(fence)),

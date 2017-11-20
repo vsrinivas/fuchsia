@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
-#include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
+#include "lib/escher/flib/release_fence_signaller.h"
 
 namespace scene_manager {
 namespace test {
@@ -49,7 +49,7 @@ class SessionHandlerForTest : public SessionHandler {
   std::atomic<uint32_t> present_count_;
 };
 
-class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
+class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
  public:
   ReleaseFenceSignallerForTest(
       escher::impl::CommandBufferSequencer* command_buffer_sequencer);
@@ -67,7 +67,7 @@ class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
 class EngineForTest : public Engine {
  public:
   EngineForTest(DisplayManager* display_manager,
-                std::unique_ptr<ReleaseFenceSignaller> r);
+                std::unique_ptr<escher::ReleaseFenceSignaller> r);
   using Engine::FindSession;
 
  private:

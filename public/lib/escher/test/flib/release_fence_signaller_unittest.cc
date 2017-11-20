@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+
 #include "lib/escher/impl/command_buffer_sequencer.h"
+#include "lib/escher/flib/fence.h"
+#include "lib/escher/flib/release_fence_signaller.h"
+#include "lib/escher/test/flib/util.h"
 
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
-#include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
-#include "garnet/bin/ui/scene_manager/tests/util.h"
-
-namespace scene_manager {
+namespace escher {
 namespace test {
 
 class ReleaseFenceSignallerTest
@@ -57,4 +57,4 @@ TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace escher

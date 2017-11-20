@@ -21,6 +21,18 @@ executable("escher_unittests") {
     "transform_unittest.cc",
   ]
 
+  if (is_fuchsia) {
+    sources += [
+      "flib/fence_listener_unittest.cc",
+      "flib/fence_set_listener_unittest.cc",
+      "flib/release_fence_signaller_unittest.cc",
+      "flib/test_with_message_loop.cc",
+      "flib/test_with_message_loop.h",
+      "flib/util.cc",
+      "flib/util.h",
+    ]
+  }
+
   deps = [
     "base:base_unittests",
     "//garnet/public/lib/escher",

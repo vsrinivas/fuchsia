@@ -1044,7 +1044,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
       return false;
     }
     auto acquire_fence_set =
-        std::make_unique<FenceSetListener>(std::move(acquire_fences));
+        std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
     // TODO: Consider calling ScheduleSessionUpdate immediately if
     // acquire_fence_set is already ready (which is the case if there are
     // zero acquire fences).

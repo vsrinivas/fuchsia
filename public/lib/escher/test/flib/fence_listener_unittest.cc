@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+
+#include "lib/escher/flib/fence.h"
+#include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
+#include "lib/escher/test/flib/test_with_message_loop.h"
+#include "lib/escher/test/flib/util.h"
 
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
-#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
-#include "garnet/bin/ui/scene_manager/tests/util.h"
-#include "lib/ui/tests/test_with_message_loop.h"
-
-namespace scene_manager {
+namespace escher {
 namespace test {
 
 class FenceListenerTest : public ::testing::Test {};
@@ -58,4 +58,4 @@ TEST_F(FenceListenerTest, AsyncFenceListenerSignalling) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace escher

@@ -8,9 +8,9 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
-#include "garnet/bin/ui/scene_manager/sync/fence.h"
 
 #include "lib/escher/escher.h"
+#include "lib/escher/flib/fence.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
@@ -56,12 +56,13 @@ DisplaySwapchain::DisplaySwapchain(Display* display,
         Export(escher::Semaphore::New(device_)));
 
     // The images are all available initially.
-    image_available_semaphores_[i].fence->event().signal(0u, kFenceSignalled);
+    image_available_semaphores_[i].fence->event().signal(
+        0u, escher::kFenceSignalled);
 #else
     auto pair = NewSemaphoreEventPair(escher);
     image_available_semaphores_.push_back(std::move(pair.first));
     watches_.push_back(
-        timestamper, std::move(pair.second), kFenceSignalled,
+        timestamper, std::move(pair.second), escher::kFenceSignalled,
         [this, i](zx_time_t timestamp) { OnFramePresented(i, timestamp); });
 #endif
   }
@@ -187,7 +188,7 @@ DisplaySwapchain::Semaphore DisplaySwapchain::Export(
   FXL_CHECK(fence);
   semaphore.magma_semaphore =
       MagmaSemaphore::NewFromEvent(&magma_connection_, fence);
-  semaphore.fence = std::make_unique<FenceListener>(std::move(fence));
+  semaphore.fence = std::make_unique<escher::FenceListener>(std::move(fence));
   return semaphore;
 }
 
