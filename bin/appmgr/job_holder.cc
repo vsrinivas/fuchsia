@@ -88,7 +88,7 @@ zx::process Launch(const zx::job& job,
                    fdio_flat_namespace_t* flat,
                    zx::channel app_services,
                    zx::channel service_request,
-                   zx::vmo data) {
+                   fsl::SizedVmo data) {
   std::vector<uint32_t> ids;
   std::vector<zx_handle_t> handles;
 
@@ -107,7 +107,7 @@ zx::process Launch(const zx::job& job,
     handles.push_back(flat->handle[i]);
   }
 
-  data.set_property(ZX_PROP_NAME, label.data(), label.size());
+  data.vmo().set_property(ZX_PROP_NAME, label.data(), label.size());
 
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
@@ -118,7 +118,7 @@ zx::process Launch(const zx::job& job,
   launchpad_set_args(lp, argv.size(), argv.data());
   launchpad_set_nametable(lp, flat->count, flat->path);
   launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
-  launchpad_load_from_vmo(lp, data.release());
+  launchpad_load_from_vmo(lp, data.vmo().release());
 
   zx_handle_t proc;
   const char* errmsg;
@@ -136,15 +136,18 @@ zx::process CreateProcess(const zx::job& job,
                           ApplicationPackagePtr package,
                           ApplicationLaunchInfoPtr launch_info,
                           fdio_flat_namespace_t* flat) {
+  fsl::SizedVmo data;
+  if (!fsl::SizedVmo::FromTransport(std::move(package->data), &data)) {
+    return zx::process();
+  }
   return Launch(job, GetLabelFromURL(launch_info->url),
                 LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
                 flat, TakeAppServices(launch_info),
-                std::move(launch_info->service_request),
-                std::move(package->data));
+                std::move(launch_info->service_request), std::move(data));
 }
 
 zx::process CreateSandboxedProcess(const zx::job& job,
-                                   zx::vmo data,
+                                   fsl::SizedVmo data,
                                    ApplicationLaunchInfoPtr launch_info,
                                    fdio_flat_namespace_t* flat) {
   if (!data)
@@ -291,7 +294,7 @@ void JobHolder::CreateApplication(
 
         if (package) {
           std::string runner;
-          LaunchType type = Classify(package->data, &runner);
+          LaunchType type = Classify(package->data->vmo, &runner);
           switch (type) {
             case LaunchType::kProcess:
               CreateApplicationWithProcess(
@@ -421,7 +424,7 @@ void JobHolder::CreateApplicationFromArchive(
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   auto file_system =
-      std::make_unique<archive::FileSystem>(std::move(package->data));
+      std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
   zx::channel pkg = file_system->OpenAsDirectory();
   if (!pkg)
     return;
@@ -463,7 +466,7 @@ void JobHolder::CreateApplicationFromArchive(
     }
 
     auto inner_package = ApplicationPackage::New();
-    inner_package->data = file_system->GetFileAsVMO(kAppPath);
+    inner_package->data = file_system->GetFileAsVMO(kAppPath).ToTransport();
     inner_package->resolved_url = package->resolved_url;
 
     auto startup_info = ApplicationStartupInfo::New();

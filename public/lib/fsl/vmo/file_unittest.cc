@@ -8,12 +8,12 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/strings/string_view.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/strings/string_view.h"
 
 namespace fsl {
 namespace {
@@ -30,11 +30,11 @@ TEST(VMOAndFile, VmoFromFd) {
   EXPECT_EQ(static_cast<ssize_t>(payload.size()),
             write(fd.get(), payload.data(), payload.size()));
 
-  zx::vmo vmo;
+  fsl::SizedVmo vmo;
   EXPECT_TRUE(VmoFromFd(std::move(fd), &vmo));
 
   std::string data;
-  EXPECT_TRUE(StringFromVmo(SizedVmo(std::move(vmo), payload.size()), &data));
+  EXPECT_TRUE(StringFromVmo(vmo, &data));
 
   EXPECT_EQ(payload, data);
 }
@@ -52,11 +52,11 @@ TEST(VMOAndFile, VmoFromFilename) {
             write(fd.get(), payload.data(), payload.size()));
   fd.reset();
 
-  zx::vmo vmo;
+  fsl::SizedVmo vmo;
   EXPECT_TRUE(VmoFromFilename(path.c_str(), &vmo));
 
   std::string data;
-  EXPECT_TRUE(StringFromVmo(SizedVmo(std::move(vmo), payload.size()), &data));
+  EXPECT_TRUE(StringFromVmo(vmo, &data));
 
   EXPECT_EQ("Another playload", data);
 }

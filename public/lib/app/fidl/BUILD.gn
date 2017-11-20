@@ -18,6 +18,7 @@ fidl("fidl") {
 
   public_deps = [
     ":service_provider",
+    "//garnet/public/lib/fsl/fidl",
   ]
 }
 

@@ -34,21 +34,17 @@ void UnmapMemory(const void* buffer, void* context) {
 
 }  // namespace
 
-sk_sp<SkData> MakeSkDataFromVMO(const zx::vmo& vmo) {
-  uint64_t size = 0u;
-  zx_status_t status = vmo.get_size(&size);
-  if (status != ZX_OK)
-    return nullptr;
-
+sk_sp<SkData> MakeSkDataFromVMO(const fsl::SizedVmo& vmo) {
+  uint64_t size = vmo.size();
   uintptr_t buffer = 0u;
-  status =
-      zx::vmar::root_self().map(0, vmo, 0u, size, ZX_VM_FLAG_PERM_READ, &buffer);
+  zx_status_t status = zx::vmar::root_self().map(0, vmo.vmo(), 0u, size,
+                                                 ZX_VM_FLAG_PERM_READ, &buffer);
   if (status != ZX_OK)
     return nullptr;
 
-  sk_sp<SkData> data = SkData::MakeWithProc(reinterpret_cast<void*>(buffer),
-                                            size, &UnmapMemory,
-                                            reinterpret_cast<void*>(size));
+  sk_sp<SkData> data =
+      SkData::MakeWithProc(reinterpret_cast<void*>(buffer), size, &UnmapMemory,
+                           reinterpret_cast<void*>(size));
   if (!data) {
     FXL_LOG(ERROR) << "Could not create SkData";
     status = zx::vmar::root_self().unmap(buffer, size);

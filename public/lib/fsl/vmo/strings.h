@@ -10,9 +10,9 @@
 #include <string>
 
 #include "lib/fsl/fidl/sized_vmo_transport.fidl.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fsl/vmo/sized_vmo.h"
 
 namespace fsl {
 
@@ -40,7 +40,7 @@ FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
 // This function is deprecated because it loses the string size when the vmo is
 // always page aligned.
 FXL_EXPORT bool StringFromVmo(const zx::vmo& handle, std::string* string_ptr)
-     __attribute__((__deprecated__("Use the version with a SizedVmo.")));
+    __attribute__((__deprecated__("Use the version with a SizedVmo.")));
 
 }  // namespace fsl
 

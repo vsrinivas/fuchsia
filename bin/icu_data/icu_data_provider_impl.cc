@@ -7,9 +7,9 @@
 #include <zircon/syscalls.h>
 #include <utility>
 
-#include "lib/icu_data/cpp/constants.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/vmo/file.h"
+#include "lib/fxl/logging.h"
+#include "lib/icu_data/cpp/constants.h"
 
 namespace icu_data {
 namespace {
@@ -29,7 +29,7 @@ bool ICUDataProviderImpl::LoadData() {
     FXL_LOG(ERROR)
         << "Loading ICU data failed: Failed to create VMO from file '"
         << kICUDataPath << "'.";
-    icu_data_vmo_.reset();
+    icu_data_vmo_ = fsl::SizedVmo();
     return false;
   }
   return true;
@@ -53,12 +53,14 @@ void ICUDataProviderImpl::ICUDataWithSha1(
     return;
   }
 
-  auto data = ICUData::New();
-  if (icu_data_vmo_.duplicate(kICUDataRights, &data->vmo) < 0) {
+  fsl::SizedVmo duplicated_vmo;
+  if (icu_data_vmo_.Duplicate(kICUDataRights, &duplicated_vmo) < 0) {
     callback(nullptr);
     return;
   }
 
+  auto data = ICUData::New();
+  data->vmo = std::move(duplicated_vmo).ToTransport();
   callback(std::move(data));
 }
 

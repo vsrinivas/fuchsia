@@ -9,10 +9,10 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/url_resolver.h"
+#include "lib/fsl/vmo/file.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "lib/fsl/vmo/file.h"
 
 namespace app {
 
@@ -42,10 +42,10 @@ void RootApplicationLoader::LoadApplication(
         }
       }
     }
-    zx::vmo data;
+    fsl::SizedVmo data;
     if (fd.is_valid() && fsl::VmoFromFd(std::move(fd), &data)) {
       ApplicationPackagePtr package = ApplicationPackage::New();
-      package->data = std::move(data);
+      package->data = std::move(data).ToTransport();
       package->resolved_url = fxl::Concatenate({"file://", path});
       callback(std::move(package));
       return;

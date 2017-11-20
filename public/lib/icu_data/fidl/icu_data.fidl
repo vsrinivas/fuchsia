@@ -4,8 +4,10 @@
 
 module icu_data;
 
+import "lib/fsl/fidl/sized_vmo_transport.fidl";
+
 struct ICUData {
-  handle<vmo> vmo;
+  fsl.SizedVmoTransport vmo;
 };
 
 [ServiceName="icu_data::ICUDataProvider"]

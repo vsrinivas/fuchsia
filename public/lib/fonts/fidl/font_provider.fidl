@@ -4,6 +4,8 @@
 
 module fonts;
 
+import "lib/fsl/fidl/sized_vmo_transport.fidl";
+
 enum FontSlant {
   UPRIGHT,
   ITALIC,
@@ -25,7 +27,7 @@ struct FontRequest {
 };
 
 struct FontData {
-  handle<vmo> vmo;
+  fsl.SizedVmoTransport vmo;
 };
 
 struct FontResponse {

@@ -5,8 +5,7 @@
 #ifndef LIB_UI_SKIA_SKIA_VMO_DATA_H_
 #define LIB_UI_SKIA_SKIA_VMO_DATA_H_
 
-#include <zx/vmo.h>
-
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "third_party/skia/include/core/SkData.h"
 
 namespace mozart {
@@ -14,7 +13,7 @@ namespace mozart {
 // Makes an |SkData| object backed by a virtual memory object which is mapped
 // read only.  Does not take ownership of the handle.
 // Returns nullptr on failure.
-sk_sp<SkData> MakeSkDataFromVMO(const zx::vmo& vmo);
+sk_sp<SkData> MakeSkDataFromVMO(const fsl::SizedVmo& vmo);
 
 }  // namespace mozart
 

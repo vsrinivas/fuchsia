@@ -114,16 +114,20 @@ zx::channel FileSystem::OpenAsDirectory() {
   return h2;
 }
 
-zx::vmo FileSystem::GetFileAsVMO(fxl::StringView path) {
+fsl::SizedVmo FileSystem::GetFileAsVMO(fxl::StringView path) {
   if (!reader_)
-    return zx::vmo();
+    return nullptr;
   DirectoryTableEntry entry;
   if (!reader_->GetDirectoryEntryByPath(path, &entry))
-    return zx::vmo();
+    return nullptr;
   zx_handle_t result = ZX_HANDLE_INVALID;
-  zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
-               entry.data_length, &result);
-  return zx::vmo(result);
+  zx_status_t status =
+      zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
+                   entry.data_length, &result);
+  if (status != ZX_OK) {
+    return nullptr;
+  }
+  return fsl::SizedVmo(zx::vmo(result), entry.data_length);
 }
 
 bool FileSystem::GetFileAsString(fxl::StringView path, std::string* result) {

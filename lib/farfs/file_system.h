@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "garnet/lib/far/archive_reader.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/files/unique_fd.h"
 
 namespace archive {
@@ -36,7 +37,7 @@ class FileSystem {
   //
   // The VMO is a copy-on-write clone of the contents of the file, which means
   // writes to the VMO do not mutate the data in the underlying archive.
-  zx::vmo GetFileAsVMO(fxl::StringView path);
+  fsl::SizedVmo GetFileAsVMO(fxl::StringView path);
 
   // Returns the contents of the the given path as a string.
   bool GetFileAsString(fxl::StringView path, std::string* result);

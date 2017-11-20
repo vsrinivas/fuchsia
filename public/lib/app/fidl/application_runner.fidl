@@ -7,6 +7,7 @@ module app;
 import "lib/app/fidl/application_controller.fidl";
 import "lib/app/fidl/application_environment.fidl";
 import "lib/app/fidl/flat_namespace.fidl";
+import "lib/fsl/fidl/sized_vmo_transport.fidl";
 
 // Information given to applications at startup.
 //
@@ -31,7 +32,7 @@ struct ApplicationPackage {
   // A read-only binary representation of the application. For example, if the
   // application is intended to run in the Dart virtual machine, this data might
   // contain a dartx package.
-  handle<vmo> data;
+  fsl.SizedVmoTransport data;
 
   // Resolved URL of the application. This is the url specified in startup_info
   // after following redirects and resolving relative paths.

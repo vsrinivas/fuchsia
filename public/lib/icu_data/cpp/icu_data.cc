@@ -7,6 +7,7 @@
 #include <zx/vmar.h>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/icu_data/cpp/constants.h"
 #include "lib/icu_data/fidl/icu_data.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"
@@ -21,17 +22,17 @@ static size_t g_icu_data_size = 0;
 // return a pointer to the memory.
 // |size_out| is required and is set with the size of the mapped memory
 // region.
-uintptr_t GetDataFromVMO(const zx::vmo& vmo, size_t* size_out) {
+uintptr_t GetDataFromVMO(const fsl::SizedVmo& vmo, size_t* size_out) {
   if (!size_out)
     return 0u;
-  uint64_t data_size = 0u;
-  zx_status_t status = vmo.get_size(&data_size);
-  if (status != ZX_OK || data_size > std::numeric_limits<size_t>::max())
+  uint64_t data_size = vmo.size();
+  if (data_size > std::numeric_limits<size_t>::max())
     return 0u;
 
   uintptr_t data = 0u;
-  status = zx::vmar::root_self().map(0, vmo, 0, static_cast<size_t>(data_size),
-                                     ZX_VM_FLAG_PERM_READ, &data);
+  zx_status_t status =
+      zx::vmar::root_self().map(0, vmo.vmo(), 0, static_cast<size_t>(data_size),
+                                ZX_VM_FLAG_PERM_READ, &data);
   if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;
@@ -68,8 +69,13 @@ bool Initialize(app::ApplicationContext* context) {
     return false;
   }
 
+  fsl::SizedVmo vmo;
+  if (!fsl::SizedVmo::FromTransport(std::move(response->vmo), &vmo)) {
+    return false;
+  }
+
   size_t data_size = 0;
-  uintptr_t data = GetDataFromVMO(response->vmo, &data_size);
+  uintptr_t data = GetDataFromVMO(vmo, &data_size);
 
   // Pass the data to ICU.
   if (data) {

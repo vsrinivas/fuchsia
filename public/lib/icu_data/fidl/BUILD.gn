@@ -8,4 +8,8 @@ fidl("fidl") {
   sources = [
     "icu_data.fidl",
   ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl/fidl",
+  ]
 }

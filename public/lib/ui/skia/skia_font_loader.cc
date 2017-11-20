@@ -22,8 +22,13 @@ void SkiaFontLoader::LoadFont(fonts::FontRequestPtr request,
   font_provider_->GetFont(
       std::move(request), [this, callback](fonts::FontResponsePtr response) {
         if (response) {
-          sk_sp<SkData> font_data =
-              MakeSkDataFromVMO(std::move(response->data->vmo));
+          fsl::SizedVmo vmo;
+          if (!fsl::SizedVmo::FromTransport(std::move(response->data->vmo),
+                                            &vmo)) {
+            callback(nullptr);
+            return;
+          }
+          sk_sp<SkData> font_data = MakeSkDataFromVMO(vmo);
           if (font_data) {
             callback(
                 SkFontMgr::RefDefault()->makeFromData(std::move(font_data)));

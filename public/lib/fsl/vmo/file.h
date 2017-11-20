@@ -9,17 +9,33 @@
 
 #include <string>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/fxl_export.h"
 
 namespace fsl {
 
 // Make a new shared buffer with the contents of a file.
-FXL_EXPORT bool VmoFromFd(fxl::UniqueFD fd, zx::vmo* handle_ptr);
+FXL_EXPORT bool VmoFromFd(fxl::UniqueFD fd, SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a file.
 FXL_EXPORT bool VmoFromFilename(const std::string& filename,
-                                zx::vmo* handle_ptr);
+                                SizedVmo* handle_ptr);
+
+// Make a new shared buffer with the contents of a file.
+//
+// This function is deprecated because it loses the file size when the vmo is
+// always page aligned.
+FXL_EXPORT bool VmoFromFilename(const std::string& filename,
+                                zx::vmo* handle_ptr)
+    __attribute__((__deprecated__("Use the version with a SizedVmo.")));
+
+// Make a new shared buffer with the contents of a file.
+//
+// This function is deprecated because it loses the file size when the vmo is
+// always page aligned.
+FXL_EXPORT bool VmoFromFd(fxl::UniqueFD fd, zx::vmo* handle_ptr)
+    __attribute__((__deprecated__("Use the version with a SizedVmo.")));
 
 }  // namespace fsl
 

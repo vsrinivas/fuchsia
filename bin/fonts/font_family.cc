@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/vmo/file.h"
+#include "lib/fxl/logging.h"
 
 namespace fonts {
 namespace {
@@ -21,11 +21,9 @@ constexpr char kItalic[] = "italic";
 constexpr char kUpright[] = "upright";
 
 struct Matcher {
-  Matcher(FontSlant slant, int weight)
-      : slant_(slant), weight_(weight) {}
+  Matcher(FontSlant slant, int weight) : slant_(slant), weight_(weight) {}
 
-  bool operator()(const FontFamily::Font& a,
-                  const FontFamily::Font& b) {
+  bool operator()(const FontFamily::Font& a, const FontFamily::Font& b) {
     if (a.slant != b.slant) {
       if (a.slant == slant_)
         return true;
@@ -41,15 +39,15 @@ struct Matcher {
   int weight_;
 };
 
-} // namespace
+}  // namespace
 
 FontFamily::Font::Font() : slant(FontSlant::UPRIGHT), weight(400) {}
 
 FontFamily::Font::Font(Font&& other)
-  : asset(std::move(other.asset)),
-    slant(std::move(other.slant)),
-    weight(std::move(other.weight)),
-    data(std::move(other.data)) {}
+    : asset(std::move(other.asset)),
+      slant(std::move(other.slant)),
+      weight(std::move(other.weight)),
+      data(std::move(other.data)) {}
 
 FontFamily::FontFamily() = default;
 
@@ -70,12 +68,14 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
   name_ = name->value.GetString();
   const auto& fonts = family.FindMember(kFonts);
   if (fonts == family.MemberEnd() || !fonts->value.IsArray()) {
-    FXL_LOG(ERROR) << "Font family '" << name_ << "' did not contain any fonts.";
+    FXL_LOG(ERROR) << "Font family '" << name_
+                   << "' did not contain any fonts.";
     return false;
   }
   for (const auto& font : fonts->value.GetArray()) {
     if (!font.IsObject()) {
-      FXL_LOG(ERROR) << "Font family '" << name_ << "' contained an invalid font.";
+      FXL_LOG(ERROR) << "Font family '" << name_
+                     << "' contained an invalid font.";
       return false;
     }
     Font record;
@@ -122,16 +122,16 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
   return true;
 }
 
-zx::vmo* FontFamily::GetFontData(const FontRequestPtr& request) {
+fsl::SizedVmo* FontFamily::GetFontData(const FontRequestPtr& request) {
   Matcher matcher(request->slant, request->weight);
   auto it = std::min_element(fonts_.begin(), fonts_.end(), matcher);
   if (it == fonts_.end())
     return nullptr;
-  if (it->data.is_valid())
+  if (it->data)
     return &it->data;
   if (fsl::VmoFromFilename(it->asset, &it->data))
     return &it->data;
   return nullptr;
 }
 
-}
+}  // namespace fonts

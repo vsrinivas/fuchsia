@@ -110,18 +110,20 @@ void FontProviderImpl::GetFont(FontRequestPtr request,
     return;
   }
 
-  zx::vmo* font_data = it->second->GetFontData(request);
+  fsl::SizedVmo* font_data = it->second->GetFontData(request);
   if (!font_data) {
     callback(nullptr);
     return;
   }
 
-  auto data = FontData::New();
-  if (font_data->duplicate(kFontDataRights, &data->vmo) < 0) {
+  fsl::SizedVmo duplicated_data;
+  if (font_data->Duplicate(kFontDataRights, &duplicated_data) < 0) {
     callback(nullptr);
     return;
   }
 
+  auto data = FontData::New();
+  data->vmo = std::move(duplicated_data).ToTransport();
   auto response = FontResponse::New();
   response->data = std::move(data);
   callback(std::move(response));

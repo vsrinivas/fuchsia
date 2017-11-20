@@ -6,11 +6,11 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_loader.fidl.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace {
 
@@ -30,13 +30,13 @@ class RetryingLoader {
         weak_ptr_factory_(this) {}
 
   void Attempt() {
-    url_loader_->Start(
-        NewRequest(), [weak_this = weak_ptr_factory_.GetWeakPtr()](
-                          const network::URLResponsePtr& response) {
-          if (weak_this) {
-            weak_this->ProcessResponse(response);
-          }
-        });
+    url_loader_->Start(NewRequest(),
+                       [weak_this = weak_ptr_factory_.GetWeakPtr()](
+                           const network::URLResponsePtr& response) {
+                         if (weak_this) {
+                           weak_this->ProcessResponse(response);
+                         }
+                       });
   }
 
   void SetDeleter(const fxl::Closure& fn) { deleter_ = fn; }
@@ -49,14 +49,15 @@ class RetryingLoader {
     request->method = "GET";
     request->url = url_;
     request->auto_follow_redirects = true;
-    request->response_body_mode = network::URLRequest::ResponseBodyMode::BUFFER;
+    request->response_body_mode =
+        network::URLRequest::ResponseBodyMode::SIZED_BUFFER;
     return request;
   }
 
   void ProcessResponse(const network::URLResponsePtr& response) {
     if (response->status_code == 200) {
       auto package = app::ApplicationPackage::New();
-      package->data = std::move(response->body->get_buffer());
+      package->data = std::move(response->body->get_sized_buffer());
       package->resolved_url = std::move(response->url);
       SendResponse(std::move(package));
     } else if (response->error) {

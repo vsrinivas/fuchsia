@@ -5,11 +5,10 @@
 #ifndef GARNET_BIN_FONTS_FONT_FAMILY_H_
 #define GARNET_BIN_FONTS_FONT_FAMILY_H_
 
-#include <zx/vmo.h>
-
 #include <vector>
 
 #include "lib/fonts/fidl/font_provider.fidl.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/rapidjson.h"
@@ -24,7 +23,7 @@ class FontFamily {
   bool Load(const rapidjson::Document::ValueType& family);
 
   const std::string& name() const { return name_; }
-  zx::vmo* GetFontData(const FontRequestPtr& request);
+  fsl::SizedVmo* GetFontData(const FontRequestPtr& request);
 
   class Font {
    public:
@@ -34,7 +33,7 @@ class FontFamily {
     std::string asset;
     FontSlant slant;
     int weight;
-    zx::vmo data;
+    fsl::SizedVmo data;
   };
 
  private:

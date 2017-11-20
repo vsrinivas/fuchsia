@@ -8,4 +8,8 @@ fidl("fidl") {
   sources = [
     "font_provider.fidl",
   ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl/fidl",
+  ]
 }
