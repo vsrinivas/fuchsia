@@ -132,7 +132,7 @@ private:
     block_cache_t cache_;
 };
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd);
+zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd);
 zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd);
 zx_status_t blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
                            const fbl::Vector<size_t>& extent_lengths);
@@ -142,7 +142,7 @@ zx_status_t blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // |end| indicates the end of the blobstore partition (in bytes)
 // |extent_lengths| contains the length (in bytes) of each blobstore extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
-zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, int fd, off_t start, off_t end,
-                                    const fbl::Vector<size_t>& extent_lengths);
+zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd, off_t start,
+                                    off_t end, const fbl::Vector<size_t>& extent_lengths);
 
 } // namespace blobstore

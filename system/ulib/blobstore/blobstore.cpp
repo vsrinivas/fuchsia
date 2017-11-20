@@ -254,7 +254,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
     }
 
     // Flush the block allocation bitmap to disk
-    fsync(blobstore_->blockfd_);
+    fsync(blobstore_->Fd());
 
     // Update the on-disk hash
     memcpy(inode->merkle_root_hash, &digest_[0], Digest::kLength);
@@ -667,7 +667,7 @@ zx_status_t Blobstore::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
     if (status != ZX_OK) {
         return status;
     }
-    ssize_t r = ioctl_block_attach_vmo(blockfd_, &xfer_vmo, out);
+    ssize_t r = ioctl_block_attach_vmo(Fd(), &xfer_vmo, out);
     if (r < 0) {
         zx_handle_close(xfer_vmo);
         return static_cast<zx_status_t>(r);
@@ -684,7 +684,7 @@ zx_status_t Blobstore::AddInodes() {
     extend_request_t request;
     request.length = 1;
     request.offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
-    if (ioctl_block_fvm_extend(blockfd_, &request) < 0) {
+    if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
         fprintf(stderr, "Blobstore::AddInodes fvm_extend failure");
         return ZX_ERR_NO_SPACE;
     }
@@ -744,7 +744,7 @@ zx_status_t Blobstore::AddBlocks(size_t nblocks) {
         return ZX_ERR_NO_SPACE;
     }
 
-    if (ioctl_block_fvm_extend(blockfd_, &request) < 0) {
+    if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
         fprintf(stderr, "Blobstore::AddBlocks FVM Extend failure");
         return ZX_ERR_NO_SPACE;
     }
@@ -773,21 +773,21 @@ zx_status_t Blobstore::AddBlocks(size_t nblocks) {
 
 
 
-Blobstore::Blobstore(int fd, const blobstore_info_t* info)
-    : blockfd_(fd) {
+Blobstore::Blobstore(fbl::unique_fd fd, const blobstore_info_t* info)
+    : blockfd_(fbl::move(fd)) {
     memcpy(&info_, info, sizeof(blobstore_info_t));
 }
 
 Blobstore::~Blobstore() {
     if (fifo_client_ != nullptr) {
-        ioctl_block_free_txn(blockfd_, &txnid_);
-        ioctl_block_fifo_close(blockfd_);
+        ioctl_block_free_txn(Fd(), &txnid_);
+        ioctl_block_fifo_close(Fd());
         block_fifo_release_client(fifo_client_);
     }
-    close(blockfd_);
 }
 
-zx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, fbl::RefPtr<Blobstore>* out) {
+zx_status_t Blobstore::Create(fbl::unique_fd fd, const blobstore_info_t* info,
+                              fbl::RefPtr<Blobstore>* out) {
     zx_status_t status = blobstore_check_info(info, TotalBlocks(*info));
     if (status < 0) {
         fprintf(stderr, "blobstore: Check info failure\n");
@@ -795,20 +795,20 @@ zx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, fbl::RefPtr<
     }
 
     fbl::AllocChecker ac;
-    fbl::RefPtr<Blobstore> fs = fbl::AdoptRef(new (&ac) Blobstore(fd, info));
+    fbl::RefPtr<Blobstore> fs = fbl::AdoptRef(new (&ac) Blobstore(fbl::move(fd), info));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_handle_t fifo;
     ssize_t r;
-    if ((r = ioctl_block_get_fifos(fd, &fifo)) < 0) {
+    if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
         return static_cast<zx_status_t>(r);
-    } else if ((r = ioctl_block_alloc_txn(fd, &fs->txnid_)) < 0) {
+    } else if ((r = ioctl_block_alloc_txn(fs->Fd(), &fs->txnid_)) < 0) {
         zx_handle_close(fifo);
         return static_cast<zx_status_t>(r);
     } else if ((status = block_fifo_create_client(fifo, &fs->fifo_client_)) != ZX_OK) {
-        ioctl_block_free_txn(fd, &fs->txnid_);
+        ioctl_block_free_txn(fs->Fd(), &fs->txnid_);
         zx_handle_close(fifo);
         return status;
     }
@@ -871,11 +871,11 @@ zx_status_t Blobstore::LoadBitmaps() {
     return txn.Flush();
 }
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
+zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd) {
     zx_status_t status;
 
     char block[kBlobstoreBlockSize];
-    if ((status = readblk(blockfd, 0, (void*)block)) < 0) {
+    if ((status = readblk(blockfd.get(), 0, (void*)block)) < 0) {
         fprintf(stderr, "blobstore: could not read info block\n");
         return status;
     }
@@ -883,7 +883,7 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
     blobstore_info_t* info = reinterpret_cast<blobstore_info_t*>(&block[0]);
 
     uint64_t blocks;
-    if ((status = blobstore_get_blockcount(blockfd, &blocks)) != ZX_OK) {
+    if ((status = blobstore_get_blockcount(blockfd.get(), &blocks)) != ZX_OK) {
         fprintf(stderr, "blobstore: cannot find end of underlying device\n");
         return status;
     }
@@ -893,13 +893,13 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
         return status;
     }
 
-    if ((status = CheckFvmConsistency(info, blockfd)) != ZX_OK) {
+    if ((status = CheckFvmConsistency(info, blockfd.get())) != ZX_OK) {
         fprintf(stderr, "blobstore: FVM info check failed\n");
         return status;
     }
 
 
-    if ((status = Blobstore::Create(blockfd, info, out)) != ZX_OK) {
+    if ((status = Blobstore::Create(fbl::move(blockfd), info, out)) != ZX_OK) {
         fprintf(stderr, "blobstore: mount failed; could not create blobstore\n");
         return status;
     }
@@ -907,11 +907,11 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
     return ZX_OK;
 }
 
-zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd) {
+zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd) {
     zx_status_t status;
     fbl::RefPtr<Blobstore> fs;
 
-    if ((status = blobstore_create(&fs, blockfd)) != ZX_OK) {
+    if ((status = blobstore_create(&fs, fbl::move(blockfd))) != ZX_OK) {
         return status;
     }
 

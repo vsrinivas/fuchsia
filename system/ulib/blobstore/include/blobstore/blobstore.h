@@ -19,6 +19,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
@@ -215,7 +216,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
     friend class VnodeBlob;
 
-    static zx_status_t Create(int blockfd, const blobstore_info_t* info, fbl::RefPtr<Blobstore>* out);
+    static zx_status_t Create(fbl::unique_fd blockfd, const blobstore_info_t* info,
+                              fbl::RefPtr<Blobstore>* out);
 
     zx_status_t Unmount();
     virtual ~Blobstore();
@@ -258,13 +260,16 @@ public:
     // Add enough slices required to hold nblocks additional blocks.
     zx_status_t AddBlocks(size_t nblocks);
 
-    int blockfd_;
+    int Fd() const {
+        return blockfd_.get();
+    }
+
     blobstore_info_t info_;
 
 private:
     friend class BlobstoreChecker;
 
-    Blobstore(int fd, const blobstore_info_t* info);
+    Blobstore(fbl::unique_fd fd, const blobstore_info_t* info);
     zx_status_t LoadBitmaps();
 
     // Finds space for a block in memory. Does not update disk.
@@ -296,6 +301,7 @@ private:
                                             VnodeBlob::TypeWavlTraits>;
     WAVLTreeByMerkle hash_{}; // Map of all 'in use' blobs
 
+    fbl::unique_fd blockfd_;
     fifo_client_t* fifo_client_{};
     txnid_t txnid_{};
     RawBitmap block_map_{};
@@ -306,9 +312,9 @@ private:
     vmoid_t info_vmoid_{};
 };
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd);
+zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd);
 
 //TODO(planders): Update blobstore to use unique_fd.
-zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd);
+zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd);
 
 } // namespace blobstore

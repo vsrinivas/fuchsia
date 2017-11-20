@@ -278,7 +278,7 @@ bool PopulateBlobstore(size_t nfiles, size_t max_size) {
     fbl::unique_fd blobfd(open(blobfs_path, O_RDWR, 0755));
     ASSERT_TRUE(blobfd, "Unable to open blobstore path");
     fbl::RefPtr<blobstore::Blobstore> bs;
-    ASSERT_EQ(blobstore::blobstore_create(&bs, blobfd.release()), ZX_OK,
+    ASSERT_EQ(blobstore::blobstore_create(&bs, fbl::move(blobfd)), ZX_OK,
               "Failed to create blobstore");
     for (unsigned i = 0; i < nfiles; i++) {
         size_t size = 1 + (rand() % max_size);

@@ -60,15 +60,15 @@ zx_status_t writeblk_offset(int fd, uint64_t bno, off_t offset, const void* data
     return ZX_OK;
 }
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int fd) {
+zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd) {
     info_block_t info_block;
 
-    if (readblk(fd, 0, (void*)info_block.block) < 0) {
+    if (readblk(fd.get(), 0, (void*)info_block.block) < 0) {
         return ZX_ERR_IO;
     }
     uint64_t blocks;
     zx_status_t status;
-    if ((status = blobstore_get_blockcount(fd, &blocks)) != ZX_OK) {
+    if ((status = blobstore_get_blockcount(fd.get(), &blocks)) != ZX_OK) {
         fprintf(stderr, "blobstore: cannot find end of underlying device\n");
         return status;
     } else if ((status = blobstore_check_info(&info_block.info, blocks)) != ZX_OK) {
@@ -87,7 +87,7 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int fd) {
     extent_lengths[2] = NodeMapBlocks(info_block.info) * kBlobstoreBlockSize;
     extent_lengths[3] = DataBlocks(info_block.info) * kBlobstoreBlockSize;
 
-    if ((status = Blobstore::Create(fbl::unique_fd(fd), 0, info_block, extent_lengths, out))
+    if ((status = Blobstore::Create(fbl::move(fd), 0, info_block, extent_lengths, out))
         != ZX_OK) {
         fprintf(stderr, "blobstore: mount failed; could not create blobstore\n");
         return status;
