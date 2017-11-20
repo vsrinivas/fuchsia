@@ -7,6 +7,7 @@
         "peridot/packages/maxwell",
         "peridot/packages/modular",
         "peridot/packages/modular_examples",
+        "peridot/packages/peridot_lib",
         "peridot/packages/re2"
     ]
 }

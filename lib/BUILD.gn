@@ -2,14 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("unittests") {
+import("//packages/package.gni")
+
+executable("unittests") {
   testonly = true
+  output_name = "peridot_lib_unittests"
 
   deps = [
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/ledger_client:unittests",
+    "//peridot/lib/module_manifest_source:unittests",
     "//peridot/lib/testing:unittests",
     "//peridot/lib/util:unittests",
-    "//peridot/lib/module_manifest_source:unittests",
   ]
+}
+
+package("peridot_lib_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":unittests",
+  ]
+
+  tests = [ {
+        name = "peridot_lib_unittests"
+      } ]
 }

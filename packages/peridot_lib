@@ -1,0 +1,9 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "peridot_lib_tests": "//peridot/lib:peridot_lib_tests"
+    }
+}
+
