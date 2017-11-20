@@ -12,9 +12,6 @@
 
 __BEGIN_CDECLS
 
-// The maximum HCI ACL frame size used for data transactions
-#define BT_HCI_MAX_FRAME_SIZE         1028  // (1024 + 4 bytes for the ACL header)
-
 // Potential values for the flags bitfield in a snoop channel packet.
 #define BT_HCI_SNOOP_FLAG_SENT        0x00  // Host -> Controller
 #define BT_HCI_SNOOP_FLAG_RECEIVED    0x01  // Controller -> Host
@@ -59,6 +56,6 @@ IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_acl_data_channel, IOCTL_BT_HCI_GET_ACL_DATA_C
 // ssize_t ioctl_bt_hci_get_snoop_channel(int fd, zx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_snoop_channel, IOCTL_BT_HCI_GET_SNOOP_CHANNEL, zx_handle_t);
 
-// TODO(armansito): Add ioctls for ACL and SCO
+// TODO(jamuraa): Add ioctl for SCO
 
 __END_CDECLS

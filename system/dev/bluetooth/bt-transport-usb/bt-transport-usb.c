@@ -5,6 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/bt-hci.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/bt-hci.h>
@@ -24,6 +25,9 @@
 #define ACL_READ_REQ_COUNT 8
 #define ACL_WRITE_REQ_COUNT 8
 
+// The maximum HCI ACL frame size used for data transactions
+#define ACL_MAX_FRAME_SIZE 1028 // (1024 + 4 bytes for the ACL header)
+
 #define CMD_BUF_SIZE 255 + 3   // 3 byte header + payload
 #define EVENT_BUF_SIZE 255 + 2 // 2 byte header + payload
 
@@ -34,9 +38,9 @@
 
 #define NUM_WAIT_ITEMS NUM_CHANNELS + 1 // add one item for the changed event
 
-// Uncomment these to force using a particular Bluetooth module
-// #define USB_VID 0x0a12  // CSR
-// #define USB_PID 0x0001
+// TODO(jamuraa): move these to hw/usb.h (or hw/bluetooth.h if that exists)
+#define USB_SUBCLASS_BLUETOOTH 1
+#define USB_PROTOCOL_BLUETOOTH 1
 
 typedef struct {
     zx_device_t* zxdev;
@@ -105,7 +109,7 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
     memcpy(snoop_buffer + 1, bytes, length);
     zx_status_t status = zx_channel_write(hci->snoop_channel, 0, snoop_buffer, length + 1, NULL, 0);
     if (status < 0) {
-        printf("usb-bt-hci: failed to write to snoop channel: %s\n", zx_status_get_string(status));
+        printf("bt-transport-usb: failed to write to snoop channel: %s\n", zx_status_get_string(status));
         channel_cleanup_locked(hci, &hci->snoop_channel);
     }
 }
@@ -123,7 +127,7 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
         uint8_t* buffer;
         zx_status_t status = usb_request_mmap(req, (void*)&buffer);
         if (status != ZX_OK) {
-            printf("usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
             goto out2;
         }
         size_t length = req->response.actual;
@@ -135,7 +139,7 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
                 if (hci->cmd_channel != ZX_HANDLE_INVALID) {
                     zx_status_t status = zx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
                     if (status < 0) {
-                        printf("hci_interrupt failed to write: %s\n", zx_status_get_string(status));
+                        printf("bt-transport-usb: hci_event_complete failed to write: %s\n", zx_status_get_string(status));
                     }
                 }
                 snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED, buffer, length);
@@ -146,7 +150,7 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
         // complicated case - need to accumulate into hci->event_buffer
 
         if (hci->event_buffer_offset + length > sizeof(hci->event_buffer)) {
-            printf("hci->event_buffer would overflow!\n");
+            printf("bt-transport-usb: event_buffer would overflow!\n");
             goto out2;
         }
 
@@ -163,7 +167,7 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
             zx_status_t status = zx_channel_write(hci->cmd_channel, 0, hci->event_buffer,
                                                   packet_size, NULL, 0);
             if (status < 0) {
-                printf("hci_interrupt failed to write: %s\n", zx_status_get_string(status));
+                printf("bt-transport-usb: failed to write: %s\n", zx_status_get_string(status));
             }
 
             snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED, hci->event_buffer, packet_size);
@@ -191,18 +195,17 @@ static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
         void* buffer;
         zx_status_t status = usb_request_mmap(req, &buffer);
         if (status != ZX_OK) {
-            printf("usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
             mtx_unlock(&hci->mutex);
             return;
         }
 
-        // The channel handle could be invalid here (e.g. if no process called
-        // the ioctl or they closed their endpoint). Instead of explicitly
-        // checking we let zx_channel_write fail with ZX_ERR_BAD_HANDLE or
-        // ZX_ERR_PEER_CLOSED.
+        // The channel handle could be invalid here (e.g. if no one opened
+        // the channel or it was closed). Instead of explicitly checking we
+        // let zx_channel_write fail with ZX_ERR_BAD_HANDLE or ZX_ERR_PEER_CLOSED.
         status = zx_channel_write(hci->acl_channel, 0, buffer, req->response.actual, NULL, 0);
         if (status < 0) {
-            printf("hci_acl_read_complete failed to write: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: hci_acl_read_complete failed to write: %s\n", zx_status_get_string(status));
         }
 
         // If the snoop channel is open then try to write the packet even if acl_channel was closed.
@@ -227,7 +230,7 @@ static void hci_acl_write_complete(usb_request_t* req, void* cookie) {
         void* buffer;
         zx_status_t status = usb_request_mmap(req, &buffer);
         if (status != ZX_OK) {
-            printf("usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            printf("bt-transport-usb: usb_request_mmap failed: %s\n", zx_status_get_string(status));
             mtx_unlock(&hci->mutex);
             return;
         }
@@ -315,7 +318,7 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         if (!node)
             return;
 
-        uint8_t buf[BT_HCI_MAX_FRAME_SIZE];
+        uint8_t buf[ACL_MAX_FRAME_SIZE];
         uint32_t length = sizeof(buf);
         zx_status_t status =
             zx_channel_read(acl_item->handle, 0, buf, NULL, length, 0, &length, NULL);
@@ -359,7 +362,7 @@ static int hci_read_thread(void* arg) {
     mtx_lock(&hci->mutex);
 
     if (!hci_has_read_channels_locked(hci)) {
-        printf("hci_read_thread: no channels are open - exiting\n");
+        printf("bt-transport-usb: no channels are open - exiting\n");
         hci->read_thread_running = false;
         mtx_unlock(&hci->mutex);
         return 0;
@@ -371,7 +374,7 @@ static int hci_read_thread(void* arg) {
         zx_status_t status = zx_object_wait_many(
             hci->read_wait_items, hci->read_wait_item_count, ZX_TIME_INFINITE);
         if (status < 0) {
-            printf("hci_read_thread: zx_object_wait_many failed (%s) - exiting\n",
+            printf("bt-transport-usb: zx_object_wait_many failed (%s) - exiting\n",
                    zx_status_get_string(status));
             mtx_lock(&hci->mutex);
             channel_cleanup_locked(hci, &hci->cmd_channel);
@@ -397,7 +400,7 @@ static int hci_read_thread(void* arg) {
         if (status == ZX_OK) {
             hci_build_read_wait_items(hci);
             if (!hci_has_read_channels_locked(hci)) {
-                printf("hci_read_thread: all channels closed - exiting\n");
+                printf("bt-transport-usb: all channels closed - exiting\n");
                 break;
             }
         }
@@ -409,56 +412,29 @@ static int hci_read_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                            void* out_buf, size_t out_len, size_t* out_actual) {
-    ssize_t result = ZX_ERR_NOT_SUPPORTED;
-    hci_t* hci = ctx;
-
+static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_handle_t* out_channel) {
+    zx_status_t result = ZX_OK;
     mtx_lock(&hci->mutex);
 
-    zx_handle_t* channel = NULL;
-
-    if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-        channel = &hci->cmd_channel;
-    } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-        channel = &hci->acl_channel;
-    } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-        channel = &hci->snoop_channel;
-    }
-
-    if (!channel) {
-        goto done;
-    }
-
-    zx_handle_t* reply = out_buf;
-    if (out_len < sizeof(*reply)) {
-        result = ZX_ERR_BUFFER_TOO_SMALL;
-        goto done;
-    }
-
-    if (*channel != ZX_HANDLE_INVALID) {
+    if (*in_channel != ZX_HANDLE_INVALID) {
+        printf("bt-transport-usb: already bound, failing\n");
         result = ZX_ERR_ALREADY_BOUND;
         goto done;
     }
 
-    zx_handle_t remote_end;
-    zx_status_t status = zx_channel_create(0, channel, &remote_end);
+    zx_status_t status = zx_channel_create(0, in_channel, out_channel);
     if (status < 0) {
-        printf("hci_ioctl: Failed to create channel: %s\n",
+        printf("bt-transport-usb: Failed to create channel: %s\n",
                zx_status_get_string(status));
         result = ZX_ERR_INTERNAL;
         goto done;
     }
 
-    *reply = remote_end;
-    *out_actual = sizeof(*reply);
-    result = ZX_OK;
-
     // Kick off the hci_read_thread if it's not already running.
-    if (result == ZX_OK && !hci->read_thread_running) {
+    if (!hci->read_thread_running) {
         hci_build_read_wait_items_locked(hci);
         thrd_t read_thread;
-        thrd_create_with_name(&read_thread, hci_read_thread, hci, "hci_read_thread");
+        thrd_create_with_name(&read_thread, hci_read_thread, hci, "bt_usb_read_thread");
         hci->read_thread_running = true;
         thrd_detach(read_thread);
     } else {
@@ -507,9 +483,44 @@ static void hci_release(void* ctx) {
     free(hci);
 }
 
+static zx_status_t hci_open_command_channel(void* ctx, zx_handle_t* out_channel) {
+    hci_t* hci = ctx;
+    return hci_open_channel(hci, &hci->cmd_channel, out_channel);
+}
+
+static zx_status_t hci_open_acl_data_channel(void* ctx, zx_handle_t* out_channel) {
+    hci_t* hci = ctx;
+    return hci_open_channel(hci, &hci->acl_channel, out_channel);
+}
+
+static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t* out_channel) {
+    hci_t* hci = ctx;
+    return hci_open_channel(hci, &hci->snoop_channel, out_channel);
+}
+
+static bt_hci_protocol_ops_t hci_protocol_ops = {
+    .open_command_channel = hci_open_command_channel,
+    .open_acl_data_channel = hci_open_acl_data_channel,
+    .open_snoop_channel = hci_open_snoop_channel,
+};
+
+static zx_status_t hci_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+    hci_t* hci = ctx;
+    if (proto_id != ZX_PROTOCOL_BT_HCI) {
+        // Pass this on for drivers to load firmware / initialize
+        return device_get_protocol(hci->usb_zxdev, proto_id, protocol);
+    }
+
+    bt_hci_protocol_t* hci_proto = protocol;
+
+    hci_proto->ops = &hci_protocol_ops;
+    hci_proto->ctx = ctx;
+    return ZX_OK;
+};
+
 static zx_protocol_device_t hci_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = hci_ioctl,
+    .get_protocol = hci_get_protocol,
     .unbind = hci_unbind,
     .release = hci_release,
 };
@@ -519,13 +530,17 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
 
     zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (status != ZX_OK) {
+        printf("bt-transport-usb: get protocol failed: %s\n", zx_status_get_string(status));
         return status;
     }
 
     // find our endpoints
     usb_desc_iter_t iter;
     zx_status_t result = usb_desc_iter_init(&usb, &iter);
-    if (result < 0) return result;
+    if (result < 0) {
+        printf("bt-transport-usb: usb iterator failed: %s\n", zx_status_get_string(status));
+        return result;
+    }
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 3) {
@@ -557,13 +572,13 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     usb_desc_iter_release(&iter);
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
-        printf("hci_bind could not find endpoints\n");
+        printf("bt-transport-usb: bind could not find endpoints\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     hci_t* hci = calloc(1, sizeof(hci_t));
     if (!hci) {
-        printf("Not enough memory for hci_t\n");
+        printf("bt-transport-usb: Not enough memory for hci_t\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -590,7 +605,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, BT_HCI_MAX_FRAME_SIZE, bulk_in_addr);
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -600,7 +615,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, BT_HCI_MAX_FRAME_SIZE, bulk_out_addr);
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -616,17 +631,19 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb_bt_hci",
+        .name = "bt_transport_usb",
         .ctx = hci,
         .ops = &hci_device_proto,
-        .proto_id = ZX_PROTOCOL_BLUETOOTH_HCI,
+        .proto_id = ZX_PROTOCOL_BT_HCI_TRANSPORT,
     };
 
     status = device_add(device, &args, &hci->zxdev);
-    if (status == ZX_OK) return ZX_OK;
+    if (status == ZX_OK) {
+        return ZX_OK;
+    }
 
 fail:
-    printf("hci_bind failed: %s\n", zx_status_get_string(status));
+    printf("bt-transport-usb: bind failed: %s\n", zx_status_get_string(status));
     hci_release(hci);
     return status;
 }
@@ -636,15 +653,10 @@ static zx_driver_ops_t usb_bt_hci_driver_ops = {
     .bind = hci_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(usb_bt_hci, usb_bt_hci_driver_ops, "zircon", "0.1", 4)
+// clang-format off
+ZIRCON_DRIVER_BEGIN(bt_transport_usb, usb_bt_hci_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
-#if defined(USB_VID) && defined(USB_PID)
-    BI_ABORT_IF(NE, BIND_USB_VID, USB_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, USB_PID),
-    BI_ABORT(),
-#else
-    BI_ABORT_IF(NE, BIND_USB_CLASS, 224),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, 1),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 1),
-#endif
-ZIRCON_DRIVER_END(usb_bt_hci)
+    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_BLUETOOTH),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_BLUETOOTH),
+ZIRCON_DRIVER_END(bt_transport_usb)

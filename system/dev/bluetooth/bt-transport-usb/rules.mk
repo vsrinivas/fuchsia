@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/usb-bt-hci.c
+MODULE_SRCS := $(LOCAL_DIR)/bt-transport-usb.c
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
