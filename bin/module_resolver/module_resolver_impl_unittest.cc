@@ -100,8 +100,6 @@ class DaisyBuilder {
 
 class TestManifestSource : public modular::ModuleManifestSource {
  public:
-  ~TestManifestSource() override {}
-
   IdleFn idle;
   NewEntryFn add;
   RemovedEntryFn remove;
