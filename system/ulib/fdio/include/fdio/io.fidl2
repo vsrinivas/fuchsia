@@ -1,0 +1,251 @@
+library io;
+
+// Interfaces which may be returned by ObjectInfo, an object
+// returned when calling Open or Describe:
+
+// The default protocol, interface information must be acquired via ListInterfaces.
+struct Service {};
+// The object may be cast to interface 'File'.
+struct File {
+  handle<event>? e;
+};
+// The object may be cast to interface 'Directory'.
+struct Directory {};
+// The object is accompanied by a pipe.
+struct Pipe {
+  handle<socket> s;
+};
+// The object is accompanied by a VMO.
+struct Vmofile {
+  handle<vmo> v;
+  uint64 offset;
+  uint64 length;
+};
+// The object may be cast to interface 'Device'.
+struct Device {
+  handle<event>? e;
+};
+
+// Describes how the connection to the Object should be handled, as well as
+// how to interpret the optional handle.
+union ObjectInfo {
+  Service service;
+  File file;
+  Directory directory;
+  Pipe pipe;
+  Vmofile vmofile;
+  Device device;
+};
+
+// Object defines the minimal interface for entities which can be accessed in a filesystem.
+interface Object {
+  // Can read from target object.
+  const uint32 kOpenRightReadable      = 0x00000001;
+  // Can write to target object.
+  const uint32 kOpenRightWritable      = 0x00000002;
+  // Connection can mount/umount filesystem.
+  const uint32 kOpenRightAdmin         = 0x00000004;
+
+  // Create the object if it doesn't exist.
+  const uint32 kOpenFlagCreate         = 0x00010000;
+  // (with Create) Fail if the object already exists.
+  const uint32 kOpenFlagCreateIfAbsent = 0x00020000;
+  // Truncate the object before usage.
+  const uint32 kOpenFlagTruncate       = 0x00040000;
+  // Return an error if the target object is not a directory.
+  const uint32 kOpenFlagDirectory      = 0x00080000;
+  // Seek to the end of the object before all writes.
+  const uint32 kOpenFlagAppend         = 0x00100000;
+  // If the object is a mount point, open the local directory.
+  const uint32 kOpenFlagNoRemote       = 0x00200000;
+  // Open a reference to the object, not the object itself.
+  const uint32 kOpenFlagNodeReference  = 0x00400000;
+  // Requests that an "OnOpen" event is sent, with
+  // a non-null ObjectInfo (if the open is successful).
+  // Implies "kOpenFlagStatus".
+  const uint32 kOpenFlagDescribe       = 0x00800000;
+  // Requests that an "OnOpen" event is sent.
+  const uint32 kOpenFlagStatus         = 0x01000000;
+
+  // May be used to create another connection to the same remote object.
+  0x80000001: Clone(request<Object> object);
+
+  // Terminates connection with object.
+  0x80000002: Close() -> (status s);
+
+  // Returns a representation of all the interfaces currently supported
+  // by the object. The Object may be bound to any of the represented
+  // interfaces.
+  0x80000004: ListInterfaces() -> (vector<string> interfaces);
+
+  // Closes handle if the requested interface not supported.
+  0x80000005: Bind(string iface);
+
+  // Returns extra information about the type of the object.
+  // If the |Describe| operation fails, the connection is closed.
+  0x80000006: Describe() -> (ObjectInfo info);
+
+  // An event produced eagerly by a fidl server if requested
+  // by open flags.
+  // Indicates the success or failure of the open operation,
+  // and optionally describes the object.
+  // If the status is |ZX_OK| and |kOpenFlagDescribe| was passed
+  // to open, |info| contains descriptive information about
+  // the object (the same as would be returned by |Describe|),
+  // otherwise it is null.
+  0x80000007: event OnOpen(status s, ObjectInfo? info);
+};
+
+// NodeAttributes defines generic information about a filesystem node.
+struct NodeAttributes {
+  // Bits reserved for posix protections. Native fuchsia filesystems
+  // are not required to set bits contained within kModeProtectionMask,
+  // but filesystems that wish to do so may refer to sys/stat.h for their
+  // definitions.
+  const uint32 kModeProtectionMask  = 0x00FFF;
+  // Bits indicating node type. The canonical mechanism to check
+  // for a node type is to take 'mode', bitwise and it with the
+  // kModeTypeMask, and check exact equality against a mode type.
+  const uint32 kModeTypeMask        = 0xFF000;
+  const uint32 kModeTypeDirectory   = 0x04000;
+  const uint32 kModeTypeBlockDevice = 0x06000;
+  const uint32 kModeTypeFile        = 0x08000;
+  const uint32 kModeTypeSocket      = 0x0C000;
+  const uint32 kModeTypeService     = 0x10000;
+  // Protection bits and node type information describe in 'mode'.
+  uint32 mode;
+  // A filesystem-unique ID.
+  uint64 id;
+  // Node size, in bytes.
+  uint64 content_size;
+  // Space needed to store node (possibly larger than size), in bytes.
+  uint64 storage_size;
+  // Hard link count.
+  uint64 link_count;
+  // Time of creation (may be updated manually after creation) in ns since Unix epoch, UTC.
+  uint64 creation_time;
+  // Time of last modification in ns since Unix epoch, UTC.
+  uint64 modification_time;
+};
+
+// Node defines a filesystem object, which implements a minimal set of functionality
+// to be compatible with posix filesystem operations.
+interface Node : Object {
+  const uint64 kMaxBuf = 8192;
+
+  // Synchronizes updates to the node to the underlying media, if it exists.
+  0x81000001: Sync() -> (status s);
+
+  // Acquire information about the node.
+  0x81000002: GetAttr() -> (status s, NodeAttributes attributes);
+
+  // Update information about the node.
+  // The fields of 'attributes' which are used to update the Node are indicated
+  // by the 'flags' argument.
+  const uint32 kNodeAttributeFlagCreationTime     = 0x00000001;
+  const uint32 kNodeAttributeFlagModificationTime = 0x00000002;
+  0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (status s);
+
+  0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<uint8>:kMaxBuf in) -> (status s, vector<uint8>:kMaxBuf out);
+
+  0x81000005: Ioctl1H(handle h, uint32 opcode, uint64 max_out, vector<uint8>:kMaxBuf in) -> (status s, vector<uint8>:kMaxBuf out);
+};
+
+// File defines the interface of a node which contains a flat layout of data.
+interface File : Node {
+  // Read 'count' bytes at the seek offset.
+  // The seek offset is moved forward by the number of bytes read.
+  0x82000001: Read(uint64 count) -> (status s, vector<uint8>:kMaxBuf data);
+
+  // Read 'count' bytes at the provided offset.
+  // Does not affect the seek offset.
+  0x82000002: ReadAt(uint64 count, uint64 offset) -> (status s, vector<uint8>:kMaxBuf data);
+
+  // Write data at the seek offset.
+  // The seek offset is moved forward by the number of bytes written.
+  0x82000003: Write(vector<uint8>:kMaxBuf data) -> (status s, uint64 actual);
+
+  // Write data to the provided offset.
+  // Does not affect the seek offset.
+  0x82000004: WriteAt(vector<uint8>:kMaxBuf data, uint64 offset) -> (status s, uint64 actual);
+
+  // Update the Seek offset.
+  enum SeekOrigin : uint32 {
+    // Seek from the start of the file.
+    Start = 0;
+    // Seek from the current position in the file.
+    Current = 1;
+    // Seek from the end of the file.
+    End = 2;
+  };
+  0x82000005: Seek(int64 offset, SeekFrom start) -> (status s, uint64 offset);
+
+  // Shrink the file size to 'length' bytes.
+  0x82000006: Truncate(uint64 length) -> (status s);
+
+  // Acquire the Directory::Open rights and flags used to access this file.
+  0x82000007: GetFlags() -> (status s, uint32 flags);
+
+  // Change the Directory::Open flags used to access the file.
+  // Supported flags which can be turned on / off:
+  // - kOpenFlagAppend
+  0x82000008: SetFlags(uint32 flags) -> (status s);
+
+  // Acquire a VMO representing this file, if there is one, with the
+  // requested access rights.
+  const uint32 kVmoFlagRead    = 0x00000001;
+  const uint32 kVmoFlagWrite   = 0x00000002;
+  const uint32 kVmoFlagExec    = 0x00000004;
+  const uint32 kVmoFlagPrivate = 0x00010000;
+  0x82000009: GetVmo(uint32 flags) -> (status s, handle<vmo> v);
+
+  // Acquire a VMO representing this file, limited to a particular range.
+  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (status s, handle<vmo> v);
+};
+
+// Directory defines a node which is capable of containing other Objects.
+interface Directory : Node {
+  // Open a new object relative to this directory object.
+  0x83000001: Open(uint32 flags, uint32 mode, string path, request<Object> object);
+
+  // Remove an object relative to this directory object.
+  0x83000002: Unlink(string path) -> (status s);
+
+  // Reads a collection of variably sized dirents into a buffer.
+  // The number of dirents in a directory may be very large: akin to
+  // calling read multiple times on a file, directories have a seek
+  // offset which is updated on subsequent calls to ReadDirents.
+  //
+  // These dirents are aligned to uint32_t, and of the form:
+  // struct dirent {
+  //   // Describes the length of the dirent name.
+  //   uint32_t size;
+  //   // Describes the type of the entry. Aligned with the
+  //   // POSIX d_type values.
+  //   uint32_t type;
+  //   // Null-terminated name of entry.
+  //   char name[0];
+  // }
+  const uint32 kDirentTypeUnknown = 0;
+  const uint32 kDirentTypeDirectory = 4;
+  const uint32 kDirentTypeBlockDevice = 6;
+  const uint32 kDirentTypeFile = 8;
+  const uint32 kDirentTypeSocket = 12;
+  const uint32 kDirentTypeService = 16;
+  0x83000003: ReadDirents(uint64 max_out) -> (status s, vector<uint8>:kMaxBuf dirents);
+
+  // Reset the directory seek offset.
+  0x83000004: Rewind();
+
+  // Acquire a token to a Directory which can be used to identify
+  // access to it at a later point in time.
+  0x83000005: GetToken() -> (status s, handle token);
+
+  // Within the directory, rename an object named src to the name dst, in
+  // a directory represented by token.
+  0x83000006: Rename(string src, handle dst_parent_token, string dst) -> (status s);
+
+  // Within the directory, create a link to an object named src by the name
+  // dst, within a directory represented by token.
+  0x83000007: Link(string src, handle dst_parent_token, string dst) -> (status s);
+};
