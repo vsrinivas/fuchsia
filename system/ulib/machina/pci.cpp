@@ -525,17 +525,6 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
     }
 }
 
-static bool pci_device_aspace_enabled(uint8_t aspace, uint16_t command) {
-    switch (aspace) {
-    case PCI_BAR_ASPACE_PIO:
-        return command & PCI_COMMAND_IO_EN;
-    case PCI_BAR_ASPACE_MMIO:
-        return command & PCI_COMMAND_MEM_EN;
-    default:
-        return false;
-    }
-}
-
 zx_status_t PciDevice::SetupBarTraps(Guest* guest) {
     for (uint8_t i = 0; i < PCI_MAX_BARS; ++i) {
         PciBar* bar = &bar_[i];

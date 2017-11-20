@@ -1,0 +1,73 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+config("machina_config") {
+  include_dirs = ["include"]
+  if (current_cpu == "x64") {
+    include_dirs += ["arch/x86/include"]
+  } else if (current_cpu == "arm64") {
+    include_dirs += ["arch/arm64/include"]
+  }
+}
+
+source_set("machina") {
+  sources = [
+    "balloon.cpp",
+    "block.cpp",
+    "gpu.cpp",
+    "input.cpp",
+    "pci.cpp",
+    "uart.cpp",
+    "virtio.cpp",
+    "virtio_pci.cpp",
+    "include/machina/balloon.h",
+    "include/machina/block.h",
+    "include/machina/gpu.h",
+    "include/machina/input.h",
+    "include/machina/pci.h",
+    "include/machina/uart.h",
+    "include/machina/virtio.h",
+    "include/machina/virtio_pci.h",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "arch/x86/io_apic.cpp",
+      "arch/x86/io_port.cpp",
+      "arch/x86/include/machina/tpm.h",
+      "arch/x86/include/machina/io_apic.h",
+      "arch/x86/include/machina/interrupt_controller.h",
+      "arch/x86/include/machina/io_port.h",
+    ]
+  }
+
+  if (current_cpu == "arm64") {
+    sources += [
+      "arch/arm64/gic_distributor.cpp",
+      "arch/arm64/include/machina/interrupt_controller.h",
+      "arch/arm64/include/machina/gic_distributor.h",
+    ]
+  }
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  deps = [
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  libs = [
+    "hid",
+    "hypervisor",
+    "sync",
+    "virtio"
+  ]
+
+  public_configs = [":machina_config"]
+}

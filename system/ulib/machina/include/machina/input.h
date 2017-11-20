@@ -22,7 +22,7 @@ class VirtioInputEventEmitter {
 public:
     virtual ~VirtioInputEventEmitter() = default;
 
-    virtual zx_status_t QueueInputEvent(const virtio_input_event_t& event);
+    virtual zx_status_t QueueInputEvent(const virtio_input_event_t& event) = 0;
 
     virtual zx_status_t FlushInputEvents() = 0;
 };

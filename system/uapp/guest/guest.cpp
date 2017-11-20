@@ -38,6 +38,14 @@
 
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = { UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE };
+
+static zx_status_t create_vmo(uint64_t size, uintptr_t* addr, zx_handle_t* vmo) {
+    zx_status_t status = zx_vmo_create(size, 0, vmo);
+    if (status != ZX_OK)
+        return status;
+    return zx_vmar_map(zx_vmar_root_self(), 0, *vmo, 0, size,
+                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, addr);
+}
 #endif
 
 static const uint64_t kVmoSize = 1u << 30;
@@ -61,14 +69,6 @@ static zx_status_t usage(const char* cmd) {
     fprintf(stderr, "\t-g                 Enable graphics output to the framebuffer.\n");
     fprintf(stderr, "\n");
     return ZX_ERR_INVALID_ARGS;
-}
-
-static zx_status_t create_vmo(uint64_t size, uintptr_t* addr, zx_handle_t* vmo) {
-    zx_status_t status = zx_vmo_create(size, 0, vmo);
-    if (status != ZX_OK)
-        return status;
-    return zx_vmar_map(zx_vmar_root_self(), 0, *vmo, 0, size,
-                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, addr);
 }
 
 static void balloon_stats_handler(VirtioBalloon* balloon, const virtio_balloon_stat_t* stats,

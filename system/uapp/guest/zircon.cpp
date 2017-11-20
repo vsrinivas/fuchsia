@@ -16,6 +16,8 @@
 
 static const uintptr_t kKernelOffset = 0x100000;
 static const uintptr_t kBootdataOffset = 0x800000;
+
+#if __aarch64__
 static const uint16_t kMzSignature = 0x5a4d; // MZ
 static const uint32_t kMzMagic = 0x644d5241; // ARM\x64
 
@@ -42,6 +44,7 @@ static bool is_mz(const MzHeader* header) {
            header->magic == kMzMagic &&
            header->pe_off >= sizeof(MzHeader);
 }
+#endif
 
 static bool is_bootdata(const bootdata_t* header) {
     return header->type == BOOTDATA_CONTAINER &&
