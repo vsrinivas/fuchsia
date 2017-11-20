@@ -246,6 +246,104 @@ bool MountEvilMinfs(void) {
     END_TEST;
 }
 
+bool UmountTestEvil(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/umount_test_evil";
+
+    BEGIN_TEST;
+
+    // Create a ramdisk, mount minfs
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
+    ASSERT_EQ(mkdir(mount_path, 0666), 0);
+    ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_OK);
+    ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+
+    // Try re-opening the root without O_ADMIN. We shouldn't be able to umount.
+    int weak_root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(weak_root_fd, 0);
+    ASSERT_LT(ioctl_vfs_unmount_fs(weak_root_fd), 0);
+
+    // Try opening a non-root directory without O_ADMIN. We shouldn't be able
+    // to umount.
+    ASSERT_EQ(mkdirat(weak_root_fd, "subdir", 0666), 0);
+    int weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(weak_subdir_fd, 0);
+    ASSERT_LT(ioctl_vfs_unmount_fs(weak_subdir_fd), 0);
+    ASSERT_EQ(close(weak_subdir_fd), 0);
+
+    // Try opening a new directory with O_ADMIN. It shouldn't open.
+    weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY | O_ADMIN);
+    ASSERT_LT(weak_subdir_fd, 0);
+    ASSERT_EQ(close(weak_root_fd), 0);
+
+    // Finally, umount using O_NOREMOTE and acquiring the connection
+    // that has "O_ADMIN" set.
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
+    ASSERT_EQ(unlink(mount_path), 0);
+    END_TEST;
+}
+
+bool DoubleMountRoot(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/double_mount_root";
+
+    BEGIN_TEST;
+
+    // Create a ramdisk, mount minfs
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
+    ASSERT_EQ(mkdir(mount_path, 0666), 0);
+    ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_OK);
+    ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+
+    // Create ANOTHER ramdisk, ready to be mounted...
+    // Try mounting again on top Minfs' remote root.
+    char ramdisk_path2[PATH_MAX];
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path2), 0);
+    ASSERT_EQ(mkfs(ramdisk_path2, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
+
+    // Try mounting on the mount point (locally; should fail because something is already mounted)
+    int mount_fd = open(mount_path, O_RDONLY | O_NOREMOTE | O_ADMIN);
+    ASSERT_GE(mount_fd, 0);
+    fd = open(ramdisk_path2, O_RDWR);
+    ASSERT_GE(fd, 0);
+    ASSERT_NE(fmount(fd, mount_fd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_OK);
+    ASSERT_EQ(close(mount_fd), 0);
+
+    // Try mounting on the mount root (remote; should fail because MinFS doesn't allow mounting
+    // on top of the root directory).
+    mount_fd = open(mount_path, O_RDONLY | O_ADMIN);
+    ASSERT_GE(mount_fd, 0);
+    fd = open(ramdisk_path2, O_RDWR);
+    ASSERT_GE(fd, 0);
+    ASSERT_NE(fmount(fd, mount_fd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_OK);
+    ASSERT_EQ(close(mount_fd), 0);
+
+
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path2), 0);
+    ASSERT_EQ(rmdir(mount_path), 0);
+    END_TEST;
+}
+
 bool MountRemount(void) {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_remount";
@@ -287,51 +385,6 @@ bool MountFsck(void) {
     // fsck shouldn't require any user input for a newly mkfs'd filesystem
     ASSERT_EQ(fsck(ramdisk_path, DISK_FORMAT_MINFS, &default_fsck_options, launch_stdio_sync),
               ZX_OK);
-    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
-    ASSERT_EQ(unlink(mount_path), 0);
-    END_TEST;
-}
-
-bool UmountTestEvil(void) {
-    char ramdisk_path[PATH_MAX];
-    const char* mount_path = "/tmp/umount_test_evil";
-
-    BEGIN_TEST;
-
-    // Create a ramdisk, mount minfs
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
-              ZX_OK);
-    ASSERT_EQ(mkdir(mount_path, 0666), 0);
-    ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
-    int fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
-              ZX_OK);
-    ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
-
-    // Try re-opening the root without O_ADMIN. We shouldn't be able to umount.
-    int weak_root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(weak_root_fd, 0);
-    ASSERT_LT(ioctl_vfs_unmount_fs(weak_root_fd), 0);
-
-    // Try opening a non-root directory without O_ADMIN. We shouldn't be able
-    // to umount.
-    ASSERT_EQ(mkdirat(weak_root_fd, "subdir", 0666), 0);
-    int weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(weak_subdir_fd, 0);
-    ASSERT_LT(ioctl_vfs_unmount_fs(weak_subdir_fd), 0);
-    ASSERT_EQ(close(weak_subdir_fd), 0);
-
-    // Try opening a new directory with O_ADMIN. It shouldn't open.
-    weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY | O_ADMIN);
-    ASSERT_LT(weak_subdir_fd, 0);
-    ASSERT_EQ(close(weak_root_fd), 0);
-
-    // Finally, umount using O_NOREMOTE and acquiring the connection
-    // that has "O_ADMIN" set.
-    ASSERT_EQ(umount(mount_path), ZX_OK);
-    ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
     ASSERT_EQ(unlink(mount_path), 0);
     END_TEST;
@@ -551,6 +604,7 @@ RUN_TEST_MEDIUM(FmountFunmount)
 RUN_TEST_MEDIUM(MountEvilMemfs)
 RUN_TEST_MEDIUM(MountEvilMinfs)
 RUN_TEST_MEDIUM(UmountTestEvil)
+RUN_TEST_MEDIUM(DoubleMountRoot)
 RUN_TEST_MEDIUM(MountRemount)
 RUN_TEST_MEDIUM(MountFsck)
 RUN_TEST_MEDIUM(MountGetDevice)
