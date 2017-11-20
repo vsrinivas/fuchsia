@@ -53,7 +53,6 @@ private:
         const CString string;
 
         // Used by the hash table.
-        CString GetKey() const { return string; }
         static size_t GetHash(CString key) {
             return fnv1a64str(key);
         }
@@ -64,9 +63,6 @@ private:
     struct CategoryStringKeyTraits {
         static CString GetKey(const StringSetEntry& obj) {
             return obj.string;
-        }
-        static bool LessThan(const CString& key1, const CString& key2) {
-            return strcmp(key1, key2) < 0;
         }
         static bool EqualTo(const CString& key1, const CString& key2) {
             return strcmp(key1, key2) == 0;
