@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 #include "gtest/gtest.h"
 
@@ -14,11 +15,11 @@ namespace {
 
 TEST(SharedVmos, Unmappable) {
   std::string content("hello");
-  zx::vmo vmo;
+  SizedVmo vmo;
   ASSERT_TRUE(VmoFromString(content, &vmo));
-  zx_handle_t vmo_handle = vmo.get();
+  zx_handle_t vmo_handle = vmo.vmo().get();
 
-  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo));
+  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()));
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_EQ(content.size(), shared_vmo->vmo_size());
@@ -28,12 +29,12 @@ TEST(SharedVmos, Unmappable) {
 
 TEST(SharedVmos, Mapped) {
   std::string content("hello");
-  zx::vmo vmo;
+  SizedVmo vmo;
   ASSERT_TRUE(VmoFromString(content, &vmo));
-  zx_handle_t vmo_handle = vmo.get();
+  zx_handle_t vmo_handle =  vmo.vmo().get();
 
   auto shared_vmo =
-      fxl::MakeRefCounted<SharedVmo>(std::move(vmo), ZX_VM_FLAG_PERM_READ);
+      fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()), ZX_VM_FLAG_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_EQ(content.size(), shared_vmo->vmo_size());

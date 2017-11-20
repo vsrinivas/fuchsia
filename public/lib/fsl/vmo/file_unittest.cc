@@ -10,7 +10,9 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/fsl/vmo/file.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 
 namespace fsl {
@@ -24,15 +26,17 @@ TEST(VMOAndFile, VmoFromFd) {
 
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
-  EXPECT_EQ(7, write(fd.get(), "Payload", 7));
+  constexpr fxl::StringView payload = "Payload";
+  EXPECT_EQ(static_cast<ssize_t>(payload.size()),
+            write(fd.get(), payload.data(), payload.size()));
 
   zx::vmo vmo;
   EXPECT_TRUE(VmoFromFd(std::move(fd), &vmo));
 
   std::string data;
-  EXPECT_TRUE(StringFromVmo(vmo, &data));
+  EXPECT_TRUE(StringFromVmo(SizedVmo(std::move(vmo), payload.size()), &data));
 
-  EXPECT_EQ("Payload", data);
+  EXPECT_EQ(payload, data);
 }
 
 TEST(VMOAndFile, VmoFromFilename) {
@@ -43,14 +47,16 @@ TEST(VMOAndFile, VmoFromFilename) {
 
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
-  EXPECT_EQ(16, write(fd.get(), "Another playload", 16));
+  constexpr fxl::StringView payload = "Another playload";
+  EXPECT_EQ(static_cast<ssize_t>(payload.size()),
+            write(fd.get(), payload.data(), payload.size()));
   fd.reset();
 
   zx::vmo vmo;
   EXPECT_TRUE(VmoFromFilename(path.c_str(), &vmo));
 
   std::string data;
-  EXPECT_TRUE(StringFromVmo(vmo, &data));
+  EXPECT_TRUE(StringFromVmo(SizedVmo(std::move(vmo), payload.size()), &data));
 
   EXPECT_EQ("Another playload", data);
 }
