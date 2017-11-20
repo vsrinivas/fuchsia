@@ -43,7 +43,7 @@ zx_status_t aml_i2c_set_slave_addr(aml_i2c_dev_t *dev, uint16_t addr) {
 
     addr &= 0x7f;
     uint32_t reg = dev->virt_regs->slave_addr;
-    reg = reg & 0xff;
+    reg = reg & ~0xff;
     reg = reg | ((addr << 1) & 0xff);
     dev->virt_regs->slave_addr = reg;
 
@@ -189,7 +189,6 @@ zx_status_t aml_i2c_wr_async(aml_i2c_connection_t *conn, const uint8_t *buff, ui
 zx_status_t aml_i2c_wr_rd_async(aml_i2c_connection_t *conn, const uint8_t *txbuff, uint32_t txlen,
                                                             uint32_t rxlen, i2c_complete_cb cb,
                                                             void* cookie) {
-
     ZX_DEBUG_ASSERT(txbuff);
     return aml_i2c_queue_async(conn, txbuff, txlen, rxlen, cb, cookie);
 }
