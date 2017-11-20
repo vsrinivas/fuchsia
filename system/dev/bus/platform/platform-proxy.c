@@ -79,7 +79,9 @@ static void pdev_i2c_complete(platform_proxy_t* proxy, pdev_resp_t* resp, const 
                               size_t actual) {
     pdev_i2c_txn_ctx_t* ctx = &resp->i2c.txn_ctx;
 
-    ctx->complete_cb(resp->status, data, actual, ctx->cookie);
+    if (ctx->complete_cb) {
+        ctx->complete_cb(resp->status, data, actual, ctx->cookie);
+    }
 }
 
 static zx_status_t pdev_ums_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
