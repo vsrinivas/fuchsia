@@ -51,3 +51,5 @@
 #define AO_GPIO_O_EN_N      0x09
 
 #define A113_PINMUX_ALT_FN_MAX 15
+
+#define A113_TDM_PHYS_BASE 0xff642000

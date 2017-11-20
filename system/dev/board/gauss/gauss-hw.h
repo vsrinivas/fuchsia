@@ -11,3 +11,13 @@
 #define I2C_SDA_A A113_GPIOZ(7)
 #define I2C_SCK_B A113_GPIOZ(8)
 #define I2C_SDA_B A113_GPIOZ(9)
+
+// pins for TDM C
+#define TDM_BCLK_C A113_GPIOA(2)
+#define TDM_FSYNC_C A113_GPIOA(3)
+#define TDM_MOSI_C A113_GPIOA(4)
+#define TDM_MISO_C A113_GPIOA(5)
+
+
+#define SPK_MUTEn A113_GPIOA(20)
+
