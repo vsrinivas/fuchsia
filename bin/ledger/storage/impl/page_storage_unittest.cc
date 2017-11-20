@@ -239,7 +239,7 @@ class PageStorageTest : public StorageTest {
     return ::testing::AssertionSuccess();
   }
 
-  CommitId TryCommitFromSync() {
+  std::unique_ptr<const Commit> TryCommitFromSync() {
     ObjectDigest root_digest;
     EXPECT_TRUE(GetEmptyNodeDigest(&root_digest));
 
@@ -247,17 +247,17 @@ class PageStorageTest : public StorageTest {
     parent.emplace_back(GetFirstHead());
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
         storage_.get(), root_digest, std::move(parent));
-    CommitId id = commit->GetId();
 
     Status status;
     storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
                                  callback::Capture(MakeQuitTask(), &status));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
-    return id;
+    return commit;
   }
 
-  std::unique_ptr<const Commit> TryCommitJournal(
+  // Returns an empty pointer if |CommitJournal| times out.
+  FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit> TryCommitJournal(
       std::unique_ptr<Journal> journal,
       Status expected_status) {
     Status status;
@@ -266,14 +266,17 @@ class PageStorageTest : public StorageTest {
         std::move(journal),
         callback::Capture(MakeQuitTask(), &status, &commit));
 
-    EXPECT_FALSE(RunLoopWithTimeout());
+    bool timed_out = RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(20));
     EXPECT_EQ(expected_status, status);
+    if (timed_out) {
+      return std::unique_ptr<const Commit>();
+    }
     return commit;
   }
 
-  CommitId TryCommitFromLocal(JournalType type,
-                              int keys,
-                              size_t min_key_size = 0) {
+  // Returns an empty pointer if |TryCommitJournal| failed.
+  FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit>
+  TryCommitFromLocal(JournalType type, int keys, size_t min_key_size = 0) {
     Status status;
     std::unique_ptr<Journal> journal;
     storage_->StartCommit(GetFirstHead()->GetId(), type,
@@ -295,6 +298,9 @@ class PageStorageTest : public StorageTest {
 
     std::unique_ptr<const Commit> commit =
         TryCommitJournal(std::move(journal), Status::OK);
+    if (!commit) {
+      return commit;
+    }
 
     // Check the contents.
     std::vector<Entry> entries = GetCommitContents(*commit);
@@ -307,7 +313,7 @@ class PageStorageTest : public StorageTest {
       EXPECT_EQ(key, entries[i].key);
     }
 
-    return commit->GetId();
+    return commit;
   }
 
   void TryAddFromLocal(std::string content,
@@ -699,14 +705,17 @@ TEST_F(PageStorageTest, HeadCommits) {
 
 TEST_F(PageStorageTest, CreateJournals) {
   // Explicit journal.
-  CommitId left_id = TryCommitFromLocal(JournalType::EXPLICIT, 5);
-  CommitId right_id = TryCommitFromLocal(JournalType::IMPLICIT, 10);
+  auto left_commit = TryCommitFromLocal(JournalType::EXPLICIT, 5);
+  ASSERT_TRUE(left_commit);
+  auto right_commit = TryCommitFromLocal(JournalType::IMPLICIT, 10);
+  ASSERT_TRUE(right_commit);
 
   // Journal for merge commit.
   storage::Status status;
   std::unique_ptr<Journal> journal;
   storage_->StartMergeCommit(
-      left_id, right_id, callback::Capture(MakeQuitTask(), &status, &journal));
+      left_commit->GetId(), right_commit->GetId(),
+      callback::Capture(MakeQuitTask(), &status, &journal));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_NE(nullptr, journal);
@@ -718,8 +727,9 @@ TEST_F(PageStorageTest, CreateJournals) {
 }
 
 TEST_F(PageStorageTest, CreateJournalHugeNode) {
-  CommitId commit_id = TryCommitFromLocal(JournalType::EXPLICIT, 500, 1024);
-  std::unique_ptr<const Commit> commit = GetCommit(commit_id);
+  std::unique_ptr<const Commit> commit =
+      TryCommitFromLocal(JournalType::EXPLICIT, 500, 1024);
+  ASSERT_TRUE(commit);
   std::vector<Entry> entries = GetCommitContents(*commit);
 
   EXPECT_EQ(500u, entries.size());
@@ -814,7 +824,7 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::ILLEGAL_STATE, status);
 
-    TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE);
+    ASSERT_FALSE(TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE));
 
     // Implicit journals.
     // All calls will fail because of FakePageDbImpl implementation, not because
@@ -1072,7 +1082,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
 
     EXPECT_TRUE(PutInJournal(journal.get(), fxl::StringPrintf("key%lu", i),
                              data_array[i].object_digest, KeyPriority::LAZY));
-    TryCommitJournal(std::move(journal), Status::OK);
+    ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
     commits.push_back(GetFirstHead()->GetId());
   }
 
@@ -1136,7 +1146,7 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   EXPECT_TRUE(PutInJournal(journal.get(), "key", data.object_digest,
                            KeyPriority::EAGER));
   EXPECT_TRUE(ObjectIsUntracked(data.object_digest, true));
-  TryCommitJournal(std::move(journal), Status::OK);
+  ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data.object_digest, false));
 }
 
@@ -1161,7 +1171,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_TRUE(PutInJournal(journal.get(), "key0", data_array[0].object_digest,
                            KeyPriority::LAZY));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_digest, true));
-  TryCommitJournal(std::move(journal), Status::OK);
+  ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_digest, false));
   EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_digest, true));
   EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_digest, true));
@@ -1182,8 +1192,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
                            KeyPriority::LAZY));
   EXPECT_TRUE(PutInJournal(journal.get(), "key3", data_array[0].object_digest,
                            KeyPriority::LAZY));
-  TryCommitJournal(std::move(journal), Status::OK);
-
+  ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_digest, false));
   EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_digest, true));
   EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_digest, false));
@@ -1194,27 +1203,29 @@ TEST_F(PageStorageTest, CommitWatchers) {
   storage_->AddCommitWatcher(&watcher);
 
   // Add a watcher and receive the commit.
-  CommitId expected = TryCommitFromLocal(JournalType::EXPLICIT, 10);
+  auto expected = TryCommitFromLocal(JournalType::EXPLICIT, 10);
+  ASSERT_TRUE(expected);
   EXPECT_EQ(1, watcher.commit_count);
-  EXPECT_EQ(expected, watcher.last_commit_id);
+  EXPECT_EQ(expected->GetId(), watcher.last_commit_id);
   EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
 
   // Add a second watcher.
   FakeCommitWatcher watcher2;
   storage_->AddCommitWatcher(&watcher2);
   expected = TryCommitFromLocal(JournalType::IMPLICIT, 10);
+  ASSERT_TRUE(expected);
   EXPECT_EQ(2, watcher.commit_count);
-  EXPECT_EQ(expected, watcher.last_commit_id);
+  EXPECT_EQ(expected->GetId(), watcher.last_commit_id);
   EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
   EXPECT_EQ(1, watcher2.commit_count);
-  EXPECT_EQ(expected, watcher2.last_commit_id);
+  EXPECT_EQ(expected->GetId(), watcher2.last_commit_id);
   EXPECT_EQ(ChangeSource::LOCAL, watcher2.last_source);
 
   // Remove one watcher.
   storage_->RemoveCommitWatcher(&watcher2);
   expected = TryCommitFromSync();
   EXPECT_EQ(3, watcher.commit_count);
-  EXPECT_EQ(expected, watcher.last_commit_id);
+  EXPECT_EQ(expected->GetId(), watcher.last_commit_id);
   EXPECT_EQ(ChangeSource::SYNC, watcher.last_source);
   EXPECT_EQ(1, watcher2.commit_count);
 }
@@ -1315,24 +1326,27 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
 }
 
 TEST_F(PageStorageTest, Generation) {
-  const CommitId commit_id1 = TryCommitFromLocal(JournalType::EXPLICIT, 3);
-  std::unique_ptr<const Commit> commit1 = GetCommit(commit_id1);
+  std::unique_ptr<const Commit> commit1 =
+      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  ASSERT_TRUE(commit1);
   EXPECT_EQ(1u, commit1->GetGeneration());
 
-  const CommitId commit_id2 = TryCommitFromLocal(JournalType::EXPLICIT, 3);
-  std::unique_ptr<const Commit> commit2 = GetCommit(commit_id2);
+  std::unique_ptr<const Commit> commit2 =
+      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  ASSERT_TRUE(commit2);
   EXPECT_EQ(2u, commit2->GetGeneration());
 
   storage::Status status;
   std::unique_ptr<Journal> journal;
   storage_->StartMergeCommit(
-      commit_id1, commit_id2,
+      commit1->GetId(), commit2->GetId(),
       callback::Capture(MakeQuitTask(), &status, &journal));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
   std::unique_ptr<const Commit> commit3 =
       TryCommitJournal(std::move(journal), Status::OK);
+  ASSERT_TRUE(commit3);
   EXPECT_EQ(3u, commit3->GetGeneration());
 }
 
@@ -1350,8 +1364,9 @@ TEST_F(PageStorageTest, DeletionOnIOThread) {
 
 TEST_F(PageStorageTest, GetEntryFromCommit) {
   int size = 10;
-  CommitId commit_id = TryCommitFromLocal(JournalType::EXPLICIT, size);
-  std::unique_ptr<const Commit> commit = GetCommit(commit_id);
+  std::unique_ptr<const Commit> commit =
+      TryCommitFromLocal(JournalType::EXPLICIT, size);
+  ASSERT_TRUE(commit);
 
   Status status;
   Entry entry;
@@ -1522,7 +1537,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_a =
       TryCommitJournal(std::move(journal_a), Status::OK);
-  EXPECT_TRUE(commit_a);
+  ASSERT_TRUE(commit_a);
   EXPECT_EQ(1u, commit_a->GetGeneration());
 
   std::unique_ptr<Journal> journal_b;
@@ -1534,7 +1549,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_b =
       TryCommitJournal(std::move(journal_b), Status::OK);
-  EXPECT_TRUE(commit_b);
+  ASSERT_TRUE(commit_b);
   EXPECT_EQ(1u, commit_b->GetGeneration());
 
   std::unique_ptr<Journal> journal_merge;
@@ -1546,6 +1561,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
 
   std::unique_ptr<const Commit> commit_merge =
       TryCommitJournal(std::move(journal_merge), Status::OK);
+  ASSERT_TRUE(commit_merge);
   EXPECT_EQ(2u, commit_merge->GetGeneration());
 
   std::unique_ptr<Journal> journal_c;
@@ -1557,7 +1573,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_c =
       TryCommitJournal(std::move(journal_c), Status::OK);
-  EXPECT_TRUE(commit_c);
+  ASSERT_TRUE(commit_c);
   EXPECT_EQ(1u, commit_c->GetGeneration());
 
   // Verify that the merge commit is returned as last, even though commit C is
