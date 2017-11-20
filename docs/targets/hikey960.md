@@ -227,32 +227,65 @@ and then install your bootloader.
 #### Installing UEFI Firmware
 
 Alternatively, if you require the UEFI firmware, first put your board into
-_recovery_ mode and then run the following command:
+_recovery_ mode by setting the switches to the following positions:
+
+        Auto Power up(Switch 1)   closed/ON
+        Recovery(Switch 2)        closed/ON
+        Fastboot(Switch 3)        open/OFF
+
+Then run the following command:
 
       scripts/hikey-efi-prebuilt hikey-uefi
 
 Once the script completes, the board will boot into fastboot mode where you can
 run the following commands:
 
+      git clone https://android.googlesource.com/device/linaro/hikey hikey-firmware
+      git -C hikey-firmware checkout 972114436628f874ac9ca28ef38ba82862937fbf
       fastboot flash ptable hikey-uefi/prm_ptable.img
       fastboot flash xloader hikey-uefi/sec_xloader.img
       fastboot flash fastboot hikey-uefi/l-loader.bin
       fastboot flash fip hikey-uefi/fip.bin
+      fastboot flash nvme hikey-firmware/installer/hikey960/nvme.img
+      fastboot flash fw_lpm3 hikey-firmware/installer/hikey960/lpm3.img
+      fastboot flash trustfirmware hikey-firmware/installer/hikey960/bl31.bin
 
+Note: remember to take the board out of recovery mode so that it will boot as
+desired when you next reset. If you're intending to frequently flash Zircon on
+to the board then you probably want to leave the board in fastboot mode.
 
 ## Installing Zircon
 
 Note: the following requires fastboot/mkdtimg/mkbootimg in your execution path.
 
 Once the HiKey board is in fastboot, run the following script from the zircon
-root directory to flash the necessary files onto the board, set it to netboot
-(zedboot), and restart the device:
+root directory to flash the necessary files onto the board. If you would also
+like to set it to zedboot skip to the next section.
+
+If you _are not_ running UEFI firmware use the following command:
+
+      ./scripts/flash-hikey
+
+If you _are_ running UEFI firmware use this command instead:
+
+      ./scripts/hikey-efi-boot-image <parent directory of tools-images-hikey960>
+
+### Zedboot
+
+If you would like to boot future kernels via the network, instead of flashing
+them directly, then run the script with the `-m` option.
+
+If you _are not_ running UEFI firmware use the following command:
 
       ./scripts/flash-hikey -m
 
-Note: this is the last flash update, and all subsequent boots should use normal
-mode (not fastboot or recovery). If you used the DIP Switch method to place the
-board in fastboot mode, you should flip the fastboot switch (switch 3) back to
+If you _are_ running UEFI firmware use this command instead:
+
+      ./scripts/hikey-efi-boot-image -m <parent directory of tools-images-hikey960>
+
+This is the last flash update, and all subsequent boots should use normal mode
+(not fastboot or recovery). If you used the DIP Switch method to place the board
+in fastboot mode, you should flip the fastboot switch (switch 3) back to
 open/OFF _before_ running this script, so that it will boot into Zircon after
 flashing (otherwise, it will boot back into fastboot mode).
 
