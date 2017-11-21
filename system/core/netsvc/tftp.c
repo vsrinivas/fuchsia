@@ -103,6 +103,10 @@ static tftp_status file_open_write(const char* filename, size_t size,
             printf("netsvc: Running EFI Paver\n");
             const char* args[] = { bin, "install-efi" };
             launchpad_set_args(lp, 2, args);
+        } else if (!strcmp(filename + image_prefix_len, NB_KERNC_HOST_FILENAME)) {
+            printf("netsvc: Running KERN-C Paver\n");
+            const char* args[] = { bin, "install-kernc" };
+            launchpad_set_args(lp, 2, args);
         } else {
             fprintf(stderr, "netsvc: Unknown Paver\n");
             return TFTP_ERR_IO;

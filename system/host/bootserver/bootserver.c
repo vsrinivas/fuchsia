@@ -176,8 +176,9 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --fvm <file> use the supplied file as a sparse FVM image\n"
-            "  --efi <file> use the supplied file as an EFI image\n"
+            "  --fvm <file>   use the supplied file as a sparse FVM image\n"
+            "  --efi <file>   use the supplied file as an EFI image\n"
+            "  --kernc <file> use the supplied file as a KERN-C CrOS image\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
             "  --nocolor    disable ANSI color (false)\n",
@@ -231,6 +232,7 @@ int main(int argc, char** argv) {
     char* nodename = NULL;
     int r, s, n = 1;
     const char* efi_image = NULL;
+    const char* kernc_image = NULL;
     const char* fvm_image = NULL;
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
@@ -270,6 +272,14 @@ int main(int argc, char** argv) {
                 return -1;
             }
             efi_image = argv[1];
+        } else if (!strcmp(argv[1], "--kernc")) {
+            argc--;
+            argv++;
+            if (argc <= 2) {
+                fprintf(stderr, "'--kernc' option requires an argument (KERN-C image)\n");
+                return -1;
+            }
+            kernc_image = argv[1];
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
@@ -513,6 +523,10 @@ int main(int argc, char** argv) {
         if (status == 0 && efi_image) {
             status = xfer(&ra, efi_image, use_filename_prefix ? NB_EFI_FILENAME
                           : NB_EFI_HOST_FILENAME);
+        }
+        if (status == 0 && kernc_image) {
+            status = xfer(&ra, kernc_image, use_filename_prefix ? NB_KERNC_FILENAME
+                          : NB_KERNC_HOST_FILENAME);
         }
 
         if (status == 0) {

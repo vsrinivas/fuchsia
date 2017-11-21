@@ -9,7 +9,7 @@
 
 // clang-format off
 
-#define BOOTLOADER_VERSION "0.6.7"
+#define BOOTLOADER_VERSION "0.6.8"
 
 #define NB_MAGIC              0xAA774217
 #define NB_DEBUGLOG_MAGIC     0xAEAE1123
@@ -61,6 +61,8 @@
 #define NB_FVM_FILENAME NB_IMAGE_PREFIX NB_FVM_HOST_FILENAME
 #define NB_EFI_HOST_FILENAME "efi.img"
 #define NB_EFI_FILENAME NB_IMAGE_PREFIX NB_EFI_HOST_FILENAME
+#define NB_KERNC_HOST_FILENAME "kernc.img"
+#define NB_KERNC_FILENAME NB_IMAGE_PREFIX NB_KERNC_HOST_FILENAME
 
 typedef struct nbmsg_t {
     uint32_t magic;

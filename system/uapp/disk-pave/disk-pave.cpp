@@ -27,6 +27,8 @@
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
 #include <fs/mapped-vmo.h>
+#include <gpt/cros.h>
+#include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -672,10 +674,23 @@ zx_status_t find_first_fit(const char* gpt_path, size_t bytes_requested,
     return ZX_ERR_NO_RESOURCES;
 }
 
-// Returns a file descriptor to an EFI partition which can be paved,
-// allocating the EFI partition if necessary.
-zx_status_t efi_find_or_add(fbl::unique_fd *efi_fd) {
-    printf("[efi_find_or_add]\n");
+// Returns "true" if the corresponding partition should
+// be used for paving.
+using PartitionFilterCb = bool (*)(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
+                                   const uint8_t name[GPT_NAME_LEN]);
+
+// Returns "true" if a new partition should be created.
+// Only called if one doesn't already exist.
+//
+// Additionally, sets the minimum requested size of the partition to allocate.
+using PartitionCreateCb = bool (*)(uint8_t* type_out, uint64_t* size_bytes_out,
+                                   const char** name_out);
+
+// Returns a file descriptor to an partition which can be paved,
+// allocating the partition if necessary.
+template <PartitionFilterCb filterCb, PartitionCreateCb createCb>
+zx_status_t partition_find_or_add(fbl::unique_fd *out_fd) {
+    printf("[partition_find_or_add]\n");
     char gpt_path[PATH_MAX];
     if (find_target_gpt(gpt_path)) {
         return ZX_ERR_IO;
@@ -691,55 +706,58 @@ zx_status_t efi_find_or_add(fbl::unique_fd *efi_fd) {
     block_info_t info;
     ssize_t rc = ioctl_block_get_info(gpt_fd.get(), &info);
     if (rc < 0) {
-        fprintf(stderr, "[efi_find_or_add] Cannot acquire GPT info\n");
+        fprintf(stderr, "[partition_find_or_add] Cannot acquire GPT info\n");
         return static_cast<zx_status_t>(rc);
     }
 
     zx_status_t r = 0;
-    uint8_t type[GPT_GUID_LEN] = GUID_EFI_VALUE;
-    // Skip the first partition in the GPT; if it is EFI, we don't
-    // want to overwrite it.
-    for (size_t i = 1; i < PARTITIONS_COUNT; i++) {
+    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
         gpt_partition_t* p = gpt->partitions[i];
         if (!p) {
             continue;
         }
 
-        if (memcmp(p->type, type, GPT_GUID_LEN) == 0) {
-            printf("[efi_find_or_add] Found EFI partition in GPT, partition %zu\n", i);
-            efi_fd->reset(open_partition(p->guid, type, ZX_SEC(5), nullptr));
-            if (!*efi_fd) {
-                fprintf(stderr, "[efi_find_or_add] Couldn't open EFI partition\n");
+        if (filterCb(i, p->type, p->name)) {
+            printf("[partition_find_or_add] Found partition in GPT, partition %zu\n", i);
+            out_fd->reset(open_partition(p->guid, p->type, ZX_SEC(5), nullptr));
+            if (!*out_fd) {
+                fprintf(stderr, "[partition_find_or_add] Couldn't open partition\n");
                 return ZX_ERR_IO;
             }
             return ZX_OK;
         }
     }
 
-    const size_t kMinimumEFISizeBytes = 1LU * (1 << 30);
+    const char* name;
+    uint8_t type[GPT_GUID_LEN];
+    size_t minimumSizeBytes = 0;
+    if (!createCb(type, &minimumSizeBytes, &name)) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
     uint64_t start, length;
-    if ((r = find_first_fit(gpt_path, kMinimumEFISizeBytes, &start, &length)) != ZX_OK) {
-        fprintf(stderr, "[efi_find_or_add] Couldn't find fit\n");
+    if ((r = find_first_fit(gpt_path, minimumSizeBytes, &start, &length)) != ZX_OK) {
+        fprintf(stderr, "[partition_find_or_add] Couldn't find fit\n");
         return r;
     }
-    length = (kMinimumEFISizeBytes + info.block_size - 1) / info.block_size;
+    length = (minimumSizeBytes + info.block_size - 1) / info.block_size;
     size_t sz;
     uint8_t guid[GPT_GUID_LEN];
     if ((r = zx_cprng_draw(guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
-        fprintf(stderr, "[efi_find_or_add] Failed to get random GUID\n");
+        fprintf(stderr, "[partition_find_or_add] Failed to get random GUID\n");
         return r;
-    } else if ((r = gpt_partition_add(gpt, "EFI Gigaboot", type, guid, start, length, 0))) {
-        fprintf(stderr, "[efi_find_or_add] Failed to add EFI partition\n");
+    } else if ((r = gpt_partition_add(gpt, name, type, guid, start, length, 0))) {
+        fprintf(stderr, "[partition_find_or_add] Failed to add partition\n");
         return r;
     } else if ((r = gpt_device_sync(gpt))) {
-        fprintf(stderr, "[efi_find_or_add] Failed to sync GPT\n");
+        fprintf(stderr, "[partition_find_or_add] Failed to sync GPT\n");
         return r;
     } else if ((r = (int) ioctl_block_rr_part(gpt_fd.get())) < 0) {
-        fprintf(stderr, "[efi_find_or_add] Failed to rebind GPT\n");
+        fprintf(stderr, "[partition_find_or_add] Failed to rebind GPT\n");
         return r;
     }
-    efi_fd->reset(open_partition(guid, type, ZX_SEC(5), nullptr));
-    if (!*efi_fd) {
+    out_fd->reset(open_partition(guid, type, ZX_SEC(5), nullptr));
+    if (!*out_fd) {
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -834,6 +852,41 @@ done:
     return (r < 0 ? ZX_ERR_BAD_STATE : ZX_OK);
 }
 
+bool efi_filter_cb(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
+                   const uint8_t name[GPT_NAME_LEN]) {
+    uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
+    // Skip the first partition in the GPT; if it is EFI, we don't
+    // want to overwrite it.
+    return gpt_index != 0 && memcmp(type, efi_type, GPT_GUID_LEN) == 0;
+}
+
+bool efi_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** name_out) {
+    uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
+    memcpy(type_out, efi_type, GPT_GUID_LEN);
+    *size_bytes_out = 1LU * (1 << 30);
+    *name_out = "EFI Gigaboot";
+    return true;
+}
+
+const char* kerncName = "KERN-C";
+
+bool kernc_filter_cb(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
+                     const uint8_t name[GPT_NAME_LEN]) {
+    uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+    char cstring_name[GPT_NAME_LEN];
+    utf16_to_cstring(cstring_name, (uint16_t*) name, GPT_NAME_LEN);
+    return memcmp(type, kernc_type, GPT_GUID_LEN) == 0 &&
+        strncmp(cstring_name, kerncName, strlen(kerncName)) == 0;
+}
+
+bool kernc_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** name_out) {
+    uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+    memcpy(type_out, kernc_type, GPT_GUID_LEN);
+    *size_bytes_out = 64LU * (1 << 20);
+    *name_out = kerncName;
+    return true;
+}
+
 } // namespace
 
 // Paves a sparse_file to the underlying disk, on top
@@ -862,38 +915,38 @@ int fvm_pave(fbl::unique_fd fd) {
     return 0;
 }
 
-// Paves an EFI image onto disk, within the GPT.
-int efi_pave(fbl::unique_fd fd) {
-    printf("[efi_pave]\n");
-    fbl::unique_fd efi_fd;
-    if (efi_find_or_add(&efi_fd) != ZX_OK) {
-        fprintf(stderr, "efi_pave: Cannot find suitable EFI partition (or cannot make one)\n");
-        return -1;
+// Paves an image onto the disk, within the GPT.
+template <PartitionFilterCb filterCb, PartitionCreateCb createCb>
+zx_status_t partition_pave(fbl::unique_fd fd) {
+    printf("[partition_pave]\n");
+    fbl::unique_fd part_fd;
+    zx_status_t status;
+    if ((status = partition_find_or_add<filterCb, createCb>(&part_fd)) != ZX_OK) {
+        fprintf(stderr, "partition_pave: Cannot find suitable partition (or cannot make one)\n");
+        return status;
     }
-    printf("[efi_pave] Found or Added EFI - OK\n");
 
     block_info_t info;
-    if (ioctl_block_get_info(efi_fd.get(), &info) < 0) {
-        fprintf(stderr, "[efi_pave] Couldn't get GPT block info\n");
-        return -1;
+    if ((status = static_cast<zx_status_t>(ioctl_block_get_info(part_fd.get(), &info))) < 0) {
+        fprintf(stderr, "[partition_pave] Couldn't get GPT block info\n");
+        return status;
     }
 
     const size_t vmo_sz = 1 << 20;
     fbl::unique_ptr<MappedVmo> mvmo;
-    zx_status_t status = MappedVmo::Create(vmo_sz, "efi-pave", &mvmo);
-    if (status != ZX_OK) {
-        fprintf(stderr, "[efi_pave] Failed to create stream VMO\n");
-        return -1;
+    if ((status = MappedVmo::Create(vmo_sz, "partition-pave", &mvmo)) != ZX_OK) {
+        fprintf(stderr, "[partition_pave] Failed to create stream VMO\n");
+        return status;
     }
 
     txnid_t txnid;
     vmoid_t vmoid;
     fifo_client_t* client;
-    status = register_fast_block_io(efi_fd.get(), mvmo->GetVmo(), &txnid,
+    status = register_fast_block_io(part_fd.get(), mvmo->GetVmo(), &txnid,
                                     &vmoid, &client);
     if (status != ZX_OK) {
-        fprintf(stderr, "[efi_pave] Cannot register fast block I/O\n");
-        return -1;
+        fprintf(stderr, "[partition_pave] Cannot register fast block I/O\n");
+        return status;
     }
 
     block_fifo_request_t request;
@@ -904,11 +957,11 @@ int efi_pave(fbl::unique_fd fd) {
 
     block_fifo_release_client(client);
     if (status != ZX_OK) {
-        return -1;
+        return status;
     }
-    printf("[efi_pave] Completed successfully\n");
+    printf("[partition_pave] Completed successfully\n");
 
-    return 0;
+    return ZX_OK;
 }
 
 // Wipes the following partitions:
@@ -975,9 +1028,10 @@ int fvm_clean() {
 int usage() {
     fprintf(stderr, "install-disk-image [command] <options*>\n");
     fprintf(stderr, "Commands:\n");
-    fprintf(stderr, "  install-fvm : Install a sparse FVM to the device\n");
-    fprintf(stderr, "  install-efi : Install an EFI partition to the device\n");
-    fprintf(stderr, "  wipe        : Clean up the install disk\n");
+    fprintf(stderr, "  install-fvm   : Install a sparse FVM to the device\n");
+    fprintf(stderr, "  install-efi   : Install an EFI partition to the device\n");
+    fprintf(stderr, "  install-kernc : Install a KERN-C CrOS partition to the device\n");
+    fprintf(stderr, "  wipe          : Clean up the install disk\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  --file <file>: Read from FILE instead of stdin\n");
     return -1;
@@ -1017,7 +1071,9 @@ int main(int argc, char** argv) {
     }
 
     if (!strcmp(cmd, "install-efi")) {
-        return efi_pave(fbl::move(fd));
+        return partition_pave<efi_filter_cb, efi_create_cb>(fbl::move(fd)) == ZX_OK ? 0 : -1;
+    } else if (!strcmp(cmd, "install-kernc")) {
+        return partition_pave<kernc_filter_cb, kernc_create_cb>(fbl::move(fd)) == ZX_OK ? 0 : -1;
     } else if (!strcmp(cmd, "install-fvm")) {
         return fvm_pave(fbl::move(fd));
     } else if (!strcmp(cmd, "wipe")) {
