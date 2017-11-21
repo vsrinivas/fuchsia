@@ -7,7 +7,6 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <hid/hid.h>
-#include <machina/thread_annotations.h>
 #include <machina/virtio.h>
 #include <virtio/input.h>
 #include <zircon/compiler.h>
@@ -94,7 +93,7 @@ private:
     const char* device_name_;
     const char* device_serial_;
     virtio_queue_t queues_[VIRTIO_INPUT_Q_COUNT];
-    virtio_input_config_t config_ TA_GUARDED(config_mutex_) = {};
+    virtio_input_config_t config_ __TA_GUARDED(config_mutex_) = {};
 
-    fbl::SinglyLinkedList<fbl::unique_ptr<KeyboardEventSource>> keyboards_ TA_GUARDED(mutex_);
+    fbl::SinglyLinkedList<fbl::unique_ptr<KeyboardEventSource>> keyboards_ __TA_GUARDED(mutex_);
 };

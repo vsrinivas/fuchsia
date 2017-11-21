@@ -6,9 +6,9 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <machina/thread_annotations.h>
 #include <machina/virtio_pci.h>
 #include <virtio/virtio.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 struct vring_desc;
@@ -97,28 +97,28 @@ private:
     // Device feature bits.
     //
     // Defined in Virtio 1.0 Section 2.2.
-    uint32_t features_ TA_GUARDED(mutex_) = 0;
-    uint32_t features_sel_ TA_GUARDED(mutex_) = 0;
+    uint32_t features_ __TA_GUARDED(mutex_) = 0;
+    uint32_t features_sel_ __TA_GUARDED(mutex_) = 0;
 
     // Driver feature bits.
-    uint32_t driver_features_ TA_GUARDED(mutex_) = 0;
-    uint32_t driver_features_sel_ TA_GUARDED(mutex_) = 0;
+    uint32_t driver_features_ __TA_GUARDED(mutex_) = 0;
+    uint32_t driver_features_sel_ __TA_GUARDED(mutex_) = 0;
 
     // Virtio device id.
     const uint8_t device_id_;
 
     // Device status field as defined in Virtio 1.0, Section 2.1.
-    uint8_t status_ TA_GUARDED(mutex_) = 0;
+    uint8_t status_ __TA_GUARDED(mutex_) = 0;
 
     // Interrupt status register.
-    uint8_t isr_status_ TA_GUARDED(mutex_) = 0;
+    uint8_t isr_status_ __TA_GUARDED(mutex_) = 0;
 
     // Index of the queue currently selected by the driver.
-    uint16_t queue_sel_ TA_GUARDED(mutex_) = 0;
+    uint16_t queue_sel_ __TA_GUARDED(mutex_) = 0;
 
     // Pointer to the structure that holds this devices configuration
     // structure.
-    void* const device_config_ TA_GUARDED(config_mutex_) = nullptr;
+    void* const device_config_ __TA_GUARDED(config_mutex_) = nullptr;
 
     // Number of bytes used for this devices configuration space.
     //

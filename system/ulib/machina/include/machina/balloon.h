@@ -6,9 +6,9 @@
 
 #include <fbl/function.h>
 #include <fbl/mutex.h>
-#include <machina/thread_annotations.h>
 #include <machina/virtio.h>
 #include <virtio/balloon.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #define VIRTIO_BALLOON_Q_INFLATEQ 0
@@ -59,7 +59,7 @@ public:
     void set_deflate_on_demand(bool b) { deflate_on_demand_ = b; }
 
 private:
-    void WaitForStatsBuffer(virtio_queue_t* stats_queue) TA_REQ(stats_.mutex);
+    void WaitForStatsBuffer(virtio_queue_t* stats_queue) __TA_REQUIRES(stats_.mutex);
 
     zx_status_t HandleDescriptor(uint16_t queue_sel);
 
@@ -72,9 +72,9 @@ private:
 
     struct {
         // The index in the available ring of the stats descriptor.
-        uint16_t desc_index TA_GUARDED(mutex) = 0;
+        uint16_t desc_index __TA_GUARDED(mutex) = 0;
         // Indicates if desc_index valid.
-        bool has_buffer TA_GUARDED(mutex) = false;
+        bool has_buffer __TA_GUARDED(mutex) = false;
         // Holds exclusive access to the stats queue. At most one stats request
         // can be active at a time (by design). Specifically we need to hold
         // exclusive access of the queue from the time a buffer is returned to
@@ -87,5 +87,5 @@ private:
 
     virtio_queue_t queues_[VIRTIO_BALLOON_Q_COUNT];
 
-    virtio_balloon_config_t config_ TA_GUARDED(config_mutex_) = {};
+    virtio_balloon_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };

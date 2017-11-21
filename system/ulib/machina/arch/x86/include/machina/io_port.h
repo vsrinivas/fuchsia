@@ -7,7 +7,7 @@
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
-#include <machina/thread_annotations.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 class PicHandler : public IoHandler {
@@ -35,7 +35,7 @@ public:
 
 private:
     mutable fbl::Mutex mutex_;
-    uint16_t enable_ TA_GUARDED(mutex_) = 0;
+    uint16_t enable_ __TA_GUARDED(mutex_) = 0;
 };
 
 class RtcHandler : public IoHandler {
@@ -49,7 +49,7 @@ private:
     zx_status_t ReadRtcRegister(uint8_t rtc_index, uint8_t* value) const;
     zx_status_t WriteRtcRegister(uint8_t rtc_index, uint8_t value);
     mutable fbl::Mutex mutex_;
-    uint8_t index_ TA_GUARDED(mutex_) = 0;
+    uint8_t index_ __TA_GUARDED(mutex_) = 0;
 };
 
 class I8042Handler : public IoHandler {
@@ -61,7 +61,7 @@ public:
 
 private:
     mutable fbl::Mutex mutex_;
-    uint8_t command_ TA_GUARDED(mutex_) = 0;
+    uint8_t command_ __TA_GUARDED(mutex_) = 0;
 };
 
 class IoPort {

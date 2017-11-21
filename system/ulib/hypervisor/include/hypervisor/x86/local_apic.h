@@ -6,7 +6,7 @@
 
 #include <fbl/mutex.h>
 #include <hypervisor/io.h>
-#include <zircon/thread_annotations.h>
+#include <zircon/compiler.h>
 
 class Guest;
 class Vcpu;
@@ -37,5 +37,5 @@ private:
     Vcpu* vcpu_;
     mutable fbl::Mutex mutex_;
     // Register accessors.
-    Registers* registers_ TA_GUARDED(mutex_);
+    Registers* registers_ __TA_GUARDED(mutex_);
 };

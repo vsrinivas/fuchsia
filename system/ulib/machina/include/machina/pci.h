@@ -8,7 +8,7 @@
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
 #include <machina/interrupt_controller.h>
-#include <machina/thread_annotations.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 // clang-format off
@@ -161,7 +161,7 @@ private:
     // Static attributes for this device.
     const Attributes attrs_;
     // Command register.
-    uint16_t command_ TA_GUARDED(mutex_) = 0;
+    uint16_t command_ __TA_GUARDED(mutex_) = 0;
     // Array of capabilities for this device.
     const pci_cap_t* capabilities_ = nullptr;
     // Size of |capabilities|.
@@ -211,7 +211,7 @@ public:
     //
     // This method is *not* thread-safe and must only be called during
     // initialization.
-    zx_status_t Connect(PciDevice* device, uint8_t slot) TA_NO_THREAD_SAFETY_ANALYSIS;
+    zx_status_t Connect(PciDevice* device, uint8_t slot) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // Access devices via the ECAM region.
     //
@@ -246,7 +246,7 @@ private:
     PciPortHandler port_handler_;
 
     // Selected address in PCI config space.
-    uint32_t config_addr_ TA_GUARDED(mutex_) = 0;
+    uint32_t config_addr_ __TA_GUARDED(mutex_) = 0;
 
     // Devices on the virtual PCI bus.
     PciDevice* device_[PCI_MAX_DEVICES] = {};

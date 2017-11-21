@@ -7,7 +7,7 @@
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
-#include <machina/thread_annotations.h>
+#include <zircon/compiler.h>
 
 class LocalApic;
 
@@ -45,11 +45,11 @@ private:
 
     mutable fbl::Mutex mutex_;
     // IO register-select register.
-    uint32_t select_ TA_GUARDED(mutex_) = 0;
+    uint32_t select_ __TA_GUARDED(mutex_) = 0;
     // IO APIC identification register.
-    uint32_t id_ TA_GUARDED(mutex_) = 0;
+    uint32_t id_ __TA_GUARDED(mutex_) = 0;
     // IO redirection table.
-    RedirectEntry redirect_[kNumRedirects] TA_GUARDED(mutex_) = {};
+    RedirectEntry redirect_[kNumRedirects] __TA_GUARDED(mutex_) = {};
     // Connected local APICs.
     LocalApic* local_apic_[kMaxLocalApics] = {};
 };

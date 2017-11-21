@@ -14,6 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
+#include <zircon/compiler.h>
 #include <zircon/device/block.h>
 
 // Dispatcher that fulfills block requests using file-descriptor IO
@@ -161,7 +162,7 @@ public:
 
 private:
     zx_status_t EnqueueBlockRequestLocked(uint16_t opcode, off_t disk_offset, const void* buf,
-                                          size_t size) TA_REQ(fifo_mutex_) {
+                                          size_t size) __TA_REQUIRES(fifo_mutex_) {
         if (request_index_ >= kNumRequests) {
             zx_status_t status = SubmitTransactionsLocked();
             if (status != ZX_OK)
@@ -178,7 +179,7 @@ private:
         return ZX_OK;
     }
 
-    zx_status_t SubmitTransactionsLocked() TA_REQ(fifo_mutex_) {
+    zx_status_t SubmitTransactionsLocked() __TA_REQUIRES(fifo_mutex_) {
         zx_status_t status = block_fifo_txn(fifo_client_, requests_, request_index_);
         request_index_ = 0;
         return status;
@@ -191,9 +192,9 @@ private:
     fifo_client_t* fifo_client_ = nullptr;
 
     size_t guest_vmo_addr_;
-    size_t request_index_ TA_GUARDED(fifo_mutex_) = 0;
+    size_t request_index_ __TA_GUARDED(fifo_mutex_) = 0;
     static constexpr size_t kNumRequests = MAX_TXN_MESSAGES;
-    block_fifo_request_t requests_[kNumRequests] TA_GUARDED(fifo_mutex_);
+    block_fifo_request_t requests_[kNumRequests] __TA_GUARDED(fifo_mutex_);
     fbl::Mutex fifo_mutex_;
 };
 
