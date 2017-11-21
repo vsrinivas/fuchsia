@@ -13,9 +13,9 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
-#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase_impl.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth_impl.h"
 #include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
@@ -33,7 +33,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       ledger::NetworkService* network_service,
       std::string user_id,
       ConfigPtr config,
-      std::unique_ptr<auth_provider::AuthProvider> auth_provider,
+      std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
@@ -56,7 +56,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   ledger::NetworkService* const network_service_;
   const std::string user_id_;
   const std::string server_id_;
-  std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
+  std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
   firebase::FirebaseImpl user_firebase_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;

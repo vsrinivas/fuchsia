@@ -4,11 +4,11 @@
 
 visibility = [ "//peridot/bin/cloud_provider_firebase/*" ]
 
-source_set("auth_provider") {
+source_set("firebase_auth") {
   sources = [
-    "auth_provider.h",
-    "auth_provider_impl.cc",
-    "auth_provider_impl.h",
+    "firebase_auth.h",
+    "firebase_auth_impl.cc",
+    "firebase_auth_impl.h",
   ]
 
   public_deps = [
@@ -25,11 +25,11 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "auth_provider_impl_unittest.cc",
+    "firebase_auth_impl_unittest.cc",
   ]
 
   deps = [
-    ":auth_provider",
+    ":firebase_auth",
     "//peridot/bin/ledger/backoff/test",
     "//peridot/bin/ledger/test:lib",
   ]

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_H_
 
 #include <functional>
 #include <string>
@@ -11,7 +11,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 
-namespace auth_provider {
+namespace firebase_auth {
 
 enum class AuthStatus {
   OK,
@@ -19,13 +19,14 @@ enum class AuthStatus {
   ERROR
 };
 
-// Source of tokens that are used to authenticate with cloud services.
+// Source of Firebase Auth tokens that can be used to authenticate with Firebase
+// services such as Firebase Real-Time Database, Firebase Storage or Firestore.
 //
 // Each instance of this class is tied to exactly one user.
-class AuthProvider {
+class FirebaseAuth {
  public:
-  AuthProvider() {}
-  virtual ~AuthProvider() {}
+  FirebaseAuth() {}
+  virtual ~FirebaseAuth() {}
 
   virtual void set_connection_error_handler(fxl::Closure on_error) {}
 
@@ -39,9 +40,9 @@ class AuthProvider {
       std::function<void(AuthStatus, std::string)> callback) = 0;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AuthProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuth);
 };
 
-}  // namespace auth_provider
+}  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_H_

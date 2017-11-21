@@ -11,8 +11,8 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 
 namespace cloud_provider_firebase {
@@ -23,7 +23,7 @@ namespace cloud_provider_firebase {
 // closed.
 class DeviceSetImpl : public cloud_provider::DeviceSet {
  public:
-  DeviceSetImpl(auth_provider::AuthProvider* auth_provider,
+  DeviceSetImpl(firebase_auth::FirebaseAuth* firebase_auth,
                 std::unique_ptr<CloudDeviceSet> cloud_device_set,
                 fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
@@ -44,7 +44,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
 
   void Erase(const EraseCallback& callback) override;
 
-  auth_provider::AuthProvider* const auth_provider_;
+  firebase_auth::FirebaseAuth* const firebase_auth_;
   std::unique_ptr<CloudDeviceSet> cloud_device_set_;
   fidl::Binding<cloud_provider::DeviceSet> binding_;
   fxl::Closure on_empty_;

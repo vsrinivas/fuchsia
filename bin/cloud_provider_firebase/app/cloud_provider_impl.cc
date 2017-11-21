@@ -21,13 +21,13 @@ CloudProviderImpl::CloudProviderImpl(
     ledger::NetworkService* network_service,
     std::string user_id,
     ConfigPtr config,
-    std::unique_ptr<auth_provider::AuthProvider> auth_provider,
+    std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)),
       network_service_(network_service),
       user_id_(std::move(user_id)),
       server_id_(config->server_id),
-      auth_provider_(std::move(auth_provider)),
+      firebase_auth_(std::move(firebase_auth)),
       user_firebase_(network_service_,
                      server_id_,
                      GetFirebasePathForUser(user_id_)),
@@ -39,7 +39,7 @@ CloudProviderImpl::CloudProviderImpl(
     }
   });
   // The class also shuts down when the auth provider is disconnected.
-  auth_provider_->set_connection_error_handler([this] {
+  firebase_auth_->set_connection_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to the token provider, "
                    << "shutting down the cloud provider.";
     if (on_empty_) {
@@ -59,7 +59,7 @@ void CloudProviderImpl::GetDeviceSet(
       network_service_, server_id_, GetFirebasePathForUser(user_id_));
   auto cloud_device_set =
       std::make_unique<CloudDeviceSetImpl>(std::move(user_firebase));
-  device_sets_.emplace(auth_provider_.get(), std::move(cloud_device_set),
+  device_sets_.emplace(firebase_auth_.get(), std::move(cloud_device_set),
                        std::move(device_set));
   callback(cloud_provider::Status::OK);
 }
@@ -85,17 +85,17 @@ void CloudProviderImpl::GetPageCloud(
   auto handler =
       std::make_unique<cloud_provider_firebase::PageCloudHandlerImpl>(
           firebase.get(), cloud_storage.get());
-  page_clouds_.emplace(auth_provider_.get(), std::move(firebase),
+  page_clouds_.emplace(firebase_auth_.get(), std::move(firebase),
                        std::move(cloud_storage), std::move(handler),
                        std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }
 
 void CloudProviderImpl::EraseAllData(const EraseAllDataCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(
-      [this, callback](auth_provider::AuthStatus auth_status,
+  auto request = firebase_auth_->GetFirebaseToken(
+      [this, callback](firebase_auth::AuthStatus auth_status,
                        std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }

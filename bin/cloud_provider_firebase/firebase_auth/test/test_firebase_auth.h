@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
 
-#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
 
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace auth_provider {
+namespace firebase_auth {
 namespace test {
 
-class TestAuthProvider : public AuthProvider {
+class TestFirebaseAuth : public FirebaseAuth {
  public:
-  explicit TestAuthProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
-  // AuthProvider:
+  // FirebaseAuth:
   void set_connection_error_handler(fxl::Closure on_error) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
@@ -40,6 +40,6 @@ class TestAuthProvider : public AuthProvider {
 };
 
 }  // namespace test
-}  // namespace auth_provider
+}  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_

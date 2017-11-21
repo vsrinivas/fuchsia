@@ -23,17 +23,17 @@ void FactoryImpl::GetCloudProvider(
     const GetCloudProviderCallback& callback) {
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
-  auto auth_provider = std::make_unique<auth_provider::AuthProviderImpl>(
+  auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       main_runner_, config->api_key, std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
-  auth_provider::AuthProviderImpl* auth_provider_ptr = auth_provider.get();
+  firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto request =
-      auth_provider_ptr->GetFirebaseUserId(fxl::MakeCopyable(
+      firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(
           [this, config = std::move(config),
-           auth_provider = std::move(auth_provider),
+           firebase_auth = std::move(firebase_auth),
            cloud_provider = std::move(cloud_provider), callback](
-              auth_provider::AuthStatus status, std::string user_id) mutable {
-            if (status != auth_provider::AuthStatus::OK) {
+              firebase_auth::AuthStatus status, std::string user_id) mutable {
+            if (status != firebase_auth::AuthStatus::OK) {
               FXL_LOG(ERROR)
                   << "Failed to retrieve the user ID from auth token provider";
               callback(cloud_provider::Status::AUTH_ERROR);
@@ -41,7 +41,7 @@ void FactoryImpl::GetCloudProvider(
             }
 
             providers_.emplace(main_runner_, network_service_, user_id,
-                               std::move(config), std::move(auth_provider),
+                               std::move(config), std::move(firebase_auth),
                                std::move(cloud_provider));
             callback(cloud_provider::Status::OK);
           }));

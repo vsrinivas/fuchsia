@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
 
 #include <functional>
 #include <memory>
@@ -11,11 +11,11 @@
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 
-namespace auth_provider {
+namespace firebase_auth {
 
 // Source of the auth information for cloud sync to use, implemented using the
 // system token provider.
@@ -28,28 +28,28 @@ namespace auth_provider {
 // *Warning*: if |token_provider| disconnects, all requests in progress are
 // dropped on the floor. TODO(ppi): keep track of pending requests and call the
 // callbacks with status TOKEN_PROVIDER_DISCONNECTED when this happens.
-class AuthProviderImpl : public AuthProvider {
+class FirebaseAuthImpl : public FirebaseAuth {
  public:
-  AuthProviderImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  FirebaseAuthImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                    std::string api_key,
                    modular::auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff);
 
-  // AuthProvider:
+  // FirebaseAuth:
   void set_connection_error_handler(fxl::Closure on_error) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(auth_provider::AuthStatus, std::string)> callback)
+      std::function<void(firebase_auth::AuthStatus, std::string)> callback)
       override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
-      std::function<void(auth_provider::AuthStatus, std::string)> callback)
+      std::function<void(firebase_auth::AuthStatus, std::string)> callback)
       override;
 
  private:
   // Retrieves the Firebase token from the token provider, transparently
   // retrying the request until success.
-  void GetToken(std::function<void(auth_provider::AuthStatus,
+  void GetToken(std::function<void(firebase_auth::AuthStatus,
                                    modular::auth::FirebaseTokenPtr)> callback);
 
   const std::string api_key_;
@@ -60,6 +60,6 @@ class AuthProviderImpl : public AuthProvider {
   callback::ScopedTaskRunner task_runner_;
 };
 
-}  // namespace auth_provider
+}  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_

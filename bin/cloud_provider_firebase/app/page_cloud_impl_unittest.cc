@@ -9,7 +9,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_firebase_auth.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/test/test_page_cloud_handler.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
@@ -22,12 +22,12 @@ class PageCloudImplTest : public ::test::TestWithMessageLoop,
                           cloud_provider::PageCloudWatcher {
  public:
   PageCloudImplTest()
-      : auth_provider_(message_loop_.task_runner()), watcher_binding_(this) {
+      : firebase_auth_(message_loop_.task_runner()), watcher_binding_(this) {
     auto handler = std::make_unique<test::TestPageCloudHandler>(
         message_loop_.task_runner());
     handler_ = handler.get();
     page_cloud_impl_ = std::make_unique<PageCloudImpl>(
-        &auth_provider_, nullptr, nullptr, std::move(handler),
+        &firebase_auth_, nullptr, nullptr, std::move(handler),
         page_cloud_.NewRequest());
   }
 
@@ -54,7 +54,7 @@ class PageCloudImplTest : public ::test::TestWithMessageLoop,
   }
 
  protected:
-  auth_provider::test::TestAuthProvider auth_provider_;
+  firebase_auth::test::TestFirebaseAuth firebase_auth_;
   cloud_provider::PageCloudPtr page_cloud_;
   test::TestPageCloudHandler* handler_ = nullptr;
   std::unique_ptr<PageCloudImpl> page_cloud_impl_;

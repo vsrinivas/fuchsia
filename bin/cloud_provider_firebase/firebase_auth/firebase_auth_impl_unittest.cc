@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider_impl.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth_impl.h"
 
 #include <utility>
 
@@ -13,7 +13,7 @@
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
-namespace auth_provider {
+namespace firebase_auth {
 
 namespace {
 
@@ -66,17 +66,17 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
 };
 
-class AuthProviderImplTest : public test::TestWithMessageLoop {
+class FirebaseAuthImplTest : public test::TestWithMessageLoop {
  public:
-  AuthProviderImplTest()
+  FirebaseAuthImplTest()
       : token_provider_(message_loop_.task_runner()),
         token_provider_binding_(&token_provider_),
-        auth_provider_(message_loop_.task_runner(),
+        firebase_auth_(message_loop_.task_runner(),
                        "api_key",
                        modular::auth::TokenProviderPtr::Create(
                            token_provider_binding_.NewBinding()),
                        InitBackoff()) {}
-  ~AuthProviderImplTest() override {}
+  ~FirebaseAuthImplTest() override {}
 
  protected:
   std::unique_ptr<backoff::Backoff> InitBackoff() {
@@ -87,26 +87,26 @@ class AuthProviderImplTest : public test::TestWithMessageLoop {
 
   TestTokenProvider token_provider_;
   fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
-  AuthProviderImpl auth_provider_;
+  FirebaseAuthImpl firebase_auth_;
   backoff::test::TestBackoff* backoff_;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AuthProviderImplTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuthImplTest);
 };
 
-TEST_F(AuthProviderImplTest, GetFirebaseToken) {
+TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   AuthStatus auth_status;
   std::string firebase_token;
-  auth_provider_.GetFirebaseToken(
+  firebase_auth_.GetFirebaseToken(
       callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("this is a token", firebase_token);
 }
 
-TEST_F(AuthProviderImplTest, GetFirebaseTokenRetryOnError) {
+TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   AuthStatus auth_status;
@@ -115,7 +115,7 @@ TEST_F(AuthProviderImplTest, GetFirebaseTokenRetryOnError) {
       modular::auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
-  auth_provider_.GetFirebaseToken(
+  firebase_auth_.GetFirebaseToken(
       [this, &called, &auth_status, &firebase_token](auto status, auto token) {
         called = true;
         auth_status = status;
@@ -136,19 +136,19 @@ TEST_F(AuthProviderImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ(1, backoff_->reset_count);
 }
 
-TEST_F(AuthProviderImplTest, GetFirebaseUserId) {
+TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   AuthStatus auth_status;
   std::string firebase_user_id;
-  auth_provider_.GetFirebaseUserId(
+  firebase_auth_.GetFirebaseUserId(
       callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("some id", firebase_user_id);
 }
 
-TEST_F(AuthProviderImplTest, GetFirebaseUserIdRetryOnError) {
+TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   AuthStatus auth_status;
@@ -157,7 +157,7 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserIdRetryOnError) {
       modular::auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
-  auth_provider_.GetFirebaseUserId(
+  firebase_auth_.GetFirebaseUserId(
       [this, &called, &auth_status, &firebase_id](auto status, auto id) {
         called = true;
         auth_status = status;
@@ -180,4 +180,4 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserIdRetryOnError) {
 
 }  // namespace
 
-}  // namespace auth_provider
+}  // namespace firebase_auth

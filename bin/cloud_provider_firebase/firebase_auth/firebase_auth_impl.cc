@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider_impl.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth_impl.h"
 
 #include <utility>
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/callback/cancellable_helper.h"
 
-namespace auth_provider {
+namespace firebase_auth {
 
-AuthProviderImpl::AuthProviderImpl(
+FirebaseAuthImpl::FirebaseAuthImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     std::string api_key,
     modular::auth::TokenProviderPtr token_provider,
@@ -21,12 +21,12 @@ AuthProviderImpl::AuthProviderImpl(
       backoff_(std::move(backoff)),
       task_runner_(std::move(task_runner)) {}
 
-void AuthProviderImpl::set_connection_error_handler(fxl::Closure on_error) {
+void FirebaseAuthImpl::set_connection_error_handler(fxl::Closure on_error) {
   token_provider_.set_connection_error_handler(std::move(on_error));
 }
 
-fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
-    std::function<void(auth_provider::AuthStatus, std::string)> callback) {
+fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(
+    std::function<void(firebase_auth::AuthStatus, std::string)> callback) {
   if (api_key_.empty()) {
     FXL_LOG(WARNING) << "No Firebase API key provided. Connection to Firebase "
                         "may be unauthenticated.";
@@ -37,16 +37,16 @@ fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
   return cancellable;
 }
 
-fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
-    std::function<void(auth_provider::AuthStatus, std::string)> callback) {
+fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
+    std::function<void(firebase_auth::AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken([callback = cancellable->WrapCallback(callback)](
                auto status, auto token) { callback(status, token->local_id); });
   return cancellable;
 }
 
-void AuthProviderImpl::GetToken(
-    std::function<void(auth_provider::AuthStatus,
+void FirebaseAuthImpl::GetToken(
+    std::function<void(firebase_auth::AuthStatus,
                        modular::auth::FirebaseTokenPtr)> callback) {
   token_provider_->GetFirebaseAuthToken(
       api_key_, [this, callback = std::move(callback)](
@@ -74,8 +74,8 @@ void AuthProviderImpl::GetToken(
         }
 
         backoff_->Reset();
-        callback(auth_provider::AuthStatus::OK, std::move(token));
+        callback(firebase_auth::AuthStatus::OK, std::move(token));
       });
 }
 
-}  // namespace auth_provider
+}  // namespace firebase_auth

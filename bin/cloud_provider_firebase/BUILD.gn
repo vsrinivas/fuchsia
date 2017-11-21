@@ -13,11 +13,9 @@ package("cloud_provider_firebase") {
     "app",
   ]
 
-  binaries = [
-    {
-      name = "cloud_provider_firebase"
-    },
-  ]
+  binaries = [ {
+        name = "cloud_provider_firebase"
+      } ]
 }
 
 executable("cloud_provider_firebase_unittests") {
@@ -25,9 +23,9 @@ executable("cloud_provider_firebase_unittests") {
 
   deps = [
     "//peridot/bin/cloud_provider_firebase/app:unittests",
-    "//peridot/bin/cloud_provider_firebase/auth_provider:unittests",
     "//peridot/bin/cloud_provider_firebase/device_set:unittests",
     "//peridot/bin/cloud_provider_firebase/firebase:unittests",
+    "//peridot/bin/cloud_provider_firebase/firebase_auth:unittests",
     "//peridot/bin/cloud_provider_firebase/gcs:unittests",
     "//peridot/bin/cloud_provider_firebase/network:unittests",
     "//peridot/bin/cloud_provider_firebase/page_handler/impl:unittests",

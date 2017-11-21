@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_firebase_auth.h"
 
 #include <utility>
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/callback/cancellable_helper.h"
 
-namespace auth_provider {
+namespace firebase_auth {
 namespace test {
 
-TestAuthProvider::TestAuthProvider(fxl::RefPtr<fxl::TaskRunner> task_runner)
+TestFirebaseAuth::TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
-void TestAuthProvider::set_connection_error_handler(fxl::Closure on_error) {
+void TestFirebaseAuth::set_connection_error_handler(fxl::Closure on_error) {
   error_handler_ = on_error;
 }
 
-fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
+fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseToken(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
@@ -30,7 +30,7 @@ fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
   return cancellable;
 }
 
-fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
+fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseUserId(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
@@ -41,9 +41,9 @@ fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
   return cancellable;
 }
 
-void TestAuthProvider::TriggerConnectionErrorHandler() {
+void TestFirebaseAuth::TriggerConnectionErrorHandler() {
   error_handler_();
 }
 
 }  // namespace test
-}  // namespace auth_provider
+}  // namespace firebase_auth

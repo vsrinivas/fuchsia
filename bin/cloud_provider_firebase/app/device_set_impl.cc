@@ -11,13 +11,13 @@
 namespace cloud_provider_firebase {
 
 DeviceSetImpl::DeviceSetImpl(
-    auth_provider::AuthProvider* auth_provider,
+    firebase_auth::FirebaseAuth* firebase_auth,
     std::unique_ptr<CloudDeviceSet> cloud_device_set,
     fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
-    : auth_provider_(auth_provider),
+    : firebase_auth_(firebase_auth),
       cloud_device_set_(std::move(cloud_device_set)),
       binding_(this, std::move(request)) {
-  FXL_DCHECK(auth_provider_);
+  FXL_DCHECK(firebase_auth_);
   // The class shuts down when the client connection is disconnected.
   binding_.set_connection_error_handler([this] {
     if (on_empty_) {
@@ -30,11 +30,11 @@ DeviceSetImpl::~DeviceSetImpl() {}
 
 void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       [this, fingerprint = convert::ToString(fingerprint), callback](
-          auth_provider::AuthStatus auth_status,
+          firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }
@@ -61,11 +61,11 @@ void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
 
 void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
                                    const SetFingerprintCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       [this, fingerprint = convert::ToString(fingerprint), callback](
-          auth_provider::AuthStatus auth_status,
+          firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }
@@ -99,11 +99,11 @@ void DeviceSetImpl::SetWatcher(
   set_watcher_callback_called_ = false;
   timestamp_update_request_sent_ = false;
 
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       [this, fingerprint = convert::ToString(fingerprint), callback](
-          auth_provider::AuthStatus auth_status,
+          firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           set_watcher_callback_called_ = true;
           return;
@@ -159,10 +159,10 @@ void DeviceSetImpl::SetWatcher(
 }
 
 void DeviceSetImpl::Erase(const EraseCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(
-      [this, callback](auth_provider::AuthStatus auth_status,
+  auto request = firebase_auth_->GetFirebaseToken(
+      [this, callback](firebase_auth::AuthStatus auth_status,
                        std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }

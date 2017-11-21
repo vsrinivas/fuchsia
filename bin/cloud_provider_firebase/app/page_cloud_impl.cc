@@ -35,17 +35,17 @@ void ConvertRecords(const std::vector<Record>& records,
 }  // namespace
 
 PageCloudImpl::PageCloudImpl(
-    auth_provider::AuthProvider* auth_provider,
+    firebase_auth::FirebaseAuth* firebase_auth,
     std::unique_ptr<firebase::Firebase> firebase,
     std::unique_ptr<gcs::CloudStorage> cloud_storage,
     std::unique_ptr<PageCloudHandler> handler,
     fidl::InterfaceRequest<cloud_provider::PageCloud> request)
-    : auth_provider_(auth_provider),
+    : firebase_auth_(firebase_auth),
       firebase_(std::move(firebase)),
       cloud_storage_(std::move(cloud_storage)),
       handler_(std::move(handler)),
       binding_(this, std::move(request)) {
-  FXL_DCHECK(auth_provider_);
+  FXL_DCHECK(firebase_auth_);
   // The class shuts down when the client connection is disconnected.
   binding_.set_connection_error_handler([this] {
     if (on_empty_) {
@@ -104,11 +104,11 @@ void PageCloudImpl::SendRemoteCommits() {
 
 void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       fxl::MakeCopyable([this, commits = std::move(commits), callback](
-                            auth_provider::AuthStatus auth_status,
+                            firebase_auth::AuthStatus auth_status,
                             std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }
@@ -129,11 +129,11 @@ void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
 
 void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
                                const GetCommitsCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable(
+  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable(
       [this, min_timestamp = convert::ToString(min_position_token), callback](
-          auth_provider::AuthStatus auth_status,
+          firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR, nullptr, nullptr);
           return;
         }
@@ -171,11 +171,11 @@ void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
     callback(cloud_provider::Status::ARGUMENT_ERROR);
     return;
   }
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       fxl::MakeCopyable([this, id = convert::ToString(id), vmo = std::move(vmo),
-                         callback](auth_provider::AuthStatus auth_status,
+                         callback](firebase_auth::AuthStatus auth_status,
                                    std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
         }
@@ -191,11 +191,11 @@ void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
 
 void PageCloudImpl::GetObject(fidl::Array<uint8_t> id,
                               const GetObjectCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       [this, id = convert::ToString(id), callback](
-          auth_provider::AuthStatus auth_status,
+          firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR, 0u, zx::socket());
           return;
         }
@@ -221,11 +221,11 @@ void PageCloudImpl::SetWatcher(
     }
     waiting_for_remote_commits_ack_ = false;
   });
-  auto request = auth_provider_->GetFirebaseToken(
+  auto request = firebase_auth_->GetFirebaseToken(
       [this, min_timestamp = convert::ToString(min_position_token), callback](
-          auth_provider::AuthStatus auth_status,
+          firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
-        if (auth_status != auth_provider::AuthStatus::OK) {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
           watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
           callback(cloud_provider::Status::AUTH_ERROR);
           return;

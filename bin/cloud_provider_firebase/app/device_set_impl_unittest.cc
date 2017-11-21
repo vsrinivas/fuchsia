@@ -7,8 +7,8 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/test/test_cloud_device_set.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_firebase_auth.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -27,9 +27,9 @@ class DeviceSetImplTest : public test::TestWithMessageLoop,
                           cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()
-      : auth_provider_(message_loop_.task_runner()),
+      : firebase_auth_(message_loop_.task_runner()),
         device_set_impl_(
-            &auth_provider_,
+            &firebase_auth_,
             InitCloudDeviceSet(&cloud_device_set_, message_loop_.task_runner()),
             device_set_.NewRequest()),
         watcher_binding_(this) {}
@@ -48,7 +48,7 @@ class DeviceSetImplTest : public test::TestWithMessageLoop,
   }
 
  protected:
-  auth_provider::test::TestAuthProvider auth_provider_;
+  firebase_auth::test::TestFirebaseAuth firebase_auth_;
   TestCloudDeviceSet* cloud_device_set_;
   cloud_provider::DeviceSetPtr device_set_;
   DeviceSetImpl device_set_impl_;

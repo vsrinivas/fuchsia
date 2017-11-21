@@ -7,7 +7,7 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_firebase_auth.h"
 #include "peridot/bin/cloud_provider_firebase/network/fake_network_service.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -22,13 +22,13 @@ ConfigPtr GetFirebaseConfig() {
   return config;
 }
 
-std::unique_ptr<auth_provider::AuthProvider> InitAuthProvider(
+std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
-    auth_provider::test::TestAuthProvider** ptr) {
-  auto auth_provider = std::make_unique<auth_provider::test::TestAuthProvider>(
+    firebase_auth::test::TestFirebaseAuth** ptr) {
+  auto firebase_auth = std::make_unique<firebase_auth::test::TestFirebaseAuth>(
       std::move(task_runner));
-  *ptr = auth_provider.get();
-  return auth_provider;
+  *ptr = firebase_auth.get();
+  return firebase_auth;
 }
 
 }  // namespace
@@ -42,12 +42,12 @@ class CloudProviderImplTest : public test::TestWithMessageLoop {
             &network_service_,
             "user_id",
             GetFirebaseConfig(),
-            InitAuthProvider(message_loop_.task_runner(), &auth_provider_),
+            InitFirebaseAuth(message_loop_.task_runner(), &firebase_auth_),
             cloud_provider_.NewRequest()) {}
   ~CloudProviderImplTest() override {}
 
  protected:
-  auth_provider::test::TestAuthProvider* auth_provider_ = nullptr;
+  firebase_auth::test::TestFirebaseAuth* firebase_auth_ = nullptr;
 
   ledger::FakeNetworkService network_service_;
   cloud_provider::CloudProviderPtr cloud_provider_;
@@ -68,13 +68,13 @@ TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(CloudProviderImplTest, EmptyWhenAuthProviderDisconnected) {
+TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
   bool on_empty_called = false;
   cloud_provider_impl_.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
     message_loop_.PostQuitTask();
   });
-  auth_provider_->TriggerConnectionErrorHandler();
+  firebase_auth_->TriggerConnectionErrorHandler();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }

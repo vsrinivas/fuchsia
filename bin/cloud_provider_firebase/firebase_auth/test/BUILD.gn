@@ -11,12 +11,12 @@ source_set("test") {
   testonly = true
 
   sources = [
-    "test_auth_provider.cc",
-    "test_auth_provider.h",
+    "test_firebase_auth.cc",
+    "test_firebase_auth.h",
   ]
 
   public_deps = [
-    "//peridot/bin/cloud_provider_firebase/auth_provider",
+    "//peridot/bin/cloud_provider_firebase/firebase_auth",
   ]
 
   deps = [
