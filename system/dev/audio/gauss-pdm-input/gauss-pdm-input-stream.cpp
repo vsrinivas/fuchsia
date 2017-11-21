@@ -16,8 +16,6 @@
 namespace audio {
 namespace gauss {
 
-constexpr size_t BUFFER_SIZE = 0x8000;
-
 GaussPdmInputStream::~GaussPdmInputStream() {}
 
 // static
@@ -540,10 +538,12 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(
 
     vmo_helper_.DestroyVmo();
 
+    size_t ring_buffer_size  = req.min_ring_buffer_frames * frame_size_;
+
     // Create the ring buffer vmo we will use to share memory with the client.
-    resp.result = vmo_helper_.AllocateVmo(BUFFER_SIZE);
+    resp.result = vmo_helper_.AllocateVmo(ring_buffer_size);
     if (resp.result != ZX_OK) {
-        zxlogf(ERROR, "Failed to create ring buffer (size %lu)\n", BUFFER_SIZE);
+        zxlogf(ERROR, "Failed to create ring buffer (size %lu)\n", ring_buffer_size);
         goto finished;
     }
 
@@ -557,7 +557,7 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(
     }
 
     // -1 because the addresses are indexed 0 -> size-1.
-    end_address = start_address + BUFFER_SIZE - 1;
+    end_address = start_address + ring_buffer_size - 1;
 
     a113_toddr_set_buf(&audio_device_, (uint32_t)start_address,
                        (uint32_t)end_address);
