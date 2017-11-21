@@ -41,6 +41,10 @@ wlan_go_dependencies = [
     source = "//garnet/go/src/netstack/watcher"
   },
   {
+    package = "netstack/trace"
+    source = "//garnet/go/src/netstack/trace"
+  },
+  {
     package = "app"
     source = "//garnet/public/lib/app/go/src/app"
   },

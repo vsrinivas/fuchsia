@@ -48,6 +48,8 @@ import (
 	"syscall"
 	"syscall/zx"
 	"unsafe"
+
+	"netstack/trace"
 )
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
@@ -373,6 +375,8 @@ func (c *Client) WaitRecv() {
 			// hooked up with a (an active) Ethernet cable.
 			m := syscall.FDIOForFD(int(c.f.Fd()))
 			status, err := IoctlGetStatus(m)
+
+			trace.DebugTraceDeep(5, "status %d FD %d", status, int(c.f.Fd()))
 
 			c.mu.Lock()
 			switch status {

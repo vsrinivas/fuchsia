@@ -9,6 +9,8 @@ import (
 	"syscall/zx"
 	"syscall/zx/mxerror"
 
+	"netstack/trace"
+
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
@@ -31,6 +33,9 @@ func (ep *linkEndpoint) MaxHeaderLength() uint16        { return headerLength }
 func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return ep.LinkAddr }
 
 func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+
+	trace.DebugTrace("eth write")
+
 	ethHdr := hdr.Prepend(headerLength)
 	if r.RemoteLinkAddress == "" && r.RemoteAddress == "\xff\xff\xff\xff" {
 		r.RemoteLinkAddress = "\xff\xff\xff\xff\xff\xff"
@@ -60,6 +65,7 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 			break
 		}
 		if err := ep.c.WaitSend(); err != nil {
+			trace.DebugDrop("Alloc error: pktlen %d usedbytes %d payload len %d", pktlen, len(hdr.UsedBytes()), len(payload))
 			log.Printf("link: alloc error: %v", err)
 			return tcpip.ErrWouldBlock
 		}
@@ -68,6 +74,7 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 	copy(buf, hdr.UsedBytes())
 	copy(buf[len(hdr.UsedBytes()):], payload)
 	if err := ep.c.Send(buf); err != nil {
+		trace.DebugDrop("Send error: pktlen %d usedbytes %d payload len %d", pktlen, len(hdr.UsedBytes()), len(payload))
 		if debug2 {
 			log.Printf("link: send error: %v", err)
 		}
@@ -77,6 +84,7 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 }
 
 func (ep *linkEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
+	trace.DebugTraceDeep(5, "eth attach")
 	go func() {
 		if err := ep.dispatch(dispatcher); err != nil {
 			log.Printf("dispatch error: %v", err)
