@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "guest": "//zircon/system/uapp/guest"
+        "guest": "//garnet/bin/guest"
     }
 }

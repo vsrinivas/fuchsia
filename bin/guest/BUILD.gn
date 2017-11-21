@@ -14,8 +14,8 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/lib/machina",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/machina",
   ]
 }
 
