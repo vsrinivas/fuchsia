@@ -429,7 +429,7 @@ zx_status_t UsbAudioStream::ProcessRingBufferChannel(dispatcher::Channel* channe
 
     return ZX_ERR_NOT_SUPPORTED;
 }
-#undef HANDLE_REQ
+#undef HREQ
 
 zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channel,
                                                      const audio_proto::StreamGetFmtsReq& req) {
