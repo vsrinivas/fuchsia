@@ -14,7 +14,7 @@
 set -e
 
 function HELP() {
-    echo "Usage: hikey-efi-boot-image [options] <uefi repo path>"
+    echo "Usage: hikey-efi-boot-image [options] <tools-images-hikey960>"
     echo "  See: /docs/targets/hikey960-uefi.md for more info"
     echo
     echo "  -b build-dir    Use specified build directory"
@@ -26,7 +26,7 @@ function HELP() {
 }
 
 ZIRCON_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ZIRCON_DIR="$ZIRCON_SCRIPTS_DIR/.."
+ZIRCON_DIR="${ZIRCON_SCRIPTS_DIR}/.."
 
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000
@@ -37,8 +37,8 @@ CMDLINE="TERM=uart"
 
 while getopts "b:r:mfh" FLAG; do
     case $FLAG in
-        b) BUILD_DIR="$OPTARG";;
-        r) RAMDISK="$OPTARG";;
+        b) BUILD_DIR="${OPTARG}";;
+        r) RAMDISK="${OPTARG}";;
         m) CMDLINE+=" netsvc.netboot=true";;
         f) FLASH="flash";;
         h) HELP;;
@@ -48,43 +48,43 @@ while getopts "b:r:mfh" FLAG; do
             ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
 if [ "$#" -lt 1 ]; then
     echo "not enough arguments"
     HELP
 fi
 
-BUILD_DIR=${BUILD_DIR:-/build-zircon-hikey960-arm64}
-KERNEL=${BUILD_DIR}/zircon.bin-dtb
-RAMDISK=${RAMDISK:-$BUILD_DIR/bootdata.bin}
+BUILD_DIR="${BUILD_DIR:-/build-zircon-hikey960-arm64}"
+KERNEL="${BUILD_DIR}/zircon.bin-dtb"
+RAMDISK="${RAMDISK:-${BUILD_DIR}/bootdata.bin}"
 
-OUT_IMAGE=${BUILD_DIR}/boot.img
-DTB_FILE=${ZIRCON_DIR}/kernel/target/hikey960/device-tree.dtb
-DT_IMAGE=${BUILD_DIR}/dt.img
+OUT_IMAGE="${BUILD_DIR}/boot.img"
+DTB_FILE="${ZIRCON_DIR}/kernel/target/hikey960/device-tree.dtb"
+DT_IMAGE="${BUILD_DIR}/dt.img"
 
-MKBOOTIMG=$1/tools-images-hikey960/build-from-source/mkbootimg
+MKBOOTIMG="${1}/build-from-source/mkbootimg"
 
-if [ ! -e ${MKBOOTIMG} ]; then
+if [ ! -e "${MKBOOTIMG}" ]; then
     echo "mkbootimg not found at path ${MKBOOTIMG}"
     HELP
 fi
 
-# mkdtimg and mkbootimg can be found at:
-#  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
+# tools-images-hikey960 found at:
+# https://github.com/96boards-hikey/tools-images-hikey960
 
 echo using mkbootimg at ${MKBOOTIMG}
-${MKBOOTIMG} --kernel $KERNEL \
+"${MKBOOTIMG}" --kernel $KERNEL \
 --kernel_offset $KERNEL_OFFSET \
 --base $MEMBASE \
 --ramdisk_offset $RAMDISK_OFFSET \
---ramdisk "$RAMDISK" \
+--ramdisk "${RAMDISK}" \
 --tags_offset $DT_OFFSET \
---cmdline "$CMDLINE" \
+--cmdline "${CMDLINE}" \
 -o $OUT_IMAGE
 
 fastboot $FLASH boot $OUT_IMAGE
-if [ -n "$FLASH" ]; then
+if [ -n "${FLASH}" ]; then
     # Can't guarantee that the target has written image to flash before the
     # fastboot command completes, so short delay here before reboot.
     sleep 1
