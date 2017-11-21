@@ -151,8 +151,8 @@ template("bootdata_cmdline") {
       output_file,
     ]
 
-    inputs = invoker.inputs
-    assert(inputs == [ inputs[0] ],
+    inputs += invoker.inputs
+    assert(invoker.inputs == [ inputs[1] ],
            "$target_name inputs must contain exactly one file name")
 
     args = script_args + [
