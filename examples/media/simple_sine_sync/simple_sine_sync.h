@@ -6,7 +6,6 @@
 
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
-// #include "lib/media/timeline/timeline.h"
 
 namespace examples {
 
@@ -33,7 +32,7 @@ class MediaApp {
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();
-  void WriteStereoAudioIntoBuffer(uintptr_t buffer, size_t num_frames);
+  void WriteAudioIntoBuffer(uintptr_t buffer, size_t num_frames);
 
   bool RefillBuffer();
 

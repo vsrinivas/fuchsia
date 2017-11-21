@@ -22,7 +22,7 @@ class MediaApp {
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();
-  void WriteStereoAudioIntoBuffer();
+  void WriteAudioIntoBuffer();
 
   media::MediaPacketPtr CreateMediaPacket(size_t packet_num);
   void SendMediaPacket(media::MediaPacketPtr packet);
@@ -35,6 +35,7 @@ class MediaApp {
 
   zx::vmo vmo_;
   uintptr_t mapped_address_ = 0u;
+  size_t num_packets_sent_ = 0u;
   size_t num_packets_completed_ = 0u;
 };
 

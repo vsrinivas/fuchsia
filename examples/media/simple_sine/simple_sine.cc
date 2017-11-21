@@ -12,21 +12,24 @@
 #include "lib/media/fidl/audio_server.fidl.h"
 
 namespace {
-// Set the renderer format to: 48 kHz, stereo, 16-bit LPCM (signed integer).
+// TODO(mpuryear): Make frame rate, num_chans, payload size & num, frequency,
+// amplitude and duration into command line inputs; these would become defaults.
+
+// Set the renderer format to: 48 kHz, mono, 16-bit LPCM (signed integer).
 constexpr float kRendererFrameRate = 48000.0f;
-constexpr size_t kNumChannels = 2;
+constexpr size_t kNumChannels = 1;
 constexpr size_t kSampleSize = sizeof(int16_t);
-// For this example, feed audio to the system in payloads of 5 milliseconds.
-constexpr size_t kMSecsPerPayload = 5;
+// For this example, feed audio to the system in payloads of 10 milliseconds.
+constexpr size_t kMSecsPerPayload = 10;
 constexpr size_t kFramesPerPayload =
     kMSecsPerPayload * kRendererFrameRate / 1000;
 constexpr size_t kPayloadSize = kFramesPerPayload * kNumChannels * kSampleSize;
-// Use 10 payload buffers, mapped contiguously in a single memory section (id 0)
-constexpr size_t kNumPayloads = 10;
+// Contiguous payload buffers mapped into a single 1-sec memory section (id 0)
+constexpr size_t kNumPayloads = 100;
 constexpr size_t kTotalMappingSize = kPayloadSize * kNumPayloads;
 constexpr size_t kBufferId = 0;
-// Play a sine wave that is 440 Hz, at 1/8 of full-scale volume.
-constexpr float kFrequency = 440.0f;
+// Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
+constexpr float kFrequency = 439.0f;
 constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
 constexpr float kAmplitudeScalar = 0.125f * std::numeric_limits<int16_t>::max();
 // Loop for 2 seconds.
@@ -50,7 +53,7 @@ void MediaApp::Run(app::ApplicationContext* app_context) {
     return;
   }
 
-  WriteStereoAudioIntoBuffer();
+  WriteAudioIntoBuffer();
   for (size_t payload_num = 0; payload_num < kNumPayloads; ++payload_num) {
     SendMediaPacket(CreateMediaPacket(payload_num));
   }
@@ -133,7 +136,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 }
 
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
-void MediaApp::WriteStereoAudioIntoBuffer() {
+void MediaApp::WriteAudioIntoBuffer() {
   int16_t* audio_buffer = reinterpret_cast<int16_t*>(mapped_address_);
 
   for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
@@ -146,34 +149,35 @@ void MediaApp::WriteStereoAudioIntoBuffer() {
   }
 }
 
-// We divide the buffer into 10 payloads. Create a packet for this payload.
+// We divided our cross-proc buffer into different zones, called payloads.
+// Create a packet corresponding to this particular payload.
 media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
   auto packet = media::MediaPacket::New();
 
+  packet->pts = (payload_num == 0) ? 0 : media::MediaPacket::kNoTimestamp;
   packet->pts_rate_ticks = kRendererFrameRate;
   packet->pts_rate_seconds = 1;
   packet->flags = 0;
   packet->payload_buffer_id = kBufferId;
   packet->payload_offset = (payload_num * kPayloadSize) % kTotalMappingSize;
   packet->payload_size = kPayloadSize;
-  packet->pts = media::MediaPacket::kNoTimestamp;
 
   return packet;
 }
 
 // Submit a packet, incrementing our count of packets sent. When it returns:
-// a. if more packets remain, create and send the next packet;
-// b. if no packets remain, begin closing down the system.
+// a. if there are more packets to send, create and send the next packet;
+// b. if all expected packets have completed, begin closing down the system.
 void MediaApp::SendMediaPacket(media::MediaPacketPtr packet) {
   FXL_DCHECK(packet_consumer_);
 
+  ++num_packets_sent_;
   packet_consumer_->SupplyPacket(
       std::move(packet), [this](media::MediaPacketDemandPtr) {
         ++num_packets_completed_;
         FXL_DCHECK(num_packets_completed_ <= kNumPacketsToSend);
-        if (num_packets_completed_ + kNumPayloads <= kNumPacketsToSend) {
-          SendMediaPacket(
-              CreateMediaPacket(num_packets_completed_ + kNumPayloads));
+        if (num_packets_sent_ < kNumPacketsToSend) {
+          SendMediaPacket(CreateMediaPacket(num_packets_sent_));
         } else if (num_packets_completed_ >= kNumPacketsToSend) {
           Shutdown();
         }

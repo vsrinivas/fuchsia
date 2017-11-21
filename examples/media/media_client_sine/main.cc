@@ -25,6 +25,8 @@ constexpr size_t kNumBuffersToSend =
     kTotalDurationSecs * kRendererFrameRate / kNumFramesPerBuffer;
 constexpr zx_time_t kBufferNSecs =
     ZX_SEC(kTotalDurationSecs) / kNumBuffersToSend;
+// Spool up as much as one second of audio data ahead of time.
+constexpr zx_duration_t kBufferSizeTime = ZX_SEC(1);
 
 int main(int argc, const char** argv) {
   fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
@@ -88,32 +90,29 @@ int main(int argc, const char** argv) {
     }
   }
 
-  zx_time_t first_write_time = zx_time_get(ZX_CLOCK_MONOTONIC);
-  zx_time_t start_time = first_write_time + delay_ns + ZX_MSEC(1);
+  zx_time_t start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t internal_buffer_full_time = start_time - kBufferSizeTime;
+  zx_time_t packet_time = start_time + delay_ns + ZX_MSEC(1);
 
-  zx_time_t timestamp = start_time;
   for (size_t write_num = 0; write_num < kNumBuffersToSend; ++write_num) {
+    // Sleep til internal buffer can accept next packet (could already be true).
+    zx_nanosleep(internal_buffer_full_time + kBufferNSecs);
+
     status = fuchsia_audio_output_stream_write(
         stream, buffer.get() + (kNumSamplesPerBuffer * write_num),
-        kNumSamplesPerBuffer, timestamp);
+        kNumSamplesPerBuffer, packet_time);
     if (status < 0) {
-      std::cout << "stream_write " << write_num << " failed: " << status
-                << "\n";
+      std::cout << "stream_write" << write_num << " failed: " << status << "\n";
       fuchsia_audio_manager_free(manager);
       return -1;
     }
-    timestamp = FUCHSIA_AUDIO_NO_TIMESTAMP;
-
-    // TODO(mpuryear): remove if stream_write can block on internal_buffer_full
-    zx_time_t wake_time = first_write_time + write_num * kBufferNSecs;
-    zx_nanosleep(wake_time);
+    internal_buffer_full_time += kBufferNSecs;
+    packet_time = FUCHSIA_AUDIO_NO_TIMESTAMP;
   }
 
-  // TODO(mpuryear): remove if stream_free can block until submitted audio ends
-  zx_nanosleep(start_time + ZX_SEC(kTotalDurationSecs));
+  // Wait for all submitted audio to play through the system.
+  zx_nanosleep(start_time + delay_ns + ZX_SEC(kTotalDurationSecs));
 
-  // stream_free completes all already-submitted buffers before returning
-  // TODO(mpuryear): ensure the client lib does this.
   fuchsia_audio_output_stream_free(stream);
   fuchsia_audio_manager_free(manager);
   return 0;

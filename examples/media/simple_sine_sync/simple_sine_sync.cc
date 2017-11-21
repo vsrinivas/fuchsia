@@ -12,12 +12,12 @@
 #include "lib/media/fidl/audio_server.fidl.h"
 
 namespace {
-// Set the renderer format to: 48 kHz, stereo, 16-bit LPCM (signed integer).
-constexpr float kRendererFrameRate = 48000.0f;
+// Set the renderer format to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).
+constexpr float kRendererFrameRate = 44100.0f;
 constexpr size_t kNumChannels = 2;
 constexpr size_t kSampleSize = sizeof(int16_t);
-// For this example, feed audio to the system in payloads of 5 milliseconds.
-constexpr size_t kMSecsPerPayload = 5;
+// For this example, feed audio to the system in payloads of 10 milliseconds.
+constexpr size_t kMSecsPerPayload = 10;
 constexpr size_t kFramesPerPayload =
     kMSecsPerPayload * kRendererFrameRate / 1000;
 constexpr size_t kPayloadSize = kFramesPerPayload * kNumChannels * kSampleSize;
@@ -61,7 +61,7 @@ int MediaApp::Run() {
     return 2;
   }
 
-  WriteStereoAudioIntoBuffer(mapped_address_, kTotalMappingFrames);
+  WriteAudioIntoBuffer(mapped_address_, kTotalMappingFrames);
 
   start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC) + first_pts_delay_;
   RefillBuffer();
@@ -131,7 +131,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 
   zx::vmo duplicate_vmo;
   status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-      &duplicate_vmo);
+                          &duplicate_vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::handle::duplicate failed - " << status;
     return status;
@@ -154,7 +154,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 }
 
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
-void MediaApp::WriteStereoAudioIntoBuffer(uintptr_t buffer, size_t num_frames) {
+void MediaApp::WriteAudioIntoBuffer(uintptr_t buffer, size_t num_frames) {
   int16_t* audio_buffer = reinterpret_cast<int16_t*>(buffer);
 
   for (size_t frame = 0; frame < num_frames; ++frame) {
@@ -170,13 +170,13 @@ void MediaApp::WriteStereoAudioIntoBuffer(uintptr_t buffer, size_t num_frames) {
 media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
   auto packet = media::MediaPacket::New();
 
+  packet->pts = (payload_num == 0) ? 0 : media::MediaPacket::kNoTimestamp;
   packet->pts_rate_ticks = kRendererFrameRate;
   packet->pts_rate_seconds = 1;
-  packet->pts = (payload_num == 0 ? 0 : media::MediaPacket::kNoTimestamp);
   packet->flags = 0;
   packet->payload_buffer_id = kBufferId;
-  packet->payload_size = kPayloadSize;
   packet->payload_offset = (payload_num % kNumPayloads) * kPayloadSize;
+  packet->payload_size = kPayloadSize;
 
   return packet;
 }
