@@ -13,7 +13,9 @@
 #include <unistd.h>
 
 #include <fbl/ref_ptr.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 #include <fs/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -30,8 +32,21 @@
 namespace {
 
 #ifdef __Fuchsia__
+#define MIN_ARGS 2
+#else
+#define MIN_ARGS 3
+#endif
 
-int do_blobstore_mount(fbl::unique_fd fd, bool readonly) {
+typedef struct {
+    bool readonly = false;
+    uint64_t data_blocks = 0;
+    fbl::Vector<fbl::String> blob_list;
+} blob_options_t;
+
+#ifdef __Fuchsia__
+
+int do_blobstore_mount(fbl::unique_fd fd, const blob_options_t& options) {
+    bool readonly = options.readonly;
     if (!readonly) {
         block_info_t block_info;
         zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
@@ -66,8 +81,24 @@ int do_blobstore_mount(fbl::unique_fd fd, bool readonly) {
 
 #else
 
-int do_blobstore_add_blob(fbl::unique_fd fd, int argc, char** argv) {
-    if (argc < 1) {
+int do_blobstore_add_blob(blobstore::Blobstore* bs, const char* blob_name) {
+    fbl::unique_fd data_fd(open(blob_name, O_RDONLY, 0644));
+    if (!data_fd) {
+        fprintf(stderr, "error: cannot open '%s'\n", blob_name);
+        return -1;
+    }
+    int r;
+    if ((r = blobstore::blobstore_add_blob(bs, data_fd.get())) != 0) {
+        if (r != ZX_ERR_ALREADY_EXISTS) {
+            fprintf(stderr, "blobstore: Failed to add blob '%s': %d\n", blob_name, r);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
+    if (options.blob_list.is_empty()) {
         fprintf(stderr, "Adding a blob requires an additional file argument\n");
         return -1;
     }
@@ -77,20 +108,72 @@ int do_blobstore_add_blob(fbl::unique_fd fd, int argc, char** argv) {
         return -1;
     }
 
-    fbl::unique_fd data_fd(open(argv[0], O_RDONLY, 0644));
-    if (!data_fd) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
-        return -1;
-    }
-    int r;
-    if ((r = blobstore::blobstore_add_blob(bs.get(), data_fd.get())) != 0) {
-        fprintf(stderr, "blobstore: Failed to add blob '%s'\n", argv[0]);
+    for (unsigned i = 0; i < options.blob_list.size(); i++) {
+        if (do_blobstore_add_blob(bs.get(), options.blob_list[i].c_str()) < 0) {
+            return -1;
+        }
     }
 
+    return 0;
+}
+
+#endif
+
+int do_blobstore_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
+    uint64_t block_count;
+    if (blobstore::blobstore_get_blockcount(fd.get(), &block_count)) {
+        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
+        return -1;
+    }
+
+    int r = blobstore::blobstore_mkfs(fd.get(), block_count);
+
+#ifndef __Fuchsia__
+    if (r >= 0 && !options.blob_list.is_empty()) {
+        if (do_blobstore_add_blobs(fbl::move(fd), options) < 0) {
+            return -1;
+        }
+    }
+#endif
     return r;
 }
 
-zx_status_t process_manifest_line(FILE* manifest, const char* dir_path, blobstore::Blobstore* bs) {
+int do_blobstore_check(fbl::unique_fd fd, const blob_options_t& options) {
+    fbl::RefPtr<blobstore::Blobstore> vn;
+    if (blobstore::blobstore_create(&vn, fbl::move(fd)) < 0) {
+        return -1;
+    }
+
+    return blobstore::blobstore_check(vn);
+}
+
+#ifndef __Fuchsia__
+off_t calculate_total_size(off_t data_blocks) {
+    blobstore::blobstore_info_t info;
+    info.block_count = data_blocks;
+    info.inode_count = 32768;
+    return (data_blocks + blobstore::DataStartBlock(info)) * blobstore::kBlobstoreBlockSize;
+}
+
+off_t calculate_blob_blocks(off_t data_size) {
+    blobstore::blobstore_inode_t node;
+    node.blob_size = data_size;
+    return MerkleTreeBlocks(node) + BlobDataBlocks(node);
+}
+
+zx_status_t process_blob(char* blob_name, blob_options_t* options) {
+    struct stat s;
+    if (stat(blob_name, &s) < 0) {
+        fprintf(stderr, "Failed to stat blob %s\n", blob_name);
+        return ZX_ERR_IO;
+    }
+
+    options->data_blocks += calculate_blob_blocks(s.st_size);
+    options->blob_list.push_back(blob_name);
+    return ZX_OK;
+}
+
+zx_status_t process_manifest_line(FILE* manifest, const char* dir_path, blob_options_t* options) {
     size_t size = 0;
     char* line = nullptr;
 
@@ -127,43 +210,21 @@ zx_status_t process_manifest_line(FILE* manifest, const char* dir_path, blobstor
         *nl_ptr = '\0';
     }
 
-    fbl::unique_fd data_fd(open(src, O_RDONLY, 0644));
-    if (!data_fd) {
-        fprintf(stderr, "error: cannot open '%s'\n", src);
-        return ZX_ERR_IO;
-    }
-
-    zx_status_t status = blobstore::blobstore_add_blob(bs, data_fd.get());
-    if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
-        fprintf(stderr, "error: failed to add blob '%s'\n", src);
-        return ZX_ERR_INTERNAL;
-    }
-
-    return ZX_OK;
+    return process_blob(src, options);
 }
 
-int do_blobstore_add_manifest(fbl::unique_fd fd, int argc, char** argv) {
-    if (argc < 1) {
-        fprintf(stderr, "Adding a manifest requires an additional file argument\n");
-        return -1;
-    }
-
-    fbl::RefPtr<blobstore::Blobstore> bs;
-    if (blobstore_create(&bs, fbl::move(fd)) < 0) {
-        return -1;
-    }
-
-    fbl::unique_fd manifest_fd(open(argv[0], O_RDONLY, 0644));
+int process_manifest(char* manifest_path, blob_options_t* options) {
+    fbl::unique_fd manifest_fd(open(manifest_path, O_RDONLY, 0644));
     if (!manifest_fd) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
+        fprintf(stderr, "error: cannot open '%s'\n", manifest_path);
         return -1;
     }
 
     char dir_path[PATH_MAX];
-    strncpy(dir_path, dirname(argv[0]), PATH_MAX);
+    strncpy(dir_path, dirname(manifest_path), PATH_MAX);
     FILE* manifest = fdopen(manifest_fd.release(), "r");
     while (true) {
-        zx_status_t status = process_manifest_line(manifest, dir_path, bs.get());
+        zx_status_t status = process_manifest_line(manifest, dir_path, options);
         if (status == ZX_ERR_OUT_OF_RANGE) {
             fclose(manifest);
             return 0;
@@ -173,39 +234,25 @@ int do_blobstore_add_manifest(fbl::unique_fd fd, int argc, char** argv) {
         }
     }
 }
-
 #endif
 
-int do_blobstore_mkfs(fbl::unique_fd fd, int argc, char** argv) {
-    uint64_t block_count;
-    if (blobstore::blobstore_get_blockcount(fd.get(), &block_count)) {
-        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
-        return -1;
-    }
-    return blobstore::blobstore_mkfs(fd.get(), block_count);
-}
-
-int do_blobstore_check(fbl::unique_fd fd, int argc, char** argv) {
-    fbl::RefPtr<blobstore::Blobstore> vn;
-    if (blobstore::blobstore_create(&vn, fbl::move(fd)) < 0) {
-        return -1;
-    }
-
-    return blobstore::blobstore_check(vn);
-}
+typedef int (*CommandFunction)(fbl::unique_fd fd, const blob_options_t& options);
 
 struct {
     const char* name;
-    int (*func)(fbl::unique_fd fd, int argc, char** argv);
+    CommandFunction func;
+    bool edit_file;
+    bool accept_args;
     const char* help;
 } CMDS[] = {
-    {"create", do_blobstore_mkfs, "initialize filesystem"},
-    {"mkfs", do_blobstore_mkfs, "initialize filesystem"},
-    {"check", do_blobstore_check, "check filesystem integrity"},
-    {"fsck", do_blobstore_check, "check filesystem integrity"},
-#ifndef __Fuchsia__
-    {"add", do_blobstore_add_blob, "add a blob to a blobstore image"},
-    {"manifest", do_blobstore_add_manifest, "add all blobs in manifest to a blobstore image"},
+    {"create", do_blobstore_mkfs, true, true, "initialize filesystem"},
+    {"mkfs", do_blobstore_mkfs, true, true, "initialize filesystem"},
+    {"check", do_blobstore_check, false, false, "check filesystem integrity"},
+    {"fsck", do_blobstore_check, false, false, "check filesystem integrity"},
+#ifdef __Fuchsia__
+    {"mount", do_blobstore_mount, false, false, "mount filesystem"},
+#else
+    {"add", do_blobstore_add_blobs, false, true, "add blobs to a blobstore image"},
 #endif
 };
 
@@ -227,22 +274,29 @@ int usage() {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
                 CMDS[n].name, CMDS[n].help);
     }
-#ifdef __Fuchsia__
-    fprintf(stderr, "%9s %-10s %s\n", "", "mount", "mount filesystem");
-#endif
     fprintf(stderr, "\n");
+#ifndef __Fuchsia__
+    fprintf(stderr, "arguments (valid for create, one or more required for add):\n"
+                    "\t--blob <path-to-file>\n"
+                    "\t--manifest <path-to-manifest>\n");
+#endif
     return -1;
 }
 
-} // namespace
+// Process options/commands and return open fd to device
+int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* options) {
+    if (argc < MIN_ARGS) {
+        fprintf(stderr, "Not enough args\n");
+        return usage();
+    }
 
-int main(int argc, char** argv) {
-    fbl::unique_fd fd;
-    bool readonly = false;
+    argc--;
+    argv++;
 
+    // Read options
     while (argc > 1) {
-        if (!strcmp(argv[1], "--readonly")) {
-            readonly = true;
+        if (!strcmp(argv[0], "--readonly")) {
+            options->readonly = true;
         } else {
             break;
         }
@@ -250,28 +304,88 @@ int main(int argc, char** argv) {
         argv++;
     }
 
+#ifndef __Fuchsia__
+    char* device = argv[0];
+    argc--;
+    argv++;
+#endif
+
+    char* command = argv[0];
+
+    __UNUSED bool edit_file = false;
+    __UNUSED bool accept_args = false;
+    // Validate command
+    for (unsigned i = 0; i < sizeof(CMDS) / sizeof(CMDS[0]); i++) {
+        if (!strcmp(command, CMDS[i].name)) {
+            *func = CMDS[i].func;
+            edit_file = CMDS[i].edit_file;
+            accept_args = CMDS[i].accept_args;
+        } else if (!strcmp(command, "manifest") && !strcmp(CMDS[i].name, "add")) {
+            // Temporary hack to allow manifest command to use add function
+            *func = CMDS[i].func;
+            edit_file = CMDS[i].edit_file;
+            accept_args = CMDS[i].accept_args;
+        }
+    }
+
+    if (*func == nullptr) {
+        fprintf(stderr, "Unknown command: %s\n", argv[0]);
+        return usage();
+    }
+
+    argc--;
+    argv++;
+
 #ifdef __Fuchsia__
-    if (argc < 2) {
-        return usage();
-    }
-    char* cmd = argv[1];
     // Block device passed by handle
-    fd.reset(FS_FD_BLOCKDEVICE);
-    argv += 2;
-    argc -= 2;
-
-    if (!strcmp(cmd, "mount")) {
-        return do_blobstore_mount(fbl::move(fd), readonly);
-    }
+    return FS_FD_BLOCKDEVICE;
 #else
-    if (argc < 3) {
-        return usage();
-    }
-    char* device = argv[1];
-    char* cmd = argv[2];
+    // Process arguments
+    while (argc > 0) {
+        if (!accept_args) {
+            fprintf(stderr, "Arguments not allowed\n");
+            return usage();
+        } else if (argc == 1 && !edit_file && options->blob_list.is_empty()) {
+            // Temporary hack to allow previous syntax for add/manifest
+            if (!strcmp(command, "add")) {
+                if (process_blob(argv[0], options) < 0) {
+                    return -1;
+                }
+            } else if (!strcmp(command, "manifest")) {
+                if (process_manifest(argv[0], options) < 0) {
+                    return -1;
+                }
+            } else {
+                return usage();
+            }
+        } else if (argc < 2) {
+            fprintf(stderr, "Invalid arguments\n");
+            return usage();
+        } else if (!strcmp(argv[0], "--blob")) {
+            if (process_blob(argv[1], options) < 0) {
+                return -1;
+            }
+        } else if (!strcmp(argv[0], "--manifest")) {
+            if (process_manifest(argv[1], options) < 0) {
+                return -1;
+            }
+        } else {
+            fprintf(stderr, "Argument not found: %s\n", argv[0]);
+            return usage();
+        }
 
+        argc -= 2;
+        argv += 2;
+    }
+
+    // Determine blobstore size (with no de-duping for identical files)
+    off_t total_size = calculate_total_size(options->data_blocks);
     char* sizestr = nullptr;
     if ((sizestr = strchr(device, '@')) != nullptr) {
+        if (!edit_file) {
+            fprintf(stderr, "Cannot specify size for this command\n");
+            return -1;
+        }
         // Create a file with an explicitly requested size
         *sizestr++ = 0;
         char* end;
@@ -297,29 +411,53 @@ int main(int argc, char** argv) {
             return usage();
         }
 
-        fd.reset(open(device, O_RDWR | O_CREAT, 0644));
-        if (!fd) {
-            fprintf(stderr, "error: cannot open '%s'\n", device);
+        if (size < total_size) {
+            fprintf(stderr, "Specified size is not large enough\n");
             return -1;
-        } else if (ftruncate(fd.get(), size)) {
+        }
+
+        total_size = size;
+    }
+
+    int open_flags = O_RDWR;
+
+    if (edit_file) {
+        open_flags |= O_CREAT;
+    }
+
+    fbl::unique_fd fd(open(device, open_flags, 0644));
+    if (!fd) {
+        fprintf(stderr, "error: cannot open '%s'\n", device);
+        return -1;
+    }
+
+    struct stat s;
+    if (fstat(fd.get(), &s) < 0) {
+        fprintf(stderr, "Failed to stat blob %s\n", device);
+        return -1;
+    }
+
+    // Update size
+    if (edit_file && (sizestr != nullptr || s.st_size < total_size)) {
+        if (ftruncate(fd.get(), total_size)) {
             fprintf(stderr, "error: cannot truncate device '%s'\n", device);
             return -1;
         }
-    } else {
-        // Open a file without an explicit size
-        fd.reset(open(device, O_RDWR, 0644));
-        if (!fd) {
-            fprintf(stderr, "error: cannot open '%s'\n", device);
-            return -1;
-        }
     }
-    argv += 3;
-    argc -= 3;
+
+    return fd.release();
 #endif
-    for (unsigned i = 0; i < sizeof(CMDS) / sizeof(CMDS[0]); i++) {
-        if (!strcmp(cmd, CMDS[i].name)) {
-            return CMDS[i].func(fbl::move(fd), argc, argv);
-        }
+}
+} // namespace
+
+int main(int argc, char** argv) {
+    CommandFunction func = nullptr;
+    blob_options_t options;
+    fbl::unique_fd fd(process_args(argc, argv, &func, &options));
+
+    if (!fd) {
+        return -1;
     }
-    return usage();
+
+    return func(fbl::move(fd), options);
 }
