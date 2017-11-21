@@ -14,7 +14,7 @@ namespace {
 class TestOwner : public JobScheduler::Owner {
 public:
     void RunAtom(MsdArmAtom* atom) override { run_list_.push_back(atom); }
-    void AtomCompleted(MsdArmAtom* atom) override {}
+    void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) override {}
 
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
 
@@ -61,10 +61,10 @@ public:
         scheduler.TryToSchedule();
         EXPECT_EQ(1u, owner.run_list().size());
         EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
-        scheduler.JobCompleted(0);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
         EXPECT_EQ(2u, owner.run_list().size());
         EXPECT_EQ(atom2_ptr, owner.run_list()[1]);
-        scheduler.JobCompleted(0);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
     }
 
     void TestCancelJob()
@@ -104,7 +104,7 @@ public:
         EXPECT_FALSE(canceled);
         EXPECT_EQ(0u, scheduler.GetAtomListSize());
         EXPECT_EQ(atom1.get(), scheduler.executing_atom());
-        scheduler.JobCompleted(0);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
         EXPECT_TRUE(canceled);
 
         // The second atom should have been thrown away, and the first should be
@@ -147,7 +147,7 @@ public:
         EXPECT_EQ(atom3.get(), scheduler.executing_atom());
         EXPECT_EQ(2u, scheduler.GetAtomListSize());
 
-        scheduler.JobCompleted(0);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
         EXPECT_EQ(nullptr, scheduler.executing_atom());
         EXPECT_EQ(2u, scheduler.GetAtomListSize());
 
@@ -166,7 +166,7 @@ public:
 
         unqueued_atom1.reset();
 
-        scheduler.JobCompleted(0);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
         EXPECT_EQ(atom2.get(), scheduler.executing_atom());
         EXPECT_EQ(0u, scheduler.GetAtomListSize());
     }

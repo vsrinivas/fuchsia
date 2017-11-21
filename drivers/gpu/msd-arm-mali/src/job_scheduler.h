@@ -17,7 +17,7 @@ public:
     class Owner {
     public:
         virtual void RunAtom(MsdArmAtom* atom) = 0;
-        virtual void AtomCompleted(MsdArmAtom* atom) = 0;
+        virtual void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) = 0;
     };
     JobScheduler(Owner* owner, uint32_t job_slots);
 
@@ -27,7 +27,7 @@ public:
     void CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection,
                                   std::function<void()> finished);
 
-    void JobCompleted(uint64_t slot);
+    void JobCompleted(uint64_t slot, ArmMaliResultCode result_code);
 
     uint32_t job_slots() const { return job_slots_; }
 

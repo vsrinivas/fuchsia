@@ -1,0 +1,35 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+group("integration") {
+  testonly = true
+
+  public_deps = [
+    ":magma_arm_integration_tests",
+  ]
+}
+
+executable("magma_arm_integration_tests") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+    "test_fault_recovery.cc",
+    "test_shutdown.cc",
+  ]
+
+  public_deps = [
+    "//garnet/lib/magma:libmagma",
+    "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
+    "//third_party/gtest",
+  ]
+
+  deps = [
+    "../../include",
+  ]
+}

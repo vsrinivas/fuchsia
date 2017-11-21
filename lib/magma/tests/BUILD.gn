@@ -18,6 +18,7 @@ package("magma-test-build-only") {
         "$mesa_build_root:tests",
         "$msd_intel_gen_build_root:msd_intel_test",
         "$msd_intel_gen_build_root:tests",
+        "integration",
       ]
     }
   }
@@ -42,10 +43,6 @@ package("magma-test") {
     tests += [
       {
         name = "magma_sys_unit_tests"
-      },
-
-      {
-        name = "magma_integration_tests"
       },
 
       {
@@ -78,6 +75,7 @@ package("magma-test") {
         ":autorun",
         "$mesa_build_root:tests",
         "$msd_intel_gen_build_root:tests",
+        "integration",
       ]
 
       tests += [
@@ -104,6 +102,10 @@ package("magma-test") {
         {
           name = "state_pool_no_free"
         },
+
+        {
+          name = "magma_integration_tests"
+        },
       ]
 
       binaries = [ {
@@ -114,10 +116,18 @@ package("magma-test") {
   }
 
   if (build_msd_arm_mali) {
-    deps += [ "//garnet/drivers/gpu/msd-arm-mali:tests" ]
-    tests += [ {
-          name = "msd_arm_mali_nonhardware_tests"
-        } ]
+    deps += [
+      "//garnet/drivers/gpu/msd-arm-mali:tests",
+      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
+    ]
+    tests += [
+      {
+        name = "msd_arm_mali_nonhardware_tests"
+      },
+      {
+        name = "magma_arm_integration_tests"
+      },
+    ]
   }
 }
 
@@ -138,7 +148,6 @@ if (build_libvulkan_arm_mali || build_intel_gen) {
 
     public_deps = [
       "benchmark",
-      "integration",
       "unit_tests:magma_abi_conformance_tests",
       "unit_tests:magma_sys_unit_tests",
       "vkcube",

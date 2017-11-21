@@ -60,11 +60,11 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
     finished_callbacks_.push_back(finished);
 }
 
-void JobScheduler::JobCompleted(uint64_t slot)
+void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
 {
     // Ignore slot, because only one job can be running at a time.
     DASSERT(executing_atom_);
-    owner_->AtomCompleted(executing_atom_.get());
+    owner_->AtomCompleted(executing_atom_.get(), result_code);
     executing_atom_.reset();
     for (auto x : finished_callbacks_) {
         x();

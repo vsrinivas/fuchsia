@@ -124,7 +124,7 @@ private:
     void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
 
     void RunAtom(MsdArmAtom* atom) override;
-    void AtomCompleted(MsdArmAtom* atom) override;
+    void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

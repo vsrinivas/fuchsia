@@ -272,6 +272,36 @@ int MsdArmDevice::JobInterruptThreadLoop()
     return 0;
 }
 
+static bool IsHardwareResultCode(uint32_t result)
+{
+    switch (result) {
+        case kArmMaliResultSuccess:
+        case kArmMaliResultAtomTerminated:
+
+        case kArmMaliResultConfigFault:
+        case kArmMaliResultPowerFault:
+        case kArmMaliResultReadFault:
+        case kArmMaliResultWriteFault:
+        case kArmMaliResultAffinityFault:
+        case kArmMaliResultBusFault:
+
+        case kArmMaliResultProgramCounterInvalidFault:
+        case kArmMaliResultEncodingInvalidFault:
+        case kArmMaliResultTypeMismatchFault:
+        case kArmMaliResultOperandFault:
+        case kArmMaliResultTlsFault:
+        case kArmMaliResultBarrierFault:
+        case kArmMaliResultAlignmentFault:
+        case kArmMaliResultDataInvalidFault:
+        case kArmMaliResultTileRangeFault:
+        case kArmMaliResultOutOfMemoryFault:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 magma::Status MsdArmDevice::ProcessJobInterrupt()
 {
     auto irq_status = registers::JobIrqFlags::GetStatus().ReadFrom(register_io_.get());
@@ -285,10 +315,21 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
         ProcessDumpStatusToLog();
     }
 
+    uint32_t failed = irq_status.failed_slots().get();
+    while (failed) {
+        uint32_t slot = __builtin_ffs(failed) - 1;
+        registers::JobSlotRegisters regs(slot);
+        uint32_t result = regs.Status().ReadFrom(register_io_.get()).reg_value();
+
+        DASSERT(IsHardwareResultCode(result));
+        scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result));
+        failed &= ~(1 << slot);
+    }
+
     uint32_t finished = irq_status.finished_slots().get();
     while (finished) {
-        uint32_t slot = ffs(finished) - 1;
-        scheduler_->JobCompleted(slot);
+        uint32_t slot = __builtin_ffs(finished) - 1;
+        scheduler_->JobCompleted(slot, kArmMaliResultSuccess);
         finished &= ~(1 << slot);
     }
 
@@ -499,13 +540,13 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io
 
     if (!atom->gpu_address()) {
         // Dependency-only jobs have a 0 gpu address, so skip them.
-        scheduler_->JobCompleted(atom->slot());
+        scheduler_->JobCompleted(atom->slot(), kArmMaliResultSuccess);
         return;
     }
 
     // Skip atom if address space can't be assigned.
     if (!address_manager_->AssignAddressSpace(atom)) {
-        scheduler_->JobCompleted(atom->slot());
+        scheduler_->JobCompleted(atom->slot(), kArmMaliResultAtomTerminated);
         return;
     }
 
@@ -528,14 +569,14 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io
 
 void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, register_io_.get()); }
 
-void MsdArmDevice::AtomCompleted(MsdArmAtom* atom)
+void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
 {
     DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
     address_manager_->AtomFinished(atom);
     atom->set_finished();
     auto connection = atom->connection().lock();
     if (connection)
-        connection->SendNotificationData(atom, kArmMaliResultSuccess);
+        connection->SendNotificationData(atom, result);
 }
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
