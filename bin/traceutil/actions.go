@@ -12,9 +12,11 @@ import (
 const defaultCategories = "app,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,motown,view,flutter,dart"
 
 type captureTraceConfig struct {
-	Categories string
-	BufferSize uint // [MB]
-	Duration   time.Duration
+	Categories           string
+	BufferSize           uint // [MB]
+	Duration             time.Duration
+	BenchmarkResultsFile string
+	SpecFile             string
 }
 
 func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
@@ -28,14 +30,30 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"Size of trace buffer in MB.")
 	f.DurationVar(&config.Duration, "duration", 0,
 		"Duration of trace capture (e.g. '10s').  Second resolution.")
+	f.StringVar(&config.SpecFile, "spec-file", "",
+		"Tracing specification file.")
+	f.StringVar(
+		&config.BenchmarkResultsFile,
+		"benchmark-results-file",
+		"",
+		"Relative filepath for storing benchmark results.",
+	)
+
 	return config
 }
 
 func captureTrace(config *captureTraceConfig, conn *TargetConnection) error {
 	cmd := []string{"trace", "record"}
-
 	if config.Categories == "" {
 		config.Categories = defaultCategories
+	}
+
+	if len(config.SpecFile) > 0 {
+		cmd = append(cmd, "--spec-file="+config.SpecFile)
+	}
+
+	if len(config.BenchmarkResultsFile) > 0 {
+		cmd = append(cmd, "--benchmark-results-file="+config.BenchmarkResultsFile)
 	}
 
 	if config.Categories != "all" {
@@ -46,7 +64,6 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection) error {
 		cmd = append(cmd, "--buffer-size="+
 			strconv.FormatUint(uint64(config.BufferSize), 10))
 	}
-
 	if config.Duration != 0 {
 		cmd = append(cmd, "--duration="+
 			strconv.FormatUint(uint64(config.Duration.Seconds()), 10))

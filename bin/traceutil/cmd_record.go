@@ -69,6 +69,20 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	jsonFilename := prefix + ".json"
 	htmlFilename := prefix + ".html"
 
+	if len(cmd.captureConfig.BenchmarkResultsFile) > 0 {
+		fmt.Printf(
+			"Downloading %v... ",
+			cmd.captureConfig.BenchmarkResultsFile)
+		err = conn.GetFile(
+			cmd.captureConfig.BenchmarkResultsFile,
+			cmd.captureConfig.BenchmarkResultsFile)
+		if err != nil {
+			fmt.Println(err)
+			return subcommands.ExitFailure
+		}
+		fmt.Println("done")
+	}
+
 	fmt.Print("Downloading trace... ")
 	// Should we use prefix on the remote file name as well?
 	err = conn.GetFile("/data/trace.json", jsonFilename)
