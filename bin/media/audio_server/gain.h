@@ -27,6 +27,9 @@ class Gain {
   // decibels.  Renderer and output gains are combined and the stored in the
   // renderer to output link as a 4.28 fixed point amplitude scale factor.
   static constexpr unsigned int kFractionalScaleBits = 28;
+  // Used to add 'rounding' to 4.28 samples, before shift-down (truncation).
+  static constexpr unsigned int kFractionalRoundValue =
+      (1u) << (kFractionalScaleBits - 1);
   static constexpr AScale kUnityScale =
       (static_cast<AScale>(1u) << kFractionalScaleBits);
   static constexpr float kMinGain = AudioRenderer::kMutedGain;

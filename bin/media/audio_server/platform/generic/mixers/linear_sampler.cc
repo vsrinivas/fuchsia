@@ -44,9 +44,8 @@ class LinearSamplerImpl : public LinearSampler {
                   Gain::AScale amplitude_scale);
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-    return ((A * static_cast<int32_t>(FRAC_ONE - alpha)) +
-            (B * static_cast<int32_t>(alpha))) >>
-           kPtsFractionalBits;
+    // Called extremely often: optimized to 2 adds, 1 mult, 1 shift
+    return A + (((B - A) * static_cast<int32_t>(alpha)) >> kPtsFractionalBits);
   }
 
   int32_t filter_data_[2 * DChCount];
@@ -88,9 +87,8 @@ class NxNLinearSamplerImpl : public LinearSampler {
                   size_t chan_count);
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-    return ((A * static_cast<int32_t>(FRAC_ONE - alpha)) +
-            (B * static_cast<int32_t>(alpha))) >>
-           kPtsFractionalBits;
+    // Called extremely often: optimized to 2 adds, 1 mult, 1 shift
+    return A + (((B - A) * static_cast<int32_t>(alpha)) >> kPtsFractionalBits);
   }
 
   size_t chan_count_;

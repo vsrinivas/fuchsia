@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <zircon/compiler.h>
 #include <limits>
 #include <type_traits>
 
@@ -62,7 +63,7 @@ class SampleScaler<
     ScaleType,
     typename std::enable_if<(ScaleType == ScalerType::MUTED), void>::type> {
  public:
-  static inline int32_t Scale(int32_t val, Gain::AScale scale) { return 0; }
+  static inline int32_t Scale(int32_t, Gain::AScale) { return 0; }
 };
 
 template <ScalerType ScaleType>
@@ -71,8 +72,10 @@ class SampleScaler<
     typename std::enable_if<(ScaleType == ScalerType::LT_UNITY), void>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
-    return static_cast<int32_t>((static_cast<int64_t>(val) * scale) >>
-                                Gain::kFractionalScaleBits);
+    // Round before shifting down
+    return static_cast<int32_t>(
+        ((static_cast<int64_t>(val) * scale) + Gain::kFractionalRoundValue) >>
+        Gain::kFractionalScaleBits);
   }
 };
 
@@ -81,7 +84,7 @@ class SampleScaler<
     ScaleType,
     typename std::enable_if<(ScaleType == ScalerType::EQ_UNITY), void>::type> {
  public:
-  static inline int32_t Scale(int32_t val, Gain::AScale scale) { return val; }
+  static inline int32_t Scale(int32_t val, Gain::AScale) { return val; }
 };
 
 template <ScalerType ScaleType>
@@ -92,11 +95,17 @@ class SampleScaler<
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     using Limit = std::numeric_limits<int16_t>;
 
-    val = static_cast<int32_t>((static_cast<int64_t>(val) * scale) >>
-                               Gain::kFractionalScaleBits);
+    // Round before shifting down
+    val = static_cast<int32_t>(
+        ((static_cast<int64_t>(val) * scale) + Gain::kFractionalRoundValue) >>
+        Gain::kFractionalScaleBits);
 
-    return (val > Limit::max()) ? Limit::max()
-                                : ((val < Limit::min()) ? Limit::min() : val);
+    if (unlikely(val > Limit::max())) {
+      return Limit::max();
+    } else if (unlikely(val < Limit::min())) {
+      return Limit::min();
+    }
+    return val;
   }
 };
 
@@ -147,7 +156,7 @@ class DstMixer<ScaleType,
                DoAccumulate,
                typename std::enable_if<DoAccumulate == false, void>::type> {
  public:
-  static inline constexpr int32_t Mix(int32_t dst,
+  static inline constexpr int32_t Mix(int32_t,
                                       int32_t sample,
                                       Gain::AScale scale) {
     return SampleScaler<ScaleType>::Scale(sample, scale);
