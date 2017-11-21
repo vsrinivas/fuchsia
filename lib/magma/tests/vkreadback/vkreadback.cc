@@ -59,6 +59,7 @@ private:
 
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
+    uint64_t bind_offset_;
 };
 
 bool VkReadbackTest::Initialize()
@@ -248,6 +249,11 @@ bool VkReadbackTest::InitImage()
 
     VkMemoryRequirements memory_reqs;
     vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
+    // Add an offset to all operations that's correctly aligned and at least a
+    // page in size, to ensure rounding the VMO down to a page offset will
+    // cause it to point to a separate page.
+    bind_offset_ =
+        memory_reqs.alignment ? memory_reqs.alignment * (PAGE_SIZE + 1) : (PAGE_SIZE + 128);
 
     VkPhysicalDeviceMemoryProperties memory_props;
     vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_props);
@@ -265,7 +271,7 @@ bool VkReadbackTest::InitImage()
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = nullptr,
-        .allocationSize = memory_reqs.size,
+        .allocationSize = memory_reqs.size + bind_offset_,
         .memoryTypeIndex = memory_type,
     };
 
@@ -356,13 +362,14 @@ bool VkReadbackTest::InitImage()
         VK_SUCCESS)
         return DRETF(false, "vkMapMemory failed: %d", result);
 
-    memset(addr, 0xab, memory_reqs.size);
+    memset(addr, 0xab, memory_reqs.size + bind_offset_);
 
     vkUnmapMemory(vk_device_, vk_device_memory_);
 
     DLOG("Allocated memory for image");
 
-    if ((result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0)) != VK_SUCCESS)
+    if ((result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, bind_offset_)) !=
+        VK_SUCCESS)
         return DRETF(false, "vkBindImageMemory failed");
 
     DLOG("Bound memory to image");
@@ -458,7 +465,7 @@ bool VkReadbackTest::Readback()
         VK_SUCCESS)
         return DRETF(false, "vkMapMeory failed: %d", result);
 
-    auto data = reinterpret_cast<uint32_t*>(addr);
+    auto data = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(addr) + bind_offset_);
 
     uint32_t expected_value = 0xBF8000FF;
     uint32_t mismatches = 0;
