@@ -159,7 +159,7 @@ template("bootdata_cmdline") {
              "-o",
              rebase_path(output_file, root_build_dir),
              "-C",
-             rebase_path(inputs[0]),
+             rebase_path(inputs[1]),
            ]
   }
 }
