@@ -836,7 +836,9 @@ void AudioDriver::ShutdownSelf(const char* debug_reason,
   }
 
   if (debug_reason != nullptr) {
-    FXL_LOG(INFO) << "AudioDriver shutting down: reason = \"" << debug_reason
+    FXL_LOG(INFO) << "AudioDriver ("
+                  << (owner_->is_input() ? "input" : "output")
+                  << ") shutting down: reason = \"" << debug_reason
                   << "\" (status = " << debug_status << ")";
   }
 

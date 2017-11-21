@@ -50,10 +50,30 @@ void AudioInput::OnWakeup() {
 void AudioInput::OnDriverGetFormatsComplete() {
   state_ = State::Idle;
 
-  // TODO(johngro) : select the best valid driver mode, do not hardcode this.
-  driver_->Configure(48000, 2, AudioSampleFormat::SIGNED_16, kMaxFenceDistance);
+  uint32_t pref_fps = 48000;
+  uint32_t pref_chan = 1;
+  AudioSampleFormat pref_fmt = AudioSampleFormat::SIGNED_16;
 
-  int64_t dist = TimelineRate(48000, ZX_SEC(1)).Scale(kMinFenceDistance);
+  zx_status_t res = SelectBestFormat(driver_->format_ranges(), &pref_fps,
+                                     &pref_chan, &pref_fmt);
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "Audio input failed to find any compatible driver formats.  Req was "
+        << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x"
+        << std::hex << static_cast<uint32_t>(pref_fmt) << ")";
+    ShutdownSelf();
+    return;
+  }
+
+  FXL_LOG(INFO) << "AudioInput Configuring for " << pref_fps << " Hz "
+                << pref_chan << " channel(s) sample format(0x" << std::hex
+                << static_cast<uint32_t>(pref_fmt) << ")";
+
+  // Send the configuration request, the recompute the distance between our
+  // start and end sampling fences.
+  driver_->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
+
+  int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance);
   FXL_DCHECK(dist < std::numeric_limits<uint32_t>::max());
   driver_->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 }

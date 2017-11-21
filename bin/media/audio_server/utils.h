@@ -5,9 +5,13 @@
 #pragma once
 
 #include <stdint.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
 #include <atomic>
+#include <vector>
 
 #include "garnet/bin/media/audio_server/constants.h"
+#include "lib/media/fidl/media_types.fidl.h"
 
 namespace media {
 namespace audio {
@@ -43,6 +47,16 @@ class AtomicGenerationId {
  private:
   std::atomic<uint32_t> id_;
 };
+
+// Given a preferred format and a list of driver supported format ranges, select
+// the "best" form and update the in/out parameters, then return ZX_OK.  If no
+// formats exist, or all format ranges get completely rejected, return an error
+// and leave the in/out params as they were.
+zx_status_t SelectBestFormat(
+    const std::vector<audio_stream_format_range_t>& fmts,
+    uint32_t* frames_per_second_inout,
+    uint32_t* channels_inout,
+    AudioSampleFormat* sample_format_inout);
 
 }  // namespace audio
 }  // namespace media

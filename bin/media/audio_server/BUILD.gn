@@ -31,6 +31,7 @@ executable("audio_server") {
         "platform/generic/output_formatter.cc",
         "platform/generic/standard_output_base.cc",
         "platform/generic/throttle_output.cc",
+        "utils.cc",
       ]
 
       public_deps =

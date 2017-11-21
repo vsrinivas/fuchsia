@@ -256,18 +256,30 @@ void DriverOutput::OnDriverGetFormatsComplete() {
 
   // TODO(johngro): Don't use hardcoded defaults here.  Try to pick the best
   // match among the formats supported by the driver.
-  uint32_t desired_frames_per_sec;
-  uint32_t desired_channel_count;
-  AudioSampleFormat desired_sample_format;
-  zx_duration_t min_rb_duration;
+  uint32_t pref_fps = kDefaultFramesPerSec;
+  uint32_t pref_chan = kDefaultChannelCount;
+  AudioSampleFormat pref_fmt = kDefaultAudioFmt;
+  zx_duration_t min_rb_duration = kDefaultHighWaterNsec +
+                                  kDefaultMaxRetentionNsec +
+                                  kDefaultRetentionGapNsec;
 
-  desired_frames_per_sec = kDefaultFramesPerSec;
-  desired_channel_count = kDefaultChannelCount;
-  desired_sample_format = kDefaultAudioFmt;
-  min_rb_duration = kDefaultHighWaterNsec + kDefaultMaxRetentionNsec +
-                    kDefaultRetentionGapNsec;
+  res = SelectBestFormat(driver_->format_ranges(), &pref_fps, &pref_chan,
+                         &pref_fmt);
 
-  TimelineRate ns_to_frames(desired_frames_per_sec, ZX_SEC(1));
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "Audio output failed to find any compatible driver formats.  "
+        << "Req was "
+        << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x"
+        << std::hex << static_cast<uint32_t>(pref_fmt) << ")";
+    return;
+  }
+
+  FXL_LOG(INFO) << "AudioOutput Configuring for " << pref_fps << " Hz "
+                << pref_chan << " channel(s) sample format(0x" << std::hex
+                << static_cast<uint32_t>(pref_fmt) << ")";
+
+  TimelineRate ns_to_frames(pref_fps, ZX_SEC(1));
   int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);
   FXL_DCHECK(retention_frames != TimelineRate::kOverflow);
   FXL_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
@@ -276,9 +288,9 @@ void DriverOutput::OnDriverGetFormatsComplete() {
 
   // Select our output formatter
   AudioMediaTypeDetailsPtr config(AudioMediaTypeDetails::New());
-  config->frames_per_second = desired_frames_per_sec;
-  config->channels = desired_channel_count;
-  config->sample_format = desired_sample_format;
+  config->frames_per_second = pref_fps;
+  config->channels = pref_chan;
+  config->sample_format = pref_fmt;
 
   output_formatter_ = OutputFormatter::Select(config);
   if (!output_formatter_) {
@@ -289,12 +301,10 @@ void DriverOutput::OnDriverGetFormatsComplete() {
   }
 
   // Start the process of configuring our driver
-  res = driver_->Configure(desired_frames_per_sec, desired_channel_count,
-                           desired_sample_format, min_rb_duration);
+  res = driver_->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to configure driver for: "
-                   << desired_frames_per_sec << " Hz " << desired_channel_count
-                   << "-Ch 0x" << std::hex << desired_sample_format << "(res "
+    FXL_LOG(ERROR) << "Failed to configure driver for: " << pref_fps << " Hz "
+                   << pref_chan << "-Ch 0x" << std::hex << pref_fmt << "(res "
                    << std::dec << res << ")";
     return;
   }
