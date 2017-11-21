@@ -25,6 +25,7 @@
         "garnet/packages/iperf",
         "garnet/packages/libc-tests",
         "garnet/packages/listen",
+        "garnet/packages/make-efi",
         "garnet/packages/make-fuchsia-vol",
         "garnet/packages/media",
         "garnet/packages/media_audio",

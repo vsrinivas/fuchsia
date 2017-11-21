@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "go"
+    ],
+    "labels": [
+        "//garnet/go/src/make-efi:host"
+    ]
+}
