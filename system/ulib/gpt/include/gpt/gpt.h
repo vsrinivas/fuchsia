@@ -64,8 +64,19 @@ typedef struct gpt_partition {
     uint64_t first;
     uint64_t last;
     uint64_t flags;
-    uint8_t name[GPT_NAME_LEN];
+    uint8_t name[GPT_NAME_LEN];  // UTF-16 on disk
 } gpt_partition_t;
+
+// Helpers for translating the |name| field of "gpt_partition_t".
+// Assumes UTF-16LE.
+// Assumes all code points are less than or equal to U+007F, and
+// discards any upper bits, forcing all inputs to be in this
+// range.
+//
+// |len| refers to the length of the input string, in chars.
+void cstring_to_utf16(uint16_t* dst, const char* src, size_t len);
+// |len| refers to the length of the input string, in 16-bit pairs.
+char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len);
 
 typedef struct gpt_device {
     // true if the partition table on the device is valid

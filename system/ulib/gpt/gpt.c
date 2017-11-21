@@ -77,12 +77,23 @@ typedef struct gpt_priv {
 
 #define get_priv(dev) ((gpt_priv_t*)((uintptr_t)(dev)-offsetof(gpt_priv_t, device)))
 
-static void cstring_to_utf16(uint16_t* dst, const char* src, size_t maxlen) {
+void cstring_to_utf16(uint16_t* dst, const char* src, size_t maxlen) {
     size_t len = strlen(src);
     if (len > maxlen) len = maxlen;
     for (size_t i = 0; i < len; i++) {
         *dst++ = (uint16_t)(*src++ & 0x7f);
     }
+}
+
+char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
+    size_t i = 0;
+    char* ptr = dst;
+    while (i < len) {
+        char c = src[i++] & 0x7f;
+        if (!c) continue;
+        *ptr++ = c;
+    }
+    return dst;
 }
 
 static void partition_init(gpt_partition_t* part, const char* name, uint8_t* type, uint8_t* guid,

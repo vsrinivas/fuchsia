@@ -63,17 +63,6 @@ static int cgetc(void) {
     }
 }
 
-static char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
-    size_t i = 0;
-    char* ptr = dst;
-    while (i < len) {
-        char c = src[i++] & 0x7f;
-        if (!c) continue;
-        *ptr++ = c;
-    }
-    return dst;
-}
-
 struct guid {
     uint32_t data1;
     uint16_t data2;

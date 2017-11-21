@@ -1031,18 +1031,6 @@ static zx_status_t make_empty_partition(gpt_device_t *install_dev,
   return ZX_OK;
 }
 
-static char *utf16_to_cstring(char *dst, const uint16_t *src, size_t len) {
-  size_t i = 0;
-  char *ptr = dst;
-  while (i < len) {
-    char c = src[i++] & 0x7f;
-    *ptr++ = c;
-    if (!c)
-      break;
-  }
-  return dst;
-}
-
 static void get_input(char *buf, size_t max_input) {
   // converted to signed since idx could possible be negative
   ssize_t max_input_s = max_input;
