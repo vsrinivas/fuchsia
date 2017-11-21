@@ -5,5 +5,6 @@
 ARCH_DIR := $(GET_LOCAL_DIR)
 
 MODULE_SRCS += \
+    $(ARCH_DIR)/i8250.cpp \
     $(ARCH_DIR)/io_apic.cpp \
     $(ARCH_DIR)/io_port.cpp \

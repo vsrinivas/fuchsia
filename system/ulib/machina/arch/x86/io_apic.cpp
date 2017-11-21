@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <machina/interrupt_controller.h>
+
 #include <string.h>
 
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
+#include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/x86/local_apic.h>
-#include <machina/io_apic.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>

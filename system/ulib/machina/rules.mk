@@ -16,7 +16,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/input.cpp \
     $(LOCAL_DIR)/pci.cpp \
-    $(LOCAL_DIR)/uart.cpp \
     $(LOCAL_DIR)/virtio.cpp \
     $(LOCAL_DIR)/virtio_pci.cpp \
 

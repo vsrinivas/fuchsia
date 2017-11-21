@@ -37,12 +37,16 @@
 #define TPM_PHYS_BASE                   0xfed40000
 #define TPM_SIZE                        0x5000
 
-// UART ports.
-#define UART0_BASE                      0x3f8
-#define UART1_BASE                      0x2f8
-#define UART2_BASE                      0x3e8
-#define UART3_BASE                      0x2e8
-#define UART_SIZE                       0x8
+// PL011 memory range.
+#define PL011_PHYS_BASE                 0xfff32000
+#define PL011_SIZE                      PAGE_SIZE
+
+// I8250 ports.
+#define I8250_BASE0                     0x3f8
+#define I8250_BASE1                     0x2f8
+#define I8250_BASE2                     0x3e8
+#define I8250_BASE3                     0x2e8
+#define I8250_SIZE                      0x8
 
 // RTC ports.
 #define RTC_BASE                        0x70

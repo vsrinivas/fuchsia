@@ -6,12 +6,10 @@
 
 #include <hypervisor/io.h>
 
-static const size_t kUartBufferSize = 128;
-
 class Guest;
 
-// Stores the state of a UART.
-class Uart : public IoHandler {
+// Implements the PL011 UART.
+class Pl011 : public IoHandler {
 public:
     zx_status_t Init(Guest* guest, uint64_t addr);
 
@@ -20,12 +18,12 @@ public:
     zx_status_t Write(uint64_t addr, const IoValue& io) override;
 
 private:
-    // Transmit holding register (THR).
-    uint8_t tx_buffer_[kUartBufferSize] = {};
+    static const size_t kBufferSize = 128;
+
+    uint8_t tx_buffer_[kBufferSize] = {};
     uint16_t tx_offset_ = 0;
 
-    // Interrupt enable register (IER).
-    uint8_t interrupt_enable_ = 0;
-    // Line control register (LCR).
-    uint8_t line_control_ = 0;
+    void Print(uint8_t ch);
 };
+
+using Uart = Pl011;

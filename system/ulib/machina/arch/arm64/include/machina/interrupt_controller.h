@@ -4,6 +4,19 @@
 
 #pragma once
 
-#include <machina/gic_distributor.h>
+#include <hypervisor/io.h>
+
+class Guest;
+
+// Implements GIC distributor.
+class GicDistributor : public IoHandler {
+public:
+    zx_status_t Init(Guest* guest);
+
+    zx_status_t Read(uint64_t addr, IoValue* value) const override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+    zx_status_t Interrupt(uint32_t global_irq) const;
+};
 
 using InterruptController = GicDistributor;

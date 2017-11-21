@@ -30,14 +30,22 @@
 #include "linux.h"
 #include "zircon.h"
 
-#if __x86_64__
+#if __aarch64__
+static const size_t kNumUarts = 1;
+static const uint64_t kUartBases[kNumUarts] = {
+    // TODO(abdulla): Considering parsing this from the MDI.
+    PL011_PHYS_BASE,
+};
+#elif __x86_64__
 #include <hypervisor/x86/acpi.h>
 #include <hypervisor/x86/local_apic.h>
 #include <machina/io_port.h>
 #include <machina/tpm.h>
 
 static const size_t kNumUarts = 4;
-static const uint64_t kUartBases[kNumUarts] = { UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE };
+static const uint64_t kUartBases[kNumUarts] = {
+    I8250_BASE0, I8250_BASE1, I8250_BASE2, I8250_BASE3,
+};
 
 static zx_status_t create_vmo(uint64_t size, uintptr_t* addr, zx_handle_t* vmo) {
     zx_status_t status = zx_vmo_create(size, 0, vmo);
@@ -265,17 +273,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to create VCPU\n");
         return status;
     }
-    InterruptController* interrupt_controller;
 
-#if __aarch64__
-    GicDistributor gic_distributor;
-    status = gic_distributor.Init(&guest);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create GIC distributor\n");
-        return status;
-    }
-    interrupt_controller = &gic_distributor;
-#elif __x86_64__
     // Setup UARTs.
     Uart uart[kNumUarts];
     for (size_t i = 0; i < kNumUarts; i++) {
@@ -285,15 +283,15 @@ int main(int argc, char** argv) {
             return status;
         }
     }
-
-    // Setup IO APIC.
-    IoApic io_apic;
-    status = io_apic.Init(&guest);
+    // Setup interrupt controller.
+    InterruptController interrupt_controller;
+    status = interrupt_controller.Init(&guest);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create IO APIC\n");
+        fprintf(stderr, "Failed to create interrupt controller\n");
         return status;
     }
-    interrupt_controller = &io_apic;
+
+#if __x86_64__
     // Setup local APIC.
     LocalApic local_apic(&vcpu, apic_addr);
     status = local_apic.Init(&guest);
@@ -301,7 +299,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to create local APIC\n");
         return status;
     }
-    status = io_apic.RegisterLocalApic(0, &local_apic);
+    status = interrupt_controller.RegisterLocalApic(0, &local_apic);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to register local APIC with IO APIC\n");
         return status;
@@ -323,7 +321,7 @@ int main(int argc, char** argv) {
 #endif
 
     // Setup PCI.
-    PciBus bus(&guest, interrupt_controller);
+    PciBus bus(&guest, &interrupt_controller);
     status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus\n");
