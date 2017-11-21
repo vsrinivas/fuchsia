@@ -25,7 +25,7 @@ void cmdline_append(const char* data) {
     while (i < max) {
         unsigned c = *data++;
         if (c == 0) {
-            if (found_equal) { //last option was null delimited
+            if (found_equal || __kernel_cmdline[i - 1] != 0) { //last option was null delimited
                 ++__kernel_cmdline_count;
             }
             break;
