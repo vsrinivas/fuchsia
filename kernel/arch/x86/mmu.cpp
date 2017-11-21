@@ -287,6 +287,50 @@ void X86PageTableMmu::TlbInvalidatePage(page_table_levels level, X86PageTableBas
     x86_tlb_invalidate_page(pt, vaddr, level, global_page);
 }
 
+uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) {
+    uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
+
+    if (flags & X86_MMU_PG_RW)
+        mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+
+    if (flags & X86_MMU_PG_U)
+        mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
+
+    if (!(flags & X86_MMU_PG_NX))
+        mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+
+    if (level > 0) {
+        switch (flags & X86_MMU_LARGE_PAT_MASK) {
+        case X86_MMU_LARGE_PAT_WRITEBACK:
+            mmu_flags |= ARCH_MMU_FLAG_CACHED;
+            break;
+        case X86_MMU_LARGE_PAT_UNCACHABLE:
+            mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+            break;
+        case X86_MMU_LARGE_PAT_WRITE_COMBINING:
+            mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
+        }
+    } else {
+        switch (flags & X86_MMU_PTE_PAT_MASK) {
+        case X86_MMU_PTE_PAT_WRITEBACK:
+            mmu_flags |= ARCH_MMU_FLAG_CACHED;
+            break;
+        case X86_MMU_PTE_PAT_UNCACHABLE:
+            mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+            break;
+        case X86_MMU_PTE_PAT_WRITE_COMBINING:
+            mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
+        }
+    }
+    return mmu_flags;
+}
+
 bool X86PageTableEpt::supports_page_size(page_table_levels level) {
     DEBUG_ASSERT(level != PT_L);
     switch (level) {
@@ -335,57 +379,7 @@ void X86PageTableEpt::TlbInvalidatePage(page_table_levels level, X86PageTableBas
     // TODO(ZX-981): Implement this.
 }
 
-/**
- * @brief Return generic MMU flags from x86 arch flags
- */
-static uint x86_mmu_flags(X86PageTableBase::PtFlags flags, enum page_table_levels level) {
-    uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
-
-    if (flags & X86_MMU_PG_RW)
-        mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
-
-    if (flags & X86_MMU_PG_U)
-        mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
-
-    if (!(flags & X86_MMU_PG_NX))
-        mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
-
-    if (level > 0) {
-        switch (flags & X86_MMU_LARGE_PAT_MASK) {
-        case X86_MMU_LARGE_PAT_WRITEBACK:
-            mmu_flags |= ARCH_MMU_FLAG_CACHED;
-            break;
-        case X86_MMU_LARGE_PAT_UNCACHABLE:
-            mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-            break;
-        case X86_MMU_LARGE_PAT_WRITE_COMBINING:
-            mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
-            break;
-        default:
-            PANIC_UNIMPLEMENTED;
-        }
-    } else {
-        switch (flags & X86_MMU_PTE_PAT_MASK) {
-        case X86_MMU_PTE_PAT_WRITEBACK:
-            mmu_flags |= ARCH_MMU_FLAG_CACHED;
-            break;
-        case X86_MMU_PTE_PAT_UNCACHABLE:
-            mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-            break;
-        case X86_MMU_PTE_PAT_WRITE_COMBINING:
-            mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
-            break;
-        default:
-            PANIC_UNIMPLEMENTED;
-        }
-    }
-    return mmu_flags;
-}
-
-/**
- * @brief Return generic MMU flags from EPT arch flags
- */
-static uint ept_mmu_flags(X86PageTableBase::PtFlags flags, enum page_table_levels level) {
+uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) {
     // Only the write-back memory type is supported.
     uint mmu_flags = ARCH_MMU_FLAG_CACHED;
 
@@ -1048,9 +1042,7 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
     return ZX_OK;
 }
 
-template <typename F>
-zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
-                                         uint* mmu_flags, F arch_to_mmu) {
+zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     canary_.Assert();
     fbl::AutoLock a(&lock_);
 
@@ -1092,7 +1084,7 @@ zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
 
     /* converting arch-specific flags to mmu flags */
     if (mmu_flags) {
-        *mmu_flags = arch_to_mmu(*last_valid_entry, ret_level);
+        *mmu_flags = pt_flags_to_mmu_flags(*last_valid_entry, ret_level);
     }
 
     return ZX_OK;
@@ -1321,11 +1313,7 @@ zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
     if (!IsValidVaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
 
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-        return pt_->QueryVaddr(vaddr, paddr, mmu_flags, ept_mmu_flags);
-    } else {
-        return pt_->QueryVaddr(vaddr, paddr, mmu_flags, x86_mmu_flags);
-    }
+    return pt_->QueryVaddr(vaddr, paddr, mmu_flags);
 }
 
 void x86_mmu_percpu_init(void) {

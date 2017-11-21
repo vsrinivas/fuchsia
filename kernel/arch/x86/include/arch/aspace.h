@@ -51,9 +51,7 @@ public:
     zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
     zx_status_t ProtectPages(vaddr_t vaddr, size_t count, uint flags);
 
-    template <typename F>
-    zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags,
-                           F pt_flags_to_mmu);
+    zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
 
     // Return the page size for this level
     // TODO(teisenbe): This would probably be better elsewhere.
@@ -85,6 +83,8 @@ protected:
     // Invalidate a single page at the given level
     virtual void TlbInvalidatePage(page_table_levels level, X86PageTableBase* pt, vaddr_t vaddr,
                                    bool global_page) = 0;
+    // Convert PtFlags to ARCH_MMU_* flags.
+    virtual uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) = 0;
 
     // Pointer to the translation table.
     paddr_t phys_ = 0;
@@ -203,6 +203,7 @@ private:
     PtFlags split_flags(page_table_levels level, PtFlags flags) final;
     void TlbInvalidatePage(page_table_levels level, X86PageTableBase* pt, vaddr_t vaddr,
                            bool global_page) final;
+    uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) final;
 
     // If true, all mappings will have the global bit set.
     bool use_global_mappings_ = false;
@@ -217,6 +218,7 @@ private:
     PtFlags split_flags(page_table_levels level, PtFlags flags) final;
     void TlbInvalidatePage(page_table_levels level, X86PageTableBase* pt, vaddr_t vaddr,
                            bool global_page) final;
+    uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) final;
 };
 
 class X86ArchVmAspace final : public ArchVmAspaceInterface {
