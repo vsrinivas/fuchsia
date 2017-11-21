@@ -5,6 +5,7 @@
 // for S_IF*
 #define _XOPEN_SOURCE
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdarg.h>
@@ -445,6 +446,27 @@ int main(int argc, char** argv) {
             fprintf(stderr, "minfs: bad size: %s\n", sizestr);
             return usage();
         }
+
+        struct stat s;
+        if (stat(fn, &s) == 0) {
+            if (s.st_mode & S_IFBLK) {
+                fprintf(stderr, "minfs: @size argument is not supported for block device targets\n");
+                return -1;
+            }
+        } else {
+            int fd = open(fn, O_CREAT);
+            if (!fd) {
+                fprintf(stderr, "minfs: failed to create %s: %s", fn, strerror(errno));
+                return -1;
+            }
+            close(fd);
+        }
+
+        if (truncate(fn, size) != 0) {
+            fprintf(stderr, "minfs: failed to truncate %s: %s\n", fn, strerror(errno));
+            return -1;
+        }
+
     }
 #endif
 
