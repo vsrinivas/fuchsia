@@ -44,6 +44,11 @@
 #define BOOTDATA_BOOTFS_MASK      (0x00FFFFFF)
 #define BOOTDATA_BOOTFS_TYPE      (0x00534642) // BFS\0
 
+// Virtual disk images.  The header fields and compression protocol
+// are the same as for the BOOTFS types, but the payload before
+// compression is a raw disk image rather than BOOTFS format.
+#define BOOTDATA_RAMDISK          (0x4b534452) // RDSK
+
 // MDI data.  The "extra" field is unused and set to 0.
 #define BOOTDATA_MDI              (0x3149444d) // MDI1
 
@@ -237,4 +242,3 @@ typedef struct bootfs_entry {
     (sizeof(bootfs_entry_t) + BOOTFS_ALIGN(entry->name_len))
 
 #endif
-

@@ -44,6 +44,7 @@ typedef enum {
     ITEM_BOOTDATA,
     ITEM_BOOTFS_BOOT,
     ITEM_BOOTFS_SYSTEM,
+    ITEM_RAMDISK,
     ITEM_KERNEL,
     ITEM_CMDLINE,
     ITEM_PLATFORM_ID,
@@ -292,7 +293,24 @@ int import_file_as(const char* fn, item_type_t type, uint32_t hdrlen,
     return 0;
 }
 
-int import_file(const char* fn, bool system) {
+int import_file(const char* fn, bool system, bool ramdisk) {
+    if (ramdisk) {
+        struct stat s;
+        if (stat(fn, &s) != 0) {
+            fprintf(stderr, "error: cannot stat '%s'\n", fn);
+            return -1;
+        }
+        notice_dep(fn);
+        fsentry_t* e = import_directory_entry("ramdisk", fn, &s);
+        if (e == NULL) {
+            return -1;
+        }
+        item_t* item = new_item(ITEM_RAMDISK);
+        item->outsize = s.st_size;
+        add_entry(item, e);
+        return 0;
+    }
+
     FILE* fp;
     if ((fp = fopen(fn, "r")) == NULL) {
         return -1;
@@ -637,7 +655,9 @@ static const char fill[4096];
 
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
-int write_bootfs(int fd, const io_ops* op, item_t* item, bool compressed) {
+int write_bootfs(int fd, item_t* item, bool compressed) {
+    const io_ops* op = compressed ? &io_compressed : &io_plain;
+
     uint32_t n;
     fsentry_t* e;
 
@@ -770,61 +790,98 @@ fail:
     return 0;
 }
 
-int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls) {
-    off_t hoff = 0;
-    if ((hoff = lseek(fd, 0, SEEK_CUR)) < 0) {
+int write_bootitem(int fd, bool compressed,
+                   item_t* item, uint32_t type, size_t nulls) {
+    const io_ops* op = compressed ? &io_compressed : &io_plain;
+
+    uint32_t crc = 0;
+
+    const size_t hdrsize = sizeof(bootdata_t);
+
+    // Make note of where we started
+    off_t start = lseek(fd, 0, SEEK_CUR);
+    if (start < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
         return -1;
     }
 
-    bootdata_t hdr = {
-        .type = type,
-        .length = ((item->type == ITEM_PLATFORM_ID ?
-                    sizeof(item->platform_id) : item->first->length)
-                   + nulls),
-        .extra = 0,
-        .flags = BOOTDATA_FLAG_V2 | BOOTDATA_FLAG_CRC32,
-        .reserved0 = 0,
-        .reserved1 = 0,
-        .magic = BOOTITEM_MAGIC,
-        .crc32 = 0,
-    };
-    if (writex(fd, &hdr, sizeof(hdr)) < 0) {
+    if (compressed) {
+        // Set the LZ4 content size to be original size
+        lz4_prefs.frameInfo.contentSize = item->outsize;
+    }
+
+    // Increment past the bootdata header which will be filled out later.
+    if (lseek(fd, (start + hdrsize), SEEK_SET) != (start + hdrsize)) {
+        fprintf(stderr, "error: cannot seek\n");
         return -1;
     }
 
-    hdr.crc32 = crc32(0, (void*) &hdr, sizeof(hdr));
+    void* cookie = NULL;
+    if (op->setup && op->setup(fd, &cookie, &crc) < 0) {
+        return -1;
+    }
 
     if (item->type == ITEM_PLATFORM_ID) {
-        if (copydata(fd, &item->platform_id, sizeof(item->platform_id),
-                     NULL, &hdr.crc32) < 0) {
+        if (op->write(fd, &item->platform_id, sizeof(item->platform_id),
+                      cookie, &crc) < 0) {
             return -1;
         }
-    } else if (copyfile(fd, item->first->srcpath, item->first->length,
-                        NULL, &hdr.crc32) < 0) {
+    } else if (op->write_file(fd, item->first->srcpath, item->first->length,
+                              cookie, &crc) < 0) {
         return -1;
     }
-    if (nulls && (copydata(fd, fill, nulls, NULL, &hdr.crc32) < 0)) {
+    if (nulls && (op->write(fd, fill, nulls, cookie, &crc) < 0)) {
         return -1;
     }
-    size_t pad = BOOTDATA_ALIGN(hdr.length) - hdr.length;
+
+    if (op->finish && op->finish(fd, cookie, &crc) < 0) {
+        return -1;
+    }
+
+    off_t end = lseek(fd, 0, SEEK_CUR);
+    if (end < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
+        return -1;
+    }
+
+    // pad bootdata_t records to 8 byte boundary
+    size_t pad = BOOTDATA_ALIGN(end) - end;
     if (pad) {
         if (writex(fd, fill, pad) < 0) {
             return -1;
         }
     }
 
-    // patch computed crc into header
-    off_t save;
-    if ((save = lseek(fd, 0, SEEK_CUR)) < 0) {
+    // Write the bootheader
+    if (lseek(fd, start, SEEK_SET) != start) {
+        fprintf(stderr, "error: couldn't seek to bootdata header\n");
         return -1;
     }
-    if (lseek(fd, hoff, SEEK_SET) != hoff) {
+
+    size_t wrote = (end - start) - hdrsize;
+
+    bootdata_t boothdr = {
+        .type = type,
+        .length = wrote,
+        .extra = wrote,
+        .flags = BOOTDATA_FLAG_V2 | BOOTDATA_FLAG_CRC32,
+        .reserved0 = 0,
+        .reserved1 = 0,
+        .magic = BOOTITEM_MAGIC,
+        .crc32 = 0,
+    };
+    if (compressed) {
+        boothdr.extra = item->outsize;
+        boothdr.flags |= BOOTDATA_BOOTFS_FLAG_COMPRESSED;
+    }
+    uint32_t hdrcrc = crc32(0, (void*) &boothdr, sizeof(boothdr));
+    boothdr.crc32 = crc32_combine(hdrcrc, crc, boothdr.length);
+    if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
         return -1;
     }
-    if (writex(fd, &hdr, sizeof(hdr)) < 0) {
-        return -1;
-    }
-    if (lseek(fd, save, SEEK_SET) != save) {
+
+    if (lseek(fd, end + pad, SEEK_SET) != (end + pad)) {
+        fprintf(stderr, "error: couldn't seek to end of item\n");
         return -1;
     }
 
@@ -836,7 +893,6 @@ int write_bootdata(const char* fn, item_t* item) {
     bool compressed = true;
 
     int fd;
-    const io_ops* op = compressed ? &io_compressed : &io_plain;
 
     fd = open(fn, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd < 0) {
@@ -856,17 +912,20 @@ int write_bootdata(const char* fn, item_t* item) {
             CHECK(copybootdatafile(fd, item->first->srcpath, item->first->length));
             break;
         case ITEM_KERNEL:
-            CHECK(write_bootitem(fd, item, BOOTDATA_KERNEL, 0));
+            CHECK(write_bootitem(fd, false, item, BOOTDATA_KERNEL, 0));
             break;
         case ITEM_CMDLINE:
-            CHECK(write_bootitem(fd, item, BOOTDATA_CMDLINE, 1));
+            CHECK(write_bootitem(fd, false, item, BOOTDATA_CMDLINE, 1));
             break;
         case ITEM_PLATFORM_ID:
-            CHECK(write_bootitem(fd, item, BOOTDATA_PLATFORM_ID, 0));
+            CHECK(write_bootitem(fd, false, item, BOOTDATA_PLATFORM_ID, 0));
             break;
         case ITEM_BOOTFS_BOOT:
         case ITEM_BOOTFS_SYSTEM:
-            CHECK(write_bootfs(fd, op, item, compressed));
+            CHECK(write_bootfs(fd, item, compressed));
+            break;
+        case ITEM_RAMDISK:
+            CHECK(write_bootitem(fd, compressed, item, BOOTDATA_RAMDISK, 0));
             break;
         default:
             fprintf(stderr, "error: internal: type %08x unknown\n", item->type);
@@ -948,6 +1007,10 @@ int dump_bootdata(const char* fn) {
             break;
         case BOOTDATA_BOOTFS_SYSTEM:
             printf("%08zx: %08x BOOTFS @/system (size=%08x)\n",
+                   off, hdr.length, hdr.extra);
+            break;
+        case BOOTDATA_RAMDISK:
+            printf("%08zx: %08x RAMDISK (size=%08x)\n",
                    off, hdr.length, hdr.extra);
             break;
 
@@ -1036,6 +1099,7 @@ void usage(void) {
     "         --vid <vid>           specify VID for platform ID record\n"
     "         --pid <vid>           specify PID for platform ID record\n"
     "         --board <board-name>  specify board name for platform ID record\n"
+    "         --ramdisk             files are raw disk images, not bootdata\n"
     "\n"
     "inputs:  <filename>            file containing bootdata (binary)\n"
     "                               or a manifest (target=srcpath lines)\n"
@@ -1067,6 +1131,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     bool system = true;
+    bool ramdisk = false;
 
     if ((argc == 3) && (!strcmp(argv[1],"-t"))) {
         return dump_bootdata(argv[2]);
@@ -1138,6 +1203,8 @@ int main(int argc, char **argv) {
             system = true;
         } else if (!strcmp(cmd,"--target=boot")) {
             system = false;
+        } else if (!strcmp(cmd,"--ramdisk")) {
+            ramdisk = true;
         } else if (!strcmp(cmd,"--vid")) {
             if (argc < 2) {
                 fprintf(stderr, "error: no value given for --vid\n");
@@ -1195,7 +1262,7 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "error: failed to import directory %s\n", path);
                     return -1;
                 }
-            } else if (import_file(path, system) < 0) {
+            } else if (import_file(path, system, ramdisk) < 0) {
                 fprintf(stderr, "error: failed to import file %s\n", path);
                 return -1;
             }

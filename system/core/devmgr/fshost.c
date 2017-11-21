@@ -9,7 +9,8 @@
 
 #include <fdio/namespace.h>
 #include <fdio/util.h>
-
+#include <fdio/watcher.h>
+#include <fs-management/ramdisk.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/loader-service.h>
 
@@ -20,6 +21,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -101,6 +104,49 @@ static void setup_last_crashlog(zx_handle_t vmo_in, uint64_t off_in, size_t sz) 
     bootfs_add_file("log/last-panic.txt", vmo, 0, sz);
 }
 
+struct bootdata_ramdisk {
+    struct bootdata_ramdisk* next;
+    zx_handle_t vmo;
+};
+static struct bootdata_ramdisk* bootdata_ramdisk_list;
+
+static zx_status_t misc_device_added(int dirfd, int event, const char* fn,
+                                     void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE || strcmp(fn, "ramctl") != 0) {
+        return ZX_OK;
+    }
+
+    while (bootdata_ramdisk_list != NULL) {
+        struct bootdata_ramdisk* br = bootdata_ramdisk_list;
+        bootdata_ramdisk_list = br->next;
+        zx_handle_t ramdisk_vmo = br->vmo;
+        free(br);
+
+        uint64_t size;
+        zx_vmo_get_size(ramdisk_vmo, &size);
+
+        char path[PATH_MAX + 1];
+        if (create_ramdisk_from_vmo(ramdisk_vmo, path) < 0) {
+            printf("fshost: failed to create ramdisk from BOOTDATA_RAMDISK\n");
+        } else {
+            printf("fshost: BOOTDATA_RAMDISK attached as %s\n", path);
+        }
+    }
+
+    return ZX_ERR_STOP;
+}
+
+static int ramctl_watcher(void* arg) {
+    int dirfd = open("/dev/misc", O_DIRECTORY | O_RDONLY);
+    if (dirfd < 0) {
+        printf("fshost: failed to open /dev/misc: %s\n", strerror(errno));
+        return -1;
+    }
+    fdio_watch_directory(dirfd, &misc_device_added, ZX_TIME_INFINITE, NULL);
+    close(dirfd);
+    return 0;
+}
+
 #define HND_BOOTFS(n) PA_HND(PA_VMO_BOOTFS, n)
 #define HND_BOOTDATA(n) PA_HND(PA_VMO_BOOTDATA, n)
 
@@ -161,6 +207,24 @@ static void setup_bootfs(void) {
                     printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
                 } else {
                     setup_bootfs_vmo(idx++, bootdata.type, bootfs_vmo);
+                }
+                break;
+            }
+            case BOOTDATA_RAMDISK: {
+                const char* errmsg;
+                zx_handle_t ramdisk_vmo;
+                status = decompress_bootdata(
+                    zx_vmar_root_self(), vmo,
+                    off, bootdata.length + sizeof(bootdata_t),
+                    &ramdisk_vmo, &errmsg);
+                if (status != ZX_OK) {
+                    printf("fshost: failed to decompress bootdata: %s\n",
+                           errmsg);
+                } else {
+                    struct bootdata_ramdisk* br = malloc(sizeof(*br));
+                    br->vmo = ramdisk_vmo;
+                    br->next = bootdata_ramdisk_list;
+                    bootdata_ramdisk_list = br;
                 }
                 break;
             }
@@ -325,6 +389,23 @@ int main(int argc, char** argv) {
         } else {
             // switch from bootfs-loader to system-loader
             zx_handle_close(dl_set_loader_service(svc));
+        }
+    }
+
+    if (bootdata_ramdisk_list != NULL) {
+        thrd_t th;
+        int err = thrd_create_with_name(&th, &ramctl_watcher, NULL,
+                                        "ramctl-watcher");
+        if (err != thrd_success) {
+            printf("fshost: failed to start ramctl-watcher: %d\n", err);
+            while (bootdata_ramdisk_list != NULL) {
+                struct bootdata_ramdisk* br = bootdata_ramdisk_list;
+                bootdata_ramdisk_list = br->next;
+                zx_handle_close(br->vmo);
+                free(br);
+            }
+        } else {
+            thrd_detach(th);
         }
     }
 
