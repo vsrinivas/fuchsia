@@ -447,7 +447,7 @@ int main(int argc, char** argv) {
 
         struct stat s;
         if (stat(fn, &s) == 0) {
-            if (s.st_mode & S_IFBLK) {
+            if (S_ISBLK(s.st_mode)) {
                 fprintf(stderr, "minfs: @size argument is not supported for block device targets\n");
                 return -1;
             }

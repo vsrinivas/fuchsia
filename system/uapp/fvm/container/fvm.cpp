@@ -64,7 +64,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
 
     uint64_t size = s.st_size;
 
-    if (s.st_mode & S_IFBLK) {
+    if (S_ISBLK(s.st_mode)) {
         uint64_t block_count;
         if (ioctl(fd_.get(), IOCTL_GET_BLOCK_COUNT, &block_count) >= 0) {
             size = block_count * 512;
