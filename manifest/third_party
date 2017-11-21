@@ -6,6 +6,10 @@
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="build"
             name="manifest"/>
+    <import remote="https://fuchsia.googlesource.com/third_party/boringssl"
+            manifest="manifest"
+            name="third_party/boringssl"
+            revision="6d838c7bf36506286b19f33cb1ef1312c045bb77"/>
   </imports>
   <projects>
     <!-- Third Party -->
@@ -32,11 +36,6 @@
     <project name="third_party/benchmark"
              path="third_party/benchmark"
              remote="https://fuchsia.googlesource.com/third_party/benchmark"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-    <project name="third_party/boringssl"
-             path="third_party/boringssl"
-             remote="https://fuchsia.googlesource.com/third_party/boringssl"
-             revision="03458bb801b93b91017f73a0b3ea1b3a00442b9a"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/cairo"
              path="third_party/cairo"

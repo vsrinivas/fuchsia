@@ -8,6 +8,6 @@
     ],
     "packages": {
         "boringssl_tests": "//third_party/boringssl:boringssl_tests",
-        "bssl": "//third_party/boringssl:bssl"
+        "boringssl_tool": "//third_party/boringssl:boringssl_tool"
     }
 }
