@@ -23,6 +23,15 @@ FUNCTION(vcpu_interrupt_start)
     str xzr, [x0]
 FUNCTION(vcpu_interrupt_end)
 
+// Test wfi instruction handling.
+FUNCTION(vcpu_wfi_start)
+    msr daifclr, #2
+    wfi
+.skip 0x278
+    mov x0, EXIT_TEST_ADDR
+    str xzr, [x0]
+FUNCTION(vcpu_wfi_end)
+
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)
     add x1, x1, #1

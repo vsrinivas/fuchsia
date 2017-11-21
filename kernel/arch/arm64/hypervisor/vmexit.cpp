@@ -10,6 +10,7 @@
 #include <trace.h>
 
 #include <arch/arm64/el2_state.h>
+#include <arch/hypervisor.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
 #include <vm/fault.h>
@@ -31,6 +32,10 @@ ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     iss = BITS(esr, 24, 0);
 }
 
+WaitInstruction::WaitInstruction(uint32_t iss) {
+    is_wfe = BIT(iss, 0);
+}
+
 SystemInstruction::SystemInstruction(uint32_t iss) {
     sysreg = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
     xt = static_cast<uint8_t>(BITS_SHIFT(iss, 9, 5));
@@ -47,6 +52,37 @@ DataAbort::DataAbort(uint32_t iss) {
 
 static void next_pc(GuestState* guest_state) {
     guest_state->system_state.elr_el2 += 4;
+}
+
+static bool gic_has_pending_interrupt(GicState* gic_state) {
+    uint32_t num_lrs = 1 + (gic_state->gich->vtr & kGichVtrListRegs);
+    for (uint32_t i = 0; i != num_lrs; ++i) {
+        if (gic_state->gich->lr[i] & kGichLrPending) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool gic_signal_interrupt(GicState* gic_state, bool reschedule) {
+    return event_signal(&gic_state->event, reschedule) > 0;
+}
+
+static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
+                                              GicState* gic_state) {
+    const WaitInstruction wi(iss);
+    if (wi.is_wfe) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    do {
+        zx_status_t status = event_wait_deadline(&gic_state->event, ZX_TIME_INFINITE, true);
+        if (status != ZX_OK) {
+            return ZX_ERR_CANCELED;
+        }
+    } while (!gic_has_pending_interrupt(gic_state));
+    next_pc(guest_state);
+    return ZX_OK;
 }
 
 static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>* hcr,
@@ -159,8 +195,8 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
 }
 
 zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
-                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                           zx_port_packet_t* packet) {
+                           GicState* gic_state, GuestPhysicalAddressSpace* gpas,
+                           TrapMap* traps, zx_port_packet_t* packet) {
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
     LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
     LTRACEF("guest elr_el2: %#lx\n", guest_state->system_state.elr_el2);
@@ -168,6 +204,9 @@ zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
 
     ExceptionSyndrome syndrome(guest_state->esr_el2);
     switch (syndrome.ec) {
+    case ExceptionClass::WFI_WFE_INSTRUCTION:
+        LTRACEF("handling wfi instruction, iss %#x\n", syndrome.iss);
+        return handle_wfi_wfe_instruction(syndrome.iss, guest_state, gic_state);
     case ExceptionClass::SMC_INSTRUCTION:
         LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
         return ZX_ERR_NOT_SUPPORTED;

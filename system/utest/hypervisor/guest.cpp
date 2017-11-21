@@ -22,6 +22,8 @@ extern const char vcpu_interrupt_start[];
 extern const char vcpu_interrupt_end[];
 extern const char vcpu_hlt_start[];
 extern const char vcpu_hlt_end[];
+extern const char vcpu_wfi_start[];
+extern const char vcpu_wfi_end[];
 extern const char vcpu_read_write_state_start[];
 extern const char vcpu_read_write_state_end[];
 extern const char guest_set_trap_start[];
@@ -152,6 +154,26 @@ static bool vcpu_hlt(void) {
 
     test_t test;
     ASSERT_TRUE(setup_interrupt_test(&test, vcpu_hlt_start, vcpu_hlt_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_wfi(void) {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup_interrupt_test(&test, vcpu_wfi_start, vcpu_wfi_end));
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
@@ -382,7 +404,9 @@ RUN_TEST(vcpu_read_write_state)
 RUN_TEST(vcpu_interrupt)
 RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
-#if __x86_64__
+#if __aarch64__
+RUN_TEST(vcpu_wfi)
+#elif __x86_64__
 RUN_TEST(guest_set_trap_with_io)
 RUN_TEST(vcpu_hlt)
 #endif

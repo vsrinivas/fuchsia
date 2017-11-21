@@ -10,12 +10,16 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/trap_map.h>
+#include <kernel/event.h>
 #include <zircon/types.h>
 
 class GuestPhysicalAddressSpace;
 class PortDispatcher;
 class VmObject;
-struct GicH;
+
+static const uint32_t kGichLrPending = 0b01 << 28;
+static const uint32_t kGichHcrEn = 1u << 0;
+static const uint32_t kGichVtrListRegs = 0b111111;
 
 typedef struct zx_port_packet zx_port_packet_t;
 
@@ -40,6 +44,38 @@ private:
     explicit Guest(uint8_t vmid);
 };
 
+struct GicH {
+    volatile uint32_t hcr;
+    volatile uint32_t vtr;
+    volatile uint32_t vmcr;
+    volatile uint32_t reserved0;
+    volatile uint32_t misr;
+    volatile uint32_t reserved1[3];
+    volatile uint64_t eisr;
+    volatile uint32_t reserved2[2];
+    volatile uint64_t elsr;
+    volatile uint32_t reserved3[46];
+    volatile uint32_t apr;
+    volatile uint32_t reserved4[3];
+    volatile uint32_t lr[64];
+} __PACKED;
+
+static_assert(__offsetof(GicH, hcr) == 0x00, "");
+static_assert(__offsetof(GicH, vtr) == 0x04, "");
+static_assert(__offsetof(GicH, vmcr) == 0x08, "");
+static_assert(__offsetof(GicH, misr) == 0x10, "");
+static_assert(__offsetof(GicH, eisr) == 0x20, "");
+static_assert(__offsetof(GicH, elsr) == 0x30, "");
+static_assert(__offsetof(GicH, apr) == 0xf0, "");
+static_assert(__offsetof(GicH, lr) == 0x100, "");
+
+struct GicState {
+    // Gic hypervisor control registers.
+    GicH* gich;
+    // Event for handling block on WFI.
+    event_t event;
+};
+
 class Vcpu {
 public:
     static zx_status_t Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
@@ -56,7 +92,7 @@ private:
     const uint8_t vmid_;
     const uint8_t vpid_;
     const thread_t* thread_;
-    GicH* gich_;
+    GicState gic_state_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;
     El2State el2_state_;

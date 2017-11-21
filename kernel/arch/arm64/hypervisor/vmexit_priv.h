@@ -13,12 +13,14 @@ typedef struct zx_port_packet zx_port_packet_t;
 
 class GuestPhysicalAddressSpace;
 struct GuestState;
+struct GicState;
 class TrapMap;
 
 // clang-format off
 
 // Exception class of an exception syndrome.
 enum class ExceptionClass : uint8_t {
+    WFI_WFE_INSTRUCTION = 0b000001,
     SMC_INSTRUCTION     = 0b010111,
     SYSTEM_INSTRUCTION  = 0b011000,
     INSTRUCTION_ABORT   = 0b100000,
@@ -31,6 +33,13 @@ struct ExceptionSyndrome {
     uint32_t iss;
 
     ExceptionSyndrome(uint32_t esr);
+};
+
+// Wait instruction that caused a VM exit.
+struct WaitInstruction {
+    bool is_wfe;
+
+    WaitInstruction(uint32_t iss);
 };
 
 // System register associated with a system instruction.
@@ -64,6 +73,8 @@ struct DataAbort {
 
 // clang-format on
 
+bool gic_signal_interrupt(GicState* gic_state, bool reschedule);
+
 zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
-                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                           zx_port_packet_t* packet);
+                           GicState* gic_state, GuestPhysicalAddressSpace* gpas,
+                           TrapMap* traps, zx_port_packet_t* packet);
