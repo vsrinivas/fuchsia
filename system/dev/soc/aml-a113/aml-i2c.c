@@ -14,7 +14,6 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <soc/aml-a113/a113-bus.h>
 #include <soc/aml-a113/aml-i2c.h>
 
 typedef struct {

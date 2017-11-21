@@ -7,11 +7,13 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
-#include <soc/aml-a113/a113-bus.h>
+#include <soc/aml-a113/a113-gpio.h>
+#include <soc/aml-a113/a113-i2c.h>
 
 typedef struct {
     platform_bus_protocol_t pbus;
-    a113_bus_t* a113;
+    a113_gpio_t gpio;
+    a113_i2c_t i2c;
     usb_mode_switch_protocol_t usb_mode_switch;
     io_buffer_t usb_phy;
 } gauss_bus_t;

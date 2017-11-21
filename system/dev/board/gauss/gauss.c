@@ -84,10 +84,10 @@ static zx_status_t gauss_bus_get_protocol(void* ctx, uint32_t proto_id, void* ou
         memcpy(out, &bus->usb_mode_switch, sizeof(bus->usb_mode_switch));
         return ZX_OK;
     case ZX_PROTOCOL_GPIO:
-        memcpy(out, &bus->a113->gpio, sizeof(bus->a113->gpio));
+        memcpy(out, &bus->gpio.proto, sizeof(bus->gpio.proto));
         return ZX_OK;
     case ZX_PROTOCOL_I2C:
-        memcpy(out, &bus->a113->i2c, sizeof(bus->a113->i2c));
+        memcpy(out, &bus->i2c.proto, sizeof(bus->i2c.proto));
         return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -101,10 +101,7 @@ static pbus_interface_ops_t gauss_bus_ops = {
 static void gauss_bus_release(void* ctx) {
     gauss_bus_t* bus = ctx;
 
-    if (bus->a113) {
-        a113_gpio_release(bus->a113);
-        free(bus->a113);
-    }
+    a113_gpio_release(&bus->gpio);
     free(bus);
 }
 
@@ -125,40 +122,34 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    bus->a113 = calloc(1, sizeof(a113_bus_t));
-    if (!bus->a113) {
-        zxlogf(ERROR, "a113 bus init failed: %d\n", status);
-        goto fail;
-    }
-
-    if ((status = a113_gpio_init(bus->a113)) != ZX_OK) {
+    if ((status = a113_gpio_init(&bus->gpio)) != ZX_OK) {
         zxlogf(ERROR, "a113_gpio_init failed: %d\n", status);
         goto fail;
     }
 
     // pinmux for Gauss i2c
-    a113_pinmux_config(bus->a113, I2C_SCK_A, 1);
-    a113_pinmux_config(bus->a113, I2C_SDA_A, 1);
-    a113_pinmux_config(bus->a113, I2C_SCK_B, 1);
-    a113_pinmux_config(bus->a113, I2C_SDA_B, 1);
+    a113_pinmux_config(&bus->gpio, I2C_SCK_A, 1);
+    a113_pinmux_config(&bus->gpio, I2C_SDA_A, 1);
+    a113_pinmux_config(&bus->gpio, I2C_SCK_B, 1);
+    a113_pinmux_config(&bus->gpio, I2C_SDA_B, 1);
 
     // Config pinmux for gauss PDM pins
-    a113_pinmux_config(bus->a113, A113_GPIOA(14), 1);
-    a113_pinmux_config(bus->a113, A113_GPIOA(15), 1);
-    a113_pinmux_config(bus->a113, A113_GPIOA(16), 1);
-    a113_pinmux_config(bus->a113, A113_GPIOA(17), 1);
-    a113_pinmux_config(bus->a113, A113_GPIOA(18), 1);
+    a113_pinmux_config(&bus->gpio, A113_GPIOA(14), 1);
+    a113_pinmux_config(&bus->gpio, A113_GPIOA(15), 1);
+    a113_pinmux_config(&bus->gpio, A113_GPIOA(16), 1);
+    a113_pinmux_config(&bus->gpio, A113_GPIOA(17), 1);
+    a113_pinmux_config(&bus->gpio, A113_GPIOA(18), 1);
 
-    a113_pinmux_config(bus->a113, TDM_BCLK_C, 1);
-    a113_pinmux_config(bus->a113, TDM_FSYNC_C, 1);
-    a113_pinmux_config(bus->a113, TDM_MOSI_C, 1);
-    a113_pinmux_config(bus->a113, TDM_MISO_C, 2);
+    a113_pinmux_config(&bus->gpio, TDM_BCLK_C, 1);
+    a113_pinmux_config(&bus->gpio, TDM_FSYNC_C, 1);
+    a113_pinmux_config(&bus->gpio, TDM_MOSI_C, 1);
+    a113_pinmux_config(&bus->gpio, TDM_MISO_C, 2);
 
-    a113_pinmux_config(bus->a113, SPK_MUTEn, 0);
-    bus->a113->gpio.ops->config(NULL, SPK_MUTEn, GPIO_DIR_OUT);
-    bus->a113->gpio.ops->write(NULL, SPK_MUTEn, 1);
+    a113_pinmux_config(&bus->gpio, SPK_MUTEn, 0);
+    gpio_config(&bus->gpio.proto, SPK_MUTEn, GPIO_DIR_OUT);
+    gpio_write(&bus->gpio.proto, SPK_MUTEn, 1);
 
-    if ((status = a113_i2c_init(bus->a113)) != ZX_OK) {
+    if ((status = a113_i2c_init(&bus->i2c)) != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init failed: %d\n", status);
         goto fail;
     }

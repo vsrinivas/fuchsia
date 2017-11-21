@@ -12,8 +12,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <soc/aml-a113/a113-bus.h>
 #include <soc/aml-a113/a113-hw.h>
+#include <soc/aml-a113/a113-i2c.h>
 #include <soc/aml-a113/aml-i2c.h>
 
 static zx_status_t a113_i2c_transact(void* ctx, const void* write_buf, size_t write_length,
@@ -59,8 +59,8 @@ static zx_status_t a113_i2c_get_channel_by_address(void* ctx, uint32_t bus_id, u
     if (bus_id >= AML_I2C_COUNT) {
         return ZX_ERR_INVALID_ARGS;
     }
-    a113_bus_t* bus = ctx;
-    aml_i2c_dev_t* dev = bus->i2c_devs[bus_id];
+    a113_i2c_t* i2c = ctx;
+    aml_i2c_dev_t* dev = i2c->i2c_devs[bus_id];
      if (!dev) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -88,20 +88,20 @@ static i2c_protocol_ops_t i2c_ops = {
     .get_channel_by_address = a113_i2c_get_channel_by_address,
 };
 
-zx_status_t a113_i2c_init(a113_bus_t* bus) {
+zx_status_t a113_i2c_init(a113_i2c_t* i2c) {
     // Gauss only uses I2C_A and I2C_B
-    zx_status_t status = aml_i2c_init(&bus->i2c_devs[AML_I2C_A], AML_I2C_A);
+    zx_status_t status = aml_i2c_init(&i2c->i2c_devs[AML_I2C_A], AML_I2C_A);
     if (status != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init: aml_i2c_init failed %d\n", status);
         return status;
     }
-    status = aml_i2c_init(&bus->i2c_devs[AML_I2C_B], AML_I2C_B);
+    status = aml_i2c_init(&i2c->i2c_devs[AML_I2C_B], AML_I2C_B);
     if (status != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init: aml_i2c_init failed %d\n", status);
         return status;
     }
 
-    bus->i2c.ops = &i2c_ops;
-    bus->i2c.ctx = bus;
+    i2c->proto.ops = &i2c_ops;
+    i2c->proto.ctx = i2c;
     return ZX_OK;
 }

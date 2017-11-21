@@ -12,7 +12,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <soc/aml-a113/a113-bus.h>
+#include <soc/aml-a113/a113-gpio.h>
 #include <soc/aml-a113/a113-hw.h>
 
 #define PAGE_MASK (PAGE_SIZE - 1)
@@ -193,9 +193,7 @@ static zx_status_t a113_pin_to_block(const uint32_t pinid, gpio_block_t** result
 }
 
 // Configure a pin for an alternate function specified by fn
-zx_status_t a113_pinmux_config(void* ctx, const uint32_t pin, const uint32_t fn) {
-    ZX_DEBUG_ASSERT(ctx);
-
+zx_status_t a113_pinmux_config(a113_gpio_t* gpio, const uint32_t pin, const uint32_t fn) {
     if (fn > A113_PINMUX_ALT_FN_MAX) {
         zxlogf(ERROR, "a113_config_pinmux: pin mux alt config out of range"
                 " %u\n", fn);
@@ -357,9 +355,9 @@ static zx_status_t a113_gpio_write(void* ctx, uint32_t index, uint8_t value) {
 }
 
 
-void a113_gpio_release(a113_bus_t* bus) {
-    io_buffer_release(&bus->periphs_ao_reg);
-    io_buffer_release(&bus->periphs_reg);
+void a113_gpio_release(a113_gpio_t* gpio) {
+    io_buffer_release(&gpio->periphs_ao_reg);
+    io_buffer_release(&gpio->periphs_reg);
 }
 
 static gpio_protocol_ops_t gpio_ops = {
@@ -368,14 +366,14 @@ static gpio_protocol_ops_t gpio_ops = {
     .write = a113_gpio_write,
 };
 
-zx_status_t a113_gpio_init(a113_bus_t* bus) {
-    ZX_DEBUG_ASSERT(bus);
+zx_status_t a113_gpio_init(a113_gpio_t* gpio) {
+    ZX_DEBUG_ASSERT(gpio);
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status = ZX_ERR_INTERNAL;
 
     // Initialize the Standard GPIO Block
-    status = io_buffer_init_physical(&bus->periphs_reg, GPIO_BASE_PAGE,
+    status = io_buffer_init_physical(&gpio->periphs_reg, GPIO_BASE_PAGE,
                                      PAGE_SIZE, resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
@@ -385,7 +383,7 @@ zx_status_t a113_gpio_init(a113_bus_t* bus) {
     }
 
     // Initialize the "Always On" GPIO AO Block.
-    status = io_buffer_init_physical(&bus->periphs_ao_reg, GPIOAO_BASE_PAGE,
+    status = io_buffer_init_physical(&gpio->periphs_ao_reg, GPIOAO_BASE_PAGE,
                                      PAGE_SIZE, resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
@@ -394,7 +392,7 @@ zx_status_t a113_gpio_init(a113_bus_t* bus) {
 
         // Failed to initialize completely. Release the IO Buffer we allocated
         // above.
-        io_buffer_release(&bus->periphs_reg);
+        io_buffer_release(&gpio->periphs_reg);
         return status;
     }
 
@@ -405,12 +403,12 @@ zx_status_t a113_gpio_init(a113_bus_t* bus) {
         switch(pinmux_blocks[i].ctrl_block_base_phys) {
             case GPIOAO_BASE_PAGE:
                 pinmux_blocks[i].ctrl_block_base_virt =
-                    ((zx_vaddr_t)io_buffer_virt(&bus->periphs_ao_reg)) +
+                    ((zx_vaddr_t)io_buffer_virt(&gpio->periphs_ao_reg)) +
                     (GPIOAO_BASE_PHYS - GPIOAO_BASE_PAGE);
                 break;
             case GPIO_BASE_PAGE:
                 pinmux_blocks[i].ctrl_block_base_virt =
-                    ((zx_vaddr_t)io_buffer_virt(&bus->periphs_reg)) +
+                    ((zx_vaddr_t)io_buffer_virt(&gpio->periphs_reg)) +
                     (GPIO_BASE_PHYS - GPIO_BASE_PAGE);
                 break;
             default:
@@ -422,14 +420,14 @@ zx_status_t a113_gpio_init(a113_bus_t* bus) {
         }
     }
 
-    // Copy the protocol into the a113 bus.
-    bus->gpio.ops = &gpio_ops;
-    bus->gpio.ctx = bus;
+    // Copy the protocol into the a113 gpio struct.
+    gpio->proto.ops = &gpio_ops;
+    gpio->proto.ctx = gpio;
 
     return ZX_OK;
 
 cleanup_and_fail:
-    io_buffer_release(&bus->periphs_ao_reg);
-    io_buffer_release(&bus->periphs_reg);
+    io_buffer_release(&gpio->periphs_ao_reg);
+    io_buffer_release(&gpio->periphs_reg);
     return status;
 }
