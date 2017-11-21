@@ -15,8 +15,6 @@ import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
-// TODO(alhaad): All instances of |outgoing_services| below are unused and shall
-// be removed soon.
 [ServiceName="modular.ModuleContext"]
 interface ModuleContext {
   // Gets a Link instance with the given name.
@@ -49,12 +47,10 @@ interface ModuleContext {
   // controller connection is made, and the view_owner request is closed.
   //
   // The calling Module instance and the new Module instance may also
-  // interact by exchanging ServiceProviders. The calling Module
-  // instance may provide its |outgoing_services|, and the new Module
+  // interact by exchanging ServiceProviders. The new Module
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
   StartModule(string name, string module_url, string? link_name,
-              app.ServiceProvider? outgoing_services,
               app.ServiceProvider&? incoming_services,
               ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
@@ -62,7 +58,6 @@ interface ModuleContext {
   // Like StartModule(), but instead accepts a Daisy structure. See docs for
   // StartDaisyInShell().
   StartDaisy(string name, Daisy daisy, string? link_name,
-             app.ServiceProvider? outgoing_services,
              app.ServiceProvider&? incoming_services,
              ModuleController& module_controller,
              mozart.ViewOwner& view_owner);
@@ -76,7 +71,6 @@ interface ModuleContext {
   //
   // If |focused| is set to true, then the surface will also get focus.
   StartModuleInShell(string name, string module_url, string? link_name,
-                     app.ServiceProvider? outgoing_services,
                      app.ServiceProvider&? incoming_services,
                      ModuleController& module_controller,
                      SurfaceRelation? surface_relation,
@@ -95,7 +89,6 @@ interface ModuleContext {
   // TODO(thatguy): Add a return value that indicates success or error. Example
   // of error: no Modules could be resolved for |daisy|.
   StartDaisyInShell(string name, Daisy daisy, string? link_name,
-                    app.ServiceProvider? outgoing_services,
                     app.ServiceProvider&? incoming_services,
                     ModuleController& module_controller,
                     SurfaceRelation? surface_relation);

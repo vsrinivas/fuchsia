@@ -42,7 +42,6 @@ ModuleControllerImpl::ModuleControllerImpl(
     app::ServiceListPtr service_list,
     fidl::InterfaceHandle<ModuleContext> module_context,
     fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
       app_client_(

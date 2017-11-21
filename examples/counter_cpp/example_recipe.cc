@@ -208,18 +208,10 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module1_link_->SetSchema(kJsonSchema);
     module2_link_->SetSchema(kJsonSchema);
 
-    // Provide services for Module 1.
-    app::ServiceProviderPtr services_for_module1;
-    outgoing_services_.AddBinding(services_for_module1.NewRequest());
-    outgoing_services_.AddService<modular::examples::Adder>(
-        [this](fidl::InterfaceRequest<modular::examples::Adder> req) {
-          adder_clients_.AddBinding(&adder_service_, std::move(req));
-        });
-
     app::ServiceProviderPtr services_from_module1;
     module_context_->StartModuleInShell(
         "module1", "example_module1", kModule1Link,
-        std::move(services_for_module1), services_from_module1.NewRequest(),
+        services_from_module1.NewRequest(),
         module1_.NewRequest(), nullptr, true);
 
     // Consume services from Module 1.
@@ -239,7 +231,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
         }));
 
     module_context_->StartModuleInShell("module2", "example_module2",
-                                        kModule2Link, nullptr, nullptr,
+                                        kModule2Link, nullptr,
                                         module2_.NewRequest(), nullptr, true);
 
     connections_.emplace_back(

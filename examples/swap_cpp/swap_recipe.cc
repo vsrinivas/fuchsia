@@ -109,7 +109,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     // This module is named after its URL.
     constexpr char kModuleLink[] = "module";
     module_context_->StartModule(module_query, module_query, kModuleLink,
-                                 nullptr, nullptr, module_.NewRequest(),
+                                 nullptr, module_.NewRequest(),
                                  module_view_.NewRequest());
     SetChild();
   }

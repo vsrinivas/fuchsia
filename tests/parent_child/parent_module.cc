@@ -56,7 +56,7 @@ class ParentApp {
  private:
   void StartChildModuleTwice() {
     module_host_->module_context()->StartModuleInShell(
-        kChildModuleName, kChildModule, kChildLink, nullptr, nullptr,
+        kChildModuleName, kChildModule, kChildLink, nullptr,
         child_module_.NewRequest(), nullptr, true);
 
     // Once the module starts, start the same module again, but with a different
@@ -68,7 +68,7 @@ class ParentApp {
 
           module_host_->module_context()->StartModuleInShell(
               kChildModuleName, kChildModule, kChildLinkAlternate, nullptr,
-              nullptr, child_module2_.NewRequest(), nullptr, true);
+              child_module2_.NewRequest(), nullptr, true);
         });
   }
 

@@ -160,7 +160,6 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
       ModuleDataPtr module_data,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -170,7 +169,6 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
-        outgoing_services_(std::move(outgoing_services)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)) {
@@ -202,7 +200,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // link value.
     if (i->module_data->module_url != module_data_->module_url ||
         !i->module_data->link_path->Equals(*module_data_->link_path) ||
-        outgoing_services_.is_valid() || incoming_services_.is_pending()) {
+        incoming_services_.is_pending()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
         Launch(flow);
@@ -244,8 +242,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         story_controller_impl_->story_scope_.GetLauncher(),
         std::move(module_config), connection.module_data.get(),
         std::move(service_list), std::move(module_context),
-        std::move(view_provider_request), std::move(outgoing_services_),
-        std::move(incoming_services_));
+        std::move(view_provider_request), std::move(incoming_services_));
 
     // Modules started with StoryController.AddModule() don't have a module
     // controller request.
@@ -280,7 +277,6 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   ModuleDataPtr module_data_;
-  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
@@ -373,7 +369,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       const fidl::String& link_name,
       const ModuleSource module_source,
       SurfaceRelationPtr surface_relation,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -389,7 +384,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         link_name_(link_name),
         module_source_(module_source),
         surface_relation_(std::move(surface_relation)),
-        outgoing_services_(std::move(outgoing_services)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)) {
@@ -462,7 +456,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   void Launch(FlowToken flow) {
     new LaunchModuleCall(&operation_queue_, story_controller_impl_,
-                         std::move(module_data_), std::move(outgoing_services_),
+                         std::move(module_data_),
                          std::move(incoming_services_),
                          std::move(module_controller_request_),
                          std::move(view_owner_request_), [flow] {});
@@ -476,7 +470,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   const fidl::String link_name_;
   const ModuleSource module_source_;
   const SurfaceRelationPtr surface_relation_;
-  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
@@ -498,7 +491,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       const fidl::String& module_name,
       const fidl::String& module_url,
       const fidl::String& link_name,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
@@ -514,7 +506,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         module_name_(module_name),
         module_url_(module_url),
         link_name_(link_name),
-        outgoing_services_(std::move(outgoing_services)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         surface_relation_(std::move(surface_relation)),
@@ -539,8 +530,8 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     new StartModuleCall(
         &operation_queue_, story_controller_impl_, parent_module_path_,
         module_path_, module_url_, link_name_, module_source_,
-        surface_relation_.Clone(), std::move(outgoing_services_),
-        std::move(incoming_services_), std::move(module_controller_request_),
+        surface_relation_.Clone(), std::move(incoming_services_),
+        std::move(module_controller_request_),
         view_owner_.NewRequest(), [this, flow] { Cont(flow); });
   }
 
@@ -581,7 +572,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   const fidl::String module_name_;
   const fidl::String module_url_;
   const fidl::String link_name_;
-  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
@@ -651,7 +641,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
     if (story_controller_impl_->IsRunning()) {
       new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
                                  parent_module_path_, module_name_, module_url_,
-                                 link_name_, nullptr, nullptr, nullptr,
+                                 link_name_, nullptr, nullptr,
                                  std::move(surface_relation_), true,
                                  ModuleSource::EXTERNAL, [flow] {});
     }
@@ -1081,7 +1071,7 @@ class StoryControllerImpl::StartCall : Operation<> {
                   &operation_queue_, story_controller_impl_, parent_path,
                   module_data->module_path[module_data->module_path.size() - 1],
                   module_data->module_url, module_data->link_path->link_name,
-                  nullptr, nullptr, nullptr,
+                  nullptr, nullptr,
                   module_data->surface_relation.Clone(), true,
                   module_data->module_source, [flow] {});
             }
@@ -1222,7 +1212,7 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
         &operation_queue_, story_controller_impl_, parent_path,
         module_data_->module_path[module_data_->module_path.size() - 1],
         module_data_->module_url, module_data_->link_path->link_name, nullptr,
-        nullptr, nullptr, std::move(module_data_->surface_relation), true,
+        nullptr, std::move(module_data_->surface_relation), true,
         module_data_->module_source, [flow] {});
   }
 
@@ -1388,7 +1378,6 @@ void StoryControllerImpl::StartModule(
     const fidl::String& module_name,
     const fidl::String& module_url,
     const fidl::String& link_name,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -1397,7 +1386,7 @@ void StoryControllerImpl::StartModule(
   module_path.push_back(module_name);
   new StartModuleCall(&operation_queue_, this, parent_module_path, module_path,
                       module_url, link_name, module_source,
-                      SurfaceRelation::New(), std::move(outgoing_services),
+                      SurfaceRelation::New(),
                       std::move(incoming_services),
                       std::move(module_controller_request),
                       std::move(view_owner_request), [] {});
@@ -1408,7 +1397,6 @@ void StoryControllerImpl::StartModuleInShell(
     const fidl::String& module_name,
     const fidl::String& module_url,
     const fidl::String& link_name,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
@@ -1416,7 +1404,7 @@ void StoryControllerImpl::StartModuleInShell(
     ModuleSource module_source) {
   new StartModuleInShellCall(
       &operation_queue_, this, parent_module_path, module_name, module_url,
-      link_name, std::move(outgoing_services), std::move(incoming_services),
+      link_name, std::move(incoming_services),
       std::move(module_controller_request), std::move(surface_relation), focus,
       module_source, [] {});
 }

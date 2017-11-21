@@ -38,7 +38,6 @@ class ModuleControllerImpl : ModuleController {
       app::ServiceListPtr service_list,
       fidl::InterfaceHandle<ModuleContext> module_context,
       fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services);
 
   ~ModuleControllerImpl() override;

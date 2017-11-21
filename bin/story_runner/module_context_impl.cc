@@ -75,22 +75,19 @@ void ModuleContextImpl::StartModule(
     const fidl::String& name,
     const fidl::String& query,
     const fidl::String& link_name,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, query, link_name,
-      std::move(outgoing_services), std::move(incoming_services),
-      std::move(module_controller), std::move(view_owner),
-      ModuleSource::INTERNAL);
+      std::move(incoming_services), std::move(module_controller),
+      std::move(view_owner), ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartDaisy(
     const fidl::String& name,
     DaisyPtr daisy,
     const fidl::String& link_name,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
@@ -98,7 +95,6 @@ void ModuleContextImpl::StartDaisy(
   module_resolver_->FindModules(
       std::move(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
-                         outgoing_services = std::move(outgoing_services),
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
                          view_owner = std::move(view_owner)](
@@ -117,9 +113,8 @@ void ModuleContextImpl::StartDaisy(
 
         story_controller_impl_->StartModule(
             module_data_->module_path, name, module_url, link_name,
-            std::move(outgoing_services), std::move(incoming_services),
-            std::move(module_controller), std::move(view_owner),
-            ModuleSource::INTERNAL);
+            std::move(incoming_services), std::move(module_controller),
+            std::move(view_owner), ModuleSource::INTERNAL);
       }));
 }
 
@@ -127,23 +122,20 @@ void ModuleContextImpl::StartModuleInShell(
     const fidl::String& name,
     const fidl::String& query,
     const fidl::String& link_name,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
     const bool focus) {
   story_controller_impl_->StartModuleInShell(
       module_data_->module_path, name, query, link_name,
-      std::move(outgoing_services), std::move(incoming_services),
-      std::move(module_controller), std::move(surface_relation), focus,
-      ModuleSource::INTERNAL);
+      std::move(incoming_services), std::move(module_controller),
+      std::move(surface_relation), focus, ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartDaisyInShell(
     const fidl::String& name,
     DaisyPtr daisy,
     const fidl::String& link_name,
-    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation) {
@@ -151,7 +143,6 @@ void ModuleContextImpl::StartDaisyInShell(
   module_resolver_->FindModules(
       std::move(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
-                         outgoing_services = std::move(outgoing_services),
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
                          surface_relation = std::move(surface_relation)](
@@ -170,9 +161,9 @@ void ModuleContextImpl::StartDaisyInShell(
 
         story_controller_impl_->StartModuleInShell(
             module_data_->module_path, name, module_url, link_name,
-            std::move(outgoing_services), std::move(incoming_services),
-            std::move(module_controller), std::move(surface_relation),
-            true /* focus */, ModuleSource::INTERNAL);
+            std::move(incoming_services), std::move(module_controller),
+            std::move(surface_relation), true /* focus */,
+            ModuleSource::INTERNAL);
       }));
 }
 
