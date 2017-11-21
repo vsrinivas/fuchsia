@@ -16,6 +16,8 @@ typedef struct {
     a113_i2c_t i2c;
     usb_mode_switch_protocol_t usb_mode_switch;
     io_buffer_t usb_phy;
+    zx_handle_t usb_phy_irq_handle;
+    thrd_t phy_irq_thread;
 } gauss_bus_t;
 
 // gauss-audio.c

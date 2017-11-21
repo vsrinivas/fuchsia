@@ -18,6 +18,7 @@
 #define TDM_MOSI_C A113_GPIOA(4)
 #define TDM_MISO_C A113_GPIOA(5)
 
-
 #define SPK_MUTEn A113_GPIOA(20)
 
+// GPIO for USB VBus
+#define USB_VBUS_GPIO A113_GPIOAO(5)

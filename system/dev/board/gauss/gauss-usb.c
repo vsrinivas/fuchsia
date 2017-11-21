@@ -6,18 +6,15 @@
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 
+#include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-a113/a113-usb-phy.h>
 
 #include "gauss.h"
-
-#define DWC3_MMIO_BASE      0xff500000
-#define DWC3_MMIO_LENGTH    0x100000
-#define DWC3_IRQ            62
+#include "gauss-hw.h"
 
 #define BIT_MASK(start, count) (((1 << (count)) - 1) << (start))
 #define SET_BITS(dest, start, count, value) \
         ((dest & ~BIT_MASK(start, count)) | (((value) << (start)) & BIT_MASK(start, count)))
-
 
 static const pbus_mmio_t dwc3_mmios[] = {
     {
@@ -54,15 +51,100 @@ static const pbus_dev_t xhci_dev = {
     .irq_count = countof(dwc3_irqs),
 };
 
+// based on code from phy-aml-new-usb3.c
+static int phy_irq_thread(void* arg) {
+    gauss_bus_t* bus = arg;
+    volatile void* addr = io_buffer_virt(&bus->usb_phy);
+    volatile void* u2p_regs = addr + PHY_REGISTER_SIZE;
+    volatile void* usb_regs = addr + (4 * PHY_REGISTER_SIZE);
+    uint32_t temp;
+
+    gpio_config(&bus->gpio.proto, USB_VBUS_GPIO, GPIO_DIR_OUT);
+
+    while (1) {
+        zx_status_t status = zx_interrupt_wait(bus->usb_phy_irq_handle);
+        zx_interrupt_complete(bus->usb_phy_irq_handle);
+        if (status != ZX_OK) {
+            if (status != ZX_ERR_CANCELED) {
+                zxlogf(ERROR, "phy_irq_thread: zx_interrupt_wait returned %d\n", status);
+            }
+            break;
+        }
+
+        temp = readl(usb_regs + USB_R5_OFFSET);
+        temp &= ~USB_R5_IDDIG_IRQ;
+        writel(temp, usb_regs + USB_R5_OFFSET);
+
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+
+        temp = readl(usb_regs + USB_R5_OFFSET);
+        bool host = !(temp & USB_R5_IDDIG_CURR);
+        zxlogf(INFO, "phy_irq_thread setting mode %s\n", (host ? "HOST" : "DEVICE"));
+
+        if (host) {
+            gpio_write(&bus->gpio.proto, USB_VBUS_GPIO, 1);
+        }
+
+        temp = readl(usb_regs + USB_R0_OFFSET);
+        if (host) {
+            temp &= ~USB_R0_U2D_ACT;
+        } else {
+            temp |= USB_R0_U2D_ACT;
+        }
+        writel(temp, usb_regs + USB_R0_OFFSET);
+
+        temp = readl(usb_regs + USB_R4_OFFSET);
+        if (host) {
+            temp &= ~USB_R4_P21_SLEEPM0;
+        } else {
+            temp |= USB_R4_P21_SLEEPM0;
+        }
+        writel(temp, usb_regs + USB_R4_OFFSET);
+
+
+        temp = readl(u2p_regs + U2P_R0_OFFSET);
+        if (host) {
+            temp |= U2P_R0_DMPULLDOWN;
+            temp |= U2P_R0_DPPULLDOWN;
+            temp |= U2P_R0_POR;
+        } else {
+            temp &= ~U2P_R0_DMPULLDOWN;
+            temp &= ~U2P_R0_DPPULLDOWN;
+            temp |= U2P_R0_POR;
+        }
+        writel(temp, u2p_regs + U2P_R0_OFFSET);
+
+        zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
+
+        temp = readl(u2p_regs + U2P_R0_OFFSET);
+        temp &= ~U2P_R0_POR;
+        writel(temp, u2p_regs + U2P_R0_OFFSET);
+
+        if (!host) {
+            gpio_write(&bus->gpio.proto, USB_VBUS_GPIO, 0);
+        }
+    }
+    return 0;
+}
+
 zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     zx_status_t status;
 
     status = io_buffer_init_physical(&bus->usb_phy, 0xffe09000, 4096, get_root_resource(),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        printf("a113_usb_init io_buffer_init_physical failed %d\n", status);
+        zxlogf(ERROR, "gauss_usb_init io_buffer_init_physical failed %d\n", status);
         return status;
     }
+
+    status = zx_interrupt_create(get_root_resource(), USB_PHY_IRQ, ZX_INTERRUPT_MODE_DEFAULT,
+                                 &bus->usb_phy_irq_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "gauss_usb_init zx_interrupt_create failed %d\n", status);
+        io_buffer_release(&bus->usb_phy);
+        return status;
+    }
+
     volatile void* regs = io_buffer_virt(&bus->usb_phy);
 
     // amlogic_new_usb2_init
@@ -105,6 +187,8 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
         zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d\n", status);
         return status;
     }
+
+    thrd_create_with_name(&bus->phy_irq_thread, phy_irq_thread, bus, "phy_irq_thread");
 
     return ZX_OK;
 }

@@ -53,3 +53,10 @@
 #define A113_PINMUX_ALT_FN_MAX 15
 
 #define A113_TDM_PHYS_BASE 0xff642000
+
+// USB MMIO and IRQ
+#define DWC3_MMIO_BASE      0xff500000
+#define DWC3_MMIO_LENGTH    0x100000
+#define DWC3_IRQ            62
+
+#define USB_PHY_IRQ         48
