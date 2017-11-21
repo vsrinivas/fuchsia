@@ -46,10 +46,10 @@ void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_
 void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
 {
     uint8_t atom_number = atom->atom_number;
-    uint32_t slot = atom->core_requirements & kAtomCoreRequirementFragmentShader ? 0 : 1;
-    if (slot == 0 && (atom->core_requirements &
-                      (kAtomCoreRequirementComputeShader | kAtomCoreRequirementTiler))) {
-        magma::log(magma::LOG_WARNING, "Invalid core requirements 0x%x\n", atom->core_requirements);
+    uint32_t flags = atom->flags;
+    uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
+    if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
+        magma::log(magma::LOG_WARNING, "Invalid atom flags 0x%x\n", flags);
         return;
     }
     magma_arm_mali_user_data user_data;

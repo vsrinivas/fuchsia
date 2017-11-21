@@ -15,12 +15,12 @@ enum MagmaArmMaliGpuMapFlags {
     kMagmaArmMaliGpuMapFlagInnerShareable = (1 << MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT),
 };
 
-enum AtomCoreRequirements {
-    kAtomCoreRequirementFragmentShader = (1 << 0),
+enum AtomFlags {
+    kAtomFlagRequireFragmentShader = (1 << 0),
 
     // Compute shaders also include vertex and geometry shaders.
-    kAtomCoreRequirementComputeShader = (1 << 1),
-    kAtomCoreRequirementTiler = (1 << 2),
+    kAtomFlagRequireComputeShader = (1 << 1),
+    kAtomFlagRequireTiler = (1 << 2),
 };
 
 enum ArmMaliResultCode { kArmMaliResultSuccess = 1 };
@@ -33,7 +33,7 @@ struct magma_arm_mali_user_data {
 struct magma_arm_mali_atom {
     uint64_t job_chain_addr;
     struct magma_arm_mali_user_data data;
-    uint32_t core_requirements; // a set of AtomCoreRequirements.
+    uint32_t flags; // a set of AtomFlags.
     uint8_t atom_number;
 
     // The atom numbers of the atoms this depends on. 0 means no dependency.

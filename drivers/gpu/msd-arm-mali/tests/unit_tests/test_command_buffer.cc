@@ -14,7 +14,7 @@ namespace {
 
 class Test {
 public:
-    void TestInvalidCoreRequirements()
+    void TestInvalidFlags()
     {
         auto ctx = InitializeContext();
         ASSERT_TRUE(ctx);
@@ -23,7 +23,7 @@ public:
         *buffer.size_ptr = 1;
         magma_arm_mali_atom* atom = buffer.atom_ptr;
         atom->atom_number = 0;
-        atom->core_requirements = 0xff;
+        atom->flags = 0xff;
 
         auto command_buffer = MakeCommandBuffer(buffer.id);
 
@@ -54,7 +54,7 @@ public:
         *buffer.size_ptr = 1;
         magma_arm_mali_atom* atom = buffer.atom_ptr;
         atom->atom_number = 0;
-        atom->core_requirements = 1;
+        atom->flags = 1;
 
         auto command_buffer = MakeCommandBuffer(buffer.id);
 
@@ -181,6 +181,6 @@ private:
 
 TEST(CommandBuffer, TestTooSmall) { ::Test().TestTooSmall(); }
 TEST(CommandBuffer, TestEmpty) { ::Test().TestEmpty(); }
-TEST(CommandBuffer, TestInvalidCoreRequirements) { ::Test().TestInvalidCoreRequirements(); }
+TEST(CommandBuffer, TestInvalidFlags) { ::Test().TestInvalidFlags(); }
 TEST(CommandBuffer, TestOverflow) { ::Test().TestOverflow(); }
 }
