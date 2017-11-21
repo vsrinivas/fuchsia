@@ -744,6 +744,7 @@ endif
 
 ifeq ($(call TOBOOL,$(HOST_USE_ASAN)),true)
 HOST_COMPILEFLAGS += -fsanitize=address
+export ASAN_SYMBOLIZER_PATH := $(HOST_TOOLCHAIN_PREFIX)llvm-symbolizer
 endif
 
 # the logic to compile and link stuff is in here
