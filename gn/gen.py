@@ -82,6 +82,8 @@ def main():
                         metavar="BUILDARG")
     parser.add_argument("--zircon_project", "-z", help="zircon project",
                         default=os.environ.get("ZIRCON_PROJECT"))
+    parser.add_argument("--platforms", "-P",
+                        help="comma-separated list of platforms")
     parser.add_argument("--packages", "-p",
                         help="comma separated list of packages",
                         default="packages/gn/default")
@@ -167,8 +169,18 @@ def main():
             parser.error('invalid autorun path: %s' % args.autorun)
         gn_args.append('autorun="%s"' % abs_autorun)
 
+    zircon_cpu = {"x86-64": "x86-64", "aarch64": "arm64"}[args.target_cpu]
+
+    if args.platforms:
+        gn_args.append('zircon_platforms=[%s]' % ', '.join(
+            ['"%s"' for platform in args.platforms.split(',')]))
+
     if args.zircon_project:
-        gn_args.append('zircon_project="%s"' % args.zircon_project)
+        if args.platforms:
+            print '--zircon_project is mutually exclusive with --platforms'
+            return 1
+        print 'NOTE: --zircon_project is deprecated; use --platforms instead'
+        gn_args.append('zircon_platforms=["%s"]' % args.zircon_project)
 
     select_variants = []
     bad_variants = []

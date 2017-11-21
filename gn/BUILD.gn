@@ -21,19 +21,6 @@ declare_args() {
   #   test -- test binaries in /bin and /test
   zircon_boot_groups = "core"
 
-  # Additional bootdata items needed from the Zircon build.  This
-  # build does not use Zircon's bootdata.bin but instead uses Zircon's
-  # bootfs.manifest, so this must list any necessary additional inputs
-  # the Zircon build puts into its bootdata.bin.
-  if (target_cpu == "arm64") {
-    zircon_additional_bootdata = [
-      "platform-id.bin",
-      "mdi.bin",
-    ]
-  } else {
-    zircon_additional_bootdata = []
-  }
-
   # A list of labels for `bootdata` targets (see //build/bootdata.gni)
   # to roll into the final bootable image.  These targets must use the
   # default `output_name` and `output_extension`.
@@ -42,6 +29,16 @@ declare_args() {
   # File containing kernel command line arguments to roll into the
   # bootdata image used for booting.
   kernel_cmdline_file = ""
+
+  # A list of platforms, i.e. different Zircon kernels that were built.
+  # There will be a different `bootdata-${platform}.bin` built for each.
+  # TODO(mcgrathr): Change defaults to short names after
+  # https://fuchsia-review.googlesource.com/c/zircon/+/90530 lands.
+  if (target_cpu == "x64") {
+    zircon_platforms = [ "zircon-pc-x86-64" ]
+  } else {
+    zircon_platforms = [ "zircon-qemu-arm64" ]
+  }
 }
 
 declare_args() {
@@ -98,15 +95,16 @@ action("generate_clang_toolchain_manifest") {
 # Permit dependencies on testonly targets from packages.
 testonly = true
 
-group("default") {
-  deps = [
-    ":mkbootfs",
-  ]
+if (current_cpu == "x64") {
+  zircon_cpu = "x86-64"
+} else {
+  zircon_cpu = current_cpu
 }
 
-zircon_out_dir = "//out/build-zircon/build-${zircon_project}"
-zircon_boot_manifest = "${zircon_out_dir}/bootfs.manifest"
-zircon_ulib_manifest = "${zircon_out_dir}-ulib/bootfs.manifest"
+zircon_boot_manifest =
+    "//out/build-zircon/build-user-${zircon_cpu}/bootfs.manifest"
+zircon_ulib_manifest =
+    "//out/build-zircon/build-user-${zircon_cpu}-ulib/bootfs.manifest"
 
 zircon_devmgr_require_system_manifest = "require_system.manifest"
 
@@ -255,28 +253,30 @@ action("finalize_manifests") {
 if (kernel_cmdline_file != "") {
   bootdata_cmdline("kernel_cmdline") {
     visibility = [ ":*" ]
-    inputs = [ kernel_cmdline_file ]
+    inputs = [
+      kernel_cmdline_file,
+    ]
   }
 }
 
-# Package up the /boot filesystem along with Zircon's additional bootdata.
-# This `boot_bootfs.bin` along with the Zircon kernel is enough to boot.
-bootdata("boot_bootfs") {
-  deps = [
-    ":finalize_manifests",
-  ]
-  inputs = [
-    final_boot_manifest,
-  ]
-  boot = true
-
-  if (kernel_cmdline_file != "") {
-    deps += [ ":kernel_cmdline" ]
-    inputs += get_target_outputs(":kernel_cmdline")
-  }
-
-  foreach(item, zircon_additional_bootdata) {
-    inputs += [ "$zircon_out_dir/$item" ]
+# Package up the /boot filesystem along with Zircon's kernel bootdata.
+# This `bootdata.bin` along with the Zircon kernel is enough to boot.
+foreach(platform, zircon_platforms) {
+  bootdata("bootdata-${platform}") {
+    deps = [
+      ":finalize_manifests",
+    ]
+    kernel_build_dir =
+        "//out/build-zircon/build-${platform}"
+    inputs = [
+      "$kernel_build_dir/kernel-bootdata.bin",
+      final_boot_manifest,
+    ]
+    boot = true
+    if (kernel_cmdline_file != "") {
+      deps += [ ":kernel_cmdline" ]
+      inputs += get_target_outputs(":kernel_cmdline")
+    }
   }
 }
 
@@ -290,13 +290,14 @@ bootdata("system_bootfs") {
   ]
 }
 
+# DEPRECATED
 # Roll those together into the image for booting with /system from RAM disk.
 bootdata("mkbootfs") {
   output_name = "user"
   output_extension = "bootfs"
 
   deps = [
-    ":boot_bootfs",
+    ":bootdata-${zircon_platforms[0]}",
     ":system_bootfs",
   ]
   inputs = []
@@ -311,4 +312,16 @@ bootdata("mkbootfs") {
     # output file is computable directly from the target name.
     inputs += [ "$root_out_dir/" + get_label_info(label, "name") + ".bin" ]
   }
+}
+
+group("default") {
+  deps = [
+    ":system_bootfs",
+  ]
+  foreach(platform, zircon_platforms) {
+    deps += [ ":bootdata-${platform}" ]
+  }
+
+  # TODO(mcgrathr): Remove dep when deprecated user.bootfs is gone.
+  deps += [ ":mkbootfs" ]
 }
