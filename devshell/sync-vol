@@ -6,4 +6,4 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-"${FUCHSIA_DIR}/scripts/make-fuchsia-vol/sync-fuchsia-vol.sh" "$@"
+"${FUCHSIA_DIR}/garnet/go/src/make-fuchsia-vol/sync-fuchsia-vol.sh" "$@"
