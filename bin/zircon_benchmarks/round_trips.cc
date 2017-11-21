@@ -401,35 +401,26 @@ ThreadFunc GetThreadFunc(const char* name) {
   return nullptr;
 }
 
-// Register a test that has two variants, single-process and multi-process.
-template <class TestClass>
-void RegisterTestMultiProc(const char* base_name) {
+template <class TestClass, typename... Args>
+void RegisterTest(const char* test_name, Args... args) {
   benchmark::RegisterBenchmark(
-      (std::string(base_name) + "_SingleProcess").c_str(),
-      [](benchmark::State& state) {
-        TestClass test(SingleProcess);
-        while (state.KeepRunning())
-          test.Run();
-      });
-  benchmark::RegisterBenchmark(
-      (std::string(base_name) + "_MultiProcess").c_str(),
-      [](benchmark::State& state) {
-        TestClass test(MultiProcess);
+      test_name,
+      [=](benchmark::State& state) {
+        TestClass test(args...);
         while (state.KeepRunning())
           test.Run();
       });
 }
 
-// Register a test that has only one variant.
+// Register a test that has two variants, single-process and multi-process.
 template <class TestClass>
-void RegisterTestNoArgs(const char* name) {
-  benchmark::RegisterBenchmark(
-      name,
-      [](benchmark::State& state) {
-        TestClass test;
-        while (state.KeepRunning())
-          test.Run();
-      });
+void RegisterTestMultiProc(const char* base_name) {
+  RegisterTest<TestClass>(
+      (std::string(base_name) + "_SingleProcess").c_str(),
+      SingleProcess);
+  RegisterTest<TestClass>(
+      (std::string(base_name) + "_MultiProcess").c_str(),
+      MultiProcess);
 }
 
 }  // namespace
@@ -439,7 +430,7 @@ void RegisterRoundTripBenchmarks() {
   RegisterTestMultiProc<ChannelPortTest>("RoundTrip_ChannelPort");
   RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");
   RegisterTestMultiProc<PortTest>("RoundTrip_Port");
-  RegisterTestNoArgs<FutexTest>("RoundTrip_Futex_SingleProcess");
+  RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
 }
 
 void RunSubprocess(const char* func_name) {
