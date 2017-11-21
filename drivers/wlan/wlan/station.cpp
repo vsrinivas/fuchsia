@@ -458,7 +458,6 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
     }
 
     common::MacAddr bssid(bss_->bssid.data());
-    debugjoin("associated with %s\n", MACSTR(bssid));
     state_ = WlanState::kAssociated;
     assoc_timeout_ = 0;
     aid_ = assoc->aid & kAidMask;
@@ -478,7 +477,11 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
         device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
-    std::printf("associated\n");
+    const common::MacAddr& mymac = device_->GetState()->address();
+    infof("NIC %s associated with \"%s\"(%s) in protocol %s\n", MACSTR(mymac), bss_->ssid.data(),
+          MACSTR(bssid),
+          // TODO(porce): Improve this by referring to the associated BSS data struct
+          IsHTReady() ? "802.11n HT 2.4GHz" : "802.11g 2.4GHz");
 
     return ZX_OK;
 }
