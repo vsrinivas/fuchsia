@@ -57,8 +57,9 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         zx_x86_ipm_buffer_t buffer;
         if (size != sizeof(buffer))
             return ZX_ERR_INVALID_ARGS;
-        if (arg.reinterpret<zx_x86_ipm_buffer_t>().copy_from_user(&buffer) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = arg.reinterpret<zx_x86_ipm_buffer_t>().copy_from_user(&buffer);
+        if (status != ZX_OK)
+            return status;
 
         // TODO(dje): Later need to rework to assign buffers to things
         // like threads.
@@ -76,8 +77,8 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         zx_rights_t vmo_rights;
         zx_rights_t needed_rights =
             ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE;
-        auto status = up->GetDispatcherWithRights(buffer.vmo, needed_rights,
-                                                  &vmo, &vmo_rights);
+        status = up->GetDispatcherWithRights(buffer.vmo, needed_rights,
+                                             &vmo, &vmo_rights);
         if (status != ZX_OK)
             return status;
 
@@ -88,8 +89,9 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         zx_x86_ipm_perf_config_t config;
         if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
-        if (arg.reinterpret<zx_x86_ipm_perf_config_t>().copy_from_user(&config) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = arg.reinterpret<zx_x86_ipm_perf_config_t>().copy_from_user(&config);
+        if (status != ZX_OK)
+            return status;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
         TRACEF("action %u, global_ctrl 0x%" PRIx64 "\n",

@@ -301,8 +301,9 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
                                      user_out_ptr<zx_status_t> read_status) {
     zx_channel_call_args_t args;
 
-    if (user_args.copy_from_user(&args) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = user_args.copy_from_user(&args);
+    if (status != ZX_OK)
+        return status;
 
     if (options)
         return ZX_ERR_INVALID_ARGS;
@@ -364,8 +365,9 @@ zx_status_t sys_channel_call_finish(zx_time_t deadline,
                                     user_out_ptr<zx_status_t> read_status) {
 
     zx_channel_call_args_t args;
-    if (user_args.copy_from_user(&args) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = user_args.copy_from_user(&args);
+    if (status != ZX_OK)
+        return status;
 
     auto up = ProcessDispatcher::GetCurrent();
 

@@ -628,8 +628,9 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             if (status != ZX_OK)
                 return status;
             uintptr_t addr;
-            if (_value.reinterpret<const uintptr_t>().copy_from_user(&addr) != ZX_OK)
-                return ZX_ERR_INVALID_ARGS;
+            status = _value.reinterpret<const uintptr_t>().copy_from_user(&addr);
+            if (status != ZX_OK)
+                return status;
             if (!x86_is_vaddr_canonical(addr))
                 return ZX_ERR_INVALID_ARGS;
             write_msr(X86_MSR_IA32_FS_BASE, addr);
@@ -643,8 +644,9 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ZX_ERR_WRONG_TYPE;
             uintptr_t value = 0;
-            if (_value.reinterpret<const uintptr_t>().copy_from_user(&value) != ZX_OK)
-                return ZX_ERR_INVALID_ARGS;
+            zx_status_t status = _value.reinterpret<const uintptr_t>().copy_from_user(&value);
+            if (status != ZX_OK)
+                return status;
             return process->set_debug_addr(value);
         }
         case ZX_PROP_JOB_IMPORTANCE: {
@@ -654,10 +656,10 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             if (!job)
                 return ZX_ERR_WRONG_TYPE;
             int32_t value = 0;
-            if (_value.reinterpret<const zx_job_importance_t>()
-                    .copy_from_user(&value) != ZX_OK) {
-                return ZX_ERR_INVALID_ARGS;
-            }
+            zx_status_t status = _value.reinterpret<const zx_job_importance_t>()
+                .copy_from_user(&value);
+            if (status != ZX_OK)
+                return status;
             return job->set_importance(
                 static_cast<zx_job_importance_t>(value));
         }

@@ -76,8 +76,9 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_
         return status;
 
     zx_port_packet_t packet;
-    if (packet_in.copy_from_user(&packet) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = packet_in.copy_from_user(&packet);
+    if (status != ZX_OK)
+        return status;
 
     return port->QueueUser(packet);
 }

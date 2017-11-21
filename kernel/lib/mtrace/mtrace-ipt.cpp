@@ -35,8 +35,9 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         uint32_t mode;
         if (size != sizeof(mode))
             return ZX_ERR_INVALID_ARGS;
-        if (arg.reinterpret<uint32_t>().copy_from_user(&mode) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = arg.reinterpret<uint32_t>().copy_from_user(&mode);
+        if (status != ZX_OK)
+            return status;
         TRACEF("action %u, mode 0x%x\n", action, mode);
         switch (mode) {
         case IPT_MODE_CPUS:
@@ -57,8 +58,9 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         zx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return ZX_ERR_INVALID_ARGS;
-        if (arg.reinterpret<zx_x86_pt_regs_t>().copy_from_user(&regs) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = arg.reinterpret<zx_x86_pt_regs_t>().copy_from_user(&regs);
+        if (status != ZX_OK)
+            return status;
         uint32_t cpu = MTRACE_IPT_OPTIONS_CPU(options);
         if ((options & ~MTRACE_IPT_OPTIONS_CPU_MASK) != 0)
             return ZX_ERR_INVALID_ARGS;
