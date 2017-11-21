@@ -36,20 +36,4 @@ bool VmoFromFilename(const std::string& filename, SizedVmo* handle_ptr) {
   return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
 }
 
-bool VmoFromFd(fxl::UniqueFD fd, zx::vmo* handle_ptr) {
-  SizedVmo sized_vmo;
-  if (!VmoFromFd(std::move(fd), &sized_vmo))
-    return false;
-  *handle_ptr = std::move(sized_vmo.vmo());
-  return true;
-}
-
-bool VmoFromFilename(const std::string& filename, zx::vmo* handle_ptr) {
-  SizedVmo sized_vmo;
-  if (!VmoFromFilename(filename, &sized_vmo))
-    return false;
-  *handle_ptr = std::move(sized_vmo.vmo());
-  return true;
-}
-
 }  // namespace fsl
