@@ -55,6 +55,7 @@ SuggestionEngineImpl::SuggestionEngineImpl()
       app_context_->ConnectToEnvironmentService<media::MediaService>();
   media_service_.set_connection_error_handler([this] {
     FXL_LOG(INFO) << "Media service connection error";
+    media_capturer_ = nullptr;
     media_service_ = nullptr;
     media_packet_producer_ = nullptr;
   });
@@ -220,7 +221,8 @@ SuggestionEngineImpl::GetMediaCapturer() {
         std::make_unique<fidl::Binding<media::MediaCapturer>>(
             media_capturer_.get());
     media_capturer_binding_->set_connection_error_handler([this] {
-      media_capturer_->Stop();
+      if (media_capturer_)
+        media_capturer_->Stop();
       media_capturer_binding_ = nullptr;
 
       // With the hacks in place right now, this tends to mean that Kronk
