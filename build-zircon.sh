@@ -22,64 +22,14 @@ usage() {
   printf 'Note: Passing extra arguments to make is not supported.\n'
 }
 
-make_zircon() {
-  local v="$1" project="$2" outdir="$3" asan_zircon="$4" asan_ulib="$5"
-  local zircon_buildroot="${outdir}/build-zircon"
-
-  # build zircon (including its portion of the sysroot) for the target architecture
-  make -j ${JOBS} V=${v} \
-    ${zircon_build_type_flags:-} ${project} \
-    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
-    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_zircon} \
-    BUILDDIR_SUFFIX=
-  # Build the alternate shared libraries (ASan).
-  make -j ${JOBS} V=${V} \
-    ${zircon_build_type_flags:-} ${project} \
-    BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
-    TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_ulib} \
-    ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
+make_zircon_common() {
+  make --no-print-directory -C "${ROOT_DIR}/zircon" \
+    -j ${JOBS} DEBUG_BUILDROOT=../../zircon "$@"
 }
 
-build() {
-  local projects="$1" outdir="$2" clean="$3" verbose="$4" asan="$5" host_asan="$6"
-  local zircon_buildroot="${outdir}/build-zircon"
-
-  if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${zircon_buildroot}"
-  fi
-
-  local asan_zircon asan_ulib
-  if [[ "${asan}" = "true" ]]; then
-      asan_zircon=true
-      asan_ulib=false
-  else
-      asan_zircon=false
-      asan_ulib=true
-  fi
-
-  pushd "${ROOT_DIR}/zircon" > /dev/null
-  case "${verbose}" in
-    1) QUIET=0 ; V=0 ;;
-    2) QUIET=0 ; V=1 ;;
-    *) QUIET=1 ; V=0 ;;
-  esac
-  export QUIET
-  # build host tools
-  make -j ${JOBS} V=${V} \
-    BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon \
-    HOST_USE_ASAN="${host_asan}" tools
-  # Check if we are building any arm64 projects and build for qemu-arm64 if so.
-  # The later build steps will use the sysroot from the qemu-arm64 build.
-  if [[ "${projects}" == *"arm64"* ]]; then
-      make_zircon "${V}" "zircon-qemu-arm64" "${outdir}" "${asan_zircon}" "${asan_ulib}"
-  fi
-  IFS=','
-  for project in $projects; do
-      if [[ "${project}" != "zircon-qemu-arm64" ]]; then
-          make_zircon "${V}" "${project}" "${outdir}" "${asan_zircon}" "${asan_ulib}"
-      fi
-  done
-  popd > /dev/null
+make_zircon_target() {
+  make_zircon_common \
+    BUILDROOT=${ZIRCON_BUILDROOT} TOOLS=${OUTDIR}/build-zircon/tools "$@"
 }
 
 declare ASAN="${ASAN:-false}"
@@ -111,6 +61,58 @@ if [[ "${PROJECTS}" = "" ]]; then
     fi
 fi
 
-readonly ASAN CLEAN HOST_ASAN PROJECTS OUTDIR VERBOSE
+declare -a ARCHLIST
+if [[ "${PROJECTS}" == *arm64* ]]; then
+    ARCHLIST+=(arm64)
+fi
+if [[ "${PROJECTS}" == *x86-64* ]]; then
+    ARCHLIST+=(x86-64)
+fi
+readonly -a ARCHLIST
+if [[ "${#ARCHLIST[@]}" == 0 ]]; then
+    echo >&2 "Cannot figure out architectures from $PROJECTS"
+    exit 2
+fi
 
-build "${PROJECTS}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}" "${HOST_ASAN}"
+readonly ASAN CLEAN HOST_ASAN PROJECTS OUTDIR VERBOSE
+readonly ZIRCON_BUILDROOT="${OUTDIR}/build-zircon"
+
+if [[ "${CLEAN}" = "true" ]]; then
+  rm -rf -- "${ZIRCON_BUILDROOT}"
+fi
+
+# These variables are picked up by make from the environment.
+case "${VERBOSE}" in
+  1) QUIET=0 ; V=0 ;;
+  2) QUIET=0 ; V=1 ;;
+  *) QUIET=1 ; V=0 ;;
+esac
+export QUIET V
+
+if [[ "${ASAN}" = "true" ]]; then
+  readonly ASAN_ZIRCON=true
+  readonly ASAN_ULIB=false
+else
+  readonly ASAN_ZIRCON=false
+  readonly ASAN_ULIB=true
+fi
+
+# Build host tools.
+make_zircon_common \
+  BUILDDIR=${OUTDIR}/build-zircon HOST_USE_ASAN="${HOST_ASAN}" tools
+
+for ARCH in "${ARCHLIST[@]}"; do
+    # Build primary userland and sysroot.
+    make_zircon_target PROJECT="user-${ARCH}" \
+        BUILDDIR_SUFFIX= USE_ASAN="${ASAN_ZIRCON}" user-only
+    # Build alternate shared libraries (ASan).
+    make_zircon_target PROJECT="user-${ARCH}" \
+        BUILDDIR_SUFFIX=-ulib USE_ASAN="${ASAN_ULIB}" \
+        ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false
+done
+
+# Build kernels.
+IFS=','
+for project in $PROJECTS; do
+    make_zircon_target PROJECT="$project" kernel-only
+done
