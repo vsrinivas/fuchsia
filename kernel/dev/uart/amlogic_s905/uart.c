@@ -186,7 +186,7 @@ static int s905_uart_getc(bool wait)
     if (initialized) {
         // do cbuf stuff here
         char c;
-        if (cbuf_read_char(&uart_rx_buf, &c, false) == 1)
+        if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1)
             return c;
         return -1;
 
