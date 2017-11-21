@@ -6,8 +6,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+set -e
+
 usage() {
-    echo "usage: ${0} target [options]"
+    echo "usage: ${0} build-dir [options]"
     echo ""
     echo "    -f user.bootfs            Fuchsia bootfs"
     echo "    -z zircon.bin             Zircon kernel"
@@ -22,25 +24,6 @@ usage() {
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR="$GUEST_SCRIPTS_DIR/../../../.."
-BUILD_DIR="$ZIRCON_DIR/build-$1"
-
-if [[ "$1" != zircon-* ]]; then
-    echo "Please specify a valid Zircon target."
-    usage
-fi
-if [ ! -d "$BUILD_DIR" ]; then
-    echo "Build directory for '$1' does not exit."
-    usage
-fi
-
-shift # Remove "target" from the argument list
-declare ZIRCON="$BUILD_DIR/zircon.bin"
-declare BOOTDATA="$BUILD_DIR/bootdata.bin"
-declare ZIRCON_DISK="$BUILD_DIR/zircon.gpt"
-declare BZIMAGE="/tmp/linux/arch/x86/boot/bzImage"
-declare INITRD="/tmp/toybox/initrd.gz"
-declare ROOTFS="/tmp/toybox/rootfs.ext2"
-declare HOST_BOOTFS="$BUILD_DIR/bootdata.bin"
 
 while getopts "f:z:b:l:i:r:g:" opt; do
   case "${opt}" in
@@ -54,8 +37,20 @@ while getopts "f:z:b:l:i:r:g:" opt; do
     *) usage ;;
   esac
 done
+shift $((OPTIND-1))
 
-readonly ZIRCON BOOTDATA ZIRCON_DISK BZIMAGE INITRD ROOTFS HOST_BOOTFS
+if [ ! -d "$1" ]; then
+    echo "Build directory '$1' does not exit."
+    usage
+fi
+
+declare -r HOST_BOOTFS=${HOST_BOOTFS:-$1/bootdata.bin}
+declare -r ZIRCON=${ZIRCON:-$1/zircon.bin}
+declare -r BOOTDATA=${BOOTDATA:-$1/bootdata.bin}
+declare -r ZIRCON_DISK=${ZIRCON_DISK:-$1/zircon.gpt}
+declare -r BZIMAGE=${BZIMAGE:-/tmp/linux/arch/x86/boot/bzImage}
+declare -r INITRD=${INITRD:-/tmp/toybox/initrd.gz}
+declare -r ROOTFS=${ROOTFS:-/tmp/toybox/rootfs.ext2}
 
 echo "
 data/dsdt.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/dsdt.aml
@@ -80,8 +75,8 @@ if [ -f "$ROOTFS" ]; then
     echo "data/rootfs.ext2=$ROOTFS" >> /tmp/guest.manifest
 fi
 
-$BUILD_DIR/tools/mkbootfs \
+$1/tools/mkbootfs \
     --target=boot \
-    -o $BUILD_DIR/bootdata-with-guest.bin \
+    -o bootdata-with-guest.bin \
     "${HOST_BOOTFS}" \
     /tmp/guest.manifest

@@ -11,15 +11,22 @@
 #  bootloader.
 #  Assumes this is run from the zircon source directory.
 
-ZIRCON_DIR=.
-ZIRCON_BUILD=${ZIRCON_DIR}/build-zircon-hikey960-arm64
+set -e
 
-KERNEL=${ZIRCON_BUILD}/zircon.bin-dtb
-RAMDISK=${ZIRCON_BUILD}/bootdata.bin
+function HELP() {
+    echo "Usage: hikey-efi-boot-image [options] <uefi repo path>"
+    echo "  See: /docs/targets/hikey960-uefi.md for more info"
+    echo
+    echo "  -b build-dir    Use specified build directory"
+    echo "  -r ramdisk      Use specified ramdisk file"
+    echo "  -m              Add mexec option to command line"
+    echo "  -f              Flash image, then boot image"
+    echo "  -h              For help"
+    exit 1
+}
 
-OUT_IMAGE=${ZIRCON_BUILD}/boot.img
-DTB_FILE=${ZIRCON_DIR}/kernel/target/hikey960/device-tree.dtb
-DT_IMAGE=${ZIRCON_BUILD}/dt.img
+ZIRCON_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ZIRCON_DIR="$ZIRCON_SCRIPTS_DIR/.."
 
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000
@@ -28,20 +35,12 @@ DT_OFFSET=0x07a00000
 
 CMDLINE="TERM=uart"
 
-function HELP() {
-    echo "Usage: hikey-efi-boot-image [options] <uefi repo path>"
-    echo "  See: /docs/targets/hikey960-uefi.md for more info"
-    echo
-    echo "  -b bootdata     Use specified bootdata file"
-    echo "  -m              Add mexec option to command line"
-    echo "  -h              For help"
-    exit 1
-}
-
-while getopts "b:mh" FLAG; do
+while getopts "b:r:mfh" FLAG; do
     case $FLAG in
-        b) RAMDISK="$OPTARG";;
+        b) BUILD_DIR="$OPTARG";;
+        r) RAMDISK="$OPTARG";;
         m) CMDLINE+=" netsvc.netboot=true";;
+        f) FLASH="flash";;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -56,9 +55,15 @@ if [ "$#" -lt 1 ]; then
     HELP
 fi
 
-# where the hikey repos live
-HIKEY_DIR=$1
-MKBOOTIMG=${HIKEY_DIR}/tools-images-hikey960/build-from-source/mkbootimg
+BUILD_DIR=${BUILD_DIR:-/build-zircon-hikey960-arm64}
+KERNEL=${BUILD_DIR}/zircon.bin-dtb
+RAMDISK=${RAMDISK:-$BUILD_DIR/bootdata.bin}
+
+OUT_IMAGE=${BUILD_DIR}/boot.img
+DTB_FILE=${ZIRCON_DIR}/kernel/target/hikey960/device-tree.dtb
+DT_IMAGE=${BUILD_DIR}/dt.img
+
+MKBOOTIMG=$1/tools-images-hikey960/build-from-source/mkbootimg
 
 if [ ! -e ${MKBOOTIMG} ]; then
     echo "mkbootimg not found at path ${MKBOOTIMG}"
@@ -76,6 +81,12 @@ ${MKBOOTIMG} --kernel $KERNEL \
 --ramdisk "$RAMDISK" \
 --tags_offset $DT_OFFSET \
 --cmdline "$CMDLINE" \
--o $OUT_IMAGE || exit 1
+-o $OUT_IMAGE
 
-fastboot boot $OUT_IMAGE || exit 1
+fastboot $FLASH boot $OUT_IMAGE
+if [ -n $FLASH ]; then
+    # Can't guarantee that the target has written image to flash before the
+    # fastboot command completes, so short delay here before reboot.
+    sleep 1
+    fastboot reboot
+fi
