@@ -41,6 +41,7 @@ source_set("lib") {
     "fifos.cc",
     "filesystem.cc",
     "main.cc",
+    "mmu.cc",
     "ports.cc",
     "round_trips.cc",
     "sockets.cc",
@@ -52,6 +53,8 @@ source_set("lib") {
   deps = [
     "//garnet/public/lib/fxl",
     "//third_party/gflags",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//third_party/benchmark",
