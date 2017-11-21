@@ -54,9 +54,11 @@ int main(int argc, char** argv) {
 
     size_t length = 0;
     size_t offset = 0;
+    bool should_unlink = true;
 
     while (i < argc) {
         if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
+            should_unlink = false;
             offset = atoll(argv[++i]);
         } else if (!strcmp(argv[i], "--length") && i + 1 < argc) {
             length = atoll(argv[++i]);
@@ -65,6 +67,10 @@ int main(int argc, char** argv) {
         }
 
         ++i;
+    }
+
+    if (!strcmp(command, "create") && should_unlink) {
+        unlink(path);
     }
 
     // If length was not specified, use length of file.
