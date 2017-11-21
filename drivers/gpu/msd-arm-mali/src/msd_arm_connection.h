@@ -55,6 +55,10 @@ public:
     void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status);
     void MarkDestroyed();
 
+    // Called only on device thread.
+    void set_address_space_lost() { address_space_lost_ = true; }
+    bool address_space_lost() const { return address_space_lost_; }
+
     AddressSpaceObserver* GetAddressSpaceObserver() override
     {
         return owner_->GetAddressSpaceObserver();
@@ -74,6 +78,9 @@ private:
     std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
 
     Owner* owner_;
+
+    // Modified and accessed only from device thread.
+    bool address_space_lost_ = false;
 
     std::mutex channel_lock_;
     msd_channel_send_callback_t send_callback_;

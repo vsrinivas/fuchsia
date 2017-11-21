@@ -103,6 +103,7 @@ private:
     class DumpRequest;
     class GpuInterruptRequest;
     class JobInterruptRequest;
+    class MmuInterruptRequest;
     class ScheduleAtomRequest;
     class CancelAtomsRequest;
 
@@ -126,6 +127,7 @@ private:
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
+    magma::Status ProcessMmuInterrupt();
     magma::Status ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom);
     magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
 
@@ -134,6 +136,7 @@ private:
     void RunAtom(MsdArmAtom* atom) override;
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
     void HardStopAtom(MsdArmAtom* atom) override;
+    void ReleaseMappingsForAtom(MsdArmAtom* atom) override;
     magma::PlatformPort* GetPlatformPort() override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"

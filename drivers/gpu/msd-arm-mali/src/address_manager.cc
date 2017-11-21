@@ -29,6 +29,9 @@ constexpr uint64_t kMemoryAttributes =
 AddressManager::AddressManager(Owner* owner, uint32_t address_slot_count) : owner_(owner)
 {
     address_slots_.resize(address_slot_count);
+    for (uint32_t i = 0; i < address_slot_count; i++) {
+        registers_.push_back(std::make_unique<HardwareSlot>(i));
+    }
 }
 
 bool AddressManager::AssignAddressSpace(MsdArmAtom* atom)
@@ -36,6 +39,8 @@ bool AddressManager::AssignAddressSpace(MsdArmAtom* atom)
     DASSERT(!atom->address_slot_mapping());
     auto connection = atom->connection().lock();
     if (!connection)
+        return false;
+    if (connection->address_space_lost())
         return false;
 
     std::shared_ptr<AddressSlotMapping> mapping = AllocateMappingForAddressSpace(connection);
@@ -49,6 +54,13 @@ void AddressManager::AtomFinished(MsdArmAtom* atom)
     if (!atom->address_slot_mapping())
         return;
     atom->set_address_slot_mapping(nullptr);
+}
+
+std::shared_ptr<AddressSlotMapping> AddressManager::GetMappingForSlot(uint32_t slot_number)
+{
+    std::lock_guard<std::mutex> lock(address_slot_lock_);
+    auto& slot = address_slots_[slot_number];
+    return slot.mapping.lock();
 }
 
 std::shared_ptr<AddressSlotMapping>
@@ -74,15 +86,26 @@ AddressManager::GetMappingForAddressSpaceUnlocked(AddressSpace* address_space)
 void AddressManager::FlushAddressMappingRange(AddressSpace* address_space, uint64_t start,
                                               uint64_t length)
 {
+    HardwareSlot* slot;
     std::shared_ptr<AddressSlotMapping> mapping;
     {
         std::lock_guard<std::mutex> lock(address_slot_lock_);
         mapping = AddressManager::GetMappingForAddressSpaceUnlocked(address_space);
+        if (!mapping)
+            return;
+        slot = registers_[mapping->slot_number()].get();
+        // Grab the hardware lock inside the address slot lock so we can be
+        // sure the address slot still maps to the same address space.
+        // std::unique_lock can't be used because it interacts poorly with
+        // thread-safety analysis
+        slot->lock.lock();
     }
-    if (!mapping)
-        return;
-    FlushMmuRange(owner_->register_io(), registers::AsRegisters(mapping->slot_number()), start,
-                  length);
+    slot->FlushMmuRange(owner_->register_io(), start, length);
+
+    // The mapping will be released before the hardware lock, so that we
+    // can be sure that the mapping will be expired after ReleaseSpaceMappings
+    // acquires the hardware lock.
+    slot->lock.unlock();
 }
 
 std::shared_ptr<AddressSlotMapping>
@@ -115,16 +138,19 @@ AddressManager::AssignToSlot(std::shared_ptr<MsdArmConnection> connection, uint3
 {
     DLOG("Assigning connection %p to slot %d\n", connection.get(), slot_number);
     AddressSlot& slot = address_slots_[slot_number];
+    HardwareSlot& hardware_slot = *registers_[slot_number];
+    std::lock_guard<std::mutex> lock(hardware_slot.lock);
+
     auto old_address_space = slot.address_space;
+    RegisterIo* io = owner_->register_io();
     if (old_address_space)
-        InvalidateSlot(slot_number);
+        hardware_slot.InvalidateSlot(io);
     auto mapping = std::make_shared<AddressSlotMapping>(slot_number, connection);
     slot.mapping = mapping;
     slot.address_space = connection->address_space();
 
-    registers::AsRegisters as_reg(slot_number);
-    RegisterIo* io = owner_->register_io();
-    WaitForMmuIdle(io, as_reg);
+    registers::AsRegisters& as_reg = hardware_slot.registers;
+    hardware_slot.WaitForMmuIdle(io);
 
     uint64_t translation_table_entry = connection->address_space()->translation_table_entry();
     as_reg.TranslationTable().FromValue(translation_table_entry).WriteTo(io);
@@ -142,30 +168,31 @@ void AddressManager::ReleaseSpaceMappings(AddressSpace* address_space)
         AddressSlot& slot = address_slots_[i];
         if (slot.address_space != address_space)
             continue;
+        // Grab lock to ensure the registers aren't being modified during
+        // invalidate.
+        HardwareSlot& hardware_slot = *registers_[i];
+        std::lock_guard<std::mutex> lock(hardware_slot.lock);
         DASSERT(slot.mapping.expired());
-        InvalidateSlot(i);
+        hardware_slot.InvalidateSlot(owner_->register_io());
         slot.address_space = nullptr;
     }
 }
 
-void AddressManager::InvalidateSlot(uint32_t slot)
+void AddressManager::HardwareSlot::InvalidateSlot(RegisterIo* io)
 {
-    RegisterIo* io = owner_->register_io();
-    registers::AsRegisters as_reg(slot);
-    WaitForMmuIdle(io, as_reg);
+    WaitForMmuIdle(io);
     constexpr uint64_t kFullAddressSpaceSize = 1ul << AddressSpace::kVirtualAddressSize;
-    FlushMmuRange(io, as_reg, 0, kFullAddressSpaceSize);
+    FlushMmuRange(io, 0, kFullAddressSpaceSize);
 
-    as_reg.TranslationTable().FromValue(0).WriteTo(io);
-    as_reg.MemoryAttributes().FromValue(kMemoryAttributes).WriteTo(io);
+    registers.TranslationTable().FromValue(0).WriteTo(io);
+    registers.MemoryAttributes().FromValue(kMemoryAttributes).WriteTo(io);
 
-    as_reg.Command().FromValue(registers::AsCommand::kCmdUpdate).WriteTo(io);
+    registers.Command().FromValue(registers::AsCommand::kCmdUpdate).WriteTo(io);
 }
 
-// static
-void AddressManager::WaitForMmuIdle(RegisterIo* io, registers::AsRegisters as_regs)
+void AddressManager::HardwareSlot::WaitForMmuIdle(RegisterIo* io)
 {
-    auto status_reg = as_regs.Status();
+    auto status_reg = registers.Status();
     if (!status_reg.ReadFrom(io).reg_value())
         return;
 
@@ -176,11 +203,10 @@ void AddressManager::WaitForMmuIdle(RegisterIo* io, registers::AsRegisters as_re
     uint32_t status = status_reg.ReadFrom(io).reg_value();
     if (status)
         magma::log(magma::LOG_WARNING, "Wait for MMU %d to idle timed out with status 0x%x\n",
-                   as_regs.address_space(), status);
+                   registers.address_space(), status);
 }
 
-void AddressManager::FlushMmuRange(RegisterIo* io, registers::AsRegisters as_regs, uint64_t start,
-                                   uint64_t length)
+void AddressManager::HardwareSlot::FlushMmuRange(RegisterIo* io, uint64_t start, uint64_t length)
 {
     DASSERT(magma::is_page_aligned(start));
     uint64_t region = start;
@@ -201,12 +227,12 @@ void AddressManager::FlushMmuRange(RegisterIo* io, registers::AsRegisters as_reg
     uint8_t region_width = log2_num_pages + kRegionLengthOffset;
 
     region |= region_width;
-    as_regs.LockAddress().FromValue(region).WriteTo(io);
-    as_regs.Command().FromValue(registers::AsCommand::kCmdLock).WriteTo(io);
-    WaitForMmuIdle(io, as_regs);
+    registers.LockAddress().FromValue(region).WriteTo(io);
+    registers.Command().FromValue(registers::AsCommand::kCmdLock).WriteTo(io);
+    WaitForMmuIdle(io);
     // Both invalidate the TLB entries and throw away data in the L2 cache
     // corresponding to them, or otherwise the cache may be written back to
     // memory after the memory's started being used for something else.
-    as_regs.Command().FromValue(registers::AsCommand::kCmdFlushMem).WriteTo(io);
-    WaitForMmuIdle(io, as_regs);
+    registers.Command().FromValue(registers::AsCommand::kCmdFlushMem).WriteTo(io);
+    WaitForMmuIdle(io);
 }

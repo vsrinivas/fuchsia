@@ -56,6 +56,14 @@ protected:
     magma::Status Process(MsdArmDevice* device) override { return device->ProcessJobInterrupt(); }
 };
 
+class MsdArmDevice::MmuInterruptRequest : public DeviceRequest {
+public:
+    MmuInterruptRequest() {}
+
+protected:
+    magma::Status Process(MsdArmDevice* device) override { return device->ProcessMmuInterrupt(); }
+};
+
 class MsdArmDevice::ScheduleAtomRequest : public DeviceRequest {
 public:
     ScheduleAtomRequest(std::shared_ptr<MsdArmAtom> atom) : atom_(std::move(atom)) {}
@@ -398,6 +406,45 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
     return MAGMA_STATUS_OK;
 }
 
+magma::Status MsdArmDevice::ProcessMmuInterrupt()
+{
+    auto irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(register_io_.get());
+
+    magma::log(magma::LOG_WARNING, "Got unexpected MMU IRQ %d\n", irq_status.reg_value());
+
+    // All MMU interrupts are unexpected, so dump status to log to help
+    // debugging.
+    ProcessDumpStatusToLog();
+
+    uint32_t faulted_slots = irq_status.pf_flags().get() | irq_status.bf_flags().get();
+    while (faulted_slots) {
+        uint32_t slot = ffs(faulted_slots) - 1;
+        std::shared_ptr<MsdArmConnection> connection;
+        {
+            auto mapping = address_manager_->GetMappingForSlot(slot);
+            if (!mapping) {
+                magma::log(magma::LOG_WARNING, "Fault on idle slot %d\n", slot);
+            } else {
+                connection = mapping->connection();
+            }
+        }
+        if (connection) {
+            connection->set_address_space_lost();
+            scheduler_->ReleaseMappingsForConnection(connection);
+            // This will invalidate the address slot, causing the job to die
+            // with a fault.
+            address_manager_->ReleaseSpaceMappings(connection->address_space());
+        }
+        faulted_slots &= ~(1 << slot);
+    }
+
+    auto clear_flags = registers::MmuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
+    clear_flags.WriteTo(register_io_.get());
+
+    mmu_interrupt_->Complete();
+    return MAGMA_STATUS_OK;
+}
+
 int MsdArmDevice::MmuInterruptThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("MMU InterruptThread");
@@ -410,18 +457,10 @@ int MsdArmDevice::MmuInterruptThreadLoop()
 
         if (interrupt_thread_quit_flag_)
             break;
-
-        auto irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(register_io_.get());
-        auto clear_flags = registers::MmuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
-        clear_flags.WriteTo(register_io_.get());
-
-        magma::log(magma::LOG_WARNING, "Got unexpected MMU IRQ %d\n", irq_status.reg_value());
-
-        // All MMU interrupts are unexpected, so dump status to log to help
-        // debugging.
-        DumpStatusToLog();
-
-        mmu_interrupt_->Complete();
+        auto request = std::make_unique<MmuInterruptRequest>();
+        auto reply = request->GetReply();
+        EnqueueDeviceRequest(std::move(request), true);
+        reply->Wait();
     }
 
     DLOG("MMU Interrupt thread exited");
@@ -663,6 +702,13 @@ void MsdArmDevice::HardStopAtom(MsdArmAtom* atom)
     slot.Command()
         .FromValue(registers::JobSlotCommand::kCommandHardStop)
         .WriteTo(register_io_.get());
+}
+
+void MsdArmDevice::ReleaseMappingsForAtom(MsdArmAtom* atom)
+{
+    // The atom should be hung on a fault, so it won't reference memory
+    // afterwards.
+    address_manager_->AtomFinished(atom);
 }
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)

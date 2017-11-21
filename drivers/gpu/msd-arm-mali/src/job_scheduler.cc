@@ -142,3 +142,11 @@ void JobScheduler::ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom)
         DASSERT(false);
     }
 }
+
+void JobScheduler::ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection> connection)
+{
+    if (executing_atom_ && executing_atom_->connection().lock() == connection) {
+        executing_atom_->set_hard_stopped();
+        owner_->ReleaseMappingsForAtom(executing_atom_.get());
+    }
+}

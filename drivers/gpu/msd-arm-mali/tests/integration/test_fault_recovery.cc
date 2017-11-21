@@ -61,7 +61,7 @@ public:
             magma_release_connection(connection_);
     }
 
-    enum How { NORMAL, JOB_FAULT };
+    enum How { NORMAL, JOB_FAULT, MMU_FAULT };
 
     void SubmitCommandBuffer(How how)
     {
@@ -107,6 +107,10 @@ public:
             case JOB_FAULT:
                 EXPECT_EQ(kArmMaliResultConfigFault, status.result_code);
                 break;
+
+            case MMU_FAULT:
+                EXPECT_EQ(kArmMaliResultReadFault, status.result_code);
+                break;
         }
 
         EXPECT_EQ(magma_unmap(connection_, batch_buffer), 0);
@@ -125,6 +129,10 @@ public:
         if (how == JOB_FAULT) {
             // An unaligned job chain address should fail with error 0x40.
             atom->job_chain_addr = 1;
+        } else if (how == MMU_FAULT) {
+            atom->job_chain_addr = job_va - PAGE_SIZE;
+            if (atom->job_chain_addr == 0)
+                atom->job_chain_addr = PAGE_SIZE * 2;
         } else {
             atom->job_chain_addr = job_va;
         }
@@ -189,6 +197,17 @@ TEST(FaultRecovery, Test)
     test->SubmitCommandBuffer(TestConnection::NORMAL);
     test.reset(new TestConnection());
     test->SubmitCommandBuffer(TestConnection::JOB_FAULT);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL);
+}
+
+TEST(FaultRecovery, TestMmu)
+{
+    std::unique_ptr<TestConnection> test;
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::MMU_FAULT);
     test.reset(new TestConnection());
     test->SubmitCommandBuffer(TestConnection::NORMAL);
 }

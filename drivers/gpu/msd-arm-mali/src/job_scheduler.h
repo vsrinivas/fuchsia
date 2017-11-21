@@ -20,6 +20,7 @@ public:
         virtual void RunAtom(MsdArmAtom* atom) = 0;
         virtual void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) = 0;
         virtual void HardStopAtom(MsdArmAtom* atom) {}
+        virtual void ReleaseMappingsForAtom(MsdArmAtom* atom) {}
         virtual magma::PlatformPort* GetPlatformPort() { return nullptr; }
     };
     using Clock = std::chrono::steady_clock;
@@ -43,6 +44,8 @@ public:
     Clock::duration GetCurrentTimeoutDuration();
 
     void KillTimedOutAtoms();
+
+    void ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
 private:
     MsdArmAtom* executing_atom() const { return executing_atom_.get(); }
