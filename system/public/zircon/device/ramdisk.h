@@ -10,6 +10,8 @@
 
 #define IOCTL_RAMDISK_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 1)
+#define IOCTL_RAMDISK_CONFIG_VMO \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_RAMDISK, 4)
 #define IOCTL_RAMDISK_UNLINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 2)
 #define IOCTL_RAMDISK_SET_FLAGS \
@@ -28,6 +30,11 @@ typedef struct ramdisk_ioctl_config_response {
 //                              ramdisk_ioctl_config_response_t* out);
 IOCTL_WRAPPER_INOUT(ioctl_ramdisk_config, IOCTL_RAMDISK_CONFIG, ramdisk_ioctl_config_t,
                     ramdisk_ioctl_config_response_t);
+
+// ssize_t ioctl_ramdisk_config_vmo(int fd, const zx_handle_t* in,
+//                                  ramdisk_ioctl_config_response_t* out);
+IOCTL_WRAPPER_INOUT(ioctl_ramdisk_config_vmo, IOCTL_RAMDISK_CONFIG_VMO,
+                    zx_handle_t, ramdisk_ioctl_config_response_t);
 
 // ssize_t ioctl_ramdisk_unlink(int fd);
 IOCTL_WRAPPER(ioctl_ramdisk_unlink, IOCTL_RAMDISK_UNLINK);

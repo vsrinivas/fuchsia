@@ -281,6 +281,74 @@ static zx_protocol_device_t ramdisk_instance_proto = {
 
 static uint64_t ramdisk_count = 0;
 
+// This always consumes the VMO handle.
+static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
+                                 uint64_t blk_size, uint64_t blk_count,
+                                 void* reply, size_t max, size_t* out_actual) {
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
+    if (max < 32) {
+        goto fail;
+    }
+
+    ramdisk_device_t* ramdev = calloc(1, sizeof(ramdisk_device_t));
+    if (!ramdev) {
+        status = ZX_ERR_NO_MEMORY;
+        goto fail;
+    }
+    if (mtx_init(&ramdev->lock, mtx_plain) != thrd_success) {
+        goto fail_free;
+    }
+    if (cnd_init(&ramdev->work_cvar) != thrd_success) {
+        goto fail_mtx;
+    }
+    ramdev->vmo = vmo;
+    ramdev->blk_size = blk_size;
+    ramdev->blk_count = blk_count;
+    snprintf(ramdev->name, sizeof(ramdev->name),
+             "ramdisk-%" PRIu64, ramdisk_count++);
+
+    status = zx_vmar_map(
+        zx_vmar_root_self(), 0, ramdev->vmo, 0, sizebytes(ramdev),
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ramdev->mapped_addr);
+    if (status != ZX_OK) {
+        goto fail_cnd;
+    }
+    list_initialize(&ramdev->txn_list);
+    if (thrd_create(&ramdev->worker, worker_thread, ramdev) != thrd_success) {
+        goto fail_unmap;
+    }
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = ramdev->name,
+        .ctx = ramdev,
+        .ops = &ramdisk_instance_proto,
+        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &ramdisk_block_ops,
+    };
+
+    if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
+        ramdisk_release(ramdev);
+        return status;
+    }
+    strcpy(reply, ramdev->name);
+    *out_actual = strlen(reply);
+    return ZX_OK;
+
+fail_unmap:
+    zx_vmar_unmap(zx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
+fail_cnd:
+    cnd_destroy(&ramdev->work_cvar);
+fail_mtx:
+    mtx_destroy(&ramdev->lock);
+fail_free:
+    free(ramdev);
+fail:
+    zx_handle_close(vmo);
+    return status;
+
+}
+
 static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
                                 size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     ramctl_device_t* ramctl = ctx;
@@ -290,62 +358,44 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         if (cmdlen != sizeof(ramdisk_ioctl_config_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        if (max < 32) {
+        ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
+        zx_handle_t vmo;
+        zx_status_t status = zx_vmo_create(
+            config->blk_size * config->blk_count, 0, &vmo);
+        if (status == ZX_OK) {
+            status = ramctl_config(ramctl, vmo,
+                                   config->blk_size, config->blk_count,
+                                   reply, max, out_actual);
+        }
+        return status;
+    }
+    case IOCTL_RAMDISK_CONFIG_VMO: {
+        if (cmdlen != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
+        zx_handle_t vmo = *(zx_handle_t*)cmd;
 
-        ramdisk_device_t* ramdev = calloc(1, sizeof(ramdisk_device_t));
-        if (!ramdev) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        ramdev->blk_size = config->blk_size;
-        ramdev->blk_count = config->blk_count;
-        mtx_init(&ramdev->lock, mtx_plain);
-        sprintf(ramdev->name, "ramdisk-%" PRIu64, ramdisk_count++);
-        zx_status_t status;
-        if ((status = zx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != ZX_OK) {
-            goto fail;
-        }
-        if ((status = zx_vmar_map(zx_vmar_root_self(), 0, ramdev->vmo, 0, sizebytes(ramdev),
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  &ramdev->mapped_addr)) != ZX_OK) {
-            goto fail_close_vmo;
-        }
-        if (cnd_init(&ramdev->work_cvar) != thrd_success) {
-            goto fail_unmap;
-        }
-        list_initialize(&ramdev->txn_list);
-        if (thrd_create(&ramdev->worker, worker_thread, ramdev) != thrd_success) {
-            goto fail_cvar_free;
+        // Ensure this is the last handle to this VMO; otherwise, the size
+        // may change from underneath us.
+        zx_info_handle_count_t info;
+        zx_status_t status = zx_object_get_info(vmo, ZX_INFO_HANDLE_COUNT,
+                                                &info, sizeof(info),
+                                                NULL, NULL);
+        if (status != ZX_OK || info.handle_count != 1) {
+            zx_handle_close(vmo);
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        device_add_args_t args = {
-            .version = DEVICE_ADD_ARGS_VERSION,
-            .name = ramdev->name,
-            .ctx = ramdev,
-            .ops = &ramdisk_instance_proto,
-            .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-            .proto_ops = &ramdisk_block_ops,
-        };
-
-        if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
-            ramdisk_release(ramdev);
+        uint64_t vmo_size;
+        status = zx_vmo_get_size(vmo, &vmo_size);
+        if (status != ZX_OK) {
+            zx_handle_close(vmo);
             return status;
         }
-        strcpy(reply, ramdev->name);
-        *out_actual = strlen(reply);
-        return ZX_OK;
 
-fail_cvar_free:
-        cnd_destroy(&ramdev->work_cvar);
-fail_unmap:
-        zx_vmar_unmap(zx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
-fail_close_vmo:
-        zx_handle_close(ramdev->vmo);
-fail:
-        free(ramdev);
-        return status;
+        return ramctl_config(ramctl, vmo,
+                             PAGE_SIZE, (vmo_size + PAGE_SIZE - 1) / PAGE_SIZE,
+                             reply, max, out_actual);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;

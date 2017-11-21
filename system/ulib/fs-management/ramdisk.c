@@ -53,28 +53,26 @@ int wait_for_driver_bind(const char* parent, const char* driver) {
     return 0;
 }
 
-int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
+static int open_ramctl(void) {
     int fd = open(RAMCTL_PATH, O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "Could not open ramctl\n");
-        return fd;
     }
-    ramdisk_ioctl_config_t config;
-    config.blk_size = blk_size;
-    config.blk_count = blk_count;
-    ramdisk_ioctl_config_response_t response;
-    ssize_t r = ioctl_ramdisk_config(fd, &config, &response);
+    return fd;
+}
+
+static int finish_create(ramdisk_ioctl_config_response_t* response,
+                         char *out_path, ssize_t r) {
     if (r < 0) {
         fprintf(stderr, "Could not configure ramdev\n");
         return -1;
     }
-    response.name[r] = 0;
-    close(fd);
+    response->name[r] = 0;
 
     const size_t ramctl_path_len = strlen(RAMCTL_PATH);
     strcpy(out_path, RAMCTL_PATH);
     out_path[ramctl_path_len] = '/';
-    strcpy(out_path + ramctl_path_len + 1, response.name);
+    strcpy(out_path + ramctl_path_len + 1, response->name);
 
     // The ramdisk should have been created instantly, but it may take
     // a moment for the block device driver to bind to it.
@@ -86,6 +84,27 @@ int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
     strcat(out_path, "/" BLOCK_EXTENSION);
 
     return 0;
+}
+
+int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
+    int fd = open_ramctl();
+    if (fd < 0)
+        return fd;
+    ramdisk_ioctl_config_t config;
+    config.blk_size = blk_size;
+    config.blk_count = blk_count;
+    ramdisk_ioctl_config_response_t response;
+    return finish_create(&response, out_path,
+                         ioctl_ramdisk_config(fd, &config, &response));
+}
+
+int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path) {
+    int fd = open_ramctl();
+    if (fd < 0)
+        return fd;
+    ramdisk_ioctl_config_response_t response;
+    return finish_create(&response, out_path,
+                         ioctl_ramdisk_config_vmo(fd, &vmo, &response));
 }
 
 int destroy_ramdisk(const char* ramdisk_path) {

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -21,6 +22,10 @@ int wait_for_driver_bind(const char* parent, const char* driver);
 //
 // Return 0 on success, -1 on error.
 int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path);
+
+// Same but uses an existing VMO as the ramdisk.
+// The handle is always consumed, and must be the only handle to this VMO.
+int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path);
 
 // Destroys a ramdisk, given the "ramdisk_path" returned from "create_ramdisk".
 //

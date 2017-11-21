@@ -51,16 +51,47 @@ static bool ramdisk_test_simple(void) {
     memset(out, 0, sizeof(out));
 
     // Write a page and a half
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), (ssize_t) sizeof(buf));
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), (ssize_t)sizeof(buf));
     ASSERT_EQ(write(fd, buf, sizeof(buf) / 2), (ssize_t) (sizeof(buf) / 2));
 
     // Seek to the start of the device and read the contents
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(read(fd, out, sizeof(out)), (ssize_t) sizeof(out));
+    ASSERT_EQ(read(fd, out, sizeof(out)), (ssize_t)sizeof(out));
     ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     close(fd);
+    END_TEST;
+}
+
+static bool ramdisk_test_vmo(void) {
+    BEGIN_TEST;
+
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(256 * PAGE_SIZE, 0, &vmo), ZX_OK);
+
+    char ramdisk_path[PATH_MAX];
+    ASSERT_EQ(create_ramdisk_from_vmo(vmo, ramdisk_path), 0);
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GE(fd, 0, "Could not open ramdisk device");
+
+    uint8_t buf[PAGE_SIZE * 2];
+    uint8_t out[PAGE_SIZE * 2];
+    memset(buf, 'a', sizeof(buf));
+    memset(out, 0, sizeof(out));
+
+    EXPECT_EQ(write(fd, buf, sizeof(buf)), (ssize_t)sizeof(buf));
+    EXPECT_EQ(write(fd, buf, sizeof(buf) / 2), (ssize_t)(sizeof(buf) / 2));
+
+    // Seek to the start of the device and read the contents
+    EXPECT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    EXPECT_EQ(read(fd, out, sizeof(out)), (ssize_t) sizeof(out));
+    EXPECT_EQ(memcmp(out, buf, sizeof(out)), 0);
+
+    EXPECT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    close(fd);
+
     END_TEST;
 }
 
@@ -1031,6 +1062,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
 
 BEGIN_TEST_CASE(ramdisk_tests)
 RUN_TEST_SMALL(ramdisk_test_simple)
+RUN_TEST_SMALL(ramdisk_test_vmo)
 RUN_TEST_SMALL(ramdisk_test_filesystem)
 RUN_TEST_SMALL(ramdisk_test_rebind)
 RUN_TEST_SMALL(ramdisk_test_bad_requests)
