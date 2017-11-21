@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/clang_toolchain.gni")
+
 _mkbootfs = "//out/build-zircon/tools/mkbootfs"
 
 # Template for assembling a Zircon `bootdata.bin` file from inputs.
@@ -67,7 +69,14 @@ template("bootdata") {
                              "testonly",
                            ])
 
-    script = _mkbootfs
+    script = "//build/gn_run_binary.sh"
+    inputs = [
+      _mkbootfs,
+    ]
+    script_args = [
+      clang_prefix,
+      rebase_path(_mkbootfs, root_build_dir),
+    ]
 
     outputs = [
       output_file,
@@ -84,7 +93,7 @@ template("bootdata") {
     sources = invoker.inputs
     input_args = rebase_path(sources, root_build_dir)
 
-    args = output_args + target_args + input_args
+    args = script_args + output_args + target_args + input_args
   }
 }
 
@@ -129,21 +138,28 @@ template("bootdata_cmdline") {
                              "testonly",
                            ])
 
-    script = _mkbootfs
+    script = "//build/gn_run_binary.sh"
+    inputs = [
+      _mkbootfs,
+    ]
+    script_args = [
+      clang_prefix,
+      rebase_path(_mkbootfs, root_build_dir),
+    ]
 
     outputs = [
       output_file,
     ]
 
     inputs = invoker.inputs
-    assert(inputs == [inputs[0]],
+    assert(inputs == [ inputs[0] ],
            "$target_name inputs must contain exactly one file name")
 
-    args = [
-      "-o",
-      rebase_path(output_file, root_build_dir),
-      "-C",
-      rebase_path(inputs[0]),
-    ]
+    args = script_args + [
+             "-o",
+             rebase_path(output_file, root_build_dir),
+             "-C",
+             rebase_path(inputs[0]),
+           ]
   }
 }

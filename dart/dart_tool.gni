@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_package.gni")
 import("//build/dart/toolchain.gni")
+import("//build/toolchain/clang_toolchain.gni")
 
 # Defines a Dart application that can be run on the host
 #
@@ -52,10 +53,13 @@ template("dart_tool") {
 
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
   depfile_path = "${snapshot_path}.d"
-  dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+  dart_target_gen_dir =
+      get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
   packages_path = "$dart_target_gen_dir/$dart_package_target_name.packages"
 
   snapshot_target_name = target_name + "_snapshot"
+
+  gn_run_binary = "//build/gn_run_binary.sh"
 
   # Creates a snapshot file.
   # The main advantage of snapshotting is that it sets up source dependencies
@@ -72,7 +76,7 @@ template("dart_tool") {
       snapshot_path,
     ]
 
-    script = dart_binary
+    script = gn_run_binary
 
     # The snapshot path needs to be rebased on top of the root build dir so
     # that the resulting depfile gets properly formatted.
@@ -81,6 +85,8 @@ template("dart_tool") {
     rebased_packages_path = rebase_path(packages_path)
 
     args = [
+      clang_prefix,
+      rebase_path(dart_binary, root_build_dir),
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",
       "--packages=$rebased_packages_path",
@@ -109,6 +115,10 @@ template("dart_tool") {
       app_path,
     ]
 
+    inputs = [
+      gn_run_binary,
+    ]
+
     args = [
       "--out",
       rebase_path(app_path),
@@ -116,6 +126,10 @@ template("dart_tool") {
       rebase_path(dart_binary),
       "--snapshot",
       rebase_path(snapshot_path),
+      "--gn_run_binary",
+      rebase_path(gn_run_binary),
+      "--clang-bindir",
+      clang_prefix,
     ]
 
     deps = [

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/clang_toolchain.gni")
+
 # This file introduces two related templates that act like action and
 # action_foreach but instead of running a script, it will compile a given tool
 # in the host toolchain and run that (either once or over the list of inputs,
@@ -108,9 +110,13 @@ template("compiled_action") {
 
     deps += [ host_tool ]
 
-    # The script takes as arguments the binary to run, and then the arguments
-    # to pass it.
-    args = [ rebase_path(host_executable, root_build_dir) ] + invoker.args
+    # The script takes as arguments Clang bin directory (for passing
+    # llvm-symbolizer to runtimes), the binary to run, and then the
+    # arguments to pass it.
+    args = [
+             clang_prefix,
+             rebase_path(host_executable, root_build_dir),
+           ] + invoker.args
   }
 }
 
@@ -155,8 +161,12 @@ template("compiled_action_foreach") {
 
     deps += [ host_tool ]
 
-    # The script takes as arguments the binary to run, and then the arguments
-    # to pass it.
-    args = [ rebase_path(host_executable, root_build_dir) ] + invoker.args
+    # The script takes as arguments Clang bin directory (for passing
+    # llvm-symbolizer to runtimes), the binary to run, and then the
+    # arguments to pass it.
+    args = [
+             clang_prefix,
+             rebase_path(host_executable, root_build_dir),
+           ] + invoker.args
   }
 }
