@@ -84,7 +84,7 @@ ${MKBOOTIMG} --kernel $KERNEL \
 -o $OUT_IMAGE
 
 fastboot $FLASH boot $OUT_IMAGE
-if [ -n $FLASH ]; then
+if [ -n "$FLASH" ]; then
     # Can't guarantee that the target has written image to flash before the
     # fastboot command completes, so short delay here before reboot.
     sleep 1
