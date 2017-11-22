@@ -26,7 +26,8 @@ Scene::Scene(scenic_lib::Session* session, float width, float height)
   background_material.SetColor(220, 220, 220, 255);
   background_node.SetShape(background_shape);
   background_node.SetMaterial(background_material);
-  background_node.SetTranslation(width * .5f, height * .5f, 0);
+  background_node.SetTranslation(width * .5f, height * .5f, .1f);
+  stroke_group_holder_.SetTranslation(0.f, 0.f, 50.f);
 
   scene.AddChild(root);
   root.AddChild(background_node);

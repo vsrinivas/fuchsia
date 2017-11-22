@@ -75,8 +75,8 @@ Camera Camera::NewOrtho(const ViewingVolume& volume) {
   // center of the stage.  Also, move the camera "upward"; since the Vulkan
   // camera points into the screen along the negative-Z axis, this is equivalent
   // to moving the entire stage by a negative amount in Z.
-  mat4 transform =
-      glm::translate(vec3(-volume.width() / 2, -volume.height() / 2, -10000));
+  mat4 transform = glm::translate(
+      vec3(-volume.width() / 2, -volume.height() / 2, -(volume.top() + 10.f)));
 
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
   mat4 projection = glm::ortho(-0.5f * volume.width(), 0.5f * volume.width(),
