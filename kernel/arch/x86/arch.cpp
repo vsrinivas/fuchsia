@@ -48,7 +48,6 @@ void *_bootdata_base;
 
 void arch_early_init(void)
 {
-    x86_mmu_percpu_init();
     x86_mmu_early_init();
 }
 

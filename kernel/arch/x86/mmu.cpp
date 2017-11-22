@@ -1253,8 +1253,9 @@ zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
 }
 
 void x86_mmu_early_init() {
-    x86_mmu_mem_type_init();
     x86_mmu_percpu_init();
+
+    x86_mmu_mem_type_init();
 
     // Unmap the lower identity mapping.
     X86ArchVmAspace::UnmapEntry<PageTable<PML4_L>>(nullptr, 0, &pml4[0]);
