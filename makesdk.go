@@ -87,8 +87,8 @@ func init() {
 	}
 
 	zxBuildDir := "out/build-zircon/"
-	x86ZxBuildDir := zxBuildDir + "/build-zircon-pc-x86-64/"
-	armZxBuildDir := zxBuildDir + "/build-zircon-qemu-arm64/"
+	x86ZxBuildDir := zxBuildDir + "/build-user-x86-64/"
+	armZxBuildDir := zxBuildDir + "/build-user-arm64/"
 	x86Builddir := "out/release-x86-64/"
 	armBuilddir := "out/release-aarch64/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
@@ -180,10 +180,24 @@ func init() {
 		},
 		{
 			kernelDebugObjs,
+			x86Builddir,
+			"sysroot/x86_64-fuchsia/debug-info",
+			customType,
+			copyIdsTxt,
+		},
+		{
+			kernelDebugObjs,
 			armZxBuildDir,
 			"sysroot/aarch64-fuchsia/debug-info",
 			customType,
 			copyKernelDebugObjs,
+		},
+		{
+			kernelDebugObjs,
+			armBuilddir,
+			"sysroot/aarch64-fuchsia/debug-info",
+			customType,
+			copyIdsTxt,
 		},
 	}
 	for _, c := range clientHeaders {
@@ -214,9 +228,9 @@ func copyKernelDebugObjs(src, dstPrefix string) {
 		}
 		return nil
 	})
-	if *dryRun {
-		return
-	}
+}
+
+func copyIdsTxt(src, dstPrefix string) {
 	// The ids.txt file has absolute paths but relative paths within the SDK are
 	// more useful to users.
 	srcIds, err := os.Open(filepath.Join(src, "ids.txt"))
@@ -224,6 +238,9 @@ func copyKernelDebugObjs(src, dstPrefix string) {
 		log.Fatal("could not open ids.txt", err)
 	}
 	defer srcIds.Close()
+	if *dryRun {
+		return
+	}
 	dstIds, err := os.Create(filepath.Join(dstPrefix, "ids.txt"))
 	if err != nil {
 		log.Fatal("could not create ids.txt", err)
@@ -266,7 +283,7 @@ func cp(args ...string) {
 	}
 	out, err := exec.Command("cp", args...).CombinedOutput()
 	if err != nil {
-		log.Fatal("cp failed with output", string(out), "error", err)
+		log.Fatal("cp failed with output ", string(out), " error ", err, args)
 	}
 }
 
