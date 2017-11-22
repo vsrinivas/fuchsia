@@ -100,13 +100,10 @@ GENERATED += $(EFI_BOOTLOADER)
 .PHONY: gigaboot
 gigaboot: $(EFI_BOOTLOADER)
 
-# top level target to just build the bootloader
-.PHONY: bootloader
-bootloader: gigaboot
-
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 # x86 only by default for now
 ifeq ($(ARCH),x86)
+bootloader: gigaboot
 all:: bootloader
 endif
 endif

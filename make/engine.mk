@@ -750,6 +750,10 @@ endif
 # the logic to compile and link stuff is in here
 include make/build.mk
 
+# top level target to just build the bootloader
+.PHONY: bootloader
+bootloader:
+
 # build a bootloader if needed
 include bootloader/build.mk
 
