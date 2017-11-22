@@ -70,11 +70,13 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (child_addr.copy_to_user(base) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = child_addr.copy_to_user(base);
+    if (status != ZX_OK)
+        return status;
 
-    if (child_vmar.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = child_vmar.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     cleanup_handler.cancel();
@@ -171,8 +173,9 @@ zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
         }
     }
 
-    if (mapped_addr.copy_to_user(vm_mapping->base()) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = mapped_addr.copy_to_user(vm_mapping->base());
+    if (status != ZX_OK)
+        return status;
 
     cleanup_handler.cancel();
     return ZX_OK;

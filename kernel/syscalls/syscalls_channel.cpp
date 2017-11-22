@@ -57,10 +57,12 @@ zx_status_t sys_channel_create(
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 
-    if (out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
-    if (out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(h0));
+    if (status != ZX_OK)
+        return status;
+    status = out1.copy_to_user(up->MapHandleToValue(h1));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(h0));
     up->AddHandle(fbl::move(h1));
@@ -117,12 +119,14 @@ zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
     // On ZX_ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
     // unconsumed, unless |options| has ZX_CHANNEL_READ_MAY_DISCARD set).
     if (actual_bytes) {
-        if (actual_bytes.copy_to_user(num_bytes) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = actual_bytes.copy_to_user(num_bytes);
+        if (status != ZX_OK)
+            return status;
     }
     if (actual_handles) {
-        if (actual_handles.copy_to_user(num_handles) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = actual_handles.copy_to_user(num_handles);
+        if (status != ZX_OK)
+            return status;
     }
     if (result == ZX_ERR_BUFFER_TOO_SMALL)
         return result;

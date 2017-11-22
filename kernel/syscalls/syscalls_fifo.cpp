@@ -46,10 +46,12 @@ zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     if (!handle1)
         return ZX_ERR_NO_MEMORY;
 
-    if (out0.copy_to_user(up->MapHandleToValue(handle0)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
-    if (out1.copy_to_user(up->MapHandleToValue(handle1)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(handle0));
+    if (status != ZX_OK)
+        return status;
+    status = out1.copy_to_user(up->MapHandleToValue(handle1));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle0));
     up->AddHandle(fbl::move(handle1));
@@ -71,8 +73,9 @@ zx_status_t sys_fifo_write(zx_handle_t handle, user_in_ptr<const void> entries,
     if (status != ZX_OK)
         return status;
 
-    if (actual_out.copy_to_user(actual) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = actual_out.copy_to_user(actual);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }
@@ -91,8 +94,9 @@ zx_status_t sys_fifo_read(zx_handle_t handle, user_out_ptr<void> entries, size_t
     if (status != ZX_OK)
         return status;
 
-    if (actual_out.copy_to_user(actual) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = actual_out.copy_to_user(actual);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }

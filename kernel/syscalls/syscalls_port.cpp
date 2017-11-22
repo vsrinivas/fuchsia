@@ -53,8 +53,9 @@ zx_status_t sys_port_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
 
     zx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (out.copy_to_user(hv) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out.copy_to_user(hv);
+    if (status != ZX_OK)
+        return status;
     up->AddHandle(fbl::move(handle));
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
@@ -108,8 +109,9 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
     if (st != ZX_OK)
         return st;
 
-    if (packet_out.copy_to_user(pp) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = packet_out.copy_to_user(pp);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }

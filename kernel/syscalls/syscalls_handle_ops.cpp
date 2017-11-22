@@ -58,8 +58,9 @@ static zx_status_t handle_dup_replace(
         if (!dest)
             return ZX_ERR_NO_MEMORY;
 
-        if (out.copy_to_user(up->MapHandleToValue(dest)) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = out.copy_to_user(up->MapHandleToValue(dest));
+        if (status != ZX_OK)
+            return status;
 
         if (is_replace)
             up->RemoveHandleLocked(handle_value);

@@ -45,8 +45,9 @@ zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_out_ptr<z
 
     zx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (out.copy_to_user(hv) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out.copy_to_user(hv);
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;

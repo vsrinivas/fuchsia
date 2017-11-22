@@ -112,8 +112,9 @@ zx_status_t sys_event_create(uint32_t options, user_out_ptr<zx_handle_t> event_o
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (event_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = event_out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;
@@ -146,11 +147,13 @@ zx_status_t sys_eventpair_create(uint32_t options,
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 
-    if (out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(h0));
+    if (status != ZX_OK)
+        return status;
 
-    if (out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = out1.copy_to_user(up->MapHandleToValue(h1));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(h0));
     up->AddHandle(fbl::move(h1));
@@ -181,8 +184,9 @@ zx_status_t sys_log_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
 
@@ -270,8 +274,9 @@ zx_status_t sys_cprng_draw(user_out_ptr<void> buffer, size_t len, user_out_ptr<s
 
     if (buffer.copy_array_to_user(kernel_buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
-    if (actual.copy_to_user(len) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = actual.copy_to_user(len);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }

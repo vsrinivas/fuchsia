@@ -51,11 +51,13 @@ zx_status_t sys_socket_create(uint32_t options, user_out_ptr<zx_handle_t> out0, 
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 
-    if (out0.copy_to_user(up->MapHandleToValue(h0)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(h0));
+    if (status != ZX_OK)
+        return status;
 
-    if (out1.copy_to_user(up->MapHandleToValue(h1)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = out1.copy_to_user(up->MapHandleToValue(h1));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(h0));
     up->AddHandle(fbl::move(h1));
@@ -188,8 +190,9 @@ zx_status_t sys_socket_accept(zx_handle_t handle, user_out_ptr<zx_handle_t> out)
     HandleOwner outhandle(h);
     up->AddHandle(fbl::move(outhandle));
 
-    if (out.copy_to_user(hv) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = out.copy_to_user(hv);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }

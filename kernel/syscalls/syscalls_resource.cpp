@@ -68,8 +68,9 @@ zx_status_t sys_resource_create(zx_handle_t handle, uint32_t kind,
     if (!child_h)
         return ZX_ERR_NO_MEMORY;
 
-    if (resource_out.copy_to_user(up->MapHandleToValue(child_h)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = resource_out.copy_to_user(up->MapHandleToValue(child_h));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(child_h));
 

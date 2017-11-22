@@ -43,8 +43,9 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         auto status = x86_ipm_get_state(&state);
         if (status != ZX_OK)
             return status;
-        if (arg.reinterpret<zx_x86_ipm_state_t>().copy_to_user(state) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        status = arg.reinterpret<zx_x86_ipm_state_t>().copy_to_user(state);
+        if (status != ZX_OK)
+            return status;
         return ZX_OK;
     }
 

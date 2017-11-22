@@ -53,8 +53,9 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_ptr<zx_hand
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = _out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
 
@@ -163,8 +164,9 @@ zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
     status = vmo->GetSize(&size);
 
     // copy the size back, even if it failed
-    if (_size.copy_to_user(size) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _size.copy_to_user(size);
+    if (status != ZX_OK)
+        return status;
 
     return status;
 }
@@ -270,8 +272,9 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t offset,
     if (!clone_handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out_handle.copy_to_user(up->MapHandleToValue(clone_handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _out_handle.copy_to_user(up->MapHandleToValue(clone_handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(clone_handle));
 

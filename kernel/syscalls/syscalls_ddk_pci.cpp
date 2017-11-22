@@ -710,8 +710,9 @@ zx_status_t sys_pci_query_irq_mode_caps(zx_handle_t dev_handle,
     if (result != ZX_OK)
         return result;
 
-    if (out_max_irqs.copy_to_user(max_irqs) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = out_max_irqs.copy_to_user(max_irqs);
+    if (status != ZX_OK)
+        return status;
 
     return result;
 }

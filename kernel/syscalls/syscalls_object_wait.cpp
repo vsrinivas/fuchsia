@@ -83,8 +83,9 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
 #endif
 
     if (observed) {
-        if (observed.copy_to_user(signals_state) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = observed.copy_to_user(signals_state);
+        if (status != ZX_OK)
+            return status;
     }
 
     if (signals_state & ZX_SIGNAL_HANDLE_CLOSED)

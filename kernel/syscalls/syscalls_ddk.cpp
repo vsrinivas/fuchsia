@@ -160,8 +160,9 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;
@@ -201,8 +202,9 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;

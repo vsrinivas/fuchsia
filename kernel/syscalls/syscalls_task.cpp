@@ -146,8 +146,9 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = _out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != ZX_OK)
+        return status;
     up->AddHandle(fbl::move(handle));
 
     return ZX_OK;
@@ -203,8 +204,9 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is ZX_OK or ZX_ERR_BUFFER_TOO_SMALL.
     if (status == ZX_OK || status == ZX_ERR_BUFFER_TOO_SMALL) {
-        if (_actual.copy_to_user(buffer_len) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = _actual.copy_to_user(buffer_len);
+        if (status != ZX_OK)
+            return status;
     }
 
     if (status != ZX_OK)
@@ -337,11 +339,13 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     if (!vmar_h)
         return ZX_ERR_NO_MEMORY;
 
-    if (_proc_handle.copy_to_user(up->MapHandleToValue(proc_h)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _proc_handle.copy_to_user(up->MapHandleToValue(proc_h));
+    if (status != ZX_OK)
+        return status;
 
-    if (_vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(vmar_h));
     up->AddHandle(fbl::move(proc_h));
@@ -477,8 +481,9 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
     zx_status_t st = vmo->ReadUser(_buffer, offset, len, &read);
 
     if (st == ZX_OK) {
-        if (_actual.copy_to_user(static_cast<size_t>(read)) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = _actual.copy_to_user(static_cast<size_t>(read));
+        if (status != ZX_OK)
+            return status;
     }
     return st;
 }
@@ -542,8 +547,9 @@ zx_status_t sys_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
     zx_status_t st = vmo->WriteUser(_buffer, offset, len, &written);
 
     if (st == ZX_OK) {
-        if (_actual.copy_to_user(static_cast<size_t>(written)) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = _actual.copy_to_user(static_cast<size_t>(written));
+        if (status != ZX_OK)
+            return status;
     }
     return st;
 }
@@ -602,8 +608,9 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_pt
         return status;
 
     HandleOwner job_handle(MakeHandle(fbl::move(job), rights));
-    if (_out.copy_to_user(up->MapHandleToValue(job_handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _out.copy_to_user(up->MapHandleToValue(job_handle));
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(job_handle));
     return ZX_OK;

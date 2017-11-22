@@ -81,8 +81,9 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
             return status;
         TRACEF("action %u, cpu %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
                action, cpu, regs.ctl, regs.output_base);
-        if (arg.reinterpret<zx_x86_pt_regs_t>().copy_to_user(regs) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        status = arg.reinterpret<zx_x86_pt_regs_t>().copy_to_user(regs);
+        if (status != ZX_OK)
+            return status;
         return ZX_OK;
     }
 

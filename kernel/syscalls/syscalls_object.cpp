@@ -531,8 +531,9 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!thread)
                 return ZX_ERR_WRONG_TYPE;
             uint32_t value = thread->get_num_state_kinds();
-            if (_value.reinterpret<uint32_t>().copy_to_user(value) != ZX_OK)
-                return ZX_ERR_INVALID_ARGS;
+            zx_status_t status = _value.reinterpret<uint32_t>().copy_to_user(value);
+            if (status != ZX_OK)
+                return status;
             return ZX_OK;
         }
         case ZX_PROP_NAME: {
@@ -551,8 +552,9 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ZX_ERR_WRONG_TYPE;
             uintptr_t value = process->get_debug_addr();
-            if (_value.reinterpret<uintptr_t>().copy_to_user(value) != ZX_OK)
-                return ZX_ERR_INVALID_ARGS;
+            zx_status_t status = _value.reinterpret<uintptr_t>().copy_to_user(value);
+            if (status != ZX_OK)
+                return status;
             return ZX_OK;
         }
         case ZX_PROP_PROCESS_VDSO_BASE_ADDRESS: {
@@ -754,8 +756,9 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
         if (!thread_h)
             return ZX_ERR_NO_MEMORY;
 
-        if (_out.copy_to_user(up->MapHandleToValue(thread_h)) != ZX_OK)
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = _out.copy_to_user(up->MapHandleToValue(thread_h));
+        if (status != ZX_OK)
+            return status;
         up->AddHandle(fbl::move(thread_h));
         return ZX_OK;
     }
@@ -768,8 +771,9 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
             if (!child_h)
                 return ZX_ERR_NO_MEMORY;
 
-            if (_out.copy_to_user(up->MapHandleToValue(child_h)) != ZX_OK)
-                return ZX_ERR_INVALID_ARGS;
+            zx_status_t status = _out.copy_to_user(up->MapHandleToValue(child_h));
+            if (status != ZX_OK)
+                return status;
             up->AddHandle(fbl::move(child_h));
             return ZX_OK;
         }
@@ -779,8 +783,9 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
             if (!child_h)
                 return ZX_ERR_NO_MEMORY;
 
-            if (_out.copy_to_user(up->MapHandleToValue(child_h)) != ZX_OK)
-                return ZX_ERR_INVALID_ARGS;
+            zx_status_t status = _out.copy_to_user(up->MapHandleToValue(child_h));
+            if (status != ZX_OK)
+                return status;
             up->AddHandle(fbl::move(child_h));
             return ZX_OK;
         }
@@ -829,8 +834,9 @@ zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_o
     if (status != ZX_OK)
         return status;
 
-    if (_cookie.copy_to_user(cookie) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    status = _cookie.copy_to_user(cookie);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }
