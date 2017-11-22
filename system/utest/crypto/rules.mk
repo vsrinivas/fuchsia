@@ -27,7 +27,6 @@ MODULE_LIBS := \
     system/ulib/unittest \
 
 MODULE_STATIC_LIBS := \
-    third_party/ulib/uboringssl \
     system/ulib/zxcpp \
     system/ulib/fbl \
 

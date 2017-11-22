@@ -31,24 +31,41 @@ public:
     // Resets self and then takes ownership of the given |buf| of |len| bytes.
     void Adopt(fbl::unique_ptr<uint8_t[]> buf, size_t len);
 
-    // Discards the current contents and allocates a new buffer of |size| bytes initialized to the
-    // given |fill| value.
-    zx_status_t Init(size_t size, uint8_t fill = 0);
+    // Discards the current contents and allocates a new buffer of |size| bytes initialized zero.
+    zx_status_t InitZero(size_t size);
+
+    // Discards the current contents and allocates a new buffer of |size| bytes initialized with a
+    // pseudorandom bytes sequence.
+    zx_status_t InitRandom(size_t size);
+
+    // Fills the underlying buffer with the given |value|
+    zx_status_t Fill(uint8_t value);
+
+    // Fills the underlying buffer with random data.
+    zx_status_t Randomize();
 
     // Resize the underlying buffer.  If the new length is shorter, the data is truncated.  If it is
     // longer, it is padded with the given |fill| value.
     zx_status_t Resize(size_t size, uint8_t fill = 0);
 
-    // Copies |len| bytes from |buf| to the underlying buffer, starting at |off|.  Resizes the
-    // buffer as needed.
-    zx_status_t Copy(const void* buf, size_t len, zx_off_t off = 0);
+    // Copies |len| bytes from |src| to |dst_off| in the underlying buffer.  Resizes the buffer as
+    // needed, padding with zeros.
+    zx_status_t Copy(const void* src, size_t len, zx_off_t dst_off = 0);
 
-    // Resizes the the underlying buffer to |size| and fills it with random data.
-    zx_status_t Randomize(size_t size);
+    // Copies |src|'s data to |dst_off| in the underlying buffer.  Resizes the buffer as needed,
+    // padding with zeros.
+    zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0);
 
     // Treats the contents of this object as a (big-endian) arbitrary precision unsigned integer and
     // increments it.  Returns |ZX_ERR_OUT_OF_RANGE| if incrementing would overflow.
     zx_status_t Increment();
+
+    // Copies the contents of |tail| to the end of this buffer.
+    zx_status_t Append(const Bytes& tail);
+
+    // Takes the last |tail->len()| bytes of this buffer, copies them into |tail|, and truncates
+    // this buffer.  It is an error for |tail| to be longer than this buffer.
+    zx_status_t Split(Bytes* tail);
 
     // Yields ownership of the underlying buffer and returns it after saving the length in |len| if
     // not null.

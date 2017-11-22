@@ -83,14 +83,14 @@ bool TestInitSeal(AEAD::Algorithm aead) {
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
 
     // Bad key
-    ASSERT_OK(key.Resize(key.len() - 1));
-    EXPECT_ZX(sealer.InitSeal(aead, key, iv, 0, nullptr), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Randomize(key.len() + 1));
+    Bytes bad_key;
+    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    EXPECT_ZX(sealer.InitSeal(aead, bad_key, iv, 0, nullptr), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
-    ASSERT_OK(iv.Resize(iv.len() - 1));
-    EXPECT_ZX(sealer.InitSeal(aead, key, iv, 0, nullptr), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(iv.Randomize(iv.len() + 1));
+    Bytes bad_iv;
+    ASSERT_OK(iv.Copy(iv.get(), iv.len() - 1));
+    EXPECT_ZX(sealer.InitSeal(aead, key, bad_iv, 0, nullptr), ZX_ERR_INVALID_ARGS);
 
     // Bad AD
     uintptr_t p;
@@ -122,9 +122,9 @@ bool TestInitOpen(AEAD::Algorithm aead) {
     ASSERT_OK(GenerateKeyMaterial(aead, &key, nullptr));
 
     // Bad key
-    ASSERT_OK(key.Resize(key.len() - 1));
-    EXPECT_ZX(opener.InitOpen(aead, key, 0, nullptr), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Randomize(key.len() + 1));
+    Bytes bad_key;
+    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    EXPECT_ZX(opener.InitOpen(aead, bad_key, 0, nullptr), ZX_ERR_INVALID_ARGS);
 
     // Bad AD
     uintptr_t p;
@@ -146,7 +146,7 @@ bool TestSealData(AEAD::Algorithm aead) {
     AEAD sealer;
     Bytes key, iv, ptext, ctext;
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
-    ASSERT_OK(ptext.Randomize(PAGE_SIZE));
+    ASSERT_OK(ptext.InitRandom(PAGE_SIZE));
 
     // Not initialized
     EXPECT_ZX(sealer.Seal(ptext, &iv, &ctext), ZX_ERR_BAD_STATE);
@@ -175,7 +175,7 @@ bool TestOpenData(AEAD::Algorithm aead) {
     BEGIN_TEST;
     Bytes key, iv, ptext, ctext, result;
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
-    ASSERT_OK(ptext.Randomize(PAGE_SIZE));
+    ASSERT_OK(ptext.InitRandom(PAGE_SIZE));
 
     AEAD sealer;
     uintptr_t p;

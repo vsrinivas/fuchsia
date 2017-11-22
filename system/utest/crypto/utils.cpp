@@ -31,7 +31,7 @@ bool AllEqual(const void* buf, uint8_t val, zx_off_t off, size_t len) {
 fbl::unique_ptr<uint8_t[]> MakeZeroPage() {
     fbl::unique_ptr<uint8_t[]> block;
     Bytes bytes;
-    if (bytes.Init(PAGE_SIZE) == ZX_OK) {
+    if (bytes.InitZero(PAGE_SIZE) == ZX_OK) {
         block = fbl::move(bytes.Release());
     }
     return block;
@@ -40,7 +40,7 @@ fbl::unique_ptr<uint8_t[]> MakeZeroPage() {
 fbl::unique_ptr<uint8_t[]> MakeRandPage() {
     fbl::unique_ptr<uint8_t[]> block;
     Bytes bytes;
-    if (bytes.Randomize(PAGE_SIZE) == ZX_OK) {
+    if (bytes.InitRandom(PAGE_SIZE) == ZX_OK) {
         block = fbl::move(bytes.Release());
     }
     return block;
@@ -70,7 +70,7 @@ zx_status_t HexToBytes(const char* hex, Bytes* out) {
         } else if ('a' <= c && c <= 'f') {
             n = static_cast<uint8_t>(c - 'a' + 10);
         } else if ('A' <= c && c <= 'F') {
-            n = static_cast<uint8_t>(c - 'A' + 10) ;
+            n = static_cast<uint8_t>(c - 'A' + 10);
         } else {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -91,13 +91,13 @@ zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv)
 
     size_t key_len;
     if ((rc = Cipher::GetKeyLen(cipher, &key_len)) != ZX_OK ||
-        (rc = key->Randomize(key_len)) != ZX_OK) {
+        (rc = key->InitRandom(key_len)) != ZX_OK) {
         return rc;
     }
     if (iv) {
         size_t iv_len;
         if ((rc = Cipher::GetIVLen(cipher, &iv_len)) != ZX_OK ||
-            (rc = iv->Randomize(iv_len)) != ZX_OK) {
+            (rc = iv->InitRandom(iv_len)) != ZX_OK) {
             return rc;
         }
     }
@@ -111,13 +111,13 @@ zx_status_t GenerateKeyMaterial(AEAD::Algorithm cipher, Bytes* key, Bytes* iv) {
 
     size_t key_len;
     if ((rc = AEAD::GetKeyLen(cipher, &key_len)) != ZX_OK ||
-        (rc = key->Randomize(key_len)) != ZX_OK) {
+        (rc = key->InitRandom(key_len)) != ZX_OK) {
         return rc;
     }
     if (iv) {
         size_t iv_len;
         if ((rc = AEAD::GetIVLen(cipher, &iv_len)) != ZX_OK ||
-            (rc = iv->Randomize(iv_len)) != ZX_OK) {
+            (rc = iv->InitRandom(iv_len)) != ZX_OK) {
             return rc;
         }
     }

@@ -54,8 +54,8 @@ bool TestUpdate(void) {
     size_t key_len;
     Bytes key, buf;
     ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
-    ASSERT_OK(key.Randomize(key_len));
-    ASSERT_OK(buf.Randomize(PAGE_SIZE));
+    ASSERT_OK(key.InitRandom(key_len));
+    ASSERT_OK(buf.InitRandom(PAGE_SIZE));
 
     // Uninitialized
     EXPECT_ZX(hmac.Update(buf.get(), buf.len()), ZX_ERR_BAD_STATE);
@@ -78,8 +78,8 @@ bool TestFinal(void) {
     size_t key_len;
     Bytes key, buf;
     ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
-    ASSERT_OK(key.Randomize(key_len));
-    ASSERT_OK(buf.Randomize(PAGE_SIZE));
+    ASSERT_OK(key.InitRandom(key_len));
+    ASSERT_OK(buf.InitRandom(PAGE_SIZE));
 
     // Uninitialized
     Bytes out;
@@ -118,7 +118,7 @@ bool TestCreate(void) {
     ASSERT_OK(key.Resize(key_len - 1));
     EXPECT_ZX(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, &digest1),
               ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Randomize(key_len));
+    ASSERT_OK(key.InitRandom(key_len));
     EXPECT_ZX(HMAC::Create(digest::kSHA256, key, nullptr, PAGE_SIZE, &digest1),
               ZX_ERR_INVALID_ARGS);
     EXPECT_ZX(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, nullptr),
@@ -157,11 +157,11 @@ bool TestVerify(void) {
     EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
     ASSERT_OK(key.Resize(key_len));
     EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, nullptr, PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Randomize(key_len));
+    ASSERT_OK(key.InitRandom(key_len));
     EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
 
     // Verify valid
-    ASSERT_OK(key.Randomize(key_len));
+    ASSERT_OK(key.InitRandom(key_len));
     ASSERT_OK(HMAC::Create(digest::kSHA256, key, block.get(), PAGE_SIZE, &out));
     EXPECT_OK(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out));
 

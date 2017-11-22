@@ -115,12 +115,11 @@ zx_status_t AEAD::InitSeal(Algorithm aead, const Bytes& key, const Bytes& iv, si
     if ((rc = Init(aead, key, Cipher::kEncrypt, ad_len, out_ad)) != ZX_OK) {
         return rc;
     }
-    size_t iv_len = iv_.len();
-    if (iv.len() != iv_len) {
-        xprintf("%s: wrong IV length; have %zu, need %zu\n", __PRETTY_FUNCTION__, iv.len(), iv_len);
+    if (iv.len() != iv_.len()) {
+        xprintf("%s: wrong IV length; have %zu, need %zu\n", __PRETTY_FUNCTION__, iv.len(), iv_.len());
         return ZX_ERR_INVALID_ARGS;
     }
-    if ((rc = iv_.Copy(iv.get(), iv_len)) != ZX_OK) {
+    if ((rc = iv_.Copy(iv)) != ZX_OK) {
         return rc;
     }
 
@@ -140,7 +139,6 @@ zx_status_t AEAD::Seal(const Bytes& ptext, Bytes* iv, Bytes* ctext) {
         return ZX_ERR_BAD_STATE;
     }
 
-    size_t iv_len = iv_.len();
     size_t ptext_len = ptext.len();
     if (!iv || !ctext) {
         xprintf("%s: bad parameter(s): iv=%p, ctext=%p\n", __PRETTY_FUNCTION__, iv, ctext);
@@ -148,13 +146,13 @@ zx_status_t AEAD::Seal(const Bytes& ptext, Bytes* iv, Bytes* ctext) {
     }
 
     size_t ctext_len = ptext_len + tag_len_;
-    if ((rc = ctext->Resize(ctext_len)) != ZX_OK || (rc = iv->Copy(iv_.get(), iv_len)) != ZX_OK ||
+    if ((rc = ctext->Resize(ctext_len)) != ZX_OK || (rc = iv->Copy(iv_)) != ZX_OK ||
         (rc = iv_.Increment()) != ZX_OK) {
         return rc;
     }
 
     size_t out_len;
-    if (EVP_AEAD_CTX_seal(&ctx_->impl, ctext->get(), &out_len, ctext_len, iv->get(), iv_len,
+    if (EVP_AEAD_CTX_seal(&ctx_->impl, ctext->get(), &out_len, ctext_len, iv->get(), iv->len(),
                           ptext.get(), ptext_len, ad_.get(), ad_len_) != 1) {
         xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
         return rc;

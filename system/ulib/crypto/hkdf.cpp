@@ -60,9 +60,13 @@ zx_status_t HKDF::Init(digest::Algorithm digest, const Bytes& key, const Bytes& 
         return rc;
     }
 
-    digest_ = digest;
     prk_.Reset();
-    return prk_.Copy(prk.get(), prk_len);
+    if ((rc = prk_.Copy(prk.get(), prk_len)) != ZX_OK) {
+        return rc;
+    }
+
+    digest_ = digest;
+    return ZX_OK;
 }
 
 zx_status_t HKDF::Derive(const char* label, Bytes* out_key) {

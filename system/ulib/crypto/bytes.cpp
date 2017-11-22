@@ -13,6 +13,7 @@
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
 #include <openssl/mem.h>
+#include <safeint/safe_math.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -36,15 +37,56 @@ void Bytes::Adopt(fbl::unique_ptr<uint8_t[]> buf, size_t len) {
     len_ = len;
 }
 
-zx_status_t Bytes::Init(size_t size, uint8_t fill) {
+zx_status_t Bytes::InitZero(size_t size) {
+    if (size == len_) {
+        return Fill(0);
+    }
+
     Reset();
-    return Resize(size, fill);
+    return Resize(size);
+}
+
+zx_status_t Bytes::InitRandom(size_t size) {
+    zx_status_t rc;
+
+    if (size != len_ && (rc = InitZero(size)) != ZX_OK) {
+        return rc;
+    }
+
+    return Randomize();
+}
+
+zx_status_t Bytes::Fill(uint8_t value) {
+    memset(buf_.get(), value, len_);
+    return ZX_OK;
+}
+
+zx_status_t Bytes::Randomize() {
+    zx_status_t rc;
+
+    uint8_t* p = buf_.get();
+    size_t size = len_;
+    size_t actual;
+    while (size != 0) {
+        size_t n = fbl::min(size, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
+        if ((rc = zx_cprng_draw(p, n, &actual)) != ZX_OK) {
+            xprintf("%s: zx_cprng_draw(%p, %zu, %p) failed: %s", __PRETTY_FUNCTION__, p, n, &actual,
+                    zx_status_get_string(rc));
+            return rc;
+        }
+        p += actual;
+        size -= actual;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Bytes::Resize(size_t size, uint8_t fill) {
-    // Early exit if truncating to zero.
+    // Early exit if truncating to zero or if size is unchanged
     if (size == 0) {
         Reset();
+    }
+    if (size == len_) {
         return ZX_OK;
     }
 
@@ -78,15 +120,13 @@ zx_status_t Bytes::Copy(const void* buf, size_t len, zx_off_t off) {
     if (len == 0) {
         return ZX_OK;
     }
-
     if (!buf) {
         xprintf("%s: null buffer\n", __PRETTY_FUNCTION__);
         return ZX_ERR_INVALID_ARGS;
     }
-
-    size_t size = off + len;
-    ZX_ASSERT(size >= len); // overflow
-    if (len_ < size && (rc = Resize(size)) != ZX_OK) {
+    safeint::CheckedNumeric<size_t> size = off;
+    size += len;
+    if (len_ < size.ValueOrDie() && (rc = Resize(size.ValueOrDie())) != ZX_OK) {
         return rc;
     }
     memcpy(buf_.get() + off, buf, len);
@@ -94,23 +134,29 @@ zx_status_t Bytes::Copy(const void* buf, size_t len, zx_off_t off) {
     return ZX_OK;
 }
 
-zx_status_t Bytes::Randomize(size_t size) {
+zx_status_t Bytes::Copy(const Bytes& other, zx_off_t off) {
+    return Copy(other.get(), other.len(), off);
+}
+
+zx_status_t Bytes::Append(const Bytes& tail) {
+    return Copy(tail, len_);
+}
+
+zx_status_t Bytes::Split(Bytes* tail) {
     zx_status_t rc;
 
-    if ((rc = Resize(size)) != ZX_OK) {
-        return rc;
+    if (!tail) {
+        xprintf("%s: missing tail\n", __PRETTY_FUNCTION__);
+        return ZX_ERR_INVALID_ARGS;
     }
-    uint8_t* p = buf_.get();
-    size_t actual;
-    while (size != 0) {
-        size_t n = fbl::min(size, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
-        if ((rc = zx_cprng_draw(p, n, &actual)) != ZX_OK) {
-            xprintf("%s: zx_cprng_draw(%p, %zu, %p) failed: %s", __PRETTY_FUNCTION__, p, n, &actual,
-                    zx_status_get_string(rc));
-            return rc;
-        }
-        p += actual;
-        size -= actual;
+    if (len_ < tail->len()) {
+        xprintf("%s: insufficient data; have %zu, need %zu\n", __PRETTY_FUNCTION__, len_,
+                tail->len());
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    size_t off = len_ - tail->len();
+    if ((rc = tail->Copy(buf_.get() + off, tail->len())) != ZX_OK || (rc = Resize(off)) != ZX_OK) {
+        return rc;
     }
 
     return ZX_OK;
@@ -122,7 +168,7 @@ zx_status_t Bytes::Increment() {
     // This is intentionally branchless to be as close to constant time as possible.  Although
     // unlikely, it's conceivable that differences in timing on incrementing leak information about
     // the contents.
-    while(i != 0) {
+    while (i != 0) {
         --i;
         uint8_t n = overflow ? 1 : 0;
         buf_[i] = static_cast<uint8_t>(buf_[i] + n);

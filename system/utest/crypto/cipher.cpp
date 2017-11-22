@@ -64,14 +64,14 @@ bool TestInitEncrypt(Cipher::Algorithm cipher) {
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
 
     // Bad key
-    ASSERT_OK(key.Resize(key.len() - 1));
-    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Randomize(key.len() + 1));
+    Bytes bad_key;
+    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    EXPECT_ZX(encrypt.InitEncrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
-    ASSERT_OK(iv.Resize(iv.len() - 1));
-    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(iv.Randomize(iv.len() + 1));
+    Bytes bad_iv;
+    ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
+    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
     // Bad tweak
     EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv, 5), ZX_ERR_INVALID_ARGS);
@@ -106,14 +106,14 @@ bool TestInitDecrypt(Cipher::Algorithm cipher) {
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
 
     // Bad key
-    ASSERT_OK(key.Resize(key.len() - 1));
-    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Randomize(key.len() + 1));
+    Bytes bad_key;
+    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    EXPECT_ZX(decrypt.InitDecrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
-    ASSERT_OK(iv.Resize(iv.len() - 1));
-    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(iv.Randomize(iv.len() + 1));
+    Bytes bad_iv;
+    ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
+    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
     // Bad tweak
     EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv, 5), ZX_ERR_INVALID_ARGS);
@@ -138,7 +138,7 @@ bool TestEncryptData(Cipher::Algorithm cipher) {
     size_t len = PAGE_SIZE;
     Bytes key, iv, ptext;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.Randomize(len));
+    ASSERT_OK(ptext.InitRandom(len));
     uint8_t ctext[len];
 
     // Not initialized
@@ -152,14 +152,11 @@ bool TestEncryptData(Cipher::Algorithm cipher) {
     EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, ctext));
 
     // Bad texts
-    EXPECT_ZX(encrypt.Encrypt(nullptr, len, ctext),
-              ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, nullptr),
-              ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(encrypt.Encrypt(nullptr, len, ctext), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, nullptr), ZX_ERR_INVALID_ARGS);
 
     // Wrong mode
-    EXPECT_ZX(encrypt.Decrypt(ptext.get(), len, ctext),
-              ZX_ERR_BAD_STATE);
+    EXPECT_ZX(encrypt.Decrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 
     // Bad tweak
     EXPECT_ZX(encrypt.Tweak((uint64_t)-1), ZX_ERR_INVALID_ARGS);
@@ -177,8 +174,7 @@ bool TestEncryptData(Cipher::Algorithm cipher) {
 
     // Reset
     encrypt.Reset();
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext),
-              ZX_ERR_BAD_STATE);
+    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
     END_TEST;
 }
 DEFINE_EACH(TestEncryptData)
@@ -188,7 +184,7 @@ bool TestDecryptData(Cipher::Algorithm cipher) {
     size_t len = PAGE_SIZE;
     Bytes key, iv, ptext;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.Randomize(len));
+    ASSERT_OK(ptext.InitRandom(len));
     uint8_t ctext[len];
     uint8_t result[len];
     Cipher encrypt;
@@ -207,14 +203,11 @@ bool TestDecryptData(Cipher::Algorithm cipher) {
     EXPECT_OK(decrypt.Decrypt(ctext, 0, result));
 
     // Bad texts
-    EXPECT_ZX(decrypt.Decrypt(nullptr, sizeof(ctext), result),
-              ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), nullptr),
-              ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(decrypt.Decrypt(nullptr, sizeof(ctext), result), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), nullptr), ZX_ERR_INVALID_ARGS);
 
     // Wrong mode
-    EXPECT_ZX(decrypt.Encrypt(ctext, sizeof(ctext), result),
-              ZX_ERR_BAD_STATE);
+    EXPECT_ZX(decrypt.Encrypt(ctext, sizeof(ctext), result), ZX_ERR_BAD_STATE);
 
     // Bad tweak
     EXPECT_ZX(decrypt.Tweak((uint64_t)-1), ZX_ERR_INVALID_ARGS);
@@ -247,8 +240,7 @@ bool TestDecryptData(Cipher::Algorithm cipher) {
 
     // Reset
     decrypt.Reset();
-    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), result),
-              ZX_ERR_BAD_STATE);
+    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), result), ZX_ERR_BAD_STATE);
     END_TEST;
 }
 DEFINE_EACH(TestDecryptData)

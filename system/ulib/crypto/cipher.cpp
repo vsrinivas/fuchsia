@@ -203,7 +203,7 @@ zx_status_t Cipher::Init(Algorithm algo, const Bytes& key, const Bytes& iv, uint
     cipher_ = algo;
 
     // Set the IV.  This may be adjusted in |Tweak| is |tweakable| is nonzero.
-    if ((rc = iv_.Copy(iv.get(), iv.len())) != ZX_OK) {
+    if ((rc = iv_.Copy(iv)) != ZX_OK) {
         return rc;
     }
     if (cipher->iv_len < sizeof(tweakable)) {

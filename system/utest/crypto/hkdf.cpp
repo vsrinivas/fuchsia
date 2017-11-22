@@ -24,8 +24,8 @@ bool TestInit(void) {
     ASSERT_OK(digest::GetDigestLen(digest::kSHA256, &md_size));
 
     Bytes ikm, salt;
-    ASSERT_OK(ikm.Randomize(md_size));
-    ASSERT_OK(salt.Randomize(GUID_LEN));
+    ASSERT_OK(ikm.InitRandom(md_size));
+    ASSERT_OK(salt.InitRandom(GUID_LEN));
 
     // Bad version
     HKDF hkdf;
@@ -34,12 +34,12 @@ bool TestInit(void) {
     // Bad input key material
     ASSERT_OK(ikm.Resize(md_size - 1));
     EXPECT_ZX(hkdf.Init(digest::kSHA256, ikm, salt), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(ikm.Randomize(md_size));
+    ASSERT_OK(ikm.InitRandom(md_size));
 
     // Salt is optional
     salt.Reset();
     EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
-    ASSERT_OK(salt.Randomize(GUID_LEN));
+    ASSERT_OK(salt.InitRandom(GUID_LEN));
 
     // Invalid flags
     EXPECT_ZX(hkdf.Init(digest::kSHA256, ikm, salt, 0x8000), ZX_ERR_INVALID_ARGS);
@@ -56,11 +56,11 @@ bool TestDerive(void) {
 
     HKDF hkdf;
     Bytes ikm, salt, key1, key2, key3;
-    ASSERT_OK(ikm.Randomize(md_size));
-    ASSERT_OK(salt.Randomize(GUID_LEN));
-    ASSERT_OK(key1.Init(md_size));
-    ASSERT_OK(key2.Init(md_size));
-    ASSERT_OK(key3.Init(md_size));
+    ASSERT_OK(ikm.InitRandom(md_size));
+    ASSERT_OK(salt.InitRandom(GUID_LEN));
+    ASSERT_OK(key1.Resize(md_size));
+    ASSERT_OK(key2.Resize(md_size));
+    ASSERT_OK(key3.Resize(md_size));
 
     // Uninitialized
     EXPECT_ZX(hkdf.Derive("init", &key1), ZX_ERR_INVALID_ARGS);
@@ -73,7 +73,7 @@ bool TestDerive(void) {
     // Bad key
     key1.Reset();
     EXPECT_ZX(hkdf.Derive("init", &key1), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key1.Init(md_size));
+    ASSERT_OK(key1.Resize(md_size));
 
     // Same label, same key
     EXPECT_OK(hkdf.Derive("same", &key1));

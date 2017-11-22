@@ -167,7 +167,11 @@ zx_status_t HMAC::Final(Bytes* out) {
     }
 
     out->Reset();
-    return out->Copy(tmp.get(), out_len);
+    if ((rc = out->Copy(tmp.get(), out_len)) != ZX_OK) {
+        return rc;
+    }
+
+    return ZX_OK;
 }
 
 } // namespace crypto
