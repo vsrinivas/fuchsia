@@ -39,7 +39,7 @@ under fuchsia. In order to start `test_runner`, you can:
   workstation, do:
 
 ```
-fx set --packages packages/gn/boot_test_modular
+fx set --packages build/gn/boot_test_modular
 
 ```
 
