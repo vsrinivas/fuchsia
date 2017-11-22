@@ -215,7 +215,7 @@ FUCHSIA_VARIANT="${variant}"
 FUCHSIA_ARCH="${arch}"
 ZIRCON_PROJECT="${zircon_project}"
 END
-  "${FUCHSIA_DIR}/packages/gn/gen.py" ${gen_args} "$@"
+  "${FUCHSIA_DIR}/build/gn/gen.py" ${gen_args} "$@"
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
     if ! [[ $("${goma_dir}/gomacc" port) =~ ^[0-9]+$ ]]; then

@@ -270,7 +270,7 @@ emptyfile() {
 set -e
 
 echo "Building boot environment for installer"
-gn_gen_path="packages/gn/gen.py"
+gn_gen_path="build/gn/gen.py"
 ninja_path="buildtools/ninja"
 build_dir_installer_system="out/installer-system-${build_arch}"
 
