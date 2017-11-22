@@ -151,6 +151,9 @@ Use `fx run -h` to see all available options.
 
 #### Enabling Graphics
 
+Note: Graphics under QEMU are extremely limited due to a lack of Vulkan
+support. Only the Zircon UI renders.
+
 To enable graphics under QEMU, add the `-g` flag to `fx run`:
 
 ```
