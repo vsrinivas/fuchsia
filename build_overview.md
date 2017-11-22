@@ -58,7 +58,7 @@ incorporate:
 # fuchsia_base is typically "default".
 # my_stuff is a possibly-empty list of extra packages to include.
 
-$ packages/gn/gen.py --packages packages/gn/fuchsia_base,packages/gn/my_stuff
+$ build/gn/gen.py --packages build/gn/fuchsia_base,build/gn/my_stuff
 ```
 This will create an `out/debug-<arch>` directory containing Ninja files to run
 the build.

@@ -22,7 +22,7 @@ and the sysroot:
 Build Fuchsia using these commands:
 
 ```
-./packages/gn/gen.py
+./build/gn/gen.py
 ./buildtools/ninja -C out/debug-x86-64
 ```
 
@@ -31,7 +31,7 @@ environment variable is set to an existing directory), use the following command
 for faster builds:
 
 ```
-./packages/gn/gen.py --ccache
+./build/gn/gen.py --ccache
 ./buildtools/ninja -C out/debug-x86-64
 ```
 
@@ -39,7 +39,7 @@ for faster builds:
 these alternative commands for faster builds:
 
 ```
-./packages/gn/gen.py --goma
+./build/gn/gen.py --goma
 ./buildtools/ninja -j1024 -C out/debug-x86-64
 ```
 
@@ -47,7 +47,7 @@ The gen.py script takes an optional parameter '--target\_cpu' to set the target
 architecture. If not supplied, it defaults to x86-64.
 
 ```
-./packages/gn/gen.py --target_cpu=aarch64
+./build/gn/gen.py --target_cpu=aarch64
 ./buildtools/ninja -C out/debug-aarch64
 ```
 
@@ -61,7 +61,7 @@ This simple example powers off the machine immediately after booting.
 
 ```
 echo 'dm poweroff' > poweroff.autorun
-./packages/gn/gen.py --autorun=poweroff.autorun
+./build/gn/gen.py --autorun=poweroff.autorun
 ./buildtools/ninja -C out/debug-x86-64
 ```
 
@@ -92,6 +92,6 @@ zircon_project argument. For example, to build a fuchsia image for the
 HiKey 960, you might invoke gen.py as follows:
 
 ```
-./packages/gn/gen.py --zircon_project=zircon-hikey960-arm64 --target_cpu=aarch64
+./build/gn/gen.py --zircon_project=zircon-hikey960-arm64 --target_cpu=aarch64
 ./buildtools/ninja -C out/debug-aarch64
 ```

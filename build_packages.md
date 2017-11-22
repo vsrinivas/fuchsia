@@ -2,7 +2,7 @@
 
 **Top level packages** are defined in JSON files which can be found at:
 
-* Primary Packages Dir: [`//packages/gn`][packages-source]
+* Primary Packages Dir: [`//build/gn`][packages-source]
 * Garnet Layer Packages: [`//garnet/packages/`][garnet-packages-source].
 * Peridot Layer Packages: [`//peridot/packages/`][peridot-packages-source].
 * Topaz Layer Packages: [`//topaz/packages/`][topaz-packages-source].
@@ -12,8 +12,8 @@ on top of (`imports`) and the GN packages it includes (`packages`):
 ``` json
 {
     "imports": [
-        "packages/gn/foo_framework”,
-        “packages/gn/some_extra_data”
+        "build/gn/foo_framework”,
+        “build/gn/some_extra_data”
     ],
     "packages": {
         "my_package": "//my/stuff/my_package"
