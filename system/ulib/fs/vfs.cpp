@@ -184,11 +184,8 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         if (!(flags & O_NOREMOTE) && vn->IsRemote()) {
             // Opening a mount point: Traverse across remote.
             *pathout = ".";
-
-            if ((r = vn->GetRemote()) > 0) {
-                *out = fbl::move(vn);
-                return ZX_OK;
-            }
+            *out = fbl::move(vn);
+            return ZX_OK;
         }
 
         flags |= (must_be_dir ? O_DIRECTORY : 0);
