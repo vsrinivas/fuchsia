@@ -7,12 +7,28 @@
 use {AsHandleRef, ClockId, HandleBased, Handle, HandleRef, Status};
 use {sys, ok};
 use std::ops;
+use std::time as stdtime;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Duration(sys::zx_duration_t);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Time(sys::zx_time_t);
+
+impl From<stdtime::Duration> for Duration {
+    fn from(dur: stdtime::Duration) -> Self {
+        Duration::from_seconds(dur.as_secs()) +
+        Duration::from_nanos(dur.subsec_nanos() as u64)
+    }
+}
+
+impl From<Duration> for stdtime::Duration {
+    fn from(dur: Duration) -> Self {
+        let secs = dur.seconds();
+        let nanos = (dur.nanos() - (secs * 1_000_000_000)) as u32;
+        stdtime::Duration::new(secs, nanos)
+    }
+}
 
 impl ops::Add<Duration> for Time {
     type Output = Time;
@@ -267,7 +283,7 @@ impl Timer {
     /// Start a one-shot timer that will fire when `deadline` passes. Wraps the
     /// [zx_timer_set](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/timer_set.md)
     /// syscall.
-    pub fn set(&self, deadline: Duration, slack: Duration) -> Result<(), Status> {
+    pub fn set(&self, deadline: Time, slack: Duration) -> Result<(), Status> {
         let status = unsafe {
             sys::zx_timer_set(self.raw_handle(), deadline.nanos(), slack.nanos())
         };
@@ -295,7 +311,14 @@ mod tests {
     }
 
     #[test]
+    fn into_from_std() {
+        let std_dur = stdtime::Duration::new(25, 25);
+        assert_eq!(std_dur, stdtime::Duration::from(Duration::from(std_dur)));
+    }
+
+    #[test]
     fn timer_basic() {
+        let slack = 0.millis();
         let ten_ms = 10.millis();
         let twenty_ms = 20.millis();
 
@@ -306,7 +329,7 @@ mod tests {
         assert_eq!(timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()), Err(Status::TIMED_OUT));
 
         // Set it, and soon it should signal.
-        assert_eq!(timer.set(ten_ms, Duration::from_nanos(0)), Ok(()));
+        assert_eq!(timer.set(ten_ms.after_now(), slack), Ok(()));
         assert_eq!(timer.wait_handle(Signals::TIMER_SIGNALED, twenty_ms.after_now()).unwrap(),
             Signals::TIMER_SIGNALED);
 
