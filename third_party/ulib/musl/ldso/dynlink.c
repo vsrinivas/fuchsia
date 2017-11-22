@@ -235,31 +235,34 @@ static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
 
 
 /* Compute load address for a virtual address in a given dso. */
-static inline size_t saddr(struct dso* p, size_t v) {
+__NO_SAFESTACK NO_ASAN static inline size_t saddr(struct dso* p, size_t v) {
     return p->l_map.l_addr + v;
 }
 
-static inline void* laddr(struct dso* p, size_t v) {
+__NO_SAFESTACK NO_ASAN static inline void* laddr(struct dso* p, size_t v) {
     return (void*)saddr(p, v);
 }
 
+__NO_SAFESTACK NO_ASAN
 static inline void (*fpaddr(struct dso* p, size_t v))(void) {
     return (void (*)(void))saddr(p, v);
 }
 
 // Accessors for dso previous and next pointers.
-static inline struct dso* dso_next(struct dso* p) {
+__NO_SAFESTACK NO_ASAN static inline struct dso* dso_next(struct dso* p) {
     return (struct dso*)p->l_map.l_next;
 }
 
-static inline struct dso* dso_prev(struct dso* p) {
+__NO_SAFESTACK NO_ASAN static inline struct dso* dso_prev(struct dso* p) {
     return (struct dso*)p->l_map.l_prev;
 }
 
+__NO_SAFESTACK NO_ASAN
 static inline void dso_set_next(struct dso* p, struct dso* next) {
     p->l_map.l_next = &next->l_map;
 }
 
+__NO_SAFESTACK NO_ASAN
 static inline void dso_set_prev(struct dso* p, struct dso* prev) {
     p->l_map.l_prev = &prev->l_map;
 }
