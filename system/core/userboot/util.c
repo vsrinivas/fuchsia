@@ -26,6 +26,12 @@ static char* hexstring(char* s, size_t len, uint64_t n) {
         n >>= 4;
     } while (n);
 
+    if (len > 2) {
+        *s++ = '0';
+        *s++ = 'x';
+        len -= 2;
+    }
+
     while ((hex > tmp) && (len > 0)) {
         *s++ = *--hex;
         len--;

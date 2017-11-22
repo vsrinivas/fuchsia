@@ -21,7 +21,8 @@
 
 #define INTERP_PREFIX "lib/"
 
-static zx_vaddr_t load(zx_handle_t log, zx_handle_t vmar, zx_handle_t vmo,
+static zx_vaddr_t load(zx_handle_t log, const char* what,
+                       zx_handle_t vmar, zx_handle_t vmo,
                        uintptr_t* interp_off, size_t* interp_len,
                        zx_handle_t* segments_vmar, size_t* stack_size,
                        bool close_vmo, bool return_entry) {
@@ -45,21 +46,21 @@ static zx_vaddr_t load(zx_handle_t log, zx_handle_t vmar, zx_handle_t vmo,
         }
     }
 
-    zx_vaddr_t addr;
+    zx_vaddr_t base, entry;
     status = elf_load_map_segments(vmar, &header, phdrs, vmo,
-                                   segments_vmar,
-                                   return_entry ? NULL : &addr,
-                                   return_entry ? &addr : NULL);
+                                   segments_vmar, &base, &entry);
     check(log, status, "elf_load_map_segments failed");
 
     if (close_vmo)
         zx_handle_close(vmo);
 
-    return addr;
+    printl(log, "userboot: loaded %s at %p, entry point %p\n",
+           what, (void*)base, (void*)entry);
+    return return_entry ? entry : base;
 }
 
 zx_vaddr_t elf_load_vmo(zx_handle_t log, zx_handle_t vmar, zx_handle_t vmo) {
-    return load(log, vmar, vmo, NULL, NULL, NULL, NULL, false, false);
+    return load(log, "vDSO", vmar, vmo, NULL, NULL, NULL, NULL, false, false);
 }
 
 enum loader_bootstrap_handle_index {
@@ -148,7 +149,8 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
 
     uintptr_t interp_off = 0;
     size_t interp_len = 0;
-    zx_vaddr_t entry = load(log, vmar, vmo, &interp_off, &interp_len,
+    zx_vaddr_t entry = load(log, filename,
+                            vmar, vmo, &interp_off, &interp_len,
                             NULL, stack_size, true, true);
     if (interp_len > 0) {
         char interp[sizeof(INTERP_PREFIX) + interp_len];
@@ -168,7 +170,7 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
         zx_handle_t interp_vmo =
             bootfs_open(log, "dynamic linker", fs, interp);
         zx_handle_t interp_vmar;
-        entry = load(log, vmar, interp_vmo,
+        entry = load(log, interp, vmar, interp_vmo,
                      NULL, NULL, &interp_vmar, NULL, true, true);
 
         stuff_loader_bootstrap(log, proc, vmar, thread, to_child,
