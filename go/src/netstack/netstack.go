@@ -308,12 +308,22 @@ func (ns *netstack) addEth(path string) error {
 		return fmt.Errorf("NIC %d: adding solicited-node IPv6 failed: %v", nicid, err)
 	}
 
+	// TODO(): Start DHCP Client after
+	// (1) link is on
+	// (2) its IP address is not to be statically configured
+	// (3) Use of DHCP is explicitly configured
 	ifs.dhcp = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
 
-	go ifs.dhcp.Run(ifs.ctx)
+	// TODO(porce): Delete this condition. Treat wired ethernet, WLAN NICs in the same way.
+	if client.Features&eth.FeatureWlan != 0 {
+		// WLAN: Upon 802.1X port open, the state change will ensue, which
+		// will invoke the DHCP Client.
+		return nil
+	}
 
+	go ifs.dhcp.Run(ifs.ctx)
 	return nil
 }

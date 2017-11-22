@@ -65,6 +65,8 @@ type Client struct {
 	txDepth int
 	rxDepth int
 
+	Features uint32 // cache of link/eth/ioctl.go's EthInfo
+
 	mu        sync.Mutex
 	state     State
 	stateFunc func(State)
@@ -121,6 +123,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 		rx:        fifos.rx,
 		txDepth:   txDepth,
 		rxDepth:   rxDepth,
+		Features:  info.Features,
 		stateFunc: stateFunc,
 		arena:     arena,
 		tmpbuf:    make([]bufferEntry, 0, maxDepth),
@@ -149,6 +152,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 		return nil, err
 	}
 	c.changeStateLocked(StateStarted)
+
 	return c, nil
 }
 
@@ -365,6 +369,8 @@ func (c *Client) WaitRecv() {
 		if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
 			c.Close()
 		} else if obs&ZXSIO_ETH_SIGNAL_STATUS != 0 {
+			// TODO(): The wired Ethernet should receive this signal upon being
+			// hooked up with a (an active) Ethernet cable.
 			m := syscall.FDIOForFD(int(c.f.Fd()))
 			status, err := IoctlGetStatus(m)
 
