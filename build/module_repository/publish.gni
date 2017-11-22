@@ -24,7 +24,7 @@
 #   sources = [ "my_module_manifest.json" ]
 # }
 
-import("//packages/package.gni")
+import("//build/package.gni")
 
 # NOTE: Using the package rule built below, the fully resolved path will be
 # /system/data/module_manifest_repository
