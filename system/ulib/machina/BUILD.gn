@@ -53,7 +53,6 @@ source_set("machina") {
   }
 
   public_deps = [
-    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
 
