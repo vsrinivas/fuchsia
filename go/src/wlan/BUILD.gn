@@ -4,7 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 # These go dependencies are common to wlanstack and wlanstack_test
 wlan_go_dependencies = [

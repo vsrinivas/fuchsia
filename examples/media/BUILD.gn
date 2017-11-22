@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//garnet/public/lib/fidl/fidl.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 package("media") {
   system_image = true

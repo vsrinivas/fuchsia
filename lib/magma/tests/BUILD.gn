@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 package("magma-test-build-only") {
   testonly = true

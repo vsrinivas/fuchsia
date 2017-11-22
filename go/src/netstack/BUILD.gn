@@ -4,7 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 package("netstack") {
   deps = [

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//garnet/public/build/test.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 source_set("client") {
   sources = [

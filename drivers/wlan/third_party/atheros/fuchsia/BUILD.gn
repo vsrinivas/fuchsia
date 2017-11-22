@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import("//build/config/fuchsia/rules.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 driver_module("ath10k_driver") {
   output_name = "ath10k"

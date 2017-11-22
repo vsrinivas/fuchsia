@@ -5,7 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
-import("//packages/package.gni")
+import("//build/package.gni")
 
 go_binary("pm_bin") {
   output_name = "pm"
