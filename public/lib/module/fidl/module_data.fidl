@@ -30,8 +30,6 @@ struct ModuleData {
   // True if an externally-started module has called ModuleContext.Done() and
   // has been stopped by the story runner, or if an internally-started module
   // was stopped by its parent module using ModuleController.Stop().
-  //
-  // TODO(vardhan): Does this need to be device-scoped?
   bool module_stopped;
 };
 
