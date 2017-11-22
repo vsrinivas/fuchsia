@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//packages/package.gni")
+import("//build/package.gni")
 
 # go_run invokes a Go script to generate an output file
 template("go_run") {

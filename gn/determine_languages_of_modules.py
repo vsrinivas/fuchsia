@@ -12,7 +12,7 @@ import sys
 def resolve_imports(import_queue):
     # Hack: Add cpp manifest until we derive runtime information from the
     # package configs themselves.
-    import_queue.append('packages/gn/cpp')
+    import_queue.append('build/gn/cpp')
     imported = set(import_queue)
     languages = set()
     while import_queue:
@@ -38,7 +38,7 @@ def resolve_imports(import_queue):
             if "/" not in config_name:
                 sys.stderr.write("""
 Package names are relative to the root of the source tree but the requested path
-did not contain a '/'. Did you mean 'packages/gn/%s' instead?
+did not contain a '/'. Did you mean 'build/gn/%s' instead?
 """ % config_name)
             return None
     return languages, imported
@@ -46,7 +46,7 @@ did not contain a '/'. Did you mean 'packages/gn/%s' instead?
 
 def main():
     parser = argparse.ArgumentParser(description="Determine languages used by set of modules")
-    parser.add_argument("--modules", help="list of modules", default="packages/gn/default")
+    parser.add_argument("--modules", help="list of modules", default="build/gn/default")
     args = parser.parse_args()
 
     languages, imported = resolve_imports(args.modules.split(","))

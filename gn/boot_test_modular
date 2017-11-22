@@ -1,6 +1,6 @@
 {
     "imports": [
-        "packages/gn/default"
+        "build/gn/default"
     ],
     "resources": [
         {

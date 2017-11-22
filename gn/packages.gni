@@ -4,7 +4,7 @@
 
 declare_args() {
   # list of packages
-  fuchsia_packages = "packages/gn/default"
+  fuchsia_packages = "build/gn/default"
 }
 
 _languages = exec_script("determine_languages_of_modules.py",

@@ -537,7 +537,7 @@ template("variant_target") {
         ]
       }
     } else {
-      # For Fuchsia, //packages/gn/variant.py depends on hard links to
+      # For Fuchsia, //build/gn/variant.py depends on hard links to
       # identify the variants.
       copy(target_name) {
         forward_variables_from(copy_vars, "*")

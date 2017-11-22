@@ -11,7 +11,7 @@ buildconfig = "//build/config/BUILDCONFIG.gn"
 secondary_source = "//build/secondary/"
 
 # The source root location.
-root = "//packages/gn"
+root = "//build/gn"
 
 # The executable used to execute scripts in action and exec_script.
 script_executable = "/usr/bin/env"
