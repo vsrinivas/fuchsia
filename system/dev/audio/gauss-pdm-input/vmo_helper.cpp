@@ -24,6 +24,19 @@ zx_status_t VmoHelperBase::AllocateVmo(size_t buffer_size) {
                buffer_size_, status);
         ring_buffer_vmo_.reset();
     }
+
+    size_t size = 0;
+    status = ring_buffer_vmo_.get_size(&size);
+
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to get ring buffer size (expected size %lu, res %d)\n",
+               buffer_size_, status);
+        ring_buffer_vmo_.reset();
+    }
+
+    zxlogf(DEBUG1, "Requested size = 0x%lx\n", buffer_size);
+    zxlogf(DEBUG1, "Actual size = 0x%lx\n", size);
+
     return status;
 }
 

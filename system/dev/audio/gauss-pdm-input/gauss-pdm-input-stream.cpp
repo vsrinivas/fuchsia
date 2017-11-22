@@ -5,6 +5,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <fbl/algorithm.h>
 #include <fbl/limits.h>
 #include <zircon/device/audio.h>
 #include <zx/vmar.h>
@@ -408,6 +409,8 @@ int GaussPdmInputStream::IrqThread() {
 
     zx_status_t status;
 
+    uint32_t last_notification_offset = 0;
+
     for (;;) {
         status = zx_interrupt_wait(audio_device_.pdm_irq);
         if (status != ZX_OK) {
@@ -430,7 +433,14 @@ int GaussPdmInputStream::IrqThread() {
         resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
         resp.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
 
-        {
+        size_t data_available =
+            offset >= last_notification_offset
+                ? offset - last_notification_offset
+                : offset + ring_buffer_size_.load() - last_notification_offset;
+
+        if (notifications_per_ring_.load() &&
+            data_available >=
+                ring_buffer_size_.load() / notifications_per_ring_.load()) {
             fbl::AutoLock lock(&lock_);
             if (!rb_channel_) {
                 zxlogf(DEBUG1, "No rb_channel. Ignoring spurious interrupt.\n");
@@ -503,14 +513,9 @@ zx_status_t GaussPdmInputStream::OnGetFifoDepthLocked(
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
-    resp.fifo_depth = GetFifoBytes();
+    resp.fifo_depth = static_cast<uint32_t>(fifo_depth_);
 
     return channel->Write(&resp, sizeof(resp));
-}
-
-uint32_t GaussPdmInputStream::GetFifoBytes() {
-    // TODO(almasrymina): ok assumption...?
-    return 0x40 * 8;
 }
 
 zx_status_t GaussPdmInputStream::OnGetBufferLocked(
@@ -523,19 +528,31 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(
     resp.hdr = req.hdr;
     resp.result = ZX_ERR_INTERNAL;
 
-    // Compute the ring buffer size.  It needs to be at least as big
-    // as the virtual fifo depth.
-    zxlogf(ERROR, "%d %d\n", GetFifoBytes(), frame_size_);
-    ZX_DEBUG_ASSERT(frame_size_ && ((GetFifoBytes() % frame_size_) == 0));
-
     vmo_helper_.DestroyVmo();
 
-    size_t ring_buffer_size  = req.min_ring_buffer_frames * frame_size_;
+    uint32_t notifications_per_ring =
+        req.notifications_per_ring ? req.notifications_per_ring : 1;
+
+    uint32_t requested_period_size =
+        req.min_ring_buffer_frames * frame_size_ / notifications_per_ring;
+
+    uint32_t period_size = fbl::round_up(requested_period_size,
+                                         static_cast<uint32_t>(fifo_depth_));
+
+    ring_buffer_size_.store(fbl::round_up(period_size * notifications_per_ring,
+                                          static_cast<uint32_t>(PAGE_SIZE)));
+
+    notifications_per_ring_.store(req.notifications_per_ring);
+
+    zxlogf(DEBUG1, "ring_buffer_size=%lu\n", ring_buffer_size_.load());
+    zxlogf(DEBUG1, "req.notifications_per_ring=%u\n",
+           req.notifications_per_ring);
 
     // Create the ring buffer vmo we will use to share memory with the client.
-    resp.result = vmo_helper_.AllocateVmo(ring_buffer_size);
+    resp.result = vmo_helper_.AllocateVmo(ring_buffer_size_.load());
     if (resp.result != ZX_OK) {
-        zxlogf(ERROR, "Failed to create ring buffer (size %lu)\n", ring_buffer_size);
+        zxlogf(ERROR, "Failed to create ring buffer (size %lu)\n",
+               ring_buffer_size_.load());
         goto finished;
     }
 
@@ -548,18 +565,21 @@ zx_status_t GaussPdmInputStream::OnGetBufferLocked(
         goto finished;
     }
 
-    // -1 because the addresses are indexed 0 -> size-1.
-    end_address = start_address + ring_buffer_size - 1;
+    // -8 because the addresses are indexed 0 -> size-8. The TODDR processes
+    // data in chunks of 8 bytes.
+    end_address = start_address + ring_buffer_size_.load() - 8;
 
     a113_toddr_set_buf(&audio_device_, (uint32_t)start_address,
                        (uint32_t)end_address);
-    a113_toddr_set_intrpt(&audio_device_, 1024);
+    a113_toddr_set_intrpt(&audio_device_,
+                          static_cast<uint32_t>(period_size / 8));
 
     // TODO(almasrymina): TODDR and pdm configuration is hardcoded for now,
     // since we only support the one format. Need to revisit this when we
     // support more.
     a113_toddr_select_src(&audio_device_, PDMIN);
     a113_toddr_set_format(&audio_device_, RJ_16BITS, 31, 16);
+
     a113_toddr_set_fifos(&audio_device_, 0x40);
     a113_pdm_ctrl(&audio_device_, 16);
     a113_pdm_filter_ctrl(&audio_device_);
@@ -602,8 +622,6 @@ GaussPdmInputStream::OnStartLocked(dispatcher::Channel* channel,
     a113_pdm_enable(&audio_device_, 1);
 
     resp.start_ticks = zx_ticks_get();
-
-    a113_pdm_dump_registers(&audio_device_);
 
     resp.result = ZX_OK;
     return channel->Write(&resp, sizeof(resp));

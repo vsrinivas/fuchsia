@@ -55,8 +55,6 @@ private:
 
     virtual ~GaussPdmInputStream();
 
-    uint32_t GetFifoBytes();
-
     int IrqThread();
 
     zx_status_t Bind(const char* devname, zx_device_t* parent);
@@ -132,6 +130,11 @@ private:
 
     a113_audio_device_t audio_device_;
     thrd_t irqthrd_;
+
+    uint32_t fifo_depth_ = 0x200;
+
+    fbl::atomic<size_t> ring_buffer_size_;
+    fbl::atomic<uint32_t> notifications_per_ring_;
 };
 
 } // namespace gauss
