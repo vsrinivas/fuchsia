@@ -32,6 +32,7 @@ var (
 	fuchsiaOutDir   = flag.String("fuchsia-out-dir", os.Getenv("FUCHSIA_OUT_DIR"), "fuchsia out dir")
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILD_DIR"), "zircon build dir")
+	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 
 	bootloader   = flag.String("bootloader", "", "path to bootx64.efi")
 	kernel       = flag.String("kernel", "", "path to zircon.bin")
@@ -70,14 +71,22 @@ func needFuchsiaOutDir() {
 		log.Fatalf("either pass -fuchsia-out-dir or set $FUCHSIA_OUT_DIR")
 	}
 }
+
 func needFuchsiaBuildDir() {
 	if *fuchsiaBuildDir == "" {
 		log.Fatalf("either pass -fuchsia-build-dir or set $FUCHSIA_BUILD_DIR")
 	}
 }
+
 func needZirconBuildDir() {
-	if (*bootloader == "" || *kernel == "") && *zirconBuildDir == "" {
+	if *zirconBuildDir == "" {
 		log.Fatalf("either pass -zircon-build-dir or set $ZIRCON_BUILD_DIR")
+	}
+}
+
+func needZirconToolsDir() {
+	if *zirconToolsDir == "" {
+		log.Fatalf("either pass -zircon-tools-dir or set $ZIRCON_TOOLS_DIR")
 	}
 }
 
@@ -126,11 +135,11 @@ func main() {
 	if !*ramdisk {
 		if *blobstore == "" {
 			needFuchsiaBuildDir()
-			*blobstore = filepath.Join(*fuchsiaBuildDir, "gen", "image_builds", "blobstore.blk")
+			*blobstore = filepath.Join(*fuchsiaBuildDir, "images", "blobstore.blk")
 		}
 		if *data == "" {
 			needFuchsiaBuildDir()
-			*data = filepath.Join(*fuchsiaBuildDir, "gen", "image_builds", "data.blk")
+			*data = filepath.Join(*fuchsiaBuildDir, "images", "data.blk")
 		}
 
 		if _, err := os.Stat(*blobstore); err != nil {
@@ -563,11 +572,11 @@ func zirconTool(name string) string {
 	var tool string
 	tool, _ = exec.LookPath(tool)
 	if tool == "" {
-		needZirconBuildDir()
-		tool, _ = exec.LookPath(filepath.Join(*zirconBuildDir, "tools", name))
+		needZirconToolsDir()
+		tool, _ = exec.LookPath(filepath.Join(*zirconToolsDir, name))
 	}
 	if tool == "" {
-		log.Fatalf("Could not find %q, you might need to build zircon", tool)
+		log.Fatalf("Could not find %q, you might need to build zircon", name)
 	}
 	return tool
 }
