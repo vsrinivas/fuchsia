@@ -1,0 +1,5 @@
+{
+    "imports": [
+        "peridot/packages/default"
+    ]
+}

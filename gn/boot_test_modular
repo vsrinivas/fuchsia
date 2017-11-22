@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "packages/gn/default"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/bootstrap/apps.config",
+            "file": "peridot/tests/boot_test.config"
+        }
+    ]
+}

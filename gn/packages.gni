@@ -1,0 +1,21 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # list of packages
+  fuchsia_packages = "packages/gn/default"
+}
+
+_languages = exec_script("determine_languages_of_modules.py",
+                         [
+                           "--modules",
+                           fuchsia_packages,
+                         ],
+                         "scope")
+
+packages_have_cpp = _languages.have_cpp
+packages_have_dart = _languages.have_dart
+packages_have_go = _languages.have_go
+packages_have_rust = _languages.have_rust
+packages_imported = _languages.imported

@@ -1,0 +1,323 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/clang_toolchain.gni")
+
+# Defines a package
+#
+# The package template is used to define a unit of related code and data.
+# A package always has a name (defaulting to the target name) and lists of
+# scopes describing the components of the package.
+#
+# Parameters
+#
+#   app (bool, optional)
+#     If true, changes the default location of binaries from
+#     |"bin/" + binary.name| to |"apps/" + binary.name|.
+#
+#   system_image (bool, optional)
+#     If true, the package is stored in the system boot image rather than in a
+#     Fuchsia Archive.
+#
+#     If this package uses the |drivers| parameter, the system_image must be set
+#     to true because we are not yet sophisticated enough to load drivers out of
+#     archives.
+#
+#     Defaults to false.
+#
+#   meta (optional)
+#     List of scopes defining the metadata entries in the package. A metadata
+#     entry is typically a source file and is placed in the "meta/" directory of
+#     the assembled package.
+#
+#     Requires |system_image| to be false.
+#
+#     Entries in a scope in the meta list:
+#
+#       path (path, required)
+#         Location of entry in source or build directory. If the resource is
+#         checked in, this will typically be specified as a path relative to the
+#         BUILD.gn file containing the package() rule. If the resource is
+#         generated, this will typically be specified relative to
+#         $target_gen_dir
+#
+#       dest (path, required)
+#         Location the resource will be placed within "meta/"
+#
+#   binary (optional)
+#     The path to the the primary binary for the package, relative to
+#     $root_build_dir. The binary will be placed in the assembled package at
+#     "bin/app" and will be executed by default when running the package.
+#
+#     Requires |system_image| to be false.
+#
+#   binaries (optional)
+#     List of scopes defining the binaries in the package. A binary is typically
+#     produced by the build system and is placed in the "bin/" directory of the
+#     assembled package.
+#
+#     Entries in a scope in the binaries list:
+#
+#       name (string, required)
+#         Name of the binary
+#
+#       source (path, optional)
+#         Location of the binary in the build directory if it is not at
+#         $root_build_dir/$name
+#
+#       dest (path, optional)
+#         Location the binary will be placed within "bin/"
+#
+#   tests (optional)
+#     List of scopes defining the test binaries in the package. A test is
+#     typically produced by the build system and is placed in the "test/"
+#     directory of the assembled package.
+#
+#     Entries in a scope in the tests list:
+#
+#       name (string, required)
+#         Name of the test
+#
+#       dest (path, optional)
+#         Location the binary will be placed within "test/"
+#
+#       disabled (bool, optional)
+#         Whether to disable the test on continuous integration jobs. This can
+#         be used when a test is temporarily broken, or if it is too flaky or
+#         slow for CI. The test will also be skipped by the "runtests" command.
+#
+#   drivers (optional)
+#     List of scopes defining the drivers in the package. A driver is typically
+#     produced by the build system and is placed in the "driver" directory
+#     of the assembled package.
+#
+#     Requires |system_image| to be true.
+#
+#     Entries in a scope in the drivers list:
+#
+#       name (string, required)
+#         Name of the driver
+#
+#   libraries (optional)
+#     List of scopes defining the (shared) libraries in the package. A library
+#     is placed in the "lib/" directory of the assembled package.
+#
+#     Entries in a scope in the libraries list:
+#
+#       name (string, required)
+#         Name of the library
+#
+#       source (path, optional)
+#         Location of the binary in the build directory if it is not at
+#         $root_build_dir/$name
+#
+#       dest (path, optional)
+#         Location the binary will be placed within "lib/"
+#
+#   resources (optional)
+#     List of scopes defining the resources in the package. A resource is a
+#     data file that may be produced by the build system, checked in to a
+#     source repository, or produced by another system that runs before the
+#     build. Resources are placed in the "data/" directory of the assembled
+#     package.
+#
+#     Entries in a scope in the resources list:
+#
+#       path (path, required)
+#         Location of resource in source or build directory. If the resource is
+#         checked in, this will typically be specified as a path relative to the
+#         BUILD.gn file containing the package() rule. If the resource is
+#         generated, this will typically be specified relative to
+#         $target_gen_dir
+#
+#       dest (path, required)
+#         Location the resource will be placed within "data/"
+#
+template("package") {
+  if (current_toolchain == target_toolchain) {
+    pkg = {
+      app = false
+      system_image = false
+      binaries = []
+      drivers = []
+      libraries = []
+      meta = []
+      package_name = target_name
+      resources = []
+      tests = []
+      forward_variables_from(invoker, "*")
+    }
+    pkg_out_dir = "$root_build_dir/package/${pkg.package_name}"
+
+    shared_toolchain_out_dir =
+        get_label_info("//lib($shlib_toolchain)", "root_out_dir")
+    not_needed([ "shared_toolchain_out_dir" ])
+
+    assert(pkg.drivers == [] || pkg.system_image)
+
+    mkfs_target = target_name + "_mkfs"
+
+    # This action assembles an image containing all binaries, tests, drivers,
+    # libraries, and resources defined in the package.
+    action(mkfs_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+
+      package_manifest_contents = []
+
+      sources = []
+
+      foreach(entry, pkg.meta) {
+        assert(!pkg.system_image, "Metadata cannot be used in system packages.")
+        source = entry.path
+        sources += [ entry.path ]
+        dest = "meta/${entry.dest}"
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+      if (defined(pkg.binary)) {
+        assert(
+            !pkg.system_image,
+            "Binary requires the package to be archived. Consider using 'binaries' for system packages.")
+        source = rebase_path("$root_build_dir/${pkg.binary}")
+        sources += [ "$root_build_dir/${pkg.binary}" ]
+        package_manifest_contents += [ "bin/app=$source" ]
+      }
+      foreach(binary, pkg.binaries) {
+        assert(
+            pkg.system_image,
+            "Binaries cannot be used in archived packages. Consider using 'binary'.")
+
+        # Binary paths are relative to the root of the build dir.
+        if (defined(binary.source)) {
+          source = rebase_path("$root_build_dir/${binary.source}")
+          sources += [ "$root_build_dir/${binary.source}" ]
+        } else {
+          source = rebase_path("$root_build_dir/${binary.name}")
+          sources += [ "$root_build_dir/${binary.name}" ]
+        }
+        dirname = "bin"
+        if (pkg.app) {
+          dirname = "apps"
+        }
+        basename = binary.name
+        if (defined(binary.dest)) {
+          basename = binary.dest
+        }
+        package_manifest_contents += [ "$dirname/$basename=$source" ]
+      }
+      foreach(test, pkg.tests) {
+        source = rebase_path("$root_build_dir/${test.name}")
+        sources += [ "$root_build_dir/${test.name}" ]
+        basename = test.name
+        if (defined(test.dest)) {
+          basename = test.dest
+        }
+        if (defined(test.disabled) && test.disabled) {
+          dest = "test/disabled/" + basename
+        } else {
+          dest = "test/" + basename
+        }
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+      foreach(driver, pkg.drivers) {
+        # Driver paths are relative to the root of the build dir.
+        source = rebase_path("$root_build_dir/${driver.name}")
+        sources += [ "$root_build_dir/${driver.name}" ]
+        dest = "driver/" + driver.name
+
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+      foreach(library, pkg.libraries) {
+        # Library paths are relative to the root of the build dir.
+        if (defined(library.source)) {
+          library_path = rebase_path(library.source)
+        } else {
+          library_path = "$shared_toolchain_out_dir/${library.name}"
+        }
+        source = rebase_path(library_path)
+        sources += [ library_path ]
+        if (defined(library.dest)) {
+          dest = "lib/" + library.dest
+        } else {
+          dest = "lib/" + library.name
+        }
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+      foreach(resource, pkg.resources) {
+        # Resource path are absolute.
+        source = resource.path
+        sources += [ resource.path ]
+        dest = "data/" + resource.dest
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+
+      system_manifest = "$pkg_out_dir/system_manifest"
+      archive_manifest = "$pkg_out_dir/archive_manifest"
+
+      if (pkg.system_image) {
+        write_file(system_manifest, package_manifest_contents)
+        write_file(archive_manifest, [])
+
+        # We have to do something in our action
+        script = "/usr/bin/touch"
+        output = "$pkg_out_dir/.stamp"
+        outputs = [
+          output,
+        ]
+        args = [ rebase_path(output) ]
+      } else {
+        assert(package_manifest_contents != [])
+
+        write_file(archive_manifest, package_manifest_contents)
+
+        archiver_label = "//garnet/bin/far:bin($host_toolchain)"
+        deps += [ archiver_label ]
+
+        archiver_out_dir = get_label_info(archiver_label, "root_out_dir")
+        far_path = "$archiver_out_dir/far"
+
+        output = "$pkg_out_dir/${pkg.package_name}.far"
+
+        script = "//build/gn_run_binary.sh"
+        inputs = [
+          far_path,
+        ]
+        outputs = [
+          output,
+        ]
+        args = [
+          clang_prefix,
+          rebase_path(far_path, root_build_dir),
+          "create",
+          "--archive=" + rebase_path(output),
+          "--manifest=" + rebase_path(archive_manifest),
+        ]
+
+        write_file(system_manifest,
+                   [ "pkgs/${pkg.package_name}=" + rebase_path(output) ])
+      }
+    }
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":" + mkfs_target,
+      ]
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "deps",
+                             ])
+    }
+
+    # Suppress unused variable warnings.
+    not_needed(invoker, "*")
+  }
+}

@@ -1,0 +1,10 @@
+{
+    "imports": [
+        "garnet/packages/iperf",
+        "garnet/packages/netstack",
+        "garnet/packages/network",
+        "garnet/packages/wlan",
+        "garnet/packages/wlanstack",
+        "garnet/packages/wlan_tests"
+    ]
+}

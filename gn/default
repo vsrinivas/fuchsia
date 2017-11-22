@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/default",
+        "packages/gn/build_info",
+        "peridot/packages/default",
+        "topaz/packages/default"
+    ]
+}
