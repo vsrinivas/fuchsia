@@ -24,11 +24,20 @@ extern "C" {
 
 #include <bits/alltypes.h>
 
-#ifndef WCHAR_MIN
-#define WCHAR_MIN __WCHAR_MIN__
-#endif
 #ifndef WCHAR_MAX
 #define WCHAR_MAX __WCHAR_MAX__
+#endif
+
+#ifndef WCHAR_MIN
+#if defined(__WCHAR_MIN__)
+#define WCHAR_MIN __WCHAR_MIN__
+#else // defined(__WCHAR_MIN__)
+#if defined(__WCHAR_UNSIGNED__)
+#define WCHAR_MIN (L'\0' + 0)
+#else
+#define WCHAR_MIN (-WCHAR_MAX - 1)
+#endif // defined (__WCHAR_UNSIGNED)
+#endif // defined(__WCHAR_MIN__)
 #endif
 
 #ifdef __cplusplus
