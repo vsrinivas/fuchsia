@@ -767,6 +767,9 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
 
     auto module_path = fidl::Array<fidl::String>::New(0);
     module_path.push_back(module_name_);
+
+    // This is a top level module, which therefore is not embedded. So the
+    // SurfaceRelation is indeed default and not null.
     new AddModuleCall(&operation_queue_, story_controller_impl_,
                       std::move(module_path),
                       module_url_, link_name_, SurfaceRelation::New(),
@@ -1376,7 +1379,7 @@ void StoryControllerImpl::StartModule(
   module_path.push_back(module_name);
   new StartModuleCall(&operation_queue_, this, module_path,
                       module_url, link_name, module_source,
-                      SurfaceRelation::New(),
+                      nullptr /* surface_relation */,
                       std::move(incoming_services),
                       std::move(module_controller_request),
                       std::move(view_owner_request), [] {});

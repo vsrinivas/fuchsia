@@ -23,7 +23,8 @@ struct ModuleData {
   ModuleSource module_source;
 
   // The |surface_relation| that was used to start this module with. The same is
-  // used when re-inflating the module.
+  // used when re-inflating the module. A SurfaceRelation value of null
+  // represents an embedded module that is not managed by the story shell.
   SurfaceRelation? surface_relation;
 
   // True if an externally-started module has called ModuleContext.Done() and
