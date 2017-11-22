@@ -8,6 +8,10 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
+
 // GUID for a ChromeOS kernel partition
 #define GUID_CROS_KERNEL_STRING "FE3A2A5D-4F32-41A7-B725-ACCC3285A309"
 #define GUID_CROS_KERNEL_VALUE { \
@@ -62,3 +66,5 @@ int gpt_cros_attr_set_tries(uint64_t* flags, uint8_t tries);
 // is returned from set.  Otherwise returns 0.
 uint8_t gpt_cros_attr_get_priority(uint64_t flags);
 int gpt_cros_attr_set_priority(uint64_t* flags, uint8_t priority);
+
+__END_CDECLS
