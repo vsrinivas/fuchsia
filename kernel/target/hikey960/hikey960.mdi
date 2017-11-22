@@ -22,9 +22,11 @@ mem-map = {
     }
 }
 
+const PERIPH_VIRT = 0xffffffffc0000000
+
 periph-mem-map = {
     bank = {
-        base-virt = 0xffffffffc0000000
+        base-virt = PERIPH_VIRT
         base-phys = 0xe8100000
         length    = 0x17f00000
     }
@@ -62,12 +64,12 @@ kernel = {
     // Keep pll011 uart at top so it is initialized first
     //  (uart6)
     arm-pl011-uart = {
-        base-virt = 0xffffffffd7e32000
+        base-virt = PERIPH_VIRT + 0x17e32000
         base-phys = 0xfff32000
         irq = 111
     }
     arm-gic-v2 = {
-        base-virt = 0xffffffffc01b0000
+        base-virt = PERIPH_VIRT + 0x001b0000
         base-phys = 0xe82b0000
         gicd-offset = 0x1000
         gicc-offset = 0x2000
