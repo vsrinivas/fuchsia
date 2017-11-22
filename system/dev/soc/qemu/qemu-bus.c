@@ -66,7 +66,6 @@ static zx_status_t qemu_pci_init(void) {
     arg->addr_windows[0].bus_end = (PCIE_ECAM_SIZE / ZX_PCI_ECAM_BYTE_PER_BUS) - 1;
 
     status = zx_pci_init(get_root_resource(), arg, arg_size);
-    free(arg);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: error %d in zx_pci_init\n", __FUNCTION__, status);
         goto fail;
