@@ -7,7 +7,7 @@
 # intermediate file.
 
 import("//build/config/fuchsia/sdk.gni")
-import("//packages/gn/packages.gni")
+import("//build/gn/packages.gni")
 
 declare_args() {
   # Generate Dart code from fidl bindings.

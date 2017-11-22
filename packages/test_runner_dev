@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "packages/gn/boot_test_runner"
+        "build/gn/boot_test_runner"
     ],
     "packages": [
         "test_runner_tests": "//garnet/bin/test_runner:test_runner_tests"

@@ -41,7 +41,7 @@ cd "${FUCHSIA_DIR}"
 scripts/build-zircon.sh \
     -p $ZIRCON_PROJECT
 
-packages/gn/gen.py \
+build/gn/gen.py \
     --target_cpu=$ARCH \
     --zircon_project=$ZIRCON_PROJECT \
     --packages="${PACKAGE:-garnet/packages/guest}" \
