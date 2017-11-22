@@ -52,7 +52,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       FocusProviderPtr focus_provider,
       maxwell::IntelligenceServices* intelligence_services,
       maxwell::UserIntelligenceProvider* user_intelligence_provider,
-      ModuleResolver* module_resolver);
+      ModuleResolver* module_resolver,
+      bool test);
 
   ~StoryProviderImpl() override;
 
@@ -195,6 +196,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
     mozart::ViewOwnerPtr story_shell_view;
   };
   std::unique_ptr<StoryShellConnection> preloaded_story_shell_;
+
+  // When running in a test, we don't preload story shells, because then the
+  // preloaded next instance of the story doesn't pass its test points.
+  const bool test_;
 
   // Holds the story shell view proxies for running story shells.
   ProxySet proxies_;

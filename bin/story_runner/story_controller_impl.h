@@ -242,16 +242,13 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // The module instances (identified by their serialized module paths) already
   // known to story shell. Does not include modules whose views are pending and
   // not yet sent to story shell.
-  std::set<std::string> connected_views_;
+  std::set<fidl::String> connected_views_;
 
-  // Holds a running module (that is displayed by story shell) 's view until its
-  // parent is connected to story shell.
-  struct ModuleView {
-    std::string parent_view_id;
-    mozart::ViewOwnerPtr view_owner;
-    SurfaceRelationPtr surface_relation;
-  };
-  std::map<std::string, ModuleView> pending_views_;
+  // Holds the view of a non-embedded running module (identified by its
+  // serialized module path) until its parent is connected to story shell. Story
+  // shell cannot display views whose parents are not yet displayed.
+  std::map<fidl::String, std::pair<fidl::Array<fidl::String>,
+                                   mozart::ViewOwnerPtr>> pending_views_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
@@ -261,6 +258,20 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
   std::vector<Connection> connections_;
+
+  // Finds the active connection for a module at the given module path. May
+  // return nullptr if the module at the path is not running, regardless of
+  // whether a module at that path is known to the story.
+  Connection* FindConnection(const fidl::Array<fidl::String>& module_path);
+
+  // Finds the active connection for the story shell anchor of a module with the
+  // given connection. The anchor is the closest ancestor module of the given
+  // module that is not embedded and actually known to the story shell. This
+  // requires that it must be running, otherwise it cannot be connected to the
+  // story shell. May return nullptr if the anchor module, or any intermediate
+  // module, is not running, regardless of whether a module at such path is
+  // known to the story.
+  Connection* FindAnchor(Connection* connection);
 
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;

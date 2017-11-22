@@ -1,0 +1,69 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("embed_shell") {
+  testonly = true
+
+  public_deps = [
+    ":embed_child_module",
+    ":embed_parent_module",
+    ":embed_story_shell",
+  ]
+}
+
+executable("embed_child_module") {
+  testonly = true
+
+  sources = [
+    "embed_child_module.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/testing",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+  ]
+}
+
+executable("embed_parent_module") {
+  testonly = true
+
+  sources = [
+    "embed_parent_module.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/testing",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+  ]
+}
+
+executable("embed_story_shell") {
+  testonly = true
+
+  sources = [
+    "embed_story_shell.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user/fidl",
+  ]
+}

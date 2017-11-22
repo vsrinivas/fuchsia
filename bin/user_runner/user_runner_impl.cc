@@ -468,7 +468,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       ledger_client_.get(), fidl::Array<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
-      user_intelligence_provider_.get(), module_resolver_service_.get()));
+      user_intelligence_provider_.get(), module_resolver_service_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(

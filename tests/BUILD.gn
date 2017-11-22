@@ -14,6 +14,7 @@ package("modular_tests") {
     "component_context",
     "context_link",
     "dev_token_manager",
+    "embed_shell",
     "last_focus_time",
     "link_data",
     "link_update",
@@ -87,6 +88,18 @@ package("modular_tests") {
       name = "component_context_unstoppable_agent"
       dest = "modular_tests/component_context_unstoppable_agent"
     },  # This should be a resource to avoid the extra copy() rule.
+    {
+      name = "embed_child_module"
+      dest = "modular_tests/embed_child_module"
+    },
+    {
+      name = "embed_parent_module"
+      dest = "modular_tests/embed_parent_module"
+    },
+    {
+      name = "embed_story_shell"
+      dest = "modular_tests/embed_story_shell"
+    },
     {
       name = "modular_tests.json"
       dest = "modular_tests/modular_tests.json"

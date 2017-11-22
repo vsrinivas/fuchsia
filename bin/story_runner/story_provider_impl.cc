@@ -19,6 +19,7 @@
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
 #include "peridot/bin/user_runner/focus.h"
+#include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/proxy.h"
@@ -399,6 +400,11 @@ class StoryProviderImpl::TeardownCall : Operation<> {
         story_provider_impl_->story_controller_impls_.erase(story_id);
       });
     }
+
+    if (story_provider_impl_->preloaded_story_shell_) {
+      story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
+          kBasicTimeout, [flow]{});
+    }
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
@@ -581,7 +587,8 @@ StoryProviderImpl::StoryProviderImpl(
     FocusProviderPtr focus_provider,
     maxwell::IntelligenceServices* const intelligence_services,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider,
-    ModuleResolver* module_resolver)
+    ModuleResolver* module_resolver,
+    const bool test)
     : PageClient("StoryProviderImpl",
                  ledger_client,
                  std::move(root_page_id),
@@ -590,6 +597,7 @@ StoryProviderImpl::StoryProviderImpl(
       device_id_(std::move(device_id)),
       ledger_client_(ledger_client),
       story_shell_(std::move(story_shell)),
+      test_(test),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
@@ -599,7 +607,9 @@ StoryProviderImpl::StoryProviderImpl(
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
   context_handler_.Watch([this] { OnContextChange(); });
   context_handler_.SelectTopics({kStoryImportanceContext});
-  LoadStoryShell();
+  if (!test_) {
+    LoadStoryShell();
+  }
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -650,7 +660,9 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
   // Kickoff another StoryShell, to make it faster for next story. We optimize
   // even further by delaying the loading of the next story shell instance by
   // doing that on the operation queue.
-  new SyncCall(&operation_queue_, [this] { LoadStoryShell(); });
+  if (!test_) {
+    new SyncCall(&operation_queue_, [this] { LoadStoryShell(); });
+  }
 
   return app_client;
 }

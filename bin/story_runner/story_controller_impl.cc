@@ -187,15 +187,12 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    auto i = std::find_if(
-        story_controller_impl_->connections_.begin(),
-        story_controller_impl_->connections_.end(),
-        [this](const Connection& c) {
-          return c.module_data->module_path.Equals(module_data_->module_path);
-        });
+
+    Connection* const i = story_controller_impl_->FindConnection(
+        module_data_->module_path);
 
     // We launch the new module if it doesn't run yet.
-    if (i == story_controller_impl_->connections_.end()) {
+    if (!i) {
       Launch(flow);
       return;
     }
@@ -329,14 +326,9 @@ class StoryControllerImpl::KillModuleCall : Operation<> {
     // this StopModuleCall Operation will cause the calls to be queued.
     // The first Stop() will cause the ModuleController to be closed, and
     // so subsequent Stop() attempts will not find a controller and will return.
-    auto ii = std::find_if(
-        story_controller_impl_->connections_.begin(),
-        story_controller_impl_->connections_.end(),
-        [this](const Connection& c) {
-          return c.module_data->module_path.Equals(module_data_->module_path);
-        });
+    auto* const i = story_controller_impl_->FindConnection(module_data_->module_path);
 
-    if (ii == story_controller_impl_->connections_.end()) {
+    if (!i) {
       FXL_LOG(INFO) << "No ModuleController for Module"
                     << " " << PathString(module_data_->module_path) << ". "
                     << "Was ModuleContext.Stop() called twice?";
@@ -347,7 +339,7 @@ class StoryControllerImpl::KillModuleCall : Operation<> {
     // done_() must be called BEFORE the Teardown() done callback returns. See
     // comment in StopModuleCall::Kill() before making changes here. Be aware
     // that done_ is NOT the Done() callback of the Operation.
-    ii->module_controller_impl->Teardown([this, flow] {
+    i->module_controller_impl->Teardown([this, flow] {
       Cont1(flow);
       done_();
     });
@@ -535,35 +527,49 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   }
 
   void Cont(FlowToken flow) {
-    const fidl::String view_id = PathString(module_path_);
-
     // If this is called during Stop(), story_shell_ might already have been
     // reset. TODO(mesch): Then the whole operation should fail.
-    if (story_controller_impl_->story_shell_) {
-      const auto parent_module_path = ParentModulePath(module_path_);
-      const fidl::String parent_view_id = PathString(parent_module_path);
+    if (!story_controller_impl_->story_shell_) {
+      return;
+    }
 
-      // We only add a module to story shell if its either a root module or its
-      // parent is already known to story shell.
-      if (parent_view_id == "" ||
-          story_controller_impl_->connected_views_.count(parent_view_id)) {
-        story_controller_impl_->story_shell_->ConnectView(
-            std::move(view_owner_), view_id, parent_view_id,
-            std::move(surface_relation_));
-        story_controller_impl_->connected_views_.insert(view_id);
-        story_controller_impl_->ProcessPendingViews();
-        if (focus_) {
-          story_controller_impl_->story_shell_->FocusView(view_id,
-                                                          parent_view_id);
-        }
-      } else {
-        // TODO(alhaad): We need to remove this if the module is stopped while
-        // its view is still on this buffer.
-        story_controller_impl_->pending_views_.emplace(std::make_pair(
-            view_id.get(),
-            ModuleView{parent_view_id.get(), std::move(view_owner_),
-                       std::move(surface_relation_)}));
+    // We only add a module to story shell if its either a root module or its
+    // anchor is already known to story shell.
+
+    if (module_path_.size() == 1) {
+      ConnectView(flow, "");
+      return;
+    }
+
+    auto* const connection = story_controller_impl_->FindConnection(module_path_);
+    FXL_CHECK(connection);  // Was just created.
+
+    auto* const anchor = story_controller_impl_->FindAnchor(connection);
+    if (anchor) {
+      const auto anchor_view_id = PathString(anchor->module_data->module_path);
+      if (story_controller_impl_->connected_views_.count(anchor_view_id)) {
+        ConnectView(flow, anchor_view_id);
+        return;
       }
+    }
+
+    story_controller_impl_->pending_views_.emplace(
+        std::make_pair(PathString(module_path_),
+                       std::make_pair(module_path_.Clone(), std::move(view_owner_))));
+  }
+
+  void ConnectView(FlowToken flow, const fidl::String& anchor_view_id) {
+    const auto view_id = PathString(module_path_);
+
+    story_controller_impl_->story_shell_->ConnectView(
+        std::move(view_owner_), view_id, anchor_view_id,
+        std::move(surface_relation_));
+
+    story_controller_impl_->connected_views_.emplace(view_id);
+    story_controller_impl_->ProcessPendingViews();
+
+    if (focus_) {
+      story_controller_impl_->story_shell_->FocusView(view_id, anchor_view_id);
     }
   }
 
@@ -1183,14 +1189,8 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     }
 
     // Check for existing module at the given path.
-    auto i = std::find_if(
-        story_controller_impl_->connections_.begin(),
-        story_controller_impl_->connections_.end(),
-        [this](const Connection& c) {
-          return c.module_data->module_path.Equals(module_data_->module_path);
-        });
-    if (i != story_controller_impl_->connections_.end() &&
-        module_data_->module_stopped) {
+    auto* const i = story_controller_impl_->FindConnection(module_data_->module_path);
+    if (i && module_data_->module_stopped) {
       new KillModuleCall(&operation_queue_, story_controller_impl_,
                          std::move(module_data_), [flow] {});
       return;
@@ -1348,6 +1348,7 @@ void StoryControllerImpl::ReleaseModule(
                         });
   FXL_DCHECK(f != connections_.end());
   f->module_controller_impl.release();
+  pending_views_.erase(PathString(f->module_data->module_path));
   connections_.erase(f);
 }
 
@@ -1405,21 +1406,41 @@ void StoryControllerImpl::StartModuleInShell(
 }
 
 void StoryControllerImpl::ProcessPendingViews() {
-  std::vector<std::string> added_keys;
+  // NOTE(mesch): As it stands, this machinery to send modules in traversal
+  // order to the story shell is N^3 over the lifetime of the story, where N is
+  // the number of modules. This function is N^2, and it's called once for each
+  // of the N modules. However, N is small, and moreover its scale is limited my
+  // much more severe constraints. Eventually, we will address this by changing
+  // story shell to be able to accomodate modules out of traversal order.
+  if (!story_shell_) {
+    return;
+  }
+
+  std::vector<fidl::String> added_keys;
 
   for (auto& kv : pending_views_) {
-    if (!connected_views_.count(kv.second.parent_view_id)) {
+    auto* const connection = FindConnection(kv.second.first);
+    if (!connection) {
       continue;
     }
 
-    if (story_shell_) {
-      auto& c = kv.second;
-      story_shell_->ConnectView(std::move(c.view_owner), kv.first,
-                                c.parent_view_id,
-                                std::move(c.surface_relation));
-      connected_views_.insert(kv.first);
-      added_keys.push_back(kv.first);
+    auto* const anchor = FindAnchor(connection);
+    if (!anchor) {
+      continue;
     }
+
+    const auto anchor_view_id = PathString(anchor->module_data->module_path);
+    if (!connected_views_.count(anchor_view_id)) {
+      continue;
+    }
+
+    const auto view_id = PathString(kv.second.first);
+    story_shell_->ConnectView(std::move(kv.second.second), view_id,
+                              anchor_view_id,
+                              connection->module_data->surface_relation.Clone());
+    connected_views_.emplace(view_id);
+
+    added_keys.push_back(kv.first);
   }
 
   if (added_keys.size()) {
@@ -1669,12 +1690,8 @@ bool StoryControllerImpl::IsRootModule(
 
 bool StoryControllerImpl::IsExternalModule(
     const fidl::Array<fidl::String>& module_path) {
-  auto i = std::find_if(connections_.begin(), connections_.end(),
-                        [&module_path](const Connection& c) {
-                          return c.module_data->module_path.Equals(module_path);
-                        });
-
-  if (i == connections_.end()) {
+  auto* const i = FindConnection(module_path);
+  if (!i) {
     return false;
   }
 
@@ -1729,6 +1746,35 @@ void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
   }
 
   NotifyStateChange();
+}
+
+StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
+    const fidl::Array<fidl::String>& module_path) {
+  for (auto& c : connections_) {
+    if (c.module_data->module_path.Equals(module_path)) {
+      return &c;
+    }
+  }
+  return nullptr;
+}
+
+StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
+    Connection* connection) {
+  if (!connection) {
+    return nullptr;
+  }
+
+  auto* anchor = FindConnection(ParentModulePath(
+      connection->module_data->module_path));
+
+  // Traverse up until there is a non-embedded module. We recognize non-embedded
+  // modules by having a non-null SurfaceRelation. If the root module is there
+  // at all, it has a non-null surface relation.
+  while (anchor && anchor->module_data->surface_relation.is_null()) {
+    anchor = FindConnection(ParentModulePath(anchor->module_data->module_path));
+  }
+
+  return anchor;
 }
 
 }  // namespace modular
