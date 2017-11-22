@@ -40,7 +40,10 @@
 #define SCTLR_EL1_RES1      0x00500800
 #define SCTLR_EL2_RES1      0x30c50830
 
-#define SS_CNTKCTL_EL1      0
+#define SS_SP_EL0           0
+#define SS_TPIDR_EL0        (SS_SP_EL0 + 8)
+#define SS_TPIDRRO_EL0      (SS_TPIDR_EL0 + 8)
+#define SS_CNTKCTL_EL1      (SS_TPIDRRO_EL0 + 8)
 #define SS_CONTEXTIDR_EL1   (SS_CNTKCTL_EL1 + 8)
 #define SS_CPACR_EL1        (SS_CONTEXTIDR_EL1 + 8)
 #define SS_CSSELR_EL1       (SS_CPACR_EL1 + 8)
@@ -83,6 +86,10 @@ typedef uint32_t __ALIGNED(8) algn32_t;
 
 struct SystemState {
     // TODO(abdulla): Re-evaluate what registers are required.
+    uint64_t sp_el0;
+    uint64_t tpidr_el0;
+    uint64_t tpidrro_el0;
+
     algn32_t cntkctl_el1;
     algn32_t contextidr_el1;
     algn32_t cpacr_el1;
@@ -112,7 +119,6 @@ struct HostState {
 
 struct GuestState {
     uint64_t x[GS_NUM_REGS];
-    // TODO(abdulla): Save EL0 state from guest.
     SystemState system_state;
 
     // Exit state.
@@ -127,6 +133,9 @@ struct El2State {
     GuestState guest_state;
 };
 
+static_assert(__offsetof(SystemState, sp_el0) == SS_SP_EL0, "");
+static_assert(__offsetof(SystemState, tpidr_el0) == SS_TPIDR_EL0, "");
+static_assert(__offsetof(SystemState, tpidrro_el0) == SS_TPIDRRO_EL0, "");
 static_assert(__offsetof(SystemState, cntkctl_el1) == SS_CNTKCTL_EL1, "");
 static_assert(__offsetof(SystemState, contextidr_el1) == SS_CONTEXTIDR_EL1, "");
 static_assert(__offsetof(SystemState, cpacr_el1) == SS_CPACR_EL1, "");

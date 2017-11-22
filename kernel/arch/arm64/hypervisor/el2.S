@@ -37,6 +37,10 @@
 .endm
 
 .macro system_state inst, off
+    system_register \inst, \off + SS_SP_EL0, sp_el0
+    system_register \inst, \off + SS_TPIDR_EL0, tpidr_el0
+    system_register \inst, \off + SS_TPIDRRO_EL0, tpidrro_el0
+
     system_register \inst, \off + SS_CNTKCTL_EL1, cntkctl_el1
     system_register \inst, \off + SS_CONTEXTIDR_EL1, contextidr_el1
     system_register \inst, \off + SS_CPACR_EL1, cpacr_el1
