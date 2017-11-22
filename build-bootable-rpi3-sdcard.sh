@@ -149,7 +149,7 @@ sudo $MINFS "$DATA_PTN_PATH@$DATA_PTN_SZ_B" create
 sudo $MANIFEST_BUILDER \
     --disk_path $ROOT_PTN_PATH \
     --minfs_path $MINFS \
-    --file_manifest "$FUCHSIA_DIR/out/debug-aarch64/gen/packages/gn/system.bootfs.manifest"
+    --file_manifest "$FUCHSIA_DIR/out/debug-aarch64/gen/build/gn/system.bootfs.manifest"
 
 # Function to attempt unmounting a mount point up to three times, sleeping
 # a couple of seconds between attempts.

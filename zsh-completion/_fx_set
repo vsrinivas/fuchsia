@@ -1,7 +1,7 @@
 # _packages completes a comma separated list of packages
 _packages() {
-  # packages are files without extensions in packages/gn/ and */packages/
-  _values -s , $(cd ${fuchsia_dir} && echo packages/gn/^*.*(.N) */packages/^*.*(.N))
+  # packages are files without extensions in build/gn/ and */packages/
+  _values -s , $(cd ${fuchsia_dir} && echo build/gn/^*.*(.N) */packages/^*.*(.N))
 }
 
 _gn_args() {

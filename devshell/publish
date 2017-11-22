@@ -44,7 +44,7 @@ function main {
 
   # if an even number of args, assume no pkg name provided
   if [[ "$# % 2" -eq 0 ]]; then
-    local pkgs_file="${build_dir}/gen/packages/gn/packages"
+    local pkgs_file="${build_dir}/gen/build/gn/packages"
     local pkg_count=0
     local pkgs=()
     while IFS= read -r e || [[ -n "$e" ]]; do

@@ -52,14 +52,14 @@ function main {
   echo -n > "${batch_file}"
 
   __fbuild_make_batch \
-    "${FUCHSIA_BUILD_DIR}/gen/packages/gn/system.bootfs.manifest" \
+    "${FUCHSIA_BUILD_DIR}/gen/build/gn/system.bootfs.manifest" \
     "${stamp_file}" "${batch_file}"
 
   while read package; do
     __fbuild_make_batch \
       "${FUCHSIA_BUILD_DIR}/package/${package}/system_manifest" \
       "${stamp_file}" "${batch_file}"
-  done < ${FUCHSIA_BUILD_DIR}/gen/packages/gn/packages
+  done < ${FUCHSIA_BUILD_DIR}/gen/build/gn/packages
 
   echo "Syncing changed system.bootfs files..."
   host="$(fx-command-run netaddr --fuchsia)"

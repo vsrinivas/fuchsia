@@ -10,7 +10,7 @@ import re
 import stat
 import subprocess
 
-# NOTE: paths.py is a direct copy from //packages/gn/paths.py
+# NOTE: paths.py is a direct copy from //build/gn/paths.py
 # If there is an issue with the paths not being valid, just pull a new copy.
 import sys
 sys.path.append(os.path.dirname(__file__))
