@@ -43,8 +43,19 @@ class EntityProviderRunner : EntityResolver {
   // EntityProviderController.
   void OnEntityProviderFinished(const std::string agent_url);
 
+  // Given a map of entity type -> entity data, creates an entity reference for
+  // it. This data is encoded into the entity reference, and must be within
+  // 16KB. If successful, a non-null value is returned.
+  fidl::String CreateReferenceFromData(
+      fidl::Map<fidl::String, fidl::String>* type_to_data);
+
+  // Called by a DataEntity when it has no more |Entity|s it needs to serve for
+  // a particular |entity_reference|.
+  void OnDataEntityFinished(const std::string& entity_reference);
+
  private:
   class EntityReferenceFactoryImpl;
+  class DataEntity;
 
   // Called by |EntityReferenceFactoryImpl|.
   void CreateReference(
@@ -55,6 +66,9 @@ class EntityProviderRunner : EntityResolver {
   // |EntityResolver|
   void ResolveEntity(const fidl::String& entity_reference,
                      fidl::InterfaceRequest<Entity> entity_request) override;
+
+  void ResolveDataEntity(const fidl::String& entity_reference,
+                         fidl::InterfaceRequest<Entity> entity_request);
 
   EntityProviderLauncher* const entity_provider_launcher_;
 
@@ -67,6 +81,9 @@ class EntityProviderRunner : EntityResolver {
   // component id -> EntityProviderController.
   std::map<std::string, std::unique_ptr<EntityProviderController>>
       entity_provider_controllers_;
+
+  // entity reference -> |Entity| implementation.
+  std::map<std::string, std::unique_ptr<DataEntity>> data_entities_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunner);
 };

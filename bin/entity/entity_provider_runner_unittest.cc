@@ -63,6 +63,9 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
  protected:
   AgentRunner* agent_runner() { return agent_runner_.get(); }
   FakeApplicationLauncher* launcher() { return &launcher_; }
+  EntityProviderRunner* entity_provider_runner() {
+    return entity_provider_runner_.get();
+  }
 
  private:
   // TODO(vardhan): A test probably shouldn't be implementing this..
@@ -229,6 +232,33 @@ TEST_F(EntityProviderRunnerTest, Basic) {
       [&counts] { return counts["GetTypes"] == 1 && counts["GetData"] == 1; });
   EXPECT_EQ(1u, counts["GetTypes"]);
   EXPECT_EQ(1u, counts["GetData"]);
+}
+
+TEST_F(EntityProviderRunnerTest, DataEntity) {
+  fidl::Map<fidl::String, fidl::String> data;
+  data["type1"] = "data1";
+
+  auto entity_ref = entity_provider_runner()->CreateReferenceFromData(&data);
+
+  EntityResolverPtr entity_resolver;
+  entity_provider_runner()->ConnectEntityResolver(entity_resolver.NewRequest());
+  EntityPtr entity;
+  entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
+
+  fidl::Array<fidl::String> output_types;
+  entity->GetTypes([&output_types](fidl::Array<fidl::String> result) {
+    output_types = std::move(result);
+  });
+  RunLoopUntil([&output_types] { return !output_types.is_null(); });
+
+  EXPECT_EQ(data.size(), output_types.size());
+  EXPECT_EQ("type1", output_types[0]);
+
+  fidl::String output_data;
+  entity->GetData(
+      "type1", [&output_data](fidl::String result) { output_data = result; });
+  RunLoopUntil([&output_data] { return !output_data.is_null(); });
+  EXPECT_EQ("data1", output_data);
 }
 
 }  // namespace

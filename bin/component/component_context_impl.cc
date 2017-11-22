@@ -70,4 +70,10 @@ void ComponentContextImpl::GetEntityResolver(
   entity_provider_runner_->ConnectEntityResolver(std::move(request));
 }
 
+void ComponentContextImpl::CreateEntityWithData(
+    fidl::Map<fidl::String, fidl::String> type_to_data,
+    const CreateEntityWithDataCallback& result) {
+  result(entity_provider_runner_->CreateReferenceFromData(&type_to_data));
+}
+
 }  // namespace modular

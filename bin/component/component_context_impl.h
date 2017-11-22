@@ -78,6 +78,11 @@ class ComponentContextImpl : public ComponentContext {
   void GetEntityResolver(
       fidl::InterfaceRequest<EntityResolver> request) override;
 
+  // |ComponentContext|
+  void CreateEntityWithData(
+      fidl::Map<fidl::String, fidl::String> type_to_data,
+      const CreateEntityWithDataCallback& result) override;
+
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
   ledger::LedgerRepository* const ledger_repository_;

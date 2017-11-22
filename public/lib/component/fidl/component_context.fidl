@@ -36,4 +36,11 @@ interface ComponentContext {
   // Gets the EntityResolver service, which can be used to resolve an entity
   // reference to an Entity interface.
   GetEntityResolver(EntityResolver& request);
+
+  // Creates a new entity where types are the keys of |type_to_data|, and the
+  // data are the values. This is a useful way to represent small immutable
+  // entities without having to provide the entity using an Agent. The types and
+  // data together must be within 16KB in size.
+  CreateEntityWithData(map<string,string> type_to_data)
+      => (string? entity_reference);
 };
