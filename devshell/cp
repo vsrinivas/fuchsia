@@ -3,17 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### copy a file to a target device
+
+## usage: fx cp SRC DST
+## Copies a file from the host to the target device.
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
-function usage {
-  cat <<END
-usage: fx cp SRC DST
-Copies a file from the host to the target device.
-END
-}
-
 if [[ $# -ne 2 ]]; then
-  usage
+  fx-command-help
   exit 1
 fi
 

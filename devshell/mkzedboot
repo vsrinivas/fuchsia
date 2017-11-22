@@ -3,21 +3,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### make a zedboot configuration in a target directory
+
+## usage: fx mkzedboot <root of external drive>
+## Builds Fuchsia bootloader and zedboot and copies it to a drive of
+## your choice. Makes zedboot the default boot option.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-function usage {
-  cat <<END
-usage: fx mkzedboot <root of external drive>
-Builds Fuchsia bootloader and zedboot and copies it to a drive of
-your choice. Makes zedboot the default boot option.
-END
-}
-
 if [[ $# -ne 1 ]]; then
-  usage
+  fx-command-help
   exit 1
 fi
 

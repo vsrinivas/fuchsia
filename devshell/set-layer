@@ -3,26 +3,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### configure jiri to manage a specific fuchsia layer cake
+
+## usage: fx set-layer garnet|peridot|topaz
+## Configures jiri to fetch the source code for the given layer and its
+## dependencies.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
-function usage {
-  cat <<END
-usage: fx set-layer garnet|peridot|topaz
-Configures jiri to fetch the source code for the given layer and its
-dependencies.
-END
-}
-
 if [[ "$#" -ne 1 ]]; then
-  usage
+  fx-command-help
 fi
 
 layer="$1"
 
 if [[ "${layer}" == "zircon" ]]; then
-  usage
+  fx-command-help
   echo >&2 "error: Switching to the Zircon layer is not supported."
   exit 1
 fi
@@ -30,7 +28,7 @@ fi
 if [[ "${layer}" != "garnet" ]] &&
    [[ "${layer}" != "peridot" ]] &&
    [[ "${layer}" != "topaz" ]]; then
-  usage
+  fx-command-help
   exit 1
 fi
 

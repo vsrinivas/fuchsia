@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### connect to a target shell over ssh
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 fx-command-run ssh -q "$(fx-command-run netaddr --fuchsia)" "$@"

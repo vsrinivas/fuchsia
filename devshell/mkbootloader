@@ -3,20 +3,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### copy gigaboot to a target directory
+
+## usage: fx mkbootloader <root of external drive>
+## Builds Fuchsia bootloader and copies it to a drive of your choice.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-function usage {
-  cat <<END
-usage: fx mkbootloader <root of external drive>
-Builds Fuchsia bootloader and copies it to a drive of your choice.
-END
-}
-
 if [[ $# -ne 1 ]]; then
-  usage
+  fx-command-help
   exit 1
 fi
 

@@ -3,21 +3,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### builds, copies to target, and adds a driver to devmgr
+
+## usage: fx add-driver TARGET
+## Builds the specified target (e.g., fxl_unittests), copies it to the target, and
+## adds it to devmgr. Useful for tight iterations on drivers.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-function usage {
-  cat <<END
-usage: fx add-driver TARGET
-Builds the specified target (e.g., fxl_unittests), copies it to the target, and
-adds it to devmgr. Useful for tight iterations on drivers.
-END
-}
-
 if [[ $# -eq 0 ]]; then
-  usage
+  fx-command-help
   exit 1
 fi
 

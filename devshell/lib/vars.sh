@@ -63,3 +63,11 @@ function fx-command-run {
   shift
   "${command_path}" "$@"
 }
+
+function fx-command-help {
+  if grep '^## ' "$0" > /dev/null; then
+    sed -n 's/^## //p' < "$0"
+  else
+    echo "No help found. Try \`fx $0 -h\`"
+  fi
+}

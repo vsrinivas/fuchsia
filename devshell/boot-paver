@@ -3,6 +3,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### run bootserver in zedboot disk paver mode
+
+## Before running the Zircon host tool `bootserver`, this command executes a
+## build of `images/efi.blk` and `images/fvm.sparse.blk`.
+## `bootserver` is then invoked with `zircon.bin`, the boot-minimal bootdata,
+## and the two disk images for paving.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh

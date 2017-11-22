@@ -3,50 +3,48 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### set build configuration
+
+## usage: fx set x86-64|aarch64|gauss|hikey960|odroidc2
+##               [--release] [--packages P1,P2,...]
+##               [--args ARG] [--build-dir DIR]
+##               [--goma|--no-goma] [--no-ensure-goma]
+##               [--goma-dir DIR]
+##               [--ccache|--no-ccache]
+## Sets build options.
+##
+## optional arguments:
+##   --release             Build the release variant (e.g., more compiler
+##                         optimizations, less debugging information).
+##   --packages            Include the listed packages (separated by commas) in the
+##                         system build. Defaults to the default set of packages
+##                         for the current layer (e.g., "garnet/packages/default"
+##                         for the Garnet layer). If the --package argument is
+##                         given multiple times, all the specified packages are
+##                         included in the build.
+##   --args                Additional argument to pass to gn. If the --args
+##                         argument is given multiple times, all the specified
+##                         arguments are passed to gn.
+##   --build-dir           The directory (relative to FUCHSIA_DIR) into which to
+##                         generate the build system. Defaults to
+##                         "out/<variant>-<arch>".
+##   --goma|--no-goma      Whether to use the goma service during the build. Goma
+##                         attempts to make builds faster using remote build
+##                         servers. Defaults to detecting whether goma is installed
+##                         on your machine.
+##   --no-ensure-goma      Skip ensuring that goma is started when using goma.
+##   --goma-dir            The directory where goma is installed. Defaults to
+##                         ~/goma.
+##   --ccache|--no-ccache  Whether to use ccache during the build. Ccache attempts
+##                         to make builds faster by caching build artifacts.
+##                         Defaults to detecting whether the CCACHE_DIR environment
+##                         variable is set to a directory.
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-
-function usage {
-  cat <<END
-usage: fx set x86-64|aarch64|gauss|hikey960|odroidc2
-              [--release] [--packages P1,P2,...]
-              [--args ARG] [--build-dir DIR]
-              [--goma|--no-goma] [--no-ensure-goma]
-              [--goma-dir DIR]
-              [--ccache|--no-ccache]
-Sets build options.
-
-optional arguments:
-  --release             Build the release variant (e.g., more compiler
-                        optimizations, less debugging information).
-  --packages            Include the listed packages (separated by commas) in the
-                        system build. Defaults to the default set of packages
-                        for the current layer (e.g., "garnet/packages/default"
-                        for the Garnet layer). If the --package argument is
-                        given multiple times, all the specified packages are
-                        included in the build.
-  --args                Additional argument to pass to gn. If the --args
-                        argument is given multiple times, all the specified
-                        arguments are passed to gn.
-  --build-dir           The directory (relative to FUCHSIA_DIR) into which to
-                        generate the build system. Defaults to
-                        "out/<variant>-<arch>".
-  --goma|--no-goma      Whether to use the goma service during the build. Goma
-                        attempts to make builds faster using remote build
-                        servers. Defaults to detecting whether goma is installed
-                        on your machine.
-  --no-ensure-goma      Skip ensuring that goma is started when using goma.
-  --goma-dir            The directory where goma is installed. Defaults to
-                        ~/goma.
-  --ccache|--no-ccache  Whether to use ccache during the build. Ccache attempts
-                        to make builds faster by caching build artifacts.
-                        Defaults to detecting whether the CCACHE_DIR environment
-                        variable is set to a directory.
-END
-}
 
 function main {
   if [[ $# -lt 1 ]]; then
-    usage
+    fx-command-help
     return 1
   fi
 
@@ -74,7 +72,7 @@ function main {
       zircon_project=zircon-odroidc2-arm64
       ;;
     *)
-      usage
+      fx-command-help
       return 1
   esac
 
@@ -96,7 +94,7 @@ function main {
         ;;
       --packages)
         if [[ $# -lt 2 ]]; then
-          usage
+          fx-command-help
           return 1
         fi
         if [[ -z "${packages}" ]]; then
@@ -108,7 +106,7 @@ function main {
         ;;
       --build-dir)
         if [[ $# -lt 2 ]]; then
-          usage
+          fx-command-help
           return 1
         fi
         build_dir="$2"
@@ -125,7 +123,7 @@ function main {
         ;;
       --goma-dir)
         if [[ $# -lt 2 ]]; then
-          usage
+          fx-command-help
           return 1
         fi
         goma_dir=$2
@@ -137,7 +135,7 @@ function main {
         ;;
       --args)
         if [[ $# -lt 2 ]]; then
-          usage
+          fx-command-help
           return 1
         fi
         gen_args="${gen_args} --args $2"
@@ -150,7 +148,7 @@ function main {
         ccache=0
         ;;
       *)
-        usage
+        fx-command-help
         return 1
     esac
     shift

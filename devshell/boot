@@ -3,6 +3,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### run bootserver
+
+## This command delegates to the Zircon host tool `bootserver`, providing
+## `zircon.bin` and `user.bootfs` (large ramdisk) as options, forwarding all
+## others.
+## For information about additional switches/options run `fx boot -h`
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh

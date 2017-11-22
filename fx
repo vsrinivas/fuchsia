@@ -27,7 +27,7 @@ function commands {
 function find_command {
   local cmd=$1
 
-  local command_path="${fuchsia_dir}/scripts/devshell/${command_name}"
+  local command_path="${fuchsia_dir}/scripts/devshell/${cmd}"
   if [[ -x "${command_path}" ]]; then
     echo "${command_path}"
     return 0
@@ -35,7 +35,7 @@ function find_command {
 
   local build_dir=$(get_build_dir)
   if [[ -n "${build_dir}" ]]; then
-    local command_path="${build_dir}/tools/${command_name}"
+    local command_path="${build_dir}/tools/${cmd}"
     if [[ -x "${command_path}" ]]; then
       echo "${command_path}"
       return 0
@@ -56,6 +56,28 @@ function find_command {
   return 1
 }
 
+function help {
+  local cmd="$1"
+  if [[ -z "${cmd}" ]]; then
+    for cmd in $(commands); do
+      local cmd_path="$(find_command "${cmd}")"
+      if [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]]; then
+        echo "${cmd} | $(sed -n '1,/^###/s/^### //p' < "${cmd_path}")"
+      else
+        echo "${cmd}"
+      fi
+    done | column -t -s '|' -c 2
+  else
+    local cmd_path="$(find_command "${cmd}")"
+    if [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]] &&
+         grep '^## ' "${cmd_path}" > /dev/null; then
+      sed -n 's/^## //p' < "${cmd_path}"
+    else
+      echo "No help found. Try \`fx ${cmd} -h\`"
+    fi
+  fi
+}
+
 function usage {
   cat <<END
 usage: fx [--config CONFIG] [-x] COMMAND [...]
@@ -65,7 +87,7 @@ directory that is contained in a Fuchsia source tree or the FUCHSIA_DIR
 environment variable set to the root of a Fuchsia source tree.
 
 commands:
-$(commands | sed -e 's/^/  /')
+$(help)
 
 optional arguments:
   --config              Path to the config file use when running COMMAND.
@@ -122,6 +144,16 @@ while [[ $# -ne 0 ]]; do
     --)
       shift
       break
+      ;;
+    help)
+      if [[ $# -gt 1 ]]; then
+        shift
+        help "$@"
+        exit
+      else
+        usage
+        exit 1
+      fi
       ;;
     -*)
       usage

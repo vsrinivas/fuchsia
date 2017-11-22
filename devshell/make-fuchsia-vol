@@ -3,11 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### virtualbox commands
-
-## For more imformation about the virtualbox subcommands, run `fx box help`
+### build a fuchsia persistent disk
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-"${FUCHSIA_DIR}/scripts/vbox/fbox.sh" "$@"
+"${FUCHSIA_BUILD_DIR}/tools/make-fuchsia-vol" "$@"
