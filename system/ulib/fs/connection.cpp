@@ -31,18 +31,6 @@ void WriteErrorReply(zx::channel channel, zx_status_t status) {
     channel.write(0, &reply, ZXRIO_OBJECT_MINSIZE, nullptr, 0);
 }
 
-zx_status_t HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
-                                   fbl::StringPiece path, uint32_t flags, uint32_t mode) {
-    zxrio_msg_t msg;
-    memset(&msg, 0, ZXRIO_HDR_SZ);
-    msg.op = ZXRIO_OPEN;
-    msg.arg = flags;
-    msg.arg2.mode = mode;
-    msg.datalen = static_cast<uint32_t>(path.length());
-    memcpy(msg.data, path.begin(), path.length());
-    return zxrio_txn_handoff(srv, channel.release(), &msg);
-}
-
 // Performs a path walk and opens a connection to another node.
 void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
             zxrio_msg_t* msg, zx::channel channel,
@@ -68,17 +56,14 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
         xprintf("vfs: open: r=%d\n", r);
     } else if (!(open_flags & O_NOREMOTE) && vnode->IsRemote()) {
         // Remote handoff to a remote filesystem node.
-        //
-        // TODO(smklein): There exists a race between multiple threads
-        // opening a "dead" connection, where the second thread may
-        // try to send a txn_handoff_open to a closed handle.
-        // See ZX-1161 for more details.
-        r = HandoffOpenTransaction(vnode->GetRemote(), fbl::move(channel), path, flags, mode);
-        if (r == ZX_ERR_PEER_CLOSED) {
-            printf("VFS: Remote filesystem channel closed, unmounting\n");
-            zx::channel c;
-            vfs->UninstallRemote(vnode, &c);
-        }
+        zxrio_msg_t msg;
+        memset(&msg, 0, ZXRIO_HDR_SZ);
+        msg.op = ZXRIO_OPEN;
+        msg.arg = flags;
+        msg.arg2.mode = mode;
+        msg.datalen = static_cast<uint32_t>(path.length());
+        memcpy(msg.data, path.begin(), path.length());
+        vfs->ForwardMessageRemote(fbl::move(vnode), fbl::move(channel), &msg);
         return;
     } else if (IsPathOnly(open_flags)) {
         vnode->Vnode::GetHandles(flags, obj.handle, &hcount, &obj.type, obj.extra, &obj.esize);

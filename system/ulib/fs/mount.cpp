@@ -119,6 +119,21 @@ zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) {
     return UninstallRemoteLocked(fbl::move(vn), h);
 }
 
+zx_status_t Vfs::ForwardMessageRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
+                                      zxrio_msg_t* msg) {
+    fbl::AutoLock lock(&vfs_lock_);
+    zx_handle_t h = vn->GetRemote();
+    if (h == ZX_HANDLE_INVALID) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    zx_status_t r = zxrio_txn_handoff(h, channel.release(), msg);
+    if (r == ZX_ERR_PEER_CLOSED) {
+        zx::channel c;
+        UninstallRemoteLocked(fbl::move(vn), &c);
+    }
+    return r;
+}
+
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list_, and sends its corresponding filesystem an 'unmount' signal.
 zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, zx::channel* h) {
