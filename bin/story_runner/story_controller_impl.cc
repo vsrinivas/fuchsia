@@ -44,6 +44,15 @@ fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
   return fxl::JoinStrings(module_path, ":");
 }
 
+fidl::Array<fidl::String> ParentModulePath(const fidl::Array<fidl::String>& module_path) {
+  auto ret = module_path.Clone();
+  if (ret.size() > 0) {
+    // Root is its own parent.
+    ret.resize(ret.size() - 1);
+  }
+  return ret;
+}
+
 void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
@@ -363,7 +372,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   StartModuleCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
-      const fidl::Array<fidl::String>& parent_module_path,
       const fidl::Array<fidl::String>& module_path,
       const fidl::String& module_url,
       const fidl::String& link_name,
@@ -378,7 +386,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
                   std::move(result_call),
                   module_url),
         story_controller_impl_(story_controller_impl),
-        parent_module_path_(parent_module_path.Clone()),
         module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
@@ -387,8 +394,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)) {
-    FXL_DCHECK(!parent_module_path_.is_null());
-
     Ready();
   }
 
@@ -403,7 +408,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
     if (link_name_) {
       link_path_ = LinkPath::New();
-      link_path_->module_path = parent_module_path_.Clone();
+      link_path_->module_path = ParentModulePath(module_path_);
       link_path_->link_name = link_name_;
       Cont1(flow);
 
@@ -412,7 +417,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       // parent module. We need to retrieve which one it is from story storage.
       new ReadDataCall<ModuleData>(
           &operation_queue_, story_controller_impl_->page(),
-          MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
+          MakeModuleKey(ParentModulePath(module_path_)), false /* not_found_is_ok */,
           XdrModuleData, [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
@@ -464,7 +469,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   // Passed in:
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> parent_module_path_;
   const fidl::Array<fidl::String> module_path_;
   const fidl::String module_url_;
   const fidl::String link_name_;
@@ -487,8 +491,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   StartModuleInShellCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
-      const fidl::Array<fidl::String>& parent_module_path,
-      const fidl::String& module_name,
+      const fidl::Array<fidl::String>& module_path,
       const fidl::String& module_url,
       const fidl::String& link_name,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
@@ -502,8 +505,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
                   std::move(result_call),
                   module_url),
         story_controller_impl_(story_controller_impl),
-        parent_module_path_(parent_module_path.Clone()),
-        module_name_(module_name),
+        module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
         incoming_services_(std::move(incoming_services)),
@@ -511,9 +513,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         surface_relation_(std::move(surface_relation)),
         focus_(focus),
         module_source_(module_source) {
-    module_path_ = parent_module_path_.Clone();
-    module_path_.push_back(module_name_);
-
     Ready();
   }
 
@@ -528,7 +527,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // shell.
 
     new StartModuleCall(
-        &operation_queue_, story_controller_impl_, parent_module_path_,
+        &operation_queue_, story_controller_impl_,
         module_path_, module_url_, link_name_, module_source_,
         surface_relation_.Clone(), std::move(incoming_services_),
         std::move(module_controller_request_),
@@ -541,7 +540,8 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // If this is called during Stop(), story_shell_ might already have been
     // reset. TODO(mesch): Then the whole operation should fail.
     if (story_controller_impl_->story_shell_) {
-      const fidl::String parent_view_id = PathString(parent_module_path_);
+      const auto parent_module_path = ParentModulePath(module_path_);
+      const fidl::String parent_view_id = PathString(parent_module_path);
 
       // We only add a module to story shell if its either a root module or its
       // parent is already known to story shell.
@@ -568,8 +568,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;
-  const fidl::Array<fidl::String> parent_module_path_;
-  const fidl::String module_name_;
+  const fidl::Array<fidl::String> module_path_;
   const fidl::String module_url_;
   const fidl::String link_name_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
@@ -578,7 +577,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   const bool focus_;
   const ModuleSource module_source_;
 
-  fidl::Array<fidl::String> module_path_;
   ModuleControllerPtr module_controller_;
   mozart::ViewOwnerPtr view_owner_;
 
@@ -591,8 +589,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
                 StoryControllerImpl* const story_controller_impl,
-                fidl::Array<fidl::String> parent_module_path,
-                const fidl::String& module_name,
+                fidl::Array<fidl::String> module_path,
                 const fidl::String& module_url,
                 const fidl::String& link_name,
                 SurfaceRelationPtr surface_relation,
@@ -602,8 +599,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
                   done,
                   module_url),
         story_controller_impl_(story_controller_impl),
-        parent_module_path_(std::move(parent_module_path)),
-        module_name_(module_name),
+        module_path_(std::move(module_path)),
         module_url_(module_url),
         link_name_(link_name),
         surface_relation_(std::move(surface_relation)) {
@@ -613,10 +609,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    module_path_ = parent_module_path_.Clone();
-    module_path_.push_back(module_name_);
     link_path_ = LinkPath::New();
-    link_path_->module_path = parent_module_path_.Clone();
+    link_path_->module_path = ParentModulePath(module_path_);
     link_path_->link_name = link_name_;
 
     WriteModuleData(flow);
@@ -640,7 +634,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
-                                 parent_module_path_, module_name_, module_url_,
+                                 module_path_, module_url_,
                                  link_name_, nullptr, nullptr,
                                  std::move(surface_relation_), true,
                                  ModuleSource::EXTERNAL, [flow] {});
@@ -648,15 +642,12 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;
-  const fidl::Array<fidl::String> parent_module_path_;
-  const fidl::String module_name_;
+  const fidl::Array<fidl::String> module_path_;
   const fidl::String module_url_;
   const fidl::String link_name_;
   SurfaceRelationPtr surface_relation_;
 
-  fidl::Array<fidl::String> module_path_;
   LinkPathPtr link_path_;
-
   ModuleDataPtr module_data_;
 
   OperationQueue operation_queue_;
@@ -774,8 +765,10 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
                           });
     }
 
+    auto module_path = fidl::Array<fidl::String>::New(0);
+    module_path.push_back(module_name_);
     new AddModuleCall(&operation_queue_, story_controller_impl_,
-                      fidl::Array<fidl::String>::New(0), module_name_,
+                      std::move(module_path),
                       module_url_, link_name_, SurfaceRelation::New(),
                       [flow] {});
   }
@@ -1065,12 +1058,11 @@ class StoryControllerImpl::StartCall : Operation<> {
           for (auto& module_data : data) {
             if (module_data->module_source == ModuleSource::EXTERNAL &&
                 !module_data->module_stopped) {
-              auto parent_path = module_data->module_path.Clone();
-              parent_path.resize(parent_path.size() - 1);
               new StartModuleInShellCall(
-                  &operation_queue_, story_controller_impl_, parent_path,
-                  module_data->module_path[module_data->module_path.size() - 1],
-                  module_data->module_url, module_data->link_path->link_name,
+                  &operation_queue_, story_controller_impl_,
+                  module_data->module_path,
+                  module_data->module_url,
+                  module_data->link_path->link_name,
                   nullptr, nullptr,
                   module_data->surface_relation.Clone(), true,
                   module_data->module_source, [flow] {});
@@ -1206,11 +1198,9 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     }
 
     // We reach this point only if we want to start an external module.
-    auto parent_path = module_data_->module_path.Clone();
-    parent_path.resize(parent_path.size() - 1);
     new StartModuleInShellCall(
-        &operation_queue_, story_controller_impl_, parent_path,
-        module_data_->module_path[module_data_->module_path.size() - 1],
+        &operation_queue_, story_controller_impl_,
+        module_data_->module_path,
         module_data_->module_url, module_data_->link_path->link_name, nullptr,
         nullptr, std::move(module_data_->surface_relation), true,
         module_data_->module_source, [flow] {});
@@ -1382,9 +1372,9 @@ void StoryControllerImpl::StartModule(
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     const ModuleSource module_source) {
-  fidl::Array<fidl::String> module_path = parent_module_path.Clone();
+  auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
-  new StartModuleCall(&operation_queue_, this, parent_module_path, module_path,
+  new StartModuleCall(&operation_queue_, this, module_path,
                       module_url, link_name, module_source,
                       SurfaceRelation::New(),
                       std::move(incoming_services),
@@ -1402,8 +1392,10 @@ void StoryControllerImpl::StartModuleInShell(
     SurfaceRelationPtr surface_relation,
     const bool focus,
     ModuleSource module_source) {
+  auto module_path = parent_module_path.Clone();
+  module_path.push_back(module_name);
   new StartModuleInShellCall(
-      &operation_queue_, this, parent_module_path, module_name, module_url,
+      &operation_queue_, this, module_path, module_url,
       link_name, std::move(incoming_services),
       std::move(module_controller_request), std::move(surface_relation), focus,
       module_source, [] {});
@@ -1524,8 +1516,10 @@ void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
     module_path.resize(0);
   }
 
+  module_path.push_back(module_name);
+
   new AddModuleCall(&operation_queue_, this, std::move(module_path),
-                    module_name, module_url, link_name,
+                    module_url, link_name,
                     std::move(surface_relation), [] {});
 }
 
