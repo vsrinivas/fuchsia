@@ -116,3 +116,8 @@ IFS=','
 for project in $PROJECTS; do
     make_zircon_target PROJECT="$project" kernel-only
 done
+
+# Build bootloaders. Some Zircon projects produce no outputs for bootloader.
+for project in $PROJECTS; do
+    make_zircon_target PROJECT="$project" bootloader
+done
