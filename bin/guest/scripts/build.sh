@@ -5,16 +5,18 @@ set -e
 usage() {
     echo "usage: ${0} [options] {arm64, x86}"
     echo
-    echo "    -g    Use Goma"
-    echo "    -p    Set packages, defaults to 'garnet/packages/guest'"
+    echo "  -A  Use ASAN in GN"
+    echo "  -g  Use Goma"
+    echo "  -p  Set packages, defaults to 'garnet/packages/guest'"
     echo
     exit 1
 }
 
-while getopts "gp:" FLAG; do
+while getopts "Agp:" FLAG; do
     case "${FLAG}" in
+    A)  GN_ASAN="--variant=asan";;
     g)  $HOME/goma/goma_ctl.py ensure_start;
-        GEN_GOMA="--goma";
+        GN_GOMA="--goma";
         NINJA_GOMA="-j1024";;
     p)  PACKAGE="${OPTARG}";;
     *)  usage;;
@@ -43,7 +45,8 @@ packages/gn/gen.py \
     --target_cpu=$ARCH \
     --zircon_project=$ZIRCON_PROJECT \
     --packages="${PACKAGE:-garnet/packages/guest}" \
-    $GEN_GOMA
+    $GN_ASAN \
+    $GN_GOMA
 
 buildtools/ninja \
     -C out/debug-$ARCH \
