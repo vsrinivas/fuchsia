@@ -2,7 +2,7 @@
     "resources": [
         {
             "bootfs_path": "data/build/last-update",
-            "file": "packages/last-update"
+            "file": "build/last-update"
         },
         {
             "bootfs_path": "data/build/snapshot",
