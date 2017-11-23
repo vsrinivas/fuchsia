@@ -23,7 +23,7 @@ usage() {
 }
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ZIRCON_DIR="$GUEST_SCRIPTS_DIR/../../../.."
+ZIRCON_DIR="$GUEST_SCRIPTS_DIR/../../../../zircon"
 
 while getopts "f:z:b:l:i:r:g:" opt; do
   case "${opt}" in

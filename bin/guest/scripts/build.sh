@@ -52,7 +52,7 @@ buildtools/ninja \
     -C out/debug-$ARCH \
     $NINJA_GOMA
 
-zircon/system/uapp/guest/scripts/mkbootfs.sh \
+garnet/bin/guest/scripts/mkbootfs.sh \
     -f out/debug-$ARCH/user.bootfs \
     out/build-zircon/build-$ZIRCON_PROJECT
 
