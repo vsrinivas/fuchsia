@@ -7,7 +7,7 @@ usage() {
     echo
     echo "  -A  Use ASAN in GN"
     echo "  -g  Use Goma"
-    echo "  -p  Set packages, defaults to 'garnet/packages/guest'"
+    echo "  -p  Set package, defaults to 'garnet/packages/guest'"
     echo
     exit 1
 }
@@ -26,10 +26,10 @@ shift $((OPTIND - 1))
 
 case "${1}" in
 arm64)
-    ZIRCON_PROJECT="zircon-hikey960-arm64";
+    PLATFORM="zircon-hikey960-arm64";
     ARCH="aarch64";;
 x86)
-    ZIRCON_PROJECT="zircon-pc-x86-64";
+    PLATFORM="zircon-pc-x86-64";
     ARCH="x86-64";;
 *)  usage;;
 esac
@@ -39,11 +39,11 @@ FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
 cd "${FUCHSIA_DIR}"
 
 scripts/build-zircon.sh \
-    -p $ZIRCON_PROJECT
+    -p $PLATFORM
 
 build/gn/gen.py \
     --target_cpu=$ARCH \
-    --zircon_project=$ZIRCON_PROJECT \
+    --platforms=$PLATFORM \
     --packages="${PACKAGE:-garnet/packages/guest}" \
     $GN_ASAN \
     $GN_GOMA
@@ -54,17 +54,17 @@ buildtools/ninja \
 
 garnet/bin/guest/scripts/mkbootfs.sh \
     -f out/debug-$ARCH/user.bootfs \
-    out/build-zircon/build-$ZIRCON_PROJECT
+    out/build-zircon/build-$PLATFORM
 
 case "${1}" in
 arm64)
     zircon/scripts/hikey-efi-boot-image \
-        -b out/build-zircon/build-$ZIRCON_PROJECT \
+        -b out/build-zircon/build-$PLATFORM \
         -r bootdata-with-guest.bin \
         $HOME/tools-images-hikey960;;
 x86)
     out/build-zircon/tools/bootserver \
         -1 \
-        out/build-zircon/build-$ZIRCON_PROJECT/zircon.bin \
+        out/build-zircon/build-$PLATFORM/zircon.bin \
         bootdata-with-guest.bin;;
 esac
