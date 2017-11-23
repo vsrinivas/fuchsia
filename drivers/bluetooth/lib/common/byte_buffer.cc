@@ -39,10 +39,11 @@ void MutableByteBuffer::Write(const uint8_t* data, size_t size, size_t pos) {
     return;
 
   FXL_CHECK(data);
-  FXL_CHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  FXL_CHECK(pos <= this->size()) << "Invalid offset (pos: " << pos
+                                 << ", buffer size: " << this->size() << ")";
   FXL_CHECK(size <= this->size() - pos)
       << "Buffer not large enough! (required: " << size
-      << ", available: " << this->size() - pos;
+      << ", available: " << this->size() - pos << ")";
 
   std::memcpy(mutable_data() + pos, data, size);
 }

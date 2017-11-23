@@ -17,6 +17,12 @@
 namespace bluetooth {
 namespace att {
 
+// v5.0, Vol 3, Part G, 5.1.2
+constexpr uint16_t kLEMinMTU = 23;
+
+// v5.0, Vol 3, Part G, 5.1.1
+constexpr uint16_t kBREDRMinMTU = 48;
+
 // The maximum length of an attribute value (v5.0, Vol 3, Part F, 3.2.9).
 constexpr size_t kMaxAttributeValueLength = 512;
 
@@ -80,7 +86,7 @@ enum class ErrorCode : uint8_t {
   kAttributeNotFound = 0x0A,
   kAttributeNotLong = 0x0B,
   kInsufficientEncryptionKeySize = 0x0C,
-  kInvalidAttributeValueLength = 0x0E,
+  kInvalidAttributeValueLength = 0x0D,
   kUnlikelyError = 0x0E,
   kInsufficientEncryption = 0x0F,
   kUnsupportedGroupType = 0x10,

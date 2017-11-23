@@ -5,10 +5,30 @@
 static_library("att") {
   sources = [
     "att.h",
+    "bearer.cc",
+    "bearer.h",
+    "packet.cc",
+    "packet.h",
   ]
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "bearer_unittest.cc",
+  ]
+
+  deps = [
+    ":att",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
+    "//third_party/gtest",
   ]
 }
