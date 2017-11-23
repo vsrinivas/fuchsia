@@ -9,9 +9,6 @@
 namespace bluetooth {
 namespace common {
 
-constexpr size_t kMaxNumSlabs = 100;
-constexpr size_t kSlabSize = 32767;
-
 using SmallBufferTraits =
     SlabBufferTraits<kSmallBufferSize, kSlabSize / kSmallBufferSize>;
 using LargeBufferTraits =
