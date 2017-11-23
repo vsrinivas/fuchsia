@@ -24,10 +24,18 @@ enum class GicdRegister : uint64_t {
     ICPEND15    = 0x2bc,
     ICFG0       = 0xc00,
     ICFG31      = 0xc7c,
+    SGI         = 0xf00,
     PID2        = 0xfe8,
 };
 
 // clang-format on
+
+SoftwareGeneratedInterrupt::SoftwareGeneratedInterrupt(uint32_t sgi) {
+    target = static_cast<InterruptTarget>(bits_shift(sgi, 25, 24));
+    cpu_mask = static_cast<uint8_t>(bits_shift(sgi, 23, 16));
+    non_secure = bit_shift(sgi, 15);
+    vector = static_cast<uint8_t>(bits_shift(sgi, 3, 0));
+}
 
 static inline uint32_t typer_it_lines(uint32_t num_interrupts) {
     return set_bits((num_interrupts >> 5) - 1, 4, 0);
@@ -76,6 +84,12 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
         if (addr % 4)
             return ZX_ERR_IO_DATA_INTEGRITY;
         return ZX_OK;
+    case GicdRegister::SGI: {
+        SoftwareGeneratedInterrupt sgi(value.u32);
+        fprintf(stderr, "Ignoring GIC SGI, target %u CPU mask %#x non-secure %u vector %u\n",
+                static_cast<uint8_t>(sgi.target), sgi.cpu_mask, sgi.non_secure, sgi.vector);
+        return ZX_OK;
+    }
     default:
         fprintf(stderr, "Unhandled GIC distributor address %#lx\n", addr);
         return ZX_ERR_NOT_SUPPORTED;

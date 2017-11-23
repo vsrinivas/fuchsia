@@ -8,6 +8,23 @@
 
 class Guest;
 
+// Target CPU for the software-generated interrupt.
+enum class InterruptTarget {
+    MASK            = 0b00,
+    ALL_BUT_LOCAL   = 0b01,
+    LOCAL           = 0b10,
+};
+
+// Software-generated interrupt received by the GIC distributor.
+struct SoftwareGeneratedInterrupt {
+    InterruptTarget target;
+    uint8_t cpu_mask;
+    bool non_secure;
+    uint8_t vector;
+
+    SoftwareGeneratedInterrupt(uint32_t sgi);
+};
+
 // Implements GIC distributor.
 class GicDistributor : public IoHandler {
 public:
