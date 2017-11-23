@@ -11,6 +11,7 @@
 
 #include <arch/arm64/el2_state.h>
 #include <arch/hypervisor.h>
+#include <dev/psci.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
 #include <vm/fault.h>
@@ -27,6 +28,8 @@
     ZX_OK; \
 })
 
+static const uint16_t kSmcPsci = 0;
+
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
     iss = BITS(esr, 24, 0);
@@ -34,6 +37,10 @@ ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
 
 WaitInstruction::WaitInstruction(uint32_t iss) {
     is_wfe = BIT(iss, 0);
+}
+
+SmcInstruction::SmcInstruction(uint32_t iss) {
+    imm = static_cast<uint16_t>(BITS(iss, 15, 0));
 }
 
 SystemInstruction::SystemInstruction(uint32_t iss) {
@@ -83,6 +90,22 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     } while (!gic_has_pending_interrupt(gic_state));
     next_pc(guest_state);
     return ZX_OK;
+}
+
+static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state) {
+    const SmcInstruction si(iss);
+    if (si.imm != kSmcPsci)
+        return ZX_ERR_NOT_SUPPORTED;
+
+    next_pc(guest_state);
+    switch (guest_state->x[0]) {
+    case PSCI64_CPU_ON:
+        // Set return value of PSCI call.
+        guest_state->x[0] = ZX_ERR_NOT_SUPPORTED;
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>* hcr,
@@ -209,7 +232,7 @@ zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
         return handle_wfi_wfe_instruction(syndrome.iss, guest_state, gic_state);
     case ExceptionClass::SMC_INSTRUCTION:
         LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
-        return ZX_ERR_NOT_SUPPORTED;
+        return handle_smc_instruction(syndrome.iss, guest_state);
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
         return handle_system_instruction(syndrome.iss, hcr, guest_state);

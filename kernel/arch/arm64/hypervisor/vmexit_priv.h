@@ -42,6 +42,13 @@ struct WaitInstruction {
     WaitInstruction(uint32_t iss);
 };
 
+// SMC instruction that cause a VM exit.
+struct SmcInstruction {
+    uint16_t imm;
+
+    SmcInstruction(uint32_t iss);
+};
+
 // System register associated with a system instruction.
 enum class SystemRegister : uint16_t {
     MAIR_EL1            = 0b11000000 << 8 /* op */ | 0b10100010 /* cr */,
