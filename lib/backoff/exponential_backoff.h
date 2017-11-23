@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_BACKOFF_EXPONENTIAL_BACKOFF_H_
-#define PERIDOT_BIN_LEDGER_BACKOFF_EXPONENTIAL_BACKOFF_H_
+#ifndef PERIDOT_LIB_BACKOFF_EXPONENTIAL_BACKOFF_H_
+#define PERIDOT_LIB_BACKOFF_EXPONENTIAL_BACKOFF_H_
 
 #include <random>
 
 #include "lib/fxl/random/rand.h"
-#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/lib/backoff/backoff.h"
 
 namespace backoff {
 
@@ -43,4 +43,4 @@ class ExponentialBackoff : public Backoff {
 
 }  // namespace backoff
 
-#endif  // PERIDOT_BIN_LEDGER_BACKOFF_EXPONENTIAL_BACKOFF_H_
+#endif  // PERIDOT_LIB_BACKOFF_EXPONENTIAL_BACKOFF_H_

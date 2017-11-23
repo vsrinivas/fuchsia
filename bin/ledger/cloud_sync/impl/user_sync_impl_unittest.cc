@@ -9,10 +9,10 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/backoff/backoff.h"
-#include "peridot/bin/ledger/backoff/test/test_backoff.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/backoff/backoff.h"
+#include "peridot/lib/backoff/test/test_backoff.h"
 
 namespace cloud_sync {
 

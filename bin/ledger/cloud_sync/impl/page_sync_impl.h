@@ -12,7 +12,6 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
@@ -23,6 +22,7 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/lib/backoff/backoff.h"
 
 namespace cloud_sync {
 

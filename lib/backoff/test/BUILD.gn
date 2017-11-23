@@ -16,7 +16,7 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/backoff",
+    "//peridot/lib/backoff",
   ]
 
   deps = [

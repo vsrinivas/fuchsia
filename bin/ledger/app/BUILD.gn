@@ -17,12 +17,12 @@ executable("app") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
-    "//peridot/bin/ledger/backoff",
     "//peridot/bin/ledger/cobalt",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",
+    "//peridot/lib/backoff",
     "//zircon/system/ulib/trace-provider",
   ]
 
@@ -120,7 +120,6 @@ source_set("unittests") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/backoff/test",
     "//peridot/bin/ledger/cloud_sync/impl",
     "//peridot/bin/ledger/cloud_sync/test",
     "//peridot/bin/ledger/convert",
@@ -130,6 +129,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/backoff/test",
     "//peridot/public/lib/auth/fidl",
     "//third_party/gtest",
   ]

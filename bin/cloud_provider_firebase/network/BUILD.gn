@@ -5,6 +5,7 @@
 visibility = [
   "//peridot/bin/cloud_provider_firebase/*",
   "//peridot/bin/ledger/*",
+
   # TODO(thatguy): This dependency will go away, but the exact timeframe is not
   # known ATM. It doesn't seem like we want to allow many (if any) clients
   # outside ledger to depend on it.
@@ -21,8 +22,8 @@ source_set("network") {
   public_deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
-    "//peridot/bin/ledger/backoff",
     "//peridot/bin/ledger/callback",
+    "//peridot/lib/backoff",
     "//zircon/system/ulib/zx",
   ]
 

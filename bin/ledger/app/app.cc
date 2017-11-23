@@ -22,10 +22,10 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 

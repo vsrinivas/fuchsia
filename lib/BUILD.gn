@@ -10,6 +10,7 @@ executable("unittests") {
 
   deps = [
     "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//peridot/lib/backoff:unittests",
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/module_manifest_source:unittests",

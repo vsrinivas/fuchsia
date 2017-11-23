@@ -11,7 +11,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/cloud_sync/test/page_sync_empty_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -21,6 +20,7 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 namespace {

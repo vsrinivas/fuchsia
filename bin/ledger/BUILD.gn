@@ -194,7 +194,6 @@ executable("ledger_unittests") {
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:unittests",
-    "//peridot/bin/ledger/backoff:unittests",
     "//peridot/bin/ledger/callback:unittests",
     "//peridot/bin/ledger/cloud_sync/impl:unittests",
     "//peridot/bin/ledger/convert:unittests",

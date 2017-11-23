@@ -6,7 +6,7 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firebase {
 

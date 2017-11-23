@@ -8,9 +8,9 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/network/network_service.h"
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 

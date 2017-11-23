@@ -12,8 +12,8 @@
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
-#include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/lib/backoff/backoff.h"
 
 namespace firebase_auth {
 

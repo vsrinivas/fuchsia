@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_BACKOFF_TEST_TEST_BACKOFF_H_
-#define PERIDOT_BIN_LEDGER_BACKOFF_TEST_TEST_BACKOFF_H_
+#ifndef PERIDOT_LIB_BACKOFF_TEST_TEST_BACKOFF_H_
+#define PERIDOT_LIB_BACKOFF_TEST_TEST_BACKOFF_H_
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_delta.h"
-#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/lib/backoff/backoff.h"
 
 namespace backoff {
 
@@ -38,4 +38,4 @@ class TestBackoff : public Backoff {
 
 }  // namespace backoff
 
-#endif  // PERIDOT_BIN_LEDGER_BACKOFF_TEST_TEST_BACKOFF_H_
+#endif  // PERIDOT_LIB_BACKOFF_TEST_TEST_BACKOFF_H_

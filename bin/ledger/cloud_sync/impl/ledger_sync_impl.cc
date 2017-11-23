@@ -5,9 +5,9 @@
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_sync {
 

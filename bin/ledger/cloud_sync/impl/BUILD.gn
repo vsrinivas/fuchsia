@@ -26,12 +26,12 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/backoff",
     "//peridot/bin/ledger/cloud_sync/public",
     "//peridot/bin/ledger/encryption/impl",
     "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/storage/public",
+    "//peridot/lib/backoff",
     "//peridot/public/lib/cloud_provider/fidl",
   ]
 
@@ -61,13 +61,13 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/backoff/test",
     "//peridot/bin/ledger/cloud_sync/impl/test",
     "//peridot/bin/ledger/cloud_sync/test",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/backoff/test",
     "//third_party/gtest",
   ]
 
