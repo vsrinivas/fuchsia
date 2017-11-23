@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_H_
 
+#include <memory>
 #include <thread>
 
 #include <google/firestore/v1beta1/document.pb.h>
@@ -14,6 +15,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 
 namespace cloud_provider_firestore {
@@ -37,7 +39,11 @@ class FirestoreService {
                          google::firestore::v1beta1::Document document)>
           callback);
 
+  std::unique_ptr<ListenCallHandler> Listen(ListenCallClient* client);
+
  private:
+  struct DocumentResponseCall;
+
   void Poll();
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
@@ -46,8 +52,9 @@ class FirestoreService {
   std::unique_ptr<google::firestore::v1beta1::Firestore::Stub> firestore_;
   grpc::CompletionQueue cq_;
 
-  struct DocumentResponseCall;
   callback::AutoCleanableSet<DocumentResponseCall> document_response_calls_;
+
+  callback::AutoCleanableSet<ListenCall> listen_calls_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FirestoreService);
 };

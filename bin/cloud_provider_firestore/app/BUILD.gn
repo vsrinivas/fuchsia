@@ -51,7 +51,6 @@ source_set("unittests") {
     ":lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/test:lib",
   ]
 }

@@ -8,6 +8,8 @@ source_set("firestore") {
   sources = [
     "firestore_service.cc",
     "firestore_service.h",
+    "listen_call.cc",
+    "listen_call.h",
   ]
 
   public_deps = [
@@ -19,4 +21,19 @@ source_set("firestore") {
   ]
 
   public_configs = [ "//third_party/googleapis:googleapis_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "listen_call_unittest.cc",
+  ]
+
+  deps = [
+    ":firestore",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//peridot/bin/ledger/test:lib",
+  ]
 }

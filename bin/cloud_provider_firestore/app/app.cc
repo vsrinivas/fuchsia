@@ -4,6 +4,8 @@
 
 #include <thread>
 
+#include <google/firestore/v1beta1/firestore.pb.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -22,17 +24,66 @@ void PrintUsage(const char* executable_name) {
 
 // This is a proof-of-concept app demonstrating a single gRPC call on the
 // Firestore server, to be replaced with real cloud provider.
-class App : public modular::Lifecycle {
+class App : public modular::Lifecycle, ListenCallClient {
  public:
   explicit App(std::string server_id)
       : server_id_(std::move(server_id)),
+        root_path_("projects/" + server_id_ + "/databases/(default)/documents"),
         firestore_service_(loop_.task_runner(), MakeChannel()) {}
+  ~App() override {}
 
   void Run() {
+    listen_call_handler_ = firestore_service_.Listen(this);
+
+    loop_.task_runner()->PostDelayedTask([this] { loop_.PostQuitTask(); },
+                                         fxl::TimeDelta::FromSeconds(20));
+
+    loop_.Run();
+  }
+
+  // ListenCallClient:
+  void OnConnected() override {
+    // The watcher connection is now active.
+
+    // Start watching for documents.
+    auto request = google::firestore::v1beta1::ListenRequest();
+    request.set_database("projects/" + server_id_ + "/databases/(default)");
+    request.mutable_add_target()->mutable_query()->set_parent(root_path_);
+    request.mutable_add_target()
+        ->mutable_query()
+        ->mutable_structured_query()
+        ->add_from()
+        ->set_collection_id("top-level-collection");
+    listen_call_handler_->Write(std::move(request));
+
+    // Start creating documents.
+    CreateNextDocument();
+  }
+
+  void OnResponse(
+      google::firestore::v1beta1::ListenResponse response) override {
+    if (response.has_document_change()) {
+      FXL_LOG(INFO) << "Received notification for: "
+                    << response.document_change().document().name();
+    }
+  }
+
+  void OnFinished(grpc::Status status) override {
+    if (!status.ok()) {
+      FXL_LOG(ERROR) << "Stream closed with an error: "
+                     << status.error_message()
+                     << ", details: " << status.error_details();
+    }
+  }
+
+ private:
+  // modular::Lifecycle:
+  void Terminate() override { loop_.PostQuitTask(); }
+
+  void CreateNextDocument() {
     // Make a request that creates a new document with an "abc" field.
     auto request = google::firestore::v1beta1::CreateDocumentRequest();
-    request.set_parent("projects/" + server_id_ +
-                       "/databases/(default)/documents");
+    request.set_parent(root_path_);
     request.set_collection_id("top-level-collection");
     google::firestore::v1beta1::Value forty_two;
     forty_two.set_integer_value(42);
@@ -42,32 +93,34 @@ class App : public modular::Lifecycle {
     // Make the RPC and print the status.
     firestore_service_.CreateDocument(
         std::move(request), [this](auto status, auto result) {
-          FXL_LOG(INFO) << "RPC status: " << status.error_code();
           if (!status.ok()) {
-            FXL_LOG(INFO) << "error message: " << status.error_message();
-            FXL_LOG(INFO) << "error details: " << status.error_details();
+            FXL_LOG(ERROR) << "Failed to create the document, "
+                           << "error message: " << status.error_message()
+                           << ", error details: " << status.error_details();
+            return;
           }
+          FXL_LOG(INFO) << "Created document " << result.name();
 
-          loop_.PostQuitTask();
+          loop_.task_runner()->PostDelayedTask([this] { CreateNextDocument(); },
+                                               fxl::TimeDelta::FromSeconds(3));
         });
-
-    loop_.Run();
   }
-
- private:
-  // modular::Lifecycle:
-  void Terminate() override { loop_.PostQuitTask(); }
-
-  fsl::MessageLoop loop_;
-
-  const std::string server_id_;
-  FirestoreService firestore_service_;
 
   std::shared_ptr<grpc::Channel> MakeChannel() {
     auto opts = grpc::SslCredentialsOptions();
     auto credentials = grpc::SslCredentials(opts);
     return grpc::CreateChannel("firestore.googleapis.com:443", credentials);
   }
+
+  fsl::MessageLoop loop_;
+
+  const std::string server_id_;
+  // Root path to the Firestore documents tree of the format:
+  // `projects/{project_id}/databases/{database_id}/documents`
+  const std::string root_path_;
+  FirestoreService firestore_service_;
+
+  std::unique_ptr<ListenCallHandler> listen_call_handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

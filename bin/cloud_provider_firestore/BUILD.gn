@@ -24,6 +24,7 @@ executable("unittests") {
   deps = [
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/cloud_provider_firestore/app:unittests",
+    "//peridot/bin/cloud_provider_firestore/firestore:unittests",
   ]
 }
 

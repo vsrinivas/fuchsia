@@ -24,7 +24,7 @@ struct FirestoreService::DocumentResponseCall {
   grpc::Status status;
 
   // Callback to be called upon completing the remote call.
-  fxl::Closure on_complete;
+  std::function<void(bool)> on_complete;
 
   // Callback to be called when the call object can be deleted.
   fxl::Closure on_empty;
@@ -54,7 +54,7 @@ void FirestoreService::CreateDocument(
   call.response_reader =
       firestore_->AsyncCreateDocument(&call.context, request, &cq_);
 
-  call.on_complete = [&call, callback = std::move(callback)] {
+  call.on_complete = [&call, callback = std::move(callback)](bool ok) {
     callback(std::move(call.status), std::move(call.response));
     if (call.on_empty) {
       call.on_empty();
@@ -63,17 +63,25 @@ void FirestoreService::CreateDocument(
   call.response_reader->Finish(&call.response, &call.status, &call.on_complete);
 }
 
+std::unique_ptr<ListenCallHandler> FirestoreService::Listen(
+    ListenCallClient* client) {
+  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+
+  auto stream_factory = [cq = &cq_, firestore = firestore_.get()](
+                            grpc::ClientContext* context, void* tag) {
+    return firestore->AsyncListen(context, cq, tag);
+  };
+  auto& call = listen_calls_.emplace(client, std::move(stream_factory));
+  return std::make_unique<ListenCallHandler>(&call);
+}
+
 void FirestoreService::Poll() {
   void* tag;
   bool ok = false;
   while (cq_.Next(&tag, &ok)) {
-    if (!ok) {
-      // This happens after cq_.Shutdown() is called.
-      break;
-    }
-
-    fxl::Closure* on_complete = reinterpret_cast<fxl::Closure*>(tag);
-    main_runner_->PostTask([on_complete] { (*on_complete)(); });
+    FXL_DCHECK(tag);
+    auto callable = reinterpret_cast<std::function<void(bool)>*>(tag);
+    main_runner_->PostTask([callable, ok] { (*callable)(ok); });
   }
 }
 
