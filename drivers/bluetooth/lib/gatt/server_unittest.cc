@@ -81,7 +81,7 @@ TEST_F(GATT_ServerTest, ExchangeMTURequestInvalidPDU) {
 }
 
 TEST_F(GATT_ServerTest, ExchangeMTURequestValueTooSmall) {
-  constexpr uint16_t kServerMTU = l2cap::kDefaultMTU;
+  const uint16_t kServerMTU = l2cap::kDefaultMTU;
   constexpr uint16_t kClientMTU = 1;
 
   // clang-format off
@@ -758,7 +758,7 @@ TEST_F(GATT_ServerTest, ReadByTypeDynamicValue) {
 
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 
-  // Assign a cached value to the second attribute. It should still be omitted
+  // Assign a static value to the second attribute. It should still be omitted
   // as the first attribute is dynamic.
   attr->SetValue(kTestValue1);
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
@@ -1174,6 +1174,182 @@ TEST_F(GATT_ServerTest, ReadByTypeMultipleExcludeFirstDynamic) {
       'f', 'o', 'o'  // value: "foo"
   );
   // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, WriteRequestInvalidPDU) {
+  // Just opcode
+  // clang-format off
+  const auto kInvalidPDU = common::CreateStaticByteBuffer(0x12);
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x00, 0x00,  // handle: 0
+      0x04         // error: Invalid PDU
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidPDU, kExpected));
+}
+
+TEST_F(GATT_ServerTest, WriteRequestInvalidHandle) {
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x12,        // opcode: write request
+      0x01, 0x00,  // handle: 0x0001
+
+      // value: "test"
+      't', 'e', 's', 't');
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x01, 0x00,  // handle: 0x0001
+      0x01         // error: invalid handle
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, WriteRequestSecurity) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+
+  // Requires encryption
+  grp->AddAttribute(kTestType16, att::AccessRequirements(),
+                    att::AccessRequirements(true, false, false));
+  grp->set_active(true);
+
+  // We send two write requests:
+  //   1. 0x0001: not writable
+  //   2. 0x0002: writable but requires encryption
+  //
+  // clang-format off
+  const auto kRequest1 = common::CreateStaticByteBuffer(
+      0x12,        // opcode: write request
+      0x01, 0x00,  // handle: 0x0001
+
+      // value: "test"
+      't', 'e', 's', 't');
+
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x01, 0x00,  // handle: 0x0001
+      0x03         // error: write not permitted
+  );
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x12,        // opcode: write request
+      0x02, 0x00,  // handle: 0x0002
+
+      // value: "test"
+      't', 'e', 's', 't');
+
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x02, 0x00,  // handle: 0x0002
+      0x03         // error: write not permitted
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected2));
+}
+
+TEST_F(GATT_ServerTest, WriteRequestNoHandler) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+
+  grp->AddAttribute(kTestType16, att::AccessRequirements(),
+                    AllowedNoSecurity());
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x12,        // opcode: write request
+      0x02, 0x00,  // handle: 0x0002
+
+      // value: "test"
+      't', 'e', 's', 't');
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x02, 0x00,  // handle: 0x0002
+      0x03         // error: write not permitted
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, WriteRequestError) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, att::AccessRequirements(),
+                                 AllowedNoSecurity());
+
+  attr->set_write_handler([&](att::Handle handle, uint16_t offset,
+                              const auto& value, const auto& result_cb) {
+    EXPECT_EQ(attr->handle(), handle);
+    EXPECT_EQ(0u, offset);
+    EXPECT_TRUE(common::ContainersEqual(
+        common::CreateStaticByteBuffer('t', 'e', 's', 't'), value));
+
+    result_cb(att::ErrorCode::kUnlikelyError);
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x12,        // opcode: write request
+      0x02, 0x00,  // handle: 0x0002
+
+      // value: "test"
+      't', 'e', 's', 't');
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x02, 0x00,  // handle: 0x0002
+      0x0E         // error: unlikely error
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, WriteRequestSuccess) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, att::AccessRequirements(),
+                                 AllowedNoSecurity());
+
+  attr->set_write_handler([&](att::Handle handle, uint16_t offset,
+                              const auto& value, const auto& result_cb) {
+    EXPECT_EQ(attr->handle(), handle);
+    EXPECT_EQ(0u, offset);
+    EXPECT_TRUE(common::ContainersEqual(
+        common::CreateStaticByteBuffer('t', 'e', 's', 't'), value));
+
+    result_cb(att::ErrorCode::kNoError);
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x12,        // opcode: write request
+      0x02, 0x00,  // handle: 0x0002
+
+      // value: "test"
+      't', 'e', 's', 't');
+  // clang-format on
+
+  // opcode: write response
+  const auto kExpected = common::CreateStaticByteBuffer(0x13);
 
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }

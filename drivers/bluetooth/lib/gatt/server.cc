@@ -65,9 +65,12 @@ Server::Server(fxl::RefPtr<att::Database> database,
                             fbl::BindMember(this, &Server::OnReadByGroupType));
   read_by_type_id_ = att_->RegisterHandler(
       att::kReadByTypeRequest, fbl::BindMember(this, &Server::OnReadByType));
+  write_req_id_ = att_->RegisterHandler(
+      att::kWriteRequest, fbl::BindMember(this, &Server::OnWriteRequest));
 }
 
 Server::~Server() {
+  att_->UnregisterHandler(write_req_id_);
   att_->UnregisterHandler(read_by_type_id_);
   att_->UnregisterHandler(read_by_group_type_id_);
   att_->UnregisterHandler(find_information_id_);
@@ -366,6 +369,64 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
   }
 
   att_->Reply(tid, std::move(buffer));
+}
+
+void Server::OnWriteRequest(att::Bearer::TransactionId tid,
+                            const att::PacketReader& packet) {
+  FXL_DCHECK(packet.opcode() == att::kWriteRequest);
+
+  if (packet.payload_size() < sizeof(att::WriteRequestParams)) {
+    att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
+    return;
+  }
+
+  const auto& params = packet.payload<att::WriteRequestParams>();
+  att::Handle handle = le16toh(params.handle);
+
+  const auto* attr = db_->FindAttribute(handle);
+  if (!attr) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kInvalidHandle);
+    return;
+  }
+
+  // TODO(armansito): Check against the connection security level here and
+  // succeed if it is sufficient.
+  if (!attr->write_reqs().allowed_without_security()) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kWriteNotPermitted);
+    return;
+  }
+
+  // Attributes with a static value cannot be written.
+  if (attr->value()) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kWriteNotPermitted);
+    return;
+  }
+
+  auto value_view = packet.payload_data().view(sizeof(params.handle));
+  if (value_view.size() > att::kMaxAttributeValueLength) {
+    att_->ReplyWithError(tid, handle,
+                         att::ErrorCode::kInvalidAttributeValueLength);
+    return;
+  }
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto result_cb = [self, tid, handle](att::ErrorCode error_code) {
+    if (!self)
+      return;
+
+    if (error_code != att::ErrorCode::kNoError) {
+      self->att_->ReplyWithError(tid, handle, error_code);
+      return;
+    }
+
+    auto buffer = common::NewSlabBuffer(1);
+    (*buffer)[0] = att::kWriteResponse;
+    self->att_->Reply(tid, std::move(buffer));
+  };
+
+  if (!attr->WriteAsync(0, value_view, result_cb)) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kWriteNotPermitted);
+  }
 }
 
 att::ErrorCode Server::ReadByTypeHelper(
