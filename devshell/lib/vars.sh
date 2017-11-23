@@ -37,7 +37,8 @@ function fx-config-read-if-present {
   export FUCHSIA_ARCH="${FUCHSIA_ARCH}"
   export ZIRCON_PROJECT="${ZIRCON_PROJECT}"
 
-  export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${FUCHSIA_OUT_DIR}/build-zircon/build-${ZIRCON_PROJECT}}"
+  export ZIRCON_BUILDROOT="${ZIRCON_BUILDROOT:-${FUCHSIA_OUT_DIR}/build-zircon}"
+  export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${ZIRCON_BUILDROOT}/build-${ZIRCON_PROJECT}}"
   return 0
 }
 
