@@ -173,7 +173,7 @@ def main():
 
     if args.platforms:
         gn_args.append('zircon_platforms=[%s]' % ', '.join(
-            ['"%s"' for platform in args.platforms.split(',')]))
+            ['"%s"' % platform for platform in args.platforms.split(',')]))
 
     if args.zircon_project:
         if args.platforms:
