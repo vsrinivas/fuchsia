@@ -98,6 +98,9 @@ class ChannelManager final {
       hci::ConnectionHandle connection_handle,
       ChannelId channel_id);
 
+  // TODO(armansito): Introduce a callback that gets invoked when a fixed
+  // channel has been closed, indicating that the link should get torn down.
+
  private:
   // Called when an ACL data packet is received from the controller. This method
   // is responsible for routing the packet to the corresponding LogicalLink.

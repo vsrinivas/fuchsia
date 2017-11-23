@@ -10,8 +10,10 @@ namespace bluetooth {
 namespace l2cap {
 namespace testing {
 
-FakeChannel::FakeChannel(ChannelId id, hci::ConnectionHandle handle)
-    : Channel(id), fragmenter_(handle), weak_ptr_factory_(this) {}
+FakeChannel::FakeChannel(ChannelId id,
+                         hci::ConnectionHandle handle,
+                         hci::Connection::LinkType link_type)
+    : Channel(id, link_type), fragmenter_(handle), weak_ptr_factory_(this) {}
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
   FXL_DCHECK(rx_cb_ && rx_task_runner_);

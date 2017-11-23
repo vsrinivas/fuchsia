@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -90,8 +91,14 @@ class Channel {
   virtual void SetRxHandler(const RxCallback& rx_cb,
                             fxl::RefPtr<fxl::TaskRunner> rx_task_runner) = 0;
 
+  // The type of the logical link this channel operates on.
+  hci::Connection::LinkType link_type() const { return link_type_; }
+
+  uint16_t tx_mtu() const { return tx_mtu_; }
+  uint16_t rx_mtu() const { return rx_mtu_; }
+
  protected:
-  explicit Channel(ChannelId id);
+  Channel(ChannelId id, hci::Connection::LinkType link_type);
 
   bool IsCreationThreadCurrent() const {
     return thread_checker_.IsCreationThreadCurrent();
@@ -101,7 +108,12 @@ class Channel {
 
  private:
   ChannelId id_;
+  hci::Connection::LinkType link_type_;
   ClosedCallback closed_cb_;
+
+  // The maximum SDU sizes for this channel.
+  uint16_t tx_mtu_;
+  uint16_t rx_mtu_;
 
   fxl::ThreadChecker thread_checker_;
 
@@ -136,10 +148,6 @@ class ChannelImpl : public Channel {
   // Called by |link_| when a PDU targeting this channel has been received.
   // Contents of |pdu| will be moved.
   void HandleRxPdu(PDU&& pdu);
-
-  // The maximum SDU sizes for this channel.
-  uint16_t tx_mtu_;
-  uint16_t rx_mtu_;
 
   // TODO(armansito): Add MPS fields when we support segmentation/flow-control.
 

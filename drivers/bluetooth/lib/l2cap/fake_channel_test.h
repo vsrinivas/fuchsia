@@ -34,6 +34,7 @@ class FakeChannelTest : public ::bluetooth::testing::TestBase {
 
     ChannelId id;
     hci::ConnectionHandle conn_handle = 0x0001;
+    hci::Connection::LinkType link_type = hci::Connection::LinkType::kLE;
   };
 
   void SetUp() override {};

@@ -13,14 +13,23 @@
 namespace bluetooth {
 namespace l2cap {
 
-Channel::Channel(ChannelId id) : id_(id) {
+Channel::Channel(ChannelId id, hci::Connection::LinkType link_type)
+    : id_(id),
+      link_type_(link_type),
+
+      // TODO(armansito): IWBN if the MTUs could be specified dynamically
+      // instead (see NET-308).
+      tx_mtu_(kDefaultMTU),
+      rx_mtu_(kDefaultMTU) {
   FXL_DCHECK(id_);
+  FXL_DCHECK(link_type_ == hci::Connection::LinkType::kLE ||
+             link_type_ == hci::Connection::LinkType::kACL);
 }
 
 namespace internal {
 
 ChannelImpl::ChannelImpl(ChannelId id, internal::LogicalLink* link)
-    : Channel(id), tx_mtu_(kDefaultMTU), rx_mtu_(kDefaultMTU), link_(link) {
+    : Channel(id, link->type()), link_(link) {
   FXL_DCHECK(link_);
 }
 
@@ -39,7 +48,7 @@ ChannelImpl::~ChannelImpl() {
 bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(sdu);
 
-  if (sdu->size() > tx_mtu_) {
+  if (sdu->size() > tx_mtu()) {
     FXL_VLOG(1) << fxl::StringPrintf(
         "l2cap: SDU size exceeds channel TxMTU (channel-id: 0x%04x)", id());
     return false;
