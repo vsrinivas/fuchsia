@@ -11,7 +11,7 @@ import "lib/ledger/fidl/ledger.fidl";
 interface LedgerRepositoryDebug {
 
   // Returns the instances list in LedgerRepository.
-  GetInstancesList() => (array<string> result);
+  GetInstancesList() => (array<array<uint8>> result);
 
   // Returns the debugging interface for the given |ledger_name|.
   GetLedgerDebug(array<uint8> ledger_name, LedgerDebug& ledger_debug) => (Status status);

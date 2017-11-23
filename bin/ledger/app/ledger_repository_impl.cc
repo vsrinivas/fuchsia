@@ -110,10 +110,10 @@ void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
 
 void LedgerRepositoryImpl::GetInstancesList(
     const GetInstancesListCallback& callback) {
-  fidl::Array<fidl::String> result = fidl::Array<fidl::String>::New(0);
-
+  fidl::Array<fidl::Array<uint8_t>> result =
+      fidl::Array<fidl::Array<uint8_t>>::New(0);
   for (auto it = ledger_managers_.begin(); it != ledger_managers_.end(); ++it) {
-    result.push_back(it->first);
+    result.push_back(convert::ToArray(it->first));
   }
   callback(std::move(result));
 }
