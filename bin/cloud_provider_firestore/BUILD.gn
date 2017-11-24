@@ -8,12 +8,18 @@ package("cloud_provider_firestore") {
   system_image = true
 
   deps = [
+    "app",
     "demo",
   ]
 
-  binaries = [ {
-        name = "firestore_demo"
-      } ]
+  binaries = [
+    {
+      name = "cloud_provider_firestore"
+    },
+    {
+      name = "firestore_demo"
+    },
+  ]
 }
 
 executable("unittests") {

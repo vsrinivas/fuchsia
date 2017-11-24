@@ -4,6 +4,24 @@
 
 visibility = [ "//peridot/bin/cloud_provider_firestore/*" ]
 
+executable("app") {
+  output_name = "cloud_provider_firestore"
+
+  sources = [
+    "app.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/lifecycle/fidl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "device_set_impl.cc",
