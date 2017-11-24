@@ -24,13 +24,13 @@ void PrintUsage(const char* executable_name) {
 
 // This is a proof-of-concept app demonstrating a single gRPC call on the
 // Firestore server, to be replaced with real cloud provider.
-class App : public modular::Lifecycle, ListenCallClient {
+class Demo : public modular::Lifecycle, ListenCallClient {
  public:
-  explicit App(std::string server_id)
+  explicit Demo(std::string server_id)
       : server_id_(std::move(server_id)),
         root_path_("projects/" + server_id_ + "/databases/(default)/documents"),
         firestore_service_(loop_.task_runner(), MakeChannel()) {}
-  ~App() override {}
+  ~Demo() override {}
 
   void Run() {
     listen_call_handler_ = firestore_service_.Listen(this);
@@ -122,7 +122,7 @@ class App : public modular::Lifecycle, ListenCallClient {
 
   std::unique_ptr<ListenCallHandler> listen_call_handler_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(App);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Demo);
 };
 }  // namespace
 
@@ -142,8 +142,8 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  cloud_provider_firestore::App app(std::move(server_id));
-  app.Run();
+  cloud_provider_firestore::Demo demo(std::move(server_id));
+  demo.Run();
 
   return 0;
 }
