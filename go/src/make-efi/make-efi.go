@@ -23,14 +23,17 @@ import (
 
 var (
 	mkfs          = flag.String("mkfs", "", "Path to mkfs-msdosfs host tool from Zircon")
-	target        = flag.String("target", "", "Target file/disk to write EFI partition to")
-	size          = flag.Uint64("size", 0, "(optiona) Size of partition to create")
+	target        = flag.String("output", "", "Target file/disk to write EFI partition to")
+	size          = flag.Uint64("size", 0, "(optional) Size of partition to create")
 	offset        = flag.Uint64("offset", 0, "(optional) Offset into target to write partition to")
-	kernel        = flag.String("kernel", "", "(optional) Path to source file for zircon.bin")
-	ramdisk       = flag.String("ramdisk", "", "(optional) Path to source file for ramdisk.bin")
+	zircon        = flag.String("zircon", "", "(optional) Path to source file for zircon.bin")
+	bootdata      = flag.String("bootdata", "", "(optional) Path to source file for bootdata.bin")
 	efiBootloader = flag.String("efi-bootloader", "", "(optional) Path to source file for EFI/BOOT/BOOTX64.EFI")
 	manifest      = flag.String("manifest", "", "(optional) Path to a manifest file of the form `dst=src\n` to import to partition")
 )
+
+// minSize is the minimum image size, as the tool currently always builds fat32.
+const minSize = 33 * 1024 * 1024
 
 func main() {
 	flag.Parse()
@@ -54,11 +57,11 @@ func main() {
 	// Slurp up all the copies to do, as it will make the final copy code simpler.
 	// It can also be used to compute the size if the size was not given.
 	dstSrc := map[string]string{}
-	if *kernel != "" {
-		dstSrc["zircon.bin"] = *kernel
+	if *zircon != "" {
+		dstSrc["zircon.bin"] = *zircon
 	}
-	if *ramdisk != "" {
-		dstSrc["ramdisk.bin"] = *ramdisk
+	if *bootdata != "" {
+		dstSrc["bootdata.bin"] = *bootdata
 	}
 	if *efiBootloader != "" {
 		dstSrc["BOOT/EFI/BOOTX64.EFI"] = *efiBootloader
@@ -104,7 +107,7 @@ func main() {
 	cmd := exec.Command(args[0], args[1:]...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println(output)
+		os.Stderr.Write(output)
 		log.Fatalf("mkfs did not succceed, see output above.\n%s\n", strings.Join(args, " "))
 	}
 
@@ -245,6 +248,9 @@ func computeSize(dstSrc map[string]string) uint64 {
 	pad := total % 63
 	if pad != 0 {
 		total += pad
+	}
+	if total < minSize {
+		return minSize
 	}
 	return total
 }
