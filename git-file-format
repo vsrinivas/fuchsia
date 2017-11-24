@@ -18,20 +18,23 @@ import sys
 import git_utils
 import paths
 
-clang_platform = '%s-%s' % (
-    platform.system().lower().replace('darwin', 'mac'),
+clang_platform = "%s-%s" % (
+    platform.system().lower().replace("darwin", "mac"),
     {
-        'x86_64': 'x64',
-        'aarch64': 'arm64',
+        "x86_64": "x64",
+        "aarch64": "arm64",
     }[platform.machine()],
 )
-CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, clang_platform, "clang", "bin", "clang-format")
+CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, clang_platform, "clang", "bin",
+                          "clang-format")
 DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 gotoolos = "linux64"
 if platform.platform().startswith("Darwin"):
     gotoolos = "mac"
 GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, gotoolos, "go", "bin", "gofmt")
+CHECK_HEADER_GUARDS_TOOL = os.path.join(paths.FUCHSIA_ROOT, "scripts", "style",
+                                        "check-header-guards.py")
 
 C_CMD = [
     CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-sort-includes",
@@ -40,17 +43,18 @@ C_CMD = [
 DART_CMD = [DART_TOOL, "-w"]
 GN_CMD = [GN_TOOL, "format"]
 GO_CMD = [GO_TOOL, "-w"]
+FIX_HEADER_GUARDS_COMMAND = [CHECK_HEADER_GUARDS_TOOL, "--fix"]
 
-EXT_TO_COMMAND = {
-    ".cc": C_CMD,
-    ".cpp": C_CMD,
-    ".dart": DART_CMD,
-    ".gn": GN_CMD,
-    ".gni": GN_CMD,
-    ".go": GO_CMD,
-    ".h": C_CMD,
-    ".hh": C_CMD,
-    ".hpp": C_CMD,
+EXT_TO_COMMANDS = {
+    ".cc": [C_CMD],
+    ".cpp": [C_CMD],
+    ".dart": [DART_CMD],
+    ".gn": [GN_CMD],
+    ".gni": [GN_CMD],
+    ".go": [GO_CMD],
+    ".h": [FIX_HEADER_GUARDS_COMMAND, C_CMD],
+    ".hh": [C_CMD],
+    ".hpp": [C_CMD],
 }
 
 
@@ -107,22 +111,24 @@ def main():
             continue
 
         _, extension = os.path.splitext(file)
-        if extension not in EXT_TO_COMMAND:
+        if extension not in EXT_TO_COMMANDS:
             continue
 
-        cmd = EXT_TO_COMMAND[extension] + [file]
         count += 1
-        if args.dry_run or args.verbose:
-            print cmd
+        cmds = EXT_TO_COMMANDS[extension]
+        for cmd in cmds:
+            cmd = cmd + [file]
+            if args.dry_run or args.verbose:
+                print cmd
 
-        if args.dry_run:
-            continue
+            if args.dry_run:
+                continue
 
-        try:
-            subprocess.check_call(cmd)
-        except Exception as e:
-            print " ".join(cmd) + " failed"
-            raise e
+            try:
+                subprocess.check_call(cmd)
+            except Exception as e:
+                print " ".join(cmd) + " failed"
+                raise e
 
     if (args.dry_run or args.verbose) and not count:
         print " (none)"
