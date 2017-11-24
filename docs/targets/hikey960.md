@@ -200,10 +200,7 @@ fastboot mode. You can enter fastboot in one of two ways:
 Once the board is in fastboot mode (regardless of which method you use), it is
 ready to be flashed with firmware updates and/or the Zircon boot image.
 
-
-## Installing Low-Level Firmware
-
-Note: the following requires fastboot/mkdtimg/mkbootimg in your execution path.
+## Install Firmware
 
 We have run into inconsistent behavior between different HiKey 960 boards,
 depending on the low level firmware came installed on the device. We recommend
@@ -211,56 +208,59 @@ setting up your board with known good firmware from the Android AOSP project.
 
 To install firmware, put your board in fastboot mode and run the following:
 
-      git clone https://android.googlesource.com/device/linaro/hikey hikey-firmware
-      git -C hikey-firmware checkout 972114436628f874ac9ca28ef38ba82862937fbf
-      fastboot flash ptable hikey-firmware/installer/hikey960/ptable.img
-      fastboot flash xloader hikey-firmware/installer/hikey960/sec_xloader.img
-      fastboot flash fastboot hikey-firmware/installer/hikey960/fastboot.img
-      fastboot flash nvme hikey-firmware/installer/hikey960/nvme.img
-      fastboot flash fw_lpm3 hikey-firmware/installer/hikey960/lpm3.img
-      fastboot flash trustfirmware hikey-firmware/installer/hikey960/bl31.bin
+      ./scripts/flash-hikey -f
 
-This installs all the AOSP firmware except Android itself. To use a different
-bootloader altogether (not the one from AOSP), first complete the above commands
-and then install your bootloader.
+## Recover the device
 
-#### Installing UEFI Firmware
-
-Alternatively, if you require the UEFI firmware, first put your board into
-_recovery_ mode by setting the switches to the following positions:
+If the hikey gets into a bad state you can try the recovery mechanism. This is
+also useful for removing the UEFI firmware if you no longer need it.  The
+script should automate the process, including reinstalling the firmware. You
+first need to put the device into recovery mode:
 
         Auto Power up(Switch 1)   closed/ON
         Recovery(Switch 2)        closed/ON
         Fastboot(Switch 3)        open/OFF
 
-Then run the following command:
+Then run:
 
-      scripts/hikey-efi-prebuilt hikey-uefi
+      ./scripts/flash-hikey -r
 
-Once the script completes, the board will boot into fastboot mode where you can
-run the following commands:
+The recovery process communicates with the device over the USB-C cable, but it
+can be a bit flaky at times. If the script complains that it can't open the
+serial device first check what serial devices are connected (`ls
+/dev/serial/by-id/`) and make sure the script is using the correct device. You
+can specify which serial port to use with `-p`. Sometimes you just need to try a
+few times or power cycle the device. Occasionally the script will fail when
+attempting to install firmware, which can usually be fixed by starting again.
 
-      git clone https://android.googlesource.com/device/linaro/hikey hikey-firmware
-      git -C hikey-firmware checkout 972114436628f874ac9ca28ef38ba82862937fbf
-      fastboot flash ptable hikey-uefi/prm_ptable.img
-      fastboot flash xloader hikey-uefi/sec_xloader.img
-      fastboot flash fastboot hikey-uefi/l-loader.bin
-      fastboot flash fip hikey-uefi/fip.bin
-      fastboot flash nvme hikey-firmware/installer/hikey960/nvme.img
-      fastboot flash fw_lpm3 hikey-firmware/installer/hikey960/lpm3.img
-      fastboot flash trustfirmware hikey-firmware/installer/hikey960/bl31.bin
+## Install UEFI firmware
 
-Note: remember to take the board out of recovery mode so that it will boot as
-desired when you next reset. If you're intending to frequently flash Zircon on
-to the board then you probably want to leave the board in fastboot mode.
+Install the UEFI firmware is similar to the recovery process. The script should
+automate everything including downloading and installing the correct firmware.
+First put your board into _recovery_ mode by setting the switches to the
+following positions:
+
+        Auto Power up(Switch 1)   closed/ON
+        Recovery(Switch 2)        closed/ON
+        Fastboot(Switch 3)        open/OFF
+
+Then run:
+
+        ./scripts/flash-hikey -u -r
+
+The script will pause before installing firmware to ensure the device is put
+into fastboot mode. If everything goes right this should happen automatically
+and you should be able to continue without changing the switches. Do remember to
+go to fastboot mode before you attempt to install Zircon though.
+
+As with recovering the device this process can be flaky. If you run into trouble
+check the serial device (see above) or try power cycling the device.
 
 ## Installing Zircon
 
-Note: the following requires fastboot/mkdtimg/mkbootimg in your execution path.
-
-Once the HiKey board is in fastboot, run the following script from the zircon
-root directory to flash the necessary files onto the board. If you would also
-like to set it to zedboot skip to the next section.
+Once the HiKey board is in fastboot mode, run the following script from the
+zircon root directory to flash the necessary files onto the board. If you would
+also like to set it to zedboot skip to the next section.
 
 If you _are not_ running UEFI firmware use the following command:
 
@@ -268,9 +268,14 @@ If you _are not_ running UEFI firmware use the following command:
 
 If you _are_ running UEFI firmware use this command instead:
 
-      ./scripts/hikey-efi-boot-image <parent directory of tools-images-hikey960>
+      ./scripts/flash-hikey -u
 
-### Zedboot
+If you'd like to boot the image instead of flashing it add the no-flash flag
+`-n` (UEFI only):
+
+      ./scripts/flash-hikey -u -n
+
+## Zedboot
 
 If you would like to boot future kernels via the network, instead of flashing
 them directly, then run the script with the `-m` option.
@@ -281,7 +286,7 @@ If you _are not_ running UEFI firmware use the following command:
 
 If you _are_ running UEFI firmware use this command instead:
 
-      ./scripts/hikey-efi-boot-image -m <parent directory of tools-images-hikey960>
+      ./scripts/flash-hikey -m -u
 
 This is the last flash update, and all subsequent boots should use normal mode
 (not fastboot or recovery). If you used the DIP Switch method to place the board
@@ -312,6 +317,25 @@ When powering up (not simply resetting) the device, you may need to press the
 reset button for the device to show up again as /dev/ttyUSBn. Recall that this
 is needed before connecting the serial console and interacting with the device.
 
+
+## Manually Installing Low-Level Firmware
+
+Note: the following requires fastboot/mkdtimg/mkbootimg in your execution path.
+
+To install firmware, put your board in fastboot mode and run the following:
+
+      git clone https://android.googlesource.com/device/linaro/hikey hikey-firmware
+      git -C hikey-firmware checkout 972114436628f874ac9ca28ef38ba82862937fbf
+      fastboot flash ptable hikey-firmware/installer/hikey960/ptable.img
+      fastboot flash xloader hikey-firmware/installer/hikey960/sec_xloader.img
+      fastboot flash fastboot hikey-firmware/installer/hikey960/fastboot.img
+      fastboot flash nvme hikey-firmware/installer/hikey960/nvme.img
+      fastboot flash fw_lpm3 hikey-firmware/installer/hikey960/lpm3.img
+      fastboot flash trustfirmware hikey-firmware/installer/hikey960/bl31.bin
+
+This installs all the AOSP firmware except Android itself. To use a different
+bootloader altogether (not the one from AOSP), first complete the above commands
+and then install your bootloader.
 
 ## Device support
 

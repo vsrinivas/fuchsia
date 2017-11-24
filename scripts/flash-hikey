@@ -6,15 +6,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-BUILD_DIR=build-zircon-hikey960-arm64
-
-KERNEL=$BUILD_DIR/zzircon.bin
-RAMDISK=$BUILD_DIR/bootdata.bin
-
-OUT_IMAGE=$BUILD_DIR/boot.img
-DTB_FILE=kernel/target/hikey960/device-tree.dtb
-DT_IMAGE=$BUILD_DIR/dt.img
-
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000
 RAMDISK_OFFSET=0x07c00000
@@ -22,39 +13,233 @@ DT_OFFSET=0x07a00000
 
 CMDLINE="TERM=uart"
 
-function HELP {
-    echo "help:"
-    echo "-m : Add mexec option to command line"
-    echo "-h for help"
+FIRMWARE_DIR=/tmp/hikey/hikey-firmware
+FIRMWARE_GIT=https://android.googlesource.com/device/linaro/hikey
+FIRMWARE_REV=972114436628f874ac9ca28ef38ba82862937fbf
+
+TOOLS_GIT=https://github.com/96boards-hikey/tools-images-hikey960.git
+TOOLS_DIR=/tmp/hikey/tools
+
+RECOVERY_PORT=/dev/serial/by-id/usb-HISILICON_USB_SER-if00-port0
+
+UEFI_DIR=/tmp/hikey/uefi
+UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/25/hikey960/release/
+
+MKBOOTIMG=${TOOLS_DIR}/build-from-source/mkbootimg
+MKDTIMG=${TOOLS_DIR}/build-from-source/mkdtimg
+
+set -e
+
+function help() {
+    echo "usage: ${0} [options]"
+    echo "  -f              Download and flash firmware."
+    echo "  -b [build-dir]  Use specified build directory."
+    echo "                  Defaults to build-zircon-hikey960-arm64/."
+    echo "  -d [ramdisk]    Use specified ramdisk file."
+    echo "                  Defaults to BUILD_DIR/bootdata.bin."
+    echo "  -m              Add mexec option to kernel command line to enable netboot."
+    echo "  -n              No flash. Boot image without flashing it to the device (UEFI only)."
+    echo "  -p [port]       Port used for recovery."
+    echo "                  Defaults to ${RECOVERY_PORT}."
+    echo "  -r              Recover device from a bad state or swap to UEFI (with -u)."
+    echo "  -u              UEFI mode. This flag is required if your device has UEFI firmware."
+    echo "                  Combine with -r and/or -f to install UEFI support."
+    echo "  -h              Show this help message."
+    echo
+    echo "See docs/targets/hikey960.md for more details."
     exit 1
 }
 
-while getopts "mh" FLAG; do
+function help_recovery() {
+    echo
+    echo "Check that the device is in recovery mode and that ${RECOVERY_PORT} is the recovery port."
+    echo "Recovery mode switch configuration is:"
+    echo "  Auto Power up(Switch 1)   closed/ON"
+    echo "  Recovery(Switch 2)        closed/ON"
+    echo "  Fastboot(Switch 3)        open/OFF"
+    echo "You can alter the recovery port with the -p option."
+
+    # TODO(alexlegg): Check that ${RECOVERY_PORT} exists and give options if it doesn't.
+
+    read -p "Proceed (y|n)? " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
+
+function help_fastboot() {
+    echo
+    echo "Check that the device is in fastboot mode:"
+    echo "  Auto Power up(Switch 1)   closed/ON"
+    echo "  Recovery(Switch 2)        open/OFF"
+    echo "  Fastboot(Switch 3)        open/ON"
+
+    read -p "Proceed (y|n)? " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
+
+function recover_device() {
+    if [[ ! -d $TOOLS_DIR ]]; then
+        git clone $TOOLS_GIT $TOOLS_DIR
+    fi
+    pushd $TOOLS_DIR
+    chmod +x hikey_idt
+    help_recovery
+    ./hikey_idt -c config -p $RECOVERY_PORT
+    popd
+}
+
+function flash_firmware() {
+    if [[ ! -d $FIRMWARE_DIR ]]; then
+        git clone $FIRMWARE_GIT $FIRMWARE_DIR
+    fi
+    if ! git -C $FIRMWARE_DIR checkout $FIRMWARE_REV ; then
+        echo "${FIRMWARE_DIR} exists but can't checkout the required revision."
+        echo "Try removing ${FIRMWARE_DIR} or selecting a new directory."
+        exit 1
+    fi
+    help_fastboot
+    fastboot flash ptable ${FIRMWARE_DIR}/installer/hikey960/ptable.img
+    fastboot flash xloader ${FIRMWARE_DIR}/installer/hikey960/sec_xloader.img
+    fastboot flash fastboot ${FIRMWARE_DIR}/installer/hikey960/fastboot.img
+    fastboot flash nvme ${FIRMWARE_DIR}/installer/hikey960/nvme.img
+    fastboot flash fw_lpm3 ${FIRMWARE_DIR}/installer/hikey960/lpm3.img
+    fastboot flash trustfirmware ${FIRMWARE_DIR}/installer/hikey960/bl31.bin
+}
+
+function recover_uefi() {
+    echo Creating $UEFI_DIR...
+    if [[ ! -d $UEFI_DIR ]]; then
+        mkdir -p ${UEFI_DIR}
+        pushd ${UEFI_DIR}
+        echo Fetching $UEFI_URL...
+        wget -A bin,config,efi,hikey_idt,img,txt -m -nd -np ${UEFI_URL}
+    else
+        pushd ${UEFI_DIR}
+    fi
+
+    chmod +x hikey_idt
+    help_recovery
+    ./hikey_idt -c config -p $RECOVERY_PORT
+    popd
+}
+
+function flash_firmware_uefi() {
+    if [[ ! -d $FIRMWARE_DIR ]]; then
+        git clone $FIRMWARE_GIT $FIRMWARE_DIR
+    fi
+    if ! git -C $FIRMWARE_DIR checkout $FIRMWARE_REV ; then
+        echo "${FIRMWARE_DIR} exists but can't checkout the required revision."
+        echo "Try removing ${FIRMWARE_DIR} or selecting a new directory."
+        exit 1
+    fi
+
+    echo Creating $UEFI_DIR...
+    if [[ ! -d $UEFI_DIR ]]; then
+        mkdir -p ${UEFI_DIR}
+        pushd ${UEFI_DIR}
+        echo Fetching $UEFI_URL...
+        wget -A bin,config,efi,hikey_idt,img,txt -m -nd -np ${UEFI_URL}
+        popd
+    fi
+
+    help_fastboot
+    fastboot flash ptable ${UEFI_DIR}/prm_ptable.img
+    fastboot flash xloader ${UEFI_DIR}/sec_xloader.img
+    fastboot flash fastboot ${UEFI_DIR}/l-loader.bin
+    fastboot flash fip ${UEFI_DIR}/fip.bin
+    fastboot flash nvme ${FIRMWARE_DIR}/installer/hikey960/nvme.img
+    fastboot flash fw_lpm3 ${FIRMWARE_DIR}/installer/hikey960/lpm3.img
+    fastboot flash trustfirmware ${FIRMWARE_DIR}/installer/hikey960/bl31.bin
+}
+
+function flash_dts() {
+    DTB_FILE=kernel/target/hikey960/device-tree.dtb
+    DT_IMAGE="${BUILD_DIR}/dt.img"
+
+    if [[ ! -d $TOOLS_DIR ]]; then
+        git clone $TOOLS_GIT $TOOLS_DIR
+    fi
+    ${MKDTIMG} -c -d $DTB_FILE -o $DT_IMAGE
+
+    fastboot flash dts $DT_IMAGE
+}
+
+function flash_kernel() {
+    if [[ ! -d $TOOLS_DIR ]]; then
+        git clone $TOOLS_GIT $TOOLS_DIR
+    fi
+    "${MKBOOTIMG}" \
+        --kernel $KERNEL \
+        --kernel_offset $KERNEL_OFFSET \
+        --base $MEMBASE \
+        --ramdisk_offset $RAMDISK_OFFSET \
+        --ramdisk "${RAMDISK}" \
+        --tags_offset $DT_OFFSET \
+        --cmdline "${CMDLINE}" \
+        -o $OUT_IMAGE
+
+    if [[ $FLAG_NOFLASH ]]; then
+        fastboot boot $OUT_IMAGE
+    else
+        fastboot flash boot $OUT_IMAGE
+        # Can't guarantee that the target has written image to flash before the
+        # fastboot command completes, so short delay here before reboot.
+        sleep 1
+        fastboot reboot
+    fi
+}
+
+while getopts "b:d:fmnp:ruh" FLAG; do
     case $FLAG in
+        b) BUILD_DIR="${OPTARG}";;
+        d) RAMDISK="${OPTARG}";;
+        f) FLAG_FIRMWARE=true;;
         m) CMDLINE+=" netsvc.netboot=true";;
-        h) HELP;;
+        n) FLAG_NOFLASH=true;;
+        p) RECOVERY_PORT="${OPTARG}";;
+        r) FLAG_RECOVER=true
+           FLAG_FIRMWARE=true;;
+        u) FLAG_UEFI=true;;
+        h) help;;
         \?)
             echo unrecognized option
-            HELP
+            help
             ;;
     esac
 done
 shift $((OPTIND-1))
 
-# mkdtimg and mkbootimg can be found at:
-#  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
+BUILD_DIR="${BUILD_DIR:-build-zircon-hikey960-arm64}"
+RAMDISK="${RAMDISK:-${BUILD_DIR}/bootdata.bin}"
+OUT_IMAGE="${BUILD_DIR}/boot.img"
 
-mkdtimg -c -d $DTB_FILE -o $DT_IMAGE || exit 1
+if [[ $FLAG_RECOVER ]]; then
+    if [[ $FLAG_UEFI ]]; then
+        recover_uefi
+    else
+        recover_device
+    fi
+fi
 
-mkbootimg --kernel $KERNEL \
---kernel_offset $KERNEL_OFFSET \
---base $MEMBASE \
---ramdisk_offset $RAMDISK_OFFSET \
---ramdisk $RAMDISK \
---tags_offset $DT_OFFSET \
---cmdline "$CMDLINE" \
--o $OUT_IMAGE || exit 1
+if [[ $FLAG_FIRMWARE ]]; then
+    if [[ $FLAG_UEFI ]]; then
+        flash_firmware_uefi
+    else
+        flash_firmware
+    fi
+    exit 0
+fi
 
-fastboot flash dts $DT_IMAGE || exit 1
-fastboot flash boot $OUT_IMAGE || exit 1
-fastboot reboot || exit 1
+if [[ $FLAG_UEFI ]]; then
+    KERNEL="${BUILD_DIR}/zircon.bin-dtb"
+    flash_kernel
+else
+    KERNEL="${BUILD_DIR}/zzircon.bin"
+    flash_dts
+    flash_kernel
+fi
