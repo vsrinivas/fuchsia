@@ -25,6 +25,8 @@ executable("app") {
 
 source_set("lib") {
   sources = [
+    "device_set_impl.cc",
+    "device_set_impl.h",
     "page_cloud_impl.cc",
     "page_cloud_impl.h",
   ]
@@ -44,6 +46,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "device_set_impl_unittest.cc",
     "page_cloud_impl_unittest.cc",
   ]
 
