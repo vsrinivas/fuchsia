@@ -28,5 +28,5 @@ exec "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -x "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" \
   -d \
   -D "${FUCHSIA_BUILD_DIR}/${fvm_block}" \
-  -c "$(<"${FUCHSIA_BUILD_DIR}/${cmdline_txt}")"
+  -c "$(<"${FUCHSIA_BUILD_DIR}/${cmdline_txt}")" \
   "$@"
