@@ -6,6 +6,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+set -e
+
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000
 RAMDISK_OFFSET=0x07c00000
@@ -28,9 +30,7 @@ UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uef
 MKBOOTIMG=${TOOLS_DIR}/build-from-source/mkbootimg
 MKDTIMG=${TOOLS_DIR}/build-from-source/mkdtimg
 
-set -e
-
-function help() {
+help() {
     echo "usage: ${0} [options]"
     echo "  -f              Download and flash firmware."
     echo "  -b [build-dir]  Use specified build directory."
@@ -50,7 +50,7 @@ function help() {
     exit 1
 }
 
-function help_recovery() {
+help_recovery() {
     echo
     echo "Check that the device is in recovery mode and that ${RECOVERY_PORT} is the recovery port."
     echo "Recovery mode switch configuration is:"
@@ -68,7 +68,7 @@ function help_recovery() {
     fi
 }
 
-function help_fastboot() {
+help_fastboot() {
     echo
     echo "Check that the device is in fastboot mode:"
     echo "  Auto Power up(Switch 1)   closed/ON"
@@ -82,9 +82,13 @@ function help_fastboot() {
     fi
 }
 
-function recover_device() {
+git_clone() {
+    git clone --depth 1 $@
+}
+
+recover_device() {
     if [[ ! -d $TOOLS_DIR ]]; then
-        git clone $TOOLS_GIT $TOOLS_DIR
+        git_clone $TOOLS_GIT $TOOLS_DIR
     fi
     pushd $TOOLS_DIR
     chmod +x hikey_idt
@@ -93,9 +97,9 @@ function recover_device() {
     popd
 }
 
-function flash_firmware() {
+flash_firmware() {
     if [[ ! -d $FIRMWARE_DIR ]]; then
-        git clone $FIRMWARE_GIT $FIRMWARE_DIR
+        git_clone $FIRMWARE_GIT $FIRMWARE_DIR
     fi
     if ! git -C $FIRMWARE_DIR checkout $FIRMWARE_REV ; then
         echo "${FIRMWARE_DIR} exists but can't checkout the required revision."
@@ -111,7 +115,7 @@ function flash_firmware() {
     fastboot flash trustfirmware ${FIRMWARE_DIR}/installer/hikey960/bl31.bin
 }
 
-function recover_uefi() {
+recover_uefi() {
     echo Creating $UEFI_DIR...
     if [[ ! -d $UEFI_DIR ]]; then
         mkdir -p ${UEFI_DIR}
@@ -128,9 +132,9 @@ function recover_uefi() {
     popd
 }
 
-function flash_firmware_uefi() {
+flash_firmware_uefi() {
     if [[ ! -d $FIRMWARE_DIR ]]; then
-        git clone $FIRMWARE_GIT $FIRMWARE_DIR
+        git_clone $FIRMWARE_GIT $FIRMWARE_DIR
     fi
     if ! git -C $FIRMWARE_DIR checkout $FIRMWARE_REV ; then
         echo "${FIRMWARE_DIR} exists but can't checkout the required revision."
@@ -157,21 +161,21 @@ function flash_firmware_uefi() {
     fastboot flash trustfirmware ${FIRMWARE_DIR}/installer/hikey960/bl31.bin
 }
 
-function flash_dts() {
+flash_dts() {
     DTB_FILE=kernel/target/hikey960/device-tree.dtb
     DT_IMAGE="${BUILD_DIR}/dt.img"
 
     if [[ ! -d $TOOLS_DIR ]]; then
-        git clone $TOOLS_GIT $TOOLS_DIR
+        git_clone $TOOLS_GIT $TOOLS_DIR
     fi
     ${MKDTIMG} -c -d $DTB_FILE -o $DT_IMAGE
 
     fastboot flash dts $DT_IMAGE
 }
 
-function flash_kernel() {
+flash_kernel() {
     if [[ ! -d $TOOLS_DIR ]]; then
-        git clone $TOOLS_GIT $TOOLS_DIR
+        git_clone $TOOLS_GIT $TOOLS_DIR
     fi
     "${MKBOOTIMG}" \
         --kernel $KERNEL \
@@ -196,20 +200,16 @@ function flash_kernel() {
 
 while getopts "b:d:fmnp:ruh" FLAG; do
     case $FLAG in
-        b) BUILD_DIR="${OPTARG}";;
-        d) RAMDISK="${OPTARG}";;
-        f) FLAG_FIRMWARE=true;;
-        m) CMDLINE+=" netsvc.netboot=true";;
-        n) FLAG_NOFLASH=true;;
-        p) RECOVERY_PORT="${OPTARG}";;
-        r) FLAG_RECOVER=true
-           FLAG_FIRMWARE=true;;
-        u) FLAG_UEFI=true;;
-        h) help;;
-        \?)
-            echo unrecognized option
-            help
-            ;;
+    b) BUILD_DIR="${OPTARG}";;
+    d) RAMDISK="${OPTARG}";;
+    f) FLAG_FIRMWARE=true;;
+    m) CMDLINE+=" netsvc.netboot=true";;
+    n) FLAG_NOFLASH=true;;
+    p) RECOVERY_PORT="${OPTARG}";;
+    r) FLAG_RECOVER=true;
+       FLAG_FIRMWARE=true;;
+    u) FLAG_UEFI=true;;
+    *) help;;
     esac
 done
 shift $((OPTIND-1))
