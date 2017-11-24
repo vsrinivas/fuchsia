@@ -8,6 +8,8 @@ source_set("lib") {
   sources = [
     "device_set_impl.cc",
     "device_set_impl.h",
+    "factory_impl.cc",
+    "factory_impl.h",
     "page_cloud_impl.cc",
     "page_cloud_impl.h",
   ]
@@ -15,6 +17,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]
 
