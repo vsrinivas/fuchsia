@@ -5,9 +5,9 @@ set -e
 usage() {
     echo "usage: ${0} [options] {arm64, x86}"
     echo
-    echo "  -A  Use ASAN in GN"
-    echo "  -g  Use Goma"
-    echo "  -p  Set package, defaults to 'garnet/packages/guest'"
+    echo "  -A            Use ASAN in GN"
+    echo "  -g            Use Goma"
+    echo "  -p [package]  Set package, defaults to 'garnet/packages/guest'"
     echo
     exit 1
 }
@@ -58,10 +58,11 @@ garnet/bin/guest/scripts/mkbootfs.sh \
 
 case "${1}" in
 arm64)
-    zircon/scripts/hikey-efi-boot-image \
+    zircon/scripts/flash-hikey \
+        -u \
+        -n \
         -b out/build-zircon/build-$PLATFORM \
-        -r bootdata-with-guest.bin \
-        $HOME/tools-images-hikey960;;
+        -d bootdata-with-guest.bin;;
 x86)
     out/build-zircon/tools/bootserver \
         -1 \
