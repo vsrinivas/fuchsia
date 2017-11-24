@@ -119,7 +119,7 @@ class LedgerManagerTest : public test::TestWithMessageLoop {
     sync_ptr = sync.get();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, std::move(storage), std::move(sync));
-    ledger_manager_->BindLedger(ledger.NewRequest());
+    ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
 
@@ -128,7 +128,7 @@ class LedgerManagerTest : public test::TestWithMessageLoop {
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<LedgerManager> ledger_manager_;
-  LedgerPtr ledger;
+  LedgerPtr ledger_;
   LedgerDebugPtr ledger_debug_;
 };
 
@@ -141,7 +141,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   PagePtr page;
   storage_ptr->should_get_page_fail = true;
-  ledger->GetPage(nullptr, page.NewRequest(),
+  ledger_->GetPage(nullptr, page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
@@ -151,7 +151,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   storage_ptr->should_get_page_fail = true;
-  ledger->GetRootPage(page.NewRequest(),
+  ledger_->GetRootPage(page.NewRequest(),
                       [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
@@ -161,7 +161,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   storage::PageId id = RandomId();
-  ledger->GetPage(convert::ToArray(id), page.NewRequest(),
+  ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
@@ -171,7 +171,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   page.reset();
   storage_ptr->ClearCalls();
 
-  ledger->DeletePage(convert::ToArray(id),
+  ledger_->DeletePage(convert::ToArray(id),
                      [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
@@ -185,7 +185,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 // LedgerImpl.
 TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   bool ledger_closed = false;
-  ledger.set_connection_error_handler([this, &ledger_closed] {
+  ledger_.set_connection_error_handler([this, &ledger_closed] {
     ledger_closed = true;
     message_loop_.PostQuitTask();
   });
@@ -195,19 +195,32 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   EXPECT_TRUE(ledger_closed);
 }
 
+TEST_F(LedgerManagerTest, OnEmptyCalled) {
+  bool on_empty_called = false;
+  ledger_manager_->set_on_empty([&] {
+    on_empty_called = true;
+    message_loop_.PostQuitTask();
+  });
+
+  ledger_.reset();
+  ledger_debug_.reset();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(on_empty_called);
+}
+
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
   PagePtr page;
   storage::PageId id = RandomId();
 
   uint8_t calls = 0;
-  ledger->GetPage(convert::ToArray(id), page.NewRequest(),
+  ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this, &calls](Status) {
                     calls++;
                     message_loop_.PostQuitTask();
                   });
   page.reset();
-  ledger->GetPage(convert::ToArray(id), page.NewRequest(),
+  ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this, &calls](Status) {
                     calls++;
                     message_loop_.PostQuitTask();
@@ -232,7 +245,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Get the root page.
   storage_ptr->ClearCalls();
   page.reset();
-  ledger->GetRootPage(page.NewRequest(),
+  ledger_->GetRootPage(page.NewRequest(),
                       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
@@ -241,7 +254,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Get a new page with a random id.
   storage_ptr->ClearCalls();
   page.reset();
-  ledger->GetPage(convert::ToArray(RandomId()), page.NewRequest(),
+  ledger_->GetPage(convert::ToArray(RandomId()), page.NewRequest(),
                   callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
@@ -250,7 +263,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Create a new page.
   storage_ptr->ClearCalls();
   page.reset();
-  ledger->GetPage(nullptr, page.NewRequest(),
+  ledger_->GetPage(nullptr, page.NewRequest(),
                   callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
@@ -273,7 +286,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   for (size_t i = 0; i < pages.size(); ++i)
-    ledger->GetPage(convert::ToArray(ids[i]), pages[i].NewRequest(),
+    ledger_->GetPage(convert::ToArray(ids[i]), pages[i].NewRequest(),
                     waiter->NewCallback());
 
   waiter->Finalize(callback::Capture(MakeQuitTask(), &status));

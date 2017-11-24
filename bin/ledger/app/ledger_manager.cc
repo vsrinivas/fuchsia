@@ -95,7 +95,11 @@ LedgerManager::LedgerManager(Environment* environment,
       storage_(std::move(storage)),
       sync_(std::move(sync)),
       ledger_impl_(this),
-      merge_manager_(environment_) {}
+      merge_manager_(environment_) {
+  bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
+  page_managers_.set_on_empty([this] { CheckEmpty(); });
+  ledger_debug_bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
+}
 
 LedgerManager::~LedgerManager() {}
 
