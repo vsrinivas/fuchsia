@@ -14,8 +14,8 @@
 
 #include "zircon.h"
 
-static const uintptr_t kKernelOffset = 0x100000;
-static const uintptr_t kBootdataOffset = 0x800000;
+static const uintptr_t kKernelOffset = 0x00100000;
+static const uintptr_t kBootdataOffset = 0x04000000;
 
 #if __aarch64__
 static const uint16_t kMzSignature = 0x5a4d; // MZ
@@ -132,19 +132,24 @@ static zx_status_t create_bootdata(const uintptr_t addr, const size_t size,
     if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
         return ZX_ERR_INVALID_ARGS;
 
+#if __aarch64__
+    const size_t bootdata_len = 0;
+#elif __x86_64__
     const size_t e820_size = guest_e820_size(size);
     const size_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
                                 sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
-    if (bootdata_off + bootdata_len > size)
+#endif
+    if (bootdata_off + bootdata_len + sizeof(bootdata_t) > size)
         return ZX_ERR_BUFFER_TOO_SMALL;
-    if (bootdata_len > UINT32_MAX)
-        return ZX_ERR_OUT_OF_RANGE;
 
     // Bootdata container.
     bootdata_t* container_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
     set_bootdata(container_hdr, BOOTDATA_CONTAINER, static_cast<uint32_t>(bootdata_len));
     container_hdr->extra = BOOTDATA_MAGIC;
 
+#if __aarch64__
+    return ZX_OK;
+#elif __x86_64__
     // ACPI root table pointer.
     bootdata_off += sizeof(bootdata_t);
     bootdata_t* acpi_rsdp_hdr = reinterpret_cast<bootdata_t*>(addr + bootdata_off);
@@ -158,6 +163,7 @@ static zx_status_t create_bootdata(const uintptr_t addr, const size_t size,
     set_bootdata(e820_table_hdr, BOOTDATA_E820_TABLE, static_cast<uint32_t>(e820_size));
     bootdata_off += sizeof(bootdata_t);
     return guest_create_e820(addr, size, bootdata_off);
+#endif
 }
 
 static zx_status_t is_zircon(const size_t size, const uintptr_t first_page, uintptr_t* guest_ip,
