@@ -517,8 +517,10 @@ action("fvm.sparse.blk") {
 # need an EFI partition image.
 action("efi.blk") {
   bootdata_label = ":bootdata-blobstore-${zircon_platforms[0]}"
+  make_efi_label = "//garnet/go/src/make-efi:host($host_toolchain)"
   deps = [
     bootdata_label,
+    make_efi_label,
   ]
 
   bootdata_bins = get_target_outputs(bootdata_label)
@@ -529,6 +531,9 @@ action("efi.blk") {
   mkfs_msdosfs_bin = "//out/build-zircon/tools/mkfs-msdosfs"
   zircon_bin = "$kernel_build_dir/zircon.bin"
 
+  make_efi_out_dir = get_label_info(make_efi_label, "root_out_dir")
+  make_efi_bin = "$make_efi_out_dir/make-efi"
+
   inputs = [
     mkfs_msdosfs_bin,
     zircon_bin,
@@ -538,10 +543,10 @@ action("efi.blk") {
   script = "//build/gn_run_binary.sh"
   args = [
     clang_prefix,
-    rebase_path("efi.py"),
+    rebase_path(make_efi_bin),
     "--output",
     rebase_path(efi_image_path),
-    "--mkfs-msdosfs",
+    "--mkfs",
     rebase_path(mkfs_msdosfs_bin),
     "--zircon",
     rebase_path(zircon_bin),
