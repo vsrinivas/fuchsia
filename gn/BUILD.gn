@@ -334,14 +334,12 @@ action("blobstore.blk") {
   script = "//build/gn_run_binary.sh"
   args = [
     clang_prefix,
-    rebase_path("blobstore.py"),
-    "--blobstore",
     rebase_path(blobstore_bin),
-    "--image",
     rebase_path(blobstore_image_path),
+    "create",
     "--manifest",
     rebase_path(final_system_manifest),
-    "--add",
+    "--blob",
     rebase_path(system_package_meta_far),
   ]
   sources = [
