@@ -54,6 +54,10 @@ package("ledger_tests") {
     },
 
     {
+      name = "ledger_benchmark_fetch"
+    },
+
+    {
       name = "ledger_benchmark_put"
     },
 
@@ -159,6 +163,16 @@ package("ledger_tests") {
       path = rebase_path(
               "//peridot/bin/ledger/test/benchmark/update_entry/update_entry_transactions.tspec")
       dest = "ledger/benchmark/update_entry_transactions.tspec"
+    },
+
+    {
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/fetch/fetch.tspec")
+      dest = "ledger/benchmark/fetch.tspec"
+    },
+
+    {
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/fetch/fetch_partial.tspec")
+      dest = "ledger/benchmark/fetch_partial.tspec"
     },
   ]
 }

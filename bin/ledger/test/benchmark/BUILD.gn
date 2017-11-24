@@ -11,6 +11,7 @@ group("benchmark") {
     ":launch_benchmark",
     ":run_ledger_benchmarks",
     "//peridot/bin/ledger/test/benchmark/convergence",
+    "//peridot/bin/ledger/test/benchmark/fetch",
     "//peridot/bin/ledger/test/benchmark/lib",
     "//peridot/bin/ledger/test/benchmark/put",
     "//peridot/bin/ledger/test/benchmark/sync",
