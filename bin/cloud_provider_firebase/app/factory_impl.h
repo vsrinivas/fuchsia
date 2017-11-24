@@ -32,10 +32,6 @@ class FactoryImpl : public Factory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
       const GetCloudProviderCallback& callback) override;
 
-  bool IsEmpty();
-
-  void CheckEmpty();
-
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
   ledger::NetworkService* const network_service_;
   callback::CancellableContainer token_requests_;
