@@ -8,9 +8,9 @@ executable("bin") {
   output_name = "guest"
 
   sources = [
-    "guest.cpp",
-    "linux.cpp",
-    "zircon.cpp",
+    "guest.cc",
+    "linux.cc",
+    "zircon.cc",
   ]
 
   deps = [
