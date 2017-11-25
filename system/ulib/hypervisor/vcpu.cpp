@@ -18,10 +18,6 @@
 #include <hypervisor/x86/decode.h>
 #endif
 
-// Interrupt vectors.
-// TODO(abdulla): Pick the right vector for ARM.
-static const uint32_t kGpFaultVector = 13u;
-
 #if __aarch64__
 static zx_status_t handle_mmio_arm(const zx_packet_guest_mem_t* mem, uint64_t trap_key,
                                    uint64_t* reg) {
@@ -124,11 +120,9 @@ static zx_status_t handle_mem(Vcpu* vcpu, const zx_packet_guest_mem_t* mem, uint
     }
 #endif // __x86_64__
 
-    if (status != ZX_OK) {
-        return vcpu->Interrupt(kGpFaultVector);
-    } else if (do_write) {
+    if (status == ZX_OK && do_write)
         return vcpu->WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-    }
+
     return status;
 }
 
