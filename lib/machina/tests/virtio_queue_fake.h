@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_
+#define GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_
 
 #include <fbl/unique_ptr.h>
 #include <machina/virtio.h>
@@ -94,3 +95,5 @@ private:
     // The next entry in the descriptor table that is available.
     uint16_t next_free_desc_ = 0;
 };
+
+#endif  // GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_

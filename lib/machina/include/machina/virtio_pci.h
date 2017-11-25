@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_PCI_H_
+#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_PCI_H_
 
 #include <machina/pci.h>
 #include <virtio/virtio.h>
@@ -52,3 +53,5 @@ private:
 
     VirtioDevice* device_;
 };
+
+#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_PCI_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_BALLOON_H_
+#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_BALLOON_H_
 
 #include <fbl/function.h>
 #include <fbl/mutex.h>
@@ -89,3 +90,5 @@ private:
 
     virtio_balloon_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };
+
+#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_BALLOON_H_

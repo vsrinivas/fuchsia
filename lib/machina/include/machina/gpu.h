@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_GPU_H_
+#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_GPU_H_
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
@@ -198,3 +199,5 @@ private:
     virtio_queue_t queues_[VIRTIO_GPU_Q_COUNT];
     virtio_gpu_config_t config_ = {};
 };
+
+#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_GPU_H_

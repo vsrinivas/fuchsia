@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_INPUT_H_
+#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_INPUT_H_
 
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
@@ -97,3 +98,5 @@ private:
 
     fbl::SinglyLinkedList<fbl::unique_ptr<KeyboardEventSource>> keyboards_ __TA_GUARDED(mutex_);
 };
+
+#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_INPUT_H_

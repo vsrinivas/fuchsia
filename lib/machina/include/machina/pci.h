@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_PCI_H_
+#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_PCI_H_
 
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
@@ -259,3 +260,5 @@ private:
     // Next mmio window to be allocated to connected devices.
     uint32_t mmio_base_ = kMmioBarBase;
 };
+
+#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_PCI_H_

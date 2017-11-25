@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
+#define GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
 
 #include <fbl/mutex.h>
 #include <hypervisor/io.h>
@@ -55,3 +56,5 @@ private:
 };
 
 using InterruptController = IoApic;
+
+#endif  // GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_

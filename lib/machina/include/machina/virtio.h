@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_H_
+#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_H_
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -279,3 +280,5 @@ zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, virtio
  * after calling virtio_queue_return.
  */
 void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len);
+
+#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_H_

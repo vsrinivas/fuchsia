@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_ARCH_ARM64_INCLUDE_MACHINA_UART_H_
+#define GARNET_LIB_MACHINA_ARCH_ARM64_INCLUDE_MACHINA_UART_H_
 
 #include <hypervisor/io.h>
 
@@ -27,3 +28,5 @@ private:
 };
 
 using Uart = Pl011;
+
+#endif  // GARNET_LIB_MACHINA_ARCH_ARM64_INCLUDE_MACHINA_UART_H_
