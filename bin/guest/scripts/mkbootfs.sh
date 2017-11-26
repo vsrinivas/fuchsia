@@ -23,7 +23,7 @@ usage() {
 }
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ZIRCON_DIR="$GUEST_SCRIPTS_DIR/../../../../zircon"
+GARNET_DIR="$GUEST_SCRIPTS_DIR/../../.."
 
 while getopts "f:z:b:l:i:r:g:" opt; do
   case "${opt}" in
@@ -53,9 +53,9 @@ declare -r INITRD=${INITRD:-/tmp/toybox/initrd.gz}
 declare -r ROOTFS=${ROOTFS:-/tmp/toybox/rootfs.ext2}
 
 echo "
-data/dsdt.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/dsdt.aml
-data/madt.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/madt.aml
-data/mcfg.aml=$ZIRCON_DIR/system/ulib/hypervisor/arch/x86/acpi/mcfg.aml
+data/dsdt.aml=$GARNET_DIR/lib/machina/arch/x86/acpi/dsdt.aml
+data/madt.aml=$GARNET_DIR/lib/machina/arch/x86/acpi/madt.aml
+data/mcfg.aml=$GARNET_DIR/lib/machina/arch/x86/acpi/mcfg.aml
 data/zircon.bin=$ZIRCON
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
 
