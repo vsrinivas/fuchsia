@@ -11,7 +11,12 @@
 #else
 // TODO(ZX-1407): If ulib/trace defines a no-op
 // version of these macros, we won't need to.
-#define TRACE_DURATION(args...) /* Nothing, for host-side tools */
+//
+// Redefine tracing macros as no-ops for host-side tools
+#define TRACE_DURATION(args...)
+#define TRACE_FLOW_BEGIN(args...)
+#define TRACE_FLOW_STEP(args...)
+#define TRACE_FLOW_END(args...)
 #endif
 
 // Enable trace printf()s

@@ -302,26 +302,34 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
 }
 
 void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
-    TRACE_DURATION("minfs", "WritebackBuffer::Enqueue", "work ptr", work.get());
+    TRACE_DURATION("minfs", "WritebackBuffer::Enqueue");
+    TRACE_FLOW_BEGIN("minfs", "writeback", reinterpret_cast<trace_flow_id_t>(work.get()));
     fbl::AutoLock lock(&writeback_lock_);
 
-    size_t blocks = work->txn()->BlkCount();
-    // TODO(smklein): Experimentally, all filesystem operations cause between
-    // 0 and 10 blocks to be updated, though the writeback buffer has space
-    // for thousands of blocks.
-    //
-    // Hypothetically, an operation (most likely, an enormous write) could
-    // cause a single operation to exceed the size of the writeback buffer,
-    // but this is currently impossible as our writes are broken into 8KB
-    // chunks.
-    //
-    // Regardless, there should either (1) exist a fallback mechanism for these
-    // extremely large operations, or (2) the worst-case operation should be
-    // calculated, and it should be proven that it will always fit within
-    // the allocated writeback buffer.
-    ZX_ASSERT_MSG(EnsureSpaceLocked(blocks) == ZX_OK,
-                  "Requested txn (%zu blocks) larger than writeback buffer", blocks);
-    CopyToBufferLocked(work->txn());
+    {
+        TRACE_DURATION("minfs", "Allocating Writeback space");
+        size_t blocks = work->txn()->BlkCount();
+        // TODO(smklein): Experimentally, all filesystem operations cause between
+        // 0 and 10 blocks to be updated, though the writeback buffer has space
+        // for thousands of blocks.
+        //
+        // Hypothetically, an operation (most likely, an enormous write) could
+        // cause a single operation to exceed the size of the writeback buffer,
+        // but this is currently impossible as our writes are broken into 8KB
+        // chunks.
+        //
+        // Regardless, there should either (1) exist a fallback mechanism for these
+        // extremely large operations, or (2) the worst-case operation should be
+        // calculated, and it should be proven that it will always fit within
+        // the allocated writeback buffer.
+        ZX_ASSERT_MSG(EnsureSpaceLocked(blocks) == ZX_OK,
+                      "Requested txn (%zu blocks) larger than writeback buffer", blocks);
+    }
+
+    {
+        TRACE_DURATION("minfs", "Copying to Writeback buffer");
+        CopyToBufferLocked(work->txn());
+    }
 
     work_queue_.push(fbl::move(work));
     cnd_signal(&consumer_cvar_);
@@ -334,7 +342,7 @@ int WritebackBuffer::WritebackThread(void* arg) {
     while (true) {
         while (!b->work_queue_.is_empty()) {
             auto work = b->work_queue_.pop();
-            TRACE_DURATION("minfs", "WritebackBuffer::WritebackThread", "work ptr", work.get());
+            TRACE_DURATION("minfs", "WritebackBuffer::WritebackThread");
 
             // Stay unlocked while processing a unit of work
             b->writeback_lock_.Release();
@@ -343,6 +351,7 @@ int WritebackBuffer::WritebackThread(void* arg) {
             // in "work" are contiguous and in the range of [start_, len_) (including
             // wraparound).
             size_t blks_consumed = work->Complete(b->buffer_->GetVmo(), b->buffer_vmoid_);
+            TRACE_FLOW_END("minfs", "writeback", reinterpret_cast<trace_flow_id_t>(work.get()));
             work = nullptr;
 
             // Relock before checking the state of the queue
