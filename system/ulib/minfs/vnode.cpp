@@ -1151,6 +1151,7 @@ zx_status_t VnodeMinfs::Close() {
 }
 
 zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_actual) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Read", "ino", ino_, "len", len, "off", off);
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Reading from ino with no fds open");
     FS_TRACE(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
@@ -1221,6 +1222,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
 
 zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
                               size_t* out_actual) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Write", "ino", ino_, "len", len, "off", offset);
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Writing to ino with no fds open");
     FS_TRACE(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, offset);
     if (IsDirectory()) {
@@ -1346,6 +1348,7 @@ done:
 }
 
 zx_status_t VnodeMinfs::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Lookup", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
@@ -1424,6 +1427,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
 
 zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                 size_t* out_actual) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Readdir");
     FS_TRACE(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
     dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(dirents, len);
@@ -1530,6 +1534,7 @@ zx_status_t VnodeMinfs::AllocateHollow(Minfs* fs, fbl::RefPtr<VnodeMinfs>* out) 
 }
 
 zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Create", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
@@ -1643,6 +1648,7 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
 }
 
 zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Unlink", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
@@ -1666,6 +1672,7 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
 }
 
 zx_status_t VnodeMinfs::Truncate(size_t len) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Truncate");
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -1785,6 +1792,7 @@ static zx_status_t check_not_subdirectory(fbl::RefPtr<VnodeMinfs> src, fbl::RefP
 zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece oldname,
                                fbl::StringPiece newname, bool src_must_be_dir,
                                bool dst_must_be_dir) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Rename", "src", oldname, "dst", newname);
     auto newdir = fbl::RefPtr<VnodeMinfs>::Downcast(_newdir);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname));
@@ -1862,6 +1870,7 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
 }
 
 zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {
+    TRACE_DURATION("minfs", "VnodeMinfs::Link", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
@@ -1911,6 +1920,7 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 // rather, it should pass a handle back to the client which is signalled
 // when the completion is signalled.
 zx_status_t VnodeMinfs::Sync() {
+    TRACE_DURATION("minfs", "VnodeMinfs::Sync");
     completion_t completion;
     zx_status_t status;
     if ((status = fs_->Sync(&completion)) != ZX_OK) {

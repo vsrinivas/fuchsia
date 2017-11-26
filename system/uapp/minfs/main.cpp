@@ -24,6 +24,7 @@
 #ifdef __Fuchsia__
 #include <async/loop.h>
 #include <fs/trace.h>
+#include <trace-provider/provider.h>
 #endif
 
 #include <minfs/fsck.h>
@@ -59,6 +60,7 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
 
     async::Loop loop;
     fs::Vfs vfs(loop.async());
+    trace::TraceProvider trace_provider(loop.async());
     vfs.SetReadonly(readonly);
     zx_status_t status;
     if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {

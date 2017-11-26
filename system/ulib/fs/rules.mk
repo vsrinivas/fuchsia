@@ -25,14 +25,16 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/trace-engine \
+    system/ulib/zircon \
 
 MODULE_PACKAGE := src
 

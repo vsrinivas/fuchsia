@@ -302,6 +302,7 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
 }
 
 void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
+    TRACE_DURATION("minfs", "WritebackBuffer::Enqueue", "work ptr", work.get());
     fbl::AutoLock lock(&writeback_lock_);
 
     size_t blocks = work->txn()->BlkCount();
@@ -333,6 +334,7 @@ int WritebackBuffer::WritebackThread(void* arg) {
     while (true) {
         while (!b->work_queue_.is_empty()) {
             auto work = b->work_queue_.pop();
+            TRACE_DURATION("minfs", "WritebackBuffer::WritebackThread", "work ptr", work.get());
 
             // Stay unlocked while processing a unit of work
             b->writeback_lock_.Release();

@@ -50,13 +50,15 @@ static_library("fs") {
 
   deps = [
     "//zircon/system/ulib/async",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxcpp",
   ]
 
   libs = [
-    "zircon",
     "fdio",
+    "trace-engine",
+    "zircon",
   ]
 }

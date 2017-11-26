@@ -7,6 +7,14 @@
 #include <assert.h>
 #include <stdint.h>
 
+#ifdef __Fuchsia__
+#include <trace/event.h>
+#else
+// TODO(ZX-1407): If ulib/trace defines a no-op
+// version of these macros, we won't need to.
+#define TRACE_DURATION(args...) /* Nothing, for host-side tools */
+#endif
+
 // General Utilities
 
 #define FS_TRACE_MINFS   0x0001

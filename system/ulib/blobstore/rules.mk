@@ -28,6 +28,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/digest \
     third_party/ulib/uboringssl \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
@@ -35,10 +36,11 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/async.default \
-    system/ulib/c \
-    system/ulib/zircon \
-    system/ulib/fdio \
     system/ulib/bitmap \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/trace-engine \
+    system/ulib/zircon \
 
 include make/module.mk
 

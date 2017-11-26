@@ -259,6 +259,7 @@ Minfs::~Minfs() {
 }
 
 zx_status_t Minfs::InoFree(VnodeMinfs* vn, WriteTxn* txn) {
+    TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->ino_);
 #ifdef __Fuchsia__
     auto ibm_id = inode_map_.StorageUnsafe()->GetVmo();
 #else
@@ -378,6 +379,7 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn, WriteTxn* txn) {
 }
 
 zx_status_t Minfs::AddInodes() {
+    TRACE_DURATION("minfs", "Minfs::AddInodes");
 #ifdef __Fuchsia__
     if ((info_.flags & kMinfsFlagFVM) == 0) {
         return ZX_ERR_NO_SPACE;
@@ -448,6 +450,7 @@ zx_status_t Minfs::AddInodes() {
 }
 
 zx_status_t Minfs::AddBlocks() {
+    TRACE_DURATION("minfs", "Minfs::AddBlocks");
 #ifdef __Fuchsia__
     if ((info_.flags & kMinfsFlagFVM) == 0) {
         return ZX_ERR_NO_SPACE;
@@ -560,6 +563,7 @@ zx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* ino_
 }
 
 zx_status_t Minfs::VnodeNew(WriteTxn* txn, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
+    TRACE_DURATION("minfs", "Minfs::VnodeNew");
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -622,6 +626,7 @@ void Minfs::VnodeReleaseLocked(VnodeMinfs* vn) {
 }
 
 zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
+    TRACE_DURATION("minfs", "Minfs::VnodeGet", "ino", ino);
     if ((ino < 1) || (ino >= info_.inode_count)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -869,6 +874,7 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
 }
 
 zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc) {
+    TRACE_DURATION("minfs", "minfs_mount");
     zx_status_t status;
 
     char blk[kMinfsBlockSize];
