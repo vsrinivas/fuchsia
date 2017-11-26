@@ -22,6 +22,13 @@
 
 #include <minfs/minfs.h>
 
+// #define DEBUG_PRINTF
+#ifdef DEBUG_PRINTF
+#define xprintf(args...) fprintf(stderr, args)
+#else
+#define xprintf(args...)
+#endif
+
 namespace {
 
 zx_time_t minfs_gettime_utc() {
@@ -1034,7 +1041,7 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
         .off_prev = 0,
     };
     while (offs.off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
-        FS_TRACE(MINFS, "Reading dirent at offset %zd\n", offs.off);
+        xprintf("Reading dirent at offset %zd\n", offs.off);
         size_t r;
         zx_status_t status = ReadInternal(data, kMinfsMaxDirentSize, offs.off, &r);
         if (status != ZX_OK) {
@@ -1098,7 +1105,7 @@ VnodeMinfs::~VnodeMinfs() {
 }
 
 zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
-    FS_TRACE(MINFS, "VnodeMinfs::ValidateFlags(0x%x) vn=%p(#%u)\n", flags, this, ino_);
+    xprintf("VnodeMinfs::ValidateFlags(0x%x) vn=%p(#%u)\n", flags, this, ino_);
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     }
@@ -1153,7 +1160,7 @@ zx_status_t VnodeMinfs::Close() {
 zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     TRACE_DURATION("minfs", "VnodeMinfs::Read", "ino", ino_, "len", len, "off", off);
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Reading from ino with no fds open");
-    FS_TRACE(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
+    xprintf("minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -1224,7 +1231,7 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
                               size_t* out_actual) {
     TRACE_DURATION("minfs", "VnodeMinfs::Write", "ino", ino_, "len", len, "off", offset);
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Writing to ino with no fds open");
-    FS_TRACE(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, offset);
+    xprintf("minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, offset);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -1375,7 +1382,7 @@ zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringP
 }
 
 zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
-    FS_TRACE(MINFS, "minfs_getattr() vn=%p(#%u)\n", this, ino_);
+    xprintf("minfs_getattr() vn=%p(#%u)\n", this, ino_);
     a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) |
             V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     a->inode = ino_;
@@ -1390,7 +1397,7 @@ zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
 
 zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     int dirty = 0;
-    FS_TRACE(MINFS, "minfs_setattr() vn=%p(#%u)\n", this, ino_);
+    xprintf("minfs_setattr() vn=%p(#%u)\n", this, ino_);
     if ((a->valid & ~(ATTR_CTIME|ATTR_MTIME)) != 0) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -1428,7 +1435,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
 zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                 size_t* out_actual) {
     TRACE_DURATION("minfs", "VnodeMinfs::Readdir");
-    FS_TRACE(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
+    xprintf("minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
     dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(dirents, len);
 

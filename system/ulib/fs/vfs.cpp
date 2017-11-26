@@ -27,7 +27,12 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
-uint32_t __trace_bits;
+// #define DEBUG_PRINTF
+#ifdef DEBUG_PRINTF
+#define xprintf(args...) fprintf(stderr, args)
+#else
+#define xprintf(args...)
+#endif
 
 namespace fs {
 namespace {
@@ -128,7 +133,7 @@ zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
                             fbl::StringPiece path, fbl::StringPiece* pathout,
                             uint32_t flags, uint32_t mode) {
-    FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
+    xprintf("VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
     zx_status_t r;
     if ((r = vfs_prevalidate_flags(flags)) != ZX_OK) {
         return r;
@@ -208,7 +213,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             }
         }
     }
-    FS_TRACE(VFS, "VfsOpen: vn=%p\n", vn.get());
+    xprintf("VfsOpen: vn=%p\n", vn.get());
     *pathout = "";
     *out = vn;
     return ZX_OK;

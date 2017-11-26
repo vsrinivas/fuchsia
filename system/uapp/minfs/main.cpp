@@ -397,11 +397,7 @@ int main(int argc, char** argv) {
 
     // handle options
     while (argc > 1) {
-        if (!strcmp(argv[1], "-v")) {
-            fs_trace_on(FS_TRACE_SOME);
-        } else if (!strcmp(argv[1], "-vv")) {
-            fs_trace_on(FS_TRACE_ALL);
-        } else if (!strcmp(argv[1], "--readonly")) {
+        if (!strcmp(argv[1], "--readonly")) {
             readonly = true;
         } else {
             break;

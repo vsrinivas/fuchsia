@@ -26,25 +26,32 @@
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
 
+// #define DEBUG_PRINTF
+#ifdef DEBUG_PRINTF
+#define xprintf(args...) fprintf(stderr, args)
+#else
+#define xprintf(args...)
+#endif
+
 namespace minfs {
 
 void minfs_dump_info(const minfs_info_t* info) {
-    FS_TRACE(MINFS, "minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
-    FS_TRACE(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
-    FS_TRACE(MINFS, "minfs: allocated blocks  @ %10u\n", info->alloc_block_count);
-    FS_TRACE(MINFS, "minfs: allocated inodes  @ %10u\n", info->alloc_inode_count);
-    FS_TRACE(MINFS, "minfs: inode bitmap @ %10u\n", info->ibm_block);
-    FS_TRACE(MINFS, "minfs: alloc bitmap @ %10u\n", info->abm_block);
-    FS_TRACE(MINFS, "minfs: inode table  @ %10u\n", info->ino_block);
-    FS_TRACE(MINFS, "minfs: data blocks  @ %10u\n", info->dat_block);
-    FS_TRACE(MINFS, "minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
+    xprintf("minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
+    xprintf("minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
+    xprintf("minfs: allocated blocks  @ %10u\n", info->alloc_block_count);
+    xprintf("minfs: allocated inodes  @ %10u\n", info->alloc_inode_count);
+    xprintf("minfs: inode bitmap @ %10u\n", info->ibm_block);
+    xprintf("minfs: alloc bitmap @ %10u\n", info->abm_block);
+    xprintf("minfs: inode table  @ %10u\n", info->ino_block);
+    xprintf("minfs: data blocks  @ %10u\n", info->dat_block);
+    xprintf("minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
 }
 
 void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino) {
-    FS_TRACE(MINFS, "inode[%u]: magic:  %10u\n", ino, inode->magic);
-    FS_TRACE(MINFS, "inode[%u]: size:   %10u\n", ino, inode->size);
-    FS_TRACE(MINFS, "inode[%u]: blocks: %10u\n", ino, inode->block_count);
-    FS_TRACE(MINFS, "inode[%u]: links:  %10u\n", ino, inode->link_count);
+    xprintf("inode[%u]: magic:  %10u\n", ino, inode->magic);
+    xprintf("inode[%u]: size:   %10u\n", ino, inode->size);
+    xprintf("inode[%u]: blocks: %10u\n", ino, inode->block_count);
+    xprintf("inode[%u]: links:  %10u\n", ino, inode->link_count);
 }
 
 zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
