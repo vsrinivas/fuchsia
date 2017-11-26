@@ -15,6 +15,7 @@
 #include <fdio/io.h>
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>
+#include <fs/trace.h>
 #include <fs/vnode.h>
 #include <zircon/assert.h>
 
@@ -198,6 +199,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
 
     switch (ZXRIO_OP(msg->op)) {
     case ZXRIO_OPEN: {
+        TRACE_DURATION("vfs", "ZXRIO_OPEN");
         char* path = (char*)msg->data;
         zx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
@@ -213,12 +215,14 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return ERR_DISPATCHER_INDIRECT;
     }
     case ZXRIO_CLOSE: {
+        TRACE_DURATION("vfs", "ZXRIO_CLOSE");
         if (!IsPathOnly(flags_)) {
             return vnode_->Close();
         }
         return ZX_OK;
     }
     case ZXRIO_CLONE: {
+        TRACE_DURATION("vfs", "ZXRIO_CLONE");
         zx::channel channel(msg->handle[0]); // take ownership
         if (!(arg & O_PIPELINE)) {
             zxrio_object_t obj;
@@ -230,6 +234,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return ERR_DISPATCHER_INDIRECT;
     }
     case ZXRIO_READ: {
+        TRACE_DURATION("vfs", "ZXRIO_READ");
         if (!IsReadable(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -244,6 +249,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_READ_AT: {
+        TRACE_DURATION("vfs", "ZXRIO_READ_AT");
         if (!IsReadable(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -256,6 +262,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE: {
+        TRACE_DURATION("vfs", "ZXRIO_WRITE");
         if (!IsWritable(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -280,6 +287,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE_AT: {
+        TRACE_DURATION("vfs", "ZXRIO_WRITE_AT");
         if (!IsWritable(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -292,6 +300,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status;
     }
     case ZXRIO_SEEK: {
+        TRACE_DURATION("vfs", "ZXRIO_SEEK");
         if (IsPathOnly(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -348,6 +357,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return ZX_OK;
     }
     case ZXRIO_STAT: {
+        TRACE_DURATION("vfs", "ZXRIO_STAT");
         zx_status_t r;
         msg->datalen = sizeof(vnattr_t);
         if ((r = vnode_->Getattr((vnattr_t*)msg->data)) < 0) {
@@ -356,6 +366,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return msg->datalen;
     }
     case ZXRIO_SETATTR: {
+        TRACE_DURATION("vfs", "ZXRIO_SETATTR");
         // TODO(smklein): Prevent read-only files from setting attributes,
         // but allow attribute-setting on mutable directories.
         // For context: ZX-1262, ZX-1065
@@ -366,6 +377,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return r;
     }
     case ZXRIO_FCNTL: {
+        TRACE_DURATION("vfs", "ZXRIO_FCNTL");
         uint32_t cmd = msg->arg;
         constexpr uint32_t kStatusFlags = O_APPEND;
         switch (cmd) {
@@ -380,6 +392,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
     }
     case ZXRIO_READDIR: {
+        TRACE_DURATION("vfs", "ZXRIO_READDIR");
         if (IsPathOnly(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -507,6 +520,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return static_cast<uint32_t>(actual);
     }
     case ZXRIO_TRUNCATE: {
+        TRACE_DURATION("vfs", "ZXRIO_TRUNCATE");
         if (!IsWritable(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -517,6 +531,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     }
     case ZXRIO_RENAME:
     case ZXRIO_LINK: {
+        TRACE_DURATION("vfs", (ZXRIO_OP(msg->op) == ZXRIO_RENAME ?
+                               "ZXRIO_RENAME" : "ZXRIO_LINK"));
         // Regardless of success or failure, we'll close the client-provided
         // vnode token handle.
         zx::event token(msg->handle[0]);
@@ -537,16 +553,19 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
 
         switch (ZXRIO_OP(msg->op)) {
-        case ZXRIO_RENAME:
+        case ZXRIO_RENAME: {
             return vfs_->Rename(fbl::move(token), vnode_,
                                 fbl::move(oldStr), fbl::move(newStr));
-        case ZXRIO_LINK:
+        }
+        case ZXRIO_LINK: {
             return vfs_->Link(fbl::move(token), vnode_,
                               fbl::move(oldStr), fbl::move(newStr));
+        }
         }
         assert(false);
     }
     case ZXRIO_MMAP: {
+        TRACE_DURATION("vfs", "ZXRIO_MMAP");
         if (IsPathOnly(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -570,13 +589,16 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status;
     }
     case ZXRIO_SYNC: {
+        TRACE_DURATION("vfs", "ZXRIO_SYNC");
         if (IsPathOnly(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
         return vnode_->Sync();
     }
-    case ZXRIO_UNLINK:
+    case ZXRIO_UNLINK: {
+        TRACE_DURATION("vfs", "ZXRIO_UNLINK");
         return vfs_->Unlink(vnode_, fbl::StringPiece((const char*)msg->data, len));
+    }
     default:
         // close inbound handles so they do not leak
         for (unsigned i = 0; i < ZXRIO_HC(msg->op); i++) {

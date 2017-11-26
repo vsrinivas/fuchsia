@@ -54,16 +54,18 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/gpt \
     system/ulib/digest \
+    system/ulib/trace \
     system/ulib/zxcpp \
     system/ulib/fbl \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
-    system/ulib/fdio \
     system/ulib/c \
+    system/ulib/fdio \
     system/ulib/fs-management \
     system/ulib/launchpad \
-    system/ulib/zircon \
+    system/ulib/trace-engine \
     system/ulib/unittest \
+    system/ulib/zircon \
 
 include make/module.mk

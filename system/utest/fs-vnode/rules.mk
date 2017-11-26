@@ -21,14 +21,16 @@ MODULE_NAME := fs-vnode-test
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/async \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/zircon \
     system/ulib/fdio \
-    system/ulib/unittest
+    system/ulib/trace-engine \
+    system/ulib/unittest \
+    system/ulib/zircon \
 
 include make/module.mk

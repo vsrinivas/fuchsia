@@ -68,6 +68,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     system/ulib/fbl \
     system/ulib/gpt \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
     third_party/ulib/lz4 \
@@ -77,6 +78,7 @@ MODULE_LIBS := \
     system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/fs-management \
+    system/ulib/trace-engine \
     system/ulib/zircon \
     system/ulib/c
 
