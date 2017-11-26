@@ -1,0 +1,49 @@
+include "zircon/system/public/zircon/mdi/zircon.mdi"
+
+cpu-map = {
+    clusters = {
+        {
+            cpu-count = 1
+        }
+    }
+}
+
+mem-map = {
+    bank = {
+        base-phys = 0
+        length = 0x40000000 // 1GB
+    }
+}
+
+const PERIPH_VIRT = 0xffffffffc0000000
+
+periph-mem-map = {
+    bank = {
+        base-virt = PERIPH_VIRT
+        base-phys = 0xe8100000
+        length    = 0x17f00000
+    }
+}
+
+kernel = {
+    arm-pl011-uart = {
+        base-virt = PERIPH_VIRT + 0x17e32000
+        base-phys = 0xfff32000
+        irq = 111
+    }
+    arm-gic-v2 = {
+        base-virt = PERIPH_VIRT + 0x001b0000
+        base-phys = 0xe82b0000
+        gicd-offset = 0x1000
+        gicc-offset = 0x2000
+        gich-offset = 0x4000
+        gicv-offset = 0x6000
+        ipi-base = 13
+    }
+    arm-psci = {
+        use-smc = true
+    }
+    arm-timer = {
+        irq-virt = 27
+    }
+}

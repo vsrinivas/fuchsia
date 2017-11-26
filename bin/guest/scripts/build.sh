@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
 set -e
+
+GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
+cd "${FUCHSIA_DIR}"
 
 usage() {
     echo "usage: ${0} [options] {arm64, x86}"
@@ -34,10 +44,6 @@ x86)
 *)  usage;;
 esac
 
-GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
-cd "${FUCHSIA_DIR}"
-
 scripts/build-zircon.sh \
     -p $PLATFORM
 
@@ -62,10 +68,10 @@ arm64)
         -u \
         -n \
         -b out/build-zircon/build-$PLATFORM \
-        -d bootdata-with-guest.bin;;
+        -d out/host-bootdata.bin;;
 x86)
     out/build-zircon/tools/bootserver \
         -1 \
         out/build-zircon/build-$PLATFORM/zircon.bin \
-        bootdata-with-guest.bin;;
+        out/host-bootdata.bin;;
 esac
