@@ -46,7 +46,7 @@ debug=0
 platform="x86-64"
 build_dir_fuchsia=""
 minfs_path=""
-build_dir_zircon=""
+zircon_project_dir=""
 device_type="pc"
 kernel_cmdline=""
 bootdata=""
@@ -68,7 +68,7 @@ while (( "$#" )); do
         "-d arguments to be ignored"
       echo "-m: path to the host architecture minfs binary, perhaps you need" \
         "to run 'make' in zircon/system/uapp/minfs"
-      echo "-a: artifacts directory for zircon, will be used to find files" \
+      echo "-a: project directory for zircon, will be used to find files" \
         "to place on the EFI partition. If not supplied, this will be assumed" \
         "relative to fuchsia build directory."
       echo "-t: the device type, for example 'qemu', 'rpi', 'pc', etc"
@@ -110,7 +110,7 @@ while (( "$#" )); do
       ;;
     "-a")
       shift
-      build_dir_zircon=$1
+      zircon_project_dir=$1
       ;;
     "-t")
       shift
@@ -149,7 +149,7 @@ if [ "$sys_mount" != "none" ] && [ "$sys_mount" != "any" ] && [ $sys_mount != "l
   exit -1;
 fi
 
-if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_zircon" = "" ]; then
+if [ "$build_dir_fuchsia" = "" ] || [ "$zircon_project_dir" = "" ]; then
   if [ "$release" -eq "$debug" ]; then
     if [ "$debug" -eq 0 ]; then
       debug=1
@@ -195,12 +195,14 @@ else
   fi
 fi
 
-if [ "$build_dir_zircon" = "" ]; then
-  build_dir_zircon="${script_dir}/../../out/build-zircon/build-zircon-${device_type}-"
+build_zircon_dir="${script_dir}/../../out/build-zircon"
+
+if [ "$zircon_project_dir" = "" ]; then
+  zircon_project_dir="${build_zircon_dir}/build-zircon-${device_type}-"
   if [ "$build_arch" = "aarch64" ]; then
-    build_dir_zircon="${build_dir_zircon}arm64"
+    zircon_project_dir="${zircon_project_dir}arm64"
   elif [ "$build_arch" = "x86-64" ]; then
-    build_dir_zircon="${build_dir_zircon}${build_arch}"
+    zircon_project_dir="${zircon_project_dir}${build_arch}"
   fi
 else
   if [ "$device_type" != "" ]; then
@@ -209,7 +211,7 @@ else
 fi
 
 if [ "$minfs_path" = "" ]; then
-  minfs_path=$build_dir_zircon/tools/minfs
+  minfs_path="${build_zircon_dir}/tools/minfs"
 fi
 
 if [ ! -f "$minfs_path" ]; then
@@ -309,7 +311,7 @@ fi
 imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc"
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia"
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch"
-  --efi_disk="$disk_path_efi" --build_dir_zircon="$build_dir_zircon"
+  --efi_disk="$disk_path_efi" --build_dir_zircon="$zircon_project_dir"
   --bootdata="$bootdata" --boot_manifest="$boot_manifest" --sys_mount="$sys_mount"
   --mdir_path="$mdir_loc" --runtime_dir="$sys_out" "${extras[@]}" )
 
