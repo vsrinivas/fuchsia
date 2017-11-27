@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_IO_PORT_H_
-#define GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_IO_PORT_H_
+#ifndef GARNET_LIB_MACHINA_ARCH_X86_IO_PORT_H_
+#define GARNET_LIB_MACHINA_ARCH_X86_IO_PORT_H_
 
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
@@ -78,4 +78,4 @@ private:
     I8042Handler i8042_;
 };
 
-#endif  // GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_IO_PORT_H_
+#endif  // GARNET_LIB_MACHINA_ARCH_X86_IO_PORT_H_

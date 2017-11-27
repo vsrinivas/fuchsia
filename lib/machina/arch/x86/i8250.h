@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_UART_H_
-#define GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_UART_H_
+#ifndef GARNET_LIB_MACHINA_ARCH_X86_I8250_H_
+#define GARNET_LIB_MACHINA_ARCH_X86_I8250_H_
 
 #include <fbl/mutex.h>
 #include <hypervisor/io.h>
@@ -32,6 +32,4 @@ private:
     void Print(uint8_t ch);
 };
 
-using Uart = I8250;
-
-#endif  // GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_UART_H_
+#endif  // GARNET_LIB_MACHINA_ARCH_X86_I8250_H_

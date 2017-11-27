@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_ARCH_ARM64_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
-#define GARNET_LIB_MACHINA_ARCH_ARM64_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
+#ifndef GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
+#define GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 
 #include <hypervisor/io.h>
 
@@ -37,6 +37,4 @@ public:
     zx_status_t Interrupt(uint32_t global_irq) const;
 };
 
-using InterruptController = GicDistributor;
-
-#endif  // GARNET_LIB_MACHINA_ARCH_ARM64_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
+#endif  // GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_

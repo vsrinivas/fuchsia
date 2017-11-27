@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
-#define GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
+#ifndef GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_
+#define GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_
 
 #include <fbl/mutex.h>
 #include <hypervisor/io.h>
@@ -55,6 +55,4 @@ private:
     LocalApic* local_apic_[kMaxLocalApics] = {};
 };
 
-using InterruptController = IoApic;
-
-#endif  // GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_INTERRUPT_CONTROLLER_H_
+#endif  // GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_

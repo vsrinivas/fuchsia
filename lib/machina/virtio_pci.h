@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_PCI_H_
-#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_PCI_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_PCI_H_
+#define GARNET_LIB_MACHINA_VIRTIO_PCI_H_
 
-#include <machina/pci.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
+
+#include "garnet/lib/machina/pci.h"
 
 class VirtioDevice;
 
@@ -54,4 +55,4 @@ private:
     VirtioDevice* device_;
 };
 
-#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_PCI_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_PCI_H_

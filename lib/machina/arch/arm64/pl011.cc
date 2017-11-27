@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/uart.h>
+#include "garnet/lib/machina/arch/arm64/pl011.h"
 
 #include <stdio.h>
 

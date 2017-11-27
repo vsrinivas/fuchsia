@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_BALLOON_H_
-#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_BALLOON_H_
+#ifndef GARNET_LIB_MACHINA_BALLOON_H_
+#define GARNET_LIB_MACHINA_BALLOON_H_
 
 #include <fbl/function.h>
 #include <fbl/mutex.h>
-#include <machina/virtio.h>
 #include <virtio/balloon.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include "garnet/lib/machina/virtio.h"
 
 #define VIRTIO_BALLOON_Q_INFLATEQ 0
 #define VIRTIO_BALLOON_Q_DEFLATEQ 1
@@ -91,4 +92,4 @@ private:
     virtio_balloon_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };
 
-#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_BALLOON_H_
+#endif  // GARNET_LIB_MACHINA_BALLOON_H_

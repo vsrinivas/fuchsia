@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_PCI_H_
-#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_PCI_H_
+#ifndef GARNET_LIB_MACHINA_PCI_H_
+#define GARNET_LIB_MACHINA_PCI_H_
 
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
-#include <machina/interrupt_controller.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include "garnet/lib/machina/interrupt_controller.h"
 
 // clang-format off
 
@@ -261,4 +262,4 @@ private:
     uint32_t mmio_base_ = kMmioBarBase;
 };
 
-#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_PCI_H_
+#endif  // GARNET_LIB_MACHINA_PCI_H_

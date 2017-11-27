@@ -15,20 +15,19 @@
 #include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
-#include <machina/balloon.h>
-#include <machina/block.h>
-#include <machina/gpu.h>
-#include <machina/input.h>
-#include <machina/interrupt_controller.h>
-#include <machina/pci.h>
-#include <machina/uart.h>
-#include <virtio/balloon.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "linux.h"
-#include "zircon.h"
+#include "garnet/lib/machina/balloon.h"
+#include "garnet/lib/machina/block.h"
+#include "garnet/lib/machina/gpu.h"
+#include "garnet/lib/machina/input.h"
+#include "garnet/lib/machina/interrupt_controller.h"
+#include "garnet/lib/machina/pci.h"
+#include "garnet/lib/machina/uart.h"
+#include "garnet/bin/guest/linux.h"
+#include "garnet/bin/guest/zircon.h"
 
 #if __aarch64__
 static const size_t kNumUarts = 1;
@@ -39,8 +38,8 @@ static const uint64_t kUartBases[kNumUarts] = {
 #elif __x86_64__
 #include <hypervisor/x86/acpi.h>
 #include <hypervisor/x86/local_apic.h>
-#include <machina/io_port.h>
-#include <machina/tpm.h>
+#include "garnet/lib/machina/arch/x86/io_port.h"
+#include "garnet/lib/machina/arch/x86/tpm.h"
 
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = {

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_BLOCK_H_
-#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_BLOCK_H_
+#ifndef GARNET_LIB_MACHINA_BLOCK_H_
+#define GARNET_LIB_MACHINA_BLOCK_H_
 
 #include <fbl/mutex.h>
-#include <machina/virtio.h>
 #include <virtio/block.h>
+
+#include "garnet/lib/machina/virtio.h"
 
 typedef struct file_state file_state_t;
 
@@ -65,4 +66,4 @@ private:
     fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher_;
 };
 
-#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_BLOCK_H_
+#endif  // GARNET_LIB_MACHINA_BLOCK_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/block.h>
+#include "garnet/lib/machina/block.h"
 
 #include <fcntl.h>
 #include <stdio.h>

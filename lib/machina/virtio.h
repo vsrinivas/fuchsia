@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_H_
-#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_H_
+#define GARNET_LIB_MACHINA_VIRTIO_H_
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <machina/virtio_pci.h>
 #include <virtio/virtio.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include "garnet/lib/machina/virtio_pci.h"
 
 struct vring_desc;
 struct vring_avail;
@@ -281,4 +282,4 @@ zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, virtio
  */
 void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len);
 
-#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_VIRTIO_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_H_

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/virtio_pci.h>
+#include "garnet/lib/machina/virtio_pci.h"
 
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
 #include <hypervisor/bits.h>
-#include <machina/virtio.h>
 #include <virtio/virtio_ids.h>
+
+#include "garnet/lib/machina/virtio.h"
 
 static uint8_t kPciCapTypeVendorSpecific = 0x9;
 

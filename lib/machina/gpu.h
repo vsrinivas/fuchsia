@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INCLUDE_MACHINA_GPU_H_
-#define GARNET_LIB_MACHINA_INCLUDE_MACHINA_GPU_H_
+#ifndef GARNET_LIB_MACHINA_GPU_H_
+#define GARNET_LIB_MACHINA_GPU_H_
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <machina/virtio.h>
 #include <virtio/gpu.h>
 #include <zircon/compiler.h>
 #include <zircon/device/display.h>
 #include <zircon/types.h>
+
+#include "garnet/lib/machina/virtio.h"
 
 #define VIRTIO_GPU_Q_CONTROLQ 0
 #define VIRTIO_GPU_Q_CURSORQ 1
@@ -200,4 +201,4 @@ private:
     virtio_gpu_config_t config_ = {};
 };
 
-#endif  // GARNET_LIB_MACHINA_INCLUDE_MACHINA_GPU_H_
+#endif  // GARNET_LIB_MACHINA_GPU_H_

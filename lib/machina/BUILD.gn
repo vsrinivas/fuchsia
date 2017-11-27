@@ -4,51 +4,42 @@
 
 import("//build/package.gni")
 
-config("machina_config") {
-  include_dirs = ["include"]
-  if (current_cpu == "x64") {
-    include_dirs += ["arch/x86/include"]
-  } else if (current_cpu == "arm64") {
-    include_dirs += ["arch/arm64/include"]
-  }
-}
-
 shared_library("machina") {
   sources = [
     "balloon.cc",
+    "balloon.h",
     "block.cc",
+    "block.h",
     "gpu.cc",
+    "gpu.h",
     "input.cc",
+    "input.h",
     "pci.cc",
+    "pci.h",
     "virtio.cc",
+    "virtio.h",
     "virtio_pci.cc",
-    "include/machina/balloon.h",
-    "include/machina/block.h",
-    "include/machina/gpu.h",
-    "include/machina/input.h",
-    "include/machina/pci.h",
-    "include/machina/virtio.h",
-    "include/machina/virtio_pci.h",
+    "virtio_pci.h",
   ]
 
   if (current_cpu == "arm64") {
     sources += [
       "arch/arm64/gic_distributor.cc",
+      "arch/arm64/gic_distributor.h",
       "arch/arm64/pl011.cc",
-      "arch/arm64/include/machina/interrupt_controller.h",
-      "arch/arm64/include/machina/uart.h",
+      "arch/arm64/pl011.h",
     ]
   }
 
   if (current_cpu == "x64") {
     sources += [
       "arch/x86/i8250.cc",
+      "arch/x86/i8250.h",
       "arch/x86/io_apic.cc",
+      "arch/x86/io_apic.h",
       "arch/x86/io_port.cc",
-      "arch/x86/include/machina/interrupt_controller.h",
-      "arch/x86/include/machina/io_port.h",
-      "arch/x86/include/machina/tpm.h",
-      "arch/x86/include/machina/uart.h",
+      "arch/x86/io_port.h",
+      "arch/x86/tpm.h",
     ]
   }
 
@@ -68,8 +59,6 @@ shared_library("machina") {
     "sync",
     "virtio",
   ]
-
-  public_configs = [":machina_config"]
 
   # TODO(ZX-1411): Add visibility annotations to code and remove this.
   configs -= [ "//build/config:symbol_visibility_hidden" ]

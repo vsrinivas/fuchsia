@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_TPM_H_
-#define GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_TPM_H_
+#ifndef GARNET_LIB_MACHINA_ARCH_X86_TPM_H_
+#define GARNET_LIB_MACHINA_ARCH_X86_TPM_H_
 
 #include <hypervisor/address.h>
 #include <hypervisor/guest.h>
@@ -21,4 +21,4 @@ public:
     zx_status_t Write(uint64_t addr, const IoValue& value) override { return ZX_OK; }
 };
 
-#endif  // GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_TPM_H_
+#endif  // GARNET_LIB_MACHINA_ARCH_X86_TPM_H_

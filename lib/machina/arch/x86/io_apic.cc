@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/interrupt_controller.h>
+#include "garnet/lib/machina/arch/x86/io_apic.h"
 
 #include <string.h>
 

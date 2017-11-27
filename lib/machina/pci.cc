@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/pci.h>
+#include "garnet/lib/machina/pci.h"
 
 #include <stdio.h>
 
@@ -10,7 +10,8 @@
 #include <hw/pci.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
-#include <machina/interrupt_controller.h>
+
+#include "garnet/lib/machina/interrupt_controller.h"
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0 0x10
