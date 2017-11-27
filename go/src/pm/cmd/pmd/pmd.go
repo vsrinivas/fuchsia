@@ -35,7 +35,7 @@ func main() {
 		log.Fatalf("pkgfs: mount failed: %s", err)
 	}
 
-	log.Printf("pkgfs mouted at %s serving index %s from blobstore %s", *path, *index, *blobstore)
+	log.Printf("pkgfs mounted at %s serving index %s from blobstore %s", *path, *index, *blobstore)
 
 	select {}
 }
