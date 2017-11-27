@@ -35,9 +35,7 @@ var (
 	addr  = flag.String("u", "http://192.168.3.1:8083", "The URL (including port if not using port 80)  of the update server.")
 	keys  = flag.String("k", "/system/data/amber/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
 	delay = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
-	demo  = flag.Bool("demo", false, "run demo mode, writes an entry to /data/pkgs/needs")
 
-	demoNeed  = "lib-usb-audio.so"
 	needsPath = "/pkgfs/needs"
 )
 
@@ -51,11 +49,6 @@ func main() {
 	log.SetPrefix("amber: ")
 	log.SetFlags(log.Ltime)
 	time.Sleep(*delay)
-
-	if *demo {
-		doDemo()
-		return
-	}
 
 	keys, err := source.LoadKeys(*keys)
 
@@ -88,24 +81,6 @@ func startFIDLSvr(d *daemon.Daemon) {
 	apiSrvr := ipcserver.NewControlSrvr(d)
 	cxt.OutgoingService.AddService(&amber.Control_ServiceBinder{apiSrvr})
 	cxt.Serve()
-}
-
-func doDemo() {
-	if err := os.MkdirAll(needsPath, os.ModePerm); err != nil {
-		fmt.Printf("Error making needs dir %s\n", err)
-		return
-	}
-
-	f, err := os.Create(filepath.Join(needsPath, demoNeed))
-	if err != nil {
-		fmt.Printf("Error making needs file %s\n", err)
-		return
-	}
-	f.Close()
-
-	// sleep a moment for the daemon to see the file
-	time.Sleep(1 * time.Second)
-	os.Remove(filepath.Join(needsPath, demoNeed))
 }
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
