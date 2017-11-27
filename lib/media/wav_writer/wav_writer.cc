@@ -25,11 +25,11 @@ static inline constexpr uint32_t make_fourcc(uint8_t a,
 }
 
 // clang-format off
-static constexpr uint32_t RIFF_FOUR_CC = make_fourcc('R', 'I', 'F', 'F');
-static constexpr uint32_t WAVE_FOUR_CC = make_fourcc('W', 'A', 'V', 'E');
-static constexpr uint32_t FMT_FOUR_CC  = make_fourcc('f', 'm', 't', ' ');
-static constexpr uint32_t DATA_FOUR_CC = make_fourcc('d', 'a', 't', 'a');
-static constexpr uint16_t FORMAT_LPCM  = 0x0001;
+constexpr uint32_t RIFF_FOUR_CC = make_fourcc('R', 'I', 'F', 'F');
+constexpr uint32_t WAVE_FOUR_CC = make_fourcc('W', 'A', 'V', 'E');
+constexpr uint32_t FMT_FOUR_CC  = make_fourcc('f', 'm', 't', ' ');
+constexpr uint32_t DATA_FOUR_CC = make_fourcc('d', 'a', 't', 'a');
+constexpr uint16_t FORMAT_LPCM  = 0x0001;
 // clang-format on
 
 // The RIFF file specification (and the child specification for WAV content)
@@ -208,7 +208,7 @@ ssize_t WriteData(int file_desc, const void* const buffer, size_t num_bytes) {
 // Create the audio file; save the RIFF chunk and 'fmt ' / 'data' sub-chunks.
 // If this object already had a file open, the header is not updated.
 template <bool enabled>
-void WavWriter<enabled>::Initialize(const char* const file_name,
+bool WavWriter<enabled>::Initialize(const char* const file_name,
                                     uint32_t channel_count,
                                     uint32_t frame_rate,
                                     uint32_t bits_per_sample) {
@@ -217,7 +217,7 @@ void WavWriter<enabled>::Initialize(const char* const file_name,
   file_.reset(::open(file_name_.c_str(), O_RDWR | O_CREAT));
   if (!file_.is_valid()) {
     FXL_LOG(WARNING) << "Failed to open '" << file_name_ << "'";
-    return;
+    return false;
   }
 
   // Save the media format params
@@ -233,79 +233,120 @@ void WavWriter<enabled>::Initialize(const char* const file_name,
     Delete();
     FXL_LOG(WARNING) << "Failed (" << status << ") writing initial header for '"
                      << file_name_ << "'.";
-  } else {
-    FXL_LOG(INFO) << "WavWriter[" << this << "] recording " << bits_per_sample_
-                  << "-bit " << frame_rate_ << " Hz " << channel_count_
-                  << "-chan PCM to '" << file_name_ << "'";
+    return false;
   }
+  FXL_LOG(INFO) << "WavWriter[" << this << "] recording " << bits_per_sample_
+                << "-bit " << frame_rate_ << " Hz " << channel_count_
+                << "-chan PCM to '" << file_name_ << "'";
+  return true;
 }
 
 // Write audio data to the file. This assumes that SEEK_SET is at end of file.
 // This can be called repeatedly without updating the header's length fields, if
 // desired. To update the header, the caller should also invoke UpdateHeader().
 template <bool enabled>
-void WavWriter<enabled>::Write(void* const buffer, uint32_t num_bytes) {
-  if (file_.is_valid()) {
-    ssize_t amt = WriteData(file_.get(), buffer, num_bytes);
-
-    if (amt >= 0) {
-      payload_written_ += amt;
-    } else {
-      FXL_LOG(WARNING) << "Failed (" << amt << ") while writing to '"
-                       << file_name_ << "'.";
-    }
-    if (amt < num_bytes) {
-      FXL_LOG(WARNING) << "Could not write all bytes to the file. Closing.";
-      Close();
-    }
+bool WavWriter<enabled>::Write(void* const buffer, uint32_t num_bytes) {
+  if (!file_.is_valid()) {
+    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
+    return false;
   }
+
+  ssize_t amt = WriteData(file_.get(), buffer, num_bytes);
+  if (amt < 0) {
+    FXL_LOG(WARNING) << "Failed (" << amt << ") while writing to '"
+                     << file_name_ << "'.";
+    return false;
+  }
+
+  payload_written_ += amt;
+  if (amt < num_bytes) {
+    FXL_LOG(WARNING) << "Could not write all bytes to the file. "
+                     << "Closing file to try to save already-written data.";
+    Close();
+    return false;
+  }
+
+  return true;
 }
 
 // We've previously written audio data to the file, so update the length fields.
 // This method need not write the entire header -- only the two length fields.
 template <bool enabled>
-void WavWriter<enabled>::UpdateHeader() {
-  if (file_.is_valid()) {
-    zx_status_t status = UpdateHeaderLengths(file_.get(), payload_written_);
-    if (status < 0) {
-      FXL_LOG(WARNING) << "Failed (" << status << ") to update WavHeader for '"
-                       << file_name_ << "'.";
-    }
+bool WavWriter<enabled>::UpdateHeader() {
+  if (!file_.is_valid()) {
+    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
+    return false;
   }
+
+  zx_status_t status = UpdateHeaderLengths(file_.get(), payload_written_);
+  if (status < 0) {
+    FXL_LOG(WARNING) << "Failed (" << status << ") to update WavHeader for '"
+                     << file_name_ << "'.";
+    return false;
+  }
+
+  return true;
 }
 
 // Discard all previously written audio data, and return the WAV file to an
 // empty (but ready to be written) state. Reclaim file space as possible.
 template <bool enabled>
-void WavWriter<enabled>::Reset() {
-  if (file_.is_valid()) {
-    payload_written_ = 0;
-    UpdateHeader();
-    if (::ftruncate(file_.get(), kWavHeaderOverhead) < 0) {
-      FXL_LOG(WARNING) << "Failed to truncate file, upon WavWritter::Reset().";
-      Close();
-    }
+bool WavWriter<enabled>::Reset() {
+  if (!file_.is_valid()) {
+    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
+    return false;
   }
+
+  payload_written_ = 0;
+  if (!UpdateHeader()) {
+    return false;
+  }
+
+  if (::ftruncate(file_.get(), kWavHeaderOverhead) < 0) {
+    FXL_LOG(WARNING) << "Failed to truncate file, upon WavWritter::Reset().";
+    Close();
+    return false;
+  }
+
+  return true;
 }
 
 // Finalize the file (update lengths in headers), and reset our file handle.
 // Any subsequent file updates will fail (although Delete can still succeed).
 template <bool enabled>
-void WavWriter<enabled>::Close() {
-  if (file_.is_valid()) {
-    FXL_LOG(INFO) << "Closing WAV file '" << file_name_ << "'";
-    // Keep any additional content since the last header update.
-    UpdateHeader();
-    file_.reset();
+bool WavWriter<enabled>::Close() {
+  if (!file_.is_valid()) {
+    FXL_LOG(WARNING) << "Invalid file '" << file_name_ << "'.";
+    return false;
   }
+
+  FXL_LOG(INFO) << "Closing WAV file '" << file_name_ << "'";
+  // Keep any additional content since the last header update.
+  if (!UpdateHeader()) {
+    return false;
+  }
+
+  file_.reset();
+  return true;
 }
 
-// Eliminate the WAV file. Always callable after Initialize (even post-Close).
+// Eliminate the WAV file (even if we've already closed it).
 template <bool enabled>
-void WavWriter<enabled>::Delete() {
+bool WavWriter<enabled>::Delete() {
   file_.reset();
+
+  // If called before Initialize, do nothing.
+  if (file_name_.empty()) {
+    return true;
+  }
+
   FXL_LOG(WARNING) << "Deleting WAV file '" << file_name_ << "'";
-  ::unlink(file_name_.c_str());
+  if (::unlink(file_name_.c_str()) < 0) {
+    FXL_LOG(WARNING) << "Could not delete file.";
+    return false;
+  }
+
+  return true;
 }
 
 // It should always be possible for a client to enable the WavWriter.

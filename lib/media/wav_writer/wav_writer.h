@@ -35,22 +35,22 @@ namespace audio {
 // Note that this library makes no effort to be thread-safe, so the client bears
 // all responsibilities for synchronization.
 //
-template <bool enabled>
+template <bool enabled = true>
 class WavWriter {
  public:
   WavWriter() {}
-  ~WavWriter() { Close(); }
+  ~WavWriter() {}
 
-  void Initialize(const char* const file_name,
+  bool Initialize(const char* const file_name,
                   uint32_t channel_count,
                   uint32_t frame_rate,
                   uint32_t bits_per_sample);
 
-  void Write(void* const buffer, uint32_t num_bytes);
-  void UpdateHeader();
-  void Reset();
-  void Close();
-  void Delete();
+  bool Write(void* const buffer, uint32_t num_bytes);
+  bool UpdateHeader();
+  bool Reset();
+  bool Close();
+  bool Delete();
 
  private:
   uint32_t channel_count_ = 0;
@@ -65,12 +65,14 @@ class WavWriter {
 template <>
 class WavWriter<false> {
  public:
-  void Initialize(const char* const, uint32_t, uint32_t, uint32_t){};
-  void Write(void* const, uint32_t){};
-  void UpdateHeader(){};
-  void Reset(){};
-  void Close(){};
-  void Delete(){};
+  bool Initialize(const char* const, uint32_t, uint32_t, uint32_t) {
+    return true;
+  };
+  bool Write(void* const, uint32_t) { return true; };
+  bool UpdateHeader() { return true; };
+  bool Reset() { return true; };
+  bool Close() { return true; };
+  bool Delete() { return true; };
 };
 
 }  // namespace audio

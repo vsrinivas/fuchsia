@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/files/unique_fd.h"
 #include "lib/media/fidl/audio_capturer.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
 
@@ -32,10 +32,10 @@ class WavRecorder : public media::AudioCapturerClient {
   media::AudioCapturerPtr capturer_;
   fidl::Binding<AudioCapturerClient> async_binding_;
   fsl::FDWaiter keystroke_waiter_;
+  media::audio::WavWriter<> wav_writer_;
 
   fxl::CommandLine cmd_line_;
-  fxl::UniqueFD wav_file_;
-  const char* filename_ = "<unknown>";
+  const char* filename_ = "";
   bool verbose_ = false;
   bool loopback_ = false;
 
@@ -50,7 +50,6 @@ class WavRecorder : public media::AudioCapturerClient {
   uint32_t bytes_per_frame_ = 0;
   size_t capture_frames_per_chunk_ = 0;
   size_t capture_frame_offset_ = 0;
-  size_t payload_written_ = 0;
   bool clean_shutdown_ = false;
 };
 

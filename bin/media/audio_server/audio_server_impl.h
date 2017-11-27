@@ -28,6 +28,8 @@ class AudioServerImpl : public AudioServer {
   ~AudioServerImpl() override;
 
   // AudioServer
+  // TODO(mpuryear): through the codebase, particularly in examples and headers,
+  // change 'audio_renderer' variables to 'audio_renderer_request' (media, etc).
   void CreateRenderer(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer,
       fidl::InterfaceRequest<MediaRenderer> media_renderer) final;

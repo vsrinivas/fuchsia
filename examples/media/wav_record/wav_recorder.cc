@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/examples/media/wav_record/wav_recorder.h"
+
 #include <fbl/auto_call.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -11,8 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
 
-#include "garnet/examples/media/wav_record/wav_hdr.h"
-#include "garnet/examples/media/wav_record/wav_recorder.h"
+#include "garnet/lib/media/wav_writer/wav_writer.h"
 
 namespace examples {
 
@@ -58,13 +59,6 @@ void WavRecorder::Run(app::ApplicationContext* app_context) {
   }
 
   filename_ = pos_args[0].c_str();
-
-  // Attempt to open our output file.
-  wav_file_.reset(::open(filename_, O_RDWR | O_CREAT));
-  if (!wav_file_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open \"" << pos_args[0] << "\"";
-    return;
-  }
 
   // Connect to the mixer and obtain a capturer
   media::AudioServerPtr audio_server =
@@ -114,17 +108,15 @@ void WavRecorder::Shutdown() {
   }
 
   if (clean_shutdown_) {
-    ::lseek(wav_file_.get(), 0, SEEK_SET);
-    WavHeader::Write(wav_file_.get(), channel_count_, frames_per_second_,
-                     payload_written_);
-    printf("done.\n");
-  }
-
-  bool delete_file = wav_file_.is_valid() && !clean_shutdown_;
-  wav_file_.reset();
-
-  if (delete_file) {
-    ::unlink(filename_);
+    if (wav_writer_.Close()) {
+      printf("done.\n");
+    } else {
+      printf("file close failed.\n");
+    }
+  } else {
+    if (!wav_writer_.Delete()) {
+      printf("Could not delete WAV file.\n");
+    }
   }
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -240,10 +232,8 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaTypePtr type) {
   bytes_per_frame_ = channel_count_ * sizeof(int16_t);
 
   // Write the inital WAV header
-  res =
-      WavHeader::Write(wav_file_.get(), channel_count_, frames_per_second_, 0);
-  if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to write initial WAV header (res " << res << ")";
+  if (!wav_writer_.Initialize(filename_, channel_count_, frames_per_second_,
+                              16)) {
     return;
   }
 
@@ -312,21 +302,17 @@ void WavRecorder::OnPacketCaptured(media::MediaPacketPtr pkt) {
 
   if (pkt->payload_size) {
     FXL_DCHECK(payload_buf_virt_);
-    FXL_DCHECK(wav_file_.is_valid());
 
-    auto tgt = reinterpret_cast<const uint8_t*>(payload_buf_virt_) +
-               pkt->payload_offset;
-    ssize_t amt = ::write(wav_file_.get(), tgt, pkt->payload_size);
-
-    if (amt < 0) {
-      FXL_LOG(ERROR) << "Failed to write " << pkt->payload_size << "bytes to \""
-                     << filename_ << "\"";
-      clean_shutdown_ = true;
+    auto tgt =
+        reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt->payload_offset;
+    if (!wav_writer_.Write(reinterpret_cast<void* const>(tgt),
+                           pkt->payload_size)) {
+      printf("File write failed. Trying to save any already-written data.\n");
+      if (!wav_writer_.Close()) {
+        printf("File close failed as well.\n");
+      }
       Shutdown();
-      return;
     }
-
-    payload_written_ += amt;
   }
 
   if (!clean_shutdown_ && !async_binding_.is_bound()) {

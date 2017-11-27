@@ -6,13 +6,12 @@ executable("wav_record") {
   sources =
       [
         "main.cc",
-        "wav_hdr.cc",
-        "wav_hdr.h",
         "wav_recorder.cc",
         "wav_recorder.h",
       ]
 
       deps = [
+        "//garnet/lib/media/wav_writer",
         "//garnet/public/lib/app/cpp",
         "//garnet/public/lib/media/audio",
         "//garnet/public/lib/media/fidl",

@@ -367,6 +367,8 @@ void AudioDeviceManager::OnDevicePlugged(
       }
     }
 
+    // TODO(mpuryear): Refactor this code for logic reuse as inputs come and go,
+    // regardless of whether they are loopbacks.
     if (is_lp) {
       for (auto& obj : capturers_) {
         FXL_DCHECK(obj.is_capturer());
