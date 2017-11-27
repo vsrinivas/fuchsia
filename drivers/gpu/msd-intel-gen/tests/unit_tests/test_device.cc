@@ -149,39 +149,9 @@ public:
 
         std::unique_ptr<MsdIntelDevice> device(
             MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false));
-        EXPECT_NE(device, nullptr);
+        ASSERT_NE(device, nullptr);
 
         EXPECT_TRUE(device->WaitIdle());
-
-        auto mapping = AddressSpace::MapBufferGpu(
-            device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "test"), PAGE_SIZE);
-        ASSERT_NE(mapping, nullptr);
-
-        gpu_addr_t target_gpu_addr = mapping->gpu_addr();
-
-        void* target_cpu_addr;
-        EXPECT_TRUE(mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));
-
-        auto batch_buffer =
-            std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
-        ASSERT_NE(batch_buffer, nullptr);
-
-        void* batch_cpu_addr;
-        EXPECT_TRUE(batch_buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
-
-        static constexpr uint32_t kDwordCount = 4;
-        static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
-
-        uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
-
-        // store dword
-        batch_ptr[0] = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt;
-        batch_ptr[1] = magma::lower_32_bits(target_gpu_addr);
-        batch_ptr[2] = magma::upper_32_bits(target_gpu_addr);
-        batch_ptr[3] = 0; // expected value
-
-        // batch end
-        batch_ptr[4] = (0xA << 23);
 
         bool ringbuffer_wrapped = false;
 
@@ -189,19 +159,43 @@ public:
         uint32_t num_iterations = 1;
 
         for (uint32_t iteration = 0; iteration < num_iterations; iteration++) {
+            auto dst_mapping = AddressSpace::MapBufferGpu(
+                device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "dst"), PAGE_SIZE);
+            ASSERT_NE(dst_mapping, nullptr);
+
+            void* dst_cpu_addr;
+            EXPECT_TRUE(dst_mapping->buffer()->platform_buffer()->MapCpu(&dst_cpu_addr));
+
+            auto batch_buffer =
+                std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "batchbuffer"));
+            ASSERT_NE(batch_buffer, nullptr);
+
+            void* batch_cpu_addr;
+            ASSERT_TRUE(batch_buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
+            uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
+
             auto batch_mapping = AddressSpace::MapBufferGpu(device->gtt(), batch_buffer, PAGE_SIZE);
             ASSERT_NE(batch_mapping, nullptr);
 
-            // Initialize the target
-            *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xdeadbeef;
-
             uint32_t expected_val = 0x8000000 + iteration;
+            uint64_t offset =
+                (iteration * sizeof(uint32_t)) % dst_mapping->buffer()->platform_buffer()->size();
+
+            static constexpr uint32_t kDwordCount = 4;
+            static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
+            batch_ptr[0] = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt; // store dword
+            batch_ptr[1] = magma::lower_32_bits(dst_mapping->gpu_addr() + offset);
+            batch_ptr[2] = magma::upper_32_bits(dst_mapping->gpu_addr() + offset);
             batch_ptr[3] = expected_val;
+            batch_ptr[4] = (0xA << 23); // batch end
 
             auto ringbuffer =
                 device->global_context()->get_ringbuffer(device->render_engine_cs()->id());
 
             uint32_t tail_start = ringbuffer->tail();
+
+            // Initialize the target
+            reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)] = 0xdeadbeef;
 
             EXPECT_TRUE(TestEngineCommandStreamer::ExecBatch(
                 device->render_engine_cs(),
@@ -212,7 +206,8 @@ public:
 
             EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 
-            uint32_t target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
+            uint32_t target_val =
+                reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)];
             EXPECT_EQ(target_val, expected_val);
 
             if (ringbuffer->tail() < tail_start) {
@@ -224,13 +219,12 @@ public:
             if (should_wrap_ringbuffer && num_iterations == 1)
                 num_iterations =
                     (ringbuffer->size() - tail_start) / (ringbuffer->tail() - tail_start) + 10;
-
-            // printf("completed iteration %d num_iterations %d target_val 0x%x\n", iteration,
-            // num_iterations, target_val);
         }
 
         if (should_wrap_ringbuffer)
             EXPECT_TRUE(ringbuffer_wrapped);
+
+        DLOG("Finished, num_iterations %u", num_iterations);
     }
 
     void ProcessRequest()
