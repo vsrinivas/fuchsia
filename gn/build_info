@@ -1,12 +1,1 @@
-{
-    "resources": [
-        {
-            "bootfs_path": "data/build/last-update",
-            "file": "build/last-update"
-        },
-        {
-            "bootfs_path": "data/build/snapshot",
-            "file": ".jiri_root/update_history/latest"
-        }
-    ]
-}
+{}
