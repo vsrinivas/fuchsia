@@ -31,8 +31,6 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst_decode(bad_len, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t bad_disp[] = {0x89, 0b01000000};
     EXPECT_EQ(inst_decode(bad_disp, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-    uint8_t has_sib[] = {0x89, 0b01000100, 0, 0};
-    EXPECT_EQ(inst_decode(has_sib, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
     uint8_t bad_h66[] = {0x66, 0b01001000, 0x89, 0b00010000};
     EXPECT_EQ(inst_decode(bad_h66, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
@@ -92,6 +90,33 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.reg, &vcpu_state.r14);
     EXPECT_NULL(inst.flags);
 
+    // mov %ebx, (%rax,%rcx,2)
+    uint8_t mov_sib[] = {0x89, 0b00011100, 0b01001000};
+    EXPECT_EQ(inst_decode(mov_sib, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // mov %ebx, 0x04(%rax,%rcx,1)
+    uint8_t mov_sib_disp[] = {0x89, 0b01011100, 0b00001000, 0x04};
+    EXPECT_EQ(inst_decode(mov_sib_disp, 4, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // mov %eax, 0xABCDEF
+    uint8_t mov_sib_nobase[] = {0x89, 0b00000100, 0b00100101, 0xEF, 0xCD, 0xAB, 0x00};
+    EXPECT_EQ(inst_decode(mov_sib_nobase, 7, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rax);
+    EXPECT_NULL(inst.flags);
+
     END_TEST;
 }
 
@@ -133,8 +158,6 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst_decode(bad_len, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t bad_disp[] = {0x8b, 0b01000000};
     EXPECT_EQ(inst_decode(bad_disp, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-    uint8_t has_sib[] = {0x8b, 0b01000100, 0, 0};
-    EXPECT_EQ(inst_decode(has_sib, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
     uint8_t bad_h66[] = {0x66, 0b01001000, 0x8b, 0b00010000};
     EXPECT_EQ(inst_decode(bad_h66, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
@@ -194,6 +217,33 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.reg, &vcpu_state.r14);
     EXPECT_NULL(inst.flags);
 
+    // mov (%rax,%rcx,2), %ebx
+    uint8_t mov_sib[] = {0x8b, 0b00011100, 0b01001000};
+    EXPECT_EQ(inst_decode(mov_sib, 3, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // mov 0x04(%rax,%rcx,1), %ebx
+    uint8_t mov_sib_disp[] = {0x8b, 0b01011100, 0b00001000, 0x04};
+    EXPECT_EQ(inst_decode(mov_sib_disp, 4, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // mov 0xABCDEF, %eax
+    uint8_t mov_sib_nobase[] = {0x8b, 0b00000100, 0b00100101, 0xEF, 0xCD, 0xAB, 0x00};
+    EXPECT_EQ(inst_decode(mov_sib_nobase, 7, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rax);
+    EXPECT_NULL(inst.flags);
+
     END_TEST;
 }
 
@@ -234,8 +284,6 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst_decode(bad_len, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t bad_disp[] = {0xc7, 0b01000000};
     EXPECT_EQ(inst_decode(bad_disp, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-    uint8_t has_sib[] = {0xc7, 0b01000100, 0, 0, 0, 0, 0, 0};
-    EXPECT_EQ(inst_decode(has_sib, 8, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
     uint8_t bad_mod_rm[] = {0xc7, 0b00111000, 0x1, 0, 0, 0};
     EXPECT_EQ(inst_decode(bad_mod_rm, 6, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
     uint8_t bad_h66[] = {0x66, 0b01001000, 0xc7, 0, 0, 0, 0, 0x1};
@@ -288,6 +336,34 @@ static bool decode_mov_c7(void) {
     EXPECT_NULL(inst.reg);
     EXPECT_NULL(inst.flags);
 
+    // movl 0x10, (%rax,%rcx,2)
+    uint8_t mov_sib[] = {0xc7, 0b00000100, 0b01001000, 0x10, 0, 0, 0};
+    EXPECT_EQ(inst_decode(mov_sib, 7, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0x10u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_NULL(inst.flags);
+
+    // movl 0x10, 0x04(%rax,%rcx,1)
+    uint8_t mov_sib_disp[] = {0xc7, 0b01000100, 0b00001000, 0x04, 0x10, 0, 0, 0};
+    EXPECT_EQ(inst_decode(mov_sib_disp, 8, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0x10u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_NULL(inst.flags);
+
+    // movl 0x10, 0xABCDEF
+    uint8_t mov_sib_nobase[] =
+        {0xc7, 0b00000100, 0b00100101, 0xEF, 0xCD, 0xAB, 0x00, 0x10, 0, 0, 0};
+    EXPECT_EQ(inst_decode(mov_sib_nobase, 11, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_WRITE);
+    EXPECT_EQ(inst.access_size, 4u);
+    EXPECT_EQ(inst.imm, 0x10u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_NULL(inst.flags);
+
     END_TEST;
 }
 
@@ -315,8 +391,6 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst_decode(bad_len, 4, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t bad_disp[] = {0x0f, 0xb6, 0b01000000};
     EXPECT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-    uint8_t has_sib[] = {0x0f, 0xb6, 0b01000100, 0, 0};
-    EXPECT_EQ(inst_decode(has_sib, 5, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
     // movzb (%rax), %ecx
     uint8_t movz[] = {0x0f, 0xb6, 0b00001000};
@@ -383,6 +457,33 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.reg, &vcpu_state.rsi);
     EXPECT_NULL(inst.flags);
 
+    // movzb (%rax,%rcx,2), %bx
+    uint8_t mov_sib[] = {0x66, 0x0f, 0xb6, 0b00011100, 0b01001000};
+    EXPECT_EQ(inst_decode(mov_sib, 5, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // movzb 0x04(%rax,%rcx,1), %bx
+    uint8_t mov_sib_disp[] = {0x66, 0x0f, 0xb6, 0b01011100, 0b00001000, 0x04};
+    EXPECT_EQ(inst_decode(mov_sib_disp, 6, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // movzb 0xABCDEF, %ax
+    uint8_t mov_sib_nobase[] = {0x66, 0x0f, 0xb6, 0b00000100, 0b00100101, 0xEF, 0xCD, 0xAB, 0x00};
+    EXPECT_EQ(inst_decode(mov_sib_nobase, 9, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 1u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rax);
+    EXPECT_NULL(inst.flags);
+
     END_TEST;
 }
 
@@ -393,8 +494,6 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst_decode(bad_len, 4, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t bad_disp[] = {0x0f, 0xb7, 0b01000000};
     EXPECT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-    uint8_t has_sib[] = {0x0f, 0xb7, 0b01000100, 0, 0};
-    EXPECT_EQ(inst_decode(has_sib, 5, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
     uint8_t has_h66[] = {0x66, 0x0f, 0xb7, 0b00001000};
     EXPECT_EQ(inst_decode(has_h66, 4, nullptr, nullptr), ZX_ERR_BAD_STATE);
 
@@ -454,6 +553,33 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.reg, &vcpu_state.rsi);
     EXPECT_NULL(inst.flags);
 
+    // movzw (%rax,%rcx,2), %ebx
+    uint8_t mov_sib[] = {0x0f, 0xb7, 0b00011100, 0b01001000};
+    EXPECT_EQ(inst_decode(mov_sib, 4, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 2u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // movzw 0x04(%rax,%rcx,1), %ebx
+    uint8_t mov_sib_disp[] = {0x0f, 0xb7, 0b01011100, 0b00001000, 0x04};
+    EXPECT_EQ(inst_decode(mov_sib_disp, 5, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 2u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rbx);
+    EXPECT_NULL(inst.flags);
+
+    // movzw 0xABCDEF, %eax
+    uint8_t mov_sib_nobase[] = {0x0f, 0xb7, 0b00000100, 0b00100101, 0xEF, 0xCD, 0xAB, 0x00};
+    EXPECT_EQ(inst_decode(mov_sib_nobase, 8, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.access_size, 2u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rax);
+    EXPECT_NULL(inst.flags);
+
     END_TEST;
 }
 
@@ -464,8 +590,6 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst_decode(bad_len, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
     uint8_t bad_disp[] = {0xf6, 0b01000000, 0};
     EXPECT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-    uint8_t has_sib[] = {0xf6, 0b01000100, 0, 0};
-    EXPECT_EQ(inst_decode(has_sib, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
     uint8_t bad_mod_rm[] = {0xf6, 0b00111000, 0x1};
     EXPECT_EQ(inst_decode(bad_mod_rm, 3, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
     uint8_t has_h66[] = {0x66, 0xf6, 0b00001000, 0};
@@ -494,6 +618,33 @@ static bool decode_test_f6(void) {
     // test 0x11, -0x1000000(%rbx)
     uint8_t test_disp_4[] = {0xf6, 0b10000011, 0, 0, 0, 0xff, 0x11};
     EXPECT_EQ(inst_decode(test_disp_4, 7, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_TEST);
+    EXPECT_EQ(inst.access_size, 1u);
+    EXPECT_EQ(inst.imm, 0x11u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+    // test 0x11, (%rax,%rcx,2)
+    uint8_t test_sib[] = {0xf6, 0b00000100, 0b01001000, 0x11};
+    EXPECT_EQ(inst_decode(test_sib, 4, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_TEST);
+    EXPECT_EQ(inst.access_size, 1u);
+    EXPECT_EQ(inst.imm, 0x11u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+    // test 0x11, 0x04(%rax,%rcx,1)
+    uint8_t test_sib_disp[] = {0xf6, 0b01000100, 0b00001000, 0x04, 0x11};
+    EXPECT_EQ(inst_decode(test_sib_disp, 5, &vcpu_state, &inst), ZX_OK);
+    EXPECT_EQ(inst.type, INST_TEST);
+    EXPECT_EQ(inst.access_size, 1u);
+    EXPECT_EQ(inst.imm, 0x11u);
+    EXPECT_NULL(inst.reg);
+    EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+    // test 0x11, 0xABCDEF
+    uint8_t test_sib_nobase[] = {0xf6, 0b00000100, 0b00100101, 0xEF, 0xCD, 0xAB, 0x00, 0x11};
+    EXPECT_EQ(inst_decode(test_sib_nobase, 8, &vcpu_state, &inst), ZX_OK);
     EXPECT_EQ(inst.type, INST_TEST);
     EXPECT_EQ(inst.access_size, 1u);
     EXPECT_EQ(inst.imm, 0x11u);
