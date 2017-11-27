@@ -11,9 +11,11 @@
 namespace cloud_provider_firestore {
 
 CloudProviderImpl::CloudProviderImpl(
+    std::string user_id,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
-    : firebase_auth_(std::move(firebase_auth)),
+    : user_id_(std::move(user_id)),
+      firebase_auth_(std::move(firebase_auth)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
   binding_.set_connection_error_handler([this] {

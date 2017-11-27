@@ -28,7 +28,7 @@ class FirebaseAuth {
   FirebaseAuth() {}
   virtual ~FirebaseAuth() {}
 
-  virtual void set_connection_error_handler(fxl::Closure on_error) {}
+  virtual void set_connection_error_handler(fxl::Closure /*on_error*/) {}
 
   // Retrieves the Firebase ID token suitable to use with Firebase Real-time
   // Database and Firebase Storage.

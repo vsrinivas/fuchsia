@@ -20,7 +20,7 @@ class App : public modular::Lifecycle {
   App()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
-        factory_impl_() {
+        factory_impl_(loop_.task_runner()) {
     FXL_DCHECK(application_context_);
   }
 

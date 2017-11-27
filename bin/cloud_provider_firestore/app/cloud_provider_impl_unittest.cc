@@ -20,7 +20,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop {
             message_loop_.task_runner());
     firebase_auth_ = firebase_auth.get();
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
-        std::move(firebase_auth), cloud_provider_.NewRequest());
+        "some user id", std::move(firebase_auth), cloud_provider_.NewRequest());
   }
   ~CloudProviderImplTest() override {}
 

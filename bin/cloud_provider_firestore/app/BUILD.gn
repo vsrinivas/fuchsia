@@ -39,6 +39,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/firebase_auth",
     "//peridot/bin/cloud_provider_firestore/fidl",
+    "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]
 
@@ -53,6 +54,7 @@ source_set("unittests") {
   sources = [
     "cloud_provider_impl_unittest.cc",
     "device_set_impl_unittest.cc",
+    "factory_impl_unittest.cc",
     "page_cloud_impl_unittest.cc",
   ]
 
@@ -61,6 +63,7 @@ source_set("unittests") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//peridot/bin/cloud_provider_firebase/firebase_auth/test",
+    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/test:lib",
   ]
 }

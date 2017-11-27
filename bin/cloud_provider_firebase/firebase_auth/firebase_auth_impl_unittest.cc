@@ -9,6 +9,7 @@
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_token_provider.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/test/test_backoff.h"
@@ -17,56 +18,7 @@ namespace firebase_auth {
 
 namespace {
 
-class TestTokenProvider : public modular::auth::TokenProvider {
- public:
-  explicit TestTokenProvider(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {
-    error_to_return = modular::auth::AuthErr::New();
-    error_to_return->status = modular::auth::Status::OK;
-    error_to_return->message = "";
-  }
-
-  // modular::auth::TokenProvider:
-  void GetAccessToken(const GetAccessTokenCallback& /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  void GetIdToken(const GetIdTokenCallback& /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  void GetFirebaseAuthToken(
-      const fidl::String& /*firebase_api_key*/,
-      const GetFirebaseAuthTokenCallback& callback) override {
-    task_runner_->PostTask(fxl::MakeCopyable(
-        [token_to_return = token_to_return.Clone(),
-         error_to_return = error_to_return.Clone(), callback]() mutable {
-          callback(std::move(token_to_return), std::move(error_to_return));
-        }));
-  }
-
-  void GetClientId(const GetClientIdCallback& /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  void Set(std::string id_token, std::string local_id, std::string email) {
-    token_to_return = modular::auth::FirebaseToken::New();
-    token_to_return->id_token = id_token;
-    token_to_return->local_id = local_id;
-    token_to_return->email = email;
-  }
-
-  void SetNull() { token_to_return = nullptr; }
-
-  modular::auth::FirebaseTokenPtr token_to_return;
-  modular::auth::AuthErrPtr error_to_return;
-
- private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
-};
-
-class FirebaseAuthImplTest : public test::TestWithMessageLoop {
+class FirebaseAuthImplTest : public ::test::TestWithMessageLoop {
  public:
   FirebaseAuthImplTest()
       : token_provider_(message_loop_.task_runner()),
@@ -85,7 +37,7 @@ class FirebaseAuthImplTest : public test::TestWithMessageLoop {
     return backoff;
   }
 
-  TestTokenProvider token_provider_;
+  test::TestTokenProvider token_provider_;
   fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
   FirebaseAuthImpl firebase_auth_;
   backoff::test::TestBackoff* backoff_;

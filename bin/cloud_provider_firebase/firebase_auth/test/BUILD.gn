@@ -13,10 +13,13 @@ source_set("test") {
   sources = [
     "test_firebase_auth.cc",
     "test_firebase_auth.h",
+    "test_token_provider.cc",
+    "test_token_provider.h",
   ]
 
   public_deps = [
     "//peridot/bin/cloud_provider_firebase/firebase_auth",
+    "//peridot/public/lib/auth/fidl",
   ]
 
   deps = [

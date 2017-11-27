@@ -21,6 +21,7 @@ namespace cloud_provider_firestore {
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
+      std::string user_id,
       std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
@@ -39,6 +40,8 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       const GetPageCloudCallback& callback) override;
 
   void EraseAllData(const EraseAllDataCallback& callback) override;
+
+  const std::string user_id_;
 
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
