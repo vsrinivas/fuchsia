@@ -320,21 +320,27 @@ mod tests {
     fn timer_basic() {
         let slack = 0.millis();
         let ten_ms = 10.millis();
-        let twenty_ms = 20.millis();
+        let five_secs = 5.seconds();
+        let six_secs = 6.seconds();
 
         // Create a timer
         let timer = Timer::create(ClockId::Monotonic).unwrap();
 
         // Should not signal yet.
-        assert_eq!(timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(
+            timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
+            Err(Status::TIMED_OUT));
 
         // Set it, and soon it should signal.
-        assert_eq!(timer.set(ten_ms.after_now(), slack), Ok(()));
-        assert_eq!(timer.wait_handle(Signals::TIMER_SIGNALED, twenty_ms.after_now()).unwrap(),
-            Signals::TIMER_SIGNALED);
+        assert_eq!(timer.set(five_secs.after_now(), slack), Ok(()));
+        assert_eq!(
+            timer.wait_handle(Signals::TIMER_SIGNALED, six_secs.after_now()),
+            Ok(Signals::TIMER_SIGNALED));
 
         // Cancel it, and it should stop signalling.
         assert_eq!(timer.cancel(), Ok(()));
-        assert_eq!(timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(
+            timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
+            Err(Status::TIMED_OUT));
     }
 }
