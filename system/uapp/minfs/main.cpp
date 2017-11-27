@@ -456,7 +456,7 @@ int main(int argc, char** argv) {
                 return -1;
             }
         } else {
-            int fd = open(fn, O_CREAT);
+            int fd = open(fn, O_CREAT, 0666);
             if (!fd) {
                 fprintf(stderr, "minfs: failed to create %s: %s", fn, strerror(errno));
                 return -1;
