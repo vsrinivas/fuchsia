@@ -73,6 +73,7 @@ executable("machina-unittests") {
     "input-unittest.cc",
     "pci-unittest.cc",
     "run_all_unittests.cc",
+    "virtio-unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
   ]

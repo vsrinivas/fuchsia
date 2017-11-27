@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/virtio.h>
-#include <unittest/unittest.h>
+#include "garnet/lib/machina/virtio.h"
 
-#include "virtio_queue_fake.h"
+#include "garnet/lib/machina/virtio_queue_fake.h"
+#include "gtest/gtest.h"
 
 #define QUEUE_SIZE 16
 
@@ -29,9 +29,7 @@ private:
     VirtioQueueFake queue_fake_;
 };
 
-static bool test_virtio_queue_overflow(void) {
-    BEGIN_TEST;
-
+TEST(VirtioQueueTest, HandleOverflow) {
     TestDevice device;
     ASSERT_EQ(device.Init(), ZX_OK);
     virtio_queue_t& queue = device.queue();
@@ -55,9 +53,4 @@ static bool test_virtio_queue_overflow(void) {
     ASSERT_EQ(desc, expected_desc);
     ASSERT_EQ(queue.avail->idx, 0);
     ASSERT_EQ(queue.index, 0);
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(virtio_queue)
-RUN_TEST(test_virtio_queue_overflow);
-END_TEST_CASE(virtio_queue)
