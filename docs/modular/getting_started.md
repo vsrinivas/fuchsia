@@ -13,7 +13,7 @@ Fuchsia to prevent `device_runner` and Armadillo from starting by default. Use
 fset and rebuild as shown below:
 
 ``` sh
-fx set x86-64 --packages build/gn/boot_test_modular
+fx set x86-64 --packages peridot/packages/boot_test_modular
 fx full-build
 ```
 
