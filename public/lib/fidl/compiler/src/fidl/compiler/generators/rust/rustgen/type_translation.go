@@ -84,6 +84,17 @@ var reservedRustKeywords map[string]bool = map[string]bool{
 	"Some":   true,
 	"None":   true,
 	"Box":    true,
+
+	// Names used by the FIDL bindings
+	"Server": true,
+	"Client": true,
+	"Dispatcher": true,
+	"DispatchResponseFuture": true,
+	"DispatchFuture": true,
+	"Proxy": true,
+	"Service": true,
+	"NAME": true,
+	"VERSION": true,
 }
 
 func isReservedKeyword(keyword string) bool {
