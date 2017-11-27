@@ -17,6 +17,10 @@ executable("bin") {
     "//garnet/lib/machina",
     "//zircon/system/ulib/fbl",
   ]
+
+  libs = [
+    "hypervisor",
+  ]
 }
 
 package("guest") {

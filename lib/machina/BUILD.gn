@@ -13,7 +13,7 @@ config("machina_config") {
   }
 }
 
-source_set("machina") {
+shared_library("machina") {
   sources = [
     "balloon.cc",
     "block.cc",
@@ -62,6 +62,7 @@ source_set("machina") {
   ]
 
   libs = [
+    "fdio",
     "hid",
     "hypervisor",
     "sync",
@@ -69,6 +70,9 @@ source_set("machina") {
   ]
 
   public_configs = [":machina_config"]
+
+  # TODO(ZX-1411): Add visibility annotations to code and remove this.
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 executable("machina-unittests") {
