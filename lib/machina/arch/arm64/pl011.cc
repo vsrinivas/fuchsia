@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 
@@ -30,7 +31,10 @@ zx_status_t Pl011::Init(Guest* guest, uint64_t addr) {
 zx_status_t Pl011::Read(uint64_t addr, IoValue* io) const {
     switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR:
-        io->u16 = control_;
+        {
+            fbl::AutoLock lock(&mutex_);
+            io->u16 = control_;
+        }
         return ZX_OK;
     case Pl011Register::FR:
         io->u16 = 0;
@@ -44,7 +48,10 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* io) const {
 zx_status_t Pl011::Write(uint64_t addr, const IoValue& io) {
     switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR:
-        control_ = io.u16;
+        {
+            fbl::AutoLock lock(&mutex_);
+            control_ = io.u16;
+        }
         return ZX_OK;
     case Pl011Register::DR:
         Print(io.u8);
@@ -60,10 +67,13 @@ zx_status_t Pl011::Write(uint64_t addr, const IoValue& io) {
 }
 
 void Pl011::Print(uint8_t ch) {
-    tx_buffer_[tx_offset_++] = ch;
-    if (tx_offset_ < kBufferSize && ch != '\r')
-        return;
-    fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
+    {
+        fbl::AutoLock lock(&mutex_);
+        tx_buffer_[tx_offset_++] = ch;
+        if (tx_offset_ < kBufferSize && ch != '\r')
+            return;
+        fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
+        tx_offset_ = 0;
+    }
     fflush(stdout);
-    tx_offset_ = 0;
 }

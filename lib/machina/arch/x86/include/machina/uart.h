@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_UART_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_INCLUDE_MACHINA_UART_H_
 
+#include <fbl/mutex.h>
 #include <hypervisor/io.h>
 
 class Guest;
@@ -20,12 +21,13 @@ public:
 
 private:
     static const size_t kBufferSize = 128;
+    mutable fbl::Mutex mutex_;
 
     uint8_t tx_buffer_[kBufferSize] = {};
     uint16_t tx_offset_ = 0;
 
-    uint8_t interrupt_enable_ = 0;
-    uint8_t line_control_ = 0;
+    uint8_t interrupt_enable_ __TA_GUARDED(mutex_) = 0;
+    uint8_t line_control_ __TA_GUARDED(mutex_) = 0;
 
     void Print(uint8_t ch);
 };

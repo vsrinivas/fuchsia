@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 
@@ -51,11 +52,17 @@ zx_status_t I8250::Read(uint64_t addr, IoValue* io) const {
     switch (static_cast<I8250Register>(addr)) {
     case I8250Register::INTERRUPT_ENABLE:
         io->access_size = 1;
-        io->u8 = interrupt_enable_;
+        {
+            fbl::AutoLock lock(&mutex_);
+            io->u8 = interrupt_enable_;
+        }
         return ZX_OK;
     case I8250Register::LINE_CONTROL:
         io->access_size = 1;
-        io->u8 = line_control_;
+        {
+            fbl::AutoLock lock(&mutex_);
+            io->u8 = line_control_;
+        }
         return ZX_OK;
     case I8250Register::LINE_STATUS:
         io->access_size = 1;
@@ -84,12 +91,18 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
     case I8250Register::INTERRUPT_ENABLE:
         if (io.access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        interrupt_enable_ = io.u8;
+        {
+            fbl::AutoLock lock(&mutex_);
+            interrupt_enable_ = io.u8;
+        }
         return ZX_OK;
     case I8250Register::LINE_CONTROL:
         if (io.access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        line_control_ = io.u8;
+        {
+            fbl::AutoLock lock(&mutex_);
+            line_control_ = io.u8;
+        }
         return ZX_OK;
     case I8250Register::INTERRUPT_ID:
     case I8250Register::MODEM_CONTROL... I8250Register::SCRATCH:
