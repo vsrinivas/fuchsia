@@ -111,6 +111,7 @@ executable("modular_unittests_bin") {
     "//peridot/bin/entity:unittests",
     "//peridot/bin/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
+    "//peridot/public/lib/entity/cpp:json_unittest",
   ]
 }
 

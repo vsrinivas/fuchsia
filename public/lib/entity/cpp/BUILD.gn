@@ -19,3 +19,17 @@ source_set("json") {
     "//third_party/rapidjson",
   ]
 }
+
+source_set("json_unittest") {
+  testonly = true
+
+  sources = [
+    "json_unittest.cc",
+  ]
+
+  deps = [
+    ":json",
+    "//third_party/gtest",
+    "//third_party/rapidjson",
+  ]
+}

@@ -20,8 +20,8 @@ bool EntityReferenceFromJson(const std::string& json, std::string* ref);
 bool EntityReferenceFromJson(const rapidjson::Value& value, std::string* ref);
 
 // Extracts the values of the JSON object |doc|'s "@type" attribute into
-// |types|. Returns false and leaves |types| untouched if |doc| is not a JSON
-// object or is not structured correctly.
+// |types|. Returns false and leaves |types| untouched if |doc| is not JSON
+// or is not structured in a way that we can extract types.
 bool ExtractEntityTypesFromJson(const std::string& json,
                                 std::vector<std::string>* types);
 

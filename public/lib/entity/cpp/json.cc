@@ -15,6 +15,8 @@ namespace modular {
 constexpr char kEntityTypeProperty[] = "@type";
 constexpr char kEntityRefAttribute[] = "@entityRef";
 
+constexpr char kEntityTypeString[] = "com.google.fuchsia.string";
+
 std::string EntityReferenceToJson(const std::string& ref) {
   auto doc = EntityReferenceToJsonDoc(ref);
 
@@ -23,6 +25,7 @@ std::string EntityReferenceToJson(const std::string& ref) {
   doc.Accept(writer);
   return buffer.GetString();
 }
+
 rapidjson::Document EntityReferenceToJsonDoc(const std::string& ref) {
   // Create an object that looks like:
   // {
@@ -47,7 +50,10 @@ bool EntityReferenceFromJson(const rapidjson::Value& value, std::string* ref) {
   if (!value.HasMember(kEntityRefAttribute))
     return false;
 
-  *ref = value[kEntityRefAttribute].GetString();
+  auto& attr = value[kEntityRefAttribute];
+  if (!attr.IsString())
+    return false;
+  *ref = attr.GetString();
   return true;
 }
 
@@ -63,7 +69,10 @@ bool ExtractEntityTypesFromJson(const std::string& json,
   }
 
   std::vector<std::string> entity_types;
-  if (doc.IsObject() && doc.HasMember(kEntityTypeProperty)) {
+
+  if (doc.IsString()) {
+    entity_types.push_back(kEntityTypeString);
+  } else if (doc.IsObject() && doc.HasMember(kEntityTypeProperty)) {
     const auto& types = doc[kEntityTypeProperty];
     if (types.IsString()) {
       entity_types.push_back(types.GetString());
@@ -76,6 +85,8 @@ bool ExtractEntityTypesFromJson(const std::string& json,
     } else {
       return false;
     }
+  } else {
+    return false;
   }
 
   output->swap(entity_types);
