@@ -44,6 +44,12 @@ did not contain a '/'. Did you mean 'build/gn/%s' instead?
     return languages, imported
 
 
+def get_dep_from_package_name(package_name):
+    if package_name[0] == '/':
+        return '"%s"' % package_name
+    return '"//%s"' % package_name
+
+
 def main():
     parser = argparse.ArgumentParser(description="Determine languages used by set of modules")
     parser.add_argument("--modules", help="list of modules", default="build/gn/default")
@@ -55,7 +61,7 @@ def main():
 
     for language in ["cpp", "dart", "go", "rust"]:
         sys.stdout.write("have_%s = %s\n" % (language, str(language in languages).lower()))
-    sys.stdout.write("imported = [%s]\n" % ",".join(map(lambda package: '"//%s"' % package, imported)))
+    sys.stdout.write("imported = [%s]\n" % ",".join(map(get_dep_from_package_name, imported)))
     return 0
 
 if __name__ == "__main__":
