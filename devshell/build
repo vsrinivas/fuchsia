@@ -11,14 +11,11 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
 function main {
-  grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"
-  local -r use_goma_result="$?"
-
   # macOS needs a lower value of -j parameter, because it has a limit on the
   # number of open file descriptors. Use 4 * cpu_count, which works well in
   # practice.
   local concurrency_args=
-  if [[ use_goma_result -eq 0 ]]; then
+  if grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
     if [[ "$(uname -s)" = "Darwin" ]]; then
       numjobs=$(( $(sysctl -n hw.ncpu) * 4 ))
       concurrency_args="-j ${numjobs}"
