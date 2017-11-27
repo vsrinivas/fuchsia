@@ -6,9 +6,10 @@
 #define GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_
 
 #include <fbl/unique_ptr.h>
-#include <machina/virtio.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
+
+#include "garnet/lib/machina/virtio.h"
 
 class VirtioQueueFake;
 

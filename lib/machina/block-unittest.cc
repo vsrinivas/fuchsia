@@ -9,13 +9,13 @@
 
 #include <fbl/unique_ptr.h>
 #include <hypervisor/vcpu.h>
-#include <machina/block.h>
-#include <machina/virtio.h>
-#include <unittest/unittest.h>
 #include <virtio/block.h>
 #include <virtio/virtio_ring.h>
 
-#include "virtio_queue_fake.h"
+#include "garnet/lib/machina/block.h"
+#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_queue_fake.h"
+#include "gtest/gtest.h"
 
 #define QUEUE_SIZE 8u
 #define DATA_SIZE 512u
@@ -83,9 +83,7 @@ private:
     VirtioQueueFake queue_;
 };
 
-static bool file_block_device_bad_header(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, BadHeader) {
     char path[] = "/tmp/file-block-device-bad-header.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -112,13 +110,9 @@ static bool file_block_device_bad_header(void) {
         ZX_OK);
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
-
-    END_TEST;
 }
 
-static bool file_block_device_bad_payload(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, BadPayload) {
     char path[] = "/tmp/file-block-device-bad-payload.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -137,12 +131,9 @@ static bool file_block_device_bad_payload(void) {
         ZX_OK);
 
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
-    END_TEST;
 }
 
-static bool file_block_device_bad_status(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, BadStatus) {
     char path[] = "/tmp/file-block-device-bad-status.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -163,13 +154,9 @@ static bool file_block_device_bad_status(void) {
 
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, 0xff);
-
-    END_TEST;
 }
 
-static bool file_block_device_bad_request(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlock, BadRequest) {
     char path[] = "/tmp/file-block-device-bad-request.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -194,13 +181,9 @@ static bool file_block_device_bad_request(void) {
 
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_UNSUPP);
-
-    END_TEST;
 }
 
-static bool file_block_device_bad_flush(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlock, BadFlush) {
     char path[] = "/tmp/file-block-device-bad-flush.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -221,13 +204,9 @@ static bool file_block_device_bad_flush(void) {
 
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
-
-    END_TEST;
 }
 
-static bool file_block_device_read(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlock, Read) {
     char path[] = "/tmp/file-block-device-read.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -254,13 +233,9 @@ static bool file_block_device_read(void) {
     ASSERT_EQ(status, VIRTIO_BLK_S_OK);
     memset(expected, 0, DATA_SIZE);
     ASSERT_EQ(memcmp(data, expected, DATA_SIZE), 0);
-
-    END_TEST;
 }
 
-static bool file_block_device_read_chain(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlock, ReadChain) {
     char path[] = "/tmp/file-block-device-read-chain.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -291,13 +266,9 @@ static bool file_block_device_read_chain(void) {
     ASSERT_EQ(memcmp(data1, expected, DATA_SIZE), 0);
     ASSERT_EQ(memcmp(data2, expected, DATA_SIZE), 0);
     ASSERT_EQ(used, sizeof(data1) + sizeof(data2) + sizeof(status));
-
-    END_TEST;
 }
 
-static bool file_block_device_write(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlock, Write) {
     char path[] = "/tmp/file-block-device-write.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -328,14 +299,9 @@ static bool file_block_device_write(void) {
     uint8_t expected[DATA_SIZE];
     memset(expected, UINT8_MAX, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
-
-
-    END_TEST;
 }
 
-static bool file_block_device_write_chain(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, WriteChain) {
     char path[] = "/tmp/file-block-device-write-chain.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -370,13 +336,9 @@ static bool file_block_device_write_chain(void) {
     memset(expected, UINT8_MAX, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
     ASSERT_EQ(used, sizeof(status));
-
-    END_TEST;
 }
 
-static bool file_block_device_flush(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, Flush) {
     char path[] = "/tmp/file-block-device-flush.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -395,13 +357,9 @@ static bool file_block_device_flush(void) {
         ZX_OK);
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_OK);
-
-    END_TEST;
 }
 
-static bool file_block_device_flush_data(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, FlushWithData) {
     char path[] = "/tmp/file-block-device-flush-data.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -425,8 +383,6 @@ static bool file_block_device_flush_data(void) {
     ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_OK);
     ASSERT_EQ(used, sizeof(status));
-
-    END_TEST;
 }
 
 struct TestBlockRequest {
@@ -439,9 +395,7 @@ struct TestBlockRequest {
 
 // Queue up 2 read requests for different sectors and verify both will be
 // handled correctly.
-static bool file_block_device_multiple_descriptors(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, ReadMultipleDescriptors) {
     char path[] = "/tmp/file-block-multiple-descriptors.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -498,13 +452,9 @@ static bool file_block_device_multiple_descriptors(void) {
     ASSERT_EQ(memcmp(request2.data, expected, DATA_SIZE), 0);
     ASSERT_EQ(request2.status, VIRTIO_BLK_S_OK);
     ASSERT_EQ(request2.used, DATA_SIZE + sizeof(request2.status));
-
-    END_TEST;
 }
 
-static bool file_block_device_read_only(void) {
-    BEGIN_TEST;
-
+TEST(VirtioBlockTest, WriteToReadOnlyDevice) {
     char path[] = "/tmp/file-block-device-read-only.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
@@ -541,22 +491,4 @@ static bool file_block_device_read_only(void) {
     uint8_t expected[DATA_SIZE];
     memset(expected, 0, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(virtio_block)
-RUN_TEST(file_block_device_bad_header)
-RUN_TEST(file_block_device_bad_payload)
-RUN_TEST(file_block_device_bad_status)
-RUN_TEST(file_block_device_bad_request)
-RUN_TEST(file_block_device_bad_flush)
-RUN_TEST(file_block_device_read)
-RUN_TEST(file_block_device_read_chain)
-RUN_TEST(file_block_device_write)
-RUN_TEST(file_block_device_write_chain)
-RUN_TEST(file_block_device_flush)
-RUN_TEST(file_block_device_flush_data)
-RUN_TEST(file_block_device_multiple_descriptors)
-RUN_TEST(file_block_device_read_only)
-END_TEST_CASE(virtio_block)

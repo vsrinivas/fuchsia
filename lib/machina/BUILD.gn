@@ -68,12 +68,16 @@ executable("machina-unittests") {
   testonly = true
 
   sources = [
+    "block-unittest.cc",
     "run_all_unittests.cc",
+    "virtio_queue_fake.cc",
+    "virtio_queue_fake.h",
   ]
 
   deps = [
     ":machina",
     "//third_party/gtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
