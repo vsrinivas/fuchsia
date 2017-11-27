@@ -6,6 +6,7 @@
         "garnet/packages/benchmark_examples",
         "garnet/packages/bluetooth",
         "garnet/packages/boringssl",
+        "garnet/packages/build_info",
         "garnet/packages/cmdutils",
         "garnet/packages/cobalt_client",
         "garnet/packages/debugserver",
@@ -61,7 +62,6 @@
         "garnet/packages/vim",
         "garnet/packages/wlan_tests",
         "garnet/packages/wlanstack",
-        "garnet/packages/zircon_benchmarks",
-        "build/gn/build_info"
+        "garnet/packages/zircon_benchmarks"
     ]
 }

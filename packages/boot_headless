@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "garnet/packages/default"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/bootstrap/apps.config",
+            "file": "garnet/bin/bootstrap/boot_headless.config"
+        }
+    ]
+}
