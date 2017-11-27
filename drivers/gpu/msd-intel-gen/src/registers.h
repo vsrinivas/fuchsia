@@ -203,7 +203,7 @@ public:
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
 class ForceWake {
 public:
-    enum Domain { GEN8, GEN9_RENDER };
+    enum Domain { GEN9_RENDER };
 
     static constexpr uint32_t kOffset = 0xA188;
     static constexpr uint32_t kStatusOffset = 0x130044;
@@ -218,9 +218,6 @@ public:
         uint32_t val32 = mask;
         val32 = (val32 << 16) | val;
         switch (domain) {
-            case GEN8:
-                reg_io->Write32(kOffset, val32);
-                break;
             case GEN9_RENDER:
                 reg_io->Write32(kRenderOffset, val32);
                 break;
@@ -230,8 +227,6 @@ public:
     static uint16_t read_status(RegisterIo* reg_io, Domain domain)
     {
         switch (domain) {
-            case GEN8:
-                return static_cast<uint16_t>(reg_io->Read32(kStatusOffset));
             case GEN9_RENDER:
                 return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
         }

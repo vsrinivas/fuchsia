@@ -16,10 +16,6 @@ public:
     TestForceWake(registers::ForceWake::Domain domain) : domain_(domain)
     {
         switch (domain) {
-            case registers::ForceWake::GEN8:
-                offset_ = registers::ForceWake::kOffset;
-                status_offset_ = registers::ForceWake::kStatusOffset;
-                break;
             case registers::ForceWake::GEN9_RENDER:
                 offset_ = registers::ForceWake::kRenderOffset;
                 status_offset_ = registers::ForceWake::kRenderStatusOffset;
@@ -80,13 +76,11 @@ TEST(ForceWake, Reset)
     uint16_t device_id;
     ASSERT_TRUE(platform_device->ReadPciConfig16(2, &device_id));
 
-    if (DeviceId::is_gen8(device_id)) {
-        TestForceWake test(registers::ForceWake::GEN8);
-        test.Reset();
-    }
     if (DeviceId::is_gen9(device_id)) {
         TestForceWake test(registers::ForceWake::GEN9_RENDER);
         test.Reset();
+    } else {
+        ASSERT_TRUE(false);
     }
 }
 
@@ -98,13 +92,11 @@ TEST(ForceWake, Request)
     uint16_t device_id;
     ASSERT_TRUE(platform_device->ReadPciConfig16(2, &device_id));
 
-    if (DeviceId::is_gen8(device_id)) {
-        TestForceWake test(registers::ForceWake::GEN8);
-        test.Request();
-    }
     if (DeviceId::is_gen9(device_id)) {
         TestForceWake test(registers::ForceWake::GEN9_RENDER);
         test.Request();
+    } else {
+        ASSERT_TRUE(false);
     }
 }
 
@@ -116,12 +108,10 @@ TEST(ForceWake, Release)
     uint16_t device_id;
     ASSERT_TRUE(platform_device->ReadPciConfig16(2, &device_id));
 
-    if (DeviceId::is_gen8(device_id)) {
-        TestForceWake test(registers::ForceWake::GEN8);
-        test.Release();
-    }
     if (DeviceId::is_gen9(device_id)) {
         TestForceWake test(registers::ForceWake::GEN9_RENDER);
         test.Release();
+    } else {
+        ASSERT_TRUE(false);
     }
 }

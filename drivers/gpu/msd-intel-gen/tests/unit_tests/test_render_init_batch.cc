@@ -54,7 +54,5 @@ public:
 
 TEST(RenderInitBatch, Init)
 {
-    TestRenderInitBatch test;
-    test.Init(std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8()));
-    test.Init(std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9()));
+    TestRenderInitBatch().Init(std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9()));
 }

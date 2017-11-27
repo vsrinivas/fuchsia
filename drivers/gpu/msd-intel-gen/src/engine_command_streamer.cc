@@ -453,9 +453,7 @@ std::unique_ptr<RenderInitBatch>
 RenderEngineCommandStreamer::CreateRenderInitBatch(uint32_t device_id)
 {
     std::unique_ptr<RenderInitBatch> batch;
-    if (DeviceId::is_gen8(device_id)) {
-        return std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
-    } else if (DeviceId::is_gen9(device_id)) {
+    if (DeviceId::is_gen9(device_id)) {
         return std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
     }
     return DRETP(nullptr, "unhandled device id");

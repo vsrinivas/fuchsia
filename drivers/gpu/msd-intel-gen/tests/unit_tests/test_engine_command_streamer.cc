@@ -170,8 +170,6 @@ public:
             std::unique_ptr<RenderInitBatch> expected_batch;
             if (DeviceId::is_gen9(device_id_))
                 expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
-            if (DeviceId::is_gen8(device_id_))
-                expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
             ASSERT_NE(expected_batch, nullptr);
             EXPECT_EQ(init_batch->size(), expected_batch->size());
         }
@@ -343,12 +341,6 @@ TEST(RenderEngineCommandStreamer, InitHardware)
 {
     TestEngineCommandStreamer test;
     test.InitHardware();
-}
-
-TEST(RenderEngineCommandStreamer, RenderInitGen8)
-{
-    TestEngineCommandStreamer test(0x1616);
-    test.RenderInit();
 }
 
 TEST(RenderEngineCommandStreamer, RenderInitGen9)
