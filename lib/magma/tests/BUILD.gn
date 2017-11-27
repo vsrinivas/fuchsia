@@ -11,7 +11,7 @@ package("magma-test-build-only") {
 
   deps = []
 
-  if (build_libvulkan_arm_mali || build_intel_gen) {
+  if (have_libvulkan) {
     deps += [ ":tests" ]
     if (build_intel_gen) {
       deps += [
@@ -34,7 +34,7 @@ package("magma-test") {
   deps = []
   tests = []
 
-  if (build_libvulkan_arm_mali || build_intel_gen) {
+  if (have_libvulkan) {
     deps += [
       ":autorun",
       ":tests",
@@ -131,7 +131,7 @@ package("magma-test") {
   }
 }
 
-if (build_libvulkan_arm_mali || build_intel_gen) {
+if (have_libvulkan) {
   copy("autorun") {
     sources = [
       "$magma_build_root/scripts/autorun",

@@ -5,6 +5,10 @@
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+if (have_prebuilt_libvulkan_arm) {
+  libvulkan_gen_path = "$target_gen_dir/libvulkan"
+}
+
 # This target is not built but ensures that the packages don't reference
 # driver directories that are invalid for the current platform.
 group("platform_driver_nodeps") {
@@ -28,7 +32,7 @@ package("magma") {
   system_image = true
 
   deps = []
-  if (build_libvulkan_arm_mali || build_intel_gen) {
+  if (have_libvulkan) {
     deps += [
       ":libmagma",
       ":libvulkan",
@@ -60,6 +64,15 @@ package("magma") {
             path = rebase_path("icd/arm_icd.json")
             dest = "vulkan/icd.d/arm_icd.json"
           } ]
+    } else if (have_prebuilt_libvulkan_arm) {
+      libraries += [ {
+            source = "$libvulkan_gen_path/libvulkan_arm.so"
+            name = "libvulkan_arm.so"
+          } ]
+      resources = [ {
+            path = rebase_path("icd/arm_icd.json")
+            dest = "vulkan/icd.d/arm_icd.json"
+          } ]
     }
   }
 
@@ -77,7 +90,7 @@ package("magma-dev") {
 
   deps = []
 
-  if (build_libvulkan_arm_mali || build_intel_gen) {
+  if (have_libvulkan) {
     deps += [
       ":libmagma",
       ":libvulkan",
@@ -87,7 +100,7 @@ package("magma-dev") {
           name = "libmagma.so"
         } ]
 
-    if (target_cpu == "x64") {
+    if (build_intel_gen) {
       deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
 
       drivers = [ {
@@ -103,6 +116,15 @@ package("magma-dev") {
     }
     if (build_libvulkan_arm_mali) {
       libraries += [ {
+            name = "libvulkan_arm.so"
+          } ]
+      resources = [ {
+            path = rebase_path("icd/arm_icd.json")
+            dest = "vulkan/icd.d/arm_icd.json"
+          } ]
+    } else if (have_prebuilt_libvulkan_arm) {
+      libraries += [ {
+            source = "$libvulkan_gen_path/libvulkan_arm.so"
             name = "libvulkan_arm.so"
           } ]
       resources = [ {
@@ -135,7 +157,7 @@ package("magma-tools") {
 package("vkcube") {
   system_image = true
 
-  if (build_libvulkan_arm_mali || build_intel_gen) {
+  if (have_libvulkan) {
     deps = [
       "//garnet/lib/magma/tests/vkcube",
     ]
@@ -185,6 +207,20 @@ if (build_intel_gen) {
   group("libvulkan") {
     public_deps = [
       "$mali_build_root:libvulkan_arm",
+    ]
+  }
+} else if (have_prebuilt_libvulkan_arm) {
+  config("libvulkan_config") {
+    libs = [ "vulkan_arm" ]
+    lib_dirs = [ libvulkan_gen_path ]
+  }
+  copy("libvulkan") {
+    public_configs = [ ":libvulkan_config" ]
+    sources = [
+      prebuilt_libvulkan_arm_path,
+    ]
+    outputs = [
+      "$libvulkan_gen_path/libvulkan_arm.so",
     ]
   }
 }
