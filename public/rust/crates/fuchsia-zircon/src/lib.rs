@@ -42,14 +42,37 @@ macro_rules! impl_handle_based {
 }
 
 // Creates associated constants of TypeName of the form
-// `pub const NAME: TypeName = TypeName(value);`
-macro_rules! assoc_consts {
-    ($typename:ident, [$($name:ident = $num:expr;)*]) => {
+// `pub const NAME: TypeName = TypeName(path::to::value);`
+// and provides a private `assoc_const_name` method and a `Debug` implementation
+// for the type based on `$name`.
+// If multiple names match, the first will be used in `name` and `Debug`.
+macro_rules! assoc_values {
+    ($typename:ident, [$($name:ident = $value:path;)*]) => {
         #[allow(non_upper_case_globals)]
         impl $typename {
             $(
-                pub const $name: $typename = $typename($num);
+                pub const $name: $typename = $typename($value);
             )*
+
+            fn assoc_const_name(&self) -> Option<&'static str> {
+                match self.0 {
+                    $(
+                        $value => Some(stringify!($name)),
+                    )*
+                    _ => None,
+                }
+            }
+        }
+
+        impl ::std::fmt::Debug for $typename {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                f.write_str(concat!(stringify!($typename), "("))?;
+                match self.assoc_const_name() {
+                    Some(name) => f.write_str(&name)?,
+                    None => ::std::fmt::Debug::fmt(&self.0, f)?,
+                }
+                f.write_str(")")
+            }
         }
     }
 }

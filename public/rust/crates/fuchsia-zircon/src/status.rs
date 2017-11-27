@@ -9,7 +9,7 @@ use sys;
 /// generally constructed using the `ok` method, which checks for `ZX_OK` and returns a
 /// `Result<(), Status>` appropriately.
 #[repr(C)]
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Status(sys::zx_status_t);
 impl Status {
     /// Returns `Ok(())` if the status was `OK`,
@@ -30,7 +30,8 @@ impl Status {
         self.0
     }
 }
-assoc_consts!(Status, [
+
+assoc_values!(Status, [
     OK                 = sys::ZX_OK;
     INTERNAL           = sys::ZX_ERR_INTERNAL;
     NOT_SUPPORTED      = sys::ZX_ERR_NOT_SUPPORTED;
@@ -158,5 +159,23 @@ impl From<Status> for io::Error {
 impl From<NulError> for Status {
     fn from(_error: NulError) -> Status {
         Status::INVALID_ARGS
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Status;
+
+    #[test]
+    fn status_debug_format() {
+        let cases = [
+            ("Status(OK)", Status::OK),
+            ("Status(BAD_SYSCALL)", Status::BAD_SYSCALL),
+            ("Status(NEXT)", Status::NEXT),
+            ("Status(-5050)", Status(-5050)),
+        ];
+        for &(expected, value) in &cases {
+            assert_eq!(expected, format!("{:?}", value));
+        }
     }
 }

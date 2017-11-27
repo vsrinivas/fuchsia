@@ -122,7 +122,7 @@ impl Vmo {
 
 /// VM Object opcodes
 #[repr(C)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct VmoOp(u32);
 impl VmoOp {
     pub fn from_raw(raw: u32) -> VmoOp {
@@ -133,7 +133,7 @@ impl VmoOp {
     }
 }
 
-assoc_consts!(VmoOp, [
+assoc_values!(VmoOp, [
     COMMIT =           sys::ZX_VMO_OP_COMMIT;
     DECOMMIT =         sys::ZX_VMO_OP_DECOMMIT;
     LOCK =             sys::ZX_VMO_OP_LOCK;
