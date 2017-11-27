@@ -17,6 +17,9 @@ class ApMlme : public Mlme {
     explicit ApMlme(DeviceInterface* device);
     ~ApMlme();
 
+    // FrameHandler methods.
+    zx_status_t HandleMlmeStartReq(const StartRequest& req) override;
+
     // Mlme interface methods.
     zx_status_t Init() override;
     zx_status_t PreChannelChange(wlan_channel_t chan) override;

@@ -28,6 +28,12 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
+zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
+    debugfn();
+    // TODO(hahnr): Implement.
+    return ZX_OK;
+}
+
 zx_status_t ApMlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     // TODO(hahnr): Implement.
