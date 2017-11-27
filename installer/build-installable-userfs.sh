@@ -276,7 +276,7 @@ gn_gen_path="build/gn/gen.py"
 ninja_path="buildtools/ninja"
 build_dir_installer_system="out/installer-system-${build_arch}"
 
-"${script_dir}/../../$gn_gen_path" --build-dir "${build_dir_installer_system}" --target_cpu "${build_arch}" --packages build/gn/installer-system
+"${script_dir}/../../$gn_gen_path" --build-dir "${build_dir_installer_system}" --target_cpu "${build_arch}" --packages garnet/packages/installer-system
 
 sys_out="${script_dir}/../../${build_dir_installer_system}"
 "${script_dir}/../../${ninja_path}" -C "${sys_out}"
