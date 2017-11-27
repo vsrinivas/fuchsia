@@ -71,6 +71,7 @@ executable("machina-unittests") {
     "block-unittest.cc",
     "gpu-unittest.cc",
     "input-unittest.cc",
+    "pci-unittest.cc",
     "run_all_unittests.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
