@@ -2,7 +2,7 @@
 
 * [Home][home]
 * [Modular](/docs/modular/getting_started.md)
-* [Ledger](/docs/ledger)
+* [Ledger](/docs/ledger/README.md)
 * [Daisy](/docs/modular/daisy.md)
 * [Entity](/docs/modular/entity.md)
 * [Examples](/examples)
