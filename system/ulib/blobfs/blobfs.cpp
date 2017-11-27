@@ -171,13 +171,15 @@ uint64_t VnodeBlob::SizeData() const {
 
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest)
     : blobfs_(fbl::move(bs)),
-      flags_(kBlobStateEmpty) {
+      flags_(kBlobStateEmpty),
+      syncing_(false) {
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs)
     : blobfs_(fbl::move(bs)),
-      flags_(kBlobStateEmpty | kBlobFlagDirectory) {}
+      flags_(kBlobStateEmpty | kBlobFlagDirectory),
+      syncing_(false)  {}
 
 void VnodeBlob::BlobCloseHandles() {
     blob_ = nullptr;
@@ -212,10 +214,14 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
             return status;
         }
         SetState(kBlobStateDataWrite);
-        if ((status = WriteMetadata()) != ZX_OK) {
+        fbl::unique_ptr<WritebackWork> wb;
+        if ((status = blobfs_->CreateWork(&wb, this)) != ZX_OK) {
+           return status;
+        } else if ((status = WriteMetadata(fbl::move(wb))) != ZX_OK) {
             fprintf(stderr, "Null blob metadata fail: %d\n", status);
             goto fail;
         }
+
         return ZX_OK;
     }
 
@@ -243,15 +249,13 @@ fail:
 
 // A helper function for dumping either the Merkle Tree or the actual blob data
 // to both (1) The containing VMO, and (2) disk.
-zx_status_t VnodeBlob::WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block) {
+void VnodeBlob::WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block) {
     TRACE_DURATION("blobfs", "Blobfs::WriteShared", "txn", txn, "start", start, "len", len,
                    "start_block", start_block);
-
     // Write as many 'entire blocks' as possible
     uint64_t n = start / kBlobfsBlockSize;
     uint64_t n_end = (start + len + kBlobfsBlockSize - 1) / kBlobfsBlockSize;
-    txn->Enqueue(vmoid_, n, n + start_block + DataStartBlock(blobfs_->info_), n_end - n);
-    return txn->Flush();
+    txn->Enqueue(blob_->GetVmo(), n, n + start_block + DataStartBlock(blobfs_->info_), n_end - n);
 }
 
 void* VnodeBlob::GetData() const {
@@ -264,9 +268,8 @@ void* VnodeBlob::GetMerkle() const {
     return blob_->GetData();
 }
 
-zx_status_t VnodeBlob::WriteMetadata() {
+zx_status_t VnodeBlob::WriteMetadata(fbl::unique_ptr<WritebackWork> wb) {
     TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
-
     assert(GetState() == kBlobStateDataWrite);
 
     // All data has been written to the containing VMO
@@ -279,35 +282,20 @@ zx_status_t VnodeBlob::WriteMetadata() {
         }
     }
 
-    // TODO(smklein): We could probably flush out these disk structures asynchronously.
-    // Even writing the above blocks could be done async. The "node" write must be done
-    // LAST, after everything else is complete, but that's the only restriction.
-    //
-    // This 'kBlobFlagSync' is currently not used, but it indicates when the sync is
-    // complete.
-    flags_ |= kBlobFlagSync;
+    atomic_store(&syncing_, true);
     auto inode = blobfs_->GetNode(map_index_);
 
-    WriteTxn txn(blobfs_.get());
-
     // Write block allocation bitmap
-    if (blobfs_->WriteBitmap(&txn, inode->num_blocks, inode->start_block) != ZX_OK) {
-        return ZX_ERR_IO;
-    }
-
-    // Flush the block allocation bitmap to disk
-    fsync(blobfs_->Fd());
+    blobfs_->WriteBitmap(wb->txn(), inode->num_blocks, inode->start_block);
 
     // Update the on-disk hash
     memcpy(inode->merkle_root_hash, &digest_[0], Digest::kLength);
 
     // Write back the blob node
-    if (blobfs_->WriteNode(&txn, map_index_)) {
-        return ZX_ERR_IO;
-    }
-
-    blobfs_->CountUpdate(&txn);
-    flags_ &= ~kBlobFlagSync;
+    blobfs_->WriteNode(wb->txn(), map_index_);
+    blobfs_->WriteInfo(wb->txn());
+    wb->SetSyncComplete();
+    blobfs_->EnqueueWork(fbl::move(wb));
     return ZX_OK;
 }
 
@@ -319,7 +307,12 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         return ZX_OK;
     }
 
-    WriteTxn txn(blobfs_.get());
+    zx_status_t status;
+    fbl::unique_ptr<WritebackWork> wb;
+    if ((status = blobfs_->CreateWork(&wb, this)) != ZX_OK) {
+        return status;
+    }
+
     auto inode = blobfs_->GetNode(map_index_);
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobfsBlockSize;
     if (GetState() == kBlobStateDataWrite) {
@@ -330,17 +323,14 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             return status;
         }
 
-        status = WriteShared(&txn, offset, len, inode->start_block);
-        if (status != ZX_OK) {
-            SetState(kBlobStateError);
-            return status;
-        }
+        WriteShared(wb->txn(), offset, len, inode->start_block);
 
         *actual = to_write;
         bytes_written_ += to_write;
 
         // More data to write.
         if (bytes_written_ < inode->blob_size) {
+            blobfs_->EnqueueWork(fbl::move(wb));
             return ZX_OK;
         }
 
@@ -352,21 +342,18 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             Digest digest;
             void* merkle_data = GetMerkle();
             const void* blob_data = GetData();
-            if (MerkleTree::Create(blob_data, inode->blob_size, merkle_data,
-                                   merkle_size, &digest) != ZX_OK) {
+
+            if ((status = MerkleTree::Create(blob_data, inode->blob_size, merkle_data,
+                                             merkle_size, &digest)) != ZX_OK) {
                 SetState(kBlobStateError);
                 return status;
             } else if (digest != digest_) {
                 // Downloaded blob did not match provided digest
                 SetState(kBlobStateError);
-                return status;
+                return ZX_ERR_IO_DATA_INTEGRITY;
             }
 
-            status = WriteShared(&txn, 0, merkle_size, inode->start_block);
-            if (status != ZX_OK) {
-                SetState(kBlobStateError);
-                return status;
-            }
+            WriteShared(wb->txn(), 0, merkle_size, inode->start_block);
         } else if ((status = Verify()) != ZX_OK) {
             // Small blobs may not have associated Merkle Trees, and will
             // require validation, since we are not regenerating and checking
@@ -376,10 +363,11 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         }
 
         // No more data to write. Flush to disk.
-        if ((status = WriteMetadata()) != ZX_OK) {
+        if ((status = WriteMetadata(fbl::move(wb))) != ZX_OK) {
             SetState(kBlobStateError);
             return status;
         }
+
         return ZX_OK;
     }
 
@@ -469,6 +457,8 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
 
 void VnodeBlob::QueueUnlink() {
     flags_ |= kBlobFlagDeletable;
+    // Attempt to purge in case the blob has been unlinked with no open fds
+    TryPurge();
 }
 
 // Allocates Blocks IN MEMORY
@@ -538,8 +528,14 @@ void Blobfs::FreeNode(size_t node_index) {
     info_.alloc_inode_count--;
 }
 
+//TODO(planders): Make sure all client-side connections are properly destroyed before shutdown
 zx_status_t Blobfs::Unmount() {
     TRACE_DURATION("blobfs", "Blobfs::Unmount");
+
+    // Ensure writeback buffer completes before auxilliary structures
+    // are deleted.
+    fsync(blockfd_.get());
+
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
     // closed.
@@ -551,7 +547,7 @@ zx_status_t Blobfs::Unmount() {
     return ZX_OK;
 }
 
-zx_status_t Blobfs::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
+void Blobfs::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
     TRACE_DURATION("blobfs", "Blobfs::WriteBitmap", "nblocks", nblocks, "start_block",
                    start_block);
     uint64_t bbm_start_block = start_block / kBlobfsBlockBits;
@@ -560,16 +556,14 @@ zx_status_t Blobfs::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_
                              kBlobfsBlockBits;
 
     // Write back the block allocation bitmap
-    txn->Enqueue(block_map_vmoid_, bbm_start_block, BlockMapStartBlock(info_) + bbm_start_block,
-                 bbm_end_block - bbm_start_block);
-    return txn->Flush();
+    txn->Enqueue(block_map_.StorageUnsafe()->GetVmo(), bbm_start_block,
+                 BlockMapStartBlock(info_) + bbm_start_block, bbm_end_block - bbm_start_block);
 }
 
-zx_status_t Blobfs::WriteNode(WriteTxn* txn, size_t map_index) {
+void Blobfs::WriteNode(WriteTxn* txn, size_t map_index) {
     TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
     uint64_t b = (map_index * sizeof(blobfs_inode_t)) / kBlobfsBlockSize;
-    txn->Enqueue(node_map_vmoid_, b, NodeMapStartBlock(info_) + b, 1);
-    return txn->Flush();
+    txn->Enqueue(node_map_->GetVmo(), b, NodeMapStartBlock(info_) + b, 1);
 }
 
 zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
@@ -587,45 +581,44 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    hash_.insert(out->get());
+    VnodeInsert(out->get());
     return ZX_OK;
 }
 
-zx_status_t Blobfs::ReleaseBlob(VnodeBlob* vn) {
-    TRACE_DURATION("blobfs", "Blobfs::ReleaseBlob");
+// If no client references to the blob still exist and the blob is either queued for deletion or
+// not in a readable state, purge all traces of the blob from blobfs.
+// This is only called when we do not expect the blob to be accessed again.
+zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
+    TRACE_DURATION("blobfs", "Blobfs::PurgeBlob");
 
-    // TODO(smklein): What if kBlobFlagSync is set? Do we risk writing out
-    // parts of the blob AFTER it has been deleted?
-    // Ex: open, alloc, disk write async start, unlink, release, disk write async end.
-    // FWIW, this isn't a problem right now with synchronous writes, but it
-    // would become a problem with asynchronous writes.
     switch (vn->GetState()) {
     case kBlobStateEmpty: {
-        // There are no in-memory or on-disk structures allocated.
-        hash_.erase(*vn);
+        VnodeRelease(vn);
         return ZX_OK;
     }
     case kBlobStateReadable: {
-        if (!vn->DeletionQueued()) {
-            // We want in-memory and on-disk data to persist.
-            hash_.erase(*vn);
-            return ZX_OK;
-        }
+        // A readable blob should only be purged if it has been unlinked
+        ZX_ASSERT(vn->DeletionQueued());
         // Fall-through
     }
     case kBlobStateDataWrite:
     case kBlobStateError: {
-        vn->SetState(kBlobStateReleasing);
         size_t node_index = vn->GetMapIndex();
         uint64_t start_block = GetNode(node_index)->start_block;
         uint64_t nblocks = GetNode(node_index)->num_blocks;
         FreeNode(node_index);
         FreeBlocks(nblocks, start_block);
-        WriteTxn txn(this);
-        WriteNode(&txn, node_index);
-        WriteBitmap(&txn, nblocks, start_block);
-        CountUpdate(&txn);
-        hash_.erase(*vn);
+        zx_status_t status;
+        fbl::unique_ptr<WritebackWork> wb;
+        if ((status = CreateWork(&wb, vn)) != ZX_OK) {
+            return status;
+        }
+        WriteTxn* txn = wb->txn();
+        WriteNode(txn, node_index);
+        WriteBitmap(txn, nblocks, start_block);
+        WriteInfo(txn);
+        VnodeRelease(vn);
+        EnqueueWork(fbl::move(wb));
         return ZX_OK;
     }
     default: {
@@ -635,12 +628,10 @@ zx_status_t Blobfs::ReleaseBlob(VnodeBlob* vn) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Blobfs::CountUpdate(WriteTxn* txn) {
-    zx_status_t status = ZX_OK;
+void Blobfs::WriteInfo(WriteTxn* txn) {
     void* infodata = info_vmo_->GetData();
     memcpy(infodata, &info_, sizeof(info_));
-    txn->Enqueue(info_vmoid_, 0, 0, 1);
-    return status;
+    txn->Enqueue(info_vmo_->GetVmo(), 0, 0, 1);
 }
 
 zx_status_t Blobfs::CreateFsId() {
@@ -697,13 +688,24 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
 zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
     TRACE_DURATION("blobfs", "Blobfs::LookupBlob");
     // Look up blob in the fast map (is the blob open elsewhere?)
-    fbl::RefPtr<VnodeBlob> vn = fbl::RefPtr<VnodeBlob>(hash_.find(digest.AcquireBytes()).CopyPointer());
-    digest.ReleaseBytes();
-    if (vn != nullptr) {
-        if (out != nullptr) {
-            *out = fbl::move(vn);
+    {
+        fbl::AutoLock lock(&hash_lock_);
+        auto raw_vn = hash_.find(digest.AcquireBytes()).CopyPointer();
+        digest.ReleaseBytes();
+
+        if (raw_vn != nullptr) {
+            auto vn = fbl::internal::MakeRefPtrUpgradeFromRaw(raw_vn, hash_lock_);
+
+            if (vn == nullptr) {
+                // Blob was found but is being deleted - remove from hash so we don't collide
+                VnodeReleaseLocked(raw_vn);
+            } else {
+                if (out != nullptr) {
+                    *out = fbl::move(vn);
+                }
+                return ZX_OK;
+            }
         }
-        return ZX_OK;
     }
 
     // Look up blob in the slow map
@@ -721,7 +723,7 @@ zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
                     vn->SetState(kBlobStateReadable);
                     vn->SetMapIndex(i);
                     // Delay reading any data from disk until read.
-                    hash_.insert(vn.get());
+                    VnodeInsert(vn.get());
                     *out = fbl::move(vn);
                 }
                 return ZX_OK;
@@ -783,11 +785,17 @@ zx_status_t Blobfs::AddInodes() {
     memset(reinterpret_cast<void*>(addr + kBlobfsBlockSize * inoblks_old), 0,
            (kBlobfsBlockSize * (inoblks - inoblks_old)));
 
-    WriteTxn txn(this);
-    txn.Enqueue(info_vmoid_, 0, 0, 1);
-    txn.Enqueue(node_map_vmoid_, inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
+    zx_status_t status;
+    fbl::unique_ptr<WritebackWork> wb;
+    if ((status = CreateWork(&wb, nullptr)) != ZX_OK) {
+        return status;
+    }
+
+    WriteInfo(wb->txn());
+    wb->txn()->Enqueue(node_map_->GetVmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
                 inoblks - inoblks_old);
-    return txn.Flush();
+    EnqueueWork(fbl::move(wb));
+    return ZX_OK;
 }
 
 zx_status_t Blobfs::AddBlocks(size_t nblocks) {
@@ -829,18 +837,36 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
     // of kBlobfsBlockSize.
     block_map_.Shrink(blocks);
 
-    WriteTxn txn(this);
+    zx_status_t status;
+    fbl::unique_ptr<WritebackWork> wb;
+    if ((status = CreateWork(&wb, nullptr)) != ZX_OK) {
+        return status;
+    }
+
     if (abmblks > abmblks_old) {
-        txn.Enqueue(block_map_vmoid_, abmblks_old, DataStartBlock(info_) + abmblks_old,
-                    abmblks - abmblks_old);
+        wb->txn()->Enqueue(block_map_.StorageUnsafe()->GetVmo(), abmblks_old,
+                     DataStartBlock(info_) + abmblks_old, abmblks - abmblks_old);
     }
 
     info_.vslice_count += request.length;
     info_.dat_slices += static_cast<uint32_t>(request.length);
     info_.block_count = blocks;
 
-    txn.Enqueue(info_vmoid_, 0, 0, 1);
-    return txn.Flush();
+    WriteInfo(wb->txn());
+    EnqueueWork(fbl::move(wb));
+    return ZX_OK;
+}
+
+void Blobfs::Sync(SyncCallback closure) {
+    zx_status_t status;
+    fbl::unique_ptr<WritebackWork> wb;
+    if ((status = CreateWork(&wb, nullptr)) != ZX_OK) {
+        closure(status);
+        return;
+    }
+
+    wb->SetClosure(fbl::move(closure));
+    EnqueueWork(fbl::move(wb));
 }
 
 Blobfs::Blobfs(fbl::unique_fd fd, const blobfs_info_t* info)
@@ -849,8 +875,11 @@ Blobfs::Blobfs(fbl::unique_fd fd, const blobfs_info_t* info)
 }
 
 Blobfs::~Blobfs() {
+    writeback_ = nullptr;
+    ZX_ASSERT(hash_.is_empty());
+
     if (fifo_client_ != nullptr) {
-        ioctl_block_free_txn(Fd(), &txnid_);
+        FreeTxnId();
         ioctl_block_fifo_close(Fd());
         block_fifo_release_client(fifo_client_);
     }
@@ -879,11 +908,11 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
         return ZX_ERR_IO;
     } else if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
         return static_cast<zx_status_t>(r);
-    } else if ((r = ioctl_block_alloc_txn(fs->Fd(), &fs->txnid_)) < 0) {
+    } else if (fs->TxnId() == TXNID_INVALID) {
         zx_handle_close(fifo);
-        return static_cast<zx_status_t>(r);
+        return static_cast<zx_status_t>(ZX_ERR_NO_RESOURCES);
     } else if ((status = block_fifo_create_client(fifo, &fs->fifo_client_)) != ZX_OK) {
-        ioctl_block_free_txn(fs->Fd(), &fs->txnid_);
+        fs->FreeTxnId();
         zx_handle_close(fifo);
         return status;
     }
@@ -921,6 +950,19 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
         return status;
     } else if ((status = fs->CreateFsId()) != ZX_OK) {
         fprintf(stderr, "blobfs: Failed to create fs_id: %d\n", status);
+        return status;
+    }
+
+    fbl::unique_ptr<MappedVmo> buffer;
+    constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
+    static_assert(kWriteBufferSize % kBlobfsBlockSize == 0,
+                  "Buffer Size must be a multiple of the Blobfs Block Size");
+    if ((status = MappedVmo::Create(kWriteBufferSize, "blobfs-writeback",
+                                    &buffer)) != ZX_OK) {
+        return status;
+    }
+    if ((status = WritebackBuffer::Create(fs.get(), fbl::move(buffer),
+                                          &fs->writeback_)) != ZX_OK) {
         return status;
     }
 

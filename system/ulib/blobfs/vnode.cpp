@@ -29,8 +29,15 @@ using digest::Digest;
 
 namespace blobfs {
 
+void VnodeBlob::fbl_recycle() {
+    // If the blob was not purged, it is still in the hash, so we need to remove it here
+    if (GetState() != kBlobStatePurged) {
+        blobfs_->VnodeRelease(this);
+    }
+    delete this;
+}
+
 VnodeBlob::~VnodeBlob() {
-    blobfs_->ReleaseBlob(this);
     if (blob_ != nullptr) {
         block_fifo_request_t request;
         request.txnid = blobfs_->TxnId();
@@ -80,8 +87,7 @@ zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset,
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
-    zx_status_t status = WriteInternal(data, len, out_actual);
-    return status;
+    return WriteInternal(data, len, out_actual);
 }
 
 zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end,
@@ -148,6 +154,7 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     if ((status = blobfs_->NewBlob(digest, &vn)) != ZX_OK) {
         return status;
     }
+    vn->fd_count_ = 1;
     *out = fbl::move(vn);
     return ZX_OK;
 }
@@ -255,9 +262,44 @@ zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out
 }
 
 void VnodeBlob::Sync(SyncCallback closure) {
-    // TODO(smklein): For now, this is a no-op, but it will change
-    // once the kBlobFlagSync flag is in use.
-    closure(ZX_OK);
+    if (atomic_load(&syncing_)) {
+        blobfs_->Sync([this, cb = fbl::move(closure)](zx_status_t status) {
+            if (status != ZX_OK) {
+                cb(status);
+                return;
+            }
+
+            status = fsync(blobfs_->Fd());
+            cb(status);
+        });
+    } else {
+        closure(ZX_OK);
+    }
+}
+
+void VnodeBlob::CompleteSync() {
+    fsync(blobfs_->Fd());
+    atomic_store(&syncing_, false);
+}
+
+zx_status_t VnodeBlob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+    fd_count_++;
+    return ZX_OK;
+}
+
+zx_status_t VnodeBlob::Close() {
+    ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
+    fd_count_--;
+    // Attempt purge in case blob was unlinked prior to close
+    TryPurge();
+    return ZX_OK;
+}
+
+void VnodeBlob::Purge() {
+    ZX_DEBUG_ASSERT(fd_count_ == 0);
+    ZX_DEBUG_ASSERT(Purgeable());
+    blobfs_->PurgeBlob(this);
+    SetState(kBlobStatePurged);
 }
 
 } // namespace blobfs

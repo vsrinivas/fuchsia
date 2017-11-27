@@ -153,6 +153,7 @@ bool TestData::run_tests() {
     ASSERT_TRUE(create_blobs());
     ASSERT_TRUE(read_blobs());
     ASSERT_TRUE(unlink_blobs());
+    ASSERT_TRUE(sync());
     return true;
 }
 
@@ -428,6 +429,14 @@ bool TestData::unlink_blobs() {
     }
 
     ASSERT_TRUE(report_test(UNLINK));
+    return true;
+}
+
+bool TestData::sync() {
+    int fd = open(MOUNT_PATH, O_DIRECTORY | O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(syncfs(fd), 0);
+    ASSERT_EQ(close(fd), 0);
     return true;
 }
 

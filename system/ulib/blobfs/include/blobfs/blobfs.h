@@ -36,12 +36,15 @@
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
+#include <blobfs/writeback.h>
 
 namespace blobfs {
 
 class Blobfs;
+class VnodeBlob;
+class WriteTxn;
+class WritebackWork;
 
-using WriteTxn = fs::WriteTxn<kBlobfsBlockSize, Blobfs>;
 using ReadTxn = fs::ReadTxn<kBlobfsBlockSize, Blobfs>;
 using digest::Digest;
 
@@ -56,20 +59,19 @@ constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
 constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
 // After Unlink:
-constexpr BlobFlags kBlobStateReleasing   = 0x00000008; // In the process of unlinking
+constexpr BlobFlags kBlobStatePurged      = 0x00000008; // Blob has been purged
 // Unrecoverable error state:
 constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
 constexpr BlobFlags kBlobStateMask        = 0x000000FF;
 
 // Informational non-state flags:
-constexpr BlobFlags kBlobFlagSync         = 0x00000100; // The blob is being written to disk
-constexpr BlobFlags kBlobFlagDeletable    = 0x00000200; // This node should be unlinked when closed
-constexpr BlobFlags kBlobFlagDirectory    = 0x00000400; // This node represents the root directory
+constexpr BlobFlags kBlobFlagDeletable    = 0x00000100; // This node should be unlinked when closed
+constexpr BlobFlags kBlobFlagDirectory    = 0x00000200; // This node represents the root directory
 constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
 
-class VnodeBlob final : public fs::Vnode {
+class VnodeBlob final : public fs::Vnode, public fbl::Recyclable<VnodeBlob> {
 public:
     // Intrusive methods and structures
     using WAVLTreeNodeState = fbl::WAVLTreeNodeState<VnodeBlob*>;
@@ -82,6 +84,10 @@ public:
 
     BlobFlags GetState() const {
         return flags_ & kBlobStateMask;
+    }
+
+    bool Purgeable() const {
+        return fd_count_ == 0 && (DeletionQueued() || !(GetState() & kBlobStateReadable));
     }
 
     bool IsDirectory() const { return flags_ & kBlobFlagDirectory; }
@@ -111,8 +117,10 @@ public:
     VnodeBlob(fbl::RefPtr<Blobfs> bs);
     // Constructs actual blobs
     VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest);
-    virtual ~VnodeBlob();
 
+    void fbl_recycle() final;
+    virtual ~VnodeBlob();
+    void CompleteSync();
 private:
     friend struct TypeWavlTraits;
 
@@ -130,6 +138,16 @@ private:
     zx_status_t CopyVmo(zx_rights_t rights, zx_handle_t* out);
 
     void QueueUnlink();
+
+    void TryPurge() {
+        if (Purgeable()) {
+            Purge();
+        }
+    }
+
+    // Verify that the blob is purgeable and remove all traces of the blob from blobfs.
+    // The blob is not expected to be accessed again after this is called.
+    void Purge();
 
     // If successful, allocates Blob Node and Blocks (in-memory)
     // kBlobStateEmpty --> kBlobStateDataWrite
@@ -162,6 +180,8 @@ private:
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
     void Sync(SyncCallback closure) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Close() final;
 
     // Read both VMOs into memory, if we haven't already.
     //
@@ -175,10 +195,11 @@ private:
     // InitVmos() must have already been called for this blob.
     zx_status_t Verify() const;
 
-    zx_status_t WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block);
+    void WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block);
+
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
-    zx_status_t WriteMetadata();
+    zx_status_t WriteMetadata(fbl::unique_ptr<WritebackWork> wb);
 
     // Acquire a pointer to the mapped data or merkle tree
     void* GetData() const;
@@ -188,6 +209,7 @@ private:
 
     const fbl::RefPtr<Blobfs> blobfs_;
     BlobFlags flags_{};
+    fbl::atomic_bool syncing_;
 
     // The blob_ here consists of:
     // 1) The Merkle Tree
@@ -199,6 +221,7 @@ private:
     uint64_t bytes_written_{};
     uint8_t digest_[Digest::kLength]{};
 
+    uint32_t fd_count_{};
     size_t map_index_{};
 };
 
@@ -247,8 +270,8 @@ public:
     // Adds Blob to the "quick lookup" map.
     zx_status_t NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out);
 
-    // Removes blob from 'active' hashmap.
-    zx_status_t ReleaseBlob(VnodeBlob* blob);
+    // Removes blob from 'active' hashmap and deletes all metadata associated with it.
+    zx_status_t PurgeBlob(VnodeBlob* blob);
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
@@ -259,7 +282,25 @@ public:
     }
     uint32_t BlockSize() const { return block_info_.block_size; }
 
-    txnid_t TxnId() const { return txnid_; }
+    txnid_t TxnId() const {
+        ZX_DEBUG_ASSERT(blockfd_);
+        thread_local txnid_t txnid_ = TXNID_INVALID;
+        if (txnid_ != TXNID_INVALID) {
+            return txnid_;
+        }
+        if (ioctl_block_alloc_txn(blockfd_.get(), &txnid_) < 0) {
+            return TXNID_INVALID;
+        }
+        return txnid_;
+    }
+
+    void FreeTxnId() {
+        txnid_t tid = TxnId();
+        if (tid == TXNID_INVALID) {
+            return;
+        }
+        ioctl_block_free_txn(blockfd_.get(), &tid);
+    }
 
     // If possible, attempt to resize the blobfs partition.
     // Add one additional slice for inodes.
@@ -274,13 +315,39 @@ public:
     // Returns an unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
 
+    using SyncCallback = fs::Vnode::SyncCallback;
+    void Sync(SyncCallback closure);
+
     blobfs_info_t info_;
+
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
+        return writeback_->GenerateWork(out, fbl::move(fbl::WrapRefPtr(vnode)));
+    }
+
+    void EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
+        writeback_->Enqueue(fbl::move(work));
+    }
+
+    void VnodeRelease(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_) {
+        fbl::AutoLock lock(&hash_lock_);
+        VnodeReleaseLocked(vn);
+    }
+
+    void VnodeReleaseLocked(VnodeBlob* vn) __TA_REQUIRES(hash_lock_) {
+        hash_.erase(vn->GetKey());
+    }
+
+    void VnodeInsert(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_) {
+        fbl::AutoLock lock(&hash_lock_);
+        hash_.insert(vn);
+    }
 
 private:
     friend class BlobfsChecker;
 
     Blobfs(fbl::unique_fd fd, const blobfs_info_t* info);
     zx_status_t LoadBitmaps();
+    fbl::unique_ptr<WritebackBuffer> writeback_;
 
     // Finds space for a block in memory. Does not update disk.
     zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
@@ -295,13 +362,13 @@ private:
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
-    zx_status_t WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block);
+    void WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block);
 
     // Given a node within the node map at an index, write it to disk.
-    zx_status_t WriteNode(WriteTxn* txn, size_t map_index);
+    void WriteNode(WriteTxn* txn, size_t map_index);
 
     // Enqueues an update for allocated inode/block counts
-    zx_status_t CountUpdate(WriteTxn* txn);
+    void WriteInfo(WriteTxn* txn);
 
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".
@@ -313,12 +380,13 @@ private:
                                            VnodeBlob*,
                                            MerkleRootTraits,
                                            VnodeBlob::TypeWavlTraits>;
-    WAVLTreeByMerkle hash_{}; // Map of all 'in use' blobs
+    WAVLTreeByMerkle hash_ __TA_GUARDED(hash_lock_){}; // Map of all 'in use' blobs
+    fbl::Mutex hash_lock_;
 
     fbl::unique_fd blockfd_;
     block_info_t block_info_{};
     fifo_client_t* fifo_client_{};
-    txnid_t txnid_{};
+
     RawBitmap block_map_{};
     vmoid_t block_map_vmoid_{};
     fbl::unique_ptr<MappedVmo> node_map_{};
@@ -330,7 +398,5 @@ private:
 
 zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
 
-//TODO(planders): Update blobfs to use unique_fd.
 zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd);
-
 } // namespace blobfs

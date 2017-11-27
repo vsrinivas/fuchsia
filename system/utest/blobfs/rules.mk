@@ -24,6 +24,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/blobfs \
     third_party/ulib/uboringssl \
+    system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/fdio \

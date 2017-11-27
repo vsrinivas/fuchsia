@@ -7,7 +7,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 
-namespace minfs {
+namespace fs {
 
 // A wrapper around a singly linked list to make it appear as a queue.
 // We pop from the front (moving the head forward) and push onto the tail.

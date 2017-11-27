@@ -58,6 +58,7 @@ private:
     bool create_blobs();
     bool read_blobs();
     bool unlink_blobs();
+    bool sync();
 
     // state
     size_t blob_size;

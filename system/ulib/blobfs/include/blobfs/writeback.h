@@ -1,19 +1,20 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #pragma once
 
-#ifdef __Fuchsia__
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <zx/vmo.h>
+#ifndef __Fuchsia__
+#error Fuchsia-only Header
 #endif
 
+
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
@@ -22,16 +23,21 @@
 #include <fs/queue.h>
 #include <fs/vfs.h>
 
-#include <minfs/bcache.h>
-#include <minfs/format.h>
+#include <sync/completion.h>
 
-namespace minfs {
+#include <zx/vmo.h>
 
-class VnodeMinfs;
+#include <blobfs/blobfs.h>
+#include <blobfs/format.h>
 
-using ReadTxn = fs::ReadTxn<kMinfsBlockSize, Bcache>;
+#include <zircon/crashlogger.h>
 
-#ifdef __Fuchsia__
+namespace blobfs {
+
+class Blobfs;
+class VnodeBlob;
+class WritebackWork;
+using ReadTxn = fs::ReadTxn<kBlobfsBlockSize, Blobfs>;
 
 typedef struct {
     zx_handle_t vmo;
@@ -44,44 +50,47 @@ class WritebackBuffer;
 
 // A transaction consisting of enqueued VMOs to be written
 // out to disk at specified locations.
-//
-// TODO(smklein): Rename to LogWriteTxn, or something similar, to imply
-// that this write transaction acts fundamentally different from the
-// ulib/fs WriteTxn under the hood.
 class WriteTxn {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
-    explicit WriteTxn(Bcache* bc) : bc_(bc) {}
+
+    explicit WriteTxn(Blobfs* bs) : bs_(bs), vmoid_(VMOID_INVALID) {}
+
     ~WriteTxn() {
-        ZX_DEBUG_ASSERT_MSG(count_ == 0, "WriteTxn still has pending requests");
+        ZX_DEBUG_ASSERT_MSG(!IsReady() || count_ == 0, "WriteTxn still has pending requests");
     }
 
     // Identify that a block should be written to disk
     // as a later point in time.
-    void Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks);
+    void Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
+                 uint64_t nblocks);
     size_t Count() const { return count_; }
     write_request_t* Requests() { return &requests_[0]; }
 
-    // Activate the transaction, writing it out to disk.
-    //
-    // Each transaction uses the |vmo| / |vmoid| pair supplied, since the
-    // transactions should be all reading from a single in-memory buffer.
-    zx_status_t Flush(zx_handle_t vmo, vmoid_t vmoid);
+    // Activate the transaction.
+    zx_status_t Flush();
 
+    size_t BlkStart() const;
     size_t BlkCount() const;
+
+    bool IsReady() const {
+        return vmoid_ != VMOID_INVALID;
+    }
+
+    void SetReady(vmoid_t vmoid) {
+        assert(vmoid_ == VMOID_INVALID);
+        assert(vmoid != VMOID_INVALID);
+        vmoid_ = vmoid;
+    }
 
 private:
     friend class WritebackBuffer;
-    Bcache* bc_;
-    size_t count_ = 0;
+    Blobfs* bs_;
+    vmoid_t vmoid_;
+    size_t count_{};
     write_request_t requests_[MAX_TXN_MESSAGES];
 };
 
-#else
-
-using WriteTxn = fs::WriteTxn<kMinfsBlockSize, Bcache>;
-
-#endif
 
 // A wrapper around a WriteTxn, holding references to the underlying Vnodes
 // corresponding to the txn, so their Vnodes (and VMOs) are not released
@@ -91,19 +100,13 @@ using WriteTxn = fs::WriteTxn<kMinfsBlockSize, Bcache>;
 // has successfully completed.
 class WritebackWork : public fbl::SinglyLinkedListable<fbl::unique_ptr<WritebackWork>> {
 public:
-    WritebackWork(Bcache* bc);
-
     // Return the WritebackWork to the default state that it was in
     // after being created.
     void Reset();
 
-#ifdef __Fuchsia__
     // Actually transacts the enqueued work, and resets the WritebackWork to
     // its initial state.
-    //
-    // Returns the number of blocks of the writeback buffer that have been
-    // consumed.
-    size_t Complete(zx_handle_t vmo, vmoid_t vmoid);
+    zx_status_t Complete();
 
     // Adds a closure to the WritebackWork, such that it will be signalled
     // when the WritebackWork is flushed to disk.
@@ -111,38 +114,38 @@ public:
     //
     // Only one closure may be set for each WritebackWork unit.
     using SyncCallback = fs::Vnode::SyncCallback;
-    void SetClosure(SyncCallback closure);
-#else
-    void Complete();
-#endif
+    void SetClosure(SyncCallback Closure);
 
-    // Allow "pinning" Vnodes so they aren't destroyed while we're completing
-    // this writeback operation.
-    void PinVnode(fbl::RefPtr<VnodeMinfs> vn);
+    // Tells work to remove sync flag once the txn has successfully completed.
+    void SetSyncComplete();
 
-    WriteTxn* txn() { return &txn_; }
+    WriteTxn* txn() {
+        return &txn_;
+    }
 private:
-#ifdef __Fuchsia__
-    SyncCallback closure_; // Optional.
-#endif
-    WriteTxn txn_;
-    size_t node_count_;
-    // May be empty. Currently '4' is the maximum number of vnodes within a
-    // single unit of writeback work, which occurs during a cross-directory
-    // rename operation.
-    fbl::RefPtr<VnodeMinfs> vn_[4];
-};
+    friend class WritebackBuffer;
+    // Create a WritebackWork given a vnode (which may be null)
+    // Vnode is stored for duration of txn so that it isn't destroyed during the write process
+    WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vnode);
 
-#ifdef __Fuchsia__
+    SyncCallback closure_; // Optional.
+    bool sync_;
+    WriteTxn txn_;
+    fbl::RefPtr<VnodeBlob> vn_;
+};
 
 // WritebackBuffer which manages a writeback buffer (and background thread,
 // which flushes this buffer out to disk).
 class WritebackBuffer {
 public:
     // Calls constructor, return an error if anything goes wrong.
-    static zx_status_t Create(Bcache* bc, fbl::unique_ptr<MappedVmo> buffer,
+    static zx_status_t Create(Blobfs* bs, fbl::unique_ptr<MappedVmo> buffer,
                               fbl::unique_ptr<WritebackBuffer>* out);
+
     ~WritebackBuffer();
+
+    // Generate a new WritebackWork given a vnode (which may be null)
+    zx_status_t GenerateWork(fbl::unique_ptr<WritebackWork>* out, fbl::RefPtr<VnodeBlob> vnode);
 
     // Enqueues work into the writeback buffer.
     // When this function returns, the transaction blocks from |work|
@@ -155,7 +158,7 @@ public:
     void Enqueue(fbl::unique_ptr<WritebackWork> work) __TA_EXCLUDES(writeback_lock_);
 
 private:
-    WritebackBuffer(Bcache* bc, fbl::unique_ptr<MappedVmo> buffer);
+    WritebackBuffer(Blobfs* bs, fbl::unique_ptr<MappedVmo> buffer);
 
     // Blocks until |blocks| blocks of data are free for the caller.
     // Returns |ZX_OK| with the lock still held in this case.
@@ -193,7 +196,7 @@ private:
     // and flushes them to disk. This thread acts as a consumer of the
     // writeback buffer.
     thrd_t writeback_thrd_;
-    Bcache* bc_;
+    Blobfs* bs_;
     fbl::Mutex writeback_lock_;
 
     // Ensures that if multiple producers are waiting for space to write their
@@ -205,12 +208,9 @@ private:
     bool unmounting_ __TA_GUARDED(writeback_lock_){false};
     fbl::unique_ptr<MappedVmo> buffer_{};
     vmoid_t buffer_vmoid_ = VMOID_INVALID;
-    // The units of all the following are "MinFS blocks".
+    // The units of all the following are "Blobfs blocks".
     size_t start_ __TA_GUARDED(writeback_lock_){};
     size_t len_ __TA_GUARDED(writeback_lock_){};
     const size_t cap_ = 0;
 };
-
-#endif
-
-} // namespace minfs
+} // namespace blobfs
