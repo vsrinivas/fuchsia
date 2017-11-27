@@ -24,6 +24,8 @@ executable("app") {
 
 source_set("lib") {
   sources = [
+    "cloud_provider_impl.cc",
+    "cloud_provider_impl.h",
     "device_set_impl.cc",
     "device_set_impl.h",
     "factory_impl.cc",
@@ -35,6 +37,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firebase/firebase_auth",
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]
@@ -48,6 +51,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "cloud_provider_impl_unittest.cc",
     "device_set_impl_unittest.cc",
     "page_cloud_impl_unittest.cc",
   ]
@@ -56,6 +60,7 @@ source_set("unittests") {
     ":lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
+    "//peridot/bin/cloud_provider_firebase/firebase_auth/test",
     "//peridot/bin/ledger/test:lib",
   ]
 }

@@ -4,7 +4,7 @@
 
 visibility = [
   "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/ledger/*",
+  "//peridot/bin/cloud_provider_firestore/*",
 ]
 
 source_set("test") {
