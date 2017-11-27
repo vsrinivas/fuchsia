@@ -22,7 +22,7 @@ doc.
 ### Ubuntu
 
 ```
-sudo apt-get install texinfo libglib2.0-dev autoconf libtool libsdl-dev build-essential golang git build-essential curl unzip
+sudo apt-get install texinfo libglib2.0-dev liblz4-tool autoconf libtool libsdl-dev build-essential golang git build-essential curl unzip
 ```
 
 ### macOS
