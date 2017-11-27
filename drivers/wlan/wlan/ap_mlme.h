@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "beacon_sender.h"
 #include "mlme.h"
+#include "packet.h"
 
 #include <ddk/protocol/wlan.h>
 #include <zircon/types.h>
@@ -15,7 +17,7 @@ namespace wlan {
 class ApMlme : public Mlme {
    public:
     explicit ApMlme(DeviceInterface* device);
-    ~ApMlme();
+    ~ApMlme() = default;
 
     // FrameHandler methods.
     zx_status_t HandleMlmeStartReq(const StartRequest& req) override;
@@ -29,6 +31,8 @@ class ApMlme : public Mlme {
 
    private:
     DeviceInterface* const device_;
+    fbl::unique_ptr<BeaconSender> bcn_sender_;
+    // TODO(hahnr): Own and manage BSS list.
 };
 
 }  // namespace wlan

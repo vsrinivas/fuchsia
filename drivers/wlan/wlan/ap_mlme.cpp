@@ -3,22 +3,33 @@
 // found in the LICENSE file.
 
 #include "ap_mlme.h"
+#include "beacon_sender.h"
 #include "dispatcher.h"
 
 #include "logging.h"
 
 namespace wlan {
 
-ApMlme::ApMlme(DeviceInterface* device) : device_(device) {
-    debugfn();
-    (void)device_;
-}
-
-ApMlme::~ApMlme() {}
+ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}
 
 zx_status_t ApMlme::Init() {
     debugfn();
-    // TODO(hahnr): Implement.
+
+    // Setup BeaconSender.
+    bcn_sender_.reset(new BeaconSender(device_));
+    auto status = bcn_sender_->Init();
+    if (status != ZX_OK) {
+        errorf("could not initialize BeaconSender: %d\n", status);
+        return status;
+    }
+
+    // TODO(hahnr): For development only to unblock from SME changes.
+    // To be removed soon.
+    auto req = StartRequest::New();
+    req->ssid = "FUCHSIA-TEST-AP";
+    req->beacon_period = 100;
+    HandleMlmeStartReq(*req);
+
     return ZX_OK;
 }
 
@@ -30,7 +41,10 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
 
 zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     debugfn();
-    // TODO(hahnr): Implement.
+
+    bcn_sender_->Start(req);
+    // TODO(hahnr): Create BSS instance which manages clients.
+
     return ZX_OK;
 }
 

@@ -14,6 +14,8 @@ source_set("mlme") {
     "action_frame.h",
     "ap_mlme.cpp",
     "ap_mlme.h",
+    "beacon_sender.cpp",
+    "beacon_sender.h",
     "bss.cpp",
     "bss.h",
     "client_mlme.cpp",

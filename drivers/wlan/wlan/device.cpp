@@ -213,6 +213,8 @@ void Device::WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     ZX_DEBUG_ASSERT(timer != nullptr);
     ZX_DEBUG_ASSERT(timer->get() == nullptr);
+    ZX_DEBUG_ASSERT(port_.is_valid());
+
     zx::timer t;
     zx_status_t status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &t);
     if (status != ZX_OK) { return status; }
