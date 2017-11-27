@@ -99,6 +99,7 @@ bool benchmark_write_read(void) {
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     }
 
+    ASSERT_EQ(syncfs(fd), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(unlink(MOUNT_POINT "/bigfile"), 0);
 
@@ -125,6 +126,7 @@ void increment_str(char* str) {
 
 template <size_t MaxComponents>
 bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
+    BEGIN_HELPER;
     static_assert(MaxComponents * kComponentLength + fbl::constexpr_strlen(MOUNT_POINT) < PATH_MAX,
                   "Path depth is too long");
     size_t path_len = strlen(path);
@@ -138,10 +140,11 @@ bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
 
         increment_str<kComponentLength>(path_component);
     }
-    return true;
+    END_HELPER;
 }
 
 bool walk_up_path_components(char* path, bool (*cb)(const char* path)) {
+    BEGIN_HELPER;
     size_t path_len = strlen(path);
 
     while (path_len != fbl::constexpr_strlen(MOUNT_POINT)) {
@@ -149,23 +152,26 @@ bool walk_up_path_components(char* path, bool (*cb)(const char* path)) {
         path[path_len - kComponentLength] = 0;
         path_len -= kComponentLength;
     }
-    return true;
+    END_HELPER;
 }
 
 bool mkdir_callback(const char* path) {
+    BEGIN_HELPER;
     ASSERT_EQ(mkdir(path, 0666), 0, "Could not make directory");
-    return true;
+    END_HELPER;
 }
 
 bool stat_callback(const char* path) {
+    BEGIN_HELPER;
     struct stat buf;
     ASSERT_EQ(stat(path, &buf), 0, "Could not stat directory");
-    return true;
+    END_HELPER;
 }
 
 bool unlink_callback(const char* path) {
+    BEGIN_HELPER;
     ASSERT_EQ(unlink(path), 0, "Could not unlink directory");
-    return true;
+    END_HELPER;
 }
 
 template <size_t MaxComponents>
@@ -188,6 +194,11 @@ bool benchmark_path_walk(void) {
     start = zx_ticks_get();
     ASSERT_TRUE(walk_up_path_components(path, unlink_callback));
     time_end("unlink", start);
+
+    int fd = open(MOUNT_POINT, O_DIRECTORY | O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(syncfs(fd), 0);
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
