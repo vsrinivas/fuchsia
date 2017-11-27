@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <machina/gpu.h>
+#include "garnet/lib/machina/gpu.h"
 
 #include <fbl/unique_ptr.h>
-#include <unittest/unittest.h>
 
-#include "virtio_queue_fake.h"
+#include "garnet/lib/machina/virtio_queue_fake.h"
+#include "gtest/gtest.h"
 
 static constexpr uint32_t kDisplayWidth = 1024;
 static constexpr uint32_t kDisplayHeight = 768;
@@ -163,9 +163,7 @@ private:
     size_t scanout_size_ = 0;
 };
 
-static bool test_get_display_info(void) {
-    BEGIN_TEST;
-
+TEST(VirtioGpuTest, HandleGetDisplayInfo) {
     uint16_t desc;
     VirtioGpuTest test;
     ASSERT_EQ(test.Init(), ZX_OK);
@@ -184,31 +182,23 @@ static bool test_get_display_info(void) {
     ASSERT_EQ(test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used), ZX_OK);
 
     EXPECT_EQ(response.hdr.type, VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
-    EXPECT_EQ(response.pmodes[0].r.x, 0);
-    EXPECT_EQ(response.pmodes[0].r.y, 0);
+    EXPECT_EQ(response.pmodes[0].r.x, 0u);
+    EXPECT_EQ(response.pmodes[0].r.y, 0u);
     EXPECT_EQ(response.pmodes[0].r.width, kDisplayWidth);
     EXPECT_EQ(response.pmodes[0].r.height, kDisplayHeight);
-
-    END_TEST;
 }
 
 // Test the basic device initialization sequence.
-static bool test_device_initialization(void) {
-    BEGIN_TEST;
-
+TEST(VirtioGpuTest, HandleInitialization) {
     VirtioGpuTest test;
     ASSERT_EQ(test.Init(), ZX_OK);
 
     ASSERT_EQ(test.CreateRootResource(), ZX_OK);
     ASSERT_EQ(test.AttachBacking(), ZX_OK);
     ASSERT_EQ(test.SetScanout(), ZX_OK);
-
-    END_TEST;
 }
 
-static bool test_set_scanout_invalid_resource_id(void) {
-    BEGIN_TEST;
-
+TEST(VirtioGpuTest, SetScanoutToInvalidResource) {
     VirtioGpuTest test;
     ASSERT_EQ(test.Init(), ZX_OK);
 
@@ -236,16 +226,10 @@ static bool test_set_scanout_invalid_resource_id(void) {
     uint32_t used;
     ASSERT_EQ(test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used), ZX_OK);
     ASSERT_EQ(response.type, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
-
-    return response.type == VIRTIO_GPU_RESP_OK_NODATA ? ZX_OK : response.type;
-
-    END_TEST;
 }
 
 // Verify a basic transfer 2d command correctly fills in the scanout.
-static bool test_fill_display(void) {
-    BEGIN_TEST;
-
+TEST(VirtioGpuTest, HandleTransfer2D) {
     VirtioGpuTest test;
     ASSERT_EQ(test.Init(), ZX_OK);
 
@@ -288,13 +272,4 @@ static bool test_fill_display(void) {
         ASSERT_EQ(memcmp(entry.buffer.get(), test.scanout_buffer() + offset, entry.len), 0);
         offset += entry.len;
     }
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(virtio_gpu)
-RUN_TEST(test_get_display_info);
-RUN_TEST(test_device_initialization);
-RUN_TEST(test_set_scanout_invalid_resource_id);
-RUN_TEST(test_fill_display);
-END_TEST_CASE(virtio_gpu)
