@@ -14,56 +14,59 @@ typedef struct file_state file_state_t;
 
 // Component to service block requests.
 class VirtioBlockRequestDispatcher {
-public:
-    virtual ~VirtioBlockRequestDispatcher() = default;
+ public:
+  virtual ~VirtioBlockRequestDispatcher() = default;
 
-    virtual zx_status_t Flush() = 0;
-    virtual zx_status_t Read(off_t disk_offset, void* buf, size_t size) = 0;
-    virtual zx_status_t Write(off_t disk_offset, const void* buf, size_t size) = 0;
-    virtual zx_status_t Submit() = 0;
-
+  virtual zx_status_t Flush() = 0;
+  virtual zx_status_t Read(off_t disk_offset, void* buf, size_t size) = 0;
+  virtual zx_status_t Write(off_t disk_offset,
+                            const void* buf,
+                            size_t size) = 0;
+  virtual zx_status_t Submit() = 0;
 };
 
 // Stores the state of a block device.
 class VirtioBlock : public VirtioDevice {
-public:
-    static const size_t kSectorSize = 512;
+ public:
+  static const size_t kSectorSize = 512;
 
-    VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size);
-    ~VirtioBlock() override = default;
+  VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size);
+  ~VirtioBlock() override = default;
 
-    // Opens a file to use as backing for the block device.
-    //
-    // Default to opening the file as read-write, but fall back to read-only
-    // if that is not possible.
-    zx_status_t Init(const char* path, const PhysMem& phys_mem);
+  // Opens a file to use as backing for the block device.
+  //
+  // Default to opening the file as read-write, but fall back to read-only
+  // if that is not possible.
+  zx_status_t Init(const char* path, const PhysMem& phys_mem);
 
-    // Starts a thread to monitor the queue for incomming block requests.
-    zx_status_t Start();
+  // Starts a thread to monitor the queue for incomming block requests.
+  zx_status_t Start();
 
-    // Our config space is read-only.
-    zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  // Our config space is read-only.
+  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    zx_status_t HandleBlockRequest(virtio_queue_t* queue, uint16_t head, uint32_t* used);
+  zx_status_t HandleBlockRequest(virtio_queue_t* queue,
+                                 uint16_t head,
+                                 uint32_t* used);
 
-    // The 'read-only' feature flag.
-    bool is_read_only() { return has_device_features(VIRTIO_BLK_F_RO); }
-    void set_read_only() { add_device_features(VIRTIO_BLK_F_RO); }
+  // The 'read-only' feature flag.
+  bool is_read_only() { return has_device_features(VIRTIO_BLK_F_RO); }
+  void set_read_only() { add_device_features(VIRTIO_BLK_F_RO); }
 
-    // The queue used for handling block reauests.
-    virtio_queue_t& queue() { return queue_; }
+  // The queue used for handling block reauests.
+  virtio_queue_t& queue() { return queue_; }
 
-private:
-    // Size of file backing the block device.
-    uint64_t size_ = 0;
-    // Queue for handling block requests.
-    virtio_queue_t queue_;
-    // Device configuration fields.
-    virtio_blk_config_t config_ = {};
+ private:
+  // Size of file backing the block device.
+  uint64_t size_ = 0;
+  // Queue for handling block requests.
+  virtio_queue_t queue_;
+  // Device configuration fields.
+  virtio_blk_config_t config_ = {};
 
-    fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher_;
+  fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher_;
 };
 
 #endif  // GARNET_LIB_MACHINA_BLOCK_H_

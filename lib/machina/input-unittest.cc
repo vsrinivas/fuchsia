@@ -18,164 +18,170 @@ static const hid_keys_t kAllKeysUp = {};
 
 /* Event emitter that records all queued events for verification purposes. */
 class FakeEventEmitter : public VirtioInputEventEmitter {
-public:
-    virtual zx_status_t QueueInputEvent(const virtio_input_event_t& event) override {
-        if (flushed_) {
-            fprintf(stderr, "FakeEventEmitter has been flushed. Call Reset() to queue more "
-                            "events.\n");
-            return ZX_ERR_BAD_STATE;
-        }
-        queued_events_.push_back(event);
-        return ZX_OK;
+ public:
+  virtual zx_status_t QueueInputEvent(
+      const virtio_input_event_t& event) override {
+    if (flushed_) {
+      fprintf(stderr,
+              "FakeEventEmitter has been flushed. Call Reset() to queue more "
+              "events.\n");
+      return ZX_ERR_BAD_STATE;
     }
+    queued_events_.push_back(event);
+    return ZX_OK;
+  }
 
-    virtual zx_status_t FlushInputEvents() override {
-        flushed_ = true;
-        return ZX_OK;
+  virtual zx_status_t FlushInputEvents() override {
+    flushed_ = true;
+    return ZX_OK;
+  }
+
+  void Reset() {
+    flushed_ = false;
+    queued_events_.reset();
+  }
+
+  size_t events() { return queued_events_.size(); }
+
+  virtio_input_event_t event(size_t index) { return queued_events_[index]; }
+
+  // Check for an evdev event between |min| and |max| inclusive in the
+  // output stream.
+  bool HasEvent(size_t min,
+                size_t max,
+                uint16_t type,
+                uint16_t code,
+                uint32_t value) {
+    for (size_t i = min; i < max + 1 && i < queued_events_.size(); ++i) {
+      auto event = queued_events_[i];
+      if (event.type == type && event.value == value && event.code == code) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    void Reset() {
-        flushed_ = false;
-        queued_events_.reset();
-    }
+  bool HasKeyPress(size_t min, size_t max, uint16_t usage) {
+    uint16_t code = KeyboardEventSource::kKeyMap[usage];
+    return HasEvent(min, max, VIRTIO_INPUT_EV_KEY, code,
+                    VIRTIO_INPUT_EV_KEY_PRESSED);
+  }
 
-    size_t events() { return queued_events_.size(); }
+  bool HasKeyRelease(size_t min, size_t max, uint16_t usage) {
+    uint16_t code = KeyboardEventSource::kKeyMap[usage];
+    return HasEvent(min, max, VIRTIO_INPUT_EV_KEY, code,
+                    VIRTIO_INPUT_EV_KEY_RELEASED);
+  }
 
-    virtio_input_event_t event(size_t index) {
-        return queued_events_[index];
-    }
+  bool HasBarrier(size_t index) {
+    return HasEvent(index, index, VIRTIO_INPUT_EV_SYN, 0, 0);
+  }
 
-    // Check for an evdev event between |min| and |max| inclusive in the
-    // output stream.
-    bool HasEvent(size_t min, size_t max, uint16_t type, uint16_t code, uint32_t value) {
-        for (size_t i = min; i < max + 1 && i < queued_events_.size(); ++i) {
-            auto event = queued_events_[i];
-            if (event.type == type && event.value == value && event.code == code) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool HasKeyPress(size_t min, size_t max, uint16_t usage) {
-        uint16_t code = KeyboardEventSource::kKeyMap[usage];
-        return HasEvent(min, max, VIRTIO_INPUT_EV_KEY, code, VIRTIO_INPUT_EV_KEY_PRESSED);
-    }
-
-    bool HasKeyRelease(size_t min, size_t max, uint16_t usage) {
-        uint16_t code = KeyboardEventSource::kKeyMap[usage];
-        return HasEvent(min, max, VIRTIO_INPUT_EV_KEY, code, VIRTIO_INPUT_EV_KEY_RELEASED);
-    }
-
-    bool HasBarrier(size_t index) {
-        return HasEvent(index, index, VIRTIO_INPUT_EV_SYN, 0, 0);
-    }
-
-private:
-    bool flushed_ = false;
-    fbl::Vector<virtio_input_event_t> queued_events_;
+ private:
+  bool flushed_ = false;
+  fbl::Vector<virtio_input_event_t> queued_events_;
 };
 
 TEST(VirtioInputTest, HandleKeyPress) {
-    FakeEventEmitter emitter;
-    KeyboardEventSource keyboard(&emitter, 0);
+  FakeEventEmitter emitter;
+  KeyboardEventSource keyboard(&emitter, 0);
 
-    // Set 'A' as pressed.
-    hid_keys_t keys = {};
-    KEYSET(keys.keymask, HID_USAGE_KEY_A);
+  // Set 'A' as pressed.
+  hid_keys_t keys = {};
+  KEYSET(keys.keymask, HID_USAGE_KEY_A);
 
-    ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
+  ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 2u);
-    EXPECT_TRUE(emitter.HasKeyPress(0, 0, HID_USAGE_KEY_A));
-    EXPECT_TRUE(emitter.HasBarrier(1));
+  ASSERT_EQ(emitter.events(), 2u);
+  EXPECT_TRUE(emitter.HasKeyPress(0, 0, HID_USAGE_KEY_A));
+  EXPECT_TRUE(emitter.HasBarrier(1));
 }
 
 TEST(VirtioInputTest, HandleMultipleKeyPress) {
-    FakeEventEmitter emitter;
-    KeyboardEventSource keyboard(&emitter, 0);
+  FakeEventEmitter emitter;
+  KeyboardEventSource keyboard(&emitter, 0);
 
-    // Set 'ABCD' as pressed.
-    hid_keys_t keys = {};
-    KEYSET(keys.keymask, HID_USAGE_KEY_A);
-    KEYSET(keys.keymask, HID_USAGE_KEY_B);
-    KEYSET(keys.keymask, HID_USAGE_KEY_C);
-    KEYSET(keys.keymask, HID_USAGE_KEY_D);
+  // Set 'ABCD' as pressed.
+  hid_keys_t keys = {};
+  KEYSET(keys.keymask, HID_USAGE_KEY_A);
+  KEYSET(keys.keymask, HID_USAGE_KEY_B);
+  KEYSET(keys.keymask, HID_USAGE_KEY_C);
+  KEYSET(keys.keymask, HID_USAGE_KEY_D);
 
-    ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
+  ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 5u);
-    EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_A));
-    EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_B));
-    EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_C));
-    EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_D));
-    EXPECT_TRUE(emitter.HasBarrier(4));
+  ASSERT_EQ(emitter.events(), 5u);
+  EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_A));
+  EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_B));
+  EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_C));
+  EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_D));
+  EXPECT_TRUE(emitter.HasBarrier(4));
 }
 
 TEST(VirtioInputTest, HandleKeyRelease) {
-    FakeEventEmitter emitter;
-    KeyboardEventSource keyboard(&emitter, 0);
+  FakeEventEmitter emitter;
+  KeyboardEventSource keyboard(&emitter, 0);
 
-    // Initialize with 'A' key pressed.
-    hid_keys_t key_pressed_keys = {};
-    KEYSET(key_pressed_keys.keymask, HID_USAGE_KEY_A);
-    ASSERT_EQ(keyboard.HandleHidKeys(key_pressed_keys), ZX_OK);
-    emitter.Reset();
+  // Initialize with 'A' key pressed.
+  hid_keys_t key_pressed_keys = {};
+  KEYSET(key_pressed_keys.keymask, HID_USAGE_KEY_A);
+  ASSERT_EQ(keyboard.HandleHidKeys(key_pressed_keys), ZX_OK);
+  emitter.Reset();
 
-    // Release all keys.
-    ASSERT_EQ(keyboard.HandleHidKeys(kAllKeysUp), ZX_OK);
+  // Release all keys.
+  ASSERT_EQ(keyboard.HandleHidKeys(kAllKeysUp), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 2u);
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 0, HID_USAGE_KEY_A));
-    EXPECT_TRUE(emitter.HasBarrier(1));
+  ASSERT_EQ(emitter.events(), 2u);
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 0, HID_USAGE_KEY_A));
+  EXPECT_TRUE(emitter.HasBarrier(1));
 }
 
 TEST(VirtioInputTest, HandleMultipleKeyRelease) {
-    FakeEventEmitter emitter;
-    KeyboardEventSource keyboard(&emitter, 0);
+  FakeEventEmitter emitter;
+  KeyboardEventSource keyboard(&emitter, 0);
 
-    // Set 'ABCD' as pressed.
-    hid_keys_t keys = {};
-    KEYSET(keys.keymask, HID_USAGE_KEY_A);
-    KEYSET(keys.keymask, HID_USAGE_KEY_B);
-    KEYSET(keys.keymask, HID_USAGE_KEY_C);
-    KEYSET(keys.keymask, HID_USAGE_KEY_D);
-    ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
-    emitter.Reset();
+  // Set 'ABCD' as pressed.
+  hid_keys_t keys = {};
+  KEYSET(keys.keymask, HID_USAGE_KEY_A);
+  KEYSET(keys.keymask, HID_USAGE_KEY_B);
+  KEYSET(keys.keymask, HID_USAGE_KEY_C);
+  KEYSET(keys.keymask, HID_USAGE_KEY_D);
+  ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
+  emitter.Reset();
 
-    // Release all keys.
-    ASSERT_EQ(keyboard.HandleHidKeys(kAllKeysUp), ZX_OK);
+  // Release all keys.
+  ASSERT_EQ(keyboard.HandleHidKeys(kAllKeysUp), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 5u);
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_C));
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_D));
-    EXPECT_TRUE(emitter.HasBarrier(4));
+  ASSERT_EQ(emitter.events(), 5u);
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_C));
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_D));
+  EXPECT_TRUE(emitter.HasBarrier(4));
 }
 
 // Test keys both being pressed and released in a single HID report.
 TEST(VirtioInputTest, HandleKeyPressAndRelease) {
-    FakeEventEmitter emitter;
-    KeyboardEventSource keyboard(&emitter, 0);
+  FakeEventEmitter emitter;
+  KeyboardEventSource keyboard(&emitter, 0);
 
-    // Set 'AB' as pressed.
-    hid_keys_t keys_ab = {};
-    KEYSET(keys_ab.keymask, HID_USAGE_KEY_A);
-    KEYSET(keys_ab.keymask, HID_USAGE_KEY_B);
-    ASSERT_EQ(keyboard.HandleHidKeys(keys_ab), ZX_OK);
-    emitter.Reset();
+  // Set 'AB' as pressed.
+  hid_keys_t keys_ab = {};
+  KEYSET(keys_ab.keymask, HID_USAGE_KEY_A);
+  KEYSET(keys_ab.keymask, HID_USAGE_KEY_B);
+  ASSERT_EQ(keyboard.HandleHidKeys(keys_ab), ZX_OK);
+  emitter.Reset();
 
-    // Release 'AB' and press 'CD'.
-    hid_keys_t keys_cd = {};
-    KEYSET(keys_cd.keymask, HID_USAGE_KEY_C);
-    KEYSET(keys_cd.keymask, HID_USAGE_KEY_D);
-    ASSERT_EQ(keyboard.HandleHidKeys(keys_cd), ZX_OK);
+  // Release 'AB' and press 'CD'.
+  hid_keys_t keys_cd = {};
+  KEYSET(keys_cd.keymask, HID_USAGE_KEY_C);
+  KEYSET(keys_cd.keymask, HID_USAGE_KEY_D);
+  ASSERT_EQ(keyboard.HandleHidKeys(keys_cd), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 5u);
-    EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_C));
-    EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_D));
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
-    EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
-    EXPECT_TRUE(emitter.HasBarrier(4));
+  ASSERT_EQ(emitter.events(), 5u);
+  EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_C));
+  EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_D));
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
+  EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
+  EXPECT_TRUE(emitter.HasBarrier(4));
 }

@@ -17,6 +17,6 @@ using Uart = I8250;
 
 using Uart = Pl011;
 
-#endif // __aarch64__
+#endif  // __aarch64__
 
 #endif  // GARNET_LIB_MACHINA_UART_H_

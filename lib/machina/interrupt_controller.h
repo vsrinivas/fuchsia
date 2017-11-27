@@ -17,6 +17,6 @@ using InterruptController = IoApic;
 
 using InterruptController = GicDistributor;
 
-#endif // __aarch64__
+#endif  // __aarch64__
 
 #endif  // GARNET_LIB_MACHINA_INTERRUPT_CONTROLLER_H_
