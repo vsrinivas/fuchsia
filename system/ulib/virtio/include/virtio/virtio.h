@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <zircon/compiler.h>
 
 #define VIRTIO_STATUS_ACKNOWLEDGE                   (1u << 0)
