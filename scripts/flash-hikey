@@ -17,7 +17,7 @@ CMDLINE="TERM=uart"
 
 FIRMWARE_DIR=/tmp/hikey/hikey-firmware
 FIRMWARE_GIT=https://android.googlesource.com/device/linaro/hikey
-FIRMWARE_REV=972114436628f874ac9ca28ef38ba82862937fbf
+FIRMWARE_TAG=android-o-iot-preview-5
 
 TOOLS_GIT=https://github.com/96boards-hikey/tools-images-hikey960.git
 TOOLS_DIR=/tmp/hikey/tools
@@ -99,13 +99,9 @@ recover_device() {
 
 flash_firmware() {
     if [[ ! -d $FIRMWARE_DIR ]]; then
-        git_clone $FIRMWARE_GIT $FIRMWARE_DIR
+        git_clone -b $FIRMWARE_TAG $FIRMWARE_GIT $FIRMWARE_DIR
     fi
-    if ! git -C $FIRMWARE_DIR checkout $FIRMWARE_REV ; then
-        echo "${FIRMWARE_DIR} exists but can't checkout the required revision."
-        echo "Try removing ${FIRMWARE_DIR} or selecting a new directory."
-        exit 1
-    fi
+
     help_fastboot
     fastboot flash ptable ${FIRMWARE_DIR}/installer/hikey960/ptable.img
     fastboot flash xloader ${FIRMWARE_DIR}/installer/hikey960/sec_xloader.img
@@ -134,12 +130,7 @@ recover_uefi() {
 
 flash_firmware_uefi() {
     if [[ ! -d $FIRMWARE_DIR ]]; then
-        git_clone $FIRMWARE_GIT $FIRMWARE_DIR
-    fi
-    if ! git -C $FIRMWARE_DIR checkout $FIRMWARE_REV ; then
-        echo "${FIRMWARE_DIR} exists but can't checkout the required revision."
-        echo "Try removing ${FIRMWARE_DIR} or selecting a new directory."
-        exit 1
+        git_clone -b $FIRMWARE_TAG $FIRMWARE_GIT $FIRMWARE_DIR
     fi
 
     echo Creating $UEFI_DIR...
