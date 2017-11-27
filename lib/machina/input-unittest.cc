@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/machina/input.h"
+
 #include <fbl/vector.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
-#include <machina/input.h>
 
-#include <unittest/unittest.h>
+#include "gtest/gtest.h"
 
 // Yanked from system/ulib/hid/hid.c
 #define KEYSET(bitmap, n) (bitmap[(n) >> 5] |= (1 << ((n)&31)))
@@ -75,9 +76,7 @@ private:
     fbl::Vector<virtio_input_event_t> queued_events_;
 };
 
-static bool test_key_press(void) {
-    BEGIN_TEST;
-
+TEST(VirtioInputTest, HandleKeyPress) {
     FakeEventEmitter emitter;
     KeyboardEventSource keyboard(&emitter, 0);
 
@@ -87,16 +86,12 @@ static bool test_key_press(void) {
 
     ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 2);
+    ASSERT_EQ(emitter.events(), 2u);
     EXPECT_TRUE(emitter.HasKeyPress(0, 0, HID_USAGE_KEY_A));
     EXPECT_TRUE(emitter.HasBarrier(1));
-
-    END_TEST;
 }
 
-static bool test_key_press_multiple(void) {
-    BEGIN_TEST;
-
+TEST(VirtioInputTest, HandleMultipleKeyPress) {
     FakeEventEmitter emitter;
     KeyboardEventSource keyboard(&emitter, 0);
 
@@ -109,19 +104,15 @@ static bool test_key_press_multiple(void) {
 
     ASSERT_EQ(keyboard.HandleHidKeys(keys), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 5);
+    ASSERT_EQ(emitter.events(), 5u);
     EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_A));
     EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_B));
     EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_C));
     EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_D));
     EXPECT_TRUE(emitter.HasBarrier(4));
-
-    END_TEST;
 }
 
-static bool test_key_release(void) {
-    BEGIN_TEST;
-
+TEST(VirtioInputTest, HandleKeyRelease) {
     FakeEventEmitter emitter;
     KeyboardEventSource keyboard(&emitter, 0);
 
@@ -134,16 +125,12 @@ static bool test_key_release(void) {
     // Release all keys.
     ASSERT_EQ(keyboard.HandleHidKeys(kAllKeysUp), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 2);
+    ASSERT_EQ(emitter.events(), 2u);
     EXPECT_TRUE(emitter.HasKeyRelease(0, 0, HID_USAGE_KEY_A));
     EXPECT_TRUE(emitter.HasBarrier(1));
-
-    END_TEST;
 }
 
-static bool test_key_release_multiple(void) {
-    BEGIN_TEST;
-
+TEST(VirtioInputTest, HandleMultipleKeyRelease) {
     FakeEventEmitter emitter;
     KeyboardEventSource keyboard(&emitter, 0);
 
@@ -159,20 +146,16 @@ static bool test_key_release_multiple(void) {
     // Release all keys.
     ASSERT_EQ(keyboard.HandleHidKeys(kAllKeysUp), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 5);
+    ASSERT_EQ(emitter.events(), 5u);
     EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
     EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
     EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_C));
     EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_D));
     EXPECT_TRUE(emitter.HasBarrier(4));
-
-    END_TEST;
 }
 
 // Test keys both being pressed and released in a single HID report.
-static bool test_key_press_and_release(void) {
-    BEGIN_TEST;
-
+TEST(VirtioInputTest, HandleKeyPressAndRelease) {
     FakeEventEmitter emitter;
     KeyboardEventSource keyboard(&emitter, 0);
 
@@ -189,20 +172,10 @@ static bool test_key_press_and_release(void) {
     KEYSET(keys_cd.keymask, HID_USAGE_KEY_D);
     ASSERT_EQ(keyboard.HandleHidKeys(keys_cd), ZX_OK);
 
-    ASSERT_EQ(emitter.events(), 5);
+    ASSERT_EQ(emitter.events(), 5u);
     EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_C));
     EXPECT_TRUE(emitter.HasKeyPress(0, 3, HID_USAGE_KEY_D));
     EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
     EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
     EXPECT_TRUE(emitter.HasBarrier(4));
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(virtio_input)
-RUN_TEST(test_key_press);
-RUN_TEST(test_key_press_multiple);
-RUN_TEST(test_key_release);
-RUN_TEST(test_key_release_multiple);
-RUN_TEST(test_key_press_and_release);
-END_TEST_CASE(virtio_input)
