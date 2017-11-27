@@ -7,15 +7,16 @@ common interface for **describing**, **referencing**, and **accessing** data
 objects (entities) which are shared between components running on the Fuchsia
 platform.  It consists of the following major concepts:
 
-* [entities](../services/entity/entity.fidl): the data objects described by the
-  model
+* [entities](../../public/lib/entity/fidl/entity.fidl): the data objects
+  described by the model
 * entity types: the way different kinds of entities are distinguished
-* [entity references](../services/entity/entity_reference.fidl): a serializable
-  token that can be used to retrieve an entity handle
-* entity providers (TODO): the extensible means by which entities are made
-  available to the system and to other components independent of their source
-* [entity resolver](../services/entity/entity_resolver.fidl): a Fuchsia API for
-  accessing an entity given a reference
+* [entity references](../../public/lib/entity/fidl/entity_reference_factory.fidl):
+  a serializable token that can be used to retrieve an entity handle
+* [entity providers](../../public/lib/entity/fidl/entity_provider.fidl):
+  the extensible means by which entities are made available to the system and to
+  other components independent of their source
+* [entity resolver](../../public/lib/entity/fidl/entity_resolver.fidl):
+  a Fuchsia API for accessing an entity given a reference
 
 Here are some ways entities can be used:
 
