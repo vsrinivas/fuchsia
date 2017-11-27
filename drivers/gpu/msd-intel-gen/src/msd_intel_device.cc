@@ -218,8 +218,14 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!platform_device_->ReadPciConfig16(2, &pci_dev_id))
         return DRETF(false, "ReadPciConfig16 failed");
 
+    uint16_t revision;
+    if (!platform_device_->ReadPciConfig16(8, &revision))
+        return DRETF(false, "ReadPciConfig16 failed");
+
+    revision_ = revision & 0xFF;
+
     device_id_ = pci_dev_id;
-    DLOG("device_id 0x%x", device_id_);
+    DLOG("device_id 0x%x revision 0x%x", device_id_, revision);
 
     uint16_t gmch_graphics_ctrl;
     if (!platform_device_->ReadPciConfig16(registers::GmchGraphicsControl::kOffset,

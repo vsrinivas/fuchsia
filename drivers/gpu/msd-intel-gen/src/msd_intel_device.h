@@ -41,6 +41,7 @@ public:
     std::unique_ptr<MsdIntelConnection> Open(msd_client_id_t client_id);
 
     uint32_t device_id() { return device_id_; }
+    uint32_t revision() { return revision_; }
     uint32_t subslice_total() { return subslice_total_; }
     uint32_t eu_total() { return eu_total_; }
     magma_display_size display_size() { return display_size_; }
@@ -177,6 +178,7 @@ private:
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
+    uint32_t revision_{};
     uint32_t subslice_total_{};
     uint32_t eu_total_{};
     magma_display_size display_size_{};

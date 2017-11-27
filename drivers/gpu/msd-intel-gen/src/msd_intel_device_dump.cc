@@ -332,15 +332,15 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
     const char* build = magma::kDebug ? "DEBUG" : "RELEASE";
     const char* fmt = "---- device dump begin ----\n"
                       "%s build\n"
-                      "Device id: 0x%x\n"
+                      "Device id: 0x%x Revision: 0x%x\n"
                       "RENDER_COMMAND_STREAMER\n"
                       "sequence_number 0x%x\n"
                       "active head pointer: 0x%llx\n";
-    int size =
-        std::snprintf(nullptr, 0, fmt, build, device_id(), dump_state.render_cs.sequence_number,
-                      dump_state.render_cs.active_head_pointer);
+    int size = std::snprintf(nullptr, 0, fmt, build, device_id(), revision(),
+                             dump_state.render_cs.sequence_number,
+                             dump_state.render_cs.active_head_pointer);
     std::vector<char> buf(size + 1);
-    std::snprintf(&buf[0], buf.size(), fmt, build, device_id(),
+    std::snprintf(&buf[0], buf.size(), fmt, build, device_id(), revision(),
                   dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer);
     dump_out.append(&buf[0]);
 
