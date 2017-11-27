@@ -104,13 +104,13 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,
         goto init_fail;
     }
 
-    // Set clocks. For now we inherit from a fixed clock. This is done before
-    // mapping the PDM registers to our address space. The PDM register is not
-    // accessible before the pdm_sysclk is running.
+    // Set clocks. This is done before mapping the PDM registers to our address
+    // space. The PDM register is not accessible before the pdm_sysclk is
+    // running.
     a113_ee_audio_write(audio_device, EE_AUDIO_CLK_PDMIN_CTRL0,
-                        (1 << 31) | (6 << 24) | 162);
+                        (1 << 31) | (2 << 24) | 79);
     a113_ee_audio_write(audio_device, EE_AUDIO_CLK_PDMIN_CTRL1,
-                        (1 << 31) | (6 << 24) | 1);
+                        (1 << 31) | (2 << 24) | 0);
     a113_ee_audio_write(audio_device, EE_AUDIO_CLK_GATE_EN, 0x000fffff);
 
     // Map the PDM registers to our address space.
