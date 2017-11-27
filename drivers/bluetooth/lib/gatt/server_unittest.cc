@@ -1354,6 +1354,181 @@ TEST_F(GATT_ServerTest, WriteRequestSuccess) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
+TEST_F(GATT_ServerTest, ReadRequestInvalidPDU) {
+  // Just opcode
+  // clang-format off
+  const auto kInvalidPDU = common::CreateStaticByteBuffer(0x0A);
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0A,        // request: read request
+      0x00, 0x00,  // handle: 0
+      0x04         // error: Invalid PDU
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidPDU, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadRequestInvalidHandle) {
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x01, 0x00  // handle: 0x0001
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0A,        // request: read request
+      0x01, 0x00,  // handle: 0x0001
+      0x01         // error: invalid handle
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadRequestSecurity) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+
+  // Requires encryption
+  grp->AddAttribute(kTestType16, att::AccessRequirements(true, false, false),
+                    att::AccessRequirements());
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x02, 0x00  // handle: 0x0002
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0A,        // request: read request
+      0x02, 0x00,  // handle: 0x0002
+      0x02         // error: read not permitted
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadRequestCached) {
+  const auto kDeclValue = common::CreateStaticByteBuffer('d', 'e', 'c', 'l');
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kDeclValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+  attr->SetValue(kTestValue);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest1 = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x01, 0x00  // handle: 0x0001
+  );
+  const auto kExpected1 = common::CreateStaticByteBuffer(
+      0x0B,               // opcode: read response
+      'd', 'e', 'c', 'l'  // value: kDeclValue
+  );
+  const auto kRequest2 = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x02, 0x00  // handle: 0x0002
+  );
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      0x0B,          // opcode: read response
+      'f', 'o', 'o'  // value: kTestValue
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest1, kExpected1));
+  EXPECT_TRUE(ReceiveAndExpect(kRequest2, kExpected2));
+}
+
+TEST_F(GATT_ServerTest, ReadRequestNoHandler) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+
+  grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                    att::AccessRequirements());
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x02, 0x00  // handle: 0x0002
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0A,        // request: read request
+      0x02, 0x00,  // handle: 0x0002
+      0x02         // error: read not permitted
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadRequestError) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+  attr->set_read_handler(
+      [&](att::Handle handle, uint16_t offset, const auto& result_cb) {
+        EXPECT_EQ(attr->handle(), handle);
+        EXPECT_EQ(0u, offset);
+
+        result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
+      });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x02, 0x00  // handle: 0x0002
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0A,        // request: read request
+      0x02, 0x00,  // handle: 0x0002
+      0x0E         // error: unlikely error
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadRequestSuccess) {
+  const auto kDeclValue = common::CreateStaticByteBuffer('d', 'e', 'c', 'l');
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+  attr->set_read_handler(
+      [&](att::Handle handle, uint16_t offset, const auto& result_cb) {
+        EXPECT_EQ(attr->handle(), handle);
+        EXPECT_EQ(0u, offset);
+
+        result_cb(att::ErrorCode::kNoError, kTestValue);
+      });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x02, 0x00  // handle: 0x0002
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x0B,          // opcode: read response
+      'f', 'o', 'o'  // value: kTestValue
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
 }  // namespace
 }  // namespace gatt
 }  // namespace btlib
