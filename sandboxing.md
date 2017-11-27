@@ -75,10 +75,10 @@ requests, but that is likely to change as the system evolves.
 ## Building an archive
 
 To build a package, use the `package()` macro in `gn` defined in
-[`//packages/packages.gni`](https://fuchsia.googlesource.com/packages/+/master/package.gni).
+[`//build/package.gni`](https://fuchsia.googlesource.com/build/+/master/package.gni).
 Specifically, to create a Fuchsia Archive (FAR) for your package (which will
 trigger sandboxing), set the `archive` flag to `true`. See the documentation for
 the `package()` macro for details about including resources
 
-For examples, see [https://fuchsia.googlesource.com/packages/+/master/gn/mozart]
-and [https://fuchsia.googlesource.com/mozart/+/master/BUILD.gn].
+For examples, see [https://fuchsia.googlesource.com/garnet/+/master/packages/fortune]
+and [https://fuchsia.googlesource.com/garnet/+/master/bin/fortune/BUILD.gn].
