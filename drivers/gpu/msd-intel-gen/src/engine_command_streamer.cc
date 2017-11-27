@@ -85,6 +85,16 @@ void EngineCommandStreamer::InitHardware()
                                          registers::InterruptRegisterBase::RENDER_ENGINE,
                                          registers::InterruptRegisterBase::USER, true);
 
+    registers::HardwareStatusMask::write(
+        register_io(), mmio_base_, registers::InterruptRegisterBase::RENDER_ENGINE,
+        registers::InterruptRegisterBase::CONTEXT_SWITCH, registers::InterruptRegisterBase::UNMASK);
+    registers::GtInterruptMask0::write(
+        register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
+        registers::InterruptRegisterBase::CONTEXT_SWITCH, registers::InterruptRegisterBase::UNMASK);
+    registers::GtInterruptEnable0::write(register_io(),
+                                         registers::InterruptRegisterBase::RENDER_ENGINE,
+                                         registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
+
     // WaEnableGapsTsvCreditFix
     registers::ArbiterControl::workaround(register_io());
 }
@@ -388,6 +398,25 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
         gpu_addr = kInvalidGpuAddr;
     }
 
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (bool busy = true; busy;) {
+        constexpr uint32_t kTimeoutUs = 100;
+        uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
+
+        busy = registers::ExeclistStatus::execlist_write_pointer(status) ==
+                   registers::ExeclistStatus::execlist_current_pointer(status) &&
+               registers::ExeclistStatus::execlist_queue_full(status);
+        if (busy) {
+            if (std::chrono::duration<double, std::micro>(
+                    std::chrono::high_resolution_clock::now() - start)
+                    .count() > kTimeoutUs) {
+                magma::log(magma::LOG_WARNING, "Timeout waiting for execlist port");
+                break;
+            }
+        }
+    }
+
     DLOG("SubmitExeclists context descriptor id 0x%lx", gpu_addr >> 12);
 
     // Use most significant bits of context gpu_addr as globally unique context id
@@ -500,6 +529,18 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     auto context = mapped_batch->GetContext().lock();
     DASSERT(context);
 
+    if (!MoveBatchToInflight(std::move(mapped_batch)))
+        return DRETF(false, "WriteBatchToRingbuffer failed");
+
+    SubmitContext(context.get(), inflight_command_sequences_.back().ringbuffer_offset());
+    return true;
+}
+
+bool RenderEngineCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatch> mapped_batch)
+{
+    auto context = mapped_batch->GetContext().lock();
+    DASSERT(context);
+
     gpu_addr_t gpu_addr;
     if (!mapped_batch->GetGpuAddress(&gpu_addr))
         return DRETF(false, "couldn't get batch gpu address");
@@ -524,56 +565,45 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
     inflight_command_sequences_.emplace(sequence_number, ringbuffer_offset,
                                         std::move(mapped_batch));
-
-    uint32_t tail = inflight_command_sequences_.back().ringbuffer_offset();
-    DLOG("Submitting context for sequence_number 0x%x", sequence_number);
-
-    SubmitContext(context.get(), tail);
-
     batch_submitted(sequence_number);
 
     return true;
 }
 
+void RenderEngineCommandStreamer::ContextSwitched()
+{
+    context_switch_pending_ = false;
+    ScheduleContext();
+}
+
 void RenderEngineCommandStreamer::ScheduleContext()
 {
-    auto start = std::chrono::high_resolution_clock::now();
-
-    for (bool busy = true; busy;) {
-        constexpr uint32_t kTimeoutUs = 100;
-        uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
-
-        busy = registers::ExeclistStatus::execlist_write_pointer(status) ==
-                   registers::ExeclistStatus::execlist_current_pointer(status) &&
-               registers::ExeclistStatus::execlist_queue_full(status);
-        if (busy) {
-            if (std::chrono::duration<double, std::micro>(
-                    std::chrono::high_resolution_clock::now() - start)
-                    .count() > kTimeoutUs) {
-                magma::log(magma::LOG_WARNING, "Timeout waiting for execlist port");
-                break;
-            }
-        }
-    }
+    auto context = scheduler_->ScheduleContext();
+    if (!context)
+        return;
 
     while (true) {
-        auto context = scheduler_->ScheduleContext();
-        if (!context)
-            break;
-
         auto mapped_batch = std::move(context->pending_batch_queue().front());
         mapped_batch->scheduled();
         context->pending_batch_queue().pop();
 
-        // TODO(MA-142) - ExecBatch should not fail.  Scheduler should verify there is
+        // TODO(MA-142) - MoveBatchToInflight should not fail.  Scheduler should verify there is
         // sufficient room in the ringbuffer before selecting a context.
         // For now, drop the command buffer and try another context.
-        if (ExecBatch(std::move(mapped_batch))) {
+        if (!MoveBatchToInflight(std::move(mapped_batch))) {
+            magma::log(magma::LOG_WARNING, "ExecBatch failed");
             break;
         }
 
-        magma::log(magma::LOG_WARNING, "ExecBatch failed");
+        // Scheduler returns nullptr when its time to switch contexts
+        auto next_context = scheduler_->ScheduleContext();
+        if (next_context == nullptr)
+            break;
+        DASSERT(context == next_context);
     }
+
+    SubmitContext(context.get(), inflight_command_sequences_.back().ringbuffer_offset());
+    context_switch_pending_ = true;
 }
 
 void RenderEngineCommandStreamer::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
@@ -586,7 +616,8 @@ void RenderEngineCommandStreamer::SubmitCommandBuffer(std::unique_ptr<CommandBuf
 
     scheduler_->CommandBufferQueued(context);
 
-    ScheduleContext();
+    if (!context_switch_pending_)
+        ScheduleContext();
 }
 
 bool RenderEngineCommandStreamer::WaitIdle()
@@ -618,8 +649,6 @@ bool RenderEngineCommandStreamer::WaitIdle()
 
 void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_completed_sequence)
 {
-    bool progress = false;
-
     // pop all completed command buffers
     while (!inflight_command_sequences_.empty() &&
            inflight_command_sequences_.front().sequence_number() <= last_completed_sequence) {
@@ -639,11 +668,7 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_c
             scheduler_->CommandBufferCompleted(context);
 
         inflight_command_sequences_.pop();
-        progress = true;
     }
-
-    if (progress)
-        ScheduleContext();
 }
 
 bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags,

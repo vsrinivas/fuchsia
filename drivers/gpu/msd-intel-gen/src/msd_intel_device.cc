@@ -669,9 +669,12 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns)
             } else {
                 ProcessCompletedCommandBuffers();
             }
-
-        } else {
-            DASSERT(false);
+        }
+        if (val & registers::InterruptRegisterBase::kContextSwitchBit) {
+            registers::GtInterruptIdentity0::clear(
+                register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
+                registers::InterruptRegisterBase::CONTEXT_SWITCH);
+            render_engine_cs_->ContextSwitched();
         }
     }
 

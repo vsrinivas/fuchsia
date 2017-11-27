@@ -103,6 +103,7 @@ public:
 
     void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
     void ResetCurrentContext();
+    void ContextSwitched();
 
     bool WaitIdle() override;
 
@@ -117,6 +118,7 @@ private:
 
     bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) override;
 
+    bool MoveBatchToInflight(std::unique_ptr<MappedBatch> mapped_batch);
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceType address_space_type);
     bool WriteSequenceNumber(MsdIntelContext* context, uint32_t* sequence_number_out);
@@ -154,6 +156,7 @@ private:
 
     std::unique_ptr<Scheduler> scheduler_;
     std::queue<InflightCommandSequence> inflight_command_sequences_;
+    bool context_switch_pending_{};
 
     friend class TestEngineCommandStreamer;
 };
