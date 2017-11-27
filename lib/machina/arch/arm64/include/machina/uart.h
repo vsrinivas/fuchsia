@@ -24,6 +24,8 @@ private:
     uint8_t tx_buffer_[kBufferSize] = {};
     uint16_t tx_offset_ = 0;
 
+    uint16_t control_ = 0;
+
     void Print(uint8_t ch);
 };
 
