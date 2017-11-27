@@ -14,6 +14,7 @@
 #include <zircon/syscalls/port.h>
 
 #include "channels.h"
+#include "main.h"
 #include "round_trips.h"
 
 // This tests the round-trip time of various Zircon kernel IPC primitives.
@@ -408,6 +409,15 @@ void RegisterTest(const char* test_name, Args... args) {
       [=](benchmark::State& state) {
         TestClass test(args...);
         while (state.KeepRunning())
+          test.Run();
+      });
+  fbenchmark::RegisterTest(
+      test_name,
+      [=]() {
+        TestClass test(args...);
+        // Run the test a small number of times to ensure that doing
+        // multiple runs works OK.
+        for (int i = 0; i < 5; ++i)
           test.Run();
       });
 }
