@@ -70,3 +70,29 @@ source_set("machina") {
 
   public_configs = [":machina_config"]
 }
+
+executable("machina-unittests") {
+  testonly = true
+
+  sources = [
+    "run_all_unittests.cc",
+  ]
+
+  deps = [
+    ":machina",
+    "//third_party/gtest",
+  ]
+}
+
+package("machina_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":machina-unittests",
+  ]
+
+  tests = [{
+    name = "machina-unittests"
+  }]
+}
