@@ -14,9 +14,9 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "peridot/bin/cloud_provider_firebase/network/fake_network_service.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/network/fake_network_service.h"
 
 namespace test {
 namespace {

@@ -11,9 +11,9 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/cancellable.h"
+#include "peridot/lib/network/network_service.h"
 
 namespace cloud_provider_firebase {
 

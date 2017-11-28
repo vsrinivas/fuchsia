@@ -27,7 +27,6 @@ executable("cloud_provider_firebase_unittests") {
     "//peridot/bin/cloud_provider_firebase/firebase:unittests",
     "//peridot/bin/cloud_provider_firebase/firebase_auth:unittests",
     "//peridot/bin/cloud_provider_firebase/gcs:unittests",
-    "//peridot/bin/cloud_provider_firebase/network:unittests",
     "//peridot/bin/cloud_provider_firebase/page_handler/impl:unittests",
     "//peridot/bin/cloud_provider_firebase/test/token_provider:unittests",
   ]

@@ -22,9 +22,9 @@ source_set("gcs") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/network",
     "//peridot/bin/ledger/glue/socket",
     "//peridot/lib/callback",
+    "//peridot/lib/network",
     "//zircon/system/ulib/zx",
   ]
 
@@ -42,8 +42,8 @@ source_set("unittests") {
     ":gcs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/network:fake",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/network:fake",
     "//third_party/gtest",
   ]
 

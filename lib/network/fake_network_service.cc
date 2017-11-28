@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/network/fake_network_service.h"
+#include "peridot/lib/network/fake_network_service.h"
 
 #include <utility>
 

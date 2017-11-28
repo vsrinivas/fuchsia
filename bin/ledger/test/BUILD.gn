@@ -3,11 +3,13 @@
 # found in the LICENSE file.
 
 visibility = [
-  # TODO(ppi): clean up deps, see LE-366.
   "//peridot/bin/cloud_provider_firebase/*",
   "//peridot/bin/cloud_provider_firestore/*",
   "//peridot/bin/ledger/*",
+
+  # TODO(ppi): clean up deps, see LE-366.
   "//peridot/lib/callback/*",
+  "//peridot/lib/network/*",
 ]
 
 source_set("lib") {

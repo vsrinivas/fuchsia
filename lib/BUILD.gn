@@ -15,6 +15,7 @@ executable("unittests") {
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/module_manifest_source:unittests",
+    "//peridot/lib/network:unittests",
     "//peridot/lib/testing:unittests",
     "//peridot/lib/util:unittests",
   ]
