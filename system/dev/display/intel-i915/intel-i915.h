@@ -6,49 +6,43 @@
 
 #if __cplusplus
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/display.h>
-
 #include <fbl/unique_ptr.h>
 
 #include <zx/vmo.h>
 
+#include "display-device.h"
 #include "gtt.h"
 #include "mmio-space.h"
 
 namespace i915 {
 
-class Device;
-using DeviceType = ddk::Device<Device, ddk::Openable, ddk::Closable>;
+class Controller;
+using DeviceType = ddk::Device<Controller, ddk::Unbindable>;
 
-class Device: public DeviceType, public ddk::DisplayProtocol<Device> {
+class Controller : public DeviceType {
 public:
-    Device(zx_device_t* parent);
-    ~Device();
+    Controller(zx_device_t* parent);
+    ~Controller();
 
-    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-    zx_status_t DdkClose(uint32_t flags);
+    void DdkUnbind();
     void DdkRelease();
     zx_status_t Bind();
 
-    zx_status_t SetMode(zx_display_info_t* info);
-    zx_status_t GetMode(zx_display_info_t* info);
-    zx_status_t GetFramebuffer(void** framebuffer);
-    void Flush();
+    MmioSpace* mmio_space() { return mmio_space_.get(); }
+    Gtt* gtt() { return &gtt_; }
 
 private:
     void EnableBacklight(bool enable);
+    zx_status_t InitDisplays();
 
     Gtt gtt_;
 
     fbl::unique_ptr<MmioSpace> mmio_space_;
     zx_handle_t regs_handle_;
 
-    uintptr_t framebuffer_;
-    uint32_t framebuffer_size_;
-    zx::vmo framebuffer_vmo_;
+    // Reference to display, owned by devmgr - will always be valid when non-null.
+    DisplayDevice* display_device_;
 
-    zx_display_info_t info_;
     uint32_t flags_;
 };
 
