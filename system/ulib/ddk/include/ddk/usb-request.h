@@ -121,7 +121,7 @@ zx_status_t usb_request_mmap(usb_request_t* req, void** data);
 
 // usb_request_cacheop() performs a cache maintenance op against the request's internal
 // buffer. 
-zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length) __attribute__((__deprecated__));
+zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length);
 
 // usb_request_cache_flush() performs a cache flush on a range of memory in the request's buffer
 zx_status_t usb_request_cache_flush(usb_request_t* req, zx_off_t offset, size_t length);
