@@ -19,7 +19,7 @@ namespace fsl {
 
 class FXL_EXPORT FDWaiter {
  public:
-  FDWaiter(async_t* async=async_get_default());
+  FDWaiter(async_t* async = async_get_default());
   ~FDWaiter();
 
   // If the wait was successful, the first argument will be ZX_OK and the

@@ -8,6 +8,7 @@
 #include <async/loop.h>
 #include <errno.h>
 #include <fdio/io.h>
+#include <fdio/util.h>
 #include <launchpad/launchpad.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -18,6 +19,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <zx/job.h>
 
 #include <map>
@@ -182,6 +184,14 @@ void usage(const char* command) {
 }
 
 int main(int argc, const char** argv) {
+  // We need to close PA_SERVICE_REQUEST otherwise clients that expect us to
+  // offer services won't know that we've started and are not going to offer
+  // any services.
+  //
+  // TODO(abarth): Instead of closing this handle, we should offer some
+  // introspection services for debugging.
+  zx_handle_close(zx_get_startup_handle(PA_SERVICE_REQUEST));
+
   async::Loop loop;
   async_set_default(loop.async());
 
