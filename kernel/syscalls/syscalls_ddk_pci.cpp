@@ -515,9 +515,9 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_out_p
     }
 
     /* Success so far, copy everything back to usersapce */
-    if (out_bar.copy_to_user(bar) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    status = out_bar.copy_to_user(bar);
+    if (status != ZX_OK)
+        return status;
 
     /* If the bar is an mmio the VMO handle still needs to be accounted for */
     if (info->is_mmio) {
@@ -606,9 +606,9 @@ zx_status_t sys_pci_get_config(zx_handle_t dev_handle, user_out_ptr<zx_pci_resou
     }
 
     // Success so far, copy everything back to the usersapce out_config pointer.
-    if (out_config.copy_to_user(config) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    status = out_config.copy_to_user(config);
+    if (status != ZX_OK)
+        return status;
 
     // If we created an MMIO handle it needs to be held by the process
     if (pci_config.is_mmio) {

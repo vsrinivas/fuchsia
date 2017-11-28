@@ -65,9 +65,9 @@ zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t vector, uint32_t op
     auto up = ProcessDispatcher::GetCurrent();
     zx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (out_handle.copy_to_user(hv) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    status = out_handle.copy_to_user(hv);
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;

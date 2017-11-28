@@ -158,12 +158,12 @@ static zx_status_t channel_read_out(ProcessDispatcher* up,
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    if (actual_bytes.copy_to_user(num_bytes) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (actual_handles.copy_to_user(num_handles) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    zx_status_t status = actual_bytes.copy_to_user(num_bytes);
+    if (status != ZX_OK)
+        return status;
+    status = actual_handles.copy_to_user(num_handles);
+    if (status != ZX_OK)
+        return status;
 
     if (num_bytes > 0u) {
         if (reply->CopyDataTo(make_user_out_ptr(args->rd_bytes)) != ZX_OK) {
