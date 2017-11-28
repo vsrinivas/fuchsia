@@ -15,7 +15,7 @@ SECTIONS
     . = KERNEL_BASE;
     PROVIDE_HIDDEN(__code_start = .);
 
-    .text.boot0 : AT(MEMBASE + KERNEL_LOAD_OFFSET) {
+    .text.boot0 : AT(KERNEL_LOAD_OFFSET) {
         KEEP(*(.text.boot0))
     } :code
 

@@ -429,7 +429,7 @@ static zx_status_t platform_mem_range_init(void)
     /* if still no ranges were found, make a safe guess */
     e820_range_init(&range, &e820_seq);
     e820entry_t entry = {
-        .addr = MEMBASE,
+        .addr = 0,
         .size = DEFAULT_MEMEND,
         .type = E820_RAM,
     };

@@ -73,10 +73,6 @@ KERNEL_DEFINES += \
 	KERNEL_BASE=$(KERNEL_BASE) \
 	KERNEL_LOAD_OFFSET=$(KERNEL_LOAD_OFFSET)
 
-KERNEL_DEFINES += \
-	MEMBASE=$(MEMBASE) \
-	MEMSIZE=$(MEMSIZE)
-
 # try to find the toolchain
 include $(LOCAL_DIR)/toolchain.mk
 TOOLCHAIN_PREFIX := $(ARCH_$(ARCH)_TOOLCHAIN_PREFIX)
@@ -116,17 +112,5 @@ endif
 # tell the compiler to leave x18 alone so we can use it to point
 # at the current cpu structure
 KERNEL_COMPILEFLAGS += -ffixed-x18
-
-# make sure some bits were set up
-MEMVARS_SET := 0
-ifneq ($(MEMBASE),)
-MEMVARS_SET := 1
-endif
-ifneq ($(MEMSIZE),)
-MEMVARS_SET := 1
-endif
-ifeq ($(MEMVARS_SET),0)
-$(error missing MEMBASE or MEMSIZE variable, please set in target rules.mk)
-endif
 
 include make/module.mk

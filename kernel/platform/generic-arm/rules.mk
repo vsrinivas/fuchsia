@@ -13,6 +13,9 @@ MODULE_SRCS += \
 
 ARCH := arm64
 
+KERNEL_DEFINES += \
+	PLATFORM_SUPPORTS_PANIC_SHELL=1
+
 MODULE_DEPS += \
 	kernel/lib/cbuf \
 	kernel/lib/mdi \
