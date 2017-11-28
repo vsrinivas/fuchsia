@@ -566,6 +566,60 @@ action("efi.blk") {
   ]
 }
 
+# kernc.vboot is a "kernel partition" target for chromebook targets.
+action("kernc.vboot") {
+  # TODO(raggi): get futility built either in GN or into a cipd package. For
+  # now this assumes that you have previously cloned vboot_reference into
+  # //third_party, and then run `make -C third_party/vboot_reference futil`
+  vboot_dir = "//third_party/vboot_reference"
+  futility_bin = "$vboot_dir/build/futility/futility"
+  kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
+  private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
+  inputs = [
+    futility_bin,
+    kernel_keyblock,
+    private_keyblock,
+  ]
+
+  bootdata_label = ":bootdata-blobstore-${zircon_platforms[0]}"
+  deps = [
+    bootdata_label,
+  ]
+
+  bootdata_bins = get_target_outputs(bootdata_label)
+  bootdata_bin = bootdata_bins[0]
+  assert([ bootdata_bin ] == bootdata_bins)
+
+  kernel_build_dir = "//out/build-zircon/build-${zircon_platforms[0]}"
+  zircon_bin = "$kernel_build_dir/zircon.bin"
+
+  output = "$images_dir/kernc.vboot"
+  outputs = [
+    output,
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path(futility_bin),
+    "vbutil_kernel",
+    "--pack",
+    rebase_path(output),
+    "--keyblock",
+    rebase_path(kernel_keyblock),
+    "--signprivate",
+    rebase_path(private_keyblock),
+    "--bootloader",
+    rebase_path(bootdata_bin),
+    "--vmlinuz",
+    rebase_path(zircon_bin),
+    "--version",
+    "1",
+    "--flags",
+    "0x2",
+  ]
+}
+
 # DEPRECATED
 # Roll those together into the image for booting with /system from RAM disk.
 bootdata("mkbootfs") {
