@@ -5,7 +5,7 @@
 #include "peridot/bin/cloud_provider_firebase/firebase/encoding.h"
 
 #include "lib/fxl/strings/utf_codecs.h"
-#include "peridot/bin/ledger/glue/crypto/base64.h"
+#include "peridot/lib/base64url/base64url.h"
 
 namespace firebase {
 
@@ -47,7 +47,7 @@ std::string Encode(fxl::StringView s, bool verbatim) {
   }
 
   std::string encoded;
-  return glue::Base64UrlEncode(s) + "B";
+  return base64url::Base64UrlEncode(s) + "B";
 }
 
 }  // namespace
@@ -87,7 +87,7 @@ bool Decode(convert::ExtendedStringView input, std::string* output) {
   }
 
   if (input.back() == 'B') {
-    return glue::Base64UrlDecode(data, output);
+    return base64url::Base64UrlDecode(data, output);
   }
 
   return false;

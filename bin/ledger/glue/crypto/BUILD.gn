@@ -9,8 +9,6 @@ visibility = [
 
 source_set("crypto") {
   sources = [
-    "base64.cc",
-    "base64.h",
     "hash.cc",
     "hash.h",
     "hmac.cc",

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GLUE_CRYPTO_BASE64_H_
-#define PERIDOT_BIN_LEDGER_GLUE_CRYPTO_BASE64_H_
+#ifndef PERIDOT_LIB_BASE64URL_BASE64URL_H_
+#define PERIDOT_LIB_BASE64URL_BASE64URL_H_
 
 #include <string>
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace glue {
+namespace base64url {
 
 // Encodes the input string in base64url.
 std::string Base64UrlEncode(fxl::StringView input);
@@ -19,6 +19,6 @@ std::string Base64UrlEncode(fxl::StringView input);
 // be done in-place.
 bool Base64UrlDecode(fxl::StringView input, std::string* output);
 
-}  // namespace glue
+}  // namespace base64url
 
-#endif  // PERIDOT_BIN_LEDGER_GLUE_CRYPTO_BASE64_H_
+#endif  // PERIDOT_LIB_BASE64URL_BASE64URL_H_

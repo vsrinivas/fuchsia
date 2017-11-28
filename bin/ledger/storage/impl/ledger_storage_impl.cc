@@ -14,10 +14,10 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "peridot/bin/ledger/glue/crypto/base64.h"
 #include "peridot/bin/ledger/storage/impl/directory_reader.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/lib/base64url/base64url.h"
 
 namespace storage {
 
@@ -25,14 +25,14 @@ namespace {
 
 // Encodes opaque bytes in a way that is usable as a directory name.
 std::string GetDirectoryName(fxl::StringView bytes) {
-  return glue::Base64UrlEncode(bytes);
+  return base64url::Base64UrlEncode(bytes);
 }
 
 // Decodes opaque bytes used as a directory names into an id. This is the
 // opposite transformation of GetDirectoryName.
 std::string GetId(fxl::StringView bytes) {
   std::string decoded;
-  bool result = glue::Base64UrlDecode(bytes, &decoded);
+  bool result = base64url::Base64UrlDecode(bytes, &decoded);
   FXL_DCHECK(result);
   return decoded;
 }

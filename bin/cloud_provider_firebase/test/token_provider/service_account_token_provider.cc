@@ -21,7 +21,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/glue/crypto/base64.h"
+#include "peridot/lib/base64url/base64url.h"
 
 namespace test {
 
@@ -71,7 +71,7 @@ std::string GetHeader() {
 
   writer.EndObject();
 
-  return glue::Base64UrlEncode(
+  return base64url::Base64UrlEncode(
       fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
@@ -268,7 +268,7 @@ std::string ServiceAccountTokenProvider::GetClaims() {
 
   writer.EndObject();
 
-  return glue::Base64UrlEncode(
+  return base64url::Base64UrlEncode(
       fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
@@ -302,7 +302,7 @@ bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
   }
 
   std::string signature =
-      glue::Base64UrlEncode(fxl::StringView(result, result_length));
+      base64url::Base64UrlEncode(fxl::StringView(result, result_length));
 
   *custom_token = message + "." + signature;
   return true;

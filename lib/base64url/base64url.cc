@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/base64.h"
+#include "peridot/lib/base64url/base64url.h"
 
 #include "lib/fxl/logging.h"
 #include "peridot/third_party/modp_b64/modp_b64.h"
 
-namespace glue {
+namespace base64url {
 
 std::string Base64UrlEncode(fxl::StringView input) {
   std::string output;
@@ -35,4 +35,4 @@ bool Base64UrlDecode(fxl::StringView input, std::string* output) {
   return true;
 }
 
-}  // namespace glue
+}  // namespace base64url

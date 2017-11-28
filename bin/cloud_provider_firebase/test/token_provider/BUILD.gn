@@ -26,6 +26,7 @@ source_set("token_provider") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/crypto",
+    "//peridot/lib/base64url",
     "//third_party/boringssl",
     "//third_party/rapidjson",
   ]

@@ -34,8 +34,8 @@ source_set("firebase") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/glue/socket",
+    "//peridot/lib/base64url",
     "//peridot/lib/callback",
   ]
 
