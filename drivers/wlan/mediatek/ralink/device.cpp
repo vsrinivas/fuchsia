@@ -3316,7 +3316,8 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     packet->tx_info.set_tx_pkt_length(txwi_len + len + align_pad_len);
 
     // TODO(tkilbourn): set these more appropriately
-    uint8_t wiv = !(pkt->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
+    const bool protected_frame = (pkt->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
+    uint8_t wiv = !protected_frame;
     packet->tx_info.set_wiv(wiv);
     packet->tx_info.set_qsel(2);
 
@@ -3360,8 +3361,9 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     txwi0.set_phy_mode(PhyMode::kHtMixMode);
 
     // The frame header is always in the packet head.
-    auto wcid =
-        LookupTxWcid(static_cast<const uint8_t*>(pkt->packet_head->data), pkt->packet_head->len);
+    auto frame = static_cast<const uint8_t*>(pkt->packet_head->data);
+    auto addr1 = frame + 4;  // 4 = FC + Duration fields
+    auto wcid = LookupTxWcid(addr1, protected_frame);
     Txwi1& txwi1 = packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);
@@ -3395,18 +3397,11 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     return ZX_OK;
 }
 
-bool Device::RequiresProtection(const uint8_t* frame, size_t len) {
-    // TODO(hahnr): Derive frame protection requirement from wlan_tx_info_t once available.
-    uint16_t fc = reinterpret_cast<const uint16_t*>(frame)[0];
-    return fc & (1 << 14);
-}
-
 // Looks up the WCID for addr1 in the frame. If no WCID was found, 255 is returned.
 // Note: This method must be evolved once multiple BSS are supported or the STA runs in AP mode and
 // uses hardware encryption.
-uint8_t Device::LookupTxWcid(const uint8_t* frame, size_t len) {
-    if (RequiresProtection(frame, len)) {
-        auto addr1 = frame + 4;  // 4 = FC + Duration fields
+uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
+    if (protected_frame) {
         // TODO(hahnr): Replace addresses and constants with MacAddr once it was moved to common/.
         if (memcmp(addr1, kBcastAddr, 6) == 0) {
             return kWcidBcastAddr;

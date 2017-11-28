@@ -170,8 +170,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
-    uint8_t LookupTxWcid(const uint8_t* frame, size_t len);
-    bool RequiresProtection(const uint8_t* frame, size_t len);
+    uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);
