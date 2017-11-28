@@ -15,3 +15,14 @@ root = "//build/gn"
 
 # The executable used to execute scripts in action and exec_script.
 script_executable = "/usr/bin/env"
+
+# These arguments override the default values for items in a declare_args
+# block. "gn args" in turn can override these.
+default_args = {
+  # Disable Skia settings not needed for host builds.
+  skia_enable_flutter_defines = true
+  skia_use_dng_sdk = false
+  skia_use_fontconfig = false
+  skia_use_libwebp = false
+  skia_use_sfntly = false
+}

@@ -107,9 +107,6 @@ def main():
                         const='thin', choices=['full', 'thin'],
                         default=None, help="use link time optimization (LTO)")
     parser.add_argument("--thinlto-cache-dir", help="ThinLTO cache directory")
-    parser.add_argument("--ignore-skia",
-                        help="Disable Skia settings - for Skia-less builds",
-                        action="store_true", default=False)
     parser.add_argument("--variant", help="Select standard build variant",
                         action="append", default=[])
     args = parser.parse_args()
@@ -133,17 +130,6 @@ def main():
         'target_cpu="%s"' % cpu_map[args.target_cpu],
         'fuchsia_packages="%s"' % args.packages,
     ]
-
-    if not args.ignore_skia:
-        # Disable some Skia features not needed for host builds.
-        # This is needed in order to build the Flutter shell.
-        gn_args += [
-            "skia_enable_flutter_defines=true",
-            "skia_use_dng_sdk=false",
-            "skia_use_fontconfig=false",
-            "skia_use_libwebp=false",
-            "skia_use_sfntly=false",
-        ]
 
     if args.build_type == "release":
         gn_args.append("is_debug=false")
