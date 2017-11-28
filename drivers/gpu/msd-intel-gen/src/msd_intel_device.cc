@@ -655,9 +655,9 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns)
         DLOG("gt IIR0 0x%08x", val);
 
         if (val & registers::InterruptRegisterBase::kUserInterruptBit) {
-            registers::GtInterruptIdentity0::write(
-                register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
-                registers::InterruptRegisterBase::USER, registers::InterruptRegisterBase::MASK);
+            registers::GtInterruptIdentity0::clear(register_io(),
+                                                   registers::InterruptRegisterBase::RENDER_ENGINE,
+                                                   registers::InterruptRegisterBase::USER);
 
             bool fault = registers::AllEngineFault::read(register_io_.get()) &
                          registers::AllEngineFault::kValid;

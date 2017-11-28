@@ -362,26 +362,26 @@ public:
     static constexpr uint32_t kPageFaultBit = 1 << 7;
     static constexpr uint32_t kContextSwitchBit = 1 << 8;
 
-    static void write(RegisterIo* register_io, uint64_t offset, Source source, bool set)
+protected:
+    static uint32_t source_bit(Source source)
     {
-        uint32_t bit;
         switch (source) {
             case USER:
-                bit = kUserInterruptBit;
-                break;
+                return kUserInterruptBit;
             case PAGE_FAULT:
-                bit = kPageFaultBit;
-                break;
+                return kPageFaultBit;
             case CONTEXT_SWITCH:
-                bit = kContextSwitchBit;
-                break;
+                return kContextSwitchBit;
         }
+    }
 
+    static void write(RegisterIo* register_io, uint64_t offset, Source source, bool set)
+    {
+        uint32_t bit = source_bit(source);
         uint32_t val = register_io->Read32(offset);
         val = set ? (val | bit) : (val & ~bit);
         register_io->Write32(offset, val);
         register_io->mmio()->PostingRead32(offset);
-        val = register_io->Read32(offset);
     }
 };
 
@@ -426,11 +426,11 @@ public:
                 return register_io->Read32(kOffset);
         }
     }
-    static void write(RegisterIo* register_io, Engine engine, Source source, MaskOp op)
+    static void clear(RegisterIo* register_io, Engine engine, Source source)
     {
         switch (engine) {
             case RENDER_ENGINE:
-                InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+                register_io->Write32(kOffset, source_bit(source));
                 break;
         }
     }
