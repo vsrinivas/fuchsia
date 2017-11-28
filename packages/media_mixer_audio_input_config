@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "media_mixer_audio_input_config": "//garnet/bin/media:media_mixer_audio_input_config"
+    }
+}
