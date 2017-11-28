@@ -20,10 +20,10 @@
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/url/gurl.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/glue/socket/socket_writer.h"
+#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 

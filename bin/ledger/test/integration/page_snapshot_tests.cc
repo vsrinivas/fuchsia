@@ -14,10 +14,10 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/integration/integration_test.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace test {
 namespace integration {

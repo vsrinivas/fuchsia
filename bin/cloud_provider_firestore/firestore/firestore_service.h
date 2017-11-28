@@ -16,7 +16,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace cloud_provider_firestore {
 

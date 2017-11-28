@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 visibility = [
+  # TODO(ppi): clean up deps, see LE-366.
   "//peridot/bin/cloud_provider_firebase/*",
   "//peridot/bin/cloud_provider_firestore/*",
   "//peridot/bin/ledger/*",
+  "//peridot/lib/callback/*",
 ]
 
 source_set("lib") {
@@ -43,10 +45,10 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/fidl",
+    "//peridot/lib/callback",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -120,8 +122,8 @@ source_set("ledger_instance_factory") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
+    "//peridot/lib/callback",
     "//third_party/gtest",
   ]
 

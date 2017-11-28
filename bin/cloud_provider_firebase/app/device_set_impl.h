@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 #include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/lib/callback/cancellable.h"
 
 namespace cloud_provider_firebase {
 

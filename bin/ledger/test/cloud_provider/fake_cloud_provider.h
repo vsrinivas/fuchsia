@@ -8,11 +8,11 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_device_set.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_page_cloud.h"
 #include "peridot/bin/ledger/test/cloud_provider/types.h"
+#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 

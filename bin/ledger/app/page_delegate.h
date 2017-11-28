@@ -17,12 +17,12 @@
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
-#include "peridot/bin/ledger/callback/operation_serializer.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/callback/operation_serializer.h"
 
 namespace ledger {
 class PageManager;

@@ -8,7 +8,7 @@
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/callback/cancellable_helper.h"
+#include "peridot/lib/callback/cancellable_helper.h"
 
 namespace ledger {
 

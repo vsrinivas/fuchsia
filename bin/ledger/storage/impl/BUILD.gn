@@ -99,11 +99,11 @@ source_set("lib") {
     ":object_identifier_lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/cobalt",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
+    "//peridot/lib/callback",
     "//zircon/system/ulib/trace",
   ]
 
@@ -128,8 +128,8 @@ source_set("test_utils") {
 
   deps = [
     ":lib",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/glue/crypto",
+    "//peridot/lib/callback",
   ]
 
   public_deps = [

@@ -9,7 +9,7 @@
 #include <string>
 
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/lib/callback/cancellable.h"
 
 namespace firebase_auth {
 

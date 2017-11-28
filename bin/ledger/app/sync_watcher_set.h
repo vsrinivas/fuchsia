@@ -7,8 +7,8 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 

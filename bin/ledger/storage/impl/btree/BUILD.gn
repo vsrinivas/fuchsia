@@ -37,11 +37,11 @@ source_set("lib") {
     ":internal",
     ":tree_node_storage",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",
     "//peridot/bin/ledger/storage/public",
+    "//peridot/lib/callback",
     "//third_party/murmurhash",
   ]
 
@@ -88,7 +88,6 @@ source_set("unittests") {
     ":tree_node_storage",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",
@@ -96,6 +95,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/callback",
     "//third_party/gtest",
   ]
 

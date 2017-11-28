@@ -9,7 +9,6 @@
 #include <numeric>
 
 #include "lib/fxl/strings/string_printf.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
@@ -17,6 +16,7 @@
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace storage {
 

@@ -15,13 +15,13 @@
 #include "peridot/bin/ledger/app/page_delegate.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
-#include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
+#include "peridot/lib/callback/auto_cleanable.h"
+#include "peridot/lib/callback/scoped_task_runner.h"
 
 namespace ledger {
 // Manages a ledger page.

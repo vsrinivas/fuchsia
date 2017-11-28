@@ -13,7 +13,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
@@ -25,6 +24,7 @@
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
 namespace {

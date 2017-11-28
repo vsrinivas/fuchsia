@@ -10,10 +10,10 @@
 #include <utility>
 
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace storage {
 

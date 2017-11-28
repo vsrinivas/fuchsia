@@ -13,11 +13,11 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
-#include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/glue/socket/socket_writer.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
+#include "peridot/lib/callback/synchronous_task.h"
 
 namespace test {
 namespace integration {

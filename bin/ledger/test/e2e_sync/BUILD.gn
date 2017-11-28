@@ -19,13 +19,13 @@ executable("e2e_sync") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/test:app_test",
     "//peridot/bin/ledger/test:ledger_instance_factory",
     "//peridot/bin/ledger/test:lib",
     "//peridot/bin/ledger/test/integration/sync",
+    "//peridot/lib/callback",
     "//third_party/gtest",
   ]
 

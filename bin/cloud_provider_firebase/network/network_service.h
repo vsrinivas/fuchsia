@@ -9,7 +9,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/url_request.fidl.h"
 #include "lib/network/fidl/url_response.fidl.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/lib/callback/cancellable.h"
 
 namespace ledger {
 

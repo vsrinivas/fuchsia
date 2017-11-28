@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 

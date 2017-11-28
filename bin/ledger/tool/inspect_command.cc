@@ -23,8 +23,8 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/tool/convert.h"
+#include "peridot/lib/callback/waiter.h"
 
 #define FILE_CREATE_MODE 0666
 

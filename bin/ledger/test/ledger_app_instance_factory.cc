@@ -8,8 +8,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/callback/synchronous_task.h"
 
 namespace test {
 namespace {

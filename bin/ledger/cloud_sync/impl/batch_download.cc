@@ -8,9 +8,9 @@
 
 #include <trace/event.h>
 
-#include "peridot/bin/ledger/callback/scoped_callback.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/lib/callback/scoped_callback.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace cloud_sync {
 

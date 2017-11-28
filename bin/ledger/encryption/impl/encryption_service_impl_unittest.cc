@@ -5,9 +5,9 @@
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
 #include "gtest/gtest.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace encryption {
 namespace {

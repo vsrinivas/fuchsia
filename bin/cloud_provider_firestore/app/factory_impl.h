@@ -12,8 +12,8 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/lib/callback/auto_cleanable.h"
+#include "peridot/lib/callback/cancellable.h"
 
 namespace cloud_provider_firestore {
 

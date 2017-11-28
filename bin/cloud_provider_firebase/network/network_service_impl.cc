@@ -7,10 +7,10 @@
 #include <utility>
 
 #include "lib/fxl/strings/ascii.h"
-#include "peridot/bin/ledger/callback/cancellable_helper.h"
-#include "peridot/bin/ledger/callback/destruction_sentinel.h"
-#include "peridot/bin/ledger/callback/to_function.h"
-#include "peridot/bin/ledger/callback/trace_callback.h"
+#include "peridot/lib/callback/cancellable_helper.h"
+#include "peridot/lib/callback/destruction_sentinel.h"
+#include "peridot/lib/callback/to_function.h"
+#include "peridot/lib/callback/trace_callback.h"
 
 namespace ledger {
 

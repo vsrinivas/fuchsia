@@ -10,9 +10,9 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 // Manages the strategies for handling merges and conflicts for a ledger as

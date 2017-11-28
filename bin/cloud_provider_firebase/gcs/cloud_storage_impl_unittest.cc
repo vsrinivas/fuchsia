@@ -18,8 +18,8 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/network/fake_network_service.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace gcs {
 namespace {

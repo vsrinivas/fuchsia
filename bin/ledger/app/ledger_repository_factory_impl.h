@@ -11,12 +11,12 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/callback/managed_container.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/lib/callback/auto_cleanable.h"
+#include "peridot/lib/callback/cancellable.h"
+#include "peridot/lib/callback/managed_container.h"
 
 namespace ledger {
 

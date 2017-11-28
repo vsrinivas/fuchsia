@@ -28,8 +28,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "peridot/bin/ledger/callback/trace_callback.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
@@ -43,6 +41,8 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/lib/callback/trace_callback.h"
+#include "peridot/lib/callback/waiter.h"
 #include "zx/vmar.h"
 #include "zx/vmo.h"
 

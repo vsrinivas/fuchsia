@@ -9,7 +9,7 @@
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/network/network_service.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/lib/callback/cancellable.h"
 
 #include "lib/fxl/macros.h"
 

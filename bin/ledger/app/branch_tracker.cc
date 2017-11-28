@@ -12,8 +12,8 @@
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/callback/scoped_callback.h"
-#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/lib/callback/scoped_callback.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {

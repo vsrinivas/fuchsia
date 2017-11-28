@@ -14,14 +14,14 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"
-#include "peridot/bin/ledger/callback/cancellable_helper.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/cancellable_helper.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace ledger {
 namespace {

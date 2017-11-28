@@ -13,10 +13,10 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/lib/callback/cancellable.h"
 
 namespace cloud_sync {
 

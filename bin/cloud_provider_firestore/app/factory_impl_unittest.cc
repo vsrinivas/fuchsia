@@ -7,8 +7,8 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_token_provider.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace cloud_provider_firestore {
 

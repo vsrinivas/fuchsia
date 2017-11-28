@@ -12,8 +12,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/util/ptr.h"
 
 namespace ledger {

@@ -13,10 +13,10 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/page_manager.h"
-#include "peridot/bin/ledger/callback/operation_serializer.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/lib/callback/operation_serializer.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace ledger {
 // Client handling communication with a ConflictResolver interface in order to

@@ -17,8 +17,8 @@
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase_impl.h"
 #include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth_impl.h"
 #include "peridot/bin/cloud_provider_firebase/network/network_service.h"
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/lib/callback/auto_cleanable.h"
+#include "peridot/lib/callback/cancellable.h"
 
 namespace cloud_provider_firebase {
 

@@ -16,12 +16,12 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/ledger/fidl/ledger.fidl-sync.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/app_test.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/test/cloud_provider/types.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace test {
 namespace e2e_local {

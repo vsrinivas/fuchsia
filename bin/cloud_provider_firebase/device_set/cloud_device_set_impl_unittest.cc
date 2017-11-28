@@ -8,8 +8,8 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace cloud_provider_firebase {
 namespace {

@@ -10,9 +10,9 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_token_provider.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace firebase_auth {
 

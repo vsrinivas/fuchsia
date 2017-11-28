@@ -15,11 +15,11 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
+#include "peridot/lib/callback/synchronous_task.h"
 
 namespace test {
 namespace {

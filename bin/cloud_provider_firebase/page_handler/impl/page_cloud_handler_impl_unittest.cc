@@ -21,8 +21,8 @@
 #include "peridot/bin/cloud_provider_firebase/firebase/status.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/capture.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

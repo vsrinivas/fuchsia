@@ -12,9 +12,9 @@
 
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/callback/scoped_callback.h"
-#include "peridot/bin/ledger/callback/trace_callback.h"
-#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/lib/callback/scoped_callback.h"
+#include "peridot/lib/callback/trace_callback.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace cloud_sync {
 

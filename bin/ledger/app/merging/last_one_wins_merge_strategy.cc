@@ -11,7 +11,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace ledger {
 

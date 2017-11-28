@@ -20,7 +20,7 @@ source_set("socket") {
     "//garnet/public/lib/fidl/c/waiter",
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fsl",
-    "//peridot/bin/ledger/callback",
+    "//peridot/lib/callback",
     "//zircon/system/ulib/zx",
   ]
 

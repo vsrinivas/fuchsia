@@ -17,7 +17,7 @@
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/util/ptr.h"
 
 namespace ledger {

@@ -166,12 +166,14 @@ package("ledger_tests") {
     },
 
     {
-      path = rebase_path("//peridot/bin/ledger/test/benchmark/fetch/fetch.tspec")
+      path =
+          rebase_path("//peridot/bin/ledger/test/benchmark/fetch/fetch.tspec")
       dest = "ledger/benchmark/fetch.tspec"
     },
 
     {
-      path = rebase_path("//peridot/bin/ledger/test/benchmark/fetch/fetch_partial.tspec")
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/fetch/fetch_partial.tspec")
       dest = "ledger/benchmark/fetch_partial.tspec"
     },
   ]
@@ -208,7 +210,6 @@ executable("ledger_unittests") {
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:unittests",
-    "//peridot/bin/ledger/callback:unittests",
     "//peridot/bin/ledger/cloud_sync/impl:unittests",
     "//peridot/bin/ledger/convert:unittests",
     "//peridot/bin/ledger/coroutine:unittests",

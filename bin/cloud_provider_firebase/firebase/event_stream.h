@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/status.h"
-#include "peridot/bin/ledger/callback/destruction_sentinel.h"
+#include "peridot/lib/callback/destruction_sentinel.h"
 
 namespace firebase {
 

@@ -44,7 +44,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/callback",
+    "//peridot/lib/callback",
   ]
 }
 
@@ -63,7 +63,7 @@ source_set("unittests") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//peridot/bin/cloud_provider_firebase/firebase_auth/test",
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/callback",
   ]
 }

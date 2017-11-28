@@ -18,10 +18,10 @@
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/callback/scoped_callback.h"
-#include "peridot/bin/ledger/callback/trace_callback.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
+#include "peridot/lib/callback/scoped_callback.h"
+#include "peridot/lib/callback/trace_callback.h"
+#include "peridot/lib/callback/waiter.h"
 
 namespace ledger {
 

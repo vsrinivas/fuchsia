@@ -6,13 +6,13 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/callback/capture.h"
 
 namespace storage {
 namespace btree {

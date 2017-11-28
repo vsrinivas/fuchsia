@@ -48,9 +48,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
     "//peridot/lib/backoff",
+    "//peridot/lib/callback",
   ]
 }
 
