@@ -196,19 +196,20 @@ go_test("wlanstack_test_bin") {
 }
 
 package("wlanstack") {
-  system_image = true
-
   deps = [
     ":wlanstack_bin",
   ]
 
-  binaries = [ {
-        name = "wlanstack"
+  binary = "wlanstack"
+
+  meta = [ {
+        path = rebase_path("wlanstack/meta/sandbox")
+        dest = "sandbox"
       } ]
 
   resources = [ {
         path = rebase_path("default.json")
-        dest = "wlanstack/config.json"
+        dest = "config.json"
       } ]
 }
 
