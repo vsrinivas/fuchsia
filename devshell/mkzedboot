@@ -35,7 +35,7 @@ cp "${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi" "${efi_target_dir}/BOOTX64.EFI"
 
 # Make zedboot
 echo "netsvc.netboot=true virtcon.font=18x32" > "${ZIRCON_BUILD_DIR}/CMDLINE"
-"${ZIRCON_BUILD_DIR}/tools/mkbootfs" -o "${ZIRCON_BUILD_DIR}/zedboot.bin" \
+"${ZIRCON_TOOLS_DIR}/mkbootfs" -o "${ZIRCON_BUILD_DIR}/zedboot.bin" \
   "${ZIRCON_BUILD_DIR}/zircon.bin" \
   -C "${ZIRCON_BUILD_DIR}/CMDLINE" "${ZIRCON_BUILD_DIR}/bootdata.bin"
 
