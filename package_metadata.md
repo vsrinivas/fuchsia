@@ -93,16 +93,20 @@ to use that feature.
 
 The set of currently known features are as follows:
 
-- `vulkan`, which requests access to the resources required to use the Vulkan
-  graphics interface.
+- `persistent-storage`, which requests access to persistent storage for the
+  device, located in `/data` in the package's namespace. (Future work will
+  likely make this access more fine-grained than just the `/data` directory.)
 
 - `root-ssl-certificates`, which requests access to the root SSL certificates
   for the device. These certicates are provided in the `/etc/ssl` and
   `/system/data/boringssl` directories in the package's namespace. (The latter
   of which will be removed once all clients transition to the former.)
 
-- `persistent-storage`, which requests access to persistent storage for the
-  device, located in `/data` in the package's namespace. (Future work will
-  likely make this access more fine-grained than just the `/data` directory.)
+- `shell`, which grants access to the resources appropriate for an interactive
+  command line. Typically, shells are granted access to all the resources
+  available in the current environment.
+
+- `vulkan`, which requests access to the resources required to use the Vulkan
+  graphics interface.
 
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
