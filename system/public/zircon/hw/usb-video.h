@@ -212,5 +212,22 @@ typedef struct {
    uint32_t bmLayoutPerStream;
 } __PACKED usb_video_vc_probe_and_commit_controls;
 
+// For accessing payload bmHeaderInfo bitmap
+#define USB_VIDEO_VS_PAYLOAD_HEADER_FID         (1 << 0)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_EOF         (1 << 1)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_PTS         (1 << 2)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_SCR         (1 << 3)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_RES         (1 << 4)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_STI         (1 << 5)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_ERR         (1 << 6)
+#define USB_VIDEO_VS_PAYLOAD_HEADER_EOH         (1 << 7)
+
+// Common header for all payloads.
+typedef struct {
+    uint8_t bHeaderLength;
+    uint8_t bmHeaderInfo;
+
+} __PACKED usb_video_vs_payload_header;
+
 __END_CDECLS;
 
