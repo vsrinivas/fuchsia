@@ -76,21 +76,8 @@ void NamespaceBuilder::AddDev() {
 }
 
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
-  if (!sandbox.dev().empty()) {
-    fxl::UniqueFD dir(open("/dev", O_DIRECTORY | O_RDWR));
-    if (dir.is_valid()) {
-      const auto& dev = sandbox.dev();
-      for (const auto& path : dev) {
-        fxl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
-        if (!entry.is_valid())
-          continue;
-        zx::channel handle = CloneChannel(entry.get());
-        if (!handle)
-          continue;
-        PushDirectoryFromChannel("/dev/" + path, std::move(handle));
-      }
-    }
-  }
+  for (const auto& path : sandbox.dev())
+    PushDirectoryFromPath("/dev/" + path);
 
   for (const auto& path : sandbox.system())
     PushDirectoryFromPath("/system/" + path);
@@ -115,6 +102,17 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
   }
 }
 
+void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
+  // TODO(abarth): Remove items from this list as clients no longer need them.
+  PushDirectoryFromPath("/blobstore");
+  PushDirectoryFromPath("/boot");
+  PushDirectoryFromPath("/dev");
+  PushDirectoryFromPath("/data");
+  PushDirectoryFromPath("/system");
+  PushDirectoryFromPath("/tmp");
+  PushDirectoryFromPath("/volume");
+}
+
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
   PushDirectoryFromPathAs(path, path);
 }
@@ -127,8 +125,10 @@ void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path,
   if (!dir.is_valid())
     return;
   zx::channel handle = CloneChannel(dir.get());
-  if (!handle)
+  if (!handle) {
+    FXL_DLOG(WARNING) << "Failed to clone channel for " << src_path;
     return;
+  }
   PushDirectoryFromChannel(std::move(dst_path), std::move(handle));
 }
 

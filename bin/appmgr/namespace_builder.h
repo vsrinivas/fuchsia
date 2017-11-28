@@ -29,6 +29,11 @@ class NamespaceBuilder {
   void AddDev();
   void AddSandbox(const SandboxMetadata& sandbox);
 
+  // This function grants access to a number of directories to processes that
+  // lack a sandbox policy. Once every application has a proper sandbox policy
+  // we should be able to remove this function.
+  void AddDeprecatedDefaultDirectories();
+
   // Returns an fdio_flat_namespace_t representing the built namespace.
   //
   // The returned fdio_flat_namespace_t has ownership of the zx::channel objects

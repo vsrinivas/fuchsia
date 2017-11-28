@@ -112,8 +112,9 @@ zx::process Launch(const zx::job& job,
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
   // print out load addresses so we can understand crashes.
-  launchpad_t* lp;
+  launchpad_t* lp = nullptr;
   launchpad_create(job.get(), label.c_str(), &lp);
+
   launchpad_clone(lp, what);
   launchpad_set_args(lp, argv.size(), argv.data());
   launchpad_set_nametable(lp, flat->count, flat->path);
@@ -122,7 +123,7 @@ zx::process Launch(const zx::job& job,
 
   zx_handle_t proc;
   const char* errmsg;
-  auto status = launchpad_go(lp, &proc, &errmsg);
+  zx_handle_t status = launchpad_go(lp, &proc, &errmsg);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
                    << status << " (" << zx_status_get_string(status)
@@ -391,9 +392,10 @@ void JobHolder::CreateApplicationWithProcess(
     return;
 
   NamespaceBuilder builder;
-  builder.AddRoot();
+  // TODO(abarth): Remove this call to AddDeprecatedDefaultDirectories once
+  // every application has a proper sandbox configuration.
+  builder.AddDeprecatedDefaultDirectories();
   builder.AddServices(std::move(svc));
-  builder.AddDev();
   AddInfoDir(&builder);
 
   // Add the custom namespace.
