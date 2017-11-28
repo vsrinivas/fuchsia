@@ -10,9 +10,6 @@ import paths
 import sys
 
 def resolve_imports(import_queue):
-    # Hack: Add cpp manifest until we derive runtime information from the
-    # package configs themselves.
-    import_queue.append('build/gn/cpp')
     imported = set(import_queue)
     languages = set()
     while import_queue:
