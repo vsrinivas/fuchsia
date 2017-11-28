@@ -28,7 +28,7 @@ passing `--ignore-skia` to gen.py.*
 To build the entire Fuchsia tree and also include the FIDL examples:
 
 ```
-./build/gn/gen.py --packages topaz/packages/examples,build/gn/default
+./build/gn/gen.py --packages topaz/packages/examples,topaz/packages/default
 ```
 
 ## Development
