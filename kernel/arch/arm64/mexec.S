@@ -13,7 +13,7 @@
 bootarg0                .req x25
 bootarg1                .req x26
 bootarg2                .req x27
-bootarg3                .req x28
+boot_el                 .req x28
 
 // This is a null terminated list of memory regions to copy.
 copy_list               .req x23
@@ -38,7 +38,9 @@ FUNCTION(mexec_asm)
     mov     bootarg0, x0
     mov     bootarg1, x1
     mov     bootarg2, x2
-    mov     bootarg3, x3
+
+// Stash the boot el, as we will need it later
+    mov     boot_el,  x3
 
 // This list contains the memmove operations that we need to perform.
     mov     copy_list, x4
@@ -79,13 +81,19 @@ FUNCTION(mexec_asm)
 
 .Lfinish_copy:
 
+    // If we were originally booted in EL2, transition back into EL2
+    cmp  boot_el, #2
+    b.lt cplt_transition_to_boot_el  // We booted in EL1, no need to transition up
+    adr  x0, cplt_transition_to_boot_el
+    hvc  #1
+
     bl mexec_arch_clean_invalidate_cache_all
 
+ cplt_transition_to_boot_el:
     // Restore the bootarguments for the next kernel.
     mov     x0, bootarg0
     mov     x1, bootarg1
     mov     x2, bootarg2
-    mov     x3, bootarg3
 
     // Get everything out of the pipeline before branching to the new kernel.
     isb

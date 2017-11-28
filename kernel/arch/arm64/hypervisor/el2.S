@@ -156,9 +156,10 @@
 
 .macro entry_init
 .align 7
-    hvc_jump .Linit_table 4
+    hvc_jump .Linit_table 5
 .Linit_table:
     b el2_hvc_psci
+    b el2_mexec
     b el2_hvc_on
     b el2_hvc_tlbi_ipa
     b el2_hvc_tlbi_vmid
@@ -181,9 +182,10 @@
     pop_stack
 
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .L\name\()_exec_table 5
+    hvc_jump .L\name\()_exec_table 6
 .L\name\()_exec_table:
     b el2_hvc_psci
+    b el2_mexec
     b el2_hvc_off
     b el2_hvc_tlbi_ipa
     b el2_hvc_tlbi_vmid
@@ -258,7 +260,7 @@ FUNCTION_LABEL(arm64_el2_exec_table)
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
-    hvc #1
+    hvc #2
     ret
 END_FUNCTION(arm64_el2_on)
 FUNCTION_LABEL(el2_hvc_on)
@@ -312,9 +314,12 @@ FUNCTION_LABEL(el2_hvc_psci)
     smc #0
     eret
 
+FUNCTION_LABEL(el2_mexec)
+    br x0
+
 // zx_status_t arm64_el2_off();
 FUNCTION(arm64_el2_off)
-    hvc #1
+    hvc #2
     ret
 END_FUNCTION(arm64_el2_off)
 FUNCTION_LABEL(el2_hvc_off)
@@ -337,7 +342,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
 // void arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr);
 FUNCTION(arm64_el2_tlbi_ipa)
-    hvc #2
+    hvc #3
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
 FUNCTION_LABEL(el2_hvc_tlbi_ipa)
@@ -354,7 +359,7 @@ FUNCTION_LABEL(el2_hvc_tlbi_ipa)
 
 // void arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
-    hvc #3
+    hvc #4
     ret
 END_FUNCTION(arm64_el2_tlbi_vmid)
 FUNCTION_LABEL(el2_hvc_tlbi_vmid)
@@ -371,7 +376,7 @@ FUNCTION_LABEL(el2_hvc_tlbi_vmid)
 
 // zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
 FUNCTION(arm64_el2_resume)
-    hvc #4
+    hvc #5
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)
