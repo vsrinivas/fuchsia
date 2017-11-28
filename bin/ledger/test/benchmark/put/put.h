@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_TEST_BENCHMARK_PUT_PUT_H_
 
 #include <memory>
+#include <set>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -32,7 +33,7 @@ namespace benchmark {
 //   --update whether operations will update existing entries (put with existing
 //     keys and new values)
 //   --seed=<int> (optional) the seed for key and value generation
-class PutBenchmark {
+class PutBenchmark : public ledger::PageWatcher {
  public:
   enum class ReferenceStrategy {
     ON,
@@ -49,6 +50,11 @@ class PutBenchmark {
                uint64_t seed);
 
   void Run();
+
+  // ledger::PageWatcher:
+  void OnChange(ledger::PageChangePtr page_change,
+                ledger::ResultState result_state,
+                const OnChangeCallback& callback) override;
 
  private:
   // Initilizes the keys to be used in the benchmark. In case the benchmark is
@@ -68,10 +74,12 @@ class PutBenchmark {
       std::vector<fidl::Array<uint8_t>> keys,
       std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done);
 
+  void BindWatcher(std::vector<fidl::Array<uint8_t>> keys);
   void RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys);
-  void CommitAndRunNext(int i, std::vector<fidl::Array<uint8_t>> keys);
+  void CommitAndRunNext(int i,
+                        size_t keyn,
+                        std::vector<fidl::Array<uint8_t>> keys);
 
-  void CommitAndShutDown();
   void ShutDown();
 
   test::DataGenerator generator_;
@@ -83,10 +91,16 @@ class PutBenchmark {
   const int key_size_;
   const int value_size_;
   const bool update_;
+
+  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   std::function<bool(size_t)> should_put_as_reference_;
 
   app::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;
+  // Keys that we use to identify a change event. For transaction_size = 1 it
+  // contains all the keys, otherwise only the last changed key for each
+  // transaction.
+  std::set<size_t> keys_to_receive_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };

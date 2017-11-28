@@ -39,7 +39,8 @@ PutBenchmark::PutBenchmark(int entry_count,
       transaction_size_(transaction_size),
       key_size_(key_size),
       value_size_(value_size),
-      update_(update) {
+      update_(update),
+      page_watcher_binding_(this) {
   FXL_DCHECK(entry_count > 0);
   FXL_DCHECK(transaction_size > 0);
   FXL_DCHECK(key_size > 0);
@@ -84,12 +85,28 @@ void PutBenchmark::Run() {
                   return;
                 }
                 TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                RunSingle(0, std::move(keys));
+                BindWatcher(std::move(keys));
               }));
         } else {
-          RunSingle(0, std::move(keys));
+          BindWatcher(std::move(keys));
         }
       }));
+}
+
+void PutBenchmark::OnChange(ledger::PageChangePtr page_change,
+                            ledger::ResultState result_state,
+                            const OnChangeCallback& callback) {
+  for (auto const& change : page_change->changes) {
+    size_t key_number = std::stoul(convert::ToString(change->key));
+    if (keys_to_receive_.find(key_number) != keys_to_receive_.end()) {
+      TRACE_ASYNC_END("benchmark", "local_change_notification", key_number);
+      keys_to_receive_.erase(key_number);
+    }
+  }
+  if (keys_to_receive_.empty()) {
+    ShutDown();
+  }
+  callback(nullptr);
 }
 
 void PutBenchmark::InitializeKeys(
@@ -98,7 +115,13 @@ void PutBenchmark::InitializeKeys(
   keys.reserve(entry_count_);
   for (int i = 0; i < entry_count_; ++i) {
     keys.push_back(generator_.MakeKey(i, key_size_));
+    if (i % transaction_size_ == transaction_size_ - 1) {
+      keys_to_receive_.insert(std::stoul(convert::ToString(keys.back())));
+    }
   }
+  // Last key should always be recorded so the last transaction is not lost.
+  size_t last_key_number = std::stoul(convert::ToString(keys.back()));
+  keys_to_receive_.insert(last_key_number);
   if (!update_) {
     on_done(std::move(keys));
     return;
@@ -149,28 +172,42 @@ void PutBenchmark::AddInitialEntries(
                }));
 }
 
+void PutBenchmark::BindWatcher(std::vector<fidl::Array<uint8_t>> keys) {
+  ledger::PageSnapshotPtr snapshot;
+  page_->GetSnapshot(
+      snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+      fxl::MakeCopyable(
+          [this, keys = std::move(keys)](ledger::Status status) mutable {
+            if (benchmark::QuitOnError(status, "GetSnapshot")) {
+              return;
+            }
+            RunSingle(0, std::move(keys));
+          }));
+}
+
 void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
   if (i == entry_count_) {
-    if (transaction_size_ > 1) {
-      CommitAndShutDown();
-    } else {
-      ShutDown();
-    }
+    // All sent, waiting for watcher notification before shutting down.
     return;
   }
 
   fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
+  size_t key_number = std::stoul(convert::ToString(keys[i]));
+  if (transaction_size_ == 1) {
+    TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
+  }
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
   PutEntry(std::move(keys[i]), std::move(value),
-           fxl::MakeCopyable([this, i, keys = std::move(keys)](
+           fxl::MakeCopyable([this, i, key_number, keys = std::move(keys)](
                                  ledger::Status status) mutable {
              if (benchmark::QuitOnError(status, "Page::Put")) {
                return;
              }
              TRACE_ASYNC_END("benchmark", "put", i);
              if (transaction_size_ > 1 &&
-                 i % transaction_size_ == transaction_size_ - 1) {
-               CommitAndRunNext(i, std::move(keys));
+                 (i % transaction_size_ == transaction_size_ - 1 ||
+                  i + 1 == entry_count_)) {
+               CommitAndRunNext(i, key_number, std::move(keys));
              } else {
                RunSingle(i + 1, std::move(keys));
              }
@@ -178,9 +215,11 @@ void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
 }
 
 void PutBenchmark::CommitAndRunNext(int i,
+                                    size_t key_number,
                                     std::vector<fidl::Array<uint8_t>> keys) {
+  TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](
+  page_->Commit(fxl::MakeCopyable([this, i, key_number, keys = std::move(keys)](
                                       ledger::Status status) mutable {
     if (benchmark::QuitOnError(status, "Page::Commit")) {
       return;
@@ -188,6 +227,10 @@ void PutBenchmark::CommitAndRunNext(int i,
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
 
+    if (i == entry_count_) {
+      RunSingle(i + 1, std::move(keys));
+      return;
+    }
     page_->StartTransaction(
         fxl::MakeCopyable([this, i = i + 1, keys = std::move(keys)](
                               ledger::Status status) mutable {
@@ -198,19 +241,6 @@ void PutBenchmark::CommitAndRunNext(int i,
           RunSingle(i, std::move(keys));
         }));
   }));
-}
-
-void PutBenchmark::CommitAndShutDown() {
-  TRACE_ASYNC_BEGIN("benchmark", "commit", entry_count_ / transaction_size_);
-  page_->Commit([this](ledger::Status status) {
-    if (benchmark::QuitOnError(status, "Page::Commit")) {
-      return;
-    }
-    TRACE_ASYNC_END("benchmark", "commit", entry_count_ / transaction_size_);
-    TRACE_ASYNC_END("benchmark", "transaction",
-                    entry_count_ / transaction_size_);
-    ShutDown();
-  });
 }
 
 void PutBenchmark::ShutDown() {
