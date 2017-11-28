@@ -13,6 +13,7 @@
 
 #include <block-client/client.h>
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
+#include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
@@ -179,8 +180,10 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
 
 // Stream a raw (non-FVM) partition to disk.
 zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
-                             block_fifo_request_t* request, const fbl::unique_fd& src_fd) {
+                             block_fifo_request_t* request, const fbl::unique_fd& src_fd,
+                             const block_info_t& info) {
     const size_t vmo_cap = mvmo->GetSize();
+    ZX_ASSERT(vmo_cap % info.block_size == 0);
     size_t offset = 0;
 
     while (true) {
@@ -198,18 +201,32 @@ zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
             fprintf(stderr, "[stream_partition] Error reading partition data\n");
             return static_cast<zx_status_t>(r);
         }
-        if (vmo_sz == 0 || r == 0) {
-            // Nothing left to write
+        if (vmo_sz == 0) {
+            // Nothing left to write.
             return ZX_OK;
+        }
+
+        if ((r == 0) && (vmo_sz % info.block_size)) {
+            // We have a partial block to write.
+            size_t rounded_length = fbl::round_up(vmo_sz, info.block_size);
+            memset(&reinterpret_cast<uint8_t*>(mvmo->GetData())[vmo_sz], 0,
+                   rounded_length - vmo_sz);
+            vmo_sz = rounded_length;
         }
 
         request->length = vmo_sz;
         request->vmo_offset = 0;
         request->dev_offset = offset;
 
-        if ((r = block_fifo_txn(client, request, 1)) != ZX_OK) {
+        zx_status_t status;
+        if ((status = block_fifo_txn(client, request, 1)) != ZX_OK) {
             fprintf(stderr, "[stream_partition] Error writing partition data\n");
-            return static_cast<zx_status_t>(r);
+            return status;
+        }
+
+        if (r == 0) {
+            // We have nothing left to read on the input pipe.
+            return ZX_OK;
         }
 
         offset += request->length;
@@ -1015,7 +1032,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
         return status;
     }
 
-    const size_t vmo_sz = 1 << 20;
+    const size_t vmo_sz = fbl::round_up(1LU << 20, info.block_size);
     fbl::unique_ptr<MappedVmo> mvmo;
     if ((status = MappedVmo::Create(vmo_sz, "partition-pave", &mvmo)) != ZX_OK) {
         fprintf(stderr, "[partition_pave] Failed to create stream VMO\n");
@@ -1036,7 +1053,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
     request.txnid = txnid;
     request.vmoid = vmoid;
     request.opcode = BLOCKIO_WRITE;
-    status = stream_partition(mvmo.get(), client, &request, fd);
+    status = stream_partition(mvmo.get(), client, &request, fd, info);
     block_fifo_release_client(client);
     if (status != ZX_OK) {
         fprintf(stderr, "[partition_pave] Failed to stream partition\n");
