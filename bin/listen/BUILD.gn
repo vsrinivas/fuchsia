@@ -22,13 +22,14 @@ executable("bin") {
 }
 
 package("listen") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "listen"
-      } ]
+  binary = "listen"
+
+  meta = [{
+    path = rebase_path("meta/sandbox")
+    dest = "sandbox"
+  }]
 }
