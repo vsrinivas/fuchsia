@@ -85,7 +85,7 @@ def main():
                         help="comma-separated list of platforms")
     parser.add_argument("--packages", "-p",
                         help="comma separated list of packages",
-                        default="build/gn/default")
+                        required=True)
     parser.add_argument("--debug",
                         help="generate debug mode build files (default)",
                         dest="build_type",

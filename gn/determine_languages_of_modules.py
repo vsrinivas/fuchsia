@@ -49,7 +49,7 @@ def get_dep_from_package_name(package_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Determine languages used by set of modules")
-    parser.add_argument("--modules", help="list of modules", default="build/gn/default")
+    parser.add_argument("--modules", help="list of modules", required=True)
     args = parser.parse_args()
 
     languages, imported = resolve_imports(args.modules.split(","))
