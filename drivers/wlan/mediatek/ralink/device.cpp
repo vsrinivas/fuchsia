@@ -2921,8 +2921,11 @@ static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
     }
 }
 
-static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3,
-                         uint8_t* rssi_offsets, uint8_t lna_gain) {
+static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi2 rxwi2,
+                         Rxwi3 rxwi3, uint8_t* rssi_offsets, uint8_t lna_gain) {
+    if (rx_desc.l2pad()) {
+        info->rx_flags |= WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
+    }
     info->valid_fields |= WLAN_RX_INFO_VALID_PHY;
     info->phy = ralink_phy_to_ddk_phy(rxwi1.phy_mode());
 
@@ -2992,7 +2995,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
 
         if (wlanmac_proxy_ != nullptr) {
             wlan_rx_info_t wlan_rx_info = {};
-            fill_rx_info(&wlan_rx_info, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
+            fill_rx_info(&wlan_rx_info, rx_desc, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
             wlan_rx_info.chan.channel_num = current_channel_;
             wlanmac_proxy_->Recv(0u, data + rx_hdr_size, rxwi0.mpdu_total_byte_count(),
                                  &wlan_rx_info);
