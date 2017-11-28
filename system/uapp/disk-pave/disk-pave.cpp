@@ -11,15 +11,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef __Fuchsia__
-#include <fs/mapped-vmo.h>
-#include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
-#include <zircon/device/device.h>
-#include <zx/vmo.h>
-#endif
-
 #include <block-client/client.h>
+#include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
@@ -27,9 +20,12 @@
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
 #include <fs/mapped-vmo.h>
+#include <fs-management/mount.h>
+#include <fs-management/ramdisk.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
+#include <zircon/device/device.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zx/fifo.h>
@@ -533,10 +529,17 @@ zx_status_t find_target_gpt(char* out_path) {
             continue;
         }
 
+        block_info_t info;
+        if ((r = ioctl_block_get_info(fd.get(), &info) < 0)) {
+            continue;
+        }
+
         // TODO(ZX-1344): This is a hack, but practically, will work for our
-        // usage.  The GPT which will contain an FVM should be a block device
-        // that is a SATA device, but not a partition itself.
-        if (strstr(out_path, "sata") != nullptr && strstr(out_path, "part") == nullptr) {
+        // usage.
+        //
+        // The GPT which will contain an FVM should be the first non-removable
+        // block device that isn't a partition itself.
+        if (!(info.flags & BLOCK_FLAG_REMOVABLE) && strstr(out_path, "part-") == nullptr) {
             closedir(d);
             return ZX_OK;
         }
@@ -855,6 +858,42 @@ done:
     return (r < 0 ? ZX_ERR_BAD_STATE : ZX_OK);
 }
 
+zx_status_t device_specific_disk_prep(const char* gpt_path) {
+    fbl::unique_fd fd;
+    gpt_device_t* gpt;
+    if (initialize_gpt(gpt_path, &fd, &gpt)) {
+        return ZX_ERR_IO;
+    }
+
+    block_info_t info;
+    ssize_t r;
+    bool modify = false;
+    zx_status_t status = ZX_OK;
+
+    if (is_cros(gpt)) {
+        if ((r = ioctl_block_get_info(fd.get(), &info)) < 0) {
+            status = static_cast<zx_status_t>(r);
+            goto done;
+        }
+
+        if (!is_ready_to_pave(gpt, &info, SZ_ZX_PART, SZ_ROOT_PART, true)) {
+            if ((status = config_cros_for_fuchsia(gpt, &info, SZ_ZX_PART,
+                                                  SZ_ROOT_PART, true)) != ZX_OK) {
+                goto done;
+            }
+            modify = true;
+        }
+    }
+
+done:
+    if (modify) {
+        gpt_device_sync(gpt);
+        ioctl_block_rr_part(fd.get());
+    }
+    gpt_device_release(gpt);
+    return status;
+}
+
 bool efi_filter_cb(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
                    const uint8_t name[GPT_NAME_LEN]) {
     uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
@@ -914,6 +953,11 @@ int fvm_pave(fbl::unique_fd fd) {
         fprintf(stderr, "[fvm_pave] Couldn't find target GPT\n");
         return -1;
     }
+    zx_status_t status = device_specific_disk_prep(gpt_path);
+    if (status != ZX_OK) {
+        fprintf(stderr, "[fvm_pave] Failed to complete device-specific prep\n");
+        return -1;
+    }
     printf("[fvm_pave] Found Target GPT %s - OK\n", gpt_path);
     if (fvm_add_to_gpt(gpt_path)) {
         fprintf(stderr, "[fvm_pave] Couldn't format FVM partition\n");
@@ -922,8 +966,7 @@ int fvm_pave(fbl::unique_fd fd) {
     printf("[fvm_pave] Added to GPT - OK\n");
 
     printf("[fvm_pave] Streaming partitions...\n");
-    zx_status_t status = fvm_stream_partitions(fbl::move(fd));
-    if (status != ZX_OK) {
+    if ((status = fvm_stream_partitions(fbl::move(fd))) != ZX_OK) {
         fprintf(stderr, "[fvm_pave] Failed to stream partitions: %d\n", status);
         return -1;
     }
@@ -939,10 +982,14 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
     if (find_target_gpt(gpt_path)) {
         return ZX_ERR_IO;
     }
+    zx_status_t status = device_specific_disk_prep(gpt_path);
+    if (status != ZX_OK) {
+        fprintf(stderr, "[partition_pave] Failed to complete device-specific prep\n");
+        return -1;
+    }
 
     fbl::unique_fd gpt_fd;
     gpt_device_t* gpt;
-    zx_status_t status;
     if ((status = initialize_gpt(gpt_path, &gpt_fd, &gpt)) != ZX_OK) {
         return status;
     }

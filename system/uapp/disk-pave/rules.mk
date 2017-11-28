@@ -18,9 +18,11 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/block-client \
+    system/ulib/chromeos-disk-setup \
     system/ulib/fs \
     system/ulib/fs-management \
     system/ulib/fvm \
+    system/ulib/installer \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/fbl \

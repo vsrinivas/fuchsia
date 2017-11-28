@@ -18,6 +18,8 @@
 // Recommended minimum size of the ChromeOS state partition
 #define MIN_SZ_STATE (5 * ((uint64_t)1) << 30)
 
+__BEGIN_CDECLS
+
 // determine if this looks like a ChromeOS partition layout
 bool is_cros(const gpt_device_t* gpt);
 
@@ -56,3 +58,5 @@ zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
                                     const uint64_t sz_kern,
                                     const uint64_t sz_root,
                                     const bool fvm_req);
+
+__END_CDECLS
