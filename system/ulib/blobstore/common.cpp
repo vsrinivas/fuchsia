@@ -20,6 +20,10 @@
 #include <fs/block-txn.h>
 #include <fs/trace.h>
 
+#ifdef __Fuchsia__
+#include <fs/fvm.h>
+#endif
+
 #define MXDEBUG 0
 
 #include <blobstore/common.h>
@@ -175,6 +179,11 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
 
         if (info.slice_size % kBlobstoreBlockSize) {
             fprintf(stderr, "blobstore mkfs: Slice size not multiple of blobstore block\n");
+            return -1;
+        }
+
+        if (fs::fvm_reset_volume_slices(fd) != ZX_OK) {
+            fprintf(stderr, "blobstore mkfs: Failed to reset slices\n");
             return -1;
         }
 

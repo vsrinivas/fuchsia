@@ -10,6 +10,7 @@
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
+#include <fs/fvm.h>
 #include <zx/vmo.h>
 #endif
 
@@ -81,6 +82,10 @@ public:
             return static_cast<zx_status_t>(r);
         }
         return ZX_OK;
+    }
+
+    zx_status_t FVMReset() {
+        return fs::fvm_reset_volume_slices(fd_.get());
     }
 
     // Acquires a Thread-local TxnId that can be used for sending messages

@@ -34,6 +34,40 @@
 #endif
 
 namespace minfs {
+namespace {
+
+// Deletes all known slices from an MinFS Partition.
+void minfs_free_slices(Bcache* bc, const minfs_info_t* info) {
+    if ((info->flags & kMinfsFlagFVM) == 0) {
+        return;
+    }
+#ifdef __Fuchsia__
+    extend_request_t request;
+    const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+    if (info->ibm_slices) {
+        request.length = info->ibm_slices;
+        request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+    if (info->abm_slices) {
+        request.length = info->abm_slices;
+        request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+    if (info->ino_slices) {
+        request.length = info->ino_slices;
+        request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+    if (info->dat_slices) {
+        request.length = info->dat_slices;
+        request.offset = kFVMBlockDataStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+#endif
+}
+
+}  // namespace
 
 void minfs_dump_info(const minfs_info_t* info) {
     xprintf("minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
@@ -926,36 +960,6 @@ zx_status_t Minfs::Unmount() {
     return ZX_OK;
 }
 
-void minfs_free_slices(Bcache* bc, const minfs_info_t* info) {
-    if ((info->flags & kMinfsFlagFVM) == 0) {
-        return;
-    }
-#ifdef __Fuchsia__
-    extend_request_t request;
-    const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
-    if (info->ibm_slices) {
-        request.length = info->ibm_slices;
-        request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
-    }
-    if (info->abm_slices) {
-        request.length = info->abm_slices;
-        request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
-    }
-    if (info->ino_slices) {
-        request.length = info->ino_slices;
-        request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
-    }
-    if (info->dat_slices) {
-        request.length = info->dat_slices;
-        request.offset = kFVMBlockDataStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
-    }
-#endif
-}
-
 int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     minfs_info_t info;
     memset(&info, 0x00, sizeof(info));
@@ -985,6 +989,10 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
         extend_request_t request;
         request.length = 1;
         request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
+        if (bc->FVMReset()) {
+            fprintf(stderr, "minfs mkfs: Failed to reset FVM slices\n");
+            return -1;
+        }
         if (bc->FVMExtend(&request) != ZX_OK) {
             fprintf(stderr, "minfs mkfs: Failed to allocate inode bitmap\n");
             return -1;

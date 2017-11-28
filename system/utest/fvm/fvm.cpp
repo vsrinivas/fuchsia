@@ -1304,7 +1304,7 @@ static bool TestVPartitionQuery(void) {
 
     query_request.vslice_start[0] = fvm_info.vslice_count + 1;
     ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd, &query_request, &query_response),
-              ZX_ERR_INVALID_ARGS);
+              ZX_ERR_OUT_OF_RANGE);
 
     // Check that request count is valid
     query_request.count = MAX_FVM_VSLICE_REQUESTS + 1;
@@ -2124,6 +2124,91 @@ static bool TestMounting(void) {
     END_TEST;
 }
 
+// Test that FVM-aware filesystem can be reformatted.
+static bool TestMkfs(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver),
+              0, "error mounting FVM");
+
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0);
+    fvm_info_t fvm_info;
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
+    size_t slice_size = fvm_info.slice_size;
+
+    // Allocate one VPart.
+    alloc_req_t request;
+    request.slice_count = 1;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0);
+
+    // Format the VPart as minfs.
+    char partition_path[PATH_MAX];
+    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block",
+             fvm_driver, kTestPartName1);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
+                   &default_mkfs_options), ZX_OK);
+
+    // Format it as MinFS again, even though it is already formatted.
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
+                   &default_mkfs_options), ZX_OK);
+
+    // Now try reformatting as blobstore.
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_BLOBFS, launch_stdio_sync,
+                   &default_mkfs_options), ZX_OK);
+
+    // Demonstrate that mounting as minfs will fail, but mounting as blobstore
+    // is successful.
+    const char* mount_path = "/tmp/minfs_test_mountpath";
+    ASSERT_EQ(mkdir(mount_path, 0666), 0);
+    ASSERT_NE(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_sync), ZX_OK);
+    vp_fd = open(partition_path, O_RDWR);
+    ASSERT_GE(vp_fd, 0);
+    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_BLOBFS, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+
+    // ... and reformat back to MinFS again.
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
+                   &default_mkfs_options), ZX_OK);
+
+    // Mount the VPart.
+    vp_fd = open(partition_path, O_RDWR);
+    ASSERT_GE(vp_fd, 0);
+    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+
+    // Verify that the mount was successful.
+    int rootfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(rootfd, 0);
+    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
+    vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
+    ssize_t r = ioctl_vfs_query_fs(rootfd, out, sizeof(buf));
+    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(vfs_query_info_t) + strlen("minfs")),
+              "Failed to query filesystem");
+    out->name[r - sizeof(vfs_query_info_t)] = '\0';
+    ASSERT_EQ(strcmp("minfs", out->name), 0, "Unexpected filesystem mounted");
+
+    // Verify that MinFS does not try to use more of the VPartition than
+    // was originally allocated.
+    ASSERT_LE(out->total_bytes, slice_size * request.slice_count);
+
+    // Clean up.
+    ASSERT_EQ(close(rootfd), 0);
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_EQ(rmdir(mount_path), 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
 // Test that the FVM can recover when one copy of
 // metadata becomes corrupt.
 static bool TestCorruptionOk(void) {
@@ -2695,6 +2780,7 @@ RUN_TEST_MEDIUM(TestSliceAccessNonContiguousVirtual)
 RUN_TEST_MEDIUM(TestPersistenceSimple)
 RUN_TEST_LARGE(TestVPartitionUpgrade)
 RUN_TEST_LARGE(TestMounting)
+RUN_TEST_LARGE(TestMkfs)
 RUN_TEST_MEDIUM(TestCorruptionOk)
 RUN_TEST_MEDIUM(TestCorruptionRegression)
 RUN_TEST_MEDIUM(TestCorruptionUnrecoverable)

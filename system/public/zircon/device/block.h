@@ -49,7 +49,7 @@
 #define IOCTL_BLOCK_FVM_EXTEND \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 12)
 // Shink a virtual partition. Returns "success" if ANY slices are
-// freed.
+// freed, even if part of the requested range contains unallocated slices.
 #define IOCTL_BLOCK_FVM_SHRINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
 #define IOCTL_BLOCK_FVM_DESTROY \
@@ -195,7 +195,8 @@ typedef struct {
 // ssize_t ioctl_block_fvm_query(int fd, fvm_info_t* info);
 IOCTL_WRAPPER_OUT(ioctl_block_fvm_query, IOCTL_BLOCK_FVM_QUERY, fvm_info_t);
 
-// ssize_t ioctl_block_fvm_query(int fd, query_request_t* request, query_response_t* response);
+// ssize_t ioctl_block_fvm_vslice_query(int fd, query_request_t* request,
+//                                      query_response_t* response);
 IOCTL_WRAPPER_INOUT(ioctl_block_fvm_vslice_query, IOCTL_BLOCK_FVM_VSLICE_QUERY,
                     query_request_t, query_response_t);
 

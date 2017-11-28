@@ -607,8 +607,8 @@ uint32_t VPartition::SliceGetLocked(size_t vslice) const {
 zx_status_t VPartition::CheckSlices(size_t vslice_start, size_t* count, bool* allocated) {
     fbl::AutoLock lock(&lock_);
 
-    if (vslice_start > mgr_->VSliceMax()) {
-        return ZX_ERR_INVALID_ARGS;
+    if (vslice_start >= mgr_->VSliceMax()) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     if (IsKilledLocked()) {
