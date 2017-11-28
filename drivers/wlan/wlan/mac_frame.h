@@ -403,6 +403,8 @@ struct MgmtFrameHeader {
 
 // IEEE Std 802.11-2016, 9.3.3.3
 struct Beacon {
+    bool Validate(size_t len);
+
     // 9.4.1.10
     uint64_t timestamp;
     // 9.4.1.3

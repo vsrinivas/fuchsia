@@ -9,6 +9,75 @@
 namespace wlan {
 
 namespace {
+
+// IEEE Std 802.11-2016, 9.3.3.3
+element_id::ElementId kValidBeaconIds[] = {
+    element_id::kSsid,
+    element_id::kSuppRates,
+    element_id::kDsssParamSet,
+    element_id::kCfParamSet,
+    element_id::kIbssParamSet,
+    element_id::kTim,
+    element_id::kCountry,
+    element_id::kPowerConstraint,
+    element_id::kChannelSwitchAnn,
+    element_id::kQuiet,
+    element_id::kIbssDfs,
+    element_id::kTpcReport,
+    element_id::kErp,
+    element_id::kExtSuppRates,
+    element_id::kRsn,
+    element_id::kBssLoad,
+    element_id::kEdcaParamSet,
+    element_id::kQosCapability,
+    element_id::kApChannelReport,
+    element_id::kBssAvgAccessDelay,
+    element_id::kAntenna,
+    element_id::kBssAvailAdmissionCapacity,
+    element_id::kBssAcAccessDelay,
+    element_id::kMeasurementPilotTrans,
+    element_id::kMultipleBssid,
+    element_id::kRmEnabledCapabilities,
+    element_id::kMobilityDomain,
+    element_id::kDseRegisteredLocation,
+    element_id::kExtChannelSwitchAnn,
+    element_id::kSuppOperatingClasses,
+    element_id::kHtCapabilities,
+    element_id::kHtOperation,
+    element_id::k2040BssCoex,
+    element_id::kOverlappingBssScanParams,
+    element_id::kExtCapabilities,
+    element_id::kFmsDescriptor,
+    element_id::kQosTrafficCapability,
+    element_id::kTimeAdvertisement,
+    element_id::kInterworking,
+    element_id::kAdvertisementProtocol,
+    element_id::kRoamingConsortium,
+    element_id::kEmergencyAlertId,
+    element_id::kMeshId,
+    element_id::kMeshConfiguration,
+    element_id::kMeshAwakeWindow,
+    element_id::kBeaconTiming,
+    element_id::kMccaopAdvertisementOverview,
+    element_id::kMccaopAdvertisement,
+    element_id::kMeshChannelSwitchParams,
+    element_id::kQmfPolicy,
+    element_id::kQloadReport,
+    element_id::kHccaTxopUpdateCount,
+    element_id::kMultiband,
+    element_id::kVhtCapabilities,
+    element_id::kVhtOperation,
+    element_id::kTransmitPowerEnvelope,
+    element_id::kChannelSwitchWrapper,
+    element_id::kExtBssLoad,
+    element_id::kQuietChannel,
+    element_id::kOperatingModeNotification,
+    element_id::kReducedNeighborReport,
+    element_id::kTvhtOperation,
+    element_id::kElementWithExtension, // Estimated Service Parameters
+    element_id::kElementWithExtension, // Future Channel Guidance
+    element_id::kVendorSpecific,
+};
 // IEEE Std 802.11-2016, 9.3.3.10
 element_id::ElementId kValidProbeRequestIds[] = {
     element_id::kSsid,
@@ -80,6 +149,13 @@ bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, El
     return r->offset() == len;
 }
 }  // namespace
+
+bool Beacon::Validate(size_t len) {
+    ElementReader reader(elements, len);
+    constexpr size_t kValidIdSize = fbl::count_of(kValidProbeRequestIds);
+    return ValidateElements(len, kValidBeaconIds, kValidIdSize, &reader);
+}
+
 
 bool ProbeRequest::Validate(size_t len) {
     ElementReader reader(elements, len);

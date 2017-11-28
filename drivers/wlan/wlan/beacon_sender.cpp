@@ -4,6 +4,7 @@
 
 #include "beacon_sender.h"
 #include "logging.h"
+#include "packet.h"
 
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -20,7 +21,6 @@ namespace wlan {
 
 BeaconSender::BeaconSender(DeviceInterface* device) : device_(device) {
     debugfn();
-    (void)device_;
 }
 
 zx_status_t BeaconSender::Init() {
@@ -55,6 +55,7 @@ zx_status_t BeaconSender::Start(const StartRequest& req) {
 
     start_req_ = req.Clone();
     bcn_thread_ = std::thread(&BeaconSender::MessageLoop, this);
+    started_at_ = std::chrono::steady_clock::now();
     return SetTimeout();
 }
 
@@ -127,7 +128,14 @@ void BeaconSender::MessageLoop() {
             switch (pkt.key) {
             case kPortPktKeyTimer: {
                 std::lock_guard<std::mutex> lock(start_req_lock_);
-                if (IsStartedLocked()) { SendBeaconFrameLocked(); }
+                if (IsStartedLocked()) {
+                    status = SendBeaconFrameLocked();
+                    if (status != ZX_OK) {
+                        errorf("error sending beacon, exiting message loop: %d\n", status);
+                        running = false;
+                        break;
+                    }
+                }
                 break;
             }
             default:
@@ -147,12 +155,88 @@ void BeaconSender::MessageLoop() {
 zx_status_t BeaconSender::SendBeaconFrameLocked() {
     debugfn();
     ZX_DEBUG_ASSERT(IsStartedLocked());
-
     debugbcnsndr("sending Beacon\n");
-    // TODO(hahnr): Send Beacon frame.
 
-    SetTimeout();
-    return ZX_OK;
+    // TODO(hahnr): Length of elements is not known at this time. Allocate enough bytes.
+    // This should be updated once there is a better size management.
+    size_t elem_len = 128;
+    size_t len = sizeof(MgmtFrameHeader) + sizeof(Beacon) + elem_len;
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+
+    // Write header.
+    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
+    hdr->fc.set_type(kManagement);
+    hdr->fc.set_subtype(ManagementSubtype::kBeacon);
+    // TODO(hahnr): Once ManagedBSS is submitted retrieve the bssid from the BSS.
+    const common::MacAddr& bssid = device_->GetState()->address();
+    hdr->addr1 = common::kBcastMac;
+    hdr->addr2 = bssid;
+    hdr->addr3 = bssid;
+    hdr->sc.set_seq(next_seq());
+
+    // Write body.
+    auto bcn = packet->mut_field<Beacon>(hdr->len());
+    bcn->beacon_interval = start_req_->beacon_period;
+    bcn->timestamp = beacon_timestamp();
+    bcn->cap.set_ess(1);
+    bcn->cap.set_short_preamble(1);
+
+    // Write elements.
+    //TODO(hahnr): All of this is hardcoded for now. Replace with actual capabilities.
+    ElementWriter w(bcn->elements, packet->len() - hdr->len() - sizeof(Beacon));
+    if (!w.write<SsidElement>(start_req_->ssid.data())) {
+        errorf("could not write ssid \"%s\" to Beacon\n", start_req_->ssid.data());
+        return ZX_ERR_IO;
+    }
+
+    // Rates (in Mbps): 1, 2, 5.5, 6 (base), 9, 11, 12, 18
+    std::vector<uint8_t> rates = {0x02, 0x04, 0x0b, 0x8c, 0x12, 0x16, 0x18, 0x24};
+    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+        errorf("[bcn-sender] could not write supported rates\n");
+        return ZX_ERR_IO;
+    }
+
+    // TODO(hahnr): Replace hardcoded channel.
+    if (!w.write<DsssParamSetElement>(1)) {
+        errorf("[bcn-sender] could not write extended supported rates\n");
+        return ZX_ERR_IO;
+    }
+
+    // Rates (in Mbps): 24, 36, 48, 54
+    std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
+    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
+        errorf("[bcn-sender] could not write extended supported rates\n");
+        return ZX_ERR_IO;
+    }
+
+    // Validate the request in debug mode.
+    ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
+
+    size_t actual_len = hdr->len() + sizeof(Beacon) + w.size();
+    auto status = packet->set_len(actual_len);
+    if (status != ZX_OK) {
+        errorf("[bcn-sender] could not set packet length to %zu: %d\n", actual_len, status);
+        return status;
+    }
+
+    status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
+        errorf("[bcn-sender] could not send beacon packet: %d\n", status);
+        return status;
+    }
+
+    return SetTimeout();
+}
+
+// TODO(hahnr): Once InfraBss is submitted, retrieve the timestamp from the BSS.
+uint64_t BeaconSender::beacon_timestamp() {
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(now - started_at_).count();
 }
 
 zx_status_t BeaconSender::SetTimeout() {
@@ -168,6 +252,19 @@ zx_status_t BeaconSender::SetTimeout() {
         return status;
     }
     return ZX_OK;
+}
+
+// TODO(hahnr): Once InfraBss is submitted, retrieve the next sequence no from the BSS.
+uint16_t BeaconSender::next_seq() {
+    uint16_t seq = device_->GetState()->next_seq();
+    if (seq == last_seq_) {
+        // If the sequence number has rolled over and back to the last seq number we sent,
+        // increment again.
+        // IEEE Std 802.11-2016, 10.3.2.11.2, Table 10-3, Note TR1
+        seq = device_->GetState()->next_seq();
+    }
+    last_seq_ = seq;
+    return seq;
 }
 
 }  // namespace wlan

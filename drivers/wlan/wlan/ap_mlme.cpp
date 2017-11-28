@@ -50,7 +50,10 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
 
 zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     debugfn();
-    // TODO(hahnr): Implement.
+
+    bcn_sender_->Stop();
+    // TODO(hahnr): Remove BSS instance.
+
     return ZX_OK;
 }
 

@@ -15,6 +15,9 @@
 
 namespace wlan {
 
+using timestamp_t = std::chrono::time_point<std::chrono::steady_clock,
+                                            std::chrono::nanoseconds>;
+
 // BeaconSender sends periodic Beacon frames for a given BSS. The BeaconSender only supports one
 // BSS at a time. Beacons are sent from a separate thread.
 // Sending Beacons through software is unlikely to be precise enough due to the tight time
@@ -36,6 +39,8 @@ class BeaconSender {
     void MessageLoop();
     zx_status_t SendBeaconFrameLocked();
     zx_status_t SetTimeout();
+    uint64_t beacon_timestamp();
+    uint16_t next_seq();
 
     static constexpr uint64_t kMessageLoopMaxWaitSeconds = 30;
     // Indicates the packet was send due to the Timer being triggered.
@@ -49,6 +54,8 @@ class BeaconSender {
     fbl::unique_ptr<Timer> timer_;
     StartRequestPtr start_req_;
     std::mutex start_req_lock_;
+    uint16_t last_seq_ = kMaxSequenceNumber;
+    timestamp_t started_at_;
 };
 
 }  // namespace wlan
