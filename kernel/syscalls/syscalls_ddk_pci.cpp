@@ -320,10 +320,12 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
     zx_handle_t handle_value = up->MapHandleToValue(handle);
 
     // If everything is successful add the handle to the process
-    if (out_info.copy_to_user(info) != ZX_OK ||
-            out_handle.copy_to_user(handle_value) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    status = out_info.copy_to_user(info);
+    if (status != ZX_OK)
+        return status;
+    status = out_handle.copy_to_user(handle_value);
+    if (status != ZX_OK)
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;

@@ -45,7 +45,7 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t
         return ZX_ERR_NO_MEMORY;
     status = out.copy_to_user(up->MapHandleToValue(handle));
     if (status != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;
@@ -113,7 +113,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
         return ZX_ERR_NO_MEMORY;
     status = out.copy_to_user(up->MapHandleToValue(handle));
     if (status != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+        return status;
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;
@@ -134,7 +134,7 @@ zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_out_ptr<zx_port_packet
 
     status = user_packet.copy_to_user(packet);
     if (status != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+        return status;
 
     return ZX_OK;
 }

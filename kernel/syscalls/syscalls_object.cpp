@@ -615,10 +615,9 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
                 // like racing with task death.
                 return status;
             }
-            if (_value.reinterpret<zx_job_importance_t>()
-                    .copy_to_user(value) != ZX_OK) {
-                return ZX_ERR_INVALID_ARGS;
-            }
+            status = _value.reinterpret<zx_job_importance_t>().copy_to_user(value);
+            if (status != ZX_OK)
+                return status;
             return ZX_OK;
         }
         default:
@@ -762,8 +761,9 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
         if (!process_h)
             return ZX_ERR_NO_MEMORY;
 
-        if (_out.copy_to_user(up->MapHandleToValue(process_h)))
-            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = _out.copy_to_user(up->MapHandleToValue(process_h));
+        if (status != ZX_OK)
+            return status;
         up->AddHandle(fbl::move(process_h));
         return ZX_OK;
     }

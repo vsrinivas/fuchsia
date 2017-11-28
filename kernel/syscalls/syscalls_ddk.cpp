@@ -213,15 +213,21 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
 zx_status_t sys_bootloader_fb_get_info(user_out_ptr<uint32_t> format, user_out_ptr<uint32_t> width,
                                        user_out_ptr<uint32_t> height, user_out_ptr<uint32_t> stride) {
 #if ARCH_X86
-    if (!bootloader.fb.base ||
-            format.copy_to_user(bootloader.fb.format) ||
-            width.copy_to_user(bootloader.fb.width) ||
-            height.copy_to_user(bootloader.fb.height) ||
-            stride.copy_to_user(bootloader.fb.stride)) {
+    if (!bootloader.fb.base)
         return ZX_ERR_INVALID_ARGS;
-    } else {
-        return ZX_OK;
-    }
+    zx_status_t status = format.copy_to_user(bootloader.fb.format);
+    if (status != ZX_OK)
+        return status;
+    status = width.copy_to_user(bootloader.fb.width);
+    if (status != ZX_OK)
+        return status;
+    status = height.copy_to_user(bootloader.fb.height);
+    if (status != ZX_OK)
+        return status;
+    status = stride.copy_to_user(bootloader.fb.stride);
+    if (status != ZX_OK)
+        return status;
+    return ZX_OK;
 #else
     return ZX_ERR_NOT_SUPPORTED;
 #endif
