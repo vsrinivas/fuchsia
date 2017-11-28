@@ -219,8 +219,10 @@ public:
         EXPECT_NE(0u, magma_get_semaphore_id(semaphore));
 
         std::thread thread([semaphore] {
-            EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_semaphore(semaphore, 1000));
-            EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_wait_semaphore(semaphore, 100));
+            EXPECT_EQ(MAGMA_STATUS_OK,
+                      magma_wait_semaphore(semaphore, MAGMA_SEMAPHORE_WAIT_FLAG_NORESET, 1000));
+            EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_semaphore(semaphore, 0, 0));
+            EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_wait_semaphore(semaphore, 0, 100));
         });
 
         magma_signal_semaphore(semaphore);
@@ -230,7 +232,7 @@ public:
         magma_reset_semaphore(semaphore);
 
         thread = std::thread([semaphore] {
-            EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_wait_semaphore(semaphore, 100));
+            EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_wait_semaphore(semaphore, 0, 100));
         });
         thread.join();
 
@@ -329,12 +331,12 @@ public:
 
             if (frame > 0) {
                 uint32_t last_index = (frame - 1) % buffers.size();
-                status = magma_wait_semaphore(buffer_presented_semaphores[last_index], 1000);
+                status = magma_wait_semaphore(buffer_presented_semaphores[last_index], 0, 1000);
                 if (status != MAGMA_STATUS_OK)
                     return DRETF(false, "wait on signal semaphore failed");
                 DLOG("buffer presented");
 
-                status = magma_wait_semaphore(signal_semaphores[last_index], 1000);
+                status = magma_wait_semaphore(signal_semaphores[last_index], 0, 1000);
                 if (status != MAGMA_STATUS_OK)
                     return DRETF(false, "wait on signal semaphore failed");
             }

@@ -399,10 +399,15 @@ void magma_reset_semaphore(magma_semaphore_t semaphore)
     reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Reset();
 }
 
-magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout)
+magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint32_t flags, uint64_t timeout)
 {
-    if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Wait(timeout))
-        return MAGMA_STATUS_TIMED_OUT;
+    if (flags & MAGMA_SEMAPHORE_WAIT_FLAG_NORESET) {
+        if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->WaitNoReset(timeout))
+            return MAGMA_STATUS_TIMED_OUT;
+    } else {
+        if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Wait(timeout))
+            return MAGMA_STATUS_TIMED_OUT;
+    }
 
     return MAGMA_STATUS_OK;
 }

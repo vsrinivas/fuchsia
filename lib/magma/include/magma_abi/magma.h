@@ -141,7 +141,7 @@ void magma_reset_semaphore(magma_semaphore_t semaphore);
 
 // Waits for |semaphore| to be signaled.  Returns MAGMA_STATUS_TIMED_OUT if the timeout
 // expires first.
-magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout);
+magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint32_t flags, uint64_t timeout);
 
 // Exports |semaphore| to it can be imported into another connection via |semaphore_handle_out|
 magma_status_t magma_export_semaphore(struct magma_connection_t* connection,
