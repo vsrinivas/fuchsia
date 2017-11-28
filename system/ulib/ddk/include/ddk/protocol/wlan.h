@@ -50,7 +50,11 @@ enum {
 };
 
 enum {
+    // The FCS for the received frame was invalid.
     WLAN_RX_INFO_FLAGS_FCS_INVALID = (1 << 0),
+    // Padding was added after the MAC header to align the frame body to 4 bytes.
+    WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4 = (1 << 1),
+    // Bits 2-31 reserved
 };
 
 typedef struct wlan_rx_info {
