@@ -51,6 +51,9 @@ declare_args() {
   # is added to FVM, and can therefore expand as needed. It must be at least
   # 10mb (the default) in order to be succesfully initialized.
   data_image_size = "10m"
+
+  # Whether to automatically generate BUILD.gn files for Zircon artifacts.
+  generate_zircon_gn_files = false
 }
 
 declare_args() {
@@ -824,6 +827,21 @@ bootdata("mkbootfs") {
     # output file is computable directly from the target name.
     inputs += [ "$root_out_dir/" + get_label_info(label, "name") + ".bin" ]
   }
+}
+
+if (generate_zircon_gn_files) {
+  zircon_files =
+      exec_script("//build/zircon/list_source_files.py", [], "list lines")
+
+  exec_script("//build/zircon/create_gn_rules.py",
+              [
+                "--out",
+                rebase_path("//sdk"),
+                "--zircon-build",
+                rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
+              ],
+              "",
+              zircon_files)
 }
 
 group("default") {
