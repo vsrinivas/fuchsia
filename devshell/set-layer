@@ -48,6 +48,10 @@ function remove-import {
 remove-import zircon manifest
 remove-import garnet manifest/garnet
 remove-import peridot manifest/peridot
+remove-import topaz manifest/topaz
+
+# TODO(abarth): Remove this step eventually once everyone has had a change to
+# remove this import from their manifest.
 remove-import manifest fuchsia
 
 jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
