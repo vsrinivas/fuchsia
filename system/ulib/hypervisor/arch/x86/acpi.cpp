@@ -18,9 +18,9 @@ extern "C" {
 #include <acpica/actypes.h>
 }
 
-static const char kDsdtPath[] = "/boot/data/dsdt.aml";
-static const char kMadtPath[] = "/boot/data/madt.aml";
-static const char kMcfgPath[] = "/boot/data/mcfg.aml";
+static const char kDsdtPath[] = "/system/data/dsdt.aml";
+static const char kMadtPath[] = "/system/data/madt.aml";
+static const char kMcfgPath[] = "/system/data/mcfg.aml";
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
     uint8_t sum = 0;
