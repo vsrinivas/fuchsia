@@ -60,6 +60,12 @@ The sandbox file is a JSON object with the following schema:
                 "type": "string"
             }
         },
+        "system": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
         "features": {
             "type": "array",
             "items": {
@@ -74,6 +80,11 @@ The `dev` array contains a list of well-known device paths that are provided to
 the application. For example, if the string `class/input` appears in the `dev`
 array, then `/dev/class/input` will appear in the namespaces of applications
 loaded from the package.
+
+The `system` array contains a list of well-known paths within the system package
+that are provided to the application. For example, if the string `bin` appears
+in the `system` array, then `/system/bin` will appear in the namespaces of
+applications loaded from the package.
 
 The `features` array contains a list of well-known features that the package
 wishes to use. Including a feature in this list is a request for the environment
