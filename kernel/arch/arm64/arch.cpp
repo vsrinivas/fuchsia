@@ -66,9 +66,10 @@ arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
-uint32_t arm64_zva_size;
-uint32_t arm64_icache_size;
-uint32_t arm64_dcache_size;
+/* cache size parameters for the current cpu, default to a reasonable minimum */
+uint32_t arm64_zva_size = 32;
+uint32_t arm64_icache_size = 32;
+uint32_t arm64_dcache_size = 32;
 
 extern uint64_t arch_boot_el; // Defined in start.S.
 

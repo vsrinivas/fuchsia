@@ -44,10 +44,12 @@ FUNCTION(arm_reset)
     /* We were launched by EFI with x1 containing system table
          mmu is on, dcache is on, icache is on
     */
+    /* efi_boot_ret efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr) */
     adr_global    x2, _start
     push_regs     x29, x30
     bl            efi_boot
-    mov           x20, x0
+    mov           x9, x0
+    mov           x10, x1
     pop_regs      x29, x30
 
     /* Turn off Dcache and MMU */
@@ -67,12 +69,12 @@ FUNCTION(arm_reset)
     msr    sctlr_el1, x0
     isb
 2:
-    mov     x0, x20
+    mov     x0, x9
     mov     x1, xzr
     mov     x2, xzr
     mov     x3, xzr
-    movlit  x20, (MEMBASE + KERNEL_LOAD_OFFSET)
-    br      x20
+    br      x10
+
 .Lno_efi:
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1
@@ -239,7 +241,6 @@ FUNCTION(arm_reset)
     movlit  tmp, MMU_TCR_FLAGS_KERNEL
     msr     tcr_el1, tmp
     isb
-
 
     /* Invalidate TLB */
     tlbi    vmalle1
