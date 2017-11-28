@@ -92,6 +92,9 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
     }
   }
 
+  for (const auto& path : sandbox.system())
+    PushDirectoryFromPath("/system/" + path);
+
   for (const auto& feature : sandbox.features()) {
     if (feature == "vulkan") {
       PushDirectoryFromPath("/dev/class/display");

@@ -18,10 +18,12 @@ class SandboxMetadata {
   bool Parse(const std::string& data);
 
   const std::vector<std::string>& dev() const { return dev_; }
+  const std::vector<std::string>& system() const { return system_; }
   const std::vector<std::string>& features() const { return features_; }
 
  private:
   std::vector<std::string> dev_;
+  std::vector<std::string> system_;
   std::vector<std::string> features_;
 };
 
