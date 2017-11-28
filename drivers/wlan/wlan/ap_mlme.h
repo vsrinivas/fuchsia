@@ -19,6 +19,7 @@ class ApMlme : public Mlme {
 
     // FrameHandler methods.
     zx_status_t HandleMlmeStartReq(const StartRequest& req) override;
+    zx_status_t HandleMlmeStopReq(const StopRequest& req) override;
 
     // Mlme interface methods.
     zx_status_t Init() override;

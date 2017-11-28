@@ -34,6 +34,12 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     return ZX_OK;
 }
 
+zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
+    debugfn();
+    // TODO(hahnr): Implement.
+    return ZX_OK;
+}
+
 zx_status_t ApMlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     // TODO(hahnr): Implement.

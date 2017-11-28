@@ -103,6 +103,7 @@ class FrameHandler {
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeEapolReq, EapolRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
+    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
 
     // Data frame handlers.
     virtual bool ShouldDropDataFrame(const DataFrameHeader& hdr) { return false; }
@@ -129,6 +130,7 @@ class FrameHandler {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeEapolReq, EapolRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
 
     // Internal Management frame handlers.
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Beacon)
