@@ -135,6 +135,8 @@ parser.add_argument('--build_dir_zircon', action='store', required=False,
                     help="""Directory in which to find magneta build artifacts.
                     either this or both the kernel AND efi_loader args must be
                     supplied.""")
+parser.add_argument('--build_dir_zircon_user', action='store', required=False,
+                    help="""Directory where zircon user artifacts are stored.""")
 parser.add_argument('--kernel', action='store', required=False,
                     help="""Location of zircon.bin, if not supplied this will
                     be assumed to be relative to --build_dir""")
@@ -168,6 +170,8 @@ parser.add_argument('--cmdline_zedboot', action='store', required=False,
 parser.add_argument('--sys_mount', action='store', required=True, default="any",
                     help="""The type of system partition to mount.
                     local|any|none default:any""")
+parser.add_argument('--build_dir_zircon_tools', action='store', required=True,
+                    help="""Where to find zircon tools""")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -178,11 +182,13 @@ kernel_cmdline = args.kernel_cmdline
 enable_thread_exp = not args.disable_thread_exp
 mdir_path = args.mdir_path
 sys_mount = args.sys_mount
+build_dir_zircon_user = args.build_dir_zircon_user
+zircon_tools = args.build_dir_zircon_tools
 
 runtime_dir = args.runtime_dir
 zedboot_build_dir = args.build_dir_zedboot
 zedboot_kernel = args.kernel_zedboot
-zedboot_bootdata = args.bootdata_zedboot
+zedboot_manifest = args.bootdata_zedboot
 zedboot_cmdline = args.cmdline_zedboot
 
 if zedboot_cmdline is None:
@@ -223,16 +229,13 @@ if zedboot_kernel is None:
   else:
     zedboot_kernel = os.path.join(zedboot_build_dir, "zircon.bin")
 
-if not zedboot_bootdata:
-  if zedboot_build_dir is None:
-    zedboot_bootdata = os.path.join(os.path.dirname(zedboot_kernel), "bootdata.bin")
-  else:
-    zedboot_bootdata = os.path.join(zedboot_build_dir, "bootdata.bin")
+if not zedboot_manifest:
+  if build_dir_zircon_user is not None:
+    zedboot_manifest = os.path.join(build_dir_zircon_user, "bootfs.manifest")
 
-  if not os.path.exists(zedboot_bootdata):
-    print """Could not find the zedboot primary bootfs relative to the zedboot
-    kernel please provide the zedboot bootdata directly or a zedboot build
-    directory which includes the bootdata.bin file."""
+  if not os.path.exists(zedboot_manifest):
+    print """Could not find the zedboot bootfs manifest at %s, please specify
+    its location directly.""" % zedboot_manifest
     sys.exit(-1)
 
 if arch == "X64" and not os.path.exists(bootloader):
@@ -311,7 +314,7 @@ print "\nCopied %i files" % file_count
 compressed_disk = "%s.lz4" % disk_path
 sparse_disk = "%s.sparse" % disk_path
 
-sparser_path = os.path.join(build_dir_zircon, "tools", "sparse")
+sparser_path = os.path.join(zircon_tools, "sparse")
 sparse_cmd = [sparser_path, "-s", disk_path, sparse_disk]
 subprocess.check_call(sparse_cmd, cwd=working_dir)
 
@@ -330,7 +333,7 @@ bootdata = mk_bootdata_fs(mkbootfs_path,
 
 zedboot_path = os.path.join(args.build_dir, FILE_ZEDBOOT)
 try:
-  util.make_zedboot(mkbootfs_path, zedboot_kernel, zedboot_bootdata,
+  util.make_zedboot(mkbootfs_path, zedboot_kernel, zedboot_manifest,
                     zedboot_cmdline, zedboot_path)
 except subprocess.CalledProcessError as err:
   print "Error creating zedboot %s" % err

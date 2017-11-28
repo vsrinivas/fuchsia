@@ -55,6 +55,8 @@ boot_manifest=""
 enable_thread_exp=1
 sys_mount="any"
 extras=("")
+zircon_user_dir=""
+zircon_tools=""
 
 while (( "$#" )); do
   case $1 in
@@ -81,6 +83,8 @@ while (( "$#" )); do
       echo "-j: disable experimental thread prioritization"
       echo "--sys-mount: where the system should get its system partition from" \
         "none|local|any. This defaults to 'any'."
+      echo "--zircon-user: location of user space files for zircon"
+      echo "--tools: location of zircon tools directory"
       exit 0
       ;;
     "-j")
@@ -136,6 +140,14 @@ while (( "$#" )); do
     "--sys-mount")
       shift
       sys_mount=$1
+      ;;
+    "--zircon-user")
+      shift
+      zircon_user_dir=$1
+      ;;
+    "--tools")
+      shift
+      zircon_tools=$1
       ;;
     *)
       extras+=("$1")
@@ -197,6 +209,10 @@ fi
 
 build_zircon_dir="${script_dir}/../../out/build-zircon"
 
+if [ "$zircon_tools" = "" ]; then
+  zircon_tools="${build_zircon_dir}/tools"
+fi
+
 if [ "$zircon_project_dir" = "" ]; then
   zircon_project_dir="${build_zircon_dir}/build-zircon-${device_type}-"
   if [ "$build_arch" = "aarch64" ]; then
@@ -207,6 +223,15 @@ if [ "$zircon_project_dir" = "" ]; then
 else
   if [ "$device_type" != "" ]; then
     echo "build directory is specified, type arg ignored"
+  fi
+fi
+
+if [ "$zircon_user_dir" = "" ]; then
+  zircon_user_dir="${build_zircon_dir}/build-user-"
+  if [ "$build_arch" = "aarch64" ]; then
+    zircon_user_dir="${zircon_user_dir}arm64"
+  elif [ "$build_arch" = "x86-64" ]; then
+    zircon_user_dir="${zircon_user_dir}${build_arch}"
   fi
 fi
 
@@ -313,7 +338,9 @@ imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcp
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch"
   --efi_disk="$disk_path_efi" --build_dir_zircon="$zircon_project_dir"
   --bootdata="$bootdata" --boot_manifest="$boot_manifest" --sys_mount="$sys_mount"
-  --mdir_path="$mdir_loc" --runtime_dir="$sys_out" "${extras[@]}" )
+  --mdir_path="$mdir_loc" --runtime_dir="$sys_out"
+  --build_dir_zircon_user="$zircon_user_dir" --build_dir_zircon_tools="$zircon_tools"
+  "${extras[@]}" )
 
 if [ "$enable_thread_exp" -eq 0 ]; then
   imager_cmd+=("--disable_thread_exp")

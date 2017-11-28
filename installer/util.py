@@ -18,7 +18,7 @@ import tempfile
 # is used as the command line. This calls a subprocess and may raise an
 # exception if that process can not be started or the process encounters an
 # error.
-def make_zedboot(mkbootfs_bin, kernel_path, bootdata_path, cmd_line, out_path):
+def make_zedboot(mkbootfs_bin, kernel_path, bootdata_manifest, cmd_line, out_path):
   remove = False
   if not os.path.exists(cmd_line):
     temp_file, path = tempfile.mkstemp()
@@ -29,7 +29,7 @@ def make_zedboot(mkbootfs_bin, kernel_path, bootdata_path, cmd_line, out_path):
     print "Command line written to %s" % cmd_line
 
   mkbootfs_cmd = [mkbootfs_bin, "-o", out_path, kernel_path, "-C", cmd_line,
-                  bootdata_path]
+                  "--target=boot", bootdata_manifest]
   subprocess.check_call(mkbootfs_cmd)
   if remove:
     os.remove(cmd_line)
