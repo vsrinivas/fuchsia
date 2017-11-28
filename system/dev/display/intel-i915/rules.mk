@@ -12,11 +12,14 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
-    $(LOCAL_DIR)/intel-i915.cpp
+    $(LOCAL_DIR)/gtt.cpp \
+    $(LOCAL_DIR)/intel-i915.cpp \
+    $(LOCAL_DIR)/mmio-space.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl
 
