@@ -21,6 +21,12 @@
 namespace wlan {
 
 namespace {
+
+template <unsigned int N, typename T> T align(T t) {
+    static_assert(N > 1 && !(N & (N - 1)), "alignment must be with a power of 2");
+    return (t + (N - 1)) & ~(N - 1);
+}
+
 void DumpPacket(const Packet& packet) {
     const uint8_t* p = packet.data();
     for (size_t i = 0; i < packet.len(); i++) {
@@ -190,27 +196,8 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
     }
 
     auto llc_offset = hdr->len();
-    {  // TODO(porce): Factor out as a function.
-
-        // Ralink aligns the Mac frame header in 4 bytes,
-        // before passing it to the device driver.
-        // The rx frame's rx_descriptor has l2pad boolean flag
-        // to indicate if the frame was zero-padded.
-        // In case of data frame with subtype kQosData(8),
-        // two bytes of QoS Control field is appended
-        // after the Addr3, and BEFORE LLC header.
-        // This offset calculation should compensate that
-        // before the frame may be passed to next level.
-
-        // TODO(porce): Replace the conditional by rxinfo's upcoming field: l2pad
-        // Alignment size is 4 bytes. This is the case for Ralink implementation.
-        // Not necessarilly generally applicable to all chipsets.
-        constexpr size_t l2padding_align = 4;  // bytes
-        if ((llc_offset % l2padding_align) != 0) { llc_offset += llc_offset % l2padding_align; }
-
-        // Alternative implementation:
-        // constexpr size_t l2padding_bytes = 2;
-        // if (hdr->fc.subtype() == kQosdata) { llc_offset += l2padding_bytes; }
+    if (rxinfo->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4) {
+        llc_offset = align<4>(llc_offset);
     }
 
     auto llc = packet->field<LlcHeader>(llc_offset);
