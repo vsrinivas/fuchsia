@@ -13,85 +13,78 @@ FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
 cd "${FUCHSIA_DIR}"
 
 usage() {
-    echo "usage: ${0} build-dir [options]"
+    echo "usage: ${0} [options] {arm64, x86}"
     echo ""
-    echo "    -f user.bootfs            Fuchsia bootfs"
-    echo "    -z zircon.bin             Zircon kernel"
     echo "    -g zircon.gpt             Zircon GPT disk image"
-    echo "    -l bzImage                Linux kernel"
+    echo "    -l bzImage                Linux kernel bzImage"
     echo "    -i initrd                 Linux initrd"
-    echo "    -r rootfs.ext2            Linux EXT2 root filesystem image"
+    echo "    -r rootfs.ext2            Linux EXT2 root file-system image"
     echo ""
     exit 1
 }
 
-while getopts "f:z:b:l:i:r:g:" opt; do
-  case "${opt}" in
-    f) HOST_BOOTFS="${OPTARG}" ;;
-    z) ZIRCON="${OPTARG}" ;;
-    g) ZIRCON_DISK="${OPTARG}" ;;
+while getopts "g:l:i:r:" opt; do
+    case "${opt}" in
+    g) ZIRCON_GPT="${OPTARG}" ;;
     l) BZIMAGE="${OPTARG}" ;;
     i) INITRD="${OPTARG}" ;;
     r) ROOTFS="${OPTARG}" ;;
     *) usage ;;
-  esac
+    esac
 done
 shift $((OPTIND-1))
 
-if [ ! -d "${1}" ]; then
-    echo "Build directory '${1}' does not exit."
-    usage
-fi
+case "${1}" in
+arm64)
+    cd out/debug-aarch64;
+    PLATFORM="zircon-hikey960-arm64";
+    GUEST_BOOTDATA="\
+        guest-mdi.bin
+        guest-platform-id.bin";
+    # NOTE(abdulla): board.mdi has paths that are relative to FUCHSIA_DIR.
+    sed 's#include "#include "../../#' \
+        ../../garnet/lib/machina/arch/arm64/mdi/board.mdi > board.mdi;
+    ../build-zircon/tools/mdigen \
+        -o guest-mdi.bin \
+        board.mdi;
+    ../build-zircon/tools/mkbootfs \
+        -o guest-platform-id.bin \
+        --vid 1 \
+        --pid 1 \
+        --board qemu-virt;;
+x86)
+    cd out/debug-x86-64;
+    PLATFORM="zircon-pc-x86-64";
+    GUEST_MANIFEST="\
+        data/dsdt.aml=../../garnet/lib/machina/arch/x86/acpi/dsdt.aml
+        data/madt.aml=../../garnet/lib/machina/arch/x86/acpi/madt.aml
+        data/mcfg.aml=../../garnet/lib/machina/arch/x86/acpi/mcfg.aml";;
+*)  usage;;
+esac
 
-declare -r HOST_BOOTFS=${HOST_BOOTFS:-$1/bootdata.bin}
-declare -r ZIRCON=${ZIRCON:-$1/zircon.bin}
-declare -r ZIRCON_DISK=${ZIRCON_DISK:-$1/zircon.gpt}
+declare -r ZIRCON=${ZIRCON:-../build-zircon/build-$PLATFORM/zircon.bin}
+declare -r ZIRCON_GPT=${ZIRCON_GPT:zircon.gpt}
 declare -r BZIMAGE=${BZIMAGE:-/tmp/linux/arch/x86/boot/bzImage}
 declare -r INITRD=${INITRD:-/tmp/toybox/initrd.gz}
 declare -r ROOTFS=${ROOTFS:-/tmp/toybox/rootfs.ext2}
 
+[ -f "${ZIRCON_GPT}" ] && GUEST_MANIFEST+=$'\n'"data/zircon.gpt=${ZIRCON_GPT}"
+[ -f "${BZIMAGE}" ] && GUEST_MANIFEST+=$'\n'"data/bzImage=${BZIMAGE}"
+[ -f "${INITRD}" ] && GUEST_MANIFEST+=$'\n'"data/initrd=${INITRD}"
+[ -f "${ROOTFS}" ] && GUEST_MANIFEST+=$'\n'"data/rootfs.ext2=${ROOTFS}"
+
 echo "\
-data/dsdt.aml=garnet/lib/machina/arch/x86/acpi/dsdt.aml
-data/madt.aml=garnet/lib/machina/arch/x86/acpi/madt.aml
-data/mcfg.aml=garnet/lib/machina/arch/x86/acpi/mcfg.aml
-data/zircon.bin=${ZIRCON}
-data/bootdata.bin=out/guest-bootdata.bin" > out/guest.manifest
-
-if [ -f "${ZIRCON_DISK}" ]; then
-    echo "data/zircon.gpt=${ZIRCON_DISK}" >> out/guest.manifest
-fi
-
-if [ -f "${BZIMAGE}" ]; then
-    echo "data/bzImage=${BZIMAGE}" >> out/guest.manifest
-fi
-
-if [ -f "${INITRD}" ]; then
-    echo "data/initrd=${INITRD}" >> out/guest.manifest
-fi
-
-if [ -f "${ROOTFS}" ]; then
-    echo "data/rootfs.ext2=${ROOTFS}" >> out/guest.manifest
-fi
-
-out/build-zircon/tools/mdigen \
-    -o out/guest-mdi.bin \
-    garnet/lib/machina/arch/arm64/mdi/board.mdi
-
-out/build-zircon/tools/mkbootfs \
-    -o out/guest-platform-id.bin \
-    --vid 1 \
-    --pid 1 \
-    --board qemu-virt
-
-out/build-zircon/tools/mkbootfs \
+    data/zircon.bin=${ZIRCON}
+    data/bootdata.bin=guest-bootdata.bin
+    ${GUEST_MANIFEST}" > guest.manifest
+../build-zircon/tools/mkbootfs \
     --target=boot \
-    -o out/guest-bootdata.bin \
-    out/guest-mdi.bin \
-    out/guest-platform-id.bin \
-    "${1}/bootfs.manifest"
-
-out/build-zircon/tools/mkbootfs \
-    --target=boot \
-    -o out/host-bootdata.bin \
-    "${HOST_BOOTFS}" \
-    out/guest.manifest
+    -o guest-bootdata.bin \
+    boot.manifest \
+    $GUEST_BOOTDATA
+../build-zircon/tools/mkbootfs \
+    --target=system \
+    -o host-bootdata.bin \
+    guest.manifest \
+    bootdata-$PLATFORM.bin \
+    system_bootfs.bin

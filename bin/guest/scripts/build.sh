@@ -36,11 +36,11 @@ shift $((OPTIND - 1))
 
 case "${1}" in
 arm64)
-    PLATFORM="zircon-hikey960-arm64";
-    ARCH="aarch64";;
+    ARCH="aarch64";
+    PLATFORM="zircon-hikey960-arm64";;
 x86)
-    PLATFORM="zircon-pc-x86-64";
-    ARCH="x86-64";;
+    ARCH="x86-64";
+    PLATFORM="zircon-pc-x86-64";;
 *)  usage;;
 esac
 
@@ -59,8 +59,7 @@ buildtools/ninja \
     $NINJA_GOMA
 
 garnet/bin/guest/scripts/mkbootfs.sh \
-    -f out/debug-$ARCH/user.bootfs \
-    out/build-zircon/build-$PLATFORM
+    "${1}"
 
 case "${1}" in
 arm64)
@@ -68,10 +67,10 @@ arm64)
         -u \
         -n \
         -b out/build-zircon/build-$PLATFORM \
-        -d out/host-bootdata.bin;;
+        -d out/debug-$ARCH/host-bootdata.bin;;
 x86)
     out/build-zircon/tools/bootserver \
         -1 \
         out/build-zircon/build-$PLATFORM/zircon.bin \
-        out/host-bootdata.bin;;
+        out/debug-$ARCH/host-bootdata.bin;;
 esac
