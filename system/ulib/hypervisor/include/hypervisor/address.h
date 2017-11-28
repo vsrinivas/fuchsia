@@ -29,8 +29,14 @@
 #define IO_APIC_PHYS_BASE               0xfec00000
 #define IO_APIC_SIZE                    PAGE_SIZE
 
-// PCI ECAM memory range.
+// PCI memory ranges.
+#if __aarch64__
+#define PCI_MMIO_BAR_PHYS_BASE          0x10000000
+#define PCI_ECAM_PHYS_BASE              0x3f000000
+#elif __x86_64__
+#define PCI_MMIO_BAR_PHYS_BASE          0xf0000000
 #define PCI_ECAM_PHYS_BASE              0xd0000000
+#endif
 #define PCI_ECAM_PHYS_TOP               (PCI_ECAM_PHYS_BASE + PCI_ECAM_SIZE(0, 1) - 1)
 
 // TPM memory range.
