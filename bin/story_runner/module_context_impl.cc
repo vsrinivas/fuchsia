@@ -167,6 +167,21 @@ void ModuleContextImpl::StartDaisyInShell(
       }));
 }
 
+void ModuleContextImpl::EmbedModule(
+    const fidl::String& name,
+    const fidl::String& query,
+    const fidl::String& link_name,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+  story_controller_impl_->EmbedModule(
+      module_data_->module_path, name, query, link_name,
+      std::move(incoming_services),
+      std::move(module_controller),
+      std::move(embed_module_watcher), std::move(view_owner));
+}
+
 void ModuleContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context_request) {
   component_context_bindings_.AddBinding(&component_context_impl_,

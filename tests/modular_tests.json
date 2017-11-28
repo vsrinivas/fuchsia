@@ -12,6 +12,17 @@
       }
     },
     {
+      "name":"embed_watcher",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=/system/test/modular_tests/embed_watcher_story_shell --user_shell_args=--root_module=/system/test/modular_tests/embed_watcher_parent_module",
+      "copy":{
+        "/system/test/modular_tests":[
+          "embed_watcher_parent_module",
+          "embed_watcher_child_module",
+          "embed_watcher_story_shell"
+        ]
+      }
+    },
+    {
       "name":"modular_unittests",
       "exec":"/system/test/modular_unittests"
     },

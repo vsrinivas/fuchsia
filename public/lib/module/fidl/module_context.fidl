@@ -50,6 +50,9 @@ interface ModuleContext {
   // interact by exchanging ServiceProviders. The new Module
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
+  //
+  // TODO(mesch): EmbedModule() should be used instead, and StartModuleInShell()
+  // should be renamed to StartModule().
   StartModule(string name, string module_url, string? link_name,
               app.ServiceProvider&? incoming_services,
               ModuleController& module_controller,
@@ -93,6 +96,35 @@ interface ModuleContext {
                     ModuleController& module_controller,
                     SurfaceRelation? surface_relation);
 
+  // Like StartModule(), used to embed the view of the requested module, but
+  // also allows to obtain information of modules started transitively in the
+  // story shell by the embedded module through the supplied EmbedModuleWatcher.
+  //
+  // The information about transitively started modules sent to the
+  // EmbedModuleWatcher can be used to manage the display of the transitively
+  // embedded modules in the story shell, specifically to Focus() and Defocus()
+  // them through an EmbedModuleController.
+  //
+  // The EmbedModuleWatcher is registered directly here rather than on the
+  // ModuleController to avoid the race condition between the registration
+  // request being connected and the embedded module starting more modules. This
+  // could also be addressed by sending catch up notifications. TBD.
+  //
+  // The EmbedModuleWatcher may be null, then EmbedModule() does exactly the
+  // same as StartModule().
+  //
+  // TODO(mesch): There is no Daisy variant of this call yet. Specifying a
+  // desired module by URL should just be expressible as a Daisy too, and then
+  // the URL and Daisy variants of these calls should be merged.
+  //
+  // TODO(mesch): StartModule() should be renamed to EmbedModule(), and then
+  // StartModuleInShell() should be renamed StartModule().
+  EmbedModule(string name, string module_url, string? link_name,
+              app.ServiceProvider&? incoming_services,
+              ModuleController& module_controller,
+              EmbedModuleWatcher? embed_module_watcher,
+              mozart.ViewOwner& view_owner);
+
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this
   // particular Module instance.
@@ -128,4 +160,38 @@ interface ModuleContext {
   // might be appropriate for the receiver to call Done() on its own
   // instead.) See ModuleState for all states and transitions.
   Done();
+};
+
+// Implemented by a Module in order to receive information about modules started
+// in the story shell by an embedded module (aka transitive embeds).
+//
+// The view ID information received this way can be used to manage focus in the
+// story shell of the transitively embedded modules.
+interface EmbedModuleWatcher {
+  // Whenever a module is sent to the story shell from the embedded module, a
+  // notification is sent here too. The EmbedModuleController connection to the
+  // module controller allows to focus and defocus the module, but not to stop
+  // or watch it.
+  //
+  // NOTE(mesch): This is EXPERIMENTAL and may change.
+  //
+  // TODO(mesch): TBD if surface relationship with embedded module and the
+  // anchor view should be exposed too.
+  //
+  // TODO(mesch): Eventually we might expose the title of the embedded module,
+  // which could be used to create a button to focus or unfocus it.
+  OnStartModuleInShell(EmbedModuleController module_controller);
+};
+
+// Controls appearance in the story shell of modules that are transitively
+// started from an embedded module. When the module is stopped, the connection
+// is closed.
+//
+// This is a subset of ModuleController.
+interface EmbedModuleController {
+  // Requests that the module become the focused module in the story.
+  Focus();
+
+  // Requests that the module be hidden in the story.
+  Defocus();
 };

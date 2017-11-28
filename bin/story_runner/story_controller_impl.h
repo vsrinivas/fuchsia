@@ -29,6 +29,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/story/fidl/per_device_story_info.fidl.h"
@@ -159,6 +160,18 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       bool focus,
       ModuleSource module_source);
 
+  // Called by ModuleContextImpl. Note this is always from an internal module
+  // source.
+  void EmbedModule(
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::String& module_name,
+      const fidl::String& module_url,
+      const fidl::String& link_name,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+
  private:
   class ModuleWatcherImpl;
 
@@ -254,6 +267,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // there is one Connection to it.
   struct Connection {
     ModuleDataPtr module_data;
+    EmbedModuleWatcherPtr embed_module_watcher;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
@@ -272,6 +286,11 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // module, is not running, regardless of whether a module at such path is
   // known to the story.
   Connection* FindAnchor(Connection* connection);
+
+  // Finds the connection of the closest embedder of a module at the given
+  // module path. May return null if there is no module running that is
+  // embedding the module at module_path.
+  Connection* FindEmbedder(const fidl::Array<fidl::String>& module_path);
 
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;
@@ -303,8 +322,12 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class StartCall;
   class GetImportanceCall;
   class LedgerNotificationCall;
-
+  class FocusCall;
+  class DefocusCall;
   class BlockingModuleDataWriteCall;
+
+  // A blocking module data write call blocks while waiting for some
+  // notifications, which are received by the StoryControllerImpl instance.
   std::vector<std::pair<ModuleDataPtr, BlockingModuleDataWriteCall*>>
       blocked_operations_;
 

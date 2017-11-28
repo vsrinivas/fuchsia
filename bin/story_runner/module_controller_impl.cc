@@ -71,7 +71,12 @@ ModuleControllerImpl::~ModuleControllerImpl() {}
 
 void ModuleControllerImpl::Connect(
     fidl::InterfaceRequest<ModuleController> request) {
-  bindings_.AddBinding(this, std::move(request));
+  module_controller_bindings_.AddBinding(this, std::move(request));
+}
+
+EmbedModuleControllerPtr ModuleControllerImpl::NewEmbedModuleController() {
+  return EmbedModuleControllerPtr::Create(
+      embed_module_controller_bindings_.AddBinding(this));
 }
 
 // If the Module instance closes its own connection, we signal this to

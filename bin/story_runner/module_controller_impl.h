@@ -16,6 +16,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
@@ -28,7 +29,7 @@ class StoryControllerImpl;
 // client that called ModuleContext.StartModule(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // ModuleContextImpl instance.
-class ModuleControllerImpl : ModuleController {
+class ModuleControllerImpl : ModuleController, EmbedModuleController {
  public:
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
@@ -44,6 +45,8 @@ class ModuleControllerImpl : ModuleController {
 
   void Connect(fidl::InterfaceRequest<ModuleController> request);
 
+  EmbedModuleControllerPtr NewEmbedModuleController();
+
   // Notifies all watchers of a state change of the module. Also
   // remembers the state to initialize future added watchers.
   void SetState(ModuleState new_state);
@@ -57,8 +60,14 @@ class ModuleControllerImpl : ModuleController {
  private:
   // |ModuleController|
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
+
+  // |ModuleController| and |EmbedModuleController|
   void Focus() override;
+
+  // |ModuleController| and |EmbedModuleController|
   void Defocus() override;
+
+  // |ModuleController|
   void Stop(const StopCallback& done) override;
 
   // Used as connection error handler on the Module connection.
@@ -74,7 +83,8 @@ class ModuleControllerImpl : ModuleController {
   const ModuleData* const module_data_;
 
   // The service provided here.
-  fidl::BindingSet<ModuleController> bindings_;
+  fidl::BindingSet<ModuleController> module_controller_bindings_;
+  fidl::BindingSet<EmbedModuleController> embed_module_controller_bindings_;
 
   // Watchers of this Module instance.
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;

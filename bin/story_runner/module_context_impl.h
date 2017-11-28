@@ -90,6 +90,15 @@ class ModuleContextImpl : ModuleContext {
       fidl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation) override;
   // |ModuleContext|
+  void EmbedModule(
+      const fidl::String& name,
+      const fidl::String& query,
+      const fidl::String& link_name,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+  // |ModuleContext|
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|
