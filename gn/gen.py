@@ -80,8 +80,7 @@ def main():
                         nargs='?', const=True, default=False,
                         help="Show GN build arguments usable in --args",
                         metavar="BUILDARG")
-    parser.add_argument("--zircon_project", "-z", help="zircon project",
-                        default=os.environ.get("ZIRCON_PROJECT"))
+    parser.add_argument("--zircon_project", "-z", help="zircon project")
     parser.add_argument("--platforms", "-P",
                         help="comma-separated list of platforms")
     parser.add_argument("--packages", "-p",
