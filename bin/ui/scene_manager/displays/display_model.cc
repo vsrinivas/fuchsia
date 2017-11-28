@@ -35,9 +35,9 @@ float Quantize(float f) {
 // This assumes a 96 dpi desktop monitor at arm's length.
 constexpr float kDefaultPixelVisualAngleDegrees = 0.0213;
 
-// The ideal visual angle of a grid unit in degrees assuming default
-// settings. Empirically determined to be around 0.255 and then quantized.
-constexpr float kIdealGridVisualAngleDegrees = 0.025390625;
+// The ideal visual angle of a pip unit in degrees assuming default
+// settings. Empirically determined to be around 0.255.
+constexpr float kIdealPipVisualAngleDegrees = 0.0255;
 
 constexpr float GetDefaultViewingDistanceInMm(DisplayModel::Usage usage) {
   switch (usage) {
@@ -105,24 +105,24 @@ DisplayMetrics DisplayModel::GetMetrics() {
   // eye.
   float adaptation_factor = (vdist * 0.5f + 180.f) / vdist;
 
-  // Compute the grid visual size as a function of viewing distance in
+  // Compute the pip visual size as a function of viewing distance in
   // millimeters per millimeter.
-  float gvsize_in_mm_per_mm = tanf(kIdealGridVisualAngleDegrees * M_PI / 180) *
+  float gvsize_in_mm_per_mm = tanf(kIdealPipVisualAngleDegrees * M_PI / 180) *
                               adaptation_factor * user_info_.user_scale_factor;
 
-  // Compute the quantized grid scale factor.
-  float scale_in_px_per_gr =
+  // Compute the quantized pip scale factor.
+  float scale_in_px_per_pp =
       Quantize(gvsize_in_mm_per_mm / pvsize_in_mm_per_mm);
 
-  // Compute the grid density if we know the physical pixel density.
-  float density_in_gr_per_mm = 0.f;
+  // Compute the pip density if we know the physical pixel density.
+  float density_in_pp_per_mm = 0.f;
   if (ppm >= 0.f) {
-    density_in_gr_per_mm = ppm / scale_in_px_per_gr;
+    density_in_pp_per_mm = ppm / scale_in_px_per_pp;
   }
 
   return DisplayMetrics(display_info_.width_in_px, display_info_.height_in_px,
-                        scale_in_px_per_gr, scale_in_px_per_gr,
-                        density_in_gr_per_mm);
+                        scale_in_px_per_pp, scale_in_px_per_pp,
+                        density_in_pp_per_mm);
 }
 
 }  // namespace scene_manager

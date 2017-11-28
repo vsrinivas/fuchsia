@@ -16,14 +16,14 @@ problems:
 * Define a physical unit, the **millimeter (mm)**, used as a physical basis
   for scale calculations.
 
-* Define a scalable unit, the **grid (gr)**, used by UI frameworks for layout
+* Define a scalable unit, the **pip (pp)**, used by UI frameworks for layout
   purposes.  Its scale is derived from physical quantities, well-defined
   configuration parameters, and through the use of empirical models to ensure
   a consistent visual impact and to optimize usability for a user or group of
   users across a broad range of devices and viewing environments.
 
 * Help creators develop intuition about the perceptual significance of
-  individual measurements expressed in logical units.  For example, **14 gr**
+  individual measurements expressed in scalable units.  For example, **14 pp**
   might be generally a good number for small readable text.  Please refer to the
   user interface design guidelines for the actual numbers.
 
@@ -42,7 +42,7 @@ as summarized in this table.
 |---------------------|-----------------|--------------------------|
 | **Pixel (px)**      | Device-specific | Rendering and Sampling   |
 | **Millimeter (mm)** | Physical        | Scale Factor Calibration |
-| **Grid (gr)**       | Scalable        | Layout Position and Size |
+| **Pip (pp)**        | Scalable        | Layout Position and Size |
 
 The following sections describe each unit in more detail.
 
@@ -70,7 +70,7 @@ graphical operations such as when rendering a scene, drawing text, decoding a
 video, or sampling from a texture.
 
 Pixel units should not be used directly for user interface layout because they
-are not scalable and therefore cannot adapt across devices; use **grid units**
+are not scalable and therefore cannot adapt across devices; use **pip units**
 instead.
 
 Pixel units may have different physical manifestations depending on the device
@@ -103,7 +103,7 @@ millimeter (px/mm)**.
 #### Details
 
 Fuchsia's graphics system uses known physical measurements in **millimeters** to
-calibrate other units, such as the **grid** (see below).  When these physical
+calibrate other units, such as **pip units** (see below).  When these physical
 measurements are not known, the system will use different formulations to
 compensate for the lack of this information.
 
@@ -112,7 +112,7 @@ in the form of ratios, such as the number of pixels per millimeter of a display.
 
 Millimeters should not be used directly for user interface layout because they
 do not capture the perceptual effects of viewing distance and other usability
-concerns; use **grid unit** instead.
+concerns; use **pip units** instead.
 
 #### Examples
 
@@ -122,43 +122,43 @@ concerns; use **grid unit** instead.
 * The nominal viewing distance of that particular display in a typical viewing
   environment might be approximately **500 mm**.
 
-### Grid Units (gr)
+### Pip Units (pp)
 
-The **grid** is a device-independent scalable unit of length for layout of user
+The **pip** is a device-independent scalable unit of length for layout of user
 interfaces and other graphical content in Fuchsia.  Its purpose is to ensure a
 consistent visual impact and to optimize usability for a user or group of users
 across a broad range of devices and viewing environments.
 
 It is common to express the size of an idealized planar or volumetric graphical
-object in terms of its width, height, and depth in whole or fractional grid
-units.  Similarly it is common to use grid units to express positions and
-vectors in that space.
+object in terms of its width, height, and depth in whole or fractional pips.
+Similarly it is common to use pips to express positions and vectors in a user
+interface.
 
-The grid unit has a **equilateral cube aspect ratio**: objects whose width,
-height, and depth have equal dimension in grid units will have an equal
+The pip unit has a **equilateral cube aspect ratio**: objects whose width,
+height, and depth have equal dimension in pip units will have an equal
 apparent width, height, and depth when rendered to the output device.
 
-A **grid square** is a square which measures **1 gr** wide by **1 gr** high.
+A **pip unit square** is a square which measures **1 pp** wide by **1 pp** high.
 
-A **grid cube** is a cube which measures **1 gr** wide by **1 gr** high by
-**1 gr** deep.
+A **pip unit cube** is a cube which measures **1 pp** wide by **1 pp** high by
+**1 pp** deep.
 
-Grid units are used at design time and on the device at run time to provide
+Pip units are used at design time and on the device at run time to provide
 a form of scale invariance.
 
-* At design time, the developer uses grid units to describe the size and
+* At design time, the developer uses pip units to describe the size and
   position of idealized graphical objects based on the user interface
   design guidelines.
 
 * At run time, the system dynamically calculates an appropriate
-  **grid transformation* to map grid units to pixel units for each output
+  **pip unit transformation* to map pip units to pixel units for each output
   device.  This transformation takes into account the device pixel density,
   nominal viewing distance, and other factors to maintain a consistent
   visual impact across a range of configurations.  It is adjusted as needed
   whenever any of its underlying factors changes.
 
-* Changes in the grid transformation affect the level of detail required
-  to maintain graphical fidelity.  For example, if the grid to pixel ratio
+* Changes in the pip unit transformation affect the level of detail required
+  to maintain graphical fidelity.  For example, if the pip to pixel ratio
   increases by a factor of two, then a view may need to allocate textures
   twice as many pixels wide and tall to prevent content from becoming blurry
   at that scale.  The view's node metrics provide the necessary information
@@ -168,24 +168,24 @@ a form of scale invariance.
   layout is invariant under camera movements; only the level of detail
   changes.  This would not be true if the scene graph were dimensions in pixels.
 
-* By convention, the root node of every view is dimensioned in grid units.
-  This makes it easy to generate scene content for layouts which are
-  specified in grid units since they are one-to-one with the view's local
-  coordinate system in the scene graph.
+* By convention, the local coordinate system of the root node of each view
+  is one-to-one with pips.  Thus the contents of each view can be directly
+  measured in pips assuming no other local coordinate transformations are
+  applied by the view to its content.
 
 #### Details
 
-Fuchsia's graphics system uses *grid units* extensively for layout in the
+Fuchsia's graphics system uses *pip units* extensively for layout in the
 scene graph and applies a transformation at rendering time.
 
-The grid transformation is a combination of the following factors.
+The pip unit transformation is a combination of the following factors.
 
 * Aspect ratio correction: Preserves equal apparent width, height, and depth
-  for objects of equal width, height, and depth in grid units.
+  for objects of equal width, height, and depth in pip units.
 
 * Angular size correction: Adapts the scale of objects to a common resolution-
   independent baseline taking into account the physical pixel density and the
-  nominal viewing distance.  Although grid units scale proportionally with
+  nominal viewing distance.  Although pip units scale proportionally with
   angular resolution, other corrections cause them not to have a constant
   apparent angular size in practice.
 
@@ -203,13 +203,13 @@ The grid transformation is a combination of the following factors.
   when default user settings are in effect.
 
 See [Display Metrics](ui_display_metrics.md) for more details about how
-the grid transformation is actually determined and used.
+the pip unit transformation is actually determined and used.
 
 #### Examples
 
-* **1 gr** on a handheld information device typically used at arm's length with
-  default settings corresponds to a visual angle of approximately 0.025 degrees.
-  This is similar to the **density-independent pixel (dp)** unit.
+* **1 pp** on a handheld information device typically used at arm's length with
+  default settings corresponds to a visual angle of approximately 0.0255 degrees.
+  This is similar to the **Android density-independent pixel (dp)** unit.
 
 * By comparison, the [CSS Reference Pixel](https://www.w3.org/TR/css-values-3/#reference-pixel)
   is defined to have a visual angle of 0.0213 degrees.
@@ -228,17 +228,17 @@ in the following tables.
 Display metrics describe the physical characteristics of a particular display
 and its basic scale factors.
 
-| Name            | Unit  | Definition                                |
-|-----------------|-------|-------------------------------------------|
-| Grid Width      | gr    | Width of visible content area             |
-| Grid Height     | gr    | Height of visible content area            |
-| Grid Scale X    | px/gr | Nominal pixels per grid in X              |
-| Grid Scale Y    | px/gr | Nominal pixels per grid in Y              |
-| Grid Density    | gr/mm | Grid density (optional)                   |
-| Display Width   | px    | Width of visible content area             |
-| Display Height  | px    | Height of visible content area            |
-| Physical Width  | mm    | Width of visible content area (optional)  |
-| Physical Height | mm    | Height of visible content area (optional) |
+| Name            | Unit  | Definition                                               |
+|-----------------|-------|----------------------------------------------------------|
+| Scalable Width  | pp    | Width of visible content area in pips                    |
+| Scalable Height | pp    | Height of visible content area in pips                   |
+| Pip Scale X     | px/pp | Nominal pixels per pip unit in X                         |
+| Pip Scale Y     | px/pp | Nominal pixels per pip unit in Y                         |
+| Pip Density     | pp/mm | Physical pip unit density (optional)                     |
+| Display Width   | px    | Width of visible content area in pixels                  |
+| Display Height  | px    | Height of visible content area in pixels                 |
+| Physical Width  | mm    | Width of visible content area in millimeters (optional)  |
+| Physical Height | mm    | Height of visible content area in millimeters (optional) |
 
 ### View Metrics
 
@@ -249,11 +249,11 @@ Views receive this information at runtime in the form of **ViewProperties**.
 View properties may change dynamically in response to view hierarchy changes
 which affect the view's layout.
 
-| Name               | Unit  | Definition                  |
-|--------------------|-------|-----------------------------|
-| View Width         | gr    | Width constraint in grids   |
-| View Height        | gr    | Height constraint in grids  |
-| View Max Elevation | gr    | Maximum elevation in grids  |
+| Name               | Unit  | Definition                 |
+|--------------------|-------|----------------------------|
+| View Width         | pp    | Width constraint in pips   |
+| View Height        | pp    | Height constraint in pips  |
+| View Max Elevation | pp    | Maximum elevation in pips  |
 
 The view is generally expected to layout its content so as to fill the
 available width and height at elevation zero.
@@ -271,19 +271,19 @@ Nodes receive this information at runtime in the form of **MetricsEvents**.
 Node metrics may change dynamically in response to scene graph changes
 which affect the node's projection into the rendering target.
 
-| Name         | Unit  | Definition                           |
-|--------------|-------|--------------------------------------|
-| Grid Scale X | px/gr | Nominal pixels per grid in X         |
-| Grid Scale Y | px/gr | Nominal pixels per grid in Y         |
-| Grid Density | gr/mm | Physical grid density (0 if unknown) |
+| Name             | Unit  | Definition                           |
+|------------------|-------|--------------------------------------|
+| Pip Unit Scale X | px/pp | Nominal pixels per pip unit in X     |
+| Pip Unit Scale Y | px/pp | Nominal pixels per pip unit in Y     |
+| Pip Unit Density | pp/mm | Physical pip unit density (optional) |
 
-The grid scale factor is important for deciding the resolution of textures
+The pip unit scale factor is important for deciding the resolution of textures
 needed to achieve optimum fidelity on the rendering target.  For example, given
-a uniform grid scale factor of **2.5**, the ideal texture size to fill a
-a **150 gr** by **100 gr** rectangle is **375 px** by **250 px**.
+a uniform pip unit scale factor of **2.5**, the ideal texture size to fill a
+a **150 pp** by **100 pp** rectangle is **375 px** by **250 px**.
 
-The grid density is useful for mapping grid dimensions to or from physical
-dimensions, although this may not be possible if the rendering target's
+The pip unit density is useful for mapping scalable dimensions to or from
+physical dimensions, although this may not be possible if the rendering target's
 physical resolution is unknown.
 
 These metrics are designed to consider the overall context of the node in the
@@ -376,10 +376,10 @@ which may override some of the behavior of the model.
 
 | Name              | Unit  | Definition                           |
 |-------------------|-------|--------------------------------------|
-| User Scale Factor | gr/gr | Magnification Ratio (default is 1.0) |
+| User Scale Factor | pp/pp | Magnification Ratio (default is 1.0) |
 
 The user scale factor allows users to uniformly scale the entire user interface
-by multiplying the grid scale factor with a user specified ratio.  This has the
-effect of increasing or decreasing the apparent angular size of graphical
+by multiplying the pip unit scale factor with a user specified ratio.  This has
+the effect of increasing or decreasing the apparent angular size of graphical
 objects and correspondingly decreasing or increasing the amount of available
-space for layout in grid units.
+space for layout measured in pips.

@@ -64,16 +64,16 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   FXL_DLOG(INFO) << "SceneManager: Display metrics: "
                  << "width_in_px=" << metrics.width_in_px()
                  << ", height_in_px=" << metrics.height_in_px()
-                 << ", width_in_gr=" << metrics.width_in_gr()
-                 << ", height_in_gr=" << metrics.height_in_gr()
+                 << ", width_in_pp=" << metrics.width_in_pp()
+                 << ", height_in_pp=" << metrics.height_in_pp()
                  << ", width_in_mm=" << metrics.width_in_mm()
                  << ", height_in_mm=" << metrics.height_in_mm()
-                 << ", x_scale_in_px_per_gr=" << metrics.x_scale_in_px_per_gr()
-                 << ", y_scale_in_px_per_gr=" << metrics.y_scale_in_px_per_gr()
-                 << ", x_scale_in_gr_per_px=" << metrics.x_scale_in_gr_per_px()
-                 << ", y_scale_in_gr_per_px=" << metrics.y_scale_in_gr_per_px()
-                 << ", density_in_gr_per_mm=" << metrics.density_in_gr_per_mm()
-                 << ", density_in_mm_per_gr=" << metrics.density_in_mm_per_gr();
+                 << ", x_scale_in_px_per_pp=" << metrics.x_scale_in_px_per_pp()
+                 << ", y_scale_in_px_per_pp=" << metrics.y_scale_in_px_per_pp()
+                 << ", x_scale_in_pp_per_px=" << metrics.x_scale_in_pp_per_px()
+                 << ", y_scale_in_pp_per_px=" << metrics.y_scale_in_pp_per_px()
+                 << ", density_in_pp_per_mm=" << metrics.density_in_pp_per_mm()
+                 << ", density_in_mm_per_pp=" << metrics.density_in_mm_per_pp();
 
   // TODO(MZ-16): We've been asked to temporarily revert the DP-ratio to 2.0.
   FXL_DLOG(INFO)

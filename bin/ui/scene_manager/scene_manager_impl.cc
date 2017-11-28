@@ -26,7 +26,7 @@ void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   auto info = scenic::DisplayInfo::New();
   info->physical_width = display->metrics().width_in_px();
   info->physical_height = display->metrics().height_in_px();
-  info->device_pixel_ratio = display->metrics().x_scale_in_px_per_gr();
+  info->device_pixel_ratio = display->metrics().x_scale_in_px_per_pp();
   callback(std::move(info));
 }
 
