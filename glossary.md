@@ -136,10 +136,10 @@ use of it.
 
 #### **Ledger**
 
-[Ledger](https://fuchsia.googlesource.com/ledger) is a distributed storage
-system for Fuchsia. Applications use Ledger either directly or through state
-synchronization primitives exposed by the Modular framework that are based on
-Ledger under-the-hood.
+[Ledger](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md)
+is a distributed storage system for Fuchsia. Applications use Ledger either
+directly or through state synchronization primitives exposed by the Modular
+framework that are based on Ledger under-the-hood.
 
 #### **LK**
 
