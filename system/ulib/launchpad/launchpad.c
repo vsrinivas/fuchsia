@@ -281,6 +281,8 @@ static zx_status_t more_handles(launchpad_t* lp, size_t n) {
 
     if (lp->handle_alloc - lp->handle_count < n) {
         size_t alloc = lp->handle_alloc == 0 ? 8 : lp->handle_alloc * 2;
+        while (alloc - lp->handle_count < n)
+            alloc <<= 1;
         zx_handle_t* handles = realloc(lp->handles,
                                        alloc * sizeof(handles[0]));
         if (handles == NULL)
