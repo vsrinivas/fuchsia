@@ -7,59 +7,51 @@
 #include <unistd.h>
 
 #include <benchmark/benchmark.h>
+#include <lib/fxl/logging.h>
+
+#include "main.h"
 
 namespace {
 
 // Measure the time taken by stat() on the current directory.
-void Filesystem_Stat(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    struct stat st;
-    if (stat(".", &st) != 0) {
-      state.SkipWithError("stat() failed");
-      return;
-    }
-  }
+void StatTest() {
+  struct stat st;
+  FXL_CHECK(stat(".", &st) == 0);
 }
-BENCHMARK(Filesystem_Stat);
 
 // Measure the time taken by open()+close() on the current directory.
-void Filesystem_Open(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    int fd = open(".", O_RDONLY);
-    if (fd < 0) {
-      state.SkipWithError("open() failed");
-      return;
-    }
-    if (close(fd) != 0) {
-      state.SkipWithError("close() failed");
-      return;
-    }
-  }
+void OpenTest() {
+  int fd = open(".", O_RDONLY);
+  FXL_CHECK(fd >= 0);
+  FXL_CHECK(close(fd) == 0);
 }
-BENCHMARK(Filesystem_Open);
 
 // Measure the time taken by fstat() on an FD for the current directory.
-void Filesystem_Fstat(benchmark::State& state) {
-  int fd = open(".", O_RDONLY);
-  if (fd < 0) {
-    state.SkipWithError("open() failed");
-    return;
+class FstatTest {
+ public:
+  FstatTest() {
+    fd_ = open(".", O_RDONLY);
+    FXL_CHECK(fd_ >= 0);
   }
 
-  while (state.KeepRunning()) {
+  ~FstatTest() {
+    FXL_CHECK(close(fd_) == 0);
+  }
+
+  void Run() {
     struct stat st;
-    if (fstat(fd, &st) != 0) {
-      state.SkipWithError("fstat() failed");
-      break;
-    }
+    FXL_CHECK(fstat(fd_, &st) == 0);
   }
 
-  // Clean up.
-  if (close(fd) != 0) {
-    state.SkipWithError("close() failed");
-    return;
-  }
+ private:
+  int fd_;
+};
+
+__attribute__((constructor))
+void RegisterTests() {
+  fbenchmark::RegisterTestFunc<StatTest>("Filesystem_Stat");
+  fbenchmark::RegisterTestFunc<OpenTest>("Filesystem_Open");
+  fbenchmark::RegisterTest<FstatTest>("Filesystem_Fstat");
 }
-BENCHMARK(Filesystem_Fstat);
 
 }  // namespace

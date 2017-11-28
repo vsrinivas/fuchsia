@@ -19,12 +19,16 @@ DEFINE_string(subprocess, "", "Launch a process to run the named function");
 
 namespace {
 
-std::vector<std::pair<std::string, std::function<void()>>> g_tests;
+typedef std::vector<std::pair<std::string, std::function<void()>>> TestList;
+// g_tests needs to be POD because this list is populated by constructors.
+// We don't want g_tests to have a constructor that might get run after
+// items have been added to the list, because that would clobber the list.
+TestList* g_tests;
 
 // Run the tests in a way that is suitable for running on the bots via
 // runtests.
 void RunFastTests() {
-  for (auto& pair : g_tests) {
+  for (auto& pair : *g_tests) {
     // Log in a format similar to gtest's output.
     printf("[ RUN      ] %s\n", pair.first.c_str());
     pair.second();
@@ -36,13 +40,13 @@ void RunFastTests() {
 
 namespace fbenchmark {
 
-void RegisterTest(const char* name, std::function<void()> func) {
-  g_tests.push_back(std::make_pair(name, func));
+void RegisterTestRunner(const char* name, std::function<void()> func) {
+  if (!g_tests)
+    g_tests = new TestList;
+  g_tests->push_back(std::make_pair(name, func));
 }
 
 int BenchmarksMain(int argc, char** argv, bool run_gbenchmark) {
-  RegisterRoundTripBenchmarks();
-
   benchmark::Initialize(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 

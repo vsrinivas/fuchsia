@@ -463,47 +463,29 @@ ThreadFunc GetThreadFunc(const char* name) {
   return nullptr;
 }
 
-template <class TestClass, typename... Args>
-void RegisterTest(const char* test_name, Args... args) {
-  benchmark::RegisterBenchmark(
-      test_name,
-      [=](benchmark::State& state) {
-        TestClass test(args...);
-        while (state.KeepRunning())
-          test.Run();
-      });
-  fbenchmark::RegisterTest(
-      test_name,
-      [=]() {
-        TestClass test(args...);
-        // Run the test a small number of times to ensure that doing
-        // multiple runs works OK.
-        for (int i = 0; i < 5; ++i)
-          test.Run();
-      });
-}
-
 // Register a test that has two variants, single-process and multi-process.
 template <class TestClass>
 void RegisterTestMultiProc(const char* base_name) {
-  RegisterTest<TestClass>(
+  fbenchmark::RegisterTest<TestClass>(
       (std::string(base_name) + "_SingleProcess").c_str(),
       SingleProcess);
-  RegisterTest<TestClass>(
+  fbenchmark::RegisterTest<TestClass>(
       (std::string(base_name) + "_MultiProcess").c_str(),
       MultiProcess);
 }
 
-}  // namespace
-
-void RegisterRoundTripBenchmarks() {
+__attribute__((constructor))
+void RegisterTests() {
   RegisterTestMultiProc<BasicChannelTest>("RoundTrip_BasicChannel");
   RegisterTestMultiProc<ChannelPortTest>("RoundTrip_ChannelPort");
   RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");
   RegisterTestMultiProc<PortTest>("RoundTrip_Port");
-  RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
-  RegisterTest<PthreadCondvarTest>("RoundTrip_PthreadCondvar_SingleProcess");
+  fbenchmark::RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
+  fbenchmark::RegisterTest<PthreadCondvarTest>(
+      "RoundTrip_PthreadCondvar_SingleProcess");
 }
+
+}  // namespace
 
 void RunSubprocess(const char* func_name) {
   auto func = GetThreadFunc(func_name);
