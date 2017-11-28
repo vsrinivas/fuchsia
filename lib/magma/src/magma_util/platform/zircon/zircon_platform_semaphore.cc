@@ -21,7 +21,7 @@ bool ZirconPlatformSemaphore::duplicate_handle(uint32_t* handle_out)
     return true;
 }
 
-bool ZirconPlatformSemaphore::Wait(uint64_t timeout_ms)
+bool ZirconPlatformSemaphore::WaitNoReset(uint64_t timeout_ms)
 {
     TRACE_DURATION("magma:sync", "semaphore wait", "id", koid_);
     zx_signals_t pending = 0;
@@ -33,8 +33,16 @@ bool ZirconPlatformSemaphore::Wait(uint64_t timeout_ms)
     DASSERT(status == ZX_OK);
     DASSERT(pending & zx_signal());
 
-    Reset();
     return true;
+}
+
+bool ZirconPlatformSemaphore::Wait(uint64_t timeout_ms)
+{
+    if (WaitNoReset(timeout_ms)) {
+        Reset();
+        return true;
+    }
+    return false;
 }
 
 bool ZirconPlatformSemaphore::WaitAsync(PlatformPort* platform_port)

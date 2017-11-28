@@ -193,6 +193,12 @@ magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeou
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_wait_semaphore_no_reset(magma_semaphore_t semaphore, uint32_t flags,
+                                             uint64_t timeout)
+{
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_export_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore,
                                       uint32_t* semaphore_handle_out)
 {

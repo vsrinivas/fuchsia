@@ -219,7 +219,8 @@ public:
         EXPECT_NE(0u, magma_get_semaphore_id(semaphore));
 
         std::thread thread([semaphore] {
-            EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_semaphore(semaphore, 1000));
+            EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_semaphore_no_reset(semaphore, 0, 1000));
+            EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_semaphore(semaphore, 0));
             EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_wait_semaphore(semaphore, 100));
         });
 
