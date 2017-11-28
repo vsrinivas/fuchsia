@@ -20,6 +20,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/blobstore \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \

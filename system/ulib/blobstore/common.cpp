@@ -169,7 +169,6 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
     // result, the block bitmap may have slightly more space allocated than is necessary.
     info.block_count -= DataStartBlock(info); // Set block_count to number of data blocks
 
-
 #ifdef __Fuchsia__
     fvm_info_t fvm_info;
 
