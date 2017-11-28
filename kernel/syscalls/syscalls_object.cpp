@@ -92,10 +92,16 @@ zx_status_t single_record_result(user_out_ptr<void> _buffer, size_t buffer_size,
     } else {
         actual = 0;
     }
-    if (_actual && (_actual.copy_to_user(actual) != ZX_OK))
-        return ZX_ERR_INVALID_ARGS;
-    if (_avail && (_avail.copy_to_user(avail) != ZX_OK))
-        return ZX_ERR_INVALID_ARGS;
+    if (_actual) {
+        zx_status_t status = _actual.copy_to_user(actual);
+        if (status != ZX_OK)
+            return status;
+    }
+    if (_avail) {
+        zx_status_t status = _avail.copy_to_user(avail);
+        if (status != ZX_OK)
+            return status;
+    }
     if (actual == 0)
         return ZX_ERR_BUFFER_TOO_SMALL;
     return ZX_OK;
@@ -192,10 +198,16 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             if (num_to_copy &&
                 _buffer.copy_array_to_user(threads.get(), sizeof(zx_koid_t) * num_to_copy) != ZX_OK)
                 return ZX_ERR_INVALID_ARGS;
-            if (_actual && (_actual.copy_to_user(num_to_copy) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(num_threads) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
+            if (_actual) {
+                zx_status_t status = _actual.copy_to_user(num_to_copy);
+                if (status != ZX_OK)
+                    return status;
+            }
+            if (_avail) {
+                zx_status_t status = _avail.copy_to_user(num_threads);
+                if (status != ZX_OK)
+                    return status;
+            }
             return ZX_OK;
         }
         case ZX_INFO_JOB_CHILDREN:
@@ -215,10 +227,16 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 // write to the user pointer.
                 return ZX_ERR_INVALID_ARGS;
             }
-            if (_actual && (_actual.copy_to_user(sje.get_count()) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(sje.get_avail()) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
+            if (_actual) {
+                zx_status_t status = _actual.copy_to_user(sje.get_count());
+                if (status != ZX_OK)
+                    return status;
+            }
+            if (_avail) {
+                zx_status_t status = _avail.copy_to_user(sje.get_avail());
+                if (status != ZX_OK)
+                    return status;
+            }
             return ZX_OK;
         }
         case ZX_INFO_THREAD: {
@@ -321,10 +339,16 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             size_t avail = 0;
             status = process->GetAspaceMaps(maps, count, &count, &avail);
 
-            if (_actual && (_actual.copy_to_user(count) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
+            if (_actual) {
+                zx_status_t status = _actual.copy_to_user(count);
+                if (status != ZX_OK)
+                    return status;
+            }
+            if (_avail) {
+                zx_status_t status = _avail.copy_to_user(avail);
+                if (status != ZX_OK)
+                    return status;
+            }
             return status;
         }
         case ZX_INFO_PROCESS_VMOS: {
@@ -345,10 +369,16 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             size_t avail = 0;
             status = process->GetVmos(vmos, count, &count, &avail);
 
-            if (_actual && (_actual.copy_to_user(count) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
+            if (_actual) {
+                zx_status_t status = _actual.copy_to_user(count);
+                if (status != ZX_OK)
+                    return status;
+            }
+            if (_avail) {
+                zx_status_t status = _avail.copy_to_user(avail);
+                if (status != ZX_OK)
+                    return status;
+            }
             return status;
         }
         case ZX_INFO_VMAR: {
@@ -423,10 +453,16 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                     return ZX_ERR_INVALID_ARGS;
             }
 
-            if (_actual && (_actual.copy_to_user(num_to_copy) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(num_cpus) != ZX_OK))
-                return ZX_ERR_INVALID_ARGS;
+            if (_actual) {
+                zx_status_t status = _actual.copy_to_user(num_to_copy);
+                if (status != ZX_OK)
+                    return status;
+            }
+            if (_avail) {
+                zx_status_t status = _avail.copy_to_user(num_cpus);
+                if (status != ZX_OK)
+                    return status;
+            }
             return ZX_OK;
         }
         case ZX_INFO_KMEM_STATS: {
