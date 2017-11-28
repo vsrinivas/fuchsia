@@ -80,11 +80,16 @@ FUNCTION(arm_reset)
     movlit  x20, (MEMBASE + KERNEL_LOAD_OFFSET)
     br      x20
 .Lno_efi:
+    /* Save the Boot info for the primary CPU only */
+    mrs     cpuid, mpidr_el1
+    ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
+    cbnz    cpuid, .Lno_save_bootinfo
     adrp    tmp, boot_structure_paddr
+    str     x0, [tmp, #:lo12:boot_structure_paddr]
     adrp    tmp2, arch_boot_el
     mrs     x2, CurrentEL
-    str     x0, [tmp, #:lo12:boot_structure_paddr]
     str     x2, [tmp2, #:lo12:arch_boot_el]
+.Lno_save_bootinfo:
 
     bl      arm64_elX_to_el1
     bl      arch_invalidate_cache_all
@@ -104,8 +109,6 @@ FUNCTION(arm_reset)
     adr_global page_table0, tt_trampoline
 
     /* send secondary cpus over to a waiting spot for the primary to finish */
-    mrs     cpuid, mpidr_el1
-    ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lmmu_enable_secondary
 
     /* clear out the kernel's bss using current physical location */
