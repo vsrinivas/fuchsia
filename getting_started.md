@@ -214,15 +214,15 @@ Source code for Mozart example apps is
 [here](https://fuchsia.googlesource.com/garnet/+/master/examples/ui).
 
 When you launch something that uses Mozart, uses hardware-accelerated graphics, or if you build
-the [default](https://fuchsia.googlesource.com/packages/+/master/gn/default) package (which will
+the [default](https://fuchsia.googlesource.com/topaz/+/master/packages/default) package (which will
 boot into the Fuchsia System UI), Fuchsia will enter "graphics mode", which will not display any
 of the text shells. In order to use the text shell, you will need to enter "console mode" by
 pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described in the previous
 section, and pressing Alt-Escape again will take you back to the graphical shell.
 
 If you would like to use a text shell inside a terminal emulator from within the graphical shell
-you can launch [moterm](https://fuchsia.googlesource.com/moterm/) by selecting the "Ask Anything"
-box and typing `moterm`.
+you can launch [moterm](https://fuchsia.googlesource.com/topaz/+/master/app/moterm) by selecting the
+"Ask Anything" box and typing `moterm`.
 
 ## Contribute changes
 
