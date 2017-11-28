@@ -40,7 +40,7 @@ Sections will be populated over time.
  - [Block devices](block_devices.md)
  - [File systems](filesystems.md)
  - Directory hierarchy
- - [Ledger](https://fuchsia.googlesource.com/ledger/+/HEAD/README.md)
+ - [Ledger](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md)
  - Document store
  - Application cache
 
