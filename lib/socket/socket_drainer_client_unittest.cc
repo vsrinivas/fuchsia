@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
+#include "peridot/lib/socket/socket_drainer_client.h"
 
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_pair.h"
 
-namespace glue {
+namespace socket {
 namespace {
 
 // Regression test for LE-229.
 TEST(SocketDrainerClient, DoNotCallOnDelete) {
   fsl::MessageLoop message_loop;
-  glue::SocketPair socket;
+  socket::SocketPair socket;
   socket.socket1.reset();
 
   auto drainer = std::make_unique<SocketDrainerClient>();
@@ -30,4 +30,4 @@ TEST(SocketDrainerClient, DoNotCallOnDelete) {
 }
 
 }  // namespace
-}  // namespace glue
+}  // namespace socket

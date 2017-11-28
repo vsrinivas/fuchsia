@@ -12,7 +12,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_pair.h"
 
 namespace firebase {
 
@@ -25,7 +25,7 @@ class EventStreamTest : public ::testing::Test {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    glue::SocketPair socket;
+    socket::SocketPair socket;
     producer_socket_ = std::move(socket.socket1);
     event_stream_ = std::make_unique<EventStream>();
     event_stream_->Start(std::move(socket.socket2),

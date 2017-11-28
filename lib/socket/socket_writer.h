@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_WRITER_H_
-#define PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_WRITER_H_
+#ifndef PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
+#define PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 
 #include <functional>
 #include <memory>
@@ -15,7 +15,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "zx/socket.h"
 
-namespace glue {
+namespace socket {
 
 // Requests data to write from its client. Interrupts itself and closes the
 // socket when deleted.
@@ -81,6 +81,6 @@ class StringSocketWriter : public SocketWriter::Client {
   std::string data_;
 };
 
-}  // namespace glue
+}  // namespace socket
 
-#endif  // PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_WRITER_H_
+#endif  // PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_

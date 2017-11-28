@@ -21,9 +21,9 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/url/gurl.h"
 #include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
 #include "peridot/lib/callback/auto_cleanable.h"
+#include "peridot/lib/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_writer.h"
 
 namespace ledger {
 
@@ -44,7 +44,7 @@ struct Filter {
 
 // Container for a socket connected to a watcher. This class handles sending a
 // stream of data to the socket.
-class ListenerContainer : public glue::SocketWriter::Client {
+class ListenerContainer : public socket::SocketWriter::Client {
  public:
   explicit ListenerContainer(std::unique_ptr<Filter> filter)
       : writer_(this), filter_(std::move(filter)) {}
@@ -79,7 +79,7 @@ class ListenerContainer : public glue::SocketWriter::Client {
     callback(to_send);
   }
 
-  // glue::SocketWriter::Client
+  // socket::SocketWriter::Client
   void GetNext(size_t offset,
                size_t max_size,
                std::function<void(fxl::StringView)> callback) override {
@@ -104,7 +104,7 @@ class ListenerContainer : public glue::SocketWriter::Client {
     on_done_();
   }
 
-  glue::SocketWriter writer_;
+  socket::SocketWriter writer_;
   const std::unique_ptr<Filter> filter_;
   std::deque<std::string> content_;
   fxl::Closure on_done_;
@@ -377,7 +377,7 @@ void FirebaseServer::HandleGetStream(
     const std::function<void(network::URLResponsePtr)> callback) {
   url::GURL url(request->url);
   auto path = GetPath(url);
-  glue::SocketPair sockets;
+  socket::SocketPair sockets;
   listeners_->AddListener(path, ExtractFilter(url), std::move(sockets.socket1),
                           GetValueAtPath(path));
   callback(BuildResponse(request->url, Server::ResponseCode::kOk,

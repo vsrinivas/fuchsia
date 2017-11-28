@@ -8,8 +8,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/url/gurl.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
+#include "peridot/lib/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_writer.h"
 
 namespace ledger {
 

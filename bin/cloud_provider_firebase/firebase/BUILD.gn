@@ -34,9 +34,9 @@ source_set("firebase") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/glue/socket",
     "//peridot/lib/base64url",
     "//peridot/lib/callback",
+    "//peridot/lib/socket",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -57,9 +57,9 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/crypto",
-    "//peridot/bin/ledger/glue/socket",
     "//peridot/bin/ledger/test:lib",
     "//peridot/lib/network:fake",
+    "//peridot/lib/socket",
     "//third_party/gtest",
   ]
 

@@ -15,10 +15,10 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 #include "peridot/lib/network/network_service_impl.h"
+#include "peridot/lib/socket/socket_pair.h"
 
 namespace firebase {
 namespace {
@@ -379,7 +379,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
       "event: put\n"
       "data: {\"path\":\"/\",\"data\":\"Alice\"}\n"
       "\n");
-  glue::SocketPair socket;
+  socket::SocketPair socket;
   fake_network_service_.SetSocketResponse(std::move(socket.socket1), 200);
   firebase_.Watch("/", {}, this);
 

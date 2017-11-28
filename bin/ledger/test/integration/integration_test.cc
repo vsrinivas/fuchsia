@@ -13,11 +13,11 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
 #include "peridot/lib/callback/synchronous_task.h"
+#include "peridot/lib/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_writer.h"
 
 namespace test {
 namespace integration {
@@ -36,10 +36,10 @@ void IntegrationTest::TearDown() {
 }
 
 zx::socket IntegrationTest::StreamDataToSocket(std::string data) {
-  glue::SocketPair sockets;
+  socket::SocketPair sockets;
   socket_task_runner_->PostTask(fxl::MakeCopyable(
       [socket = std::move(sockets.socket1), data = std::move(data)]() mutable {
-        auto writer = new glue::StringSocketWriter();
+        auto writer = new socket::StringSocketWriter();
         writer->Start(std::move(data), std::move(socket));
       }));
   return std::move(sockets.socket2);

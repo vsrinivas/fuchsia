@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//peridot/bin/ledger/*",
-  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/*",
+  "//peridot/lib/*",
 ]
 
 source_set("socket") {
@@ -23,6 +23,19 @@ source_set("socket") {
     "//peridot/lib/callback",
     "//zircon/system/ulib/zx",
   ]
+}
 
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "socket_drainer_client_unittest.cc",
+    "socket_writer_unittest.cc",
+  ]
+
+  deps = [
+    ":socket",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
 }

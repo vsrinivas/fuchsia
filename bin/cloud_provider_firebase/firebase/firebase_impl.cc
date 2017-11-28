@@ -13,7 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
+#include "peridot/lib/socket/socket_drainer_client.h"
 
 namespace firebase {
 
@@ -67,7 +67,7 @@ struct FirebaseImpl::WatchData {
 
   callback::AutoCancel request;
   std::unique_ptr<EventStream> event_stream;
-  std::unique_ptr<glue::SocketDrainerClient> drainer;
+  std::unique_ptr<socket::SocketDrainerClient> drainer;
 };
 
 FirebaseImpl::WatchData::WatchData() {}
@@ -245,7 +245,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     const std::string& url = response->url;
     const std::string& status_line = response->status_line;
     watch_data_[watch_client]->drainer =
-        std::make_unique<glue::SocketDrainerClient>();
+        std::make_unique<socket::SocketDrainerClient>();
     watch_data_[watch_client]->drainer->Start(
         std::move(response->body->get_stream()),
         [this, watch_client, url, status_line](const std::string& body) {

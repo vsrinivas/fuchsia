@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_DRAINER_CLIENT_H_
-#define PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_DRAINER_CLIENT_H_
+#ifndef PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_
+#define PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_
 
 #include <functional>
 #include <memory>
@@ -14,7 +14,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/callback/destruction_sentinel.h"
 
-namespace glue {
+namespace socket {
 
 class SocketDrainerClient : public fsl::SocketDrainer::Client {
  public:
@@ -43,6 +43,6 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);
 };
 
-}  // namespace glue
+}  // namespace socket
 
-#endif  // PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_DRAINER_CLIENT_H_
+#endif  // PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_

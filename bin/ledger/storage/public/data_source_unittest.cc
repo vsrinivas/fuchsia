@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/socket/socket_pair.h"
 
 namespace storage {
 namespace {
@@ -106,7 +106,7 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
   std::vector<std::string> chunks;
   DataSource::Status status;
 
-  glue::SocketPair socket_pair;
+  socket::SocketPair socket_pair;
   auto data_source = DataSource::Create(std::move(socket_pair.socket2),
                                         nb_iterations * value.size());
 

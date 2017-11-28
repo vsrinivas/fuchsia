@@ -11,14 +11,11 @@ source_set("unittests") {
     "crypto/crypto_test_util.cc",
     "crypto/hmac_unittests.cc",
     "crypto/kdf_unittests.cc",
-    "socket/socket_drainer_client_unittest.cc",
-    "socket/socket_writer_unittest.cc",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/glue/crypto",
-    "//peridot/bin/ledger/glue/socket",
     "//third_party/gtest",
   ]
 

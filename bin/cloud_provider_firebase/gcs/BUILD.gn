@@ -22,9 +22,9 @@ source_set("gcs") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/glue/socket",
     "//peridot/lib/callback",
     "//peridot/lib/network",
+    "//peridot/lib/socket",
     "//zircon/system/ulib/zx",
   ]
 

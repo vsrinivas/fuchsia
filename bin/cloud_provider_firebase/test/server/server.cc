@@ -5,8 +5,8 @@
 #include "peridot/bin/cloud_provider_firebase/test/server/server.h"
 
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
+#include "peridot/lib/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_writer.h"
 
 namespace ledger {
 
@@ -125,8 +125,8 @@ network::URLResponsePtr Server::BuildResponse(
 network::URLResponsePtr Server::BuildResponse(const std::string& url,
                                               ResponseCode code,
                                               std::string body) {
-  glue::SocketPair sockets;
-  auto* writer = new glue::StringSocketWriter();
+  socket::SocketPair sockets;
+  auto* writer = new socket::StringSocketWriter();
   writer->Start(body, std::move(sockets.socket2));
   std::map<std::string, std::string> headers;
   headers["content-length"] = fxl::NumberToString(body.size());

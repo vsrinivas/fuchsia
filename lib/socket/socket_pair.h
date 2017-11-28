@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_PAIR_H_
-#define PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_PAIR_H_
+#ifndef PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
+#define PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "zx/socket.h"
 
-namespace glue {
+namespace socket {
 
 // SocketPair produces a pair of connected sockets.
 class SocketPair {
@@ -30,6 +30,6 @@ inline SocketPair::SocketPair() {
 
 inline SocketPair::~SocketPair() {}
 
-}  // namespace glue
+}  // namespace socket
 
-#endif  // PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_PAIR_H_
+#endif  // PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_

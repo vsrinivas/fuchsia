@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
+#include "peridot/lib/socket/socket_writer.h"
 
 #include <string.h>
 
@@ -11,7 +11,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace glue {
+namespace socket {
 
 // TODO(qsr): Remove this, and retrieve the buffer size from the socket when
 // available.
@@ -123,4 +123,4 @@ void StringSocketWriter::OnDataComplete() {
   delete this;
 }
 
-}  // namespace glue
+}  // namespace socket

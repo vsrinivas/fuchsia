@@ -14,10 +14,10 @@
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/status.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
-#include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/cancellable.h"
 #include "peridot/lib/network/network_service.h"
+#include "peridot/lib/socket/socket_drainer_client.h"
 
 #include <rapidjson/document.h>
 
@@ -96,7 +96,7 @@ class FirebaseImpl : public Firebase {
   const std::string api_url_;
 
   callback::CancellableContainer requests_;
-  callback::AutoCleanableSet<glue::SocketDrainerClient> drainers_;
+  callback::AutoCleanableSet<socket::SocketDrainerClient> drainers_;
 
   struct WatchData;
   std::map<WatchClient*, std::unique_ptr<WatchData>> watch_data_;

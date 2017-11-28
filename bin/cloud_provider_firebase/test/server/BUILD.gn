@@ -24,7 +24,7 @@ source_set("server") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netstack/fidl:net_address",
     "//garnet/public/lib/network/fidl",
-    "//peridot/bin/ledger/glue/socket",
+    "//peridot/lib/socket",
   ]
 
   deps = [

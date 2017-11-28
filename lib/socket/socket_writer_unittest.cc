@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
+#include "peridot/lib/socket/socket_writer.h"
 
 #include <utility>
 
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/lib/socket/socket_drainer_client.h"
+#include "peridot/lib/socket/socket_pair.h"
 
-namespace glue {
+namespace socket {
 namespace {
 
 class StringClient : public SocketWriter::Client {
@@ -37,7 +37,7 @@ class StringClient : public SocketWriter::Client {
 
 TEST(SocketWriter, WriteAndRead) {
   fsl::MessageLoop message_loop;
-  glue::SocketPair socket;
+  SocketPair socket;
   StringClient client("bazinga\n");
   SocketWriter writer(&client);
   writer.Start(std::move(socket.socket1));
@@ -57,7 +57,7 @@ TEST(SocketWriter, WriteAndRead) {
 
 TEST(SocketWriter, ClientClosedTheirEnd) {
   fsl::MessageLoop message_loop;
-  glue::SocketPair socket;
+  SocketPair socket;
   StringClient client("bazinga\n");
   SocketWriter writer(&client);
   socket.socket2.reset();
@@ -67,7 +67,7 @@ TEST(SocketWriter, ClientClosedTheirEnd) {
 
 TEST(SocketWriter, StringSocketWriter) {
   fsl::MessageLoop message_loop;
-  glue::SocketPair socket;
+  SocketPair socket;
   StringSocketWriter* writer = new StringSocketWriter();
   writer->Start("bazinga\n", std::move(socket.socket1));
 
@@ -84,4 +84,4 @@ TEST(SocketWriter, StringSocketWriter) {
 }
 
 }  // namespace
-}  // namespace glue
+}  // namespace socket
