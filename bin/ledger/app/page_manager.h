@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_delta.h"
@@ -17,6 +18,7 @@
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
@@ -33,7 +35,7 @@ namespace ledger {
 //
 // When the set of PageImpls becomes empty, client is notified through
 // |on_empty_callback|.
-class PageManager {
+class PageManager : public PageDebug {
  public:
   // Whether the page storage was just created (|NEW|) or already present
   // locally (|EXISTING|).
@@ -57,6 +59,10 @@ class PageManager {
   void BindPage(fidl::InterfaceRequest<Page> page_request,
                 std::function<void(Status)> on_done);
 
+  // Binds |page_debug| request and fires |callback| with Status::OK.
+  void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
+                     std::function<void(Status)> callback);
+
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
   void BindPageSnapshot(std::unique_ptr<const storage::Commit> commit,
@@ -70,6 +76,8 @@ class PageManager {
  private:
   void CheckEmpty();
   void OnSyncBacklogDownloaded();
+
+  void GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) override;
 
   Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;
@@ -88,6 +96,8 @@ class PageManager {
       page_requests_;
 
   SyncWatcherSet watchers_;
+
+  fidl::BindingSet<PageDebug> page_debug_bindings_;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;

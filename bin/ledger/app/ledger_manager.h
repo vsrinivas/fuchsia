@@ -77,6 +77,10 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
   // LedgerDebug:
   void GetPagesList(const GetPagesListCallback& callback) override;
 
+  void GetPageDebug(fidl::Array<uint8_t> page_id,
+                    fidl::InterfaceRequest<PageDebug> page_debug,
+                    const GetPageDebugCallback& callback) override;
+
   Environment* const environment_;
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;

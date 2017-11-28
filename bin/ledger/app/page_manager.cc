@@ -8,6 +8,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/page_utils.h"
 
 namespace ledger {
 
@@ -26,6 +27,7 @@ PageManager::PageManager(
       task_runner_(environment->main_runner()) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
+  page_debug_bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
 
   if (page_sync_context_) {
     page_sync_context_->page_sync->SetSyncWatcher(&watchers_);
@@ -75,6 +77,12 @@ void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
   page_requests_.emplace_back(std::move(page_request), std::move(on_done));
 }
 
+void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
+                                std::function<void(Status)> callback) {
+  page_debug_bindings_.AddBinding(this, std::move(page_debug));
+  callback(Status::OK);
+}
+
 void PageManager::BindPageSnapshot(
     std::unique_ptr<const storage::Commit> commit,
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
@@ -86,7 +94,8 @@ void PageManager::BindPageSnapshot(
 void PageManager::CheckEmpty() {
   if (on_empty_callback_ && pages_.empty() && snapshots_.empty() &&
       page_requests_.empty() && merge_resolver_->IsEmpty() &&
-      (!page_sync_context_ || page_sync_context_->page_sync->IsIdle())) {
+      (!page_sync_context_ || page_sync_context_->page_sync->IsIdle()) &&
+      page_debug_bindings_.size() == 0) {
     on_empty_callback_();
   }
 }
@@ -103,4 +112,16 @@ void PageManager::OnSyncBacklogDownloaded() {
   page_requests_.clear();
 }
 
+void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
+  page_storage_->GetHeadCommitIds(fxl::MakeCopyable(
+      [callback = std::move(callback)](storage::Status status,
+                                       std::vector<storage::CommitId> heads) {
+        fidl::Array<fidl::Array<uint8_t>> result =
+            fidl::Array<fidl::Array<uint8_t>>::New(0);
+        for (size_t i = 0; i < heads.size(); ++i)
+          result.push_back(convert::ToArray(heads[i]));
+
+        callback(PageUtils::ConvertStatus(status), std::move(result));
+      }));
+}
 }  // namespace ledger

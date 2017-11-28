@@ -27,6 +27,9 @@ class LedgerManager::PageManagerContainer {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
     }
+    for (const auto& request : debug_requests_) {
+      request.second(Status::INTERNAL_ERROR);
+    }
   }
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
@@ -51,6 +54,21 @@ class LedgerManager::PageManagerContainer {
     requests_.emplace_back(std::move(page_request), std::move(callback));
   }
 
+  // Keeps track of |page_debug| and |callback|. Binds |page_debug| and fires
+  // |callback| when a PageManager is available or an error occurs.
+  void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
+                     std::function<void(Status)> callback) {
+    if (status_ != Status::OK) {
+      callback(status_);
+      return;
+    }
+    if (page_manager_) {
+      page_manager_->BindPageDebug(std::move(page_debug), std::move(callback));
+      return;
+    }
+    debug_requests_.emplace_back(std::move(page_debug), std::move(callback));
+  }
+
   // Sets the PageManager or the error status for the container. This notifies
   // all awaiting callbacks and binds all pages in case of success.
   void SetPageManager(Status status,
@@ -68,6 +86,15 @@ class LedgerManager::PageManagerContainer {
       }
     }
     requests_.clear();
+    for (auto& request : debug_requests_) {
+      if (page_manager_) {
+        page_manager_->BindPageDebug(std::move(request.first),
+                                     std::move(request.second));
+      } else {
+        request.second(status_);
+      }
+    }
+    debug_requests_.clear();
     if (on_empty_callback_) {
       if (page_manager_) {
         page_manager_->set_on_empty(on_empty_callback_);
@@ -83,6 +110,9 @@ class LedgerManager::PageManagerContainer {
   std::vector<
       std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;
+  std::vector<
+      std::pair<fidl::InterfaceRequest<PageDebug>, std::function<void(Status)>>>
+      debug_requests_;
   fxl::Closure on_empty_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
@@ -122,7 +152,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
 
   storage_->GetPageStorage(
       page_id.ToString(),
-      [this, page_id = page_id.ToString(), container](
+      [ this, page_id = page_id.ToString(), container ](
           storage::Status storage_status,
           std::unique_ptr<storage::PageStorage> page_storage) mutable {
         Status status = PageUtils::ConvertStatus(storage_status, Status::OK);
@@ -224,6 +254,17 @@ void LedgerManager::GetPagesList(const GetPagesListCallback& callback) {
     result.push_back(convert::ToArray(it->first));
   }
   callback(std::move(result));
+}
+
+void LedgerManager::GetPageDebug(fidl::Array<uint8_t> page_id,
+                                 fidl::InterfaceRequest<PageDebug> page_debug,
+                                 const GetPageDebugCallback& callback) {
+  auto it = page_managers_.find(page_id);
+  if (it != page_managers_.end()) {
+    it->second.BindPageDebug(std::move(page_debug), callback);
+  } else {
+    callback(Status::PAGE_NOT_FOUND);
+  }
 }
 
 }  // namespace ledger

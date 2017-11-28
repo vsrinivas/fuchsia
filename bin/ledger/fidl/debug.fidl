@@ -9,7 +9,6 @@ import "lib/ledger/fidl/ledger.fidl";
 
 [ServiceName="ledger::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
-
   // Returns the instances list in LedgerRepository.
   GetInstancesList() => (array<array<uint8>> result);
 
@@ -20,4 +19,13 @@ interface LedgerRepositoryDebug {
 interface LedgerDebug {
   // Returns the pages list in Ledger.
   GetPagesList() => (array<array<uint8>> result);
+
+  // Returns OK and binds the |page_debug| for the given |page_id|.
+  // Returns PAGE_NOT_FOUND if |page_id| isn't found.
+  GetPageDebug(array<uint8, 16> page_id, PageDebug& page_debug) => (Status status);
+};
+
+interface PageDebug {
+  // Returns OK and a list of the head commits IDs.
+  GetHeadCommitsIds() => (Status status, array<array<uint8>> result);
 };
