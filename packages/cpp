@@ -1,5 +1,0 @@
-{
-    "packages": {
-        "cpp": "//build/toolchain/fuchsia:cpp"
-    }
-}
