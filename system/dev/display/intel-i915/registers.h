@@ -39,4 +39,13 @@ public:
     }
 };
 
+// MASTER_INT_CTL
+class MasterInterruptControl : public RegisterBase<MasterInterruptControl> {
+public:
+    DEF_BIT(31, enable_mask);
+    DEF_BIT(23, sde_int_pending);
+
+    static auto Get() { return RegisterAddr<MasterInterruptControl>(0x44200); }
+};
+
 } // namespace registers

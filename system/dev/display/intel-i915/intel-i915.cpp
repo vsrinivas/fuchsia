@@ -27,6 +27,7 @@
 #include "bootloader-display.h"
 #include "intel-i915.h"
 #include "registers.h"
+#include "registers_ddi.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 
@@ -38,7 +39,57 @@
 
 #define FLAGS_BACKLIGHT 1
 
+namespace {
+    static bool is_gen9(uint16_t device_id) {
+        // Skylake graphics all match 0x19XX and kaby lake graphics all match
+        // 0x59XX. There are a few other devices which have matching device_ids,
+        // but none of them are display-class devices.
+        device_id &= 0xff00;
+        return device_id == 0x1900 || device_id == 0x5900;
+    }
+
+    static int irq_handler(void* arg) {
+        return static_cast<i915::Controller*>(arg)->IrqLoop();
+    }
+}
+
 namespace i915 {
+
+int Controller::IrqLoop() {
+    for (;;) {
+        if (zx_interrupt_wait(irq_) != ZX_OK) {
+            zxlogf(TRACE, "i915: interrupt wait failed\n");
+            break;
+        }
+
+        auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
+        interrupt_ctrl.enable_mask().set(0);
+        interrupt_ctrl.WriteTo(mmio_space_.get());
+
+        zx_interrupt_complete(irq_);
+
+        if (interrupt_ctrl.sde_int_pending().get()) {
+            auto sde_int_identity = registers::SdeInterruptBase
+                    ::Get(registers::SdeInterruptBase::kSdeIntIdentity).ReadFrom(mmio_space_.get());
+            for (uint32_t i = 0; i < registers::kDdiCount; i++) {
+                registers::Ddi ddi = registers::kDdis[i];
+                bool hp_detected = sde_int_identity.ddi_bit(ddi).get();
+                bool long_pulse_detected = registers::HotplugCtrl
+                        ::Get(ddi).ReadFrom(mmio_space_.get()).long_pulse_detected(ddi).get();
+                if (hp_detected && long_pulse_detected) {
+                    // TODO(ZX-1414): Actually handle these events
+                    zxlogf(TRACE, "i915: hotplug detected %d\n", ddi);
+                }
+            }
+            // Write back the register to clear the bits
+            sde_int_identity.WriteTo(mmio_space_.get());
+        }
+
+        interrupt_ctrl.enable_mask().set(1);
+        interrupt_ctrl.WriteTo(mmio_space_.get());
+    }
+    return 0;
+}
 
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
@@ -52,6 +103,63 @@ void Controller::EnableBacklight(bool enable) {
 
         mmio_space_->Write32(BACKLIGHT_CTRL_OFFSET, tmp);
     }
+}
+
+zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
+    // Disable interrupts here, we'll re-enable them at the very end of ::Bind
+    auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
+    interrupt_ctrl.enable_mask().set(0);
+    interrupt_ctrl.WriteTo(mmio_space_.get());
+
+    uint32_t irq_cnt = 0;
+    zx_status_t status = pci_query_irq_mode_caps(pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
+    if (status != ZX_OK || !irq_cnt) {
+        zxlogf(ERROR, "i915: Failed to find interrupts %d %d\n", status, irq_cnt);
+        return ZX_ERR_INTERNAL;
+    }
+
+    if ((status = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to set irq mode %d\n", status);
+        return status;
+    }
+
+    if ((status = pci_map_interrupt(pci, 0, &irq_) != ZX_OK)) {
+        zxlogf(ERROR, "i915: Failed to map interrupt %d\n", status);
+        return status;
+    }
+
+    status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to create irq thread\n");
+        return status;
+    }
+
+    auto sfuse_strap = registers::SouthFuseStrap::Get().ReadFrom(mmio_space_.get());
+    for (uint32_t i = 0; i < registers::kDdiCount; i++) {
+        registers::Ddi ddi = registers::kDdis[i];
+        // TODO(stevensd): gen9 doesn't have any registers to detect if ddi A or E are present.
+        // For now just assume that they are, but we should eventually read from the VBT.
+        bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E)
+                || (ddi == registers::DDI_B && sfuse_strap.port_b_present().get())
+                || (ddi == registers::DDI_C && sfuse_strap.port_c_present().get())
+                || (ddi == registers::DDI_D && sfuse_strap.port_d_present().get());
+
+        auto hp_ctrl = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get());
+        hp_ctrl.hpd_enable(ddi).set(enabled);
+        hp_ctrl.WriteTo(mmio_space_.get());
+
+        auto mask = registers::SdeInterruptBase::Get(
+                registers::SdeInterruptBase::kSdeIntMask).ReadFrom(mmio_space_.get());
+        mask.ddi_bit(ddi).set(!enabled);
+        mask.WriteTo(mmio_space_.get());
+
+        auto enable = registers::SdeInterruptBase::Get(
+                registers::SdeInterruptBase::kSdeIntEnable).ReadFrom(mmio_space_.get());
+        enable.ddi_bit(ddi).set(enabled);
+        enable.WriteTo(mmio_space_.get());
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Controller::InitDisplays() {
@@ -90,7 +198,7 @@ void Controller::DdkRelease() {
 }
 
 zx_status_t Controller::Bind() {
-    zxlogf(SPEW, "i915: binding to display controller\n");
+    zxlogf(TRACE, "i915: binding to display controller\n");
 
     pci_protocol_t pci;
     if (device_get_protocol(parent_, ZX_PROTOCOL_PCI, &pci)) {
@@ -120,6 +228,7 @@ zx_status_t Controller::Bind() {
 
     zx_handle_close(cfg_handle);
 
+    zxlogf(TRACE, "i915: mapping registers\n");
     // map register window
     uintptr_t regs;
     uint64_t regs_size;
@@ -138,6 +247,16 @@ zx_status_t Controller::Bind() {
     }
     mmio_space_ = fbl::move(mmio_space);
 
+    if (is_gen9(pci_config->device_id)) {
+        zxlogf(TRACE, "i915: initialzing hotplug\n");
+        status = InitHotplug(&pci);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "i915: failed to init hotplugging\n");
+            return status;
+        }
+    }
+
+    zxlogf(TRACE, "i915: mapping gtt\n");
     gtt_.Init(mmio_space_.get(), gtt_size);
 
     status = DdkAdd("intel_i915");
@@ -146,10 +265,17 @@ zx_status_t Controller::Bind() {
         return status;
     }
 
+    zxlogf(TRACE, "i915: initializing displays\n");
     status = InitDisplays();
     if (status != ZX_OK) {
         device_remove(zxdev());
         return status;
+    }
+
+    if (is_gen9(pci_config->device_id)) {
+        auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
+        interrupt_ctrl.enable_mask().set(1);
+        interrupt_ctrl.WriteTo(mmio_space_.get());
     }
 
     // TODO remove when the gfxconsole moves to user space
@@ -160,7 +286,7 @@ zx_status_t Controller::Bind() {
                        display_device_->info().format, display_device_->info().width,
                        display_device_->info().height, display_device_->info().stride);
 
-    zxlogf(SPEW, "i915: reg=%08lx regsize=0x%" PRIx64 " fb=0x%" PRIx64 "fbsize=0x%d\n",
+    zxlogf(TRACE, "i915: reg=%08lx regsize=0x%" PRIx64 " fb=0x%" PRIx64 "fbsize=0x%d\n",
             regs, regs_size, display_device_->framebuffer(), display_device_->framebuffer_size());
 
     return ZX_OK;
@@ -169,6 +295,14 @@ zx_status_t Controller::Bind() {
 Controller::Controller(zx_device_t* parent) : DeviceType(parent) { }
 
 Controller::~Controller() {
+    if (irq_) {
+        zx_interrupt_signal(irq_);
+
+        thrd_join(irq_thread_, nullptr);
+
+        zx_handle_close(irq_);
+    }
+
     if (mmio_space_) {
         EnableBacklight(false);
 
