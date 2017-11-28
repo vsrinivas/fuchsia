@@ -1230,9 +1230,7 @@ bool Station::IsHTReady() const {
     // bool client_is_ht_config = true;
     // return bss_is_ht_capable && client_is_ht_capable && client_is_ht_config;
 
-    // TODO(porce): GoogleGuest-Legacy fails to offer DHCP upon
-    // return true;
-    return false;
+    return true;
 }
 
 HtCapabilities Station::BuildHtCapabilities() const {

@@ -3266,7 +3266,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     }
 
     // TODO(porce): Incorporate this into pkt->info
-    // txwi0.set_phy_mode(PhyMode::kHtMixMode);
+    txwi0.set_phy_mode(PhyMode::kHtMixMode);
 
     // The frame header is always in the packet head.
     auto wcid =
