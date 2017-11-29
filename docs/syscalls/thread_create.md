@@ -23,14 +23,14 @@ will not start executing until *thread_start()* is called.
 
 *name* is silently truncated to a maximum of *ZX_MAX_NAME_LEN-1* characters.
 
-When the last handle to a thread is closed, the thread is destroyed.
-
 Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
 *thread_exit**() being called).
 
 *process* is the controlling [process object](../objects/process.md) for the
 new thread, which will become a child of that process.
+
+For thread lifecycle details see [thread object](../objects/thread.md).
 
 ## RETURN VALUE
 

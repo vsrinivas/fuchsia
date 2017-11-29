@@ -16,13 +16,35 @@ context. Thread objects live associated to a particular
 objects necessary for I/O and computation.
 
 ### Lifetime
-A thread can be created implicitly by calling `sys_process_start()`, in which
-case the new thread is the "main thread" and the thread entrypoint is defined by
-the previously loaded binary. Or it can be created by calling
-`sys_thread_create()` which takes the entrypoint as a parameter.
+Threads are created by calling `zx_thread_create()`, but only start executing
+when either `zx_thread_start()` or `zx_process_start()` are called. Both syscalls
+take as an argument the entrypoint of the initial routine to execute.
 
-A thread terminates when it `return`s from executing the routine specified as
-the entrypoint or by calling `sys_thread_exit()`.
+The thread passed to `zx_process_start()` should be the first thread to start execution
+on a process.
+
+A thread terminates execution:
++ by calling `zx_thread_exit()`
++ by calling `zx_vmar_unmap_handle_close_thread_exit()`
++ by calling `zx_futex_wake_handle_close_thread_exit()`
++ when the parent process terminates
++ by calling `zx_task_kill()` with the thread's handle
++ after generating an exception for which there is no handler or the handler
+decides to terminate the thread.
+
+Returning from the entrypoint routine does not terminate execution. The last
+action of the entrypoint should be to call `zx_thread_exit()` or one of the
+above mentioned `_exit()` variants.
+
+Closing the last handle to a thread does not terminate execution. In order to
+forcefully kill a thread for which there is no available handle, use
+`zx_object_get_child()` to obtain a handle to the thread. This method is strongly
+discouraged. Killing a thread that is executing might leave the process in a
+corrupt state.
+
+Fuchsia native threads are always *detached*. That is, there is no *join()* operation
+needed to do a clean termination. However, some runtimes above the kernel, such as
+C11 or POSIX might require threads to be joined.
 
 ## SYSCALLS
 
@@ -35,5 +57,6 @@ the entrypoint or by calling `sys_thread_exit()`.
 <br>
 
 + [task_resume](../syscalls/task_resume.md) - cause a suspended task to continue running
-+ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) - attach an exception port to a task
++ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) - attach an exception
+port to a task
 + [task_kill](../syscalls/task_kill.md) - cause a task to stop running

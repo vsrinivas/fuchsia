@@ -106,12 +106,6 @@ ThreadDispatcher::~ThreadDispatcher() {
     event_destroy(&exception_event_);
 }
 
-void ThreadDispatcher::on_zero_handles() {
-    LTRACE_ENTRY_OBJ;
-
-    Kill();
-}
-
 namespace {
 
 zx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe,

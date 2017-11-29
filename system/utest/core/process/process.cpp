@@ -73,7 +73,7 @@ bool process_start_fail() {
     END_TEST;
 }
 
-bool kill_process_via_thread_close() {
+bool process_not_killed_via_thread_close() {
     BEGIN_TEST;
 
     zx_handle_t event;
@@ -86,10 +86,12 @@ bool kill_process_via_thread_close() {
     // closing the only thread handle should cause the process to terminate.
     EXPECT_EQ(zx_handle_close(thread), ZX_OK);
 
-    zx_signals_t signals;
+    // The timeout below does not have to be large because the processing happens
+    // synchronously if indeed |thread| is the last handle.
+    zx_signals_t signals = 0;
     EXPECT_EQ(zx_object_wait_one(
-        process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
-    EXPECT_EQ(signals, ZX_TASK_TERMINATED);
+        process, ZX_TASK_TERMINATED, zx_deadline_after(ZX_MSEC(1)), &signals), ZX_ERR_TIMED_OUT);
+    EXPECT_NE(signals, ZX_TASK_TERMINATED);
 
     EXPECT_EQ(zx_handle_close(process), ZX_OK);
     END_TEST;
@@ -217,16 +219,15 @@ bool kill_process_handle_cycle() {
     EXPECT_EQ(zx_object_wait_one(
         thread2, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals), ZX_ERR_TIMED_OUT);
 
-    EXPECT_EQ(zx_handle_close(thread1), ZX_OK);
-
-    // Closing thread1 should cause process 1 to exit which should cause process 2 to
-    // exit which we test by waiting on the second process thread handle.
+    // Make the first process exit gracefully. This should terminate both processes.
+    EXPECT_EQ(mini_process_cmd(minip_chn[0], MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
 
     EXPECT_EQ(zx_object_wait_one(
         thread2, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
     // ZX_THREAD_RUNNING may also be present
     EXPECT_EQ(signals & ~ZX_THREAD_RUNNING, ZX_TASK_TERMINATED);
 
+    EXPECT_EQ(zx_handle_close(thread1), ZX_OK);
     EXPECT_EQ(zx_handle_close(thread2), ZX_OK);
 
     END_TEST;
@@ -374,7 +375,7 @@ bool info_reflects_process_state() {
 BEGIN_TEST_CASE(process_tests)
 RUN_TEST(mini_process_sanity);
 RUN_TEST(process_start_fail);
-RUN_TEST(kill_process_via_thread_close);
+RUN_TEST(process_not_killed_via_thread_close);
 RUN_TEST(kill_process_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
 RUN_TEST_ENABLE_CRASH_HANDLER(kill_process_via_vmar_destroy);
