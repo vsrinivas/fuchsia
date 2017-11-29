@@ -8,8 +8,9 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/devshell/lib/vars.sh
 fx-config-read
+source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
-export CMAKE_PROGRAM="${FUCHSIA_DIR}/buildtools/cmake/bin/cmake"
+export CMAKE_PROGRAM="${FUCHSIA_DIR}/buildtools/${BUILDTOOLS_PLATFORM}/cmake/bin/cmake"
 export NINJA_PROGRAM="${FUCHSIA_DIR}/buildtools/ninja"
 
 "${FUCHSIA_DIR}/third_party/vboot_reference/scripts/build-futility.sh"
