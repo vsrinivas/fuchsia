@@ -47,11 +47,13 @@ enum ResourceType {
   // Scene, camera, lighting.
   kScene = 1 << 23,
   kCamera = 1 << 24,
-  kDirectionalLight = 1 << 25,
-  kRenderer = 1 << 26,
+  kLight = 1 << 25,
+  kAmbientLight = 1 << 26,
+  kDirectionalLight = 1 << 27,
+  kRenderer = 1 << 28,
 
   // Animation
-  kVariable = 1 << 27,
+  kVariable = 1 << 29,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

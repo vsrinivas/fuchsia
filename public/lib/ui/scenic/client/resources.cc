@@ -345,6 +345,14 @@ Scene::Scene(Scene&& moved) : ContainerNode(std::move(moved)) {}
 
 Scene::~Scene() = default;
 
+void Scene::AddLight(uint32_t light_id) {
+  session()->Enqueue(NewAddLightOp(id(), light_id));
+}
+
+void Scene::DetachLights() {
+  session()->Enqueue(NewDetachLightsOp(id()));
+}
+
 Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
 
 Camera::Camera(Session* session, uint32_t scene_id) : Resource(session) {
@@ -377,6 +385,12 @@ void Renderer::SetCamera(uint32_t camera_id) {
 
 void Renderer::SetParam(scenic::RendererParamPtr param) {
   session()->Enqueue(NewSetRendererParamOp(id(), std::move(param)));
+}
+
+void Renderer::SetShadowTechnique(scenic::ShadowTechnique technique) {
+  auto param = scenic::RendererParam::New();
+  param->set_shadow_technique(technique);
+  SetParam(std::move(param));
 }
 
 void Renderer::SetDisableClipping(bool disable_clipping) {
@@ -422,6 +436,49 @@ DisplayCompositor::~DisplayCompositor() = default;
 
 void DisplayCompositor::SetLayerStack(uint32_t layer_stack_id) {
   session()->Enqueue(NewSetLayerStackOp(id(), layer_stack_id));
+}
+
+Light::Light(Session* session) : Resource(session) {}
+
+Light::Light(Light&& moved) : Resource(std::move(moved)) {}
+
+Light::~Light() = default;
+
+void Light::SetColor(const float rgb[3]) {
+  session()->Enqueue(NewSetLightColorOp(id(), rgb));
+}
+
+void Light::SetColor(uint32_t variable_id) {
+  session()->Enqueue(NewSetLightColorOp(id(), variable_id));
+}
+
+void Light::Detach() {
+  session()->Enqueue(NewDetachLightOp(id()));
+}
+
+AmbientLight::AmbientLight(Session* session) : Light(session) {
+  session->Enqueue(NewCreateAmbientLightOp(id()));
+}
+
+AmbientLight::AmbientLight(AmbientLight&& moved) : Light(std::move(moved)) {}
+
+AmbientLight::~AmbientLight() = default;
+
+DirectionalLight::DirectionalLight(Session* session) : Light(session) {
+  session->Enqueue(NewCreateDirectionalLightOp(id()));
+}
+
+DirectionalLight::DirectionalLight(DirectionalLight&& moved)
+    : Light(std::move(moved)) {}
+
+DirectionalLight::~DirectionalLight() = default;
+
+void DirectionalLight::SetDirection(const float direction[3]) {
+  session()->Enqueue(NewSetLightDirectionOp(id(), direction));
+}
+
+void DirectionalLight::SetDirection(uint32_t variable_id) {
+  session()->Enqueue(NewSetLightDirectionOp(id(), variable_id));
 }
 
 }  // namespace scenic_lib

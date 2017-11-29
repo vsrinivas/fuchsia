@@ -29,6 +29,14 @@ inline escher::mat4 Unwrap(const scenic::mat4Ptr& args) {
           m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]};
 }
 
+inline escher::vec3 Unwrap(const scenic::ColorRgbPtr& args) {
+  return {args->red, args->green, args->blue};
+}
+
+inline escher::vec4 Unwrap(const scenic::ColorRgbaPtr& args) {
+  return {args->red, args->green, args->blue, args->alpha};
+}
+
 inline escher::quat Unwrap(const scenic::QuaternionPtr& args) {
   return {args->w, escher::vec3(args->x, args->y, args->z)};
 }

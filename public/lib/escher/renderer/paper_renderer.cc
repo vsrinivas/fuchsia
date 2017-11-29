@@ -29,12 +29,6 @@
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
 
-// If 1 uses a compute kernel to perform SSDO sampling, otherwise uses a
-// fragment shader.  For not-yet-understood reasons, the compute kernel is
-// drastically inefficient.
-// TODO: try to improve the compute kernel, and if that fails, delete this code.
-#define SSDO_SAMPLING_USES_KERNEL 0
-
 namespace escher {
 
 using impl::ModelDisplayListFlag;
@@ -146,35 +140,6 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
   command_buffer->KeepAlive(fb_aux);
   command_buffer->KeepAlive(accelerator_texture);
 
-#if SSDO_SAMPLING_USES_KERNEL
-  TexturePtr depth_texture = fxl::MakeRefCounted<Texture>(
-      escher()->resource_recycler(), depth_in, vk::Filter::eNearest,
-      vk::ImageAspectFlagBits::eDepth);
-
-  TexturePtr output_texture = fxl::MakeRefCounted<Texture>(
-      escher()->resource_recycler() color_out, vk::Filter::eNearest,
-      vk::ImageAspectFlagBits::eColor);
-
-  command_buffer->KeepAlive(depth_texture);
-  command_buffer->KeepAlive(output_texture);
-  command_buffer->KeepAlive(fb_out);
-  command_buffer->KeepAlive(fb_aux);
-
-  // Prepare to sample from the depth buffer.
-  command_buffer->TransitionImageLayout(
-      depth_in, vk::ImageLayout::eDepthStencilAttachmentOptimal,
-      vk::ImageLayout::eGeneral);
-  command_buffer->TransitionImageLayout(color_out, vk::ImageLayout::eUndefined,
-                                        vk::ImageLayout::eGeneral);
-
-  AddTimestamp("finished layout transition before SSDO sampling");
-
-  impl::SsdoSampler::SamplerConfig sampler_config(stage);
-  ssdo_->SampleUsingKernel(command_buffer, depth_texture, output_texture,
-                           &sampler_config);
-  AddTimestamp("finished SSDO sampling");
-
-#else
   TexturePtr depth_texture = fxl::MakeRefCounted<Texture>(
       escher()->resource_recycler(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
@@ -200,7 +165,6 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
   AddTimestamp("finished layout transition before SSDO filtering");
-#endif
 
   // Do two filter passes, one horizontal and one vertical.
   if (!kSkipFiltering) {
@@ -215,15 +179,9 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
       ssdo_->Filter(command_buffer, fb_aux, color_out_tex, accelerator_texture,
                     &filter_config);
 
-#if SSDO_SAMPLING_USES_KERNEL
-      command_buffer->TransitionImageLayout(
-          color_out, vk::ImageLayout::eGeneral,
-          vk::ImageLayout::eColorAttachmentOptimal);
-#else
       command_buffer->TransitionImageLayout(
           color_out, vk::ImageLayout::eShaderReadOnlyOptimal,
           vk::ImageLayout::eColorAttachmentOptimal);
-#endif
 
       AddTimestamp("finished SSDO filter pass 1");
     }
@@ -484,8 +442,10 @@ void PaperRenderer::DrawFrameWithNoShadows(const Stage& stage,
       // TODO: pass escher::RenderPass instead of vk::RenderPass?
       no_shadow_lighting_pass_->vk());
 
+  const vec3 kAmbientLightColor(1.f);
+  const vec3 kDirectionalLightColor(0.f);
   DrawLightingPass(kLightingPassSampleCount, framebuffer, TexturePtr(),
-                   mat4(1.f), ambient_light_color_, ambient_light_color_,
+                   mat4(1.f), kAmbientLightColor, kDirectionalLightColor,
                    no_shadow_lighting_pass_, stage, model, camera,
                    overlay_model);
 }
@@ -520,7 +480,7 @@ void PaperRenderer::DrawFrameWithShadowMapShadows(
       shadow_map_lighting_pass_->vk());
 
   DrawLightingPass(kLightingPassSampleCount, framebuffer, shadow_map->texture(),
-                   shadow_map->matrix(), ambient_light_color_,
+                   shadow_map->matrix(), stage.fill_light().color(),
                    shadow_map->light_color(), shadow_map_lighting_pass_, stage,
                    model, camera, overlay_model);
 }
@@ -634,9 +594,9 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const Stage& stage,
     current_frame()->KeepAlive(lighting_fb);
 
     DrawLightingPass(kLightingPassSampleCount, lighting_fb, shadow_texture,
-                     mat4(1.f), ambient_light_color_,
-                     vec3(1.f) - ambient_light_color_, ssdo_lighting_pass_,
-                     stage, model, camera, overlay_model);
+                     mat4(1.f), stage.fill_light().color(),
+                     stage.key_light().color(), ssdo_lighting_pass_, stage,
+                     model, camera, overlay_model);
 
     AddTimestamp("finished lighting pass");
   } else {
@@ -665,9 +625,9 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const Stage& stage,
     current_frame()->KeepAlive(multisample_fb);
 
     DrawLightingPass(kLightingPassSampleCount, multisample_fb, shadow_texture,
-                     mat4(1.f), ambient_light_color_,
-                     vec3(1.f) - ambient_light_color_, ssdo_lighting_pass_,
-                     stage, model, camera, overlay_model);
+                     mat4(1.f), stage.fill_light().color(),
+                     stage.key_light().color(), ssdo_lighting_pass_, stage,
+                     model, camera, overlay_model);
 
     AddTimestamp("finished lighting pass");
 

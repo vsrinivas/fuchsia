@@ -151,6 +151,24 @@ scenic::OpPtr NewCreateRendererOp(uint32_t id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
+scenic::OpPtr NewCreateAmbientLightOp(uint32_t id) {
+  auto ambient_light = scenic::AmbientLight::New();
+
+  auto resource = scenic::Resource::New();
+  resource->set_ambient_light(std::move(ambient_light));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+scenic::OpPtr NewCreateDirectionalLightOp(uint32_t id) {
+  auto directional_light = scenic::DirectionalLight::New();
+
+  auto resource = scenic::Resource::New();
+  resource->set_directional_light(std::move(directional_light));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
 scenic::OpPtr NewCreateCircleOp(uint32_t id, float radius) {
   auto radius_value = scenic::Value::New();
   radius_value->set_vector1(radius);
@@ -356,6 +374,9 @@ scenic::OpPtr NewCreateVariableOp(uint32_t id, scenic::ValuePtr value) {
       break;
     case scenic::Value::Tag::MATRIX4X4:
       variable->type = scenic::ValueType::kMatrix4;
+      break;
+    case scenic::Value::Tag::COLOR_RGB:
+      variable->type = scenic::ValueType::kColorRgb;
       break;
     case scenic::Value::Tag::COLOR_RGBA:
       variable->type = scenic::ValueType::kColorRgba;
@@ -805,6 +826,81 @@ scenic::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
   return op;
 }
 
+scenic::OpPtr NewSetLightColorOp(uint32_t light_id, const float rgb[3]) {
+  auto set_op = scenic::SetLightColorOp::New();
+  set_op->light_id = light_id;
+  set_op->color = NewColorRgbValue(rgb[0], rgb[1], rgb[2]);
+
+  auto op = scenic::Op::New();
+  op->set_set_light_color(std::move(set_op));
+
+  return op;
+}
+
+scenic::OpPtr NewSetLightColorOp(uint32_t light_id, uint32_t variable_id) {
+  auto set_op = scenic::SetLightColorOp::New();
+  set_op->light_id = light_id;
+  set_op->color = NewColorRgbValue(variable_id);
+
+  auto op = scenic::Op::New();
+  op->set_set_light_color(std::move(set_op));
+
+  return op;
+}
+
+scenic::OpPtr NewSetLightDirectionOp(uint32_t light_id, const float dir[3]) {
+  auto set_op = scenic::SetLightDirectionOp::New();
+  set_op->light_id = light_id;
+  set_op->direction = NewVector3Value(dir);
+
+  auto op = scenic::Op::New();
+  op->set_set_light_direction(std::move(set_op));
+
+  return op;
+}
+
+scenic::OpPtr NewSetLightDirectionOp(uint32_t light_id, uint32_t variable_id) {
+  auto set_op = scenic::SetLightDirectionOp::New();
+  set_op->light_id = light_id;
+  set_op->direction = NewVector3Value(variable_id);
+
+  auto op = scenic::Op::New();
+  op->set_set_light_direction(std::move(set_op));
+
+  return op;
+}
+
+scenic::OpPtr NewAddLightOp(uint32_t scene_id, uint32_t light_id) {
+  auto add_light_op = scenic::AddLightOp::New();
+  add_light_op->scene_id = scene_id;
+  add_light_op->light_id = light_id;
+
+  auto op = scenic::Op::New();
+  op->set_add_light(std::move(add_light_op));
+
+  return op;
+}
+
+scenic::OpPtr NewDetachLightOp(uint32_t light_id) {
+  auto detach_light_op = scenic::DetachLightOp::New();
+  detach_light_op->light_id = light_id;
+
+  auto op = scenic::Op::New();
+  op->set_detach_light(std::move(detach_light_op));
+
+  return op;
+}
+
+scenic::OpPtr NewDetachLightsOp(uint32_t scene_id) {
+  auto detach_lights_op = scenic::DetachLightsOp::New();
+  detach_lights_op->scene_id = scene_id;
+
+  auto op = scenic::Op::New();
+  op->set_detach_lights(std::move(detach_lights_op));
+
+  return op;
+}
+
 scenic::OpPtr NewSetEventMaskOp(uint32_t resource_id, uint32_t event_mask) {
   auto set_event_mask_op = scenic::SetEventMaskOp::New();
   set_event_mask_op->id = resource_id;
@@ -860,6 +956,13 @@ scenic::Vector2ValuePtr NewVector2Value(const float value[2]) {
   return val;
 }
 
+scenic::Vector2ValuePtr NewVector2Value(uint32_t variable_id) {
+  auto val = scenic::Vector2Value::New();
+  val->variable_id = variable_id;
+  val->value = scenic::vec2::New();
+  return val;
+}
+
 scenic::vec3Ptr NewVector3(const float value[3]) {
   scenic::vec3Ptr val = scenic::vec3::New();
   val->x = value[0];
@@ -895,6 +998,13 @@ scenic::Vector4ValuePtr NewVector4Value(const float value[4]) {
   auto val = scenic::Vector4Value::New();
   val->variable_id = 0;
   val->value = NewVector4(value);
+  return val;
+}
+
+scenic::Vector4ValuePtr NewVector4Value(uint32_t variable_id) {
+  auto val = scenic::Vector4Value::New();
+  val->variable_id = variable_id;
+  val->value = scenic::vec4::New();
   return val;
 }
 
@@ -947,6 +1057,54 @@ scenic::Matrix4ValuePtr NewMatrix4Value(const float matrix[16]) {
   auto val = scenic::Matrix4Value::New();
   val->variable_id = 0;
   val->value = NewMatrix4(matrix);
+  return val;
+}
+
+scenic::Matrix4ValuePtr NewMatrix4Value(uint32_t variable_id) {
+  auto val = scenic::Matrix4Value::New();
+  val->variable_id = variable_id;
+  val->value = scenic::mat4::New();
+  return val;
+}
+
+scenic::ColorRgbValuePtr NewColorRgbValue(float red, float green, float blue) {
+  auto val = scenic::ColorRgbValue::New();
+  val->variable_id = 0;
+  val->value = scenic::ColorRgb::New();
+  auto& color = val->value;
+  color->red = red;
+  color->green = green;
+  color->blue = blue;
+
+  return val;
+}
+
+scenic::ColorRgbValuePtr NewColorRgbValue(uint32_t variable_id) {
+  auto val = scenic::ColorRgbValue::New();
+  val->variable_id = variable_id;
+  val->value = scenic::ColorRgb::New();
+
+  return val;
+}
+
+scenic::ColorRgbaValuePtr NewColorRgbaValue(const uint8_t value[4]) {
+  auto val = scenic::ColorRgbaValue::New();
+  val->variable_id = 0;
+  val->value = scenic::ColorRgba::New();
+  auto& color = val->value;
+  color->red = value[0];
+  color->green = value[1];
+  color->blue = value[2];
+  color->alpha = value[3];
+
+  return val;
+}
+
+scenic::ColorRgbaValuePtr NewColorRgbaValue(uint32_t variable_id) {
+  auto val = scenic::ColorRgbaValue::New();
+  val->variable_id = variable_id;
+  val->value = scenic::ColorRgba::New();
+
   return val;
 }
 

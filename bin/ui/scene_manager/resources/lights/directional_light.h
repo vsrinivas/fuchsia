@@ -4,31 +4,28 @@
 
 #pragma once
 
-#include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "lib/escher/geometry/types.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/light.h"
 
 namespace scene_manager {
 
-class DirectionalLight final : public Resource {
+class DirectionalLight final : public Light {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  DirectionalLight(Session* session,
-                   scenic::ResourceId id,
-                   const escher::vec3& direction,
-                   float intensity);
+  DirectionalLight(Session* session, scenic::ResourceId id);
 
-  const escher::vec3& direction() const { return direction_; }
-  float intensity() const { return intensity_; }
+  // The direction will be normalized before storing.  Returns false if the
+  // length of |direction| is nearly zero.
+  bool SetDirection(const glm::vec3& direction);
 
-  void set_intensity(float intensity) { intensity_ = intensity; }
+  // The normalized direction of the light source.
+  const glm::vec3& direction() const { return direction_; }
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
  private:
-  escher::vec3 direction_;
-  float intensity_;
+  glm::vec3 direction_ = {0.f, 0.f, -1.f};
 };
 
 }  // namespace scene_manager

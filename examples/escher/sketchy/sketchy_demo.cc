@@ -28,8 +28,9 @@ void SketchyDemo::InitializeEscherStage() {
   stage_.set_viewing_volume(
       escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
   // TODO: perhaps lights should be initialized by the various demo scenes.
-  stage_.set_key_light(escher::DirectionalLight(
-      escher::vec2(1.5f * M_PI, 1.5f * M_PI), 0.15f * M_PI, 0.7f));
+  stage_.set_key_light(
+      escher::DirectionalLight(escher::vec2(1.5f * M_PI, 1.5f * M_PI),
+                               0.15f * M_PI, escher::vec3(0.7f)));
   stage_.set_fill_light(escher::AmbientLight(0.3f));
 }
 

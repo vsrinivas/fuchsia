@@ -19,10 +19,15 @@
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 100.f;
 static constexpr float kFar = -1.f;
-static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
 // Directional light is 50% intensity; ambient light will adjust automatically.
 static constexpr float kLightIntensity = 0.5f;
+
+// Directional light parameters.
+static constexpr float kLightDispersion = M_PI * 0.15f;
+static constexpr float kLightElevationRadians = M_PI / 3.f;
+
+static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
@@ -75,10 +80,10 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
 void WaterfallDemo::InitializeEscherStage() {
   stage_.set_viewing_volume(
       escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
-  // TODO: perhaps lights should be initialized by the various demo scenes.
-  stage_.set_key_light(escher::DirectionalLight(
-      escher::vec2(1.5f * M_PI, 1.5f * M_PI), 0.15f * M_PI, 0.7f));
-  stage_.set_fill_light(escher::AmbientLight(0.3f));
+  stage_.set_key_light(
+      escher::DirectionalLight(escher::vec2(1.5f * M_PI, 1.5f * M_PI),
+                               0.15f * M_PI, vec3(kLightIntensity)));
+  stage_.set_fill_light(escher::AmbientLight(1.f - kLightIntensity));
 }
 
 void WaterfallDemo::InitializeDemoScenes() {
@@ -278,12 +283,23 @@ void WaterfallDemo::DrawFrame() {
     stopwatch_.Start();
   }
 
+  if (animate_light_) {
+    light_azimuth_radians_ += 0.02;
+  }
+  vec3 light_direction = glm::normalize(vec3(-cos(light_azimuth_radians_),
+                                             -sin(light_azimuth_radians_),
+                                             -tan(kLightElevationRadians)));
+
+  stage_.set_key_light(escher::DirectionalLight(
+      escher::vec2(light_azimuth_radians_, kLightElevationRadians),
+      kLightDispersion, vec3(kLightIntensity)));
+
   escher::ShadowMapPtr shadow_map;
   if (shadow_mode_ == kShadowMap) {
     const vec3 directional_light_color(kLightIntensity);
     renderer_->set_ambient_light_color(vec3(1.f) - directional_light_color);
     shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
-        stage_, *model, vec3(0.3f, 0.3f, -1.f), directional_light_color);
+        stage_, *model, light_direction, directional_light_color);
   }
 
   swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera,

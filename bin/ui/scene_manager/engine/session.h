@@ -139,7 +139,11 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetHitTestBehaviorOp(const scenic::SetHitTestBehaviorOpPtr& op);
   bool ApplySetCameraOp(const scenic::SetCameraOpPtr& op);
   bool ApplySetCameraProjectionOp(const scenic::SetCameraProjectionOpPtr& op);
-  bool ApplySetLightIntensityOp(const scenic::SetLightIntensityOpPtr& op);
+  bool ApplySetLightColorOp(const scenic::SetLightColorOpPtr& op);
+  bool ApplySetLightDirectionOp(const scenic::SetLightDirectionOpPtr& op);
+  bool ApplyAddLightOp(const scenic::AddLightOpPtr& op);
+  bool ApplyDetachLightOp(const scenic::DetachLightOpPtr& op);
+  bool ApplyDetachLightsOp(const scenic::DetachLightsOpPtr& op);
   bool ApplySetTextureOp(const scenic::SetTextureOpPtr& op);
   bool ApplySetColorOp(const scenic::SetColorOpPtr& op);
   bool ApplyBindMeshBuffersOp(const scenic::BindMeshBuffersOpPtr& op);
@@ -161,6 +165,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyCreateCamera(scenic::ResourceId id, const scenic::CameraPtr& args);
   bool ApplyCreateRenderer(scenic::ResourceId id,
                            const scenic::RendererPtr& args);
+  bool ApplyCreateAmbientLight(scenic::ResourceId id,
+                               const scenic::AmbientLightPtr& args);
   bool ApplyCreateDirectionalLight(scenic::ResourceId id,
                                    const scenic::DirectionalLightPtr& args);
   bool ApplyCreateRectangle(scenic::ResourceId id,
@@ -203,9 +209,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                            const scenic::CameraPtr& args);
   ResourcePtr CreateRenderer(scenic::ResourceId id,
                              const scenic::RendererPtr& args);
-  ResourcePtr CreateDirectionalLight(scenic::ResourceId id,
-                                     escher::vec3 direction,
-                                     float intensity);
+  ResourcePtr CreateAmbientLight(scenic::ResourceId id);
+  ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
   ResourcePtr CreateClipNode(scenic::ResourceId id,
                              const scenic::ClipNodePtr& args);
   ResourcePtr CreateEntityNode(scenic::ResourceId id,

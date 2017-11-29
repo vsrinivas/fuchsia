@@ -41,7 +41,11 @@ union Op {
   // Camera and lighting operations.
   SetCameraOp set_camera;
   SetCameraProjectionOp set_camera_projection;
-  SetLightIntensityOp set_light_intensity;
+  SetLightColorOp set_light_color;
+  SetLightDirectionOp set_light_direction;
+  AddLightOp add_light;
+  DetachLightOp detach_light;
+  DetachLightsOp detach_lights;
 
   SetTextureOp set_texture;
   SetColorOp set_color;
@@ -366,14 +370,34 @@ struct SetCameraProjectionOp {
   FloatValue fovy;  // Y-axis field of view, in radians.
 };
 
-// Sets the intensity of a Light.
-//
-// Constraints:
-// - |light_id| refs a |Light|.
-// - |intensity| is a value or variable of type kFloat..
-struct SetLightIntensityOp {
+// Sets the color of the Light identified by |light_id|.
+struct SetLightColorOp {
   uint32 light_id;
-  Value intensity;  // type: kFloat
+  ColorRgbValue color;
+};
+
+// Sets the direction of the DirectionalLight identified by |light_id|.
+struct SetLightDirectionOp {
+  uint32 light_id;
+  Vector3Value direction;
+};
+
+// Adds the light specified by |light_id| specified by |light_id| to the scene
+// identified by |scene_id|.
+struct AddLightOp {
+  uint32 scene_id;
+  uint32 light_id;
+};
+
+// Detach the light specified by |light_id| from the scene that it is attached
+// to, if any.
+struct DetachLightOp {
+  uint32 light_id;
+};
+
+// Detach all lights from the scene specified by |scene_id|.
+struct DetachLightsOp {
+  uint32 scene_id;
 };
 
 // Sets/clears a material's texture.
@@ -401,8 +425,6 @@ struct SetColorOp {
   uint32 material_id;
   ColorRgbaValue color;
 };
-
-
 
 // Set a mesh's indices and vertices.
 //

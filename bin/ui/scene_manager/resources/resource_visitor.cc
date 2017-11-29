@@ -15,7 +15,9 @@
 #include "garnet/bin/ui/scene_manager/resources/image.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/ambient_light.h"
 #include "garnet/bin/ui/scene_manager/resources/lights/directional_light.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/light.h"
 #include "garnet/bin/ui/scene_manager/resources/material.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
@@ -99,6 +101,14 @@ void Camera::Accept(ResourceVisitor* visitor) {
 }
 
 void Renderer::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Light::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void AmbientLight::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

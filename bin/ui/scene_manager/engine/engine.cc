@@ -17,6 +17,7 @@
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
 #include "garnet/bin/ui/scene_manager/swapchain/display_swapchain.h"
 #include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace scene_manager {
@@ -25,6 +26,10 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
     : display_manager_(display_manager),
       escher_(escher),
       paper_renderer_(escher::PaperRenderer::New(escher)),
+      shadow_renderer_(
+          escher::ShadowMapRenderer::New(escher,
+                                         paper_renderer_->model_data(),
+                                         paper_renderer_->model_renderer())),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher->resource_recycler(),
           escher->gpu_allocator())),
@@ -142,7 +147,8 @@ void Engine::RenderFrame(const FrameTimingsPtr& timings,
   UpdateAndDeliverMetrics(presentation_time);
 
   for (auto& compositor : compositors_) {
-    compositor->DrawFrame(timings, paper_renderer_.get());
+    compositor->DrawFrame(timings, paper_renderer_.get(),
+                          shadow_renderer_.get());
   }
 }
 

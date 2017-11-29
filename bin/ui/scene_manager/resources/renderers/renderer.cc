@@ -228,6 +228,14 @@ void Renderer::Visitor::Visit(Renderer* r) {
   FXL_CHECK(false);
 }
 
+void Renderer::Visitor::Visit(Light* r) {
+  FXL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(AmbientLight* r) {
+  FXL_CHECK(false);
+}
+
 void Renderer::Visitor::Visit(DirectionalLight* r) {
   FXL_CHECK(false);
 }

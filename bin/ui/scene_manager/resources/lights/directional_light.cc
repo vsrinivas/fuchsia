@@ -4,17 +4,26 @@
 
 #include "garnet/bin/ui/scene_manager/resources/lights/directional_light.h"
 
+#include "garnet/bin/ui/scene_manager/util/error_reporter.h"
+
 namespace scene_manager {
 
 const ResourceTypeInfo DirectionalLight::kTypeInfo = {
-    ResourceType::kDirectionalLight, "DirectionalLight"};
+    ResourceType::kLight | ResourceType::kDirectionalLight, "DirectionalLight"};
 
-DirectionalLight::DirectionalLight(Session* session,
-                                   scenic::ResourceId id,
-                                   const escher::vec3& direction,
-                                   float intensity)
-    : Resource(session, id, DirectionalLight::kTypeInfo),
-      direction_(direction),
-      intensity_(intensity) {}
+DirectionalLight::DirectionalLight(Session* session, scenic::ResourceId id)
+    : Light(session, id, DirectionalLight::kTypeInfo) {}
+
+bool DirectionalLight::SetDirection(const glm::vec3& direction) {
+  float length = glm::length(direction);
+  if (length < 0.001f) {
+    error_reporter()->ERROR() << "scene_manager::DirectionalLight::"
+                                 "SetDirection(): length of direction vector "
+                                 "is near zero.";
+    return false;
+  }
+  direction_ = direction / length;
+  return true;
+}
 
 }  // namespace scene_manager

@@ -47,6 +47,8 @@ class Renderer : public Resource {
 
   Camera* camera() const { return camera_.get(); }
 
+  scenic::ShadowTechnique shadow_technique() const { return shadow_technique_; }
+
  private:
   class Visitor : public ResourceVisitor {
    public:
@@ -70,6 +72,8 @@ class Renderer : public Resource {
     void Visit(Scene* r) override;
     void Visit(Camera* r) override;
     void Visit(Renderer* r) override;
+    void Visit(Light* r) override;
+    void Visit(AmbientLight* r) override;
     void Visit(DirectionalLight* r) override;
     void Visit(Import* r) override;
 

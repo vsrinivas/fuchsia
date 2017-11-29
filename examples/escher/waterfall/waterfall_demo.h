@@ -65,6 +65,8 @@ class WaterfallDemo : public Demo {
   bool profile_one_frame_ = false;
   // Run an offscreen benchmark.
   bool run_offscreen_benchmark_ = false;
+  // True if the direction of the light source is animating.
+  bool animate_light_ = true;
 
   // 3 camera projection modes:
   // - orthogonal full-screen
@@ -77,6 +79,7 @@ class WaterfallDemo : public Demo {
   escher::ShadowMapRendererPtr shadow_renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
   escher::Stage stage_;
+  double light_azimuth_radians_ = 0.f;
 
   escher::Stopwatch stopwatch_;
   uint64_t frame_count_ = 0;

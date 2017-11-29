@@ -17,25 +17,42 @@ namespace escher {
 class DirectionalLight {
  public:
   DirectionalLight();
-  DirectionalLight(vec2 direction, float dispersion, float intensity);
+  // Direction vector must be normalized.
+  DirectionalLight(vec3 direction, float dispersion, vec3 color);
+
+  // Direction is as described for the polar_direction() accessor.
+  DirectionalLight(vec2 polar_direction, float dispersion, vec3 color);
+
   ~DirectionalLight();
+
+  // The direction that the light travels.
+  const vec3& direction() const { return direction_; }
 
   // The direction from which the light is received. The first coordinate is
   // theta (the the azimuthal angle, in radians) and the second coordinate is
   // phi (the polar angle, in radians).
-  const vec2& direction() const { return direction_; }
+  const vec2& polar_direction() const { return polar_direction_; }
 
   // The angular variance in the light, in radians.
+  // TODO(ES-46): it's not well-defined how rendering should/will respond to
+  // this value. Its meaning is implicitly defined by implementation of
+  // SsdoSampler, but it's not clear how/if it will be taken into account for
+  // e.g. shadow-map-based soft shadows.
   float dispersion() const { return dispersion_; }
 
   // The amount of light emitted.
-  // TODO(abarth): In what units?
-  float intensity() const { return intensity_; }
+  // TODO(ES-47): In what units?
+  const vec3& color() const { return color_; }
+  void set_color(vec3 color) { color_ = color; }
+
+  // TODO(ES-48): deprecated.  Only used for SSDO shadows, and white lights.
+  float intensity() const { return color_.r; }
 
  private:
-  vec2 direction_;
+  vec3 direction_;
+  vec2 polar_direction_;
   float dispersion_ = 0.0f;
-  float intensity_ = 0.0f;
+  vec3 color_;
 };
 
 }  // namespace escher

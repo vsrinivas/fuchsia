@@ -4,21 +4,26 @@
 
 #pragma once
 
+#include "lib/escher/geometry/types.h"
+
 namespace escher {
 
 // Ambient light is emitted omnidirectionally from infinity.
 class AmbientLight {
  public:
-  AmbientLight();
-  explicit AmbientLight(float intensity);
+  explicit AmbientLight(float intensity = 0.f);
+  explicit AmbientLight(const vec3& color);
   ~AmbientLight();
 
   // The amount of light emitted.
   // TODO(abarth): In what units?
-  float intensity() const { return intensity_; }
+  // TODO(jjosh): deprecated.  Only used for SSDO shadows, and white lights.
+  float intensity() const { return color_.r; }
+
+  const vec3 color() const { return color_; }
 
  private:
-  float intensity_ = 0.0f;
+  vec3 color_;
 };
 
 }  // namespace escher

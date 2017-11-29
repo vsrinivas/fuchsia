@@ -18,6 +18,7 @@
 #include "garnet/bin/ui/scene_manager/resources/image.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe_handler.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/ambient_light.h"
 #include "garnet/bin/ui/scene_manager/resources/lights/directional_light.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
@@ -46,8 +47,6 @@ namespace {
 // this will necessarily involve looking up the value in the ResourceMap.
 constexpr std::array<scenic::Value::Tag, 2> kFloatValueTypes{
     {scenic::Value::Tag::VECTOR1, scenic::Value::Tag::VARIABLE_ID}};
-constexpr std::array<scenic::Value::Tag, 2> kVec3ValueTypes{
-    {scenic::Value::Tag::VECTOR3, scenic::Value::Tag::VARIABLE_ID}};
 
 }  // anonymous namespace
 
@@ -111,8 +110,16 @@ bool Session::ApplyOp(const scenic::OpPtr& op) {
       return ApplySetCameraOp(op->get_set_camera());
     case scenic::Op::Tag::SET_CAMERA_PROJECTION:
       return ApplySetCameraProjectionOp(op->get_set_camera_projection());
-    case scenic::Op::Tag::SET_LIGHT_INTENSITY:
-      return ApplySetLightIntensityOp(op->get_set_light_intensity());
+    case scenic::Op::Tag::SET_LIGHT_COLOR:
+      return ApplySetLightColorOp(op->get_set_light_color());
+    case scenic::Op::Tag::SET_LIGHT_DIRECTION:
+      return ApplySetLightDirectionOp(op->get_set_light_direction());
+    case scenic::Op::Tag::ADD_LIGHT:
+      return ApplyAddLightOp(op->get_add_light());
+    case scenic::Op::Tag::DETACH_LIGHT:
+      return ApplyDetachLightOp(op->get_detach_light());
+    case scenic::Op::Tag::DETACH_LIGHTS:
+      return ApplyDetachLightsOp(op->get_detach_lights());
     case scenic::Op::Tag::SET_TEXTURE:
       return ApplySetTextureOp(op->get_set_texture());
     case scenic::Op::Tag::SET_COLOR:
@@ -164,6 +171,8 @@ bool Session::ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op) {
       return ApplyCreateCamera(id, op->resource->get_camera());
     case scenic::Resource::Tag::RENDERER:
       return ApplyCreateRenderer(id, op->resource->get_renderer());
+    case scenic::Resource::Tag::AMBIENT_LIGHT:
+      return ApplyCreateAmbientLight(id, op->resource->get_ambient_light());
     case scenic::Resource::Tag::DIRECTIONAL_LIGHT:
       return ApplyCreateDirectionalLight(id,
                                          op->resource->get_directional_light());
@@ -514,24 +523,55 @@ bool Session::ApplySetCameraProjectionOp(
   return false;
 }
 
-bool Session::ApplySetLightIntensityOp(
-    const scenic::SetLightIntensityOpPtr& op) {
+bool Session::ApplySetLightColorOp(const scenic::SetLightColorOpPtr& op) {
   // TODO(MZ-123): support variables.
-  if (IsVariable(op->intensity)) {
+  if (op->color->variable_id) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetLightIntensityOp(): "
-           "unimplemented: variable intensity.";
+        << "scene_manager::Session::ApplySetLightColorOp(): "
+           "unimplemented: variable color.";
     return false;
-  } else if (!IsFloat(op->intensity)) {
+  } else if (auto light = resources_.FindResource<Light>(op->light_id)) {
+    return light->SetColor(Unwrap(op->color->value));
+  }
+  return false;
+}
+
+bool Session::ApplySetLightDirectionOp(
+    const scenic::SetLightDirectionOpPtr& op) {
+  // TODO(MZ-123): support variables.
+  if (op->direction->variable_id) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetLightIntensityOp(): "
-           "intensity is not a float.";
+        << "scene_manager::Session::ApplySetLightDirectionOp(): "
+           "unimplemented: variable direction.";
     return false;
   } else if (auto light =
                  resources_.FindResource<DirectionalLight>(op->light_id)) {
-    light->set_intensity(op->intensity->get_vector1());
-    return true;
+    return light->SetDirection(Unwrap(op->direction->value));
   }
+  return false;
+}
+
+bool Session::ApplyAddLightOp(const scenic::AddLightOpPtr& op) {
+  if (auto scene = resources_.FindResource<Scene>(op->scene_id)) {
+    if (auto light = resources_.FindResource<Light>(op->light_id)) {
+      return scene->AddLight(std::move(light));
+    }
+  }
+
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyAddLightOp(): unimplemented.";
+  return false;
+}
+
+bool Session::ApplyDetachLightOp(const scenic::DetachLightOpPtr& op) {
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyDetachLightOp(): unimplemented.";
+  return false;
+}
+
+bool Session::ApplyDetachLightsOp(const scenic::DetachLightsOpPtr& op) {
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyDetachLightsOp(): unimplemented.";
   return false;
 }
 
@@ -604,25 +644,16 @@ bool Session::ApplyCreateRenderer(scenic::ResourceId id,
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
+bool Session::ApplyCreateAmbientLight(scenic::ResourceId id,
+                                      const scenic::AmbientLightPtr& args) {
+  auto light = CreateAmbientLight(id);
+  return light ? resources_.AddResource(id, std::move(light)) : false;
+}
+
 bool Session::ApplyCreateDirectionalLight(
     scenic::ResourceId id,
     const scenic::DirectionalLightPtr& args) {
-  if (!AssertValueIsOfType(args->direction, kVec3ValueTypes) ||
-      !AssertValueIsOfType(args->intensity, kFloatValueTypes)) {
-    return false;
-  }
-
-  // TODO(MZ-123): support variables.
-  if (IsVariable(args->direction) || IsVariable(args->intensity)) {
-    error_reporter_->ERROR()
-        << "scene_manager::Session::ApplyCreateDirectionalLight(): "
-           "unimplemented: variable direction/intensity.";
-    return false;
-  }
-
-  auto light =
-      CreateDirectionalLight(id, Unwrap(args->direction->get_vector3()),
-                             args->intensity->get_vector1());
+  auto light = CreateDirectionalLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
@@ -820,10 +851,12 @@ ResourcePtr Session::CreateRenderer(scenic::ResourceId id,
   return fxl::MakeRefCounted<Renderer>(this, id);
 }
 
-ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id,
-                                            escher::vec3 direction,
-                                            float intensity) {
-  return fxl::MakeRefCounted<DirectionalLight>(this, id, direction, intensity);
+ResourcePtr Session::CreateAmbientLight(scenic::ResourceId id) {
+  return fxl::MakeRefCounted<AmbientLight>(this, id);
+}
+
+ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id) {
+  return fxl::MakeRefCounted<DirectionalLight>(this, id);
 }
 
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
@@ -894,6 +927,10 @@ ResourcePtr Session::CreateVariable(scenic::ResourceId id,
       break;
     case scenic::ValueType::kMatrix4:
       variable = fxl::MakeRefCounted<Matrix4x4Variable>(this, id);
+      break;
+    case scenic::ValueType::kColorRgb:
+      // not yet supported
+      variable = nullptr;
       break;
     case scenic::ValueType::kColorRgba:
       // not yet supported
@@ -1050,7 +1087,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
-        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
+        [ weak = weak_factory_.GetWeakPtr(), presentation_time ] {
           if (weak)
             weak->engine_->ScheduleSessionUpdate(presentation_time,
                                                  SessionPtr(weak.get()));

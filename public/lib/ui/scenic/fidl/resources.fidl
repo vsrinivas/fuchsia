@@ -46,6 +46,7 @@ union Resource {
   Renderer renderer;
 
   // Lighting.
+  AmbientLight ambient_light;
   DirectionalLight directional_light;
 
   // A value that can be used in place of a constant value.
@@ -146,6 +147,13 @@ struct Camera {
 struct Renderer {
 };
 
+// An AmbientLight is a Light that is is assumed to be everywhere in the scene,
+// in all directions.
+//
+// The following operations may be applied to an AmbientLight (see ops.fidl):
+//   - SetLightColor
+struct AmbientLight {};
+
 // A DirectionalLight is a Light that is emitted from a point at infinity.
 //
 // Although the light is directional, the light has some amount of angular
@@ -154,12 +162,9 @@ struct Renderer {
 // primary direction.
 //
 // The following operations may be applied to a DirectionalLight (see ops.fidl):
+//   - SetLightColor
 //   - SetDirection
-//   - SetLightIntensity
-struct DirectionalLight {
-  Value direction;  // vec3.
-  Value intensity;  // float
-};
+struct DirectionalLight {};
 
 // Simple texture-mapped material.
 //

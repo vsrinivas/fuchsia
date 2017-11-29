@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 
 namespace escher {
 class Escher;
@@ -13,6 +13,7 @@ class Image;
 class Model;
 class PaperRenderer;
 class Semaphore;
+class ShadowMapRenderer;
 class Stage;
 using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
@@ -47,7 +48,8 @@ class Compositor : public Resource {
   // into a single output image.  Subclasses determine how to obtain and present
   // the output image.
   void DrawFrame(const FrameTimingsPtr& frame_timings,
-                 escher::PaperRenderer* renderer);
+                 escher::PaperRenderer* renderer,
+                 escher::ShadowMapRenderer* shadow_renderer);
 
  protected:
   escher::Escher* escher() const { return escher_; }
@@ -60,8 +62,8 @@ class Compositor : public Resource {
  private:
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
 
-  void InitStage(escher::Stage* stage, uint32_t width, uint32_t height);
   void DrawLayer(escher::PaperRenderer* escher_renderer,
+                 escher::ShadowMapRenderer* shadow_renderer,
                  Layer* layer,
                  const escher::ImagePtr& output_image,
                  const escher::SemaphorePtr& frame_done_semaphore,

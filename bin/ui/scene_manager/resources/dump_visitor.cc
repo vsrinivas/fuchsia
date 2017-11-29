@@ -16,6 +16,7 @@
 #include "garnet/bin/ui/scene_manager/resources/image.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/ambient_light.h"
 #include "garnet/bin/ui/scene_manager/resources/lights/directional_light.h"
 #include "garnet/bin/ui/scene_manager/resources/material.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
@@ -268,10 +269,21 @@ void DumpVisitor::Visit(Renderer* r) {
   EndItem();
 }
 
+void DumpVisitor::Visit(Light* r) {
+  FXL_CHECK(false) << "implement Visit() in Light subclasses";
+}
+
+void DumpVisitor::Visit(AmbientLight* r) {
+  BeginItem("AmbientLight", r);
+  escher::operator<<(WriteProperty("color"), r->color());
+  VisitResource(r);
+  EndItem();
+}
+
 void DumpVisitor::Visit(DirectionalLight* r) {
   BeginItem("DirectionalLight", r);
   escher::operator<<(WriteProperty("direction"), r->direction());
-  WriteProperty("intensity") << r->intensity();
+  escher::operator<<(WriteProperty("color"), r->color());
   VisitResource(r);
   EndItem();
 }

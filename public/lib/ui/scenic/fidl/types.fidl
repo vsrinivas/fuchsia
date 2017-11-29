@@ -35,6 +35,12 @@ struct ColorRgba {
   uint8 alpha;
 };
 
+struct ColorRgb {
+  float red;
+  float green;
+  float blue;
+};
+
 struct Quaternion {
   float x;
   float y;
@@ -57,6 +63,7 @@ union Value {
   vec4 vector4;
   mat4 matrix4x4;
   ColorRgba color_rgba;
+  ColorRgb color_rgb;
   // Degrees of counter-clockwise rotation in the XY plane.
   float degrees;
   Quaternion quaternion;
@@ -114,6 +121,15 @@ struct Matrix4Value {
 // A value that is specified explicitly by |value| if |variable_id| is zero,
 // or is the value produced by the resource identified by |variable_id|, e.g.
 // an animation or expression.  In the latter case, the value produced by the
+// resource must be a ColorRgb, and |value| is ignored.
+struct ColorRgbValue {
+  ColorRgb value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
 // resource must be a ColorRgba, and |value| is ignored.
 struct ColorRgbaValue {
   ColorRgba value;
@@ -136,6 +152,7 @@ enum ValueType {
   kVector3,
   kVector4,
   kMatrix4,
+  kColorRgb,
   kColorRgba,
   kQuaternion,
   kTransform,

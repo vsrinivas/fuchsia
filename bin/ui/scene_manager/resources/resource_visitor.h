@@ -27,6 +27,8 @@ class Layer;
 class Camera;
 class Renderer;
 class Scene;
+class Light;
+class AmbientLight;
 class DirectionalLight;
 
 class ResourceVisitor {
@@ -60,6 +62,8 @@ class ResourceVisitor {
   virtual void Visit(Scene* r) = 0;
   virtual void Visit(Camera* r) = 0;
   virtual void Visit(Renderer* r) = 0;
+  virtual void Visit(Light* r) = 0;
+  virtual void Visit(AmbientLight* r) = 0;
   virtual void Visit(DirectionalLight* r) = 0;
 
   // Imported resources.

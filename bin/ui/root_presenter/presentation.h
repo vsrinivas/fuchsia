@@ -125,6 +125,8 @@ class Presentation : private mozart::ViewTreeListener,
   // TODO(MZ-254): put camera before scene.
   scenic_lib::Scene scene_;
   scenic_lib::Camera camera_;
+  scenic_lib::AmbientLight ambient_light_;
+  scenic_lib::DirectionalLight directional_light_;
   scenic_lib::EntityNode root_view_host_node_;
   zx::eventpair root_view_host_import_token_;
   scenic_lib::ImportNode root_view_parent_node_;
@@ -133,7 +135,6 @@ class Presentation : private mozart::ViewTreeListener,
   zx::eventpair content_view_host_import_token_;
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
-
   scenic::DisplayInfoPtr display_info_;
   float logical_width_ = 0.f;
   float logical_height_ = 0.f;

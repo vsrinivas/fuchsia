@@ -10,6 +10,7 @@
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/semaphore_wait.h"
 #include "lib/escher/renderer/shadow_map.h"
+#include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/vk/image.h"
@@ -19,6 +20,8 @@
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer_stack.h"
 #include "garnet/bin/ui/scene_manager/resources/dump_visitor.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/ambient_light.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/directional_light.h"
 #include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"
 #include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 
@@ -56,21 +59,64 @@ bool Compositor::SetLayerStack(LayerStackPtr layer_stack) {
   return true;
 }
 
-void Compositor::InitStage(escher::Stage* stage,
-                           uint32_t width,
-                           uint32_t height) {
+// Helper function for DrawLayer().
+static void InitEscherStage(
+    escher::Stage* stage,
+    uint32_t width,
+    uint32_t height,
+    const std::vector<AmbientLightPtr>& ambient_lights,
+    const std::vector<DirectionalLightPtr>& directional_lights) {
   // TODO(MZ-194): Define these properties on the Scene instead of hardcoding
   // them here.
   constexpr float kTop = 1000;
   constexpr float kBottom = 0;
   stage->set_viewing_volume(
       {static_cast<float>(width), static_cast<float>(height), kTop, kBottom});
-  stage->set_key_light(escher::DirectionalLight(
-      escher::vec2(1.5f * M_PI, 1.5f * M_PI), 0.15f * M_PI, 0.7f));
-  stage->set_fill_light(escher::AmbientLight(0.3f));
+
+  if (ambient_lights.empty()) {
+    constexpr float kIntensity = 0.3f;
+    FXL_LOG(WARNING) << "scene_manager::Compositor::InitEscherStage(): no "
+                        "ambient light was provided.  Using one with "
+                        "intensity: "
+                     << kIntensity << ".";
+    stage->set_fill_light(escher::AmbientLight(kIntensity));
+  } else {
+    if (ambient_lights.size() > 1) {
+      FXL_LOG(WARNING)
+          << "scene_manager::Compositor::InitEscherStage(): only a single "
+             "ambient light is supported, but "
+          << ambient_lights.size() << " were provided.  Using the first one.";
+    }
+    stage->set_fill_light(escher::AmbientLight(ambient_lights[0]->color()));
+  }
+
+  if (directional_lights.empty()) {
+    constexpr float kHeading = 1.5f * M_PI;
+    constexpr float kElevation = 1.5f * M_PI;
+    constexpr float kIntensity = 0.3f;
+    FXL_LOG(WARNING) << "scene_manager::Compositor::InitEscherStage(): no "
+                        "directional light was provided (heading: "
+                     << kHeading << ", elevation: " << kElevation
+                     << ", intensity: " << kIntensity << ").";
+    stage->set_key_light(
+        escher::DirectionalLight(escher::vec2(kHeading, kElevation),
+                                 0.15f * M_PI, escher::vec3(kIntensity)));
+  } else {
+    if (directional_lights.size() > 1) {
+      FXL_LOG(WARNING)
+          << "scene_manager::Compositor::InitEscherStage(): only a single "
+             "directional light is supported, but "
+          << directional_lights.size()
+          << " were provided.  Using the first one.";
+    }
+    auto& light = directional_lights[0];
+    stage->set_key_light(escher::DirectionalLight(
+        light->direction(), 0.15f * M_PI, light->color()));
+  }
 }
 
 void Compositor::DrawLayer(escher::PaperRenderer* escher_renderer,
+                           escher::ShadowMapRenderer* shadow_map_renderer,
                            Layer* layer,
                            const escher::ImagePtr& output_image,
                            const escher::SemaphorePtr& frame_done_semaphore,
@@ -93,21 +139,46 @@ void Compositor::DrawLayer(escher::PaperRenderer* escher_renderer,
     return;
   }
 
+  auto& renderer = layer->renderer();
+  auto& scene = renderer->camera()->scene();
+
   escher::Stage stage;
-  InitStage(&stage, output_image->width(), output_image->height());
-  auto renderer = layer->renderer();
+  InitEscherStage(&stage, output_image->width(), output_image->height(),
+                  scene->ambient_lights(), scene->directional_lights());
   escher::Model model(renderer->CreateDisplayList(renderer->camera()->scene(),
                                                   escher::vec2(layer->size())));
   escher::Camera camera =
       renderer->camera()->GetEscherCamera(stage.viewing_volume());
 
-  escher_renderer->DrawFrame(stage, model, camera, output_image,
-                             escher::ShadowMapPtr(), overlay_model,
-                             frame_done_semaphore, nullptr);
+  // Set the renderer's shadow mode, and generate a shadow map if necessary.
+  escher::ShadowMapPtr shadow_map;
+  switch (renderer->shadow_technique()) {
+    case scenic::ShadowTechnique::UNSHADOWED:
+      escher_renderer->set_shadow_type(escher::PaperRendererShadowType::kNone);
+      break;
+    case scenic::ShadowTechnique::SCREEN_SPACE:
+      escher_renderer->set_shadow_type(escher::PaperRendererShadowType::kSsdo);
+      break;
+    case scenic::ShadowTechnique::MOMENT_SHADOW_MAP:
+      FXL_DLOG(WARNING) << "Moment shadow maps not implemented";
+      // fallthrough to regular shadow maps.
+    case scenic::ShadowTechnique::SHADOW_MAP:
+      escher_renderer->set_shadow_type(
+          escher::PaperRendererShadowType::kShadowMap);
+
+      shadow_map = shadow_map_renderer->GenerateDirectionalShadowMap(
+          stage, model, stage.key_light().direction(),
+          stage.key_light().color());
+      break;
+  }
+
+  escher_renderer->DrawFrame(stage, model, camera, output_image, shadow_map,
+                             overlay_model, frame_done_semaphore, nullptr);
 }
 
 void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
-                           escher::PaperRenderer* escher_renderer) {
+                           escher::PaperRenderer* escher_renderer,
+                           escher::ShadowMapRenderer* shadow_renderer) {
   TRACE_DURATION("gfx", "Compositor::DrawFrame");
 
   // Obtain a list of drawable layers.
@@ -141,8 +212,8 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
         vk::Filter::eLinear);
 
     auto semaphore = escher::Semaphore::New(escher()->vk_device());
-    DrawLayer(escher_renderer, drawable_layers[i], texture->image(), semaphore,
-              nullptr);
+    DrawLayer(escher_renderer, shadow_renderer, drawable_layers[i],
+              texture->image(), semaphore, nullptr);
     texture->image()->SetWaitSemaphore(std::move(semaphore));
 
     auto material = escher::Material::New(layer->color(), std::move(texture));
@@ -156,14 +227,14 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   swapchain_->DrawAndPresentFrame(
       frame_timings,
       [
-        this, escher_renderer, layer = drawable_layers[0],
+        this, escher_renderer, shadow_renderer, layer = drawable_layers[0],
         overlay = &overlay_model
       ](const escher::ImagePtr& output_image,
         const escher::SemaphorePtr& acquire_semaphore,
         const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
-        DrawLayer(escher_renderer, layer, output_image, frame_done_semaphore,
-                  overlay);
+        DrawLayer(escher_renderer, shadow_renderer, layer, output_image,
+                  frame_done_semaphore, overlay);
       });
 
   if (FXL_VLOG_IS_ON(3)) {

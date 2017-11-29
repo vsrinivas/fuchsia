@@ -55,8 +55,16 @@ std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
       return stream << "SET_CAMERA";
     case Op::Tag::SET_CAMERA_PROJECTION:
       return stream << "SET_CAMERA_PROJECTION";
-    case Op::Tag::SET_LIGHT_INTENSITY:
-      return stream << "SET_LIGHT_INTENSITY";
+    case Op::Tag::SET_LIGHT_COLOR:
+      return stream << "SET_LIGHT_COLOR";
+    case Op::Tag::SET_LIGHT_DIRECTION:
+      return stream << "SET_LIGHT_DIRECTION";
+    case Op::Tag::ADD_LIGHT:
+      return stream << "ADD_LIGHT";
+    case Op::Tag::DETACH_LIGHT:
+      return stream << "DETACH_LIGHT";
+    case Op::Tag::DETACH_LIGHTS:
+      return stream << "DETACH_LIGHTS";
     case Op::Tag::SET_TEXTURE:
       return stream << "SET_TEXTURE";
     case Op::Tag::SET_COLOR:
@@ -106,6 +114,9 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case Resource::Tag::RENDERER:
       stream << "Renderer";
+      break;
+    case Resource::Tag::AMBIENT_LIGHT:
+      stream << "AmbientLight";
       break;
     case Resource::Tag::DIRECTIONAL_LIGHT:
       stream << "DirectionalLight";
@@ -209,6 +220,8 @@ std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
       return stream << "vec4";
     case Value::Tag::MATRIX4X4:
       return stream << "mat4";
+    case Value::Tag::COLOR_RGB:
+      return stream << "rgb";
     case Value::Tag::COLOR_RGBA:
       return stream << "rgba";
     case Value::Tag::DEGREES:

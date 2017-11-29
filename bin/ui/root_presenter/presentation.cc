@@ -56,6 +56,8 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
       renderer_(&session_),
       scene_(&session_),
       camera_(scene_),
+      ambient_light_(&session_),
+      directional_light_(&session_),
       root_view_host_node_(&session_),
       root_view_parent_node_(&session_),
       content_view_host_node_(&session_),
@@ -82,6 +84,12 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
   renderer_.SetCamera(camera_);
   scene_.AddChild(root_view_host_node_);
 
+  scene_.AddLight(ambient_light_);
+  scene_.AddLight(directional_light_);
+  ambient_light_.SetColor(0.3f, 0.3f, 0.3f);
+  directional_light_.SetColor(0.7f, 0.7f, 0.7f);
+  directional_light_.SetDirection(1.f, 1.f, -2.f);
+
   layer_.SetRenderer(renderer_);
   layer_stack_.AddLayer(layer_);
   compositor_.SetLayerStack(layer_stack_);
@@ -104,15 +112,15 @@ void Presentation::Present(
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scene_manager_->GetDisplayInfo(fxl::MakeCopyable(
-      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
-       presentation_request = std::move(presentation_request)](
-          scenic::DisplayInfoPtr display_info) mutable {
-        if (weak)
-          weak->CreateViewTree(std::move(view_owner),
-                               std::move(presentation_request),
-                               std::move(display_info));
-      }));
+  scene_manager_->GetDisplayInfo(fxl::MakeCopyable([
+    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+    presentation_request = std::move(presentation_request)
+  ](scenic::DisplayInfoPtr display_info) mutable {
+    if (weak)
+      weak->CreateViewTree(std::move(view_owner),
+                           std::move(presentation_request),
+                           std::move(display_info));
+  }));
 }
 
 void Presentation::CreateViewTree(

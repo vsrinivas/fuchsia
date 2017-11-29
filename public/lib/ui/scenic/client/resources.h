@@ -373,12 +373,68 @@ class Variable final : public Resource {
   FXL_DISALLOW_COPY_AND_ASSIGN(Variable);
 };
 
+// Represents an abstract light resource in a session.
+// This type cannot be instantiated, please see subclasses.
+class Light : public Resource {
+ public:
+  // Sets the light's color.
+  void SetColor(float red, float green, float blue) {
+    SetColor((float[3]){red, green, blue});
+  }
+  void SetColor(const float rgb[3]);
+  void SetColor(uint32_t variable_id);
+
+  // Detach light from the scene it is attached to, if any.
+  void Detach();
+
+ protected:
+  explicit Light(Session* session);
+  Light(Light&& moved);
+  ~Light();
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(Light);
+};
+
+// Represents a directional light resource in a session.
+class AmbientLight final : public Light {
+ public:
+  explicit AmbientLight(Session* session);
+  AmbientLight(AmbientLight&& moved);
+  ~AmbientLight();
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(AmbientLight);
+};
+
+// Represents a directional light resource in a session.
+class DirectionalLight final : public Light {
+ public:
+  explicit DirectionalLight(Session* session);
+  DirectionalLight(DirectionalLight&& moved);
+  ~DirectionalLight();
+
+  // Sets the light's direction.
+  void SetDirection(float dx, float dy, float dz) {
+    SetDirection((float[3]){dx, dy, dz});
+  }
+  void SetDirection(const float direction[3]);
+  void SetDirection(uint32_t variable_id);
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(DirectionalLight);
+};
+
 // Represents a scene resource in a session.
 class Scene final : public ContainerNode {
  public:
   explicit Scene(Session* session);
   Scene(Scene&& moved);
   ~Scene();
+
+  void AddLight(const Light& light) { AddLight(light.id()); }
+  void AddLight(uint32_t light_id);
+  void DetachLights();
 
  private:
   void Detach() = delete;
@@ -416,6 +472,9 @@ class Renderer final : public Resource {
   void SetCamera(uint32_t camera_id);
 
   void SetParam(scenic::RendererParamPtr param);
+
+  // Convenient wrapper for SetParam().
+  void SetShadowTechnique(scenic::ShadowTechnique technique);
 
   // Set whether clipping is disabled for this renderer.
   // NOTE: disabling clipping only has a visual effect; hit-testing is not

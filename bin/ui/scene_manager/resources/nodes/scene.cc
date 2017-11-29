@@ -4,6 +4,9 @@
 
 #include "garnet/bin/ui/scene_manager/resources/nodes/scene.h"
 
+#include "garnet/bin/ui/scene_manager/resources/lights/ambient_light.h"
+#include "garnet/bin/ui/scene_manager/resources/lights/directional_light.h"
+
 namespace scene_manager {
 
 const ResourceTypeInfo Scene::kTypeInfo = {
@@ -12,7 +15,27 @@ const ResourceTypeInfo Scene::kTypeInfo = {
 Scene::Scene(Session* session, scenic::ResourceId node_id)
     : Node(session, node_id, Scene::kTypeInfo) {}
 
+Scene::~Scene() = default;
+
+bool Scene::AddLight(const LightPtr& light) {
+  if (light->IsKindOf<AmbientLight>()) {
+    // TODO: check for duplicates.
+    ambient_lights_.push_back(
+        AmbientLightPtr(static_cast<AmbientLight*>(light.get())));
+    return true;
+  } else if (light->IsKindOf<DirectionalLight>()) {
+    // TODO: check for duplicates.
+    directional_lights_.push_back(
+        DirectionalLightPtr(static_cast<DirectionalLight*>(light.get())));
+    return true;
+  }
+  error_reporter()->ERROR()
+      << "scene_manager::Scene::AddLight(): unrecognized light type.";
+  return false;
+}
+
 bool Scene::Detach() {
+  // Skip Node's default implementation; use Resource's instead.
   return Resource::Detach();
 }
 

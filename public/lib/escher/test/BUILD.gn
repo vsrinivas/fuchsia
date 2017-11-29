@@ -17,6 +17,7 @@ executable("escher_unittests") {
     "mesh_spec_unittest.cc",
     "object_unittest.cc",
     "run_all_unittests.cc",
+    "scene/directional_light_unittest.cc",
     "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",
   ]

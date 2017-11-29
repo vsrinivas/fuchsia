@@ -66,16 +66,6 @@ class SsdoSampler {
               const TexturePtr& accelerator_texture,
               const SamplerConfig* push_constants);
 
-  // Same algorithm as Sample(), implemented with a compute kernel instead of
-  // a fragment shader.  Currently very inefficient, but keeping around for
-  // experimentation: it seems that there's no fundamental reason that this
-  // version cannot exceed the performance of the fragment shader version.
-  // TODO: improve or delete.
-  void SampleUsingKernel(CommandBuffer* command_buffer,
-                         const TexturePtr& depth_texture,
-                         const TexturePtr& output_texture,
-                         const SamplerConfig* push_constants);
-
   // Filter the noisy output from Sample().  This should be called twice, to
   // filter in a horizontal and a vertical direction (the direction is selected
   // by the FilterConfig's 'stride' parameter).
@@ -97,7 +87,6 @@ class SsdoSampler {
   vk::RenderPass render_pass_;
   PipelinePtr sampler_pipeline_;
   PipelinePtr filter_pipeline_;
-  ComputeShader sampler_kernel_;
 };
 
 }  // namespace impl

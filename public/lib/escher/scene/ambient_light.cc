@@ -6,9 +6,9 @@
 
 namespace escher {
 
-AmbientLight::AmbientLight(float intensity) : intensity_() {}
+AmbientLight::AmbientLight(float intensity) : color_(vec3(intensity)) {}
 
-AmbientLight::AmbientLight() {}
+AmbientLight::AmbientLight(const vec3& color) : color_(color) {}
 
 AmbientLight::~AmbientLight() {}
 

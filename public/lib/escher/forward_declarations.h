@@ -33,6 +33,7 @@ class Renderer;
 class RenderPass;
 class Semaphore;
 class ShadowMap;
+class ShadowMapRenderer;
 class Shape;
 class Stage;
 class Texture;
@@ -56,6 +57,7 @@ typedef fxl::RefPtr<Renderer> RendererPtr;
 typedef fxl::RefPtr<RenderPass> RenderPassPtr;
 typedef fxl::RefPtr<Semaphore> SemaphorePtr;
 typedef fxl::RefPtr<ShadowMap> ShadowMapPtr;
+typedef fxl::RefPtr<ShadowMapRenderer> ShadowMapRendererPtr;
 typedef fxl::RefPtr<Texture> TexturePtr;
 typedef fxl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
 

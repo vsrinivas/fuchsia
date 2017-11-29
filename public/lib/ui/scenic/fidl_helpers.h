@@ -47,6 +47,8 @@ scenic::OpPtr NewCreateLayerOp(uint32_t id);
 scenic::OpPtr NewCreateSceneOp(uint32_t id);
 scenic::OpPtr NewCreateCameraOp(uint32_t id, uint32_t scene_id);
 scenic::OpPtr NewCreateRendererOp(uint32_t id);
+scenic::OpPtr NewCreateAmbientLightOp(uint32_t id);
+scenic::OpPtr NewCreateDirectionalLightOp(uint32_t id);
 
 scenic::OpPtr NewCreateCircleOp(uint32_t id, float radius);
 scenic::OpPtr NewCreateRectangleOp(uint32_t id, float width, float height);
@@ -135,6 +137,14 @@ scenic::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
                                        const float eye_look_at[3],
                                        const float eye_up[3],
                                        float fovy);
+scenic::OpPtr NewSetLightColorOp(uint32_t light_id, const float rgb[3]);
+scenic::OpPtr NewSetLightColorOp(uint32_t light_id, uint32_t variable_id);
+scenic::OpPtr NewSetLightDirectionOp(uint32_t light_id,
+                                     const float direction[3]);
+scenic::OpPtr NewSetLightDirectionOp(uint32_t light_id, uint32_t variable_id);
+scenic::OpPtr NewAddLightOp(uint32_t scene_id, uint32_t light_id);
+scenic::OpPtr NewDetachLightOp(uint32_t light_id);
+scenic::OpPtr NewDetachLightsOp(uint32_t scene_id);
 
 // Material operations.
 scenic::OpPtr NewSetTextureOp(uint32_t node_id, uint32_t image_id);
@@ -184,13 +194,19 @@ scenic::OpPtr NewSetDisableClippingOp(uint32_t resource_id,
 // Basic types.
 scenic::FloatValuePtr NewFloatValue(float value);
 scenic::Vector2ValuePtr NewVector2Value(const float value[2]);
-scenic::Vector3ValuePtr NewVector3Value(uint32_t variable_id);
+scenic::Vector2ValuePtr NewVector2Value(uint32_t variable_id);
 scenic::Vector3ValuePtr NewVector3Value(const float value[3]);
+scenic::Vector3ValuePtr NewVector3Value(uint32_t variable_id);
 scenic::Vector4ValuePtr NewVector4Value(const float value[4]);
+scenic::Vector4ValuePtr NewVector4Value(uint32_t variable_id);
 scenic::QuaternionValuePtr NewQuaternionValue(const float value[4]);
 scenic::QuaternionValuePtr NewQuaternionValue(uint32_t variable_id);
 scenic::Matrix4ValuePtr NewMatrix4Value(const float value[16]);
+scenic::Matrix4ValuePtr NewMatrix4Value(uint32_t variable_id);
+scenic::ColorRgbValuePtr NewColorRgbValue(float red, float green, float blue);
+scenic::ColorRgbValuePtr NewColorRgbValue(uint32_t variable_id);
 scenic::ColorRgbaValuePtr NewColorRgbaValue(const uint8_t value[4]);
+scenic::ColorRgbaValuePtr NewColorRgbaValue(uint32_t variable_id);
 scenic::QuaternionValuePtr NewQuaternionValue(const float value[4]);
 
 }  // namespace scenic_lib

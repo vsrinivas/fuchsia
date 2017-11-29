@@ -140,6 +140,7 @@ class Engine : private FrameSchedulerDelegate {
   DisplayManager* const display_manager_;
   escher::Escher* const escher_;
   escher::PaperRendererPtr paper_renderer_;
+  escher::ShadowMapRendererPtr shadow_renderer_;
 
   ResourceLinker resource_linker_;
   EventTimestamper event_timestamper_;
