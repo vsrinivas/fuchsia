@@ -48,6 +48,8 @@ KEYWORD(As, "as")
 KEYWORD(Module, "module")
 KEYWORD(Using, "using")
 
+KEYWORD(Status, "status")
+
 KEYWORD(Array, "array")
 KEYWORD(Handle, "handle")
 KEYWORD(Request, "request")

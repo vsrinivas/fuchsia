@@ -150,6 +150,7 @@ struct IdentifierType : public Type {
 struct PrimitiveType : public Type {
     enum struct TypeKind {
         Bool,
+        Status,
         Int8,
         Int16,
         Int32,
