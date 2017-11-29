@@ -679,6 +679,7 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
 }
 
 std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
+    std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
     std::vector<std::unique_ptr<InterfaceMemberMethod>> method_members;
@@ -686,9 +687,21 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
     ConsumeToken(Token::Kind::Interface);
     if (!Ok())
         return Fail();
+
     auto identifier = ParseIdentifier();
     if (!Ok())
         return Fail();
+
+    if (MaybeConsumeToken(Token::Kind::Colon)) {
+        for (;;) {
+            superinterfaces.emplace_back(ParseCompoundIdentifier());
+            if (!Ok())
+                return Fail();
+            if (!MaybeConsumeToken(Token::Kind::Comma))
+                break;
+        }
+    }
+
     ConsumeToken(Token::Kind::LeftCurly);
     if (!Ok())
         return Fail();
@@ -723,8 +736,8 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
     if (!Ok())
         Fail();
 
-    return std::make_unique<InterfaceDeclaration>(std::move(identifier), std::move(const_members),
-                                                  std::move(enum_members),
+    return std::make_unique<InterfaceDeclaration>(std::move(identifier), std::move(superinterfaces),
+                                                  std::move(const_members), std::move(enum_members),
                                                   std::move(method_members));
 }
 

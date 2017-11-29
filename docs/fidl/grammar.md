@@ -61,8 +61,11 @@ enum-member = IDENTIFIER , ( "=" , enum-member-value ) ;
 
 enum-member-value = IDENTIFIER | NUMERIC-LITERAL ;
 
-interface-declaration = "interface" , IDENTIFIER ,
+interface-declaration = "interface" , IDENTIFIER , ( ":" , super-interface-list ) ,
                         "{" , ( interface-member , ";" )*  , "}" ;
+
+super-interface-list = compound-identifier
+                     | compound-identifier , "," , super-interface-list
 
 interface-member = interface-method | const-declaration | enum-declaration ;
 

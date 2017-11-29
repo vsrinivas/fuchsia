@@ -5,3 +5,11 @@ interface Foo {
     2: SomeMethodWithAResponse() -> ();
     3: event SomeEvent(int32 response);
 }
+
+interface Bar {
+    4: DoIt();
+}
+
+interface FooAndBarWaitTheresMore : Foo, Bar {
+    5: MoreMoreMore();
+}
