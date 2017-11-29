@@ -435,7 +435,7 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
                                                      const audio_proto::StreamGetFmtsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     size_t formats_sent = 0;
-    audio_proto::StreamGetFmtsResp resp;
+    audio_proto::StreamGetFmtsResp resp = { };
 
     if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
         LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
@@ -476,7 +476,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     ZX_DEBUG_ASSERT(channel != nullptr);
 
     zx::channel client_rb_channel;
-    audio_proto::StreamSetFmtResp resp;
+    audio_proto::StreamSetFmtResp resp = { };
     bool found_one = false;
 
     resp.hdr = req.hdr;
@@ -624,6 +624,8 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
 
 finished:
     if (resp.result == ZX_OK) {
+        // TODO(johngro): Report the actual external delay.
+        resp.external_delay_nsec = 0;
         return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
     } else {
         return channel->Write(&resp, sizeof(resp));
@@ -633,7 +635,7 @@ finished:
 zx_status_t UsbAudioStream::OnGetGainLocked(dispatcher::Channel* channel,
                                             const audio_proto::GetGainReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-    audio_proto::GetGainResp resp;
+    audio_proto::GetGainResp resp = { };
 
     resp.hdr       = req.hdr;
     resp.cur_mute  = false;
@@ -652,7 +654,7 @@ zx_status_t UsbAudioStream::OnSetGainLocked(dispatcher::Channel* channel,
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
-    audio_proto::SetGainResp resp;
+    audio_proto::SetGainResp resp = { };
     resp.hdr = req.hdr;
 
     bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE);
@@ -672,7 +674,7 @@ zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
-    audio_proto::PlugDetectResp resp;
+    audio_proto::PlugDetectResp resp = { };
     resp.hdr   = req.hdr;
     resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
                                                        AUDIO_PDNF_PLUGGED);
@@ -683,7 +685,7 @@ zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
 
 zx_status_t UsbAudioStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
                                                  const audio_proto::RingBufGetFifoDepthReq& req) {
-    audio_proto::RingBufGetFifoDepthResp resp;
+    audio_proto::RingBufGetFifoDepthResp resp = { };
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
@@ -694,7 +696,7 @@ zx_status_t UsbAudioStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
 
 zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
                                               const audio_proto::RingBufGetBufferReq& req) {
-    audio_proto::RingBufGetBufferResp resp;
+    audio_proto::RingBufGetBufferResp resp = { };
     zx::vmo client_rb_handle;
     uint32_t map_flags, client_rights;
 
@@ -720,7 +722,7 @@ zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
     ring_buffer_size_  = req.min_ring_buffer_frames;
     ring_buffer_size_ *= frame_size_;
     if (ring_buffer_size_ < fifo_bytes_)
-        ring_buffer_size_ = fifo_bytes_;
+        ring_buffer_size_ = fbl::round_up(fifo_bytes_, frame_size_);
 
     // Set up our state for generating notifications.
     if (req.notifications_per_ring) {
@@ -763,6 +765,7 @@ zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
         LOG("Failed to duplicate ring buffer handle (res %d)\n", resp.result);
         goto finished;
     }
+    resp.num_ring_buffer_frames = ring_buffer_size_ / frame_size_;
 
 finished:
     zx_status_t res;
@@ -781,9 +784,8 @@ finished:
 
 zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
                                           const audio_proto::RingBufStartReq& req) {
-    audio_proto::RingBufStartResp resp;
+    audio_proto::RingBufStartResp resp = { };
     resp.hdr = req.hdr;
-    resp.start_ticks = 0;
 
     fbl::AutoLock req_lock(&req_lock_);
 
@@ -860,7 +862,7 @@ zx_status_t UsbAudioStream::OnStopLocked(dispatcher::Channel* channel,
     // transactions instead of having an intermediate STOPPING state we use to
     // wait for the transactions in flight to finish via RequestComplete.
     if (ring_buffer_state_ != RingBufferState::STARTED) {
-        audio_proto::RingBufStopResp resp;
+        audio_proto::RingBufStopResp resp = { };
 
         req_lock.release();
         resp.hdr = req.hdr;
@@ -890,7 +892,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         audio_proto::RingBufPositionNotify notify_pos;
     } resp;
 
-    uint64_t complete_time = zx_ticks_get();
+    uint64_t complete_time = zx_time_get(ZX_CLOCK_MONOTONIC);
     Action when_finished = Action::NONE;
 
     // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
@@ -986,7 +988,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
                 // Then we can accurately report the start time as the time of
                 // the tick on which we scheduled the first transaction.
                 resp.start.result = ZX_OK;
-                resp.start.start_ticks = complete_time - ticks_per_msec_;
+                resp.start.start_time = complete_time - ZX_MSEC(1);
                 rb_channel_->Write(&resp.start, sizeof(resp.start));
             }
             {

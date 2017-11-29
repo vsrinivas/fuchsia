@@ -175,6 +175,7 @@ typedef struct audio_stream_cmd_set_format_req {
 typedef struct audio_stream_cmd_set_format_resp {
     audio_cmd_hdr_t hdr;
     zx_status_t     result;
+    uint64_t        external_delay_nsec;
 
     // Note: Upon success, a channel used to control the audio buffer will also
     // be returned.
@@ -303,6 +304,7 @@ typedef struct audio_rb_cmd_get_buffer_req {
 typedef struct audio_rb_cmd_get_buffer_resp {
     audio_cmd_hdr_t hdr;
     zx_status_t     result;
+    uint32_t        num_ring_buffer_frames;
 
     // NOTE: If result == ZX_OK, a VMO handle representing the ring buffer to
     // be used will be returned as well.  Clients may map this buffer with
@@ -324,11 +326,7 @@ typedef struct audio_rb_cmd_start_req {
 typedef struct audio_rb_cmd_start_resp {
     audio_cmd_hdr_t hdr;
     zx_status_t     result;
-
-    // Nominal time at which the first frame of audio started to be clocked out
-    // to the codec as measured by zx_ticks_get().
-    //
-    uint64_t start_ticks;
+    uint64_t        start_time;
 } audio_rb_cmd_start_resp_t;
 
 // AUDIO_RB_CMD_STOP

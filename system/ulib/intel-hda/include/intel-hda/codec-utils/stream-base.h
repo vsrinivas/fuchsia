@@ -167,7 +167,7 @@ private:
     zx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
     zx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
-    fbl::RefPtr<dispatcher::Channel>         stream_channel_    __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<dispatcher::Channel>       stream_channel_    __TA_GUARDED(obj_lock_);
     fbl::Vector<audio_proto::FormatRange>  supported_formats_ __TA_GUARDED(obj_lock_);
 
     uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;

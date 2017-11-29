@@ -338,7 +338,7 @@ zx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
         const audio_proto::RingBufGetFifoDepthReq& req) {
     ZX_DEBUG_ASSERT(channel_ != nullptr);
 
-    audio_proto::RingBufGetFifoDepthResp resp;
+    audio_proto::RingBufGetFifoDepthResp resp = { };
     resp.hdr = req.hdr;
 
     // We don't know what our FIFO depth is going to be if our format has not
@@ -358,13 +358,12 @@ zx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
 zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req) {
     zx::vmo ring_buffer_vmo;
     zx::vmo client_rb_handle;
-    audio_proto::RingBufGetBufferResp resp;
+    audio_proto::RingBufGetBufferResp resp = { };
     uint64_t tmp;
     uint32_t rb_size;
 
     ZX_DEBUG_ASSERT(channel_ != nullptr);
 
-    memset(&resp, 0, sizeof(resp));
     resp.hdr    = req.hdr;
     resp.result = ZX_ERR_INTERNAL;
 
@@ -560,6 +559,9 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     cyclic_buffer_length_ = rb_size;
     bdl_last_valid_index_ = static_cast<uint16_t>(entry - 1);
 
+    ZX_DEBUG_ASSERT((rb_size % bytes_per_frame_) == 0);
+    resp.num_ring_buffer_frames = rb_size / bytes_per_frame_;
+
 finished:
     if (resp.result == ZX_OK) {
         // Success.  DMA is set up and ready to go.  If we manage to send the
@@ -575,12 +577,11 @@ finished:
 }
 
 zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartReq& req) {
-    audio_proto::RingBufStartResp resp;
+    audio_proto::RingBufStartResp resp = { };
     uint32_t ctl_val;
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
-    resp.start_ticks = 0;
 
     // We cannot start unless we have configured the ring buffer and are not already started.
     if (!ring_buffer_vmo_.is_valid() || running_) {
@@ -639,7 +640,7 @@ zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartRe
                                  HDA_SD_REG_STS32_ACK;
         REG_SET_BITS(&regs_->ctl_sts.w, SET);
         hw_wmb();
-        resp.start_ticks = zx_ticks_get();
+        resp.start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
     }
 
     // Success, we are now running.
@@ -650,7 +651,7 @@ finished:
 }
 
 zx_status_t IntelHDAStream::ProcessStopLocked(const audio_proto::RingBufStopReq& req) {
-    audio_proto::RingBufStopResp resp;
+    audio_proto::RingBufStopResp resp = { };
     resp.hdr = req.hdr;
 
     if (running_) {

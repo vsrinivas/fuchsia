@@ -230,7 +230,7 @@ zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     ZX_DEBUG_ASSERT(ring_buffer_channel.is_valid());
 
     fbl::AutoLock obj_lock(&obj_lock_);
-    audio_proto::StreamSetFmtResp resp;
+    audio_proto::StreamSetFmtResp resp = { };
     zx_status_t res = ZX_OK;
 
     // Are we shutting down?
@@ -256,6 +256,7 @@ zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
     resp.hdr.transaction_id = set_format_tid_;
     resp.result = ZX_OK;
+    resp.external_delay_nsec = 0;   // report his properly based on the codec path delay.
     res = stream_channel_->Write(&resp, sizeof(resp), fbl::move(ring_buffer_channel));
 
 finished:
@@ -394,7 +395,7 @@ zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* ch
                                                          const audio_proto::StreamGetFmtsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     size_t formats_sent = 0;
-    audio_proto::StreamGetFmtsResp resp;
+    audio_proto::StreamGetFmtsResp resp = { };
 
     if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
         LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
@@ -520,7 +521,7 @@ zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(dispatcher::Channel* cha
     return ZX_OK;
 
 send_fail_response:
-    audio_proto::StreamSetFmtResp resp;
+    audio_proto::StreamSetFmtResp resp = { };
     resp.hdr = fmt.hdr;
     resp.result = res;
 
@@ -536,7 +537,7 @@ zx_status_t IntelHDAStreamBase::DoGetGainLocked(dispatcher::Channel* channel,
                                                 const audio_proto::GetGainReq& req) {
     // Fill out the response header, then let the stream implementation fill out
     // the payload.
-    audio_proto::GetGainResp resp;
+    audio_proto::GetGainResp resp = { };
     resp.hdr = req.hdr;
     OnGetGainLocked(&resp);
 
@@ -554,7 +555,7 @@ zx_status_t IntelHDAStreamBase::DoSetGainLocked(dispatcher::Channel* channel,
 
     // Fill out the response header, then let the stream implementation fill out
     // the payload.
-    audio_proto::SetGainResp resp;
+    audio_proto::SetGainResp resp = { };
     resp.hdr = req.hdr;
     OnSetGainLocked(req, &resp);
 
@@ -572,7 +573,7 @@ zx_status_t IntelHDAStreamBase::DoPlugDetectLocked(dispatcher::Channel* channel,
 
     // Fill out the response header, then let the stream implementation fill out
     // the payload.
-    audio_proto::PlugDetectResp resp;
+    audio_proto::PlugDetectResp resp = { };
     resp.hdr = req.hdr;
     OnPlugDetectLocked(channel, req, &resp);
 

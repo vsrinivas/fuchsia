@@ -342,10 +342,11 @@ zx_status_t TdmOutputStream::OnGetStreamFormatsLocked(dispatcher::Channel* chann
                                                       const audio_proto::StreamGetFmtsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     uint16_t formats_sent = 0;
-    audio_proto::StreamGetFmtsResp resp;
+    audio_proto::StreamGetFmtsResp resp = { };
 
     if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
-        zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+        zxlogf(ERROR,
+                "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
                supported_formats_.size());
         return ZX_ERR_INTERNAL;
     }
@@ -382,7 +383,7 @@ zx_status_t TdmOutputStream::OnSetStreamFormatLocked(dispatcher::Channel* channe
     ZX_DEBUG_ASSERT(channel != nullptr);
 
     zx::channel client_rb_channel;
-    audio_proto::StreamSetFmtResp resp;
+    audio_proto::StreamSetFmtResp resp = { };
     bool found_one = false;
 
     resp.hdr = req.hdr;
@@ -459,6 +460,8 @@ zx_status_t TdmOutputStream::OnSetStreamFormatLocked(dispatcher::Channel* channe
 
 finished:
     if (resp.result == ZX_OK) {
+        // TODO(johngro): Report the actual external delay.
+        resp.external_delay_nsec = 0;
         return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
     } else {
         return channel->Write(&resp, sizeof(resp));
@@ -468,7 +471,7 @@ finished:
 zx_status_t TdmOutputStream::OnGetGainLocked(dispatcher::Channel* channel,
                                              const audio_proto::GetGainReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-    audio_proto::GetGainResp resp;
+    audio_proto::GetGainResp resp = { };
 
     resp.hdr = req.hdr;
     resp.cur_mute = false;
@@ -487,7 +490,7 @@ zx_status_t TdmOutputStream::OnSetGainLocked(dispatcher::Channel* channel,
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
-    audio_proto::SetGainResp resp;
+    audio_proto::SetGainResp resp = { };
     resp.hdr = req.hdr;
 
 
@@ -515,7 +518,7 @@ zx_status_t TdmOutputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
-    audio_proto::PlugDetectResp resp;
+    audio_proto::PlugDetectResp resp = { };
     resp.hdr = req.hdr;
     resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
                                                       AUDIO_PDNF_PLUGGED);
@@ -524,7 +527,7 @@ zx_status_t TdmOutputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
 
 zx_status_t TdmOutputStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
                                                   const audio_proto::RingBufGetFifoDepthReq& req) {
-    audio_proto::RingBufGetFifoDepthResp resp;
+    audio_proto::RingBufGetFifoDepthResp resp = { };
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
@@ -556,7 +559,7 @@ zx_status_t TdmOutputStream::SetModuleClocks() {
 
 zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
                                                const audio_proto::RingBufGetBufferReq& req) {
-    audio_proto::RingBufGetBufferResp resp;
+    audio_proto::RingBufGetBufferResp resp = { };
     zx::vmo client_rb_handle;
     uint32_t client_rights;
 
@@ -573,7 +576,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
     ring_buffer_size_ = req.min_ring_buffer_frames;
     ring_buffer_size_ *= frame_size_;
     if (ring_buffer_size_ < fifo_bytes_)
-        ring_buffer_size_ = fifo_bytes_;
+        ring_buffer_size_ = fbl::round_up(fifo_bytes_, frame_size_);
 
     // TODO - (hollande) Make this work with non contig vmo
     resp.result = pdev_alloc_contig_vmo(&pdev_, ring_buffer_size_, 0,
@@ -585,13 +588,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
         goto finished;
     }
 
-    uint64_t vsize;
     uint32_t bytes_per_notification;
-
-    ring_buffer_vmo_.get_size(&vsize);
-    ZX_DEBUG_ASSERT(vsize <= fbl::numeric_limits<uint32_t>::max());
-    ring_buffer_size_ = static_cast<uint32_t>(vsize);
-
     if (req.notifications_per_ring) {
         bytes_per_notification = ring_buffer_size_ / req.notifications_per_ring;
     } else {
@@ -616,6 +613,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
         zxlogf(ERROR, "Failed to duplicate ring buffer handle (res %d)\n", resp.result);
         goto finished;
     }
+    resp.num_ring_buffer_frames = ring_buffer_size_ / frame_size_;
 
 finished:
     zx_status_t res;
@@ -642,7 +640,7 @@ zx_status_t TdmOutputStream::ProcessRingNotification() {
         notify_timer_->Cancel();
     }
 
-    audio_proto::RingBufPositionNotify resp;
+    audio_proto::RingBufPositionNotify resp = { };
     resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
     resp.ring_buffer_pos = regs_->frddr[2].status2 - ring_buffer_phys_;
@@ -665,7 +663,7 @@ zx_status_t TdmOutputStream::OnStartLocked(dispatcher::Channel* channel,
         notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
     }
 
-    audio_proto::RingBufStartResp resp;
+    audio_proto::RingBufStartResp resp = { };
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
@@ -699,7 +697,7 @@ zx_status_t TdmOutputStream::OnStartLocked(dispatcher::Channel* channel,
     //enable tdmout
     regs_->tdmout[TDM_OUT_C].ctl0 |= (1 << 31);
 
-    resp.start_ticks = zx_ticks_get();
+    resp.start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
     return channel->Write(&resp, sizeof(resp));
 }
 
@@ -708,7 +706,7 @@ zx_status_t TdmOutputStream::OnStopLocked(dispatcher::Channel* channel,
     notify_timer_->Cancel();
     regs_->tdmout[TDM_OUT_C].ctl0 &= ~(1 << 31);
     running_ = false;
-    audio_proto::RingBufStopResp resp;
+    audio_proto::RingBufStopResp resp = { };
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
     return channel->Write(&resp, sizeof(resp));

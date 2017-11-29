@@ -452,6 +452,8 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second,
                 frames_per_second, channels, sample_format, res);
     }
 
+    external_delay_nsec_ = resp.external_delay_nsec;
+
     // TODO(johngro) : Verify the type of this handle before transferring it to
     // our ring buffer channel handle.
     rb_ch_.reset(tmp.release());
@@ -484,6 +486,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
         fifo_depth_ = resp.fifo_depth;
     }
 
+    uint64_t rb_sz;
     {
         // Get a VMO representing the ring buffer we will share with the audio driver.
         audio_rb_cmd_get_buffer_req_t  req;
@@ -505,22 +508,25 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
             return res;
         }
 
+        rb_sz = static_cast<uint64_t>(resp.num_ring_buffer_frames) * frame_sz_;
+
         // TODO(johngro) : Verify the type of this handle before transferring it to our VMO handle.
         rb_vmo_.reset(tmp.release());
     }
 
-    // We have the buffer, fetch the size the driver finally decided on.
-    uint64_t rb_sz;
-    res = rb_vmo_.get_size(&rb_sz);
+    // We have the buffer, fetch the underlying size of the VMO (a rounded up
+    // multiple of pages) and sanity check it against the effective size the
+    // driver reported.
+    uint64_t rb_page_sz;
+    res = rb_vmo_.get_size(&rb_page_sz);
     if (res != ZX_OK) {
         printf("Failed to fetch ring buffer VMO size (res %d)\n", res);
         return res;
     }
 
-    // Sanity check the size and stash it if it checks out.
-    if ((rb_sz > fbl::numeric_limits<decltype(rb_sz_)>::max()) || ((rb_sz % frame_sz_) != 0)) {
-        printf("Bad VMO size returned by audio driver! (size = %" PRIu64 " frame_sz = %u)\n",
-                rb_sz, frame_sz_);
+    if ((rb_sz > fbl::numeric_limits<decltype(rb_sz_)>::max()) || (rb_sz > rb_page_sz)) {
+        printf("Bad ring buffer size returned by audio driver! "
+               "(kernel size = %lu driver size = %lu)\n", rb_page_sz,  rb_sz);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -561,7 +567,7 @@ zx_status_t AudioDeviceStream::StartRingBuffer() {
     zx_status_t res = DoCall(rb_ch_, req, &resp);
 
     if (res == ZX_OK) {
-        start_ticks_ = resp.start_ticks;
+        start_time_ = resp.start_time;
     }
 
     return res;
@@ -571,7 +577,7 @@ zx_status_t AudioDeviceStream::StopRingBuffer() {
     if (rb_ch_ == ZX_HANDLE_INVALID)
         return ZX_ERR_BAD_STATE;
 
-    start_ticks_ = 0;
+    start_time_ = 0;
 
     audio_rb_cmd_stop_req_t  req;
     audio_rb_cmd_stop_resp_t resp;

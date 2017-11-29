@@ -271,14 +271,14 @@ GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
 
     return ZX_ERR_NOT_SUPPORTED;
 }
-#undef HANDLE_REQ
+#undef HREQ
 
 zx_status_t GaussPdmInputStream::OnGetStreamFormats(
     dispatcher::Channel* channel, const audio_proto::StreamGetFmtsReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
     ZX_DEBUG_ASSERT(channel != nullptr);
     uint16_t formats_sent = 0;
-    audio_proto::StreamGetFmtsResp resp;
+    audio_proto::StreamGetFmtsResp resp = { };
 
     if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
         zxlogf(ERROR, "Too many formats (%zu) to send during "
@@ -326,7 +326,7 @@ GaussPdmInputStream::OnSetStreamFormat(dispatcher::Channel* channel,
     ZX_DEBUG_ASSERT(channel != nullptr);
 
     zx::channel client_rb_channel;
-    audio_proto::StreamSetFmtResp resp;
+    audio_proto::StreamSetFmtResp resp = { };
 
     resp.hdr = req.hdr;
 
@@ -399,7 +399,10 @@ GaussPdmInputStream::OnSetStreamFormat(dispatcher::Channel* channel,
     a113_audio_register_toddr(&audio_device_);
 
 finished:
-    if (resp.result != ZX_OK) {
+    if (resp.result == ZX_OK) {
+        // TODO(johngro): Report the actual external delay.
+        resp.external_delay_nsec = 0;
+    } else {
         fbl::AutoLock lock(&lock_);
 
         if (rb_channel_) {
@@ -466,7 +469,7 @@ zx_status_t GaussPdmInputStream::OnGetGain(dispatcher::Channel* channel,
     zxlogf(DEBUG1, "%s\n", __func__);
 
     ZX_DEBUG_ASSERT(channel != nullptr);
-    audio_proto::GetGainResp resp;
+    audio_proto::GetGainResp resp = { };
 
     resp.hdr = req.hdr;
     resp.cur_mute = false;
@@ -485,7 +488,7 @@ zx_status_t GaussPdmInputStream::OnSetGain(dispatcher::Channel* channel,
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
-    audio_proto::SetGainResp resp;
+    audio_proto::SetGainResp resp = { };
     resp.hdr = req.hdr;
 
     // We don't support setting gain for now.
@@ -502,7 +505,7 @@ GaussPdmInputStream::OnPlugDetect(dispatcher::Channel* channel,
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return ZX_OK;
 
-    audio_proto::PlugDetectResp resp;
+    audio_proto::PlugDetectResp resp = { };
     resp.hdr = req.hdr;
     resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
                                                       AUDIO_PDNF_PLUGGED);
@@ -514,7 +517,7 @@ zx_status_t GaussPdmInputStream::OnGetFifoDepth(
     const audio_proto::RingBufGetFifoDepthReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
-    audio_proto::RingBufGetFifoDepthResp resp;
+    audio_proto::RingBufGetFifoDepthResp resp = { };
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
@@ -528,7 +531,7 @@ GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
                                  const audio_proto::RingBufGetBufferReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
-    audio_proto::RingBufGetBufferResp resp;
+    audio_proto::RingBufGetBufferResp resp = { };
     zx::vmo client_rb_handle;
     uint32_t client_rights;
 
@@ -548,6 +551,25 @@ GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
 
     ring_buffer_size_.store(fbl::round_up(period_size * notifications_per_ring,
                                           static_cast<uint32_t>(PAGE_SIZE)));
+
+    // TODO(johngro) : Come back here and fix this.  Right now, we know that our
+    // frame size is always going to be 16 bytes (8 channels, 2 bytes per
+    // channel), and that our ring buffer size is always going to be a multiple
+    // of pages (4k, hence divisible by 16), so this should always be the case.
+    //
+    // Moving forward, if we ever want to support other frame sizes (in
+    // particular, things which may not be a power of two), it would be good to
+    // make this code more generic.  We have a few requirements to obey,
+    // however.  Not only must the ring buffer size be a multiple of frame size,
+    // it must also be a multiple of 8; hence a multiple of LCM(frame_size, 8).
+    // It would be really handy to have a fbl:: version of fbl::gcd and fbl::lcm
+    // to handle these calulations.  Perhaps, by the time that I come back and
+    // address this, we will.
+    if (ring_buffer_size_.load() % frame_size_) {
+        zxlogf(ERROR, "Frame size (%u) does not divide ring buffer size (%zu)\n",
+                frame_size_, ring_buffer_size_.load());
+        goto finished;
+    }
 
     notifications_per_ring_.store(req.notifications_per_ring);
 
@@ -603,6 +625,11 @@ GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
         goto finished;
     }
 
+    ZX_DEBUG_ASSERT((ring_buffer_size_.load() / frame_size_) <=
+                    fbl::numeric_limits<decltype(resp.num_ring_buffer_frames)>::max());
+    resp.num_ring_buffer_frames =
+        static_cast<decltype(resp.num_ring_buffer_frames)>(ring_buffer_size_.load() / frame_size_);
+
 finished:
     zx_status_t res;
     if (resp.result == ZX_OK) {
@@ -620,13 +647,13 @@ GaussPdmInputStream::OnStart(dispatcher::Channel* channel,
                              const audio_proto::RingBufStartReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
-    audio_proto::RingBufStartResp resp;
+    audio_proto::RingBufStartResp resp = { };
     resp.hdr = req.hdr;
 
     a113_pdm_fifo_reset(&audio_device_);
     a113_toddr_enable(&audio_device_, 1);
     a113_pdm_enable(&audio_device_, 1);
-    resp.start_ticks = zx_ticks_get();
+    resp.start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     resp.result = ZX_OK;
     return channel->Write(&resp, sizeof(resp));
@@ -637,7 +664,7 @@ GaussPdmInputStream::OnStop(dispatcher::Channel* channel,
                             const audio_proto::RingBufStopReq& req) {
     zxlogf(DEBUG1, "%s\n", __func__);
 
-    audio_proto::RingBufStopResp resp;
+    audio_proto::RingBufStopResp resp = { };
 
     a113_toddr_enable(&audio_device_, 0);
     a113_pdm_enable(&audio_device_, 0);

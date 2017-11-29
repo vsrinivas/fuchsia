@@ -175,7 +175,6 @@ private:
 
     const int       usb_index_;
     const zx_time_t create_time_;
-    const uint64_t  ticks_per_msec_ = zx_ticks_per_second() / 1000u;
 
     // TODO(johngro) : See MG-940.  eliminate this ASAP
     bool req_complete_prio_bumped_ = false;

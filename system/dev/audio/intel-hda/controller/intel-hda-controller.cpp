@@ -337,8 +337,7 @@ zx_status_t IntelHDAController::DriverBind(void* ctx,
     }
 
     // Initialize our device and fill out the protocol hooks
-    device_add_args_t args;
-    memset(&args, 0, sizeof(args));
+    device_add_args_t args = { };
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "intel-hda-controller";
     {
