@@ -9,6 +9,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 namespace vmofs {
@@ -49,12 +50,10 @@ uint32_t VnodeFile::GetVType() {
 }
 
 zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
-    if (flags & O_DIRECTORY) {
+    if (flags & ZX_FS_FLAG_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
-    switch (flags & O_ACCMODE) {
-    case O_WRONLY:
-    case O_RDWR:
+    if (flags & ZX_FS_RIGHT_WRITABLE) {
         return ZX_ERR_ACCESS_DENIED;
     }
     return ZX_OK;
