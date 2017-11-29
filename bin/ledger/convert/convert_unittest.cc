@@ -76,23 +76,6 @@ TEST(Convert, ToFlatBufferVector) {
   EXPECT_EQ(str, result);
 }
 
-TEST(Convert, ToIdStorage) {
-  IdStorage id_storage;
-  unsigned char id[sizeof(id_storage)];
-
-  for (unsigned char i = 0; i < sizeof(id); ++i) {
-    id[i] = i;
-  }
-  id_storage = *reinterpret_cast<IdStorage*>(id);
-
-  ExtendedStringView str_view = &id_storage;
-
-  IdStorage id_storage2 = *str_view;
-
-  EXPECT_EQ(0, memcmp(&id_storage, &id_storage2, sizeof(id_storage2)));
-  EXPECT_EQ(0, memcmp(id, &id_storage2, sizeof(id_storage2)));
-}
-
 TEST(Convert, ImplicitConversion) {
   std::string str = "Hello";
   ExtendedStringView esv(str);

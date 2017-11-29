@@ -23,6 +23,22 @@
 
 namespace storage {
 
+namespace {
+
+static_assert(sizeof(IdStorage) == kCommitIdSize,
+              "storage size for id is incorrect");
+
+const IdStorage* ToIdStorage(CommitIdView id) {
+  return reinterpret_cast<const IdStorage*>(id.data());
+}
+
+CommitIdView ToCommitIdView(const IdStorage* id_storage) {
+  return CommitIdView(fxl::StringView(reinterpret_cast<const char*>(id_storage),
+                                      sizeof(IdStorage)));
+}
+
+}  // namespace
+
 class CommitImpl::SharedStorageBytes
     : public fxl::RefCountedThreadSafe<SharedStorageBytes> {
  public:
@@ -66,9 +82,9 @@ std::string SerializeCommit(
 
   auto parents_id = builder.CreateVectorOfStructs(
       parent_commits.size(),
-      static_cast<std::function<void(size_t, convert::IdStorage*)>>(
-          [&parent_commits](size_t i, convert::IdStorage* child_storage) {
-            *child_storage = *convert::ToIdStorage(parent_commits[i]->GetId());
+      static_cast<std::function<void(size_t, IdStorage*)>>(
+          [&parent_commits](size_t i, IdStorage* child_storage) {
+            *child_storage = *ToIdStorage(parent_commits[i]->GetId());
           }));
 
   auto root_node_storage = ToObjectIdentifierStorage(
@@ -125,7 +141,7 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage,
   std::vector<CommitIdView> parent_ids;
 
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
-    parent_ids.emplace_back(commit_storage->parents()->Get(i));
+    parent_ids.emplace_back(ToCommitIdView(commit_storage->parents()->Get(i)));
   }
   commit->reset(new CommitImpl(page_storage, std::move(id),
                                commit_storage->timestamp(),

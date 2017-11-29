@@ -5,14 +5,14 @@
 #ifndef PERIDOT_BIN_LEDGER_CONVERT_CONVERT_H_
 #define PERIDOT_BIN_LEDGER_CONVERT_CONVERT_H_
 
+#include <string>
+
+#include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
 #include <rapidjson/document.h>
-#include <string>
 
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/convert/bytes_generated.h"
-#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace convert {
 
@@ -48,16 +48,9 @@ class ExtendedStringView : public fxl::StringView {
       const flatbuffers::Vector<uint8_t>* byte_storage)
       : fxl::StringView(reinterpret_cast<const char*>(byte_storage->data()),
                         byte_storage->size()) {}
-  ExtendedStringView(const IdStorage* id_storage)  // NOLINT
-      : fxl::StringView(reinterpret_cast<const char*>(id_storage),
-                        sizeof(IdStorage)) {}
 
   operator leveldb::Slice() const {  // NOLINT
     return leveldb::Slice(data(), size());
-  }
-  operator const IdStorage*() const {  // NOLINT
-    FXL_DCHECK(size() == sizeof(IdStorage));
-    return reinterpret_cast<const IdStorage*>(data());
   }
 
   fidl::Array<uint8_t> ToArray();
@@ -75,11 +68,6 @@ inline ExtendedStringView ToStringView(ExtendedStringView value) {
 
 // Returns the representation of the given value in LevelDB.
 inline leveldb::Slice ToSlice(ExtendedStringView value) {
-  return value;
-}
-
-// Returns the representation of the given value as an IdStorage.
-inline const IdStorage* ToIdStorage(ExtendedStringView value) {
   return value;
 }
 

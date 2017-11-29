@@ -28,7 +28,6 @@ flatbuffer("commit_storage") {
 
   public_deps = [
     ":object_identifier",
-    "//peridot/bin/ledger/convert:byte_storage",
   ]
 
   extra_configs = [ "//peridot/bin/ledger:ledger_config" ]

@@ -20,8 +20,8 @@ source_set("convert") {
   ]
 
   public_deps = [
-    ":byte_storage",
     "//garnet/public/lib/fxl",
+    "//third_party/flatbuffers",
     "//third_party/leveldb",
     "//third_party/rapidjson",
     "//zircon/system/ulib/zx",
@@ -30,23 +30,11 @@ source_set("convert") {
   configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
-flatbuffer("byte_storage") {
-  sources = [
-    "bytes.fbs",
-  ]
-
-  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
-}
-
 flatbuffer("byte_storage_test") {
   testonly = true
 
   sources = [
     "bytes_test.fbs",
-  ]
-
-  public_deps = [
-    ":byte_storage",
   ]
 
   extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
