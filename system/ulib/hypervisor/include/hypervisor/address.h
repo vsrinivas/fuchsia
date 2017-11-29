@@ -47,6 +47,10 @@
 #define PL011_PHYS_BASE                 0xfff32000
 #define PL011_SIZE                      PAGE_SIZE
 
+// PL031 memory range.
+#define PL031_PHYS_BASE                 0x09010000
+#define PL031_SIZE                      PAGE_SIZE
+
 // I8250 ports.
 #define I8250_BASE0                     0x3f8
 #define I8250_BASE1                     0x2f8
