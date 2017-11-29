@@ -73,15 +73,17 @@ declare -r ROOTFS=${ROOTFS:-/tmp/toybox/rootfs.ext2}
 [ -f "${INITRD}" ] && GUEST_MANIFEST+=$'\n'"data/initrd=${INITRD}"
 [ -f "${ROOTFS}" ] && GUEST_MANIFEST+=$'\n'"data/rootfs.ext2=${ROOTFS}"
 
+grep -v 'config/devmgr' boot.manifest > guest-boot.manifest
+../build-zircon/tools/mkbootfs \
+    --target=boot \
+    -o guest-bootdata.bin \
+    guest-boot.manifest \
+    $GUEST_BOOTDATA
+
 echo "\
     data/zircon.bin=${ZIRCON}
     data/bootdata.bin=guest-bootdata.bin
     ${GUEST_MANIFEST}" > guest.manifest
-../build-zircon/tools/mkbootfs \
-    --target=boot \
-    -o guest-bootdata.bin \
-    boot.manifest \
-    $GUEST_BOOTDATA
 ../build-zircon/tools/mkbootfs \
     --target=system \
     -o host-bootdata.bin \
