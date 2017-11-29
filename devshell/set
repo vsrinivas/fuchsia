@@ -157,9 +157,11 @@ function main {
   if [[ -n "${packages}" ]]; then
     gen_args="${gen_args} --packages ${packages}"
   else
+    local -r jiri_manifest="${FUCHSIA_DIR}/.jiri_manifest"
+
     # TODO(pylaligand): remove this check once the Fuchsia population has moved
     # away from that specific manifest.
-    if grep -q "\"fuchsia\"" "${FUCHSIA_DIR}/.jiri_manifest"; then
+    if grep -q "\"fuchsia\"" "${jiri_manifest}"; then
       echo -e "You are using the obsolete 'fuchsia' manifest."
       echo -e "Please switch to the Topaz manifest instead: fx set-layer topaz"
       return 1
@@ -169,21 +171,26 @@ function main {
     # have a mechanism for switching between layers or for selecting which
     # layers to build from source.
 
-    # If both of the cases below trigger, gen.py will error out because gen.py
+    # If multiple cases below trigger, gen.py will error out because gen.py
     # doesn't support multiple --packages arguments. However, we shouldn't get
     # into this situation because jiri would have already errored out due to the
     # conflicting version requirements of importing 2+ layers at the same time.
 
-    if grep -q "manifest/garnet" "${FUCHSIA_DIR}/.jiri_manifest"; then
+    if grep -q "manifest/garnet" "${jiri_manifest}"; then
       gen_args="${gen_args} --packages garnet/packages/default"
     fi
 
-    if grep -q "manifest/peridot" "${FUCHSIA_DIR}/.jiri_manifest"; then
+    if grep -q "manifest/peridot" "${jiri_manifest}"; then
       gen_args="${gen_args} --packages peridot/packages/default"
     fi
 
-    if grep -q "manifest/topaz" "${FUCHSIA_DIR}/.jiri_manifest"; then
+    if grep -q "manifest/topaz" "${jiri_manifest}"; then
       gen_args="${gen_args} --packages topaz/packages/default"
+    fi
+
+    if [[ `cat ${jiri_manifest}` =~ vendor/([a-zA-Z0-9_-]+) ]]; then
+      local -r name="${BASH_REMATCH[1]}"
+      gen_args="${gen_args} --packages vendor/${name}/packages/default"
     fi
   fi
 
