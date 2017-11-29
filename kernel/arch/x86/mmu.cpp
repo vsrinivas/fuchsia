@@ -1330,8 +1330,8 @@ zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
     return pt_->UnmapPages(vaddr, count, unmapped);
 }
 
-zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
-                                 uint mmu_flags, size_t* mapped) {
+zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
+                                           uint mmu_flags, size_t* mapped) {
     if (!IsValidVaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
 

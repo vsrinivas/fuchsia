@@ -697,8 +697,8 @@ zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attr
     return ret;
 }
 
-zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
-                                 uint mmu_flags, size_t* mapped) {
+zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
+                                           uint mmu_flags, size_t* mapped) {
     canary_.Assert();
     LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n",
             vaddr, paddr, count, mmu_flags);

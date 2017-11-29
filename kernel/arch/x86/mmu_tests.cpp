@@ -35,14 +35,14 @@ static bool mmu_tests(void* context) {
         // Map a single page to force the lower PDP of the target region
         // to be created
         size_t mapped;
-        err = aspace.Map(va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+        err = aspace.MapContiguous(va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, ZX_OK, "map single page");
         EXPECT_EQ(mapped, 1u, "map single page");
         EXPECT_EQ(aspace.pt_pages(), 4u,
                   "map single page, PDP, PD and PT tables allocated");
 
         // Map the last page of the region
-        err = aspace.Map(va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+        err = aspace.MapContiguous(va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, ZX_OK, "map last page");
         EXPECT_EQ(mapped, 1u, "map single page");
         EXPECT_EQ(aspace.pt_pages(), 6u,
@@ -95,7 +95,7 @@ static bool mmu_tests(void* context) {
         // Map a single page to force the lower PDP of the target region
         // to be created
         size_t mapped;
-        err = aspace.Map(va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+        err = aspace.MapContiguous(va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, ZX_OK, "map single page");
         EXPECT_EQ(mapped, 1u, "map single page");
         EXPECT_EQ(aspace.pt_pages(), 4u,
@@ -135,7 +135,7 @@ static bool mmu_tests(void* context) {
         static const size_t alloc_size = 1UL << PD_SHIFT;
 
         size_t mapped;
-        err = aspace.Map(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
+        err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
         EXPECT_EQ(err, ZX_OK, "map large page");
         EXPECT_EQ(mapped, 512u, "map large page");
         EXPECT_EQ(aspace.pt_pages(), 3u, "map large page");

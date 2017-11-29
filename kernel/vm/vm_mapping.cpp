@@ -446,7 +446,8 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         // Only perform the MMU mapping if the pages have non-empty permissions
         if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_RWX_MASK) {
             size_t mapped;
-            zx_status_t ret = aspace_->arch_aspace().Map(va, pa, 1, arch_mmu_flags_, &mapped);
+            zx_status_t ret = aspace_->arch_aspace().MapContiguous(va, pa, 1, arch_mmu_flags_,
+                                                                   &mapped);
             if (ret != ZX_OK) {
                 TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
                 return ret;
@@ -633,7 +634,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             }
 
             size_t mapped;
-            status = aspace_->arch_aspace().Map(va, new_pa, 1, mmu_flags, &mapped);
+            status = aspace_->arch_aspace().MapContiguous(va, new_pa, 1, mmu_flags, &mapped);
             if (status < 0) {
                 TRACEF("failed to map replacement page\n");
                 return ZX_ERR_NO_MEMORY;
@@ -651,7 +652,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
         DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
         size_t mapped;
-        status = aspace_->arch_aspace().Map(va, new_pa, 1, mmu_flags, &mapped);
+        status = aspace_->arch_aspace().MapContiguous(va, new_pa, 1, mmu_flags, &mapped);
         if (status < 0) {
             TRACEF("failed to map page\n");
             return ZX_ERR_NO_MEMORY;

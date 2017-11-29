@@ -331,7 +331,8 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
 
         size_t mapped;
         auto err =
-            aspace->arch_aspace().Map(argv[3].u, argv[2].u, (uint)argv[4].u, (uint)argv[5].u, &mapped);
+            aspace->arch_aspace().MapContiguous(argv[3].u, argv[2].u, (uint)argv[4].u,
+                                                (uint)argv[5].u, &mapped);
         printf("arch_mmu_map returns %d, mapped %zu\n", err, mapped);
     } else if (!strcmp(argv[1].str, "unmap")) {
         if (argc < 4)

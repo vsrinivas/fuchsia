@@ -39,11 +39,15 @@ public:
     virtual zx_status_t Destroy() = 0;
 
     // main methods
-    virtual zx_status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count,
-                            uint mmu_flags, size_t* mapped) = 0;
 
+    // Map a physically contiguous region into the virtual address space
+    virtual zx_status_t MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
+                                      uint mmu_flags, size_t* mapped) = 0;
+
+    // Unmap the given virtual address range
     virtual zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) = 0;
 
+    // Change the page protections on the given virtual address range
     virtual zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) = 0;
 
     virtual zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) = 0;
