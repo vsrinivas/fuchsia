@@ -109,7 +109,7 @@ where
     unsafe {
         zircon::Status::from_raw(fdio_sys::fdio_watch_directory(
             dir.as_raw_fd(),
-            &mut Some(watcher_cb::<F>),
+            Some(watcher_cb::<F>),
             deadline,
             cb_ptr,
         ))

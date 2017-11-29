@@ -1627,7 +1627,7 @@ extern "C" {
     pub fn fdio_service_clone(h: zx_handle_t) -> zx_handle_t;
     pub fn fdio_watch_directory(
         dirfd: raw::c_int,
-        cb: *mut watchdir_func_t,
+        cb: watchdir_func_t,
         deadline: zx_time_t,
         cookie: *mut raw::c_void,
     ) -> zx_status_t;
