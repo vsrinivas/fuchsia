@@ -285,6 +285,7 @@ def main():
 
         # Update the various paths to the binary sources and locate the desired
         # binary if applicable.
+        base = None
         if "bin" in config:
             for bin in config["bin"]:
                 if "name" in bin:
