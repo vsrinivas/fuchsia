@@ -19,11 +19,11 @@ On the host system, run the following from the Fuchsia root (ex: the same
 directory that contains `.jiri_root`):
 ```
 # Optional: Build Linux, an initial RAM disk, and an EXT2 file-system.
-zircon/system/uapp/guest/scripts/mklinux.sh
-zircon/system/uapp/guest/scripts/mksysroot.sh -ri
+garnet/bin/guest/scripts/mklinux.sh
+garnet/bin/guest/scripts/mksysroot.sh -ri
 
 # Optional: Build a GPT disk image for Zircon guests.
-zircon/system/uapp/guest/scripts/mkgpt.sh
+garnet/bin/guest/scripts/mkgpt.sh
 
 # This will assemble all the boot images and start the bootserver. It will be
 # ready to netboot once you see:
@@ -36,40 +36,40 @@ garnet/bin/guest/scripts/build.sh x86
 
 After netbooting the target device, to run Zircon:
 ```
-guest -r /boot/data/bootdata.bin /boot/data/zircon.bin
+guest -r /system/data/bootdata.bin /system/data/zircon.bin
 ```
 
 To run Zircon using a GPT disk image:
 ```
 guest \
-    -b /boot/data/zircon.gpt \
-    -r /boot/data/bootdata.bin \
-    /boot/data/zircon.bin
+    -b /system/data/zircon.gpt \
+    -r /system/data/bootdata.bin \
+    /system/data/zircon.bin
 ```
 
 ### Linux guest
 
 After netbooting the target device, to run Linux using an initial RAM disk:
 ```
-guest -r /boot/data/initrd /boot/data/bzImage
+guest -r /system/data/initrd /system/data/bzImage
 ```
 
 To run Linux using a **read-only** EXT2 root file-system:
 ```
 guest \
-    -b /boot/data/rootfs.ext2 \
+    -b /system/data/rootfs.ext2 \
     -c 'root=/dev/vda ro init=/init' \
-    /boot/data/bzImage
+    /system/data/bzImage
 ```
 
 To run Linux using a **writable** EXT2 root file-system:
 ```
-cp /boot/data/rootfs.ext2 /boot/data/rootfs-rw.ext2
+cp /system/data/rootfs.ext2 /system/data/rootfs-rw.ext2
 
 guest \
-    -b /boot/data/rootfs-rw.ext2 \
+    -b /system/data/rootfs-rw.ext2 \
     -c 'root=/dev/vda rw init=/init' \
-    /boot/data/bzImage
+    /system/data/bzImage
 ```
 
 Linux also supports an interactive graphical framebuffer:
@@ -77,9 +77,9 @@ Linux also supports an interactive graphical framebuffer:
 ```
 guest \
     -g \
-    -r /boot/data/initrd \
+    -r /system/data/initrd \
     -c 'console=tty0' \
-    /boot/data/bzImage
+    /system/data/bzImage
 ```
 
 This will cause the guest to gain control of the framebuffer. Keyboard HID
