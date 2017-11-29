@@ -10,12 +10,17 @@
 #include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
 #include <zircon/assert.h>
-
 #include <zx/time.h>
+
+#include <limits.h>
 
 // clang-format off
 
-/* Local APIC register addresses. */
+// Local APIC memory range.
+static const uint64_t kLocalApicPhysBase        = 0xfee00000;
+static const uint64_t kLocalApicSize            = PAGE_SIZE;
+
+// Local APIC register addresses.
 static const uint64_t kLocalApicId              = 0x020;
 static const uint64_t kLocalApicVersion         = 0x030;
 static const uint16_t kLocalApicEoi             = 0x0b0;
@@ -210,7 +215,7 @@ LocalApic::LocalApic(Vcpu* vcpu, uintptr_t apic_addr)
     : vcpu_(vcpu), registers_(reinterpret_cast<Registers*>(apic_addr)), timer_(this) {}
 
 zx_status_t LocalApic::Init(Guest* guest) {
-    return guest->CreateMapping(TrapType::MMIO_SYNC, LOCAL_APIC_PHYS_BASE, LOCAL_APIC_SIZE, 0,
+    return guest->CreateMapping(TrapType::MMIO_SYNC, kLocalApicPhysBase, kLocalApicSize, 0,
                                 this);
 }
 

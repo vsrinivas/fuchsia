@@ -5,6 +5,7 @@
 #include <hypervisor/x86/acpi.h>
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
