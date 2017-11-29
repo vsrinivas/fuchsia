@@ -32,6 +32,8 @@
 // separately.
 #define NUM_CHANNELS 2
 
+#define NUM_WAIT_ITEMS NUM_CHANNELS + 1 // add one item for the changed event
+
 // Uncomment these to force using a particular Bluetooth module
 // #define USB_VID 0x0a12  // CSR
 // #define USB_PID 0x0001
@@ -45,7 +47,10 @@ typedef struct {
     zx_handle_t acl_channel;
     zx_handle_t snoop_channel;
 
-    zx_wait_item_t read_wait_items[NUM_CHANNELS];
+    // Signaled when a channel opens or closes
+    zx_handle_t channels_changed_evt;
+
+    zx_wait_item_t read_wait_items[NUM_WAIT_ITEMS];
     uint32_t read_wait_item_count;
 
     bool read_thread_running;
@@ -81,25 +86,13 @@ static void queue_interrupt_requests_locked(hci_t* hci) {
     }
 }
 
-static void cmd_channel_cleanup_locked(hci_t* hci) {
-    if (hci->cmd_channel == ZX_HANDLE_INVALID) return;
+static void channel_cleanup_locked(hci_t* hci, zx_handle_t* channel) {
+    if (*channel == ZX_HANDLE_INVALID)
+        return;
 
-    zx_handle_close(hci->cmd_channel);
-    hci->cmd_channel = ZX_HANDLE_INVALID;
-}
-
-static void acl_channel_cleanup_locked(hci_t* hci) {
-    if (hci->acl_channel == ZX_HANDLE_INVALID) return;
-
-    zx_handle_close(hci->acl_channel);
-    hci->acl_channel = ZX_HANDLE_INVALID;
-}
-
-static void snoop_channel_cleanup_locked(hci_t* hci) {
-    if (hci->snoop_channel == ZX_HANDLE_INVALID) return;
-
-    zx_handle_close(hci->snoop_channel);
-    hci->snoop_channel = ZX_HANDLE_INVALID;
+    zx_handle_close(*channel);
+    *channel = ZX_HANDLE_INVALID;
+    zx_object_signal(hci->channels_changed_evt, 0, ZX_EVENT_SIGNALED);
 }
 
 static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes, size_t length) {
@@ -113,7 +106,7 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
     zx_status_t status = zx_channel_write(hci->snoop_channel, 0, snoop_buffer, length + 1, NULL, 0);
     if (status < 0) {
         printf("usb-bt-hci: failed to write to snoop channel: %s\n", zx_status_get_string(status));
-        snoop_channel_cleanup_locked(hci);
+        channel_cleanup_locked(hci, &hci->snoop_channel);
     }
 }
 
@@ -263,7 +256,13 @@ static void hci_build_read_wait_items_locked(hci_t* hci) {
         count++;
     }
 
+    items[count].handle = hci->channels_changed_evt;
+    items[count].waitfor = ZX_EVENT_SIGNALED;
+    count++;
+
     hci->read_wait_item_count = count;
+
+    zx_object_signal(hci->channels_changed_evt, ZX_EVENT_SIGNALED, 0);
 }
 
 static void hci_build_read_wait_items(hci_t* hci) {
@@ -274,7 +273,7 @@ static void hci_build_read_wait_items(hci_t* hci) {
 
 // Returns false if there's an error while sending the packet to the hardware or
 // if the channel peer closed its endpoint.
-static bool hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
+static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
     if (cmd_item->pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED)) {
         uint8_t buf[CMD_BUF_SIZE];
         uint32_t length = sizeof(buf);
@@ -298,24 +297,23 @@ static bool hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
         mtx_unlock(&hci->mutex);
     }
 
-    return true;
+    return;
 
 fail:
     mtx_lock(&hci->mutex);
-    cmd_channel_cleanup_locked(hci);
+    channel_cleanup_locked(hci, &hci->cmd_channel);
     mtx_unlock(&hci->mutex);
-
-    return false;
 }
 
-static bool hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
+static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
     if (acl_item->pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED)) {
         mtx_lock(&hci->mutex);
         list_node_t* node = list_peek_head(&hci->free_acl_write_reqs);
         mtx_unlock(&hci->mutex);
 
         // We don't have enough reqs. Simply punt the channel read until later.
-        if (!node) return node;
+        if (!node)
+            return;
 
         uint8_t buf[BT_HCI_MAX_FRAME_SIZE];
         uint32_t length = sizeof(buf);
@@ -333,7 +331,8 @@ static bool hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
 
         // At this point if we don't get a free node from |free_acl_write_reqs| that means that
         // they were cleaned up in hci_release(). Just drop the packet.
-        if (!node) return true;
+        if (!node)
+            return;
 
         usb_request_t* req = containerof(node, usb_request_t, node);
         usb_request_copyto(req, buf, length, 0);
@@ -341,14 +340,17 @@ static bool hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         usb_request_queue(&hci->usb, req);
     }
 
-    return true;
+    return;
 
 fail:
     mtx_lock(&hci->mutex);
-    acl_channel_cleanup_locked(hci);
+    channel_cleanup_locked(hci, &hci->acl_channel);
     mtx_unlock(&hci->mutex);
+}
 
-    return false;
+static bool hci_has_read_channels_locked(hci_t* hci) {
+    // One for the signal event, any additional are read channels.
+    return hci->read_wait_item_count > 1;
 }
 
 static int hci_read_thread(void* arg) {
@@ -356,10 +358,11 @@ static int hci_read_thread(void* arg) {
 
     mtx_lock(&hci->mutex);
 
-    if (hci->read_wait_item_count == 0) {
+    if (!hci_has_read_channels_locked(hci)) {
         printf("hci_read_thread: no channels are open - exiting\n");
+        hci->read_thread_running = false;
         mtx_unlock(&hci->mutex);
-        goto done;
+        return 0;
     }
 
     mtx_unlock(&hci->mutex);
@@ -368,41 +371,41 @@ static int hci_read_thread(void* arg) {
         zx_status_t status = zx_object_wait_many(
             hci->read_wait_items, hci->read_wait_item_count, ZX_TIME_INFINITE);
         if (status < 0) {
-            printf("hci_read_thread: zx_object_wait_many failed: %s\n",
+            printf("hci_read_thread: zx_object_wait_many failed (%s) - exiting\n",
                    zx_status_get_string(status));
             mtx_lock(&hci->mutex);
-            cmd_channel_cleanup_locked(hci);
-            acl_channel_cleanup_locked(hci);
+            channel_cleanup_locked(hci, &hci->cmd_channel);
+            channel_cleanup_locked(hci, &hci->acl_channel);
             mtx_unlock(&hci->mutex);
             break;
         }
 
-        for (unsigned i = 0; i < NUM_CHANNELS; ++i) {
+        for (unsigned i = 0; i < hci->read_wait_item_count; ++i) {
             mtx_lock(&hci->mutex);
             zx_wait_item_t item = hci->read_wait_items[i];
             mtx_unlock(&hci->mutex);
 
-            zx_handle_t handle = hci->read_wait_items[i].handle;
-            if ((handle == hci->cmd_channel && !hci_handle_cmd_read_events(hci, &item)) ||
-                (handle == hci->acl_channel && !hci_handle_acl_read_events(hci, &item))) {
-                // There was an error while handling the read events. Rebuild the
-                // wait items array to see if any channels are still open.
-                hci_build_read_wait_items(hci);
-                if (hci->read_wait_item_count == 0) {
-                    printf("hci_read_thread: all channels closed - exiting\n");
-                    goto done;
-                }
+            if (item.handle == hci->cmd_channel) {
+                hci_handle_cmd_read_events(hci, &item);
+            } else if (item.handle == hci->acl_channel) {
+                hci_handle_acl_read_events(hci, &item);
+            }
+        }
+
+        // The channels might have been changed by the *_read_events, recheck the event.
+        status = zx_object_wait_one(hci->channels_changed_evt, ZX_EVENT_SIGNALED, 0u, NULL);
+        if (status == ZX_OK) {
+            hci_build_read_wait_items(hci);
+            if (!hci_has_read_channels_locked(hci)) {
+                printf("hci_read_thread: all channels closed - exiting\n");
+                break;
             }
         }
     }
 
-done:
     mtx_lock(&hci->mutex);
     hci->read_thread_running = false;
     mtx_unlock(&hci->mutex);
-
-    printf("hci_read_thread: exiting\n");
-
     return 0;
 }
 
@@ -413,88 +416,54 @@ static zx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
 
     mtx_lock(&hci->mutex);
 
+    zx_handle_t* channel = NULL;
+
     if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-        zx_handle_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) {
-            result = ZX_ERR_BUFFER_TOO_SMALL;
-            goto done;
-        }
-
-        if (hci->cmd_channel != ZX_HANDLE_INVALID) {
-            result = ZX_ERR_ALREADY_BOUND;
-            goto done;
-        }
-
-        zx_handle_t remote_end;
-        zx_status_t status = zx_channel_create(0, &hci->cmd_channel, &remote_end);
-        if (status < 0) {
-            printf("hci_ioctl: Failed to create command channel: %s\n",
-                   zx_status_get_string(status));
-            result = ZX_ERR_INTERNAL;
-            goto done;
-        }
-
-        *reply = remote_end;
-        *out_actual = sizeof(*reply);
-        result = ZX_OK;
+        channel = &hci->cmd_channel;
     } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-        zx_handle_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) {
-            result = ZX_ERR_BUFFER_TOO_SMALL;
-            goto done;
-        }
-
-        if (hci->acl_channel != ZX_HANDLE_INVALID) {
-            result = ZX_ERR_ALREADY_BOUND;
-            goto done;
-        }
-
-        zx_handle_t remote_end;
-        zx_status_t status = zx_channel_create(0, &hci->acl_channel, &remote_end);
-        if (status < 0) {
-            printf("hci_ioctl: Failed to create ACL data channel: %s\n",
-                   zx_status_get_string(status));
-            result = ZX_ERR_INTERNAL;
-            goto done;
-        }
-
-        *reply = remote_end;
-        *out_actual = sizeof(*reply);
-        result = ZX_OK;
+        channel = &hci->acl_channel;
     } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-        zx_handle_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) {
-            result = ZX_ERR_BUFFER_TOO_SMALL;
-            goto done;
-        }
-
-        if (hci->snoop_channel != ZX_HANDLE_INVALID) {
-            result = ZX_ERR_ALREADY_BOUND;
-            goto done;
-        }
-
-        zx_handle_t remote_end;
-        zx_status_t status = zx_channel_create(0, &hci->snoop_channel, &remote_end);
-        if (status < 0) {
-            printf("hci_ioctl: Failed to create snoop channel: %s\n",
-                   zx_status_get_string(status));
-            result = ZX_ERR_INTERNAL;
-            goto done;
-        }
-
-        *reply = remote_end;
-        *out_actual = sizeof(*reply);
-        result = ZX_OK;
+        channel = &hci->snoop_channel;
     }
 
-    hci_build_read_wait_items_locked(hci);
+    if (!channel) {
+        goto done;
+    }
+
+    zx_handle_t* reply = out_buf;
+    if (out_len < sizeof(*reply)) {
+        result = ZX_ERR_BUFFER_TOO_SMALL;
+        goto done;
+    }
+
+    if (*channel != ZX_HANDLE_INVALID) {
+        result = ZX_ERR_ALREADY_BOUND;
+        goto done;
+    }
+
+    zx_handle_t remote_end;
+    zx_status_t status = zx_channel_create(0, channel, &remote_end);
+    if (status < 0) {
+        printf("hci_ioctl: Failed to create channel: %s\n",
+               zx_status_get_string(status));
+        result = ZX_ERR_INTERNAL;
+        goto done;
+    }
+
+    *reply = remote_end;
+    *out_actual = sizeof(*reply);
+    result = ZX_OK;
 
     // Kick off the hci_read_thread if it's not already running.
     if (result == ZX_OK && !hci->read_thread_running) {
+        hci_build_read_wait_items_locked(hci);
         thrd_t read_thread;
         thrd_create_with_name(&read_thread, hci_read_thread, hci, "hci_read_thread");
         hci->read_thread_running = true;
         thrd_detach(read_thread);
+    } else {
+        // Poke the changed event to get the new channel.
+        zx_object_signal(hci->channels_changed_evt, 0, ZX_EVENT_SIGNALED);
     }
 
 done:
@@ -508,9 +477,9 @@ static void hci_unbind(void* ctx) {
     // Close the transport channels so that the host stack is notified of device removal.
     mtx_lock(&hci->mutex);
 
-    cmd_channel_cleanup_locked(hci);
-    acl_channel_cleanup_locked(hci);
-    snoop_channel_cleanup_locked(hci);
+    channel_cleanup_locked(hci, &hci->cmd_channel);
+    channel_cleanup_locked(hci, &hci->acl_channel);
+    channel_cleanup_locked(hci, &hci->snoop_channel);
 
     mtx_unlock(&hci->mutex);
 
@@ -601,6 +570,8 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     list_initialize(&hci->free_event_reqs);
     list_initialize(&hci->free_acl_read_reqs);
     list_initialize(&hci->free_acl_write_reqs);
+
+    zx_event_create(0, &hci->channels_changed_evt);
 
     mtx_init(&hci->mutex, mtx_plain);
 

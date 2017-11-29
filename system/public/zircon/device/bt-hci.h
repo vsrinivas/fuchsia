@@ -17,7 +17,7 @@ __BEGIN_CDECLS
 
 // Potential values for the flags bitfield in a snoop channel packet.
 #define BT_HCI_SNOOP_FLAG_SENT        0x00  // Host -> Controller
-#define BT_HCI_SNOOP_FLAG_RECEIVED    0x01  // Controller <- Host
+#define BT_HCI_SNOOP_FLAG_RECEIVED    0x01  // Controller -> Host
 #define BT_HCI_SNOOP_FLAG_DATA        0x02  // Data packet
 
 // Get a channel handle for a two-way HCI command channel for sending and
