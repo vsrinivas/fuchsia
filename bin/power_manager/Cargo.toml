@@ -1,0 +1,18 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "power_manager"
+version = "0.1.0"
+license = "BSD-3-Clause"
+
+[dependencies]
+futures = "0.1"
+tokio-core = { path = "../../../third_party/rust-mirrors/tokio-core" }
+bytes = "0.4"
+fdio = { path = "../../../public/rust/crates/fdio" }
+libc = "0.2"
+
+[profile.release]
+panic = 'abort'

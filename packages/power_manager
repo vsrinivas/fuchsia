@@ -1,9 +1,10 @@
 {
     "languages": [
-        "go"
+        "go",
+        "rust"
     ],
     "packages": {
-        "power_manager": "//garnet/go/src/power_manager",
+        "power_manager": "//garnet/bin/power_manager:power_manager",
         "power_manager_gotests": "//garnet/go/src/power_manager:power_manager_gotests"
     }
 }
