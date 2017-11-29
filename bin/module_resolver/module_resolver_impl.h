@@ -15,6 +15,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/suggestion/fidl/query_handler.fidl.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
+#include "peridot/bin/module_resolver/type_inference.h"
 
 namespace maxwell {
 
@@ -55,6 +56,8 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   bool AllSourcesAreReady() const {
     return ready_sources_.size() == sources_.size();
   }
+
+  NounTypeInferenceHelper type_helper_;
 
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules

@@ -54,22 +54,6 @@ modular::FindModulesResultPtr CreateDefaultResult(
   return result;
 }
 
-std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
-  if (noun->is_entity_type()) {
-    return std::vector<std::string>(noun->get_entity_type().begin(),
-                                    noun->get_entity_type().end());
-  } else if (noun->is_json()) {
-    std::vector<std::string> types;
-    if (!modular::ExtractEntityTypesFromJson(noun->get_json(), &types)) {
-      FXL_LOG(WARNING) << "Mal-formed JSON in noun: " << noun->get_json();
-      return {};
-    }
-    return types;
-  }
-  // TODO(thatguy): Add support for other methods of getting Entity types.
-  return {};
-}
-
 }  // namespace
 
 ModuleResolverImpl::ModuleResolverImpl()
@@ -138,7 +122,7 @@ void ModuleResolverImpl::FindModules(
     // TODO(thatguy): Once we grab Entity types from an Entity reference, this
     // will have to be an async call. At this point we'll have to break this
     // entire operation up into parts.
-    auto types = GetEntityTypesFromNoun(noun);
+    auto types = type_helper_.GetEntityTypes(noun);
 
     // The types list we have is an OR - any Module that can handle any of the
     // types is valid, So, we union all valid resolutions.

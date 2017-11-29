@@ -50,6 +50,8 @@ source_set("module_resolver_impl") {
   sources = [
     "module_resolver_impl.cc",
     "module_resolver_impl.h",
+    "type_inference.h",
+    "type_inference.cc",
   ]
 
   deps = [
