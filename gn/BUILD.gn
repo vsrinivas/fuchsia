@@ -377,6 +377,13 @@ bootdata_cmdline("systempkg_cmdline") {
   ]
 }
 
+bootdata_cmdline("zedboot_cmdline") {
+  visibility = [ ":*" ]
+  inputs = [
+    "//build/gn/zedboot_config",
+  ]
+}
+
 # Package up the /boot filesystem along with Zircon's kernel bootdata.
 # This `bootdata.bin` along with the Zircon kernel is enough to boot.
 foreach(platform, zircon_platforms) {
@@ -396,13 +403,29 @@ foreach(platform, zircon_platforms) {
     }
   }
 
+  bootdata("zedboot-${platform}") {
+    deps = [
+      ":bootdata-${platform}",
+      ":zedboot_cmdline",
+    ]
+
+    kernel_build_dir = "//out/build-zircon/build-${platform}"
+    inputs = [
+      "$kernel_build_dir/kernel-bootdata.bin",
+      zircon_boot_manifest,
+    ]
+    foreach(label, deps) {
+      inputs += get_target_outputs(label)
+    }
+  }
+
   bootdata("bootdata-blobstore-${platform}") {
     deps = [
       ":bootdata-${platform}",
       ":systempkg_cmdline",
     ]
-    inputs = get_target_outputs(":systempkg_cmdline")
 
+    inputs = []
     foreach(label, deps) {
       inputs += get_target_outputs(label)
     }
