@@ -24,20 +24,6 @@ struct BackingPages
   size_t len;
 };
 
-// Scanout that uses an in-memory buffer instead of a framebuffer device.
-class TestScanout : public GpuScanout {
- public:
-  TestScanout(uint32_t width,
-              uint32_t height,
-              uint32_t format,
-              fbl::unique_ptr<uint8_t[]> buffer)
-      : GpuScanout(width, height, format, buffer.get()),
-        fb_(fbl::move(buffer)) {}
-
- private:
-  fbl::unique_ptr<uint8_t[]> fb_;
-};
-
 class VirtioGpuTest {
  public:
   VirtioGpuTest()
@@ -68,8 +54,10 @@ class VirtioGpuTest {
     scanout_buffer_ = buffer.get();
     scanout_size_ = scanout_size;
 
-    auto scanout = fbl::make_unique<TestScanout>(width, height, kPixelFormat,
-                                                 fbl::move(buffer));
+    SkImageInfo info = SkImageInfo::MakeN32(width, height, kOpaque_SkAlphaType);
+    sk_sp<SkSurface> surface =
+        SkSurface::MakeRasterDirect(info, buffer.get(), info.minRowBytes());
+    auto scanout = fbl::make_unique<GpuScanout>(fbl::move(surface));
     gpu_.AddScanout(fbl::move(scanout));
     return ZX_OK;
   }
@@ -138,6 +126,33 @@ class VirtioGpuTest {
     request.hdr.type = VIRTIO_GPU_CMD_SET_SCANOUT;
     request.resource_id = kRootResourceId;
     request.scanout_id = kScanoutId;
+    request.r.x = 0;
+    request.r.y = 0;
+    request.r.width = kDisplayWidth;
+    request.r.height = kDisplayHeight;
+
+    uint16_t desc = 0;
+    virtio_gpu_ctrl_hdr_t response = {};
+    zx_status_t status = control_queue()
+                             .BuildDescriptor()
+                             .AppendReadable(&request, sizeof(request))
+                             .AppendWriteable(&response, sizeof(response))
+                             .Build(&desc);
+    if (status != ZX_OK)
+      return status;
+
+    uint32_t used;
+    status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    if (status != ZX_OK)
+      return status;
+
+    return response.type == VIRTIO_GPU_RESP_OK_NODATA ? ZX_OK : response.type;
+  }
+
+  zx_status_t Flush() {
+    virtio_gpu_resource_flush request = {};
+    request.hdr.type = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
+    request.resource_id = kRootResourceId;
     request.r.x = 0;
     request.r.y = 0;
     request.r.width = kDisplayWidth;
@@ -279,6 +294,9 @@ TEST(VirtioGpuTest, HandleTransfer2D) {
       test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
       ZX_OK);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_OK_NODATA);
+
+  // Send a flush command to draw bytes to our scanout buffer.
+  ASSERT_EQ(test.Flush(), ZX_OK);
 
   // Verify backing/scanout are now in sync.
   size_t offset = 0;

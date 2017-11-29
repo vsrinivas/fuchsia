@@ -12,8 +12,73 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio_ids.h>
-#include <zircon/pixelformat.h>
 #include <zircon/process.h>
+
+#include "third_party/skia/include/core/SkCanvas.h"
+
+// A scanout that renders to a zircon framebuffer device.
+class FramebufferScanout : public GpuScanout {
+ public:
+  // Create a scanout that owns a zircon framebuffer device.
+  static zx_status_t Create(const char* path,
+                            fbl::unique_ptr<GpuScanout>* out) {
+    // Open framebuffer and get display info.
+    int vfd = open(path, O_RDWR);
+    if (vfd < 0)
+      return ZX_ERR_NOT_FOUND;
+
+    ioctl_display_get_fb_t fb;
+    if (ioctl_display_get_fb(vfd, &fb) != sizeof(fb)) {
+      close(vfd);
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    // Map framebuffer VMO.
+    uintptr_t fbo;
+    size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
+    zx_status_t status =
+        zx_vmar_map(zx_vmar_root_self(), 0, fb.vmo, 0, size,
+                    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
+    if (status != ZX_OK) {
+      close(vfd);
+      return status;
+    }
+
+    // Wrap the framebuffer in an SkSurface so we can render using a canvas.
+    SkImageInfo info =
+        SkImageInfo::MakeN32Premul(fb.info.width, fb.info.height);
+    size_t rowBytes = info.minRowBytes();
+    sk_sp<SkSurface> surface = SkSurface::MakeRasterDirect(
+        info, reinterpret_cast<void*>(fbo), rowBytes);
+
+    auto scanout =
+        fbl::make_unique<FramebufferScanout>(fbl::move(surface), vfd);
+    *out = fbl::move(scanout);
+    return ZX_OK;
+  }
+
+  FramebufferScanout(sk_sp<SkSurface>&& surface, int fd)
+      : GpuScanout(fbl::move(surface)), fd_(fd) {}
+
+  ~FramebufferScanout() {
+    if (fd_ > 0)
+      close(fd_);
+  }
+
+  void FlushRegion(const virtio_gpu_rect_t& rect) override {
+    GpuScanout::FlushRegion(rect);
+    ioctl_display_region_t fb_region = {
+        .x = rect.x,
+        .y = rect.y,
+        .width = rect.width,
+        .height = rect.height,
+    };
+    ioctl_display_flush_fb_region(fd_, &fb_region);
+  }
+
+ private:
+  int fd_;
+};
 
 VirtioGpu::VirtioGpu(uintptr_t guest_physmem_addr, size_t guest_physmem_size)
     : VirtioDevice(VIRTIO_ID_GPU,
@@ -201,9 +266,20 @@ void VirtioGpu::GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
   response->hdr.type = VIRTIO_GPU_RESP_OK_DISPLAY_INFO;
 }
 
+fbl::unique_ptr<GpuResource> GpuResource::Create(
+    const virtio_gpu_resource_create_2d_t* request,
+    VirtioGpu* gpu) {
+  SkBitmap bitmap;
+  bitmap.setInfo(SkImageInfo::MakeN32(request->width, request->height,
+                                      kOpaque_SkAlphaType));
+  bitmap.allocPixels();
+  return fbl::make_unique<GpuResource>(gpu, request->resource_id,
+                                            fbl::move(bitmap));
+}
+
 void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
                                  virtio_gpu_ctrl_hdr_t* response) {
-  auto res = fbl::make_unique<GpuResource>(this, request);
+  fbl::unique_ptr<GpuResource> res = GpuResource::Create(request, this);
   resources_.insert(fbl::move(res));
   response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }
@@ -224,6 +300,7 @@ void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
   if (request->resource_id == 0) {
     // Resource ID 0 is a special case and means the provided scanout
     // should be disabled.
+    scanout_->SetResource(nullptr, request);
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
     return;
   }
@@ -233,36 +310,14 @@ void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
     return;
   }
 
-  auto it = resources_.find(request->resource_id);
-  if (it == resources_.end()) {
+  auto res = resources_.find(request->resource_id);
+  if (res == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
     return;
   }
+  scanout_->SetResource(&*res, request);
 
-  // Only support a simple scanout where resource/scanout coordinates map
-  // 1:1. This is currently what linux and zircon virtcons do but this
-  // assumption will likely break down with a more advanced driver.
-  if (scanout_->width() != it->width() || scanout_->height() != it->height()) {
-    fprintf(stderr,
-            "virtio-gpu: resource/scanout size mismatch not supported.\n");
-    response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-    return;
-  }
-  if (request->r.x != 0 || request->r.y != 0 ||
-      request->r.width != it->width() || request->r.height != it->height()) {
-    fprintf(stderr, "virtio-gpu: partial scanout not supported.\n");
-    response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-    return;
-  }
-  if (it->format() != scanout_->format()) {
-    fprintf(
-        stderr,
-        "virtio-gpu: resource/scanout pixel format mismatch not supported.\n");
-    response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-    return;
-  }
-
-  response->type = it->SetScanout(scanout_.get());
+  response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }
 
 void VirtioGpu::ResourceAttachBacking(
@@ -309,71 +364,8 @@ void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
   response->type = it->Flush(request);
 }
 
-// Convert virtio gpu formats to zircon formats.
-uint32_t FramebufferScanout::VirtioPixelFormat(uint32_t zx_format) {
-  switch (zx_format) {
-    case ZX_PIXEL_FORMAT_ARGB_8888:
-      return VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
-    case ZX_PIXEL_FORMAT_RGB_x888:
-      return VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM;
-    default:
-      fprintf(stderr, "zircon format %#x not known\n", zx_format);
-      return 0;
-  }
-}
-
-zx_status_t FramebufferScanout::Create(const char* path,
-                                       fbl::unique_ptr<GpuScanout>* out) {
-  // Open framebuffer and get display info.
-  int vfd = open(path, O_RDWR);
-  if (vfd < 0)
-    return ZX_ERR_NOT_FOUND;
-
-  ioctl_display_get_fb_t fb;
-  if (ioctl_display_get_fb(vfd, &fb) != sizeof(fb)) {
-    close(vfd);
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // Map framebuffer VMO.
-  uintptr_t fbo;
-  size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
-  zx_status_t status =
-      zx_vmar_map(zx_vmar_root_self(), 0, fb.vmo, 0, size,
-                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
-  if (status != ZX_OK) {
-    close(vfd);
-    return status;
-  }
-
-  auto scanout = fbl::make_unique<FramebufferScanout>(
-      vfd, fb, reinterpret_cast<uint8_t*>(fbo));
-  *out = fbl::move(scanout);
-  return ZX_OK;
-}
-
-FramebufferScanout::~FramebufferScanout() {
-  if (fd_ > 0)
-    close(fd_);
-}
-
-void FramebufferScanout::FlushRegion(const virtio_gpu_rect_t& r) {
-  ioctl_display_region_t fb_region = {
-      .x = r.x,
-      .y = r.y,
-      .width = r.width,
-      .height = r.height,
-  };
-  ioctl_display_flush_fb_region(fd_, &fb_region);
-}
-
-GpuResource::GpuResource(VirtioGpu* gpu,
-                         const virtio_gpu_resource_create_2d_t* args)
-    : gpu_(gpu),
-      res_id_(args->resource_id),
-      width_(args->width),
-      height_(args->height),
-      format_(args->format) {}
+GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, SkBitmap bitmap)
+    : gpu_(gpu), res_id_(id), bitmap_(fbl::move(bitmap)) {}
 
 virtio_gpu_ctrl_type GpuResource::AttachBacking(
     const virtio_gpu_mem_entry_t* mem_entries,
@@ -403,16 +395,19 @@ virtio_gpu_ctrl_type GpuResource::DetachBacking() {
 
 virtio_gpu_ctrl_type GpuResource::TransferToHost2D(
     const virtio_gpu_transfer_to_host_2d_t* request) {
-  if (scanout_ == nullptr)
+  if (bitmap_.isNull()) {
     return VIRTIO_GPU_RESP_ERR_UNSPEC;
-  if (backing_.is_empty())
+  }
+  if (backing_.is_empty()) {
     return VIRTIO_GPU_RESP_ERR_UNSPEC;
+  }
 
   // Optimize for copying a contiguous region.
-  uint32_t stride = scanout_->width() * VirtioGpu::kBytesPerPixel;
+  uint8_t* pixel_ref = reinterpret_cast<uint8_t*>(bitmap_.getPixels());
+  uint32_t stride = bitmap_.width() * VirtioGpu::kBytesPerPixel;
   if (request->offset == 0 && request->r.x == 0 && request->r.y == 0 &&
-      request->r.width == scanout_->width()) {
-    CopyBytes(0, scanout_->buffer(), stride * scanout_->height());
+      request->r.width == static_cast<uint32_t>(bitmap_.width())) {
+    CopyBytes(0, pixel_ref, stride * bitmap_.height());
     return VIRTIO_GPU_RESP_OK_NODATA;
   }
 
@@ -423,22 +418,19 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2D(
     size_t size = ((request->r.y + line) * stride) +
                   (request->r.x * VirtioGpu::kBytesPerPixel);
 
-    CopyBytes(src_offset, scanout_->buffer() + size, linesize);
+    CopyBytes(src_offset, pixel_ref + size, linesize);
   }
   return VIRTIO_GPU_RESP_OK_NODATA;
 }
 
 virtio_gpu_ctrl_type GpuResource::Flush(
     const virtio_gpu_resource_flush_t* request) {
-  if (scanout_ == nullptr)
-    return VIRTIO_GPU_RESP_ERR_UNSPEC;
+  GpuScanout* scanout = scanout_;
+  if (scanout == nullptr)
+    return VIRTIO_GPU_RESP_OK_NODATA;
 
-  scanout_->FlushRegion(request->r);
-  return VIRTIO_GPU_RESP_OK_NODATA;
-}
-
-virtio_gpu_ctrl_type GpuResource::SetScanout(GpuScanout* scanout) {
-  scanout_ = scanout;
+  // TODO: Convert r to scanout coordinates.
+  scanout->FlushRegion(request->r);
   return VIRTIO_GPU_RESP_OK_NODATA;
 }
 
@@ -462,4 +454,30 @@ void GpuResource::CopyBytes(uint64_t offset, uint8_t* dest, size_t size) {
     }
     base += entry.length;
   }
+}
+
+void GpuScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
+  GpuResource* res = resource_;
+  if (res == nullptr) {
+    return;
+  }
+  SkCanvas* canvas = surface_->getCanvas();
+  SkRect surface_rect = SkRect::MakeIWH(surface_->width(), surface_->height());
+  canvas->drawBitmapRect(res->bitmap(), rect_, surface_rect, nullptr);
+}
+
+zx_status_t GpuScanout::SetResource(GpuResource* res,
+                                    const virtio_gpu_set_scanout_t* request) {
+  GpuResource* old_res = resource_;
+  resource_ = res;
+  if (resource_ == nullptr) {
+    if (old_res != nullptr)
+      old_res->DetachFromScanout();
+    return ZX_OK;
+  }
+  resource_->AttachToScanout(this);
+  rect_ = SkRect::MakeXYWH(
+      SkIntToScalar(request->r.x), SkIntToScalar(request->r.y),
+      SkIntToScalar(request->r.width), SkIntToScalar(request->r.height));
+  return ZX_OK;
 }

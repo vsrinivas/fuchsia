@@ -14,66 +14,50 @@
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/virtio.h"
+#include "third_party/skia/include/core/SkBitmap.h"
+#include "third_party/skia/include/core/SkSurface.h"
 
 #define VIRTIO_GPU_Q_CONTROLQ 0
 #define VIRTIO_GPU_Q_CURSORQ 1
 #define VIRTIO_GPU_Q_COUNT 2
 
+class GpuResource;
 class VirtioGpu;
 
 using ResourceId = uint32_t;
 using ScanoutId = uint32_t;
 
-/* A scanout represents a display that GPU resources can be rendered to.
- *
- * Each scanout will own a single device under /dev/class/framebuffer/
- */
+// A scanout represents a display that GPU resources can be rendered to.
 class GpuScanout {
  public:
-  GpuScanout(uint32_t width, uint32_t height, uint32_t format, uint8_t* buffer)
-      : width_(width), height_(height), format_(format), buffer_(buffer) {}
+  GpuScanout(sk_sp<SkSurface>&& surface) : surface_(surface) {}
 
   virtual ~GpuScanout() = default;
 
-  uint32_t width() const { return width_; }
-  uint32_t height() const { return height_; }
-  uint32_t format() const { return format_; }
-  uint8_t* buffer() const { return buffer_; }
+  uint32_t width() const { return surface_->width(); }
+  uint32_t height() const { return surface_->height(); }
 
-  virtual void FlushRegion(const virtio_gpu_rect_t& rect) {}
+  virtual void FlushRegion(const virtio_gpu_rect_t& rect);
 
- private:
-  uint32_t width_;
-  uint32_t height_;
-  uint32_t format_;
-  uint8_t* buffer_;
-};
-
-class FramebufferScanout : public GpuScanout {
- public:
-  static zx_status_t Create(const char* framebuffer,
-                            fbl::unique_ptr<GpuScanout>* out);
-
-  FramebufferScanout(int fd, const ioctl_display_get_fb_t& fb, uint8_t* buffer)
-      : GpuScanout(fb.info.width,
-                   fb.info.height,
-                   VirtioPixelFormat(fb.info.format),
-                   buffer),
-        fd_(fd) {}
-
-  virtual ~FramebufferScanout();
-
-  void FlushRegion(const virtio_gpu_rect_t& rect) override;
+  zx_status_t SetResource(GpuResource* res,
+                          const virtio_gpu_set_scanout_t* request);
 
  private:
-  static uint32_t VirtioPixelFormat(uint32_t zx_format);
-  int fd_ = 0;
+  sk_sp<SkSurface> surface_;
+
+  // Scanout parameters.
+  GpuResource* resource_;
+  SkRect rect_;
 };
 
-/* A resource corresponds to a single display buffer. */
+// A resource corresponds to a single display buffer.
 class GpuResource
     : public fbl::SinglyLinkedListable<fbl::unique_ptr<GpuResource>> {
  public:
+  static fbl::unique_ptr<GpuResource> Create(
+      const virtio_gpu_resource_create_2d_t* request,
+      VirtioGpu* gpu);
+
   // The driver will provide a scatter-gather list of memory pages to back
   // the framebuffer in guest physical memory.
   struct BackingPages
@@ -95,11 +79,17 @@ class GpuResource
                      size_t,
                      kNumHashTableBuckets>;
 
-  GpuResource(VirtioGpu* gpu, const virtio_gpu_resource_create_2d_t* args);
+  GpuResource(VirtioGpu*, ResourceId, SkBitmap);
 
-  uint32_t width() const { return width_; }
-  uint32_t height() const { return height_; }
-  uint32_t format() const { return format_; }
+  uint32_t width() const { return bitmap_.width(); }
+
+  uint32_t height() const { return bitmap_.height(); }
+
+  const SkBitmap& bitmap() const { return bitmap_; }
+
+  void AttachToScanout(GpuScanout* scanout) { scanout_ = scanout; }
+
+  void DetachFromScanout() { scanout_ = nullptr; }
 
   virtio_gpu_ctrl_type SetScanout(GpuScanout* scanout);
 
@@ -135,15 +125,14 @@ class GpuResource
   void CopyBytes(uint64_t offset, uint8_t* dest, size_t size);
 
   VirtioGpu* gpu_;
-  GpuScanout* scanout_;
   ResourceId res_id_;
-  uint32_t width_;
-  uint32_t height_;
-  uint32_t format_;
   fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>> backing_;
+
+  SkBitmap bitmap_;
+  GpuScanout* scanout_;
 };
 
-/* Virtio 2D GPU device. */
+// Virtio 2D GPU device.
 class VirtioGpu : public VirtioDevice {
  public:
   static constexpr uint8_t kBytesPerPixel = 4;
