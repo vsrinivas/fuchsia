@@ -25,9 +25,13 @@
 #include <zx/vmo.h>
 
 #include "bootloader-display.h"
+#include "hdmi-display.h"
 #include "intel-i915.h"
+#include "macros.h"
 #include "registers.h"
 #include "registers-ddi.h"
+#include "registers-dpll.h"
+#include "registers-pipe.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 
@@ -167,13 +171,24 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
 zx_status_t Controller::InitDisplays(uint16_t device_id) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<DisplayDevice> disp_device(nullptr);
-
     if (ENABLE_MODESETTING && is_gen9(device_id)) {
-        // TODO(ZX-1414): Actually try to initialize displays
-        zxlogf(INFO, "Did not find any displays\n");
-        return ZX_OK;
+        for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
+            zxlogf(SPEW, "Trying to init display %d\n", registers::kDdis[i]);
+
+            fbl::unique_ptr<DisplayDevice> hdmi_disp(
+                    new (&ac) HdmiDisplay(this, registers::kDdis[i], registers::PIPE_A));
+            if (ac.check() && hdmi_disp->Init()) {
+                disp_device = fbl::move(hdmi_disp);
+            }
+        }
+
+        if (!disp_device) {
+            zxlogf(INFO, "Did not find any displays\n");
+            return ZX_OK;
+        }
     } else {
-        disp_device.reset(new (&ac) BootloaderDisplay(this));
+        // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
+        disp_device.reset(new (&ac) BootloaderDisplay(this, registers::DDI_A, registers::PIPE_A));
         if (!ac.check()) {
             zxlogf(ERROR, "i915: failed to alloc disp_device\n");
             return ZX_ERR_NO_MEMORY;

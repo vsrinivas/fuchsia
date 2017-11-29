@@ -14,7 +14,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/bootloader-display.cpp \
     $(LOCAL_DIR)/display-device.cpp \
+    $(LOCAL_DIR)/edid.cpp \
     $(LOCAL_DIR)/gtt.cpp \
+    $(LOCAL_DIR)/hdmi-display.cpp \
     $(LOCAL_DIR)/intel-i915.cpp \
     $(LOCAL_DIR)/mmio-space.cpp
 

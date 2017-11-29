@@ -102,5 +102,70 @@ public:
     static RegisterAddr<SouthFuseStrap> Get() { return RegisterAddr<SouthFuseStrap>(0xc2014); }
 };
 
+// DDI_BUF_CTL
+class DdiBufControl : public RegisterBase<DdiBufControl> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x64000;
+
+    DEF_BIT(31, ddi_buffer_enable);
+    DEF_FIELD(27, 24, dp_vswing_emp_sel);
+    DEF_BIT(16, port_reversal);
+    DEF_BIT(7, ddi_idle_status);
+    DEF_BIT(4, ddi_a_lane_capability_control);
+    DEF_FIELD(3, 1, dp_port_width_selection);
+    DEF_BIT(0, init_display_detected);
+};
+
+// High byte of DDI_BUF_TRANS
+class DdiBufTransHi : public RegisterBase<DdiBufTransHi> {
+public:
+    DEF_BIT(31, balance_leg_enable);
+    DEF_FIELD(17, 0, deemphasis_level);
+};
+
+// Low byte of DDI_BUF_TRANS
+class DdiBufTransLo : public RegisterBase<DdiBufTransLo> {
+public:
+    DEF_FIELD(20, 16, vref);
+    DEF_FIELD(10, 0, vswing);
+};
+
+// DISPIO_CR_TX_BMU_CR0
+class DisplayIoCtrlRegTxBmu : public RegisterBase<DisplayIoCtrlRegTxBmu> {
+public:
+    DEF_FIELD(27, 23, disable_balance_leg);
+
+    registers::BitfieldRef<uint32_t> tx_balance_leg_select(Ddi ddi) {
+        int bit = 8 +  3 * ddi;
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
+    }
+
+    static RegisterAddr<DisplayIoCtrlRegTxBmu> Get() {
+        return RegisterAddr<DisplayIoCtrlRegTxBmu>(0x6c00c);
+    }
+};
+
+// An instance of DdiRegs represents the registers for a particular DDI.
+class DdiRegs {
+public:
+    DdiRegs(Ddi ddi) : ddi_number_((int) ddi) { }
+
+    RegisterAddr<registers::DdiBufControl> DdiBufControl() {
+        return GetReg<registers::DdiBufControl>();
+    }
+    RegisterAddr<registers::DdiBufTransHi> DdiBufTransHi(int index) {
+        return RegisterAddr<registers::DdiBufTransHi>(0x64e00 + 0x60 * ddi_number_ + 8 * index + 4);
+    }
+    RegisterAddr<registers::DdiBufTransLo> DdiBufTransLo(int index) {
+        return RegisterAddr<registers::DdiBufTransLo>(0x64e00 + 0x60 * ddi_number_ + 8 * index);
+    }
+
+private:
+    template <class RegType> RegisterAddr<RegType> GetReg() {
+        return RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_number_);
+    }
+
+    uint32_t ddi_number_;
+};
 
 } // namespace registers
