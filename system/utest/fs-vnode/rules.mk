@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/remote-dir-tests.cpp \
     $(LOCAL_DIR)/service-tests.cpp \
     $(LOCAL_DIR)/vmo-file-tests.cpp \
+    $(LOCAL_DIR)/vmofs-tests.cpp \
     $(LOCAL_DIR)/main.c
 
 MODULE_NAME := fs-vnode-test
@@ -22,6 +23,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/async \
     system/ulib/trace \
+    system/ulib/vmofs \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl

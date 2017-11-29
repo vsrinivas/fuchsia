@@ -135,6 +135,9 @@ uint32_t VnodeDir::GetVType() {
 }
 
 zx_status_t VnodeDir::ValidateFlags(uint32_t flags) {
+    if (flags & ZX_FS_RIGHT_WRITABLE) {
+        return ZX_ERR_NOT_FILE;
+    }
     return ZX_OK;
 }
 
