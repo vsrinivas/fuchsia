@@ -333,7 +333,8 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
             cpu_mask_t primary = cpu_num_to_mask(0);
             return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary);
         }
-        case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE: {
+        case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
+        case ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1: {
             zx_system_powerctl_arg_t arg;
             status = raw_arg.copy_from_user(&arg);
             if (status != ZX_OK) {

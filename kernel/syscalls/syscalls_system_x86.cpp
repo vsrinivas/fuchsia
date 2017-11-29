@@ -15,6 +15,7 @@
 #include <trace.h>
 #include <vm/vm_aspace.h>
 
+#include <arch/x86/feature.h>
 #include <arch/x86/bootstrap16.h>
 #include <arch/x86/acpi.h>
 extern "C" {
@@ -100,13 +101,55 @@ zx_status_t suspend_thread(void* raw_arg) {
     return ZX_OK;
 }
 
-} // namespace
-
-zx_status_t arch_system_powerctl(uint32_t cmd, const zx_system_powerctl_arg_t* arg) {
-    if (cmd != ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE) {
+zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg) {
+    if ((x86_microarch != X86_MICROARCH_INTEL_SANDY_BRIDGE) &&
+        (x86_microarch != X86_MICROARCH_INTEL_BROADWELL) &&
+        (x86_microarch != X86_MICROARCH_INTEL_HASWELL) &&
+        (x86_microarch != X86_MICROARCH_INTEL_SKYLAKE) &&
+        (x86_microarch != X86_MICROARCH_INTEL_KABYLAKE)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    uint32_t power_limit = arg->x86_power_limit.power_limit;
+    uint8_t clamp = arg->x86_power_limit.clamp;
+    uint8_t enable = arg->x86_power_limit.enable;
+
+    uint64_t u = read_msr(X86_MSR_RAPL_POWER_UNIT);
+    uint64_t v = read_msr(X86_MSR_PKG_POWER_LIMIT);
+
+    uint64_t pu = 1 << (u & 0xf);
+
+    // TODO(ZX-1429) time window is not currently supported
+
+    v &= ~0x7fff;
+    if (power_limit > 0) {
+        uint64_t n = (power_limit * pu / 1000);
+        if (n > 0x7fff) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        v |= n;
+    } else {
+        // set to default if 0
+        v |= read_msr(X86_MSR_PKG_POWER_INFO) & 0x7fff;
+    }
+
+    if (clamp) {
+        v |= X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP;
+    } else {
+        v &= ~X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP;
+    }
+
+    if (enable) {
+        v |= X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE;
+    } else {
+        v &= ~X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE;
+    }
+
+    write_msr(X86_MSR_PKG_POWER_LIMIT, v);
+    return ZX_OK;
+}
+
+zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
     uint8_t target_s_state = arg->acpi_transition_s_state.target_s_state;
     uint8_t sleep_type_a = arg->acpi_transition_s_state.sleep_type_a;
     uint8_t sleep_type_b = arg->acpi_transition_s_state.sleep_type_b;
@@ -159,4 +202,17 @@ zx_status_t arch_system_powerctl(uint32_t cmd, const zx_system_powerctl_arg_t* a
     }
 
     return ZX_OK;
+}
+
+} // namespace
+
+zx_status_t arch_system_powerctl(uint32_t cmd, const zx_system_powerctl_arg_t* arg) {
+    switch (cmd) {
+    case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
+        return acpi_transition_s_state(arg);
+    case ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1:
+        return x86_set_pkg_pl1(arg);
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }

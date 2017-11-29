@@ -62,6 +62,13 @@
 #define X86_MSR_IA32_HWP_REQUEST        0x00000774 /* power manage control hints */
 #define X86_CR4_PSE                     0xffffffef /* Disabling PSE bit in the CR4 */
 
+// Non-architectural MSRs
+#define X86_MSR_RAPL_POWER_UNIT         0x00000606 /* RAPL unit multipliers */
+#define X86_MSR_PKG_POWER_LIMIT         0x00000610 /* Package power limits */
+#define X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP   (1 << 16)
+#define X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE  (1 << 15)
+#define X86_MSR_PKG_POWER_INFO          0x00000614 /* Package power range info */
+
 /* EFLAGS/RFLAGS */
 #define X86_FLAGS_CF                    (1<<0)
 #define X86_FLAGS_PF                    (1<<2)

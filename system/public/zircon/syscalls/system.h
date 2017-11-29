@@ -12,6 +12,7 @@ __BEGIN_CDECLS
 #define ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS              1u
 #define ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY 2u
 #define ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE      3u
+#define ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1              4u
 
 typedef struct zx_system_powerctl_arg {
     union {
@@ -20,6 +21,12 @@ typedef struct zx_system_powerctl_arg {
             uint8_t sleep_type_a; // Value from ACPI VM (SLP_TYPa)
             uint8_t sleep_type_b; // Value from ACPI VM (SLP_TYPb)
         } acpi_transition_s_state;
+        struct {
+            uint32_t power_limit; // PL1 value in milliwatts
+            uint32_t time_window; // PL1 time window in microseconds
+            uint8_t clamp;        // PL1 clamping enable
+            uint8_t enable;       // PL1 enable
+        } x86_power_limit;
     };
 } zx_system_powerctl_arg_t;
 
