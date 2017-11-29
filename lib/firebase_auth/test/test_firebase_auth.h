@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
 
-#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
+#include "peridot/lib/firebase_auth/firebase_auth.h"
 
 #include "lib/fxl/tasks/task_runner.h"
 
@@ -42,4 +42,4 @@ class TestFirebaseAuth : public FirebaseAuth {
 }  // namespace test
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_

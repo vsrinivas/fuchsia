@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth_impl.h"
+#include "peridot/lib/firebase_auth/firebase_auth_impl.h"
 
 #include <utility>
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_token_provider.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/test/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/firebase_auth/test/test_token_provider.h"
 
 namespace firebase_auth {
 

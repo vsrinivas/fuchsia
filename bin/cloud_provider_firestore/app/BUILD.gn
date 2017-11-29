@@ -37,8 +37,8 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/firebase_auth",
     "//peridot/bin/cloud_provider_firestore/fidl",
+    "//peridot/lib/firebase_auth",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]
@@ -62,8 +62,8 @@ source_set("unittests") {
     ":lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
-    "//peridot/bin/cloud_provider_firebase/firebase_auth/test",
     "//peridot/bin/ledger/test:lib",
     "//peridot/lib/callback",
+    "//peridot/lib/firebase_auth/test",
   ]
 }

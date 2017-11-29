@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
 
 #include <functional>
 #include <memory>
@@ -11,9 +11,9 @@
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
+#include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {
 
@@ -62,4 +62,4 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_

@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/cloud_provider_firestore/*",
+  "//peridot/bin/*",
+  "//peridot/lib/*",
 ]
 
 source_set("test") {
@@ -18,7 +18,7 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//peridot/bin/cloud_provider_firebase/firebase_auth",
+    "//peridot/lib/firebase_auth",
     "//peridot/public/lib/auth/fidl",
   ]
 

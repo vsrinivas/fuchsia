@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_H_
 
 #include <functional>
 #include <string>
@@ -45,4 +45,4 @@ class FirebaseAuth {
 
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_FIREBASE_AUTH_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_H_

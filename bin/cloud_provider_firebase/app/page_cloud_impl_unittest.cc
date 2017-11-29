@@ -9,11 +9,11 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/cloud_provider_firebase/firebase_auth/test/test_firebase_auth.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/test/test_page_cloud_handler.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
 
 namespace cloud_provider_firebase {
 namespace {

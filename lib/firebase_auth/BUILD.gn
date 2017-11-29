@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/cloud_provider_firestore/*",
+  "//peridot/bin/*",
+  "//peridot/lib/*",
 ]
 
 source_set("firebase_auth") {
@@ -20,8 +20,6 @@ source_set("firebase_auth") {
     "//peridot/lib/callback",
     "//peridot/public/lib/auth/fidl",
   ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -33,10 +31,8 @@ source_set("unittests") {
 
   deps = [
     ":firebase_auth",
-    "//peridot/bin/cloud_provider_firebase/firebase_auth/test",
     "//peridot/bin/ledger/test:lib",
     "//peridot/lib/backoff/test",
+    "//peridot/lib/firebase_auth/test",
   ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

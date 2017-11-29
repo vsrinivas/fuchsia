@@ -13,11 +13,11 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
-#include "peridot/bin/cloud_provider_firebase/firebase_auth/firebase_auth.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 #include "peridot/lib/callback/cancellable.h"
+#include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace cloud_provider_firebase {
 

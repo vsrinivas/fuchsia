@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
 
 #include <string>
 
@@ -47,4 +47,4 @@ class TestTokenProvider : public modular::auth::TokenProvider {
 }  // namespace test
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
