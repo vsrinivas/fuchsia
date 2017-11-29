@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -34,5 +35,10 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default);
 // return _default if key not found or invalid
 // return they key's integer value otherwise
 uint64_t cmdline_get_uint64(const char* key, uint64_t _default);
+
+// internal storage for the command line
+extern char __kernel_cmdline[CMDLINE_MAX];
+extern size_t __kernel_cmdline_size;
+extern size_t __kernel_cmdline_count;
 
 __END_CDECLS

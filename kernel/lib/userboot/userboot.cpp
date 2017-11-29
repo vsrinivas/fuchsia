@@ -43,10 +43,6 @@ static const size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 #define RAMDISK_VMO_NAME "userboot-raw-ramdisk"
 #define CRASHLOG_VMO_NAME "crashlog"
 
-extern char __kernel_cmdline[CMDLINE_MAX];
-extern unsigned __kernel_cmdline_size;
-extern unsigned __kernel_cmdline_count;
-
 namespace {
 
 #include "userboot-code.h"
@@ -197,8 +193,8 @@ struct bootstrap_message {
 };
 
 static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
-    const uint32_t data_size =
-        static_cast<uint32_t>(offsetof(struct bootstrap_message, cmdline)) +
+    const size_t data_size =
+        offsetof(struct bootstrap_message, cmdline) +
         __kernel_cmdline_size;
     bootstrap_message* msg =
         static_cast<bootstrap_message*>(malloc(data_size));
@@ -210,7 +206,7 @@ static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     msg->header.protocol = ZX_PROCARGS_PROTOCOL;
     msg->header.version = ZX_PROCARGS_VERSION;
     msg->header.environ_off = offsetof(struct bootstrap_message, cmdline);
-    msg->header.environ_num = __kernel_cmdline_count;
+    msg->header.environ_num = static_cast<uint32_t>(__kernel_cmdline_count);
     msg->header.handle_info_off =
         offsetof(struct bootstrap_message, handle_info);
     for (int i = 0; i < BOOTSTRAP_HANDLES; ++i) {
@@ -258,7 +254,7 @@ static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     fbl::unique_ptr<MessagePacket> packet;
     uint32_t num_handles = BOOTSTRAP_HANDLES;
     zx_status_t status =
-        MessagePacket::Create(msg, data_size, num_handles, &packet);
+        MessagePacket::Create(msg, static_cast<uint32_t>(data_size), num_handles, &packet);
     free(msg);
     if (status != ZX_OK) {
         return nullptr;

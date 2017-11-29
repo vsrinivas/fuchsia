@@ -5,20 +5,21 @@
 // https://opensource.org/licenses/MIT
 
 #include <kernel/cmdline.h>
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 char __kernel_cmdline[CMDLINE_MAX];
-unsigned __kernel_cmdline_size;
-unsigned __kernel_cmdline_count;
+size_t __kernel_cmdline_size;
+size_t __kernel_cmdline_count;
 
 // import into kernel commandline, converting invalid
 // characters to '.', combining multiple spaces, and
 // converting into a \0 separated, \0\0 terminated
 // style environment string
 void cmdline_append(const char* data) {
-    unsigned i = __kernel_cmdline_size;
+    size_t i = __kernel_cmdline_size;
     if (i == CMDLINE_MAX) {
         return;
     }
@@ -26,13 +27,13 @@ void cmdline_append(const char* data) {
     if (i > 0 && __kernel_cmdline[i] == 0) {
         i--;
     }
-    unsigned max = CMDLINE_MAX - 2;
+    size_t max = CMDLINE_MAX - 2;
 
     bool found_equal = false;
     while (i < max) {
         unsigned c = *data++;
         if (c == 0) {
-            if (found_equal || __kernel_cmdline[i - 1] != 0) { //last option was null delimited
+            if (found_equal || (i > 0 && __kernel_cmdline[i - 1] != 0)) { //last option was null delimited
                 ++__kernel_cmdline_count;
             }
             break;
@@ -76,7 +77,7 @@ void cmdline_append(const char* data) {
 const char* cmdline_get(const char* key) {
     if (!key)
         return __kernel_cmdline;
-    unsigned sz = strlen(key);
+    size_t sz = strlen(key);
     const char* ptr = __kernel_cmdline;
     for (;;) {
         if (!strncmp(ptr, key, sz) && (ptr[sz] == '=' || ptr[sz] == '\0')) {
