@@ -157,6 +157,14 @@ function main {
   if [[ -n "${packages}" ]]; then
     gen_args="${gen_args} --packages ${packages}"
   else
+    # TODO(pylaligand): remove this check once the Fuchsia population has moved
+    # away from that specific manifest.
+    if grep -q "\"fuchsia\"" "${FUCHSIA_DIR}/.jiri_manifest"; then
+      echo -e "You are using the obsolete 'fuchsia' manifest."
+      echo -e "Please switch to the Topaz manifest instead: fx set-layer topaz"
+      return 1
+    fi
+
     # TODO(abarth): We might want to make this logic more sophisticated once we
     # have a mechanism for switching between layers or for selecting which
     # layers to build from source.
