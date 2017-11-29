@@ -31,8 +31,8 @@ namespace {
 bool MixerOwnsInputs() {
   constexpr bool kMixerOwnsInputsDefault = false;
   if (kMixerOwnsInputsDefault) {
-    FXL_DLOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
-                      "to hardcoded constexpr.";
+    FXL_LOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
+                     "to hardcoded constexpr.";
     return true;
   }
 
@@ -40,15 +40,14 @@ bool MixerOwnsInputs() {
       "/system/data/media/mixer_owns_audio_input";
   struct stat junk;
   if (::stat(kMixerOwnsInputsTestFile, &junk) >= 0) {
-    FXL_DLOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
-                      "to presence of \""
-                   << kMixerOwnsInputsTestFile << "\".";
+    FXL_LOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
+                     "to presence of \""
+                  << kMixerOwnsInputsTestFile << "\".";
     return true;
   }
 
-  FXL_DLOG(INFO)
-      << "Audio Mixer does not own inputs.  Constexpr is false and \""
-      << kMixerOwnsInputsTestFile << "\" was not detected.";
+  FXL_LOG(INFO) << "Audio Mixer does not own inputs.  Constexpr is false and \""
+                << kMixerOwnsInputsTestFile << "\" was not detected.";
   return false;
 }
 }  // namespace
