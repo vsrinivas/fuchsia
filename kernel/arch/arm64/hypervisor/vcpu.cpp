@@ -61,8 +61,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     vcpu->hcr_.store(HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO |
-                     HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM |
-                     HCR_EL2_RW);
+                     HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW);
     vcpu->gic_state_.gich->hcr |= kGichHcrEn;
 
     *out = fbl::move(vcpu);

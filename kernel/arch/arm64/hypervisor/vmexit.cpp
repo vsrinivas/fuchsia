@@ -228,7 +228,7 @@ zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
     ExceptionSyndrome syndrome(guest_state->esr_el2);
     switch (syndrome.ec) {
     case ExceptionClass::WFI_WFE_INSTRUCTION:
-        LTRACEF("handling wfi instruction, iss %#x\n", syndrome.iss);
+        LTRACEF("handling wfi/wfe instruction, iss %#x\n", syndrome.iss);
         return handle_wfi_wfe_instruction(syndrome.iss, guest_state, gic_state);
     case ExceptionClass::SMC_INSTRUCTION:
         LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
