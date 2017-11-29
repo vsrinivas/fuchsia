@@ -28,6 +28,8 @@ shared_library("machina") {
       "arch/arm64/gic_distributor.h",
       "arch/arm64/pl011.cc",
       "arch/arm64/pl011.h",
+      "arch/arm64/pl031.cc",
+      "arch/arm64/pl031.h",
     ]
   }
 

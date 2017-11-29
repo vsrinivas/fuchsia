@@ -16,8 +16,8 @@ class Pl011 : public IoHandler {
   zx_status_t Init(Guest* guest, uint64_t addr);
 
   // IoHandler interface.
-  zx_status_t Read(uint64_t addr, IoValue* io) const override;
-  zx_status_t Write(uint64_t addr, const IoValue& io) override;
+  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
  private:
   static const size_t kBufferSize = 128;

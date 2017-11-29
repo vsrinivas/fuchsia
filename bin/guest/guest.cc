@@ -30,6 +30,8 @@
 #include "garnet/lib/machina/uart.h"
 
 #if __aarch64__
+#include "garnet/lib/machina/arch/arm64/pl031.h"
+
 static const size_t kNumUarts = 1;
 static const uint64_t kUartBases[kNumUarts] = {
     // TODO(abdulla): Considering parsing this from the MDI.
@@ -309,7 +311,14 @@ int main(int argc, char** argv) {
     return status;
   }
 
-#if __x86_64__
+#if __aarch64__
+  Pl031 pl031;
+  status = pl031.Init(&guest);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create PL031 RTC\n");
+    return status;
+  }
+#elif __x86_64__
   // Setup local APIC.
   LocalApic local_apic(&vcpu, apic_addr);
   status = local_apic.Init(&guest);

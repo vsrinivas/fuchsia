@@ -28,15 +28,15 @@ zx_status_t Pl011::Init(Guest* guest, uint64_t addr) {
   return guest->CreateMapping(TrapType::MMIO_SYNC, addr, PL011_SIZE, 0, this);
 }
 
-zx_status_t Pl011::Read(uint64_t addr, IoValue* io) const {
+zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
   switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR: {
       fbl::AutoLock lock(&mutex_);
-      io->u16 = control_;
+      value->u16 = control_;
     }
       return ZX_OK;
     case Pl011Register::FR:
-      io->u16 = 0;
+      value->u16 = 0;
       return ZX_OK;
     default:
       fprintf(stderr, "Unhandled PL011 address read %#lx\n", addr);
@@ -44,15 +44,15 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* io) const {
   }
 }
 
-zx_status_t Pl011::Write(uint64_t addr, const IoValue& io) {
+zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
   switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR: {
       fbl::AutoLock lock(&mutex_);
-      control_ = io.u16;
+      control_ = value.u16;
     }
       return ZX_OK;
     case Pl011Register::DR:
-      Print(io.u8);
+      Print(value.u8);
       return ZX_OK;
     case Pl011Register::ICR:
     case Pl011Register::IFLS:
