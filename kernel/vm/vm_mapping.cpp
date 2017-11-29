@@ -386,6 +386,81 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
     return ZX_OK;
 }
 
+namespace {
+
+class VmMappingCoalescer {
+public:
+    VmMappingCoalescer(VmMapping* mapping, vaddr_t base);
+    ~VmMappingCoalescer();
+
+    // Add a page to the mapping run.  If this fails, the VmMappingCoalescer is
+    // no longer valid.
+    zx_status_t Append(vaddr_t vaddr, paddr_t paddr) {
+        DEBUG_ASSERT(!aborted_);
+        // If this isn't the expected vaddr, flush the run we have first.
+        if (count_ >= fbl::count_of(phys_) || vaddr != base_ + count_ * PAGE_SIZE) {
+            zx_status_t status = Flush();
+            if (status != ZX_OK) {
+                return status;
+            }
+            base_ = vaddr;
+        }
+        phys_[count_] = paddr;
+        ++count_;
+        return ZX_OK;
+    }
+
+    // Submit any outstanding mappings to the MMU.  If this fails, the
+    // VmMappingCoalescer is no longer valid.
+    zx_status_t Flush();
+
+    // Drop the current outstanding mappings without sending them to the MMU.
+    // After this call, the VmMappingCoalescer is no longer valid.
+    void Abort() {
+        aborted_ = true;
+    }
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmMappingCoalescer);
+
+    VmMapping* mapping_;
+    vaddr_t base_;
+    paddr_t phys_[16];
+    size_t count_;
+    bool aborted_;
+};
+
+VmMappingCoalescer::VmMappingCoalescer(VmMapping* mapping, vaddr_t base)
+    : mapping_(mapping), base_(base), count_(0), aborted_(false) { }
+
+VmMappingCoalescer::~VmMappingCoalescer() {
+    // Make sure we've flushed or aborted
+    DEBUG_ASSERT(count_ == 0 || aborted_);
+}
+
+zx_status_t VmMappingCoalescer::Flush() {
+    if (count_ == 0) {
+        return ZX_OK;
+    }
+
+    uint flags = mapping_->arch_mmu_flags();
+    if (flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
+        size_t mapped;
+        zx_status_t ret = mapping_->aspace()->arch_aspace().Map(base_, phys_, count_, flags,
+                                                                &mapped);
+        if (ret != ZX_OK) {
+            TRACEF("error %d mapping %zu pages starting at va %#" PRIxPTR "\n", ret, count_, base_);
+            aborted_ = true;
+            return ret;
+        }
+        DEBUG_ASSERT(mapped == count_);
+    }
+    base_ += count_ * PAGE_SIZE;
+    count_ = 0;
+    return ZX_OK;
+}
+
+} // namespace
+
 zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     canary_.Assert();
 
@@ -423,6 +498,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     // iterate through the range, grabbing a page from the underlying object and
     // mapping it in
     size_t o;
+    VmMappingCoalescer coalescer(this, base_ + offset);
     for (o = offset; o < offset + len; o += PAGE_SIZE) {
         uint64_t vmo_offset = object_offset_ + o;
 
@@ -433,30 +509,22 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
             // no page to map
             if (commit) {
                 // fail when we can't commit every requested page
+                coalescer.Abort();
                 return status;
-            } else {
-                // skip ahead
-                continue;
             }
+
+            // skip ahead
+            continue;
         }
 
         vaddr_t va = base_ + o;
         LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pa, va);
-
-        // Only perform the MMU mapping if the pages have non-empty permissions
-        if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_RWX_MASK) {
-            size_t mapped;
-            zx_status_t ret = aspace_->arch_aspace().MapContiguous(va, pa, 1, arch_mmu_flags_,
-                                                                   &mapped);
-            if (ret != ZX_OK) {
-                TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
-                return ret;
-            }
-            DEBUG_ASSERT(mapped == 1);
+        status = coalescer.Append(va, pa);
+        if (status != ZX_OK) {
+            return status;
         }
     }
-
-    return ZX_OK;
+    return coalescer.Flush();
 }
 
 zx_status_t VmMapping::DecommitRange(size_t offset, size_t len,
