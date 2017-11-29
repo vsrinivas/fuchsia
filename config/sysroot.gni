@@ -17,7 +17,7 @@ if (current_os == target_os && target_sysroot != "") {
   }
   sysroot = rebase_path("//out/build-zircon/build-user-${_zircon_cpu}/sysroot")
 } else if (is_linux) {
-  sysroot = rebase_path("//buildtools/sysroot")
+  sysroot = rebase_path("//buildtools/${host_platform}/sysroot")
 } else if (is_mac) {
   import("//build/config/mac/config.gni")
   sysroot = mac_sdk_path
