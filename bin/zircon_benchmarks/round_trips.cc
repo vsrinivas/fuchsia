@@ -8,19 +8,23 @@
 
 #include <benchmark/benchmark.h>
 #include <launchpad/launchpad.h>
-#include <lib/fxl/logging.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
+
 #include "channels.h"
+#include "garnet/bin/zircon_benchmarks/round_trip_service.fidl.h"
 #include "main.h"
 #include "round_trips.h"
 
-// This tests the round-trip time of various Zircon kernel IPC primitives.
-// It measures the latency of sending a request to another thread or
-// process and receiving a reply back.
+// This tests the round-trip time of various operations, including Zircon
+// kernel IPC primitives.  It measures the latency of sending a request to
+// another thread or process and receiving a reply back.
 //
 // These tests generally use the same IPC primitive in both directions
 // (i.e. from client to server and from server to client) for sending and
@@ -324,6 +328,49 @@ class PortTest {
   ThreadOrProcess thread_or_process_;
 };
 
+// Implementation of FIDL interface for testing round trip IPCs.
+class RoundTripServiceImpl : public RoundTripService {
+ public:
+  void RoundTripTest(uint32_t arg,
+                     const RoundTripTestCallback& callback) override {
+    FXL_CHECK(arg == 123);
+    callback(456);
+  }
+};
+
+// Test IPC round trips using FIDL IPC.  This uses a synchronous IPC on the
+// client side.
+class FidlTest {
+ public:
+  FidlTest(MultiProc multiproc) {
+    zx_handle_t server =
+        GetSynchronousProxy(&service_ptr_).PassChannel().release();
+    thread_or_process_.Launch("FidlTest::ThreadFunc", &server, 1, multiproc);
+  }
+
+  static void ThreadFunc(std::vector<zx_handle_t> handles) {
+    FXL_CHECK(handles.size() == 1);
+    zx::channel channel(handles[0]);
+
+    fsl::MessageLoop loop;
+    RoundTripServiceImpl service_impl;
+    fidl::Binding<RoundTripService> binding(&service_impl, std::move(channel));
+    binding.set_connection_error_handler(
+        [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
+    loop.Run();
+  }
+
+  void Run() {
+    uint32_t result;
+    FXL_CHECK(service_ptr_->RoundTripTest(123, &result));
+    FXL_CHECK(result == 456);
+  }
+
+ private:
+  ThreadOrProcess thread_or_process_;
+  RoundTripServiceSyncPtr service_ptr_;
+};
+
 // Test the round trip time for waking up threads using Zircon futexes.
 // Note that Zircon does not support cross-process futexes, only
 // within-process futexes, so there is no multi-process version of this
@@ -450,6 +497,7 @@ const ThreadFuncEntry thread_funcs[] = {
   DEF_FUNC(ChannelPortTest::ThreadFunc)
   DEF_FUNC(ChannelCallTest::ThreadFunc)
   DEF_FUNC(PortTest::ThreadFunc)
+  DEF_FUNC(FidlTest::ThreadFunc)
 #undef DEF_FUNC
 };
 // clang-format on
@@ -480,6 +528,7 @@ void RegisterTests() {
   RegisterTestMultiProc<ChannelPortTest>("RoundTrip_ChannelPort");
   RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");
   RegisterTestMultiProc<PortTest>("RoundTrip_Port");
+  RegisterTestMultiProc<FidlTest>("RoundTrip_Fidl");
   fbenchmark::RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
   fbenchmark::RegisterTest<PthreadCondvarTest>(
       "RoundTrip_PthreadCondvar_SingleProcess");

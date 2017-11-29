@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//garnet/public/lib/fidl/fidl.gni")
 
 # This executable runs the benchmarks via the gbenchmark library.  It is
 # not suitable for running via runtests because, by default (when run with
@@ -51,10 +52,12 @@ source_set("lib") {
     "vmo.cc",
   ]
   deps = [
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gflags",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
+    ":fidl_interface",
   ]
   public_deps = [
     "//third_party/benchmark",
@@ -62,6 +65,13 @@ source_set("lib") {
   libs = [
     "launchpad",
     "zircon",
+  ]
+}
+
+fidl("fidl_interface") {
+  testonly = true
+  sources = [
+    "round_trip_service.fidl",
   ]
 }
 
