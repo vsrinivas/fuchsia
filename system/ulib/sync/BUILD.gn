@@ -2,26 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("block-client_config") {
+config("sync_config") {
   include_dirs = [ "include" ]
 }
 
-source_set("block-client") {
+source_set("sync") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
-    "client.c",
-    "include/block-client/client.h",
+    "completion.c",
+    "include/sync/completion.h",
+    "include/sync/futex.h",
   ]
 
-  public_configs = [ ":block-client_config" ]
+  public_configs = [ ":sync_config" ]
 
   deps = [
-    "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/fbl",
   ]
 
   libs = [
-    "fdio",
     "zircon",
   ]
 }
