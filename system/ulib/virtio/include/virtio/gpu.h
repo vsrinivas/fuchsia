@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <zircon/compiler.h>
 
 // clang-format off

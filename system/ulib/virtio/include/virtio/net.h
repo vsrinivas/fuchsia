@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <ddk/protocol/ethernet.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
 
 // clang-format off
 
