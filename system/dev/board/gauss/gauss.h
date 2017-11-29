@@ -7,6 +7,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <soc/aml-a113/a113-clocks.h>
 #include <soc/aml-a113/a113-gpio.h>
 #include <soc/aml-a113/a113-i2c.h>
 
@@ -18,6 +19,7 @@ typedef struct {
     io_buffer_t usb_phy;
     zx_handle_t usb_phy_irq_handle;
     thrd_t phy_irq_thread;
+    a113_clk_dev_t *clocks;
 } gauss_bus_t;
 
 // gauss-audio.c

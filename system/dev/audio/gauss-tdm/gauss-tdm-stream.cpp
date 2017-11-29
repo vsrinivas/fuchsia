@@ -148,8 +148,8 @@ zx_status_t TdmOutputStream::AddFormats(
     range.min_channels = 2;
     range.max_channels = 2;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = 49000;
-    range.max_frames_per_second = 49000;
+    range.min_frames_per_second = 48000;
+    range.max_frames_per_second = 48000;
 
     fbl::AllocChecker ac;
     supported_formats->reserve(1, &ac);
@@ -536,10 +536,13 @@ zx_status_t TdmOutputStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
 
 zx_status_t TdmOutputStream::SetModuleClocks() {
 
-    // enable mclk c, select fclk_div4 as source, divide by 20 to get 12.5MHz
-    //  at 256 sclk/frame, this yields 48.828125kHz
-    // TODO(hollande) - switch to pll to get accurate timing for 48kHz
-    regs_->mclk_ctl[MCLK_C] = (1 << 31) | (6 << 24) | (19);
+    /* enable mclk c
+       select mpll2 as source - 245758771.206Hz
+       divide clock source by 2 to get tdm mclk
+       divide mclk by 10 to get 12287938.5603 Hz SCLK
+       SCLK is 256 x fs => 47999.7600012 frames per sec
+    */
+    regs_->mclk_ctl[MCLK_C] = (1 << 31) | (2 << 24) | (9);
 
     // configure mst_sclk_gen
     regs_->sclk_ctl[MCLK_C].ctl0 = (0x03 << 30) | (1 << 20) | (0 << 10) | 255;

@@ -23,6 +23,20 @@
 #include "gauss.h"
 #include "gauss-hw.h"
 
+
+#define GAUSS_TDM_SAMPLE_RATE (48000)
+#define GAUSS_TDM_BITS_PER_SLOT (32)
+#define GAUSS_TDM_SLOTS_PER_FRAME (8)
+#define GAUSS_TDM_CLK_SRC_MULT (20)
+#define GAUSS_TDM_CLK_N        (GAUSS_TDM_BITS_PER_SLOT * \
+                                GAUSS_TDM_SLOTS_PER_FRAME * \
+                                GAUSS_TDM_CLK_SRC_MULT)
+
+
+// 48khz sample rate, 8 slots, 32bits per slot
+#define GAUSS_TDM_CLK_SRC_FREQ (GAUSS_TDM_SAMPLE_RATE * \
+                                GAUSS_TDM_CLK_N)
+
 // turn this on to enable Gauss accelerometer test driver
 //#define I2C_TEST 1
 
@@ -153,6 +167,20 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "a113_i2c_init failed: %d\n", status);
         goto fail;
     }
+
+    status = a113_clk_init(&bus->clocks);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "a113_clk_init failed: %d\n",status);
+        goto fail;
+    }
+
+    // Set mpll2 to 20x our desired sckl frequency.
+    // tdm divides down by 20 for sclk
+    uint64_t actual_freq;
+    a113_clk_set_mpll2(bus->clocks, GAUSS_TDM_CLK_SRC_FREQ, &actual_freq);
+
+    zxlogf(INFO,"Requested sample rate = %d, actual = %ld\n",GAUSS_TDM_SAMPLE_RATE,
+                                                       actual_freq / GAUSS_TDM_CLK_N);
 
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
     bus->usb_mode_switch.ctx = bus;
