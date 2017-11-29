@@ -39,7 +39,7 @@ namespace {
 
 typedef struct {
     bool readonly = false;
-    uint64_t data_blocks = 0;
+    uint64_t data_blocks = blobstore::kStartBlockMinimum; // Account for reserved blocks
     fbl::Vector<fbl::String> blob_list;
 } blob_options_t;
 
