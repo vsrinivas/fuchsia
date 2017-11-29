@@ -4,8 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/firebase/encoding.h"
 #include "gtest/gtest.h"
+#include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/utf_codecs.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
 
 #include <string>
 
@@ -130,10 +130,10 @@ TEST(EncodingTest, BackAndForth) {
 
   // Check random sequence of size less or equals 3.
   for (size_t i = 0; i < 10000; ++i) {
-    size_t size = glue::RandUint64() % 4;
+    size_t size = fxl::RandUint64() % 4;
     char buffer[size];
     fxl::StringView view(buffer, size);
-    glue::RandBytes(buffer, size);
+    fxl::RandBytes(reinterpret_cast<unsigned char*>(buffer), size);
     EXPECT_TRUE(Decode(EncodeKey(view), &ret_key));
     EXPECT_EQ(view, ret_key);
     EXPECT_TRUE(Decode(EncodeValue(view), &ret_value));

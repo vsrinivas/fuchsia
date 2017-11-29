@@ -56,7 +56,6 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/convert",
-    "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/test:lib",
     "//peridot/lib/network:fake",
     "//peridot/lib/socket",

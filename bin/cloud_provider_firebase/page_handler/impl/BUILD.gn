@@ -28,7 +28,6 @@ source_set("impl") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/firebase",
     "//peridot/bin/cloud_provider_firebase/gcs",
-    "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/public",  # For serialization version constant.
     "//zircon/system/ulib/zx",
   ]
