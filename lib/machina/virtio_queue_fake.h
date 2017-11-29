@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_
-#define GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
+#define GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
 
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio.h>
@@ -108,4 +108,4 @@ class VirtioQueueFake {
   uint16_t next_free_desc_ = 0;
 };
 
-#endif  // GARNET_LIB_MACHINA_TESTS_VIRTIO_QUEUE_FAKE_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
