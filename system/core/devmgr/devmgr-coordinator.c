@@ -1439,7 +1439,12 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
         return r;
     }
 
-    return dh_bind_driver(dev->proxy, drv->libname);
+    r = dh_bind_driver(dev->proxy, drv->libname);
+    //TODO(swetland): arrange to mark us unbound when the proxy (or its devhost) goes away
+    if ((r == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
+        dev->flags |= DEV_CTX_BOUND;
+    }
+    return r;
 }
 
 static void dc_handle_new_device(device_t* dev) {
