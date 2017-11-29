@@ -27,7 +27,7 @@ __BEGIN_CDECLS;
 #define PDEV_PID_HIKEY960           1
 #define PDEV_DID_HIKEY960_GPIO_TEST 1
 
-// Amlogic
+// Google
 #define PDEV_VID_GOOGLE             3
 #define PDEV_PID_GAUSS              1
 
@@ -35,5 +35,9 @@ __BEGIN_CDECLS;
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
 #define PDEV_DID_GAUSS_I2C_TEST     3
 #define PDEV_DID_GAUSS_LED          4
+
+// Khadas
+#define PDEV_VID_KHADAS             4
+#define PDEV_PID_VIM                1
 
 __END_CDECLS;
