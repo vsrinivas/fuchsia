@@ -36,46 +36,6 @@ page_table1             .req x21
 
 .section .text.boot, "ax", @progbits
 FUNCTION(arm_reset)
-    movlit  x9, EFI_BOOT_SIGNATURE
-    ldr     x10, [x1]
-    cmp     x9,x10
-    bne     .Lno_efi
-
-    /* We were launched by EFI with x1 containing system table
-         mmu is on, dcache is on, icache is on
-    */
-    /* efi_boot_ret efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr) */
-    adr_global    x2, _start
-    push_regs     x29, x30
-    bl            efi_boot
-    mov           x9, x0
-    mov           x10, x1
-    pop_regs      x29, x30
-
-    /* Turn off Dcache and MMU */
-    mrs    x0, CurrentEL
-    cmp    x0, #0x04
-    b.ne   1f
-    mrs    x0, sctlr_el2
-    bic    x0, x0, #1 << 0    // clear SCTLR.M
-    bic    x0, x0, #1 << 2    // clear SCTLR.C
-    msr    sctlr_el2, x0
-    isb
-    b      2f
-1:
-    mrs    x0, sctlr_el1
-    bic    x0, x0, #1 << 0    // clear SCTLR.M
-    bic    x0, x0, #1 << 2    // clear SCTLR.C
-    msr    sctlr_el1, x0
-    isb
-2:
-    mov     x0, x9
-    mov     x1, xzr
-    mov     x2, xzr
-    mov     x3, xzr
-    br      x10
-
-.Lno_efi:
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
@@ -287,6 +247,48 @@ FUNCTION(arm_reset)
     wfe
     b       .Lunsupported_cpu_trap
 END_FUNCTION(arm_reset)
+
+    /* efi entry point */
+FUNCTION(efi_start)
+    movlit  x9, EFI_BOOT_SIGNATURE
+    ldr     x10, [x1]
+    cmp     x9,x10
+    bne     arm_reset
+
+    /* We were launched by EFI with x1 containing system table
+         mmu is on, dcache is on, icache is on
+    */
+    /* efi_boot_ret efi_boot(void* handle, efi_system_table_t *systable, paddr_t image_addr) */
+    adr_global    x2, _start
+    push_regs     x29, x30
+    bl            efi_boot
+    mov           x9, x0
+    mov           x10, x1
+    pop_regs      x29, x30
+
+    /* Turn off Dcache and MMU */
+    mrs    x0, CurrentEL
+    cmp    x0, #0x04
+    b.ne   1f
+    mrs    x0, sctlr_el2
+    bic    x0, x0, #1 << 0    // clear SCTLR.M
+    bic    x0, x0, #1 << 2    // clear SCTLR.C
+    msr    sctlr_el2, x0
+    isb
+    b      2f
+1:
+    mrs    x0, sctlr_el1
+    bic    x0, x0, #1 << 0    // clear SCTLR.M
+    bic    x0, x0, #1 << 2    // clear SCTLR.C
+    msr    sctlr_el1, x0
+    isb
+2:
+    mov     x0, x9
+    mov     x1, xzr
+    mov     x2, xzr
+    mov     x3, xzr
+    br      x10
+END_FUNCTION(efi_start)
 
 .ltorg
 
