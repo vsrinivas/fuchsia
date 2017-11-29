@@ -13,7 +13,7 @@ typedef struct zx_port_packet zx_port_packet_t;
 
 class GuestPhysicalAddressSpace;
 struct GuestState;
-struct GicState;
+struct GichState;
 class TrapMap;
 
 // clang-format off
@@ -80,8 +80,8 @@ struct DataAbort {
 
 // clang-format on
 
-bool gic_signal_interrupt(GicState* gic_state, bool reschedule);
+bool gich_signal_interrupt(GichState* gich_state, bool reschedule);
 
 zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
-                           GicState* gic_state, GuestPhysicalAddressSpace* gpas,
+                           GichState* gich_state, GuestPhysicalAddressSpace* gpas,
                            TrapMap* traps, zx_port_packet_t* packet);

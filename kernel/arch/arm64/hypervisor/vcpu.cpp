@@ -24,14 +24,14 @@ static const uint32_t kSpsrDaif = 0b1111 << 6;
 static const uint32_t kSpsrEl1h = 0b0101;
 static const uint32_t kSpsrNzcv = 0b1111 << 28;
 
-static zx_status_t get_gich(uint8_t vpid, GicH** gich) {
+static zx_status_t get_gich(uint8_t vpid, Gich** gich) {
     // Check for presence of GICv2 virtualisation extensions.
     //
     // TODO(abdulla): Support GICv3 virtualisation.
     if (GICH_OFFSET == 0)
         return ZX_ERR_NOT_SUPPORTED;
 
-    *gich = reinterpret_cast<GicH*>(GICH_ADDRESS + 0x1000 + (vpid << 9));
+    *gich = reinterpret_cast<Gich*>(GICH_ADDRESS + 0x1000 + (vpid << 9));
     return ZX_OK;
 }
 
@@ -53,8 +53,9 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
         return ZX_ERR_NO_MEMORY;
     auto_call.cancel();
 
-    event_init(&vcpu->gic_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
-    status = get_gich(vpid, &vcpu->gic_state_.gich);
+    timer_init(&vcpu->gich_state_.timer);
+    event_init(&vcpu->gich_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
+    status = get_gich(vpid, &vcpu->gich_state_.gich);
     if (status != ZX_OK)
         return status;
 
@@ -62,7 +63,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     vcpu->hcr_.store(HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO |
                      HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW);
-    vcpu->gic_state_.gich->hcr |= kGichHcrEn;
+    vcpu->gich_state_.gich->hcr |= kGichHcrEn;
 
     *out = fbl::move(vcpu);
     return ZX_OK;
@@ -93,8 +94,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // We received a physical interrupt, return to the guest.
             status = ZX_OK;
         } else if (status == ZX_OK) {
-            status = vmexit_handler(&hcr_, &el2_state_.guest_state, &gic_state_,
-                                    gpas_, traps_, packet);
+            status = vmexit_handler(&hcr_, &el2_state_.guest_state, &gich_state_, gpas_, traps_,
+                                    packet);
         } else {
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
@@ -104,15 +105,15 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
 zx_status_t Vcpu::Interrupt(uint32_t interrupt) {
     // TODO(abdulla): Improve handling of list register exhaustion.
-    uint64_t elsr = gic_state_.gich->elsr;
+    uint64_t elsr = gich_state_.gich->elsr;
     if (elsr == 0)
         return ZX_ERR_NO_RESOURCES;
 
     size_t i = __builtin_ctzl(elsr);
-    gic_state_.gich->lr[i] = kGichLrPending | interrupt;
+    gich_state_.gich->lr[i] = kGichLrPending | interrupt;
     hcr_.fetch_or(HCR_EL2_VI);
 
-    if (!gic_signal_interrupt(&gic_state_, true)) {
+    if (!gich_signal_interrupt(&gich_state_, true)) {
         DEBUG_ASSERT(!arch_ints_disabled());
         arch_disable_ints();
         auto cpu = cpu_of(vpid_);

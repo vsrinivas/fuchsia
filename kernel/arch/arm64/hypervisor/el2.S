@@ -425,8 +425,8 @@ FUNCTION_LABEL(el2_guest_exit)
 
     // Set the hypervisor control register.
     // Disable guest traps, and ensure EL1 is arm64.
-    mov x9, #HCR_EL2_RW
-    msr hcr_el2, x9
+    mov x10, #HCR_EL2_RW
+    msr hcr_el2, x10
     isb
 
     switch_to_host

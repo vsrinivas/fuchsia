@@ -12,6 +12,7 @@
 #include <arch/arm64/el2_state.h>
 #include <arch/hypervisor.h>
 #include <dev/psci.h>
+#include <dev/timer/arm_generic.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
 #include <vm/fault.h>
@@ -29,6 +30,7 @@
 })
 
 static const uint16_t kSmcPsci = 0;
+static const uint32_t kCntpCtlEnable = 1u << 0;
 
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
@@ -61,33 +63,52 @@ static void next_pc(GuestState* guest_state) {
     guest_state->system_state.elr_el2 += 4;
 }
 
-static bool gic_has_pending_interrupt(GicState* gic_state) {
-    uint32_t num_lrs = 1 + (gic_state->gich->vtr & kGichVtrListRegs);
+static bool gich_has_pending_interrupt(GichState* gich_state) {
+    uint32_t num_lrs = 1 + (gich_state->gich->vtr & kGichVtrListRegs);
     for (uint32_t i = 0; i != num_lrs; ++i) {
-        if (gic_state->gich->lr[i] & kGichLrPending) {
+        if (gich_state->gich->lr[i] & kGichLrPending) {
             return true;
         }
     }
     return false;
 }
 
-bool gic_signal_interrupt(GicState* gic_state, bool reschedule) {
-    return event_signal(&gic_state->event, reschedule) > 0;
+bool gich_signal_interrupt(GichState* gich_state, bool reschedule) {
+    return event_signal(&gich_state->event, reschedule) > 0;
 }
 
+static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
+    bool has_timer = ARM64_READ_SYSREG(cntp_ctl_el0) & kCntpCtlEnable;
+    if (!has_timer)
+        return INT_NO_RESCHEDULE;
+
+    GichState* gich_state = static_cast<GichState*>(arg);
+    bool signaled = gich_signal_interrupt(gich_state, false);
+    return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+}
+
+
 static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
-                                              GicState* gic_state) {
+                                              GichState* gich_state) {
     const WaitInstruction wi(iss);
     if (wi.is_wfe) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    bool has_timer = ARM64_READ_SYSREG(cntp_ctl_el0) & kCntpCtlEnable;
+    if (has_timer) {
+        uint64_t cntpct_deadline = ARM64_READ_SYSREG(cntp_cval_el0);
+        zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
+        timer_cancel(&gich_state->timer);
+        timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
+    }
+
     do {
-        zx_status_t status = event_wait_deadline(&gic_state->event, ZX_TIME_INFINITE, true);
+        zx_status_t status = event_wait_deadline(&gich_state->event, ZX_TIME_INFINITE, true);
         if (status != ZX_OK) {
             return ZX_ERR_CANCELED;
         }
-    } while (!gic_has_pending_interrupt(gic_state));
+    } while (!has_timer && !gich_has_pending_interrupt(gich_state));
     next_pc(guest_state);
     return ZX_OK;
 }
@@ -218,7 +239,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
 }
 
 zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
-                           GicState* gic_state, GuestPhysicalAddressSpace* gpas,
+                           GichState* gich_state, GuestPhysicalAddressSpace* gpas,
                            TrapMap* traps, zx_port_packet_t* packet) {
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
     LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
@@ -229,7 +250,7 @@ zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
     switch (syndrome.ec) {
     case ExceptionClass::WFI_WFE_INSTRUCTION:
         LTRACEF("handling wfi/wfe instruction, iss %#x\n", syndrome.iss);
-        return handle_wfi_wfe_instruction(syndrome.iss, guest_state, gic_state);
+        return handle_wfi_wfe_instruction(syndrome.iss, guest_state, gich_state);
     case ExceptionClass::SMC_INSTRUCTION:
         LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
         return handle_smc_instruction(syndrome.iss, guest_state);

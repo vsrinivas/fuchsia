@@ -57,7 +57,7 @@ static uint64_t zx_time_to_cntpct(zx_time_t zx_time)
     return u64_mul_u64_fp32_64(zx_time, cntpct_per_ns);
 }
 
-static zx_time_t cntpct_to_zx_bigtime(uint64_t cntpct)
+zx_time_t cntpct_to_zx_time(uint64_t cntpct)
 {
     return u64_mul_u64_fp32_64(cntpct, ns_per_cntpct);
 }
@@ -236,7 +236,7 @@ void platform_stop_timer(void)
 
 zx_time_t current_time(void)
 {
-    return cntpct_to_zx_bigtime(read_ct());
+    return cntpct_to_zx_time(read_ct());
 }
 
 uint64_t current_ticks(void)
@@ -283,16 +283,16 @@ static void test_zx_time_to_cntpct(uint32_t cntfrq, zx_time_t zx_time)
                   zx_time, cntpct, expected_cntpct);
 }
 
-static void test_cntpct_to_zx_bigtime(uint32_t cntfrq, uint64_t expected_s)
+static void test_cntpct_to_zx_time(uint32_t cntfrq, uint64_t expected_s)
 {
-    zx_time_t expected_zx_bigtime = ZX_SEC(expected_s);
+    zx_time_t expected_zx_time = ZX_SEC(expected_s);
     uint64_t cntpct = (uint64_t)cntfrq * expected_s;
-    zx_time_t zx_bigtime = cntpct_to_zx_bigtime(cntpct);
+    zx_time_t zx_time = cntpct_to_zx_time(cntpct);
 
-    test_time_conversion_check_result(zx_bigtime, expected_zx_bigtime, (1000 * 1000 + cntfrq - 1) / cntfrq, false);
-    LTRACEF_LEVEL(2, "cntpct_to_zx_bigtime(%" PRIu64
+    test_time_conversion_check_result(zx_time, expected_zx_time, (1000 * 1000 + cntfrq - 1) / cntfrq, false);
+    LTRACEF_LEVEL(2, "cntpct_to_zx_time(%" PRIu64
                   "): got %" PRIu64 ", expect %" PRIu64 "\n",
-                  cntpct, zx_bigtime, expected_zx_bigtime);
+                  cntpct, zx_time, expected_zx_time);
 }
 
 static void test_time_conversions(uint32_t cntfrq)
@@ -304,12 +304,12 @@ static void test_time_conversions(uint32_t cntfrq)
     test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
     test_zx_time_to_cntpct(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
     test_zx_time_to_cntpct(cntfrq, 1ULL<<60);
-    test_cntpct_to_zx_bigtime(cntfrq, 0);
-    test_cntpct_to_zx_bigtime(cntfrq, 1);
-    test_cntpct_to_zx_bigtime(cntfrq, 60 * 60 * 24);
-    test_cntpct_to_zx_bigtime(cntfrq, 60 * 60 * 24 * 365);
-    test_cntpct_to_zx_bigtime(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
-    test_cntpct_to_zx_bigtime(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
+    test_cntpct_to_zx_time(cntfrq, 0);
+    test_cntpct_to_zx_time(cntfrq, 1);
+    test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24);
+    test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24 * 365);
+    test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
+    test_cntpct_to_zx_time(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
 }
 
 static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)

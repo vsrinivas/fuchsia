@@ -11,6 +11,7 @@
 #include <fbl/unique_ptr.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
+#include <kernel/timer.h>
 #include <zircon/types.h>
 
 class GuestPhysicalAddressSpace;
@@ -44,7 +45,8 @@ private:
     explicit Guest(uint8_t vmid);
 };
 
-struct GicH {
+// Representation of GICH registers.
+struct Gich {
     volatile uint32_t hcr;
     volatile uint32_t vtr;
     volatile uint32_t vmcr;
@@ -60,20 +62,23 @@ struct GicH {
     volatile uint32_t lr[64];
 } __PACKED;
 
-static_assert(__offsetof(GicH, hcr) == 0x00, "");
-static_assert(__offsetof(GicH, vtr) == 0x04, "");
-static_assert(__offsetof(GicH, vmcr) == 0x08, "");
-static_assert(__offsetof(GicH, misr) == 0x10, "");
-static_assert(__offsetof(GicH, eisr) == 0x20, "");
-static_assert(__offsetof(GicH, elsr) == 0x30, "");
-static_assert(__offsetof(GicH, apr) == 0xf0, "");
-static_assert(__offsetof(GicH, lr) == 0x100, "");
+static_assert(__offsetof(Gich, hcr) == 0x00, "");
+static_assert(__offsetof(Gich, vtr) == 0x04, "");
+static_assert(__offsetof(Gich, vmcr) == 0x08, "");
+static_assert(__offsetof(Gich, misr) == 0x10, "");
+static_assert(__offsetof(Gich, eisr) == 0x20, "");
+static_assert(__offsetof(Gich, elsr) == 0x30, "");
+static_assert(__offsetof(Gich, apr) == 0xf0, "");
+static_assert(__offsetof(Gich, lr) == 0x100, "");
 
-struct GicState {
-    // Gic hypervisor control registers.
-    GicH* gich;
+// Stores the state of the GICH across VM exits.
+struct GichState {
+    // Timer for ARM generic timer.
+    timer_t timer;
     // Event for handling block on WFI.
     event_t event;
+    // Virtual GICH address.
+    Gich* gich;
 };
 
 class Vcpu {
@@ -92,7 +97,7 @@ private:
     const uint8_t vmid_;
     const uint8_t vpid_;
     const thread_t* thread_;
-    GicState gic_state_;
+    GichState gich_state_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;
     El2State el2_state_;
