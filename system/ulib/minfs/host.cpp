@@ -156,9 +156,16 @@ uint32_t fdio_flags_to_zxio(uint32_t flags) {
         result |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
         break;
     }
+#ifdef O_PATH
     if (flags & O_PATH) {
         result |= ZX_FS_FLAG_VNODE_REF_ONLY;
     }
+#endif
+#ifdef O_DIRECTORY
+    if (flags & O_DIRECTORY) {
+        result |= ZX_FS_FLAG_DIRECTORY;
+    }
+#endif
     if (flags & O_CREAT) {
         result |= ZX_FS_FLAG_CREATE;
     }
@@ -167,9 +174,6 @@ uint32_t fdio_flags_to_zxio(uint32_t flags) {
     }
     if (flags & O_TRUNC) {
         result |= ZX_FS_FLAG_TRUNCATE;
-    }
-    if (flags & O_DIRECTORY) {
-        result |= ZX_FS_FLAG_DIRECTORY;
     }
     if (flags & O_APPEND) {
         result |= ZX_FS_FLAG_APPEND;
