@@ -33,7 +33,7 @@ var (
 )
 
 // minSize is the minimum image size, as the tool currently always builds fat32.
-const minSize = 33 * 1024 * 1024
+const minSize = 63 * 1024 * 1024
 
 func main() {
 	flag.Parse()
@@ -89,6 +89,7 @@ func main() {
 	if *size == 0 {
 		*size = computeSize(dstSrc)
 	}
+	*size = alignSize(*size)
 
 	f, err := os.Create(*target)
 	if err != nil {
@@ -131,9 +132,16 @@ func main() {
 	}
 
 	root.Sync()
-	root.Close()
+	if err := root.Close(); err != nil {
+		log.Fatal(err)
+	}
+	if err := fatfs.Close(); err != nil {
+		log.Fatal(err)
+	}
 	f.Sync()
-	f.Close()
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // msCopyIn copies src from the host filesystem into dst under the given
@@ -240,6 +248,7 @@ func (r *manifestReader) Next() (dst, src string, err error) {
 	return "", "", err
 }
 
+
 func computeSize(dstSrc map[string]string) uint64 {
 	var total uint64
 	for _, src := range dstSrc {
@@ -251,6 +260,17 @@ func computeSize(dstSrc map[string]string) uint64 {
 	}
 	if total < minSize {
 		return minSize
+	}
+
+	return total
+}
+
+// sectors per track is 63, and a sector is 512, so we must round to the nearest
+// 32256.
+const sizeAlignment = 32256
+func alignSize(total uint64) uint64 {
+	if d := total % sizeAlignment; d != 0 {
+		total = total + (sizeAlignment - d)
 	}
 	return total
 }
