@@ -43,6 +43,12 @@ public:
     // Map a physically contiguous region into the virtual address space
     virtual zx_status_t MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
                                       uint mmu_flags, size_t* mapped) = 0;
+    // Map the given array of pages into the virtual address space starting at
+    // |vaddr|, in the order they appear in |phys|.
+    // If any address in the range [vaddr, vaddr + count * PAGE_SIZE) is already
+    // mapped when this is called, this returns ZX_ERR_ALREADY_EXISTS.
+    virtual zx_status_t Map(vaddr_t vaddr, paddr_t* phys, size_t count,
+                            uint mmu_flags, size_t* mapped) = 0;
 
     // Unmap the given virtual address range
     virtual zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) = 0;

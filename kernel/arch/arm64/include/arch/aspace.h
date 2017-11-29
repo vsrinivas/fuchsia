@@ -24,6 +24,8 @@ public:
     zx_status_t Destroy() override;
 
     // main methods
+    zx_status_t Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
+                    size_t* mapped) override;
     zx_status_t MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
                               uint mmu_flags, size_t* mapped) override;
 
@@ -69,6 +71,10 @@ private:
                          pte_t attrs, uint index_shift, uint page_size_shift,
                          volatile pte_t* page_table, uint asid) TA_REQ(lock_);
 
+    void MmuParamsFromFlags(uint mmu_flags,
+                            pte_t* attrs, vaddr_t* vaddr_base,
+                            uint* top_size_shift, uint* top_index_shift,
+                            uint* page_size_shift, uint* asid);
     ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                      vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
                      uint page_size_shift, volatile pte_t* top_page_table,
@@ -83,6 +89,7 @@ private:
                              vaddr_t vaddr_base, uint top_size_shift,
                              uint top_index_shift, uint page_size_shift,
                              volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
+    zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("VAAS")> canary_;
 

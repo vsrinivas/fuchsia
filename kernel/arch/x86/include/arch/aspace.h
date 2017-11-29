@@ -46,8 +46,10 @@ public:
     size_t pages() const { return pages_; }
     void* ctx() const { return ctx_; }
 
-    zx_status_t MapPages(vaddr_t vaddr, paddr_t paddr, const size_t count,
+    zx_status_t MapPages(vaddr_t vaddr, paddr_t* phys, size_t count,
                          uint flags, size_t* mapped);
+    zx_status_t MapPagesContiguous(vaddr_t vaddr, paddr_t paddr, const size_t count,
+                                   uint flags, size_t* mapped);
     zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
     zx_status_t ProtectPages(vaddr_t vaddr, size_t count, uint flags);
 
@@ -238,6 +240,8 @@ public:
     // main methods
     zx_status_t MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
                               uint mmu_flags, size_t* mapped) override;
+    zx_status_t Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
+                    size_t* mapped) override;
     zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
     zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
     zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;

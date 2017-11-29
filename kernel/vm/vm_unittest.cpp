@@ -887,6 +887,83 @@ static bool vmo_lookup_test(void* context) {
     END_TEST;
 }
 
+// TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
+// special case that.
+#if ARCH_ARM64
+#define MMU_EXPECT_EQ(exp, act, msg) EXPECT_EQ(ZX_ERR_INTERNAL, act, msg)
+#else
+#define MMU_EXPECT_EQ(exp, act, msg) EXPECT_EQ(exp, act, msg)
+#endif
+
+static bool arch_noncontiguous_map(void* context) {
+    BEGIN_TEST;
+
+    // Get some phys pages to test on
+    paddr_t phys[3];
+    struct list_node phys_list = LIST_INITIAL_VALUE(phys_list);
+    size_t count = pmm_alloc_pages(fbl::count_of(phys), 0, &phys_list);
+    EXPECT_EQ(count, fbl::count_of(phys), "");
+    {
+        size_t i = 0;
+        vm_page_t* p;
+        list_for_every_entry(&phys_list, p, vm_page_t, free.node) {
+            phys[i] = vm_page_to_paddr(p);
+            ++i;
+        }
+    }
+
+    zx_status_t status;
+    {
+        ArchVmAspace aspace;
+        status = aspace.Init(USER_ASPACE_BASE, USER_ASPACE_SIZE, 0);
+        EXPECT_EQ(ZX_OK, status, "failed to init aspace\n");
+
+        // Attempt to map a set of vm_page_t
+        size_t mapped;
+        vaddr_t base = USER_ASPACE_BASE + 10 * PAGE_SIZE;
+        status = aspace.Map(base, phys, fbl::count_of(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+        EXPECT_EQ(ZX_OK, status, "failed first map\n");
+        EXPECT_EQ(fbl::count_of(phys), mapped, "weird first map\n");
+        for (size_t i = 0; i < fbl::count_of(phys); ++i) {
+            paddr_t paddr;
+            uint mmu_flags;
+            status = aspace.Query(base + i * PAGE_SIZE, &paddr, &mmu_flags);
+            EXPECT_EQ(ZX_OK, status, "bad first map\n");
+            EXPECT_EQ(phys[i], paddr, "bad first map\n");
+            EXPECT_EQ(ARCH_MMU_FLAG_PERM_READ, mmu_flags, "bad first map\n");
+        }
+
+        // Attempt to map again, should fail
+        status = aspace.Map(base, phys, fbl::count_of(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+        MMU_EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
+
+        // Attempt to map partially ovelapping, should fail
+        status = aspace.Map(base + 2 * PAGE_SIZE, phys, fbl::count_of(phys),
+                            ARCH_MMU_FLAG_PERM_READ, &mapped);
+        MMU_EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
+        status = aspace.Map(base - 2 * PAGE_SIZE, phys, fbl::count_of(phys),
+                            ARCH_MMU_FLAG_PERM_READ, &mapped);
+        MMU_EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
+
+        // No entries should have been created by the partial failures
+        status = aspace.Query(base - 2 * PAGE_SIZE, nullptr, nullptr);
+        EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
+        status = aspace.Query(base - PAGE_SIZE, nullptr, nullptr);
+        EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
+        status = aspace.Query(base + 3 * PAGE_SIZE, nullptr, nullptr);
+        EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
+        status = aspace.Query(base + 4 * PAGE_SIZE, nullptr, nullptr);
+        EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
+
+        status = aspace.Destroy();
+        EXPECT_EQ(ZX_OK, status, "failed to destroy aspace\n");
+    }
+
+    pmm_free(&phys_list);
+
+    END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -917,6 +994,7 @@ VM_UNITTEST(vmo_double_remap_test)
 VM_UNITTEST(vmo_read_write_smoke_test)
 VM_UNITTEST(vmo_cache_test)
 VM_UNITTEST(vmo_lookup_test)
+VM_UNITTEST(arch_noncontiguous_map)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);

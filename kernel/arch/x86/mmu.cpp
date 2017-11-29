@@ -1050,9 +1050,69 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
     return ZX_OK;
 }
 
-zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t paddr,
-                                       const size_t count, uint mmu_flags,
-                                       size_t* mapped) {
+zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t count,
+                                       uint mmu_flags, size_t* mapped) {
+    canary_.Assert();
+    fbl::AutoLock a(&lock_);
+
+    LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
+            this, vaddr, count, mmu_flags);
+
+    if (!x86_mmu_check_vaddr(vaddr))
+        return ZX_ERR_INVALID_ARGS;
+    for (size_t i = 0; i < count; ++i) {
+        if (!x86_mmu_check_paddr(phys[i]))
+            return ZX_ERR_INVALID_ARGS;
+    }
+    if (count == 0)
+        return ZX_OK;
+
+    if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+        return ZX_ERR_INVALID_ARGS;
+
+    DEBUG_ASSERT(virt_);
+
+    // TODO(teisenbe): Improve performance of this function by integrating deeper into
+    // the algorithm (e.g. make the cursors aware of the page array).
+    size_t idx = 0;
+    auto undo = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        if (idx > 0) {
+            MappingCursor start = {
+                .paddr = 0, .vaddr = vaddr, .size = idx * PAGE_SIZE,
+            };
+
+            MappingCursor result;
+            RemoveMapping(virt_, MAX_PAGING_LEVEL, start, &result);
+            DEBUG_ASSERT(result.size == 0);
+        }
+    });
+
+    vaddr_t v = vaddr;
+    for (; idx < count; ++idx) {
+        MappingCursor start = {
+            .paddr = phys[idx], .vaddr = v, .size = PAGE_SIZE,
+        };
+        MappingCursor result;
+        zx_status_t status = AddMapping(virt_, mmu_flags, MAX_PAGING_LEVEL, start, &result);
+        if (status != ZX_OK) {
+            dprintf(SPEW, "Add mapping failed with err=%d\n", status);
+            return status;
+        }
+        DEBUG_ASSERT(result.size == 0);
+
+        v += PAGE_SIZE;
+    }
+
+    if (mapped) {
+        *mapped = count;
+    }
+    undo.cancel();
+    return ZX_OK;
+}
+
+zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
+                                                 const size_t count, uint mmu_flags,
+                                                 size_t* mapped) {
     canary_.Assert();
     fbl::AutoLock a(&lock_);
 
@@ -1339,7 +1399,19 @@ zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
         if (mmu_flags & ~kValidEptFlags)
             return ZX_ERR_INVALID_ARGS;
     }
-    return pt_->MapPages(vaddr, paddr, count, mmu_flags, mapped);
+    return pt_->MapPagesContiguous(vaddr, paddr, count, mmu_flags, mapped);
+}
+
+zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count,
+                                 uint mmu_flags, size_t* mapped) {
+    if (!IsValidVaddr(vaddr))
+        return ZX_ERR_INVALID_ARGS;
+
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        if (mmu_flags & ~kValidEptFlags)
+            return ZX_ERR_INVALID_ARGS;
+    }
+    return pt_->MapPages(vaddr, phys, count, mmu_flags, mapped);
 }
 
 zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
