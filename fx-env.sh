@@ -105,3 +105,48 @@ if [[ -z "${ZSH_VERSION}" ]]; then
   }
   complete -o nospace -F __fx_go fx-go
 fi
+
+# Support command-line auto-completions for the fx command.
+if [[ -z "${ZSH_VERSION}" ]]; then
+  function __fx_complete_cmd {
+    local cmd cur prev
+    cmd="${COMP_WORDS[1]}"
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    case "${cmd}" in
+      set)
+        if [[ ${COMP_CWORD} -eq 2 ]]; then
+          COMPREPLY=($(compgen -W "x86-64 aarch64 gauss hikey960 odroidc2" "${cur}"))
+          return
+        fi
+        case "${prev}" in
+          --packages)
+            COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/*/packages/${cur}* 2>/dev/null | \
+              sed -n "s|^${FUCHSIA_DIR}/\(.*\)\$|\1|p" | xargs echo))
+            return
+            ;;
+        esac
+        ;;
+
+      set-layer)
+        if [[ ${COMP_CWORD} -eq 2 ]]; then
+          COMPREPLY=($(compgen -W "garnet peridot topaz" "${cur}"))
+          return
+        fi
+        ;;
+    esac
+  }
+
+  function __fx {
+    COMPREPLY=()
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+      COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/scripts/devshell/${COMP_WORDS[1]}* 2>/dev/null | \
+        sed -n "s|^${FUCHSIA_DIR}/scripts/devshell/\([^/]*\)\$|\1|p" | xargs echo))
+    else
+      __fx_complete_cmd
+    fi
+  }
+  complete -o default -F __fx fx
+fi
+
