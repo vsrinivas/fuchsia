@@ -9,6 +9,8 @@
 #include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 
+#include "garnet/lib/machina/rtc.h"
+
 // PL031 registers.
 enum class Pl031Register : uint64_t {
     DR = 0x00,
@@ -24,7 +26,7 @@ zx_status_t Pl031::Read(uint64_t addr, IoValue* value) const {
     case Pl031Register::DR:
       if (value->access_size != 4)
         return ZX_ERR_IO_DATA_INTEGRITY;
-      value->u32 = zx_time_get(ZX_CLOCK_UTC);
+      value->u32 = rtc_time();
       return ZX_OK;
     default:
       fprintf(stderr, "Unhandled PL031 address read %#lx\n", addr);

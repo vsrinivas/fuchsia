@@ -10,6 +10,8 @@
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 
+#include "garnet/lib/machina/rtc.h"
+
 // clang-format off
 
 /* PIC constatants. */
@@ -192,7 +194,7 @@ zx_status_t RtcHandler::Write(uint64_t addr, const IoValue& value) {
 
 zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index,
                                         uint8_t* value) const {
-  time_t now = zx_time_get(ZX_CLOCK_UTC);
+  time_t now = rtc_time();
   struct tm tm;
   if (localtime_r(&now, &tm) == nullptr)
     return ZX_ERR_INTERNAL;

@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef GARNET_LIB_MACHINA_RTC_H_
+#define GARNET_LIB_MACHINA_RTC_H_
+
+#include <time.h>
+#include <zircon/types.h>
+
+// Returns the current time in seconds.
+static inline time_t rtc_time() {
+  return zx_time_get(ZX_CLOCK_UTC) / ZX_SEC(1);
+}
+
+#endif  // GARNET_LIB_MACHINA_RTC_H_
