@@ -15,7 +15,6 @@
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <installer/installer.h>
 
 #include <unittest/unittest.h>
 

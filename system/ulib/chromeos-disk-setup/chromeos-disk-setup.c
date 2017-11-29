@@ -11,9 +11,9 @@
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <installer/installer.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 bool is_cros(const gpt_device_t* gpt) {
@@ -303,11 +303,12 @@ zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
     uint16_t num_parts = 0;
     for (; gpt->partitions[num_parts] != NULL; ++num_parts)
         ;
-    gpt_partition_t** parts = sort_partitions(gpt->partitions, num_parts);
-
+    gpt_partition_t** parts = malloc(num_parts * sizeof(gpt_partition_t*));
     if (parts == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
+
+    gpt_sort_partitions(gpt->partitions, parts, num_parts);
 
     int16_t kern_idx = -1;
     int16_t root_idx = -1;

@@ -14,7 +14,6 @@
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <installer/installer.h>
 
 int main(int argc, char** argv) {
     printf("Executing dry run of GPT reconfig, layout will not be altered.\n");
@@ -37,10 +36,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    uint64_t t;
-    gpt_device_t* dev = read_gpt(gpt_fd, &t);
-
-    if (dev == NULL) {
+    gpt_device_t* dev;
+    if (!gpt_device_read_gpt(gpt_fd, &dev)) {
         fprintf(stderr, "Error reading gpt\n");
         close(gpt_fd);
         return -1;

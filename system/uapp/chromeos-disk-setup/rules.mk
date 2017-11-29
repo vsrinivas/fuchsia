@@ -16,7 +16,6 @@ MODULE_SRCS := $(LOCAL_DIR)/chromeos-disk-setup.c
 MODULE_STATIC_LIBS := \
     system/ulib/chromeos-disk-setup \
     system/ulib/gpt \
-    system/ulib/installer \
     third_party/ulib/cksum
 
 MODULE_LIBS := system/ulib/c \

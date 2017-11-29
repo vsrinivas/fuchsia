@@ -14,7 +14,6 @@ MODULE_SRCS := $(LOCAL_DIR)/chromeos-disk-setup.c
 MODULE_LIBS := system/ulib/c
 
 MODULE_STATIC_LIBS := system/ulib/gpt \
-    system/ulib/zircon \
-    system/ulib/installer
+    system/ulib/zircon
 
 include make/module.mk

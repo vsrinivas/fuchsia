@@ -5,6 +5,7 @@
 #include <gpt/gpt.h>
 #include <lib/cksum.h>
 #include <zircon/syscalls.h> // for zx_cprng_draw
+#include <zircon/device/block.h>
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -16,6 +17,14 @@
 #include <sys/param.h>
 
 #include "gpt/gpt.h"
+
+static bool debug_out = false;
+
+#define G_PRINTF(f, ...) if (debug_out) printf ((f), ##__VA_ARGS__);
+
+void gpt_set_debug_output_enabled(bool enabled) {
+    debug_out = enabled;
+}
 
 //TODO: rearrange to use gpt_header_t someday
 typedef struct gpt_hdr_blk {
@@ -197,7 +206,7 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
     priv->blocks = blocks;
 
     if (priv->blocksize != 512) {
-        printf("blocksize != 512 not supported\n");
+        G_PRINTF("blocksize != 512 not supported\n");
         goto fail;
     }
 
@@ -221,7 +230,7 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
 
     // is this a valid gpt header?
     if (header->magic != GPT_MAGIC) {
-        printf("invalid header magic!\n");
+        G_PRINTF("invalid header magic!\n");
         goto out; // ok to have an invalid header
     }
 
@@ -230,12 +239,12 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
     header->crc32 = 0;
     uint32_t crc = crc32(0, (const unsigned char*)header, header->size);
     if (crc != saved_crc) {
-        printf("header crc check failed\n");
+        G_PRINTF("header crc check failed\n");
         goto out;
     }
 
     if (header->entries_count > PARTITIONS_COUNT) {
-        printf("too many partitions!\n");
+        G_PRINTF("too many partitions!\n");
         goto out;
     }
 
@@ -245,7 +254,7 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
         goto out;
     }
     if (header->entries_count > PARTITIONS_COUNT) {
-        printf("too many partitions\n");
+        G_PRINTF("too many partitions\n");
         goto out;
     }
 
@@ -258,7 +267,7 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
     }
     ssize_t ptable_size = header->entries_size * header->entries_count;
     if ((size_t)ptable_size > SIZE_MAX) {
-        printf("partition table too big\n");
+        G_PRINTF("partition table too big\n");
         goto out;
     }
     rc = read(fd, ptable, ptable_size);
@@ -269,7 +278,7 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
     // partition table checksum
     crc = crc32(0, (const unsigned char*)ptable, ptable_size);
     if (crc != header->entries_crc) {
-        printf("table crc check failed\n");
+        G_PRINTF("table crc check failed\n");
         goto out;
     }
 
@@ -446,7 +455,7 @@ int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_e
     gpt_priv_t* priv = get_priv(dev);
 
     if (!dev->valid) {
-        printf("partition header invalid\n");
+        G_PRINTF("partition header invalid\n");
         return -1;
     }
 
@@ -461,12 +470,12 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
     gpt_priv_t* priv = get_priv(dev);
 
     if (!dev->valid) {
-        printf("partition header invalid, sync to generate a default header\n");
+        G_PRINTF("partition header invalid, sync to generate a default header\n");
         return -1;
     }
 
     if (blocks == 0) {
-        printf("partition must be at least 1 block\n");
+        G_PRINTF("partition must be at least 1 block\n");
         return -1;
     }
 
@@ -475,8 +484,8 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
 
     // check range
     if (last < first || first < priv->header.first || last > priv->header.last) {
-        printf("partition must be in range of usable blocks[%" PRIu64", %" PRIu64"]\n",
-                priv->header.first, priv->header.last);
+        G_PRINTF("partition must be in range of usable blocks[%" PRIu64", %" PRIu64"]\n",
+                 priv->header.first, priv->header.last);
         return -1;
     }
 
@@ -489,12 +498,12 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
             break;
         }
         if (first <= dev->partitions[i]->last && last >= dev->partitions[i]->first) {
-            printf("partition range overlaps\n");
+            G_PRINTF("partition range overlaps\n");
             return -1;
         }
     }
     if (tail == -1) {
-        printf("too many partitions\n");
+        G_PRINTF("too many partitions\n");
         return -1;
     }
 
@@ -523,7 +532,7 @@ int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid) {
         }
     }
     if (i == PARTITIONS_COUNT) {
-        printf("partition not found\n");
+        G_PRINTF("partition not found\n");
         return -1;
     }
     // clear the entry
@@ -563,4 +572,49 @@ void gpt_device_get_header_guid(gpt_device_t* dev,
                                 uint8_t (*disk_guid_out)[GPT_GUID_LEN]) {
     gpt_hdr_blk_t* header = &get_priv(dev)->header;
     memcpy(disk_guid_out, header->guid, GPT_GUID_LEN);
+}
+
+int gpt_device_read_gpt(int fd, gpt_device_t** gpt_out) {
+    block_info_t info;
+
+    ssize_t rc = ioctl_block_get_info(fd, &info);
+    if (rc < 0) {
+        return rc;
+    }
+
+    if (info.block_size < 1) {
+        return -1;
+    }
+
+    int result = gpt_device_init(fd, info.block_size, info.block_count,
+                                 gpt_out);
+
+    if (result < 0) {
+        return result;
+    } else if (!(*gpt_out)->valid) {
+        gpt_device_release(*gpt_out);
+        *gpt_out = NULL;
+        return -1;
+    }
+
+    return 0;
+}
+
+static int compare(const void *ls, const void *rs) {
+    if ((*(gpt_partition_t **)ls)->first > (*(gpt_partition_t **)rs)->first) {
+        return 1;
+    } else if ((*(gpt_partition_t **)ls)->first < (*(gpt_partition_t **)rs)->first) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+void gpt_sort_partitions(gpt_partition_t** in, gpt_partition_t** sorted_out,
+                         uint16_t count) {
+
+    for (uint16_t idx = 0; idx < count; idx++) {
+        sorted_out[idx] = in[idx];
+    }
+    qsort(sorted_out, count, sizeof(gpt_partition_t*), compare);
 }

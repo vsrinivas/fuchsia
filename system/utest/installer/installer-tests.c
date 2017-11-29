@@ -331,9 +331,20 @@ bool verify_sort(gpt_partition_t **partitions, int count) {
 
 bool do_sort_test(int test_size, uint64_t val_max) {
   gpt_partition_t *values = malloc(test_size * sizeof(gpt_partition_t));
-  gpt_partition_t **value_ptrs = malloc(test_size * sizeof(gpt_partition_t *));
-  if (values == NULL) {
+  gpt_partition_t **out_ptrs = malloc(test_size * sizeof(gpt_partition_t *));
+  gpt_partition_t **in_ptrs = malloc(test_size * sizeof(gpt_partition_t *));
+
+  if (values == NULL || out_ptrs == NULL || in_ptrs == NULL) {
     fprintf(stderr, "Unable to allocate memory for test\n");
+    if (values != NULL) {
+      free(values);
+    }
+    if (out_ptrs != NULL) {
+      free(out_ptrs);
+    }
+    if (in_ptrs != NULL) {
+      free(in_ptrs);
+    }
     return false;
   }
 
@@ -355,20 +366,20 @@ bool do_sort_test(int test_size, uint64_t val_max) {
         }
       }
 
-      value_ptrs[idx] = values + idx;
+      in_ptrs[idx] = values + idx;
     }
   }
 
-  gpt_partition_t **sorted_values = sort_partitions(value_ptrs, test_size);
-  ASSERT_EQ(verify_sort(sorted_values, test_size), true, "");
+  gpt_sort_partitions(in_ptrs, out_ptrs, test_size);
+  ASSERT_EQ(verify_sort(out_ptrs, test_size), true, "");
 
   // sort again to test ordered data is handled properly
-  sorted_values = sort_partitions(sorted_values, test_size);
-  ASSERT_EQ(verify_sort(sorted_values, test_size), true, "");
+  gpt_sort_partitions(out_ptrs, out_ptrs, test_size);
+  ASSERT_EQ(verify_sort(out_ptrs, test_size), true, "");
 
   free(values);
-  free(sorted_values);
-  free(value_ptrs);
+  free(out_ptrs);
+  free(in_ptrs);
 
   return true;
 }

@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <zircon/compiler.h>
+#include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 
 typedef gpt_entry_t gpt_partition_t;
@@ -93,6 +94,18 @@ uint32_t gpt_device_get_size_blocks(uint32_t block_sz);
 
 // print out the GPT
 void print_table(gpt_device_t* device);
+
+// Sort an array of gpt_partition_t pointers based on the values of
+// gpt_partition_t->first. sorted_out will contain an array of pointers
+// to partitions in sorted order.
+void gpt_sort_partitions(gpt_partition_t** in, gpt_partition_t** sorted_out,
+                         uint16_t count);
+
+// Attempt to read a GPT from the file descriptor. dev_out will be NULL if
+// the read fails or read succeeds and GPT is invalid.
+int gpt_device_read_gpt(int fd, gpt_device_t** dev_out);
+
+void gpt_set_debug_output_enabled(bool enabled);
 
 #define GPT_DIFF_TYPE    (0x01u)
 #define GPT_DIFF_GUID    (0x02u)

@@ -505,13 +505,13 @@ zx_status_t find_install_device(DIR *dir, const char *dir_path,
   strcpy(dev_path_out, dir_path);
   const size_t base_len = strlen(dev_path_out);
   const size_t buffer_remaining = max_len - base_len - 1;
-  uint64_t block_size;
-  gpt_device_t *install_dev = NULL;
+  gpt_device_t *install_dev;
 
   for (ssize_t rc =
            get_next_file_path(dir, buffer_remaining, &dev_path_out[base_len]);
        rc >= 0; rc = get_next_file_path(dir, buffer_remaining,
                                         &dev_path_out[base_len])) {
+    install_dev = NULL;
     if (rc > 0) {
       fprintf(stderr, "Device path length overrun by %zd characters\n", rc);
       continue;
@@ -522,13 +522,17 @@ zx_status_t find_install_device(DIR *dir, const char *dir_path,
       continue;
     }
 
-    install_dev = read_gpt(fd, &block_size);
-    close(fd);
-
     // if we read a GPT, see if it has the entry we want
-    if (install_dev != NULL && install_dev->valid) {
-      *unfound_parts_out = find_install_partitions(
-          install_dev, block_size, requested_parts, PATH_MAX, part_paths_out);
+    if (!gpt_device_read_gpt(fd, &install_dev)) {
+      block_info_t blk_info;
+      ssize_t rc = ioctl_block_get_info(fd, &blk_info);
+      if (rc >= 0 && blk_info.block_size > 0) {
+        *unfound_parts_out = find_install_partitions(install_dev,
+                                                     blk_info.block_size,
+                                                     requested_parts, PATH_MAX,
+                                                     part_paths_out);
+      }
+
       if (*unfound_parts_out != 0) {
         gpt_device_release(install_dev);
         install_dev = NULL;
@@ -537,6 +541,7 @@ zx_status_t find_install_device(DIR *dir, const char *dir_path,
         break;
       }
     }
+    close(fd);
   }
 
   if (install_dev != NULL) {
@@ -636,7 +641,6 @@ void find_device_with_space(DIR *dir, char *dir_path, uint64_t space_required,
   strcpy(path_buffer, dir_path);
   size_t base_len = strlen(path_buffer);
   size_t buffer_remaining = PATH_MAX - base_len - 1;
-  uint64_t block_size;
 
   // no device looks configured the way we want for install, see if we can
   // partition a device and make it suitable
@@ -658,31 +662,24 @@ void find_device_with_space(DIR *dir, char *dir_path, uint64_t space_required,
 
     block_info_t info;
     rc = ioctl_block_get_info(device_fd, &info);
-    if (rc < 0) {
+    if (rc < 0 || info.block_size < 1) {
       fprintf(stderr, "Unable to get block info for '%s'\n", path_buffer);
       close(device_fd);
       continue;
     }
-    block_size = info.block_size;
 
-    gpt_device_t *install_dev = read_gpt(device_fd, &block_size);
-
-    if (install_dev == NULL) {
-      close(device_fd);
-      continue;
-    } else if (!install_dev->valid) {
-      fprintf(stderr, "Read GPT for %s, but it is invalid\n", path_buffer);
-      gpt_device_release(install_dev);
+    gpt_device_t *install_dev;
+    if (gpt_device_read_gpt(device_fd, &install_dev)) {
       close(device_fd);
       continue;
     }
 
     part_location_t space_offset;
-    find_available_space(install_dev, space_required / block_size,
-                         info.block_count, block_size, &space_offset);
+    find_available_space(install_dev, space_required / info.block_size,
+                         info.block_count, info.block_size, &space_offset);
     gpt_device_release(install_dev);
     close(device_fd);
-    if (space_offset.blk_len * block_size >= space_required) {
+    if (space_offset.blk_len * info.block_size >= space_required) {
       strcpy(device_path_out, path_buffer);
       *offset_out = space_offset.blk_offset;
       return;
@@ -703,7 +700,22 @@ zx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
     return ZX_ERR_IO;
   }
   uint64_t block_size;
-  gpt_device_t *gpt_edit = read_gpt(rw_dev, &block_size);
+  gpt_device_t *gpt_edit;
+  if (gpt_device_read_gpt(rw_dev, &gpt_edit)) {
+    fprintf(stderr, "Failed reading GPT.\n");
+    close(rw_dev);
+    return ZX_ERR_IO;
+  }
+
+  block_info_t blk_info;
+  if (ioctl_block_get_info(rw_dev, &blk_info) < 0 || blk_info.block_size < 1) {
+    fprintf(stderr, "Couldn't get block device information.\n");
+    close(rw_dev);
+    gpt_device_release(gpt_edit);
+    return ZX_ERR_IO;
+  }
+
+  block_size = blk_info.block_size;
 
   // TODO(jmatt): consider asking the user what device to partition
   // install_dev should point to the device we want to modify
@@ -748,9 +760,7 @@ zx_status_t create_partitions(char *dev_path, uint64_t block_offset) {
 static zx_status_t check_for_partition(int device_fd,
                                        uint8_t (*guid)[GPT_GUID_LEN]) {
   gpt_device_t *gpt_edit;
-  uint64_t block_size;
-  gpt_edit = read_gpt(device_fd, &block_size);
-  if (gpt_edit == NULL) {
+  if (gpt_device_read_gpt(device_fd, &gpt_edit)) {
     fprintf(stderr, "Unable to read GPT from device.\n");
     return ZX_ERR_IO;
   }
@@ -809,12 +819,11 @@ static zx_status_t make_part(int device_fd, const char *dev_dir_path,
                              size_t offset, size_t length,
                              uint8_t (*guid)[GPT_GUID_LEN], disk_format_t format,
                              const char *label) {
-  uint64_t block_size;
   uint8_t disk_guid[GPT_GUID_LEN];
 
   // ADD the data partition of the requested size that the requested location
-  gpt_device_t *gpt_edit = read_gpt(device_fd, &block_size);
-  if (gpt_edit == NULL) {
+  gpt_device_t *gpt_edit;
+  if (gpt_device_read_gpt(device_fd, &gpt_edit)) {
     fprintf(stderr, "Couldn't read GPT from device.\n");
     return ZX_ERR_IO;
   }
@@ -859,13 +868,13 @@ static zx_status_t make_part(int device_fd, const char *dev_dir_path,
     return ZX_ERR_IO;
   }
 
-  gpt_edit = read_gpt(device_fd, &block_size);
-  close(device_fd);
-  if (gpt_edit == NULL) {
+  if (gpt_device_read_gpt(device_fd, &gpt_edit)) {
+    close(device_fd);
     fprintf(stderr, "Couldn't read GPT after partition addition.\n");
     return ZX_ERR_IO;
   }
 
+  close(device_fd);
   // count the number of partitions we have
   uint16_t part_count = count_partitions(gpt_edit);
 
@@ -922,10 +931,9 @@ static zx_status_t format_existing(int device_fd, char *dev_dir_path,
                                    uint8_t (*guid)[GPT_GUID_LEN],
                                    disk_format_t disk_format) {
     lseek(device_fd, 0, SEEK_SET);
-    uint64_t block_size;
 
-    gpt_device_t *gpt_device = read_gpt(device_fd, &block_size);
-    if (gpt_device == NULL) {
+    gpt_device_t *gpt_device;
+    if (gpt_device_read_gpt(device_fd, &gpt_device)) {
       fprintf(stderr, "WARNING: Couldn't read GPT to format partition.\n");
       return ZX_ERR_INTERNAL;
     }
@@ -1151,15 +1159,22 @@ static zx_status_t build_disk_record(int device_fd, char *path,
 
   // see if this block device has a GPT we can read and get disk
   // size
-  gpt_device_t *target_dev = read_gpt(device_fd, block_size_out);
-  if (target_dev == NULL || !target_dev->valid) {
-    if (target_dev != NULL) {
-      gpt_device_release(target_dev);
-    }
+  gpt_device_t *target_dev;
+  if (gpt_device_read_gpt(device_fd, &target_dev)) {
     free(disk_rec);
     return ZX_ERR_IO;
   }
   disk_rec->device = target_dev;
+
+  block_info_t blk_info;
+  if (ioctl_block_get_info(device_fd, &blk_info) < 0) {
+    fprintf(stderr, "Failure getting block information.\n");
+    gpt_device_release(target_dev);
+    free(disk_rec);
+    return ZX_ERR_IO;
+  }
+
+  *block_size_out = blk_info.block_size;
 
   // record path to the device
   disk_rec->path = malloc((strlen(path) + 1) * sizeof(char));
@@ -1292,16 +1307,9 @@ static bool ask_for_disk_part(list_node_t *list, int num_disks,
 }
 
 static bool remove_partition(int device_fd, int part_idx) {
-  uint64_t block_size;
-  gpt_device_t *dev = read_gpt(device_fd, &block_size);
-  if (dev == NULL) {
+  gpt_device_t *dev;
+  if (gpt_device_read_gpt(device_fd, &dev)) {
     printf("Unable to remove partition, couldn't read GPT.\n");
-    return false;
-  }
-
-  if (!dev->valid) {
-    printf("Unable to remove partition, GPT is invalid\n");
-    gpt_device_release(dev);
     return false;
   }
 

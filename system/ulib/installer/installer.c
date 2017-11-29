@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <gpt/gpt.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <zircon/device/block.h>
@@ -141,48 +142,6 @@ zx_status_t find_partition(gpt_partition_t **gpt_table,
   return ZX_ERR_NOT_FOUND;
 }
 
-static int compare(const void *ls, const void *rs) {
-  return (int)(((part_tuple_t *)ls)->first - ((part_tuple_t *)rs)->first);
-}
-
-/*
- * Sort an array of gpt_partition_t pointers based on the values of
- * gpt_partition_t->first. The returned value will contain an array of pointers
- * to partitions in sorted order. This array was allocated on the heap and
- * should be freed at some point.
- */
-gpt_partition_t **sort_partitions(gpt_partition_t **parts, uint16_t count) {
-  gpt_partition_t **sorted_parts = malloc(count * sizeof(gpt_partition_t *));
-  if (sorted_parts == NULL) {
-    fprintf(stderr, "Unable to sort partitions, out of memory.\n");
-    return NULL;
-  }
-
-  part_tuple_t *sort_tuples = malloc(count * sizeof(part_tuple_t));
-  if (sort_tuples == NULL) {
-    fprintf(stderr, "Unable to sort partitions, out of memory.\n");
-    free(sorted_parts);
-    return NULL;
-  }
-
-  for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
-    sort_tuples->index = idx;
-    sort_tuples->first = parts[idx]->first;
-  }
-
-  sort_tuples -= count;
-  qsort(sort_tuples, count, sizeof(part_tuple_t), compare);
-
-  // create a sorted array of pointers
-  for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
-    sorted_parts[idx] = parts[sort_tuples->index];
-  }
-
-  sort_tuples -= count;
-  free(sort_tuples);
-  return sorted_parts;
-}
-
 /*
  * Attempt to find an unallocated portion of the specified device that is at
  * least blocks_req in size. block_count should contain the total number of
@@ -227,11 +186,14 @@ void find_available_space(gpt_device_t *device, size_t blocks_req,
     // have bailed out of counting early
     for (count = 0; device->partitions[count] != NULL; count++)
       ;
-    sorted_parts = sort_partitions(device->partitions, count);
+
+    sorted_parts = malloc(count * sizeof(gpt_partition_t*));
     if (sorted_parts == NULL) {
-      printf("Sort failure\n");
+      printf("No memory available to sort partitions\n");
       return;
     }
+
+    gpt_sort_partitions(device->partitions, sorted_parts, count);
   } else {
     sorted_parts = device->partitions;
   }
@@ -320,51 +282,6 @@ ssize_t get_next_file_path(DIR *dfd, size_t max_name_len, char *name_out) {
 }
 
 /*
- * Attempt to read a GPT from the file descriptor. If successful the returned
- * pointer points to the populated gpt_device_t struct, otherwise NULL is
- * returned.
- */
-gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
-  assert(blocksize_out != NULL);
-  block_info_t info;
-  ssize_t rc = ioctl_block_get_info(fd, &info);
-  if (rc < 0) {
-    fprintf(stderr, "error getting block info, ioctl result code: %zd\n", rc);
-    return NULL;
-  }
-  *blocksize_out = info.block_size;
-
-  if (*blocksize_out < 1) {
-    fprintf(stderr, "Device reports block size of %" PRIu64 ", abort!\n",
-            *blocksize_out);
-    return NULL;
-  }
-
-  gpt_device_t *gpt;
-
-  // gpt_device_init produces output we want to suppress, so kidnap stdout
-  // TODO(jmatt) Remove this hyjinx when lib-gpt stops writing to stdout
-  int backup = dup(1);
-  close(1);
-
-  rc = gpt_device_init(fd, info.block_size, info.block_count, &gpt);
-
-  // restore stdout
-  fflush(stdout);
-  dup2(backup, 1);
-  close(backup);
-
-  if (rc < 0) {
-    fprintf(stderr, "error reading GPT, result code: %zd \n", rc);
-    return NULL;
-  } else if (!gpt->valid) {
-    return NULL;
-  }
-
-  return gpt;
-}
-
-/*
  * Attempt to open the given path. If successful, returns the file descriptor
  * associated with the opened path in read only mode.
  */
@@ -385,7 +302,6 @@ zx_status_t find_disk_by_guid(DIR *dir, const char *dir_path,
   strcpy(disk_path_out, dir_path);
   const size_t base_len = strlen(disk_path_out);
   const size_t buffer_remaining = max_len - base_len - 1;
-  uint64_t block_size;
   gpt_device_t *install_dev = NULL;
   uint8_t guid_targ[GPT_GUID_LEN];
   *install_dev_out = NULL;
@@ -404,10 +320,10 @@ zx_status_t find_disk_by_guid(DIR *dir, const char *dir_path,
       continue;
     }
 
-    install_dev = read_gpt(fd, &block_size);
+    int res = gpt_device_read_gpt(fd, &install_dev);
     close(fd);
 
-    if (install_dev != NULL) {
+    if (!res) {
       gpt_device_get_header_guid(install_dev, &guid_targ);
       if (!memcmp(guid_targ, disk_guid, GPT_GUID_LEN)) {
         *install_dev_out = install_dev;

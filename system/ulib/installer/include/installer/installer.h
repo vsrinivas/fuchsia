@@ -16,11 +16,6 @@
 #define SIZE_RESERVED (((uint32_t)17) * 1024)
 #define PATH_BLOCKDEVS "/dev/class/block"
 
-typedef struct part_tuple {
-  int index;
-  size_t first;
-} part_tuple_t;
-
 typedef struct part_location {
   size_t blk_offset;
   size_t blk_len;
@@ -41,8 +36,6 @@ zx_status_t find_partition(gpt_partition_t **gpt_table,
 bool check_partition_size(const gpt_partition_t *partition,
                           const uint64_t min_size, const uint64_t block_size,
                           const char *partition_name);
-
-gpt_partition_t **sort_partitions(gpt_partition_t **parts, uint16_t count);
 
 void find_available_space(gpt_device_t *device, size_t blocks_req,
                           size_t block_count, size_t block_size,
@@ -74,5 +67,3 @@ zx_status_t find_disk_by_guid(DIR *dir, const char* dir_path,
 ssize_t get_next_file_path(DIR *dfd, size_t max_name_len, char *name_out);
 
 int open_device_ro(const char *dev_path);
-
-gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out);
