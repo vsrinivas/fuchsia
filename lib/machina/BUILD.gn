@@ -50,8 +50,10 @@ shared_library("machina") {
   ]
 
   deps = [
+    "//zircon/system/ulib/async:loop",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxcpp",
   ]
 
   libs = [
