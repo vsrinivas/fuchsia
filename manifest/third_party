@@ -241,6 +241,12 @@
              remote="https://fuchsia.googlesource.com/third_party/zlib"
              gerrithost="https://fuchsia-review.googlesource.com"/>
 
+    <!-- TODO(INTK-60) should supersede the need for this, as it will be delivered by cipd instead -->
+    <project name="third_party/vboot_reference"
+             path="third_party/vboot_reference"
+             remote="https://fuchsia.googlesource.com/third_party/vboot_reference"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+
     <!-- TODO(abarth): These projects have the wrong names. The names should
          match the path under fuchsia.googlesource.com -->
 
