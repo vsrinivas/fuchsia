@@ -54,6 +54,8 @@ protected:
     bool LoadEdid(registers::BaseEdid* edid);
     MmioSpace* mmio_space() const;
     bool EnablePowerWell2();
+    bool ResetPipe();
+    bool ResetDdi();
 
 private:
     // This is the I2C address for DDC segment, for fetching EDID data.

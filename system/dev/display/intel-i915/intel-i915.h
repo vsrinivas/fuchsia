@@ -40,6 +40,7 @@ private:
     void EnableBacklight(bool enable);
     zx_status_t InitHotplug(pci_protocol_t* pci);
     zx_status_t InitDisplays(uint16_t device_id);
+    bool BringUpDisplayEngine();
 
     Gtt gtt_;
 

@@ -26,6 +26,12 @@ public:
         int bit = dpll * 6 + 1;
         return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
     }
+    static constexpr int kLinkRate2700Mhz = 0; // DisplayPort 5.4 GHz
+    static constexpr int kLinkRate1350Mhz = 1; // DisplayPort 2.7 GHz
+    static constexpr int kLinkRate810Mhz = 2;  // DisplayPort 1.62 GHz
+    static constexpr int kLinkRate1620Mhz = 3; // DisplayPort 3.24 GHz
+    static constexpr int kLinkRate1080Mhz = 4; // DisplayPort 2.16 GHz
+    static constexpr int kLinkRate2160Mhz = 5; // DisplayPort 4.32 GHz
 
     registers::BitfieldRef<uint32_t> dpll_override(int dpll) {
         int bit = dpll * 6;
@@ -126,6 +132,14 @@ public:
     }
 
     static RegisterAddr<DpllStatus> Get() { return RegisterAddr<DpllStatus>(0x6c060); }
+};
+
+// LCPLL1_CTL
+class Lcpll1Control : public RegisterBase<Lcpll1Control> {
+public:
+    DEF_BIT(30, pll_lock);
+
+    static RegisterAddr<Lcpll1Control> Get() { return RegisterAddr<Lcpll1Control>(0x46010); }
 };
 
 } // namespace registers

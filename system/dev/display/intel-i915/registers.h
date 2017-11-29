@@ -118,4 +118,44 @@ public:
     static RegisterAddr<FuseStatus> Get() { return RegisterAddr<FuseStatus>(0x42000); }
 };
 
+// NDE_RSTWRN_OPT
+class NorthDERestetWarning : public RegisterBase<NorthDERestetWarning> {
+public:
+    DEF_BIT(4, rst_pch_handshake_enable);
+
+    static RegisterAddr<NorthDERestetWarning> Get() {
+        return RegisterAddr<NorthDERestetWarning>(0x46408);
+    }
+};
+
+// CLCLK_CTL
+class CdClockCtl : public RegisterBase<CdClockCtl> {
+public:
+    DEF_FIELD(27, 26, cd_freq_select);
+    static constexpr uint32_t kFreqSelect3XX = 2;
+
+    DEF_FIELD(10, 0, cd_freq_decimal);
+    static constexpr uint32_t kFreqDecimal3375 = 0b01010100001;
+
+    static RegisterAddr<CdClockCtl> Get() { return RegisterAddr<CdClockCtl>(0x46000); }
+
+};
+
+// DBUF_CTL
+class DbufCtl : public RegisterBase<DbufCtl> {
+public:
+    DEF_BIT(31, power_request);
+    DEF_BIT(31, power_state);
+
+    static RegisterAddr<DbufCtl> Get() { return RegisterAddr<DbufCtl>(0x45008); }
+};
+
+// VGA_CONTROL
+class VgaCtl : public RegisterBase<VgaCtl> {
+public:
+    DEF_BIT(31, vga_display_disable);
+
+    static RegisterAddr<VgaCtl> Get() { return RegisterAddr<VgaCtl>(0x41000); }
+};
+
 } // namespace registers

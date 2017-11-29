@@ -10,6 +10,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
+#include <hw/inout.h>
 #include <hw/pci.h>
 
 #include <assert.h>
@@ -168,10 +169,141 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
     return ZX_OK;
 }
 
+bool Controller::BringUpDisplayEngine() {
+    // Enable PCH Reset Handshake
+    auto nde_rstwrn_opt = registers::NorthDERestetWarning::Get().ReadFrom(mmio_space_.get());
+    nde_rstwrn_opt.rst_pch_handshake_enable().set(1);
+    nde_rstwrn_opt.WriteTo(mmio_space_.get());
+
+    // Wait for Power Well 0 distribution
+    if (!WAIT_ON_US(registers::FuseStatus
+            ::Get().ReadFrom(mmio_space_.get()).pg0_dist_status().get(), 5)) {
+        zxlogf(ERROR, "Power Well 0 distribution failed\n");
+        return false;
+    }
+
+    // Enable and wait for Power Well 1 and Misc IO power
+    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get());
+    power_well.power_well_1_request().set(1);
+    power_well.misc_io_power_state().set(1);
+    power_well.WriteTo(mmio_space_.get());
+    if (!WAIT_ON_US(registers::PowerWellControl2
+            ::Get().ReadFrom(mmio_space_.get()).power_well_1_state().get(), 10)) {
+        zxlogf(ERROR, "Power Well 1 failed to enable\n");
+        return false;
+    }
+    if (!WAIT_ON_US(registers::PowerWellControl2
+            ::Get().ReadFrom(mmio_space_.get()).misc_io_power_state().get(), 10)) {
+        zxlogf(ERROR, "Misc IO power failed to enable\n");
+        return false;
+    }
+    if (!WAIT_ON_US(registers::FuseStatus
+            ::Get().ReadFrom(mmio_space_.get()).pg1_dist_status().get(), 5)) {
+        zxlogf(ERROR, "Power Well 1 distribution failed\n");
+        return false;
+    }
+
+    // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
+    // something special (i.e. for eDP), assume that the BIOS already enabled it.
+    auto dpll_enable = registers::DpllEnable::Get(0).ReadFrom(mmio_space_.get());
+    if (!dpll_enable.enable_dpll().get()) {
+        // Set the cd_clk frequency to the minimum
+        auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space_.get());
+        cd_clk.cd_freq_select().set(cd_clk.kFreqSelect3XX);
+        cd_clk.cd_freq_decimal().set(cd_clk.kFreqDecimal3375);
+        cd_clk.WriteTo(mmio_space_.get());
+
+        // Configure DPLL0
+        auto dpll_ctl1 = registers::DpllControl1::Get().ReadFrom(mmio_space_.get());
+        dpll_ctl1.dpll_link_rate(0).set(dpll_ctl1.kLinkRate810Mhz);
+        dpll_ctl1.dpll_override(0).set(1);
+        dpll_ctl1.dpll_hdmi_mode(0).set(0);
+        dpll_ctl1.dpll_ssc_enable(0).set(0);
+        dpll_ctl1.WriteTo(mmio_space_.get());
+
+        // Enable DPLL0 and wait for it
+        dpll_enable.enable_dpll().set(1);
+        dpll_enable.WriteTo(mmio_space_.get());
+        if (!WAIT_ON_MS(registers::Lcpll1Control
+                ::Get().ReadFrom(mmio_space_.get()).pll_lock().get(), 5)) {
+            zxlogf(ERROR, "Failed to configure dpll0\n");
+            return false;
+        }
+
+        // Do the magic sequence for Changing CD Clock Frequency specified on
+        // intel-gfx-prm-osrc-skl-vol12-display.pdf p.135
+        constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
+        constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
+        constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
+        mmio_space_.get()->Write32(kGtDriverMailboxData0, 0x3);
+        mmio_space_.get()->Write32(kGtDriverMailboxData1, 0x0);
+        mmio_space_.get()->Write32(kGtDriverMailboxInterface, 0x80000007);
+
+        int count = 0;
+        for (;;) {
+            if (!WAIT_ON_US(mmio_space_.get()
+                    ->Read32(kGtDriverMailboxInterface) & 0x80000000, 150)) {
+                zxlogf(ERROR, "GT Driver Mailbox driver busy\n");
+                return false;
+            }
+            if (mmio_space_.get()->Read32(kGtDriverMailboxData0) & 0x1) {
+                break;
+            }
+            if (count++ == 3) {
+                zxlogf(ERROR, "Failed to set cd_clk\n");
+                return false;
+            }
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        }
+
+        cd_clk.WriteTo(mmio_space_.get());
+
+        mmio_space_.get()->Write32(kGtDriverMailboxData0, 0x3);
+        mmio_space_.get()->Write32(kGtDriverMailboxData1, 0x0);
+        mmio_space_.get()->Write32(kGtDriverMailboxInterface, 0x80000007);
+    }
+
+    // Enable and wait for DBUF
+    auto dbuf_ctl = registers::DbufCtl::Get().ReadFrom(mmio_space_.get());
+    dbuf_ctl.power_request().set(1);
+    dbuf_ctl.WriteTo(mmio_space_.get());
+
+    if (!WAIT_ON_US(registers::DbufCtl
+            ::Get().ReadFrom(mmio_space_.get()).power_state().get(), 10)) {
+        zxlogf(ERROR, "Failed to enable DBUF\n");
+        return false;
+    }
+
+    // We never use VGA, so just disable it at startup
+    constexpr uint16_t kSequencerIdx = 0x3c4;
+    constexpr uint16_t kSequencerData = 0x3c5;
+    constexpr uint8_t kClockingModeIdx = 1;
+    constexpr uint8_t kClockingModeScreenOff = (1 << 5);
+    zx_status_t status = zx_mmap_device_io(get_root_resource(), kSequencerIdx, 2);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to map vga ports\n");
+        return false;
+    }
+    outp(kSequencerIdx, kClockingModeIdx);
+    uint8_t clocking_mode = inp(kSequencerData);
+    if (!(clocking_mode & kClockingModeScreenOff)) {
+        outp(kSequencerIdx, inp(kSequencerData) | kClockingModeScreenOff);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+
+        auto vga_ctl = registers::VgaCtl::Get().ReadFrom(mmio_space());
+        vga_ctl.vga_display_disable().set(1);
+        vga_ctl.WriteTo(mmio_space());
+    }
+
+    return true;
+}
+
 zx_status_t Controller::InitDisplays(uint16_t device_id) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<DisplayDevice> disp_device(nullptr);
     if (ENABLE_MODESETTING && is_gen9(device_id)) {
+        BringUpDisplayEngine();
+
         for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
             zxlogf(SPEW, "Trying to init display %d\n", registers::kDdis[i]);
 

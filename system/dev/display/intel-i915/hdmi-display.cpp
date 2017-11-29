@@ -291,6 +291,10 @@ bool HdmiDisplay::Init(zx_display_info* info) {
         return false;
     }
 
+    if (!ResetPipe() || !ResetDdi()) {
+        return false;
+    }
+
     registers::BaseEdid edid;
     if (!LoadEdid(&edid) || !EnablePowerWell2()) {
         return false;
