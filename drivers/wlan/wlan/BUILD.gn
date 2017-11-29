@@ -28,6 +28,7 @@ source_set("mlme") {
     "element_id.h",
     "frame_handler.h",
     "logging.h",
+    "macaddr_map.h",
     "mac_frame.cpp",
     "mac_frame.h",
     "mlme.h",

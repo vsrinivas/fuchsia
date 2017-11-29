@@ -16,6 +16,7 @@
 
 #include "lib/fidl/cpp/bindings/array.h"
 
+#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
 #include <zx/time.h>
 
@@ -26,7 +27,6 @@ namespace wlan {
 
 Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     : device_(device), timer_(std::move(timer)) {
-    nbrs_bss_.Reset();
     ZX_DEBUG_ASSERT(timer_.get());
 }
 
@@ -85,8 +85,7 @@ void Scanner::Reset() {
     channel_index_ = 0;
     channel_start_ = 0;
     timer_->CancelTimer();
-
-    nbrs_bss_.Reset();
+    nbrs_bss_.Clear();
 }
 
 bool Scanner::IsRunning() const {
@@ -120,6 +119,9 @@ zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
+    // Before processing Beacon, remove stale entries.
+    RemoveStaleBss();
+
     auto hdr = frame.hdr;
     common::MacAddr bssid(hdr->addr3);
     common::MacAddr src_addr(hdr->addr2);
@@ -131,14 +133,40 @@ zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_
         return ZX_OK;  // Do not process.
     }
 
-    auto status = nbrs_bss_.Upsert(bssid, frame.body, frame.body_len,
-                                   &rxinfo);  // body_len does not include FCS.
+    // Update existing BSS or insert if already in map.
+    zx_status_t status = ZX_OK;
+    auto bss = nbrs_bss_.Lookup(bssid);
+    if (bss != nullptr) {
+        status = bss->ProcessBeacon(frame.body, frame.body_len, &rxinfo);
+    } else if (nbrs_bss_.IsFull()) {
+        errorf("error, maximum number of BSS reached: %lu\n", nbrs_bss_.Count());
+    } else {
+        bss = fbl::AdoptRef(new Bss(bssid));
+        bss->ProcessBeacon(frame.body, frame.body_len, &rxinfo);
+        status = nbrs_bss_.Insert(bssid, bss);
+    }
+
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
                  MACSTR(bssid), frame.body->timestamp);
     }
 
     return ZX_OK;
+}
+
+void Scanner::RemoveStaleBss() {
+    // TODO(porce): call this periodically and delete stale entries.
+    // TODO(porce): Implement a complex preemption logic here.
+
+    // Only prune if necessary time passed.
+    static zx_time_t ts_last_prune = 0;
+    auto now = zx_time_get(ZX_CLOCK_UTC);
+    if (ts_last_prune + kBssPruneDelay > now) { return; }
+
+    // Prune stale entries.
+    ts_last_prune = now;
+    nbrs_bss_.RemoveIf(
+        [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry >= now); });
 }
 
 zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
@@ -302,15 +330,12 @@ zx_status_t Scanner::SendProbeRequest() {
 zx_status_t Scanner::SendScanResponse() {
     debugfn();
 
-    for (auto& iter : nbrs_bss_.map()) {
-        Bss* bss = iter.second;
-        if (bss == nullptr) continue;
-
+    nbrs_bss_.ForEach([this](fbl::RefPtr<Bss> bss) {
         if (req_->ssid.size() == 0 || req_->ssid == bss->SsidToString()) {
             debugbss("%s\n", bss->ToString().c_str());
             resp_->bss_description_set.push_back(bss->ToFidl());
         }
-    }
+    });
 
     size_t buf_len = sizeof(ServiceHeader) + resp_->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
@@ -325,7 +350,7 @@ zx_status_t Scanner::SendScanResponse() {
         status = device_->SendService(std::move(packet));
     }
 
-    nbrs_bss_.Reset();  // TODO(porce): Decouple BSS management from Scanner.
+    nbrs_bss_.Clear();  // TODO(porce): Decouple BSS management from Scanner.
     return status;
 }
 

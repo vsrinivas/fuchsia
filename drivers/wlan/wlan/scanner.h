@@ -55,6 +55,14 @@ class Scanner : public FrameHandler {
     zx_time_t InitialTimeout() const;
     zx_status_t SendScanResponse();
     zx_status_t SendProbeRequest();
+    // Removes stale BSS entries from the neighbor BSS map. Pruning will only take effect every
+    // kBssPruneDelay seconds, and hence, multiple calls to this method in a short time frame have
+    // no effect.
+    void RemoveStaleBss();
+
+    static constexpr size_t kMaxBssEntries = 20;  // Limited by zx.Channel buffer size.
+    static constexpr zx_time_t kBssExpiry = ZX_SEC(60);
+    static constexpr zx_time_t kBssPruneDelay = ZX_SEC(5);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
@@ -65,7 +73,7 @@ class Scanner : public FrameHandler {
     zx_time_t channel_start_ = 0;
 
     // TODO(porce): Decouple neighbor BSS management from scanner.
-    BssMap nbrs_bss_;
+    BssMap nbrs_bss_ = {kMaxBssEntries};
 };
 
 }  // namespace wlan

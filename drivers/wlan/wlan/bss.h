@@ -14,18 +14,21 @@
 #include "enum.h"
 #include "logging.h"
 #include "mac_frame.h"
+#include "macaddr_map.h"
 
 #include "garnet/drivers/wlan/common/channel.h"
 #include "garnet/drivers/wlan/common/macaddr.h"
 
-#include <unordered_map>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace wlan {
 // BeaconHash is a signature to compare consecutive beacons without memcmp().
 // TODO(porce): Revamp to exclude varying IEs.
 typedef uint32_t BeaconHash;
 
-class Bss {
+class Bss : public fbl::RefCounted<Bss> {
    public:
     Bss(const common::MacAddr& bssid) : bssid_(bssid) {
         memset(&cap_, 0, sizeof(cap_));
@@ -113,39 +116,6 @@ class Bss {
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bss);
 };  // namespace wlan
 
-class BssMap {
-   public:
-    BssMap() {}
-    ~BssMap() { Reset(); }
-
-    bool HasKey(const common::MacAddr& bssid) const;
-    Bss* Lookup(const common::MacAddr& bssid) const;
-    zx_status_t Upsert(const common::MacAddr& bssid, const Beacon* beacon, size_t bcn_len,
-                       const wlan_rx_info_t* rx_info);
-    void Reset();
-
-    // TODO(porce): MacAddr as a key in unordered_map does not work.
-    // Symptom: Once inserting an entry, it cannot be found.
-    // Fallback to uint16_t, with above wrapper functions.
-    // std::unordered_map<MacAddr, Bss*, MacAddrHasher> map() { return map_; };
-    const std::unordered_map<uint64_t, Bss*>& map() { return map_; };
-
-   private:
-    bool IsFull() const;
-    zx_status_t Prune();
-    zx_status_t Insert(const common::MacAddr& bssid, Bss* bss);
-
-    const size_t kMaxEntries = 20;  // Limited by zx.Channel buffer size.
-    static constexpr zx_time_t kExpiry = ZX_SEC(60);
-    static constexpr zx_time_t kPruneDelay = ZX_SEC(5);
-
-    // TODO(porce): MacAddr as a key in unordered_map does not work.
-    // Symptom: Once inserting an entry, it cannot be found.
-    // Fallback to uint16_t, with above wrapper functions.
-    // std::unordered_map<MacAddr, Bss*, MacAddrHasher> map_;
-    std::unordered_map<uint64_t, Bss*> map_;
-
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BssMap);
-};
+using BssMap = MacAddrMap<fbl::RefPtr<Bss>, macaddr_map_type::kBss>;
 
 }  // namespace wlan
