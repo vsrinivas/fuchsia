@@ -65,8 +65,8 @@ zx_status_t LocalApicTimer::WriteLvt(uint32_t value) {
     masked_ = bits_shift(value, 16, 16);
 
     uint32_t mode = bits_shift(value, 18, 17);
-    // Return error for TSC-Deadline mode or reserved value
-    if (mode >= static_cast<uint32_t>(Mode::TscDeadline))
+    // Return error for reserved value.
+    if (mode > static_cast<uint32_t>(Mode::TscDeadline))
         return ZX_ERR_NOT_SUPPORTED;
     mode_ = static_cast<LocalApicTimer::Mode>(mode);
     UpdateLocked(zx::time::get(ZX_CLOCK_MONOTONIC));
@@ -123,8 +123,7 @@ uint32_t LocalApicTimer::ReadCcr() const {
     case Mode::Periodic:
         return static_cast<uint32_t>(initial_count_ - (ticks % (initial_count_ + 1)));
     case Mode::TscDeadline:
-        // We don't support TscDeadline mode and explicitly return error if
-        // anyone tries to use it.
+        // We don't support TscDeadline mode.
         break;
     }
     return 0;
@@ -150,8 +149,7 @@ void LocalApicTimer::UpdateLocked(zx_time_t now) {
         remain = initial_count_ - (ticks % initial_count_);
         break;
     case Mode::TscDeadline:
-        // We don't support TscDeadline mode and explicitly return error if
-        // anyone tries to use it.
+        // We don't support TscDeadline mode.
         break;
     }
 
@@ -306,6 +304,13 @@ zx_status_t LocalApic::Write(uint64_t addr, const IoValue& value) {
         return ZX_OK;
     }
     case kLocalApicLvtTimer:
+        {
+            // Update the APIC page since the TSC timer emulation in the kernel
+            // depends on reading this value out of the APIC page.
+            fbl::AutoLock lock(&mutex_);
+            uintptr_t reg = reinterpret_cast<uintptr_t>(registers_) + addr;
+            *reinterpret_cast<volatile uint32_t*>(reg) = value.u32;
+        }
         return timer_.WriteLvt(value.u32);
     case kLocalApicInitialCount:
         return timer_.WriteIcr(value.u32);
