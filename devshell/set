@@ -157,14 +157,14 @@ function main {
   if [[ -n "${packages}" ]]; then
     gen_args="${gen_args} --packages ${packages}"
   else
-    # TODO(abarth): We might want to make this logic more sophistocated once we
+    # TODO(abarth): We might want to make this logic more sophisticated once we
     # have a mechanism for switching between layers or for selecting which
     # layers to build from source.
 
     # If both of the cases below trigger, gen.py will error out because gen.py
     # doesn't support multiple --packages arguments. However, we shouldn't get
     # into this situation because jiri would have already errored out due to the
-    # conflicting version requirements of importing both garnet and peridot.
+    # conflicting version requirements of importing 2+ layers at the same time.
 
     if grep -q "manifest/garnet" "${FUCHSIA_DIR}/.jiri_manifest"; then
       gen_args="${gen_args} --packages garnet/packages/default"
@@ -172,6 +172,10 @@ function main {
 
     if grep -q "manifest/peridot" "${FUCHSIA_DIR}/.jiri_manifest"; then
       gen_args="${gen_args} --packages peridot/packages/default"
+    fi
+
+    if grep -q "manifest/topaz" "${FUCHSIA_DIR}/.jiri_manifest"; then
+      gen_args="${gen_args} --packages topaz/packages/default"
     fi
   fi
 
