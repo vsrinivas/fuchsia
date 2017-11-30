@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
- #include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"

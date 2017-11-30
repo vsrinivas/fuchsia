@@ -5,15 +5,11 @@
 import("//build/package.gni")
 
 package("test_runner") {
-  system_image = true
-
   deps = [
     "server",
   ]
 
-  binaries = [ {
-        name = "test_runner"
-      } ]
+  binary = "test_runner"
 }
 
 package("run_integration_tests") {
