@@ -47,7 +47,7 @@ fx set --packages build/gn/boot_test_modular
   your fuchsia device, do:
 
 ```
-/system/bin/test_runner
+run test_runner
 ```
 
 Each subdirectory of `peridot/tests` contains one integration test. They
