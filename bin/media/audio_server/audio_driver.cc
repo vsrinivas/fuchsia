@@ -611,6 +611,10 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
     return resp.result;
   }
 
+  // TODO(johngro) : See MTWN-61.  Update capturers and outputs to take external
+  // delay into account when sampling.
+  external_delay_nsec_ = resp.external_delay_nsec;
+
   // Activate out ring buffer channel in our execution domain.
   // clang-format off
   ::audio::dispatcher::Channel::ProcessHandler process_handler(
@@ -741,6 +745,7 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(
     fxl::MutexLocker lock(&ring_buffer_state_lock_);
 
     ring_buffer_ = DriverRingBuffer::Create(fbl::move(rb_vmo), bytes_per_frame_,
+                                            resp.num_ring_buffer_frames,
                                             owner_->is_input());
     if (ring_buffer_ == nullptr) {
       ShutdownSelf("Failed to allocate and map driver ring buffer");
@@ -775,22 +780,7 @@ zx_status_t AudioDriver::ProcessStartResponse(
   // Now that we have started up, compute the transformation from clock
   // monotonic to the ring buffer position (in bytes) Then update the ring
   // buffer state's transformation and bump the generation counter.
-  //
-  // Start by coverting the start time (reported in ticks) to a start time in
-  // clock monotonic units.
-  //
-  // TODO(johngro): This conversion makes a bunch of assumptions (for example,
-  // the relationship between clock monotonic and system ticks is not actually
-  // defined anywhere at the moment).
-  //
-  // It would be better to either just convert the mixer to work in ticks
-  // instead of CLOCK_MONOTONIC, or to change the driver requirements to have
-  // them report the start time in clock monotonic units.
-  uint64_t ticks_per_sec = zx_ticks_per_second();
-  FXL_DCHECK(ticks_per_sec <= std::numeric_limits<uint32_t>::max());
-  int64_t start_clock_mono =
-      TimelineRate::Scale(resp.start_ticks, ZX_SEC(1), ticks_per_sec);
-  TimelineFunction func(start_clock_mono, 0, ZX_SEC(1),
+  TimelineFunction func(resp.start_time, 0, ZX_SEC(1),
                         frames_per_sec_ * bytes_per_frame_);
   {
     fxl::MutexLocker lock(&ring_buffer_state_lock_);

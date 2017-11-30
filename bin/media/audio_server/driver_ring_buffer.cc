@@ -14,10 +14,11 @@ namespace audio {
 // static
 fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo,
                                                        uint32_t frame_size,
+                                                       uint32_t frame_count,
                                                        bool input) {
   auto ret = fbl::AdoptRef(new DriverRingBuffer());
 
-  if (ret->Init(fbl::move(vmo), frame_size, input) != ZX_OK) {
+  if (ret->Init(fbl::move(vmo), frame_size, frame_count, input) != ZX_OK) {
     return nullptr;
   }
 
@@ -32,6 +33,7 @@ DriverRingBuffer::~DriverRingBuffer() {
 
 zx_status_t DriverRingBuffer::Init(zx::vmo vmo,
                                    uint32_t frame_size,
+                                   uint32_t frame_count,
                                    bool input) {
   if (!vmo.is_valid()) {
     FXL_LOG(ERROR) << "Invalid VMO!";
@@ -44,24 +46,24 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo,
   }
 
   frame_size_ = frame_size;
+  frames_ = frame_count;
+  size_ = static_cast<uint64_t>(frame_size_ * frames_);
 
   zx_status_t res;
+  uint64_t vmo_size;
   vmo_ = fbl::move(vmo);
-  res = vmo_.get_size(&size_);
+  res = vmo_.get_size(&vmo_size);
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
     return res;
   }
 
-  if (size_ % frame_size_) {
-    FXL_LOG(ERROR) << "Ring buffer size (" << size_
-                   << ") is not a multiple of the frame size (" << frame_size_
-                   << ")";
+  if (size_ > vmo_size) {
+    FXL_LOG(ERROR) << "Driver reported ring buffer size (" << size_
+                   << ") is greater than VMO size (" << vmo_size << ")";
     return res;
   }
-
-  frames_ = size_ / frame_size_;
 
   // Map the VMO into our address space.
   // TODO(johngro) : How do I specify the cache policy for this mapping?

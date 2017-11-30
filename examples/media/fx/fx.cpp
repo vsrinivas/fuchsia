@@ -30,7 +30,7 @@ using media::TimelineFunction;
 constexpr uint32_t NUM_CHANNELS = 2u;
 constexpr uint32_t INPUT_FRAMES_PER_SEC = 48000u;
 constexpr uint32_t INPUT_BUFFER_LENGTH_MSEC = 10u;
-constexpr uint32_t INPUT_BUFFER_LENGTH_FRAMES =
+constexpr uint32_t INPUT_BUFFER_MIN_FRAMES =
     (INPUT_FRAMES_PER_SEC * INPUT_BUFFER_LENGTH_MSEC) / 1000u;
 constexpr zx_time_t PROCESS_CHUNK_TIME = ZX_MSEC(1);
 constexpr uint32_t OUTPUT_BUF_MSEC = 1000;
@@ -152,6 +152,7 @@ class FxProcessor {
   uint16_t preamp_gain_fixed_;
 
   fbl::unique_ptr<AudioInput> input_;
+  uint32_t input_buffer_frames_ = 0;
   media::AudioServerPtr audio_server_;
   media::AudioRendererPtr output_audio_;
   media::MediaRendererPtr output_media_;
@@ -170,6 +171,9 @@ void FxProcessor::Startup() {
     printf("Invalid input sample size %u\n", input_->sample_size());
     return;
   }
+
+  FXL_DCHECK((input_->ring_buffer_bytes() % input_->frame_sz()) == 0);
+  input_buffer_frames_ = input_->ring_buffer_bytes() / input_->frame_sz();
 
   if (!wav_writer_.Initialize("/tmp/fx.wav", input_->channel_cnt(),
                               input_->frame_rate(), 16)) {
@@ -274,23 +278,20 @@ void FxProcessor::Startup() {
   int64_t fifo_frames =
       ((input_->fifo_depth() + input_->frame_sz() - 1) / input_->frame_sz());
 
-  // TODO(johngro): Switch audio start times to always be expressed in clock
-  // monotonic units, instead of ticks.  Right now, we are making assumptions
-  // about the relationship between ticks and clock monotonic which we should
-  // not be making.
-  TimelineFunction clock_mono_to_ticks(0, 0, 1000000000u,
-                                       zx_ticks_per_second());
-  TimelineFunction ticks_to_input_wr_ptr(input_->start_ticks(), -fifo_frames,
-                                         zx_ticks_per_second(),
-                                         input_->frame_rate());
+  media::TimelineRate frames_per_nsec;
+  {
+    media::TimelineRate frames_per_sec(input_->frame_rate(), 1);
+    media::TimelineRate sec_per_nsec(1, ZX_SEC(1));
+    frames_per_nsec =
+        media::TimelineRate::Product(frames_per_sec, sec_per_nsec);
+  }
 
-  clock_mono_to_input_wr_ptr_ =
-      TimelineFunction::Compose(ticks_to_input_wr_ptr, clock_mono_to_ticks);
+  clock_mono_to_input_wr_ptr_ = media::TimelineFunction(
+      input_->start_time(), -fifo_frames, frames_per_nsec);
 
   // Compute the time at which the input will have a chunk of data to process,
   // and schedule a DPC for then.
-  int64_t first_process_frames =
-      (PROCESS_CHUNK_TIME * input_->frame_rate()) / 1000000000;
+  int64_t first_process_frames = frames_per_nsec.Scale(PROCESS_CHUNK_TIME);
   auto first_process_time =
       fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(
           clock_mono_to_input_wr_ptr_.ApplyInverse(first_process_frames)));
@@ -520,18 +521,18 @@ void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
   }
 
   int64_t todo64 = input_wp - input_rp_;
-  if (todo64 > INPUT_BUFFER_LENGTH_FRAMES) {
+  if (todo64 > input_buffer_frames_) {
     printf(
         "Fell behind by more than the input buffer size "
         "(todo %" PRId64 " buflen %u\n",
-        todo64, INPUT_BUFFER_LENGTH_FRAMES);
+        todo64, input_buffer_frames_);
     Shutdown("Failed to produce output packet");
     return;
   }
 
   uint32_t todo = static_cast<uint32_t>(todo64);
   uint32_t input_start =
-      static_cast<uint32_t>(input_rp_) % INPUT_BUFFER_LENGTH_FRAMES;
+      static_cast<uint32_t>(input_rp_) % input_buffer_frames_;
   uint32_t output_start = output_buf_wp_ % output_buf_frames_;
   uint32_t output_space = output_buf_frames_ - output_start;
 
@@ -557,7 +558,7 @@ void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
   // output.
   auto input_base = reinterpret_cast<int16_t*>(input_->ring_buffer());
   auto output_base = reinterpret_cast<int16_t*>(output_buf_virt_);
-  ApplyEffect(input_base, input_start, INPUT_BUFFER_LENGTH_FRAMES, output_base,
+  ApplyEffect(input_base, input_start, input_buffer_frames_, output_base,
               output_start, output_buf_frames_, todo,
               (preamp_gain_ == 0.0) ? &FxProcessor::CopyInputEffect
                                     : &FxProcessor::PreampInputEffect);
@@ -762,7 +763,7 @@ int main(int argc, char** argv) {
     return res;
   }
 
-  res = input->GetBuffer(INPUT_BUFFER_LENGTH_FRAMES, 0u);
+  res = input->GetBuffer(INPUT_BUFFER_MIN_FRAMES, 0u);
   if (res != ZX_OK) {
     return res;
   }

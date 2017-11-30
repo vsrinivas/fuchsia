@@ -74,7 +74,6 @@ class AudioInput : public ActiveSource {
   audio_sample_format_t configured_sample_format_;
   uint32_t configured_bytes_per_frame_;
   std::shared_ptr<PayloadAllocator> allocator_;
-  TimelineRate pts_rate_;
   // The fields above need to be stable while the worker thread is operating.
 
   std::atomic<State> state_;

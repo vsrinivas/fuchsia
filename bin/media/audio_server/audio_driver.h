@@ -73,6 +73,7 @@ class AudioDriver {
 
   State state() const { return state_; }
   uint32_t frames_per_sec() const { return frames_per_sec_; }
+  uint64_t external_delay_nsec() const { return external_delay_nsec_; }
   uint16_t channel_count() const { return channel_count_; }
   audio_sample_format_t sample_format() const { return sample_format_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
@@ -197,6 +198,7 @@ class AudioDriver {
 
   // Configuration state.
   uint32_t frames_per_sec_;
+  uint64_t external_delay_nsec_;
   uint16_t channel_count_;
   audio_sample_format_t sample_format_;
   uint32_t bytes_per_frame_;

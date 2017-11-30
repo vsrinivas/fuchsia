@@ -15,6 +15,7 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
  public:
   static fbl::RefPtr<DriverRingBuffer> Create(zx::vmo vmo,
                                               uint32_t frame_size,
+                                              uint32_t frame_count,
                                               bool input);
 
   uint64_t size() const { return size_; }
@@ -28,7 +29,10 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
   DriverRingBuffer() {}
   ~DriverRingBuffer();
 
-  zx_status_t Init(zx::vmo vmo, uint32_t frame_size, bool input);
+  zx_status_t Init(zx::vmo vmo,
+                   uint32_t frame_size,
+                   uint32_t frame_count,
+                   bool input);
 
   zx::vmo vmo_;
   uint64_t size_ = 0;

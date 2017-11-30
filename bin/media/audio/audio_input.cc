@@ -124,7 +124,6 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
   configured_frames_per_second_ = audio_stream_type.frames_per_second();
   configured_channels_ = audio_stream_type.channels();
   configured_bytes_per_frame_ = audio_stream_type.bytes_per_frame();
-  pts_rate_ = TimelineRate(configured_frames_per_second_, 1);
   config_valid_ = true;
 
   return true;
@@ -181,8 +180,7 @@ void AudioInput::Worker() {
 
   // TODO(dalesat): Report this failure so the capture client can be informed.
 
-  auto cleanup =
-      fbl::MakeAutoCall([this]() { audio_input_->Close(); });
+  auto cleanup = fbl::MakeAutoCall([this]() { audio_input_->Close(); });
 
   // Open the device
   res = audio_input_->Open();
@@ -203,6 +201,12 @@ void AudioInput::Worker() {
                    << configured_sample_format_ << " (res " << res << ")";
     return;
   }
+
+  TimelineRate frames_per_sec(audio_input_->frame_rate(), 1);
+  TimelineRate sec_per_nsec(1, ZX_SEC(1));
+  TimelineRate frames_per_nsec =
+      TimelineRate::Product(frames_per_sec, sec_per_nsec);
+  TimelineRate nsec_per_frame = frames_per_nsec.Inverse();
 
   // Establish the shared ring buffer.  Request enough room to hold at least
   // kPacketPerRingBuffer packets.
@@ -241,20 +245,14 @@ void AudioInput::Worker() {
       (audio_input_->fifo_depth() + configured_bytes_per_frame_ - 1) /
       configured_bytes_per_frame_;
 
-  TimelineFunction ticks_to_wr_ptr(audio_input_->start_ticks(), -fifo_frames,
-                                   zx_ticks_per_second(),
-                                   configured_frames_per_second_);
-
-  // TODO(johngro) : If/when the zircon APIs support specifying deadlines using
-  // the tick timeline instead of the clock monotonic timeline, use that
-  // instead.
-  TimelineRate nsec_per_frame(1000000000u, configured_frames_per_second_);
+  TimelineFunction clock_mono_to_input_wr_ptr(audio_input_->start_time(),
+                                              -fifo_frames, frames_per_nsec);
 
   while (state_ == State::kStarted) {
     // Steady state operation.  Start by figuring out how many full packets we
     // have waiting for us in the ring buffer.
-    uint64_t now_ticks = zx_ticks_get();
-    int64_t wr_ptr = ticks_to_wr_ptr.Apply(now_ticks);
+    uint64_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    int64_t wr_ptr = clock_mono_to_input_wr_ptr.Apply(now);
     int64_t pending_packets = (wr_ptr - frames_rxed) / cached_frames_per_packet;
 
     if (pending_packets > 0) {
@@ -312,9 +310,9 @@ void AudioInput::Worker() {
 
         ActiveSourceStage* stage_ptr = stage();
         if (stage_ptr) {
-          stage_ptr->SupplyPacket(Packet::Create(frames_rxed, pts_rate_, false,
-                                                 false, cached_packet_size, buf,
-                                                 allocator_));
+          stage_ptr->SupplyPacket(
+              Packet::Create(frames_rxed, frames_per_sec, false, false,
+                             cached_packet_size, buf, allocator_));
         }
 
         // Update our bookkeeping.
