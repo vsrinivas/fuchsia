@@ -29,6 +29,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/dev-ec.c \
     $(LOCAL_DIR)/dev-pwrsrc.c \
     $(LOCAL_DIR)/dev-tbmc.cpp \
+    $(LOCAL_DIR)/dev-thermal.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/init.c \
     $(LOCAL_DIR)/pci.c \
@@ -36,6 +37,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/powerbtn.c \
     $(LOCAL_DIR)/processor.c \
     $(LOCAL_DIR)/resources.c \
+    $(LOCAL_DIR)/util.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

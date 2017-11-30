@@ -66,6 +66,7 @@
 #define IOCTL_FAMILY_USB_VIRT_BUS   0x29
 #define IOCTL_FAMILY_IPM            0x2A  // ioctls for Intel Perf Monitoring
 #define IOCTL_FAMILY_POWER          0x30
+#define IOCTL_FAMILY_THERMAL        0x31
 
 // IOCTL constructor
 // --K-FFNN

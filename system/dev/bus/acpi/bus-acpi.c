@@ -680,6 +680,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         tbmc_init(parent, object);
     } else if (!memcmp(hid, GOOGLE_CROS_EC_HID_STRING, HID_LENGTH)) {
         cros_ec_lpc_init(parent, object);
+    } else if (!memcmp(hid, DPTF_THERMAL_HID_STRING, HID_LENGTH)) {
+        thermal_init(parent, info, object);
     }
 
 out:
