@@ -53,8 +53,10 @@ class DisplayModel {
     kClose = 2,
     // Display is used at arm's reach.
     kNear = 3,
+    // Display is used beyond arm's reach.
+    kMidrange = 4,
     // Display is used well beyond arm's reach.
-    kFar = 4,
+    kFar = 5,
   };
 
   // Provides information about the viewing environment.

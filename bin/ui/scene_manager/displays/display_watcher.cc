@@ -76,13 +76,20 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
                  << ", density_in_mm_per_pp=" << metrics.density_in_mm_per_pp();
 
   // TODO(MZ-16): We've been asked to temporarily revert the DP-ratio to 2.0.
-  FXL_DLOG(INFO)
-      << "SceneManager: Ignoring display metrics, using DP-ratio of 2.0.";
-  DisplayMetrics fake_metrics = DisplayMetrics(
-      metrics.width_in_px(), metrics.height_in_px(), 2.f, 2.f, 0.f);
+  const bool kOverrideDpRatio = true;
+  if (kOverrideDpRatio) {
+    FXL_DLOG(INFO)
+        << "SceneManager: Ignoring display metrics, using DP-ratio of 2.0.";
+    DisplayMetrics fake_metrics = DisplayMetrics(
+        metrics.width_in_px(), metrics.height_in_px(), 2.f, 2.f, 0.f);
+
+    // Invoke the callback, passing the display metrics.
+    callback(&fake_metrics);
+    return;
+  }
 
   // Invoke the callback, passing the display metrics.
-  callback(&fake_metrics);
+  callback(&metrics);
 }
 
 }  // namespace scene_manager

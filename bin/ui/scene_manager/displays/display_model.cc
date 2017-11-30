@@ -47,6 +47,8 @@ constexpr float GetDefaultViewingDistanceInMm(DisplayModel::Usage usage) {
       return 500.f;
     case DisplayModel::Usage::kNear:
       return 720.f;
+    case DisplayModel::Usage::kMidrange:
+      return 1200.f;
     case DisplayModel::Usage::kFar:
       return 3000.f;
     default:

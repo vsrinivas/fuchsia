@@ -24,7 +24,7 @@ void ConfigureDisplay(uint32_t width_in_px,
     // Assume that the device is an Acer Switch 12 Alpha.
     FXL_LOG(INFO)
         << "SceneManager: treating device as an Acer Switch 12 Alpha.";
-    model->display_info().density_in_px_per_mm = 8.386f;
+    model->display_info().density_in_px_per_mm = 8.5f;
     model->environment_info().usage = DisplayModel::Usage::kClose;
   } else if (width_in_px == 2400 && height_in_px == 1600) {
     // Assume that the device is a Google Pixelbook.
