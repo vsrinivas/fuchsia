@@ -19,10 +19,6 @@ extern "C" {
 #include <acpica/actypes.h>
 }
 
-static const char kDsdtPath[] = "/system/data/dsdt.aml";
-static const char kMadtPath[] = "/system/data/madt.aml";
-static const char kMcfgPath[] = "/system/data/mcfg.aml";
-
 static uint8_t acpi_checksum(void* table, uint32_t length) {
     uint8_t sum = 0;
     uint8_t* start = reinterpret_cast<uint8_t*>(table);
@@ -32,9 +28,13 @@ static uint8_t acpi_checksum(void* table, uint32_t length) {
     return static_cast<uint8_t>(UINT8_MAX - sum + 1);
 }
 
-static void acpi_header(ACPI_TABLE_HEADER* header, const char* signature, uint32_t length) {
+static void acpi_header(ACPI_TABLE_HEADER* header, const char* table_id, const char* signature,
+                        uint32_t length) {
     memcpy(header->Signature, signature, ACPI_NAME_SIZE);
     header->Length = length;
+    memcpy(header->OemId, "ZX", 2);
+    memcpy(header->OemTableId, table_id, ACPI_OEM_TABLE_ID_SIZE);
+    header->OemRevision = 0;
     header->Checksum = acpi_checksum(header, header->Length);
 }
 
@@ -63,7 +63,48 @@ static zx_status_t load_file(const char* path, uintptr_t addr, size_t size, uint
     return ZX_OK;
 }
 
-zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off) {
+static void* madt_subtable(void* base, uint32_t off, uint8_t type, uint8_t length) {
+    ACPI_SUBTABLE_HEADER* subtable = (ACPI_SUBTABLE_HEADER*)((uint8_t*)base + off);
+    subtable->Type = type;
+    subtable->Length = length;
+    return subtable;
+}
+
+static zx_status_t create_madt(uintptr_t addr, size_t size, zx_vaddr_t io_apic_addr, size_t num_cpus,
+                               uint32_t* actual) {
+    uint32_t table_size = static_cast<uint32_t>(sizeof(ACPI_TABLE_MADT) +
+                                                (num_cpus * sizeof(ACPI_MADT_LOCAL_APIC)) +
+                                                sizeof(ACPI_MADT_IO_APIC));
+    if (table_size > size) {
+        fprintf(stderr, "Not enough space for MADT table\n");
+        return ZX_ERR_IO;
+    }
+
+    ACPI_TABLE_MADT* madt = reinterpret_cast<ACPI_TABLE_MADT*>(addr);
+    acpi_header(&madt->Header, "ZX MADT", ACPI_SIG_MADT, table_size);
+
+    uint32_t offset = sizeof(ACPI_TABLE_MADT);
+    for (uint8_t id = 0; id < num_cpus; ++id) {
+        ACPI_MADT_LOCAL_APIC* local_apic = reinterpret_cast<ACPI_MADT_LOCAL_APIC*>(
+            madt_subtable(madt, offset, ACPI_MADT_TYPE_LOCAL_APIC, sizeof(ACPI_MADT_LOCAL_APIC)));
+        local_apic->ProcessorId = id;
+        local_apic->Id = id;
+        local_apic->LapicFlags = ACPI_MADT_ENABLED;
+        offset += static_cast<uint32_t>(sizeof(ACPI_MADT_LOCAL_APIC));
+    }
+
+    ACPI_MADT_IO_APIC* io_apic = reinterpret_cast<ACPI_MADT_IO_APIC*>(
+        madt_subtable(madt, offset, ACPI_MADT_TYPE_IO_APIC, sizeof(ACPI_MADT_IO_APIC)));
+    io_apic->Reserved = 0;
+    io_apic->Address = static_cast<uint32_t>(io_apic_addr);
+    io_apic->GlobalIrqBase = 0;
+
+    *actual = table_size;
+    return ZX_OK;
+}
+
+zx_status_t create_acpi_table(const acpi_config& cfg, uintptr_t addr, size_t size,
+                              uintptr_t acpi_off) {
     if (size < acpi_off + PAGE_SIZE)
         return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -86,23 +127,25 @@ zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     fadt->Pm1EventLength = (ACPI_PM1_REGISTER_WIDTH / 8) * 2 /* enable and status registers */;
     fadt->Pm1aControlBlock = PM1_CONTROL_PORT;
     fadt->Pm1ControlLength = ACPI_PM1_REGISTER_WIDTH / 8;
-    acpi_header(&fadt->Header, ACPI_SIG_FADT, sizeof(ACPI_TABLE_FADT));
+    // Table ID must match RSDT.
+    acpi_header(&fadt->Header, "ZX ACPI", ACPI_SIG_FADT, sizeof(ACPI_TABLE_FADT));
 
     // DSDT.
     uint32_t actual;
-    zx_status_t status = load_file(kDsdtPath, addr + dsdt_off, size - dsdt_off, &actual);
+    zx_status_t status = load_file(cfg.dsdt_path, addr + dsdt_off, size - dsdt_off, &actual);
     if (status != ZX_OK)
         return status;
 
     // MADT.
     const uint32_t madt_off = dsdt_off + actual;
-    status = load_file(kMadtPath, addr + madt_off, size - madt_off, &actual);
+    status = create_madt(addr + madt_off, size - madt_off, cfg.io_apic_addr, cfg.num_cpus, &actual);
+
     if (status != ZX_OK)
         return status;
 
     // MCFG.
     const uint32_t mcfg_off = madt_off + actual;
-    status = load_file(kMcfgPath, addr + mcfg_off, size - mcfg_off, &actual);
+    status = load_file(cfg.mcfg_path, addr + mcfg_off, size - mcfg_off, &actual);
     if (status != ZX_OK)
         return status;
 
@@ -111,6 +154,18 @@ zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     rsdt->TableOffsetEntry[0] = fadt_off;
     rsdt->TableOffsetEntry[1] = madt_off;
     rsdt->TableOffsetEntry[2] = mcfg_off;
-    acpi_header(&rsdt->Header, ACPI_SIG_RSDT, rsdt_length);
+    // Table ID must match FADT.
+    acpi_header(&rsdt->Header, "ZX ACPI", ACPI_SIG_RSDT, rsdt_length);
     return ZX_OK;
+}
+
+// TODO(alexlegg): Remove this stub.
+zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off) {
+    struct acpi_config cfg = {
+        .dsdt_path = "/system/data/dsdt.aml",
+        .mcfg_path = "/system/data/mcfg.aml",
+        .io_apic_addr = 0xfec00000,
+        .num_cpus = 1,
+    };
+    return create_acpi_table(cfg, addr, size, acpi_off);
 }

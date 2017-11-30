@@ -6,11 +6,15 @@
 
 #include <zircon/types.h>
 
-/**
- * Create an ACPI 1.0 table.
- *
- * @param addr The mapped address of guest physical memory.
- * @param size The size of guest physical memory.
- * @param acpi_off The offset to write the ACPI table.
- */
+struct acpi_config {
+    const char* dsdt_path;
+    const char* mcfg_path;
+    zx_vaddr_t io_apic_addr;
+    size_t num_cpus;
+};
+
+zx_status_t create_acpi_table(const struct acpi_config& cfg, uintptr_t addr, size_t size,
+                              uintptr_t acpi_off);
+
+// TODO(alexlegg): Remove this stub.
 zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off);
