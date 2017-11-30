@@ -191,7 +191,7 @@ func msCopyIn(src string, root fs.Directory, dst string) {
 		var n int
 		n, err = from.Read(b)
 		if n > 0 {
-			if _, err := to.Write(b, 0, fs.WhenceFromCurrent); err != nil {
+			if _, err := to.Write(b[:n], 0, fs.WhenceFromCurrent); err != nil {
 				log.Fatalf("writing %s to msdosfs file: %s", name, err)
 			}
 		}
