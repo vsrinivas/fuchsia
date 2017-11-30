@@ -109,7 +109,6 @@ def main():
     parser.add_argument("--ignore-skia",
                         help="Disable Skia settings - for Skia-less builds",
                         action="store_true", default=False)
-    parser.add_argument("--autorun", help="path to autorun script")
     parser.add_argument("--variant", help="Select standard build variant",
                         action="append", default=[])
     args = parser.parse_args()
@@ -162,11 +161,6 @@ def main():
             gn_args.append("use_thinlto = false")
         elif args.thinlto_cache_dir:
             gn_args.append('thinlto_cache_dir="%s"' % args.thinlto_cache_dir)
-    if args.autorun:
-        abs_autorun = os.path.abspath(args.autorun)
-        if not os.path.exists(abs_autorun):
-            parser.error('invalid autorun path: %s' % args.autorun)
-        gn_args.append('autorun="%s"' % abs_autorun)
 
     zircon_cpu = {"x86-64": "x86-64", "aarch64": "arm64"}[args.target_cpu]
 

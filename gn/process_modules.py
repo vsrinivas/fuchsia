@@ -101,7 +101,7 @@ def resolve_imports(import_queue, build_root):
     return amalgamation
 
 
-def manifest_contents(files, autorun=None):
+def manifest_contents(files):
     return ''.join("%s=%s\n" % (f["bootfs_path"], f["file"]) for f in files)
 
 
@@ -124,7 +124,6 @@ def main():
     parser.add_argument("--system-manifest", help="path to manifest file to generate for /system")
     parser.add_argument("--modules", help="list of modules", default="default")
     parser.add_argument("--omit-files", help="list of files omitted from user.bootfs", default="")
-    parser.add_argument("--autorun", help="path to autorun script", default="")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
     parser.add_argument("--arch", help="architecture being targetted")
@@ -135,8 +134,6 @@ def main():
         return 1
 
     system_manifest_contents = manifest_contents(amalgamation.system.files)
-    if args.autorun:
-        system_manifest_contents += "autorun=%s\n" % autorun
     update_file(args.system_manifest, system_manifest_contents)
 
     if args.depfile:

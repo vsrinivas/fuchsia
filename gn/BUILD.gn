@@ -7,9 +7,6 @@ import("//build/gn/packages.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
 declare_args() {
-  # path to autorun script
-  autorun = ""
-
   # Manifest files describing target libraries from toolchains.
   # TODO(TO-471): This is ignored as a build argument and overridden below.
   toolchain_manifests = [ "${clang_prefix}/../lib/${clang_target}.manifest" ]
@@ -234,13 +231,6 @@ action("finalize_manifests") {
     "--cwd=.",
     "--groups=all",
   ]
-
-  if (autorun != "") {
-    autorun_manifest = "$target_gen_dir/autorun.manifest"
-    write_file(autorun_manifest, [ "autorun=$autorun" ])
-    sources += [ autorun_manifest ]
-    args += [ "--manifest=" + rebase_path(autorun_manifest) ]
-  }
 
   # TODO(mcgrathr,jamesr): When process_modules.py drops support for
   # package JSON files adding files directly, this can go away.
