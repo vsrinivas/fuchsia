@@ -64,7 +64,7 @@ func main() {
 		dstSrc["bootdata.bin"] = *bootdata
 	}
 	if *efiBootloader != "" {
-		dstSrc["BOOT/EFI/BOOTX64.EFI"] = *efiBootloader
+		dstSrc["EFI/BOOT/BOOTX64.EFI"] = *efiBootloader
 	}
 	if *manifest != "" {
 		r, err := newManifestReader(*manifest)
@@ -248,7 +248,6 @@ func (r *manifestReader) Next() (dst, src string, err error) {
 	return "", "", err
 }
 
-
 func computeSize(dstSrc map[string]string) uint64 {
 	var total uint64
 	for _, src := range dstSrc {
@@ -268,6 +267,7 @@ func computeSize(dstSrc map[string]string) uint64 {
 // sectors per track is 63, and a sector is 512, so we must round to the nearest
 // 32256.
 const sizeAlignment = 32256
+
 func alignSize(total uint64) uint64 {
 	if d := total % sizeAlignment; d != 0 {
 		total = total + (sizeAlignment - d)
