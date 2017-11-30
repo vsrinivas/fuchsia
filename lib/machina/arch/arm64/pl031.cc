@@ -6,9 +6,9 @@
 
 #include <stdio.h>
 
-#include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 
+#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/rtc.h"
 
 // PL031 registers.
@@ -17,7 +17,7 @@ enum class Pl031Register : uint64_t {
 };
 
 zx_status_t Pl031::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, PL031_PHYS_BASE, PL031_SIZE,
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kPl031PhysBase, kPl031Size,
                               0, this);
 }
 

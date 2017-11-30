@@ -4,9 +4,10 @@
 
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
 
-#include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
+
+#include "garnet/lib/machina/address.h"
 
 static const uint64_t kMaxInterrupts = 128;
 static const uint64_t kGicRevision = 2;
@@ -46,8 +47,8 @@ static inline uint32_t pidr2_arch_rev(uint32_t revision) {
 }
 
 zx_status_t GicDistributor::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, GIC_DISTRIBUTOR_PHYS_BASE,
-                              GIC_DISTRIBUTOR_SIZE, 0, this);
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kGicDistributorPhysBase,
+                              kGicDistributorSize, 0, this);
 }
 
 zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {

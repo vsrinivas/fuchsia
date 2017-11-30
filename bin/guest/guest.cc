@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include <fbl/unique_ptr.h>
-#include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
 #include <zircon/process.h>
@@ -21,6 +20,7 @@
 
 #include "garnet/bin/guest/linux.h"
 #include "garnet/bin/guest/zircon.h"
+#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/balloon.h"
 #include "garnet/lib/machina/block.h"
 #include "garnet/lib/machina/gpu.h"
@@ -35,7 +35,7 @@
 static const size_t kNumUarts = 1;
 static const uint64_t kUartBases[kNumUarts] = {
     // TODO(abdulla): Considering parsing this from the MDI.
-    PL011_PHYS_BASE,
+    kPl011PhysBase,
 };
 #elif __x86_64__
 #include <hypervisor/x86/acpi.h>
@@ -45,10 +45,10 @@ static const uint64_t kUartBases[kNumUarts] = {
 
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = {
-    I8250_BASE0,
-    I8250_BASE1,
-    I8250_BASE2,
-    I8250_BASE3,
+    kI8250Base0,
+    kI8250Base1,
+    kI8250Base2,
+    kI8250Base3,
 };
 
 static zx_status_t create_vmo(uint64_t size,

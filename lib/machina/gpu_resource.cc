@@ -14,7 +14,7 @@ fbl::unique_ptr<GpuResource> GpuResource::Create(
                                       kOpaque_SkAlphaType));
   bitmap.allocPixels();
   return fbl::make_unique<GpuResource>(gpu, request->resource_id,
-                                            fbl::move(bitmap));
+                                       fbl::move(bitmap));
 }
 
 GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, SkBitmap bitmap)

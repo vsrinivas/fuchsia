@@ -5,16 +5,17 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_TPM_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_TPM_H_
 
-#include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
 #include <zircon/types.h>
+
+#include "garnet/lib/machina/address.h"
 
 // Stub TPM implementation.
 class Tpm : public IoHandler {
  public:
   zx_status_t Init(Guest* guest) {
-    return guest->CreateMapping(TrapType::MMIO_SYNC, TPM_PHYS_BASE, TPM_SIZE, 0,
+    return guest->CreateMapping(TrapType::MMIO_SYNC, kTpmPhysBase, kTpmSize, 0,
                                 this);
   }
 

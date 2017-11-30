@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
@@ -15,6 +14,8 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
+
+#include "garnet/lib/machina/address.h"
 
 // clang-format off
 
@@ -41,8 +42,8 @@
 // clang-format on
 
 zx_status_t IoApic::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, IO_APIC_PHYS_BASE,
-                              IO_APIC_SIZE, 0, this);
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kIoApicPhysBase, kIoApicSize,
+                              0, this);
 }
 
 zx_status_t IoApic::RegisterLocalApic(uint8_t local_apic_id,

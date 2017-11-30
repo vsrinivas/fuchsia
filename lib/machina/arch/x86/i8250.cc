@@ -7,15 +7,16 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/address.h>
 #include <hypervisor/guest.h>
+
+#include "garnet/lib/machina/address.h"
 
 // Use an async trap for the first port (TX port) only.
 static const uint64_t kI8250AsyncBase = 0;
 static const uint64_t kI8250AsyncSize = 1;
 static const uint64_t kI8250AsyncOffset = 0;
 static const uint64_t kI8250SyncBase = kI8250AsyncSize;
-static const uint64_t kI8250SyncSize = I8250_SIZE - kI8250AsyncSize;
+static const uint64_t kI8250SyncSize = kI8250Size - kI8250AsyncSize;
 static const uint64_t kI8250SyncOffset = kI8250AsyncSize;
 
 // I8250 state flags.

@@ -8,10 +8,7 @@
 
 #include <fbl/auto_lock.h>
 #include <hw/pci.h>
-#include <hypervisor/address.h>
 #include <hypervisor/bits.h>
-
-#include "garnet/lib/machina/interrupt_controller.h"
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0 0x10
@@ -129,15 +126,15 @@ zx_status_t PciBus::Init() {
     return status;
 
   // Setup ECAM trap for a single bus.
-  status = guest_->CreateMapping(TrapType::MMIO_SYNC, PCI_ECAM_PHYS_BASE,
-                                 PCI_ECAM_SIZE(0, 1), 0, &ecam_handler_);
+  status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase,
+                                 pci_ecam_size(0, 1), 0, &ecam_handler_);
   if (status != ZX_OK)
     return status;
 
 #if __x86_64__
   // Setup PIO trap.
-  status = guest_->CreateMapping(TrapType::PIO_SYNC, PCI_CONFIG_PORT_BASE,
-                                 PCI_CONFIG_PORT_SIZE, 0, &port_handler_);
+  status = guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase,
+                                 kPciConfigPortSize, 0, &port_handler_);
   if (status != ZX_OK)
     return status;
 #endif

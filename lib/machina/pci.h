@@ -6,12 +6,12 @@
 #define GARNET_LIB_MACHINA_PCI_H_
 
 #include <fbl/mutex.h>
-#include <hypervisor/address.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 
 // clang-format off
@@ -209,7 +209,7 @@ class PciBus {
   static const uint32_t kPioBarBase = 0x8000;
 
   // Base address in MMIO space to map device BAR registers.
-  static const uint32_t kMmioBarBase = PCI_MMIO_BAR_PHYS_BASE;
+  static const uint32_t kMmioBarBase = kPciMmioBarPhysBase;
 
   PciBus(Guest* guest, const InterruptController* interrupt_controller);
 

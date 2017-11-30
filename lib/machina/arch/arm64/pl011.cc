@@ -7,8 +7,9 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/address.h>
 #include <hypervisor/guest.h>
+
+#include "garnet/lib/machina/address.h"
 
 // clang-format off
 
@@ -25,7 +26,7 @@ enum class Pl011Register : uint64_t {
 // clang-format on
 
 zx_status_t Pl011::Init(Guest* guest, uint64_t addr) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, addr, PL011_SIZE, 0, this);
+  return guest->CreateMapping(TrapType::MMIO_SYNC, addr, kPl011Size, 0, this);
 }
 
 zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {

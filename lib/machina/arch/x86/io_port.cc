@@ -10,6 +10,7 @@
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 
+#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/rtc.h"
 
 // clang-format off
@@ -61,7 +62,7 @@ constexpr uint8_t kI8042DataTestResponse        = 0x55;
 // clang-format on
 
 zx_status_t PicHandler::Init(Guest* guest, uint16_t base) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, base, PIC_SIZE, 0, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, base, kPicSize, 0, this);
 }
 
 zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) const {
@@ -78,7 +79,7 @@ zx_status_t PicHandler::Write(uint64_t addr, const IoValue& value) {
 }
 
 zx_status_t PitHandler::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, PIT_BASE, PIT_SIZE, 0, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kPitBase, kPitSize, 0, this);
 }
 
 zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) const {
@@ -136,7 +137,7 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
       uint16_t slp_type = bits_shift(value.u16, 12, 10);
       if (slp_en != 0) {
         // Only power-off transitions are supported.
-        return slp_type == SLP_TYP5 ? ZX_ERR_STOP : ZX_ERR_NOT_SUPPORTED;
+        return slp_type == kSlpTyp5 ? ZX_ERR_STOP : ZX_ERR_NOT_SUPPORTED;
       }
       break;
     }
@@ -151,7 +152,7 @@ static uint8_t to_bcd(int binary) {
 }
 
 zx_status_t RtcHandler::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, RTC_BASE, RTC_SIZE, 0, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kRtcBase, kRtcSize, 0, this);
 }
 
 zx_status_t RtcHandler::Read(uint64_t addr, IoValue* value) const {
@@ -263,12 +264,12 @@ zx_status_t RtcHandler::WriteRtcRegister(uint8_t rtc_index, uint8_t value) {
 
 zx_status_t I8042Handler::Init(Guest* guest) {
   zx_status_t status = guest->CreateMapping(
-      TrapType::PIO_SYNC, I8042_BASE + kI8042DataPort, 1, kI8042DataPort, this);
+      TrapType::PIO_SYNC, kI8042Base + kI8042DataPort, 1, kI8042DataPort, this);
   if (status != ZX_OK)
     return status;
 
   return guest->CreateMapping(TrapType::PIO_SYNC,
-                              I8042_BASE + kI8042CommandPort, 1,
+                              kI8042Base + kI8042CommandPort, 1,
                               kI8042CommandPort, this);
 }
 
@@ -308,10 +309,10 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
 
 zx_status_t IoPort::Init(Guest* guest) {
   zx_status_t status;
-  status = pic1_.Init(guest, PIC1_BASE);
+  status = pic1_.Init(guest, kPic1Base);
   if (status != ZX_OK)
     return status;
-  status = pic2_.Init(guest, PIC2_BASE);
+  status = pic2_.Init(guest, kPic2Base);
   if (status != ZX_OK)
     return status;
   status = pit_.Init(guest);
