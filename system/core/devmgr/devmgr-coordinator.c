@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
@@ -78,6 +79,9 @@ static bool dc_in_suspend(void) {
 static void dc_suspend(uint32_t flags);
 static void dc_mexec(zx_handle_t* h);
 static void dc_continue_suspend(suspend_context_t* ctx);
+
+static bool suspend_fallback = false;
+static bool suspend_debug = false;
 
 static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
@@ -1777,6 +1781,46 @@ static void process_suspend_list(suspend_context_t* ctx) {
     ctx->dh = dh;
 }
 
+static bool check_pending(device_t* dev) {
+    pending_t* pending;
+    if (dev->proxy) {
+        pending = list_peek_tail_type(&dev->proxy->pending, pending_t, node);
+    } else {
+        pending = list_peek_tail_type(&dev->pending, pending_t, node);
+    }
+    if ((pending == NULL) || (pending->op != PENDING_SUSPEND)) {
+        return false;
+    } else {
+        log(ERROR, "  devhost with device '%s' timed out\n", dev->name);
+        return true;
+    }
+}
+
+static int suspend_timeout_thread(void* arg) {
+    // 10 seconds
+    zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
+
+    suspend_context_t* ctx = arg;
+    if (suspend_debug) {
+        if (ctx->flags == RUNNING) {
+            return 0; // success
+        }
+        log(ERROR, "devcoord: suspend time out\n");
+        log(ERROR, "  sflags: 0x%08x\n", ctx->sflags);
+        device_t* dev;
+        list_for_every_entry(&list_devices, dev, device_t, anode) {
+            check_pending(dev);
+        }
+        check_pending(&root_device);
+        check_pending(&misc_device);
+        check_pending(&sys_device);
+    }
+    if (suspend_fallback) {
+        dc_suspend_fallback(ctx->sflags);
+    }
+    return 0;
+}
+
 static void dc_suspend(uint32_t flags) {
     // these top level devices should all have proxies. if not,
     // the system hasn't fully initialized yet and cannot go to
@@ -1798,6 +1842,15 @@ static void dc_suspend(uint32_t flags) {
     list_initialize(&ctx->devhosts);
 
     build_suspend_list(ctx);
+
+    if (suspend_fallback || suspend_debug) {
+        thrd_t t;
+        int ret = thrd_create_with_name(&t, suspend_timeout_thread, ctx,
+                                        "devcoord-suspend-timeout");
+        if (ret != thrd_success) {
+            log(ERROR, "devcoord: can't create suspend timeout thread\n");
+        }
+    }
 
     ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
     process_suspend_list(ctx);
@@ -2039,6 +2092,9 @@ void coordinator(void) {
     if (getenv_bool("devmgr.verbose", false)) {
         log_flags |= LOG_DEVLC;
     }
+
+    suspend_fallback = getenv_bool("devmgr.suspend-timeout-fallback", false);
+    suspend_debug = getenv_bool("devmgr.suspend-timeout-debug", false);
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &sys_device);

@@ -57,6 +57,16 @@ Instructs the devmgr that a /system volume is required.  Without this,
 devmgr assumes this is a standalone Zircon build and not a full Fuchsia
 system.
 
+## devmgr\.suspend-timeout-debug
+
+If this option is set, the system prints out debugging when mexec, suspend,
+reboot, or power off did not finish in 10 seconds.
+
+## devmgr\.suspend-timeout-fallback
+
+If this option is set, the system invokes kernel fallback to reboot or poweroff
+the device when the operation did not finish in 10 seconds.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the
