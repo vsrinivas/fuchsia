@@ -17,7 +17,10 @@ executable("time_service_bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/icu_data/cpp",
+    "//garnet/public/lib/icu_data/fidl",
     "//garnet/public/lib/time_service/fidl",
+    "//third_party/icu",
   ]
 }
 

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <time.h>
 #include <iostream>
 
-#include "lib/app/cpp/environment_services.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -13,8 +14,9 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/time_service/fidl/time_service.fidl.h"
 
-static constexpr char kSetOffsetCmd[] = "set_offset_minutes";
 static constexpr char kGetOffsetCmd[] = "get_offset_minutes";
+static constexpr char kSetTimezoneIdCmd[] = "set_timezone_id";
+static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 
 class TzUtil {
  public:
@@ -27,20 +29,33 @@ class TzUtil {
       Usage();
       return;
     }
-    if (command_line.HasOption(kSetOffsetCmd)) {
-      std::string offset_str;
-      command_line.GetOptionValue(kSetOffsetCmd, &offset_str);
-      if (!offset_str.empty()) {
-        int64_t offset = fxl::StringToNumber<int64_t>(offset_str);
-        SetTimezoneOffset(offset);
+    if (command_line.HasOption(kSetTimezoneIdCmd)) {
+      std::string timezone_id;
+      command_line.GetOptionValue(kSetTimezoneIdCmd, &timezone_id);
+      if (!timezone_id.empty()) {
+        bool status;
+        time_svc_->SetTimezone(timezone_id, &status);
+        if (status) {
+          return;
+        }
+        std::cerr << "ERROR: Unable to set ID." << std::endl;
+        exit(1);
       } else {
         Usage();
       }
       return;
     }
+    if (command_line.HasOption(kGetTimezoneIdCmd)) {
+      fidl::String timezone_id;
+      time_svc_->GetTimezoneId(&timezone_id);
+      std::cout << timezone_id << std::endl;
+      return;
+    }
     if (command_line.HasOption(kGetOffsetCmd)) {
-      int64_t offset;
-      time_svc_->GetTimezoneOffsetMinutes(&offset);
+      int32_t offset;
+      time_t seconds_since_epoch = time(NULL);
+      int64_t now_gmt_ms = seconds_since_epoch * 1000;
+      time_svc_->GetTimezoneOffsetMinutes(now_gmt_ms, &offset);
       std::cout << offset << std::endl;
       return;
     }
@@ -51,26 +66,17 @@ class TzUtil {
 
  private:
   static void Usage() {
-    std::cout << "Usage: tz-util [--help|--" << kSetOffsetCmd << "=M|"
+    std::cout << "Usage: tz-util [--help|"
+              << "--" << kSetTimezoneIdCmd << "=ID|"
+              << "--" << kGetTimezoneIdCmd << "|"
               << "--" << kGetOffsetCmd << "]" << std::endl;
     std::cout << std::endl;
-  }
-
-  void SetTimezoneOffset(int64_t offset) {
-    time_service::Status status;
-    time_svc_->SetTimezoneOffsetMinutes(offset, &status);
-    if (status == time_service::Status::OK) {
-      return;
-    } else {
-      std::cerr << "ERROR: Unable to set offset." << std::endl;
-      exit(1);
-    }
   }
 
   time_service::TimeServiceSyncPtr time_svc_;
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;

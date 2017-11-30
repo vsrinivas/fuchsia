@@ -15,18 +15,18 @@ class MainService {
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     app_context_->outgoing_services()->AddService<TimeService>(
         [this](fidl::InterfaceRequest<TimeService> request) {
-          time_svc.AddBinding(std::move(request));
+          time_svc_.AddBinding(std::move(request));
         });
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
-  TimeServiceImpl time_svc;
+  TimeServiceImpl time_svc_;
 };
 
 }  // namespace time_service
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   fsl::MessageLoop loop;
   time_service::MainService svc;
   loop.Run();

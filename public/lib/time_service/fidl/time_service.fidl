@@ -4,29 +4,31 @@
 
 module time_service;
 
-enum Status {
-  OK,
-  ERR_WRITE,
-  ERR_INVALID_OFFSET,
-};
-
 // TODO(US-384): Update protocol for more stuctured data: timezone names,
 // standard timezone codenames, and DST start/end information
 // (see go/garnet-time).
+//
+// For more information on the ICU timezone ID format, see:
+// http://userguide.icu-project.org/datetime
 [ServiceName="time_service::TimeService"]
 interface TimeService {
-  // Gets timezone offset (in minutes. Can be negative).
-  GetTimezoneOffsetMinutes() => (int64 offset);
+  // Returns timezone offset (in minutes from UTC. Can be negative) for the
+  // supplied number of milliseconds since the Unix epoch. Applies DST when
+  // appropriate.
+  GetTimezoneOffsetMinutes(int64 milliseconds_since_epoch)
+      => (int32 offset_minutes);
 
-  // Sets the UTC offset in minutes.  Must be a privileged user.
-  SetTimezoneOffsetMinutes(int64 offset) => (Status s);
+  // Sets the timezone for the machine based on an ICU ID.
+  SetTimezone(string timezone_id) => (bool status);
 
-  // Watches for updates to timezone.
+  // Gets the timezone ID string.
+  GetTimezoneId() => (string timezone_id);
+
+  // Watches for updates to the timezone ID.
   Watch(TimeServiceWatcher watcher);
 };
 
 interface TimeServiceWatcher {
-  // When the timezone changes, returns the new offset in minutes. Functions as
-  // a callback version of TimeService::GetTimezoneOffsetMinutes().
-  OnTimezoneOffsetChange(int64 offset_minutes);
+  // When the timezone changes, returns the new timezone ID.
+  OnTimezoneOffsetChange(string timezone_id);
 };
