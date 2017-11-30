@@ -10,10 +10,20 @@
 
 namespace fbenchmark {
 
-void RegisterTestRunner(const char* name, std::function<void()> func);
+class TestCaseInterface {
+ public:
+  virtual ~TestCaseInterface();
+  virtual void Run() = 0;
+};
+
+void RegisterTestFactory(const char* name,
+                         std::function<TestCaseInterface*()> factory_func);
 int BenchmarksMain(int argc, char** argv, bool run_gbenchmark);
 
 // Register a benchmark that is specified by a class.
+//
+// Any class may be used as long as it provides a Run() method that runs an
+// iteration of the test.
 template <class TestClass, typename... Args>
 void RegisterTest(const char* test_name, Args... args) {
   benchmark::RegisterBenchmark(
@@ -23,15 +33,18 @@ void RegisterTest(const char* test_name, Args... args) {
         while (state.KeepRunning())
           test.Run();
       });
-  RegisterTestRunner(
-      test_name,
-      [=]() {
-        TestClass test(args...);
-        // Run the test a small number of times to ensure that doing
-        // multiple runs works OK.
-        for (int i = 0; i < 5; ++i)
-          test.Run();
-      });
+
+  // Wrapper class that allows us to call Run() via a virtual function
+  // call.  (In the future we might require TestClass to derive from
+  // TestCaseInterface instead of using a wrapper like this.)
+  class TestCase : public TestCaseInterface {
+   public:
+    explicit TestCase(Args... args) : test_(args...) {}
+    void Run() override { test_.Run(); }
+   private:
+    TestClass test_;
+  };
+  RegisterTestFactory(test_name, [=] { return new TestCase(args...); });
 }
 
 typedef void TestFunc();

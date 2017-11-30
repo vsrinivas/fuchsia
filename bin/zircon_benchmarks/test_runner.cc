@@ -17,9 +17,11 @@ DEFINE_uint32(channel_read, 0, "Launch a process to read from a channel");
 DEFINE_uint32(channel_write, 0, "Launch a process to write to a channel");
 DEFINE_string(subprocess, "", "Launch a process to run the named function");
 
+namespace fbenchmark {
 namespace {
 
-typedef std::vector<std::pair<std::string, std::function<void()>>> TestList;
+typedef std::vector<std::pair<std::string, std::function<TestCaseInterface*()>>>
+    TestList;
 // g_tests needs to be POD because this list is populated by constructors.
 // We don't want g_tests to have a constructor that might get run after
 // items have been added to the list, because that would clobber the list.
@@ -31,19 +33,25 @@ void RunFastTests() {
   for (auto& pair : *g_tests) {
     // Log in a format similar to gtest's output.
     printf("[ RUN      ] %s\n", pair.first.c_str());
-    pair.second();
+    TestCaseInterface* test = pair.second();
+    // Run the test a small number of times to ensure that doing multiple
+    // runs works OK.
+    for (int i = 0; i < 5; ++i)
+      test->Run();
+    delete test;
     printf("[       OK ] %s\n", pair.first.c_str());
   }
 }
 
 }  // namespace
 
-namespace fbenchmark {
+TestCaseInterface::~TestCaseInterface() {}
 
-void RegisterTestRunner(const char* name, std::function<void()> func) {
+void RegisterTestFactory(const char* name,
+                         std::function<TestCaseInterface*()> factory_func) {
   if (!g_tests)
     g_tests = new TestList;
-  g_tests->push_back(std::make_pair(name, func));
+  g_tests->push_back(std::make_pair(name, factory_func));
 }
 
 int BenchmarksMain(int argc, char** argv, bool run_gbenchmark) {
