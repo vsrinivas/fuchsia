@@ -6,10 +6,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <benchmark/benchmark.h>
 #include <lib/fxl/logging.h>
 
-#include "main.h"
+#include "test_runner.h"
 
 namespace {
 

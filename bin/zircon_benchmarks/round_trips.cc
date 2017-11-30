@@ -6,7 +6,6 @@
 #include <thread>
 #include <vector>
 
-#include <benchmark/benchmark.h>
 #include <launchpad/launchpad.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -19,8 +18,8 @@
 
 #include "channels.h"
 #include "garnet/bin/zircon_benchmarks/round_trip_service.fidl.h"
-#include "main.h"
 #include "round_trips.h"
+#include "test_runner.h"
 
 // This tests the round-trip time of various operations, including Zircon
 // kernel IPC primitives.  It measures the latency of sending a request to

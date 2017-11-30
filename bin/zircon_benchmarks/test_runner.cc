@@ -10,8 +10,8 @@
 #include <gflags/gflags.h>
 
 #include "channels.h"
-#include "main.h"
 #include "round_trips.h"
+#include "test_runner.h"
 
 DEFINE_uint32(channel_read, 0, "Launch a process to read from a channel");
 DEFINE_uint32(channel_write, 0, "Launch a process to write to a channel");
