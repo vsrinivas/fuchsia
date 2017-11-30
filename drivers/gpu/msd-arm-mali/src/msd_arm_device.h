@@ -116,6 +116,7 @@ private:
     void EnableInterrupts();
     void DisableInterrupts();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
+    void SuspectedGpuHang();
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
@@ -125,6 +126,7 @@ private:
 
     void RunAtom(MsdArmAtom* atom) override;
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
+    void HardStopAtom(MsdArmAtom* atom) override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

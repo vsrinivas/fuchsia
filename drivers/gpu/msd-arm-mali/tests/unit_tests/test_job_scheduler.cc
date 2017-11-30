@@ -15,11 +15,14 @@ class TestOwner : public JobScheduler::Owner {
 public:
     void RunAtom(MsdArmAtom* atom) override { run_list_.push_back(atom); }
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) override {}
+    void HardStopAtom(MsdArmAtom* atom) override { stopped_atoms_.push_back(atom); }
 
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
+    std::vector<MsdArmAtom*>& stopped_atoms() { return stopped_atoms_; }
 
 private:
     std::vector<MsdArmAtom*> run_list_;
+    std::vector<MsdArmAtom*> stopped_atoms_;
 };
 
 class TestAddressSpaceObserver : public AddressSpaceObserver {
@@ -170,6 +173,45 @@ public:
         EXPECT_EQ(atom2.get(), scheduler.executing_atom());
         EXPECT_EQ(0u, scheduler.GetAtomListSize());
     }
+
+    void TestTimeout()
+    {
+        TestOwner owner;
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
+        JobScheduler scheduler(&owner, 1);
+
+        // Make timeout lower so test runs faster.
+        static constexpr uint64_t kTimeoutDurationMs = 10;
+        scheduler.set_timeout_duration(kTimeoutDurationMs);
+
+        auto atom = std::make_shared<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+        MsdArmAtom* atom_ptr = atom.get();
+        scheduler.EnqueueAtom(atom);
+        DASSERT(scheduler.GetCurrentTimeoutDuration() == JobScheduler::Clock::duration::max());
+
+        scheduler.TryToSchedule();
+        DASSERT(scheduler.GetCurrentTimeoutDuration() <=
+                std::chrono::milliseconds(kTimeoutDurationMs));
+        while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero())
+            ;
+        EXPECT_EQ(0u, owner.stopped_atoms().size());
+        scheduler.KillTimedOutAtoms();
+        EXPECT_EQ(1u, owner.stopped_atoms().size());
+        EXPECT_EQ(atom_ptr, owner.stopped_atoms()[0]);
+        EXPECT_EQ(atom_ptr, scheduler.executing_atom());
+
+        // Second kill shouldn't do anything, since the atom has already been
+        // stopped.
+        EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
+        scheduler.KillTimedOutAtoms();
+        EXPECT_EQ(1u, owner.stopped_atoms().size());
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+        EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
+    }
 };
 
 TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
@@ -177,3 +219,5 @@ TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
 TEST(JobScheduler, CancelJob) { TestJobScheduler().TestCancelJob(); }
 
 TEST(JobScheduler, JobDependencies) { TestJobScheduler().TestJobDependencies(); }
+
+TEST(JobScheduler, Timeout) { TestJobScheduler().TestTimeout(); }

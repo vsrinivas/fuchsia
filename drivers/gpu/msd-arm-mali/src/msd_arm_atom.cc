@@ -31,3 +31,5 @@ void MsdArmAtom::set_address_slot_mapping(std::shared_ptr<AddressSlotMapping> ad
     }
     address_slot_mapping_ = address_slot_mapping;
 }
+
+void MsdArmAtom::SetExecutionStarted() { execution_start_time_ = std::chrono::steady_clock::now(); }

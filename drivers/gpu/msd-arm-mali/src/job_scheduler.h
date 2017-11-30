@@ -5,6 +5,7 @@
 #ifndef JOB_SCHEDULER_H_
 #define JOB_SCHEDULER_H_
 
+#include <chrono>
 #include <functional>
 #include <list>
 #include <vector>
@@ -18,7 +19,10 @@ public:
     public:
         virtual void RunAtom(MsdArmAtom* atom) = 0;
         virtual void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) = 0;
+        virtual void HardStopAtom(MsdArmAtom* atom) {}
     };
+    using Clock = std::chrono::steady_clock;
+
     JobScheduler(Owner* owner, uint32_t job_slots);
 
     void EnqueueAtom(std::shared_ptr<MsdArmAtom> atom);
@@ -33,12 +37,25 @@ public:
 
     size_t GetAtomListSize();
 
+    // Gets the duration until the currently executing atom should time out,
+    // or max if there's no timeout pending.
+    Clock::duration GetCurrentTimeoutDuration();
+
+    void KillTimedOutAtoms();
+
 private:
     MsdArmAtom* executing_atom() const { return executing_atom_.get(); }
+
+    void set_timeout_duration(uint64_t timeout_duration_ms)
+    {
+        timeout_duration_ms_ = timeout_duration_ms;
+    }
 
     Owner* owner_;
 
     uint32_t job_slots_;
+
+    uint64_t timeout_duration_ms_ = 1000;
 
     std::shared_ptr<MsdArmAtom> executing_atom_;
     std::list<std::shared_ptr<MsdArmAtom>> atoms_;

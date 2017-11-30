@@ -31,8 +31,10 @@ void JobScheduler::TryToSchedule()
         }
     }
 
-    if (executing_atom_)
+    if (executing_atom_) {
+        executing_atom_->SetExecutionStarted();
         owner_->RunAtom(executing_atom_.get());
+    }
 }
 
 void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection,
@@ -74,3 +76,20 @@ void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
 }
 
 size_t JobScheduler::GetAtomListSize() { return atoms_.size(); }
+
+JobScheduler::Clock::duration JobScheduler::GetCurrentTimeoutDuration()
+{
+    if (!executing_atom_ || executing_atom_->hard_stopped())
+        return Clock::duration::max();
+    return executing_atom_->execution_start_time() +
+           std::chrono::milliseconds(timeout_duration_ms_) - Clock::now();
+}
+
+void JobScheduler::KillTimedOutAtoms()
+{
+    if (GetCurrentTimeoutDuration() <= Clock::duration::zero()) {
+        DASSERT(executing_atom_.get());
+        executing_atom_->set_hard_stopped();
+        owner_->HardStopAtom(executing_atom_.get());
+    }
+}

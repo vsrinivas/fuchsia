@@ -5,6 +5,7 @@
 #ifndef MSD_ARM_ATOM_H_
 #define MSD_ARM_ATOM_H_
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -35,6 +36,14 @@ public:
     // These methods should only be called on the device thread.
     bool finished() const { return finished_; }
     void set_finished() { finished_ = true; }
+    bool hard_stopped() const { return hard_stopped_; }
+    void set_hard_stopped() { hard_stopped_ = true; }
+    void SetExecutionStarted();
+
+    std::chrono::time_point<std::chrono::steady_clock> execution_start_time() const
+    {
+        return execution_start_time_;
+    }
 
     // These methods should only be called on the device thread.
     void set_address_slot_mapping(std::shared_ptr<AddressSlotMapping> address_slot_mapping);
@@ -56,6 +65,8 @@ private:
     // This data is mutable after construction from the device thread.
     bool finished_ = false;
     std::shared_ptr<AddressSlotMapping> address_slot_mapping_;
+    std::chrono::time_point<std::chrono::steady_clock> execution_start_time_;
+    bool hard_stopped_ = false;
 };
 
 #endif // MSD_ARM_ATOM_H_

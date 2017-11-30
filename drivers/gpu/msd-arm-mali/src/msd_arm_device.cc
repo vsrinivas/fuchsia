@@ -169,6 +169,13 @@ std::shared_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id)
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
+void MsdArmDevice::SuspectedGpuHang()
+{
+    magma::log(magma::LOG_WARNING, "Possible GPU hang\n");
+    ProcessDumpStatusToLog();
+    scheduler_->KillTimedOutAtoms();
+}
+
 int MsdArmDevice::DeviceThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
@@ -180,22 +187,32 @@ int MsdArmDevice::DeviceThreadLoop()
 
     std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
 
-    while (true) {
-        device_request_semaphore_->Wait();
+    while (!device_thread_quit_flag_) {
+        auto timeout_duration = scheduler_->GetCurrentTimeoutDuration();
+        if (timeout_duration <= JobScheduler::Clock::duration::zero()) {
+            SuspectedGpuHang();
+            continue;
+        }
+        if (timeout_duration < JobScheduler::Clock::duration::max()) {
+            // Add 1 to avoid rounding time down and spinning with timeouts close to 0.
+            int64_t millisecond_timeout =
+                std::chrono::duration_cast<std::chrono::milliseconds>(timeout_duration).count() + 1;
+            device_request_semaphore_->Wait(millisecond_timeout);
+        } else {
+            device_request_semaphore_->Wait();
+        }
 
-        while (true) {
+        while (!device_thread_quit_flag_) {
             lock.lock();
-            if (!device_request_list_.size())
+            if (!device_request_list_.size()) {
+                lock.unlock();
                 break;
+            }
             auto request = std::move(device_request_list_.front());
             device_request_list_.pop_front();
             lock.unlock();
             request->ProcessAndReply(this);
         }
-        lock.unlock();
-
-        if (device_thread_quit_flag_)
-            break;
     }
 
     DLOG("DeviceThreadLoop exit");
@@ -577,6 +594,15 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
     auto connection = atom->connection().lock();
     if (connection)
         connection->SendNotificationData(atom, result);
+}
+
+void MsdArmDevice::HardStopAtom(MsdArmAtom* atom)
+{
+    DASSERT(atom->hard_stopped());
+    registers::JobSlotRegisters slot(atom->slot());
+    slot.Command()
+        .FromValue(registers::JobSlotCommand::kCommandHardStop)
+        .WriteTo(register_io_.get());
 }
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
