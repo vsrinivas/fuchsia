@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
 
 namespace cloud_provider_firestore {
 
-struct FirestoreService::DocumentResponseCall {
+struct FirestoreServiceImpl::DocumentResponseCall {
   void set_on_empty(fxl::Closure on_empty) { this->on_empty = on_empty; }
 
   // Context used to make the remote call.
@@ -30,19 +30,20 @@ struct FirestoreService::DocumentResponseCall {
   fxl::Closure on_empty;
 };
 
-FirestoreService::FirestoreService(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                                   std::shared_ptr<grpc::Channel> channel)
+FirestoreServiceImpl::FirestoreServiceImpl(
+    fxl::RefPtr<fxl::TaskRunner> main_runner,
+    std::shared_ptr<grpc::Channel> channel)
     : main_runner_(std::move(main_runner)),
       firestore_(google::firestore::v1beta1::Firestore::NewStub(channel)) {
-  polling_thread_ = std::thread(&FirestoreService::Poll, this);
+  polling_thread_ = std::thread(&FirestoreServiceImpl::Poll, this);
 }
 
-FirestoreService::~FirestoreService() {
+FirestoreServiceImpl::~FirestoreServiceImpl() {
   cq_.Shutdown();
   polling_thread_.join();
 }
 
-void FirestoreService::CreateDocument(
+void FirestoreServiceImpl::CreateDocument(
     google::firestore::v1beta1::CreateDocumentRequest request,
     std::function<void(grpc::Status status,
                        google::firestore::v1beta1::Document document)>
@@ -63,7 +64,7 @@ void FirestoreService::CreateDocument(
   call.response_reader->Finish(&call.response, &call.status, &call.on_complete);
 }
 
-std::unique_ptr<ListenCallHandler> FirestoreService::Listen(
+std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
     ListenCallClient* client) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
 
@@ -72,10 +73,10 @@ std::unique_ptr<ListenCallHandler> FirestoreService::Listen(
     return firestore->AsyncListen(context, cq, tag);
   };
   auto& call = listen_calls_.emplace(client, std::move(stream_factory));
-  return std::make_unique<ListenCallHandler>(&call);
+  return std::make_unique<ListenCallHandlerImpl>(&call);
 }
 
-void FirestoreService::Poll() {
+void FirestoreServiceImpl::Poll() {
   void* tag;
   bool ok = false;
   while (cq_.Next(&tag, &ok)) {

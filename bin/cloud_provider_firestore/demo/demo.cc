@@ -10,7 +10,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
 
 namespace cloud_provider_firestore {
 namespace {
@@ -118,7 +118,7 @@ class Demo : public modular::Lifecycle, ListenCallClient {
   // Root path to the Firestore documents tree of the format:
   // `projects/{project_id}/databases/{database_id}/documents`
   const std::string root_path_;
-  FirestoreService firestore_service_;
+  FirestoreServiceImpl firestore_service_;
 
   std::unique_ptr<ListenCallHandler> listen_call_handler_;
 

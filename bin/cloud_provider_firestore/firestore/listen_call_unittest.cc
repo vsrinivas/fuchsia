@@ -84,7 +84,7 @@ class ListenCallTest : public test::TestWithMessageLoop,
 };
 
 TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   handler.reset();
 
   // Simulate the connection response arriving.
@@ -105,7 +105,7 @@ TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
 }
 
 TEST_F(ListenCallTest, ConnectionError) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(false);
   EXPECT_EQ(0, on_connected_calls_);
   EXPECT_EQ(0, on_response_calls_);
@@ -114,7 +114,7 @@ TEST_F(ListenCallTest, ConnectionError) {
 }
 
 TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -135,7 +135,7 @@ TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
 }
 
 TEST_F(ListenCallTest, WriteAndFinish) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -152,7 +152,7 @@ TEST_F(ListenCallTest, WriteAndFinish) {
 }
 
 TEST_F(ListenCallTest, WriteAndDeleteHandler) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -169,7 +169,7 @@ TEST_F(ListenCallTest, WriteAndDeleteHandler) {
 }
 
 TEST_F(ListenCallTest, ReadAndFinish) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -187,7 +187,7 @@ TEST_F(ListenCallTest, ReadAndFinish) {
 }
 
 TEST_F(ListenCallTest, ReadAndDeleteHandler) {
-  auto handler = std::make_unique<ListenCallHandler>(call_.get());
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(true);
   EXPECT_EQ(1, on_connected_calls_);
 

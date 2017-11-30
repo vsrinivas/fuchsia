@@ -5,57 +5,37 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_H_
 
-#include <memory>
-#include <thread>
+#include <functional>
 
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <grpc++/grpc++.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
-#include "peridot/lib/callback/auto_cleanable.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 
 namespace cloud_provider_firestore {
 
-// Wrapper over the Firestore connection exposing an asynchronous API.
+// Client library for Firestore.
 //
 // Requests methods are assumed to be called on the |main_runner| thread. All
 // client callbacks are called on the |main_runner|.
-//
-// Internally, the class uses a polling thread to wait for request completion.
 class FirestoreService {
  public:
-  FirestoreService(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                   std::shared_ptr<grpc::Channel> channel);
+  FirestoreService() {}
+  virtual ~FirestoreService() {}
 
-  ~FirestoreService();
-
-  void CreateDocument(
+  virtual void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
       std::function<void(grpc::Status status,
                          google::firestore::v1beta1::Document document)>
-          callback);
+          callback) = 0;
 
-  std::unique_ptr<ListenCallHandler> Listen(ListenCallClient* client);
+  virtual std::unique_ptr<ListenCallHandler> Listen(
+      ListenCallClient* client) = 0;
 
  private:
-  struct DocumentResponseCall;
-
-  void Poll();
-
-  fxl::RefPtr<fxl::TaskRunner> main_runner_;
-  std::thread polling_thread_;
-
-  std::unique_ptr<google::firestore::v1beta1::Firestore::Stub> firestore_;
-  grpc::CompletionQueue cq_;
-
-  callback::AutoCleanableSet<DocumentResponseCall> document_response_calls_;
-
-  callback::AutoCleanableSet<ListenCall> listen_calls_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(FirestoreService);
 };
 

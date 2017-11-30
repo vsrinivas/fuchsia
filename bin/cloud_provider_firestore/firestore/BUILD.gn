@@ -6,10 +6,12 @@ visibility = [ "//peridot/bin/cloud_provider_firestore/*" ]
 
 source_set("firestore") {
   sources = [
-    "firestore_service.cc",
     "firestore_service.h",
+    "firestore_service_impl.cc",
+    "firestore_service_impl.h",
     "listen_call.cc",
     "listen_call.h",
+    "listen_call_client.h",
   ]
 
   public_deps = [
