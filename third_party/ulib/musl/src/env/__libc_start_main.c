@@ -1,7 +1,7 @@
 #include "libc.h"
-#include "zircon_impl.h"
 #include "pthread_impl.h"
 #include "setjmp_impl.h"
+#include "zircon_impl.h"
 #include <elf.h>
 #include <stdatomic.h>
 #include <string.h>
@@ -11,14 +11,6 @@
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
-
-// Hook for extension libraries to init. Extensions must zero out
-// handle[i] and handle_info[i] for any handles they claim.
-void __libc_extensions_init(uint32_t handle_count,
-                            zx_handle_t handle[],
-                            uint32_t handle_info[],
-                            uint32_t name_count,
-                            char** names) __attribute__((weak));
 
 struct start_params {
     uint32_t argc, nhandles, namec;

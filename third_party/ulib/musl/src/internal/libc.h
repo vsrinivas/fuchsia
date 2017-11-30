@@ -74,6 +74,19 @@ void __libc_startup_handles_init(uint32_t nhandles,
 
 _Noreturn void __libc_start_main(void* arg, int (*main)(int, char**, char**));
 
+
+// Hook for extension libraries to init. Extensions must zero out
+// handle[i] and handle_info[i] for any handles they claim.
+void __libc_extensions_init(uint32_t handle_count,
+                            zx_handle_t handle[],
+                            uint32_t handle_info[],
+                            uint32_t name_count,
+                            char** names) __attribute__((weak));
+
+// Hook for extension libraries to clean up. This is run after exit
+// and quick_exit handlers.
+void __libc_extensions_fini(void) __attribute__((weak));
+
 extern uintptr_t __stack_chk_guard;
 void __stack_chk_fail(void);
 
