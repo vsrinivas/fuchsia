@@ -110,7 +110,6 @@ void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   PushDirectoryFromPath("/data");
   PushDirectoryFromPath("/system");
   PushDirectoryFromPath("/tmp");
-  PushDirectoryFromPath("/volume");
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
