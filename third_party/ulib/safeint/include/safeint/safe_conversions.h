@@ -5,13 +5,14 @@
 #ifndef BASE_NUMERICS_SAFE_CONVERSIONS_H_
 #define BASE_NUMERICS_SAFE_CONVERSIONS_H_
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fbl/limits.h>
 #include <fbl/type_support.h>
 
 #include <safeint/safe_conversions_impl.h>
+
+#include <zircon/assert.h>
 
 namespace safeint {
 
@@ -46,7 +47,7 @@ constexpr typename fbl::enable_if<!fbl::numeric_limits<T>::is_signed,
 // overflow or underflow. NaN source will always trigger a CHECK.
 template <typename Dst, typename Src>
 inline Dst checked_cast(Src value) {
-  ASSERT(IsValueInRangeForNumericType<Dst>(value));
+  ZX_ASSERT(IsValueInRangeForNumericType<Dst>(value));
   return static_cast<Dst>(value);
 }
 
@@ -54,7 +55,7 @@ inline Dst checked_cast(Src value) {
 struct SaturatedCastNaNBehaviorCheck {
   template <typename T>
   static T HandleNaN() {
-    ASSERT(false);
+    ZX_ASSERT(false);
     return T();
   }
 };
@@ -90,7 +91,7 @@ inline Dst saturated_cast(Src value) {
       return NaNHandler::template HandleNaN<Dst>();
   }
 
-  ASSERT(false);
+  ZX_ASSERT(false);
   return static_cast<Dst>(value);
 }
 

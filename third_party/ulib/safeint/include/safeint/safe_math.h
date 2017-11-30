@@ -11,6 +11,8 @@
 
 #include <safeint/safe_math_impl.h>
 
+#include <zircon/assert.h>
+
 namespace safeint {
 
 namespace internal {
@@ -82,7 +84,7 @@ class CheckedNumeric {
   // ValueOrDie() The primary accessor for the underlying value. If the current
   // state is not valid it will CHECK and crash.
   T ValueOrDie() const {
-    ASSERT(IsValid());
+    ZX_ASSERT(IsValid());
     return state_.value();
   }
 

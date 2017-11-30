@@ -2,9 +2,11 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
+SRC_DIR := third_party/ulib/safeint
 
-MODULE_SRCS += $(LOCAL_DIR)/safe_numerics_unittest.cpp
+KERNEL_INCLUDES += $(SRC_DIR)/include
+
+MODULE_SRCS += $(SRC_DIR)/safe_numerics_unittest.cpp
 MODULE_DEPS += kernel/lib/unittest
 MODULE_DEPS += kernel/lib/fbl
 

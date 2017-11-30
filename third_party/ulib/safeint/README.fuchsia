@@ -8,6 +8,7 @@ Modifications:
 - Changed namespace from base to safeint
 - Added rules.mk
 - Moved headers into include path
-- Reanmed safe_numerics_unittest.cc to safe_numerics_unittest.cpp
+- Renamed safe_numerics_unittest.cc to safe_numerics_unittest.cpp
 - Wired safe_numerics_unittest.cpp into unittest system
 - Removed all float stuff
+- Changed ASSERTs to ZX_ASSERTs
