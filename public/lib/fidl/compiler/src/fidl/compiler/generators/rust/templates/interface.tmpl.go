@@ -350,7 +350,7 @@ impl Proxy {
     {{end}}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Eq, PartialEq, Copy, Clone, Hash)]
 pub struct Service;
 impl fidl::FidlService for Service {
     type Proxy = Proxy;

@@ -29,7 +29,7 @@ const {{$struct.Name}}Versions: [(u32, u32); {{$versions}}] = [
 ];
 
 // Struct definition
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct {{$struct.Name}} {
 {{range $field := $struct.Fields}}    pub {{$field.Name}}: {{$field.Type}},
 {{end -}}

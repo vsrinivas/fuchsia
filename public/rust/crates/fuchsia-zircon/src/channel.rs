@@ -12,7 +12,7 @@ use std::mem;
 /// [channel](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Channel(Handle);
 impl_handle_based!(Channel);
 impl Peered for Channel {}

@@ -11,6 +11,7 @@ use {FidlService, Encodable, Decodable, EncodableNullable, DecodableNullable, en
     decode_handle, EncodeBuf, DecodeBuf, EncodableType, Result};
 
 /// The `Client` end of a FIDL connection.
+#[derive(Eq, PartialEq, Hash)]
 pub struct ClientEnd<T> {
     inner: zircon::Channel,
     phantom: PhantomData<T>,
@@ -51,7 +52,7 @@ impl<T> From<zircon::Handle> for ClientEnd<T> {
 
 impl<T: FidlService> ::std::fmt::Debug for ClientEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "ClientEnd(name={}, version={})", T::NAME, T::VERSION)
+        write!(f, "ClientEnd(name={}, version={}, channel={:?})", T::NAME, T::VERSION, self.inner)
     }
 }
 
@@ -84,6 +85,7 @@ impl<T> DecodableNullable for ClientEnd<T> {}
 
 
 /// The `Server` end of a FIDL connection.
+#[derive(Eq, PartialEq, Hash)]
 pub struct ServerEnd<T> {
     inner: zircon::Channel,
     phantom: PhantomData<T>,
@@ -124,7 +126,7 @@ impl<T> From<zircon::Handle> for ServerEnd<T> {
 
 impl<T: FidlService> ::std::fmt::Debug for ServerEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "ServerEnd(name={}, version={})", T::NAME, T::VERSION)
+        write!(f, "ServerEnd(name={}, version={}, channel={:?})", T::NAME, T::VERSION, self.inner)
     }
 }
 

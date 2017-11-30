@@ -18,7 +18,7 @@ pub trait Endpoint: HandleBased {
 }
 
 /// FIDL pointer to a type that implements a given interface.
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]
 pub struct InterfacePtr<E> {
     /// The inner type that implements the interface.
     pub inner: E,
