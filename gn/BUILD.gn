@@ -49,6 +49,10 @@ declare_args() {
   # 10mb (the default) in order to be succesfully initialized.
   data_image_size = "10m"
 
+  # Disable addition of data.blk to fvm.sparse.blk.
+  #  Workaround for Ledger open failures against minfs on FVM.
+  disable_data_minfs = false
+
   # Whether to automatically generate BUILD.gn files for Zircon artifacts.
   generate_zircon_gn_files = false
 }
@@ -474,12 +478,10 @@ action("fvm.sparse.blk") {
   fvm_path = "//out/build-zircon/tools/fvm"
   inputs = [
     blobstore_image_path,
-    data_image_path,
     fvm_path,
   ]
   deps = [
     ":blobstore.blk",
-    ":data.blk",
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -490,12 +492,23 @@ action("fvm.sparse.blk") {
     "sparse",
     "--blobstore",
     rebase_path(blobstore_image_path),
-    "--data",
-    rebase_path(data_image_path),
   ]
   outputs = [
     fvm_sparse_image_path,
   ]
+
+  if (!disable_data_minfs) {
+    inputs += [
+      data_image_path
+    ]
+    deps += [
+      ":data.blk",
+    ]
+    args += [
+      "--data",
+      rebase_path(data_image_path),
+    ]
+  }
 }
 
 # kernc.vboot is a "kernel partition" target for chromebook targets.
