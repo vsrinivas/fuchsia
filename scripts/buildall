@@ -11,7 +11,6 @@ function HELP {
     echo "help:"
     echo "-a arg              : Pass arg to make"
     echo "-f                  : Exit on first failure"
-    echo "-m                  : Build zircon targets only"
     echo "-r                  : Also build release mode builds"
     echo "-c                  : Also build with clang"
     echo "-A                  : Also build with ASan"
@@ -24,11 +23,10 @@ FAIL_FAST=0
 DO_RELEASE=0
 DO_CLANG=0
 DO_ASAN=0
-ZIRCON_ONLY=0
 MAKE_ARGS=
 QUIET=0
 
-while getopts Aa:fhmrcq FLAG; do
+while getopts Aa:fhrcq FLAG; do
     case $FLAG in
         A) DO_ASAN=1;;
         a) MAKE_ARGS="${MAKE_ARGS} ${OPTARG}";;
@@ -36,7 +34,6 @@ while getopts Aa:fhmrcq FLAG; do
         h) HELP;;
         r) DO_RELEASE=1;;
         c) DO_CLANG=1;;
-        m) ZIRCON_ONLY=1;;
         q) QUIET=1;;
         \?)
             echo unrecognized option
@@ -45,12 +42,17 @@ while getopts Aa:fhmrcq FLAG; do
 done
 shift $((OPTIND-1))
 
-if [ "$ZIRCON_ONLY" -eq 1 ]; then
-    # build everything in the projects directory
-    PROJECTS=`echo kernel/project/zircon*.mk | xargs -n1 basename | sed 's/\.mk//'`
-else
-    PROJECTS=`echo kernel/project/*.mk | xargs -n1 basename | sed 's/\.mk//'`
-fi
+PROJECTS=
+# build everything in the projects directory
+for p in kernel/project/*.mk; do
+    p=${p##*/}
+    p=${p%.mk}
+    case "$p" in
+    user-*|zircon-*) ;;
+    *) PROJECTS="$PROJECTS $p"
+    esac
+done
+
 FAILED=""
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

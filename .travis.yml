@@ -2,11 +2,11 @@ language: c
 script: ./scripts/travis-builds.sh
 env:
     # full zircon kernel + user space builds
-    - PROJECT=zircon-pc-x86-64
-    - PROJECT=zircon-qemu-arm64
-    - PROJECT=zircon-rpi3-arm64
-    - PROJECT=zircon-hikey960-arm64
-    - PROJECT=zircon-odroidc2-arm64
+    - PROJECT=x86
+    - PROJECT=arm64
+    - PROJECT=hikey960
+    - PROJECT=gauss
+    - PROJECT=odroidc2
 
 sudo: required
 dist: trusty

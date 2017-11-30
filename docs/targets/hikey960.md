@@ -64,7 +64,7 @@ To build zircon, invoke the following command from the top level Zircon
 directory (ensure that you have checked out the ARM64 toolchains). For more
 information, see `docs/getting_started.md`:
 
-      make zircon-hikey960-arm64
+      make hikey960
 
 
 ## Setting up the serial console

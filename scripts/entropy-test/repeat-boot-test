@@ -30,7 +30,7 @@ function HELP {
     echo "    -n <name>   : nodename (only mandatory for non-qemu (netboot) targets)" >&2
     echo "    -o <dir>    : output directory" >&2
     echo "    -s <source> : entropy source to test: hw_rng, jitterentropy" >&2
-    echo "    -t <target> : qemu-x86-64, qemu-arm64, pc, hikey960, odroidc2, or rpi3" >&2
+    echo "    -t <target> : qemu-x86, qemu-arm64, pc, hikey960, odroidc2, or rpi3" >&2
     echo >&2
     echo "Optional options (if omitted, default as specified):" >&2
     echo "    -b <dir>    : build directory [default: autodetected from -t]" >&2
@@ -118,29 +118,29 @@ fi
 # handle the TARGET variable
 if [[ -z $TARGET ]]; then
     echo "choose target:" >&2
-    select TARGET in "qemu-x86-64" "qemu-arm64" "pc" "hikey960" "odroidc2" "rpi3"; do
+    select TARGET in "qemu-x86" "qemu-arm64" "pc" "hikey960" "odroidc2" "rpi3"; do
         if [[ -n $TARGET ]]; then break; fi
     done
 fi
 case "$TARGET" in
-    qemu-x86-64)
-        ARCH="x86-64"
-        BUILD_PROJECT="zircon-pc-x86-64"
+    qemu-x86)
+        ARCH="x86"
+        BUILD_PROJECT="x86"
         METHOD=qemu
         ;;
     qemu-arm64)
         ARCH="arm64"
-        BUILD_PROJECT="zircon-$TARGET"
+        BUILD_PROJECT="arm64"
         METHOD=qemu
         ;;
     pc)
-        ARCH="x86-64"
-        BUILD_PROJECT="zircon-$TARGET-$ARCH"
+        ARCH="x86"
+        BUILD_PROJECT="x86"
         METHOD=netboot
         ;;
     hikey960 | odroidc2 | rpi3)
         ARCH="arm64"
-        BUILD_PROJECT="zircon-$TARGET-$ARCH"
+        BUILD_PROJECT="$TARGET"
         METHOD=netboot
         ;;
     *)

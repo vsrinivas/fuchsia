@@ -7,7 +7,7 @@
 
 LKMAKEROOT := .
 BUILDROOT ?= .
-DEFAULT_PROJECT ?= zircon-pc-x86-64
+DEFAULT_PROJECT ?= x86
 TOOLCHAIN_PREFIX ?=
 
 ENABLE_BUILD_SYSROOT ?= true
@@ -33,4 +33,3 @@ export ENABLE_BUILD_LISTFILES
 .PHONY: _top $(MAKECMDGOALS)
 $(MAKECMDGOALS) _top:
 	@$(MAKE) -C $(LKMAKEROOT) --no-print-directory -rR -f make/engine.mk $(MAKECMDGOALS)
-

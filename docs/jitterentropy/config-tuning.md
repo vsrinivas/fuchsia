@@ -180,7 +180,7 @@ whatever level of granularity is appropriate).
 
 ### Can we even record optimal parameters with enough granularity?
 
-I mentioned it above, but one of our targets is "zircon-pc-x86-64", which is what runs on any x86
+I mentioned it above, but one of our targets is "x86", which is what runs on any x86
 PC. Naturally, x86 PCs can very quite a bit. Even if we did something like add preprocessor symbols
 like `JITTERENTROPY_LL_VALUE` etc. to the build, customized in `kernel/project/target/pc-x86.mk`,
 could we pick a good value for *all PCs*?

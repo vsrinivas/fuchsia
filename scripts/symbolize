@@ -13,14 +13,14 @@ function names and, if available, source code locations (filenames and
 line numbers from debug info).
 
 Example usage #1:
-  ./scripts/run-zircon -a x86-64 | ./scripts/symbolize devmgr.elf --build-dir=build-zircon-pc-x86-64
+  ./scripts/run-zircon -a x86 | ./scripts/symbolize devmgr.elf --build-dir=build-x86
 
 Example usage #2:
-  ./scripts/symbolize devmgr.elf --build-dir=build-zircon-pc-x86-64
+  ./scripts/symbolize devmgr.elf --build-dir=build-x86
   <copy and paste output from Zircon>
 
 Example usage #3 (for zircon kernel output):
-  ./scripts/symbolize --build-dir=build-zircon-pc-x86-64
+  ./scripts/symbolize --build-dir=build-x86
   <copy and paste output from Zircon>
 
 
@@ -226,10 +226,10 @@ def main():
     debug_mode = args.debug
 
     zircon_build_dir = os.path.join(
-        os.path.dirname(SCRIPT_DIR), "build-zircon-pc-x86-64")
+        os.path.dirname(SCRIPT_DIR), "build-x86")
     if not os.path.exists(zircon_build_dir):
         zircon_build_dir = os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-zircon", "build-zircon-pc-x86-64")
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-zircon", "build-x86")
     build_dirs = [zircon_build_dir]
     if args.build_dir:
         build_dirs = args.build_dir + build_dirs
@@ -242,7 +242,7 @@ def main():
         # Plus this is only used as a fallback in case the file isn't found
         # in ids.txt.
         fuchsia_build_dir = os.path.abspath(os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86"))
         fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir,
             "exe.unstripped")
         build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs

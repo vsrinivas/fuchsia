@@ -27,7 +27,7 @@ echo $ZIRCON_DIR
 
 # Ensure Zircon has been built prior to formatting USB
 pushd "$ZIRCON_DIR" > /dev/null
-./scripts/make-parallel zircon-odroidc2-arm64
+./scripts/make-parallel odroidc2
 popd > /dev/null
 
 lsblk
@@ -147,11 +147,11 @@ sudo mount "$DATA_PTN_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
 # Copy the kernel to the boot partition.
-sudo cp "$ZIRCON_DIR/build-zircon-odroidc2-arm64/zircon.bin" \
+sudo cp "$ZIRCON_DIR/build-odroidc2/zircon.bin" \
         "${MOUNT_PATH}/"
 
 # Copy the ramdisk
-sudo cp "$ZIRCON_DIR/build-zircon-odroidc2-arm64/bootdata.bin" \
+sudo cp "$ZIRCON_DIR/build-odroidc2/bootdata.bin" \
         "${MOUNT_PATH}/"
 
 sudo cp "$ZIRCON_DIR/kernel/target/odroidc2/boot.ini" \

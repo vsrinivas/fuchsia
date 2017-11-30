@@ -55,12 +55,12 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 
 ## How to Create a Bootable USB Flash Drive
 1. Build everything
-  * `(cd $FUCHSIA_ROOT; fx set x86-64; fx full-build)`
+  * `(cd $FUCHSIA_ROOT; fx set x86; fx full-build)`
 2. Format your USB Flash Drive with a FAT32 partition as the first partition
-3. Copy `$FUCHSIA_ROOT/out/build-zircon/build-zircon-pc-x86-64/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
+3. Copy `$FUCHSIA_ROOT/out/build-zircon/build-x86/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
 If you plan to netboot, you're done.
-4. Copy `$FUCHSIA_ROOT/out/build-zircon/build-zircon-pc-x86-64/zircon.bin` to the root of the USB Flash Drive
-5. Optionally copy an additional bootfs image to `ramdisk.bin` on the root of the USB Flash Drive (for a Fuchsia build, a bootfs image can be found at `$FUCHSIA_ROOT/out/debug-x86-64/user.bootfs`)
+4. Copy `$FUCHSIA_ROOT/out/build-zircon/build-x86/zircon.bin` to the root of the USB Flash Drive
+5. Optionally copy an additional bootfs image to `ramdisk.bin` on the root of the USB Flash Drive (for a Fuchsia build, a bootfs image can be found at `$FUCHSIA_ROOT/out/debug-x86/user.bootfs`)
 
 If you need to boot zircon over the network, skip step 4 and/or delete
 zircon.bin from the root of the USB Flash Drive.

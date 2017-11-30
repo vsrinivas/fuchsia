@@ -21,11 +21,11 @@ Clear any existing build and then build with the afl-fuzz compiler wrappers.
 
 ```
 cd $ZIRCON_DIR
-rm -fr build-zircon-pc-x86-64
+rm -fr build-x86
 PATH=$PWD/prebuilt/downloads/clang+llvm-x86_64-linux/bin/:$PATH:$AFL_PATH make \
-  build-zircon-pc-x86-64/tools/fidl HOST_TOOLCHAIN_PREFIX=afl-
+  build-x86/tools/fidl HOST_TOOLCHAIN_PREFIX=afl-
 ```
-adjusting if you're not building on x86-64 Linux, etc.
+adjusting if you're not building on x86 Linux, etc.
 
 ## Run the fuzzer
 
@@ -33,7 +33,7 @@ The parser includes some examples to use as inputs. As fidl2 becomes adopted we 
 the different interfaces declared across our tree, but for now we use what's in `system/host/fidl/examples`.
 
 ```
-$AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-zircon-pc-x86-64/tools/fidl dump '@@'
+$AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-x86/tools/fidl dump '@@'
 ```
 
 ## Results

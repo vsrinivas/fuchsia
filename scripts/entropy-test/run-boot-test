@@ -32,7 +32,7 @@ ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
 function HELP {
     echo "$0 [options] output-dir/" >&2
     echo "options:" >&2
-    echo "-a <arch>   : arm64 or x86-64" >&2
+    echo "-a <arch>   : arm64 or x86" >&2
     echo "-c <word>   : add word to kernel cmdline" >&2
     echo "-l <len>    : entropy test length (bytes to collect)" >&2
     echo "-m <method> : netboot or qemu" >&2
@@ -99,11 +99,7 @@ CMDLINE+="kernel.entropy-test.src=$SRC "
 if [[ -n $LEN ]]; then CMDLINE+="kernel.entropy-test.len=$LEN "; fi
 
 # find and read builddir
-if [[ "$ARCH" == "x86-64" ]]; then
-    PROJECT="zircon-pc-x86-64"
-elif [[ $METHOD = "qemu" ]]; then
-    PROJECT="zircon-qemu-$ARCH"
-fi
+PROJECT="$ARCH"
 
 if [[ -z "$BUILDDIR" ]]; then
     if [[ -n $PROJECT ]]; then

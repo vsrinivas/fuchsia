@@ -64,7 +64,7 @@ in the document.
 
 ## Build Zircon
 
-Build results will be in $SRC/zircon/build-{qemu-arm64,pc-x86-64}
+Build results will be in $SRC/zircon/build-{arm64,x86}
 
 The variable $BUILDDIR in examples below refers to the build output directory
 for the particular build in question.
@@ -73,10 +73,10 @@ for the particular build in question.
 cd $SRC/zircon
 
 # for aarch64
-make -j32 zircon-qemu-arm64
+make -j32 arm64
 
-# for x86-64
-make -j32 zircon-pc-x86-64
+# for x86
+make -j32 x86
 ```
 
 ### Using Clang
@@ -88,10 +88,10 @@ To build Zircon using Clang as the target toolchain, set the
 cd $SRC/zircon
 
 # for aarch64
-make -j32 USE_CLANG=true zircon-qemu-arm64
+make -j32 USE_CLANG=true arm64
 
-# for x86-64
-make -j32 USE_CLANG=true zircon-pc-x86-64
+# for x86
+make -j32 USE_CLANG=true x86
 ```
 
 ## Building Zircon for all targets
@@ -144,7 +144,7 @@ export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Darwin-x86_64/bin
 
 ## Copying files to and from Zircon
 
-With local link IPv6 configured, the host tool ./build-zircon-ARCH/tools/netcp
+With local link IPv6 configured, the host tool ./build-ARCH/tools/netcp
 can be used to copy files.
 
 ```

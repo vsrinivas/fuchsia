@@ -134,7 +134,7 @@ function func_help {
   echo "                            zircon related checkers. all mode will enable both"
   echo "                            default checkers and zircon related checkers."
   echo "                            Default value is clang."
-  echo "-t <target>               : build target. Default is zircon-pc-x86-64"
+  echo "-t <target>               : build target. Default is x86"
   echo "-n                        : do not run analyzer on unit tests"
   echo "-h                        : for help"
   exit 1

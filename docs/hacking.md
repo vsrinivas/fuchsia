@@ -70,7 +70,7 @@ name>.disable``.
 On a skylake system, all these options together would look something like:
 
 ```
-$ tools/build-zircon-x86_64/bootserver build-zircon-x86_64/zircon.bin -- gfxconsole.early driver.intel-i915-display.disable
+$ tools/build-x86/bootserver build-x86/zircon.bin -- gfxconsole.early driver.intel-i915-display.disable
 ```
 
 To directly output to the console rather than buffering it (useful in the event

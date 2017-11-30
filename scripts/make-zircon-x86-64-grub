@@ -10,7 +10,7 @@ set -e -u
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-PROJECT="zircon-pc-x86-64"
+PROJECT="x86"
 PROJECT_DIR="$DIR/../build-$PROJECT"
 BOOTDATA="${1:-$PROJECT_DIR/bootdata.bin}"
 

@@ -7,4 +7,8 @@
 # https://opensource.org/licenses/MIT
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-$DIR/buildall -m "$@"
+
+echo >&2 \
+    "$0 is deprecated; use $(dirname "${BASH_SOURCE[0]}")/buildall instead"
+
+$DIR/buildall "$@"

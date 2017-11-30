@@ -51,7 +51,7 @@ when invoking run-zircon-{arch}.
 # for aarch64
 ./scripts/run-zircon-arm64
 
-# for x86-64
+# for x86
 ./scripts/run-zircon-x86-64
 ```
 
@@ -62,7 +62,7 @@ first if necessary and -g to run with a graphical framebuffer.
 
 To exit qemu, enter Ctrl-a x. Use Ctrl-a h to see other commands.
 
-## Enabling Networking under QEMU (x86-64 only)
+## Enabling Networking under QEMU (x86 only)
 
 The run-zircon-x86-64 script, when given the -N argument will attempt to create
 a network interface using the Linux tun/tap network device named "qemu".  QEMU
@@ -91,7 +91,7 @@ run-zircon-x86-64 script uses /dev/tap0.
 sudo chown $USER /dev/tap0
 
 # Run zircon in QEMU, which will open /dev/tap0
-./scripts/run-zircon-x86-64 -N
+./scripts/run-zircon-x86 -N
 
 # (In a different window) bring up tap0 with a link local IPv6 address
 sudo ifconfig tap0 inet6 fc00::/7 up
@@ -146,7 +146,7 @@ And then in the shell you're running GDB in:
 [Commands here are fully spelled out, but remember most can be abbreviated.]
 
 ```
-shell2$ gdb build-zircon-pc-x86-64/zircon.elf
+shell2$ gdb build-x86/zircon.elf
 (gdb) target extended-remote :1234
 Remote debugging using :1234
 0x000000000000fff0 in ?? ()

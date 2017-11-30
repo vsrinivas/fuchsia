@@ -6,7 +6,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-export PROJECT=zircon-odroidc2-arm64
+export PROJECT=odroidc2
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

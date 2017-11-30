@@ -13,7 +13,7 @@
 #
 # Invocation mostly matches `make`, i.e.:
 #
-#     scripts/entropy-test/make-parallel zircon-<target>-<arch>
+#     scripts/entropy-test/make-parallel <target>
 #
 # The exception to this is the '-l' flag. If passed, this script strips it out,
 # and uses the '-l' argument as the length of entropy test to run (this is used
@@ -28,7 +28,7 @@ ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
 function HELP {
     echo "$0 [options] <project>" >&2
     echo >&2
-    echo "    <project> : zircon project, e.g. zircon-pc-x86-64" >&2
+    echo "    <project> : zircon project, e.g. x86" >&2
     echo >&2
     echo "Options:" >&2
     echo "    -l <len>  : value to pass to ENTROPY_COLLECTOR_TEST_MAXLEN" >&2

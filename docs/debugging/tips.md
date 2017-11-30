@@ -39,7 +39,7 @@ tools on zircon itself.
 
 Example:
 ```
-$ make -j10 zircon-pc-x86-64 BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger GLOBAL_DEBUGFLAGS=-g1
+$ make -j10 x86 BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger GLOBAL_DEBUGFLAGS=-g1
 ```
 
 This example will include in the boot image debug info files for all

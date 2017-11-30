@@ -6,8 +6,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-set -e
-
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000
 RAMDISK_OFFSET=0x07c00000
@@ -34,7 +32,7 @@ help() {
     echo "usage: ${0} [options]"
     echo "  -f              Download and flash firmware."
     echo "  -b [build-dir]  Use specified build directory."
-    echo "                  Defaults to build-zircon-hikey960-arm64/."
+    echo "                  Defaults to build-hikey960/."
     echo "  -d [ramdisk]    Use specified ramdisk file."
     echo "                  Defaults to BUILD_DIR/bootdata.bin."
     echo "  -m              Add mexec option to kernel command line to enable netboot."
@@ -205,7 +203,7 @@ while getopts "b:d:fmnp:ruh" FLAG; do
 done
 shift $((OPTIND-1))
 
-BUILD_DIR="${BUILD_DIR:-build-zircon-hikey960-arm64}"
+BUILD_DIR="${BUILD_DIR:-build-hikey960}"
 RAMDISK="${RAMDISK:-${BUILD_DIR}/bootdata.bin}"
 OUT_IMAGE="${BUILD_DIR}/boot.img"
 
