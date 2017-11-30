@@ -42,6 +42,7 @@ source_set("lib") {
     "fifos.cc",
     "filesystem.cc",
     "mmu.cc",
+    "null.cc",
     "ports.cc",
     "round_trips.cc",
     "sockets.cc",
