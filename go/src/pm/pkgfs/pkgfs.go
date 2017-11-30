@@ -752,6 +752,7 @@ func (d *packageDir) Read() ([]fs.Dirent, error) {
 	// TODO(raggi): improve efficiency
 	dirs := map[string]struct{}{}
 	dents := []fs.Dirent{}
+	dents = append(dents, dirDirEnt("."))
 	for name := range d.contents {
 		if d.subdir != nil {
 			if !strings.HasPrefix(name, *d.subdir) {

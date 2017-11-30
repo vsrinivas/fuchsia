@@ -415,15 +415,18 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
 			return fdio.IndirectError(msg.Handle[0], mxErr)
 		}
-		ro := &fdio.RioObject{
-			RioObjectHeader: fdio.RioObjectHeader{
-				Status: zx.ErrOk,
-				Type:   uint32(fdio.ProtocolRemote),
-			},
-			Esize:  0,
-			Hcount: 0,
+		flags := openFlagsFromRIO(uint32(msg.Arg), msg.Mode())
+		if !flags.Pipeline() {
+			ro := &fdio.RioObject{
+				RioObjectHeader: fdio.RioObjectHeader{
+					Status: zx.ErrOk,
+					Type:   uint32(fdio.ProtocolRemote),
+				},
+				Esize:  0,
+				Hcount: 0,
+			}
+			ro.Write(msg.Handle[0], 0)
 		}
-		ro.Write(msg.Handle[0], 0)
 		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
 			d2.Close()
 		}
