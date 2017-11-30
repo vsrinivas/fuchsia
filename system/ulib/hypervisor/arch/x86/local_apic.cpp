@@ -257,13 +257,17 @@ zx_status_t LocalApic::Read(uint64_t addr, IoValue* value) const {
         value->u32 = 0;
         return ZX_OK;
     case kLocalApicLvtTimer:
-        return timer_.ReadLvt();
+        value->u32 = timer_.ReadLvt();
+        return ZX_OK;
     case kLocalApicInitialCount:
-        return timer_.ReadIcr();
+        value->u32 = timer_.ReadIcr();
+        return ZX_OK;
     case kLocalApicCurrentCount:
-        return timer_.ReadCcr();
+        value->u32 = timer_.ReadCcr();
+        return ZX_OK;
     case kLocalApicDivideConfig:
-        return timer_.ReadDcr();
+        value->u32 = timer_.ReadDcr();
+        return ZX_OK;
     }
 
     fprintf(stderr, "Unhandled local APIC address %#lx\n", addr);
