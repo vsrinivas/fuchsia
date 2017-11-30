@@ -23,6 +23,22 @@
 #include "vim.h"
 #include "vim-hw.h"
 
+static const pbus_mmio_t display_mmios[] = {
+    {
+        .base = 0x3d800000,
+        .length = 1920 * 1080 * 2,
+    },
+};
+
+static const pbus_dev_t display_dev = {
+    .name = "display",
+    .vid = PDEV_VID_KHADAS,
+    .pid = PDEV_PID_VIM,
+    .did = PDEV_PID_VIM_DISPLAY,
+    .mmios = display_mmios,
+    .mmio_count = countof(display_mmios),
+};
+
 static zx_status_t vim_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
 //    vim_bus_t* bus = ctx;
 
@@ -100,6 +116,11 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
 
     if ((status = vim_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
+    }
+
+    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "vim_usb_init could not add display_dev: %d\n", status);
+        return status;
     }
 
     return ZX_OK;
