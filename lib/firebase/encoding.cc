@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/firebase/encoding.h"
+#include "peridot/lib/firebase/encoding.h"
 
 #include "lib/fxl/strings/utf_codecs.h"
 #include "peridot/lib/base64url/base64url.h"

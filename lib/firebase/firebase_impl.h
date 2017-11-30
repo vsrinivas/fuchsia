@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_FIREBASE_IMPL_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_FIREBASE_IMPL_H_
+#ifndef PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
+#define PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
 
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "peridot/bin/cloud_provider_firebase/firebase/event_stream.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/status.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/cancellable.h"
+#include "peridot/lib/firebase/event_stream.h"
+#include "peridot/lib/firebase/firebase.h"
+#include "peridot/lib/firebase/status.h"
+#include "peridot/lib/firebase/watch_client.h"
 #include "peridot/lib/network/network_service.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
 
@@ -104,4 +104,4 @@ class FirebaseImpl : public Firebase {
 
 }  // namespace firebase
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_FIREBASE_IMPL_H_
+#endif  // PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_

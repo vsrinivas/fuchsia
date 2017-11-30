@@ -26,9 +26,9 @@ source_set("impl") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/firebase",
     "//peridot/bin/cloud_provider_firebase/gcs",
     "//peridot/bin/ledger/storage/public",  # For serialization version constant.
+    "//peridot/lib/firebase",
     "//zircon/system/ulib/zx",
   ]
 
@@ -48,9 +48,9 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/firebase",
     "//peridot/bin/cloud_provider_firebase/gcs",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/firebase",
     "//third_party/gtest",
   ]
 

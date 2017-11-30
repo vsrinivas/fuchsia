@@ -14,6 +14,7 @@ executable("unittests") {
     "//peridot/lib/callback:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",
+    "//peridot/lib/firebase:unittests",
     "//peridot/lib/firebase_auth:unittests",
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/module_manifest_source:unittests",

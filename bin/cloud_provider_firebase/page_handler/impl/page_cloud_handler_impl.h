@@ -10,12 +10,12 @@
 #include <string>
 
 #include "lib/fsl/vmo/sized_vmo.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/watch_client_impl.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/types.h"
+#include "peridot/lib/firebase/firebase.h"
+#include "peridot/lib/firebase/watch_client.h"
 #include "zx/socket.h"
 
 namespace cloud_provider_firebase {

@@ -10,6 +10,7 @@ visibility = [
   # TODO(ppi): clean up deps, see LE-366.
   "//peridot/lib/callback/*",
   "//peridot/lib/network/*",
+  "//peridot/lib/firebase/*",
   "//peridot/lib/firebase_auth/*",
 ]
 

@@ -14,9 +14,9 @@
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/firebase_impl.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/cancellable.h"
+#include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
 #include "peridot/lib/network/network_service.h"
 

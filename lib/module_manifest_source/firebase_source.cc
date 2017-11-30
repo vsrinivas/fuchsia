@@ -13,8 +13,8 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/cloud_provider_firebase/firebase/firebase_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/network/network_service_impl.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
