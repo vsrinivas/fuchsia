@@ -587,8 +587,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
         return ZX_ERR_NO_MEMORY;
 
     timer_init(&vcpu->local_apic_state_.timer);
-    event_init(&vcpu->local_apic_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
-    status = vcpu->local_apic_state_.interrupt_bitmap.Reset(kNumInterrupts);
+    status = vcpu->local_apic_state_.interrupt_tracker.Init();
     if (status != ZX_OK)
         return status;
 
@@ -642,6 +641,23 @@ Vcpu::~Vcpu() {
     DEBUG_ASSERT(status == ZX_OK);
 }
 
+// Injects an interrupt into the guest, if there is one pending.
+static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+    uint32_t vector;
+    zx_status_t status = local_apic_state->interrupt_tracker.Pop(&vector);
+    if (status != ZX_OK)
+        return;
+
+    if (vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
+        // If interrupts are enabled, we inject an interrupt.
+        vmcs->IssueInterrupt(vector);
+    } else {
+        local_apic_state->interrupt_tracker.Track(vector);
+        // If interrupts are disabled, we set VM exit on interrupt enable.
+        vmcs->InterruptWindowExiting(true);
+    }
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return ZX_ERR_BAD_STATE;
@@ -687,12 +703,15 @@ void vmx_exit(VmxState* vmx_state) {
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
-    if (vector > X86_INT_MAX)
-        return ZX_ERR_OUT_OF_RANGE;
-    auto cpu = cpu_of(vpid_);
-    if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
+    bool signaled;
+    zx_status_t status = local_apic_state_.interrupt_tracker.Signal(vector, true, &signaled);
+    if (status != ZX_OK)
+        return status;
+
+    if (!signaled) {
         DEBUG_ASSERT(!arch_ints_disabled());
         arch_disable_ints();
+        auto cpu = cpu_of(vpid_);
         // If we did not signal the VCPU and we are not running on the same CPU,
         // it means the VCPU is currently running, therefore we should issue an
         // IPI to force a VM exit.

@@ -54,15 +54,17 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     auto_call.cancel();
 
     timer_init(&vcpu->gich_state_.timer);
-    event_init(&vcpu->gich_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
+    status = vcpu->gich_state_.interrupt_tracker.Init();
+    if (status != ZX_OK)
+        return status;
     status = get_gich(vpid, &vcpu->gich_state_.gich);
     if (status != ZX_OK)
         return status;
 
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
-    vcpu->hcr_.store(HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO |
-                     HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW);
+    vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC |
+                 HCR_EL2_TWI | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW;
     vcpu->gich_state_.gich->hcr |= kGichHcrEn;
 
     *out = fbl::move(vcpu);
@@ -81,6 +83,21 @@ Vcpu::~Vcpu() {
     DEBUG_ASSERT(status == ZX_OK);
 }
 
+static bool gich_maybe_interrupt(GichState* gich_state) {
+    uint64_t prev_elrs = gich_state->gich->elrs;
+    uint64_t elrs = prev_elrs;
+    while (elrs != 0) {
+        uint32_t vector;
+        zx_status_t status = gich_state->interrupt_tracker.Pop(&vector);
+        if (status != ZX_OK)
+            break;
+        size_t i = __builtin_ctzl(elrs);
+        gich_state->gich->lr[i] = kGichLrPending | vector;
+        elrs &= ~i;
+    }
+    return elrs != prev_elrs;
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return ZX_ERR_BAD_STATE;
@@ -88,7 +105,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     zx_paddr_t state = vaddr_to_paddr(&el2_state_);
     zx_status_t status;
     do {
-        uint64_t hcr = hcr_.fetch_and(~HCR_EL2_VI);
+        uint64_t hcr = hcr_;
+        if (gich_maybe_interrupt(&gich_state_))
+            hcr |= HCR_EL2_VI;
         status = arm64_el2_resume(vttbr, state, hcr);
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
@@ -103,20 +122,19 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
-zx_status_t Vcpu::Interrupt(uint32_t interrupt) {
-    // TODO(abdulla): Improve handling of list register exhaustion.
-    uint64_t elsr = gich_state_.gich->elsr;
-    if (elsr == 0)
-        return ZX_ERR_NO_RESOURCES;
+zx_status_t Vcpu::Interrupt(uint32_t vector) {
+    bool signaled;
+    zx_status_t status = gich_state_.interrupt_tracker.Signal(vector, true, &signaled);
+    if (status != ZX_OK)
+        return status;
 
-    size_t i = __builtin_ctzl(elsr);
-    gich_state_.gich->lr[i] = kGichLrPending | interrupt;
-    hcr_.fetch_or(HCR_EL2_VI);
-
-    if (!gich_signal_interrupt(&gich_state_, true)) {
+    if (!signaled) {
         DEBUG_ASSERT(!arch_ints_disabled());
         arch_disable_ints();
         auto cpu = cpu_of(vpid_);
+        // If we did not signal the VCPU and we are not running on the same CPU,
+        // it means the VCPU is currently running, therefore we should issue an
+        // IPI to force a VM exit.
         if (cpu != arch_curr_cpu_num()) {
             mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu), 0);
         }

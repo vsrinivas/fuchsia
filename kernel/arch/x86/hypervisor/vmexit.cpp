@@ -14,11 +14,11 @@
 #include <arch/hypervisor.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/canary.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/interrupt_tracker.h>
 #include <kernel/auto_lock.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
@@ -113,57 +113,6 @@ static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     if (new_interruptibility != guest_interruptibility) {
         vmcs->Write(VmcsField32::GUEST_INTERRUPTIBILITY_STATE, new_interruptibility);
     }
-}
-
-/* Removes the highest priority interrupt from the bitmap, and returns it. */
-static uint32_t local_apic_pop_interrupt(LocalApicState* local_apic_state) {
-    // TODO(abdulla): Handle interrupt masking.
-    AutoSpinLock lock(&local_apic_state->interrupt_lock);
-    size_t vector = local_apic_state->interrupt_bitmap.Scan(0, kNumInterrupts, false);
-    if (vector == kNumInterrupts)
-        return kNumInterrupts;
-    local_apic_state->interrupt_bitmap.ClearOne(vector);
-    // Reverse value to get interrupt.
-    return static_cast<uint32_t>(X86_INT_MAX - vector);
-}
-
-static void local_apic_pending_interrupt(LocalApicState* local_apic_state, uint32_t vector) {
-    AutoSpinLock lock(&local_apic_state->interrupt_lock);
-    // We reverse the value, as RawBitmapGeneric::Scan will return the
-    // lowest priority interrupt, but we need the highest priority.
-    local_apic_state->interrupt_bitmap.SetOne(X86_INT_MAX - vector);
-}
-
-/* Attempts to issue an interrupt from the bitmap, returning true if it did. */
-static bool local_apic_has_pending_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-    AutoSpinLock lock(&local_apic_state->interrupt_lock);
-    return kNumInterrupts != local_apic_state->interrupt_bitmap.Scan(0, kNumInterrupts, false);
-}
-
-// Injects an interrupt into the guest, if there is one pending.
-void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-    uint32_t vector = local_apic_pop_interrupt(local_apic_state);
-    if (vector == kNumInterrupts)
-        return;
-
-    if (vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
-        // If interrupts are enabled, we inject an interrupt.
-        vmcs->IssueInterrupt(vector);
-    } else {
-        local_apic_pending_interrupt(local_apic_state, vector);
-        // If interrupts are disabled, we set VM exit on interrupt enable.
-        vmcs->InterruptWindowExiting(true);
-    }
-}
-
-// Sets the given interrupt in the bitmap and signals waiters, returning true if
-// a waiter was signaled.
-bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vector,
-                                 bool reschedule) {
-    local_apic_pending_interrupt(local_apic_state, vector);
-    // TODO(abdulla): We can skip this check if an interrupt is pending, as we
-    // would have already signaled. However, we should be careful with locking.
-    return event_signal(&local_apic_state->event, reschedule) > 0;
 }
 
 static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
@@ -313,14 +262,10 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
                               LocalApicState* local_apic_state) {
-    do {
-        zx_status_t status = event_wait_deadline(&local_apic_state->event, ZX_TIME_INFINITE, true);
-        vmcs->Reload();
-        if (status != ZX_OK)
-            return ZX_ERR_CANCELED;
-    } while (!local_apic_has_pending_interrupt(vmcs, local_apic_state));
     next_rip(exit_info, vmcs);
-    return ZX_OK;
+    zx_status_t status = local_apic_state->interrupt_tracker.Wait();
+    vmcs->Reload();
+    return status;
 }
 
 static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
@@ -406,12 +351,15 @@ static uint32_t* apic_reg(LocalApicState* local_apic_state, uint16_t reg) {
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
     uint32_t* lvt_timer = apic_reg(local_apic_state, kLocalApicLvtTimer);
-
     if (*lvt_timer & LVT_MASKED)
         return INT_NO_RESCHEDULE;
 
     uint8_t vector = *lvt_timer & LVT_TIMER_VECTOR_MASK;
-    bool signaled = local_apic_signal_interrupt(local_apic_state, vector, false);
+    bool signaled;
+    zx_status_t status = local_apic_state->interrupt_tracker.Signal(vector, false, &signaled);
+    if (status != ZX_OK)
+        return INT_NO_RESCHEDULE;
+
     return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 

@@ -7,22 +7,26 @@
 #pragma once
 
 #include <arch/arm64/el2_state.h>
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
+#include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <zircon/types.h>
+
+static const uint16_t kNumInterrupts = 256;
+static const uint32_t kGichLrPending = 0b01 << 28;
+static const uint32_t kGichHcrEn = 1u << 0;
+
+typedef struct zx_port_packet zx_port_packet_t;
 
 class GuestPhysicalAddressSpace;
 class PortDispatcher;
 class VmObject;
-
-static const uint32_t kGichLrPending = 0b01 << 28;
-static const uint32_t kGichHcrEn = 1u << 0;
-static const uint32_t kGichVtrListRegs = 0b111111;
-
-typedef struct zx_port_packet zx_port_packet_t;
 
 class Guest {
 public:
@@ -55,7 +59,7 @@ struct Gich {
     volatile uint32_t reserved1[3];
     volatile uint64_t eisr;
     volatile uint32_t reserved2[2];
-    volatile uint64_t elsr;
+    volatile uint64_t elrs;
     volatile uint32_t reserved3[46];
     volatile uint32_t apr;
     volatile uint32_t reserved4[3];
@@ -67,7 +71,7 @@ static_assert(__offsetof(Gich, vtr) == 0x04, "");
 static_assert(__offsetof(Gich, vmcr) == 0x08, "");
 static_assert(__offsetof(Gich, misr) == 0x10, "");
 static_assert(__offsetof(Gich, eisr) == 0x20, "");
-static_assert(__offsetof(Gich, elsr) == 0x30, "");
+static_assert(__offsetof(Gich, elrs) == 0x30, "");
 static_assert(__offsetof(Gich, apr) == 0xf0, "");
 static_assert(__offsetof(Gich, lr) == 0x100, "");
 
@@ -75,8 +79,8 @@ static_assert(__offsetof(Gich, lr) == 0x100, "");
 struct GichState {
     // Timer for ARM generic timer.
     timer_t timer;
-    // Event for handling block on WFI.
-    event_t event;
+    // Tracks active interrupts.
+    hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
     // Virtual GICH address.
     Gich* gich;
 };
@@ -101,7 +105,7 @@ private:
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;
     El2State el2_state_;
-    fbl::atomic<uint64_t> hcr_;
+    uint64_t hcr_;
 
     Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
          TrapMap* traps);

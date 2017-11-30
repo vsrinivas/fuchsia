@@ -80,8 +80,6 @@ struct DataAbort {
 
 // clang-format on
 
-bool gich_signal_interrupt(GichState* gich_state, bool reschedule);
-
-zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
-                           GichState* gich_state, GuestPhysicalAddressSpace* gpas,
-                           TrapMap* traps, zx_port_packet_t* packet);
+zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
+                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           zx_port_packet_t* packet);

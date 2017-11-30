@@ -31,6 +31,7 @@
 
 static const uint16_t kSmcPsci = 0;
 static const uint32_t kCntpCtlEnable = 1u << 0;
+static const uint32_t kTimerVector = 27;
 
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
@@ -63,54 +64,36 @@ static void next_pc(GuestState* guest_state) {
     guest_state->system_state.elr_el2 += 4;
 }
 
-static bool gich_has_pending_interrupt(GichState* gich_state) {
-    uint32_t num_lrs = 1 + (gich_state->gich->vtr & kGichVtrListRegs);
-    for (uint32_t i = 0; i != num_lrs; ++i) {
-        if (gich_state->gich->lr[i] & kGichLrPending) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool gich_signal_interrupt(GichState* gich_state, bool reschedule) {
-    return event_signal(&gich_state->event, reschedule) > 0;
-}
-
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     bool has_timer = ARM64_READ_SYSREG(cntp_ctl_el0) & kCntpCtlEnable;
     if (!has_timer)
         return INT_NO_RESCHEDULE;
 
     GichState* gich_state = static_cast<GichState*>(arg);
-    bool signaled = gich_signal_interrupt(gich_state, false);
+    bool signaled;
+    zx_status_t status = gich_state->interrupt_tracker.Signal(kTimerVector, false, &signaled);
+    if (status != ZX_OK)
+        return INT_NO_RESCHEDULE;
+
     return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
-
 
 static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
                                               GichState* gich_state) {
     const WaitInstruction wi(iss);
-    if (wi.is_wfe) {
+    if (wi.is_wfe)
         return ZX_ERR_NOT_SUPPORTED;
-    }
 
+    timer_cancel(&gich_state->timer);
     bool has_timer = ARM64_READ_SYSREG(cntp_ctl_el0) & kCntpCtlEnable;
     if (has_timer) {
         uint64_t cntpct_deadline = ARM64_READ_SYSREG(cntp_cval_el0);
         zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
-        timer_cancel(&gich_state->timer);
         timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
     }
 
-    do {
-        zx_status_t status = event_wait_deadline(&gich_state->event, ZX_TIME_INFINITE, true);
-        if (status != ZX_OK) {
-            return ZX_ERR_CANCELED;
-        }
-    } while (!has_timer && !gich_has_pending_interrupt(gich_state));
     next_pc(guest_state);
-    return ZX_OK;
+    return gich_state->interrupt_tracker.Wait();
 }
 
 static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state) {
@@ -129,8 +112,7 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state)
     }
 }
 
-static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>* hcr,
-                                             GuestState* guest_state) {
+static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state) {
     const SystemInstruction si(iss);
     const uint64_t reg = guest_state->x[si.xt];
 
@@ -152,15 +134,15 @@ static zx_status_t handle_system_instruction(uint32_t iss, fbl::atomic<uint64_t>
         uint32_t sctlr_el1 = reg & UINT32_MAX;
         if ((guest_state->system_state.sctlr_el1 ^ sctlr_el1) & SCTLR_ELX_M) {
             if (sctlr_el1 & SCTLR_ELX_M) {
-                hcr->fetch_and(~HCR_EL2_DC);
+                *hcr &= ~HCR_EL2_DC;
             } else {
-                hcr->fetch_or(HCR_EL2_DC);
+                *hcr |= HCR_EL2_DC;
             }
         }
         guest_state->system_state.sctlr_el1 = sctlr_el1;
 
         LTRACEF("guest sctlr_el1: %#x\n", sctlr_el1);
-        LTRACEF("guest hcr_el2: %#lx\n", hcr->load());
+        LTRACEF("guest hcr_el2: %#lx\n", *hcr);
         next_pc(guest_state);
         return ZX_OK;
     }
@@ -238,9 +220,9 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     return ZX_ERR_NEXT;
 }
 
-zx_status_t vmexit_handler(fbl::atomic<uint64_t>* hcr, GuestState* guest_state,
-                           GichState* gich_state, GuestPhysicalAddressSpace* gpas,
-                           TrapMap* traps, zx_port_packet_t* packet) {
+zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
+                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           zx_port_packet_t* packet) {
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
     LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
     LTRACEF("guest elr_el2: %#lx\n", guest_state->system_state.elr_el2);
