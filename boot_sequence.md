@@ -35,9 +35,7 @@ service implemented by that app.
 
 `bootstrap` also runs a number of application in the boot environment at
 startup. The list of applications to run at startup is contained in the
-`/system/data/bootstrap/apps.config` file. By default, this list includes
-`/boot/bin/sh /system/autorun`, which is a useful development hook for the
-boot sequence, and `run-vc`, which creates virtual consoles.
+`/system/data/bootstrap/apps.config` file.
 
 # Layer 3: [device_runner](https://fuchsia.googlesource.com/modular/+/master/src/device_runner/)
 
