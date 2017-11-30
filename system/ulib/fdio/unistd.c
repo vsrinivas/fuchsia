@@ -1443,6 +1443,13 @@ int fdatasync(int fd) {
     return fsync(fd);
 }
 
+int syncfs(int fd) {
+    // TODO(smklein): Currently, fsync syncs the entire filesystem, not just
+    // the target file descriptor. These functions should use different sync
+    // mechanisms, where fsync is more fine-grained.
+    return fsync(fd);
+}
+
 int fstat(int fd, struct stat* s) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {

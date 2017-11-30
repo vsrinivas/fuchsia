@@ -415,6 +415,12 @@ static void stub_sync(void) {
 }
 weak_alias(stub_sync, sync);
 
+static int stub_syncfs(int fd) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_syncfs, syncfs);
+
 static mode_t stub_umask(mode_t mask) {
     errno = ENOSYS;
     return -1;

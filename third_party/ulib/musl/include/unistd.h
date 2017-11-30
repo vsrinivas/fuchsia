@@ -139,6 +139,7 @@ int lockf(int, int, off_t);
 long gethostid(void);
 int nice(int);
 void sync(void);
+int syncfs(int);
 pid_t setpgrp(void);
 char* crypt(const char*, const char*);
 void encrypt(char*, int);
@@ -177,7 +178,6 @@ int setresgid(gid_t, gid_t, gid_t);
 int getresuid(uid_t*, uid_t*, uid_t*);
 int getresgid(gid_t*, gid_t*, gid_t*);
 char* get_current_dir_name(void);
-int syncfs(int);
 int euidaccess(const char*, int);
 int eaccess(const char*, int);
 #endif
