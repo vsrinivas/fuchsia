@@ -48,7 +48,7 @@ zx_status_t ClientMlme::Init() {
     }
 
     ZX_DEBUG_ASSERT(scanner_.get() == nullptr);
-    scanner_ = std::make_shared<Scanner>(device_, std::move(timer));
+    scanner_ = fbl::AdoptRef(new Scanner(device_, std::move(timer)));
     AddChildHandler(scanner_);
     return status;
 }
@@ -87,7 +87,8 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const JoinRequest& req) {
         return status;
     }
 
-    sta_.reset(new Station(device_, std::move(timer)));
+    RemoveChildHandler(sta_);
+    sta_ = fbl::AdoptRef(new Station(device_, std::move(timer)));
     AddChildHandler(sta_);
     return ZX_OK;
 }

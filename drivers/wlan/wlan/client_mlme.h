@@ -7,7 +7,7 @@
 #include "mlme.h"
 
 #include <ddk/protocol/wlan.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/ref_ptr.h>
 #include <zircon/types.h>
 
 namespace wlan {
@@ -36,9 +36,9 @@ class ClientMlme : public Mlme {
 
     DeviceInterface* const device_;
 
-    std::shared_ptr<Scanner> scanner_;
+    fbl::RefPtr<Scanner> scanner_;
     // TODO(tkilbourn): track other STAs
-    std::shared_ptr<Station> sta_;
+    fbl::RefPtr<Station> sta_;
 };
 
 }  // namespace wlan

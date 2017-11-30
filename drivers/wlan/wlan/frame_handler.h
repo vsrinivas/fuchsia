@@ -11,6 +11,9 @@
 #include <ddk/protocol/wlan.h>
 #include <zircon/types.h>
 
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+
 #define WLAN_DECL_VIRT_FUNC_HANDLE(methodName, args...) \
     virtual zx_status_t methodName(args) { return ZX_OK; }
 
@@ -54,10 +57,10 @@ namespace wlan {
 // the parent did not fail processing the frame itself.
 // Frame processing errors returned by children are logged but have no effect onto their
 // siblings or the parent.
-class FrameHandler {
+class FrameHandler : public fbl::RefCounted<FrameHandler> {
    public:
     FrameHandler() {}
-    virtual ~FrameHandler() {}
+    virtual ~FrameHandler() = default;
 
     template <typename... Args> zx_status_t HandleFrame(Args&&... args) {
         auto status = HandleFrameInternal(std::forward<Args>(args)...);
@@ -68,25 +71,25 @@ class FrameHandler {
 
         // Forward frame to all children.
         uint16_t i = 0;
-        for (auto child = children_.begin(); child != children_.end();) {
-            if (auto handler = child->lock()) {
-                status = handler->HandleFrame(std::forward<Args>(args)...);
-                // Log when a child failed processing a frame, but proceed.
-                if (status != ZX_OK) {
-                    debugfhandler("child %u failed handling frame: %d\n", i, status);
-                }
-                child++;
-                i++;
-            } else {
-                // Handler expired, remove from list.
-                child = children_.erase(child);
+        for (auto& handler : children_) {
+            status = handler->HandleFrame(std::forward<Args>(args)...);
+            // Log when a child failed processing a frame, but proceed.
+            if (status != ZX_OK) {
+                debugfhandler("child %u failed handling frame: %d\n", i, status);
             }
+            i++;
         }
-
         return ZX_OK;
     }
 
-    void AddChildHandler(std::weak_ptr<FrameHandler> ptr) { children_.push_back(ptr); }
+    void AddChildHandler(fbl::RefPtr<FrameHandler> ptr) { children_.push_back(ptr); }
+
+    void RemoveChildHandler(fbl::RefPtr<FrameHandler> ptr) {
+        children_.erase(
+            std::remove_if(children_.begin(), children_.end(),
+                           [ptr](fbl::RefPtr<FrameHandler>& entry) { return entry == ptr; }),
+            children_.end());
+    }
 
    protected:
     // Ethernet frame handlers.
@@ -160,7 +163,7 @@ class FrameHandler {
         return ZX_OK;
     }
 
-    std::vector<std::weak_ptr<FrameHandler>> children_;
+    std::vector<fbl::RefPtr<FrameHandler>> children_;
 };
 
 }  // namespace wlan
