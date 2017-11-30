@@ -34,6 +34,7 @@ asan versions of the toolchain/Zircon libraries.
 
 from collections import namedtuple
 import argparse
+import fnmatch
 import itertools
 import manifest
 import os
@@ -64,6 +65,9 @@ input_manifest = namedtuple('input_manifest', [
 # Each --output argument yields an output_manifest tuple.
 output_manifest = namedtuple('output_manifest', ['file', 'manifest'])
 
+# Each --binary argument yields a input_binary tuple.
+input_binary = namedtuple('input_binary', ['target_pattern', 'output_group'])
+
 
 # Collect all the binaries from auxiliary manifests into
 # a dictionary mapping entry.target to binary_entry.
@@ -83,9 +87,9 @@ def collect_auxiliaries(manifest, examined):
 
 
 # Return an iterable of binary_entry for all the binaries in `manifest` and
-# their dependencies from `aux_binaries`, and an iterable of manifest_entry
-# for all the other files in `manifest`.
-def collect_binaries(manifest, aux_binaries, examined):
+# `input_binaries` and their dependencies from `aux_binaries`, and an
+# iterable of manifest_entry for all the other files in `manifest`.
+def collect_binaries(manifest, input_binaries, aux_binaries, examined):
     # As we go, we'll collect the actual binaries for the output
     # in this dictionary mapping entry.target to binary_entry.
     binaries = {}
@@ -97,12 +101,12 @@ def collect_binaries(manifest, aux_binaries, examined):
     # dictionary mapping DT_SONAME string to binary_entry.
     soname_map_by_toolchain = {}
 
-    def add_binary(binary, context=None, auxiliary=False):
-        def RewriteBinaryGroup(old_binary, group_override):
-            return binary_entry(
-                old_binary.entry._replace(group=group_override),
-                old_binary.info)
+    def rewrite_binary_group(old_binary, group_override):
+        return binary_entry(
+            old_binary.entry._replace(group=group_override),
+            old_binary.info)
 
+    def add_binary(binary, context=None, auxiliary=False):
         # Add a binary by target name.
         def add_auxiliary(target, required, group_override=None):
             if group_override is None:
@@ -117,7 +121,7 @@ def collect_binaries(manifest, aux_binaries, examined):
                     "'%s' not in auxiliary manifests, needed by %r via %r" %
                     (target, binary.entry, context.root_dependent))
             if aux_binary:
-                add_binary(RewriteBinaryGroup(aux_binary, group_override),
+                add_binary(rewrite_binary_group(aux_binary, group_override),
                            aux_context, True)
                 return True
             return False
@@ -231,6 +235,21 @@ def collect_binaries(manifest, aux_binaries, examined):
         else:
             nonbinaries.append(entry)
 
+    matched_binaries = set()
+    for input_binary in input_binaries:
+        matches = fnmatch.filter(aux_binaries.iterkeys(),
+                                 input_binary.target_pattern)
+        assert matches, (
+            "--input-binary='%s' did not match any binaries" %
+            input_binary.target_pattern)
+        for target in matches:
+            assert target not in matched_binaries, (
+                "'%s' matched by multiple --input-binary patterns" % target)
+            matched_binaries.add(target)
+            add_binary(rewrite_binary_group(aux_binaries[target],
+                                            input_binary.output_group),
+                       auxiliary=True)
+
     return binaries.itervalues(), nonbinaries
 
 
@@ -299,7 +318,8 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     return stripped_manifest, debug_list
 
 
-def emit_manifests(args, selected, unselected, standalone_output):
+def emit_manifests(args, selected, unselected, input_binaries,
+                   standalone_output):
     def update_file(file, contents):
         if os.path.exists(file) and os.path.getsize(file) == len(contents):
             with open(file, 'r') as f:
@@ -313,7 +333,8 @@ def emit_manifests(args, selected, unselected, standalone_output):
 
     # Collect all the inputs and reify.
     aux_binaries = collect_auxiliaries(unselected, examined)
-    binaries, nonbinaries = collect_binaries(selected, aux_binaries, examined)
+    binaries, nonbinaries = collect_binaries(selected, input_binaries,
+                                             aux_binaries, examined)
 
     # Finalize the output binaries.
     binaries, debug_files = strip_binary_manifest(binaries, 'stripped',
@@ -344,8 +365,8 @@ def emit_manifests(args, selected, unselected, standalone_output):
     # whereas everything in the system image has to agree about the
     # shared library variants to install.
     for output, selected in standalone_output.iteritems():
-        binaries, nonbinaries = collect_binaries(selected, aux_binaries,
-                                                 examined)
+        binaries, nonbinaries = collect_binaries(selected, [],
+                                                 aux_binaries, examined)
         # Partition into binaries that have already been used in other
         # output manifests and new binaries.  For the reused binaries,
         # we can reuse the debug file discovery/stripping already done.
@@ -433,6 +454,17 @@ class optional_input_manifest_action(input_manifest_action):
         self.optional = True
 
 
+class input_binary_action(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        binaries = getattr(namespace, self.dest, None)
+        if binaries is None:
+            binaries = []
+            setattr(namespace, self.dest, binaries)
+        outputs = getattr(namespace, 'output', None)
+        output_group = len(outputs) - 1
+        binaries.append(input_binary(values, output_group))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='''
 Massage manifest files from the build to produce images.
@@ -462,6 +494,8 @@ shared libraries and the like.
     parser.add_argument('--optional-manifest', dest='manifest',
                         action=optional_input_manifest_action,
                         help='Input manifest file (if it exists)')
+    parser.add_argument('--binary', action=input_binary_action, default=[],
+                        help='Take matching binaries from auxiliary manifests')
     return parser.parse_args()
 
 
@@ -497,7 +531,8 @@ def main():
             for entry in standalone_unselected[input]:
                 print '\t' + repr(entry)
 
-    emit_manifests(args, all_selected, all_unselected, standalone_output)
+    emit_manifests(args, all_selected, all_unselected, args.binary,
+                   standalone_output)
 
 
 if __name__ == "__main__":
