@@ -66,6 +66,12 @@ wlan_go_dependencies = [
   },
 ]
 
+wlan_gn_deps = [
+  "//garnet/public/lib/app/fidl",
+  "//garnet/public/lib/netstack/fidl",
+  "//garnet/public/lib/wlan/fidl",
+]
+
 go_test("keywrap_test_bin") {
   output_name = "keywrap_test"
   gopackage = "wlan/keywrap"
@@ -73,6 +79,8 @@ go_test("keywrap_test_bin") {
   # TODO(hahnr): This program has a smaller dependency set in practice, its go_dependencies list
   # should be updated to match the code.
   go_dependencies = wlan_go_dependencies
+
+  deps = wlan_gn_deps
 }
 
 go_test("elements_test_bin") {
@@ -91,6 +99,7 @@ go_test("eapol_handshake_test_bin") {
     "//garnet/public/lib/wlan/fidl",
     "//garnet/public/lib/wlan/fidl:mlme",
   ]
+  deps += wlan_gn_deps
   go_dependencies = [
       {
         package = "fidl"
@@ -142,6 +151,7 @@ go_binary("wlanstack_bin") {
     "//garnet/public/lib/wlan/fidl",
     "//garnet/public/lib/wlan/fidl:mlme",
   ]
+  deps += wlan_gn_deps
   go_dependencies = wlan_go_dependencies
 }
 
@@ -192,6 +202,7 @@ go_test("wlanstack_test_bin") {
     "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/wlan/fidl:mlme",
   ]
+  deps += wlan_gn_deps
   go_dependencies = wlan_go_dependencies
 }
 
