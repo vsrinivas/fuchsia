@@ -1265,10 +1265,12 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
     async_callback_->OnPacketCaptured(std::move(pkt));
   }
 
+  async_callback_.reset();
+
   // If we have a valid callback to make, call it now.
   if (pending_async_stop_cbk_ != nullptr) {
     pending_async_stop_cbk_();
-    FXL_DCHECK(pending_async_stop_cbk_ == nullptr);
+    pending_async_stop_cbk_ = nullptr;
   }
 
   // All done!  Transition back to the OperatingSync state.
