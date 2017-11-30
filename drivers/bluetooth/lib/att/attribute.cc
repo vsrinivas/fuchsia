@@ -47,7 +47,8 @@ void Attribute::SetValue(const common::ByteBuffer& value) {
   value_ = common::DynamicByteBuffer(value);
 }
 
-bool Attribute::ReadAsync(uint16_t offset,
+bool Attribute::ReadAsync(const std::string& peer_id,
+                          uint16_t offset,
                           const ReadResultCallback& result_callback) const {
   if (!is_initialized() || !read_handler_)
     return false;
@@ -55,11 +56,12 @@ bool Attribute::ReadAsync(uint16_t offset,
   if (!read_reqs_.allowed())
     return false;
 
-  read_handler_(handle_, offset, result_callback);
+  read_handler_(peer_id, handle_, offset, result_callback);
   return true;
 }
 
-bool Attribute::WriteAsync(uint16_t offset,
+bool Attribute::WriteAsync(const std::string& peer_id,
+                           uint16_t offset,
                            const common::ByteBuffer& value,
                            const WriteResultCallback& result_callback) const {
   if (!is_initialized() || !write_handler_)
@@ -68,7 +70,7 @@ bool Attribute::WriteAsync(uint16_t offset,
   if (!write_reqs_.allowed())
     return false;
 
-  write_handler_(handle_, offset, std::move(value), result_callback);
+  write_handler_(peer_id, handle_, offset, std::move(value), result_callback);
   return true;
 }
 

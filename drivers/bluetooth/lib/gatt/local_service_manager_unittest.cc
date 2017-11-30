@@ -13,6 +13,7 @@ namespace btlib {
 namespace gatt {
 namespace {
 
+constexpr char kTestDeviceId[] = "11223344-1122-1122-1122-112233445566";
 constexpr common::UUID kTestType16((uint16_t)0xdead);
 constexpr common::UUID kTestType32((uint32_t)0xdeadbeef);
 
@@ -413,7 +414,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristicNoReadPermission) {
     result_called = true;
   };
 
-  EXPECT_FALSE(attr->ReadAsync(0, result_cb));
+  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, result_cb));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -444,7 +445,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristicNoReadProperty) {
   att::ErrorCode ecode = att::ErrorCode::kNoError;
   auto result_cb = [&ecode](auto code, const auto&) { ecode = code; };
 
-  EXPECT_TRUE(attr->ReadAsync(0, result_cb));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, 0, result_cb));
 
   // The error should be handled internally and not reach |read_cb|.
   EXPECT_FALSE(called);
@@ -490,7 +491,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristic) {
     EXPECT_TRUE(common::ContainersEqual(kTestValue, value));
   };
 
-  EXPECT_TRUE(attr->ReadAsync(kOffset, result_cb));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kOffset, result_cb));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -520,7 +521,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWritePermission) {
   bool result_called = false;
   auto result_cb = [&result_called](auto) { result_called = true; };
 
-  EXPECT_FALSE(attr->WriteAsync(0, kTestValue, result_cb));
+  EXPECT_FALSE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, result_cb));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -551,7 +552,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWriteProperty) {
   att::ErrorCode ecode = att::ErrorCode::kNoError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(0, kTestValue, result_cb));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, result_cb));
 
   // The error should be handled internally and not reach |write_cb|.
   EXPECT_FALSE(called);
@@ -595,7 +596,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristic) {
   att::ErrorCode ecode = att::ErrorCode::kUnlikelyError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(kOffset, kTestValue, result_cb));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kOffset, kTestValue, result_cb));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -631,7 +632,7 @@ TEST(GATT_LocalServiceManagerTest, ReadDescriptorNoReadPermission) {
     result_called = true;
   };
 
-  EXPECT_FALSE(attr->ReadAsync(0, result_cb));
+  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, result_cb));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -680,7 +681,7 @@ TEST(GATT_LocalServiceManagerTest, ReadDescriptor) {
     EXPECT_TRUE(common::ContainersEqual(kTestValue, value));
   };
 
-  EXPECT_TRUE(attr->ReadAsync(kOffset, result_cb));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kOffset, result_cb));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -715,7 +716,7 @@ TEST(GATT_LocalServiceManagerTest, WriteDescriptorNoWritePermission) {
   bool result_called = false;
   auto result_cb = [&result_called](auto) { result_called = true; };
 
-  EXPECT_FALSE(attr->WriteAsync(0, kTestValue, result_cb));
+  EXPECT_FALSE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, result_cb));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -762,7 +763,7 @@ TEST(GATT_LocalServiceManagerTest, WriteDescriptor) {
   att::ErrorCode ecode = att::ErrorCode::kUnlikelyError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(kOffset, kTestValue, result_cb));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kOffset, kTestValue, result_cb));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);

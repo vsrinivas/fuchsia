@@ -78,7 +78,8 @@ class LowEnergyConnection {
     FXL_DCHECK(local_db);
     FXL_DCHECK(att_chan);
 
-    gatt_ = std::make_unique<gatt::Connection>(std::move(att_chan), local_db);
+    gatt_ =
+        std::make_unique<gatt::Connection>(id_, std::move(att_chan), local_db);
   }
 
   size_t ref_count() const { return refs_.size(); }

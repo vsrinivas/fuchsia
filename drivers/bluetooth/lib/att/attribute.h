@@ -114,7 +114,8 @@ class Attribute final {
   using ReadResultCallback =
       std::function<void(ErrorCode status, const common::ByteBuffer& value)>;
   using ReadHandler =
-      std::function<void(Handle handle,
+      std::function<void(const std::string& peer_id,
+                         Handle handle,
                          uint16_t offset,
                          const ReadResultCallback& result_callback)>;
   void set_read_handler(const ReadHandler& read_handler) {
@@ -123,7 +124,8 @@ class Attribute final {
 
   using WriteResultCallback = std::function<void(ErrorCode status)>;
   using WriteHandler =
-      std::function<void(Handle handle,
+      std::function<void(const std::string& peer_id,
+                         Handle handle,
                          uint16_t offset,
                          const common::ByteBuffer& value,
                          const WriteResultCallback& result_callback)>;
@@ -133,12 +135,14 @@ class Attribute final {
 
   // Initiates an asynchronous read of the attribute value. Returns false if
   // this attribute is not dynamic.
-  bool ReadAsync(uint16_t offset,
+  bool ReadAsync(const std::string& peer_id,
+                 uint16_t offset,
                  const ReadResultCallback& result_callback) const;
 
   // Initiates an asynchronous write of the attribute value. Returns false if
   // this attribute is not dynamic.
-  bool WriteAsync(uint16_t offset,
+  bool WriteAsync(const std::string& peer_id,
+                  uint16_t offset,
                   const common::ByteBuffer& value,
                   const WriteResultCallback& result_callback) const;
 

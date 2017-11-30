@@ -11,6 +11,7 @@ namespace btlib {
 namespace att {
 namespace {
 
+constexpr char kTestDeviceId[] = "11223344-1122-1122-1122-112233445566";
 constexpr Handle kTestHandle = 0x0001;
 constexpr common::UUID kTestType1((uint16_t)0x0001);
 constexpr common::UUID kTestType2((uint16_t)0x0002);
@@ -124,7 +125,7 @@ TEST(ATT_AttributeTest, ReadAsyncReadNotAllowed) {
   AttributeGrouping group(kTestType1, kTestHandle, 1, kTestValue);
   Attribute* attr = group.AddAttribute(kTestType2, AccessRequirements(),
                                        AccessRequirements());
-  EXPECT_FALSE(attr->ReadAsync(0, [](auto, const auto&) {}));
+  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, [](auto, const auto&) {}));
 }
 
 TEST(ATT_AttributeTest, ReadAsyncReadNoHandler) {
@@ -133,7 +134,7 @@ TEST(ATT_AttributeTest, ReadAsyncReadNoHandler) {
       kTestType2,
       AccessRequirements(false, false, false),  // read (no security)
       AccessRequirements());                    // write not allowed
-  EXPECT_FALSE(attr->ReadAsync(0, [](auto, const auto&) {}));
+  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, [](auto, const auto&) {}));
 }
 
 TEST(ATT_AttributeTest, ReadAsync) {
@@ -154,7 +155,9 @@ TEST(ATT_AttributeTest, ReadAsync) {
     callback_called = true;
   };
 
-  auto handler = [&](Handle handle, uint16_t offset, const auto& result_cb) {
+  auto handler = [&](const auto& peer_id, Handle handle, uint16_t offset,
+                     const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
     EXPECT_EQ(attr->handle(), handle);
     EXPECT_EQ(kTestOffset, offset);
     EXPECT_TRUE(result_cb);
@@ -163,7 +166,7 @@ TEST(ATT_AttributeTest, ReadAsync) {
   };
 
   attr->set_read_handler(handler);
-  EXPECT_TRUE(attr->ReadAsync(kTestOffset, callback));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kTestOffset, callback));
   EXPECT_TRUE(callback_called);
 }
 
@@ -171,7 +174,8 @@ TEST(ATT_AttributeTest, WriteAsyncWriteNotAllowed) {
   AttributeGrouping group(kTestType1, kTestHandle, 1, kTestValue);
   Attribute* attr = group.AddAttribute(kTestType2, AccessRequirements(),
                                        AccessRequirements());
-  EXPECT_FALSE(attr->WriteAsync(0, common::BufferView(), [](auto) {}));
+  EXPECT_FALSE(
+      attr->WriteAsync(kTestDeviceId, 0, common::BufferView(), [](auto) {}));
 }
 
 TEST(ATT_AttributeTest, WriteAsyncWriteNoHandler) {
@@ -180,7 +184,8 @@ TEST(ATT_AttributeTest, WriteAsyncWriteNoHandler) {
       kTestType2,
       AccessRequirements(),                      // read not allowed
       AccessRequirements(false, false, false));  // write no security
-  EXPECT_FALSE(attr->WriteAsync(0, common::BufferView(), [](auto) {}));
+  EXPECT_FALSE(
+      attr->WriteAsync(kTestDeviceId, 0, common::BufferView(), [](auto) {}));
 }
 
 TEST(ATT_AttributeTest, WriteAsync) {
@@ -199,8 +204,9 @@ TEST(ATT_AttributeTest, WriteAsync) {
     callback_called = true;
   };
 
-  auto handler = [&](Handle handle, uint16_t offset, const auto& value,
-                     const auto& result_cb) {
+  auto handler = [&](const auto& peer_id, Handle handle, uint16_t offset,
+                     const auto& value, const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
     EXPECT_EQ(attr->handle(), handle);
     EXPECT_EQ(kTestOffset, offset);
     EXPECT_TRUE(common::ContainersEqual(
@@ -211,8 +217,9 @@ TEST(ATT_AttributeTest, WriteAsync) {
   };
 
   attr->set_write_handler(handler);
-  EXPECT_TRUE(attr->WriteAsync(
-      kTestOffset, common::CreateStaticByteBuffer('h', 'i'), callback));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kTestOffset,
+                               common::CreateStaticByteBuffer('h', 'i'),
+                               callback));
   EXPECT_TRUE(callback_called);
 }
 

@@ -163,8 +163,8 @@ class LocalServiceManager::ServiceData final {
     // TODO(armansito): Consider tracking a transaction timeout here (NET-338).
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto read_handler = [self, id = chrc->id(), props = chrc->properties()](
-                            att::Handle handle, uint16_t offset,
-                            const auto& result_cb) {
+                            const auto& peer_id, att::Handle handle,
+                            uint16_t offset, const auto& result_cb) {
       if (!self) {
         result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
         return;
@@ -182,8 +182,9 @@ class LocalServiceManager::ServiceData final {
     };
 
     auto write_handler = [self, id = chrc->id(), props = chrc->properties()](
-                             att::Handle handle, uint16_t offset,
-                             const auto& value, const auto& result_cb) {
+                             const auto& peer_id, att::Handle handle,
+                             uint16_t offset, const auto& value,
+                             const auto& result_cb) {
       if (!self) {
         if (result_cb)
           result_cb(att::ErrorCode::kUnlikelyError);
@@ -230,9 +231,9 @@ class LocalServiceManager::ServiceData final {
 
   void AddDescriptor(att::AttributeGrouping* grouping, DescriptorPtr desc) {
     auto self = weak_ptr_factory_.GetWeakPtr();
-    auto read_handler = [self, id = desc->id()](att::Handle handle,
-                                                uint16_t offset,
-                                                const auto& result_cb) {
+    auto read_handler = [self, id = desc->id()](
+                            const auto& peer_id, att::Handle handle,
+                            uint16_t offset, const auto& result_cb) {
       if (!self) {
         result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
         return;
@@ -242,8 +243,9 @@ class LocalServiceManager::ServiceData final {
     };
 
     auto write_handler = [self, id = desc->id()](
-                             att::Handle handle, uint16_t offset,
-                             const auto& value, const auto& result_cb) {
+                             const auto& peer_id, att::Handle handle,
+                             uint16_t offset, const auto& value,
+                             const auto& result_cb) {
       // Descriptors cannot be written using the "write without response"
       // procedure.
       if (!result_cb)

@@ -29,9 +29,12 @@ namespace gatt {
 // is initialized with. Each Server shares an att::Bearer with a Client.
 class Server final {
  public:
+  // |peer_id| is the 128-bit UUID that identifies the peer device.
   // |database| will be queried by the Server to resolve transactions.
   // |bearer| is the ATT data bearer that this Server operates on.
-  Server(fxl::RefPtr<att::Database> database, fxl::RefPtr<att::Bearer> bearer);
+  Server(const std::string& peer_id,
+         fxl::RefPtr<att::Database> database,
+         fxl::RefPtr<att::Bearer> bearer);
   ~Server();
 
  private:
@@ -71,6 +74,7 @@ class Server final {
       size_t* out_value_size,
       std::list<const att::Attribute*>* out_results);
 
+  std::string peer_id_;
   fxl::RefPtr<att::Database> db_;
   fxl::RefPtr<att::Bearer> att_;
 

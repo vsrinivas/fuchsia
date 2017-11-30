@@ -11,12 +11,13 @@
 namespace btlib {
 namespace gatt {
 
-Connection::Connection(std::unique_ptr<l2cap::Channel> att_chan,
+Connection::Connection(const std::string& peer_id,
+                       std::unique_ptr<l2cap::Channel> att_chan,
                        fxl::RefPtr<att::Database> local_db) {
   auto att = att::Bearer::Create(std::move(att_chan));
   FXL_DCHECK(att);
 
-  server_ = std::make_unique<gatt::Server>(local_db, std::move(att));
+  server_ = std::make_unique<gatt::Server>(peer_id, local_db, std::move(att));
 }
 
 Connection::~Connection() {}

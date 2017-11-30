@@ -49,9 +49,10 @@ att::ErrorCode CheckSecurity(const att::AccessRequirements& reqs,
 
 }  // namespace
 
-Server::Server(fxl::RefPtr<att::Database> database,
+Server::Server(const std::string& peer_id,
+               fxl::RefPtr<att::Database> database,
                fxl::RefPtr<att::Bearer> bearer)
-    : db_(database), att_(bearer), weak_ptr_factory_(this) {
+    : peer_id_(peer_id), db_(database), att_(bearer), weak_ptr_factory_(this) {
   FXL_DCHECK(db_);
   FXL_DCHECK(att_);
 
@@ -341,7 +342,7 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
     };
 
     // Respond with an error if no read handler was registered.
-    if (!results.front()->ReadAsync(0, result_cb)) {
+    if (!results.front()->ReadAsync(peer_id_, 0, result_cb)) {
       att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
     }
     return;
@@ -427,7 +428,7 @@ void Server::OnReadRequest(att::Bearer::TransactionId tid,
     return;
   }
 
-  if (!attr->ReadAsync(0, callback)) {
+  if (!attr->ReadAsync(peer_id_, 0, callback)) {
     att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
   }
 }
@@ -485,7 +486,7 @@ void Server::OnWriteRequest(att::Bearer::TransactionId tid,
     self->att_->Reply(tid, std::move(buffer));
   };
 
-  if (!attr->WriteAsync(0, value_view, result_cb)) {
+  if (!attr->WriteAsync(peer_id_, 0, value_view, result_cb)) {
     att_->ReplyWithError(tid, handle, att::ErrorCode::kWriteNotPermitted);
   }
 }
