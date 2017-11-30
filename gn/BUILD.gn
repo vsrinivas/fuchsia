@@ -438,20 +438,17 @@ action("data.blk") {
 }
 
 # fvm.blk creates a non-sparse FVM partition image containing the blobstore
-# partition produced by blobstore.blk and the data partition produced by
-# data.blk. fvm.blk is primarily invoked and used by the qemu run, via `fx
-# run-fvm`.
+# partition produced by blobstore.blk. fvm.blk is primarily invoked and used by
+# the qemu run, via `fx run-fvm`.
 action("fvm.blk") {
   visibility = [ ":*" ]
   fvm_path = "//out/build-zircon/tools/fvm"
   inputs = [
     blobstore_image_path,
-    data_image_path,
     fvm_path,
   ]
   deps = [
     ":blobstore.blk",
-    ":data.blk",
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -462,8 +459,6 @@ action("fvm.blk") {
     "create",
     "--blobstore",
     rebase_path(blobstore_image_path),
-    "--data",
-    rebase_path(data_image_path),
   ]
   outputs = [
     fvm_image_path,
