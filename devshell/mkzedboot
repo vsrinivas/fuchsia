@@ -19,7 +19,7 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
-if [[ ! -d $1 ]]; then
+if [[ ! -d "$1" ]]; then
   echo >&2 "error: Drive at $1 does not appear to be mounted."
   exit 1
 fi
@@ -33,18 +33,17 @@ fx-command-run build-zircon
 mkdir -p "${efi_target_dir}"
 cp "${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi" "${efi_target_dir}/BOOTX64.EFI"
 
-# Make zedboot
-echo "netsvc.netboot=true virtcon.font=18x32" > "${ZIRCON_BUILD_DIR}/CMDLINE"
-"${ZIRCON_TOOLS_DIR}/mkbootfs" -o "${ZIRCON_BUILD_DIR}/zedboot.bin" \
-  "${ZIRCON_BUILD_DIR}/zircon.bin" \
-  -C "${ZIRCON_BUILD_DIR}/CMDLINE" "${ZIRCON_BUILD_DIR}/bootdata.bin"
+ZEDBOOT_IMAGE="images/zedboot-${ZIRCON_PROJECT}.bin"
+
+# Build the Zedboot image.
+fx-command-run build "$ZEDBOOT_IMAGE"
 
 # Copy zedboot.bin to drive
-cp "${ZIRCON_BUILD_DIR}/zedboot.bin" "${drive_dir}"
+cp -f "${FUCHSIA_BUILD_DIR}/${ZEDBOOT_IMAGE}" "${drive_dir}/zedboot.bin"
 
 # Set zedboot as the default boot option, with a timeout of 0
 # (i.e. boot instantly into zedboot)
-echo "bootloader.default=zedboot bootloader.timeout=0" > "${ZIRCON_BUILD_DIR}/CMDLINE"
-cp "${ZIRCON_BUILD_DIR}/CMDLINE" ${drive_dir}
+rm -f "${drive_dir}/CMDLINE"
+echo 'bootloader.default=zedboot bootloader.timeout=0' > "${drive_dir}/CMDLINE"
 
 echo "Bootloader + zedboot loaded to $1"
