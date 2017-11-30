@@ -37,7 +37,7 @@ class Commit {
   virtual uint64_t GetGeneration() const = 0;
 
   // Returns the id of the root node of this commit.
-  virtual ObjectDigestView GetRootDigest() const = 0;
+  virtual ObjectIdentifier GetRootIdentifier() const = 0;
 
   // Returns the byte representation of this |Commit| as they will be synced to
   // the cloud.

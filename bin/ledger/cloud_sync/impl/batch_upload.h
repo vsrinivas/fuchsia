@@ -73,7 +73,8 @@ class BatchUpload {
   void UploadNextObject();
 
   // Uploads the given object.
-  void UploadObject(std::unique_ptr<const storage::Object> object);
+  void UploadObject(storage::ObjectIdentifier object_identifier,
+                    std::unique_ptr<const storage::Object> object);
 
   // Filters already synced commits.
   void FilterAndUploadCommits();
@@ -90,7 +91,7 @@ class BatchUpload {
   const unsigned int max_concurrent_uploads_;
 
   // All remaining object ids to be uploaded along with this batch of commits.
-  std::vector<storage::ObjectDigest> remaining_object_digests_;
+  std::vector<storage::ObjectIdentifier> remaining_object_identifiers_;
 
   // Number of object uploads currently in progress.
   unsigned int current_uploads_ = 0u;

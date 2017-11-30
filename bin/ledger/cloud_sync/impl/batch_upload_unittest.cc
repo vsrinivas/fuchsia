@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
@@ -87,13 +88,15 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   }
 
   void GetUnsyncedPieces(
-      std::function<void(storage::Status, std::vector<storage::ObjectDigest>)>
-          callback) override {
-    std::vector<storage::ObjectDigest> object_digests;
+      std::function<void(storage::Status,
+                         std::vector<storage::ObjectIdentifier>)> callback)
+      override {
+    std::vector<storage::ObjectIdentifier> object_identifiers;
     for (auto& digest_object_pair : unsynced_objects_to_return) {
-      object_digests.push_back(digest_object_pair.first);
+      object_identifiers.push_back(
+          storage::MakeDefaultObjectIdentifier(digest_object_pair.first));
     }
-    callback(storage::Status::OK, std::move(object_digests));
+    callback(storage::Status::OK, std::move(object_identifiers));
   }
 
   void GetObject(storage::ObjectDigestView object_digest,
@@ -112,9 +115,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
              std::move(unsynced_objects_to_return[object_digest.ToString()]));
   }
 
-  void MarkPieceSynced(storage::ObjectDigestView object_digest,
+  void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
                        std::function<void(storage::Status)> callback) override {
-    objects_marked_as_synced.insert(object_digest.ToString());
+    objects_marked_as_synced.insert(object_identifier);
     callback(storage::Status::OK);
   }
 
@@ -141,7 +144,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   std::map<storage::ObjectDigest, std::unique_ptr<const TestObject>>
       unsynced_objects_to_return;
-  std::set<storage::ObjectDigest> objects_marked_as_synced;
+  std::set<storage::ObjectIdentifier> objects_marked_as_synced;
   std::set<storage::CommitId> commits_marked_as_synced;
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
@@ -151,7 +154,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 // errors.
 class TestPageStorageFailingToMarkPieces : public TestPageStorage {
  public:
-  void MarkPieceSynced(storage::ObjectDigestView /*object_digest*/,
+  void MarkPieceSynced(storage::ObjectIdentifier /*object_identifier*/,
                        std::function<void(storage::Status)> callback) override {
     callback(storage::Status::NOT_IMPLEMENTED);
   }
@@ -286,8 +289,10 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
 }
 
 // Verifies that the number of concurrent object uploads is limited to
@@ -326,9 +331,12 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
 
   // Verify the sync status in storage.
   EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest0"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest0")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
 }
 
 // Test an upload that fails on uploading objects.
@@ -383,8 +391,10 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   EXPECT_EQ("obj_data1", page_cloud_.received_objects["obj_digest1"]);
   EXPECT_EQ("obj_data2", page_cloud_.received_objects["obj_digest2"]);
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
 
   // Verify that neither the commit wasn't marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -435,8 +445,10 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
+                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
 }
 
 // Test a commit upload that gets an error from storage.

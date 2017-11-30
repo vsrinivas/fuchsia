@@ -9,7 +9,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
-#include "peridot/bin/ledger/encryption/public/constants.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace encryption {
 namespace {
@@ -43,8 +43,9 @@ void EncryptionServiceImpl::EncryptCommit(
     std::function<void(Status, std::string)> callback) {
   flatbuffers::FlatBufferBuilder builder;
 
-  auto storage = CreateEncryptedCommitStorage(
-      builder, kDefaultKeyIndex, commit_storage.ToFlatBufferVector(&builder));
+  auto storage =
+      CreateEncryptedCommitStorage(builder, storage::kDefaultKeyIndex,
+                                   commit_storage.ToFlatBufferVector(&builder));
   builder.Finish(storage);
 
   std::string encrypted_storage(

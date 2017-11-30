@@ -353,8 +353,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
       writer << "bgcolor=red, ";
     }
     writer << "tooltip=\"timestamp="
-           << fxl::NumberToString(commit->GetTimestamp())
-           << " root_id=" << convert::ToHex(commit->GetRootDigest())
+           << fxl::NumberToString(commit->GetTimestamp()) << " root_id="
+           << convert::ToHex(commit->GetRootIdentifier().object_digest)
            << "\"];\n";
   }
   writer << "}\n";

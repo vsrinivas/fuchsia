@@ -13,6 +13,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
@@ -39,7 +40,6 @@ void TreeNode::FromDigest(
     PageStorage* page_storage,
     ObjectDigestView digest,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
-  std::unique_ptr<const Object> object;
   page_storage->GetObject(
       digest, PageStorage::Location::NETWORK,
       [page_storage, callback = std::move(callback)](
@@ -66,6 +66,11 @@ void TreeNode::FromEntries(PageStorage* page_storage,
                            const std::vector<ObjectDigest>& children,
                            std::function<void(Status, ObjectDigest)> callback) {
   FXL_DCHECK(entries.size() + 1 == children.size());
+#ifndef NDEBUG
+  for (const auto& digest : children) {
+    FXL_DCHECK(storage::IsDigestValid(digest));
+  }
+#endif
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
       storage::DataSource::Create(std::move(encoding)), std::move(callback));

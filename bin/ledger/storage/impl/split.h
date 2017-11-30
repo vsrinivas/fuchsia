@@ -25,26 +25,28 @@ enum class IterationStatus {
 // |IN_PROGRESS|, the id of the content, and the content itself. Then the last
 // call of |callback| is done with a status of |DONE|, the final id for the data
 // and a |nullptr| chunk. |callback| is not called anymore once |source| is
-// deleted.
+// deleted. On each iteration, |callback| must return the |ObjectIdentifier| to
+// use to reference the given content.
 void SplitDataSource(
     DataSource* source,
-    std::function<void(IterationStatus,
-                       ObjectDigest,
-                       std::unique_ptr<DataSource::DataChunk>)> callback);
+    std::function<ObjectIdentifier(IterationStatus,
+                                   ObjectDigest,
+                                   std::unique_ptr<DataSource::DataChunk>)>
+        callback);
 
 // Recurse over all pieces of an index object.
 Status ForEachPiece(fxl::StringView index_content,
-                    std::function<Status(ObjectDigestView)> callback);
+                    std::function<Status(ObjectIdentifier)> callback);
 
 // Collects all pieces ids needed to build the object with id |root|. This
 // returns the id of the object itself, and recurse inside any index if the
 // |callback| returned true for the given id.
 void CollectPieces(
-    ObjectDigestView root,
+    ObjectIdentifier root,
     std::function<void(ObjectDigestView,
                        std::function<void(Status, fxl::StringView)>)>
         data_accessor,
-    std::function<bool(IterationStatus, ObjectDigestView)> callback);
+    std::function<bool(IterationStatus, ObjectIdentifier)> callback);
 
 }  // namespace storage
 

@@ -51,13 +51,13 @@ void BatchUpload::Start() {
   storage_->GetUnsyncedPieces(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this](storage::Status status,
-             std::vector<storage::ObjectDigest> object_digests) {
+             std::vector<storage::ObjectIdentifier> object_identifiers) {
         if (status != storage::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
           return;
         }
-        remaining_object_digests_ = std::move(object_digests);
+        remaining_object_identifiers_ = std::move(object_identifiers);
         StartObjectUpload();
       }));
 }
@@ -73,48 +73,53 @@ void BatchUpload::Retry() {
 void BatchUpload::StartObjectUpload() {
   FXL_DCHECK(current_uploads_ == 0u);
   // If there are no unsynced objects left, upload the commits.
-  if (remaining_object_digests_.empty()) {
+  if (remaining_object_identifiers_.empty()) {
     FilterAndUploadCommits();
     return;
   }
 
   while (current_uploads_ < max_concurrent_uploads_ &&
-         !remaining_object_digests_.empty()) {
+         !remaining_object_identifiers_.empty()) {
     UploadNextObject();
   }
 }
 
 void BatchUpload::UploadNextObject() {
-  FXL_DCHECK(!remaining_object_digests_.empty());
+  FXL_DCHECK(!remaining_object_identifiers_.empty());
   FXL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
   current_objects_handled_++;
-  auto object_digest_to_send = std::move(remaining_object_digests_.back());
+  auto object_identifier_to_send =
+      std::move(remaining_object_identifiers_.back());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
-  remaining_object_digests_.pop_back();
-  storage_->GetPiece(object_digest_to_send,
-                     callback::MakeScoped(
-                         weak_ptr_factory_.GetWeakPtr(),
-                         [this](storage::Status storage_status,
-                                std::unique_ptr<const storage::Object> object) {
-                           FXL_DCHECK(storage_status == storage::Status::OK);
-                           UploadObject(std::move(object));
-                         }));
+  remaining_object_identifiers_.pop_back();
+  storage_->GetPiece(
+      object_identifier_to_send.object_digest,
+      callback::MakeScoped(
+          weak_ptr_factory_.GetWeakPtr(),
+          [this, object_identifier_to_send](
+              storage::Status storage_status,
+              std::unique_ptr<const storage::Object> object) mutable {
+            FXL_DCHECK(storage_status == storage::Status::OK);
+            UploadObject(std::move(object_identifier_to_send),
+                         std::move(object));
+          }));
 }
 
-void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
+void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
+                               std::unique_ptr<const storage::Object> object) {
   fsl::SizedVmo data;
   auto status = object->GetVmo(&data);
   // TODO(ppi): LE-225 Handle disk IO errors.
   FXL_DCHECK(status == storage::Status::OK);
 
-  storage::ObjectDigest digest = object->GetDigest();
   (*page_cloud_)
       ->AddObject(
-          convert::ToArray(digest), std::move(data).ToTransport(),
+          convert::ToArray(object_identifier.object_digest),
+          std::move(data).ToTransport(),
           callback::MakeScoped(
               weak_ptr_factory_.GetWeakPtr(),
-              [this, digest = std::move(digest)](
+              [this, object_identifier = std::move(object_identifier)](
                   cloud_provider::Status status) mutable {
                 FXL_DCHECK(current_uploads_ > 0);
                 current_uploads_--;
@@ -125,7 +130,8 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
                   errored_ = true;
                   // Re-enqueue the object for another upload attempt.
-                  remaining_object_digests_.push_back(std::move(digest));
+                  remaining_object_identifiers_.push_back(
+                      std::move(object_identifier));
 
                   if (current_objects_handled_ == 0u) {
                     on_error_(error_type_);
@@ -135,7 +141,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
                 // Uploading the object succeeded.
                 storage_->MarkPieceSynced(
-                    digest,
+                    std::move(object_identifier),
                     callback::MakeScoped(
                         weak_ptr_factory_.GetWeakPtr(),
                         [this](storage::Status status) {
@@ -155,14 +161,15 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
                           }
 
                           if (current_objects_handled_ == 0 &&
-                              remaining_object_digests_.empty()) {
+                              remaining_object_identifiers_.empty()) {
                             // All the referenced objects are uploaded and
                             // marked as synced, upload the commits.
                             FilterAndUploadCommits();
                             return;
                           }
 
-                          if (!errored_ && !remaining_object_digests_.empty()) {
+                          if (!errored_ &&
+                              !remaining_object_identifiers_.empty()) {
                             UploadNextObject();
                           }
                         }));

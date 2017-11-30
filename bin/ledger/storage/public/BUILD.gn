@@ -19,6 +19,8 @@ source_set("public") {
     "iterator.h",
     "journal.h",
     "ledger_storage.h",
+    "make_object_identifier.cc",
+    "make_object_identifier.h",
     "object.cc",
     "object.h",
     "page_storage.cc",

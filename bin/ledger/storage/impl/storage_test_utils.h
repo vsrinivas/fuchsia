@@ -32,7 +32,7 @@ class ObjectData {
 
   const std::string value;
   const size_t size;
-  const std::string object_digest;
+  const ObjectIdentifier object_identifier;
 };
 
 // Builder the object id for the given content. If |inline_behavior| is
@@ -47,8 +47,11 @@ std::string RandomString(size_t size);
 // Create a new random commit id.
 CommitId RandomCommitId();
 
-// Create a new random object id.
+// Create a new random object digest.
 ObjectDigest RandomObjectDigest();
+
+// Create a new random object identifier.
+ObjectIdentifier RandomObjectIdentifier();
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.

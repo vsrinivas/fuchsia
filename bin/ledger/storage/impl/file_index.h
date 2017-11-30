@@ -16,8 +16,8 @@ namespace storage {
 // validation.
 class FileIndexSerialization {
  public:
-  struct ObjectDigestAndSize {
-    ObjectDigest digest;
+  struct ObjectIdentifierAndSize {
+    ObjectIdentifier identifier;
     uint64_t size;
   };
 
@@ -29,9 +29,10 @@ class FileIndexSerialization {
                                const FileIndex** file_index);
 
   // Builds the |FileIndex| representing the given children.
-  static void BuildFileIndex(const std::vector<ObjectDigestAndSize>& children,
-                             std::unique_ptr<DataSource::DataChunk>* output,
-                             size_t* total_size);
+  static void BuildFileIndex(
+      const std::vector<ObjectIdentifierAndSize>& children,
+      std::unique_ptr<DataSource::DataChunk>* output,
+      size_t* total_size);
 
  private:
   FileIndexSerialization() {}

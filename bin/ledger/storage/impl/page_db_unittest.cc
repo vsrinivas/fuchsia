@@ -132,7 +132,7 @@ TEST_F(PageDbTest, Commits) {
     parents.emplace_back(new test::CommitRandomImpl());
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        &page_storage_, RandomObjectDigest(), std::move(parents));
+        &page_storage_, RandomObjectIdentifier(), std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
@@ -300,9 +300,10 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
 TEST_F(PageDbTest, UnsyncedPieces) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     ObjectDigest object_digest = RandomObjectDigest();
-    std::vector<ObjectDigest> object_digests;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
-    EXPECT_TRUE(object_digests.empty());
+    std::vector<ObjectIdentifier> object_identifiers;
+    EXPECT_EQ(Status::OK,
+              page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_TRUE(object_identifiers.empty());
 
     EXPECT_EQ(Status::OK,
               page_db_.WriteObject(handler, object_digest,
@@ -310,9 +311,10 @@ TEST_F(PageDbTest, UnsyncedPieces) {
                                    PageDbObjectStatus::LOCAL));
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
                                                    PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
-    EXPECT_EQ(1u, object_digests.size());
-    EXPECT_EQ(object_digest, object_digests[0]);
+    EXPECT_EQ(Status::OK,
+              page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_EQ(1u, object_identifiers.size());
+    EXPECT_EQ(object_digest, object_identifiers[0].object_digest);
     PageDbObjectStatus object_status;
     EXPECT_EQ(Status::OK,
               page_db_.GetObjectStatus(handler, object_digest, &object_status));
@@ -320,8 +322,9 @@ TEST_F(PageDbTest, UnsyncedPieces) {
 
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
                                                    PageDbObjectStatus::SYNCED));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
-    EXPECT_TRUE(object_digests.empty());
+    EXPECT_EQ(Status::OK,
+              page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_TRUE(object_identifiers.empty());
     EXPECT_EQ(Status::OK,
               page_db_.GetObjectStatus(handler, object_digest, &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
@@ -339,15 +342,17 @@ TEST_F(PageDbTest, Batch) {
                                              DataSource::DataChunk::Create(""),
                                              PageDbObjectStatus::LOCAL));
 
-    std::vector<ObjectDigest> object_digests;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
-    EXPECT_TRUE(object_digests.empty());
+    std::vector<ObjectIdentifier> object_identifiers;
+    EXPECT_EQ(Status::OK,
+              page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_TRUE(object_identifiers.empty());
 
     EXPECT_EQ(Status::OK, batch->Execute(handler));
 
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
-    EXPECT_EQ(1u, object_digests.size());
-    EXPECT_EQ(object_digest, object_digests[0]);
+    EXPECT_EQ(Status::OK,
+              page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_EQ(1u, object_identifiers.size());
+    EXPECT_EQ(object_digest, object_identifiers[0].object_digest);
   }));
 }
 

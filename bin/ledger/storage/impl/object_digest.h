@@ -22,6 +22,9 @@ enum class ObjectDigestType {
   INDEX_HASH,
 };
 
+// Returns whether the given digest is valid.
+bool IsDigestValid(ObjectDigestView object_digest);
+
 // Returns the type of |object_digest|.
 ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest);
 

@@ -16,10 +16,11 @@
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/impl/commit_generated.h"
-#include "peridot/bin/ledger/storage/impl/object_identifier.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_generated.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/lib/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 
@@ -76,7 +77,7 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 std::string SerializeCommit(
     uint64_t generation,
     int64_t timestamp,
-    ObjectDigestView root_node_digest,
+    const ObjectIdentifier& root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   flatbuffers::FlatBufferBuilder builder;
 
@@ -87,8 +88,8 @@ std::string SerializeCommit(
             *child_storage = *ToIdStorage(parent_commits[i]->GetId());
           }));
 
-  auto root_node_storage = ToObjectIdentifierStorage(
-      &builder, MakeDefaultObjectIdentifier(root_node_digest.ToString()));
+  auto root_node_storage =
+      ToObjectIdentifierStorage(&builder, root_node_identifier);
   auto storage = CreateCommitStorage(builder, timestamp, generation,
                                      root_node_storage, parents_id);
   builder.Finish(storage);
@@ -101,14 +102,14 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
                        CommitId id,
                        int64_t timestamp,
                        uint64_t generation,
-                       ObjectDigestView root_node_digest,
+                       ObjectIdentifier root_node_identifier,
                        std::vector<CommitIdView> parent_ids,
                        fxl::RefPtr<SharedStorageBytes> storage_bytes)
     : page_storage_(page_storage),
       id_(std::move(id)),
       timestamp_(timestamp),
       generation_(generation),
-      root_node_digest_(std::move(root_node_digest)),
+      root_node_identifier_(std::move(root_node_identifier)),
       parent_ids_(std::move(parent_ids)),
       storage_bytes_(std::move(storage_bytes)) {
   FXL_DCHECK(page_storage_ != nullptr);
@@ -131,28 +132,26 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage,
   fxl::RefPtr<SharedStorageBytes> storage_ptr =
       SharedStorageBytes::Create(std::move(storage_bytes));
 
-  FXL_DCHECK(CheckValidSerialization(storage_ptr->bytes()));
-
   const CommitStorage* commit_storage =
       GetCommitStorage(storage_ptr->bytes().data());
 
-  ObjectDigestView root_node_digest =
-      commit_storage->root_node_id()->object_digest();
+  ObjectIdentifier root_node_identifier =
+      ToObjectIdentifier(commit_storage->root_node_id());
   std::vector<CommitIdView> parent_ids;
 
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
     parent_ids.emplace_back(ToCommitIdView(commit_storage->parents()->Get(i)));
   }
-  commit->reset(new CommitImpl(page_storage, std::move(id),
-                               commit_storage->timestamp(),
-                               commit_storage->generation(), root_node_digest,
-                               parent_ids, std::move(storage_ptr)));
+  commit->reset(new CommitImpl(
+      page_storage, std::move(id), commit_storage->timestamp(),
+      commit_storage->generation(), std::move(root_node_identifier), parent_ids,
+      std::move(storage_ptr)));
   return Status::OK;
 }
 
 std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
     PageStorage* page_storage,
-    ObjectDigestView root_node_digest,
+    ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
@@ -181,7 +180,7 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
   }
 
   std::string storage_bytes = SerializeCommit(
-      generation, timestamp, root_node_digest, std::move(parent_commits));
+      generation, timestamp, root_node_identifier, std::move(parent_commits));
 
   CommitId id = glue::SHA256WithLengthHash(storage_bytes);
 
@@ -203,13 +202,17 @@ void CommitImpl::Empty(
           return;
         }
 
-        fxl::RefPtr<SharedStorageBytes> storage_ptr =
-            SharedStorageBytes::Create(std::move(root_node_digest));
+        FXL_DCHECK(IsDigestValid(root_node_digest));
 
-        const auto& bytes = storage_ptr->bytes();
+        fxl::RefPtr<SharedStorageBytes> storage_ptr =
+            SharedStorageBytes::Create("");
+        ObjectIdentifier root_identifier =
+            MakeDefaultObjectIdentifier(root_node_digest);
+
         auto ptr = std::unique_ptr<Commit>(new CommitImpl(
-            page_storage, kFirstPageCommitId.ToString(), 0, 0, bytes,
-            std::vector<CommitIdView>(), std::move(storage_ptr)));
+            page_storage, kFirstPageCommitId.ToString(), 0, 0,
+            std::move(root_identifier), std::vector<CommitIdView>(),
+            std::move(storage_ptr)));
         callback(Status::OK, std::move(ptr));
       });
 }
@@ -217,7 +220,7 @@ void CommitImpl::Empty(
 std::unique_ptr<Commit> CommitImpl::Clone() const {
   return std::unique_ptr<CommitImpl>(
       new CommitImpl(page_storage_, id_, timestamp_, generation_,
-                     root_node_digest_, parent_ids_, storage_bytes_));
+                     root_node_identifier_, parent_ids_, storage_bytes_));
 }
 
 const CommitId& CommitImpl::GetId() const {
@@ -236,8 +239,8 @@ uint64_t CommitImpl::GetGeneration() const {
   return generation_;
 }
 
-ObjectDigestView CommitImpl::GetRootDigest() const {
-  return root_node_digest_;
+ObjectIdentifier CommitImpl::GetRootIdentifier() const {
+  return root_node_identifier_;
 }
 
 fxl::StringView CommitImpl::GetStorageBytes() const {

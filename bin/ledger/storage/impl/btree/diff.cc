@@ -9,6 +9,7 @@
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 
 namespace storage {
 namespace btree {
@@ -480,6 +481,9 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
                            ObjectDigestView right_node_digest,
                            std::string min_key,
                            const std::function<bool(EntryChange)>& on_next) {
+  FXL_DCHECK(storage::IsDigestValid(left_node_digest));
+  FXL_DCHECK(storage::IsDigestValid(right_node_digest));
+
   if (left_node_digest == right_node_digest) {
     return Status::OK;
   }
@@ -513,6 +517,10 @@ Status ForEachThreeWayDiffInternal(
     ObjectDigestView right_node_digest,
     std::string min_key,
     const std::function<bool(ThreeWayChange)>& on_next) {
+  FXL_DCHECK(IsDigestValid(base_node_digest));
+  FXL_DCHECK(IsDigestValid(left_node_digest));
+  FXL_DCHECK(IsDigestValid(right_node_digest));
+
   if (left_node_digest == right_node_digest) {
     return Status::OK;
   }
@@ -540,8 +548,11 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done) {
+  FXL_DCHECK(storage::IsDigestValid(base_root_digest));
+  FXL_DCHECK(storage::IsDigestValid(other_root_digest));
   coroutine_service->StartCoroutine(
-      [page_storage, base_root_digest, other_root_digest,
+      [page_storage, base_root_digest = base_root_digest.ToString(),
+       other_root_digest = other_root_digest.ToString(),
        on_next = std::move(on_next), min_key = std::move(min_key),
        on_done =
            std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
@@ -561,8 +572,13 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
                          std::string min_key,
                          std::function<bool(ThreeWayChange)> on_next,
                          std::function<void(Status)> on_done) {
+  FXL_DCHECK(storage::IsDigestValid(base_root_digest));
+  FXL_DCHECK(storage::IsDigestValid(left_root_digest));
+  FXL_DCHECK(storage::IsDigestValid(right_root_digest));
   coroutine_service->StartCoroutine(
-      [page_storage, base_root_digest, left_root_digest, right_root_digest,
+      [page_storage, base_root_digest = base_root_digest.ToString(),
+       left_root_digest = left_root_digest.ToString(),
+       right_root_digest = right_root_digest.ToString(),
        on_next = std::move(on_next), min_key = std::move(min_key),
        on_done =
            std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {

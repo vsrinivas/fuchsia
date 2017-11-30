@@ -16,11 +16,13 @@
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace storage {
 
 namespace {
+
 std::vector<size_t> GetEnumeration(size_t size) {
   FXL_CHECK(size <= 100);
 
@@ -39,17 +41,19 @@ std::string ResizeForBehavior(std::string value,
   return value;
 }
 
-std::string GetObjectDigest(std::string value) {
+ObjectIdentifier GetObjectIdentifier(std::string value) {
   std::string result;
   auto data_source = DataSource::Create(std::move(value));
-  SplitDataSource(data_source.get(),
-                  [&result](IterationStatus status, ObjectDigest object_digest,
-                            std::unique_ptr<DataSource::DataChunk> chunk) {
-                    if (status == IterationStatus::DONE) {
-                      result = object_digest;
-                    }
-                  });
-  return result;
+  SplitDataSource(
+      data_source.get(),
+      [&result](IterationStatus status, ObjectDigest object_digest,
+                std::unique_ptr<DataSource::DataChunk> chunk) {
+        if (status == IterationStatus::DONE) {
+          result = object_digest;
+        }
+        return MakeDefaultObjectIdentifier(std::move(object_digest));
+      });
+  return MakeDefaultObjectIdentifier(std::move(result));
 }
 
 // Pre-determined node level function.
@@ -74,7 +78,7 @@ constexpr btree::NodeLevelCalculator kTestNodeLevelCalculator = {
 ObjectData::ObjectData(std::string value, InlineBehavior inline_behavior)
     : value(ResizeForBehavior(std::move(value), inline_behavior)),
       size(this->value.size()),
-      object_digest(GetObjectDigest(this->value)) {}
+      object_identifier(GetObjectIdentifier(this->value)) {}
 
 std::unique_ptr<DataSource> ObjectData::ToDataSource() {
   return DataSource::Create(value);
@@ -87,7 +91,7 @@ std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
 ObjectDigest MakeObjectDigest(std::string content,
                               InlineBehavior inline_behavior) {
   ObjectData data(std::move(content), inline_behavior);
-  return data.object_digest;
+  return data.object_identifier.object_digest;
 }
 
 std::string RandomString(size_t size) {
@@ -103,7 +107,11 @@ CommitId RandomCommitId() {
 
 ObjectDigest RandomObjectDigest() {
   ObjectData data(RandomString(16), InlineBehavior::PREVENT);
-  return data.object_digest;
+  return data.object_identifier.object_digest;
+}
+
+ObjectIdentifier RandomObjectIdentifier() {
+  return MakeDefaultObjectIdentifier(RandomObjectDigest());
 }
 
 EntryChange NewEntryChange(std::string key,

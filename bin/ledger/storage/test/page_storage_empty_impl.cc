@@ -94,13 +94,13 @@ void PageStorageEmptyImpl::MarkCommitSynced(
 }
 
 void PageStorageEmptyImpl::GetUnsyncedPieces(
-    std::function<void(Status, std::vector<ObjectDigest>)> callback) {
+    std::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
   FXL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED, std::vector<ObjectDigest>());
+  callback(Status::NOT_IMPLEMENTED, std::vector<ObjectIdentifier>());
 }
 
 void PageStorageEmptyImpl::MarkPieceSynced(
-    ObjectDigestView /*object_digest*/,
+    ObjectIdentifier /*object_identifier*/,
     std::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);

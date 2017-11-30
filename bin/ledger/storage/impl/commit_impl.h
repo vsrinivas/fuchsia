@@ -24,7 +24,7 @@ class CommitImpl : public Commit {
 
   static std::unique_ptr<const Commit> FromContentAndParents(
       PageStorage* page_storage,
-      ObjectDigestView root_node_digest,
+      ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
@@ -39,7 +39,7 @@ class CommitImpl : public Commit {
   std::vector<CommitIdView> GetParentIds() const override;
   int64_t GetTimestamp() const override;
   uint64_t GetGeneration() const override;
-  ObjectDigestView GetRootDigest() const override;
+  ObjectIdentifier GetRootIdentifier() const override;
   fxl::StringView GetStorageBytes() const override;
 
  private:
@@ -51,7 +51,7 @@ class CommitImpl : public Commit {
              CommitId id,
              int64_t timestamp,
              uint64_t generation,
-             ObjectDigestView root_node_digest,
+             ObjectIdentifier root_node_identifier,
              std::vector<CommitIdView> parent_ids,
              fxl::RefPtr<SharedStorageBytes> storage_bytes);
 
@@ -59,7 +59,7 @@ class CommitImpl : public Commit {
   const CommitId id_;
   const int64_t timestamp_;
   const uint64_t generation_;
-  const ObjectDigestView root_node_digest_;
+  const ObjectIdentifier root_node_identifier_;
   const std::vector<CommitIdView> parent_ids_;
   const fxl::RefPtr<SharedStorageBytes> storage_bytes_;
 };

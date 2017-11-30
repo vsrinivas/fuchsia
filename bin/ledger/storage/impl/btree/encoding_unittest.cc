@@ -7,9 +7,10 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
-#include "peridot/bin/ledger/storage/impl/object_identifier.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 namespace btree {

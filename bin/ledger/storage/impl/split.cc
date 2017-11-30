@@ -10,11 +10,11 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/third_party/bup/bupsplit.h"
@@ -25,11 +25,14 @@ namespace {
 constexpr size_t kMinChunkSize = 4 * 1024;
 constexpr size_t kMaxChunkSize = std::numeric_limits<uint16_t>::max();
 constexpr size_t kBitsPerLevel = 4;
-// The max number of indentifiers that an index can contain so that the file
-// size is less than |kMaxChunkSize|.
-constexpr size_t kMaxDigestsPerIndex = kMaxChunkSize / 61;
+// Empiric maximal size for an identifier in an index file. This should be the
+// smallest possible number that allow the Split tests to pass.
+constexpr size_t kMaxIdentifierSize = 77;
+// The max number of identifiers that an index can contain so that the file size
+// is less than |kMaxChunkSize|.
+constexpr size_t kMaxIdentifiersPerIndex = kMaxChunkSize / kMaxIdentifierSize;
 
-using ObjectDigestAndSize = FileIndexSerialization::ObjectDigestAndSize;
+using ObjectIdentifierAndSize = FileIndexSerialization::ObjectIdentifierAndSize;
 
 struct ChunkAndSize {
   std::unique_ptr<DataSource::DataChunk> chunk;
@@ -46,7 +49,7 @@ struct ChunkAndSize {
 // For each chunk cut by the rolling hash, the identifier of the chunk is added
 // at level 0. The rolling hash algorithm also returns the number of index files
 // that need to be built. An index file is also built as soon as a level
-// contains |kMaxDigestsPerIndex| digests.
+// contains |kMaxIdentifiersPerIndex| identifiers.
 // When the algorithm builds the index at level |n| it does the following:
 // For all levels from 0 to |n|:
 //   - Build the index file at the given level. As a special case, if there is
@@ -57,9 +60,10 @@ struct ChunkAndSize {
 class SplitContext {
  public:
   explicit SplitContext(
-      std::function<void(IterationStatus,
-                         ObjectDigest,
-                         std::unique_ptr<DataSource::DataChunk>)> callback)
+      std::function<ObjectIdentifier(IterationStatus,
+                                     ObjectDigest,
+                                     std::unique_ptr<DataSource::DataChunk>)>
+          callback)
       : callback_(std::move(callback)),
         roll_sum_split_(kMinChunkSize, kMaxChunkSize) {}
   SplitContext(SplitContext&& other) = default;
@@ -92,21 +96,24 @@ class SplitContext {
     FXL_DCHECK(current_chunks_.empty());
 
     // The final id to send exists.
-    FXL_DCHECK(!current_digests_per_level_.back().empty());
+    FXL_DCHECK(!current_identifiers_per_level_.back().empty());
 
     // This traverses the stack of indices, sending each level until a single
     // top level index is produced.
-    for (size_t i = 0; i < current_digests_per_level_.size(); ++i) {
-      if (current_digests_per_level_[i].empty()) {
+    for (size_t i = 0; i < current_identifiers_per_level_.size(); ++i) {
+      if (current_identifiers_per_level_[i].empty()) {
         continue;
       }
 
       // At the top of the stack with a single element, the algorithm is
-      // finished. The top-level object_digest is the unique element.
-      if (i == current_digests_per_level_.size() - 1 &&
-          current_digests_per_level_[i].size() == 1) {
-        callback_(IterationStatus::DONE,
-                  std::move(current_digests_per_level_[i][0].digest), nullptr);
+      // finished. The top-level object_identifier is the unique element.
+      if (i == current_identifiers_per_level_.size() - 1 &&
+          current_identifiers_per_level_[i].size() == 1) {
+        callback_(
+            IterationStatus::DONE,
+            std::move(
+                current_identifiers_per_level_[i][0].identifier.object_digest),
+            nullptr);
         return;
       }
 
@@ -117,12 +124,13 @@ class SplitContext {
   }
 
  private:
-  std::vector<ObjectDigestAndSize>& GetCurrentDigestAtLevel(size_t level) {
-    if (level >= current_digests_per_level_.size()) {
-      FXL_DCHECK(level == current_digests_per_level_.size());
-      current_digests_per_level_.resize(level + 1);
+  std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(
+      size_t level) {
+    if (level >= current_identifiers_per_level_.size()) {
+      FXL_DCHECK(level == current_identifiers_per_level_.size());
+      current_identifiers_per_level_.resize(level + 1);
     }
-    return current_digests_per_level_[level];
+    return current_identifiers_per_level_[level];
   }
 
   // Appends the given chunk to the unprocessed data and processes as much data
@@ -144,7 +152,7 @@ class SplitContext {
 
       size_t level = GetLevel(bits);
       for (size_t i = 0; i < level; ++i) {
-        FXL_DCHECK(!current_digests_per_level_[i].empty());
+        FXL_DCHECK(!current_identifiers_per_level_[i].empty());
         BuildIndexAtLevel(i);
       }
     }
@@ -156,31 +164,34 @@ class SplitContext {
     size_t size = data_view.size();
     ObjectDigest object_digest =
         ComputeObjectDigest(ObjectType::VALUE, data_view);
-    callback_(IterationStatus::IN_PROGRESS, object_digest, std::move(data));
-    AddIdentifierAtLevel(0, {std::move(object_digest), size});
+    auto identifier =
+        callback_(IterationStatus::IN_PROGRESS, object_digest, std::move(data));
+    AddIdentifierAtLevel(0, {std::move(identifier), size});
   }
 
-  void AddIdentifierAtLevel(size_t level, ObjectDigestAndSize data) {
-    GetCurrentDigestAtLevel(level).push_back(std::move(data));
+  void AddIdentifierAtLevel(size_t level, ObjectIdentifierAndSize data) {
+    GetCurrentIdentifiersAtLevel(level).push_back(std::move(data));
 
-    if (current_digests_per_level_[level].size() < kMaxDigestsPerIndex) {
+    if (current_identifiers_per_level_[level].size() <
+        kMaxIdentifiersPerIndex) {
       // The level is not full, more identifiers can be added.
       return;
     }
 
-    FXL_DCHECK(current_digests_per_level_[level].size() == kMaxDigestsPerIndex);
+    FXL_DCHECK(current_identifiers_per_level_[level].size() ==
+               kMaxIdentifiersPerIndex);
     // The level contains the max number of identifiers. Creating the index
     // file.
 
     AddIdentifierAtLevel(
         level + 1,
-        BuildAndSendIndex(std::move(current_digests_per_level_[level])));
-    current_digests_per_level_[level].clear();
+        BuildAndSendIndex(std::move(current_identifiers_per_level_[level])));
+    current_identifiers_per_level_[level].clear();
   }
 
   void BuildIndexAtLevel(size_t level) {
-    auto objects = std::move(current_digests_per_level_[level]);
-    current_digests_per_level_[level].clear();
+    auto objects = std::move(current_identifiers_per_level_[level]);
+    current_identifiers_per_level_[level].clear();
 
     if (objects.size() == 1) {
       AddIdentifierAtLevel(level + 1, std::move(objects.front()));
@@ -190,21 +201,24 @@ class SplitContext {
     }
   }
 
-  ObjectDigestAndSize BuildAndSendIndex(
-      std::vector<ObjectDigestAndSize> digests_and_sizes) {
-    FXL_DCHECK(digests_and_sizes.size() > 1);
-    FXL_DCHECK(digests_and_sizes.size() <= kMaxDigestsPerIndex);
+  ObjectIdentifierAndSize BuildAndSendIndex(
+      std::vector<ObjectIdentifierAndSize> identifiers_and_sizes) {
+    FXL_DCHECK(identifiers_and_sizes.size() > 1);
+    FXL_DCHECK(identifiers_and_sizes.size() <= kMaxIdentifiersPerIndex);
 
     std::unique_ptr<DataSource::DataChunk> chunk;
     size_t total_size;
-    FileIndexSerialization::BuildFileIndex(digests_and_sizes, &chunk,
+    FileIndexSerialization::BuildFileIndex(identifiers_and_sizes, &chunk,
                                            &total_size);
 
-    FXL_DCHECK(chunk->Get().size() <= kMaxChunkSize) << chunk->Get().size();
+    FXL_DCHECK(chunk->Get().size() <= kMaxChunkSize)
+        << "Expected maximum of: " << kMaxChunkSize
+        << ", but got: " << chunk->Get().size();
     ObjectDigest object_digest =
         ComputeObjectDigest(ObjectType::INDEX, chunk->Get());
-    callback_(IterationStatus::IN_PROGRESS, object_digest, std::move(chunk));
-    return {std::move(object_digest), total_size};
+    auto identifier = callback_(IterationStatus::IN_PROGRESS, object_digest,
+                                std::move(chunk));
+    return {std::move(identifier), total_size};
   }
 
   static size_t GetLevel(size_t bits) {
@@ -256,9 +270,9 @@ class SplitContext {
     return DataSource::DataChunk::Create(std::move(data));
   }
 
-  std::function<void(IterationStatus,
-                     ObjectDigest,
-                     std::unique_ptr<DataSource::DataChunk>)>
+  std::function<ObjectIdentifier(IterationStatus,
+                                 ObjectDigest,
+                                 std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   bup::RollSumSplit roll_sum_split_;
   // The list of chunks from the initial source that are not yet entiretly
@@ -268,7 +282,8 @@ class SplitContext {
   // at the given index is a view to the chunk at the same index.
   std::vector<fxl::StringView> views_;
   // List of unsent indices per level.
-  std::vector<std::vector<ObjectDigestAndSize>> current_digests_per_level_;
+  std::vector<std::vector<ObjectIdentifierAndSize>>
+      current_identifiers_per_level_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SplitContext);
 };
@@ -279,11 +294,11 @@ class CollectPiecesState
   std::function<void(ObjectDigestView,
                      std::function<void(Status, fxl::StringView)>)>
       data_accessor;
-  std::function<bool(IterationStatus, ObjectDigestView)> callback;
+  std::function<bool(IterationStatus, ObjectIdentifier)> callback;
   bool running = true;
 };
 
-void CollectPiecesInternal(ObjectDigestView root,
+void CollectPiecesInternal(ObjectIdentifier root,
                            fxl::RefPtr<CollectPiecesState> state,
                            fxl::Closure on_done) {
   if (!state->callback(IterationStatus::IN_PROGRESS, root)) {
@@ -291,47 +306,50 @@ void CollectPiecesInternal(ObjectDigestView root,
     return;
   }
 
-  if (GetObjectDigestType(root) != ObjectDigestType::INDEX_HASH) {
+  if (GetObjectDigestType(root.object_digest) != ObjectDigestType::INDEX_HASH) {
     on_done();
     return;
   }
 
-  state->data_accessor(root, [state, on_done = std::move(on_done)](
-                                 Status status, fxl::StringView data) mutable {
-    if (!state->running) {
-      on_done();
-      return;
-    }
+  state->data_accessor(
+      root.object_digest, [state, on_done = std::move(on_done)](
+                              Status status, fxl::StringView data) mutable {
+        if (!state->running) {
+          on_done();
+          return;
+        }
 
-    if (status != Status::OK) {
-      FXL_LOG(WARNING) << "Unable to read object content.";
-      state->running = false;
-      on_done();
-      return;
-    }
+        if (status != Status::OK) {
+          FXL_LOG(WARNING) << "Unable to read object content.";
+          state->running = false;
+          on_done();
+          return;
+        }
 
-    auto waiter = callback::CompletionWaiter::Create();
-    status = ForEachPiece(data, [&](ObjectDigestView digest) {
-      CollectPiecesInternal(digest, state, waiter->NewCallback());
-      return Status::OK;
-    });
-    if (status != Status::OK) {
-      state->running = false;
-      on_done();
-      return;
-    }
+        auto waiter = callback::CompletionWaiter::Create();
+        status = ForEachPiece(data, [&](ObjectIdentifier identifier) {
+          CollectPiecesInternal(std::move(identifier), state,
+                                waiter->NewCallback());
+          return Status::OK;
+        });
+        if (status != Status::OK) {
+          state->running = false;
+          on_done();
+          return;
+        }
 
-    waiter->Finalize(std::move(on_done));
-  });
+        waiter->Finalize(std::move(on_done));
+      });
 }
 
 }  // namespace
 
 void SplitDataSource(
     DataSource* source,
-    std::function<void(IterationStatus,
-                       ObjectDigest,
-                       std::unique_ptr<DataSource::DataChunk>)> callback) {
+    std::function<ObjectIdentifier(IterationStatus,
+                                   ObjectDigest,
+                                   std::unique_ptr<DataSource::DataChunk>)>
+        callback) {
   SplitContext context(std::move(callback));
   source->Get(
       fxl::MakeCopyable([context = std::move(context)](
@@ -342,7 +360,7 @@ void SplitDataSource(
 }
 
 Status ForEachPiece(fxl::StringView index_content,
-                    std::function<Status(ObjectDigestView)> callback) {
+                    std::function<Status(ObjectIdentifier)> callback) {
   const FileIndex* file_index;
   Status status =
       FileIndexSerialization::ParseFileIndex(index_content, &file_index);
@@ -351,7 +369,7 @@ Status ForEachPiece(fxl::StringView index_content,
   }
 
   for (const auto* child : *file_index->children()) {
-    Status status = callback(child->object_digest());
+    Status status = callback(ToObjectIdentifier(child->object_identifier()));
     if (status != Status::OK) {
       return status;
     }
@@ -361,11 +379,11 @@ Status ForEachPiece(fxl::StringView index_content,
 }
 
 void CollectPieces(
-    ObjectDigestView root,
+    ObjectIdentifier root,
     std::function<void(ObjectDigestView,
                        std::function<void(Status, fxl::StringView)>)>
         data_accessor,
-    std::function<bool(IterationStatus, ObjectDigestView)> callback) {
+    std::function<bool(IterationStatus, ObjectIdentifier)> callback) {
   auto state = fxl::AdoptRef(new CollectPiecesState());
   state->data_accessor = std::move(data_accessor);
   state->callback = std::move(callback);
@@ -373,7 +391,7 @@ void CollectPieces(
   CollectPiecesInternal(root, state, [state] {
     IterationStatus final_status =
         state->running ? IterationStatus::DONE : IterationStatus::ERROR;
-    state->callback(final_status, "");
+    state->callback(final_status, {});
   });
 }
 

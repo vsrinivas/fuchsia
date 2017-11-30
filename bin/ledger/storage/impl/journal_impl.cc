@@ -13,6 +13,7 @@
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/waiter.h"
 
 namespace storage {
@@ -172,8 +173,8 @@ void JournalImpl::CreateCommitFromChanges(
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   btree::ApplyChanges(
-      coroutine_service_, page_storage_, parents[0]->GetRootDigest(),
-      std::move(changes),
+      coroutine_service_, page_storage_,
+      parents[0]->GetRootIdentifier().object_digest, std::move(changes),
       fxl::MakeCopyable([this, parents = std::move(parents),
                          callback = std::move(callback)](
                             Status status, ObjectDigest object_digest,
@@ -185,7 +186,8 @@ void JournalImpl::CreateCommitFromChanges(
         }
         // If the commit is a no-op, return early.
         if (parents.size() == 1 &&
-            parents.front()->GetRootDigest() == object_digest) {
+            parents.front()->GetRootIdentifier().object_digest ==
+                object_digest) {
           FXL_DCHECK(new_nodes.empty());
           // We are in an operation from the serializer: make sure not to sent
           // the rollback operation in the serializer as well, or a deadlock
@@ -198,8 +200,9 @@ void JournalImpl::CreateCommitFromChanges(
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
-            CommitImpl::FromContentAndParents(page_storage_, object_digest,
-                                              std::move(parents));
+            CommitImpl::FromContentAndParents(
+                page_storage_, MakeDefaultObjectIdentifier(object_digest),
+                std::move(parents));
         GetObjectsToSync(fxl::MakeCopyable([this,
                                             new_nodes = std::move(new_nodes),
                                             commit = std::move(commit),

@@ -8,6 +8,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/lib/callback/waiter.h"
 #include "third_party/murmurhash/murmurhash.h"
 
@@ -630,6 +631,7 @@ void ApplyChanges(
     std::function<void(Status, ObjectDigest, std::unordered_set<ObjectDigest>)>
         callback,
     const NodeLevelCalculator* node_level_calculator) {
+  FXL_DCHECK(storage::IsDigestValid(root_digest));
   coroutine_service->StartCoroutine(fxl::MakeCopyable(
       [page_storage, root_digest = root_digest.ToString(),
        changes = std::move(changes), callback = std::move(callback),

@@ -9,6 +9,7 @@
 
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
 
 namespace storage {
@@ -37,8 +38,8 @@ uint64_t FakeCommit::GetGeneration() const {
   return journal_->GetGeneration();
 }
 
-ObjectDigestView FakeCommit::GetRootDigest() const {
-  return journal_->GetId();
+ObjectIdentifier FakeCommit::GetRootIdentifier() const {
+  return {kDefaultKeyIndex, kDefaultDeletionScopeId, journal_->GetId()};
 }
 
 fxl::StringView FakeCommit::GetStorageBytes() const {

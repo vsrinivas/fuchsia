@@ -258,7 +258,7 @@ class PageDb : public PageDbMutator {
   // lexicographically sorted.
   FXL_WARN_UNUSED_RESULT virtual Status GetUnsyncedPieces(
       coroutine::CoroutineHandler* handler,
-      std::vector<ObjectDigest>* object_digests) = 0;
+      std::vector<ObjectIdentifier>* object_identifiers) = 0;
 
   // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given

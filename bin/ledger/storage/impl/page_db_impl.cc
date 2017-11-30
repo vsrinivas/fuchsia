@@ -8,12 +8,12 @@
 #include <string>
 
 #include "lib/fxl/strings/concatenate.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/convert/convert.h"
 
 #define RETURN_ON_ERROR(expr)   \
@@ -50,7 +50,7 @@ void ExtractSortedCommitsIds(
   }
 }
 
-class JournalEntryIterator : public Iterator<const EntryChange> {
+class JournalEntryIterator final : public Iterator<const EntryChange> {
  public:
   explicit JournalEntryIterator(
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
@@ -77,7 +77,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
 
  private:
   void PrepareEntry() {
-    if (!Valid()) {
+    if (!JournalEntryIterator::Valid()) {
       change_.reset(nullptr);
       return;
     }
@@ -236,9 +236,24 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
 
 Status PageDbImpl::GetUnsyncedPieces(
     CoroutineHandler* handler,
-    std::vector<ObjectDigest>* object_digests) {
-  return db_.GetByPrefix(handler, convert::ToSlice(LocalObjectRow::kPrefix),
-                         object_digests);
+    std::vector<ObjectIdentifier>* object_identifiers) {
+  std::vector<ObjectDigest> digests;
+  Status status = db_.GetByPrefix(
+      handler, convert::ToSlice(LocalObjectRow::kPrefix), &digests);
+  if (status != Status::OK) {
+    return status;
+  }
+
+  // TODO(qsr): Store identifiers in db. DB currently only contains the digest
+  // of objects. It is necessary to store the full identifier to be able to
+  // upload the correctly encrypted object.
+  object_identifiers->clear();
+  for (auto& digest : digests) {
+    object_identifiers->push_back(
+        MakeDefaultObjectIdentifier(std::move(digest)));
+  }
+
+  return Status::OK;
 }
 
 Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,

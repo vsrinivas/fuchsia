@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 
 namespace storage {
@@ -18,12 +19,13 @@ TEST(FileIndexSerialization, CheckInvalid) {
 }
 
 TEST(FileIndexSerialization, SerializationDeserialization) {
-  const std::vector<FileIndexSerialization::ObjectDigestAndSize> elements = {
-      {RandomObjectDigest(), 1}, {RandomObjectDigest(), 2},
-      {RandomObjectDigest(), 3}, {RandomObjectDigest(), 4},
-      {RandomObjectDigest(), 3}, {RandomObjectDigest(), 2},
-      {RandomObjectDigest(), 1},
-  };
+  const std::vector<FileIndexSerialization::ObjectIdentifierAndSize> elements =
+      {
+          {RandomObjectIdentifier(), 1}, {RandomObjectIdentifier(), 2},
+          {RandomObjectIdentifier(), 3}, {RandomObjectIdentifier(), 4},
+          {RandomObjectIdentifier(), 3}, {RandomObjectIdentifier(), 2},
+          {RandomObjectIdentifier(), 1},
+      };
 
   constexpr size_t expected_total_size = 16;
 
@@ -43,8 +45,8 @@ TEST(FileIndexSerialization, SerializationDeserialization) {
   const auto& children = *(file_index->children());
   for (size_t i = 0; i < elements.size(); ++i) {
     EXPECT_EQ(elements[i].size, children[i]->size());
-    EXPECT_EQ(elements[i].digest,
-              convert::ToString(children[i]->object_digest()));
+    EXPECT_EQ(elements[i].identifier,
+              ToObjectIdentifier(children[i]->object_identifier()));
   }
 }
 

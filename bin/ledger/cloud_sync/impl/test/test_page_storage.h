@@ -50,8 +50,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       std::function<void(storage::Status status)> callback) override;
 
   void GetUnsyncedPieces(
-      std::function<void(storage::Status, std::vector<storage::ObjectDigest>)>
-          callback) override;
+      std::function<void(storage::Status,
+                         std::vector<storage::ObjectIdentifier>)> callback)
+      override;
 
   storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override;
 

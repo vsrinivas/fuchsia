@@ -208,8 +208,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                 }
 
                 // Check if the 2 parents have the same content.
-                if (commits[0]->GetRootDigest() ==
-                    commits[1]->GetRootDigest()) {
+                if (commits[0]->GetRootIdentifier() ==
+                    commits[1]->GetRootIdentifier()) {
                   // In that case, the result must be a commit with the same
                   // content.
                   storage_->StartMergeCommit(

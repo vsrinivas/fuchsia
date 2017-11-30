@@ -6,7 +6,6 @@ visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("public") {
   sources = [
-    "constants.h",
     "encryption_service.h",
   ]
 

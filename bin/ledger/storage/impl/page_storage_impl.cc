@@ -29,7 +29,6 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
@@ -41,6 +40,7 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/trace_callback.h"
 #include "peridot/lib/callback/waiter.h"
 #include "zx/vmar.h"
@@ -53,9 +53,6 @@ using coroutine::CoroutineHandler;
 namespace {
 
 const char kLevelDbDir[] = "/leveldb";
-
-static_assert(kStorageHashSize == glue::kHashSize,
-              "Unexpected kStorageHashSize value");
 
 struct StringPointerComparator {
   using is_transparent = std::true_type;
@@ -137,6 +134,7 @@ void PageStorageImpl::GetHeadCommitIds(
 void PageStorageImpl::GetCommit(
     CommitIdView commit_id,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+  FXL_DCHECK(commit_id.size());
   coroutine_service_->StartCoroutine([this, commit_id = commit_id.ToString(),
                                       final_callback = std::move(callback)](
                                          CoroutineHandler* handler) mutable {
@@ -153,6 +151,7 @@ void PageStorageImpl::GetCommit(
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                                          std::vector<ObjectDigest> new_objects,
                                          std::function<void(Status)> callback) {
+  FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest));
   commit_serializer_.Serialize<Status>(
       std::move(callback),
       fxl::MakeCopyable([this, commit = std::move(commit),
@@ -319,23 +318,23 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
 }
 
 void PageStorageImpl::GetUnsyncedPieces(
-    std::function<void(Status, std::vector<ObjectDigest>)> callback) {
-  coroutine_service_->StartCoroutine(
-      [this, final_callback =
-                 std::move(callback)](CoroutineHandler* handler) mutable {
-        auto callback =
-            UpdateActiveHandlersCallback(handler, std::move(final_callback));
+    std::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
+  coroutine_service_->StartCoroutine([this,
+                                      final_callback = std::move(callback)](
+                                         CoroutineHandler* handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-        std::vector<ObjectDigest> unsynced_object_digests;
-        Status s = db_->GetUnsyncedPieces(handler, &unsynced_object_digests);
-        callback(s, unsynced_object_digests);
-      });
+    std::vector<ObjectIdentifier> unsynced_object_identifiers;
+    Status s = db_->GetUnsyncedPieces(handler, &unsynced_object_identifiers);
+    callback(s, unsynced_object_identifiers);
+  });
 }
 
-void PageStorageImpl::MarkPieceSynced(ObjectDigestView object_digest,
+void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine(
-      [this, object_digest = object_digest.ToString(),
+      [this, object_digest = object_identifier.object_digest,
        final_callback =
            std::move(callback)](CoroutineHandler* handler) mutable {
         auto callback =
@@ -363,25 +362,26 @@ void PageStorageImpl::AddObjectFromLocal(
               std::unique_ptr<DataSource::DataChunk> chunk) mutable {
             if (status == IterationStatus::ERROR) {
               callback(Status::IO_ERROR, "");
-              return;
+              return MakeDefaultObjectIdentifier(std::move(object_digest));
             }
+            FXL_DCHECK(IsDigestValid(object_digest));
             if (chunk) {
               FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
 
               if (GetObjectDigestType(object_digest) !=
                   ObjectDigestType::INLINE) {
-                AddPiece(std::move(object_digest), std::move(chunk),
-                         ChangeSource::LOCAL, waiter->NewCallback());
+                AddPiece(object_digest, std::move(chunk), ChangeSource::LOCAL,
+                         waiter->NewCallback());
               }
-              return;
+              return MakeDefaultObjectIdentifier(std::move(object_digest));
             }
 
             FXL_DCHECK(status == IterationStatus::DONE);
-            waiter->Finalize(
-                [object_digest = std::move(object_digest),
-                 callback = std::move(callback)](Status status) mutable {
-                  callback(status, std::move(object_digest));
-                });
+            waiter->Finalize([object_digest, callback = std::move(callback)](
+                                 Status status) mutable {
+              callback(status, std::move(object_digest));
+            });
+            return MakeDefaultObjectIdentifier(std::move(object_digest));
           }));
 }
 
@@ -389,6 +389,7 @@ void PageStorageImpl::GetObject(
     ObjectDigestView object_digest,
     Location location,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
+  FXL_DCHECK(IsDigestValid(object_digest));
   GetPiece(object_digest, [this, object_digest = object_digest.ToString(),
                            location, callback = std::move(callback)](
                               Status status,
@@ -454,8 +455,9 @@ void PageStorageImpl::GetObject(
         callback(Status::INTERNAL_IO_ERROR, nullptr);
         return;
       }
-      FillBufferWithObjectContent(child->object_digest(), std::move(vmo_copy),
-                                  offset, child->size(), waiter->NewCallback());
+      FillBufferWithObjectContent(child->object_identifier()->object_digest(),
+                                  std::move(vmo_copy), offset, child->size(),
+                                  waiter->NewCallback());
       offset += child->size();
     }
     if (offset != file_index->size()) {
@@ -530,7 +532,8 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
                                         std::function<bool(Entry)> on_next,
                                         std::function<void(Status)> on_done) {
   btree::ForEachEntry(
-      coroutine_service_, this, commit.GetRootDigest(), min_key,
+      coroutine_service_, this, commit.GetRootIdentifier().object_digest,
+      min_key,
       [on_next = std::move(on_next)](btree::EntryAndNodeDigest next) {
         return on_next(next.entry);
       },
@@ -563,8 +566,9 @@ void PageStorageImpl::GetEntryFromCommit(
         }
         callback(s, Entry());
       });
-  btree::ForEachEntry(coroutine_service_, this, commit.GetRootDigest(),
-                      std::move(key), std::move(on_next), std::move(on_done));
+  btree::ForEachEntry(coroutine_service_, this,
+                      commit.GetRootIdentifier().object_digest, std::move(key),
+                      std::move(on_next), std::move(on_done));
 }
 
 void PageStorageImpl::GetCommitContentsDiff(
@@ -573,9 +577,10 @@ void PageStorageImpl::GetCommitContentsDiff(
     std::string min_key,
     std::function<bool(EntryChange)> on_next_diff,
     std::function<void(Status)> on_done) {
-  btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootDigest(),
-                     other_commit.GetRootDigest(), std::move(min_key),
-                     std::move(on_next_diff), std::move(on_done));
+  btree::ForEachDiff(
+      coroutine_service_, this, base_commit.GetRootIdentifier().object_digest,
+      other_commit.GetRootIdentifier().object_digest, std::move(min_key),
+      std::move(on_next_diff), std::move(on_done));
 }
 
 void PageStorageImpl::GetThreeWayContentsDiff(
@@ -586,9 +591,10 @@ void PageStorageImpl::GetThreeWayContentsDiff(
     std::function<bool(ThreeWayChange)> on_next_diff,
     std::function<void(Status)> on_done) {
   btree::ForEachThreeWayDiff(
-      coroutine_service_, this, base_commit.GetRootDigest(),
-      left_commit.GetRootDigest(), right_commit.GetRootDigest(),
-      std::move(min_key), std::move(on_next_diff), std::move(on_done));
+      coroutine_service_, this, base_commit.GetRootIdentifier().object_digest,
+      left_commit.GetRootIdentifier().object_digest,
+      right_commit.GetRootIdentifier().object_digest, std::move(min_key),
+      std::move(on_next_diff), std::move(on_done));
 }
 
 void PageStorageImpl::GetJournalEntries(
@@ -695,10 +701,10 @@ Status PageStorageImpl::MarkAllPiecesLocal(
       object_digests.reserve(object_digests.size() +
                              file_index->children()->size());
       for (const auto* child : *file_index->children()) {
-        if (GetObjectDigestType(child->object_digest()) !=
+        if (GetObjectDigestType(child->object_identifier()->object_digest()) !=
             ObjectDigestType::INLINE) {
           std::string new_object_digest =
-              convert::ToString(child->object_digest());
+              convert::ToString(child->object_identifier()->object_digest());
           if (!seen_digests.count(new_object_digest)) {
             object_digests.push_back(std::move(new_object_digest));
           }
@@ -787,14 +793,14 @@ void PageStorageImpl::DownloadFullObject(ObjectDigestView object_digest,
 
                 auto waiter =
                     callback::StatusWaiter<Status>::Create(Status::OK);
-                Status status =
-                    ForEachPiece(chunk->Get(), [&](ObjectDigestView digest) {
-                      if (GetObjectDigestType(digest) ==
+                Status status = ForEachPiece(
+                    chunk->Get(), [&](ObjectIdentifier identifier) {
+                      if (GetObjectDigestType(identifier.object_digest) ==
                           ObjectDigestType::INLINE) {
                         return Status::OK;
                       }
 
-                      auto digest_string = digest.ToString();
+                      auto digest_string = identifier.object_digest;
                       Status status =
                           db_->ReadObject(handler, digest_string, nullptr);
                       if (status == Status::NOT_FOUND) {
@@ -960,8 +966,9 @@ void PageStorageImpl::FillBufferWithObjectContent(
                  return;
                }
                FillBufferWithObjectContent(
-                   child->object_digest(), std::move(vmo_copy),
-                   offset + sub_offset, child->size(), waiter->NewCallback());
+                   child->object_identifier()->object_digest(),
+                   std::move(vmo_copy), offset + sub_offset, child->size(),
+                   waiter->NewCallback());
                sub_offset += child->size();
              }
              waiter->Finalize(std::move(callback));
@@ -1186,7 +1193,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(coroutine_service_, this,
-                              leaf.second->GetRootDigest(),
+                              leaf.second->GetRootIdentifier().object_digest,
                               waiter->NewCallback());
   }
 

@@ -18,6 +18,16 @@ constexpr uint64_t kCommitIdSize = 32;
 constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
 constexpr const fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
                                                    kCommitIdSize);
+// The default encryption values. Only used until real encryption is
+// implemented: LE-286
+//
+// Use max_int32 for key_index as it will never be used in practice as it is not
+// expected that any user will change its key 2^32 times.
+constexpr uint32_t kDefaultKeyIndex = std::numeric_limits<uint32_t>::max();
+// Use max_int32 - 1 for default deletion scoped id. max_int32 has a special
+// meaning in the specification and is used to have per object deletion scope.
+constexpr uint32_t kDefaultDeletionScopeId =
+    std::numeric_limits<uint32_t>::max() - 1;
 
 // The serialization version of the ledger.
 constexpr const fxl::StringView kSerializationVersion = "20";

@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
+
 namespace storage {
 
 bool FileIndexSerialization::CheckValidFileIndexSerialization(
@@ -23,18 +25,19 @@ Status FileIndexSerialization::ParseFileIndex(fxl::StringView content,
 }
 
 void FileIndexSerialization::BuildFileIndex(
-    const std::vector<ObjectDigestAndSize>& children,
+    const std::vector<ObjectIdentifierAndSize>& children,
     std::unique_ptr<DataSource::DataChunk>* output,
     size_t* total_size) {
   auto builder = std::make_unique<flatbuffers::FlatBufferBuilder>();
   size_t local_total_size = 0u;
 
   std::vector<flatbuffers::Offset<ObjectChild>> object_children;
-  for (const auto& digest_and_size : children) {
-    local_total_size += digest_and_size.size;
-    object_children.push_back(CreateObjectChild(
-        *builder, digest_and_size.size,
-        convert::ToFlatBufferVector(builder.get(), digest_and_size.digest)));
+  for (const auto& identifier_and_size : children) {
+    local_total_size += identifier_and_size.size;
+    object_children.push_back(
+        CreateObjectChild(*builder, identifier_and_size.size,
+                          ToObjectIdentifierStorage(
+                              builder.get(), identifier_and_size.identifier)));
   }
   FinishFileIndexBuffer(
       *builder, CreateFileIndex(*builder, local_total_size,

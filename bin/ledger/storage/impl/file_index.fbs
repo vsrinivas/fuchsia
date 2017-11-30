@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+include "peridot/bin/ledger/storage/impl/object_identifier.fbs";
+
 namespace storage;
 
 // An entry for the identifier of a part of a file.
 table ObjectChild {
   size: ulong;
-  object_digest: [ubyte];
+  object_identifier: ObjectIdentifierStorage;
 }
 
 // The index of a chunked file.

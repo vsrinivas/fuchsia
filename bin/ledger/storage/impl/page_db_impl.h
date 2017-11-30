@@ -54,8 +54,9 @@ class PageDbImpl : public PageDb {
   Status IsCommitSynced(coroutine::CoroutineHandler* handler,
                         const CommitId& commit_id,
                         bool* is_synced) override;
-  Status GetUnsyncedPieces(coroutine::CoroutineHandler* handler,
-                           std::vector<ObjectDigest>* object_digests) override;
+  Status GetUnsyncedPieces(
+      coroutine::CoroutineHandler* handler,
+      std::vector<ObjectIdentifier>* object_identifiers) override;
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          ObjectDigestView object_digest,
                          PageDbObjectStatus* object_status) override;

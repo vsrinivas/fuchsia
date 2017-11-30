@@ -12,6 +12,9 @@ namespace storage {
 
 namespace {
 
+static_assert(kStorageHashSize == glue::kHashSize,
+              "Unexpected kStorageHashSize value");
+
 constexpr char kValueHashPrefix = 1;
 constexpr char kIndexHashPrefix = 2;
 
@@ -25,7 +28,28 @@ std::string AddPrefix(char c, convert::ExtendedStringView data) {
 
 }  // namespace
 
+bool IsDigestValid(ObjectDigestView object_digest) {
+  if (object_digest.size() <= kStorageHashSize) {
+    // |object_digest| is of type inline.
+    return true;
+  }
+  if (object_digest.size() != kStorageHashSize + 1) {
+    // Digest size is invalid.
+    return false;
+  }
+  // The first character of the digest indicates its type.
+  switch (object_digest[0]) {
+    case kValueHashPrefix:
+    case kIndexHashPrefix:
+      return true;
+  }
+  // The first character is invalid.
+  return false;
+}
+
 ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest) {
+  FXL_DCHECK(IsDigestValid(object_digest));
+
   if (object_digest.size() <= kStorageHashSize) {
     return ObjectDigestType::INLINE;
   }
@@ -37,7 +61,8 @@ ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest) {
       return ObjectDigestType::INDEX_HASH;
   }
 
-  FXL_NOTREACHED();
+  FXL_NOTREACHED() << "Unknown digest prefix: "
+                   << static_cast<uint32_t>(object_digest[0]);
   return ObjectDigestType::VALUE_HASH;
 }
 
@@ -52,6 +77,8 @@ ObjectType GetObjectType(ObjectDigestType digest_type) {
 }
 
 fxl::StringView ExtractObjectDigestData(ObjectDigestView object_digest) {
+  FXL_DCHECK(IsDigestValid(object_digest));
+
   if (object_digest.size() <= kStorageHashSize) {
     return object_digest;
   }

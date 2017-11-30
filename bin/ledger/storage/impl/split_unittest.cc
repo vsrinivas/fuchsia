@@ -15,6 +15,7 @@
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 namespace {
@@ -84,7 +85,7 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
                   [result = std::move(result), callback = std::move(callback)](
                       IterationStatus status, ObjectDigest digest,
                       std::unique_ptr<DataSource::DataChunk> data) mutable {
-                    ASSERT_TRUE(result);
+                    EXPECT_TRUE(result);
                     if (status == IterationStatus::IN_PROGRESS) {
                       EXPECT_LE(data->Get().size(), kMaxChunkSize);
                       if (result->data.count(digest) != 0) {
@@ -93,12 +94,13 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
                         result->data[digest] = std::move(data);
                       }
                     }
-                    result->calls.push_back({status, std::move(digest)});
+                    result->calls.push_back({status, digest});
                     if (status != IterationStatus::IN_PROGRESS) {
                       auto to_send = std::move(*result);
                       result.reset();
                       callback(std::move(to_send));
                     }
+                    return MakeDefaultObjectIdentifier(std::move(digest));
                   }));
 }
 
@@ -129,8 +131,9 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
       auto content = data.at(digest)->Get();
       const FileIndex* file_index = GetFileIndex(content.data());
       for (const auto* child : *file_index->children()) {
-        auto r = ReadFile(convert::ToString(child->object_digest()), data,
-                          result, child->size());
+        auto r = ReadFile(
+            convert::ToString(child->object_identifier()->object_digest()),
+            data, result, child->size());
         if (!r) {
           return r;
         }
@@ -250,11 +253,12 @@ TEST(SplitTest, Error) {
   ASSERT_EQ(IterationStatus::ERROR, split_result.calls.back().status);
 }
 
-std::string MakeIndexId(size_t i) {
+ObjectIdentifier MakeIndexId(size_t i) {
   std::string value;
   value.resize(sizeof(i));
   memcpy(&value[0], &i, sizeof(i));
-  return ComputeObjectDigest(ObjectType::INDEX, value);
+  return MakeDefaultObjectIdentifier(
+      ComputeObjectDigest(ObjectType::INDEX, value));
 }
 
 TEST(SplitTest, CollectPieces) {
@@ -286,13 +290,13 @@ TEST(SplitTest, CollectPieces) {
   std::map<std::string, std::unique_ptr<DataSource::DataChunk>> objects;
 
   for (size_t i = 0; i < parts.size(); ++i) {
-    std::vector<FileIndexSerialization::ObjectDigestAndSize> children;
+    std::vector<FileIndexSerialization::ObjectIdentifierAndSize> children;
     for (size_t child : parts[i]) {
       children.push_back({MakeIndexId(child), 1});
     }
     size_t total_size;
-    FileIndexSerialization::BuildFileIndex(children, &objects[MakeIndexId(i)],
-                                           &total_size);
+    FileIndexSerialization::BuildFileIndex(
+        children, &objects[MakeIndexId(i).object_digest], &total_size);
   }
   IterationStatus status;
   std::unordered_set<ObjectDigest> digests;
@@ -303,10 +307,10 @@ TEST(SplitTest, CollectPieces) {
         callback(Status::OK, objects[digest.ToString()]->Get());
       },
       [&status, &digests](IterationStatus received_status,
-                          ObjectDigestView digest) {
+                          ObjectIdentifier identifier) {
         status = received_status;
         if (status == IterationStatus::IN_PROGRESS) {
-          digests.insert(digest.ToString());
+          digests.insert(identifier.object_digest);
         }
         return true;
       });
@@ -334,7 +338,7 @@ TEST(SplitTest, CollectPiecesError) {
           return;
         }
         ++called;
-        std::vector<FileIndexSerialization::ObjectDigestAndSize> children;
+        std::vector<FileIndexSerialization::ObjectIdentifierAndSize> children;
         children.push_back({MakeIndexId(2 * called), 1});
         children.push_back({MakeIndexId(2 * called + 1), 1});
         std::unique_ptr<DataSource::DataChunk> data;
@@ -342,7 +346,7 @@ TEST(SplitTest, CollectPiecesError) {
         FileIndexSerialization::BuildFileIndex(children, &data, &total_size);
         callback(Status::OK, data->Get());
       },
-      [&status](IterationStatus received_status, ObjectDigestView digest) {
+      [&status](IterationStatus received_status, ObjectIdentifier identifier) {
         status = received_status;
         return true;
       });

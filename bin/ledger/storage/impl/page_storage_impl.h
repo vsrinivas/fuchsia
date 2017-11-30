@@ -82,8 +82,9 @@ class PageStorageImpl : public PageStorage {
   void MarkCommitSynced(const CommitId& commit_id,
                         std::function<void(Status)> callback) override;
   void GetUnsyncedPieces(
-      std::function<void(Status, std::vector<ObjectDigest>)> callback) override;
-  void MarkPieceSynced(ObjectDigestView object_digest,
+      std::function<void(Status, std::vector<ObjectIdentifier>)> callback)
+      override;
+  void MarkPieceSynced(ObjectIdentifier object_identifier,
                        std::function<void(Status)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,

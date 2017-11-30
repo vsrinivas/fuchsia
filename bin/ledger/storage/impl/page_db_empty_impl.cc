@@ -67,7 +67,7 @@ Status PageDbEmptyImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::GetUnsyncedPieces(
     CoroutineHandler* /*handler*/,
-    std::vector<ObjectDigest>* /*object_digests*/) {
+    std::vector<ObjectIdentifier>* /*object_identifiers*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,

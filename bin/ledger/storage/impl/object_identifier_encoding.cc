@@ -2,18 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/impl/object_identifier.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 
 #include <limits>
 
-#include "peridot/bin/ledger/encryption/public/constants.h"
-
 namespace storage {
-
-ObjectIdentifier MakeDefaultObjectIdentifier(ObjectDigest digest) {
-  return {encryption::kDefaultKeyIndex, encryption::kDefaultDeletionScopeId,
-          std::move(digest)};
-}
 
 ObjectIdentifier ToObjectIdentifier(
     const ObjectIdentifierStorage* object_identifier_storage) {
