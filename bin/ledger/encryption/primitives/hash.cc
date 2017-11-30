@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/encryption/primitives/hash.h"
 
 #include <openssl/sha.h>
 
 #include "lib/fxl/logging.h"
 
-namespace glue {
+namespace encryption {
 
 std::string SHA256WithLengthHash(fxl::StringView data) {
   std::string result;
@@ -22,4 +22,4 @@ std::string SHA256WithLengthHash(fxl::StringView data) {
   return result;
 }
 
-}  // namespace glue
+}  // namespace encryption

@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 
@@ -17,7 +17,7 @@ namespace {
 std::string RandomString(size_t size) {
   std::string result;
   result.resize(size);
-  glue::RandBytes(&result[0], size);
+  encryption::RandBytes(&result[0], size);
   return result;
 }
 

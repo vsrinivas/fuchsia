@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/hmac.h"
+#include "peridot/bin/ledger/encryption/primitives/hmac.h"
 
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
-namespace glue {
+namespace encryption {
 
 std::string SHA256HMAC(fxl::StringView key, fxl::StringView data) {
   FXL_CHECK(key.size() >= SHA256_DIGEST_LENGTH);
@@ -26,4 +26,4 @@ std::string SHA256HMAC(fxl::StringView key, fxl::StringView data) {
   return result;
 }
 
-}  // namespace glue
+}  // namespace encryption

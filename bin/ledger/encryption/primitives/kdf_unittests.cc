@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/kdf.h"
+#include "peridot/bin/ledger/encryption/primitives/kdf.h"
 
 #include <gtest/gtest.h>
 
-#include "peridot/bin/ledger/glue/crypto/crypto_test_util.h"
+#include "peridot/bin/ledger/encryption/primitives/crypto_test_util.h"
 
-namespace glue {
+namespace encryption {
 namespace {
 
 TEST(KDF, Correctness) {
@@ -19,4 +19,4 @@ TEST(KDF, Correctness) {
   EXPECT_EQ(expected, HMAC256KDF(data, expected.size()));
 }
 }  // namespace
-}  // namespace glue
+}  // namespace encryption

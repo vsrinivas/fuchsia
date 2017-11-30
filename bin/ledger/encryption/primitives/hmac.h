@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GLUE_CRYPTO_HMAC_H_
-#define PERIDOT_BIN_LEDGER_GLUE_CRYPTO_HMAC_H_
+#ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_HMAC_H_
+#define PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_HMAC_H_
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace glue {
+namespace encryption {
 // Compute the HMAC defined by RFC 2104 using SHA-256 for the hash algorithm.
 // |key| must be at least 256 bits long.
 std::string SHA256HMAC(fxl::StringView key, fxl::StringView data);
-}  // namespace glue
+}  // namespace encryption
 
-#endif  // PERIDOT_BIN_LEDGER_GLUE_CRYPTO_HMAC_H_
+#endif  // PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_HMAC_H_

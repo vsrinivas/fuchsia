@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/crypto_test_util.h"
+#include "peridot/bin/ledger/encryption/primitives/crypto_test_util.h"
 
 #include "lib/fxl/strings/string_number_conversions.h"
 
-namespace glue {
+namespace encryption {
 
 std::string FromHex(fxl::StringView data) {
   std::string result;
@@ -19,4 +19,4 @@ std::string FromHex(fxl::StringView data) {
   return result;
 }
 
-}  // namespace glue
+}  // namespace encryption

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GLUE_CRYPTO_CRYPTO_TEST_UTIL_H_
-#define PERIDOT_BIN_LEDGER_GLUE_CRYPTO_CRYPTO_TEST_UTIL_H_
+#ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_CRYPTO_TEST_UTIL_H_
+#define PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_CRYPTO_TEST_UTIL_H_
 
 #include <string>
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace glue {
+namespace encryption {
 std::string FromHex(fxl::StringView data);
 }
 
-#endif  // PERIDOT_BIN_LEDGER_GLUE_CRYPTO_CRYPTO_TEST_UTIL_H_
+#endif  // PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_CRYPTO_TEST_UTIL_H_

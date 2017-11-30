@@ -9,7 +9,7 @@
 #include <numeric>
 
 #include "lib/fxl/strings/string_printf.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -97,7 +97,7 @@ ObjectDigest MakeObjectDigest(std::string content,
 std::string RandomString(size_t size) {
   std::string value;
   value.resize(size);
-  glue::RandBytes(&value[0], value.size());
+  encryption::RandBytes(&value[0], value.size());
   return value;
 }
 

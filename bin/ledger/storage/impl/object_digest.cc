@@ -5,14 +5,14 @@
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 
 #include "lib/fxl/strings/concatenate.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 
 namespace storage {
 
 namespace {
 
-static_assert(kStorageHashSize == glue::kHashSize,
+static_assert(kStorageHashSize == encryption::kHashSize,
               "Unexpected kStorageHashSize value");
 
 constexpr char kValueHashPrefix = 1;
@@ -96,9 +96,11 @@ ObjectDigest ComputeObjectDigest(ObjectType type,
       if (content.size() <= kStorageHashSize) {
         return content.ToString();
       }
-      return AddPrefix(kValueHashPrefix, glue::SHA256WithLengthHash(content));
+      return AddPrefix(kValueHashPrefix,
+                       encryption::SHA256WithLengthHash(content));
     case ObjectType::INDEX:
-      return AddPrefix(kIndexHashPrefix, glue::SHA256WithLengthHash(content));
+      return AddPrefix(kIndexHashPrefix,
+                       encryption::SHA256WithLengthHash(content));
   }
 }
 

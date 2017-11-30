@@ -12,8 +12,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/hash.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
@@ -24,7 +24,7 @@ namespace fake {
 namespace {
 
 storage::ObjectDigest ComputeObjectDigest(fxl::StringView value) {
-  return glue::SHA256WithLengthHash(value);
+  return encryption::SHA256WithLengthHash(value);
 }
 
 }  // namespace

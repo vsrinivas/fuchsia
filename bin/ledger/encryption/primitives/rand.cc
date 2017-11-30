@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 
 #include <zircon/syscalls.h>
 
@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 
-namespace glue {
+namespace encryption {
 
 namespace {
 
@@ -44,4 +44,4 @@ uint64_t RandUint64() {
   return result;
 }
 
-}  // namespace glue
+}  // namespace encryption

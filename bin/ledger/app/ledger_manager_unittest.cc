@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -27,7 +27,7 @@ namespace {
 storage::PageId RandomId() {
   std::string result;
   result.resize(kPageIdSize);
-  glue::RandBytes(&result[0], kPageIdSize);
+  encryption::RandBytes(&result[0], kPageIdSize);
   return result;
 }
 

@@ -16,7 +16,7 @@
 #include "peridot/bin/ledger/app/merging/test_utils.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"

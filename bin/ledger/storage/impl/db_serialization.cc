@@ -6,7 +6,7 @@
 
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 
 namespace storage {
 
@@ -87,7 +87,7 @@ std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
   id.resize(kJournalIdSize);
   id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitPrefix
                                                  : kExplicitPrefix);
-  glue::RandBytes(&id[1], kJournalIdSize - 1);
+  encryption::RandBytes(&id[1], kJournalIdSize - 1);
   return id;
 }
 

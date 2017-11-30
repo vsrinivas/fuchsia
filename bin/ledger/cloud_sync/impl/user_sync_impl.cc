@@ -10,7 +10,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_sync {
@@ -109,7 +109,7 @@ void UserSyncImpl::CheckCloudNotErased() {
 void UserSyncImpl::CreateFingerprint() {
   // Generate the fingerprint.
   char fingerprint_array[kFingerprintSize];
-  glue::RandBytes(fingerprint_array, kFingerprintSize);
+  encryption::RandBytes(fingerprint_array, kFingerprintSize);
   fingerprint_ =
       convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
 

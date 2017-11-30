@@ -15,7 +15,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
@@ -38,7 +38,7 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
 
   std::string new_name;
   new_name.resize(16);
-  glue::RandBytes(&new_name[0], new_name.size());
+  encryption::RandBytes(&new_name[0], new_name.size());
   if (!files::WriteFile(name_path, new_name.c_str(), new_name.size())) {
     FXL_LOG(ERROR) << "Unable to write file at: " << name_path;
     return false;

@@ -15,7 +15,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
@@ -78,7 +78,8 @@ TEST_F(PageDbTest, HeadCommits) {
     EXPECT_TRUE(heads.empty());
 
     CommitId cid = RandomCommitId();
-    EXPECT_EQ(Status::OK, page_db_.AddHead(handler, cid, glue::RandUint64()));
+    EXPECT_EQ(Status::OK,
+              page_db_.AddHead(handler, cid, encryption::RandUint64()));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_EQ(1u, heads.size());
     EXPECT_EQ(cid, heads[0]);
@@ -97,7 +98,7 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     for (size_t i = 0; i < 10; ++i) {
       int64_t ts;
       do {
-        ts = glue::RandUint64();
+        ts = encryption::RandUint64();
       } while (std::find(timestamps.begin(), timestamps.end(), ts) !=
                timestamps.end());
       timestamps.push_back(ts);

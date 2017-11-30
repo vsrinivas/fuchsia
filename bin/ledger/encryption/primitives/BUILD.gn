@@ -2,12 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/ledger/*",
-]
+visibility = [ "//peridot/bin/ledger/*" ]
 
-source_set("crypto") {
+source_set("primitives") {
   sources = [
     "hash.cc",
     "hash.h",
@@ -23,6 +20,23 @@ source_set("crypto") {
     "//garnet/public/lib/fxl",
     "//peridot/third_party/modp_b64",
     "//third_party/boringssl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "crypto_test_util.cc",
+    "hmac_unittests.cc",
+    "kdf_unittests.cc",
+  ]
+
+  deps = [
+    ":primitives",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

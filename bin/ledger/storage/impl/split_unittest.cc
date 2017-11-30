@@ -8,8 +8,8 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/hash.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"

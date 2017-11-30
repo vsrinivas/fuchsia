@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/lib/callback/capture.h"

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/glue/crypto/kdf.h"
+#include "peridot/bin/ledger/encryption/primitives/kdf.h"
 
 #include <openssl/digest.h>
 #include <openssl/hkdf.h>
 
 #include "lib/fxl/logging.h"
 
-namespace glue {
+namespace encryption {
 
 std::string HMAC256KDF(fxl::StringView data, size_t length) {
   std::string output;
@@ -21,4 +21,4 @@ std::string HMAC256KDF(fxl::StringView data, size_t length) {
   return output;
 }
 
-}  // namespace glue
+}  // namespace encryption

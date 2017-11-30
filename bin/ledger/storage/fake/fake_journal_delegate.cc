@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
@@ -17,7 +17,7 @@ namespace {
 storage::CommitId RandomCommitId() {
   std::string result;
   result.resize(kCommitIdSize);
-  glue::RandBytes(&result[0], kCommitIdSize);
+  encryption::RandBytes(&result[0], kCommitIdSize);
   return result;
 }
 

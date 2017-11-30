@@ -14,7 +14,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/lib/callback/trace_callback.h"
 
 namespace ledger {
@@ -23,7 +23,7 @@ namespace {
 
 void GenerateRandomId(fidl::Array<uint8_t>* id) {
   id->resize(kPageIdSize);
-  glue::RandBytes(id->data(), kPageIdSize);
+  encryption::RandBytes(id->data(), kPageIdSize);
 }
 
 }  // namespace

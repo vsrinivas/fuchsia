@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
@@ -14,8 +14,8 @@ namespace test {
 
 CommitRandomImpl::CommitRandomImpl()
     : id_(RandomCommitId()),
-      timestamp_(glue::RandUint64()),
-      generation_(glue::RandUint64()),
+      timestamp_(encryption::RandUint64()),
+      generation_(encryption::RandUint64()),
       root_node_identifier_(RandomObjectIdentifier()),
       parent_ids_{RandomObjectDigest()},
       parent_ids_views_{parent_ids_[0]},
