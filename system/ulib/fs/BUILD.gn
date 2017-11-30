@@ -10,9 +10,11 @@ static_library("fs") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "connection.cpp",
+    "fvm.cpp",
     "include/fs/block-txn.h",
     "include/fs/client.h",
     "include/fs/connection.h",
+    "include/fs/fvm.h",
     "include/fs/managed-vfs.h",
     "include/fs/mapped-vmo.h",
     "include/fs/pseudo-dir.h",
