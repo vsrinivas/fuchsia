@@ -19,6 +19,7 @@ executable("suggestion_proposal_test_module") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
+    "//peridot/lib/callback",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",

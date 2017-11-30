@@ -11,10 +11,10 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/lib/util/weak_callback.h"
 #include "peridot/tests/component_context/test_agent1_interface.fidl.h"
 
 using modular::testing::TestPoint;
@@ -96,19 +96,19 @@ class ParentApp {
         "test_agent1_connected", [this](const fidl::String&) {
           agent1_connected_.Pass();
           TestMessageQueue([this] {
-            TestAgentController(modular::WeakCallback(
+            TestAgentController(callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(), [this] { steps_.Step(); }));
           });
         });
 
-    TestUnstoppableAgent(modular::WeakCallback(weak_ptr_factory_.GetWeakPtr(),
-                                               [this] { steps_.Step(); }));
+    TestUnstoppableAgent(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                                              [this] { steps_.Step(); }));
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        modular::WeakCallback(weak_ptr_factory_.GetWeakPtr(),
-                              [this] { steps_.Cancel(); }),
+        callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                             [this] { steps_.Cancel(); }),
         kTimeout);
   }
 
@@ -170,11 +170,11 @@ class ParentApp {
     // time, so this test isn't reliable. We need to make a call to the agent
     // and wait for a response.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        modular::WeakCallback(weak_ptr_factory_.GetWeakPtr(),
-                              [this, done_cb] {
-                                unstoppable_agent_controller_.reset();
-                                done_cb();
-                              }),
+        callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                             [this, done_cb] {
+                               unstoppable_agent_controller_.reset();
+                               done_cb();
+                             }),
         fxl::TimeDelta::FromMilliseconds(500));
   }
 

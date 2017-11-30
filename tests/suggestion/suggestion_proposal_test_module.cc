@@ -5,12 +5,13 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
+#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/lib/util/weak_callback.h"
 
 using modular::testing::TestPoint;
 
@@ -74,7 +75,7 @@ class SuggestionApp {
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        modular::WeakCallback(
+        callback::MakeScoped(
             weak_ptr_factory_.GetWeakPtr(),
             [this] { module_host_->module_context()->Done(); }),
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));

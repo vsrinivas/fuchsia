@@ -10,9 +10,9 @@
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
+#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/lib/util/weak_callback.h"
 
 using modular::testing::TestPoint;
 
@@ -40,7 +40,8 @@ class ParentApp {
 
  private:
   void ScheduleDone() {
-    auto check = [this, done = std::make_shared<int>(0)](const fidl::String& value) {
+    auto check = [this,
+                  done = std::make_shared<int>(0)](const fidl::String& value) {
       ++*done;
       if (*done == 2) {
         module_host_->module_context()->Done();
@@ -53,10 +54,8 @@ class ParentApp {
 
   void StartChildModule() {
     module_host_->module_context()->StartModule(
-        kChildModuleName, kChildModule,
-        nullptr /* link_name */,
-        nullptr /* incoming_services */,
-        child_module_.NewRequest(),
+        kChildModuleName, kChildModule, nullptr /* link_name */,
+        nullptr /* incoming_services */, child_module_.NewRequest(),
         child_view_.NewRequest());
   }
 

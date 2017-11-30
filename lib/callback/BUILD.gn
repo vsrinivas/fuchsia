@@ -5,6 +5,7 @@
 visibility = [
   "//peridot/bin/*",
   "//peridot/lib/*",
+  "//peridot/tests/*",
 ]
 
 source_set("callback") {

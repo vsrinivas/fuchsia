@@ -25,6 +25,7 @@ executable("component_context_test") {
     ":test_agent1_interface",
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
+    "//peridot/lib/callback",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/component/fidl",

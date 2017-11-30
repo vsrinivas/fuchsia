@@ -21,6 +21,7 @@ executable("remote_invoker_test") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/callback",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/component/fidl",

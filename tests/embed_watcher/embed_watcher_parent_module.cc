@@ -10,9 +10,9 @@
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
+#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/lib/util/weak_callback.h"
 
 using modular::testing::TestPoint;
 
@@ -28,8 +28,7 @@ class ParentApp : modular::EmbedModuleWatcher {
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      : module_host_(module_host),
-        embed_module_watcher_binding_(this) {
+      : module_host_(module_host), embed_module_watcher_binding_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     ScheduleDone();
     StartChildModule();
@@ -41,7 +40,8 @@ class ParentApp : modular::EmbedModuleWatcher {
 
  private:
   void ScheduleDone() {
-    auto check = [this, done = std::make_shared<int>(0)](const fidl::String& value) {
+    auto check = [this,
+                  done = std::make_shared<int>(0)](const fidl::String& value) {
       ++*done;
       if (*done == 3) {
         module_host_->module_context()->Done();
@@ -55,17 +55,15 @@ class ParentApp : modular::EmbedModuleWatcher {
 
   void StartChildModule() {
     module_host_->module_context()->EmbedModule(
-        kChildModuleName, kChildModule,
-        nullptr /* link_name */,
-        nullptr /* incoming_services */,
-        child_module_.NewRequest(),
-        embed_module_watcher_binding_.NewBinding(),
-        child_view_.NewRequest());
+        kChildModuleName, kChildModule, nullptr /* link_name */,
+        nullptr /* incoming_services */, child_module_.NewRequest(),
+        embed_module_watcher_binding_.NewBinding(), child_view_.NewRequest());
   }
 
   // |EmbedModuleWatcher|
   void OnStartModuleInShell(
-      fidl::InterfaceHandle<modular::EmbedModuleController> controller) override {
+      fidl::InterfaceHandle<modular::EmbedModuleController> controller)
+      override {
     embed_module_controller_.Bind(std::move(controller));
     embed_module_controller_->Focus();
   }
