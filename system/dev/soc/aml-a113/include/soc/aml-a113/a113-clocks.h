@@ -22,12 +22,12 @@ typedef struct {
 } a113_clk_dev_t;
 
 static inline uint32_t a113_clk_get_reg(a113_clk_dev_t *dev, uint32_t offset) {
-    return   ((uint32_t *)dev->virt_regs)[offset];
+    return   ((volatile uint32_t *)dev->virt_regs)[offset];
 }
 
 static inline uint32_t a113_clk_set_reg(a113_clk_dev_t *dev, uint32_t offset, uint32_t value) {
     ((uint32_t *)dev->virt_regs)[offset] = value;
-    return   ((uint32_t *)dev->virt_regs)[offset];
+    return   ((volatile uint32_t *)dev->virt_regs)[offset];
 }
 
 zx_status_t a113_clk_init(a113_clk_dev_t **device);
