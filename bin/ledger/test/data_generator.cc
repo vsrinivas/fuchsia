@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace test {
 

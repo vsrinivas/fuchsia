@@ -9,7 +9,7 @@
 #include <string>
 
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace storage {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_CONVERT_CONVERT_H_
-#define PERIDOT_BIN_LEDGER_CONVERT_CONVERT_H_
+#ifndef PERIDOT_LIB_CONVERT_CONVERT_H_
+#define PERIDOT_LIB_CONVERT_CONVERT_H_
 
 #include <string>
 
@@ -102,4 +102,4 @@ struct StringViewComparator {
 
 }  // namespace convert
 
-#endif  // PERIDOT_BIN_LEDGER_CONVERT_CONVERT_H_
+#endif  // PERIDOT_LIB_CONVERT_CONVERT_H_

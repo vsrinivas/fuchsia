@@ -13,7 +13,7 @@
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/url/gurl.h"
 #include "peridot/bin/cloud_provider_firebase/test/server/server.h"
-#include "peridot/bin/ledger/convert/collection_view.h"
+#include "peridot/lib/convert/collection_view.h"
 
 namespace ledger {
 

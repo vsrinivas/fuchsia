@@ -13,13 +13,13 @@
 #include "lib/fxl/build_config.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_counted.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/impl/commit_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_generated.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace storage {
 

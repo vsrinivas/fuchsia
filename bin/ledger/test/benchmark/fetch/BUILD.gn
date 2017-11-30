@@ -20,11 +20,11 @@ executable("ledger_benchmark_fetch") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/test:lib",
     "//peridot/bin/ledger/test/benchmark/lib",
     "//peridot/lib/callback",
+    "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",
     "//zircon/system/ulib/trace-provider",
   ]

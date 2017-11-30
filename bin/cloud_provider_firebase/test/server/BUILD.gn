@@ -29,7 +29,7 @@ source_set("server") {
 
   deps = [
     "//garnet/public/lib/url",
-    "//peridot/bin/ledger/convert",
+    "//peridot/lib/convert",
     "//third_party/rapidjson",
   ]
 

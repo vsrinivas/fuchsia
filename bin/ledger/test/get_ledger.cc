@@ -11,11 +11,11 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/synchronous_task.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace test {
 namespace {

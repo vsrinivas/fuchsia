@@ -6,7 +6,7 @@
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 

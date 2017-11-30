@@ -7,7 +7,7 @@
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firebase {
 

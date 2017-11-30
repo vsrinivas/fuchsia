@@ -16,8 +16,8 @@
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/lib/callback/waiter.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 

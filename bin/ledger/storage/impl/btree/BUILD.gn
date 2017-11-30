@@ -37,11 +37,11 @@ source_set("lib") {
     ":internal",
     ":tree_node_storage",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/callback",
+    "//peridot/lib/convert",
     "//third_party/murmurhash",
   ]
 

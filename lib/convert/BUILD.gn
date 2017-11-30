@@ -5,8 +5,8 @@
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 visibility = [
-  "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/ledger/*",
+  "//peridot/bin/*",
+  "//peridot/lib/*",
 ]
 
 source_set("convert") {
@@ -26,8 +26,6 @@ source_set("convert") {
     "//third_party/rapidjson",
     "//zircon/system/ulib/zx",
   ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 flatbuffer("byte_storage_test") {
@@ -36,8 +34,6 @@ flatbuffer("byte_storage_test") {
   sources = [
     "bytes_test.fbs",
   ]
-
-  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -53,6 +49,4 @@ source_set("unittests") {
     ":convert",
     "//third_party/gtest",
   ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

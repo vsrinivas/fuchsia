@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_device_set.h"
 
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace cloud_sync {
 namespace test {

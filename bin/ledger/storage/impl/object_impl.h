@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/convert/convert.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
 #include "zx/vmar.h"
 

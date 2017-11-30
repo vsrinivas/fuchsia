@@ -20,8 +20,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/lib/base64url/base64url.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace test {
 

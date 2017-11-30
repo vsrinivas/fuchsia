@@ -32,7 +32,7 @@ source_set("public") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/convert",
+    "//peridot/lib/convert",
     "//peridot/lib/util:ptr",
     "//third_party/flatbuffers",
     "//zircon/system/ulib/zx",

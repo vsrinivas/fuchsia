@@ -48,8 +48,8 @@ source_set("object_identifier_lib") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/encryption/public",
+    "//peridot/lib/convert",
   ]
 
   public_deps = [
@@ -109,8 +109,8 @@ source_set("lib") {
 
   public_deps = [
     ":object_identifier_lib",
-    "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/coroutine",
+    "//peridot/lib/convert",
     "//peridot/third_party/bup",
     "//third_party/leveldb",
   ]

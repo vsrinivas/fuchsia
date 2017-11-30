@@ -24,8 +24,8 @@ source_set("token_provider") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//peridot/bin/ledger/convert",
     "//peridot/lib/base64url",
+    "//peridot/lib/convert",
     "//third_party/boringssl",
     "//third_party/rapidjson",
   ]

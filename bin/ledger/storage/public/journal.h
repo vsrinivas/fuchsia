@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_JOURNAL_H_
 
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace storage {
 

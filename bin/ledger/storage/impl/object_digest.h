@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_DIGEST_H_
 
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace storage {
 

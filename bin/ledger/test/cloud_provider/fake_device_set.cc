@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/test/cloud_provider/fake_device_set.h"
 
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 

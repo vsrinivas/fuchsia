@@ -48,10 +48,10 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/callback",
+    "//peridot/lib/convert",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -125,8 +125,8 @@ source_set("ledger_instance_factory") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/convert",
     "//peridot/lib/callback",
+    "//peridot/lib/convert",
     "//third_party/gtest",
   ]
 

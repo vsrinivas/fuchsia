@@ -8,13 +8,13 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/test/data_generator.h"
 #include "peridot/bin/ledger/test/get_ledger.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/waiter.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace test {
 namespace integration {

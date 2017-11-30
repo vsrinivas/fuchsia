@@ -211,7 +211,6 @@ executable("ledger_unittests") {
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:unittests",
     "//peridot/bin/ledger/cloud_sync/impl:unittests",
-    "//peridot/bin/ledger/convert:unittests",
     "//peridot/bin/ledger/coroutine:unittests",
     "//peridot/bin/ledger/coroutine/context:unittests",
     "//peridot/bin/ledger/encryption/impl:unittests",

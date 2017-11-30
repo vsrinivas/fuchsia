@@ -19,7 +19,6 @@
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_manager.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
@@ -28,6 +27,7 @@
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 namespace {

@@ -7,8 +7,8 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 

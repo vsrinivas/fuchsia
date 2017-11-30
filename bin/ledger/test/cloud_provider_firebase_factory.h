@@ -12,9 +12,9 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace test {
 

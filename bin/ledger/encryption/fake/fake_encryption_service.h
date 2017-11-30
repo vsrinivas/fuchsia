@@ -9,8 +9,8 @@
 #include <string>
 
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace encryption {
 

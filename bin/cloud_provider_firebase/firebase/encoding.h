@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace firebase {
 
