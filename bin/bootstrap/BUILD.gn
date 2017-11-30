@@ -29,14 +29,13 @@ executable("bin") {
 }
 
 package("bootstrap") {
+  system_image = true
+
   deps = [
     ":bin",
   ]
 
-  binary = "bootstrap"
-
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
+  binaries = [ {
+        name = "bootstrap"
       } ]
 }
