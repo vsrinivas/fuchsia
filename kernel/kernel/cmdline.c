@@ -19,6 +19,13 @@ unsigned __kernel_cmdline_count;
 // style environment string
 void cmdline_append(const char* data) {
     unsigned i = __kernel_cmdline_size;
+    if (i == CMDLINE_MAX) {
+        return;
+    }
+    // strip a previous set-terminator
+    if (i > 0 && __kernel_cmdline[i] == 0) {
+        i--;
+    }
     unsigned max = CMDLINE_MAX - 2;
 
     bool found_equal = false;
