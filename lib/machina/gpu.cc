@@ -153,6 +153,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_resp_display_info_t*>(response_desc.addr);
       GetDisplayInfo(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
@@ -163,6 +164,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       ResourceCreate2D(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_SET_SCANOUT: {
@@ -173,6 +175,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       SetScanout(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_RESOURCE_FLUSH: {
@@ -183,6 +186,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       ResourceFlush(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: {
@@ -193,6 +197,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       TransferToHost2D(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: {
@@ -216,6 +221,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       ResourceAttachBacking(request, mem_entries, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_RESOURCE_UNREF: {
@@ -226,6 +232,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       ResourceUnref(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     case VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING: {
@@ -236,20 +243,22 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       ResourceDetachBacking(request, response);
+      *used += sizeof(*response);
       return ZX_OK;
     }
     // Not yet implemented.
     case VIRTIO_GPU_CMD_UPDATE_CURSOR:
-    case VIRTIO_GPU_CMD_MOVE_CURSOR: {
-      default:
+    case VIRTIO_GPU_CMD_MOVE_CURSOR:
+    default: {
         fprintf(stderr, "Unsupported GPU command %d\n", header->type);
         // ACK.
         virtio_desc_t response_desc;
         virtio_queue_read_desc(queue, request_desc.next, &response_desc);
-        auto resp =
+        auto response =
             reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
-        resp->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-        return ZX_ERR_NOT_SUPPORTED;
+        response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
+        *used += sizeof(*response);
+        return ZX_OK;
     }
   }
 }

@@ -81,8 +81,9 @@ class VirtioGpuTest {
     if (status != ZX_OK)
       return status;
 
-    uint32_t used;
+    uint32_t used = 0;
     status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK)
       return status;
 
@@ -114,8 +115,9 @@ class VirtioGpuTest {
     if (status != ZX_OK)
       return status;
 
-    uint32_t used;
+    uint32_t used = 0;
     status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK)
       return status;
 
@@ -142,8 +144,9 @@ class VirtioGpuTest {
     if (status != ZX_OK)
       return status;
 
-    uint32_t used;
+    uint32_t used = 0;
     status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK)
       return status;
 
@@ -169,8 +172,9 @@ class VirtioGpuTest {
     if (status != ZX_OK)
       return status;
 
-    uint32_t used;
+    uint32_t used = 0;
     status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK)
       return status;
 
@@ -208,6 +212,7 @@ TEST(VirtioGpuTest, HandleGetDisplayInfo) {
       test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
       ZX_OK);
 
+  EXPECT_EQ(sizeof(response), used);
   EXPECT_EQ(response.hdr.type, VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
   EXPECT_EQ(response.pmodes[0].r.x, 0u);
   EXPECT_EQ(response.pmodes[0].r.y, 0u);
@@ -250,10 +255,11 @@ TEST(VirtioGpuTest, SetScanoutToInvalidResource) {
                 .Build(&desc),
             ZX_OK);
 
-  uint32_t used;
+  uint32_t used = 0;
   ASSERT_EQ(
       test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
       ZX_OK);
+  EXPECT_EQ(sizeof(response), used);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
 }
 
@@ -290,10 +296,11 @@ TEST(VirtioGpuTest, HandleTransfer2D) {
     memset(entry.buffer.get(), 0xff, entry.len);
   }
 
-  uint32_t used;
+  uint32_t used = 0;
   ASSERT_EQ(
       test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
       ZX_OK);
+  EXPECT_EQ(sizeof(response), used);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_OK_NODATA);
 
   // Send a flush command to draw bytes to our scanout buffer.
