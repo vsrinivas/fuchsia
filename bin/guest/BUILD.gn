@@ -41,9 +41,6 @@ package("guest") {
         path = rebase_path("//garnet/lib/machina/arch/x86/acpi/dsdt.aml")
         dest = "dsdt.aml"
       }, {
-        path = rebase_path("//garnet/lib/machina/arch/x86/acpi/madt.aml")
-        dest = "madt.aml"
-      }, {
         path = rebase_path("//garnet/lib/machina/arch/x86/acpi/mcfg.aml")
         dest = "mcfg.aml"
       }

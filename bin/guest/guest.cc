@@ -44,6 +44,8 @@ static const uint64_t kUartBases[kNumUarts] = {
 #include "garnet/lib/machina/arch/x86/io_port.h"
 #include "garnet/lib/machina/arch/x86/tpm.h"
 
+static const char kDsdtPath[] = "/system/data/dsdt.aml";
+static const char kMcfgPath[] = "/system/data/mcfg.aml";
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = {
     machina::kI8250Base0,
@@ -221,7 +223,14 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Failed to create page table\n");
     return status;
   }
-  status = guest_create_acpi_table(physmem_addr, physmem_size, pt_end_off);
+
+  struct acpi_config acpi_config = {
+    .dsdt_path = kDsdtPath,
+    .mcfg_path = kMcfgPath,
+    .io_apic_addr = machina::kIoApicPhysBase,
+    .num_cpus = 1,
+  };
+  status = create_acpi_table(acpi_config, physmem_addr, physmem_size, pt_end_off);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create ACPI table\n");
     return status;
