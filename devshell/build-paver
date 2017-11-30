@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### build the paver disk image targets
+
+## builds efi-${ZIRCON_PROJECT}.blk, fvm.sparse.blk, and bootdata-blobstore-${ZIRCON_PROJECT}.bin
+##
+## usage: fx build-paver [extra ninja args]
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+
+fx-command-run build "${efi_block}" "${fvm_sparse_block}" "${ramdisk_bin}" "$@"
