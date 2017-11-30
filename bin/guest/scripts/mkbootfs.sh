@@ -54,11 +54,7 @@ arm64)
         --board qemu-virt;;
 x86)
     cd out/debug-x86-64;
-    PLATFORM="zircon-pc-x86-64";
-    GUEST_MANIFEST="\
-        data/dsdt.aml=../../garnet/lib/machina/arch/x86/acpi/dsdt.aml
-        data/madt.aml=../../garnet/lib/machina/arch/x86/acpi/madt.aml
-        data/mcfg.aml=../../garnet/lib/machina/arch/x86/acpi/mcfg.aml";;
+    PLATFORM="zircon-pc-x86-64";;
 *)  usage;;
 esac
 
