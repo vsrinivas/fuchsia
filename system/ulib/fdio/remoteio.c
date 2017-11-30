@@ -986,5 +986,6 @@ fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e) {
     atomic_init(&rio->io.refcount, 1);
     rio->h = h;
     rio->h2 = e;
+    atomic_init(&rio->txid, 1);
     return &rio->io;
 }
