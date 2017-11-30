@@ -126,7 +126,6 @@ final_system_manifest = "$root_out_dir/system.manifest"
 # Keep the following in sync with the values in
 #   //scripts/devshell/lib/image_build_vars.sh
 images_dir = "$root_out_dir/images"
-efi_image_path = "$images_dir/efi.blk"
 system_package_dir = "$root_gen_dir/system.pkg"
 system_package_meta_far = "$system_package_dir/meta.far"
 system_package_cmdline = "$images_dir/cmdline.txt"
@@ -511,63 +510,6 @@ action("fvm.sparse.blk") {
   ]
 }
 
-# efi.blk is a partition image containing a a kernel and bootdata image, plus,
-# if appropriate, a bootloader. This target is not consumed by the default
-# build, but instead may be invoked by tools from //scripts and elsewhere that
-# need an EFI partition image.
-action("efi.blk") {
-  bootdata_label = ":bootdata-blobstore-${zircon_platforms[0]}"
-  make_efi_label = "//garnet/go/src/make-efi:host($host_toolchain)"
-  deps = [
-    bootdata_label,
-    make_efi_label,
-  ]
-
-  bootdata_bins = get_target_outputs(bootdata_label)
-  bootdata_bin = bootdata_bins[0]
-  assert([ bootdata_bin ] == bootdata_bins)
-
-  kernel_build_dir = "//out/build-zircon/build-${zircon_platforms[0]}"
-  mkfs_msdosfs_bin = "//out/build-zircon/tools/mkfs-msdosfs"
-  zircon_bin = "$kernel_build_dir/zircon.bin"
-
-  make_efi_out_dir = get_label_info(make_efi_label, "root_out_dir")
-  make_efi_bin = "$make_efi_out_dir/make-efi"
-
-  inputs = [
-    mkfs_msdosfs_bin,
-    zircon_bin,
-  ]
-  inputs += get_target_outputs(bootdata_label)
-
-  script = "//build/gn_run_binary.sh"
-  args = [
-    clang_prefix,
-    rebase_path(make_efi_bin),
-    "--output",
-    rebase_path(efi_image_path),
-    "--mkfs",
-    rebase_path(mkfs_msdosfs_bin),
-    "--zircon",
-    rebase_path(zircon_bin),
-    "--bootdata",
-    rebase_path(bootdata_bin),
-  ]
-
-  if (target_cpu == "x64") {
-    gigaboot_bin = "$kernel_build_dir/bootloader/bootx64.efi"
-    args += [
-      "--efi-bootloader",
-      rebase_path(gigaboot_bin),
-    ]
-    inputs += [ gigaboot_bin ]
-  }
-
-  outputs = [
-    efi_image_path,
-  ]
-}
-
 # kernc.vboot is a "kernel partition" target for chromebook targets.
 action("kernc.vboot") {
   # TODO(INTK-60): get futility built either in GN or into a cipd package.
@@ -720,7 +662,9 @@ foreach(platform, zircon_platforms) {
   # the BOOTDATA bits.  This single file can be booted by Gigaboot.
   bootdata("zedboot-${platform}") {
     output_name = "images/$target_name"
-    deps = [ ":zedboot-data-${platform}" ]
+    deps = [
+      ":zedboot-data-${platform}",
+    ]
     kernel_build_dir = "//out/build-zircon/build-${platform}"
     inputs = [
       "$kernel_build_dir/zircon.bin",
@@ -781,6 +725,74 @@ foreach(platform, zircon_platforms) {
       "1",
       "--flags",
       "0x2",
+    ]
+  }
+
+  # efi-${platform}.blk is a partition image containing a a kernel and bootdata
+  # image, plus, zedboot and if appropriate, a bootloader. This target is not
+  # consumed by the default build, but instead may be invoked by tools from
+  # //scripts and elsewhere that need an EFI partition image.
+  action("efi-${platform}.blk") {
+    bootdata_label = ":bootdata-blobstore-${platform}"
+    zedboot_label = ":zedboot-${platform}"
+    make_efi_label = "//garnet/go/src/make-efi:host($host_toolchain)"
+    deps = [
+      bootdata_label,
+      make_efi_label,
+      zedboot_label,
+    ]
+
+    bootdata_bins = get_target_outputs(bootdata_label)
+    bootdata_bin = bootdata_bins[0]
+    assert([ bootdata_bin ] == bootdata_bins)
+
+    zedboot_bins = get_target_outputs(zedboot_label)
+    zedboot_bin = zedboot_bins[0]
+    assert([ zedboot_bin ] == zedboot_bins)
+
+    kernel_build_dir = "//out/build-zircon/build-${platform}"
+    mkfs_msdosfs_bin = "//out/build-zircon/tools/mkfs-msdosfs"
+    zircon_bin = "$kernel_build_dir/zircon.bin"
+
+    make_efi_out_dir = get_label_info(make_efi_label, "root_out_dir")
+    make_efi_bin = "$make_efi_out_dir/make-efi"
+
+    # Keep this value in sync with //scripts/devshell/lib/images_build_vars.sh
+    efi_image_path = "$images_dir/efi-${platform}.blk"
+
+    inputs = [
+      mkfs_msdosfs_bin,
+      zircon_bin,
+    ]
+    inputs += get_target_outputs(bootdata_label)
+
+    script = "//build/gn_run_binary.sh"
+    args = [
+      clang_prefix,
+      rebase_path(make_efi_bin),
+      "--output",
+      rebase_path(efi_image_path),
+      "--mkfs",
+      rebase_path(mkfs_msdosfs_bin),
+      "--zircon",
+      rebase_path(zircon_bin),
+      "--bootdata",
+      rebase_path(bootdata_bin),
+      "--zedboot",
+      rebase_path(zedboot_bin),
+    ]
+
+    if (target_cpu == "x64") {
+      gigaboot_bin = "$kernel_build_dir/bootloader/bootx64.efi"
+      args += [
+        "--efi-bootloader",
+        rebase_path(gigaboot_bin),
+      ]
+      inputs += [ gigaboot_bin ]
+    }
+
+    outputs = [
+      efi_image_path,
     ]
   }
 }
