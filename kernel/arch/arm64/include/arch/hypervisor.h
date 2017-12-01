@@ -51,19 +51,19 @@ private:
 
 // Representation of GICH registers.
 struct Gich {
-    volatile uint32_t hcr;
-    volatile uint32_t vtr;
-    volatile uint32_t vmcr;
-    volatile uint32_t reserved0;
-    volatile uint32_t misr;
-    volatile uint32_t reserved1[3];
-    volatile uint64_t eisr;
-    volatile uint32_t reserved2[2];
-    volatile uint64_t elrs;
-    volatile uint32_t reserved3[46];
-    volatile uint32_t apr;
-    volatile uint32_t reserved4[3];
-    volatile uint32_t lr[64];
+    uint32_t hcr;
+    uint32_t vtr;
+    uint32_t vmcr;
+    uint32_t reserved0;
+    uint32_t misr;
+    uint32_t reserved1[3];
+    uint64_t eisr;
+    uint32_t reserved2[2];
+    uint64_t elrs;
+    uint32_t reserved3[46];
+    uint32_t apr;
+    uint32_t reserved4[3];
+    uint32_t lr[64];
 } __PACKED;
 
 static_assert(__offsetof(Gich, hcr) == 0x00, "");
@@ -82,7 +82,7 @@ struct GichState {
     // Tracks active interrupts.
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
     // Virtual GICH address.
-    Gich* gich;
+    volatile Gich* gich;
 };
 
 class Vcpu {

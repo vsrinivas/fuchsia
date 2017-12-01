@@ -24,14 +24,14 @@ static const uint32_t kSpsrDaif = 0b1111 << 6;
 static const uint32_t kSpsrEl1h = 0b0101;
 static const uint32_t kSpsrNzcv = 0b1111 << 28;
 
-static zx_status_t get_gich(uint8_t vpid, Gich** gich) {
+static zx_status_t get_gich(volatile Gich** gich) {
     // Check for presence of GICv2 virtualisation extensions.
     //
     // TODO(abdulla): Support GICv3 virtualisation.
     if (GICH_OFFSET == 0)
         return ZX_ERR_NOT_SUPPORTED;
 
-    *gich = reinterpret_cast<Gich*>(GICH_ADDRESS + 0x1000 + (vpid << 9));
+    *gich = reinterpret_cast<volatile Gich*>(GICH_ADDRESS + 0x1000);
     return ZX_OK;
 }
 
@@ -57,7 +57,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     status = vcpu->gich_state_.interrupt_tracker.Init();
     if (status != ZX_OK)
         return status;
-    status = get_gich(vpid, &vcpu->gich_state_.gich);
+    status = get_gich(&vcpu->gich_state_.gich);
     if (status != ZX_OK)
         return status;
 
