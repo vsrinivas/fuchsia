@@ -21,7 +21,7 @@ static fbl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(guest_mutex);
 
 static fbl::Mutex vcpu_mutex;
 static size_t num_vcpus TA_GUARDED(vcpu_mutex) = 0;
-static hypervisor::IdTracker<uint8_t, 8> vpid_tracker TA_GUARDED(vcpu_mutex);
+static hypervisor::IdAllocator<uint8_t, 8> vpid_allocator TA_GUARDED(vcpu_mutex);
 
 El2TranslationTable::~El2TranslationTable() {
     vm_page_t* page = paddr_to_vm_page(l0_pa_);
@@ -166,17 +166,17 @@ zx_status_t free_vmid(uint8_t vmid) {
 zx_status_t alloc_vpid(uint8_t* vpid) {
     fbl::AutoLock lock(&vcpu_mutex);
     if (num_vcpus == 0) {
-        zx_status_t status = vpid_tracker.Init();
+        zx_status_t status = vpid_allocator.Init();
         if (status != ZX_OK)
             return status;
     }
     num_vcpus++;
-    return vpid_tracker.AllocId(vpid);
+    return vpid_allocator.AllocId(vpid);
 }
 
 zx_status_t free_vpid(uint8_t vpid) {
     fbl::AutoLock lock(&vcpu_mutex);
-    zx_status_t status = vpid_tracker.FreeId(vpid);
+    zx_status_t status = vpid_allocator.FreeId(vpid);
     if (status != ZX_OK)
         return status;
     num_vcpus--;

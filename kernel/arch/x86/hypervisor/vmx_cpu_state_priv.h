@@ -7,7 +7,7 @@
 #pragma once
 
 #include <arch/hypervisor.h>
-#include <hypervisor/id_tracker.h>
+#include <hypervisor/id_allocator.h>
 
 // clang-format off
 
@@ -61,7 +61,7 @@ struct VmxRegion {
 };
 
 /* Maintains the VMX state for each CPU. */
-class VmxCpuState : public hypervisor::IdTracker<uint16_t, 64> {
+class VmxCpuState : public hypervisor::IdAllocator<uint16_t, 64> {
 public:
     static zx_status_t Create(fbl::unique_ptr<VmxCpuState>* out);
     ~VmxCpuState();

@@ -11,12 +11,12 @@
 
 namespace hypervisor {
 
-// Tracks architecture-specific resource IDs.
+// Allocates architecture-specific resource IDs.
 //
 // |T| is the type of the ID, and is an integral type.
 // |N| is the maximum value of an ID.
 template <typename T, T N>
-class IdTracker {
+class IdAllocator {
 public:
     zx_status_t Init() {
         return id_bitmap_.Reset(N);
