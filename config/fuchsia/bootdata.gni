@@ -104,6 +104,9 @@ template("bootdata") {
 #
 #   output_name (optional, default: target_name)
 #   output_extension (optional, default: "bin")
+#   deps (usually required)
+#   visibility (optional)
+#   testonly (optional)
 #       Same as for `bootdata`, which see.
 #
 #   inputs (required)
@@ -161,5 +164,69 @@ template("bootdata_cmdline") {
              "-C",
              rebase_path(inputs[1]),
            ]
+  }
+}
+
+# Template for writing a Zircon `bootdata.bin` file containing RAM disk images.
+#
+# Parameters
+#
+#   output_name (optional, default: target_name)
+#   output_extension (optional, default: "bin")
+#   deps (usually required)
+#   visibility (optional)
+#   testonly (optional)
+#       Same as for `bootdata`, which see.
+#
+#   inputs (required)
+#       [list of files] Input files.  Each is a raw disk image, which will
+#       become a `ramdisk` block device at runtime.
+#
+template("bootdata_ramdisk") {
+  assert(defined(invoker.inputs), "inputs required for $target_name")
+
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".bin"
+  }
+
+  output_file = "$root_out_dir/$output_file"
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                             "testonly",
+                           ])
+
+    script = "//build/gn_run_binary.sh"
+    inputs = [
+      _mkbootfs,
+    ]
+    script_args = [
+      clang_prefix,
+      rebase_path(_mkbootfs, root_build_dir),
+    ]
+
+    outputs = [
+      output_file,
+    ]
+
+    inputs += invoker.inputs
+    args = script_args + [
+             "-o",
+             rebase_path(output_file, root_build_dir),
+             "--ramdisk",
+           ] + rebase_path(invoker.inputs)
   }
 }

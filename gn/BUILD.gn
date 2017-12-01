@@ -469,6 +469,19 @@ action("fvm.blk") {
   ]
 }
 
+# This packs (compressed) fvm.blk into BOOTDATA_RAMDISK format,
+# used by the netboot-* targets below.
+bootdata_ramdisk("bootdata-fvm") {
+  visibility = [ ":*" ]
+  deps = [
+    ":fvm.blk",
+  ]
+  inputs = []
+  foreach(label, deps) {
+    inputs += get_target_outputs(label)
+  }
+}
+
 # fvm.sparse.blk creates a sparse FVM partition image containing the blobstore
 # partition produced by blobstore.blk and the data partition produced by
 # data.blk. fvm.sparse.blk is primarily invoked and used by the paver boot, via
@@ -498,12 +511,8 @@ action("fvm.sparse.blk") {
   ]
 
   if (!disable_data_minfs) {
-    inputs += [
-      data_image_path
-    ]
-    deps += [
-      ":data.blk",
-    ]
+    inputs += [ data_image_path ]
+    deps += [ ":data.blk" ]
     args += [
       "--data",
       rebase_path(data_image_path),
@@ -796,12 +805,35 @@ foreach(platform, zircon_platforms) {
       efi_image_path,
     ]
   }
+
+  # This packs up a single BOOTDATA container that includes fvm.blk as a
+  # RAMDISK image.  This can be used for network booting the full system
+  # without using any real storage.  The system decompresses the fvm.blk
+  # image into memory and then sees that RAM disk just as if it were a
+  # real disk on the device.
+  bootdata("netboot-${platform}") {
+    deps = [
+      ":bootdata-blobstore-${platform}",
+      ":bootdata-fvm",
+    ]
+    inputs = []
+    foreach(label, deps) {
+      inputs += get_target_outputs(label)
+    }
+  }
 }
 
 group("zedboot") {
   deps = []
   foreach(platform, zircon_platforms) {
     deps += [ ":zedboot-${platform}" ]
+  }
+}
+
+group("netboot") {
+  deps = []
+  foreach(platform, zircon_platforms) {
+    deps += [ ":netboot-${platform}" ]
   }
 }
 
