@@ -123,6 +123,6 @@ static int stub_getaddrinfo(const char* restrict host, const char* restrict serv
 }
 weak_alias(stub_getaddrinfo, getaddrinfo);
 
-void stub_freeaddrinfo(struct addrinfo* p) {
+static void stub_freeaddrinfo(struct addrinfo* p) {
 }
 weak_alias(stub_freeaddrinfo, freeaddrinfo);
