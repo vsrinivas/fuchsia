@@ -641,12 +641,12 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
 
 magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns)
 {
+    registers::MasterInterruptControl::write(register_io_.get(), false);
+
     uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
     DLOG("ProcessInterrupts 0x%08x", master_interrupt_control);
 
     TRACE_DURATION("magma", "ProcessInterrupts");
-
-    registers::MasterInterruptControl::write(register_io_.get(), false);
 
     if (master_interrupt_control &
         registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
