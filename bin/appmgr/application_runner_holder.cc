@@ -15,11 +15,10 @@
 namespace app {
 
 ApplicationRunnerHolder::ApplicationRunnerHolder(
-    ServiceProviderPtr services,
+    Services services,
     ApplicationControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
-  services_->ConnectToService(ApplicationRunner::Name_,
-                              runner_.NewRequest().PassChannel());
+  services_.ConnectToService(runner_.NewRequest());
 }
 
 ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;

@@ -96,6 +96,7 @@ executable("cobalt_testapp") {
     "//garnet/public/lib/cobalt/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
   ]
 }
 

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/services.h"
 
 #include "garnet/examples/fidl/services/echo.fidl.h"
 
@@ -23,33 +23,31 @@ class ResponsePrinter {
 
 class EchoClientApp {
  public:
-  EchoClientApp()
-    : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  EchoClientApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
   }
 
   bool Start(std::string server_url, std::string msg) {
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = server_url;
-    launch_info->services = echo_provider_.NewRequest();
+    launch_info->service_request = echo_provider_.NewRequest();
 
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             controller_.NewRequest());
 
-    app::ConnectToService(echo_provider_.get(), echo_.NewRequest());
+    echo_provider_.ConnectToService(echo_.NewRequest());
     FXL_DCHECK(echo_);
 
-    echo_->EchoString(msg,
-                      [this](fidl::String value) {
-                        ResponsePrinter printer;
-                        printer.Run(std::move(value));
-                      });
+    echo_->EchoString(msg, [this](fidl::String value) {
+      ResponsePrinter printer;
+      printer.Run(std::move(value));
+    });
     return true;
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> context_;
-  app::ServiceProviderPtr echo_provider_;
+  app::Services echo_provider_;
   app::ApplicationControllerPtr controller_;
   echo::EchoPtr echo_;
 };
@@ -70,7 +68,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
   echo::EchoClientApp app;
-if (app.Start(server_url, msg))
+  if (app.Start(server_url, msg))
     loop.Run();
   return 0;
 }

@@ -8,15 +8,15 @@
 #include <map>
 #include <memory>
 
+#include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "garnet/examples/ui/tile/tile_params.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/presentation/fidl/presenter.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/presentation/fidl/presenter.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 
 namespace examples {
 

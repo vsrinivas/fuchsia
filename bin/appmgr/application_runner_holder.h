@@ -13,14 +13,14 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
+#include "lib/svc/cpp/services.h"
 
 namespace app {
 
 class ApplicationRunnerHolder {
  public:
-  ApplicationRunnerHolder(
-      ServiceProviderPtr services,
-      ApplicationControllerPtr controller);
+  ApplicationRunnerHolder(Services services,
+                          ApplicationControllerPtr controller);
   ~ApplicationRunnerHolder();
 
   void StartApplication(
@@ -30,7 +30,7 @@ class ApplicationRunnerHolder {
       fidl::InterfaceRequest<ApplicationController> controller);
 
  private:
-  ServiceProviderPtr services_;
+  Services services_;
   ApplicationControllerPtr controller_;
   ApplicationRunnerPtr runner_;
 

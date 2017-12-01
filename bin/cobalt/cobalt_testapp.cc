@@ -14,7 +14,6 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/cobalt/fidl/cobalt.fidl-sync.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/cobalt/fidl/cobalt_controller.fidl-sync.h"
@@ -27,6 +26,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/svc/cpp/services.h"
 
 // Command-line flags
 
@@ -211,10 +211,10 @@ bool CobaltTestApp::RunAllTestingStrategies() {
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
   app_controller_.reset();
-  app::ServiceProviderPtr services;
+  app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = "cobalt";
-  launch_info->services = services.NewRequest();
+  launch_info->service_request = services.NewRequest();
   {
     std::ostringstream stream;
     stream << "--schedule_interval_seconds=" << schedule_interval_seconds;
@@ -239,11 +239,10 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   });
 
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  app::ConnectToService(services.get(), fidl::GetSynchronousProxy(&factory));
+  services.ConnectToService(fidl::GetSynchronousProxy(&factory));
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
 
-  app::ConnectToService(services.get(),
-                        fidl::GetSynchronousProxy(&cobalt_controller_));
+  services.ConnectToService(fidl::GetSynchronousProxy(&cobalt_controller_));
 }
 
 bool CobaltTestApp::RunTestsWithRequestSendSoon() {

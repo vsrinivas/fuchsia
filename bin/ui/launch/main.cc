@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zx/channel.h>
+
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/ui/presentation/fidl/presenter.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/svc/cpp/services.h"
+#include "lib/ui/presentation/fidl/presenter.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -27,12 +29,12 @@ int main(int argc, const char** argv) {
   auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
 
   // Launch application.
-  app::ServiceProviderPtr services;
+  app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
-  launch_info->services = services.NewRequest();
+  launch_info->service_request = services.NewRequest();
   app::ApplicationControllerPtr controller;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());
@@ -43,7 +45,7 @@ int main(int argc, const char** argv) {
 
   // Create the view.
   fidl::InterfacePtr<mozart::ViewProvider> view_provider;
-  app::ConnectToService(services.get(), view_provider.NewRequest());
+  services.ConnectToService(view_provider.NewRequest());
   fidl::InterfaceHandle<mozart::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 

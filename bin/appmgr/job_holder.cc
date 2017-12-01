@@ -25,6 +25,7 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/svc/cpp/services.h"
 
 namespace app {
 namespace {
@@ -282,9 +283,10 @@ void JobHolder::CreateApplication(
   // launch_info is moved before LoadApplication() gets at its first argument.
   fidl::String url = launch_info->url;
   loader_->LoadApplication(
-      url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
-                              controller = std::move(controller)](
-                                 ApplicationPackagePtr package) mutable {
+      url, fxl::MakeCopyable([
+        this, launch_info = std::move(launch_info),
+        controller = std::move(controller)
+      ](ApplicationPackagePtr package) mutable {
         fxl::RefPtr<ApplicationNamespace> application_namespace =
             default_namespace_;
         if (!launch_info->additional_services.is_null()) {
@@ -509,11 +511,11 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   // recursively to detect cycles.
   auto result = runners_.emplace(runner, nullptr);
   if (result.second) {
-    ServiceProviderPtr runner_services;
+    Services runner_services;
     ApplicationControllerPtr runner_controller;
     auto runner_launch_info = ApplicationLaunchInfo::New();
     runner_launch_info->url = runner;
-    runner_launch_info->services = runner_services.NewRequest();
+    runner_launch_info->service_request = runner_services.NewRequest();
     CreateApplication(std::move(runner_launch_info),
                       runner_controller.NewRequest());
 

@@ -6,9 +6,9 @@
 
 #include <fdio/util.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fxl/logging.h"
+#include "lib/svc/cpp/services.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 
 namespace examples {
 
@@ -38,20 +38,19 @@ void TileView::Present(
 
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
-    app::ServiceProviderPtr services;
+    app::Services services;
     app::ApplicationControllerPtr controller;
 
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = url;
-    launch_info->services = services.NewRequest();
+    launch_info->service_request = services.NewRequest();
 
     // |env_launcher_| launches the app with our nested environment.
     env_launcher_->CreateApplication(std::move(launch_info),
                                      controller.NewRequest());
 
     // Get the view provider back from the launched app.
-    auto view_provider =
-        app::ConnectToService<mozart::ViewProvider>(services.get());
+    auto view_provider = services.ConnectToService<mozart::ViewProvider>();
 
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
