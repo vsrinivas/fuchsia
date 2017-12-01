@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### view commits not yet rolled to a layer
+
 import argparse
 import base64
 import json
