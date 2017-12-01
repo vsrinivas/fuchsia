@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 // Helpers for using |ServiceProvider|s.
+//
+// The functions in this header deprecated along with |ServiceProvider| itself.
+// Please use the functions in lib/svc/cpp/services.h instead.
 
 #ifndef LIB_APP_CPP_CONNECT_H_
 #define LIB_APP_CPP_CONNECT_H_

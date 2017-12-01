@@ -10,6 +10,13 @@
 
 namespace app {
 
+void ConnectToService(const zx::channel& directory,
+                      zx::channel request,
+                      const std::string& service_path) {
+  fdio_service_connect_at(directory.get(), service_path.c_str(),
+                          request.release());
+}
+
 Services::Services() = default;
 
 Services::~Services() = default;
@@ -30,12 +37,6 @@ zx::channel Services::NewRequest() {
 
 void Services::Bind(zx::channel directory) {
   directory_ = std::move(directory);
-}
-
-void Services::ConnectToService(const std::string& service_name,
-                                zx::channel request) {
-  fdio_service_connect_at(directory_.get(), service_name.c_str(),
-                          request.release());
 }
 
 }  // namespace app

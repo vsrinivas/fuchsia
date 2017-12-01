@@ -133,7 +133,7 @@ void App::RegisterSingleton(std::string service_name,
               services_.emplace(launch_info->url, std::move(services));
         }
 
-        it->second.ConnectToService(service_name, std::move(client_handle));
+        it->second.ConnectToService(std::move(client_handle), service_name);
       }),
       service_name);
 }
