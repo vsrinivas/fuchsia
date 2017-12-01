@@ -6,6 +6,7 @@
 ### view commits not yet rolled to a layer
 
 import argparse
+from argparse import RawTextHelpFormatter
 import base64
 import json
 import requests
@@ -14,6 +15,7 @@ import xml.etree.ElementTree as xml
 
 
 LAYERS = [
+    'vendor', # For checkouts building on top of Topaz.
     'topaz',
     'peridot',
     'garnet',
@@ -75,32 +77,56 @@ def filter_commit(commit):
     return True
 
 
+def print_commits(layer, commits):
+    """Prints the given commits in a user=pleasing format."""
+    commits = [c for c in commits if filter_commit(c)]
+    print('')
+    print('        --------------')
+    print('        | %s |' % '{:^10}'.format(layer))
+    print('        --------------')
+    for commit in commits:
+        print('%s | %s | %s' % (commit['commit'][:7],
+                                commit['author']['name'][:15].ljust(15),
+                                commit['message'].splitlines()[0]))
+    if not commits:
+        print('None')
+
+
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
+        description="""Displays the commits not yet rolled to a given layer.
+For vendor layers, specify the Topaz revision with --topaz-revision.""")
     parser.add_argument('--layer',
                         help='Name of the layer to inspect',
                         choices=LAYERS,
                         required=True)
+    parser.add_argument('--topaz-revision',
+                        help='(vendor only) revision of the Topaz layer')
     args = parser.parse_args()
+
     layer = args.layer
-    revision = 'master'
+    revision = args.topaz_revision
+
+    if layer != 'vendor' and revision:
+        print('Warning: Topaz revision only used with vendor layers.')
+
+    if layer == 'vendor' and not revision:
+        print('Error: vendor layers require a Topaz revision.')
+        return 1
+
+    if layer == 'vendor':
+        commits = get_commits('topaz', revision)
+        print_commits('topaz', commits)
+        layer = 'topaz'
+    else:
+        revision = 'master'
 
     while True:
         (lower_layer, lower_revision) = get_lower_layer_commit(layer, revision)
         if not lower_layer:
-            return
+            break
         commits = get_commits(lower_layer, lower_revision)
-        commits = [c for c in commits if filter_commit(c)]
-        print('')
-        print('        --------------')
-        print('        | %s |' % '{:^10}'.format(lower_layer))
-        print('        --------------')
-        for commit in commits:
-            print('%s | %s | %s' % (commit['commit'][:7],
-                                    commit['author']['name'][:15].ljust(15),
-                                    commit['message'].splitlines()[0]))
-        if not commits:
-            print('None')
+        print_commits(lower_layer, commits)
         layer = lower_layer
         revision = lower_revision
 
