@@ -23,7 +23,7 @@ TEST(NamespaceBuilder, Control) {
   builder.AddSandbox(sandbox);
 
   fdio_flat_namespace_t* flat = builder.Build();
-  EXPECT_EQ(3u, flat->count);
+  EXPECT_EQ(4u, flat->count);
 
   std::vector<std::string> paths;
   for (size_t i = 0; i < flat->count; ++i)
@@ -32,6 +32,8 @@ TEST(NamespaceBuilder, Control) {
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/input") !=
               paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/display") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/gpu") !=
               paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/vulkan") !=
               paths.end());
