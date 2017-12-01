@@ -347,15 +347,14 @@ def emit_manifests(args, selected, unselected, input_binaries,
         if entry.group is not None:
             outputs[entry.group].manifest.append(entry._replace(group=None))
 
-    # Emit each manifest.
-    # Sort so that functionally identical output is textually identical.
-    for output in outputs:
-        output.manifest.sort(key=lambda entry: entry.target)
-        update_file(output.file,
-                    manifest.format_manifest_file(output.manifest))
-
     all_binaries = {binary.info.build_id: binary.entry for binary in binaries}
     all_debug_files = {info.build_id: info for info in debug_files}
+
+    # TODO(US-390): As a stopgap until there is a smarter loader service,
+    # we'll toss every shared library used by any package into the system
+    # manifest.  Drop this behavior when it's no longer needed.
+    global_soname = set(binary.info.soname
+                        for binary in binaries if binary.info.soname)
 
     # Now handle the standalone outputs.  These reuse the same
     # aux_binaries, but ignore all the work done for the system image
@@ -388,7 +387,14 @@ def emit_manifests(args, selected, unselected, input_binaries,
         all_debug_files.update(
             {info.build_id: info for info in debug_files})
 
+        # TODO(US-390): Remove this later; see comment above.
+        for binary in binaries:
+            if binary.info.soname and binary.info.soname not in global_soname:
+                outputs[-1].manifest.append(binary.entry._replace(group=None))
+                global_soname.add(binary.info.soname)
+
         # Finally, emit the standalone manifest.
+        # Sort so that functionally identical output is textually identical.
         update_file(output,
                     manifest.format_manifest_file(sorted(
                         (entry._replace(group=None) for entry in
@@ -396,6 +402,13 @@ def emit_manifests(args, selected, unselected, input_binaries,
                                          (binary.entry for binary in binaries),
                                          nonbinaries)),
                         key=lambda entry: entry.target)))
+
+    # Emit each primary manifest.
+    # Sort so that functionally identical output is textually identical.
+    for output in outputs:
+        output.manifest.sort(key=lambda entry: entry.target)
+        update_file(output.file,
+                    manifest.format_manifest_file(output.manifest))
 
     # Emit the build ID list.
     # Sort so that functionally identical output is textually identical.
