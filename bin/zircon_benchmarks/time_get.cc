@@ -18,9 +18,24 @@ void TimeGetMonotonicTest() {
   zx_time_get(ZX_CLOCK_MONOTONIC);
 }
 
+void TimeGetUtcTest() {
+  zx_time_get(ZX_CLOCK_UTC);
+}
+
+void TimeGetThreadTest() {
+  zx_time_get(ZX_CLOCK_THREAD);
+}
+
+void TicksGetTest() {
+  zx_ticks_get();
+}
+
 __attribute__((constructor))
 void RegisterTests() {
   fbenchmark::RegisterTestFunc<TimeGetMonotonicTest>("TimeGetMonotonic");
+  fbenchmark::RegisterTestFunc<TimeGetUtcTest>("TimeGetUtc");
+  fbenchmark::RegisterTestFunc<TimeGetThreadTest>("TimeGetThread");
+  fbenchmark::RegisterTestFunc<TicksGetTest>("TicksGet");
 }
 
 }  // namespace
