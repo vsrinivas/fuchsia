@@ -68,7 +68,7 @@ typedef struct ipm_per_trace_state {
     // true if |config| has been set.
     bool configured;
 
-    zx_x86_ipm_perf_config_t config;
+    zx_x86_ipm_config_t config;
 
     // # of entries in |buffers|.
     // TODO(dje): This is generally the number of cpus, but it could be
@@ -221,7 +221,7 @@ static zx_status_t get_simple_config_sample_freq(
 }
 
 static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                   zx_x86_ipm_perf_config_t* config) {
+                                   zx_x86_ipm_config_t* config) {
     uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
     uint32_t enable = 0;
     if (os_usr_mask & IPM_CATEGORY_OS)
@@ -248,7 +248,7 @@ static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_
 }
 
 static zx_status_t misc_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                  zx_x86_ipm_perf_config_t* config) {
+                                  zx_x86_ipm_config_t* config) {
     config->misc_ctrl = 0;
     if (simple_config->categories & IPM_CATEGORY_PROFILE_PC)
         config->misc_ctrl |= IPM_MISC_CTRL_PROFILE_PC;
@@ -257,7 +257,7 @@ static zx_status_t misc_to_config(const ioctl_ipm_simple_perf_config_t* simple_c
 
 static zx_status_t category_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
                                       const category_spec_t* spec,
-                                      zx_x86_ipm_perf_config_t* config) {
+                                      zx_x86_ipm_config_t* config) {
     uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
 
     for (size_t i = 0; i < spec->count && i < ipm_num_programmable_counters; ++i) {
@@ -285,7 +285,7 @@ static zx_status_t category_to_config(const ioctl_ipm_simple_perf_config_t* simp
 }
 
 static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                               zx_x86_ipm_perf_config_t* config) {
+                                               zx_x86_ipm_config_t* config) {
     uint32_t programmable_category =
         simple_config->categories & IPM_CATEGORY_PROGRAMMABLE_MASK;
     bool use_fixed = !!(simple_config->categories & IPM_CATEGORY_FIXED_MASK);
@@ -352,24 +352,24 @@ static void ipm_free_buffers_for_trace(ipm_per_trace_state_t* per_trace, uint32_
 
 // The userspace side of the driver.
 
-static zx_status_t ipm_get_state(cpu_trace_device_t* dev,
-                                 void* reply, size_t replymax,
-                                 size_t* out_actual) {
+static zx_status_t ipm_get_properties(cpu_trace_device_t* dev,
+                                      void* reply, size_t replymax,
+                                      size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    zx_x86_ipm_state_t state;
-    if (replymax < sizeof(state))
+    zx_x86_ipm_properties_t props;
+    if (replymax < sizeof(props))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_IPM, MTRACE_IPM_GET_STATE,
-                          0, &state, sizeof(state));
+        zx_mtrace_control(resource, MTRACE_KIND_IPM, MTRACE_IPM_GET_PROPERTIES,
+                          0, &props, sizeof(props));
     if (status != ZX_OK)
         return status;
 
-    memcpy(reply, &state, sizeof(state));
-    *out_actual = sizeof(state);
+    memcpy(reply, &props, sizeof(props));
+    *out_actual = sizeof(props);
     return ZX_OK;
 }
 
@@ -529,15 +529,15 @@ static zx_status_t ipm_get_buffer_handle(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipm_stage_perf_config(cpu_trace_device_t* dev,
-                                         const void* cmd, size_t cmdlen) {
+static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
+                                    const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     ipm_device_t* ipm = dev->ipm;
     if (!ipm)
         return ZX_ERR_BAD_STATE;
 
-    ioctl_ipm_perf_config_t config;
+    ioctl_ipm_config_t config;
     if (cmdlen != sizeof(config))
         return ZX_ERR_INVALID_ARGS;
     memcpy(&config, cmd, sizeof(config));
@@ -569,7 +569,7 @@ static zx_status_t ipm_stage_simple_perf_config(cpu_trace_device_t* dev,
         return ZX_ERR_BAD_STATE;
 
     ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
-    zx_x86_ipm_perf_config_t config;
+    zx_x86_ipm_config_t config;
     zx_status_t status = simple_config_to_cpu_config(&simple_config, &config);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: simple_config_to_cpu_config failed, %d\n",
@@ -582,9 +582,9 @@ static zx_status_t ipm_stage_simple_perf_config(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipm_get_perf_config(cpu_trace_device_t* dev,
-                                       void* reply, size_t replymax,
-                                       size_t* out_actual) {
+static zx_status_t ipm_get_config(cpu_trace_device_t* dev,
+                                  void* reply, size_t replymax,
+                                  size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     ipm_device_t* ipm = dev->ipm;
@@ -595,7 +595,7 @@ static zx_status_t ipm_get_perf_config(cpu_trace_device_t* dev,
     if (!per_trace->configured)
         return ZX_ERR_BAD_STATE;
 
-    ioctl_ipm_perf_config_t config;
+    ioctl_ipm_config_t config;
     if (replymax < sizeof(config))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -708,10 +708,10 @@ zx_status_t ipm_ioctl(cpu_trace_device_t* dev, uint32_t op,
     assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_IPM);
 
     switch (op) {
-    case IOCTL_IPM_GET_STATE:
+    case IOCTL_IPM_GET_PROPERTIES:
         if (cmdlen != 0)
             return ZX_ERR_INVALID_ARGS;
-        return ipm_get_state(dev, reply, replymax, out_actual);
+        return ipm_get_properties(dev, reply, replymax, out_actual);
 
     case IOCTL_IPM_ALLOC_TRACE:
         if (replymax != 0)
@@ -734,18 +734,18 @@ zx_status_t ipm_ioctl(cpu_trace_device_t* dev, uint32_t op,
     case IOCTL_IPM_GET_BUFFER_HANDLE:
         return ipm_get_buffer_handle(dev, cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_IPM_STAGE_PERF_CONFIG:
+    case IOCTL_IPM_STAGE_CONFIG:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return ipm_stage_perf_config(dev, cmd, cmdlen);
+        return ipm_stage_config(dev, cmd, cmdlen);
 
     case IOCTL_IPM_STAGE_SIMPLE_PERF_CONFIG:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipm_stage_simple_perf_config(dev, cmd, cmdlen);
 
-    case IOCTL_IPM_GET_PERF_CONFIG:
-        return ipm_get_perf_config(dev, reply, replymax, out_actual);
+    case IOCTL_IPM_GET_CONFIG:
+        return ipm_get_config(dev, reply, replymax, out_actual);
 
     case IOCTL_IPM_START:
         if (cmdlen != 0 || replymax != 0)

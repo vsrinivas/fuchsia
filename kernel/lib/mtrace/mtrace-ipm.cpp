@@ -34,16 +34,16 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
            action, options, arg.get(), size);
 
     switch (action) {
-    case MTRACE_IPM_GET_STATE: {
-        zx_x86_ipm_state_t state;
-        if (size != sizeof(state))
+    case MTRACE_IPM_GET_PROPERTIES: {
+        zx_x86_ipm_properties_t props;
+        if (size != sizeof(props))
             return ZX_ERR_INVALID_ARGS;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        auto status = x86_ipm_get_state(&state);
+        auto status = x86_ipm_get_properties(&props);
         if (status != ZX_OK)
             return status;
-        status = arg.reinterpret<zx_x86_ipm_state_t>().copy_to_user(state);
+        status = arg.reinterpret<zx_x86_ipm_properties_t>().copy_to_user(props);
         if (status != ZX_OK)
             return status;
         return ZX_OK;
@@ -87,10 +87,10 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
     }
 
     case MTRACE_IPM_STAGE_CONFIG: {
-        zx_x86_ipm_perf_config_t config;
+        zx_x86_ipm_config_t config;
         if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_x86_ipm_perf_config_t>().copy_from_user(&config);
+        zx_status_t status = arg.reinterpret<zx_x86_ipm_config_t>().copy_from_user(&config);
         if (status != ZX_OK)
             return status;
         if (options != 0)

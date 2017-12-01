@@ -26,13 +26,13 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-zx_status_t x86_ipm_get_state(zx_x86_ipm_state_t* state);
+zx_status_t x86_ipm_get_properties(zx_x86_ipm_properties_t* state);
 
 zx_status_t x86_ipm_init();
 
 zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo);
 
-zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config);
+zx_status_t x86_ipm_stage_config(const zx_x86_ipm_config_t* config);
 
 zx_status_t x86_ipm_start();
 

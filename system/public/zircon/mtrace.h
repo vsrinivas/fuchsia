@@ -51,9 +51,9 @@ __BEGIN_CDECLS
 
 // Actions for Intel Performance Monitoring control
 
-// Get the current state.
-// The result is an mx_x86_ipm_state_t struct filled in.
-#define MTRACE_IPM_GET_STATE 0
+// Get performonce monitoring system properties
+// The result is an mx_x86_ipm_properties_t struct filled in.
+#define MTRACE_IPM_GET_PROPERTIES 0
 
 // Prepare the kernel for performance data collection trace runs.
 #define MTRACE_IPM_INIT 1

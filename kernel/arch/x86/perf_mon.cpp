@@ -280,18 +280,18 @@ static void x86_perfmon_clear_overflow_indicators() {
     write_msr(IA32_PERF_GLOBAL_OVF_CTRL, value);
 }
 
-zx_status_t x86_ipm_get_state(zx_x86_ipm_state_t* state) {
+zx_status_t x86_ipm_get_properties(zx_x86_ipm_properties_t* props) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
         return ZX_ERR_NOT_SUPPORTED;
-    state->api_version = IPM_API_VERSION;
-    state->pm_version = perfmon_version;
-    state->num_fixed_counters = perfmon_num_fixed_counters;
-    state->num_programmable_counters = perfmon_num_programmable_counters;
-    state->perf_capabilities = perfmon_capabilities;
-    state->alloced = !!perfmon_state;
-    state->started = atomic_load(&perfmon_active);
+    props->api_version = IPM_API_VERSION;
+    props->pm_version = perfmon_version;
+    props->num_fixed_counters = perfmon_num_fixed_counters;
+    props->num_programmable_counters = perfmon_num_programmable_counters;
+    props->perf_capabilities = perfmon_capabilities;
+    props->alloced = !!perfmon_state;
+    props->started = atomic_load(&perfmon_active);
     return ZX_OK;
 }
 
@@ -370,7 +370,7 @@ static void x86_ipm_set_sampling_mode_locked(perfmon_state_t* state, bool enable
     }
 }
 
-zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config) {
+zx_status_t x86_ipm_stage_config(const zx_x86_ipm_config_t* config) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)

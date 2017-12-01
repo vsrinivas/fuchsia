@@ -292,7 +292,7 @@ typedef struct {
     bool alloced;
     // True if MTRACE_IPM_START done.
     bool started;
-} zx_x86_ipm_state_t;
+} zx_x86_ipm_properties_t;
 
 // This is for passing buffer specs to the kernel (for setting up the
 // debug store MSRs, or for directly writing in "counting mode").
@@ -327,7 +327,7 @@ typedef struct {
 
     // TODO(dje): Add initial counter values here instead of always resetting
     // to zero?
-} zx_x86_ipm_perf_config_t;
+} zx_x86_ipm_config_t;
 
 // Header for each data buffer.
 typedef struct {
@@ -520,13 +520,11 @@ typedef enum {
 
 // Fetch the state of data collection.
 // Must be called prior to STAGE_CPU_DATA and after any intermediate FREE.
-// Output: zx_x86_ipm_state_t
-// TODO(dje): Not entirely happy with the use of the names "state" and "config"
-// here. Swapping them feels a bit better.
-#define IOCTL_IPM_GET_STATE \
+// Output: zx_x86_ipm_properties_t
+#define IOCTL_IPM_GET_PROPERTIES \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPM, 0)
-IOCTL_WRAPPER_OUT(ioctl_ipm_get_state, IOCTL_IPM_GET_STATE,
-                  zx_x86_ipm_state_t);
+IOCTL_WRAPPER_OUT(ioctl_ipm_get_properties, IOCTL_IPM_GET_PROPERTIES,
+                  zx_x86_ipm_properties_t);
 
 // The configuration for a data collection run.
 // This is generally the first call to allocate resources for a trace,
@@ -579,19 +577,19 @@ IOCTL_WRAPPER_OUT(ioctl_ipm_get_trace_config, IOCTL_IPM_GET_TRACE_CONFIG,
 
 // Full-featured perf-data trace configuration.
 typedef struct {
-    zx_x86_ipm_perf_config_t config;
-} ioctl_ipm_perf_config_t;
+    zx_x86_ipm_config_t config;
+} ioctl_ipm_config_t;
 
 // Stage performance monitor configuration for a cpu.
 // Must be called with data collection off and after INIT.
 // Note: This doesn't actually configure the counters, this just stages
 // the values for subsequent use by START.
-// Input: ioctl_ipm_perf_config_t
+// Input: ioctl_ipm_config_t
 // TODO(dje): Provide a more abstract way to configure the hardware.
-#define IOCTL_IPM_STAGE_PERF_CONFIG \
+#define IOCTL_IPM_STAGE_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPM, 4)
-IOCTL_WRAPPER_IN(ioctl_ipm_stage_perf_config, IOCTL_IPM_STAGE_PERF_CONFIG,
-                 ioctl_ipm_perf_config_t);
+IOCTL_WRAPPER_IN(ioctl_ipm_stage_config, IOCTL_IPM_STAGE_CONFIG,
+                 ioctl_ipm_config_t);
 
 // A simple way for clients to request particular counters without having to
 // deal with the details.
@@ -617,11 +615,11 @@ IOCTL_WRAPPER_IN(ioctl_ipm_stage_simple_perf_config,
 
 // Fetch performance monitor configuration for a cpu.
 // Must be called with data collection off and after INIT.
-// Output: ioctl_ipm_perf_config_t
-#define IOCTL_IPM_GET_PERF_CONFIG \
+// Output: ioctl_ipm_config_t
+#define IOCTL_IPM_GET_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPM, 6)
-IOCTL_WRAPPER_OUT(ioctl_ipm_get_perf_config, IOCTL_IPM_GET_PERF_CONFIG,
-                  ioctl_ipm_perf_config_t);
+IOCTL_WRAPPER_OUT(ioctl_ipm_get_config, IOCTL_IPM_GET_CONFIG,
+                  ioctl_ipm_config_t);
 
 // This contains the run-time produced data about the buffer.
 // Not the trace data itself, just info about the data.
