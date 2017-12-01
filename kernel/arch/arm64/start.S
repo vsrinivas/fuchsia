@@ -378,9 +378,10 @@ FUNCTION(arm_reset)
 
     // Choose a good (ideally random) stack-guard value as early as possible.
     bl      choose_stack_guard
-    str	    x0, [tmp, #ZX_TLS_STACK_GUARD_OFFSET]
+    mrs     tmp, tpidr_el1
+    str     x0, [tmp, #ZX_TLS_STACK_GUARD_OFFSET]
     // Don't leak the value to other code.
-    mov	    x0, xzr
+    mov     x0, xzr
 
     bl  lk_main
     b   .
