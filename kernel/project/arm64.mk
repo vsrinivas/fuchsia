@@ -8,7 +8,9 @@
 # Project file to build zircon + user space on top of qemu
 # for 64bit arm (cortex-a53)
 
+ARCH := arm64
+TARGET := qemu-virt
+
 include kernel/project/virtual/test.mk
 include kernel/project/virtual/user.mk
-include kernel/project/target/qemu-virt.mk
 

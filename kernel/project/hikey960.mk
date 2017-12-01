@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-MODULES +=
+ARCH := arm64
+TARGET := hikey960
 
 include kernel/project/virtual/user.mk
 include kernel/project/virtual/test.mk
-include kernel/project/target/hikey960-a53.mk
