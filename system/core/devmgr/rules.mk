@@ -32,6 +32,7 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/bootdata \
+    system/ulib/memfs \
     third_party/ulib/lz4 \
     system/ulib/port \
     system/ulib/driver-info \
@@ -56,12 +57,11 @@ MODULE_GROUP := core
 MODULE_SRCS := \
     $(LOCAL_DIR)/block-watcher.c \
     $(LOCAL_DIR)/devmgr-fdio.c \
-    $(LOCAL_DIR)/dnode.cpp \
     $(LOCAL_DIR)/fshost.c \
-    $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
 
 MODULE_STATIC_LIBS := \
+    system/ulib/memfs \
     system/ulib/fs \
     system/ulib/async \
     system/ulib/async.loop \

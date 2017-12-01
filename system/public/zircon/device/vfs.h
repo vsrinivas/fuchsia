@@ -52,9 +52,6 @@
 // the connection to the filesystem and return it.
 #define IOCTL_VFS_UNMOUNT_NODE \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 2)
-// Add a bootfs vmo to the system fs.
-#define IOCTL_VFS_MOUNT_BOOTFS_VMO \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 3)
 // Determine which filesystem the vnode belongs to.
 #define IOCTL_VFS_QUERY_FS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_VFS, 4)
@@ -146,9 +143,6 @@ IOCTL_WRAPPER(ioctl_vfs_unmount_fs, IOCTL_VFS_UNMOUNT_FS);
 
 // ssize_t ioctl_vfs_unmount_node(int fd, zx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_vfs_unmount_node, IOCTL_VFS_UNMOUNT_NODE, zx_handle_t);
-
-// ssize_t ioctl_vfs_mount_bootfs_vmo(int fd, zx_handle_t* in);
-IOCTL_WRAPPER_IN(ioctl_vfs_mount_bootfs_vmo, IOCTL_VFS_MOUNT_BOOTFS_VMO, zx_handle_t);
 
 typedef struct vfs_query_info {
     // These are the total/used # of data bytes, not # of entire disk bytes.
