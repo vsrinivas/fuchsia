@@ -15,11 +15,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
 vboot_dir="${FUCHSIA_DIR}/third_party/vboot_reference"
+CGPT="${vboot_dir}/build/cgpt/cgpt"
+if [[ ! -x "${CGPT}" ]]; then
 (
 cd "${vboot_dir}"
-make cgpt
+make cgpt futil
 )
-CGPT="${vboot_dir}/build/cgpt/cgpt"
+fi
 
 is_usb() {
   if [ -n "$(type -path udevadm)" ]; then
