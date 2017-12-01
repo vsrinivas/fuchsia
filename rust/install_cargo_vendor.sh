@@ -7,7 +7,7 @@
 # cannot be built from sources in the Fuchsia tree.
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
+readonly ROOT_DIR="$(dirname $(dirname "${SCRIPT_DIR}"))"
 
 if [[ "$(uname -s)" = "Darwin" ]]; then
   readonly TRIPLE="x86_64-apple-darwin"

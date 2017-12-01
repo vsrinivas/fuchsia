@@ -6,7 +6,6 @@
 import argparse
 import fileinput
 import os
-import paths
 import platform
 import re
 import shutil
@@ -15,9 +14,11 @@ import sys
 import tempfile
 import uuid
 
-sys.path += [os.path.join(paths.FUCHSIA_ROOT, "third_party", "pytoml")]
+FUCHSIA_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "pytoml")]
 import pytoml
-sys.path += [os.path.join(paths.FUCHSIA_ROOT, "build", "rust")]
+sys.path += [os.path.join(FUCHSIA_ROOT, "build", "rust")]
 import local_crates
 
 from check_rust_licenses import check_licenses
@@ -48,7 +49,7 @@ def get_cargo_bin():
         platform_dir = "linux-x64"
     else:
         raise Exception("Platform not supported: %s" % host_os)
-    return os.path.join(paths.FUCHSIA_ROOT, "buildtools", platform_dir, "rust",
+    return os.path.join(FUCHSIA_ROOT, "buildtools", platform_dir, "rust",
                         "bin", "cargo")
 
 
@@ -106,7 +107,7 @@ def update_crates(crates):
             if not is_from_crates_io:
                 # A build rule is needed for this crate.
                 print("Generating build rule for mirror '%s'" % name)
-                crate["path"] = os.path.join(paths.FUCHSIA_ROOT, "third_party",
+                crate["path"] = os.path.join(FUCHSIA_ROOT, "third_party",
                                              "rust-mirrors", name)
                 result.append(crate)
             continue
@@ -115,7 +116,7 @@ def update_crates(crates):
             print("Ignoring local crate '%s'" % name)
             continue
 
-        crate["path"] = os.path.join(paths.FUCHSIA_ROOT, "third_party",
+        crate["path"] = os.path.join(FUCHSIA_ROOT, "third_party",
                                      "rust-crates", "vendor", crate["label"])
         result.append(crate)
 
@@ -190,12 +191,12 @@ def fix_build_files(crates):
     dep_pattern = re.compile(
             r"^(\s*)\"//third_party/rust-crates:([a-z\-]+)-(\d[\d\.]+)\",\s*$")
     not_found = set()
-    for root, dirs, files in os.walk(os.path.join(paths.FUCHSIA_ROOT)):
+    for root, dirs, files in os.walk(os.path.join(FUCHSIA_ROOT)):
         for file in files:
             _, ext = os.path.splitext(file)
             if file != "BUILD.gn" and ext != ".gni":
                 continue
-            base = os.path.relpath(root, paths.FUCHSIA_ROOT)
+            base = os.path.relpath(root, FUCHSIA_ROOT)
             if base == "third_party/rust-crates":
                 # The build file defining the crates is up-to-date, thank you
                 # very much.
@@ -232,7 +233,7 @@ def main():
     parser = argparse.ArgumentParser("Updates third-party Rust crates")
     parser.add_argument("--cargo-vendor",
                         help="Path to the cargo-vendor command",
-                        default=os.path.join(paths.FUCHSIA_ROOT, "out",
+                        default=os.path.join(FUCHSIA_ROOT, "out",
                                              "cargo-vendor", "debug",
                                              "cargo-vendor"))
     parser.add_argument("--debug",
@@ -249,7 +250,7 @@ def main():
     # directory would be used, but unfortunately this would break the flow as
     # the configs used to seed the vendor directory must be under a common
     # parent directory.
-    base_dir = paths.FUCHSIA_ROOT
+    base_dir = FUCHSIA_ROOT
 
     toml_path = os.path.join(base_dir, "Cargo.toml")
     lock_path = os.path.join(base_dir, "Cargo.lock")
@@ -299,10 +300,10 @@ def main():
             os.remove(toml_path)
             os.remove(lock_path)
 
-    crates_dir = os.path.join(paths.FUCHSIA_ROOT, "third_party", "rust-crates")
+    crates_dir = os.path.join(FUCHSIA_ROOT, "third_party", "rust-crates")
     vendor_dir = os.path.join(crates_dir, "vendor")
     shutil.rmtree(vendor_dir)
-    shutil.move(os.path.join(paths.FUCHSIA_ROOT, "vendor"), vendor_dir)
+    shutil.move(os.path.join(FUCHSIA_ROOT, "vendor"), vendor_dir)
 
     crates = update_crates(crates)
 
