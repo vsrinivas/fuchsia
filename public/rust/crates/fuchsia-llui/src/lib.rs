@@ -42,11 +42,11 @@ struct zx_display_info_t {
     flags: u32,
 }
 
-const ZX_PIXEL_FORMAT_RGB_565: u32 = 1;
-const ZX_PIXEL_FORMAT_ARGB_8888: u32 = 4;
-const ZX_PIXEL_FORMAT_RGB_X888: u32 = 5;
-const ZX_PIXEL_FORMAT_MONO_1: u32 = 6;
-const ZX_PIXEL_FORMAT_MONO_8: u32 = 7;
+const ZX_PIXEL_FORMAT_RGB_565: u32 = 0x00020001;
+const ZX_PIXEL_FORMAT_ARGB_8888: u32 = 0x00040004;
+const ZX_PIXEL_FORMAT_RGB_X888: u32 = 0x00040005;
+const ZX_PIXEL_FORMAT_MONO_1: u32 = 0x00000006;
+const ZX_PIXEL_FORMAT_MONO_8: u32 = 0x00010007;
 
 #[repr(C)]
 struct ioctl_display_get_fb_t {
