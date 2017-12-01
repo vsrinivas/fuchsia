@@ -7,9 +7,8 @@
 
 #include <functional>
 
-#include <zx/socket.h>
-
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
@@ -21,12 +20,10 @@ class PageSyncDelegate {
   PageSyncDelegate() {}
   virtual ~PageSyncDelegate() {}
 
-  // Retrieves the object of the given id from the cloud. The size of the object
-  // is passed to the callback along with the socket handle, so that the
-  // client can verify that all data was streamed when draining the socket.
+  // Retrieves the object of the given id from the cloud.
   virtual void GetObject(
       ObjectDigestView object_digest,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      std::function<void(Status status, std::unique_ptr<DataSource>)>
           callback) = 0;
 
  private:

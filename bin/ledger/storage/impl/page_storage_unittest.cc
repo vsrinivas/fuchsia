@@ -111,13 +111,13 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
 
   void GetObject(
       ObjectDigestView object_digest,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
-          callback) override {
+      std::function<void(Status status,
+          std::unique_ptr<DataSource> data_source)> callback) override {
     ObjectDigest digest = object_digest.ToString();
     std::string& value = digest_to_value_[digest];
     object_requests.insert(digest);
     on_get_object_([callback = std::move(callback), value] {
-      callback(Status::OK, value.size(), fsl::WriteStringToSocket(value));
+      callback(Status::OK, DataSource::Create(value));
     });
   }
 

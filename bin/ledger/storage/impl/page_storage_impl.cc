@@ -749,16 +749,15 @@ void PageStorageImpl::DownloadFullObject(ObjectDigestView object_digest,
   FXL_DCHECK(GetObjectDigestType(object_digest) != ObjectDigestType::INLINE);
 
   page_sync_->GetObject(object_digest, [this, callback = std::move(callback),
-                                        object_digest =
-                                            object_digest.ToString()](
-                                           Status status, uint64_t size,
-                                           zx::socket data) mutable {
+                                        object_digest = object_digest.ToString()](
+                                            Status status,
+                                            std::unique_ptr<DataSource> data_source) mutable {
     if (status != Status::OK) {
       callback(status);
       return;
     }
     ReadDataSource(
-        DataSource::Create(std::move(data), size),
+        std::move(data_source),
         [this, callback = std::move(callback),
          object_digest = std::move(object_digest)](
             Status status,

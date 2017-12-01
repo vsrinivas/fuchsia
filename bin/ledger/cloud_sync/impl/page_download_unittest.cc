@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -46,6 +47,22 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
  protected:
   void SetOnNewStateCallback(fxl::Closure callback) {
     new_state_callback_ = std::move(callback);
+  }
+
+  std::string GetData(storage::DataSource* data_source) {
+    std::stringstream data;
+    data_source->Get([this, &data](
+        std::unique_ptr<storage::DataSource::DataChunk> chunk,
+        storage::DataSource::Status status) {
+      EXPECT_NE(storage::DataSource::Status::ERROR, status);
+      if (status == storage::DataSource::Status::TO_BE_CONTINUED) {
+        data << chunk->Get();
+      } else {
+        message_loop_.PostQuitTask();
+      }
+    });
+    EXPECT_FALSE(RunLoopWithTimeout());
+    return data.str();
   }
 
   test::TestPageStorage storage_;
@@ -335,18 +352,15 @@ TEST_F(PageDownloadTest, GetObject) {
   page_download_->StartDownload();
 
   storage::Status status;
-  uint64_t size;
-  zx::socket data;
+  std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
       storage::ObjectDigestView("object_digest"),
-      callback::Capture(MakeQuitTask(), &status, &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &data_source));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(7u, size);
-  std::string content;
-  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &content));
-  EXPECT_EQ("content", content);
+  EXPECT_EQ(7u, data_source->GetSize());
+  EXPECT_EQ("content", GetData(data_source.get()));
 }
 
 // Verifies that sync retries GetObject() attempts upon connection error.
@@ -368,19 +382,16 @@ TEST_F(PageDownloadTest, RetryGetObject) {
     }
   });
   storage::Status status;
-  uint64_t size;
-  zx::socket data;
+  std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
       storage::ObjectDigestView("object_digest"),
-      callback::Capture(MakeQuitTask(), &status, &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &data_source));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(6u, page_cloud_.get_object_calls);
   EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(7u, size);
-  std::string content;
-  EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &content));
-  EXPECT_EQ("content", content);
+  EXPECT_EQ(7u, data_source->GetSize());
+  EXPECT_EQ("content", GetData(data_source.get()));
 }
 
 }  // namespace

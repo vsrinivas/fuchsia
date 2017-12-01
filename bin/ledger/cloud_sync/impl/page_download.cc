@@ -6,6 +6,7 @@
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
 
 namespace cloud_sync {
 namespace {
@@ -246,7 +247,8 @@ void PageDownload::DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
 
 void PageDownload::GetObject(
     storage::ObjectDigestView object_digest,
-    std::function<void(storage::Status status, uint64_t size, zx::socket data)>
+    std::function<void(storage::Status status,
+                       std::unique_ptr<storage::DataSource> data_source)>
         callback) {
   current_get_object_calls_++;
   auto object_digest_str = object_digest.ToString();
@@ -275,12 +277,13 @@ void PageDownload::GetObject(
               FXL_LOG(WARNING)
                   << log_prefix_
                   << "Fetching remote object failed with status: " << status;
-              callback(storage::Status::IO_ERROR, 0, zx::socket());
+              callback(storage::Status::IO_ERROR, nullptr);
               current_get_object_calls_--;
               return;
             }
 
-            callback(storage::Status::OK, size, std::move(data));
+            callback(storage::Status::OK,
+                storage::DataSource::Create(std::move(data), size));
             current_get_object_calls_--;
           });
 }

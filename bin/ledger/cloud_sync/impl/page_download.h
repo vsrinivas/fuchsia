@@ -72,10 +72,10 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
                      fxl::Closure on_done);
 
   // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectDigestView object_digest,
-                 std::function<void(storage::Status status,
-                                    uint64_t size,
-                                    zx::socket data)> callback) override;
+  void GetObject(
+      storage::ObjectDigestView object_digest,
+      std::function<void(storage::Status status,
+          std::unique_ptr<storage::DataSource> data_source)> callback) override;
 
   void HandleError(const char error_description[]);
 
