@@ -8,6 +8,7 @@
         "//garnet/go/src/amber:amber-srv(//build/toolchain:host_x64)"
     ],
     "packages": {
-        "amber": "//garnet/go/src/amber"
+        "amber": "//garnet/go/src/amber",
+        "amber_tools": "//garnet/go/src/amber:amber_tools"
     }
 }

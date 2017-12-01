@@ -106,14 +106,15 @@ package("pm") {
 }
 
 package("pmd") {
-  system_image = true
-
   deps = [
     ":pmd_bin",
   ]
 
-  binaries = [ {
-        name = "pmd"
+  binary = "pmd"
+
+  meta = [ {
+        path = rebase_path("cmd/pmd/meta/sandbox")
+        dest = "sandbox"
       } ]
 }
 

@@ -33,7 +33,7 @@ var (
 	usage = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
 	store = flag.String("s", "/data/amber/tuf", "The path to the local file store")
 	addr  = flag.String("u", "http://192.168.3.1:8083", "The URL (including port if not using port 80)  of the update server.")
-	keys  = flag.String("k", "/system/data/amber/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
+	keys  = flag.String("k", "/pkg/data/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
 	delay = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
 
 	needsPath = "/pkgfs/needs"
@@ -84,8 +84,7 @@ func startFIDLSvr(d *daemon.Daemon) {
 }
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
-	files := []string{
-		"/system/bin/amber"}
+	files := []string{"/pkg/bin/app"}
 	reqSet := pkg.NewPackageSet()
 
 	d := sha512.New()

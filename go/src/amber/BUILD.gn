@@ -59,45 +59,53 @@ go_binary("amber_bin") {
     {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
-    }
+    },
   ]
 }
 
 package("amber") {
-  system_image = true
-
   deps = [
     ":amber_bin",
-    ":amber_ctl",
-    ":amber_init"
   ]
 
-  binaries = [ {
-        name = "amber"
-      },
-      {
-        name = "amber_ctl"
-      },
-      {
-        name = "amber_init"
-      }
-  ]
+  binary = "amber"
 
   resources = [ {
         path = rebase_path("keys/root_sig.json")
-        dest = "amber/keys"
+        dest = "keys"
       } ]
+
+  meta = [ {
+        path = rebase_path("cmd/amber/meta/sandbox")
+        dest = "sandbox"
+      } ]
+}
+
+package("amber_tools") {
+  system_image = true
+
+  deps = [
+    ":amber_ctl",
+    ":amber_init",
+  ]
+
+  binaries = [
+    {
+      name = "amber_ctl"
+    },
+    {
+      name = "amber_init"
+    },
+  ]
 }
 
 go_binary("amber-srv") {
   gopackage = "amber/cmd/amber-serve"
 
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    }
-  ]
+  go_dependencies = [ {
+        package = "amber"
+        source = "//garnet/go/src/amber"
+      } ]
 }
 
 go_binary("amber-publish") {
@@ -131,7 +139,7 @@ go_binary("amber-publish") {
     {
       package = "github.com/golang/snappy"
       source = "//third_party/golibs/github.com/golang/snappy"
-    }
+    },
   ]
 }
 
@@ -167,14 +175,16 @@ go_binary("amber_init") {
     {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
-    }
+    },
   ]
 }
 
 go_binary("amber_ctl") {
   gopackage = "amber/cmd/ctl"
 
-  deps = [ "//garnet/public/lib/amber/fidl" ]
+  deps = [
+    "//garnet/public/lib/amber/fidl",
+  ]
 
   go_dependencies = [
     {
@@ -200,7 +210,7 @@ go_binary("amber_ctl") {
     {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
-    }
+    },
   ]
 }
 
@@ -239,9 +249,13 @@ package("amber_test") {
   testonly = true
   system_image = true
 
-  deps = [ ":amber_daemon_test" ]
+  deps = [
+    ":amber_daemon_test",
+  ]
 
-  tests = [ { name = "amber_daemon_test" } ]
+  tests = [ {
+        name = "amber_daemon_test"
+      } ]
 }
 
 copy("amber-srv-keys") {
