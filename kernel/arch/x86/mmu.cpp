@@ -1027,13 +1027,13 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", this, vaddr, count);
 
     canary_.Assert();
-    fbl::AutoLock a(&lock_);
 
     if (!x86_mmu_check_vaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
     if (count == 0)
         return ZX_OK;
 
+    fbl::AutoLock a(&lock_);
     DEBUG_ASSERT(virt_);
 
     MappingCursor start = {
@@ -1053,7 +1053,6 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
 zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t count,
                                        uint mmu_flags, size_t* mapped) {
     canary_.Assert();
-    fbl::AutoLock a(&lock_);
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, count, mmu_flags);
@@ -1070,6 +1069,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
         return ZX_ERR_INVALID_ARGS;
 
+    fbl::AutoLock a(&lock_);
     DEBUG_ASSERT(virt_);
 
     // TODO(teisenbe): Improve performance of this function by integrating deeper into
@@ -1114,7 +1114,6 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
                                                  const size_t count, uint mmu_flags,
                                                  size_t* mapped) {
     canary_.Assert();
-    fbl::AutoLock a(&lock_);
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, paddr, count, mmu_flags);
@@ -1129,6 +1128,7 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
         return ZX_ERR_INVALID_ARGS;
 
+    fbl::AutoLock a(&lock_);
     DEBUG_ASSERT(virt_);
 
     MappingCursor start = {
@@ -1150,7 +1150,6 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
 
 zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags) {
     canary_.Assert();
-    fbl::AutoLock a(&lock_);
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, count, mmu_flags);
@@ -1162,6 +1161,8 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
 
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
         return ZX_ERR_INVALID_ARGS;
+
+    fbl::AutoLock a(&lock_);
 
     MappingCursor start = {
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
@@ -1177,12 +1178,13 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
 
 zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     canary_.Assert();
-    fbl::AutoLock a(&lock_);
 
     page_table_levels ret_level;
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", paddr %p, mmu_flags %p\n", this, vaddr, paddr,
             mmu_flags);
+
+    fbl::AutoLock a(&lock_);
 
     volatile pt_entry_t* last_valid_entry;
     zx_status_t status = GetMapping(virt_, vaddr, MAX_PAGING_LEVEL, &ret_level, &last_valid_entry);
