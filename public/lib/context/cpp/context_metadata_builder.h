@@ -25,6 +25,10 @@ class ContextMetadataBuilder {
   ContextMetadataBuilder& SetEntityTypes(
       const fidl::Array<fidl::String>& types);
 
+  ContextMetadataBuilder& SetLinkPath(
+      const fidl::Array<fidl::String>& module_path,
+      const fidl::String& name);
+
   // Build() can be called only once, as it moves |m_|.
   ContextMetadataPtr Build();
 
@@ -32,6 +36,7 @@ class ContextMetadataBuilder {
   StoryMetadataPtr& StoryMetadata();
   ModuleMetadataPtr& ModuleMetadata();
   EntityMetadataPtr& EntityMetadata();
+  LinkMetadataPtr& LinkMetadata();
 
   ContextMetadataPtr m_;
 };

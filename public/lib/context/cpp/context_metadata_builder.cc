@@ -49,36 +49,40 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
   EntityMetadata()->type = types.Clone();
   return *this;
 }
+ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
+      const fidl::Array<fidl::String>& module_path,
+      const fidl::String& name) {
+  LinkMetadata()->module_path = module_path.Clone();
+  LinkMetadata()->name = name;
+  return *this;
+}
 
 ContextMetadataPtr ContextMetadataBuilder::Build() {
   return std::move(m_);
 }
 
+#define ENSURE_MEMBER(field, class_name) \
+  if (!m_) \
+    m_ = ContextMetadata::New(); \
+  if (!m_->field) { \
+    m_->field = class_name::New(); \
+  } \
+  return m_->field;
+
 StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {
-  if (!m_)
-    m_ = ContextMetadata::New();
-  if (!m_->story) {
-    m_->story = StoryMetadata::New();
-  }
-  return m_->story;
+  ENSURE_MEMBER(story, StoryMetadata);
 }
 
 ModuleMetadataPtr& ContextMetadataBuilder::ModuleMetadata() {
-  if (!m_)
-    m_ = ContextMetadata::New();
-  if (!m_->mod) {
-    m_->mod = ModuleMetadata::New();
-  }
-  return m_->mod;
+  ENSURE_MEMBER(mod, ModuleMetadata);
 }
 
 EntityMetadataPtr& ContextMetadataBuilder::EntityMetadata() {
-  if (!m_)
-    m_ = ContextMetadata::New();
-  if (!m_->entity) {
-    m_->entity = EntityMetadata::New();
-  }
-  return m_->entity;
+  ENSURE_MEMBER(entity, EntityMetadata);
+}
+
+LinkMetadataPtr& ContextMetadataBuilder::LinkMetadata() {
+  ENSURE_MEMBER(link, LinkMetadata);
 }
 
 }  // namespace maxwell

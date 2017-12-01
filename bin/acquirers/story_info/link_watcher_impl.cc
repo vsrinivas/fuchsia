@@ -58,12 +58,18 @@ LinkWatcherImpl::LinkWatcherImpl(
     : owner_(owner),
       story_controller_(story_controller),
       story_id_(story_id),
-      story_value_(story_value),
       link_path_(link_path->Clone()),
       link_watcher_binding_(this) {
   modular::LinkPtr link;
   story_controller_->GetLink(link_path_->module_path.Clone(),
                              link_path_->link_name, link.NewRequest());
+
+  story_value->CreateChildValue(link_value_.NewRequest(),
+                                ContextValueType::LINK);
+  link_value_->Set(nullptr, ContextMetadataBuilder()
+                                .SetLinkPath(link_path_->module_path,
+                                             link_path_->link_name)
+                                .Build());
 
   link->Watch(link_watcher_binding_.NewBinding());
 
@@ -80,10 +86,11 @@ LinkWatcherImpl::LinkWatcherImpl(
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
 void LinkWatcherImpl::Notify(const fidl::String& json) {
-  ProcessContext(json);
+  // TODO(thatguy): Deprecate this method once every Link is a "context link".
+  MaybeProcessContextLink(json);
 }
 
-void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
+void LinkWatcherImpl::MaybeProcessContextLink(const fidl::String& value) {
   modular::JsonDoc doc;
   doc.Parse(value);
   FXL_CHECK(!doc.HasParseError());
@@ -124,7 +131,7 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   auto it = values_.find(context.topic);
   if (it == values_.end()) {
     ContextValueWriterPtr topic_value;
-    story_value_->CreateChildValue(topic_value.NewRequest(),
+    link_value_->CreateChildValue(topic_value.NewRequest(),
                                    ContextValueType::ENTITY);
     it = values_.emplace(context.topic, std::move(topic_value)).first;
   }

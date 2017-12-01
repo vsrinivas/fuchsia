@@ -34,14 +34,15 @@ class LinkWatcherImpl : modular::LinkWatcher {
   // |LinkWatcher|
   void Notify(const fidl::String& json) override;
 
-  void ProcessContext(const fidl::String& value);
+  void MaybeProcessContextLink(const fidl::String& value);
 
   StoryWatcherImpl* const owner_;
   modular::StoryController* const story_controller_;
 
   const std::string story_id_;
-  ContextValueWriter* const story_value_;
   const modular::LinkPathPtr link_path_;
+
+  ContextValueWriterPtr link_value_;
 
   // Per context link topic, the context value.
   std::map<fidl::String, ContextValueWriterPtr> values_;
