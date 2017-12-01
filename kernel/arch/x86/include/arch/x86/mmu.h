@@ -88,8 +88,6 @@
 
 __BEGIN_CDECLS
 
-#define MAX_PAGING_LEVEL        (enum page_table_levels)(X86_PAGING_LEVELS - 1)
-
 struct map_range {
     vaddr_t start_vaddr;
     paddr_t start_paddr; /* Physical address in the PAE mode is 32 bits wide */

@@ -30,6 +30,10 @@ public:
     zx_status_t AliasKernelMappings();
 
 private:
+    page_table_levels top_level() final { return PML4_L; }
+    bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
+    bool check_paddr(paddr_t paddr) final;
+    bool check_vaddr(vaddr_t vaddr) final;
     bool supports_page_size(page_table_levels level) final;
     IntermediatePtFlags intermediate_flags() final;
     PtFlags terminal_flags(page_table_levels level, uint flags) final;
@@ -46,6 +50,10 @@ private:
 // Implementation of Intel's Extended Page Tables, for use in virtualization.
 class X86PageTableEpt final : public X86PageTableBase {
 private:
+    page_table_levels top_level() final { return PML4_L; }
+    bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
+    bool check_paddr(paddr_t paddr) final;
+    bool check_vaddr(vaddr_t vaddr) final;
     bool supports_page_size(page_table_levels level) final;
     IntermediatePtFlags intermediate_flags() final;
     PtFlags terminal_flags(page_table_levels level, uint flags) final;

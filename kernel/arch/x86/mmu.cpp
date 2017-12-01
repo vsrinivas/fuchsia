@@ -82,7 +82,7 @@ bool x86_is_vaddr_canonical(vaddr_t vaddr) {
 /**
  * @brief  check if the virtual address is aligned and canonical
  */
-bool x86_mmu_check_vaddr(vaddr_t vaddr) {
+static bool x86_mmu_check_vaddr(vaddr_t vaddr) {
     /* Check to see if the address is PAGE aligned */
     if (!IS_ALIGNED(vaddr, PAGE_SIZE))
         return false;
@@ -93,7 +93,7 @@ bool x86_mmu_check_vaddr(vaddr_t vaddr) {
 /**
  * @brief  check if the physical address is valid and aligned
  */
-bool x86_mmu_check_paddr(paddr_t paddr) {
+static bool x86_mmu_check_paddr(paddr_t paddr) {
     uint64_t max_paddr;
 
     /* Check to see if the address is PAGE aligned */
@@ -183,6 +183,14 @@ static void x86_tlb_invalidate_page(X86PageTableBase* pt, vaddr_t vaddr,
     }
 
     mp_sync_exec(target, target_mask, TlbInvalidatePage_task, &task_context);
+}
+
+bool X86PageTableMmu::check_paddr(paddr_t paddr) {
+    return x86_mmu_check_paddr(paddr);
+}
+
+bool X86PageTableMmu::check_vaddr(vaddr_t vaddr) {
+    return x86_mmu_check_vaddr(vaddr);
 }
 
 bool X86PageTableMmu::supports_page_size(page_table_levels level) {
@@ -321,6 +329,14 @@ uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, page_table_levels lev
         }
     }
     return mmu_flags;
+}
+
+bool X86PageTableEpt::check_paddr(paddr_t paddr) {
+    return x86_mmu_check_paddr(paddr);
+}
+
+bool X86PageTableEpt::check_vaddr(vaddr_t vaddr) {
+    return x86_mmu_check_vaddr(vaddr);
 }
 
 bool X86PageTableEpt::supports_page_size(page_table_levels level) {

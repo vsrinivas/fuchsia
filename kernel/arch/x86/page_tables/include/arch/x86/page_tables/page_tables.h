@@ -59,6 +59,14 @@ public:
     zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
 
 protected:
+    // Returns the highest level of the page tables
+    virtual page_table_levels top_level() = 0;
+    // Returns true if the given ARCH_MMU_FLAG_* flag combination is valid.
+    virtual bool allowed_flags(uint flags) = 0;
+    // Returns true if the given paddr is valid
+    virtual bool check_paddr(paddr_t paddr) = 0;
+    // Returns true if the given vaddr is valid
+    virtual bool check_vaddr(vaddr_t vaddr) = 0;
     // Whether the processor supports the page size of this level
     virtual bool supports_page_size(page_table_levels level) = 0;
     // Return the hardware flags to use on intermediate page tables entries

@@ -15,12 +15,6 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-// TODO(teisenbe): Get rid of these by adding more virtual functions
-#include <vm/arch_vm_aspace.h>
-extern bool x86_mmu_check_paddr(paddr_t paddr);
-extern bool x86_mmu_check_vaddr(vaddr_t vaddr);
-#define MAX_PAGING_LEVEL PML4_L
-
 #define LOCAL_TRACE 0
 
 namespace {
@@ -320,7 +314,7 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
 /**
  * @brief Unmaps the range specified by start_cursor.
  *
- * Level must be MAX_PAGING_LEVEL when invoked.
+ * Level must be top_level() when invoked.
  *
  * @param table The top-level paging structure's virtual address.
  * @param start_cursor A cursor describing the range of address space to
@@ -335,7 +329,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, page_table_leve
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr,
             start_cursor.size);
-    DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
+    DEBUG_ASSERT(check_vaddr(start_cursor.vaddr));
 
     if (level == PT_L) {
         return RemoveMappingL0(table, start_cursor, new_cursor);
@@ -465,7 +459,7 @@ bool X86PageTableBase::RemoveMappingL0(volatile pt_entry_t* table,
 /**
  * @brief Creates mappings for the range specified by start_cursor
  *
- * Level must be MAX_PAGING_LEVEL when invoked.
+ * Level must be top_level() when invoked.
  *
  * @param table The top-level paging structure's virtual address.
  * @param start_cursor A cursor describing the range of address space to
@@ -481,8 +475,8 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
                                          page_table_levels level, const MappingCursor& start_cursor,
                                          MappingCursor* new_cursor) {
     DEBUG_ASSERT(table);
-    DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
-    DEBUG_ASSERT(x86_mmu_check_paddr(start_cursor.paddr));
+    DEBUG_ASSERT(check_vaddr(start_cursor.vaddr));
+    DEBUG_ASSERT(check_paddr(start_cursor.paddr));
 
     zx_status_t ret = ZX_OK;
     *new_cursor = start_cursor;
@@ -494,13 +488,13 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
     // Disable thread safety analysis, since Clang has trouble noticing that
     // lock_ is held when RemoveMapping is called.
     auto abort = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        if (level == MAX_PAGING_LEVEL) {
+        if (level == top_level()) {
             MappingCursor cursor = start_cursor;
             MappingCursor result;
             // new_cursor->size should be how much is left to be mapped still
             cursor.size -= new_cursor->size;
             if (cursor.size > 0) {
-                RemoveMapping(table, MAX_PAGING_LEVEL, cursor, &result);
+                RemoveMapping(table, level, cursor, &result);
                 DEBUG_ASSERT(result.size == 0);
             }
         }
@@ -599,7 +593,7 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
 /**
  * @brief Changes the permissions/caching of the range specified by start_cursor
  *
- * Level must be MAX_PAGING_LEVEL when invoked.
+ * Level must be top_level() when invoked.
  *
  * @param table The top-level paging structure's virtual address.
  * @param start_cursor A cursor describing the range of address space to
@@ -613,7 +607,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr,
             start_cursor.size);
-    DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
+    DEBUG_ASSERT(check_vaddr(start_cursor.vaddr));
 
     if (level == PT_L) {
         return UpdateMappingL0(table, mmu_flags, start_cursor, new_cursor);
@@ -720,7 +714,7 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
 
     canary_.Assert();
 
-    if (!x86_mmu_check_vaddr(vaddr))
+    if (!check_vaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
     if (count == 0)
         return ZX_OK;
@@ -733,7 +727,7 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
     };
 
     MappingCursor result;
-    RemoveMapping(virt_, MAX_PAGING_LEVEL, start, &result);
+    RemoveMapping(virt_, top_level(), start, &result);
     DEBUG_ASSERT(result.size == 0);
 
     if (unmapped)
@@ -749,21 +743,22 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, count, mmu_flags);
 
-    if (!x86_mmu_check_vaddr(vaddr))
+    if (!check_vaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
     for (size_t i = 0; i < count; ++i) {
-        if (!x86_mmu_check_paddr(phys[i]))
+        if (!check_paddr(phys[i]))
             return ZX_ERR_INVALID_ARGS;
     }
     if (count == 0)
         return ZX_OK;
 
-    // TODO(teisenbe): abstract this check into a virtual function
-    if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+    if (!allowed_flags(mmu_flags))
         return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock a(&lock_);
     DEBUG_ASSERT(virt_);
+
+    page_table_levels top = top_level();
 
     // TODO(teisenbe): Improve performance of this function by integrating deeper into
     // the algorithm (e.g. make the cursors aware of the page array).
@@ -775,7 +770,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
             };
 
             MappingCursor result;
-            RemoveMapping(virt_, MAX_PAGING_LEVEL, start, &result);
+            RemoveMapping(virt_, top, start, &result);
             DEBUG_ASSERT(result.size == 0);
         }
     });
@@ -786,7 +781,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
             .paddr = phys[idx], .vaddr = v, .size = PAGE_SIZE,
         };
         MappingCursor result;
-        zx_status_t status = AddMapping(virt_, mmu_flags, MAX_PAGING_LEVEL, start, &result);
+        zx_status_t status = AddMapping(virt_, mmu_flags, top, start, &result);
         if (status != ZX_OK) {
             dprintf(SPEW, "Add mapping failed with err=%d\n", status);
             return status;
@@ -811,14 +806,14 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, paddr, count, mmu_flags);
 
-    if ((!x86_mmu_check_paddr(paddr)))
+    if ((!check_paddr(paddr)))
         return ZX_ERR_INVALID_ARGS;
-    if (!x86_mmu_check_vaddr(vaddr))
+    if (!check_vaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
     if (count == 0)
         return ZX_OK;
 
-    if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+    if (!allowed_flags(mmu_flags))
         return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock a(&lock_);
@@ -828,7 +823,7 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
         .paddr = paddr, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    zx_status_t status = AddMapping(virt_, mmu_flags, MAX_PAGING_LEVEL, start, &result);
+    zx_status_t status = AddMapping(virt_, mmu_flags, top_level(), start, &result);
     if (status != ZX_OK) {
         dprintf(SPEW, "Add mapping failed with err=%d\n", status);
         return status;
@@ -847,12 +842,12 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
             this, vaddr, count, mmu_flags);
 
-    if (!x86_mmu_check_vaddr(vaddr))
+    if (!check_vaddr(vaddr))
         return ZX_ERR_INVALID_ARGS;
     if (count == 0)
         return ZX_OK;
 
-    if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+    if (!allowed_flags(mmu_flags))
         return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock a(&lock_);
@@ -861,7 +856,7 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    zx_status_t status = UpdateMapping(virt_, mmu_flags, MAX_PAGING_LEVEL, start, &result);
+    zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result);
     if (status != ZX_OK) {
         return status;
     }
@@ -880,7 +875,7 @@ zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mm
     fbl::AutoLock a(&lock_);
 
     volatile pt_entry_t* last_valid_entry;
-    zx_status_t status = GetMapping(virt_, vaddr, MAX_PAGING_LEVEL, &ret_level, &last_valid_entry);
+    zx_status_t status = GetMapping(virt_, vaddr, top_level(), &ret_level, &last_valid_entry);
     if (status != ZX_OK)
         return status;
 
@@ -922,16 +917,17 @@ zx_status_t X86PageTableBase::Destroy(vaddr_t base, size_t size) {
     canary_.Assert();
 
 #if LK_DEBUGLEVEL > 1
+    page_table_levels top = top_level();
     pt_entry_t* table = static_cast<pt_entry_t*>(virt_);
-    uint start = vaddr_to_index(MAX_PAGING_LEVEL, base);
-    uint end = vaddr_to_index(MAX_PAGING_LEVEL, base + size - 1);
+    uint start = vaddr_to_index(top, base);
+    uint end = vaddr_to_index(top, base + size - 1);
 
     // Don't check start if that table is shared with another aspace.
-    if (!page_aligned(MAX_PAGING_LEVEL, base)) {
+    if (!page_aligned(top, base)) {
         start += 1;
     }
     // Do check the end if it fills out the table entry.
-    if (page_aligned(MAX_PAGING_LEVEL, base + size)) {
+    if (page_aligned(top, base + size)) {
         end += 1;
     }
 
