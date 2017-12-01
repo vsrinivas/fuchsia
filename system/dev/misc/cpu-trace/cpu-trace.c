@@ -46,7 +46,7 @@ static zx_status_t cpu_trace_ioctl(void* ctx, uint32_t op,
 
     ssize_t result;
     switch (IOCTL_FAMILY(op)) {
-        case IOCTL_FAMILY_IPM:
+        case IOCTL_FAMILY_CPUPERF:
             result = ipm_ioctl(dev, op, cmd, cmdlen,
                                reply, replymax, out_actual);
             break;
