@@ -56,6 +56,7 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gflags",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     ":fidl_interface",
