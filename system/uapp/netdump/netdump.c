@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inet6/inet6.h>
+#include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/process.h>
@@ -22,6 +23,7 @@
 #include <unistd.h>
 
 #define BUFSIZE 2048
+#define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
 
 typedef struct {
     const char* device;
@@ -216,7 +218,9 @@ int write_idb(int fd) {
         .blk_tot_len = sizeof(pcap_idb_t),
         .linktype = 1,
         .reserved = 0,
-        .snaplen = 0xFFFFFFFF,
+        // We can't use a zero here, but tcpdump also rejects 2^32 - 1. Try 2^16 - 1.
+        // See http://seclists.org/tcpdump/2012/q2/8.
+        .snaplen = 0xFFFF,
         .blk_tot_len2 = sizeof(pcap_idb_t),
     };
 
@@ -233,19 +237,33 @@ int write_packet(int fd, void* data, size_t len) {
         return 0;
     }
 
+    size_t padded_len = ROUNDUP(len, 4);
     simple_pkt_t pkt = {
         .type = 0x00000003,
-        .blk_tot_len = SIMPLE_PKT_MIN_SIZE + len,
+        .blk_tot_len = SIMPLE_PKT_MIN_SIZE + padded_len,
         .pkt_len = len,
     };
 
+    // TODO(tkilbourn): rewrite this to offload writing to another thread, and also deal with
+    // partial writes
     if (write(fd, &pkt, sizeof(pkt)) != sizeof(pkt)) {
         fprintf(stderr, "Couldn't write packet header\n");
         return -1;
-    } else if (write(fd, data, len) != (ssize_t) len) {
+    }
+    if (write(fd, data, len) != (ssize_t) len) {
         fprintf(stderr, "Couldn't write packet\n");
         return -1;
-    } else if (write(fd, &pkt.blk_tot_len, sizeof(pkt.blk_tot_len)) != sizeof(pkt.blk_tot_len)) {
+    }
+    if (padded_len > len) {
+        size_t padding = padded_len - len;
+        ZX_DEBUG_ASSERT(padding <= 3);
+        static const uint32_t zero = 0;
+        if (write(fd, &zero, padding) != (ssize_t) padding) {
+            fprintf(stderr, "Couldn't write padding\n");
+            return -1;
+        }
+    }
+    if (write(fd, &pkt.blk_tot_len, sizeof(pkt.blk_tot_len)) != sizeof(pkt.blk_tot_len)) {
         fprintf(stderr, "Couldn't write packet footer\n");
         return -1;
     }
