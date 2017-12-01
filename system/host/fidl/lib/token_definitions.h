@@ -45,7 +45,7 @@ TOKEN(Arrow)
 
 // Keywords
 KEYWORD(As, "as")
-KEYWORD(Module, "module")
+KEYWORD(Library, "library")
 KEYWORD(Using, "using")
 
 KEYWORD(Status, "status")

@@ -1,4 +1,4 @@
-module examples_7
+library examples_7
 
 using pkg
 

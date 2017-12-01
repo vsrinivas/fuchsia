@@ -883,7 +883,7 @@ std::unique_ptr<File> Parser::ParseFile() {
     std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
 
-    ConsumeToken(Token::Kind::Module);
+    ConsumeToken(Token::Kind::Library);
     if (!Ok())
         return Fail();
     auto identifier = ParseCompoundIdentifier();

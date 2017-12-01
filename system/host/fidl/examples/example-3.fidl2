@@ -1,4 +1,4 @@
-module example_3
+library example_3
 
 struct Point {
     // Abscissa

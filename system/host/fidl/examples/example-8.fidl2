@@ -1,4 +1,4 @@
-module example_8
+library example_8
 
 struct foo {
     uint8 u8_0;

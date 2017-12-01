@@ -1,4 +1,4 @@
-module example_1
+library example_1
 
 struct Point {
 }

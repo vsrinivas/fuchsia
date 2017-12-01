@@ -1,4 +1,4 @@
-module example_9
+library example_9
 
 enum EchoMe {
     zero = 0;

@@ -1,4 +1,4 @@
-module example_5
+library example_5
 
 struct Point {
     uint64 x;

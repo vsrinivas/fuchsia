@@ -1,4 +1,4 @@
-module types
+library types
 
 struct this_is_a_struct {}
 union this_is_a_union {}

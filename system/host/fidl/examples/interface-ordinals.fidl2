@@ -1,4 +1,4 @@
-module interface_ordinals
+library interface_ordinals
 
 interface Foo {
     1: SomeMethod();
