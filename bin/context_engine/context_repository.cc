@@ -122,6 +122,7 @@ void MergeMetadata(const ContextMetadataPtr& from, ContextMetadataPtr* to) {
   // node of each type (story, module, entity, etc).
   MERGE(story);
   MERGE(mod);
+  MERGE(link);
   MERGE(entity);
 #undef MERGE
 }

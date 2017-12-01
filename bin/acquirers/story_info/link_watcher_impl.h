@@ -34,6 +34,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
   // |LinkWatcher|
   void Notify(const fidl::String& json) override;
 
+  void ProcessNewValue(const fidl::String& json);
   void MaybeProcessContextLink(const fidl::String& value);
 
   StoryWatcherImpl* const owner_;
@@ -42,10 +43,22 @@ class LinkWatcherImpl : modular::LinkWatcher {
   const std::string story_id_;
   const modular::LinkPathPtr link_path_;
 
-  ContextValueWriterPtr link_value_;
+  // Allows us to write the initial Link node in the Context engine, and then
+  // create child nodes for each Entity we see in the Link.
+  ContextValueWriterPtr link_node_writer_;
+
+  // When applicable: Per top-level JSON member key in the Link value, a value
+  // writer that allows us to store the contained Entity.
+  //
+  // See the documentation in ProcessNewValue() for more details.
+  std::map<std::string, ContextValueWriterPtr> entity_node_writers_;
+  // TODO(thatguy): When Bundles come online, remove |entity_values_| in favor
+  // of this. Rename to |entity_value_|.
+  ContextValueWriterPtr single_entity_node_writer_;
 
   // Per context link topic, the context value.
-  std::map<fidl::String, ContextValueWriterPtr> values_;
+  // TODO(thatguy): Deprecate this usage in favor of Links.
+  std::map<fidl::String, ContextValueWriterPtr> topic_node_writers_;
 
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 

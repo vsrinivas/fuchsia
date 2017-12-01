@@ -9,6 +9,7 @@
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
+#include "lib/entity/cpp/json.h"
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -64,12 +65,12 @@ LinkWatcherImpl::LinkWatcherImpl(
   story_controller_->GetLink(link_path_->module_path.Clone(),
                              link_path_->link_name, link.NewRequest());
 
-  story_value->CreateChildValue(link_value_.NewRequest(),
+  story_value->CreateChildValue(link_node_writer_.NewRequest(),
                                 ContextValueType::LINK);
-  link_value_->Set(nullptr, ContextMetadataBuilder()
-                                .SetLinkPath(link_path_->module_path,
-                                             link_path_->link_name)
-                                .Build());
+  link_node_writer_->Set(
+      nullptr, ContextMetadataBuilder()
+                   .SetLinkPath(link_path_->module_path, link_path_->link_name)
+                   .Build());
 
   link->Watch(link_watcher_binding_.NewBinding());
 
@@ -86,8 +87,80 @@ LinkWatcherImpl::LinkWatcherImpl(
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
 void LinkWatcherImpl::Notify(const fidl::String& json) {
+  ProcessNewValue(json);
   // TODO(thatguy): Deprecate this method once every Link is a "context link".
   MaybeProcessContextLink(json);
+}
+
+void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
+  // We are looking for the following |value| structures:
+  //
+  // 1) |value| contains a JSON-style entity:
+  //   { "@type": ..., ... }
+  // 2) |value| contains a JSON-encoded Entity reference
+  // (EntityReferenceFromJson() will return true).
+  // 3) |value| is a JSON dictionary, and any of the members satisfies either
+  // (1) or (2).
+  //
+  // TODO(thatguy): Moving to Bundles allows us to ignore (3), and using
+  // Entities everywhere allows us to ignore (1).
+  modular::JsonDoc doc;
+  doc.Parse(value);
+  FXL_CHECK(!doc.HasParseError());
+
+  // (1) & (2)
+  std::vector<std::string> types;
+  std::string ref;
+  if (modular::ExtractEntityTypesFromJson(doc, &types) ||
+      modular::EntityReferenceFromJson(doc, &ref)) {
+    // There is only *one* Entity in this Link.
+    entity_node_writers_.clear();
+    if (!single_entity_node_writer_.is_bound()) {
+    link_node_writer_->CreateChildValue(single_entity_node_writer_.NewRequest(),
+                                        ContextValueType::ENTITY);
+    }
+    single_entity_node_writer_->Set(value, nullptr);
+    return;
+  } else {
+    // There is not simply a *single* Entity in this Link. There may be
+    // multiple Entities (see below).
+    single_entity_node_writer_.reset();
+  }
+
+  if (!doc.IsObject()) {
+    return;
+  }
+
+  // (3)
+  std::set<std::string> keys_that_have_entities;
+  for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
+    if (modular::ExtractEntityTypesFromJson(it->value, &types) ||
+        modular::EntityReferenceFromJson(it->value, &ref)) {
+      keys_that_have_entities.insert(it->name.GetString());
+
+      auto value_it = entity_node_writers_.find(it->name.GetString());
+      if (value_it == entity_node_writers_.end()) {
+        ContextValueWriterPtr writer;
+        link_node_writer_->CreateChildValue(writer.NewRequest(),
+                                            ContextValueType::ENTITY);
+        value_it = entity_node_writers_
+                       .emplace(it->name.GetString(), std::move(writer))
+                       .first;
+      }
+      value_it->second->Set(modular::JsonValueToString(it->value), nullptr);
+    }
+  }
+
+  // Clean up any old entries in |entity_node_writers_|.
+  std::set<std::string> to_remove;
+  for (const auto& entry : entity_node_writers_) {
+    if (keys_that_have_entities.count(entry.first) == 0) {
+      to_remove.insert(entry.first);
+    }
+  }
+  for (const auto& key : to_remove) {
+    entity_node_writers_.erase(key);
+  }
 }
 
 void LinkWatcherImpl::MaybeProcessContextLink(const fidl::String& value) {
@@ -128,12 +201,14 @@ void LinkWatcherImpl::MaybeProcessContextLink(const fidl::String& value) {
 
   std::string json = modular::JsonValueToString(doc);
 
-  auto it = values_.find(context.topic);
-  if (it == values_.end()) {
-    ContextValueWriterPtr topic_value;
-    link_value_->CreateChildValue(topic_value.NewRequest(),
-                                   ContextValueType::ENTITY);
-    it = values_.emplace(context.topic, std::move(topic_value)).first;
+  auto it = topic_node_writers_.find(context.topic);
+  if (it == topic_node_writers_.end()) {
+    ContextValueWriterPtr topic_node_writer;
+    link_node_writer_->CreateChildValue(topic_node_writer.NewRequest(),
+                                        ContextValueType::ENTITY);
+    it =
+        topic_node_writers_.emplace(context.topic, std::move(topic_node_writer))
+            .first;
   }
   it->second->Set(json, ContextMetadataBuilder()
                             .SetEntityTopic(MakeLinkTopic(context.topic))

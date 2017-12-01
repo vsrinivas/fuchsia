@@ -24,5 +24,7 @@ bool EntityReferenceFromJson(const rapidjson::Value& value, std::string* ref);
 // or is not structured in a way that we can extract types.
 bool ExtractEntityTypesFromJson(const std::string& json,
                                 std::vector<std::string>* types);
+bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
+                                std::vector<std::string>* types);
 
 }  // namespace modular

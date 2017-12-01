@@ -68,12 +68,17 @@ bool ExtractEntityTypesFromJson(const std::string& json,
     return false;
   }
 
+  return ExtractEntityTypesFromJson(doc, output);
+}
+
+bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
+                                std::vector<std::string>* const output) {
   std::vector<std::string> entity_types;
 
-  if (doc.IsString()) {
+  if (value.IsString()) {
     entity_types.push_back(kEntityTypeString);
-  } else if (doc.IsObject() && doc.HasMember(kEntityTypeProperty)) {
-    const auto& types = doc[kEntityTypeProperty];
+  } else if (value.IsObject() && value.HasMember(kEntityTypeProperty)) {
+    const auto& types = value[kEntityTypeProperty];
     if (types.IsString()) {
       entity_types.push_back(types.GetString());
     } else if (types.IsArray()) {

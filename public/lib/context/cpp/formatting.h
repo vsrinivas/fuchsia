@@ -14,6 +14,7 @@ std::ostream& operator<<(std::ostream& os, const FocusedState& state);
 std::ostream& operator<<(std::ostream& os, const StoryMetadata& meta);
 std::ostream& operator<<(std::ostream& os, const ModuleMetadata& meta);
 std::ostream& operator<<(std::ostream& os, const EntityMetadata& meta);
+std::ostream& operator<<(std::ostream& os, const LinkMetadata& meta);
 std::ostream& operator<<(std::ostream& os, const ContextMetadata& meta);
 
 std::ostream& operator<<(std::ostream& os, const ContextValue& value);
