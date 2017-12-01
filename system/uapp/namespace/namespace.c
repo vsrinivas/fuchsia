@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include <fdio/namespace.h>
 #include <zircon/syscalls.h>
 
@@ -20,15 +21,23 @@ void print_namespace(fdio_flat_namespace_t* flat) {
     }
 }
 
-int run_in_namespace(const char* bin, size_t count, char** mapping) {
-    fdio_ns_t* ns;
+int run_in_namespace(int argc, const char* const* argv,
+                     size_t count, const char* const* mapping) {
     zx_status_t r;
+    zx_handle_t binary;
+    r = launchpad_vmo_from_file(argv[0], &binary);
+    if (r != ZX_OK) {
+        fprintf(stderr, "error: failed to read '%s': %d\n", argv[0], r);
+        return -1;
+    }
+
+    fdio_ns_t* ns;
     if ((r = fdio_ns_create(&ns)) < 0) {
-        fprintf(stderr, "failed to create namespace: %d\n", r);
+        fprintf(stderr, "error: failed to create namespace: %d\n", r);
         return -1;
     }
     for (size_t n = 0; n < count; n++) {
-        char* dst = *mapping++;
+        const char* dst = *mapping++;
         char* src = strchr(dst, '=');
         if (src == NULL) {
             fprintf(stderr, "error: mapping '%s' not in form of '<dst>=<src>'\n", dst);
@@ -59,17 +68,17 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
     print_namespace(flat);
 
     launchpad_t* lp;
-    launchpad_create(0, bin, &lp);
+    launchpad_create(0, argv[0], &lp);
     launchpad_clone(lp, LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
-    launchpad_set_args(lp, 1, &bin);
+    launchpad_set_args(lp, argc, argv);
     launchpad_set_nametable(lp, flat->count, flat->path);
     launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
-    launchpad_load_from_file(lp, bin);
+    launchpad_load_from_vmo(lp, binary);
     free(flat);
     const char* errmsg;
     zx_handle_t proc;
     if ((r = launchpad_go(lp, &proc, &errmsg)) < 0) {
-        fprintf(stderr, "error: failed to launch shell: %s\n", errmsg);
+        fprintf(stderr, "error: failed to launch command: %s\n", errmsg);
         return -1;
     }
     zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
@@ -90,17 +99,34 @@ int dump_current_namespace(void) {
     return 0;
 }
 
-int main(int argc, char** argv) {
+static const char* kShell[] = { "/boot/bin/sh" };
+
+int main(int argc, const char* const* argv) {
     if (argc == 2 && strcmp(argv[1], "--dump") == 0) {
         return dump_current_namespace();
     }
 
     if (argc > 1) {
-        return run_in_namespace("/boot/bin/sh", argc - 1, argv + 1);
+        int child_argc = 1;
+        const char* const* child_argv = kShell;
+        size_t count = 0;
+        const char* const* mapping = argv + 1;
+        for (int i = 1; i < argc; ++i) {
+            if (strcmp(argv[i], "--") == 0) {
+                if (i + 1 < argc) {
+                    child_argc = argc - i - 1;
+                    child_argv = &argv[i + 1];
+                }
+                break;
+            }
+            ++count;
+        }
+        return run_in_namespace(child_argc, child_argv, count, mapping);
     }
 
-    printf("Usage: %s [ --dump | [dst=src]+ ]\n"
-           "Dumps the current namespace or runs a shell with src mapped to dst\n",
+    printf("Usage: %s ( --dump | [dst=src]+ [ -- cmd arg1 ... argn ] )\n"
+           "Dumps the current namespace or runs a command with src mapped to dst.\n"
+           "If no command is specified, runs a shell.\n",
            argv[0]);
     return -1;
 }
