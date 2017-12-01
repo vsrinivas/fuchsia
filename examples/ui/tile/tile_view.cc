@@ -87,10 +87,6 @@ void TileView::CreateNestedEnvironment() {
       });
 }
 
-void TileView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
-  UpdateScene();
-}
-
 void TileView::OnChildAttached(uint32_t child_key,
                                mozart::ViewInfoPtr child_view_info) {
   auto it = views_.find(child_key);
@@ -121,7 +117,7 @@ void TileView::AddChildView(
 
   GetViewContainer()->AddChild(view_key, std::move(child_view_owner),
                                std::move(host_import_token));
-  UpdateScene();
+  InvalidateScene();
 }
 
 void TileView::RemoveChildView(uint32_t child_key) {
@@ -132,11 +128,12 @@ void TileView::RemoveChildView(uint32_t child_key) {
   views_.erase(it);
 
   GetViewContainer()->RemoveChild(child_key, nullptr);
-  UpdateScene();
+  InvalidateScene();
 }
 
-void TileView::UpdateScene() {
-  if (!properties() || views_.empty())
+void TileView::OnSceneInvalidated(
+    scenic::PresentationInfoPtr presentation_info) {
+  if (!has_logical_size() || views_.empty())
     return;
 
   // Layout all children in a row.
@@ -187,8 +184,6 @@ void TileView::UpdateScene() {
 
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
-
-  session()->Present(0, [](scenic::PresentationInfoPtr info) {});
 }
 
 TileView::ViewData::ViewData(const std::string& url,

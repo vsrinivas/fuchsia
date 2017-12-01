@@ -49,10 +49,11 @@ class TileView : public mozart::BaseView,
   };
 
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
+  void OnSceneInvalidated(
+      scenic::PresentationInfoPtr presentation_info) override;
 
   // |Presenter|:
   void Present(
@@ -75,7 +76,6 @@ class TileView : public mozart::BaseView,
                     const std::string& url,
                     app::ApplicationControllerPtr);
   void RemoveChildView(uint32_t child_key);
-  void UpdateScene();
 
   // Nested environment within which the apps started by TileView will run.
   app::ApplicationEnvironmentPtr env_;

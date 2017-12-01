@@ -67,8 +67,6 @@ void ShapesView::OnSceneInvalidated(
   circle_node_.SetShape(circle_shape);
   circle_node_.SetTranslation(logical_size().width * .85f,
                               logical_size().height * .85f, kCircleElevation);
-
-  session()->Present(0, [](scenic::PresentationInfoPtr info) {});
 }
 
 }  // namespace examples
