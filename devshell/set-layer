@@ -32,9 +32,15 @@ if [[ "${layer}" != "garnet" ]] &&
   exit 1
 fi
 
-if [[ -z $(which jiri) ]]; then
-  echo >&2 "error: Cannot find \"jiri\". Is \"jiri\" in your PATH?"
-  exit 1
+# If jiri is not found which will return an err which will cause bash to exit.
+# "|| echo" catches that.
+jiri=$(which jiri || echo)
+if [[ -z ${jiri} ]]; then
+  jiri="${FUCHSIA_DIR}/.jiri_root/bin/jiri"
+  if [[ ! -f ${jiri} ]]; then
+    echo >&2 "error: Cannot find \"jiri\" in your PATH nor at ${jiri}."
+    exit 1
+  fi
 fi
 
 cd "${FUCHSIA_DIR}"
@@ -42,7 +48,7 @@ cd "${FUCHSIA_DIR}"
 function remove-import {
   local -r name=$1
   local -r manifest=$2
-  jiri -q import -delete=true -name="${name}" "${manifest}"
+  ${jiri} -q import -delete=true -name="${name}" "${manifest}"
 }
 
 remove-import zircon manifest
@@ -54,7 +60,7 @@ remove-import topaz manifest/topaz
 # remove this import from their manifest.
 remove-import manifest fuchsia
 
-jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
+${jiri} import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
 
   cat <<END
 Configured jiri for ${layer}. Run these commands to update your build:
