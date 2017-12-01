@@ -1927,11 +1927,16 @@ zx_status_t VnodeMinfs::Sync() {
     completion_t completion;
     zx_status_t status;
     if ((status = fs_->Sync(&completion)) != ZX_OK) {
+        FS_TRACE_ERROR("VnodeMinfs::Sync fs sync failure: %d\n", status);
         return status;
     } else if ((status = completion_wait(&completion, ZX_SEC(15))) != ZX_OK) {
+        FS_TRACE_ERROR("VnodeMinfs::Sync Completion wait failure: %d\n", status);
+        return status;
+    } else if ((status = fs_->bc_->Sync()) != ZX_OK) {
+        FS_TRACE_ERROR("VnodeMinfs::Sync block device sync failure: %d\n", status);
         return status;
     }
-    return fs_->bc_->Sync();
+    return ZX_OK;
 }
 
 zx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {

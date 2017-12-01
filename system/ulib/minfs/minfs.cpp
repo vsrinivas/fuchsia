@@ -798,7 +798,8 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
 
 zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     zx_status_t status = minfs_check_info(info, bc.get());
-    if (status < 0) {
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("Minfs::Create failed to check info: %d\n", status);
         return status;
     }
 
@@ -839,10 +840,12 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
 #ifdef __Fuchsia__
     if ((status = fs->bc_->AttachVmo(fs->block_map_.StorageUnsafe()->GetVmo(),
                                      &fs->block_map_vmoid_)) != ZX_OK) {
+        FS_TRACE_ERROR("Minfs::Create failed to attach block map VMO: %d", status);
         return status;
     }
     if ((status = fs->bc_->AttachVmo(fs->inode_map_.StorageUnsafe()->GetVmo(),
                                      &fs->inode_map_vmoid_)) != ZX_OK) {
+        FS_TRACE_ERROR("Minfs::Create failed to attach inode map VMO: %d", status);
         return status;
     }
 
@@ -855,6 +858,7 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
 
     if ((status = fs->bc_->AttachVmo(fs->inode_table_->GetVmo(),
                                      &fs->inode_table_vmoid_)) != ZX_OK) {
+        FS_TRACE_ERROR("Minfs::Create failed to attach inode table VMO: %d\n", status);
         return status;
     }
 
@@ -875,6 +879,7 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
     txn.Enqueue(fs->inode_table_vmoid_, 0, fs->info_.ino_block, inoblks);
     txn.Enqueue(fs->info_vmoid_, 0, 0, 1);
     if ((status = txn.Flush()) != ZX_OK) {
+        FS_TRACE_ERROR("Minfs::Create failed to read initial blocks: %d\n", status);
         return status;
     }
 

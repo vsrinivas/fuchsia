@@ -495,14 +495,17 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const minfs_info_t* i
     cached_indirect_ = 0;
 
     zx_status_t status;
-    if ((status = checked_inodes_.Reset(info->inode_count)) < 0) {
+    if ((status = checked_inodes_.Reset(info->inode_count)) != ZX_OK) {
+        FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked inodes: %d\n", status);
         return status;
     }
-    if ((status = checked_blocks_.Reset(info->block_count)) < 0) {
+    if ((status = checked_blocks_.Reset(info->block_count)) != ZX_OK) {
+        FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked blocks: %d\n", status);
         return status;
     }
     Minfs* fs;
-    if ((status = Minfs::Create(&fs, fbl::move(bc), info)) < 0) {
+    if ((status = Minfs::Create(&fs, fbl::move(bc), info)) != ZX_OK) {
+        FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
         return status;
     }
     fs_.reset(fs);
@@ -519,21 +522,23 @@ zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc) {
     }
     const minfs_info_t* info = reinterpret_cast<const minfs_info_t*>(data);
     minfs_dump_info(info);
-    if (minfs_check_info(info, bc.get())) {
-        return -1;
+    if ((status = minfs_check_info(info, bc.get())) != ZX_OK) {
+        FS_TRACE_ERROR("minfs_check: check_info failure: %d\n", status);
+        return status;
     }
 
     MinfsChecker chk;
     if ((status = chk.Init(fbl::move(bc), info)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs_check: Init failure: %d\n", status);
         return status;
     }
 
     //TODO: check root not a directory
-    if ((status = chk.CheckInode(1, 1, 0)) < 0) {
+    if ((status = chk.CheckInode(1, 1, 0)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs_check: CheckInode failure: %d\n", status);
         return status;
     }
 
-    status = ZX_OK;
     zx_status_t r;
 
     // Save an error if it occurs, but check for subsequent errors
