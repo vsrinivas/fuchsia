@@ -34,32 +34,6 @@
 #define FIXED_CTR_ENABLE_OS 1
 #define FIXED_CTR_ENABLE_USR 2
 
-typedef enum {
-// N.B. The order of arch/nonarch here must match |kPerfEvents|.
-#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name, description) \
-  symbol,
-#include <zircon/device/cpu-trace/intel-pm-events.inc>
-#define DEF_SKL_EVENT(symbol, event, umask, flags, name, description) \
-  symbol,
-#include <zircon/device/cpu-trace/skylake-pm-events.inc>
-} perf_event_kind_t;
-
-typedef struct {
-    uint32_t event;
-    uint32_t umask;
-    uint32_t flags;
-} perf_event_t;
-
-static const perf_event_t kPerfEvents[] = {
-// N.B. The order of arch/nonarch here must match |perf_event_kind_t|.
-#define DEF_ARCH_EVENT(symbol, ebx_bit, event, umask, flags, name, description) \
-  { event, umask, flags },
-#include <zircon/device/cpu-trace/intel-pm-events.inc>
-#define DEF_SKL_EVENT(symbol, event, umask, flags, name, description) \
-  { event, umask, flags },
-#include <zircon/device/cpu-trace/skylake-pm-events.inc>
-};
-
 // All configuration data is staged here before writing any MSRs, etc.
 // Then when ready the "START" ioctl will write all the necessary MSRS,
 // and do whatever kernel operations are required for collecting data.
@@ -134,206 +108,6 @@ void ipm_init_once(void)
     zxlogf(TRACE, "IPM: version: %u\n", ipm_config_version);
     zxlogf(TRACE, "IPM: num_programmable_counters: %u\n", ipm_num_programmable_counters);
     zxlogf(TRACE, "IPM: num_fixed_counters: %u\n", ipm_num_fixed_counters);
-}
-
-
-// Category to register values converter
-// TODO(dje): It's nice to provide a simpler API for configuring the h/w,
-// but one can reasonably argue the client, e.g., apps/tracing, should provide
-// it. OTOH, if there are several clients IWBN if they could all share the same
-// mechanism (without adding yet another layer). Revisit, later.
-
-typedef struct {
-    size_t count;
-    const perf_event_kind_t* events;
-} category_spec_t;
-
-#define DEF_CATEGORY(symbol, id, name, counters...) \
-  static const perf_event_kind_t symbol ## _events[] = { counters };
-#include <zircon/device/cpu-trace/intel-pm-categories.inc>
-
-static const category_spec_t kCategorySpecs[] = {
-#define DEF_CATEGORY(symbol, id, name, counters...) \
-  { \
-    countof(symbol ## _events), \
-    &symbol ## _events[0] \
-  },
-#include <zircon/device/cpu-trace/intel-pm-categories.inc>
-};
-
-// Map programmable category ids to indices in |kCategorySpecs|.
-static const uint32_t kProgrammableCategoryMap[] = {
-#define DEF_CATEGORY(symbol, id, name, counters...) \
-  [id] = symbol,
-#include <zircon/device/cpu-trace/intel-pm-categories.inc>
-};
-
-static_assert(countof(kCategorySpecs) == IPM_CATEGORY_MAX, "");
-static_assert(countof(kProgrammableCategoryMap) <=
-              IPM_CATEGORY_PROGRAMMABLE_MAX, "");
-
-static uint32_t get_simple_config_os_usr_mask(const ioctl_ipm_simple_perf_config_t* simple_config) {
-    uint32_t os_usr_mask = simple_config->categories & (IPM_CATEGORY_OS | IPM_CATEGORY_USER);
-    // TODO(dje): Maybe convert no bits specified -> both os+usr. Later.
-    return os_usr_mask;
-}
-
-static zx_status_t get_simple_config_sample_freq(
-        const ioctl_ipm_simple_perf_config_t* simple_config,
-        uint32_t* sample_freq) {
-    uint32_t freq_sel = simple_config->categories & IPM_CATEGORY_MODE_MASK;
-    switch (freq_sel) {
-    case IPM_CATEGORY_TALLY:
-        *sample_freq = 0;
-        break;
-    case IPM_CATEGORY_SAMPLE_100:
-        *sample_freq = 100;
-        break;
-    case IPM_CATEGORY_SAMPLE_500:
-        *sample_freq = 500;
-        break;
-    case IPM_CATEGORY_SAMPLE_1000:
-        *sample_freq = 1000;
-        break;
-    case IPM_CATEGORY_SAMPLE_5000:
-        *sample_freq = 5000;
-        break;
-    case IPM_CATEGORY_SAMPLE_10000:
-        *sample_freq = 10000;
-        break;
-    case IPM_CATEGORY_SAMPLE_50000:
-        *sample_freq = 50000;
-        break;
-    case IPM_CATEGORY_SAMPLE_100000:
-        *sample_freq = 100000;
-        break;
-    case IPM_CATEGORY_SAMPLE_500000:
-        *sample_freq = 500000;
-        break;
-    case IPM_CATEGORY_SAMPLE_1000000:
-        *sample_freq = 1000000;
-        break;
-    default:
-        zxlogf(ERROR, "ipm: invalid sample frequency: 0x%x\n", freq_sel);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return ZX_OK;
-}
-
-static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                   zx_x86_ipm_config_t* config) {
-    uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
-    uint32_t enable = 0;
-    if (os_usr_mask & IPM_CATEGORY_OS)
-        enable |= FIXED_CTR_ENABLE_OS;
-    if (os_usr_mask & IPM_CATEGORY_USER)
-        enable |= FIXED_CTR_ENABLE_USR;
-    // Indexed by fixed counter number.
-    static const uint32_t event_mask[] = {
-        IPM_CATEGORY_FIXED_CTR0,
-        IPM_CATEGORY_FIXED_CTR1,
-        IPM_CATEGORY_FIXED_CTR2,
-    };
-    uint32_t num_fixed = ipm_num_fixed_counters;
-    if (countof(event_mask) < num_fixed)
-        num_fixed = countof(event_mask);
-    for (uint32_t i = 0; i < num_fixed; ++i) {
-        if (simple_config->categories & event_mask[i]) {
-            config->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(i);
-            config->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(i);
-        }
-    }
-
-    return ZX_OK; // TODO(dje): Maybe remove, but later.
-}
-
-static zx_status_t misc_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                  zx_x86_ipm_config_t* config) {
-    config->misc_ctrl = 0;
-    if (simple_config->categories & IPM_CATEGORY_PROFILE_PC)
-        config->misc_ctrl |= IPM_MISC_CTRL_PROFILE_PC;
-    return ZX_OK; // TODO(dje): Maybe remove, but later.
-}
-
-static zx_status_t category_to_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                      const category_spec_t* spec,
-                                      zx_x86_ipm_config_t* config) {
-    uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
-
-    for (size_t i = 0; i < spec->count && i < ipm_num_programmable_counters; ++i) {
-        const perf_event_t* event = &kPerfEvents[spec->events[i]];
-        uint64_t evtsel = 0;
-        evtsel |= event->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
-        evtsel |= event->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
-        if (os_usr_mask & IPM_CATEGORY_OS)
-            evtsel |= IA32_PERFEVTSEL_OS_MASK;
-        if (os_usr_mask & IPM_CATEGORY_USER)
-            evtsel |= IA32_PERFEVTSEL_USR_MASK;
-        if (event->flags & IPM_REG_FLAG_EDG)
-            evtsel |= IA32_PERFEVTSEL_E_MASK;
-        if (event->flags & IPM_REG_FLAG_ANYT)
-            evtsel |= IA32_PERFEVTSEL_ANY_MASK;
-        if (event->flags & IPM_REG_FLAG_INV)
-            evtsel |= IA32_PERFEVTSEL_INV_MASK;
-        evtsel |= (event->flags & IPM_REG_FLAG_CMSK_MASK) << IA32_PERFEVTSEL_CMASK_SHIFT;
-        evtsel |= IA32_PERFEVTSEL_EN_MASK;
-        config->programmable_events[i] = evtsel;
-        config->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(i);
-    }
-
-    return ZX_OK; // TODO(dje): Maybe remove, but later.
-}
-
-static zx_status_t simple_config_to_cpu_config(const ioctl_ipm_simple_perf_config_t* simple_config,
-                                               zx_x86_ipm_config_t* config) {
-    uint32_t programmable_category =
-        simple_config->categories & IPM_CATEGORY_PROGRAMMABLE_MASK;
-    bool use_fixed = !!(simple_config->categories & IPM_CATEGORY_FIXED_MASK);
-    uint32_t os_usr_mask = get_simple_config_os_usr_mask(simple_config);
-    uint32_t sample_freq;
-    zx_status_t status;
-
-    status = get_simple_config_sample_freq(simple_config, &sample_freq);
-    if (status != ZX_OK)
-        return status;
-
-    memset(config, 0, sizeof(*config));
-
-    if (use_fixed) {
-        status = fixed_to_config(simple_config, config);
-        if (status != ZX_OK)
-            return status;
-    }
-
-    status = misc_to_config(simple_config, config);
-    if (status != ZX_OK)
-        return status;
-
-    if (programmable_category >= countof(kProgrammableCategoryMap)) {
-        zxlogf(ERROR, "ipm: bad programmable category %u\n", programmable_category);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (programmable_category != IPM_CATEGORY_NONE) {
-        uint32_t spec_index = kProgrammableCategoryMap[programmable_category];
-        status = category_to_config(simple_config,
-                                    &kCategorySpecs[spec_index],
-                                    config);
-        if (status != ZX_OK)
-            return status;
-    }
-
-    config->sample_freq = sample_freq;
-
-#if TRY_FREEZE_ON_PMI
-    config->debug_ctrl = IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_MASK;
-#endif
-
-    if (!os_usr_mask) {
-        // Help the user understand why there's no data.
-        zxlogf(INFO, "ipm: Neither OS nor USR tracing specified\n");
-    }
-
-    return ZX_OK;
 }
 
 
@@ -552,36 +326,6 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t ipm_stage_simple_perf_config(cpu_trace_device_t* dev,
-                                                const void* cmd, size_t cmdlen) {
-    zxlogf(TRACE, "%s called\n", __func__);
-
-    ipm_device_t* ipm = dev->ipm;
-    if (!ipm)
-        return ZX_ERR_BAD_STATE;
-
-    ioctl_ipm_simple_perf_config_t simple_config;
-    if (cmdlen != sizeof(simple_config))
-        return ZX_ERR_INVALID_ARGS;
-    memcpy(&simple_config, cmd, sizeof(simple_config));
-
-    if (ipm->active)
-        return ZX_ERR_BAD_STATE;
-
-    ipm_per_trace_state_t* per_trace = ipm->per_trace_state;
-    zx_x86_ipm_config_t config;
-    zx_status_t status = simple_config_to_cpu_config(&simple_config, &config);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: simple_config_to_cpu_config failed, %d\n",
-               __func__, status);
-        return status;
-    }
-
-    per_trace->config = config;
-    per_trace->configured = true;
-    return ZX_OK;
-}
-
 static zx_status_t ipm_get_config(cpu_trace_device_t* dev,
                                   void* reply, size_t replymax,
                                   size_t* out_actual) {
@@ -738,11 +482,6 @@ zx_status_t ipm_ioctl(cpu_trace_device_t* dev, uint32_t op,
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipm_stage_config(dev, cmd, cmdlen);
-
-    case IOCTL_IPM_STAGE_SIMPLE_PERF_CONFIG:
-        if (replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return ipm_stage_simple_perf_config(dev, cmd, cmdlen);
 
     case IOCTL_IPM_GET_CONFIG:
         return ipm_get_config(dev, reply, replymax, out_actual);

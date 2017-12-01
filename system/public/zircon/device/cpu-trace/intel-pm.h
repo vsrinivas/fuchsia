@@ -451,69 +451,6 @@ typedef struct {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// To simplify use by the trace client, which uses categories to distinguish
-// what to trace, we provide a set of predefined trace categories.
-// Note that there are only up to 11 counters that can be active at once,
-// so we cannot provide an "all" category.
-// TODO(dje): Provide one or more user-defined categories and allow user to
-// specify what gets collected (say via scripting language used by
-// cpuperf_provider).
-
-// Only one of the programmable categories can be selected at a time.
-// Anything more complex can't use ioctl_ipm_stage_simple_perf_config.
-// The value is the "id" specified in intel-pm-categories.inc.
-#define IPM_CATEGORY_PROGRAMMABLE_MASK 0xff
-#define IPM_CATEGORY_PROGRAMMABLE_MAX  (IPM_CATEGORY_PROGRAMMABLE_MASK)
-
-// The fixed counters are separate and fixed-purpose, any combination may
-// be used.
-#define IPM_CATEGORY_FIXED_MASK 0xf000
-#define IPM_CATEGORY_FIXED_CTR0 0x1000
-#define IPM_CATEGORY_FIXED_CTR1 0x2000
-#define IPM_CATEGORY_FIXED_CTR2 0x4000
-
-// One or both of these must be added.
-// If both are elided then no data collection is done.
-#define IPM_CATEGORY_OS         0x10000
-#define IPM_CATEGORY_USER       0x20000
-// TODO(dje): For backward compatibility for now.
-#define IPM_CATEGORY_USR        IPM_CATEGORY_USER
-
-// Collect aspace+pc data.
-#define IPM_CATEGORY_PROFILE_PC 0x40000
-
-// Only one of the following may be specified.
-// A better way would be to provide numeric arguments to categories, but
-// this is for the "simple mode" of driving the device, so we KISS for now.
-#define IPM_CATEGORY_MODE_MASK      0xff00000
-#define IPM_CATEGORY_TALLY          0x0000000 // cpu:tally
-#define IPM_CATEGORY_SAMPLE_100     0x0100000 // cpu:sample:100
-#define IPM_CATEGORY_SAMPLE_500     0x0200000 // cpu:sample:500
-#define IPM_CATEGORY_SAMPLE_1000    0x0300000 // cpu:sample:1000
-#define IPM_CATEGORY_SAMPLE_5000    0x0400000 // cpu:sample:5000
-#define IPM_CATEGORY_SAMPLE_10000   0x0500000 // cpu:sample:10000
-#define IPM_CATEGORY_SAMPLE_50000   0x0600000 // cpu:sample:50000
-#define IPM_CATEGORY_SAMPLE_100000  0x0700000 // cpu:sample:100000
-#define IPM_CATEGORY_SAMPLE_500000  0x0800000 // cpu:sample:500000
-#define IPM_CATEGORY_SAMPLE_1000000 0x0900000 // cpu:sample:1000000
-
-// TODO(dje): Provide values for old versions of macros.
-#define IPM_CATEGORY_COUNT              IPM_CATEGORY_TALLY
-#define IPM_CATEGORY_FIXED              IPM_CATEGORY_FIXED_MASK
-#define EVENT_INSTRUCTIONS_RETIRED      EVENT_ARCH_INSTRUCTIONS_RETIRED
-#define EVENT_UNHALTED_CORE_CYCLES      EVENT_ARCH_UNHALTED_CORE_CYCLES
-#define EVENT_UNHALTED_REFERENCE_CYCLES EVENT_ARCH_UNHALTED_REFERENCE_CYCLES
-
-// Only one of the programmable categories can be chosen.
-// See intel-pm-categories.inc for how this translates to actual registers.
-typedef enum {
-#define DEF_CATEGORY(symbol, id, name, counters...) symbol,
-#include <zircon/device/cpu-trace/intel-pm-categories.inc>
-    IPM_CATEGORY_MAX
-} ipm_perf_event_category_t;
-
-///////////////////////////////////////////////////////////////////////////////
-
 #ifdef __Fuchsia__
 
 // ioctls
@@ -590,28 +527,6 @@ typedef struct {
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPM, 4)
 IOCTL_WRAPPER_IN(ioctl_ipm_stage_config, IOCTL_IPM_STAGE_CONFIG,
                  ioctl_ipm_config_t);
-
-// A simple way for clients to request particular counters without having to
-// deal with the details.
-typedef struct {
-    // Sampling frequency. If zero then do simple counting (tally).
-    // When a counter gets this many hits an interrupt is generated.
-    uint32_t sample_freq;
-
-    // A mask of IPM_CATEGORY_* values.
-    uint32_t categories;
-} ioctl_ipm_simple_perf_config_t;
-
-// Specify what to trace using "categories".
-// Must be called with data collection off and after ALLOC.
-// Note: This doesn't actually configure the counters, this just stages
-// the values for subsequent use by START.
-// Input: ioctl_ipm_simple_config_t
-#define IOCTL_IPM_STAGE_SIMPLE_PERF_CONFIG \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPM, 5)
-IOCTL_WRAPPER_IN(ioctl_ipm_stage_simple_perf_config,
-                 IOCTL_IPM_STAGE_SIMPLE_PERF_CONFIG,
-                 ioctl_ipm_simple_perf_config_t);
 
 // Fetch performance monitor configuration for a cpu.
 // Must be called with data collection off and after INIT.
