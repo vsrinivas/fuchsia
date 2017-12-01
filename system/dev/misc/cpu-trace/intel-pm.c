@@ -239,7 +239,7 @@ static zx_status_t fixed_to_config(const ioctl_ipm_simple_perf_config_t* simple_
         num_fixed = countof(event_mask);
     for (uint32_t i = 0; i < num_fixed; ++i) {
         if (simple_config->categories & event_mask[i]) {
-            config->fixed_counter_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(i);
+            config->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(i);
             config->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(i);
         }
     }
@@ -626,7 +626,7 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
     zxlogf(TRACE, "%s: fixed ctrl 0x%" PRIx64 ", global ctrl 0x%" PRIx64
            ", sample freq %u\n",
            __func__, per_trace->config.global_ctrl,
-           per_trace->config.fixed_counter_ctrl,
+           per_trace->config.fixed_ctrl,
            per_trace->config.sample_freq);
 
     // Require something to be enabled in order to start tracing.

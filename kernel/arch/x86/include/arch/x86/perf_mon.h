@@ -16,8 +16,6 @@
 
 #include <arch/x86.h>
 
-// TODO(dje): For zx_x86_ipm_perf_config_t. To be revisited when we switch to
-// "resources".
 #include <zircon/device/cpu-trace/intel-pm.h>
 
 __BEGIN_CDECLS
@@ -32,8 +30,7 @@ zx_status_t x86_ipm_get_state(zx_x86_ipm_state_t* state);
 
 zx_status_t x86_ipm_init();
 
-zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo,
-                                  const zx_x86_ipm_buffer_t* buffer);
+zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo);
 
 zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config);
 

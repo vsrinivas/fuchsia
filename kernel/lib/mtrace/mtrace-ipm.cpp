@@ -83,7 +83,7 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         if (status != ZX_OK)
             return status;
 
-        return x86_ipm_assign_buffer(cpu, fbl::move(vmo->vmo()), &buffer);
+        return x86_ipm_assign_buffer(cpu, fbl::move(vmo->vmo()));
     }
 
     case MTRACE_IPM_STAGE_CONFIG: {

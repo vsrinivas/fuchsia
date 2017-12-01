@@ -50,18 +50,12 @@ __BEGIN_CDECLS
 #define MTRACE_IPT_OPTIONS_CPU(options) ((options) & MTRACE_IPT_OPTIONS_CPU_MASK)
 
 // Actions for Intel Performance Monitoring control
-// TODO(dje): At the moment we only support "counting mode". That is:
-// - turn the counters on,
-// - run the experiment,
-// - turn the counters off,
-// - collect the results.
 
 // Get the current state.
 // The result is an mx_x86_ipm_state_t struct filled in.
 #define MTRACE_IPM_GET_STATE 0
 
 // Prepare the kernel for performance data collection trace runs.
-// TODO(dje): Later rework to support multiple different trace runs.
 #define MTRACE_IPM_INIT 1
 
 // Assign a buffer to the specified cpu.

@@ -308,7 +308,7 @@ typedef struct {
     uint64_t programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS];
 
     // IA32_FIXED_CTR_CTRL
-    uint64_t fixed_counter_ctrl;
+    uint64_t fixed_ctrl;
 
     // IA32_DEBUGCTL
     uint64_t debug_ctrl;

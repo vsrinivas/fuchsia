@@ -9,7 +9,7 @@
 // this will all get rewritten. Until such time, the goal here is KISS.
 // This file contains the lower part of Intel Performance Monitor support that
 // must be done in the kernel (so that we can read/write msrs).
-// The userspace driver is in system/dev/misc/intel-pm/intel-pm.c.
+// The userspace driver is in system/dev/misc/cpu-trace/intel-pm.c.
 
 // TODO(dje): See Intel Vol 3 18.2.3.1 for hypervisor recommendations.
 // TODO(dje): LBR, BTS, et.al. See Intel Vol 3 Chapter 17.
@@ -161,7 +161,7 @@ struct perfmon_state_t {
     uint64_t events[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
 
     // IA32_FIXED_CTR_CTRL
-    uint64_t fixed_counter_ctrl = 0;
+    uint64_t fixed_ctrl = 0;
 
     // IA32_DEBUGCTL
     uint64_t debug_ctrl = 0;
@@ -261,14 +261,6 @@ void x86_perfmon_init(void)
         kFixedCounterCtrlWritableBits |= IA32_FIXED_CTR_CTRL_ANY_MASK(i);
         kFixedCounterCtrlWritableBits |= IA32_FIXED_CTR_CTRL_PMI_MASK(i);
     }
-
-    TRACEF("perfmon: version: %u\n", perfmon_version);
-    TRACEF("perfmon: num_programmable_counters: %u\n", perfmon_num_programmable_counters);
-    TRACEF("perfmon: programmable_counter_width: %u\n", perfmon_programmable_counter_width);
-    TRACEF("perfmon: num_fixed_counters: %u\n", perfmon_num_fixed_counters);
-    TRACEF("perfmon: fixed_counter_width: %u\n", perfmon_fixed_counter_width);
-    TRACEF("perfmon: unsupported counters: 0x%x\n", perfmon_unsupported_events);
-    TRACEF("perfmon: capabilities: 0x%x\n", perfmon_capabilities);
 }
 
 static void x86_perfmon_clear_overflow_indicators() {
@@ -276,6 +268,7 @@ static void x86_perfmon_clear_overflow_indicators() {
                       IA32_PERF_GLOBAL_OVF_CTRL_DS_BUFFER_CLR_OVF_MASK |
                       IA32_PERF_GLOBAL_OVF_CTRL_UNCORE_CLR_OVF_MASK);
 
+    // TODO(dje): Maybe precompute this, when there's data warranting it.
     for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i) {
         value |= IA32_PERF_GLOBAL_OVF_CTRL_PMC_CLR_OVF_MASK(i);
     }
@@ -331,8 +324,7 @@ zx_status_t x86_ipm_init() {
     return ZX_OK;
 }
 
-zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo,
-                                  const zx_x86_ipm_buffer_t* buffer) {
+zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -371,9 +363,9 @@ static void x86_ipm_set_sampling_mode_locked(perfmon_state_t* state, bool enable
     }
     for (unsigned i = 0; i < perfmon_num_fixed_counters; ++i) {
         if (enable) {
-            state->fixed_counter_ctrl |= IA32_FIXED_CTR_CTRL_PMI_MASK(i);
+            state->fixed_ctrl |= IA32_FIXED_CTR_CTRL_PMI_MASK(i);
         } else {
-            state->fixed_counter_ctrl &= ~IA32_FIXED_CTR_CTRL_PMI_MASK(i);
+            state->fixed_ctrl &= ~IA32_FIXED_CTR_CTRL_PMI_MASK(i);
         }
     }
 }
@@ -406,8 +398,8 @@ zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config) {
         TRACEF("Non writable bits set in |global_ctrl|\n");
         return ZX_ERR_INVALID_ARGS;
     }
-    if (config->fixed_counter_ctrl & ~kFixedCounterCtrlWritableBits) {
-        TRACEF("Non writable bits set in |fixed_counter_ctrl|\n");
+    if (config->fixed_ctrl & ~kFixedCounterCtrlWritableBits) {
+        TRACEF("Non writable bits set in |fixed_ctrl|\n");
         return ZX_ERR_INVALID_ARGS;
     }
     if (config->debug_ctrl & ~kDebugCtrlWritableBits) {
@@ -441,7 +433,7 @@ zx_status_t x86_ipm_stage_config(const zx_x86_ipm_perf_config_t* config) {
     perfmon_state->global_ctrl = config->global_ctrl;
     DEBUG_ASSERT(sizeof(perfmon_state->events) == sizeof(config->programmable_events));
     memcpy(perfmon_state->events, config->programmable_events, sizeof(perfmon_state->events));
-    perfmon_state->fixed_counter_ctrl = config->fixed_counter_ctrl;
+    perfmon_state->fixed_ctrl = config->fixed_ctrl;
     perfmon_state->debug_ctrl = config->debug_ctrl;
     perfmon_state->misc_ctrl = config->misc_ctrl;
     perfmon_state->sample_freq = config->sample_freq;
@@ -565,7 +557,7 @@ static void x86_ipm_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
     for (unsigned i = 0; i < perfmon_num_fixed_counters; ++i) {
         write_msr(IA32_FIXED_CTR0 + i, data->fixed_counters[i]);
     }
-    write_msr(IA32_FIXED_CTR_CTRL, state->fixed_counter_ctrl);
+    write_msr(IA32_FIXED_CTR_CTRL, state->fixed_ctrl);
 
     for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i) {
         // Ensure PERFEVTSEL.EN is zero before resetting the counter value,
