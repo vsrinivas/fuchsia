@@ -102,9 +102,14 @@ The set of currently known features are as follows:
   `/system/data/boringssl` directories in the package's namespace. (The latter
   of which will be removed once all clients transition to the former.)
 
-- `shell`, which grants access to the resources appropriate for an interactive
+- `shell`, which requests access to the resources appropriate for an interactive
   command line. Typically, shells are granted access to all the resources
   available in the current environment.
+
+- `system-temp`, which requests access to the system temp directory, located at
+  `/tmp` in the package's namespace. (Future work will likely remove access to
+  the system temp directory in favor of a local temp directory for each
+  process.)
 
 - `vulkan`, which requests access to the resources required to use the Vulkan
   graphics interface.
