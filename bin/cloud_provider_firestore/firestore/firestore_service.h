@@ -19,12 +19,27 @@ namespace cloud_provider_firestore {
 
 // Client library for Firestore.
 //
+// Manages access to a particular Firestore database.
+//
 // Requests methods are assumed to be called on the |main_runner| thread. All
 // client callbacks are called on the |main_runner|.
 class FirestoreService {
  public:
   FirestoreService() {}
   virtual ~FirestoreService() {}
+
+  // Returns the Firestore path to the managed database.
+  //
+  // The returned value is in the format:
+  // `projects/{project_id}/databases/{database_id}`.
+  virtual const std::string& GetDatabasePath() = 0;
+
+  // Returns the Firestore path to the root of the resource tree of the managed
+  // database.
+  //
+  // The returned value is in the format:
+  // `projects/{project_id}/databases/{database_id}/documents`.
+  virtual const std::string& GetRootPath() = 0;
 
   virtual void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,

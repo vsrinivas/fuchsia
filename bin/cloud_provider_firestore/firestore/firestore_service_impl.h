@@ -15,20 +15,23 @@
 
 namespace cloud_provider_firestore {
 
-// Client library for Firestore.
-//
-// Requests methods are assumed to be called on the |main_runner| thread. All
-// client callbacks are called on the |main_runner|.
+// Implementation of the FirestoreService interface.
 //
 // This class is implemented as a wrapper over the Firestore connection. We use
 // a polling thread to wait for request completion on the completion queue and
 // expose a callback-based API to the client.
 class FirestoreServiceImpl : public FirestoreService {
  public:
-  FirestoreServiceImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
+  FirestoreServiceImpl(std::string server_id,
+                       fxl::RefPtr<fxl::TaskRunner> main_runner,
                        std::shared_ptr<grpc::Channel> channel);
 
   ~FirestoreServiceImpl() override;
+
+  // FirestoreService:
+  const std::string& GetDatabasePath() override { return database_path_; }
+
+  const std::string& GetRootPath() override { return root_path_; }
 
   void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
@@ -42,6 +45,10 @@ class FirestoreServiceImpl : public FirestoreService {
   struct DocumentResponseCall;
 
   void Poll();
+
+  const std::string server_id_;
+  const std::string database_path_;
+  const std::string root_path_;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
   std::thread polling_thread_;

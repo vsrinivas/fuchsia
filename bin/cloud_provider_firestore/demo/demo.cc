@@ -27,9 +27,9 @@ void PrintUsage(const char* executable_name) {
 class Demo : public modular::Lifecycle, ListenCallClient {
  public:
   explicit Demo(std::string server_id)
-      : server_id_(std::move(server_id)),
-        root_path_("projects/" + server_id_ + "/databases/(default)/documents"),
-        firestore_service_(loop_.task_runner(), MakeChannel()) {}
+      : firestore_service_(std::move(server_id),
+                           loop_.task_runner(),
+                           MakeChannel()) {}
   ~Demo() override {}
 
   void Run() {
@@ -47,8 +47,9 @@ class Demo : public modular::Lifecycle, ListenCallClient {
 
     // Start watching for documents.
     auto request = google::firestore::v1beta1::ListenRequest();
-    request.set_database("projects/" + server_id_ + "/databases/(default)");
-    request.mutable_add_target()->mutable_query()->set_parent(root_path_);
+    request.set_database(firestore_service_.GetDatabasePath());
+    request.mutable_add_target()->mutable_query()->set_parent(
+        firestore_service_.GetRootPath());
     request.mutable_add_target()
         ->mutable_query()
         ->mutable_structured_query()
@@ -83,7 +84,7 @@ class Demo : public modular::Lifecycle, ListenCallClient {
   void CreateNextDocument() {
     // Make a request that creates a new document with an "abc" field.
     auto request = google::firestore::v1beta1::CreateDocumentRequest();
-    request.set_parent(root_path_);
+    request.set_parent(firestore_service_.GetRootPath());
     request.set_collection_id("top-level-collection");
     google::firestore::v1beta1::Value forty_two;
     forty_two.set_integer_value(42);
@@ -114,10 +115,6 @@ class Demo : public modular::Lifecycle, ListenCallClient {
 
   fsl::MessageLoop loop_;
 
-  const std::string server_id_;
-  // Root path to the Firestore documents tree of the format:
-  // `projects/{project_id}/databases/{database_id}/documents`
-  const std::string root_path_;
   FirestoreServiceImpl firestore_service_;
 
   std::unique_ptr<ListenCallHandler> listen_call_handler_;

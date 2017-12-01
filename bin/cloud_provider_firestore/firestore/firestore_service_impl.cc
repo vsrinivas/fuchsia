@@ -31,9 +31,13 @@ struct FirestoreServiceImpl::DocumentResponseCall {
 };
 
 FirestoreServiceImpl::FirestoreServiceImpl(
+    std::string server_id,
     fxl::RefPtr<fxl::TaskRunner> main_runner,
     std::shared_ptr<grpc::Channel> channel)
-    : main_runner_(std::move(main_runner)),
+    : server_id_(std::move(server_id)),
+      database_path_("projects/" + server_id_ + "/databases/(default)"),
+      root_path_(database_path_ + "/documents"),
+      main_runner_(std::move(main_runner)),
       firestore_(google::firestore::v1beta1::Firestore::NewStub(channel)) {
   polling_thread_ = std::thread(&FirestoreServiceImpl::Poll, this);
 }
