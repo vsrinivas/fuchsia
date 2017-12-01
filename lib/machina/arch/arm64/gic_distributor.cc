@@ -9,7 +9,8 @@
 
 #include "garnet/lib/machina/address.h"
 
-static const uint64_t kMaxInterrupts = 128;
+// NOTE: This should match the same constant in arch/hypervisor.h within Zircon.
+static const uint64_t kNumInterrupts = 256;
 static const uint64_t kGicRevision = 2;
 
 // clang-format off
@@ -58,7 +59,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
   switch (static_cast<GicdRegister>(addr)) {
     case GicdRegister::TYPE:
       // TODO(abdulla): Set the number of VCPUs.
-      value->u32 = typer_it_lines(kMaxInterrupts);
+      value->u32 = typer_it_lines(kNumInterrupts);
       return ZX_OK;
     case GicdRegister::ICFG0... GicdRegister::ICFG31:
       if (addr % 4)
