@@ -88,7 +88,7 @@ function download_qemu() {
 
 if [[ "${HOST_PLATFORM}" == "linux64" ]]; then
   function download_sysroot() {
-    download_host_tarball sysroot "sysroot/${HOST_PLATFORM}" "${BUILDTOOLS_DIR}/${BUILDTOOLS_PLATFORM}"
+    download_cipd_package sysroot sysroot "${BUILDTOOLS_DIR}/${BUILDTOOLS_PLATFORM}/sysroot"
   }
 fi
 
