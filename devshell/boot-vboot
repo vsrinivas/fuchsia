@@ -14,6 +14,12 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
+# TODO(INTK-60): remove once futility is in //buildtools
+futility_bin="${FUCHSIA_DIR}/third_party/vboot_reference/build/futility/futility"
+if [[ ! -x "${futility_bin}" ]]; then
+  make -C "${FUCHSIA_DIR}/third_party/vboot_reference" "${futility_bin}"
+fi
+
 fx-command-run build "${kernc_vboot}" "${fvm_sparse_block}" "${ramdisk_bin}"
 
 exec "${ZIRCON_TOOLS_DIR}/bootserver" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}" \
