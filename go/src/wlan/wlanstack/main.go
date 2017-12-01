@@ -157,7 +157,7 @@ func main() {
 func (ws *Wlanstack) readConfigFile() {
 	// TODO(tkilbourn): monitor this file for changes
 	// TODO(tkilbourn): replace this with a FIDL interface
-	const configFile = "/pkg/config.json"
+	const configFile = "/pkg/data/config.json"
 	// Once we remove the overrideFile, remove "system" access from meta/sandbox.
 	const overrideFile = "/system/data/wlanstack/override.json"
 
