@@ -619,7 +619,8 @@ READELF := $(CLANG_TOOLCHAIN_PREFIX)llvm-readelf
 CPPFILT := $(CLANG_TOOLCHAIN_PREFIX)llvm-cxxfilt
 SIZE := $(CLANG_TOOLCHAIN_PREFIX)llvm-size
 NM := $(CLANG_TOOLCHAIN_PREFIX)llvm-nm
-OBJCOPY := $(CLANG_TOOLCHAIN_PREFIX)llvm-objcopy
+# continue using binutils objcopy for now until -O binary problems are resolved
+OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
 STRIP := $(CLANG_TOOLCHAIN_PREFIX)llvm-objcopy --strip-sections
 else
 CC := $(GOMACC) $(TOOLCHAIN_PREFIX)gcc
