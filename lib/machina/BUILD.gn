@@ -12,6 +12,8 @@ shared_library("machina") {
     "block.h",
     "gpu.cc",
     "gpu.h",
+    "gpu_bitmap.cc",
+    "gpu_bitmap.h",
     "gpu_resource.cc",
     "gpu_resource.h",
     "gpu_scanout.cc",
@@ -54,7 +56,6 @@ shared_library("machina") {
   ]
 
   deps = [
-    "//third_party/skia",
     "//zircon/system/ulib/async:loop",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
@@ -90,7 +91,6 @@ executable("machina-unittests") {
   deps = [
     ":machina",
     "//third_party/gtest",
-    "//third_party/skia",
     "//zircon/system/ulib/fbl",
   ]
 }

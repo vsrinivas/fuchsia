@@ -11,7 +11,7 @@
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/gpu.h"
-#include "third_party/skia/include/core/SkBitmap.h"
+#include "garnet/lib/machina/gpu_bitmap.h"
 
 class GpuScanout;
 
@@ -34,13 +34,13 @@ class GpuResource
         : addr(addr_), length(length_) {}
   };
 
-  GpuResource(VirtioGpu*, ResourceId, SkBitmap);
+  GpuResource(VirtioGpu*, ResourceId, GpuBitmap);
 
   uint32_t width() const { return bitmap_.width(); }
 
   uint32_t height() const { return bitmap_.height(); }
 
-  const SkBitmap& bitmap() const { return bitmap_; }
+  const GpuBitmap& bitmap() const { return bitmap_; }
 
   void AttachToScanout(GpuScanout* scanout) { scanout_ = scanout; }
 
@@ -83,7 +83,7 @@ class GpuResource
   ResourceId res_id_;
   fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>> backing_;
 
-  SkBitmap bitmap_;
+  GpuBitmap bitmap_;
   GpuScanout* scanout_;
 };
 

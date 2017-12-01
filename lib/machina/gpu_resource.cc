@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
 #include "garnet/lib/machina/gpu_resource.h"
 
 #include "garnet/lib/machina/gpu_scanout.h"
@@ -9,15 +11,12 @@
 fbl::unique_ptr<GpuResource> GpuResource::Create(
     const virtio_gpu_resource_create_2d_t* request,
     VirtioGpu* gpu) {
-  SkBitmap bitmap;
-  bitmap.setInfo(SkImageInfo::MakeN32(request->width, request->height,
-                                      kOpaque_SkAlphaType));
-  bitmap.allocPixels();
+  GpuBitmap bitmap(request->width, request->height);
   return fbl::make_unique<GpuResource>(gpu, request->resource_id,
                                        fbl::move(bitmap));
 }
 
-GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, SkBitmap bitmap)
+GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, GpuBitmap bitmap)
     : gpu_(gpu), res_id_(id), bitmap_(fbl::move(bitmap)) {}
 
 virtio_gpu_ctrl_type GpuResource::AttachBacking(
@@ -48,7 +47,7 @@ virtio_gpu_ctrl_type GpuResource::DetachBacking() {
 
 virtio_gpu_ctrl_type GpuResource::TransferToHost2D(
     const virtio_gpu_transfer_to_host_2d_t* request) {
-  if (bitmap_.isNull()) {
+  if (bitmap_.buffer() == nullptr) {
     return VIRTIO_GPU_RESP_ERR_UNSPEC;
   }
   if (backing_.is_empty()) {
@@ -56,7 +55,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2D(
   }
 
   // Optimize for copying a contiguous region.
-  uint8_t* pixel_ref = reinterpret_cast<uint8_t*>(bitmap_.getPixels());
+  uint8_t* pixel_ref = bitmap_.buffer();
   uint32_t stride = bitmap_.width() * VirtioGpu::kBytesPerPixel;
   if (request->offset == 0 && request->r.x == 0 && request->r.y == 0 &&
       request->r.width == static_cast<uint32_t>(bitmap_.width())) {

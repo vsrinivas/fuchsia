@@ -50,14 +50,10 @@ class VirtioGpuTest {
   }
 
   zx_status_t CreateScanout(uint32_t width, uint32_t height) {
-    size_t scanout_size = width * height * VirtioGpu::kBytesPerPixel;
-    fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[scanout_size]);
-    scanout_buffer_ = buffer.get();
-    scanout_size_ = scanout_size;
+    GpuBitmap surface(width, height);
+    scanout_size_ = width * height * VirtioGpu::kBytesPerPixel;
+    scanout_buffer_ = surface.buffer();
 
-    SkImageInfo info = SkImageInfo::MakeN32(width, height, kOpaque_SkAlphaType);
-    sk_sp<SkSurface> surface =
-        SkSurface::MakeRasterDirect(info, buffer.get(), info.minRowBytes());
     auto scanout = fbl::make_unique<GpuScanout>(fbl::move(surface));
     gpu_.AddScanout(fbl::move(scanout));
     return ZX_OK;

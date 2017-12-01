@@ -15,9 +15,9 @@
 #include <zircon/device/display.h>
 #include <zircon/process.h>
 
+#include "garnet/lib/machina/gpu_bitmap.h"
 #include "garnet/lib/machina/gpu_resource.h"
 #include "garnet/lib/machina/gpu_scanout.h"
-#include "third_party/skia/include/core/SkCanvas.h"
 
 // A scanout that renders to a zircon framebuffer device.
 class FramebufferScanout : public GpuScanout {
@@ -47,20 +47,14 @@ class FramebufferScanout : public GpuScanout {
       return status;
     }
 
-    // Wrap the framebuffer in an SkSurface so we can render using a canvas.
-    SkImageInfo info =
-        SkImageInfo::MakeN32Premul(fb.info.width, fb.info.height);
-    size_t rowBytes = info.minRowBytes();
-    sk_sp<SkSurface> surface = SkSurface::MakeRasterDirect(
-        info, reinterpret_cast<void*>(fbo), rowBytes);
-
-    auto scanout =
-        fbl::make_unique<FramebufferScanout>(fbl::move(surface), vfd);
+    GpuBitmap bitmap(fb.info.width, fb.info.height,
+                     reinterpret_cast<uint8_t*>(fbo));
+    auto scanout = fbl::make_unique<FramebufferScanout>(fbl::move(bitmap), vfd);
     *out = fbl::move(scanout);
     return ZX_OK;
   }
 
-  FramebufferScanout(sk_sp<SkSurface>&& surface, int fd)
+  FramebufferScanout(GpuBitmap surface, int fd)
       : GpuScanout(fbl::move(surface)), fd_(fd) {}
 
   ~FramebufferScanout() {
@@ -250,15 +244,15 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
     case VIRTIO_GPU_CMD_UPDATE_CURSOR:
     case VIRTIO_GPU_CMD_MOVE_CURSOR:
     default: {
-        fprintf(stderr, "Unsupported GPU command %d\n", header->type);
-        // ACK.
-        virtio_desc_t response_desc;
-        virtio_queue_read_desc(queue, request_desc.next, &response_desc);
-        auto response =
-            reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
-        response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-        *used += sizeof(*response);
-        return ZX_OK;
+      fprintf(stderr, "Unsupported GPU command %d\n", header->type);
+      // ACK.
+      virtio_desc_t response_desc;
+      virtio_queue_read_desc(queue, request_desc.next, &response_desc);
+      auto response =
+          reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
+      response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
+      *used += sizeof(*response);
+      return ZX_OK;
     }
   }
 }
