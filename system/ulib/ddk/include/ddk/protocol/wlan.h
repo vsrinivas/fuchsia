@@ -26,12 +26,15 @@ enum {
     // Bits 7-31 reserved
 };
 
+// PHY values may be used in a bitfield (e.g., device capabilities) or as a value (e.g., rx or tx
+// info).
 enum {
-    WLAN_PHY_CCK = 1,
-    WLAN_PHY_OFDM = 2,
-    WLAN_PHY_HT_MIXED = 3,
-    WLAN_PHY_HT_GREENFIELD = 4,
-    WLAN_PHY_VHT = 5,
+    WLAN_PHY_DSSS = (1 << 0),
+    WLAN_PHY_CCK = (1 << 1),
+    WLAN_PHY_OFDM = (1 << 2),
+    WLAN_PHY_HT_MIXED = (1 << 3),
+    WLAN_PHY_HT_GREENFIELD = (1 << 4),
+    WLAN_PHY_VHT = (1 << 5),
 };
 
 enum {
@@ -48,6 +51,95 @@ enum {
     WLAN_BSS_TYPE_INFRASTRUCTURE = 1,
     WLAN_BSS_TYPE_IBSS = 2,
 };
+
+enum {
+    // Device or driver implements scanning. TODO(tkilbourn): define the interface between drivers
+    // for passing scan request and response.
+    WLAN_DRIVER_FEATURE_SCAN_OFFLOAD = (1 << 0),
+    // Device or driver implements rate selection. The data_rate and mcs fields of wlan_tx_info_t
+    // should not be populated, unless the MLME wishes to force a given rate for a packet.
+    WLAN_DRIVER_FEATURE_RATE_SELECTION = (1 << 1),
+};
+
+enum {
+    // Device supports operation as a non-AP station (i.e., a client of an AP).
+    WLAN_MAC_MODE_STA = (1 << 0),
+    // Device supports operation as an access point.
+    WLAN_MAC_MODE_AP = (1 << 1),
+    // TODO: IBSS, PBSS, mesh
+};
+
+// Basic capabilities. IEEE Std 802.11-2016, 9.4.1.4
+enum {
+    WLAN_CAP_SHORT_PREAMBLE = (1 << 0),
+    WLAN_CAP_SPECTRUM_MGMT = (1 << 1),
+    WLAN_CAP_SHORT_SLOT_TIME = (1 << 2),
+    WLAN_CAP_RADIO_MGMT = (1 << 3),
+};
+
+// HT capabilities. IEEE Std 802.11-2016, 9.4.2.56
+typedef struct wlan_ht_caps {
+    uint16_t ht_capability_info;
+    uint8_t ampdu_params;
+    uint8_t supported_mcs_set[16];
+    uint16_t ht_ext_capabilities;
+    uint32_t tx_beamforming_capabilities;
+    uint8_t asel_capabilities;
+} wlan_ht_caps_t;
+
+// VHT capabilities. IEEE Std 802.11-2016, 9.4.2.158
+typedef struct wlan_vht_caps {
+    uint32_t vht_capability_info;
+    uint64_t supported_vht_mcs_and_nss_set;
+} wlan_vht_caps_t;
+
+// Channels are numbered as in IEEE Std 802.11-2016, 17.3.8.4.2
+// Each channel is defined as base_freq + 5 * n MHz, where n is between 1 and 200 (inclusive). Here
+// n represents the channel number.
+// Example:
+//   Standard 2.4GHz channels:
+//     base_freq = 2407 MHz
+//     n = 1-14
+typedef struct wlan_chan_list {
+    uint16_t base_freq;
+    // Each entry in this array represents a value of n in the above channel numbering formula.
+    // The array size is roughly based on what is needed to represent the most common 5GHz
+    // operating classes.
+    uint8_t channels[64];
+} wlan_chan_list_t;
+
+#define WLAN_BAND_DESC_MAX_LEN 16
+
+typedef struct wlan_band_info {
+    // Human-readable description of the band, for debugging.
+    char desc[WLAN_BAND_DESC_MAX_LEN];
+    // HT PHY capabilities.
+    wlan_ht_caps_t ht_caps;
+    // VHT PHY capabilities.
+    bool vht_supported;
+    wlan_vht_caps_t vht_caps;
+    // Basic rates supported in this band, as defined in IEEE Std 802.11-2016, 9.4.2.3.
+    // Each rate is given in units of 500 kbit/s, so 1 Mbit/s is represent as 0x02.
+    uint8_t basic_rates[12];
+    // Channels supported in this band.
+    wlan_chan_list_t supported_channels;
+} wlan_band_info_t;
+
+typedef struct wlanmac_info {
+    ethmac_info_t eth_info;
+    // Bitmask indicating the WLAN_PHY_* values supported by the hardware.
+    uint16_t supported_phys;
+    // Bitmask indicating the WLAN_DRIVER_FEATURE_* values supported by the driver and hardware.
+    uint32_t driver_features;
+    // Bitmask representing supported modes.
+    uint16_t mac_modes;
+    // Bitmask indicating WLAN_CAP_* capabilities supported by the hardware.
+    uint32_t caps;
+    // Supported bands. For now up to 2 bands are supported, in order to keep the size of this
+    // struct fixed.
+    uint8_t num_bands;
+    wlan_band_info_t bands[2];
+} wlanmac_info_t;
 
 enum {
     // The FCS for the received frame was invalid.
@@ -172,9 +264,9 @@ typedef struct wlanmac_ifc {
 typedef struct wlanmac_protocol_ops {
     // Obtain information about the device and supported features
     // Safe to call at any time.
-    // TODO: create wlanmac_info_t for wlan-specific info and copy the relevant
-    // ethernet fields into ethmac_info_t before passing up the stack
+    // query is deprecated. Transition to query2 is in-progress.
     zx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
+    zx_status_t (*query2)(void* ctx, uint32_t options, wlanmac_info_t* info);
 
     // Start wlanmac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called
