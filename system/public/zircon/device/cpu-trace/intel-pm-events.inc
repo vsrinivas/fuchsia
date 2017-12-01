@@ -5,13 +5,35 @@
 // Intel architecture-specified performance monitor registers.
 // This has the benefit of providing the data in a usage-independent way.
 
-#ifndef DEF_ARCH_EVENT
-#define DEF_ARCH_EVENT(symbol, cpuid_ebx_bit, event, umask, flags, name, description) /* nothing */
+// Fixed counters
+// While this duplicates the corresponding architectural counters, this allows
+// specifying the counter as either fixed or programmable.
+// args:
+// - symbol
+// - id (10 bits, must be unique for each DEF_FIXED_EVENT entry)
+// - event number as known to hardware
+// - flags (IPM_FIXEDREG_FLAG_* values) (uint32_t) [at present there are none]
+// - short name (ideally max 24 chars for legibility in display in chrome)
+// - description (if empty use "")
+
+#ifndef DEF_FIXED_EVENT
+#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) /* nothing */
 #endif
+
+DEF_FIXED_EVENT(FIXED_INSTRUCTIONS_RETIRED,
+  0, 0, 0,
+  "Instructions Retired",      "")
+DEF_FIXED_EVENT(FIXED_UNHALTED_CORE_CYCLES,
+  1, 1, 0,
+  "Unhalted Core Cycles",      "")
+DEF_FIXED_EVENT(FIXED_UNHALTED_REFERENCE_CYCLES,
+  2, 2, 0,
+  "Unhalted Reference Cycles", "")
 
 // Architectural performance counters
 // args:
 // - symbol
+// - id (10 bits, must be unique for each DEF_ARCH_EVENT entry)
 // - CPUID.0AH.EBX bit position (uint32_t)
 // - event (uint32_t)
 // - umask (uint32_t)
@@ -19,14 +41,33 @@
 // - short name (ideally max 24 chars for legibility in display in chrome)
 // - description (if empty use "")
 
+#ifndef DEF_ARCH_EVENT
+#define DEF_ARCH_EVENT(symbol, id, cpuid_ebx_bit, event, umask, flags, name, description) /* nothing */
+#endif
+
 // These are also the "fixed" counters.
-DEF_ARCH_EVENT(ARCH_UNHALTED_CORE_CYCLES,        0, 0x3c, 0x00, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED1,    "Unhalted Core Cycles",      "")
-DEF_ARCH_EVENT(ARCH_INSTRUCTIONS_RETIRED,        1, 0xc0, 0x00, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED0,    "Instructions Retired",      "")
-DEF_ARCH_EVENT(ARCH_UNHALTED_REFERENCE_CYCLES,   2, 0x3c, 0x01, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED2,    "Unhalted Reference Cycles", "")
+DEF_ARCH_EVENT(ARCH_UNHALTED_CORE_CYCLES,
+  0, 0, 0x3c, 0x00, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED1,
+  "Unhalted Core Cycles",      "")
+DEF_ARCH_EVENT(ARCH_INSTRUCTIONS_RETIRED,
+  1, 1, 0xc0, 0x00, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED0,
+  "Instructions Retired",      "")
+DEF_ARCH_EVENT(ARCH_UNHALTED_REFERENCE_CYCLES,
+  2, 2, 0x3c, 0x01, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED2,
+  "Unhalted Reference Cycles", "")
 
-DEF_ARCH_EVENT(ARCH_LLC_REFERENCE,               3, 0x2e, 0x4f, IPM_REG_FLAG_ARCH, "LLC References",        "Last Level Cache")
-DEF_ARCH_EVENT(ARCH_LLC_MISSES,                  4, 0x2e, 0x41, IPM_REG_FLAG_ARCH, "LLC Misses",            "Last Level Cache")
-DEF_ARCH_EVENT(ARCH_BRANCH_INSTRUCTIONS_RETIRED, 5, 0xc4, 0x00, IPM_REG_FLAG_ARCH, "Branches Retired",      "Branch instructions retired")
-DEF_ARCH_EVENT(ARCH_BRANCH_MISSES_RETIRED,       6, 0xc5, 0x00, IPM_REG_FLAG_ARCH, "Branch Misses Retired", "")
+DEF_ARCH_EVENT(ARCH_LLC_REFERENCE,
+  3, 3, 0x2e, 0x4f, IPM_REG_FLAG_ARCH,
+  "LLC References",        "Last Level Cache")
+DEF_ARCH_EVENT(ARCH_LLC_MISSES,
+  4, 4, 0x2e, 0x41, IPM_REG_FLAG_ARCH,
+  "LLC Misses",            "Last Level Cache")
+DEF_ARCH_EVENT(ARCH_BRANCH_INSTRUCTIONS_RETIRED,
+  5, 5, 0xc4, 0x00, IPM_REG_FLAG_ARCH,
+  "Branches Retired",      "Branch instructions retired")
+DEF_ARCH_EVENT(ARCH_BRANCH_MISSES_RETIRED,
+  6, 6, 0xc5, 0x00, IPM_REG_FLAG_ARCH,
+  "Branch Misses Retired", "Mispredicted branch instructions at retirement")
 
+#undef DEF_FIXED_EVENT
 #undef DEF_ARCH_EVENT
