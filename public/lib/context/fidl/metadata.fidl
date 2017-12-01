@@ -4,6 +4,8 @@
 
 module maxwell;
 
+import "lib/module/fidl/link_path.fidl";
+
 // This struct serves two purposes. It is:
 //
 // 1) Used to expose metadata along with each context node when interfacing
@@ -17,14 +19,11 @@ module maxwell;
 // if the dual-responsibility becomes difficult to manage.
 struct ContextMetadata {
   StoryMetadata? story;
-
-  // Annoyingly, "module" is a reserved word in FIDL.
-  ModuleMetadata? mod;
-
+  ModuleMetadata? mod;  // Annoyingly, "module" is a reserved word in FIDL.
   EntityMetadata? entity;
+  LinkMetadata? link;
 
   // TODO(thatguy): Add Agent metadata.
-  // TODO(thatguy): Add Link metadata.
 };
 
 struct StoryMetadata {
@@ -42,6 +41,19 @@ struct ModuleMetadata {
 struct EntityMetadata {
   string? topic;
   array<string>? type;
+};
+
+struct LinkMetadata {
+  // These fields are identical to those in modular.LinkPath. Can't use
+  // modular.LinkPath directly because depending on lib/modular/fidl:link_path
+  // causes issues with Dart bindings (they try to import the file from the
+  // wrong package name), and depending on lib/modular/fidl causes a dependency
+  // cycle (lib/context -> lib/module -> lib/user_intelligence -> lib/context).
+  //
+  // TODO(thatguy): Once we have FIDL2 (which will apparently fix the Dart
+  // bindings problem), use LinkPath.
+  array<string>? module_path;
+  string? name;
 };
 
 // bool type cannot be made optional (in StoryMetadata above), so we cannot
