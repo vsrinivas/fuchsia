@@ -144,7 +144,10 @@ class CompiledLibrary(object):
         self.name = name
         self.include_dirs = set()
         self.deps = []
+        self.lib_name = ''
+        self.is_shared = False
         self.prebuilt = ''
+        self.debug_prebuilt = ''
 
 
 def generate_compiled_library(package, context):
@@ -160,12 +163,27 @@ def generate_compiled_library(package, context):
         data.include_dirs.add('//%s' % folder)
 
     # Lib.
-    for name, path in package.get('lib', {}).iteritems():
-        (file, folder) = extract_file(name, path, context)
-        # TODO(pylaligand): also handle the debug version.
-        if file.endswith('.so.abi'):
-            data.prebuilt = '//%s' % file
-            break
+    libs = package.get('lib', {})
+    if len(libs) == 1:
+        # Static library.
+        data.is_shared = False
+        (name, path) = libs.items()[0]
+        (file, _) = extract_file(name, path, context)
+        data.prebuilt = "//%s" % file
+        data.lib_name = os.path.basename(file)
+    elif len(libs) == 2:
+        # Shared library.
+        data.is_shared = True
+        for name, path in libs.iteritems():
+            (file, _) = extract_file(name, path, context)
+            if '/debug/' in name:
+                data.debug_prebuilt = '//%s' % file
+                data.lib_name = os.path.basename(file)
+            else:
+                data.prebuilt = '//%s' % file
+    else:
+        raise Exception('Too many files for %s: %s' % (lib_name,
+                                                       ', '.join(libs.keys())))
 
     # Dependencies.
     data.deps += package.get('deps', [])
@@ -250,12 +268,14 @@ def main():
             print('(%s) Unsupported package type: %s/%s, skipping'
                   % (name, type, arch))
             continue
-        if debug:
-            print('Processing %s' % name)
         if arch == 'src':
+            type = 'source'
             generate_source_library(package, context)
         else:
+            type = 'prebuilt'
             generate_compiled_library(package, context)
+        if debug:
+            print('Processed %s (%s)' % (name, type))
 
 
 if __name__ == "__main__":
