@@ -14,7 +14,7 @@ function commands {
   local newline=$'\n'
   local build_dir=$(get_build_dir)
   if [[ -n "${build_dir}" ]]; then
-    cmds="${cmds}${newline}$(ls "${build_dir}/tools")"
+    cmds="${cmds}${newline}$(ls "${build_dir}/tools" 2&>/dev/null)"
   fi
 
   for tool in ${buildtools_whitelist}; do
