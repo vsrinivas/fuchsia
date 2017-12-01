@@ -27,6 +27,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 
 #include <fdio/debug.h>
 #include <fdio/io.h>
@@ -142,22 +143,6 @@ fdio_t* __fdio_fd_to_io(int fd) {
     }
     mtx_unlock(&fdio_lock);
     return io;
-}
-
-static void fdio_exit(void) {
-    mtx_lock(&fdio_lock);
-    for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
-        fdio_t* io = fdio_fdtab[fd];
-        if (io) {
-            fdio_fdtab[fd] = NULL;
-            io->dupcount--;
-            if (io->dupcount == 0) {
-                io->ops->close(io);
-                fdio_release(io);
-            }
-        }
-    }
-    mtx_unlock(&fdio_lock);
 }
 
 zx_status_t fdio_close(fdio_t* io) {
@@ -649,10 +634,25 @@ void __libc_extensions_init(uint32_t handle_count,
     if (fdio_cwd_handle == NULL) {
         fdio_cwd_handle = fdio_null_create();
     }
-
-    atexit(fdio_exit);
 }
 
+// Clean up during process teardown. This runs after atexit hooks in
+// libc. It continues to hold the fdio lock until process exit, to
+// prevent other threads from racing on file descriptors.
+void __libc_extensions_fini(void) TA_ACQ(&fdio_lock) {
+    mtx_lock(&fdio_lock);
+    for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
+        fdio_t* io = fdio_fdtab[fd];
+        if (io) {
+            fdio_fdtab[fd] = NULL;
+            io->dupcount--;
+            if (io->dupcount == 0) {
+                io->ops->close(io);
+                fdio_release(io);
+            }
+        }
+    }
+}
 
 zx_status_t fdio_ns_install(fdio_ns_t* ns) {
     fdio_t* io = fdio_ns_open_root(ns);
