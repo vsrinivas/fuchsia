@@ -61,6 +61,7 @@
         "garnet/packages/tracing",
         "garnet/packages/tz-util",
         "garnet/packages/url",
+        "garnet/packages/vboot_reference",
         "garnet/packages/vim",
         "garnet/packages/wlan_tests",
         "garnet/packages/wlanstack",

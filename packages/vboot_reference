@@ -1,0 +1,12 @@
+{
+  "languages": [
+    "cpp"
+  ],
+  "imports": [
+    "garnet/packages/boringssl_libcrypto"
+  ],
+  "labels": [
+    "//garnet/tools/vboot_reference:futility_host",
+    "//garnet/tools/vboot_reference:cgpt_host"
+  ]
+}

@@ -1,0 +1,254 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+
+# NOTE(raggi): if you come to add significantly more binaries from
+# vboot_reference, it may be time to take the sources under "library_sources"
+# and turn them into actual library rules. That wasn't necessary or woth it at
+# the time of writing.
+
+vboot_dir = "//third_party/vboot_reference"
+
+library_sources = [
+  "$vboot_dir/firmware/2lib/2api.c",
+  "$vboot_dir/firmware/2lib/2common.c",
+  "$vboot_dir/firmware/2lib/2crc8.c",
+  "$vboot_dir/firmware/2lib/2hmac.c",
+  "$vboot_dir/firmware/2lib/2misc.c",
+  "$vboot_dir/firmware/2lib/2nvstorage.c",
+  "$vboot_dir/firmware/2lib/2rsa.c",
+  "$vboot_dir/firmware/2lib/2secdata.c",
+  "$vboot_dir/firmware/2lib/2secdatak.c",
+  "$vboot_dir/firmware/2lib/2sha1.c",
+  "$vboot_dir/firmware/2lib/2sha256.c",
+  "$vboot_dir/firmware/2lib/2sha512.c",
+  "$vboot_dir/firmware/2lib/2sha_utility.c",
+  "$vboot_dir/firmware/2lib/2stub.c",
+  "$vboot_dir/firmware/2lib/2tpm_bootmode.c",
+  "$vboot_dir/firmware/bdb/bdb.c",
+  "$vboot_dir/firmware/bdb/ecdsa.c",
+  "$vboot_dir/firmware/bdb/host.c",
+  "$vboot_dir/firmware/bdb/misc.c",
+  "$vboot_dir/firmware/bdb/nvm.c",
+  "$vboot_dir/firmware/bdb/rsa.c",
+  "$vboot_dir/firmware/bdb/secrets.c",
+  "$vboot_dir/firmware/bdb/sha.c",
+  "$vboot_dir/firmware/bdb/stub.c",
+  "$vboot_dir/firmware/lib/cgptlib/cgptlib.c",
+  "$vboot_dir/firmware/lib/cgptlib/cgptlib_internal.c",
+  "$vboot_dir/firmware/lib/cgptlib/crc32.c",
+  "$vboot_dir/firmware/lib/ec_sync.c",
+  "$vboot_dir/firmware/lib/ec_sync_all.c",
+  "$vboot_dir/firmware/lib/gpt_misc.c",
+  "$vboot_dir/firmware/lib/region-fw.c",
+  "$vboot_dir/firmware/lib/region-init.c",
+  "$vboot_dir/firmware/lib/region-kernel.c",
+  "$vboot_dir/firmware/lib/rollback_index.c",
+  "$vboot_dir/firmware/lib/tpm_lite/tlcl.c",
+  "$vboot_dir/firmware/lib/utility_string.c",
+  "$vboot_dir/firmware/lib/vboot_api_kernel.c",
+  "$vboot_dir/firmware/lib/vboot_audio.c",
+  "$vboot_dir/firmware/lib/vboot_common.c",
+  "$vboot_dir/firmware/lib/vboot_common_init.c",
+  "$vboot_dir/firmware/lib/vboot_display.c",
+  "$vboot_dir/firmware/lib/vboot_kernel.c",
+  "$vboot_dir/firmware/lib/vboot_nvstorage.c",
+  "$vboot_dir/firmware/lib/vboot_ui.c",
+  "$vboot_dir/firmware/lib/vboot_ui_menu.c",
+  "$vboot_dir/firmware/lib20/api.c",
+  "$vboot_dir/firmware/lib20/api_kernel.c",
+  "$vboot_dir/firmware/lib20/common.c",
+  "$vboot_dir/firmware/lib20/kernel.c",
+  "$vboot_dir/firmware/lib20/misc.c",
+  "$vboot_dir/firmware/lib20/packed_key.c",
+  "$vboot_dir/firmware/lib21/api.c",
+  "$vboot_dir/firmware/lib21/common.c",
+  "$vboot_dir/firmware/lib21/misc.c",
+  "$vboot_dir/firmware/lib21/packed_key.c",
+  "$vboot_dir/firmware/stub/tpm_lite_stub.c",
+  "$vboot_dir/firmware/stub/vboot_api_stub.c",
+  "$vboot_dir/firmware/stub/vboot_api_stub_disk.c",
+  "$vboot_dir/firmware/stub/vboot_api_stub_init.c",
+  "$vboot_dir/firmware/stub/vboot_api_stub_region.c",
+  "$vboot_dir/firmware/stub/vboot_api_stub_stream.c",
+  "$vboot_dir/host/lib/crossystem.c",
+  "$vboot_dir/host/lib/extract_vmlinuz.c",
+  "$vboot_dir/host/lib/file_keys.c",
+  "$vboot_dir/host/lib/fmap.c",
+  "$vboot_dir/host/lib/host_common.c",
+  "$vboot_dir/host/lib/host_key.c",
+  "$vboot_dir/host/lib/host_key2.c",
+  "$vboot_dir/host/lib/host_keyblock.c",
+  "$vboot_dir/host/lib/host_misc.c",
+  "$vboot_dir/host/lib/host_signature.c",
+  "$vboot_dir/host/lib/host_signature2.c",
+  "$vboot_dir/host/lib/signature_digest.c",
+  "$vboot_dir/host/lib/util_misc.c",
+  "$vboot_dir/host/lib21/host_fw_preamble.c",
+  "$vboot_dir/host/lib21/host_key.c",
+  "$vboot_dir/host/lib21/host_keyblock.c",
+  "$vboot_dir/host/lib21/host_misc.c",
+  "$vboot_dir/host/lib21/host_signature.c",
+]
+if (target_cpu == "x64") {
+  library_sources += [ "$vboot_dir/host/arch/x86_64/lib/crossystem_arch.c" ]
+} else if (target_cpu == "arm64") {
+  library_sources += [ "$vboot_dir/host/arch/arm/lib/crossystem_arch.c" ]
+} else {
+  assert(false, "Unsupported CPU")
+}
+
+executable("cgpt") {
+  sources = library_sources
+
+  # mininmal uuid generator
+  sources += [ "uuid/uuid.cc" ]
+
+  # binary sources
+  sources += [
+    "$vboot_dir/cgpt/cgpt.c",
+    "$vboot_dir/cgpt/cgpt_add.c",
+    "$vboot_dir/cgpt/cgpt_boot.c",
+    "$vboot_dir/cgpt/cgpt_common.c",
+    "$vboot_dir/cgpt/cgpt_create.c",
+    "$vboot_dir/cgpt/cgpt_legacy.c",
+    "$vboot_dir/cgpt/cgpt_prioritize.c",
+    "$vboot_dir/cgpt/cgpt_repair.c",
+    "$vboot_dir/cgpt/cgpt_show.c",
+    "$vboot_dir/cgpt/cmd_add.c",
+    "$vboot_dir/cgpt/cmd_boot.c",
+    "$vboot_dir/cgpt/cmd_create.c",
+    "$vboot_dir/cgpt/cmd_legacy.c",
+    "$vboot_dir/cgpt/cmd_prioritize.c",
+    "$vboot_dir/cgpt/cmd_repair.c",
+    "$vboot_dir/cgpt/cmd_show.c",
+  ]
+  if (!is_mac) {
+    sources += [
+      "$vboot_dir/cgpt/cgpt_find.c",
+      "$vboot_dir/cgpt/cgpt_nor.c",
+      "$vboot_dir/cgpt/cmd_find.c",
+    ]
+  }
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/boringssl:crypto",
+  ]
+  configs += [ ":internal_config" ]
+}
+
+# The upstream makefile actually generates this source, but for simplicities
+# sake, we just have a pre-generated version.
+copy("futility_cmds.c") {
+  sources = [
+    "futility_cmds.c",
+  ]
+  outputs = [
+    "$target_gen_dir/futility_cmds.c",
+  ]
+}
+
+executable("futility") {
+  sources = library_sources
+
+  # binary sources
+  sources += [
+    "$vboot_dir/futility/bdb_helper.c",
+    "$vboot_dir/futility/cmd_bdb.c",
+    "$vboot_dir/futility/cmd_create.c",
+    "$vboot_dir/futility/cmd_dump_fmap.c",
+    "$vboot_dir/futility/cmd_gbb_utility.c",
+    "$vboot_dir/futility/cmd_load_fmap.c",
+    "$vboot_dir/futility/cmd_pcr.c",
+    "$vboot_dir/futility/cmd_show.c",
+    "$vboot_dir/futility/cmd_sign.c",
+    "$vboot_dir/futility/cmd_validate_rec_mrc.c",
+    "$vboot_dir/futility/cmd_vbutil_firmware.c",
+    "$vboot_dir/futility/cmd_vbutil_kernel.c",
+    "$vboot_dir/futility/cmd_vbutil_key.c",
+    "$vboot_dir/futility/cmd_vbutil_keyblock.c",
+    "$vboot_dir/futility/file_type.c",
+    "$vboot_dir/futility/file_type_bios.c",
+    "$vboot_dir/futility/file_type_rwsig.c",
+    "$vboot_dir/futility/file_type_usbpd1.c",
+    "$vboot_dir/futility/futility.c",
+    "$vboot_dir/futility/misc.c",
+    "$vboot_dir/futility/ryu_root_header.c",
+    "$vboot_dir/futility/vb1_helper.c",
+    "$vboot_dir/futility/vb2_helper.c",
+  ]
+  deps = [
+    ":futility_cmds.c",
+  ]
+  sources += get_target_outputs(":futility_cmds.c")
+  if (!is_mac) {
+    sources += [
+      "$vboot_dir/futility/cmd_dump_kernel_config.c",
+      "$vboot_dir/futility/dump_kernel_config_lib.c",
+    ]
+  }
+  deps += [ "//third_party/boringssl:crypto" ]
+  configs += [ ":internal_config" ]
+}
+
+config("internal_config") {
+  visibility = [ "./*" ]
+  include_dirs = [
+    "$vboot_dir/firmware/2lib/include",
+    "$vboot_dir/firmware/bdb",
+    "$vboot_dir/firmware/include",
+    "$vboot_dir/firmware/lib/cgptlib/include",
+    "$vboot_dir/firmware/lib/cryptolib/include",
+    "$vboot_dir/firmware/lib/include",
+    "$vboot_dir/firmware/lib/tpm_lite/include",
+    "$vboot_dir/firmware/lib20/include",
+    "$vboot_dir/firmware/lib21/include",
+    "$vboot_dir/host/include",
+    "$vboot_dir/host/lib/include",
+    "$vboot_dir/host/lib21/include",
+
+    # For the uuid/uuid.h stub.
+    ".",
+  ]
+  cflags = [
+    "-Wno-address-of-packed-member",
+    "-Wno-enum-conversion",
+    "-Wno-format",
+    "-Wno-ignored-qualifiers",
+    "-Wno-missing-field-initializers",
+    "-Wno-sign-compare",
+    "-Wno-unused-function",
+  ]
+  if (is_mac) {
+    defines = [
+      "HAVE_MACOS=1",
+      "NDEBUG",
+    ]
+  }
+  if (is_linux) {
+    defines = [
+      "_GNU_SOURCE",
+      "NDEBUG",
+    ]
+  }
+}
+
+install_host_tools("cgpt_host") {
+  deps = [
+    ":cgpt",
+  ]
+  outputs = [
+    "cgpt",
+  ]
+}
+
+install_host_tools("futility_host") {
+  deps = [
+    ":futility",
+  ]
+  outputs = [
+    "futility",
+  ]
+}
