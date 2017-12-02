@@ -13,7 +13,6 @@ First, you need to
 and the sysroot:
 
 ```
-(cd zircon; make -j32 zircon-pc-x86-64)
 ./scripts/build-zircon.sh
 ```
 

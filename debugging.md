@@ -72,7 +72,7 @@ addresses in the backtrace to symbolic form. This program is `symbolize`:
 Copy the above to a file, say `backtrace.out`, and then run:
 
 ```
-bash$ ZIRCON_BUILD_DIR=$FUCHSIA_DIR/out/build-zircon/build-zircon-pc-x86-64
+bash$ ZIRCON_BUILD_DIR=$FUCHSIA_DIR/out/build-zircon/build-x86
 bash$ cat backtrace.out | $FUCHSIA_DIR/zircon/scripts/symbolize \
   --build-dir=$ZIRCON_BUILD_DIR \
   $ZIRCON_BUILD_DIR/system/utest/debugger/debugger.elf

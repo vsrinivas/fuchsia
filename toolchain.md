@@ -29,18 +29,18 @@ LLVM_SRCDIR=${HOME}/llvm
 Before building the runtime libraries that are built along with the
 compiler, you need a Zircon `sysroot` built.  This comes from the
 Zircon build and sits in the `sysroot` subdirectory of the main Zircon
-build directory.  For example, `.../build-zircon-pc-x86-64/sysroot`.
+build directory.  For example, `.../build-x86/sysroot`.
 In the following commands, the string `${FUCHSIA_${arch}_SYSROOT}`
 stands in for this absolute directory name.  You can cut & paste these
 commands into a shell after setting the `FUCHSIA_${arch}_SYSROOT`
 variable, e.g.:
 
 ```bash
-make zircon-pc-x86-64
-FUCHSIA_x86_64_SYSROOT=`pwd`/build-zircon-pc-x86-64/sysroot
+make x86
+FUCHSIA_x86_64_SYSROOT=`pwd`/build-x86/sysroot
 
-make zircon-qemu-arm64
-FUCHSIA_aarch64_SYSROOT=`pwd`/build-zircon-qemu-arm64/sysroot
+make arm64
+FUCHSIA_aarch64_SYSROOT=`pwd`/build-arm64/sysroot
 ```
 
 You can build a Fuchsia Clang compiler using the following commands.
