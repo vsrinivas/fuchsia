@@ -5,6 +5,7 @@
 #pragma once
 
 #include "beacon_sender.h"
+#include "infra_bss.h"
 #include "mlme.h"
 #include "packet.h"
 
@@ -32,7 +33,7 @@ class ApMlme : public Mlme {
    private:
     DeviceInterface* const device_;
     fbl::unique_ptr<BeaconSender> bcn_sender_;
-    // TODO(hahnr): Own and manage BSS list.
+    InfraBssMap bss_map_;
 };
 
 }  // namespace wlan

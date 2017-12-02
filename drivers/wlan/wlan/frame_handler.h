@@ -23,8 +23,7 @@
 #define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)          \
     zx_status_t HandleFrameInternal(Method& method, const mlmeMsgType& msg) { \
         if (ShouldDropMlmeMessage(method)) { return ZX_ERR_STOP; }            \
-        methodName(msg);                                                      \
-        return ZX_OK;                                                         \
+        return methodName(msg);                                               \
     }
 
 #define WLAN_DECL_FUNC_HANDLE_MGMT(mgmtFrameType)                                      \
@@ -35,8 +34,7 @@
     zx_status_t HandleFrameInternal(const MgmtFrame<mgmtFrameType>& frame, \
                                     const wlan_rx_info_t& info) {          \
         if (ShouldDropMgmtFrame(*frame.hdr)) { return ZX_ERR_STOP; }       \
-        Handle##mgmtFrameType(frame, info);                                \
-        return ZX_OK;                                                      \
+        return Handle##mgmtFrameType(frame, info);                         \
     }
 
 #define WLAN_DECL_VIRT_FUNC_HANDLE_DATA(methodName, args...) \
@@ -146,21 +144,18 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
     zx_status_t HandleFrameInternal(const BaseFrame<EthernetII>& frame) {
         if (ShouldDropEthFrame(frame)) { return ZX_ERR_NOT_SUPPORTED; }
-        HandleEthFrame(frame);
-        return ZX_OK;
+        return HandleEthFrame(frame);
     }
 
     zx_status_t HandleFrameInternal(const DataFrameHeader& hdr, const wlan_rx_info_t& rxinfo) {
         if (ShouldDropDataFrame(hdr)) { return ZX_ERR_NOT_SUPPORTED; }
-        HandleNullDataFrame(hdr, rxinfo);
-        return ZX_OK;
+        return HandleNullDataFrame(hdr, rxinfo);
     }
 
     zx_status_t HandleFrameInternal(const DataFrame<LlcHeader>& frame,
                                     const wlan_rx_info_t& rxinfo) {
         if (ShouldDropDataFrame(*frame.hdr)) { return ZX_ERR_NOT_SUPPORTED; }
-        HandleDataFrame(frame, rxinfo);
-        return ZX_OK;
+        return HandleDataFrame(frame, rxinfo);
     }
 
     std::vector<fbl::RefPtr<FrameHandler>> children_;

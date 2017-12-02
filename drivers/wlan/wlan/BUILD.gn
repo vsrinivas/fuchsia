@@ -31,6 +31,8 @@ source_set("mlme") {
     "element.h",
     "element_id.h",
     "frame_handler.h",
+    "infra_bss.cpp",
+    "infra_bss.h",
     "logging.h",
     "macaddr_map.h",
     "mac_frame.cpp",

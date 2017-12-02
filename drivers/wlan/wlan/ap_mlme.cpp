@@ -23,6 +23,15 @@ zx_status_t ApMlme::Init() {
         return status;
     }
 
+    // Register all available BSS. BSS become active by adding them as frame targets.
+    // So far, only one BSS is supported by the device.
+    auto& bssid = device_->GetState()->address();
+    auto bss = fbl::AdoptRef(new InfraBss(device_, bssid));
+    status = bss_map_.Insert(bssid, bss);
+    if (status != ZX_OK) {
+        errorf("[ap-mlme] BSS could not be registered: %s\n", MACSTR(bssid));
+    }
+
     // TODO(hahnr): For development only to unblock from SME changes.
     // To be removed soon.
     auto req = StartRequest::New();
@@ -43,7 +52,13 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     debugfn();
 
     bcn_sender_->Start(req);
-    // TODO(hahnr): Create BSS instance which manages clients.
+
+    // TODO(hahnr): Evolve to support multiple BSS at some point.
+    auto& bssid = device_->GetState()->address();
+    auto bss = bss_map_.Lookup(bssid);
+    if (bss != nullptr) {
+        AddChildHandler(bss);
+    }
 
     return ZX_OK;
 }
@@ -52,7 +67,13 @@ zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     debugfn();
 
     bcn_sender_->Stop();
-    // TODO(hahnr): Remove BSS instance.
+
+    // TODO(hahnr): Evolve to support multiple BSS at some point.
+    auto& bssid = device_->GetState()->address();
+    auto bss = bss_map_.Lookup(bssid);
+    if (bss != nullptr) {
+        RemoveChildHandler(bss);
+    }
 
     return ZX_OK;
 }
