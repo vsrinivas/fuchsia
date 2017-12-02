@@ -29,12 +29,10 @@ declare_args() {
 
   # A list of platforms, i.e. different Zircon kernels that were built.
   # There will be a different `bootdata-${platform}.bin` built for each.
-  # TODO(mcgrathr): Change defaults to short names after
-  # https://fuchsia-review.googlesource.com/c/zircon/+/90530 lands.
   if (target_cpu == "x64") {
-    zircon_platforms = [ "zircon-pc-x86-64" ]
+    zircon_platforms = [ "x86" ]
   } else {
-    zircon_platforms = [ "zircon-qemu-arm64" ]
+    zircon_platforms = [ target_cpu ]
   }
 
   # Build a large ramdisk image based on `system.manifest` into `user.bootfs`.
