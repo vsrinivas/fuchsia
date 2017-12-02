@@ -13,19 +13,10 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
-fx-ensure-vboot-tools
-
-if [[ $(uname) != "Linux" ]]; then
-  echo "This script is only supported under Linux"
-  exit 1
-fi
-
+# TODO(raggi): this defensiveness can probably get in the way, and should
+# probably be removed at the first sign of trouble.
 is_usb() {
-  if [ -n "$(type -path udevadm)" ]; then
-    udevadm info --query=all --name="$1" | grep -q ID_BUS=usb
-  else
-    (cd /sys/block/$(basename "$1")/device 2>/dev/null && pwd -P) | grep -q usb
-  fi
+  fx-command-run list-usb-disks | grep "$1"
 }
 
 USB_DEVICE="$1"
@@ -42,17 +33,20 @@ if ! is_usb "${USB_DEVICE}"; then
   exit 1
 fi
 
+if [[ "$(uname)" == "Darwin" ]]; then
+  diskutil unmountDisk "${USB_DEVICE}"
+fi
+
 sudo chown "${USER}" "${USB_DEVICE}"
 
 # Destroy any existing GPT/MBR on the device and re-create
 echo -n "Create new GPT partition table... "
-sgdisk --zap-all "${USB_DEVICE}" >/dev/null
-sgdisk --clear "${USB_DEVICE}" >/dev/null
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" create -z "${USB_DEVICE}"
 echo "done"
 
 echo -n "Create new partitions... "
-"${CGPT}" add -s 32768 -t kernel -b 64 -l kernel "${USB_DEVICE}"
-"${CGPT}" add -i 1 -T 1 -S 1 -P 2 "${USB_DEVICE}"
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s 32768 -t kernel -b 64 -l kernel "${USB_DEVICE}"
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -i 1 -T 1 -S 1 -P 2 "${USB_DEVICE}"
 echo "done"
 
 echo "Building signed zedboot image"
