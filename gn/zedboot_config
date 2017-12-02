@@ -1,4 +1,2 @@
 netsvc.netboot=true
-gfxconsole.early=true
 virtcon.font=18x32
-
