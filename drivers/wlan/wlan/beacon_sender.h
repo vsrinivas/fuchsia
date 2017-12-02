@@ -31,6 +31,7 @@ class BeaconSender {
     ~BeaconSender() = default;
 
     zx_status_t Init();
+    bool IsStarted();
     zx_status_t Start(const StartRequest& req);
     zx_status_t Stop();
 

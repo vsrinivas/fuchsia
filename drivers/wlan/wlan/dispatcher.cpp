@@ -282,6 +282,15 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
         auto frame = MgmtFrame<Deauthentication>(hdr, deauth, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
+    case ManagementSubtype::kAssociationRequest: {
+        auto authreq = packet->field<AssociationRequest>(hdr->len());
+        if (authreq == nullptr) {
+            errorf("assocation request packet too small (len=%zd)\n", payload_len);
+            return ZX_ERR_IO;
+        }
+        auto frame = MgmtFrame<AssociationRequest>(hdr, authreq, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
+    }
     case ManagementSubtype::kAssociationResponse: {
         auto authresp = packet->field<AssociationResponse>(hdr->len());
         if (authresp == nullptr) {
@@ -433,6 +442,8 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
         HandleMlmeMethod<ResetRequest>(packet, method);
         mlme_.reset();
         return ZX_OK;
+    case Method::START_request:
+        return HandleMlmeMethodInlinedStruct<StartRequest>(packet, method);
     case Method::SCAN_request:
         return HandleMlmeMethod<ScanRequest>(packet, method);
     case Method::JOIN_request:
@@ -453,10 +464,10 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     }
 }
 
-template <typename Message>
+template <typename Message, typename FidlStruct>
 zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, Method method) {
-    ::fidl::StructPtr<Message> req;
-    auto status = DeserializeServiceMsg(*packet, method, &req);
+    FidlStruct req;
+    auto status = DeserializeServiceMsg<Message>(*packet, method, &req);
     if (status != ZX_OK) {
         errorf("could not deserialize MLME Method %d: %d\n", method, status);
         return status;

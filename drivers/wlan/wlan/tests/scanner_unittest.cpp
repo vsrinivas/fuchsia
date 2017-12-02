@@ -101,7 +101,7 @@ class ScannerTest : public ::testing::Test {
     zx_status_t DeserializeResponse() {
         EXPECT_EQ(1u, mock_dev_.svc_queue.size());
         auto packet = mock_dev_.svc_queue.Dequeue();
-        return DeserializeServiceMsg(*packet, Method::SCAN_confirm, &resp_);
+        return DeserializeServiceMsg<ScanResponse>(*packet, Method::SCAN_confirm, &resp_);
     }
 
     ScanRequestPtr req_;

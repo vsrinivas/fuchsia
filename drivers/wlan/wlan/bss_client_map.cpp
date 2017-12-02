@@ -7,7 +7,7 @@
 namespace wlan {
 
 bool BssClientMap::HasAidAvailable() {
-    return next_aid_ >= kMaxClients;
+    return next_aid_ < kMaxClients;
 }
 
 bool BssClientMap::Has(const common::MacAddr& addr) {

@@ -30,13 +30,6 @@ zx_status_t ApMlme::Init() {
     status = bss_map_.Insert(bssid, bss);
     if (status != ZX_OK) { errorf("[ap-mlme] BSS could not be registered: %s\n", MACSTR(bssid)); }
 
-    // TODO(hahnr): For development only to unblock from SME changes.
-    // To be removed soon.
-    auto req = StartRequest::New();
-    req->ssid = "FUCHSIA-TEST-AP";
-    req->beacon_period = 100;
-    HandleMlmeStartReq(*req);
-
     return ZX_OK;
 }
 
@@ -48,6 +41,11 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
 
 zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     debugfn();
+
+    if (bcn_sender_->IsStarted()) {
+        errorf("received MLME-START.request while already running\n");
+        return ZX_OK;
+    }
 
     bcn_sender_->Start(req);
 
@@ -61,6 +59,11 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
 
 zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     debugfn();
+
+    if (!bcn_sender_->IsStarted()) {
+        errorf("received MLME-STOP.request without running\n");
+        return ZX_OK;
+    }
 
     bcn_sender_->Stop();
 

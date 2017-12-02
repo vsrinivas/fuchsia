@@ -1,5 +1,5 @@
 {
-    "SSID": "FUCHSIA-AP",
+    "SSID": "FUCHSIA-TEST-AP",
     "BeaconPeriod": 100,
     "DTIMPeriod": 2,
     "Active": false

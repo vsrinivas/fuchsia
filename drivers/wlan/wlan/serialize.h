@@ -10,8 +10,8 @@
 
 namespace wlan {
 
-template <typename T>
-zx_status_t DeserializeServiceMsg(const Packet& packet, Method m, ::fidl::StructPtr<T>* out) {
+template <typename T, typename FidlStruct = ::fidl::StructPtr<T>>
+zx_status_t DeserializeServiceMsg(const Packet& packet, Method m, FidlStruct* out) {
     if (out == nullptr) return ZX_ERR_INVALID_ARGS;
 
     const uint8_t* p = packet.data();

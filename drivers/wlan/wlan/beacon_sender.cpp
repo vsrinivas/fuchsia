@@ -83,6 +83,12 @@ zx_status_t BeaconSender::Stop() {
     return ZX_OK;
 }
 
+bool BeaconSender::IsStarted() {
+    debugfn();
+    std::lock_guard<std::mutex> lock(start_req_lock_);
+    return IsStartedLocked();
+}
+
 bool BeaconSender::IsStartedLocked() const {
     debugfn();
     return !start_req_.is_null();
