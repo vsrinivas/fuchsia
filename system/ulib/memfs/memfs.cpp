@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <async/loop.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
@@ -17,6 +18,7 @@
 #include <fbl/unique_ptr.h>
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
+#include <memfs/memfs.h>
 #include <memfs/vnode.h>
 #include <zircon/device/vfs.h>
 
@@ -112,3 +114,42 @@ zx_status_t createFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<Vnod
 }
 
 } // namespace memfs
+
+struct memfs_filesystem {
+    memfs::Vfs vfs;
+};
+
+zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
+                                    zx_handle_t* root_out) {
+    ZX_DEBUG_ASSERT(async != nullptr);
+    ZX_DEBUG_ASSERT(fs_out != nullptr);
+    ZX_DEBUG_ASSERT(root_out != nullptr);
+
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &client, &server);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::unique_ptr<memfs_filesystem_t> fs = fbl::make_unique<memfs_filesystem_t>();
+    fs->vfs.set_async(async);
+
+    fbl::RefPtr<memfs::VnodeDir> root;
+    if ((status = memfs::createFilesystem("<tmp>", &fs->vfs, &root)) != ZX_OK) {
+        return status;
+    }
+    if ((status = fs->vfs.ServeDirectory(fbl::move(root), fbl::move(server))) != ZX_OK) {
+        return status;
+    }
+
+    *fs_out = fs.release();
+    *root_out = client.release();
+    return ZX_OK;
+}
+
+zx_status_t memfs_free_filesystem(memfs_filesystem_t* fs, zx_duration_t timeout) {
+    ZX_DEBUG_ASSERT(fs != nullptr);
+    zx_status_t status = fs->vfs.UninstallAll(zx_deadline_after(timeout));
+    delete fs;
+    return status;
+}

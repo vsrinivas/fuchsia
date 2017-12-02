@@ -18,7 +18,7 @@ namespace fs {
 // A specialization of |Vfs| which tears down all active connections when it
 // is destroyed.
 //
-// Unlinke |Vfs|, this class is NOT thread-safe and it must be used with a
+// Unlike |Vfs|, this class is NOT thread-safe and it must be used with a
 // single-threaded asynchronous dispatcher.
 class ManagedVfs : public Vfs {
 public:
