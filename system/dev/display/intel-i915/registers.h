@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "registers_base.h"
+#include "registers-base.h"
 
 namespace registers {
 
@@ -34,7 +34,7 @@ public:
     static constexpr uint32_t kTrailingPtePadding = 136;
     static constexpr uint32_t kHeaderPtePaddingFor180Or270 = 136;
 
-    static auto Get() {
+    static RegisterAddr<PlaneSurface> Get() {
         return RegisterAddr<PlaneSurface>(kAddr);
     }
 };
@@ -45,7 +45,9 @@ public:
     DEF_BIT(31, enable_mask);
     DEF_BIT(23, sde_int_pending);
 
-    static auto Get() { return RegisterAddr<MasterInterruptControl>(0x44200); }
+    static RegisterAddr<MasterInterruptControl> Get() {
+        return RegisterAddr<MasterInterruptControl>(0x44200);
+    }
 };
 
 } // namespace registers

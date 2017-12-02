@@ -29,7 +29,7 @@ public:
 
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t Bind();
+    zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
     MmioSpace* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
@@ -39,7 +39,7 @@ public:
 private:
     void EnableBacklight(bool enable);
     zx_status_t InitHotplug(pci_protocol_t* pci);
-    zx_status_t InitDisplays();
+    zx_status_t InitDisplays(uint16_t device_id);
 
     Gtt gtt_;
 

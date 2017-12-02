@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "registers_base.h"
+#include "registers-base.h"
 
 namespace registers {
 
@@ -26,7 +26,7 @@ public:
     static constexpr uint32_t kSdeIntIdentity = 0xc4008;
     static constexpr uint32_t kSdeIntEnable = 0xc400c;
 
-    auto ddi_bit(Ddi ddi) {
+    registers::BitfieldRef<uint32_t> ddi_bit(Ddi ddi) {
         uint32_t bit;
         switch (ddi) {
             case DDI_A:
@@ -43,10 +43,12 @@ public:
             default:
                 bit = -1;
         }
-        return registers::BitfieldRef(reg_value_ptr(), bit + 1, bit);
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    static auto Get(uint32_t offset) { return RegisterAddr<SdeInterruptBase>(offset); }
+    static RegisterAddr<SdeInterruptBase> Get(uint32_t offset) {
+        return RegisterAddr<SdeInterruptBase>(offset);
+    }
 };
 
 // SHOTPLUG_CTL + SHOTPLUG_CTL2
@@ -59,17 +61,17 @@ public:
     static constexpr uint32_t kLongPulseBitSubOffset = 1;
     static constexpr uint32_t kHpdEnableBitSubOffset = 4;
 
-    auto hpd_enable(Ddi ddi) {
+    registers::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
         uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
-        return registers::BitfieldRef(reg_value_ptr(), bit + 1, bit);
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    auto long_pulse_detected(Ddi ddi) {
+    registers::BitfieldRef<uint32_t> long_pulse_detected(Ddi ddi) {
         uint32_t bit = ddi_to_first_bit(ddi) + kLongPulseBitSubOffset;
-        return registers::BitfieldRef(reg_value_ptr(), bit + 1, bit);
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    static auto Get(Ddi ddi) {
+    static RegisterAddr<HotplugCtrl> Get(Ddi ddi) {
         return RegisterAddr<HotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
     }
 
@@ -97,7 +99,7 @@ public:
     DEF_BIT(1, port_c_present);
     DEF_BIT(0, port_d_present);
 
-    static auto Get() { return RegisterAddr<SouthFuseStrap>(0xc2014); }
+    static RegisterAddr<SouthFuseStrap> Get() { return RegisterAddr<SouthFuseStrap>(0xc2014); }
 };
 
 

@@ -27,7 +27,7 @@
 #include "bootloader-display.h"
 #include "intel-i915.h"
 #include "registers.h"
-#include "registers_ddi.h"
+#include "registers-ddi.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 
@@ -38,6 +38,8 @@
 #define BACKLIGHT_CTRL_BIT ((uint32_t)(1u << 31))
 
 #define FLAGS_BACKLIGHT 1
+
+#define ENABLE_MODESETTING 0
 
 namespace {
     static bool is_gen9(uint16_t device_id) {
@@ -162,17 +164,25 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
     return ZX_OK;
 }
 
-zx_status_t Controller::InitDisplays() {
+zx_status_t Controller::InitDisplays(uint16_t device_id) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<DisplayDevice> disp_device(new (&ac) BootloaderDisplay(this));
-    if (!ac.check()) {
-        zxlogf(ERROR, "i915: failed to alloc disp_device\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::unique_ptr<DisplayDevice> disp_device(nullptr);
 
-    if (!disp_device->Init()) {
-        zxlogf(ERROR, "i915: failed to init display\n");
-        return ZX_ERR_INTERNAL;
+    if (ENABLE_MODESETTING && is_gen9(device_id)) {
+        // TODO(ZX-1414): Actually try to initialize displays
+        zxlogf(INFO, "Did not find any displays\n");
+        return ZX_OK;
+    } else {
+        disp_device.reset(new (&ac) BootloaderDisplay(this));
+        if (!ac.check()) {
+            zxlogf(ERROR, "i915: failed to alloc disp_device\n");
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        if (!disp_device->Init()) {
+            zxlogf(ERROR, "i915: failed to init display\n");
+            return ZX_ERR_INTERNAL;
+        }
     }
 
     zx_status_t status = disp_device->DdkAdd("intel_i915_disp");
@@ -197,7 +207,7 @@ void Controller::DdkRelease() {
     delete this;
 }
 
-zx_status_t Controller::Bind() {
+zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
     zxlogf(TRACE, "i915: binding to display controller\n");
 
     pci_protocol_t pci;
@@ -264,9 +274,10 @@ zx_status_t Controller::Bind() {
         zxlogf(ERROR, "i915: failed to add controller device\n");
         return status;
     }
+    controller_ptr->release();
 
     zxlogf(TRACE, "i915: initializing displays\n");
-    status = InitDisplays();
+    status = InitDisplays(pci_config->device_id);
     if (status != ZX_OK) {
         device_remove(zxdev());
         return status;
@@ -280,22 +291,23 @@ zx_status_t Controller::Bind() {
 
     // TODO remove when the gfxconsole moves to user space
     EnableBacklight(true);
-    zx_set_framebuffer(get_root_resource(),
-                       reinterpret_cast<void*>(display_device_->framebuffer()),
-                       static_cast<uint32_t>(display_device_->framebuffer_size()),
-                       display_device_->info().format, display_device_->info().width,
-                       display_device_->info().height, display_device_->info().stride);
+    if (display_device_) {
+        zx_set_framebuffer(get_root_resource(),
+                           reinterpret_cast<void*>(display_device_->framebuffer()),
+                           static_cast<uint32_t>(display_device_->framebuffer_size()),
+                           display_device_->info().format, display_device_->info().width,
+                           display_device_->info().height, display_device_->info().stride);
+    }
 
-    zxlogf(TRACE, "i915: reg=%08lx regsize=0x%" PRIx64 " fb=0x%" PRIx64 "fbsize=0x%d\n",
-            regs, regs_size, display_device_->framebuffer(), display_device_->framebuffer_size());
+    zxlogf(TRACE, "i915: initialization done\n");
 
     return ZX_OK;
 }
 
-Controller::Controller(zx_device_t* parent) : DeviceType(parent) { }
+Controller::Controller(zx_device_t* parent) : DeviceType(parent), irq_(ZX_HANDLE_INVALID) { }
 
 Controller::~Controller() {
-    if (irq_) {
+    if (irq_ != ZX_HANDLE_INVALID) {
         zx_interrupt_signal(irq_);
 
         thrd_join(irq_thread_, nullptr);
@@ -320,9 +332,5 @@ zx_status_t intel_i915_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = controller->Bind();
-    if (status == ZX_OK) {
-        controller.release();
-    }
-    return status;
+    return controller->Bind(&controller);
 }

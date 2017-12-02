@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include "intel-i915.h"
+#include "mmio-space.h"
 
 namespace registers {
 
@@ -59,16 +59,17 @@ private:
     uint32_t reg_addr_;
 };
 
-class BitfieldRef {
+template <class IntType> class BitfieldRef {
 public:
-    BitfieldRef(uint32_t* value_ptr, uint32_t bit_high_incl, uint32_t bit_low)
+    BitfieldRef(IntType* value_ptr, uint32_t bit_high_incl, uint32_t bit_low)
         : value_ptr_(value_ptr), shift_(bit_low), mask_((1 << (bit_high_incl - bit_low + 1)) - 1)
     {
+        static_assert(sizeof(IntType) <= sizeof(uint32_t), "BitfieldRef too large");
     }
 
     uint32_t get() { return (*value_ptr_ >> shift_) & mask_; }
 
-    void set(uint32_t field_val)
+    void set(IntType field_val)
     {
         assert((field_val & ~mask_) == 0);
         *value_ptr_ &= ~(mask_ << shift_);
@@ -76,7 +77,7 @@ public:
     }
 
 private:
-    uint32_t* value_ptr_;
+    IntType* value_ptr_;
     uint32_t shift_;
     uint32_t mask_;
 };
@@ -84,16 +85,21 @@ private:
 #define DEF_FIELD(BIT_HIGH, BIT_LOW, NAME)                                                         \
     static_assert((BIT_HIGH) > (BIT_LOW), "Upper bit goes before lower bit");                      \
     static_assert((BIT_HIGH) < 32, "Upper bit is out of range");                                   \
-    registers::BitfieldRef NAME()                                                        \
-    {                                                                                              \
-        return registers::BitfieldRef(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));           \
+    registers::BitfieldRef<uint32_t> NAME() {                                                      \
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));           \
     }
 
 #define DEF_BIT(BIT, NAME)                                                                         \
     static_assert((BIT) < 32, "Bit is out of range");                                              \
-    registers::BitfieldRef NAME()                                                        \
-    {                                                                                              \
-        return registers::BitfieldRef(reg_value_ptr(), (BIT), (BIT));                    \
+    registers::BitfieldRef<uint32_t> NAME() {                                                      \
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT), (BIT));                    \
+    }
+
+#define DEF_SUBFIELD(COMBINED_FIELD, BIT_HIGH, BIT_LOW, SUBFIELD_NAME)                             \
+    static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                     \
+    static_assert((BIT_HIGH) < 8, "Upper bit is out of range");                                    \
+    registers::BitfieldRef<uint8_t> SUBFIELD_NAME() {                                              \
+        return registers::BitfieldRef<uint8_t>(&COMBINED_FIELD, (BIT_HIGH), (BIT_LOW));            \
     }
 
 } // namespace registers
