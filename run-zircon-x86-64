@@ -8,5 +8,5 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-exec $DIR/../zircon/scripts/run-zircon -a x86-64 \
-    -o $DIR/../out/build-zircon/build-zircon-pc-x86-64 "$@"
+exec $DIR/../zircon/scripts/run-zircon -a x86 \
+    -o $DIR/../out/build-zircon/build-x86 "$@"

@@ -57,15 +57,23 @@ if [[ "${PROJECTS}" = "" ]]; then
     if [[ "${TARGET}" != "" ]]; then
         PROJECTS="${TARGET}"
     else
-        PROJECTS="zircon-pc-x86-64" # Default
+        PROJECTS="x86" # Default
     fi
 fi
 
+have_arm64=false
+have_x86=false
+for project in $PROJECTS; do
+    case "$project" in
+    *x86*) have_x86=true ;;
+    *) have_arm64=true ;;
+    esac
+done
 declare -a ARCHLIST
-if [[ "${PROJECTS}" == *arm64* ]]; then
+if $have_arm64; then
     ARCHLIST+=(arm64)
 fi
-if [[ "${PROJECTS}" == *x86-64* ]]; then
+if $have_x86; then
     ARCHLIST+=(x86-64)
 fi
 readonly -a ARCHLIST

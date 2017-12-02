@@ -10,10 +10,11 @@ fx-config-read
 
 qemu_dir="${QEMU_DIR:-$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n ${BUILDTOOLS_QEMU_DIR})/bin}"
 
-arch="${FUCHSIA_ARCH}"
-if [[ "${arch}" -eq "aarch64" ]]; then
-  arch="arm64"
-fi
+case "$FUCHSIA_ARCH" in
+aarch64) arch=arm64 ;;
+x86-64) arch=x86 ;;
+*) echo >&2 "Unexpected FUCHSIA_ARCH=$FUCHSIA_ARCH"; exit 2 ;;
+esac
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -o "${ZIRCON_BUILD_DIR}" \

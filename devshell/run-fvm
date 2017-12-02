@@ -12,10 +12,11 @@ source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"
 
-arch="${FUCHSIA_ARCH}"
-if [[ "${arch}" -eq "aarch64" ]]; then
-  arch="arm64"
-fi
+case "$FUCHSIA_ARCH" in
+aarch64) arch=arm64 ;;
+x86-64) arch=x86 ;;
+*) echo >&2 "Unexpected FUCHSIA_ARCH=$FUCHSIA_ARCH"; exit 2 ;;
+esac
 
 fx-command-run build "${fvm_block}" "${ramdisk_bin}"
 

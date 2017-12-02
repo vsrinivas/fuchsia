@@ -9,4 +9,4 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 exec $DIR/../zircon/scripts/run-zircon -a arm64 \
-    -o $DIR/../out/build-zircon/build-zircon-qemu-arm64 "$@"
+    -o $DIR/../out/build-zircon/build-arm64 "$@"

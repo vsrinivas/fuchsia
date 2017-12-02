@@ -53,23 +53,23 @@ function main {
   case $1 in
     x86-64)
       arch=x86-64
-      zircon_project=zircon-pc-x86-64
+      zircon_project=x86
       ;;
     aarch64)
       arch=aarch64
-      zircon_project=zircon-qemu-arm64
+      zircon_project=arm64
       ;;
     gauss)
       arch=aarch64
-      zircon_project=zircon-gauss-arm64
+      zircon_project=gauss
       ;;
     hikey960)
       arch=aarch64
-      zircon_project=zircon-hikey960-arm64
+      zircon_project=hikey960
       ;;
     odroidc2)
       arch=aarch64
-      zircon_project=zircon-odroidc2-arm64
+      zircon_project=odroidc2
       ;;
     *)
       fx-command-help
