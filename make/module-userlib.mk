@@ -159,19 +159,27 @@ MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
 
 # grab all files from source, we'll filter out .h, .c, etc in the next steps
 # so as to exclude build files, editor droppings, etc
-MODULE_PKG_FILES := $(sort $(shell find $(MODULE_SRCDIR) -type f))
+MODULE_PKG_FILES := $(shell find $(MODULE_SRCDIR) -type f)
 
 # split based on include/... and everything else
 MODULE_PKG_INCS := $(filter %.h,$(filter $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
-MODULE_PKG_INCS := "[includes]" $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
+MODULE_PKG_INCS := $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
+
+MODULE_PKG_DEPS := $(foreach dep,$(MODULE_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
 
 ifeq ($(filter src,$(MODULE_PACKAGE)),src)
 MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
-MODULE_PKG_SRCS := "[src]" $(foreach inc,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(inc))=SOURCE/$(inc))
+MODULE_PKG_SRCS := $(foreach inc,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(inc))=SOURCE/$(inc))
 MODULE_PKG_ARCH := src
+MODULE_PKG_TAG := "[src]"
+# source modules need to include their static deps to be buildable
+MODULE_PKG_SDEPS := $(foreach dep,$(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
 else
-MODULE_PKG_SRCS := "[lib]"
+MODULE_PKG_SRCS :=
 MODULE_PKG_ARCH := $(ARCH)
+MODULE_PKG_TAG := "[lib]"
+# binary modules do not include static deps (they've already been linked in)
+MODULE_PKG_SDEPS :=
 
 ifneq ($(filter shared,$(MODULE_PACKAGE)),)
 ifneq ($(MODULE_SO_NAME),)
@@ -183,16 +191,47 @@ endif
 ifneq ($(filter static,$(MODULE_PACKAGE)),)
 MODULE_PKG_SRCS += lib/lib$(MODULE_NAME).a=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).a
 endif
-
 endif
 
-MODULE_PKG_DEPS := "[deps]" $(foreach dep,$(MODULE_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
+
+# libc is the "sysroot" package
+# We bundle crt1, aux libs (libdl, etc), libzircon, as well
+# as the public system headers and libzircon headers into this package
+ifeq ($(MODULE),system/ulib/c)
+# empty compatibility libraries
+MODULE_PKG_SRCS += lib/libm.so=SOURCE/third_party/ulib/musl/lib.ld
+MODULE_PKG_SRCS += lib/libdl.so=SOURCE/third_party/ulib/musl/lib.ld
+MODULE_PKG_SRCS += lib/libpthread.so=SOURCE/third_party/ulib/musl/lib.ld
+
+# crt1
+MODULE_PKG_SRCS += lib/Scrt1.o=$(patsubst $(BUILDDIR)/%,BUILD/%,$(USER_SCRT1_OBJ))
+
+# libzircon
+MODULE_PKG_SRCS += lib/libzircon.so=BUILD/system/ulib/zircon/libzircon.so.abi
+MODULE_PKG_SRCS += lib/debug/libzircon.so=BUILD/system/ulib/zircon/libzircon.so
+
+# global headers
+GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
+MODULE_PKG_INCS += $(foreach inc,$(GLOBAL_HEADERS),$(patsubst system/public/%,%,$(inc))=SOURCE/$(inc))
+
+# generated headers
+MODULE_PKG_INCS += $(foreach inc,$(sort $(SYSGEN_PUBLIC_HEADERS)),$(patsubst $(SYSGEN_BUILDDIR)/%,%,$(inc))=$(patsubst $(BUILDDIR)/%,BUILD/%,$(inc)))
+
+# libzircon headers
+ZIRCON_HEADERS := $(shell find system/ulib/zircon/include -name \*\.h)
+MODULE_PKG_INCS += $(foreach inc,$(ZIRCON_HEADERS),$(patsubst system/ulib/zircon/include/%,%,$(inc))=SOURCE/$(inc))
+
+# libc only depends on libzircon which is now included, so clear the deps list
+MODULE_PKG_DEPS :=
+MODULE_PKG_SDEPS :=
+endif
 
 $(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
-$(MODULE_PKG_FILE): _INCS := $(MODULE_PKG_INCS)
-$(MODULE_PKG_FILE): _SRCS := $(MODULE_PKG_SRCS)
-$(MODULE_PKG_FILE): _DEPS := $(MODULE_PKG_DEPS)
 $(MODULE_PKG_FILE): _ARCH := $(MODULE_PKG_ARCH)
+$(MODULE_PKG_FILE): _INCS := $(if $(MODULE_PKG_INCS),"[includes]" $(sort $(MODULE_PKG_INCS)))
+$(MODULE_PKG_FILE): _SRCS := $(if $(MODULE_PKG_SRCS),$(MODULE_PKG_TAG) $(sort $(MODULE_PKG_SRCS)))
+$(MODULE_PKG_FILE): _DEPS := $(if $(MODULE_PKG_DEPS),"[deps]" $(sort $(MODULE_PKG_DEPS)))
+$(MODULE_PKG_FILE): _SDEPS := $(if $(MODULE_PKG_SDEPS),"[static-deps]" $(sort $(MODULE_PKG_SDEPS)))
 $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-userlib.mk
 	@$(call BUILDECHO,creating package $@ ;)\
 	$(MKDIR) ;\
@@ -202,6 +241,7 @@ $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-userlib.mk
 	echo "arch=$(_ARCH)" >> $@ ;\
 	for i in $(_INCS) ; do echo $$i >> $@ ; done ;\
 	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
+	for i in $(_SDEPS) ; do echo $$i >> $@ ; done ;\
 	for i in $(_DEPS) ; do echo $$i >> $@ ; done
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
