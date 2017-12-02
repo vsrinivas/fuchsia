@@ -5,18 +5,45 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## Before running the Zircon host tool `bootserver`, this command executes a
-## build of `images/efi.blk` and `images/fvm.sparse.blk`.
-## `bootserver` is then invoked with `zircon.bin`, the boot-minimal bootdata,
-## and the two disk images for paving.
+## usage: fx boot-paver <machine type> [bootserver arguments]
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
+if [[ $# == 0 ]]; then
+  fx-command-help
+  fx-machine-types
+  exit 1
+fi
+
+declare -a disks=("--fvm" "${FUCHSIA_BUILD_DIR}/${fvm_sparse_block}")
+ramdisk="${FUCHSIA_BUILD_DIR}/${ramdisk_bin}"
+
+machine_type="$1"
+shift
+case "${machine_type}" in
+  # TODO(raggi): ramdisk isn't a paver, but, this script will replace `fx boot` at which point this is correct behavior
+  ram)
+    ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${ZIRCON_PLATFORM}.bin"
+    disks=()
+  ;;
+  efi|acer|nuc)
+    disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}")
+  ;;
+  cros|pixel|vboot)
+    disks=("${disks[@]}" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
+  ;;
+  *)
+  echo "Unsupported machine type: \"${machine_type}\""
+  fx-machine-types
+  exit 1
+esac
+
 fx-command-run build-paver
 
-exec "${ZIRCON_TOOLS_DIR}/bootserver" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}" \
-  --fvm "${FUCHSIA_BUILD_DIR}/${fvm_sparse_block}" \
-    "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
-    "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" "$@"
+exec "${ZIRCON_TOOLS_DIR}/bootserver" \
+  "${disks[@]}" \
+  "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
+  "${ramdisk}" \
+  "$@"

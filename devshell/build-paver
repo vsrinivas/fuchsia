@@ -13,4 +13,6 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
-fx-command-run build "${efi_block}" "${fvm_sparse_block}" "${ramdisk_bin}" "$@"
+fx-ensure-vboot-tools
+
+fx-command-run build "${kernc_vboot}" "${efi_block}" "${fvm_sparse_block}" "${ramdisk_bin}" "$@"

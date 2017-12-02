@@ -5,22 +5,19 @@
 
 ### make a zedboot configuration in a target directory
 
-## usage: fx mkzedboot <root of external drive>
+## usage: fx mkvbootzedboot </dev/your/usb/disk>
 ## Builds Fuchsia bootloader and zedboot and copies it to a drive of
 ## your choice. Makes zedboot the default boot option.
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx-config-read
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
-vboot_dir="${FUCHSIA_DIR}/third_party/vboot_reference"
-CGPT="${vboot_dir}/build/cgpt/cgpt"
-if [[ ! -x "${CGPT}" ]]; then
-(
-cd "${vboot_dir}"
-make cgpt futil
-)
+fx-ensure-vboot-tools
+
+if [[ $(uname) != "Linux" ]]; then
+  echo "This script is only supported under Linux"
+  exit 1
 fi
 
 is_usb() {
@@ -34,10 +31,14 @@ is_usb() {
 USB_DEVICE="$1"
 if [[ -z "${USB_DEVICE}" ]]; then
   echo >&2 "device argument required"
+  echo "USB disks:"
+  fx-command-run list-usb-disks
   exit 1
 fi
 if ! is_usb "${USB_DEVICE}"; then
   echo >&2 "USB disk device argument required"
+  echo "USB disks:"
+  fx-command-run list-usb-disks
   exit 1
 fi
 

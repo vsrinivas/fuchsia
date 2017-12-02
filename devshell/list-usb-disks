@@ -1,0 +1,30 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### list attached usb disks
+
+case "$(uname)" in
+Darwin)
+  disks=$(diskutil list | grep '^/dev/' | grep -v 'internal' | grep -v 'virtual' | cut -d ' ' -f 1)
+  for disk in $disks; do
+    details="$(diskutil info "${disk}" | grep 'Media Name' | cut -d : -f 2-)"
+    echo "${disk} - ${details}"
+  done
+  ;;
+Linux)
+  for disk in $(ls /dev/disk/by-path/*-usb-* 2>/dev/null); do
+    if [[ "${disk}" =~ part ]]; then
+      continue
+    fi
+    disk=$(readlink -f "${disk}")
+    details="$(cat /sys/block/$(basename "${disk}")/device/model)"
+    echo "${disk} - ${details}"
+  done
+  ;;
+*)
+  echo "Unsupported platform $(uname)"
+  exit 1
+  ;;
+esac
