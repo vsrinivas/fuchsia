@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/cpuperf_provider/reader.h"
+#include "garnet/lib/cpuperf/reader.h"
 
 #include <inttypes.h>
 
@@ -13,10 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace cpuperf_provider {
-namespace {
-
-}  // namespace
+namespace cpuperf {
 
 Reader::Reader(int fd, uint32_t buffer_size)
     : fd_(fd),
@@ -32,22 +29,18 @@ Reader::Reader(int fd, uint32_t buffer_size)
   }
 }
 
-bool Reader::ReadState(zx_x86_ipm_state_t* state) {
-  auto status = ioctl_ipm_get_state(fd_, state);
+bool Reader::GetProperties(cpuperf_properties_t* props) {
+  auto status = ioctl_cpuperf_get_properties(fd_, props);
   if (status < 0)
-    FXL_LOG(ERROR) << "ioctl_ipm_get_state failed: " << status;
+    FXL_LOG(ERROR) << "ioctl_cpuperf_get_properties failed: " << status;
   return status >= 0;
 }
 
-bool Reader::ReadPerfConfig(zx_x86_ipm_perf_config_t* config) {
-  ioctl_ipm_perf_config_t ioctl_config;
-  auto status = ioctl_ipm_get_perf_config(fd_, &ioctl_config);
-  if (status < 0) {
-    FXL_LOG(ERROR) << "ioctl_ipm_get_perf_config failed: " << status;
-    return false;
-  }
-  *config = ioctl_config.config;
-  return true;
+bool Reader::GetConfig(cpuperf_config_t* config) {
+  auto status = ioctl_cpuperf_get_config(fd_, config);
+  if (status < 0)
+    FXL_LOG(ERROR) << "ioctl_cpuperf_get_config failed: " << status;
+  return status >= 0;
 }
 
 bool Reader::MapBufferVmo(zx_handle_t vmo) {
@@ -75,35 +68,32 @@ bool Reader::MapBufferVmo(zx_handle_t vmo) {
   return true;
 }
 
-static bool ReadBufferInfo(zx::vmo& vmo, uint32_t cpu, bool sampling_mode,
-                           zx_x86_ipm_buffer_info_t* info) {
+static bool ReadBufferHeader(zx::vmo& vmo, uint32_t cpu, bool sampling_mode,
+                             cpuperf_buffer_header_t* hdr) {
   size_t actual;
-  auto status = vmo.read(info, 0, sizeof(*info), &actual);
+  auto status = vmo.read(hdr, 0, sizeof(*hdr), &actual);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_vmo_read failed: " << status;
     return false;
   }
-  if (actual != sizeof(*info)) {
+  if (actual != sizeof(*hdr)) {
     FXL_LOG(ERROR) << "zx_vmo_read short read, got " << actual
-                   << " instead of " << sizeof(info);
+                   << " instead of " << sizeof(hdr);
     return false;
   }
 
   FXL_LOG(INFO) << "cpu " << cpu
-                << ": buffer version " << info->version
-                << ", " << info->capture_end << " bytes";
+                << ": buffer version " << hdr->version
+                << ", " << hdr->capture_end << " bytes";
 
-  uint32_t expected_version =
-    sampling_mode ?
-    IPM_BUFFER_SAMPLING_MODE_VERSION :
-    IPM_BUFFER_COUNTING_MODE_VERSION;
-  if (info->version != expected_version) {
-    FXL_LOG(ERROR) << "Unsupported buffer version, got " << info->version
+  uint32_t expected_version = CPUPERF_BUFFER_VERSION;
+  if (hdr->version != expected_version) {
+    FXL_LOG(ERROR) << "Unsupported buffer version, got " << hdr->version
                    << " instead of " << expected_version;
     return false;
   }
 
-  uint64_t kernel_ticks_per_second = info->ticks_per_second;
+  uint64_t kernel_ticks_per_second = hdr->ticks_per_second;
   uint64_t user_ticks_per_second = zx_ticks_per_second();
   if (kernel_ticks_per_second != user_ticks_per_second) {
     FXL_LOG(WARNING) << "Kernel and userspace are using different tracing"
@@ -111,51 +101,6 @@ static bool ReadBufferInfo(zx::vmo& vmo, uint32_t cpu, bool sampling_mode,
                      << " kernel_ticks_per_second=" << kernel_ticks_per_second
                      << " user_ticks_per_second=" << user_ticks_per_second;
   }
-
-  return true;
-}
-
-bool Reader::ReadNextRecord(uint32_t* cpu, zx_x86_ipm_counters_t* counters) {
-  if (current_cpu_ >= num_cpus_)
-    return false;
-
-  ioctl_ipm_buffer_handle_req_t req;
-  req.descriptor = current_cpu_;
-  zx_handle_t handle;
-  auto ioctl_status = ioctl_ipm_get_buffer_handle(fd_, &req, &handle);
-  if (ioctl_status < 0) {
-    FXL_LOG(ERROR) << "ioctl_ipm_get_buffer_handle failed: " << ioctl_status;
-    return false;
-  }
-
-  zx::vmo vmo(handle);
-  zx_x86_ipm_buffer_info_t info;
-  if (!ReadBufferInfo(vmo, current_cpu_, false, &info))
-    return false;
-
-  FXL_VLOG(2) << fxl::StringPrintf("ReadNextRecord: cpu=%u", current_cpu_);
-
-  size_t actual;
-  auto status = vmo.read(counters, sizeof(info), sizeof(*counters), &actual);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_vmo_read failed: " << status;
-    return false;
-  }
-  if (actual != sizeof(*counters)) {
-    FXL_LOG(ERROR) << "zx_vmo_read short read, got " << actual
-                   << " instead of " << sizeof(*counters);
-    return false;
-  }
-
-  if (ticks_per_second_ != 0 &&
-      ticks_per_second_ != info.ticks_per_second) {
-    FXL_LOG(WARNING) << "Current buffer using different timebase from previous buffer"
-                     << ": was " << ticks_per_second_
-                     << " now " << info.ticks_per_second;
-  }
-  ticks_per_second_ = info.ticks_per_second;
-  *cpu = current_cpu_;
-  ++current_cpu_;
 
   return true;
 }
@@ -170,12 +115,13 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
         ++current_cpu_;
       if (current_cpu_ >= num_cpus_)
         break;
-      ioctl_ipm_buffer_handle_req_t req;
+      ioctl_cpuperf_buffer_handle_req_t req;
       req.descriptor = current_cpu_;
       zx_handle_t handle;
-      auto ioctl_status = ioctl_ipm_get_buffer_handle(fd_, &req, &handle);
+      auto ioctl_status = ioctl_cpuperf_get_buffer_handle(fd_, &req, &handle);
       if (ioctl_status < 0) {
-        FXL_LOG(ERROR) << "ioctl_ipm_get_buffer_handle failed: " << ioctl_status;
+        FXL_LOG(ERROR) << "ioctl_cpuperf_get_buffer_handle failed: "
+                       << ioctl_status;
         return false;
       }
 
@@ -183,12 +129,12 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
       if (!MapBufferVmo(handle))
         return false;
 
-      zx_x86_ipm_buffer_info_t info;
-      if (!ReadBufferInfo(current_vmo_, current_cpu_, true, &info))
+      cpuperf_buffer_header_t header;
+      if (!ReadBufferHeader(current_vmo_, current_cpu_, true, &header))
         return false;
-      next_record_ = buffer_start_ + sizeof(info);
-      capture_end_ = buffer_start_ + info.capture_end;
-      ticks_per_second_ = info.ticks_per_second;
+      next_record_ = buffer_start_ + sizeof(header);
+      capture_end_ = buffer_start_ + header.capture_end;
+      ticks_per_second_ = header.ticks_per_second;
       if (next_record_ > capture_end_) {
         FXL_LOG(WARNING) << "Bad trace data for cpu " << current_cpu_
                          << ", end point within header";
@@ -198,8 +144,8 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
         continue;
     }
 
-    const zx_x86_ipm_record_header_t* hdr =
-      reinterpret_cast<const zx_x86_ipm_record_header_t*>(next_record_);
+    const cpuperf_record_header_t* hdr =
+      reinterpret_cast<const cpuperf_record_header_t*>(next_record_);
     if (next_record_ + sizeof(*hdr) > capture_end_) {
       FXL_LOG(WARNING) << "Bad trace data for cpu " << current_cpu_
                        << ", no space for final record header";
@@ -211,7 +157,8 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
     auto record_size = RecordSize(hdr);
     if (record_size == 0) {
       FXL_LOG(WARNING) << "Bad trace data for cpu " << current_cpu_
-                       << ", bad record type: " << hdr->type;
+                       << ", bad record type: "
+                       << static_cast<unsigned>(hdr->type);
       // Bump |next_record_| so that we'll skip to the next cpu.
       next_record_ = capture_end_;
       continue;
@@ -224,19 +171,23 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
       continue;
     }
 
-    FXL_VLOG(2) << fxl::StringPrintf("ReadNextRecord: cpu=%u, offset=%zu",
-                                     current_cpu_,
-                                     next_record_ - buffer_start_);
+    // There can be millions of records. This is useful for small test runs,
+    // but otherwise is too painful. The verbosity level is chosen to
+    // recognize that.
+    FXL_VLOG(10) << fxl::StringPrintf("ReadNextRecord: cpu=%u, offset=%zu",
+                                      current_cpu_,
+                                      next_record_ - buffer_start_);
 
     switch (record_type) {
-#if IPM_API_VERSION >= 2
-      case IPM_RECORD_TICK:
+      case CPUPERF_RECORD_TICK:
         memcpy(&record->tick, next_record_, sizeof(record->tick));
         break;
-      case IPM_RECORD_PC:
+      case CPUPERF_RECORD_VALUE:
+        memcpy(&record->value, next_record_, sizeof(record->value));
+        break;
+      case CPUPERF_RECORD_PC:
         memcpy(&record->pc, next_record_, sizeof(record->pc));
         break;
-#endif
       default:
         FXL_NOTREACHED();
     }
@@ -250,29 +201,28 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
   return false;
 }
 
-zx_x86_ipm_record_type_t Reader::RecordType(
-    const zx_x86_ipm_record_header_t* hdr) {
+cpuperf_record_type_t Reader::RecordType(const cpuperf_record_header_t* hdr) {
   switch (hdr->type) {
-    case IPM_RECORD_TICK:
-      return IPM_RECORD_TICK;
-    case IPM_RECORD_PC:
-      return IPM_RECORD_PC;
+    case CPUPERF_RECORD_TICK:
+    case CPUPERF_RECORD_VALUE:
+    case CPUPERF_RECORD_PC:
+      return static_cast<cpuperf_record_type_t>(hdr->type);
     default:
-      return IPM_RECORD_RESERVED;
+      return CPUPERF_RECORD_RESERVED;
   }
 }
 
-size_t Reader::RecordSize(const zx_x86_ipm_record_header_t* hdr) {
+size_t Reader::RecordSize(const cpuperf_record_header_t* hdr) {
   switch (hdr->type) {
-#if IPM_API_VERSION >= 2
-    case IPM_RECORD_TICK:
-      return sizeof(zx_x86_ipm_tick_record_t);
-    case IPM_RECORD_PC:
-      return sizeof(zx_x86_ipm_pc_record_t);
-#endif
+    case CPUPERF_RECORD_TICK:
+      return sizeof(cpuperf_tick_record_t);
+    case CPUPERF_RECORD_VALUE:
+      return sizeof(cpuperf_value_record_t);
+    case CPUPERF_RECORD_PC:
+      return sizeof(cpuperf_pc_record_t);
     default:
       return 0;
   }
 }
 
-}  // namespace cpuperf_provider
+}  // namespace cpuperf

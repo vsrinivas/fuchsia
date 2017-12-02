@@ -18,12 +18,8 @@ executable("bin") {
       "app.h",
       "categories.cc",
       "categories.h",
-      "events.cc",
-      "events.h",
       "importer.cc",
       "importer.h",
-      "reader.cc",
-      "reader.h",
     ]
   }
 
