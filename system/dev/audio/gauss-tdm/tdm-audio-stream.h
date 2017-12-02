@@ -133,6 +133,7 @@ private:
     // sample rates).
     fbl::Vector<audio_stream_format_range_t> supported_formats_;
 
+    platform_device_protocol_t pdev_;
     i2c_protocol_t i2c_;
 
     fbl::unique_ptr<Tas57xx> left_sub_;

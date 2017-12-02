@@ -28,15 +28,14 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
     auto stream = fbl::AdoptRef(
         new TdmOutputStream(parent, fbl::move(domain)));
 
-    platform_device_protocol_t proto;
-    zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &proto);
+    zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &stream->pdev_);
     if (res != ZX_OK) {
         return res;
     }
 
     size_t mmio_size;
     void *regs;
-    res = pdev_map_mmio(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    res = pdev_map_mmio(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                         &regs, &mmio_size,
                         stream->regs_vmo_.reset_and_get_address());
 
@@ -577,8 +576,8 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
         ring_buffer_size_ = fifo_bytes_;
 
     // TODO - (hollande) Make this work with non contig vmo
-    resp.result = zx_vmo_create_contiguous(get_root_resource(), ring_buffer_size_, 0,
-                                 ring_buffer_vmo_.reset_and_get_address());
+    resp.result = pdev_alloc_contig_vmo(&pdev_, ring_buffer_size_, 0,
+                                        ring_buffer_vmo_.reset_and_get_address());
 
     if (resp.result != ZX_OK) {
         zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)\n", ring_buffer_size_,

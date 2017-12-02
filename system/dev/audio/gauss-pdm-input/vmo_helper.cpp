@@ -11,12 +11,12 @@
 namespace audio {
 namespace gauss {
 
-zx_status_t VmoHelperBase::AllocateVmo(size_t buffer_size) {
+zx_status_t VmoHelperBase::AllocateVmo(platform_device_protocol_t* pdev,
+                                       size_t buffer_size) {
     buffer_size_ = buffer_size;
     // TODO(almasrymina): get_root_resource is going away soon. Will need to
     // migrate then.
-    zx_status_t status =
-        zx_vmo_create_contiguous(get_root_resource(), buffer_size_, 0,
+    zx_status_t status = pdev_alloc_contig_vmo(pdev, buffer_size_, 0,
                                  ring_buffer_vmo_.reset_and_get_address());
 
     if (status != ZX_OK) {
@@ -40,8 +40,9 @@ zx_status_t VmoHelperBase::AllocateVmo(size_t buffer_size) {
     return status;
 }
 
-zx_status_t VmoHelper<true>::AllocateVmo(size_t buffer_size) {
-    zx_status_t status = VmoHelperBase::AllocateVmo(buffer_size);
+zx_status_t VmoHelper<true>::AllocateVmo(platform_device_protocol_t* pdev,
+                                         size_t buffer_size) {
+    zx_status_t status = VmoHelperBase::AllocateVmo(pdev, buffer_size);
     if (status != ZX_OK)
         return status;
 
@@ -65,8 +66,9 @@ void VmoHelperBase::DestroyVmo() {
 }
 
 template <bool DEBUG>
-zx_status_t VmoHelper<DEBUG>::AllocateVmo(size_t buffer_size) {
-    return VmoHelperBase::AllocateVmo(buffer_size);
+zx_status_t VmoHelper<DEBUG>::AllocateVmo(platform_device_protocol_t* pdev,
+                                          size_t buffer_size) {
+    return VmoHelperBase::AllocateVmo(pdev, buffer_size);
 }
 
 template <bool DEBUG>

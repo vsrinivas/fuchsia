@@ -556,7 +556,8 @@ GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
            req.notifications_per_ring);
 
     // Create the ring buffer vmo we will use to share memory with the client.
-    resp.result = vmo_helper_.AllocateVmo(ring_buffer_size_.load());
+    resp.result = vmo_helper_.AllocateVmo(&audio_device_.pdev,
+                                          ring_buffer_size_.load());
     if (resp.result != ZX_OK) {
         zxlogf(ERROR, "Failed to create ring buffer (size %lu)\n",
                ring_buffer_size_.load());
