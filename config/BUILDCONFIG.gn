@@ -60,19 +60,7 @@ declare_args() {
   # It exists only to be set in toolchain_args.
   # See //build/toolchain/clang_toolchain.gni for details.
   current_base_toolchain = target_toolchain
-
-  # zircon build project
-  zircon_project = ""
 }
-
-if (zircon_project == "") {
-  if (current_cpu == "arm64") {
-    zircon_project = "zircon-qemu-arm64"
-  } else if (current_cpu == "x64") {
-    zircon_project = "zircon-pc-x86-64"
-  }
-}
-assert(zircon_project != "", "unable to set default zircon build project")
 
 is_android = false
 is_fuchsia = false
