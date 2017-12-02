@@ -80,7 +80,6 @@ def main():
                         nargs='?', const=True, default=False,
                         help="Show GN build arguments usable in --args",
                         metavar="BUILDARG")
-    parser.add_argument("--zircon_project", "-z", help="zircon project")
     parser.add_argument("--platforms", "-P",
                         help="comma-separated list of platforms")
     parser.add_argument("--packages", "-p",
@@ -167,13 +166,6 @@ def main():
     if args.platforms:
         gn_args.append('zircon_platforms=[%s]' % ', '.join(
             ['"%s"' % platform for platform in args.platforms.split(',')]))
-
-    if args.zircon_project:
-        if args.platforms:
-            print '--zircon_project is mutually exclusive with --platforms'
-            return 1
-        print 'NOTE: --zircon_project is deprecated; use --platforms instead'
-        gn_args.append('zircon_platforms=["%s"]' % args.zircon_project)
 
     select_variants = []
     bad_variants = []
