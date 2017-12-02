@@ -369,6 +369,19 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
     pdata->blockid = 0;
     txn->actual = 0;
 
+    // This command has a data phase?
+    bool has_data = cmd & SDMMC_RESP_DATA_PRESENT;
+
+    if (has_data && txn->length == 0) {
+        // Empty txn; return immediately
+        dev->completed = dev->pending;
+        dev->completed->status = ZX_OK;
+        dev->completed->actual = 0;
+        dev->pending = NULL;
+        completion_signal(&dev->pending_completion);
+        return ZX_OK;
+    }
+
     // Every command requires that the Command Inhibit is unset.
     uint32_t inhibit_mask = SDHCI_STATE_CMD_INHIBIT;
 
@@ -383,8 +396,6 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
     while (regs->state & inhibit_mask)
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
-    // This command has a data phase?
-    bool has_data = cmd & SDMMC_RESP_DATA_PRESENT;
     bool use_dma = sdhci_supports_adma2_64bit(dev);
     if (has_data) {
         st = iotxn_physmap(txn);

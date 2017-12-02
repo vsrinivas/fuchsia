@@ -93,7 +93,24 @@ static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
         return ZX_ERR_NOT_SUPPORTED;
     }
     case IOCTL_DEVICE_SYNC: {
-        return ZX_ERR_NOT_SUPPORTED;
+        iotxn_t* txn;
+        zx_status_t status = iotxn_alloc(&txn, 0, 0);
+        if (status != ZX_OK) {
+            return status;
+        }
+        completion_t completion = COMPLETION_INIT;
+        txn->opcode = IOTXN_OP_READ;
+        txn->flags = IOTXN_SYNC_BEFORE;
+        txn->offset = 0;
+        txn->length = 0;
+        txn->complete_cb = sdmmc_txn_cplt;
+        txn->cookie = &completion;
+        sdmmc_t* device = ctx;
+        iotxn_queue(device->zxdev, txn);
+        completion_wait(&completion, ZX_TIME_INFINITE);
+        status = txn->status;
+        iotxn_release(txn);
+        return status;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
