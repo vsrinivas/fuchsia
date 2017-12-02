@@ -116,7 +116,9 @@ static void sdmmc_release(void* ctx) {
         mtx_lock(&sdmmc->lock);
         iotxn_t* txn;
         list_for_every_entry(&sdmmc->txn_list, txn, iotxn_t, node) {
+            mtx_unlock(&sdmmc->lock);
             iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
+            mtx_lock(&sdmmc->lock);
         }
         mtx_unlock(&sdmmc->lock);
 
@@ -394,12 +396,12 @@ static int sdmmc_worker_thread(void* arg) {
         // between each txn.
         mtx_lock(&sdmmc->lock);
         iotxn_t* txn = list_remove_head_type(&sdmmc->txn_list, iotxn_t, node);
+        mtx_unlock(&sdmmc->lock);
         if (txn) {
             sdmmc_do_txn(sdmmc, txn);
         } else {
             zx_object_signal(sdmmc->worker_event, SDMMC_IOTXN_RECEIVED, 0);
         }
-        mtx_unlock(&sdmmc->lock);
 
         uint32_t pending;
         zx_status_t st = zx_object_wait_one(sdmmc->worker_event,
