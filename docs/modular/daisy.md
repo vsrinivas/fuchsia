@@ -47,37 +47,3 @@ Since verb templates are expressed independently of the type of data they
 operate on, the Daisy creator does not need to know what type of data is
 represented in each noun. In fact, each noun can thus capture ambiguity, which
 is in turn captured in the Daisy.
-
-## Creating Daisies
-
-### in Dart
-
-> TODO(thatguy): The code below doesn't actually exist yet. :(
-
-```dart
-import "peridot/lib/daisy.dart"
-
-// Assume we have a PDF Entity in |thisPdf|.
-daisy = new Daisy("com.google.fuchsia.preview.v1", thisPdf);
-
-// Want to present the user with any action we can do to |thisPdf|?
-daisy = new Daisy.justNouns(thisPdf);
-
-// A more complex action: Navigate. Let's use text instead of Entities, and
-// rely on Entity translation for ensuring the arguments end up in a format
-// the target Module can understand.
-daisy = new Daisy("com.google.fuchsia.navigate.v1",
-                  start: "home", destination: "Googleplex");
-// Or using a Context signal for the start:
-daisy = new Daisy("com.google.fuchsia.navigate.v1",
-                  start: contextReader.select(entity: {"topic": "myLocation"}),
-                  destination: "1234 Main St");
-```
-
-### in C++
-
-TODO
-
-## Using Daisies
-
-TODO
