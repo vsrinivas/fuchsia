@@ -93,7 +93,7 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     }
 
     next_pc(guest_state);
-    return gich_state->interrupt_tracker.Wait();
+    return gich_state->interrupt_tracker.Wait(nullptr);
 }
 
 static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state) {

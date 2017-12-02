@@ -9,21 +9,17 @@
 #include <fbl/arena.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_ptr.h>
+#include <hypervisor/state_invalidator.h>
 #include <object/port_dispatcher.h>
 #include <object/semaphore.h>
 
-/* Reloads the hypervisor state. */
-struct StateReloader {
-    virtual void Reload() = 0;
-};
-
-/* Blocks on allocation if the arena is empty. */
+// Blocks on allocation if the arena is empty.
 class BlockingPortAllocator final : public PortAllocator {
 public:
     BlockingPortAllocator();
 
     zx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;
-    PortPacket* BlockingAlloc(StateReloader* reloader);
+    PortPacket* AllocBlocking();
     virtual void Free(PortPacket* port_packet) override;
 
 private:
@@ -33,14 +29,14 @@ private:
     PortPacket* Alloc() override;
 };
 
-/* Describes a single trap within a guest. */
+// Describes a single trap within a guest.
 class Trap : public fbl::WAVLTreeContainable<fbl::unique_ptr<Trap>> {
 public:
     Trap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
          uint64_t key);
 
     zx_status_t Init();
-    zx_status_t Queue(const zx_port_packet_t& packet, StateReloader* reloader);
+    zx_status_t Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator);
 
     zx_vaddr_t GetKey() const { return addr_; }
     bool Contains(zx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
@@ -60,7 +56,7 @@ private:
     BlockingPortAllocator port_allocator_;
 };
 
-/* Contains all the traps within a guest. */
+// Contains all the traps within a guest.
 class TrapMap {
 public:
     zx_status_t InsertTrap(uint32_t kind, zx_vaddr_t addr, size_t len,

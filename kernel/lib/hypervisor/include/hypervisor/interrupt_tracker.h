@@ -8,6 +8,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include <hypervisor/state_invalidator.h>
 #include <kernel/auto_lock.h>
 #include <kernel/event.h>
 
@@ -63,7 +64,9 @@ public:
     }
 
     // Waits for an interrupt.
-    zx_status_t Wait() {
+    zx_status_t Wait(StateInvalidator* invalidator) {
+        if (invalidator != nullptr)
+            invalidator->Invalidate();
         do {
             zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
             if (status != ZX_OK)

@@ -19,13 +19,10 @@ zx_status_t BlockingPortAllocator::Init() {
     return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
 }
 
-PortPacket* BlockingPortAllocator::BlockingAlloc(StateReloader* reloader) {
-    bool was_blocked;
-    zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, &was_blocked);
+PortPacket* BlockingPortAllocator::AllocBlocking() {
+    zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, nullptr);
     if (status != ZX_OK)
         return nullptr;
-    if (was_blocked && reloader != nullptr)
-        reloader->Reload();
     return Alloc();
 }
 
@@ -49,10 +46,12 @@ zx_status_t Trap::Init() {
     return port_allocator_.Init();
 }
 
-zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateReloader* reloader) {
+zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator) {
+    if (invalidator != nullptr)
+        invalidator->Invalidate();
     if (port_ == nullptr)
         return ZX_ERR_NOT_FOUND;
-    PortPacket* port_packet = port_allocator_.BlockingAlloc(reloader);
+    PortPacket* port_packet = port_allocator_.AllocBlocking();
     if (port_packet == nullptr)
         return ZX_ERR_NO_MEMORY;
     port_packet->packet = packet;

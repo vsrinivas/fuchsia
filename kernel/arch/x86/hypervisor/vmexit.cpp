@@ -122,11 +122,10 @@ static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* loc
         return ZX_ERR_CANCELED;
 
     ExitInterruptionInformation int_info(*vmcs);
-
     DEBUG_ASSERT(int_info.valid);
     DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
     x86_call_external_interrupt_handler(int_info.vector);
-    vmcs->Reload();
+    vmcs->Invalidate();
     return ZX_OK;
 }
 
@@ -263,9 +262,7 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
 static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
                               LocalApicState* local_apic_state) {
     next_rip(exit_info, vmcs);
-    zx_status_t status = local_apic_state->interrupt_tracker.Wait();
-    vmcs->Reload();
-    return status;
+    return local_apic_state->interrupt_tracker.Wait(vmcs);
 }
 
 static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,

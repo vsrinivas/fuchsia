@@ -93,7 +93,7 @@ static void vmwrite(uint64_t field, uint64_t val) {
     DEBUG_ASSERT(err == ZX_OK);
 }
 
-AutoVmcs::AutoVmcs(const paddr_t vmcs_address)
+AutoVmcs::AutoVmcs(paddr_t vmcs_address)
     : vmcs_address_(vmcs_address) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
@@ -106,13 +106,14 @@ AutoVmcs::~AutoVmcs() {
     arch_enable_ints();
 }
 
-void AutoVmcs::Reload() {
-    DEBUG_ASSERT(arch_ints_disabled());
-    __UNUSED zx_status_t status = vmptrld(vmcs_address_);
-    DEBUG_ASSERT(status == ZX_OK);
+void AutoVmcs::Invalidate() {
+#if LK_DEBUGLEVEL > 0
+    vmcs_address_ = 0;
+#endif
 }
 
 void AutoVmcs::InterruptWindowExiting(bool enable) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     uint32_t controls = Read(VmcsField32::PROCBASED_CTLS);
     if (enable) {
         controls |= kProcbasedCtlsIntWindowExiting;
@@ -138,6 +139,7 @@ static bool has_error_code(uint32_t vector) {
 }
 
 void AutoVmcs::IssueInterrupt(uint32_t vector) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     uint32_t interrupt_info = kInterruptInfoValid | (vector & UINT8_MAX);
     if (vector <= X86_INT_MAX_INTEL_DEFINED)
         interrupt_info |= kInterruptTypeHardwareException;
@@ -151,39 +153,48 @@ void AutoVmcs::IssueInterrupt(uint32_t vector) {
 }
 
 uint16_t AutoVmcs::Read(VmcsField16 field) const {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     return static_cast<uint16_t>(vmread(static_cast<uint64_t>(field)));
 }
 
 uint32_t AutoVmcs::Read(VmcsField32 field) const {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     return static_cast<uint32_t>(vmread(static_cast<uint64_t>(field)));
 }
 
 uint64_t AutoVmcs::Read(VmcsField64 field) const {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     return vmread(static_cast<uint64_t>(field));
 }
 
 uint64_t AutoVmcs::Read(VmcsFieldXX field) const {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     return vmread(static_cast<uint64_t>(field));
 }
 
 void AutoVmcs::Write(VmcsField16 field, uint16_t val) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
 void AutoVmcs::Write(VmcsField32 field, uint32_t val) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
 void AutoVmcs::Write(VmcsField64 field, uint64_t val) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
 void AutoVmcs::Write(VmcsFieldXX field, uint64_t val) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
 zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
                                  uint32_t set, uint32_t clear) {
+    DEBUG_ASSERT(vmcs_address_ != 0);
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {

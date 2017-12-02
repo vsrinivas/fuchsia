@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <hypervisor/trap_map.h>
+#include <hypervisor/state_invalidator.h>
 
 // clang-format off
 
@@ -182,12 +182,12 @@ enum class InvEpt : uint64_t {
 // clang-format on
 
 // Loads a VMCS within a given scope.
-class AutoVmcs : public StateReloader {
+class AutoVmcs : public StateInvalidator {
 public:
-    AutoVmcs(const paddr_t vmcs_address_);
+    AutoVmcs(paddr_t vmcs_address_);
     ~AutoVmcs();
 
-    void Reload() override;
+    void Invalidate() override;
     void InterruptWindowExiting(bool enable);
     void IssueInterrupt(uint32_t vector);
 
@@ -204,7 +204,7 @@ public:
                            uint32_t clear);
 
 private:
-    const paddr_t vmcs_address_;
+    paddr_t vmcs_address_;
 };
 
 // Pins execution to a CPU within a given scope.
