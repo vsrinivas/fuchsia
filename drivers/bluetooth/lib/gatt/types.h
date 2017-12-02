@@ -72,7 +72,8 @@ class Characteristic final {
                  uint8_t properties,
                  uint16_t extended_properties,
                  const att::AccessRequirements& read_permissions,
-                 const att::AccessRequirements& write_permissions);
+                 const att::AccessRequirements& write_permissions,
+                 const att::AccessRequirements& update_permissions);
   ~Characteristic() = default;
 
   IdType id() const { return id_; }
@@ -86,6 +87,10 @@ class Characteristic final {
 
   const att::AccessRequirements& write_permissions() const {
     return write_permissions_;
+  }
+
+  const att::AccessRequirements& update_permissions() const {
+    return update_permissions_;
   }
 
   const std::vector<DescriptorPtr>& descriptors() const { return descriptors_; }
@@ -106,6 +111,7 @@ class Characteristic final {
   uint16_t extended_properties_;
   att::AccessRequirements read_permissions_;
   att::AccessRequirements write_permissions_;
+  att::AccessRequirements update_permissions_;
   std::vector<DescriptorPtr> descriptors_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Characteristic);

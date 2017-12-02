@@ -10,18 +10,21 @@ namespace gatt {
 Service::Service(bool primary, const common::UUID& type)
     : primary_(primary), type_(type) {}
 
-Characteristic::Characteristic(IdType id,
-                               const common::UUID& type,
-                               uint8_t properties,
-                               uint16_t extended_properties,
-                               const att::AccessRequirements& read_permissions,
-                               const att::AccessRequirements& write_permissions)
+Characteristic::Characteristic(
+    IdType id,
+    const common::UUID& type,
+    uint8_t properties,
+    uint16_t extended_properties,
+    const att::AccessRequirements& read_permissions,
+    const att::AccessRequirements& write_permissions,
+    const att::AccessRequirements& update_permissions)
     : id_(id),
       type_(type),
       properties_(properties),
       extended_properties_(extended_properties),
       read_permissions_(read_permissions),
-      write_permissions_(write_permissions) {}
+      write_permissions_(write_permissions),
+      update_permissions_(update_permissions) {}
 
 Descriptor::Descriptor(IdType id,
                        const common::UUID& type,

@@ -74,6 +74,13 @@ class ByteBuffer {
     return data()[pos];
   }
 
+  // Converts the underlying buffer to the given type with bounds checking.
+  template <typename T>
+  const T& As() const {
+    FXL_CHECK(size() == sizeof(T));
+    return *reinterpret_cast<const T*>(data());
+  }
+
   // Returns the contents of this buffer as a C++ string-like object without
   // copying its contents.
   fxl::StringView AsString() const;

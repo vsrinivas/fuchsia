@@ -47,6 +47,14 @@ using WriteHandler = std::function<void(IdType service_id,
                                         const common::ByteBuffer& value,
                                         const WriteResponder& responder)>;
 
+// Called when the peer device with the given |peer_id| has enabled or disabled
+// notifications/indications on the characteristic with id |chrc_id|.
+using ClientConfigCallback = std::function<void(IdType service_id,
+                                                IdType chrc_id,
+                                                const std::string& peer_id,
+                                                bool notify,
+                                                bool indicate)>;
+
 // LocalServiceManager allows clients to implement GATT services. This
 // internally maintains an attribute database and provides hooks for clients to
 // respond to read and write requests, send notifications/indications,
@@ -69,11 +77,25 @@ class LocalServiceManager final {
   // must have unique identifiers to aid in value request handling.
   IdType RegisterService(ServicePtr service,
                          ReadHandler read_handler,
-                         WriteHandler write_handler);
+                         WriteHandler write_handler,
+                         ClientConfigCallback ccc_callback);
 
   // Unregisters the GATT service hierarchy identified by |service_id|. Returns
   // false if |service_id| is unrecognized.
   bool UnregisterService(IdType service_id);
+
+  // Returns the client characteristic configuration for the given |peer_id| and
+  // the characteristic identified by |service_id| and |chrc_id|. Returns false
+  // if |service_id| is unknown or no configurations exist for |chrc_id|.
+  struct ClientCharacteristicConfig {
+    att::Handle handle;
+    bool notify;
+    bool indicate;
+  };
+  bool GetCharacteristicConfig(IdType service_id,
+                               IdType chrc_id,
+                               const std::string& peer_id,
+                               ClientCharacteristicConfig* out_config);
 
   fxl::RefPtr<att::Database> database() const { return db_; }
 
