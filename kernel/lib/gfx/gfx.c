@@ -632,10 +632,9 @@ gfx_surface *gfx_create_surface(void *ptr, uint width, uint height, uint stride,
 
 int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags)
 {
-    DEBUG_ASSERT(width > 0);
-    DEBUG_ASSERT(height > 0);
-    DEBUG_ASSERT(stride >= width);
-    DEBUG_ASSERT(format < GFX_FORMAT_MAX);
+    if ((width == 0) || (height == 0) || (stride < width)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     surface->flags = flags;
     surface->format = format;
