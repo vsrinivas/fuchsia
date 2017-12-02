@@ -61,11 +61,13 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     if (status != ZX_OK)
         return status;
 
+    vcpu->gich_state_.gich->hcr |= kGichHcrEn;
+    vcpu->gich_state_.num_lrs = (vcpu->gich_state_.gich->vtr & kGichVtrListRegs) + 1;
+    vcpu->gich_state_.elrs = (1 << vcpu->gich_state_.num_lrs) - 1;
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC |
                  HCR_EL2_TWI | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW;
-    vcpu->gich_state_.gich->hcr |= kGichHcrEn;
 
     *out = fbl::move(vcpu);
     return ZX_OK;
@@ -98,6 +100,28 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
     return elrs != prev_elrs;
 }
 
+template <typename Out, typename In>
+static void gich_copy(Out* out, const In& in, uint32_t num_lrs) {
+    out->vmcr = in.vmcr;
+    out->elrs = in.elrs;
+    for (uint32_t i = 0; i < num_lrs; i++) {
+        out->lr[i] = in.lr[i];
+    }
+}
+
+AutoGich::AutoGich(GichState* gich_state)
+    : gich_state_(gich_state) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+    arch_disable_ints();
+    gich_copy(gich_state_->gich, *gich_state_, gich_state_->num_lrs);   // Load
+}
+
+AutoGich::~AutoGich() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    gich_copy(gich_state_, *gich_state_->gich, gich_state_->num_lrs);   // Save
+    arch_enable_ints();
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return ZX_ERR_BAD_STATE;
@@ -105,10 +129,13 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     zx_paddr_t state = vaddr_to_paddr(&el2_state_);
     zx_status_t status;
     do {
-        uint64_t hcr = hcr_;
-        if (gich_maybe_interrupt(&gich_state_))
-            hcr |= HCR_EL2_VI;
-        status = arm64_el2_resume(vttbr, state, hcr);
+        {
+            AutoGich auto_gich(&gich_state_);
+            uint64_t curr_hcr = hcr_;
+            if (gich_maybe_interrupt(&gich_state_))
+                curr_hcr |= HCR_EL2_VI;
+            status = arm64_el2_resume(vttbr, state, curr_hcr);
+        }
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
             status = ZX_OK;

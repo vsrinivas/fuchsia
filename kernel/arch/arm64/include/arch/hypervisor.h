@@ -19,8 +19,9 @@
 #include <zircon/types.h>
 
 static const uint16_t kNumInterrupts = 256;
-static const uint32_t kGichLrPending = 0b01 << 28;
 static const uint32_t kGichHcrEn = 1u << 0;
+static const uint32_t kGichVtrListRegs = 0b111111;
+static const uint32_t kGichLrPending = 0b01 << 28;
 
 typedef struct zx_port_packet zx_port_packet_t;
 
@@ -83,6 +84,22 @@ struct GichState {
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
     // Virtual GICH address.
     volatile Gich* gich;
+
+    // GICH state to be restored between VM exits.
+    uint32_t num_lrs;
+    uint32_t vmcr = 0;
+    uint64_t elrs;
+    uint32_t lr[64] = {};
+};
+
+// Loads a GICH within a given scope.
+class AutoGich {
+public:
+    AutoGich(GichState* gich_state);
+    ~AutoGich();
+
+private:
+    GichState* gich_state_;
 };
 
 class Vcpu {
