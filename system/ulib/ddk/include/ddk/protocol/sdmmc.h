@@ -54,4 +54,7 @@ static_assert(sizeof(sdmmc_protocol_data_t) <= sizeof(iotxn_proto_data_t), "sdmm
 #define IOCTL_SDMMC_MMC_TUNING \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 5)
 
+#define IOCTL_SDMMC_GET_MAX_TRANSFER_SIZE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 6)
+
 __END_CDECLS;

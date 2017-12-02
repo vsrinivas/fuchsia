@@ -50,6 +50,7 @@ typedef struct sdmmc {
     bool worker_thread_running;
 
     block_callbacks_t* callbacks;
+    uint32_t max_transfer_size;
 } sdmmc_t;
 
 // Issue a command to the host controller

@@ -65,11 +65,13 @@ static zx_off_t sdmmc_get_size(void* ctx) {
 }
 
 static void sdmmc_get_info(block_info_t* info, void* ctx) {
+    sdmmc_t* sdmmc = ctx;
     memset(info, 0, sizeof(*info));
     // Since we only support SDHC cards, the blocksize must be the SDHC
     // blocksize.
     info->block_size = SDHC_BLOCK_SIZE;
     info->block_count = sdmmc_get_size(ctx) / SDHC_BLOCK_SIZE;
+    info->max_transfer_size = sdmmc->max_transfer_size;
 }
 
 static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
@@ -342,7 +344,16 @@ out:
 static int sdmmc_worker_thread(void* arg) {
     sdmmc_t* sdmmc = (sdmmc_t*)arg;
 
-    zx_status_t st;
+    zx_status_t st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_GET_MAX_TRANSFER_SIZE,
+                                  NULL, 0,
+                                  &sdmmc->max_transfer_size, sizeof(sdmmc->max_transfer_size),
+                                  NULL);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdmmc: failed to get max transfer size, rc = %d\n", st);
+        device_remove(sdmmc->zxdev);
+        return st;
+    }
+
     iotxn_t* setup_txn = NULL;
     // Allocate a single iotxn that we use to bootstrap the card with.
     static_assert(SDHC_BLOCK_SIZE <= PAGE_SIZE, "");

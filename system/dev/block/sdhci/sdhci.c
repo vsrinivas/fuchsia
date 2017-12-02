@@ -765,6 +765,17 @@ static zx_status_t sdhci_ioctl(void* ctx, uint32_t op,
         return ZX_OK;
     case IOCTL_SDMMC_MMC_TUNING:
         return sdhci_mmc_tuning(dev);
+    case IOCTL_SDMMC_GET_MAX_TRANSFER_SIZE: {
+        if (out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        uint32_t max_transfer_size = DMA_DESC_COUNT * PAGE_SIZE;
+        memcpy(out_buf, &max_transfer_size, sizeof(max_transfer_size));
+        if (out_actual) {
+            *out_actual = sizeof(max_transfer_size);
+        }
+        return ZX_OK;
+    }
     }
 
     return ZX_ERR_NOT_SUPPORTED;
