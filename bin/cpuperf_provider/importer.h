@@ -9,78 +9,129 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <trace-engine/context.h>
-#include <zircon/device/cpu-trace/intel-pm.h>
+#include <unordered_map>
 
-#include "garnet/bin/cpuperf_provider/events.h"
+#include <trace-engine/context.h>
+#include <zircon/device/cpu-trace/cpu-perf.h>
+
+#include "garnet/bin/cpuperf_provider/categories.h"
+#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/cpuperf/reader.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "reader.h"
 
 namespace cpuperf_provider {
 
 class Importer {
 public:
-  Importer(trace_context* context, uint32_t category_mask,
+  Importer(trace_context* context, const TraceConfig* trace_config,
            trace_ticks_t start_time, trace_ticks_t stop_time);
   ~Importer();
 
-  bool Import(Reader& reader);
+  bool Import(cpuperf::Reader& reader);
 
 private:
   static constexpr size_t kMaxNumCpus = 32;
   static_assert(kMaxNumCpus <= TRACE_ENCODED_THREAD_REF_MAX_INDEX,
                 "bad value for kMaxNumCpus");
 
-  uint64_t ImportTallyRecords(Reader& reader,
-                              const zx_x86_ipm_state_t& state,
-                              const zx_x86_ipm_perf_config_t& config);
-  uint64_t ImportSampleRecords(Reader& reader,
-                               const zx_x86_ipm_state_t& state,
-                               const zx_x86_ipm_perf_config_t& config);
+  class CounterTracker final {
+  public:
+    CounterTracker(trace_ticks_t start_time) : start_time_(start_time) {}
 
-  void ImportTallyRecord(trace_cpu_number_t cpu,
-                         const zx_x86_ipm_state_t& state,
-                         const zx_x86_ipm_perf_config_t& config,
-                         const zx_x86_ipm_counters_t& counters);
-  void ImportProgrammableSampleRecord(trace_cpu_number_t cpu,
-                                      const zx_x86_ipm_state_t& state,
-                                      const zx_x86_ipm_perf_config_t& config,
-                                      const Reader::SampleRecord& record,
-                                      trace_ticks_t previous_time,
-                                      uint64_t ticks_per_second,
-                                      uint64_t counter_value,
-                                      uint64_t* programmable_counter_value);
-  void ImportFixedSampleRecord(trace_cpu_number_t cpu,
-                               const zx_x86_ipm_state_t& state,
-                               const zx_x86_ipm_perf_config_t& config,
-                               const Reader::SampleRecord& record,
-                               trace_ticks_t previous_time,
-                               uint64_t ticks_per_second,
-                               uint64_t counter_value,
-                               uint64_t* fixed_counter_value);
+    bool HaveValue(unsigned cpu, cpuperf_event_id_t id) const {
+      Key key = GenKey(cpu, id);
+      CounterData::const_iterator iter = data_.find(key);
+      return iter != data_.end();
+    }
 
-  void EmitTallyRecord(trace_cpu_number_t cpu, const EventDetails* details,
-                       const trace_string_ref_t& category_ref,
-                       uint64_t value);
+    void UpdateTime(unsigned cpu, cpuperf_event_id_t id,
+                    trace_ticks_t time) {
+      Key key = GenKey(cpu, id);
+      data_[key].time = time;
+    }
 
-  void EmitSampleRecord(trace_cpu_number_t cpu, const EventDetails* details,
-                        const trace_string_ref_t& category_ref,
-                        const Reader::SampleRecord& record,
+    trace_ticks_t GetTime(unsigned cpu, cpuperf_event_id_t id) const {
+      Key key = GenKey(cpu, id);
+      CounterData::const_iterator iter = data_.find(key);
+      if (iter == data_.end())
+        return start_time_;
+      return iter->second.time;
+    }
+
+    void AccumulateValue(unsigned cpu, cpuperf_event_id_t id,
+                         uint64_t value) {
+      Key key = GenKey(cpu, id);
+      data_[key].value += value;
+    }
+
+    uint64_t GetValue(unsigned cpu, cpuperf_event_id_t id) const {
+      Key key = GenKey(cpu, id);
+      CounterData::const_iterator iter = data_.find(key);
+      if (iter == data_.end())
+        return 0;
+      return iter->second.value;
+    }
+
+  private:
+    using Key = uint32_t;
+    struct Data {
+      trace_ticks_t time = 0;
+      uint64_t value = 0;
+    };
+    using CounterData = std::unordered_map<Key, Data>;
+
+    Key GenKey(unsigned cpu, cpuperf_event_id_t id) const {
+      FXL_DCHECK(cpu < kMaxNumCpus);
+      static_assert(sizeof(id) == 2, "");
+      return (cpu << 16) | id;
+    }
+
+    const trace_ticks_t start_time_;
+    CounterData data_;
+  };
+
+  uint64_t ImportRecords(cpuperf::Reader& reader,
+                         const cpuperf_properties_t& props,
+                         const cpuperf_config_t& config);
+
+  void ImportSampleRecord(trace_cpu_number_t cpu,
+                          const cpuperf_config_t& config,
+                          const cpuperf::Reader::SampleRecord& record,
+                          trace_ticks_t previous_time,
+                          uint64_t ticks_per_second,
+                          uint64_t counter_value);
+
+  void EmitSampleRecord(trace_cpu_number_t cpu,
+                        const cpuperf::EventDetails* details,
+                        const cpuperf::Reader::SampleRecord& record,
                         trace_ticks_t start_time,
                         uint64_t ticks_per_second, uint64_t value);
 
+  void EmitTallyCounts(const cpuperf_config_t& config,
+                       const CounterTracker* counter_data);
+
+  void EmitTallyRecord(trace_cpu_number_t cpu,
+                       cpuperf_event_id_t event_id,
+                       trace_ticks_t time,
+                       uint64_t value);
+
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu);
 
-  bool IsSampleMode() const;
-  bool IsTallyMode() const { return !IsSampleMode(); }
-
   trace_context* const context_;
-  uint32_t category_mask_;
+  const TraceConfig* trace_config_;
   trace_ticks_t start_time_;
   trace_ticks_t stop_time_;
 
   trace_string_ref_t const cpu_string_ref_;
-  trace_string_ref_t const fixed_category_ref_;
+  // Our use of the "category" argument to trace_context_write_* functions
+  // is a bit abnormal. The argument "should" be the name of the category
+  // the user provided. However, users can select individual counters or
+  // collections of counters and the mapping from user-provided category
+  // name to our output is problematic. So just use a single category to
+  // encompass all of them ("cpu:perf") and use the name argument to
+  // identify each counter.
+  trace_string_ref_t const cpuperf_category_ref_;
   trace_string_ref_t const value_name_ref_;
   trace_string_ref_t const rate_name_ref_;
   trace_string_ref_t const aspace_name_ref_;

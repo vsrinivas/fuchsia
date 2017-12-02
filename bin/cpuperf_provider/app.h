@@ -9,6 +9,8 @@
 
 #include <memory>
 
+#include "garnet/bin/cpuperf_provider/categories.h"
+#include "garnet/lib/cpuperf/controller.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
@@ -21,10 +23,9 @@ public:
   ~App();
 
 private:
-  uint32_t GetCategoryMask();
   void UpdateState();
 
-  void StartTracing(uint32_t category_mask);
+  void StartTracing(const TraceConfig& trace_config);
   void StopTracing();
 
   void PrintHelp();
@@ -34,8 +35,9 @@ private:
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   trace::TraceObserver trace_observer_;
-  uint32_t current_category_mask_ = 0u;
+  TraceConfig trace_config_;
   trace_context_t* context_ = nullptr;
+  std::unique_ptr<cpuperf::Controller> controller_;
 
   trace_ticks_t start_time_ = 0;
   trace_ticks_t stop_time_ = 0;

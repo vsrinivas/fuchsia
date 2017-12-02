@@ -6,7 +6,6 @@
 
 #ifdef __x86_64__
 #include "garnet/bin/cpuperf_provider/app.h"
-#include "garnet/bin/cpuperf_provider/events.h"
 #endif
 
 #include "lib/fsl/tasks/message_loop.h"
@@ -21,8 +20,6 @@ int main(int argc, const char** argv) {
     return 1;
 
   FXL_VLOG(2) << argv[0] << ": starting";
-
-  cpuperf_provider::InitializeEventSelectMaps();
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
