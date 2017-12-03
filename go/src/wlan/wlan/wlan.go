@@ -52,6 +52,7 @@ type Client struct {
 	staAddr  [6]byte
 	txid     uint64
 	eapolC   *eapol.Client
+	wlanInfo *mlme_ext.DeviceQueryResponse
 
 	state state
 }
@@ -120,13 +121,7 @@ func (c *Client) Run() {
 	var nextState state
 
 	watchingMLME := false
-
-	// Enter AP mode if ap config was supplied and is active. Else fall back to client mode.
-	if c.apCfg != nil && c.apCfg.Active {
-		c.state = newStartBSSState(c)
-	} else {
-		c.state = newScanState(c)
-	}
+	c.state = newQueryState()
 
 event_loop:
 	for {
@@ -353,6 +348,12 @@ func parseResponse(buf []byte) (interface{}, error) {
 		return &ind, nil
 	case int32(mlme.Method_EapolConfirm):
 		var resp mlme.EapolResponse
+		return &resp, nil
+	case int32(mlme.Method_DeviceQueryConfirm):
+		var resp mlme_ext.DeviceQueryResponse
+		if err := resp.Decode(dec); err != nil {
+			return nil, fmt.Errorf("could not decode DeviceQueryResponse: %v", err)
+		}
 		return &resp, nil
 	default:
 		return nil, fmt.Errorf("unknown ordinal: %v", header.ordinal)

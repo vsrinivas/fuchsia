@@ -117,6 +117,68 @@ func (s *startBSSState) timerExpired(c *Client) (state, error) {
 	return s, nil
 }
 
+// Querying
+
+type queryState struct {
+}
+
+func newQueryState() *queryState {
+	return &queryState{}
+}
+
+func (s *queryState) String() string {
+	return "querying"
+}
+
+func (s *queryState) run(c *Client) (time.Duration, error) {
+	req := &mlme_ext.DeviceQueryRequest{}
+	if debug {
+		log.Printf("query req: %v", req)
+	}
+
+	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_DeviceQueryRequest))
+}
+
+func (s *queryState) commandIsDisabled() bool {
+	return true
+}
+
+func (s *queryState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
+	return s, nil
+}
+
+func (s *queryState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
+	switch v := msg.(type) {
+	case *mlme_ext.DeviceQueryResponse:
+		if debug {
+			PrintDeviceQueryResponse(v)
+		}
+		c.wlanInfo, _ = msg.(*mlme_ext.DeviceQueryResponse)
+
+		// Enter AP mode if ap config was supplied and is active. Else fall back to client mode.
+		// TODO(tkilbourn): confirm that the device capabilities include the desired mode
+		if c.apCfg != nil && c.apCfg.Active {
+			return newStartBSSState(c), nil
+		} else {
+			return newScanState(c), nil
+		}
+	default:
+		return s, fmt.Errorf("unexpected message type: %T", v)
+	}
+}
+
+func (s *queryState) handleMLMETimeout(c *Client) (state, error) {
+	return s, nil
+}
+
+func (s *queryState) needTimer(c *Client) (bool, time.Duration) {
+	return false, 0
+}
+
+func (s *queryState) timerExpired(c *Client) (state, error) {
+	return s, nil
+}
+
 // Scanning
 
 const DefaultScanInterval = 5 * time.Second
@@ -128,7 +190,6 @@ type scanState struct {
 	cmdPending *commandRequest
 }
 
-var twoPointFourGhzChannels = []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 var broadcastBssid = [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 func newScanState(c *Client) *scanState {
@@ -144,13 +205,21 @@ func (s *scanState) String() string {
 	return "scanning"
 }
 
-func newScanRequest(ssid string) *mlme.ScanRequest {
+func newScanRequest(ssid string, c *Client) *mlme.ScanRequest {
+	// TODO(tkilbourn): unify all our channel representations.
+	// TODO(tkilbourn): filter out the supported channels to a reasonable subset for now
+	channels := []uint16{}
+	for _, band := range c.wlanInfo.Bands {
+		for _, ch := range band.Channels {
+			channels = append(channels, uint16(ch))
+		}
+	}
 	return &mlme.ScanRequest{
 		BssType:        mlme.BssTypes_Infrastructure,
 		Bssid:          broadcastBssid,
 		Ssid:           ssid,
 		ScanType:       mlme.ScanTypes_Passive,
-		ChannelList:    &twoPointFourGhzChannels,
+		ChannelList:    &channels,
 		MinChannelTime: 100,
 		MaxChannelTime: 300,
 	}
@@ -164,9 +233,9 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		if sr.Timeout > 0 {
 			timeout = time.Duration(sr.Timeout) * time.Second
 		}
-		req = newScanRequest("")
+		req = newScanRequest("", c)
 	} else if c.cfg != nil && c.cfg.SSID != "" && !s.pause {
-		req = newScanRequest(c.cfg.SSID)
+		req = newScanRequest(c.cfg.SSID, c)
 	}
 	if req != nil {
 		if debug {

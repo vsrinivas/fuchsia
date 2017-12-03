@@ -81,6 +81,9 @@ Dispatcher::Dispatcher(DeviceInterface* device) : device_(device) {
 
 Dispatcher::~Dispatcher() {}
 
+template <>
+zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* packet, Method method);
+
 zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     debugfn();
 
@@ -97,6 +100,7 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
 
     // If there is no active MLME, block all packets but service ones.
     // MLME-JOIN.request and MLME-START.request implicitly select a mode and initialize the MLME.
+    // DEVICE_QUERY.request is used to obtain device capabilities.
     auto service_msg = (packet->peer() == Packet::Peer::kService);
     if (mlme_ == nullptr && !service_msg) {
         errorf("received packet with no active MLME\n");
@@ -388,8 +392,11 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
 
     auto method = static_cast<Method>(hdr->ordinal);
 
-    // If there is no active MLME only JOIN.req/SCAN.req and START.req are accepted.
-    // Those will then either move the MLME into AP or Client mode.
+    if (method == Method::DEVICE_QUERY_request) {
+        return HandleMlmeMethod<DeviceQueryRequest>(packet, method);
+    }
+
+    // Only a subset of requests are supported before an MLME has been initialized.
     if (mlme_ == nullptr) {
         switch (method) {
             case Method::SCAN_request:
@@ -440,8 +447,6 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
         return HandleMlmeMethod<EapolRequest>(packet, method);
     case Method::SETKEYS_request:
         return HandleMlmeMethod<SetKeysRequest>(packet, method);
-    case Method::DEVICE_QUERY_request:
-        return HandleMlmeMethod<DeviceQueryRequest>(packet, method);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;
@@ -458,6 +463,54 @@ zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, Method method) {
     }
     ZX_DEBUG_ASSERT(!req.is_null());
     return mlme_->HandleFrame(method, *req);
+}
+
+template <>
+zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* unused_packet, Method method) {
+    debugfn();
+    ZX_DEBUG_ASSERT(method == Method::DEVICE_QUERY_request);
+
+    auto resp = DeviceQueryResponse::New();
+    const wlanmac_info_t& info = device_->GetWlanInfo();
+    if (info.mac_modes & WLAN_MAC_MODE_STA) {
+        resp->modes.push_back(MacMode::STA);
+    }
+    if (info.mac_modes & WLAN_MAC_MODE_AP) {
+        resp->modes.push_back(MacMode::AP);
+    }
+    for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
+        const wlan_band_info_t& band_info = info.bands[band_idx];
+        auto band = BandCapabilities::New();
+        band->basic_rates.resize(0);
+        for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
+            if (band_info.basic_rates[rate_idx] != 0) {
+                band->basic_rates.push_back(band_info.basic_rates[rate_idx]);
+            }
+        }
+        const wlan_chan_list_t& chan_list = band_info.supported_channels;
+        band->base_frequency = chan_list.base_freq;
+        band->channels.resize(0);
+        for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels); chan_idx++) {
+            if (chan_list.channels[chan_idx] != 0) {
+                band->channels.push_back(chan_list.channels[chan_idx]);
+            }
+        }
+        resp->bands.push_back(std::move(band));
+    }
+
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::DEVICE_QUERY_confirm, resp);
+    if (status != ZX_OK) {
+        errorf("could not serialize DeviceQueryResponse: %d\n", status);
+        return status;
+    }
+
+    return device_->SendService(std::move(packet));
 }
 
 zx_status_t Dispatcher::PreChannelChange(wlan_channel_t chan) {

@@ -107,7 +107,6 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeDeviceQueryReq, DeviceQueryRequest)
 
     // Data frame handlers.
     virtual bool ShouldDropDataFrame(const DataFrameHeader& hdr) { return false; }
@@ -136,7 +135,6 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeDeviceQueryReq, DeviceQueryRequest)
 
     // Internal Management frame handlers.
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Beacon)
