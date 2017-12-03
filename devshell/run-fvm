@@ -20,14 +20,26 @@ esac
 
 fx-command-run build "${fvm_block}" "${ramdisk_bin}"
 
-# TODO(ZX-1402): remove the -c flag once the kernel accepts command lines from
-# all sources without dropping any.
-exec "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
+# Construction of a qcow image prevents qemu from writing back to the
+# build-produced image file, which could cause timestamp issues with that file.
+qcowdir="$(mktemp -d)"
+if [[ ! -d "${qcowdir}" ]]; then
+  echo >&2 "Failed to create temporary directory"
+  exit 1
+fi
+qimg="${qcowdir}/fuchsia.qcow2"
+trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
+
+qimg="${qcowdir}/fuchsia.qcow2"
+"${qemu_dir}/qemu-img" create -f qcow2 -b "${FUCHSIA_BUILD_DIR}/${fvm_block}" \
+  "${qimg}"
+
+"${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -o "${ZIRCON_BUILD_DIR}" \
   -a "${arch}" \
   -q "${qemu_dir}" \
   -x "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" \
   -d \
-  -D "${FUCHSIA_BUILD_DIR}/${fvm_block}" \
-  -c "$(<"${FUCHSIA_BUILD_DIR}/${cmdline_txt}")" \
+  -D "${qimg}" \
+  --diskfmt="qcow2" \
   "$@"
