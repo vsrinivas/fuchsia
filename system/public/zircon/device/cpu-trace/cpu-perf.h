@@ -84,6 +84,7 @@ typedef enum {
     CPUPERF_UNIT_ARCH = 1,
     CPUPERF_UNIT_FIXED = 2,
     CPUPERF_UNIT_MODEL = 3,
+    CPUPERF_UNIT_MISC = 4,
 } cpuperf_unit_type_t;
 
 // Sampling mode data header.

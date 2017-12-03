@@ -41,6 +41,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/perf_mon.h>
 #include <assert.h>
+#include <dev/pci_common.h>
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
@@ -54,7 +55,9 @@
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
+#include <vm/vm_object_physical.h>
 #include <lib/ktrace.h>
+#include <lib/pci/pio.h>
 #include <zircon/device/cpu-trace/cpu-perf.h>
 #include <zircon/device/cpu-trace/intel-pm.h>
 #include <zircon/ktrace.h>
@@ -66,6 +69,14 @@
 #include <trace.h>
 
 #define LOCAL_TRACE 0
+
+// There's only a few misc events, and they're non-homogenous,
+// so handle them directly.
+typedef enum {
+#define DEF_MISC_EVENT(symbol, id, flags, name, description) \
+    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#include <zircon/device/cpu-trace/intel-misc-events.inc>
+} misc_event_id_t;
 
 // TODO(dje): Freeze-on-PMI doesn't work in skylake.
 // This is here for experimentation purposes.
@@ -99,6 +110,43 @@
 #define IA32_PERF_GLOBAL_INUSE 0x392
 
 #define IA32_DEBUGCTL 0x1d9
+
+// Vendor,device ids of the device with MCHBAR stats registers.
+#define INTEL_MCHBAR_PCI_VENDOR_ID 0x8086
+const uint16_t supported_mem_device_ids[] = {
+    0x1900,  // docs use this value
+    0x1904,  // seen on NUC
+};
+
+// Offset in PCI config space of the BAR (base address register) of the
+// memory control stats registers.
+#define INTEL_MCHBAR_PCI_CONFIG_OFFSET 0x48
+
+// Offsets from the BAR in the memory controller hub mmio space of counters
+// we're interested in. See the specs for MCHBAR in, e.g.,
+// "6th Generation Intel Core Processor Family Datasheet, Vol. 2".
+// TODO(dje): These values are model specific. The current values work for
+// currently supported platforms. Need to detect when we're on a supported
+// platform.
+// The BEGIN/END values are for computing the page(s) we need to map.
+// Offset from BAR of the first byte we need to map.
+#define UNC_IMC_STATS_BEGIN             0x5040
+// Offset from UNC_IMC_STATS_BEGIN of GT request count, 32 bits.
+#define UNC_IMC_DRAM_GT_REQUESTS_OFFSET 0x0
+// Offset from UNC_IMC_STATS_BEGIN of IA request count, 32 bits.
+#define UNC_IMC_DRAM_IA_REQUESTS_OFFSET 0x4
+// Offset from UNC_IMC_STATS_BEGIN of IO request count.
+#define UNC_IMC_DRAM_IO_REQUESTS_OFFSET 0x8
+// Offset from UNC_IMC_STATS_BEGIN of #bytes read, 32 bit counter
+// of 64 byte lines.
+#define UNC_IMC_DRAM_DATA_READS_OFFSET  0x10
+// Offset from UNC_IMC_STATS_BEGIN of #bytes written, 32 bit counter
+// of 64 byte lines.
+#define UNC_IMC_DRAM_DATA_WRITES_OFFSET 0x14
+// Offset from BAR of the last byte we need to map.
+#define UNC_IMC_STATS_END               0x5057
+
+static constexpr uint32_t kNumIntelMemoryCounters = 5;
 
 // These aren't constexpr as we iterate to fill in values for each counter.
 static uint64_t kGlobalCtrlWritableBits;
@@ -153,6 +201,14 @@ static uint64_t perfmon_max_programmable_counter_value = 0;
 // Counter bits in GLOBAL_STATUS to check on each interrupt.
 static uint64_t perfmon_counter_status_bits = 0;
 
+// BAR (base address register) of Intel MCHBAR performance
+// registers. These registers are accessible via mmio.
+static uint32_t perfmon_mchbar_bar = 0;
+
+// The number of "miscellaneous" counters we support.
+// At present this is just the MCHBAR counters.
+static uint32_t perfmon_num_misc_counters = 0;
+
 struct PerfmonCpuData {
     // The trace buffer, passed in from userspace.
     fbl::RefPtr<VmObject> buffer_vmo;
@@ -168,6 +224,30 @@ struct PerfmonCpuData {
     cpuperf_record_header_t* buffer_next = nullptr;
 } __CPU_ALIGN;
 
+struct MemoryControllerHubData {
+    // Where the regs are mapped.
+    fbl::RefPtr<VmMapping> mapping;
+
+    // The addresses where these counters are mapped, or zero if not mapped.
+    volatile uint32_t* bytes64_read_addr = 0;
+    volatile uint32_t* bytes64_written_addr = 0;
+    volatile uint32_t* gt_requests_addr = 0;
+    volatile uint32_t* ia_requests_addr = 0;
+    volatile uint32_t* io_requests_addr = 0;
+
+    // We can't reset the counters, and even if we could it's preferable to
+    // avoid making the device writable (lots of critical stuff in there),
+    // so record the previous values so that we can emit into the trace buffer
+    // the delta since the last interrupt.
+    struct {
+        uint32_t bytes64_read = 0;
+        uint32_t bytes64_written = 0;
+        uint32_t gt_requests = 0;
+        uint32_t ia_requests = 0;
+        uint32_t io_requests = 0;
+    } last_mem;
+};
+
 struct PerfmonState {
     static zx_status_t Create(unsigned n_cpus, fbl::unique_ptr<PerfmonState>* out_state);
     explicit PerfmonState(unsigned n_cpus);
@@ -182,6 +262,9 @@ struct PerfmonState {
     // IA32_DEBUGCTL
     uint64_t debug_ctrl = 0;
 
+    // True if MCHBAR perf regs need to be mapped in.
+    bool need_mchbar = false;
+
     // See intel-pm.h:zx_x86_ipm_config_t.
     cpuperf_event_id_t timebase_id = CPUPERF_EVENT_ID_NONE;
 
@@ -189,6 +272,7 @@ struct PerfmonState {
     // over the entire arrays.
     unsigned num_used_fixed = 0;
     unsigned num_used_programmable = 0;
+    unsigned num_used_misc = 0;
 
     // Number of entries in |cpu_data|.
     const unsigned num_cpus;
@@ -198,6 +282,8 @@ struct PerfmonState {
     // fbl::unique_ptr<PerfmonCpuData[]> cpu_data;
     // but that will need to wait for a "new" that handles aligned allocs.
     PerfmonCpuData* cpu_data = nullptr;
+
+    MemoryControllerHubData mchbar_data;
 
     // |fixed_hw_map[i]| is the h/w fixed counter number.
     // This is used to only look at fixed counters that are used.
@@ -211,6 +297,7 @@ struct PerfmonState {
     // Flags for each counter, IPM_CONFIG_FLAG_*.
     uint32_t fixed_flags[IPM_MAX_FIXED_COUNTERS] = {};
     uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
+    uint32_t misc_flags[IPM_MAX_MISC_COUNTERS] = {};
 
     // The ids for each of the in-use counters, or zero if not used.
     // These are passed in from the driver and then written to the buffer,
@@ -218,6 +305,7 @@ struct PerfmonState {
     // All in-use entries appear consecutively.
     cpuperf_event_id_t fixed_ids[IPM_MAX_FIXED_COUNTERS] = {};
     cpuperf_event_id_t programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
+    cpuperf_event_id_t misc_ids[IPM_MAX_MISC_COUNTERS] = {};
 
     // IA32_PERFEVTSEL_*
     uint64_t events[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
@@ -262,6 +350,47 @@ PerfmonState::~PerfmonState() {
             data->~PerfmonCpuData();
         }
         free(cpu_data);
+    }
+}
+
+static bool x86_perfmon_have_mchbar_data() {
+    uint32_t vendor_id, device_id;
+
+    auto status = Pci::PioCfgRead(0, 0, 0,
+                                  PCI_CONFIG_VENDOR_ID,
+                                  &vendor_id, 16);
+    if (status != ZX_OK)
+        return false;
+    if (vendor_id != INTEL_MCHBAR_PCI_VENDOR_ID)
+        return false;
+    status = Pci::PioCfgRead(0, 0, 0,
+                             PCI_CONFIG_DEVICE_ID,
+                             &device_id, 16);
+    if (status != ZX_OK)
+        return false;
+    for (auto supported_device_id : supported_mem_device_ids) {
+        if (supported_device_id == device_id)
+            return true;
+    }
+
+    TRACEF("perfmon: unsupported pci device: 0x%x.0x%x\n",
+           vendor_id, device_id);
+    return false;
+}
+
+static void x86_perfmon_init_mchbar() {
+    uint32_t bar;
+    auto status = Pci::PioCfgRead(0, 0, 0,
+                                  INTEL_MCHBAR_PCI_CONFIG_OFFSET,
+                                  &bar, 32);
+    if (status == ZX_OK) {
+        LTRACEF("perfmon: mchbar: 0x%x\n", bar);
+        // TODO(dje): The lower four bits contain useful data, but punt for now.
+        // See PCI spec 6.2.5.1.
+        perfmon_mchbar_bar = bar & ~15u;
+        perfmon_num_misc_counters = kNumIntelMemoryCounters;
+    } else {
+        TRACEF("perfmon: error %d reading mchbar\n", status);
     }
 }
 
@@ -344,6 +473,10 @@ void x86_perfmon_init(void)
         kFixedCounterCtrlWritableBits |= IA32_FIXED_CTR_CTRL_EN_MASK(i);
         kFixedCounterCtrlWritableBits |= IA32_FIXED_CTR_CTRL_ANY_MASK(i);
         kFixedCounterCtrlWritableBits |= IA32_FIXED_CTR_CTRL_PMI_MASK(i);
+    }
+
+    if (x86_perfmon_have_mchbar_data()) {
+        x86_perfmon_init_mchbar();
     }
 }
 
@@ -430,6 +563,7 @@ zx_status_t x86_ipm_get_properties(zx_x86_ipm_properties_t* props) {
     props->pm_version = perfmon_version;
     props->num_fixed_counters = perfmon_num_fixed_counters;
     props->num_programmable_counters = perfmon_num_programmable_counters;
+    props->num_misc_counters = perfmon_num_misc_counters;
     props->fixed_counter_width = perfmon_fixed_counter_width;
     props->programmable_counter_width = perfmon_programmable_counter_width;
     props->perf_capabilities = perfmon_capabilities;
@@ -616,6 +750,62 @@ static zx_status_t x86_ipm_verify_programmable_config(
     return ZX_OK;
 }
 
+static zx_status_t x86_ipm_verify_misc_config(
+        const zx_x86_ipm_config_t* config,
+        unsigned* out_num_used) {
+    bool seen_last = false;
+    unsigned num_used = perfmon_num_misc_counters;
+    for (unsigned i = 0; i < perfmon_num_misc_counters; ++i) {
+        cpuperf_event_id_t id = config->misc_ids[i];
+        if (id != 0 && seen_last) {
+            TRACEF("Active misc events not front-filled\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (id == 0) {
+            if (!seen_last)
+                num_used = i;
+            seen_last = true;
+        }
+        if (seen_last) {
+            if (config->misc_flags[i] != 0) {
+                TRACEF("Unused |misc_flags[%u]| not zero\n", i);
+                return ZX_ERR_INVALID_ARGS;
+            }
+        } else {
+            if (config->misc_flags[i] & ~IPM_CONFIG_FLAG_MASK) {
+                TRACEF("Unused bits set in |misc_flags[%u]|\n", i);
+                return ZX_ERR_INVALID_ARGS;
+            }
+            // Currently we only support the MCHBAR counters.
+            // They cannot provide pc. We ignore the OS/USER bits.
+            if (config->misc_flags[i] & IPM_CONFIG_FLAG_PC) {
+                TRACEF("Invalid bits (0x%x) in |misc_flags[%u]|\n",
+                       config->misc_flags[i], i);
+                return ZX_ERR_INVALID_ARGS;
+            }
+            if ((config->misc_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
+                    config->timebase_id == CPUPERF_EVENT_ID_NONE) {
+                TRACEF("Timebase requested for |misc_flags[%u]|, but not provided\n", i);
+                return ZX_ERR_INVALID_ARGS;
+            }
+            switch (id) {
+            case MISC_MEM_BYTES_READ_ID:
+            case MISC_MEM_BYTES_WRITTEN_ID:
+            case MISC_MEM_GT_REQUESTS_ID:
+            case MISC_MEM_IA_REQUESTS_ID:
+            case MISC_MEM_IO_REQUESTS_ID:
+                break;
+            default:
+                TRACEF("Invalid misc counter id |misc_ids[%u]|\n", i);
+                return ZX_ERR_INVALID_ARGS;
+            }
+        }
+    }
+
+    *out_num_used = num_used;
+    return ZX_OK;
+}
+
 static zx_status_t x86_ipm_verify_timebase_config(
         zx_x86_ipm_config_t* config,
         unsigned num_fixed, unsigned num_programmable) {
@@ -661,6 +851,12 @@ static zx_status_t x86_ipm_verify_config(zx_x86_ipm_config_t* config,
         return status;
     state->num_used_programmable = num_used_programmable;
 
+    unsigned num_used_misc;
+    status = x86_ipm_verify_misc_config(config, &num_used_misc);
+    if (status != ZX_OK)
+        return status;
+    state->num_used_misc = num_used_misc;
+
     status = x86_ipm_verify_timebase_config(config,
                                             state->num_used_fixed,
                                             state->num_used_programmable);
@@ -698,6 +894,7 @@ static void x86_ipm_stage_programmable_config(const zx_x86_ipm_config_t* config,
                   sizeof(config->programmable_ids), "");
     memcpy(state->programmable_ids, config->programmable_ids,
            sizeof(state->programmable_ids));
+
     static_assert(sizeof(state->programmable_initial_value) ==
                   sizeof(config->programmable_initial_value), "");
     memcpy(state->programmable_initial_value, config->programmable_initial_value,
@@ -711,6 +908,37 @@ static void x86_ipm_stage_programmable_config(const zx_x86_ipm_config_t* config,
     static_assert(sizeof(state->events) ==
                   sizeof(config->programmable_events), "");
     memcpy(state->events, config->programmable_events, sizeof(state->events));
+}
+
+static void x86_ipm_stage_misc_config(const zx_x86_ipm_config_t* config,
+                                      PerfmonState* state) {
+    static_assert(sizeof(state->misc_ids) ==
+                  sizeof(config->misc_ids), "");
+    memcpy(state->misc_ids, config->misc_ids,
+           sizeof(state->misc_ids));
+
+    static_assert(sizeof(state->misc_flags) ==
+                  sizeof(config->misc_flags), "");
+    memcpy(state->misc_flags, config->misc_flags,
+           sizeof(state->misc_flags));
+
+    state->need_mchbar = false;
+    for (unsigned i = 0; i < state->num_used_misc; ++i) {
+        switch (state->misc_ids[i]) {
+        case MISC_MEM_BYTES_READ_ID:
+        case MISC_MEM_BYTES_WRITTEN_ID:
+        case MISC_MEM_GT_REQUESTS_ID:
+        case MISC_MEM_IA_REQUESTS_ID:
+        case MISC_MEM_IO_REQUESTS_ID:
+            state->need_mchbar = true;
+            break;
+        }
+    }
+
+    // What we'd like to do here is record the current values of these
+    // counters, but they're not mapped in yet.
+    memset(&state->mchbar_data.last_mem, 0,
+           sizeof(state->mchbar_data.last_mem));
 }
 
 // Stage the configuration for later activation by START.
@@ -741,8 +969,93 @@ zx_status_t x86_ipm_stage_config(zx_x86_ipm_config_t* config) {
 
     x86_ipm_stage_fixed_config(config, state);
     x86_ipm_stage_programmable_config(config, state);
+    x86_ipm_stage_misc_config(config, state);
 
     return ZX_OK;
+}
+
+// Read the byte counter from the MCHBAR and return the delta
+// since the last read. We do this in order to catch the cases of the counter
+// wrapping that we can (they're only 32 bits in h/w and are read-only).
+// WARNING: This function has the side-effect of updating |*last_value|.
+static uint32_t read_mchbar_counter(volatile uint32_t* addr,
+                                    uint32_t* last_value_addr) {
+    DEBUG_ASSERT(addr);
+    uint32_t value = *addr;
+    uint32_t last_value = *last_value_addr;
+    *last_value_addr = value;
+    // Check for overflow. The code is the same in both branches, the if()
+    // exists to document the issue.
+    if (value < last_value) {
+        // Overflow, counter wrapped.
+        // We don't know how many times it wrapped, assume once.
+        // We rely on unsigned twos-complement arithmetic here.
+        return value - last_value;
+    } else {
+        // The counter may still have wrapped, but we can't detect this case.
+        return value - last_value;
+    }
+}
+
+static uint32_t read_mchbar_bytes64_read(PerfmonState* state) {
+    return read_mchbar_counter(
+        state->mchbar_data.bytes64_read_addr,
+        &state->mchbar_data.last_mem.bytes64_read);
+}
+
+static uint32_t read_mchbar_bytes64_written(PerfmonState* state) {
+    return read_mchbar_counter(
+        state->mchbar_data.bytes64_written_addr,
+        &state->mchbar_data.last_mem.bytes64_written);
+}
+
+static uint32_t read_mchbar_gt_requests(PerfmonState* state) {
+    return read_mchbar_counter(
+        state->mchbar_data.gt_requests_addr,
+        &state->mchbar_data.last_mem.gt_requests);
+}
+
+static uint32_t read_mchbar_ia_requests(PerfmonState* state) {
+    return read_mchbar_counter(
+        state->mchbar_data.ia_requests_addr,
+        &state->mchbar_data.last_mem.ia_requests);
+}
+
+static uint32_t read_mchbar_io_requests(PerfmonState* state) {
+    return read_mchbar_counter(
+        state->mchbar_data.io_requests_addr,
+        &state->mchbar_data.last_mem.io_requests);
+}
+
+static uint64_t read_misc_counter(PerfmonState* state,
+                                  cpuperf_event_id_t id) {
+    uint64_t value = 0;
+    switch (id) {
+    case MISC_MEM_BYTES_READ_ID: {
+        uint32_t value32 = read_mchbar_bytes64_read(state);
+        // Return the value in bytes, easier for human readers of the
+        // resulting report.
+        value = value32 * 64ul;
+        break;
+    }
+    case MISC_MEM_BYTES_WRITTEN_ID: {
+        uint32_t value32 = read_mchbar_bytes64_written(state);
+        // Return the value in bytes, easier for human readers of the
+        // resulting report.
+        value = value32 * 64ul;
+        break;
+    }
+    case MISC_MEM_GT_REQUESTS_ID:
+        value = read_mchbar_gt_requests(state);
+        break;
+    case MISC_MEM_IA_REQUESTS_ID:
+        value = read_mchbar_ia_requests(state);
+        break;
+    case MISC_MEM_IO_REQUESTS_ID:
+        value = read_mchbar_io_requests(state);
+        break;
+    }
+    return value;
 }
 
 static void x86_ipm_unmap_buffers_locked(PerfmonState* state) {
@@ -757,6 +1070,87 @@ static void x86_ipm_unmap_buffers_locked(PerfmonState* state) {
         data->buffer_end = nullptr;
         data->buffer_next = nullptr;
     }
+
+    if (state->mchbar_data.mapping) {
+        state->mchbar_data.mapping->Destroy();
+    }
+    state->mchbar_data.mapping.reset();
+    state->mchbar_data.bytes64_read_addr = nullptr;
+    state->mchbar_data.bytes64_written_addr = nullptr;
+    state->mchbar_data.gt_requests_addr = nullptr;
+    state->mchbar_data.ia_requests_addr = nullptr;
+    state->mchbar_data.io_requests_addr = nullptr;
+}
+
+static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
+    DEBUG_ASSERT(perfmon_mchbar_bar != 0);
+    fbl::RefPtr<VmObject> vmo;
+    vaddr_t begin_page =
+        (perfmon_mchbar_bar + UNC_IMC_STATS_BEGIN) & ~(PAGE_SIZE - 1);
+    vaddr_t end_page =
+        (perfmon_mchbar_bar + UNC_IMC_STATS_END) & ~(PAGE_SIZE - 1);
+    size_t num_bytes_to_map = end_page + PAGE_SIZE - begin_page;
+    size_t begin_offset =
+        (perfmon_mchbar_bar + UNC_IMC_STATS_BEGIN) & (PAGE_SIZE - 1);
+
+    // We only map in the page(s) with the data we need.
+    auto status = VmObjectPhysical::Create(begin_page, num_bytes_to_map, &vmo);
+    if (status != ZX_OK)
+        return status;
+
+    const char name[] = "perfmon-mchbar";
+    vmo->set_name(name, sizeof(name));
+    status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK)
+        return status;
+
+    auto vmar = VmAspace::kernel_aspace()->RootVmar();
+    uint32_t vmar_flags = 0;
+    uint32_t arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ;
+    fbl::RefPtr<VmMapping> mapping;
+    status = vmar->CreateVmMapping(0, PAGE_SIZE, /*align_pow2*/0,
+                                   vmar_flags, fbl::move(vmo),
+                                   0, arch_mmu_flags, name,
+                                   &mapping);
+    if (status != ZX_OK)
+        return status;
+
+    status = mapping->MapRange(0, PAGE_SIZE, false);
+    if (status != ZX_OK)
+        return status;
+
+    state->mchbar_data.mapping = mapping;
+#define INIT_MC_ADDR(member, offset) \
+    do { \
+        state->mchbar_data.member = \
+            reinterpret_cast<uint32_t*>( \
+                mapping->base() + begin_offset + offset); \
+    } while (0)
+    INIT_MC_ADDR(bytes64_read_addr, UNC_IMC_DRAM_DATA_READS_OFFSET);
+    INIT_MC_ADDR(bytes64_written_addr, UNC_IMC_DRAM_DATA_WRITES_OFFSET);
+    INIT_MC_ADDR(gt_requests_addr, UNC_IMC_DRAM_GT_REQUESTS_OFFSET);
+    INIT_MC_ADDR(ia_requests_addr, UNC_IMC_DRAM_IA_REQUESTS_OFFSET);
+    INIT_MC_ADDR(io_requests_addr, UNC_IMC_DRAM_IO_REQUESTS_OFFSET);
+#undef INIT_MC_ADDR
+
+    // Record the current values of these so that the trace will only include
+    // the delta since tracing started.
+#define INIT_MC_COUNT(member) \
+    do { \
+        state->mchbar_data.last_mem.member = 0; \
+        (void) read_mchbar_ ## member(state); \
+    } while (0)
+    INIT_MC_COUNT(bytes64_read);
+    INIT_MC_COUNT(bytes64_written);
+    INIT_MC_COUNT(gt_requests);
+    INIT_MC_COUNT(ia_requests);
+    INIT_MC_COUNT(io_requests);
+#undef INIT_MC_COUNT
+
+    TRACEF("memory stats mapped: begin 0x%lx, %zu bytes\n",
+           mapping->base(), num_bytes_to_map);
+
+    return ZX_OK;
 }
 
 static zx_status_t x86_ipm_map_buffers_locked(PerfmonState* state) {
@@ -804,9 +1198,16 @@ static zx_status_t x86_ipm_map_buffers_locked(PerfmonState* state) {
         data->buffer_next = reinterpret_cast<cpuperf_record_header_t*>(
             reinterpret_cast<char*>(data->buffer_start) + hdr->capture_end);
     }
+
+    // Get access to MCHBAR stats if we can.
+    if (status == ZX_OK && state->need_mchbar) {
+        status = x86_map_mchbar_stat_registers(state);
+    }
+
     if (status != ZX_OK) {
         x86_ipm_unmap_buffers_locked(state);
     }
+
     return status;
 }
 
@@ -865,8 +1266,9 @@ zx_status_t x86_ipm_start() {
     if (status != ZX_OK)
         return status;
 
-    TRACEF("Enabling perfmon, %u fixed, %u programmable\n",
-           state->num_used_fixed, state->num_used_programmable);
+    TRACEF("Enabling perfmon, %u fixed, %u programmable, %u misc\n",
+           state->num_used_fixed, state->num_used_programmable,
+           state->num_used_misc);
     if (LOCAL_TRACE) {
         LTRACEF("global ctrl: 0x%" PRIx64 ", fixed ctrl: 0x%" PRIx64 "\n",
                 state->global_ctrl, state->fixed_ctrl);
@@ -959,6 +1361,19 @@ static void x86_ipm_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
                           state->fixed_initial_value[i] + 1);
             }
             next = x86_perfmon_write_value_record(next, id, now, value);
+        }
+        // Misc events are currently all non-cpu-specific.
+        // Just report for cpu 0. See pmi_interrupt_handler.
+        if (cpu == 0) {
+            for (unsigned i = 0; i < state->num_used_misc; ++i) {
+                if (next > last) {
+                    hdr->flags |= CPUPERF_BUFFER_FLAG_FULL;
+                    break;
+                }
+                cpuperf_event_id_t id = state->misc_ids[i];
+                uint64_t value = read_misc_counter(state, id);
+                next = x86_perfmon_write_value_record(next, id, now, value);
+            }
         }
 
         data->buffer_next = next;
@@ -1069,9 +1484,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 
     // Rather than continually checking if we have enough space, just check
     // for the maximum amount we'll need.
-    size_t space_needed =
-        (state->num_used_programmable + state->num_used_fixed) *
-        kMaxRecordSize;
+    size_t space_needed = ((state->num_used_programmable +
+                            state->num_used_fixed +
+                            state->num_used_misc) *
+                           kMaxRecordSize);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
         TRACEF("cpu %u: @%" PRIu64 " pmi buffer full\n", cpu, now);
         data->buffer_start->flags |= CPUPERF_BUFFER_FLAG_FULL;
@@ -1179,6 +1595,26 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 LTRACEF("cpu %u: resetting FIXED %u to 0x%" PRIx64 "\n",
                         cpu, hw_num, state->fixed_initial_value[i]);
                 write_msr(IA32_FIXED_CTR0 + hw_num, state->fixed_initial_value[i]);
+            }
+            // Misc events are currently all non-cpu-specific. We have a
+            // timebase driving their collection, but useful timebases
+            // are triggered on each cpu. One thing we'd like to avoid is
+            // contention for the cache line containing these counters.
+            // For now, only collect data when we're running on cpu 0.
+            // This is not ideal, it could be mostly idle. OTOH, some
+            // interrupts are currently only serviced on cpu 0 so that
+            // ameliorates the problem somewhat.
+            if (cpu == 0) {
+                for (unsigned i = 0; i < state->num_used_misc; ++i) {
+                    if (!(state->misc_flags[i] & IPM_CONFIG_FLAG_TIMEBASE)) {
+                        // While a timebase is required for all current misc
+                        // counters, we don't assume this here.
+                        continue;
+                    }
+                    cpuperf_event_id_t id = state->misc_ids[i];
+                    uint64_t value = read_misc_counter(state, id);
+                    next = x86_perfmon_write_value_record(next, id, now, value);
+                }
             }
         }
 

@@ -254,6 +254,9 @@ __BEGIN_CDECLS
 // maximum number of fixed-use counters
 #define IPM_MAX_FIXED_COUNTERS 3
 
+// misc counters, see intel-misc-events.inc
+#define IPM_MAX_MISC_COUNTERS 5
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // These structs are used for communication between the device driver
@@ -267,6 +270,8 @@ typedef struct {
     uint32_t num_fixed_counters;
     // The number of programmable counters.
     uint32_t num_programmable_counters;
+    // The number of misc counters.
+    uint32_t num_misc_counters;
     // Width in bits of fixed counters.
     uint32_t fixed_counter_width;
     // Width in bits of programmable counters.
@@ -304,14 +309,18 @@ typedef struct {
     // The used entries begin at index zero and are consecutive (no holes).
     cpuperf_event_id_t fixed_ids[IPM_MAX_FIXED_COUNTERS];
     cpuperf_event_id_t programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
+    // Ids of other h/w counters to collect data for.
+    cpuperf_event_id_t misc_ids[IPM_MAX_MISC_COUNTERS];
 
     // Initial value of each counter.
+    // The "misc" counters currently do not support initial values.
     uint64_t fixed_initial_value[IPM_MAX_FIXED_COUNTERS];
     uint64_t programmable_initial_value[IPM_MAX_PROGRAMMABLE_COUNTERS];
 
     // Flags for each counter.
     uint32_t fixed_flags[IPM_MAX_FIXED_COUNTERS];
     uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS];
+    uint32_t misc_flags[IPM_MAX_MISC_COUNTERS];
 // Both of IPM_CONFIG_FLAG_{PC,TIMEBASE} cannot be set.
 #define IPM_CONFIG_FLAG_MASK     0x3
 // Collect aspace+pc values.
