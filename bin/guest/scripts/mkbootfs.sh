@@ -15,20 +15,20 @@ cd "${FUCHSIA_DIR}"
 usage() {
   echo "usage: ${0} [options] {arm64, x86}"
   echo ""
-  echo "    -g zircon.gpt             Zircon GPT disk image"
-  echo "    -l bzImage                Linux kernel bzImage"
-  echo "    -i initrd                 Linux initrd"
-  echo "    -r rootfs.ext2            Linux EXT2 root file-system image"
+  echo "    -g zircon.gpt   Zircon GPT disk image"
+  echo "    -l image        Linux kernel image"
+  echo "    -i initrd       Linux initrd"
+  echo "    -r rootfs.ext2  Linux EXT2 root file-system image"
   echo ""
   exit 1
 }
 
 while getopts "g:l:i:r:" opt; do
   case "${opt}" in
-  g) ZIRCON_GPT="${OPTARG}" ;;
-  l) BZIMAGE="${OPTARG}" ;;
-  i) INITRD="${OPTARG}" ;;
-  r) ROOTFS="${OPTARG}" ;;
+  g) ZIRCON_GPT="${OPTARG}";;
+  l) IMAGE="${OPTARG}";;
+  i) INITRD="${OPTARG}";;
+  r) ROOTFS="${OPTARG}";;
   *) usage ;;
   esac
 done
@@ -51,22 +51,23 @@ arm64)
     -o guest-platform-id.bin \
     --vid 1 \
     --pid 1 \
-    --board qemu-virt;;
+    --board qemu-virt;
+  IMAGE=${IMAGE:-/tmp/linux/arch/arm64/boot/Image};;
 x86)
   cd out/debug-x86-64;
-  PLATFORM="zircon-pc-x86-64";;
+  PLATFORM="zircon-pc-x86-64";
+  IMAGE=${IMAGE:-/tmp/linux/arch/x86/boot/bzImage};;
 *)
   usage;;
 esac
 
 declare -r ZIRCON=${ZIRCON:-../build-zircon/build-$PLATFORM/zircon.bin}
 declare -r ZIRCON_GPT=${ZIRCON_GPT:zircon.gpt}
-declare -r BZIMAGE=${BZIMAGE:-/tmp/linux/arch/x86/boot/bzImage}
 declare -r INITRD=${INITRD:-/tmp/toybox/initrd.gz}
 declare -r ROOTFS=${ROOTFS:-/tmp/toybox/rootfs.ext2}
 
 [ -f "${ZIRCON_GPT}" ] && GUEST_MANIFEST+=$'\n'"data/zircon.gpt=${ZIRCON_GPT}"
-[ -f "${BZIMAGE}" ] && GUEST_MANIFEST+=$'\n'"data/bzImage=${BZIMAGE}"
+[ -f "${IMAGE}" ] && GUEST_MANIFEST+=$'\n'"data/image=${IMAGE}"
 [ -f "${INITRD}" ] && GUEST_MANIFEST+=$'\n'"data/initrd=${INITRD}"
 [ -f "${ROOTFS}" ] && GUEST_MANIFEST+=$'\n'"data/rootfs.ext2=${ROOTFS}"
 
