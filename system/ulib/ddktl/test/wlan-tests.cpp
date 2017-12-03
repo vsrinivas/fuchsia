@@ -67,7 +67,7 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
 };
 
 class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>,
-                            public ddk::WlanmacProtocol<TestWlanmacProtocol> {
+                            public ddk::WlanmacProtocol<TestWlanmacProtocol, true> {
   public:
     TestWlanmacProtocol()
       : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {
@@ -87,6 +87,12 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info) {
         query_this_ = get_this();
         query_called_ = true;
+        return ZX_OK;
+    }
+
+    zx_status_t WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
+        query2_this_ = get_this();
+        query2_called_ = true;
         return ZX_OK;
     }
 
@@ -129,6 +135,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     bool VerifyCalls() const {
         BEGIN_HELPER;
         EXPECT_EQ(this_, query_this_, "");
+        EXPECT_EQ(this_, query2_this_, "");
         EXPECT_EQ(this_, start_this_, "");
         EXPECT_EQ(this_, stop_this_, "");
         EXPECT_EQ(this_, queue_tx_this_, "");
@@ -136,6 +143,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         EXPECT_EQ(this_, set_bss_this_, "");
         EXPECT_EQ(this_, set_key_this_, "");
         EXPECT_TRUE(query_called_, "");
+        EXPECT_TRUE(query2_called_, "");
         EXPECT_TRUE(start_called_, "");
         EXPECT_TRUE(stop_called_, "");
         EXPECT_TRUE(queue_tx_called_, "");
@@ -157,6 +165,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
   private:
     uintptr_t this_ = 0u;
     uintptr_t query_this_ = 0u;
+    uintptr_t query2_this_ = 0u;
     uintptr_t stop_this_ = 0u;
     uintptr_t start_this_ = 0u;
     uintptr_t queue_tx_this_ = 0u;
@@ -164,6 +173,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     uintptr_t set_bss_this_ = 0u;
     uintptr_t set_key_this_ = 0u;
     bool query_called_ = false;
+    bool query2_called_ = false;
     bool stop_called_ = false;
     bool start_called_ = false;
     bool queue_tx_called_ = false;
@@ -218,6 +228,7 @@ static bool test_wlanmac_protocol() {
     status = dev.DdkGetProtocol(ZX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_OK, status, "");
     EXPECT_EQ(ZX_OK, proto.ops->query(proto.ctx, 0, nullptr), "");
+    EXPECT_EQ(ZX_OK, proto.ops->query2(proto.ctx, 0, nullptr), "");
     proto.ops->stop(proto.ctx);
     EXPECT_EQ(ZX_OK, proto.ops->start(proto.ctx, nullptr, nullptr), "");
     proto.ops->queue_tx(proto.ctx, 0, nullptr);
@@ -247,6 +258,7 @@ static bool test_wlanmac_protocol_proxy() {
     TestWlanmacIfc ifc_dev;
 
     EXPECT_EQ(ZX_OK, proxy.Query(0, nullptr), "");
+    EXPECT_EQ(ZX_OK, proxy.Query2(0, nullptr), "");
     proxy.Stop();
     EXPECT_EQ(ZX_OK, proxy.Start(&ifc_dev), "");
     proxy.QueueTx(0, nullptr);
