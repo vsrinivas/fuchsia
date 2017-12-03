@@ -45,6 +45,30 @@ zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     return ZX_OK;
 }
 
+zx_status_t Device::WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
+    zx_status_t status = WlanmacQuery(options, &info->eth_info);
+    if (status != ZX_OK) { return status; }
+
+    // Fill out a minimal set of wlan device capabilities
+    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT_MIXED;
+    info->driver_features = 0;
+    info->mac_modes = WLAN_MAC_MODE_STA;
+    info->caps = 0;
+    info->num_bands = 1;
+    info->bands[0] = {
+        .desc = "2.4 GHz",
+        .ht_caps = {},
+        .vht_supported = false,
+        .vht_caps = {},
+        .supported_channels = {
+            .base_freq = 2417,
+            .channels = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, },
+        },
+    };
+
+    return ZX_OK;
+}
+
 void Device::WlanmacStop() {
     std::printf("wlan::testing::Device::WlanmacStop()\n");
     std::lock_guard<std::mutex> lock(lock_);

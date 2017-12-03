@@ -3036,6 +3036,11 @@ zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     return ZX_OK;
 }
 
+zx_status_t Device::WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
+    // TODO(tkilbourn): implement this
+    return ZX_OK;
+}
+
 zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);

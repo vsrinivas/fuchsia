@@ -30,7 +30,8 @@ template <uint16_t A> class EepromField;
 enum KeyMode : uint8_t;
 enum KeyType : uint8_t;
 
-class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
+class Device : public ddk::Device<Device, ddk::Unbindable>,
+               public ddk::WlanmacProtocol<Device, true> {
    public:
     Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
@@ -44,6 +45,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     // ddk::WlanmacProtocol methods
     zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
+    zx_status_t WlanmacQuery2(uint32_t options, wlanmac_info_t* info);
     zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
