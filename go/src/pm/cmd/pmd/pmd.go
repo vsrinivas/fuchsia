@@ -7,7 +7,6 @@ package main
 import (
 	"flag"
 	"log"
-	"time"
 
 	"fuchsia.googlesource.com/pm/pkgfs"
 )
@@ -19,12 +18,8 @@ var (
 )
 
 func main() {
+	log.SetPrefix("pmd: ")
 	flag.Parse()
-
-	log.Printf("pkgfs going to sleep for filesystems")
-
-	// XXX(raggi): hack to wait for filesystems to come up
-	time.Sleep(10 * time.Second)
 
 	fs, err := pkgfs.New(*index, *blobstore)
 	if err != nil {

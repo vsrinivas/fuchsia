@@ -25,7 +25,7 @@ import (
 type mountInfo struct {
 	unmountOnce  sync.Once
 	serveChannel *zx.Channel
-	parentFd     *os.File
+	parentFd     int
 }
 
 // Mount attaches the filesystem host to the given path. If an error occurs
@@ -38,7 +38,7 @@ func (f *Filesystem) Mount(path string) error {
 		return err
 	}
 
-	f.mountInfo.parentFd, err = os.OpenFile(path, syscall.O_ADMIN, os.ModePerm)
+	f.mountInfo.parentFd, err = syscall.Open(path, syscall.O_ADMIN|syscall.O_DIRECTORY, 0777)
 	if err != nil {
 		return err
 	}
@@ -46,16 +46,16 @@ func (f *Filesystem) Mount(path string) error {
 	var rpcChan *zx.Channel
 	rpcChan, f.mountInfo.serveChannel, err = zx.NewChannel(0)
 	if err != nil {
-		f.mountInfo.parentFd.Close()
-		f.mountInfo.parentFd = nil
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.parentFd = -1
 		return fmt.Errorf("channel creation: %s", err)
 	}
 
-	if err := syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(fdio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
+	if err := syscall.FDIOForFD(f.mountInfo.parentFd).IoctlSetHandle(fdio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
 		f.mountInfo.serveChannel.Close()
 		f.mountInfo.serveChannel = nil
-		f.mountInfo.parentFd.Close()
-		f.mountInfo.parentFd = nil
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.parentFd = -1
 		return fmt.Errorf("mount failure: %s", err)
 	}
 
@@ -63,8 +63,8 @@ func (f *Filesystem) Mount(path string) error {
 	if err != nil {
 		f.mountInfo.serveChannel.Close()
 		f.mountInfo.serveChannel = nil
-		f.mountInfo.parentFd.Close()
-		f.mountInfo.parentFd = nil
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.parentFd = -1
 		return fmt.Errorf("vfs server creation: %s", err)
 	}
 
@@ -80,11 +80,11 @@ func (f *Filesystem) Mount(path string) error {
 func (f *Filesystem) Unmount() {
 	f.mountInfo.unmountOnce.Do(func() {
 		// TODO(raggi): log errors?
-		syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
+		syscall.FDIOForFD(f.mountInfo.parentFd).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
 		f.mountInfo.serveChannel.Close()
-		f.mountInfo.parentFd.Close()
+		syscall.Close(f.mountInfo.parentFd)
 		f.mountInfo.serveChannel = nil
-		f.mountInfo.parentFd = nil
+		f.mountInfo.parentFd = -1
 	})
 }
 
