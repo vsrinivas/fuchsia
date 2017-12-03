@@ -185,7 +185,7 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D, bool HasQuery2=false>
+template <typename D, bool HasQuery2=true>
 class WlanmacProtocol : public internal::base_protocol {
   public:
     WlanmacProtocol() {
