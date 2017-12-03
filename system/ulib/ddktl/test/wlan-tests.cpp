@@ -67,7 +67,7 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
 };
 
 class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>,
-                            public ddk::WlanmacProtocol<TestWlanmacProtocol, true> {
+                            public ddk::WlanmacProtocol<TestWlanmacProtocol> {
   public:
     TestWlanmacProtocol()
       : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {

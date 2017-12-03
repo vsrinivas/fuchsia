@@ -57,7 +57,7 @@ DECLARE_HAS_MEMBER_FN(has_wlanmac_set_channel, WlanmacSetChannel);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_bss, WlanmacSetBss);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_key, WlanmacSetKey);
 
-template <typename D, bool HasQuery2=true>
+template <typename D>
 constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_query<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacQuery");
@@ -67,14 +67,14 @@ constexpr void CheckWlanmacProtocolSubclass() {
                   "'zx_status_t WlanmacQuery(uint32_t, ethmac_info_t*)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
-    static_assert(!HasQuery2 || internal::has_wlanmac_query2<D>::value,
+    static_assert(internal::has_wlanmac_query2<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacQuery2");
-    //static_assert(fbl::is_same<decltype(&D::WlanmacQuery2),
-    //                            zx_status_t (D::*)(uint32_t, wlanmac_info_t*)>::value,
-    //              "WlanmacQuery2 must be a non-static member function with signature "
-    //              "'zx_status_t WlanmacQuery2(uint32_t, wlanmac_info_t*)', and be visible to "
-    //              "ddk::WlanmacProtocol<D> (either because they are public, or because of "
-    //              "friendship).");
+    static_assert(fbl::is_same<decltype(&D::WlanmacQuery2),
+                                zx_status_t (D::*)(uint32_t, wlanmac_info_t*)>::value,
+                  "WlanmacQuery2 must be a non-static member function with signature "
+                  "'zx_status_t WlanmacQuery2(uint32_t, wlanmac_info_t*)', and be visible to "
+                  "ddk::WlanmacProtocol<D> (either because they are public, or because of "
+                  "friendship).");
     static_assert(internal::has_wlanmac_stop<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacStop");
     static_assert(fbl::is_same<decltype(&D::WlanmacStop),
