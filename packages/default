@@ -46,7 +46,6 @@
         "garnet/packages/network_time",
         "garnet/packages/openssh",
         "garnet/packages/openssh-keys",
-        "garnet/packages/openssh-keys",
         "garnet/packages/pm",
         "garnet/packages/pmd",
         "garnet/packages/pmd_tests",
