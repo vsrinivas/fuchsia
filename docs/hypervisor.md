@@ -19,7 +19,7 @@ On your host device, from the Zircon directory, run:
 scripts/build-zircon-x86-64
 
 # Optional: Build Linux, an initial RAM disk, and an EXT2 file-system.
-system/uapp/guest/scripts/mklinux.sh
+system/uapp/guest/scripts/mklinux.sh x86
 system/uapp/guest/scripts/mksysroot.sh -ri
 
 # Optional: Build a GPT disk image for Zircon guests.
@@ -50,7 +50,7 @@ To run Zircon using a GPT disk image:
 
 After netbooting the target device, to run Linux using an initial RAM disk:
 ```
-/boot/bin/guest -r /boot/data/initrd /boot/data/bzImage
+/boot/bin/guest -r /boot/data/initrd /boot/data/image
 ```
 
 To run Linux using a **read-only** EXT2 root file-system:
@@ -58,7 +58,7 @@ To run Linux using a **read-only** EXT2 root file-system:
 /boot/bin/guest \
     -b /boot/data/rootfs.ext2 \
     -c 'root=/dev/vda ro init=/init' \
-    /boot/data/bzImage
+    /boot/data/image
 ```
 
 To run Linux using a **writable** EXT2 root file-system:
@@ -68,7 +68,7 @@ cp /boot/data/rootfs.ext2 /boot/data/rootfs-rw.ext2
 /boot/bin/guest \
     -b /boot/data/rootfs-rw.ext2 \
     -c 'root=/dev/vda rw init=/init' \
-    /boot/data/bzImage
+    /boot/data/image
 ```
 
 Linux also supports an interactive graphical framebuffer:
@@ -78,7 +78,7 @@ Linux also supports an interactive graphical framebuffer:
     -g \
     -r /boot/data/initrd \
     -c 'console=tty0' \
-    /boot/data/bzImage
+    /boot/data/image
 ```
 
 This will cause the guest to gain control of the framebuffer. Keyboard HID
