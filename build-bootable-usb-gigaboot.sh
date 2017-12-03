@@ -148,13 +148,13 @@ trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmou
 
 sudo mkdir -p "${MOUNT_PATH}/EFI/BOOT"
 echo -n "Copying Bootloader..."
-sudo cp "$FUCHSIA_DIR/out/build-zircon/build-zircon-pc-x86-64/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
+sudo cp "$FUCHSIA_DIR/out/build-zircon/build-x86/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
 echo " SUCCESS"
 
 if [ "$INCLUDE_ZIRCON" -eq 1 ]; then
   echo -n "Copying zircon.bin..."
-  sudo cp "$FUCHSIA_DIR/zircon/build-zircon-pc-x86-64/zircon.bin" "${MOUNT_PATH}/zircon.bin"
-  sudo cp "$FUCHSIA_DIR/zircon/build-zircon-pc-x86-64/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
+  sudo cp "$FUCHSIA_DIR/out/build-zircon/build-x86/zircon.bin" "${MOUNT_PATH}/zircon.bin"
+  sudo cp "$FUCHSIA_DIR/out/build-zircon/build-user-x86-64-ulib/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
   echo " SUCCESS"
 fi
 
