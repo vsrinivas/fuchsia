@@ -3030,16 +3030,15 @@ void Device::DdkRelease() {
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
-    info->mtu = 1500;
-    std::memcpy(info->mac, mac_addr_, ETH_MAC_SIZE);
-    info->features |= ETHMAC_FEATURE_WLAN;
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Device::WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
     memset(info, 0, sizeof(*info));
-    zx_status_t status = WlanmacQuery(options, &info->eth_info);
-    if (status != ZX_OK) { return status; }
+
+    info->eth_info.mtu = 1500;
+    std::memcpy(info->eth_info.mac, mac_addr_, ETH_MAC_SIZE);
+    info->eth_info.features |= ETHMAC_FEATURE_WLAN;
 
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT_MIXED |
         WLAN_PHY_HT_GREENFIELD;

@@ -55,12 +55,12 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
 
-    status = wlanmac_proxy_.Query(0, &ethmac_info_);
+    status = wlanmac_proxy_.Query2(0, &wlanmac_info_);
     if (status != ZX_OK) {
         errorf("could not query wlanmac device: %d\n", status);
         return status;
     }
-    state_->set_address(common::MacAddr(ethmac_info_.mac));
+    state_->set_address(common::MacAddr(wlanmac_info_.eth_info.mac));
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
@@ -153,7 +153,7 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     debugfn();
     if (info == nullptr) return ZX_ERR_INVALID_ARGS;
 
-    *info = ethmac_info_;
+    *info = wlanmac_info_.eth_info;
     // Make sure this device is reported as a wlan device
     info->features |= ETHMAC_FEATURE_WLAN;
     return ZX_OK;

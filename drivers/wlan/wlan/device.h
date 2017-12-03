@@ -100,7 +100,7 @@ class Device : public WlanBaseDevice,
     ddk::WlanmacProtocolProxy wlanmac_proxy_;
     fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
-    ethmac_info_t ethmac_info_ = {};
+    wlanmac_info_t wlanmac_info_ = {};
     fbl::RefPtr<DeviceState> state_;
 
     std::mutex lock_;

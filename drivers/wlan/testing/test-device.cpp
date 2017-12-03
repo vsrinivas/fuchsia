@@ -37,17 +37,17 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
-    std::printf("wlan::testing::Device::WlanmacQuery()\n");
-    static uint8_t mac[ETH_MAC_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
-    info->features = ETHMAC_FEATURE_WLAN;
-    info->mtu = 1500;
-    std::memcpy(info->mac, mac, ETH_MAC_SIZE);
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Device::WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
-    zx_status_t status = WlanmacQuery(options, &info->eth_info);
-    if (status != ZX_OK) { return status; }
+    std::printf("wlan::testing::Device::WlanmacQuery2()\n");
+    memset(info, 0, sizeof(*info));
+
+    static uint8_t mac[ETH_MAC_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+    info->eth_info.features |= ETHMAC_FEATURE_WLAN;
+    info->eth_info.mtu = 1500;
+    std::memcpy(info->eth_info.mac, mac, ETH_MAC_SIZE);
 
     // Fill out a minimal set of wlan device capabilities
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT_MIXED;
