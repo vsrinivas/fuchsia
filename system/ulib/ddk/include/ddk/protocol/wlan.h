@@ -264,9 +264,7 @@ typedef struct wlanmac_ifc {
 typedef struct wlanmac_protocol_ops {
     // Obtain information about the device and supported features
     // Safe to call at any time.
-    // query is deprecated. Transition to query2 is in-progress.
-    zx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
-    zx_status_t (*query2)(void* ctx, uint32_t options, wlanmac_info_t* info);
+    zx_status_t (*query)(void* ctx, uint32_t options, wlanmac_info_t* info);
 
     // Start wlanmac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called

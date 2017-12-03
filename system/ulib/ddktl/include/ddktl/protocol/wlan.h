@@ -185,13 +185,12 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D>
+template <typename D, bool QueryRenamed=false>
 class WlanmacProtocol : public internal::base_protocol {
   public:
     WlanmacProtocol() {
-        internal::CheckWlanmacProtocolSubclass<D>();
+        internal::CheckWlanmacProtocolSubclass<D, QueryRenamed>();
         ops_.query = Query;
-        ops_.query2 = Query2;
         ops_.stop = Stop;
         ops_.start = Start;
         ops_.queue_tx = QueueTx;
@@ -206,12 +205,14 @@ class WlanmacProtocol : public internal::base_protocol {
     }
 
   private:
-    static zx_status_t Query(void* ctx, uint32_t options, ethmac_info_t* info) {
-        return static_cast<D*>(ctx)->WlanmacQuery(options, info);
+    DDKTL_DEPRECATED(QueryRenamed)
+    static zx_status_t Query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+        return static_cast<D*>(ctx)->WlanmacQuery2(options, info);
     }
 
-    static zx_status_t Query2(void* ctx, uint32_t options, wlanmac_info_t* info) {
-        return static_cast<D*>(ctx)->WlanmacQuery2(options, info);
+    DDKTL_NOTREADY(QueryRenamed)
+    static zx_status_t Query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+        return static_cast<D*>(ctx)->WlanmacQuery(options, info);
     }
 
     static void Stop(void* ctx) {
@@ -247,12 +248,12 @@ class WlanmacProtocolProxy {
     WlanmacProtocolProxy(wlanmac_protocol_t* proto)
       : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t Query(uint32_t options, ethmac_info_t* info) {
+    zx_status_t Query(uint32_t options, wlanmac_info_t* info) {
         return ops_->query(ctx_, options, info);
     }
 
     zx_status_t Query2(uint32_t options, wlanmac_info_t* info) {
-        return ops_->query2(ctx_, options, info);
+        return ops_->query(ctx_, options, info);
     }
 
     template <typename D>
