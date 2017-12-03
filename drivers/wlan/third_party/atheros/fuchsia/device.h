@@ -36,7 +36,7 @@ class Device;
 using BaseDevice = ddk::Device<Device, ddk::Unbindable>;
 
 class Device : public BaseDevice,
-               public ddk::WlanmacProtocol<Device, true> {
+               public ddk::WlanmacProtocol<Device> {
   public:
     Device(zx_device_t* device, fbl::unique_ptr<Hif> hif);
 
