@@ -36,12 +36,8 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t Device::WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
-    std::printf("wlan::testing::Device::WlanmacQuery2()\n");
+zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
+    std::printf("wlan::testing::Device::WlanmacQuery()\n");
     memset(info, 0, sizeof(*info));
 
     static uint8_t mac[ETH_MAC_SIZE] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};

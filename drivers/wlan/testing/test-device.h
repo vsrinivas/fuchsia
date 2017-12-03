@@ -20,7 +20,7 @@ namespace testing {
 class Device;
 using TestBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
-class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device> {
+class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device, true> {
    public:
     Device(zx_device_t* device, test_protocol_t* test_proto);
 
@@ -31,8 +31,7 @@ class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device> {
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 
-    zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
-    zx_status_t WlanmacQuery2(uint32_t options, wlanmac_info_t* info);
+    zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);
     void WlanmacStop();
     zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);

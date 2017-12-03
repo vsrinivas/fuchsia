@@ -3029,11 +3029,7 @@ void Device::DdkRelease() {
     delete this;
 }
 
-zx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t Device::WlanmacQuery2(uint32_t options, wlanmac_info_t* info) {
+zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     memset(info, 0, sizeof(*info));
 
     info->eth_info.mtu = 1500;
