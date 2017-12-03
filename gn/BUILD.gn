@@ -518,58 +518,72 @@ action("fvm.sparse.blk") {
   }
 }
 
-# kernc.vboot is a "kernel partition" target for chromebook targets.
-action("kernc.vboot") {
-  futility_label = "//garnet/tools/vboot_reference:futility($host_toolchain)"
-  futility_out_dir = get_label_info(futility_label, "root_out_dir")
-  futility_bin = "$futility_out_dir/futility"
+# Build a "kernel partition" target for ChromeOS targets.
+#
+# Parameters
+#
+#   deps (required)
+#     Must be bootdata labels defined earlier in the file.
+#
+#   platform (required)
+#     zircon_platforms element.
+#
+template("vboot") {
+  output_name = "${target_name}.vboot"
+  action(output_name) {
+    futility_label = "//garnet/tools/vboot_reference:futility($host_toolchain)"
+    futility_out_dir = get_label_info(futility_label, "root_out_dir")
+    futility_bin = "$futility_out_dir/futility"
+    deps = [
+      futility_label,
+    ]
 
-  vboot_dir = "//third_party/vboot_reference"
-  kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
-  private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
-  inputs = [
-    kernel_keyblock,
-    private_keyblock,
-  ]
+    vboot_dir = "//third_party/vboot_reference"
+    kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
+    private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
+    inputs = [
+      kernel_keyblock,
+      private_keyblock,
+    ]
 
-  bootdata_label = ":bootdata-blobstore-${zircon_platforms[0]}"
-  deps = [
-    bootdata_label,
-    futility_label,
-  ]
+    bootdata_bins = []
+    foreach(bootdata_label, invoker.deps) {
+      bootdata_bins += get_target_outputs(bootdata_label)
+    }
+    deps += invoker.deps
 
-  bootdata_bins = get_target_outputs(bootdata_label)
-  bootdata_bin = bootdata_bins[0]
-  assert([ bootdata_bin ] == bootdata_bins)
+    bootdata_bin = bootdata_bins[0]
+    assert([ bootdata_bin ] == bootdata_bins)
 
-  kernel_build_dir = "//out/build-zircon/build-${zircon_platforms[0]}"
-  zircon_bin = "$kernel_build_dir/zircon.bin"
+    kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
+    zircon_bin = "$kernel_build_dir/zircon.bin"
 
-  output = "$images_dir/kernc.vboot"
-  outputs = [
-    output,
-  ]
+    output = "$images_dir/$output_name"
+    outputs = [
+      output,
+    ]
 
-  script = "//build/gn_run_binary.sh"
-  args = [
-    clang_prefix,
-    rebase_path(futility_bin),
-    "vbutil_kernel",
-    "--pack",
-    rebase_path(output),
-    "--keyblock",
-    rebase_path(kernel_keyblock),
-    "--signprivate",
-    rebase_path(private_keyblock),
-    "--bootloader",
-    rebase_path(bootdata_bin),
-    "--vmlinuz",
-    rebase_path(zircon_bin),
-    "--version",
-    "1",
-    "--flags",
-    "0x2",
-  ]
+    script = "//build/gn_run_binary.sh"
+    args = [
+      clang_prefix,
+      rebase_path(futility_bin),
+      "vbutil_kernel",
+      "--pack",
+      rebase_path(output),
+      "--keyblock",
+      rebase_path(kernel_keyblock),
+      "--signprivate",
+      rebase_path(private_keyblock),
+      "--bootloader",
+      rebase_path(bootdata_bin),
+      "--vmlinuz",
+      rebase_path(zircon_bin),
+      "--version",
+      "1",
+      "--flags",
+      "0x2",
+    ]
+  }
 }
 
 bootdata_cmdline("zedboot_cmdline") {
@@ -684,60 +698,6 @@ foreach(platform, zircon_platforms) {
     }
   }
 
-  # images/zedboot-${platform}.vboot is a zedboot "kernel partition"
-  # target for chromebook targets.
-  action("zedboot-${platform}.vboot") {
-    # TODO(INTK-60): get futility built either in GN or into a cipd package.
-    # For now, invoke //scripts/build-futility.sh
-    vboot_dir = "//third_party/vboot_reference"
-    futility_bin = "$vboot_dir/build/futility/futility"
-    kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
-    private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
-    inputs = [
-      futility_bin,
-      kernel_keyblock,
-      private_keyblock,
-    ]
-
-    bootdata_label = ":zedboot-data-${platform}"
-    deps = [
-      bootdata_label,
-    ]
-
-    bootdata_bins = get_target_outputs(bootdata_label)
-    bootdata_bin = bootdata_bins[0]
-    assert([ bootdata_bin ] == bootdata_bins)
-
-    kernel_build_dir = "//out/build-zircon/build-${platform}"
-    zircon_bin = "$kernel_build_dir/zircon.bin"
-
-    output = "$images_dir/zedboot-${platform}.vboot"
-    outputs = [
-      output,
-    ]
-
-    script = "//build/gn_run_binary.sh"
-    args = [
-      clang_prefix,
-      rebase_path(futility_bin),
-      "vbutil_kernel",
-      "--pack",
-      rebase_path(output),
-      "--keyblock",
-      rebase_path(kernel_keyblock),
-      "--signprivate",
-      rebase_path(private_keyblock),
-      "--bootloader",
-      rebase_path(bootdata_bin),
-      "--vmlinuz",
-      rebase_path(zircon_bin),
-      "--version",
-      "1",
-      "--flags",
-      "0x2",
-    ]
-  }
-
   # efi-${platform}.blk is a partition image containing a a kernel and bootdata
   # image, plus, zedboot and if appropriate, a bootloader. This target is not
   # consumed by the default build, but instead may be invoked by tools from
@@ -820,6 +780,19 @@ foreach(platform, zircon_platforms) {
     foreach(label, deps) {
       inputs += get_target_outputs(label)
     }
+  }
+
+  # ChromeOS vboot images.
+  vboot("zircon-${platform}") {
+    deps = [
+      ":bootdata-blobstore-${platform}",
+    ]
+  }
+
+  vboot("zedboot-${platform}") {
+    deps = [
+      ":zedboot-data-${platform}",
+    ]
   }
 }
 
