@@ -73,7 +73,6 @@ library_sources = [
   "$vboot_dir/firmware/stub/vboot_api_stub_init.c",
   "$vboot_dir/firmware/stub/vboot_api_stub_region.c",
   "$vboot_dir/firmware/stub/vboot_api_stub_stream.c",
-  "$vboot_dir/host/lib/crossystem.c",
   "$vboot_dir/host/lib/extract_vmlinuz.c",
   "$vboot_dir/host/lib/file_keys.c",
   "$vboot_dir/host/lib/fmap.c",
@@ -92,12 +91,15 @@ library_sources = [
   "$vboot_dir/host/lib21/host_misc.c",
   "$vboot_dir/host/lib21/host_signature.c",
 ]
-if (target_cpu == "x64") {
-  library_sources += [ "$vboot_dir/host/arch/x86_64/lib/crossystem_arch.c" ]
-} else if (target_cpu == "arm64") {
-  library_sources += [ "$vboot_dir/host/arch/arm/lib/crossystem_arch.c" ]
-} else {
-  assert(false, "Unsupported CPU")
+if (is_linux) {
+  library_sources += [ "$vboot_dir/host/lib/crossystem.c" ]
+  if (target_cpu == "x64") {
+    library_sources += [ "$vboot_dir/host/arch/x86_64/lib/crossystem_arch.c" ]
+  } else if (target_cpu == "arm64") {
+    library_sources += [ "$vboot_dir/host/arch/arm/lib/crossystem_arch.c" ]
+  } else {
+    assert(false, "Unsupported CPU")
+  }
 }
 
 executable("cgpt") {
