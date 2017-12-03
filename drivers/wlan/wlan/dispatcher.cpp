@@ -10,6 +10,7 @@
 #include "serialize.h"
 
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
@@ -439,6 +440,8 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
         return HandleMlmeMethod<EapolRequest>(packet, method);
     case Method::SETKEYS_request:
         return HandleMlmeMethod<SetKeysRequest>(packet, method);
+    case Method::DEVICE_QUERY_request:
+        return HandleMlmeMethod<DeviceQueryRequest>(packet, method);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;

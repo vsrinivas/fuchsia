@@ -72,7 +72,10 @@ struct MockDevice : public DeviceInterface {
 
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
+    const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
+
     fbl::RefPtr<DeviceState> state;
+    wlanmac_info_t wlanmac_info;
     PacketQueue eth_queue;
     PacketQueue wlan_queue;
     PacketQueue svc_queue;

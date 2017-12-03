@@ -31,6 +31,7 @@ class ClientMlme : public Mlme {
     zx_status_t HandleTimeout(const ObjectId id) override;
     // MLME-JOIN.request will initialize a Station and starts the association flow.
     zx_status_t HandleMlmeJoinReq(const JoinRequest& msg) override;
+    zx_status_t HandleMlmeDeviceQueryReq(const DeviceQueryRequest& msg) override;
 
     bool IsStaValid() const;
 

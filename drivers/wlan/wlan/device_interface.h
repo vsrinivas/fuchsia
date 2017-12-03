@@ -61,6 +61,7 @@ class DeviceInterface {
     virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;
 
     virtual fbl::RefPtr<DeviceState> GetState() = 0;
+    virtual const wlanmac_info_t& GetWlanInfo() const = 0;
 };
 
 }  // namespace wlan

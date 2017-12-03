@@ -71,6 +71,7 @@ class Device : public WlanBaseDevice,
     zx_status_t SetBss(const common::MacAddr& mac, uint8_t type) override final;
     zx_status_t SetKey(wlan_key_config_t* key_config) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
+    const wlanmac_info_t& GetWlanInfo() const override final;
 
    private:
     enum class DevicePacket : uint64_t {

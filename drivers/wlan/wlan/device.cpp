@@ -301,6 +301,10 @@ fbl::RefPtr<DeviceState> Device::GetState() {
     return state_;
 }
 
+const wlanmac_info_t& Device::GetWlanInfo() const {
+    return wlanmac_info_;
+}
+
 void Device::MainLoop() {
     infof("starting MainLoop\n");
     const char kThreadName[] = "wlan-mainloop";

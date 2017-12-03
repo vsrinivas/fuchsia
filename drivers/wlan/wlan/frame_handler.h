@@ -7,6 +7,7 @@
 #include "mac_frame.h"
 
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
 #include <ddk/protocol/wlan.h>
 #include <zircon/types.h>
@@ -106,6 +107,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
+    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeDeviceQueryReq, DeviceQueryRequest)
 
     // Data frame handlers.
     virtual bool ShouldDropDataFrame(const DataFrameHeader& hdr) { return false; }
@@ -134,6 +136,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeDeviceQueryReq, DeviceQueryRequest)
 
     // Internal Management frame handlers.
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Beacon)
