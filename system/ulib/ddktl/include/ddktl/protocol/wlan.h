@@ -93,8 +93,8 @@
 //         // Clean up
 //     }
 //
-//     zx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info) {
-//         // Fill out the ethmac info
+//     zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
+//         // Fill out the wlanmac info
 //         return ZX_OK;
 //     }
 //
@@ -185,7 +185,7 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D, bool QueryRenamed=false>
+template <typename D, bool QueryRenamed=true>
 class WlanmacProtocol : public internal::base_protocol {
   public:
     WlanmacProtocol() {
