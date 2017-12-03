@@ -25,5 +25,33 @@ struct EapolIndication {
     array<uint8> data;
 };
 
+// DEVICE_QUERY.request
+
+struct DeviceQueryRequest {
+    // This field prevents the C++ bindings from using an InlineStructPtr, which doesn't work with
+    // our dispatcher.
+    array<uint8, 1> unused;
+};
+
+// DEVICE_QUERY.confirm
+
+enum MacMode {
+    STA,
+    AP,
+};
+
+struct BandCapabilities {
+    array<uint16> basic_rates;
+    uint16 base_frequency;
+    array<uint8> channels;
+};
+
+// TODO(tkilbourn): add more fields for debugging. For now, we just have the information
+// necessary for the SME.
+struct DeviceQueryResponse {
+    array<MacMode> modes;
+    array<BandCapabilities> bands;
+};
+
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official
 // MLME primitives.

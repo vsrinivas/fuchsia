@@ -417,5 +417,9 @@ enum Method {
     // Args: EapolIndication
     EAPOL_indication,
 
-    LAST = EAPOL_indication,
+    // Args: DeviceQueryRequest
+    DEVICE_QUERY_request,
+
+    // Args: DeviceQueryResponse
+    DEVICE_QUERY_confirm,
 };
