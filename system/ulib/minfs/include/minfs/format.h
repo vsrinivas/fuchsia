@@ -37,7 +37,7 @@ constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
 constexpr uint32_t kMinfsVersion        = 0x00000005;
 
-constexpr ino_t kMinfsRootIno           = 1;
+constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
 constexpr uint32_t kMinfsFlagFVM        = 0x00000002; // Mounted on FVM
 constexpr uint32_t kMinfsBlockSize      = 8192;
@@ -49,7 +49,8 @@ constexpr uint32_t kMinfsDirect         = 16;
 constexpr uint32_t kMinfsIndirect       = 31;
 constexpr uint32_t kMinfsDoublyIndirect = 1;
 
-constexpr uint32_t kMinfsDirectPerIndirect = (kMinfsBlockSize / sizeof(blk_t));
+constexpr uint32_t kMinfsDirectPerIndirect  = (kMinfsBlockSize / sizeof(blk_t));
+constexpr uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDirectPerIndirect;
 // not possible to have a block at or past this one
 // due to the limitations of the inode and indirect blocks
 // constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect)

@@ -88,193 +88,40 @@ void VnodeMinfs::InodeSync(WriteTxn* txn, uint32_t flags) {
     fs_->InodeSync(txn, ino_, &inode_);
 }
 
-zx_status_t VnodeMinfs::BlocksShrinkDirect(WriteTxn *txn, size_t count, blk_t* barray,
-                                           bool* dirty) {
-    // release direct blocks
-    for (unsigned i = 0; i < count; i++) {
-        if (barray[i] == 0) {
-            continue;
-        }
-        fs_->ValidateBno(barray[i]);
-        fs_->BlockFree(txn, barray[i]);
-        barray[i] = 0;
-        inode_.block_count--;
-        *dirty = true;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t VnodeMinfs::BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, size_t count,
-                                             uint32_t ib_vmo_offset, blk_t* iarray,
-                                             bool* dirty) {
-    // release indirect blocks
-    for (unsigned i = 0; i < count; i++) {
-        if (iarray[i] == 0) {
-            continue;
-        }
-        fs_->ValidateBno(iarray[i]);
-
-#ifdef __Fuchsia__
-        uint32_t* entry;
-        ReadIndirectVmoBlock(ib_vmo_offset + i, &entry);
-#else
-        uint32_t entry[kMinfsBlockSize];
-        ReadIndirectBlock(iarray[i], entry);
-#endif
-
-        // release the blocks pointed at by the entries in the indirect block
-        zx_status_t status;
-        uint32_t direct_start = i == 0 ? bindex : 0;
-        if ((status = BlocksShrinkDirect(txn, kMinfsDirectPerIndirect - direct_start,
-                                         &entry[direct_start], dirty)) != ZX_OK) {
-            return status;
-        }
-
-        // only update the indirect block if an entry was deleted
-        if (*dirty) {
-#ifdef __Fuchsia__
-            txn->Enqueue(vmo_indirect_->GetVmo(), ib_vmo_offset + i, iarray[i] +
-                         fs_->info_.dat_block, 1);
-#else
-            fs_->bc_->Writeblk(iarray[i] + fs_->info_.dat_block, entry);
-#endif
-        }
-
-        // Only delete the indirect block if all direct blocks have been deleted
-        if (direct_start == 0)  {
-            // release the direct block itself
-            fs_->BlockFree(txn, iarray[i]);
-            iarray[i] = 0;
-            inode_.block_count--;
-            *dirty = true;
-        }
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t VnodeMinfs::BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibindex, uint32_t bindex,
-                                                   size_t count, uint32_t dib_vmo_offset,
-                                                   uint32_t ib_vmo_offset, blk_t* diarray,
-                                                   bool* dirty) {
-    // release doubly indirect blocks
-    for (unsigned i = 0; i < count; i++) {
-        if (diarray[i] == 0) {
-            continue;
-        }
-
-        fs_->ValidateBno(diarray[i]);
-
-#ifdef __Fuchsia__
-        uint32_t* dientry;
-        ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(i), &dientry);
-#else
-        uint32_t dientry[kMinfsBlockSize];
-        ReadIndirectBlock(diarray[i], dientry);
-#endif
-
-        // release the blocks pointed at by the entries in the indirect block
-        uint32_t indirect_start = i == 0 ? ibindex : 0;
-        uint32_t direct_start = (i == 0 && indirect_start == ibindex) ? bindex : 0;
-        zx_status_t status;
-        if ((status = BlocksShrinkIndirect(txn, direct_start,
-                                           kMinfsDirectPerIndirect - indirect_start,
-                                           ib_vmo_offset + i + indirect_start,
-                                           &dientry[indirect_start], dirty))
-            != ZX_OK) {
-            return status;
-        }
-
-        // only update the indirect block if an entry was deleted
-        if (*dirty) {
-#ifdef __Fuchsia__
-            txn->Enqueue(vmo_indirect_->GetVmo(), dib_vmo_offset + i, diarray[i] +
-                         fs_->info_.dat_block, 1);
-#else
-            fs_->bc_->Writeblk(diarray[i] + fs_->info_.dat_block, dientry);
-#endif
-        }
-
-        // Only delete the doubly indirect block if all indirect blocks have been deleted
-        if (indirect_start == 0 && direct_start == 0)  {
-            // release the doubly indirect block itself
-            fs_->BlockFree(txn, diarray[i]);
-            diarray[i] = 0;
-            inode_.block_count--;
-            *dirty = true;
-        }
-    }
-
-    return ZX_OK;
-}
-
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
 zx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, blk_t start) {
-    bool dirty = false;
-    zx_status_t status = ZX_OK;
+    ZX_DEBUG_ASSERT(txn != nullptr);
+    bop_params_t boparams(start, static_cast<blk_t>(kMinfsMaxFileBlock - start), nullptr);
+    zx_status_t status;
+    if ((status = BlockOp(txn, DELETE, &boparams)) != ZX_OK) {
+        return status;
+    }
+
+#ifdef __Fuchsia__
+    // Arbitrary minimum size for indirect vmo
     size_t size = (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
-    size_t count = start <= kMinfsDirect ? kMinfsDirect - start : 0;
+    // Number of blocks before dindirect blocks start
+    blk_t pre_dindirect = kMinfsDirect + kMinfsDirectPerIndirect * kMinfsIndirect;
+    if (start > pre_dindirect) {
+        blk_t distart = start - pre_dindirect; //first bno relative to dindirect blocks
+        blk_t last_dindirect = distart / (kMinfsDirectPerDindirect); // index of last dindirect
 
-    if ((status = BlocksShrinkDirect(txn, count, &inode_.dnum[start], &dirty))
-        != ZX_OK) {
-        return status;
-    }
-
-    if (start < kMinfsDirect) {
-        start = 0;
-    } else {
-        start -= kMinfsDirect;
-    }
-
-    uint32_t ibindex = start / kMinfsDirectPerIndirect;
-    uint32_t bindex = start % kMinfsDirectPerIndirect;
-    count = ibindex <= kMinfsIndirect ? kMinfsIndirect - ibindex : 0;
-    if ((status = BlocksShrinkIndirect(txn, bindex, count, ibindex, &inode_.inum[ibindex], &dirty))
-        != ZX_OK) {
-        return status;
-    }
-
-    if (start < kMinfsIndirect * kMinfsDirectPerIndirect) {
-        start = 0;
-    } else {
-        start -= kMinfsIndirect * kMinfsDirectPerIndirect;
-
-        uint32_t last_dindirect = start / (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
-        uint32_t first_indirect = start % (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
-
-        if (first_indirect > 0) {
+        // Calculate new size for indirect vmo
+        if (distart % kMinfsDirectPerDindirect) {
             size = GetVmoSizeForIndirect(last_dindirect);
-        } else if (last_dindirect > 0) {
+        } else if (last_dindirect) {
             size = GetVmoSizeForIndirect(last_dindirect - 1);
         }
     }
 
-    uint32_t dibindex = start / (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
-    start %= kMinfsDirectPerIndirect * kMinfsDirectPerIndirect;
-    ibindex = start / kMinfsDirectPerIndirect;
-    bindex = start % kMinfsDirectPerIndirect;
-    count = dibindex <= kMinfsDoublyIndirect ? kMinfsDoublyIndirect - dibindex : 0;
-    if ((status = BlocksShrinkDoublyIndirect(txn, ibindex, bindex, count,
-                                             GetVmoOffsetForDoublyIndirect(dibindex),
-                                             GetVmoOffsetForIndirect(dibindex),
-                                             &inode_.dinum[dibindex], &dirty)) != ZX_OK) {
-        return status;
-    }
-
-#ifdef __Fuchsia__
+    // Shrink the indirect vmo if necessary
     if (vmo_indirect_ != nullptr && vmo_indirect_->GetSize() > size) {
         if ((status = vmo_indirect_->Shrink(size)) != ZX_OK) {
             return status;
         }
     }
 #endif
-
-    if (dirty) {
-        InodeSync(txn, kMxFsSyncDefault);
-    }
-
     return ZX_OK;
 }
 
@@ -462,140 +309,197 @@ zx_status_t VnodeMinfs::InitVmo() {
 }
 #endif
 
-zx_status_t VnodeMinfs::GetBnoDirect(WriteTxn* txn, blk_t* bno, bool* dirty) {
-    // direct blocks are simple... is there an entry in dnum[]?
-    blk_t hint = 0;
+zx_status_t VnodeMinfs::AllocateIndirect(WriteTxn* txn, blk_t index, IndirectArgs* args) {
+    ZX_DEBUG_ASSERT(txn != nullptr);
 
-    if (*bno == 0) {
-        if (txn == nullptr) {
-            *bno = 0;
-            return ZX_OK;
-        }
-        // allocate a new block
-        zx_status_t status = fs_->BlockNew(txn, hint, bno);
-        if (status != ZX_OK) {
-            return status;
-        }
-        inode_.block_count++;
-        *dirty = true;
+    // *bno must not be already allocated
+    ZX_DEBUG_ASSERT(args->GetBno(index) == 0);
+
+    // allocate new indirect block
+    zx_status_t status;
+    blk_t bno;
+    if ((status = fs_->BlockNew(txn, 0, &bno)) != ZX_OK) {
+        return status;
     }
 
-    fs_->ValidateBno(*bno);
+#ifdef __Fuchsia__
+    ClearIndirectVmoBlock(args->GetOffset() + index);
+#else
+    ClearIndirectBlock(bno);
+#endif
+
+    args->SetBno(index, bno);
+    inode_.block_count++;
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t ib_vmo_offset,
-                                       blk_t* ibno, blk_t* bno, bool* dirty) {
+zx_status_t VnodeMinfs::BlockOpDirect(WriteTxn *txn, DirectArgs* params) {
+    for (unsigned i = 0; i < params->GetCount(); i++) {
+        blk_t bno = params->GetBno(i);
+        switch (params->GetOp()) {
+            case DELETE: {
+                // If we found a valid block, delete it.
+                if (bno) {
+                    fs_->ValidateBno(bno);
+                    fs_->BlockFree(txn, bno);
+                    params->SetBno(i, 0);
+                    inode_.block_count--;
+                }
+                break;
+            }
+            case WRITE: {
+                ZX_DEBUG_ASSERT(txn != nullptr);
+                if (bno == 0) {
+                    zx_status_t status;
+                    if ((status = fs_->BlockNew(txn, 0, &bno)) != ZX_OK) {
+                        return status;
+                    }
+                    inode_.block_count++;
+                }
+
+                fs_->ValidateBno(bno);
+            }
+            // fall through
+            case READ: {
+                params->SetBno(i, bno);
+                break;
+            }
+            default: {
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+        }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t VnodeMinfs::BlockOpIndirect(WriteTxn* txn, IndirectArgs* params) {
     // we should have initialized vmo before calling this method
     zx_status_t status;
 
 #ifdef __Fuchsia__
-    if ((status = VnodeMinfs::InitIndirectVmo()) != ZX_OK) {
-        return status;
+    if (params->GetOp() == READ || params->GetOp() == WRITE) {
+        validate_vmo_size(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
     }
 #endif
 
-    // retrieve indirect block at this index
-    if (*ibno == 0) {
-        if (txn == nullptr) {
-            *bno = 0;
-            return ZX_OK;
+    for (unsigned i = 0; i < params->GetCount(); i++) {
+        bool dirty = false;
+        if (params->GetBno(i) == 0) {
+            switch (params->GetOp()) {
+            case DELETE:
+                continue;
+            case READ:
+                return ZX_OK;
+            case WRITE:
+                if ((status = AllocateIndirect(txn, i, params)) != ZX_OK) {
+                    return status;
+                }
+                break;
+            default:
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+
         }
-        // allocate new indirect block if it does not exist
-        if ((status = fs_->BlockNew(txn, 0, ibno)) != ZX_OK) {
+
+#ifdef __Fuchsia__
+        blk_t* entry;
+        ReadIndirectVmoBlock(params->GetOffset() + i, &entry);
+#else
+        blk_t entry[kMinfsBlockSize];
+        ReadIndirectBlock(params->GetBno(i), entry);
+#endif
+
+        DirectArgs direct_params = params->GetDirect(entry, i);
+        if ((status = BlockOpDirect(txn, &direct_params)) != ZX_OK) {
             return status;
         }
 
+        // only update the indirect block if an entry was deleted
+        if (dirty || direct_params.IsDirty()) {
 #ifdef __Fuchsia__
-        ClearIndirectVmoBlock(ib_vmo_offset);
+            txn->Enqueue(vmo_indirect_->GetVmo(), params->GetOffset() + i,
+                         params->GetBno(i) + fs_->info_.dat_block, 1);
 #else
-        ClearIndirectBlock(*ibno);
+            fs_->bc_->Writeblk(params->GetBno(i) + fs_->info_.dat_block, entry);
 #endif
+            params->SetDirty();
+        }
 
-        inode_.block_count++;
-        *dirty = true;
-    }
-
-#ifdef __Fuchsia__
-    uint32_t* ientry;
-    ReadIndirectVmoBlock(ib_vmo_offset, &ientry);
-#else
-    uint32_t ientry[kMinfsBlockSize];
-    ReadIndirectBlock(*ibno, ientry);
-#endif
-
-    bool direct_dirty = false;
-    if ((status = GetBnoDirect(txn, &ientry[bindex], &direct_dirty)) != ZX_OK) {
-        return status;
-    }
-
-    *bno = ientry[bindex];
-
-    if (*dirty || direct_dirty) {
-        // Write back the indirect block if a new block was allocated
-#ifdef __Fuchsia__
-        txn->Enqueue(vmo_indirect_->GetVmo(), ib_vmo_offset, *ibno + fs_->info_.dat_block, 1);
-#else
-        fs_->bc_->Writeblk(*ibno + fs_->info_.dat_block, ientry);
-#endif
-        InodeSync(txn, kMxFsSyncDefault);
+        // We can delete the current indirect block if all direct blocks within it are deleted
+        if (params->GetOp() == DELETE && direct_params.GetCount() == kMinfsDirectPerIndirect) {
+            // release the direct block itself
+            fs_->BlockFree(txn, params->GetBno(i));
+            params->SetBno(i, 0);
+            inode_.block_count--;
+        }
     }
 
     return ZX_OK;
+
 }
 
-zx_status_t VnodeMinfs::GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, uint32_t bindex,
-                                             uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
-                                             blk_t* dibno, blk_t* bno, bool* dirty) {
+zx_status_t VnodeMinfs::BlockOpDindirect(WriteTxn* txn, DindirectArgs* params) {
     zx_status_t status;
 
-    // look up the doubly indirect bno, create if it doesn't already exist
-    if (*dibno == 0) {
-        if (txn == nullptr) {
-            *bno = 0;
-            return ZX_OK;
+#ifdef __Fuchsia__
+    if (params->GetOp() == READ || params->GetOp() == WRITE) {
+        validate_vmo_size(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
+    }
+#endif
+
+    // operate on doubly indirect blocks
+    for (unsigned i = 0; i < params->GetCount(); i++) {
+        bool dirty = false;
+        if (params->GetBno(i) == 0) {
+            switch (params->GetOp()) {
+            case DELETE:
+                continue;
+            case READ:
+                return ZX_OK;
+            case WRITE:
+                if ((status = AllocateIndirect(txn, i, params)) != ZX_OK) {
+                    return status;
+                }
+                break;
+            default:
+                return ZX_ERR_NOT_SUPPORTED;
+            }
         }
 
-        // allocate a new doubly indirect block
-        if ((status = fs_->BlockNew(txn, 0, dibno)) != ZX_OK) {
+#ifdef __Fuchsia__
+        uint32_t* dientry;
+        ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(i), &dientry);
+#else
+        uint32_t dientry[kMinfsBlockSize];
+        ReadIndirectBlock(params->GetBno(i), dientry);
+#endif
+
+        // operate on blocks pointed at by the entries in the indirect block
+        IndirectArgs indirect_params = params->GetIndirect(dientry, i);
+        if ((status = BlockOpIndirect(txn, &indirect_params)) != ZX_OK) {
             return status;
         }
 
+        // only update the indirect block if an entry was deleted
+        if (dirty || indirect_params.IsDirty()) {
 #ifdef __Fuchsia__
-        ClearIndirectVmoBlock(dib_vmo_offset);
+            txn->Enqueue(vmo_indirect_->GetVmo(), params->GetOffset() + i, params->GetBno(i) +
+                         fs_->info_.dat_block, 1);
 #else
-        ClearIndirectBlock(*dibno);
+            fs_->bc_->Writeblk(params->GetBno(i) + fs_->info_.dat_block, dientry);
 #endif
+            params->SetDirty();
+        }
 
-        // record new doubly indirect block in inode, note that we need to update
-        inode_.block_count++;
-        *dirty = true;
-    }
-
-    // read from doubly indirect block
-#ifdef __Fuchsia__
-    uint32_t* dientry;
-    ReadIndirectVmoBlock(dib_vmo_offset, &dientry);
-#else
-    uint32_t dientry[kMinfsBlockSize];
-    ReadIndirectBlock(*dibno, dientry);
-#endif
-
-    // get indirect block
-    bool indirect_dirty = false;
-    if ((status = GetBnoIndirect(txn, bindex, ib_vmo_offset + ibindex, &dientry[ibindex], bno,
-                                 &indirect_dirty)) != ZX_OK) {
-        return status;
-    }
-
-    if (*dirty || indirect_dirty) {
-        // Write back the doubly indirect block if a new block was allocated
-#ifdef __Fuchsia__
-        txn->Enqueue(vmo_indirect_->GetVmo(), dib_vmo_offset, *dibno + fs_->info_.dat_block, 1);
-#else
-        fs_->bc_->Writeblk(*dibno + fs_->info_.dat_block, dientry);
-#endif
-        InodeSync(txn, kMxFsSyncDefault);
+        // We can delete the current doubly indirect block if all indirect blocks within it
+        // (and direct blocks within those) are deleted
+        if (params->GetOp() == DELETE && indirect_params.GetCount() == kMinfsDirectPerDindirect) {
+            // release the doubly indirect block itself
+            fs_->BlockFree(txn, params->GetBno(i));
+            params->SetBno(i, 0);
+            inode_.block_count--;
+        }
     }
 
     return ZX_OK;
@@ -627,62 +531,137 @@ void VnodeMinfs::ClearIndirectBlock(blk_t bno) {
 }
 #endif
 
-// Get the bno corresponding to the nth logical block within the file.
-zx_status_t VnodeMinfs::GetBno(WriteTxn* txn, blk_t n, blk_t* bno) {
+zx_status_t VnodeMinfs::BlockOp(WriteTxn* txn, blk_op_t op, bop_params_t* boparams) {
+    blk_t start = boparams->start;
+    blk_t found = 0;
     bool dirty = false;
+    if (found < boparams->count && start < kMinfsDirect) {
+        // array starting with first direct block
+        blk_t* array = &inode_.dnum[start];
+        // number of direct blocks to process
+        blk_t count = fbl::min(boparams->count - found, kMinfsDirect - start);
+        // if bnos exist, adjust past found (should be 0)
+        blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
 
-    if (n < kMinfsDirect) {
-        zx_status_t status = GetBnoDirect(txn, &inode_.dnum[n], &dirty);
-        *bno = inode_.dnum[n];
-        return status;
+        DirectArgs direct_params(op, array, count, bnos);
+        zx_status_t status;
+        if ((status = BlockOpDirect(txn, &direct_params)) != ZX_OK) {
+            return status;
+        }
+
+        found += count;
+        dirty |= direct_params.IsDirty();
     }
 
     // for indirect blocks, adjust past the direct blocks
-    n -= kMinfsDirect;
+    if (start < kMinfsDirect) {
+        start = 0;
+    } else {
+        start -= kMinfsDirect;
+    }
 
-    if (n < kMinfsIndirect * kMinfsDirectPerIndirect) {
-        // index of indirect block
-        uint32_t ibindex = n / kMinfsDirectPerIndirect;
+    if (found < boparams->count && start < kMinfsIndirect * kMinfsDirectPerIndirect) {
+        // index of indirect block, and offset of that block within indirect vmo
+        blk_t ibindex = start / kMinfsDirectPerIndirect;
         // index of direct block within indirect block
-        uint32_t bindex = n % kMinfsDirectPerIndirect;
-        return GetBnoIndirect(txn, bindex, ibindex, &inode_.inum[ibindex], bno, &dirty);
+        blk_t bindex = start % kMinfsDirectPerIndirect;
+
+        // array starting with first indirect block
+        blk_t* array = &inode_.inum[ibindex];
+        // number of direct blocks to process within indirect blocks
+        blk_t count = fbl::min(boparams->count - found,
+                                         kMinfsIndirect * kMinfsDirectPerIndirect - start);
+        // if bnos exist, adjust past found
+        blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
+
+        IndirectArgs indirect_params(op, array, count, bnos, bindex, ibindex);
+        zx_status_t status;
+        if ((status = BlockOpIndirect(txn, &indirect_params)) != ZX_OK) {
+            return status;
+        }
+
+        found += count;
+        dirty |= indirect_params.IsDirty();
     }
 
     // for doubly indirect blocks, adjust past the indirect blocks
-    n -= (kMinfsIndirect * kMinfsDirectPerIndirect);
+    if (start < kMinfsIndirect * kMinfsDirectPerIndirect) {
+        start = 0;
+    } else {
+        start -= kMinfsIndirect * kMinfsDirectPerIndirect;
+    }
 
-    if (n < kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect) {
+    if (found < boparams->count &&
+        start < kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect) {
         // index of doubly indirect block
-        uint32_t dibindex = n / (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
+        uint32_t dibindex = start / (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
         ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
-        n -= (dibindex * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
-        // index of indirect block within doubly indirect block
-        uint32_t ibindex = n / kMinfsDirectPerIndirect;
-        // index of direct block within indirect block
-        uint32_t bindex = n % kMinfsDirectPerIndirect;
+        start -= (dibindex * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
 
-    #ifdef __Fuchsia__
+        // array starting with first doubly indirect block
+        blk_t* array = &inode_.dinum[dibindex];
+        // number of direct blocks to process within doubly indirect blocks
+        blk_t count = fbl::min(boparams->count - found,
+                kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect - start);
+        // if bnos exist, adjust past found
+        blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
+        // index of direct block within indirect block
+        blk_t bindex = start % kMinfsDirectPerIndirect;
+        // offset of indirect block within indirect vmo
+        blk_t ib_vmo_offset = GetVmoOffsetForIndirect(dibindex);
+        // index of indirect block within doubly indirect block
+        blk_t ibindex = start / kMinfsDirectPerIndirect;
+        // offset of doubly indirect block within indirect vmo
+        blk_t dib_vmo_offset = GetVmoOffsetForDoublyIndirect(dibindex);
+
+        DindirectArgs dindirect_params(op, array, count, bnos, bindex, ib_vmo_offset, ibindex,
+                                       dib_vmo_offset);
+        zx_status_t status;
+        if ((status = BlockOpDindirect(txn, &dindirect_params)) != ZX_OK) {
+            return status;
+        }
+
+        found += count;
+        dirty |= dindirect_params.IsDirty();
+    }
+
+    if (dirty) {
+        ZX_DEBUG_ASSERT(txn != nullptr);
+        InodeSync(txn, kMxFsSyncDefault);
+    }
+
+    // Return out of range if we were not able to process all blocks
+    return found == boparams->count ? ZX_OK : ZX_ERR_OUT_OF_RANGE;
+}
+
+zx_status_t VnodeMinfs::BlockGet(WriteTxn* txn, blk_t n, blk_t* bno) {
+#ifdef __Fuchsia__
+    if (n >= kMinfsDirect) {
         zx_status_t status;
         // If the vmo_indirect_ vmo has not been created, make it now.
         if ((status = InitIndirectVmo()) != ZX_OK) {
             return status;
         }
 
-        // Grow VMO if we need more space to fit this set of indirect blocks
-        uint64_t vmo_size = GetVmoSizeForIndirect(dibindex);
-        if (vmo_indirect_->GetSize() < vmo_size) {
-            if ((status = vmo_indirect_->Grow(vmo_size)) != ZX_OK) {
-                return status;
+        // Number of blocks prior to dindirect blocks
+        blk_t pre_dindirect = kMinfsDirect + kMinfsDirectPerIndirect * kMinfsIndirect;
+        if (n >= pre_dindirect) {
+            // Index of last doubly indirect block
+            blk_t dibindex = (n - pre_dindirect) / kMinfsDirectPerDindirect;
+            ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
+            uint64_t vmo_size = GetVmoSizeForIndirect(dibindex);
+            // Grow VMO if we need more space to fit doubly indirect blocks
+            if (vmo_indirect_->GetSize() < vmo_size) {
+                if ((status = vmo_indirect_->Grow(vmo_size)) != ZX_OK) {
+                    return status;
+                }
             }
         }
-    #endif
-
-        return GetBnoDoublyIndirect(txn, ibindex, bindex, GetVmoOffsetForDoublyIndirect(dibindex),
-                                    GetVmoOffsetForIndirect(dibindex), &inode_.dinum[dibindex], bno,
-                                    &dirty);
     }
+#endif
 
-    return ZX_ERR_OUT_OF_RANGE;
+    bop_params_t boparams(n, 1, bno);
+    return BlockOp(txn, txn ? WRITE : READ, &boparams);
 }
 
 // Immediately stop iterating over the directory.
@@ -1203,7 +1182,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
         }
 
         blk_t bno;
-        if ((status = GetBno(nullptr, n, &bno)) != ZX_OK) {
+        if ((status = BlockGet(nullptr, n, &bno)) != ZX_OK) {
             return status;
         }
         if (bno != 0) {
@@ -1305,14 +1284,14 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
 
         // Update this block on-disk
         blk_t bno;
-        if ((status = GetBno(txn, n, &bno)) != ZX_OK) {
+        if ((status = BlockGet(txn, n, &bno))) {
             goto done;
         }
         ZX_DEBUG_ASSERT(bno != 0);
         txn->Enqueue(vmo_.get(), n, bno + fs_->info_.dat_block, 1);
 #else
         blk_t bno;
-        if ((status = GetBno(txn, n, &bno)) != ZX_OK) {
+        if ((status = BlockGet(txn, n, &bno))) {
             goto done;
         }
         ZX_DEBUG_ASSERT(bno != 0);
@@ -1346,6 +1325,7 @@ done:
 
         return ZX_ERR_NO_SPACE;
     }
+
     if ((off + len) > inode_.size) {
         inode_.size = static_cast<uint32_t>(off + len);
     }
@@ -1751,7 +1731,7 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
         if (len < inode_.size) {
             char bdata[kMinfsBlockSize];
             blk_t rel_bno = static_cast<blk_t>(len / kMinfsBlockSize);
-            if (GetBno(nullptr, rel_bno, &bno) != ZX_OK) {
+            if (BlockGet(nullptr, rel_bno, &bno) != ZX_OK) {
                 return ZX_ERR_IO;
             }
             if (bno != 0) {
@@ -1968,5 +1948,47 @@ zx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {
     return ZX_OK;
 }
 #endif
+
+VnodeMinfs::DirectArgs VnodeMinfs::IndirectArgs::GetDirect(blk_t* barray, unsigned ibindex) const {
+    // Determine the starting index for direct blocks within this indirect block
+    blk_t direct_start = ibindex == 0 ? bindex_ : 0;
+
+    // Determine how many direct blocks have already been op'd in indirect block context
+    blk_t found = 0;
+
+    if (ibindex) {
+        found = kMinfsDirectPerIndirect * ibindex - bindex_;
+    }
+
+    DirectArgs params(op_, // op
+                      &barray[direct_start], // array
+                      fbl::min(count_ - found, kMinfsDirectPerIndirect - direct_start), // count
+                      bnos_ == nullptr ? nullptr : &bnos_[found]); // bnos
+    return params;
+}
+
+VnodeMinfs::IndirectArgs VnodeMinfs::DindirectArgs::GetIndirect(blk_t* iarray,
+                                                                unsigned dibindex) const {
+    // Determine relative starting indices for indirect and direct blocks
+    uint32_t indirect_start = dibindex == 0 ? ibindex_ : 0;
+    uint32_t direct_start = (dibindex == 0 && indirect_start == ibindex_) ? bindex_ : 0;
+
+    // Determine how many direct blocks we have already op'd within doubly indirect
+    // context
+    blk_t found = 0;
+    if (dibindex) {
+        found = kMinfsDirectPerIndirect * kMinfsDirectPerIndirect * dibindex -
+                (ibindex_ * kMinfsDirectPerIndirect) + bindex_;
+    }
+
+    IndirectArgs params(op_, // op
+                        &iarray[indirect_start], // array
+                        fbl::min(count_ - found, kMinfsDirectPerDindirect - direct_start), // count
+                        bnos_ == nullptr ? nullptr : &bnos_[found], // bnos
+                        direct_start, // bindex
+                        ib_vmo_offset_ + dibindex + ibindex_ // ib_vmo_offset
+                        );
+    return params;
+}
 
 } // namespace minfs

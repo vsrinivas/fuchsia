@@ -376,78 +376,130 @@ private:
 #endif  // MINFS_PARANOID_MODE && __Fuchsia__
     }
 
-    // Get the disk block 'bno' corresponding to the 'nth' block relative to the start of the
-    // current direct/indirect/doubly indirect block section.
-    // Allocate the block if requested with a non-null "txn".
-    zx_status_t GetBno(WriteTxn* txn, blk_t n, blk_t* bno);
+    typedef enum {
+        READ,
+        WRITE,
+        DELETE,
+    } blk_op_t;
 
-    // Acquire (or allocate) a direct block |*bno|. If allocation occurs,
-    // |*dirty| is set to true, and the inode block is written to disk.
-    //
-    // Example call for accessing the 0th direct block in the inode:
-    // GetBnoDirect(txn, &inode_.dnum[0], &dirty);
-    zx_status_t GetBnoDirect(WriteTxn* txn, blk_t* bno, bool* dirty);
+    typedef struct bop_params {
+        bop_params(blk_t start, blk_t count, blk_t* bnos)
+            : start(start), count(count), bnos(bnos) {}
 
-    // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within an indirect
-    // block |*ibno|, which is allocated if necessary. If allocation of the indirect block occurs,
-    // |*dirty| is set to true, and the indirect and inode blocks are written to disk.
-    //
-    // On Fuchsia, |ib_vmo_offset| contains the block offset of |*ibno| within the cached
-    // indirect VMO. On other platforms, this argument may be ignored.
-    //
-    // Example call for accessing the 3rd direct block within the 2nd indirect block:
-    // GetBnoIndirect(txn, 3, 2, &inode_.inum[2], &bno, &dirty);
-    zx_status_t GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t ib_vmo_offset,
-                               blk_t* ibno, blk_t* bno, bool* dirty);
+        blk_t start;
+        blk_t count;
+        blk_t* bnos;
+    } bop_params_t;
 
-    // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within a doubly
-    // indirect block |*dibno|, at index |ibindex| within that indirect block. If allocation occurs,
-    // |*dirty| is set to true, and the doubly indirect, indirect, and inode blocks are written to
-    // disk. |dib_vmo_offset| and |ib_vmo_offset| are the offset of the doubly indirect block and
-    // the doubly indirect block's indirect block set within the indirect VMO, respectively.
-    //
-    // Example call for accessing the 3rd direct block in the 2nd indirect block
-    // in the 0th doubly indirect block:
-    // GetBnoDoublyIndirect(txn, 2, 3, GetVmoOffsetForDoublyIndirect(0), GetVmoOffsetForIndirect(0),
-    //                      &inode_.dinum[0], &bno, &dirty);
-    zx_status_t GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, uint32_t bindex,
-                                     uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
-                                     blk_t* dibno, blk_t* bno, bool* dirty);
+    class DirectArgs {
+    public:
+        DirectArgs(blk_op_t op, blk_t* array, blk_t count, blk_t* bnos)
+            : op_(op), array_(array), count_(count), bnos_(bnos), dirty_(false) {}
 
+        blk_op_t GetOp() const { return op_; }
+        blk_t GetBno(blk_t index) const { return array_[index]; }
+        void SetBno(blk_t index, blk_t value) {
+            ZX_DEBUG_ASSERT(index < GetCount());
+
+            if (bnos_ != nullptr) {
+                bnos_[index] = value ? value : array_[index];
+            }
+
+            if (array_[index] != value) {
+                array_[index] = value;
+                dirty_ = true;
+            }
+        }
+
+        blk_t GetCount() const { return count_; }
+
+        bool IsDirty() const { return dirty_; }
+    protected:
+        const blk_op_t op_; // determines what operation to perform on blocks
+        blk_t* const array_; // array containing blocks to be operated on
+        const blk_t count_; // number of direct blocks to operate on
+        blk_t* const bnos_; // array of |count| bnos returned to the user
+        bool dirty_; // true if blocks have successfully been op'd
+    };
+
+    class IndirectArgs : public DirectArgs {
+    public:
+        IndirectArgs(blk_op_t op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
+                     blk_t ib_vmo_offset)
+            : DirectArgs(op, array, count, bnos), bindex_(bindex), ib_vmo_offset_(ib_vmo_offset) {}
+
+        void SetDirty() { dirty_ = true; }
+
+        void SetBno(blk_t index, blk_t value) {
+            ZX_DEBUG_ASSERT(index < GetCount());
+            array_[index] = value;
+            SetDirty();
+        }
+
+        // Number of indirect blocks we need to iterate through to touch all |count| direct blocks.
+        blk_t GetCount() const {
+            return (bindex_ + count_ + kMinfsDirectPerIndirect - 1) / kMinfsDirectPerIndirect;
+        }
+
+        blk_t GetOffset() const { return ib_vmo_offset_; }
+
+        // Generate parameters for direct blocks in indirect block |ibindex|, which are contained
+        // in |barray|
+        DirectArgs GetDirect(blk_t* barray, unsigned ibindex) const;
+
+    protected:
+        const blk_t bindex_; // relative index of the first direct block within the first indirect
+                            // block
+        const blk_t ib_vmo_offset_; // index of the first indirect block
+    };
+
+    class DindirectArgs : public IndirectArgs {
+    public:
+        DindirectArgs(blk_op_t op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
+                      blk_t ib_vmo_offset, blk_t ibindex, blk_t dib_vmo_offset)
+            : IndirectArgs(op, array, count, bnos, bindex, ib_vmo_offset),
+              ibindex_(ibindex), dib_vmo_offset_(dib_vmo_offset) {}
+
+        // Number of doubly indirect blocks we need to iterate through to touch all |count| direct
+        // blocks.
+        blk_t GetCount() const {
+            return (ibindex_ + count_ + kMinfsDirectPerDindirect - 1) / kMinfsDirectPerDindirect;
+        }
+
+        blk_t GetOffset() const { return dib_vmo_offset_; }
+
+        // Generate parameters for indirect blocks in doubly indirect block |dibindex|, which are
+        // contained in |iarray|
+        IndirectArgs GetIndirect(blk_t* iarray, unsigned dibindex) const;
+
+    protected:
+        const blk_t ibindex_; // relative index of the first indirect block within the first
+                             // doubly indirect block
+        const blk_t dib_vmo_offset_; // index of the first doubly indirect block
+    };
+
+    // Allocate an indirect or doubly indirect block at |offset| within the indirect vmo and clear
+    // the in-memory block array
+    // Assumes that vmo_indirect_ has already been initialized
+    zx_status_t AllocateIndirect(WriteTxn* txn, blk_t index, IndirectArgs* args);
+
+    // Perform operation |op| on blocks as specified by |params|
+    // The BlockOp methods should not be called directly
+    // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
+    zx_status_t BlockOp(WriteTxn* txn, blk_op_t op, bop_params_t* params);
+    zx_status_t BlockOpDirect(WriteTxn* txn, DirectArgs* params);
+    zx_status_t BlockOpIndirect(WriteTxn* txn, IndirectArgs* params);
+    zx_status_t BlockOpDindirect(WriteTxn* txn, DindirectArgs* params);
+
+    // Get the disk block 'bno' corresponding to the 'n' block
+    // If 'txn' is non-null, new blocks are allocated for all un-allocated bnos.
+    // This can be extended to retrieve multiple contiguous blocks in one call
+    zx_status_t BlockGet(WriteTxn* txn, blk_t n, blk_t* bno);
     // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
+    // This can be extended to return indices of deleted bnos, or to delete a specific number of
+    // bnos
     zx_status_t BlocksShrink(WriteTxn* txn, blk_t start);
-
-    // Shrink |count| direct blocks from the |barray| array of direct blocks. Sets |*dirty| to
-    // true if anything is deleted.
-    zx_status_t BlocksShrinkDirect(WriteTxn *txn, size_t count, blk_t* barray, bool* dirty);
-
-    // Shrink |count| indirect blocks from the |iarray| array of indirect blocks. Sets |*dirty| to
-    // true if anything is deleted.
-    //
-    // For the first indirect block in a set, only remove the blocks from index |bindex| up to the
-    // end of the  indirect block. Only deletes this first indirect block if |bindex| is zero.
-    //
-    // On Fuchsia |ib_vmo_offset| contains the block offset of the |iarray| buffer within the
-    // cached indirect VMO. On other platforms, this argument may be ignored.
-    zx_status_t BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, size_t count,
-                                     uint32_t ib_vmo_offset, blk_t* iarray, bool* dirty);
-
-    // Shrink |count| doubly indirect blocks from the |diarray| array of doubly indirect blocks.
-    // Sets |*dirty| to true if anything is deleted.
-    //
-    // For the first doubly indirect block in a set, only remove blocks from indirect blocks from
-    // index |ibindex| up to the end of the doubly indirect block. |bindex| is the first direct
-    // block to be deleted in the first indirect block of the first doubly indirect block. Only
-    // delete the doubly indirect block if |ibindex| is zero AND |bindex| is zero.
-    //
-    // On Fuchsia |dib_vmo_offset| contains the block offset of the |diarray| buffer within the
-    // cached indirect VMO, and |ib_vmo_offset| contains the block offset of the indirect blocks
-    // pointed to from the doubly indirect block at diarray[0]. On other platforms, this argument
-    // may be ignored.
-    zx_status_t BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibindex, uint32_t bindex,
-                                           size_t count, uint32_t dib_vmo_offset,
-                                           uint32_t ib_vmo_offset, blk_t* diarray, bool* dirty);
 
     // Update the vnode's inode and write it to disk.
     void InodeSync(WriteTxn* txn, uint32_t flags);
@@ -474,9 +526,11 @@ private:
                                    uint64_t size);
 
     // Reads the block at |offset| in memory.
+    // Assumes that vmo_indirect_ has already been initialized
     void ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry);
 
     // Clears the block at |offset| in memory.
+    // Assumes that vmo_indirect_ has already been initialized
     void ClearIndirectVmoBlock(uint32_t offset);
 
     // The following functionality interacts with handles directly, and are not applicable outside

@@ -133,7 +133,6 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
     }
 
     n -= kMinfsIndirect * kMinfsDirectPerIndirect;
-    const uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDirectPerIndirect;
     i = n / (kMinfsDirectPerDindirect); // doubly indirect index
     n -= (i * kMinfsDirectPerDindirect);
     j = n / kMinfsDirectPerIndirect; // indirect index

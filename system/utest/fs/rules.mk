@@ -24,8 +24,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-clone.cpp \
     $(LOCAL_DIR)/test-directory.cpp \
     $(LOCAL_DIR)/test-dot-dot.c \
-    $(LOCAL_DIR)/test-link.c \
     $(LOCAL_DIR)/test-fcntl.cpp \
+    $(LOCAL_DIR)/test-link.c \
     $(LOCAL_DIR)/test-maxfile.cpp \
     $(LOCAL_DIR)/test-minfs.cpp \
     $(LOCAL_DIR)/test-mmap.cpp \
