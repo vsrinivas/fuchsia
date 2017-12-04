@@ -20,6 +20,9 @@
 #define QUEUE_SIZE 8u
 #define DATA_SIZE 512u
 
+namespace machina {
+namespace {
+
 class VirtioBlockTest {
  public:
   VirtioBlockTest() : block_(0, UINTPTR_MAX), queue_(&block_.queue()) {}
@@ -505,3 +508,6 @@ TEST(VirtioBlockTest, WriteToReadOnlyDevice) {
   memset(expected, 0, DATA_SIZE);
   ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
 }
+
+}  // namespace
+}  // namespace machina

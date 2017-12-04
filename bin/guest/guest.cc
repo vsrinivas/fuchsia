@@ -35,7 +35,7 @@
 static const size_t kNumUarts = 1;
 static const uint64_t kUartBases[kNumUarts] = {
     // TODO(abdulla): Considering parsing this from the MDI.
-    kPl011PhysBase,
+    machina::kPl011PhysBase,
 };
 #elif __x86_64__
 #include <hypervisor/x86/acpi.h>
@@ -45,10 +45,10 @@ static const uint64_t kUartBases[kNumUarts] = {
 
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = {
-    kI8250Base0,
-    kI8250Base1,
-    kI8250Base2,
-    kI8250Base3,
+    machina::kI8250Base0,
+    machina::kI8250Base1,
+    machina::kI8250Base2,
+    machina::kI8250Base3,
 };
 
 static zx_status_t create_vmo(uint64_t size,
@@ -68,7 +68,7 @@ static const uint64_t kVmoSize = 1u << 30;
 static uint32_t balloon_threshold_pages = 1024;
 
 static zx_status_t usage(const char* cmd) {
-// clang-format off
+  // clang-format off
   fprintf(stderr, "usage: %s [OPTIONS] kernel.bin\n", cmd);
   fprintf(stderr, "\n");
   fprintf(stderr, "OPTIONS:\n");
@@ -83,11 +83,11 @@ static zx_status_t usage(const char* cmd) {
   fprintf(stderr, "\t-d                 Demand-page balloon deflate requests\n");
   fprintf(stderr, "\t-g                 Enable graphics output to the framebuffer.\n");
   fprintf(stderr, "\n");
-// clang-format on
+  // clang-format on
   return ZX_ERR_INVALID_ARGS;
 }
 
-static void balloon_stats_handler(VirtioBalloon* balloon,
+static void balloon_stats_handler(machina::VirtioBalloon* balloon,
                                   const virtio_balloon_stat_t* stats,
                                   size_t len) {
   for (size_t i = 0; i < len; ++i) {
@@ -96,7 +96,7 @@ static void balloon_stats_handler(VirtioBalloon* balloon,
 
     uint32_t current_pages = balloon->num_pages();
     uint32_t available_pages =
-        static_cast<uint32_t>(stats[i].val / VirtioBalloon::kPageSize);
+        static_cast<uint32_t>(stats[i].val / machina::VirtioBalloon::kPageSize);
     uint32_t target_pages =
         current_pages + (available_pages - balloon_threshold_pages);
     if (current_pages == target_pages)
@@ -112,14 +112,14 @@ static void balloon_stats_handler(VirtioBalloon* balloon,
 }
 
 typedef struct balloon_task_args {
-  VirtioBalloon* balloon;
+  machina::VirtioBalloon* balloon;
   zx_duration_t interval;
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
   fbl::unique_ptr<balloon_task_args_t> args(
       static_cast<balloon_task_args_t*>(ctx));
-  VirtioBalloon* balloon = args->balloon;
+  machina::VirtioBalloon* balloon = args->balloon;
   while (true) {
     zx_nanosleep(zx_deadline_after(args->interval));
     args->balloon->RequestStats(
@@ -130,7 +130,7 @@ static int balloon_stats_task(void* ctx) {
   return ZX_OK;
 }
 
-static zx_status_t poll_balloon_stats(VirtioBalloon* balloon,
+static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
                                       zx_duration_t interval) {
   thrd_t thread;
   auto args = new balloon_task_args_t{balloon, interval};
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup UARTs.
-  Uart uart[kNumUarts];
+  machina::Uart uart[kNumUarts];
   for (size_t i = 0; i < kNumUarts; i++) {
     status = uart[i].Init(&guest, kUartBases[i]);
     if (status != ZX_OK) {
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
     }
   }
   // Setup interrupt controller.
-  InterruptController interrupt_controller;
+  machina::InterruptController interrupt_controller;
   status = interrupt_controller.Init(&guest);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create interrupt controller\n");
@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
   }
 
 #if __aarch64__
-  Pl031 pl031;
+  machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create PL031 RTC\n");
@@ -332,14 +332,14 @@ int main(int argc, char** argv) {
     return status;
   }
   // Setup IO ports.
-  IoPort io_port;
+  machina::IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create IO ports\n");
     return status;
   }
   // Setup TPM
-  Tpm tpm;
+  machina::Tpm tpm;
   status = tpm.Init(&guest);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create TPM\n");
@@ -348,7 +348,7 @@ int main(int argc, char** argv) {
 #endif
 
   // Setup PCI.
-  PciBus bus(&guest, &interrupt_controller);
+  machina::PciBus bus(&guest, &interrupt_controller);
   status = bus.Init();
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create PCI bus\n");
@@ -356,8 +356,8 @@ int main(int argc, char** argv) {
   }
 
   // Setup block device.
-  VirtioBlock block(physmem_addr, physmem_size);
-  PciDevice& virtio_block = block.pci_device();
+  machina::VirtioBlock block(physmem_addr, physmem_size);
+  machina::PciDevice& virtio_block = block.pci_device();
   if (block_path != NULL) {
     status = block.Init(block_path, guest.phys_mem());
     if (status != ZX_OK)
@@ -372,7 +372,8 @@ int main(int argc, char** argv) {
       return status;
   }
   // Setup memory balloon.
-  VirtioBalloon balloon(physmem_addr, physmem_size, guest.phys_mem().vmo());
+  machina::VirtioBalloon balloon(physmem_addr, physmem_size,
+                                 guest.phys_mem().vmo());
   balloon.set_deflate_on_demand(balloon_deflate_on_demand);
   status = bus.Connect(&balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
   if (status != ZX_OK)
@@ -380,9 +381,9 @@ int main(int argc, char** argv) {
   if (balloon_poll_interval > 0)
     poll_balloon_stats(&balloon, balloon_poll_interval);
   // Setup Virtio GPU.
-  VirtioGpu gpu(physmem_addr, physmem_size);
-  VirtioInput input(physmem_addr, physmem_size, "zircon-input",
-                    "serial-number");
+  machina::VirtioGpu gpu(physmem_addr, physmem_size);
+  machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
+                             "serial-number");
   if (use_gpu) {
     status = gpu.Init("/dev/class/framebuffer/000");
     if (status != ZX_OK)

@@ -17,6 +17,8 @@
 #define guest_paddr_to_host_vaddr(device, addr) \
   (static_cast<zx_vaddr_t>(((device)->guest_physmem_addr()) + (addr)))
 
+namespace machina {
+
 VirtioDevice::VirtioDevice(uint8_t device_id,
                            void* config,
                            size_t config_size,
@@ -343,3 +345,5 @@ zx_status_t VirtioDevice::WriteConfig(uint64_t addr, const IoValue& value) {
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+}  // namespace machina

@@ -11,6 +11,8 @@
 
 #include "garnet/lib/machina/address.h"
 
+namespace machina {
+
 // Stub TPM implementation.
 class Tpm : public IoHandler {
  public:
@@ -26,5 +28,7 @@ class Tpm : public IoHandler {
     return ZX_OK;
   }
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_X86_TPM_H_

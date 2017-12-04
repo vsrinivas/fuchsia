@@ -14,6 +14,9 @@
 #define KEYSET(bitmap, n) (bitmap[(n) >> 5] |= (1 << ((n)&31)))
 #define KEYCLR(bitmap, n) (bitmap[(n) >> 5] &= ~(1 << ((n)&31)))
 
+namespace machina {
+namespace {
+
 static const hid_keys_t kAllKeysUp = {};
 
 /* Event emitter that records all queued events for verification purposes. */
@@ -185,3 +188,6 @@ TEST(VirtioInputTest, HandleKeyPressAndRelease) {
   EXPECT_TRUE(emitter.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
   EXPECT_TRUE(emitter.HasBarrier(4));
 }
+
+}  // namespace
+}  // namespace machina

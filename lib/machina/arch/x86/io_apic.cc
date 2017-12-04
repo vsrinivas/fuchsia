@@ -19,27 +19,29 @@
 
 // clang-format off
 
-/* IO APIC register addresses. */
+// IO APIC register addresses.
 #define IO_APIC_IOREGSEL                0x00
 #define IO_APIC_IOWIN                   0x10
 
-/* IO APIC register addresses. */
+// IO APIC register addresses.
 #define IO_APIC_REGISTER_ID             0x00
 #define IO_APIC_REGISTER_VER            0x01
 #define IO_APIC_REGISTER_ARBITRATION    0x02
 
-/* IO APIC configuration constants. */
+// IO APIC configuration constants.
 #define IO_APIC_VERSION                 0x11
 #define FIRST_REDIRECT_OFFSET           0x10
 #define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IoApic::kNumRedirectOffsets - 1)
 
-/* DESTMOD register. */
+// DESTMOD register.
 #define IO_APIC_DESTMOD_PHYSICAL        0x00
 #define IO_APIC_DESTMOD_LOGICAL         0x01
 
 #define LOCAL_APIC_DFR_FLAT_MODEL       0xf
 
 // clang-format on
+
+namespace machina {
 
 zx_status_t IoApic::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::MMIO_SYNC, kIoApicPhysBase, kIoApicSize,
@@ -233,3 +235,5 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register,
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
+
+}  // namespace machina

@@ -18,7 +18,9 @@
 #define VIRTIO_BALLOON_Q_STATSQ 2
 #define VIRTIO_BALLOON_Q_COUNT 3
 
-/* Virtio memory balloon device. */
+namespace machina {
+
+// Virtio memory balloon device.
 class VirtioBalloon : public VirtioDevice {
  public:
   // Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
@@ -94,5 +96,7 @@ class VirtioBalloon : public VirtioDevice {
 
   virtio_balloon_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_BALLOON_H_

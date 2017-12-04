@@ -10,6 +10,8 @@
 
 #include "garnet/lib/machina/gpu_bitmap.h"
 
+namespace machina {
+
 class GpuResource;
 
 // A scanout represents a display that GPU resources can be rendered to.
@@ -34,5 +36,7 @@ class GpuScanout {
   GpuResource* resource_;
   GpuRect rect_;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_GPU_SCANOUT_H_

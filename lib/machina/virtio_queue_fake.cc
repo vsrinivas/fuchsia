@@ -8,6 +8,8 @@
 
 #include <fbl/alloc_checker.h>
 
+namespace machina {
+
 zx_status_t VirtioQueueFake::Init(uint16_t queue_size) {
   fbl::unique_ptr<uint8_t[]> desc;
   fbl::unique_ptr<uint8_t[]> avail;
@@ -136,3 +138,5 @@ DescBuilder& DescBuilder::Append(void* buf, size_t buf_len, bool write) {
 
   return *this;
 }
+
+}  // namespace machina

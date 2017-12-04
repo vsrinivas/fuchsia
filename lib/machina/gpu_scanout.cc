@@ -6,6 +6,8 @@
 
 #include "garnet/lib/machina/gpu_resource.h"
 
+namespace machina {
+
 void GpuScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
   GpuResource* res = resource_;
   if (res == nullptr) {
@@ -44,3 +46,5 @@ zx_status_t GpuScanout::SetResource(GpuResource* res,
   rect_.height = request->r.height;
   return ZX_OK;
 }
+
+}  // namespace machina

@@ -11,6 +11,9 @@
 
 #define VIRTIO_TEST_ID 30
 
+namespace machina {
+namespace {
+
 class TestDevice : public VirtioDevice {
  public:
   TestDevice()
@@ -51,3 +54,6 @@ TEST(VirtioQueueTest, HandleOverflow) {
   ASSERT_EQ(queue.avail->idx, 0);
   ASSERT_EQ(queue.index, 0);
 }
+
+}  // namespace
+}  // namespace machina

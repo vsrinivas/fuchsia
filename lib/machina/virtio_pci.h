@@ -10,6 +10,8 @@
 
 #include "garnet/lib/machina/pci.h"
 
+namespace machina {
+
 class VirtioDevice;
 
 typedef struct virtio_queue virtio_queue_t;
@@ -63,5 +65,7 @@ class VirtioPci : public PciDevice {
 
   VirtioDevice* device_;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_VIRTIO_PCI_H_

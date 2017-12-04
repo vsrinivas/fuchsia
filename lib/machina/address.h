@@ -7,6 +7,8 @@
 
 #include <limits.h>
 
+namespace machina {
+
 // The size of an ECAM region depends on values in the MCFG ACPI table. For
 // each ECAM region there is a defined physical base address as well as a bus
 // start/end value for that region.
@@ -86,5 +88,7 @@ static const uint64_t kPciConfigPortBase        = 0xcf8;
 static const uint64_t kPciConfigPortSize        = 0x8;
 
 // clang-format on
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ADDRESS_H_

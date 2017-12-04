@@ -12,6 +12,8 @@
 
 typedef struct file_state file_state_t;
 
+namespace machina {
+
 // Component to service block requests.
 class VirtioBlockRequestDispatcher {
  public:
@@ -68,5 +70,7 @@ class VirtioBlock : public VirtioDevice {
 
   fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher_;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_BLOCK_H_

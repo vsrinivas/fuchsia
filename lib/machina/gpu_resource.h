@@ -13,6 +13,8 @@
 #include "garnet/lib/machina/gpu.h"
 #include "garnet/lib/machina/gpu_bitmap.h"
 
+namespace machina {
+
 class GpuScanout;
 
 // A resource corresponds to a single display buffer.
@@ -86,5 +88,7 @@ class GpuResource
   GpuBitmap bitmap_;
   GpuScanout* scanout_;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_GPU_RESOURCE_H_

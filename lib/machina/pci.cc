@@ -22,7 +22,9 @@
 #define PCI_REGISTER_CAP_BASE 0xa4
 #define PCI_REGISTER_CAP_TOP UINT8_MAX
 
-/* PCI config relative IO port addresses (typically at 0xcf8). */
+namespace machina {
+
+// PCI config relative IO port addresses (typically at 0xcf8).
 constexpr uint16_t kPciConfigAddressPortBase = 0;
 constexpr uint16_t kPciConfigAddressPortTop = 3;
 constexpr uint16_t kPciConfigDataPortBase = 4;
@@ -35,13 +37,12 @@ constexpr uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
 constexpr uint8_t kPciCapTypeOffset = 0;
 constexpr uint8_t kPciCapNextOffset = 1;
 
-/* Per-device IRQ assignments.
- *
- * These are provided to the guest via the _SB section in the DSDT ACPI table.
- *
- * The DSDT defines interrupts for 5 devices (IRQ 32-36). Adding
- * additional devices beyond that will require updates to the DSDT.
- */
+// Per-device IRQ assignments.
+//
+// These are provided to the guest via the _SB section in the DSDT ACPI table.
+//
+// The DSDT defines interrupts for 5 devices (IRQ 32-36). Adding
+// additional devices beyond that will require updates to the DSDT.
 constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35,
                                                                36};
 
@@ -385,7 +386,7 @@ zx_status_t PciDevice::ReadCapability(uint8_t addr, uint32_t* out) const {
   return ZX_OK;
 }
 
-/* Read a 4 byte aligned value from PCI config space. */
+// Read a 4 byte aligned value from PCI config space.
 zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
   switch (reg) {
     //  ---------------------------------
@@ -550,3 +551,5 @@ zx_status_t PciDevice::Interrupt() const {
     return ZX_ERR_BAD_STATE;
   return bus_->Interrupt(*this);
 }
+
+}  // namespace machina

@@ -9,13 +9,17 @@
 
 #include "garnet/lib/machina/arch/x86/io_apic.h"
 
+namespace machina {
 using InterruptController = IoApic;
+}  // namespace machina
 
 #elif __aarch64__
 
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
 
+namespace machina {
 using InterruptController = GicDistributor;
+}  // namespace machina
 
 #endif  // __aarch64__
 

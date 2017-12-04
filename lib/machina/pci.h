@@ -50,14 +50,16 @@
 // clang-format on
 
 class Guest;
+
+namespace machina {
+
 class PciBus;
 class PciDevice;
 
-/* PCI capability structure.
- *
- * The 1-byte next pointer will be computed dynamically while traversing the
- * capabilities list.
- */
+// PCI capability structure.
+//
+// The 1-byte next pointer will be computed dynamically while traversing the
+// capabilities list.
 typedef struct pci_cap {
   // PCI capability ID as defined in PCI LOCAL BUS SPECIFICATION, REV. 3.0
   // Appendix H.
@@ -272,5 +274,7 @@ class PciBus {
   // Next mmio window to be allocated to connected devices.
   uint32_t mmio_base_ = kMmioBarBase;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_PCI_H_

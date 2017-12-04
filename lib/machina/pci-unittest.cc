@@ -16,7 +16,10 @@
   (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) | \
    ((reg)&PCI_TYPE1_REGISTER_MASK))
 
-/* Test we can read multiple fields in 1 32-bit word. */
+namespace machina {
+namespace {
+
+// Test we can read multiple fields in 1 32-bit word.
 TEST(PciDeviceTest, ReadConfigRegister) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -30,7 +33,7 @@ TEST(PciDeviceTest, ReadConfigRegister) {
   EXPECT_EQ(value.u32, PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16));
 }
 
-/* Verify we can read portions of a 32 bit word, one byte at a time. */
+// Verify we can read portions of a 32 bit word, one byte at a time.
 TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -48,14 +51,13 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
   }
 }
 
-/* PCI devices BAR sizes must be a power of 2 and must not support setting any
- * bits in the BAR that are not size aligned. Software often relies on this to
- * read the bar size by writing all 1's to the register and reading back the
- * value.
- *
- * This tests that we properly mask the lowest bits so software can compute the
- * BAR size.
- */
+// PCI devices BAR sizes must be a power of 2 and must not support setting any
+// bits in the BAR that are not size aligned. Software often relies on this to
+// read the bar size by writing all 1's to the register and reading back the
+// value.
+//
+// This tests that we properly mask the lowest bits so software can compute the
+// BAR size.
 TEST(PciDeviceTest, ReadBarSize) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -79,9 +81,8 @@ TEST(PciDeviceTest, ReadBarSize) {
   EXPECT_EQ(~(value.u32 & ~PCI_BAR_ASPACE_MASK) + 1, bar->size);
 }
 
-/* Verify stats & cap registers correctly show present capabilities and that
- * capability data is readable.
- */
+// Verify stats & cap registers correctly show present capabilities and that
+// capability data is readable.
 TEST(PciDeviceTest, ReadCapability) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -128,10 +129,9 @@ TEST(PciDeviceTest, ReadCapability) {
   EXPECT_EQ(0x0a0f0009u, cap_value.u32);
 }
 
-/* Build a list of capabilities with no data (only the required ID/next
- * fields). Verify the next pointers are correctly wired up to traverse
- * the linked list.
- */
+// Build a list of capabilities with no data (only the required ID/next
+// fields). Verify the next pointers are correctly wired up to traverse
+// the linked list.
 TEST(PciDeviceTest, ReadChainedCapability) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -166,25 +166,24 @@ TEST(PciDeviceTest, ReadChainedCapability) {
   EXPECT_EQ(0u, cap_ptr.u8);
 }
 
-/* Test accesses to the PCI config address ports.
- *
- * Access to the 32-bit PCI config address port is provided by the IO ports
- * 0xcf8 - 0xcfb. Accesses to each port must have the same alignment as the
- * port address used.
- *
- * The device operates on relative port addresses so we'll use 0-3 instead of
- * 0cf8-0xcfb
- *
- * Ex:
- *  -------------------------------------
- * | port  | valid access widths (bytes) |
- * --------------------------------------|
- * |   0   | 1, 2, 4                     |
- * |   1   | 1                           |
- * |   2   | 1, 2                        |
- * |   3   | 1                           |
- *  -------------------------------------
- */
+// Test accesses to the PCI config address ports.
+//
+// Access to the 32-bit PCI config address port is provided by the IO ports
+// 0xcf8 - 0xcfb. Accesses to each port must have the same alignment as the
+// port address used.
+//
+// The device operates on relative port addresses so we'll use 0-3 instead of
+// 0cf8-0xcfb
+//
+// Ex:
+//  -------------------------------------
+// | port  | valid access widths (bytes) |
+// --------------------------------------|
+// |   0   | 1, 2, 4                     |
+// |   1   | 1                           |
+// |   2   | 1, 2                        |
+// |   3   | 1                           |
+//  -------------------------------------
 TEST(PciBusTest, WriteConfigAddressPort) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -210,10 +209,9 @@ TEST(PciBusTest, WriteConfigAddressPort) {
   EXPECT_EQ(bus.config_addr(), 0xFACE9978u);
 }
 
-/* Test reading the PCI config address ports.
- *
- * See pci_bus_write_config_addr_port for more details.
- */
+// Test reading the PCI config address ports.
+//
+// See pci_bus_write_config_addr_port for more details.
 TEST(PciBusTest, ReadConfigAddressPort) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -242,10 +240,9 @@ TEST(PciBusTest, ReadConfigAddressPort) {
   EXPECT_EQ(value.u8, 0x56u);
 }
 
-/* The address written to the data port (0xcf8) is 4b aligned. The offset into
- * the data port range 0xcfc-0xcff is added to the address to access partial
- * words.
- */
+// The address written to the data port (0xcf8) is 4b aligned. The offset into
+// the data port range 0xcfc-0xcff is added to the address to access partial
+// words.
 TEST(PciBusTest, ReadConfigDataPort) {
   Guest guest;
   PciBus bus(&guest, nullptr);
@@ -285,3 +282,6 @@ TEST(PciBusTest, ReadConfigDataPort) {
   EXPECT_EQ(value.access_size, 2);
   EXPECT_EQ(value.u16, PCI_DEVICE_ID_INTEL_Q35);
 }
+
+}  // namespace
+}  // namespace machina

@@ -19,6 +19,8 @@
 #include "garnet/lib/machina/gpu_resource.h"
 #include "garnet/lib/machina/gpu_scanout.h"
 
+namespace machina {
+
 // A scanout that renders to a zircon framebuffer device.
 class FramebufferScanout : public GpuScanout {
  public:
@@ -360,3 +362,5 @@ void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
   }
   response->type = it->Flush(request);
 }
+
+}  // namespace machina

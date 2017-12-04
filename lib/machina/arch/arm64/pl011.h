@@ -10,6 +10,8 @@
 
 class Guest;
 
+namespace machina {
+
 // Implements the PL011 UART.
 class Pl011 : public IoHandler {
  public:
@@ -30,5 +32,7 @@ class Pl011 : public IoHandler {
 
   void Print(uint8_t ch);
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_ARM64_PL011_H_

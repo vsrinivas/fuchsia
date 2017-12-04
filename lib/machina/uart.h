@@ -9,13 +9,17 @@
 
 #include "garnet/lib/machina/arch/x86/i8250.h"
 
+namespace machina {
 using Uart = I8250;
+}  // namespace machina
 
 #elif __aarch64__
 
 #include "garnet/lib/machina/arch/arm64/pl011.h"
 
+namespace machina {
 using Uart = Pl011;
+}  // namespace machina
 
 #endif  // __aarch64__
 

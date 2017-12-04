@@ -9,6 +9,8 @@
 
 class Guest;
 
+namespace machina {
+
 // Target CPU for the software-generated interrupt.
 enum class InterruptTarget {
   MASK = 0b00,
@@ -36,5 +38,7 @@ class GicDistributor : public IoHandler {
 
   zx_status_t Interrupt(uint32_t global_irq) const;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_

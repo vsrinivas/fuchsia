@@ -11,9 +11,11 @@
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/rtc.h"
 
+namespace machina {
+
 // PL031 registers.
 enum class Pl031Register : uint64_t {
-    DR = 0x00,
+  DR = 0x00,
 };
 
 zx_status_t Pl031::Init(Guest* guest) {
@@ -38,3 +40,5 @@ zx_status_t Pl031::Write(uint64_t addr, const IoValue& value) {
   fprintf(stderr, "Unhandled PL031 address write %#lx\n", addr);
   return ZX_ERR_IO;
 }
+
+}  // namespace machina

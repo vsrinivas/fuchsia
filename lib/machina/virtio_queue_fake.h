@@ -11,6 +11,8 @@
 
 #include "garnet/lib/machina/virtio.h"
 
+namespace machina {
+
 class VirtioQueueFake;
 
 // Helper class for building buffer made up of chained descriptors.
@@ -109,3 +111,5 @@ class VirtioQueueFake {
 };
 
 #endif  // GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
+
+}  // namespace machina

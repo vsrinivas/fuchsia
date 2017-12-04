@@ -15,21 +15,23 @@
 
 // clang-format off
 
-/* PIC constatants. */
+namespace machina {
+
+// PIC constatants.
 constexpr uint16_t kPicDataPort                 = 1;
 constexpr uint8_t kPicInvalid                   = UINT8_MAX;
 
-/* PM1 relative port mappings. */
+// PM1 relative port mappings.
 constexpr uint16_t kPm1StatusPort               = 0;
 constexpr uint16_t kPm1EnablePort               = 2;
 constexpr uint16_t kPm1ControlPort              = PM1_CONTROL_PORT - PM1_EVENT_PORT;
 constexpr uint16_t kPm1Size                     = kPm1EnablePort + 1;
 
-/* RTC relative port mappings. */
+// RTC relative port mappings.
 constexpr uint16_t kRtcIndexPort                = 0;
 constexpr uint16_t kRtcDataPort                 = 1;
 
-/* RTC register addresses. */
+// RTC register addresses.
 constexpr uint8_t kRtcRegisterSeconds           = 0;
 constexpr uint8_t kRtcRegisterSecondsAlarm      = 1;
 constexpr uint8_t kRtcRegisterMinutes           = 2;
@@ -43,19 +45,19 @@ constexpr uint8_t kRtcRegisterA                 = 10;
 constexpr uint8_t kRtcRegisterB                 = 11;
 constexpr uint8_t kRtcRegisterC                 = 12;
 
-/* RTC register B flags. */
+// RTC register B flags.
 constexpr uint8_t kRtcRegisterBDaylightSavings  = 1 << 0;
 constexpr uint8_t kRtcRegisterBHourFormat       = 1 << 1;
 constexpr uint8_t kRtcRegisterBInterruptMask    = 0x70;
 
-/* RTC relative port mappings. */
+// RTC relative port mappings.
 constexpr uint16_t kI8042DataPort               = 0x0;
 constexpr uint16_t kI8042CommandPort            = 0x4;
 
-/* I8042 status flags. */
+// I8042 status flags.
 constexpr uint8_t kI8042StatusOutputFull        = 1 << 0;
 
-/* I8042 test constants. */
+// I8042 test constants.
 constexpr uint8_t kI8042CommandTest             = 0xaa;
 constexpr uint8_t kI8042DataTestResponse        = 0x55;
 
@@ -330,3 +332,5 @@ zx_status_t IoPort::Init(Guest* guest) {
 
   return ZX_OK;
 }
+
+}  // namespace machina

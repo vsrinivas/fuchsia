@@ -10,6 +10,9 @@
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "gtest/gtest.h"
 
+namespace machina {
+namespace {
+
 static constexpr uint32_t kDisplayWidth = 1024;
 static constexpr uint32_t kDisplayHeight = 768;
 static constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
@@ -311,3 +314,6 @@ TEST(VirtioGpuTest, HandleTransfer2D) {
     offset += entry.len;
   }
 }
+
+}  // namespace
+}  // namespace machina

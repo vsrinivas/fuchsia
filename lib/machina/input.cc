@@ -16,6 +16,8 @@
 #include <hypervisor/bits.h>
 #include <virtio/virtio_ids.h>
 
+namespace machina {
+
 static const char* kInputDirPath = "/dev/class/input";
 
 // HID keycode -> evdev keycode.
@@ -412,3 +414,5 @@ zx_status_t KeyboardEventSource::SendBarrierEvent() {
     return status;
   return emitter_->FlushInputEvents();
 }
+
+}  // namespace machina

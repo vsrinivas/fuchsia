@@ -8,6 +8,8 @@
 #include <virtio/virtio_ids.h>
 #include <zircon/syscalls.h>
 
+namespace machina {
+
 static zx_status_t decommit_pages(zx_handle_t vmo,
                                   uint64_t addr,
                                   uint64_t len) {
@@ -193,3 +195,5 @@ uint32_t VirtioBalloon::num_pages() {
   fbl::AutoLock lock(&config_mutex_);
   return config_.num_pages;
 }
+
+}  // namespace machina

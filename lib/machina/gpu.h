@@ -17,6 +17,8 @@
 #define VIRTIO_GPU_Q_CURSORQ 1
 #define VIRTIO_GPU_Q_COUNT 2
 
+namespace machina {
+
 class GpuResource;
 class GpuScanout;
 class VirtioGpu;
@@ -107,5 +109,7 @@ class VirtioGpu : public VirtioDevice {
   virtio_queue_t queues_[VIRTIO_GPU_Q_COUNT];
   virtio_gpu_config_t config_ = {};
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_GPU_H_

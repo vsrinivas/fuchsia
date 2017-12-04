@@ -19,7 +19,9 @@
 #define VIRTIO_INPUT_Q_STATUSQ 1
 #define VIRTIO_INPUT_Q_COUNT 2
 
-/* Interface for manipulating the stream of input events. */
+namespace machina {
+
+// Interface for manipulating the stream of input events.
 class VirtioInputEventEmitter {
  public:
   virtual ~VirtioInputEventEmitter() = default;
@@ -29,7 +31,7 @@ class VirtioInputEventEmitter {
   virtual zx_status_t FlushInputEvents() = 0;
 };
 
-/* Manages input events from a single (host) keyboard device. */
+// Manages input events from a single (host) keyboard device.
 class KeyboardEventSource
     : public fbl::SinglyLinkedListable<fbl::unique_ptr<KeyboardEventSource>> {
  public:
@@ -66,7 +68,7 @@ class KeyboardEventSource
   VirtioInputEventEmitter* emitter_;
 };
 
-/* Virtio input device. */
+// Virtio input device.
 class VirtioInput : public VirtioDevice, public VirtioInputEventEmitter {
  public:
   VirtioInput(uintptr_t guest_physmem_addr,
@@ -106,5 +108,7 @@ class VirtioInput : public VirtioDevice, public VirtioInputEventEmitter {
   fbl::SinglyLinkedList<fbl::unique_ptr<KeyboardEventSource>> keyboards_
       __TA_GUARDED(mutex_);
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_INPUT_H_

@@ -10,6 +10,8 @@
 
 class Guest;
 
+namespace machina {
+
 // Implements the I8250 UART.
 class I8250 : public IoHandler {
  public:
@@ -31,5 +33,7 @@ class I8250 : public IoHandler {
 
   void Print(uint8_t ch);
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_X86_I8250_H_

@@ -10,6 +10,8 @@
 
 class Guest;
 
+namespace machina {
+
 // Implements the PL031 RTC.
 class Pl031 : public IoHandler {
  public:
@@ -19,5 +21,7 @@ class Pl031 : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_ARM64_PL031_H_

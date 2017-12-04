@@ -9,6 +9,8 @@
 
 #include "garnet/lib/machina/address.h"
 
+namespace machina {
+
 // NOTE: This should match the same constant in arch/hypervisor.h within Zircon.
 static const uint64_t kNumInterrupts = 256;
 static const uint64_t kGicRevision = 2;
@@ -104,3 +106,5 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
 zx_status_t GicDistributor::Interrupt(uint32_t global_irq) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+}  // namespace machina

@@ -8,6 +8,8 @@
 
 #include "garnet/lib/machina/gpu_scanout.h"
 
+namespace machina {
+
 fbl::unique_ptr<GpuResource> GpuResource::Create(
     const virtio_gpu_resource_create_2d_t* request,
     VirtioGpu* gpu) {
@@ -107,3 +109,5 @@ void GpuResource::CopyBytes(uint64_t offset, uint8_t* dest, size_t size) {
     base += entry.length;
   }
 }
+
+}  // namespace machina

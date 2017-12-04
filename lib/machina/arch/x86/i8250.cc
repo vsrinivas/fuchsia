@@ -11,6 +11,8 @@
 
 #include "garnet/lib/machina/address.h"
 
+namespace machina {
+
 // Use an async trap for the first port (TX port) only.
 static const uint64_t kI8250AsyncBase = 0;
 static const uint64_t kI8250AsyncSize = 1;
@@ -123,3 +125,5 @@ void I8250::Print(uint8_t ch) {
   fflush(stdout);
   tx_offset_ = 0;
 }
+
+}  // namespace machina

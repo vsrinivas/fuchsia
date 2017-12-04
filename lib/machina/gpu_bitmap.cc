@@ -8,6 +8,8 @@
 
 #include "garnet/lib/machina/gpu.h"
 
+namespace machina {
+
 GpuBitmap::GpuBitmap() : GpuBitmap(0, 0, nullptr) {}
 
 GpuBitmap::GpuBitmap(GpuBitmap&& o)
@@ -21,8 +23,7 @@ GpuBitmap::GpuBitmap(GpuBitmap&& o)
 GpuBitmap::GpuBitmap(uint32_t width, uint32_t height, uint8_t* ptr)
     : width_(width), height_(height), ptr_(ptr) {}
 
-GpuBitmap::GpuBitmap(uint32_t width,
-                     uint32_t height)
+GpuBitmap::GpuBitmap(uint32_t width, uint32_t height)
     : width_(width),
       height_(height),
       buffer_(new uint8_t[width * height * VirtioGpu::kBytesPerPixel]),
@@ -67,3 +68,5 @@ void GpuBitmap::DrawBitmap(const GpuBitmap& source_bitmap,
     source_offset += (source_bitmap.width() * VirtioGpu::kBytesPerPixel);
   }
 }
+
+}  // namespace machina

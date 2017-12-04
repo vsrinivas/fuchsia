@@ -12,32 +12,33 @@
 
 #include "garnet/lib/machina/virtio.h"
 
+namespace machina {
+
 static uint8_t kPciCapTypeVendorSpecific = 0x9;
 
 static uint16_t kPciVendorIdVirtio = 0x1af4;
 
-/* Virtio PCI Bar Layout.
- *
- * Expose all read/write fields on BAR0 using a strongly ordered mapping.
- * Map the Queue notify region to BAR1 with a BELL type that does not require
- * the guest to decode any instruction fields. The queue to notify can be
- * inferred based on the address accessed alone.
- *
- *          BAR0                BAR1
- *      ------------  00h   ------------  00h
- *     | Virtio PCI |      |  Queue 0   |
- *     |   Common   |      |   Notify   |
- *     |   Config   |      |------------| 04h
- *     |------------| 38h  |  Queue 1   |
- *     | ISR Config |      |   Notify   |
- *     |------------| 3ch  |------------|
- *     |  Device-   |      |    ...     |
- *     | Specific   |      |------------| 04 * N
- *     |  Config    |      |  Queue N   |
- *     |            |      |   Notify   |
- *      ------------        ------------
- * These structures are defined in Virtio 1.0 Section 4.1.4.
- */
+// Virtio PCI Bar Layout.
+//
+// Expose all read/write fields on BAR0 using a strongly ordered mapping.
+// Map the Queue notify region to BAR1 with a BELL type that does not require
+// the guest to decode any instruction fields. The queue to notify can be
+// inferred based on the address accessed alone.
+//
+//          BAR0                BAR1
+//      ------------  00h   ------------  00h
+//     | Virtio PCI |      |  Queue 0   |
+//     |   Common   |      |   Notify   |
+//     |   Config   |      |------------| 04h
+//     |------------| 38h  |  Queue 1   |
+//     | ISR Config |      |   Notify   |
+//     |------------| 3ch  |------------|
+//     |  Device-   |      |    ...     |
+//     | Specific   |      |------------| 04 * N
+//     |  Config    |      |  Queue N   |
+//     |            |      |   Notify   |
+//      ------------        ------------
+// These structures are defined in Virtio 1.0 Section 4.1.4.
 static const uint8_t kVirtioPciBar = 0;
 static const uint8_t kVirtioPciNotifyBar = 1;
 
@@ -91,9 +92,8 @@ static const size_t kVirtioPciDeviceCfgBase = 0x3c;
 static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
               "Virtio PCI notify config has illegal alignment.");
 
-/* Handle reads to the common configuration structure as defined in
- * Virtio 1.0 Section 4.1.4.3.
- */
+// Handle reads to the common configuration structure as defined in
+// Virtio 1.0 Section 4.1.4.3.
 zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
   switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
@@ -238,9 +238,8 @@ static void virtio_queue_update_addr(virtio_queue_t* queue) {
   virtio_queue_set_used_addr(queue, queue->addr.used);
 }
 
-/* Handle writes to the common configuration structure as defined in
- * Virtio 1.0 Section 4.1.4.3.
- */
+// Handle writes to the common configuration structure as defined in
+// Virtio 1.0 Section 4.1.4.3.
 zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
@@ -480,3 +479,5 @@ zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
 
   return device_->Kick(static_cast<uint16_t>(notify_queue));
 }
+
+}  // namespace machina

@@ -11,6 +11,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+namespace machina {
+
 class PicHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest, uint16_t base);
@@ -77,5 +79,7 @@ class IoPort {
   RtcHandler rtc_;
   I8042Handler i8042_;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_X86_IO_PORT_H_

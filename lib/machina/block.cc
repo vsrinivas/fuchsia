@@ -17,6 +17,8 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 
+namespace machina {
+
 // Dispatcher that fulfills block requests using file-descriptor IO
 // (ex: read/write to a file descriptor).
 class FdioBlockDispatcher : public VirtioBlockRequestDispatcher {
@@ -390,3 +392,5 @@ zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,
   }
   return ZX_OK;
 }
+
+}  // namespace machina

@@ -11,6 +11,8 @@
 
 #include "garnet/lib/machina/address.h"
 
+namespace machina {
+
 // clang-format off
 
 // PL011 registers.
@@ -76,3 +78,5 @@ void Pl011::Print(uint8_t ch) {
   }
   fflush(stdout);
 }
+
+}  // namespace machina

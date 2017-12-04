@@ -8,9 +8,13 @@
 #include <time.h>
 #include <zircon/types.h>
 
+namespace machina {
+
 // Returns the current time in seconds.
 static inline time_t rtc_time() {
   return zx_time_get(ZX_CLOCK_UTC) / ZX_SEC(1);
 }
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_RTC_H_

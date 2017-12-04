@@ -12,6 +12,8 @@
 class Guest;
 class LocalApic;
 
+namespace machina {
+
 // Implements the IO APIC.
 class IoApic : public IoHandler {
  public:
@@ -54,5 +56,7 @@ class IoApic : public IoHandler {
   // Connected local APICs.
   LocalApic* local_apic_[kMaxLocalApics] = {};
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_

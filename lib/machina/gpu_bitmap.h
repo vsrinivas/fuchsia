@@ -10,6 +10,8 @@
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
+namespace machina {
+
 struct GpuRect {
   uint32_t x;
   uint32_t y;
@@ -54,5 +56,7 @@ class GpuBitmap {
   fbl::unique_ptr<uint8_t[]> buffer_;
   uint8_t* ptr_;
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_GPU_BITMAP_H_
