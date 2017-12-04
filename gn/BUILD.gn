@@ -730,6 +730,9 @@ foreach(platform, zircon_platforms) {
     # Keep this value in sync with //scripts/devshell/lib/images_build_vars.sh
     efi_image_path = "$images_dir/efi-${platform}.blk"
 
+    # EFI commandline (Gigaboot options)
+    efi_cmdline = "efi_bootloader_cmdline"
+
     inputs = [
       mkfs_msdosfs_bin,
       zircon_bin,
@@ -750,6 +753,8 @@ foreach(platform, zircon_platforms) {
       rebase_path(bootdata_bin),
       "--zedboot",
       rebase_path(zedboot_bin),
+      "--cmdline",
+      rebase_path(efi_cmdline),
     ]
 
     if (target_cpu == "x64") {
