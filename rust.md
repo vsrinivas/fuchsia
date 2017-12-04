@@ -73,12 +73,12 @@ changes which haven't made it to *crates.io*. These mirrors are located in
 To be able to run the script updating third-party crates, you first need to
 build the `cargo-vendor` utility:
 ```
-scripts/build_cargo_vendor.sh
+scripts/rust/build_cargo_vendor.sh
 ```
 
 To update these crates, run the following command:
 ```
-scripts/update_rust_crates.py
+scripts/rust/update_rust_crates.py
 ```
 
 The configurations used as a reference to generate the set of required crates
@@ -144,7 +144,7 @@ libraries built independently from the crate.
 [manifest]: http://doc.crates.io/manifest.html "Manifest file"
 [3p-crates]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/vendor "Third-party crates"
 [source-replacement]: http://doc.crates.io/source-replacement.html "Source replacement"
-[update-script]: https://fuchsia.googlesource.com/scripts/+/master/update_rust_crates.py "Update script"
+[update-script]: https://fuchsia.googlesource.com/scripts/+/master/rust/update_rust_crates.py "Update script"
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
 [local-crates]: https://fuchsia.googlesource.com/build/+/master/rust/local_crates.py "Local crates"
 [build-integration]: https://github.com/rust-lang/rust-roadmap/issues/12 "Build integration"
