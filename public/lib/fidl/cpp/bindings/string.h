@@ -81,6 +81,8 @@ class String {
 
   size_t size() const { return value_.size(); }
 
+  bool empty() const { return value_.empty(); }
+
   const char* data() const { return value_.data(); }
 
   const char& at(size_t offset) const { return value_.at(offset); }
