@@ -26,6 +26,7 @@ class VulkanTest {
 public:
     bool Initialize();
     static bool Exec(VulkanTest* t1, VulkanTest* t2);
+    static bool ExecUsingQueue(VulkanTest* t1, VulkanTest* t2);
 
 private:
     bool InitVulkan();
@@ -263,10 +264,6 @@ bool VulkanTest::InitVulkan()
             .flags = 0,
         };
 
-        // Try not setting the export part; not sure if this is required
-        if (i == kSemaphoreCount - 1)
-            create_info.pNext = nullptr;
-
         VkSemaphore semaphore;
         result = vkCreateSemaphore(vk_device_, &create_info, nullptr, &semaphore);
         if (result != VK_SUCCESS)
@@ -350,12 +347,96 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
     return true;
 }
 
+bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2)
+{
+    VkResult result;
+
+    std::vector<uint32_t> handle(kSemaphoreCount);
+
+    // Export semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        VkSemaphoreGetFuchsiaHandleInfoKHR info{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+            .pNext = nullptr,
+            .semaphore = t1->vk_semaphore_[i],
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+        };
+        result = t1->vkGetSemaphoreFuchsiaHandleKHR_(t1->vk_device_, &info, &handle[i]);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkGetSemaphoreFdKHR returned %d", result);
+    }
+
+    // Import semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        // Permanent import.
+        VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
+            .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
+            .pNext = nullptr,
+            .semaphore = t2->vk_semaphore_[i],
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handle = handle[i]};
+
+        result = t1->vkImportSemaphoreFuchsiaHandleKHR_(t2->vk_device_, &import_info);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkImportSemaphoreFdKHR failed: %d", result);
+    }
+
+    VkSubmitInfo submit_info1 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                 .signalSemaphoreCount = 1,
+                                 .pSignalSemaphores = &t1->vk_semaphore_[0]};
+    result = vkQueueSubmit(t1->vk_queue_, 1, &submit_info1, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkQueueSubmit failed: %d", result);
+
+    VkPipelineStageFlags stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkSubmitInfo submit_info2 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                 .waitSemaphoreCount = 1,
+                                 .pWaitSemaphores = &t2->vk_semaphore_[0],
+                                 .pWaitDstStageMask = &stage_flags,
+                                 .signalSemaphoreCount = 1,
+                                 .pSignalSemaphores = &t2->vk_semaphore_[1]};
+    result = vkQueueSubmit(t2->vk_queue_, 1, &submit_info2, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkQueueSubmit failed: %d", result);
+
+    VkSubmitInfo submit_info3 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                 .waitSemaphoreCount = 1,
+                                 .pWaitSemaphores = &t1->vk_semaphore_[1],
+                                 .pWaitDstStageMask = &stage_flags};
+    vkQueueSubmit(t1->vk_queue_, 1, &submit_info3, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkQueueSubmit failed: %d", result);
+
+    result = vkQueueWaitIdle(t1->vk_queue_);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+    result = vkQueueWaitIdle(t2->vk_queue_);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+
+    // Destroy semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        vkDestroySemaphore(t1->vk_device_, t1->vk_semaphore_[i], nullptr);
+        vkDestroySemaphore(t2->vk_device_, t2->vk_semaphore_[i], nullptr);
+    }
+
+    return true;
+}
+
 TEST(VulkanExtension, ExternalSemaphoreFuchsia)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
     ASSERT_TRUE(t2.Initialize());
     ASSERT_TRUE(VulkanTest::Exec(&t1, &t2));
+}
+
+TEST(VulkanExtension, QueueExternalSemaphoreFuchsia)
+{
+    VulkanTest t1, t2;
+    ASSERT_TRUE(t1.Initialize());
+    ASSERT_TRUE(t2.Initialize());
+    ASSERT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2));
 }
 
 } // namespace
