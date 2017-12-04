@@ -357,9 +357,8 @@ void JobHolder::CreateApplicationWithRunner(
     return;
 
   NamespaceBuilder builder;
-  builder.AddRoot();
+  builder.AddDeprecatedDefaultDirectories();
   builder.AddServices(std::move(svc));
-  builder.AddDev();
   AddInfoDir(&builder);
 
   // Add the custom namespace.
