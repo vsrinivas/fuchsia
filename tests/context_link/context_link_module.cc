@@ -41,13 +41,7 @@ class TestApp {
     link_->Set(nullptr,
                "{\"link_value\":\"1\",\"@context\":{\"topic\":\""
                "context_link_test\"}}");
-
-    // TODO(mesch): If we set values on a Link too fast, they get swallowed by
-    // syncing old values back from the ledger. FW-208.
-    link_->Sync([this] {
-      fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this] { Set2(); }, fxl::TimeDelta::FromSeconds(5));
-    });
+    link_->Sync([this] { Set2(); });
   }
 
   void Set2() {
