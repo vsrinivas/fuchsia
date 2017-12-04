@@ -6,29 +6,52 @@
 
 namespace cloud_provider_firestore {
 
-struct FirestoreServiceImpl::DocumentResponseCall {
-  void set_on_empty(fxl::Closure on_empty) { this->on_empty = on_empty; }
+namespace {
+// Handles the general case of call response that returns a status and a
+// response value.
+template <typename ResponseType>
+struct ResponseVariant {
+  using CallbackType = std::function<void(grpc::Status, ResponseType)>;
 
-  // Context used to make the remote call.
-  grpc::ClientContext context;
-
-  // Reader used to retrieve the result of the remote call.
-  std::unique_ptr<
-      grpc::ClientAsyncResponseReader<google::firestore::v1beta1::Document>>
-      response_reader;
-
-  // Response of the remote call.
-  google::firestore::v1beta1::Document response;
-
-  // Response status of the remote call.
-  grpc::Status status;
-
-  // Callback to be called upon completing the remote call.
-  std::function<void(bool)> on_complete;
-
-  // Callback to be called when the call object can be deleted.
-  fxl::Closure on_empty;
+  static void Call(const CallbackType& callback,
+                   grpc::Status status,
+                   ResponseType response) {
+    callback(std::move(status), std::move(response));
+  }
 };
+
+// Handles a special case of response type being empty, in which case we skip
+// the google::protobuf::Empty value and only pass the status to the caller.
+template <>
+struct ResponseVariant<google::protobuf::Empty> {
+  using CallbackType = std::function<void(grpc::Status)>;
+
+  static void Call(const CallbackType& callback,
+                   grpc::Status status,
+                   google::protobuf::Empty response) {
+    callback(std::move(status));
+  }
+};
+
+template <typename ResponseType>
+void MakeCall(
+    SingleResponseCall<ResponseType>* call,
+    std::unique_ptr<SingleResponseReader<ResponseType>> response_reader,
+    typename ResponseVariant<ResponseType>::CallbackType callback) {
+  call->response_reader = std::move(response_reader);
+
+  call->on_complete = [call, callback = std::move(callback)](bool ok) {
+    ResponseVariant<ResponseType>::Call(callback, std::move(call->status),
+                                        std::move(call->response));
+    if (call->on_empty) {
+      call->on_empty();
+    }
+  };
+  call->response_reader->Finish(&call->response, &call->status,
+                                &call->on_complete);
+}
+
+}  // namespace
 
 FirestoreServiceImpl::FirestoreServiceImpl(
     std::string server_id,
@@ -47,25 +70,41 @@ FirestoreServiceImpl::~FirestoreServiceImpl() {
   polling_thread_.join();
 }
 
-void FirestoreServiceImpl::CreateDocument(
-    google::firestore::v1beta1::CreateDocumentRequest request,
-    std::function<void(grpc::Status status,
-                       google::firestore::v1beta1::Document document)>
+void FirestoreServiceImpl::GetDocument(
+    google::firestore::v1beta1::GetDocumentRequest request,
+    std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
-
   DocumentResponseCall& call = document_response_calls_.emplace();
+  auto response_reader =
+      firestore_->AsyncGetDocument(&call.context, std::move(request), &cq_);
+  MakeCall<google::firestore::v1beta1::Document>(
+      &call, std::move(response_reader), std::move(callback));
+}
 
-  call.response_reader =
-      firestore_->AsyncCreateDocument(&call.context, request, &cq_);
+void FirestoreServiceImpl::CreateDocument(
+    google::firestore::v1beta1::CreateDocumentRequest request,
+    std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+        callback) {
+  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  DocumentResponseCall& call = document_response_calls_.emplace();
+  auto response_reader =
+      firestore_->AsyncCreateDocument(&call.context, std::move(request), &cq_);
 
-  call.on_complete = [&call, callback = std::move(callback)](bool ok) {
-    callback(std::move(call.status), std::move(call.response));
-    if (call.on_empty) {
-      call.on_empty();
-    }
-  };
-  call.response_reader->Finish(&call.response, &call.status, &call.on_complete);
+  MakeCall<google::firestore::v1beta1::Document>(
+      &call, std::move(response_reader), std::move(callback));
+}
+
+void FirestoreServiceImpl::DeleteDocument(
+    google::firestore::v1beta1::DeleteDocumentRequest request,
+    std::function<void(grpc::Status)> callback) {
+  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  EmptyResponseCall& call = empty_response_calls_.emplace();
+  auto response_reader =
+      firestore_->AsyncDeleteDocument(&call.context, std::move(request), &cq_);
+
+  MakeCall<google::protobuf::Empty>(&call, std::move(response_reader),
+                                    std::move(callback));
 }
 
 std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(

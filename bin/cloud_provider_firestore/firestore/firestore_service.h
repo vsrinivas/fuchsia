@@ -40,11 +40,22 @@ class FirestoreService {
   // `projects/{project_id}/databases/{database_id}/documents`.
   virtual const std::string& GetRootPath() = 0;
 
+  // Gets a single document.
+  virtual void GetDocument(
+      google::firestore::v1beta1::GetDocumentRequest request,
+      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+          callback) = 0;
+
+  // Creates a new document.
   virtual void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
-      std::function<void(grpc::Status status,
-                         google::firestore::v1beta1::Document document)>
+      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) = 0;
+
+  // Deletes a document.
+  virtual void DeleteDocument(
+      google::firestore::v1beta1::DeleteDocumentRequest request,
+      std::function<void(grpc::Status)> callback) = 0;
 
   virtual std::unique_ptr<ListenCallHandler> Listen(
       ListenCallClient* client) = 0;

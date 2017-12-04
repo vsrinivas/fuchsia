@@ -15,6 +15,37 @@
 
 namespace cloud_provider_firestore {
 
+template <typename ResponseType>
+using SingleResponseReader = grpc::ClientAsyncResponseReader<ResponseType>;
+
+template <typename ResponseType>
+struct SingleResponseCall {
+  void set_on_empty(fxl::Closure on_empty) { this->on_empty = on_empty; }
+
+  // Context used to make the remote call.
+  grpc::ClientContext context;
+
+  // Reader used to retrieve the result of the remote call.
+  std::unique_ptr<SingleResponseReader<ResponseType>> response_reader;
+
+  // Response of the remote call.
+  ResponseType response;
+
+  // Response status of the remote call.
+  grpc::Status status;
+
+  // Callback to be called upon completing the remote call.
+  std::function<void(bool)> on_complete;
+
+  // Callback to be called when the call object can be deleted.
+  fxl::Closure on_empty;
+};
+
+using DocumentResponseCall =
+    SingleResponseCall<google::firestore::v1beta1::Document>;
+
+using EmptyResponseCall = SingleResponseCall<google::protobuf::Empty>;
+
 // Implementation of the FirestoreService interface.
 //
 // This class is implemented as a wrapper over the Firestore connection. We use
@@ -33,17 +64,22 @@ class FirestoreServiceImpl : public FirestoreService {
 
   const std::string& GetRootPath() override { return root_path_; }
 
+  void GetDocument(
+      google::firestore::v1beta1::GetDocumentRequest request,
+      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+          callback) override;
+
   void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
-      std::function<void(grpc::Status status,
-                         google::firestore::v1beta1::Document document)>
+      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
+
+  void DeleteDocument(google::firestore::v1beta1::DeleteDocumentRequest request,
+                      std::function<void(grpc::Status)> callback) override;
 
   std::unique_ptr<ListenCallHandler> Listen(ListenCallClient* client) override;
 
  private:
-  struct DocumentResponseCall;
-
   void Poll();
 
   const std::string server_id_;
@@ -57,6 +93,7 @@ class FirestoreServiceImpl : public FirestoreService {
   grpc::CompletionQueue cq_;
 
   callback::AutoCleanableSet<DocumentResponseCall> document_response_calls_;
+  callback::AutoCleanableSet<EmptyResponseCall> empty_response_calls_;
 
   callback::AutoCleanableSet<ListenCall> listen_calls_;
 };
