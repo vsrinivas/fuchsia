@@ -20,7 +20,7 @@ namespace netconnector {
 namespace mdns {
 
 // Sends and receives mDNS messages on any number of interfaces.
-class MdnsTransceiver {
+class MdnsTransceiver : public netstack::NotificationListener {
  public:
   using LinkChangeCallback = std::function<void()>;
   using InboundMessageCallback =
@@ -56,10 +56,6 @@ class MdnsTransceiver {
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
 
  private:
-  static const fxl::TimeDelta kMinAddressRecheckDelay;
-  static const fxl::TimeDelta kMaxAddressRecheckDelay;
-  static constexpr int64_t kAddressRecheckDelayMultiplier = 2;
-
   struct InterfaceId {
     InterfaceId(const std::string& name, sa_family_t family)
         : name_(name), family_(family) {}
@@ -80,15 +76,19 @@ class MdnsTransceiver {
   // specified address.
   bool InterfaceAlreadyFound(const IpAddress& address);
 
+  // NotificationListener implementation.
+  void OnInterfacesChanged(
+      fidl::Array<netstack::NetInterfacePtr> interfaces) override;
+
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::vector<InterfaceId> enabled_interfaces_;
   LinkChangeCallback link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;
   std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;
-  fxl::TimeDelta address_recheck_delay_ = kMinAddressRecheckDelay;
   std::unique_ptr<app::ApplicationContext> application_context_;
   netstack::NetstackPtr netstack_;
+  fidl::Binding<netstack::NotificationListener> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
 #include <limits>
 #include <unordered_set>
 
@@ -227,7 +228,8 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   host_name_ = host_name;
   host_full_name_ = MdnsNames::LocalHostFullName(host_name);
 
-  FXL_LOG(INFO) << "Verifying uniqueness of host name " << host_full_name_;
+  std::cerr << "mDNS: Verifying uniqueness of host name " << host_full_name_
+            << "\n";
 
   transceiver_.SetHostFullName(host_full_name_);
 
@@ -241,12 +243,14 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
         FXL_DCHECK(agents_.empty());
 
         if (!successful) {
-          FXL_LOG(WARNING) << "Another host is using name " << host_full_name_;
+          std::cerr << "mDNS: Another host is using name " << host_full_name_
+                    << "\n";
           OnHostNameConflict();
           return;
         }
 
-        FXL_LOG(INFO) << "Using unique host name " << host_full_name_;
+        std::cerr << "mDNS: Using unique host name " << host_full_name_
+                  << "\n";
 
         // Start all the agents.
         started_ = true;

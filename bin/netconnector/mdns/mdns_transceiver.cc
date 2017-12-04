@@ -20,17 +20,10 @@
 namespace netconnector {
 namespace mdns {
 
-// static
-const fxl::TimeDelta MdnsTransceiver::kMinAddressRecheckDelay =
-    fxl::TimeDelta::FromSeconds(1);
-
-// static
-const fxl::TimeDelta MdnsTransceiver::kMaxAddressRecheckDelay =
-    fxl::TimeDelta::FromSeconds(5 * 60);
-
 MdnsTransceiver::MdnsTransceiver()
     : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      binding_(this) {
   netstack_ =
       application_context_->ConnectToEnvironmentService<netstack::Netstack>();
 }
@@ -51,12 +44,28 @@ void MdnsTransceiver::Start(
   link_change_callback_ = link_change_callback;
   inbound_message_callback_ = inbound_message_callback;
 
+  fidl::InterfaceHandle<netstack::NotificationListener> listener_handle;
+
+  binding_.Bind(&listener_handle);
+  binding_.set_connection_error_handler([this]() {
+    binding_.set_connection_error_handler(nullptr);
+    binding_.Close();
+    FXL_LOG(ERROR) << "Connection to netstack dropped.";
+  });
+
+  netstack_->RegisterListener(std::move(listener_handle));
+
   FindNewInterfaces();
 }
 
 void MdnsTransceiver::Stop() {
   for (auto& interface : interfaces_) {
     interface->Stop();
+  }
+
+  if (binding_.is_bound()) {
+    binding_.set_connection_error_handler(nullptr);
+    binding_.Close();
   }
 }
 
@@ -161,15 +170,6 @@ void MdnsTransceiver::FindNewInterfaces() {
           }
         }
 
-        if (recheck_addresses) {
-          task_runner_->PostDelayedTask([this]() { FindNewInterfaces(); },
-                                        address_recheck_delay_);
-
-          address_recheck_delay_ =
-              std::min(address_recheck_delay_ * kAddressRecheckDelayMultiplier,
-                       kMaxAddressRecheckDelay);
-        }
-
         if (link_change) {
           FXL_DCHECK(link_change_callback_);
           link_change_callback_();
@@ -185,6 +185,11 @@ bool MdnsTransceiver::InterfaceAlreadyFound(const IpAddress& address) {
   }
 
   return false;
+}
+
+void MdnsTransceiver::OnInterfacesChanged(
+    fidl::Array<netstack::NetInterfacePtr> interfaces) {
+  FindNewInterfaces();
 }
 
 }  // namespace mdns

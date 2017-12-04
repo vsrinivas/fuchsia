@@ -9,6 +9,8 @@
 #include <poll.h>
 #include <sys/socket.h>
 
+#include <iostream>
+
 #include "garnet/bin/netconnector/mdns/dns_formatting.h"
 #include "garnet/bin/netconnector/mdns/dns_reading.h"
 #include "garnet/bin/netconnector/mdns/dns_writing.h"
@@ -54,8 +56,8 @@ bool MdnsInterfaceTransceiver::Start(const InboundMessageCallback& callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  FXL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", address "
-                << address_;
+  std::cerr << "Starting mDNS on interface " << name_ << ", address "
+            << address_ << ".\n";
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
