@@ -120,6 +120,7 @@ static tftp_status file_open_write(const char* filename, size_t size,
         launchpad_transfer_fd(lp, fds[0], STDIN_FILENO);
         if (launchpad_go(lp, &file_info->paver.process, NULL) != ZX_OK) {
             printf("netsvc: tftp couldn't launch paver\n");
+            close(fds[1]);
             return TFTP_ERR_IO;
         }
 
@@ -186,14 +187,16 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
 
 static void file_close(void* cookie) {
     file_info_t* file_info = cookie;
-    if (file_info->type != paver && file_info->netboot_file == NULL) {
+    if (file_info->type == netboot && file_info->netboot_file == NULL) {
         netfile_close();
-    } else if (file_info->type == paver) {
+    } else if (file_info->type == paver && file_info->filename[0] != '\0') {
         zx_signals_t signals;
         close(file_info->paver.fd);
         zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED,
                            zx_deadline_after(ZX_SEC(10)), &signals);
         zx_handle_close(file_info->paver.process);
+        // Extra protection against double-close.
+        file_info->filename[0] = '\0';
     }
 }
 
@@ -243,7 +246,8 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     tftp_session_set_transport_interface(session, &transport_ifc);
 }
 
-static void end_connection(void) {
+static void end_connection(void* cookie) {
+    file_close(cookie);
     session = NULL;
     tftp_next_timeout = ZX_TIME_INFINITE;
 }
@@ -254,11 +258,11 @@ void tftp_timeout_expired(void) {
                                       &file_info);
     if (result == TFTP_ERR_TIMED_OUT) {
         printf("netsvc: excessive timeouts, dropping tftp connection\n");
-        end_connection();
+        end_connection(&file_info);
         netfile_abort_write();
     } else if (result < 0) {
         printf("netsvc: failed to generate timeout response, dropping tftp connection\n");
-        end_connection();
+        end_connection(&file_info);
         netfile_abort_write();
     } else {
         if (last_msg_size > 0) {
@@ -299,13 +303,13 @@ void tftp_recv(void* data, size_t len,
                                          &handler_opts);
     if (status < 0) {
         printf("netsvc: tftp protocol error:%s\n", err_msg);
-        end_connection();
+        end_connection(&file_info);
         netfile_abort_write();
     } else if (status == TFTP_TRANSFER_COMPLETED) {
         printf("netsvc: tftp %s of file %s completed\n",
                file_info.is_write ? "write" : "read",
                file_info.filename);
-        end_connection();
+        end_connection(&file_info);
     }
 }
 
