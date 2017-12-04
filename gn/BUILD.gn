@@ -606,6 +606,7 @@ zedboot_binary_patterns = [
   "bin/fixfs",
   "bin/fsck*",
   "bin/gpt",
+  "bin/killall",
   "bin/lsblk",
   "bin/lsdev",
   "bin/lsusb",
