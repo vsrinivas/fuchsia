@@ -19,6 +19,9 @@ static constexpr size_t kMaxAuthorities = 1024;
 static constexpr size_t kMaxAdditionals = 1024;
 
 void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
+  size_t start_position_of_current_run = reader.bytes_consumed();
+  size_t end_position_of_original_run = 0;
+
   while (reader.healthy()) {
     uint8_t label_size;
     reader >> label_size;
@@ -30,14 +33,21 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
       reader >> label_size;
       offset |= label_size;
 
-      // Set the read position to that offset and rest of the name.
-      size_t bytes_consumed = reader.bytes_consumed();
-      reader.SetBytesConsumed(offset);
-      ReadNameLabels(reader, chars);
+      if (offset > start_position_of_current_run) {
+        // This is an attempt to loop or point forward: bad in either case.
+        reader.MarkUnhealthy();
+        return;
+      }
 
-      // Restore the read position.
-      reader.SetBytesConsumed(bytes_consumed);
-      break;
+      if (end_position_of_original_run == 0) {
+        end_position_of_original_run = reader.bytes_consumed();
+        FXL_DCHECK(end_position_of_original_run != 0);
+      }
+
+      // Set the read position to that offset and rest of the name.
+      reader.SetBytesConsumed(offset);
+      start_position_of_current_run = offset;
+      continue;
     }
 
     if (label_size > 63) {
@@ -46,6 +56,7 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
     }
 
     if (label_size == 0) {
+      // End of name.
       break;
     }
 
@@ -56,6 +67,11 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
     }
 
     chars[chars.size() - 1] = '.';
+  }
+
+  // If we changed position to pick up fragments, restore the position.
+  if (end_position_of_original_run != 0) {
+    reader.SetBytesConsumed(end_position_of_original_run);
   }
 }
 
