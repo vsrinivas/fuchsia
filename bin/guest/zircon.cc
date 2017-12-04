@@ -12,39 +12,12 @@
 #include <zircon/assert.h>
 #include <zircon/boot/bootdata.h>
 
-#include "zircon.h"
+#include "garnet/bin/guest/efi.h"
+#include "garnet/bin/guest/zircon.h"
 
 static const uintptr_t kKernelOffset = 0x00100000;
 static const uintptr_t kBootdataOffset = 0x04000000;
 static const uint64_t kBuildSigStartMagic = 0x5452545347495342;  // BSIGSTRT
-
-#if __aarch64__
-static const uint16_t kMzSignature = 0x5a4d;  // MZ
-static const uint32_t kMzMagic = 0x644d5241;  // ARM\x64
-
-// MZ header used to boot ARM64 kernels.
-//
-// See: https://www.kernel.org/doc/Documentation/arm64/booting.txt.
-struct MzHeader {
-  uint32_t code0;
-  uint32_t code1;
-  uint64_t kernel_off;
-  uint64_t kernel_len;
-  uint64_t flags;
-  uint64_t reserved0;
-  uint64_t reserved1;
-  uint64_t reserved2;
-  uint32_t magic;
-  uint32_t pe_off;
-} __PACKED;
-static_assert(sizeof(MzHeader) == 64, "");
-
-static bool is_mz(const MzHeader* header) {
-  return (header->code0 & UINT16_MAX) == kMzSignature &&
-         header->kernel_len > sizeof(MzHeader) && header->magic == kMzMagic &&
-         header->pe_off >= sizeof(MzHeader);
-}
-#endif
 
 static bool is_bootdata(const bootdata_t* header) {
   return header->type == BOOTDATA_CONTAINER &&
@@ -196,36 +169,25 @@ static zx_status_t create_bootdata(const uintptr_t addr,
 #endif
 }
 
-static zx_status_t is_zircon(const size_t size,
-                             const uintptr_t first_page,
+static zx_status_t is_zircon(const uintptr_t first_page,
                              uintptr_t* guest_ip,
                              uintptr_t* kernel_off,
                              uintptr_t* kernel_len) {
   zircon_kernel_t* kernel_header =
       reinterpret_cast<zircon_kernel_t*>(first_page);
-  if (is_bootdata(&kernel_header->hdr_file)) {
-    if (kernel_header->hdr_kernel.type != BOOTDATA_KERNEL) {
-      fprintf(stderr, "Invalid Zircon kernel header\n");
-      return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-    *guest_ip = kernel_header->data_kernel.entry64;
-    *kernel_off = kKernelOffset;
-    *kernel_len =
-        sizeof(bootdata_t) + BOOTDATA_ALIGN(kernel_header->hdr_file.length);
-    return ZX_OK;
+
+  if (!is_bootdata(&kernel_header->hdr_file)) {
+    return read_efi(first_page, guest_ip, kernel_off, kernel_len);
+  } else if (kernel_header->hdr_kernel.type != BOOTDATA_KERNEL) {
+    fprintf(stderr, "Invalid Zircon kernel header\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-#if __aarch64__
-  MzHeader* mz_header = reinterpret_cast<MzHeader*>(first_page);
-  if (is_mz(mz_header)) {
-    *guest_ip = mz_header->kernel_off;
-    *kernel_off = mz_header->kernel_off;
-    *kernel_len = mz_header->kernel_len;
-    return ZX_OK;
-  }
-#endif
-
-  return ZX_ERR_NOT_SUPPORTED;
+  *guest_ip = kernel_header->data_kernel.entry64;
+  *kernel_off = kKernelOffset;
+  *kernel_len =
+      sizeof(bootdata_t) + BOOTDATA_ALIGN(kernel_header->hdr_file.length);
+  return ZX_OK;
 }
 
 static bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
@@ -244,7 +206,7 @@ zx_status_t setup_zircon(const uintptr_t addr,
   uintptr_t kernel_off = 0;
   uintptr_t kernel_len = 0;
   zx_status_t status =
-      is_zircon(size, first_page, guest_ip, &kernel_off, &kernel_len);
+      is_zircon(first_page, guest_ip, &kernel_off, &kernel_len);
   if (status != ZX_OK)
     return status;
 

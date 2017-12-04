@@ -12,7 +12,7 @@
 
 #include <hypervisor/guest.h>
 
-#include "linux.h"
+#include "garnet/bin/guest/linux.h"
 
 // clang-format off
 #define SECTOR_SIZE             512u

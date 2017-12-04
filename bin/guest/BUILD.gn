@@ -8,6 +8,7 @@ executable("bin") {
   output_name = "guest"
 
   sources = [
+    "efi.cc",
     "guest.cc",
     "linux.cc",
     "zircon.cc",
