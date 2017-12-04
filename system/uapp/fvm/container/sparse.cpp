@@ -24,7 +24,7 @@ zx_status_t SparseContainer::Create(const char* path, size_t slice_size,
 }
 
 SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
-    : Container(slice_size) {
+    : Container(slice_size), disk_size_(0) {
     fd_.reset(open(path, O_CREAT | O_RDWR, 0666));
 
     if (!fd_) {
@@ -138,6 +138,12 @@ zx_status_t SparseContainer::Commit() {
     if (!dirty_ || image_.partition_count == 0) {
         fprintf(stderr, "Commit: Nothing to write.\n");
         return ZX_OK;
+    }
+
+    // Reset file length to 0
+    if (ftruncate(fd_.get(), 0) != 0) {
+        fprintf(stderr, "Failed to truncate fvm container");
+        return ZX_ERR_IO;
     }
 
     // Recalculate and verify header length
