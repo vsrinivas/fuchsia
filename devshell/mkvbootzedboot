@@ -41,7 +41,9 @@ sudo chown "${USER}" "${USB_DEVICE}"
 
 # Destroy any existing GPT/MBR on the device and re-create
 echo -n "Create new GPT partition table... "
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" repair "${USB_DEVICE}"
 "${FUCHSIA_BUILD_DIR}/tools/cgpt" create -z "${USB_DEVICE}"
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" create "${USB_DEVICE}"
 echo "done"
 
 echo -n "Create new partitions... "
