@@ -18,6 +18,7 @@ function HELP {
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
+    echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
     echo "-G <version>         : use GIC v2 or v3"
     echo "-I <interface name>  : network interface name, default is qemu."
@@ -52,6 +53,7 @@ CLANG=0
 DISK=0
 DISKFILE="blk.bin"
 DISKTYPE=
+DISKFMT="raw"
 BUILDDIR=
 GIC=0
 GRAPHICS=0
@@ -112,6 +114,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
             disktype=*) DISKTYPE=${OPTARG#*=};;
+            diskfmt=*) DISKFMT=${OPTARG#*=};;
             vnc=*) VNC=${OPTARG#*=};;
             *)
                 echo unrecognized long option
@@ -208,7 +211,7 @@ if (( $DISK )); then
         fi
     fi
 
-    ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
+    ARGS+=" -drive file=${DISKFILE},format=${DISKFMT},if=none,id=mydisk"
     if [[ "$DISKTYPE" == "virtio" ]]; then
         ARGS+=" -device virtio-blk-pci,drive=mydisk"
     elif [[ "$DISKTYPE" == "ahci" ]]; then
