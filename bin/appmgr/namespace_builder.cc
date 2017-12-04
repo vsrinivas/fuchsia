@@ -108,7 +108,6 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
 void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   // TODO(abarth): Remove items from this list as clients no longer need them.
   PushDirectoryFromPath("/blobstore");
-  PushDirectoryFromPath("/boot");
   PushDirectoryFromPath("/dev");
   PushDirectoryFromPath("/data");
   PushDirectoryFromPath("/system");
