@@ -119,14 +119,18 @@ private:
 
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
 public:
-    InterruptRequest(uint64_t interrupt_time_ns) : interrupt_time_ns_(interrupt_time_ns) {}
+    InterruptRequest(uint64_t interrupt_time_ns, uint32_t master_interrupt_control)
+        : interrupt_time_ns_(interrupt_time_ns), master_interrupt_control_(master_interrupt_control)
+    {
+    }
 
 protected:
     magma::Status Process(MsdIntelDevice* device) override
     {
-        return device->ProcessInterrupts(interrupt_time_ns_);
+        return device->ProcessInterrupts(interrupt_time_ns_, master_interrupt_control_);
     }
     uint64_t interrupt_time_ns_;
+    uint32_t master_interrupt_control_;
 };
 
 class MsdIntelDevice::DumpRequest : public DeviceRequest {
@@ -165,19 +169,7 @@ void MsdIntelDevice::Destroy()
     DLOG("Destroy");
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-    if (register_io_)
-        registers::MasterInterruptControl::write(register_io_.get(), false);
-
-    interrupt_thread_quit_flag_ = true;
-
-    if (interrupt_)
-        interrupt_->Signal();
-
-    if (interrupt_thread_.joinable()) {
-        DLOG("joining interrupt thread");
-        interrupt_thread_.join();
-        DLOG("joined");
-    }
+    interrupt_manager_.reset();
 
     device_thread_quit_flag_ = true;
 
@@ -257,9 +249,13 @@ bool MsdIntelDevice::Init(void* device_handle)
     QuerySliceInfo(&subslice_total_, &eu_total_);
     ReadDisplaySize();
 
-    interrupt_ = platform_device_->RegisterInterrupt();
-    if (!interrupt_)
+    auto platform_interrupt = platform_device_->RegisterInterrupt();
+    if (!platform_interrupt)
         return DRETF(false, "failed to register interrupt");
+
+    interrupt_manager_ = InterruptManager::Create(this, std::move(platform_interrupt));
+    if (!interrupt_manager_)
+        return DRETF(false, "failed to create interrupt manager");
 
     PerProcessGtt::InitPrivatePat(register_io_.get());
 
@@ -299,8 +295,6 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     semaphore_port_ = magma::SemaphorePort::Create();
 
-    registers::MasterInterruptControl::write(register_io_.get(), true);
-
 #if MSD_INTEL_ENABLE_MODESETTING
     // The modesetting code is only tested on gen 9 (Skylake).
     if (DeviceId::is_gen9(device_id_))
@@ -324,8 +318,6 @@ bool MsdIntelDevice::RenderEngineInit()
 
     if (!render_engine_cs_->RenderInit(global_context_, std::move(init_batch), gtt_))
         return DRETF(false, "render_engine_cs failed RenderInit");
-
-    registers::MasterInterruptControl::write(register_io_.get(), true);
 
     return true;
 }
@@ -362,11 +354,11 @@ void MsdIntelDevice::StartDeviceThread()
         });
     }
 
-    // TODO: move interrupt thread processing into device thread.
-    // However for now, we need a separate interrupt thread and it
-    // requires the device thread.
-    DASSERT(!interrupt_thread_.joinable());
-    interrupt_thread_ = std::thread([this] { this->InterruptThreadLoop(); });
+    // Don't start interrupt processing until the device thread is running.
+    interrupt_manager_->RegisterCallback(
+        InterruptCallback, this,
+        registers::MasterInterruptControl::kRenderInterruptsPendingBitMask |
+            registers::MasterInterruptControl::kDisplayEnginePipeAInterruptsPendingBit);
 
     DASSERT(!wait_thread_.joinable());
     wait_thread_ = std::thread([this] { this->WaitThreadLoop(); });
@@ -375,30 +367,18 @@ void MsdIntelDevice::StartDeviceThread()
     wait_thread_.detach();
 }
 
-int MsdIntelDevice::InterruptThreadLoop()
+void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_control)
 {
-    magma::PlatformThreadHelper::SetCurrentThreadName("InterruptThread");
-    DLOG("Interrupt thread started");
+    DASSERT(data);
 
-    while (!interrupt_thread_quit_flag_) {
-        DLOG("waiting for interrupt");
-        interrupt_->Wait();
-        DLOG("Returned from interrupt wait!");
+    auto request =
+        std::make_unique<InterruptRequest>(get_current_time_ns(), master_interrupt_control);
+    auto reply = request->GetReply();
 
-        if (interrupt_thread_quit_flag_)
-            break;
+    reinterpret_cast<MsdIntelDevice*>(data)->EnqueueDeviceRequest(std::move(request), true);
 
-        auto request = std::make_unique<InterruptRequest>(get_current_time_ns());
-        auto reply = request->GetReply();
-
-        EnqueueDeviceRequest(std::move(request), true);
-
-        TRACE_DURATION("magma", "Interrupt Request Wait");
-        reply->Wait();
-    }
-
-    DLOG("Interrupt thread exited");
-    return 0;
+    TRACE_DURATION("magma", "Interrupt Request Wait");
+    reply->Wait();
 }
 
 void MsdIntelDevice::WaitThreadLoop()
@@ -639,11 +619,9 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
     progress_->Completed(sequence_number);
 }
 
-magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns)
+magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
+                                                uint32_t master_interrupt_control)
 {
-    registers::MasterInterruptControl::write(register_io_.get(), false);
-
-    uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
     DLOG("ProcessInterrupts 0x%08x", master_interrupt_control);
 
     TRACE_DURATION("magma", "ProcessInterrupts");
@@ -688,9 +666,6 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns)
 
         ProcessFlipComplete(interrupt_time_ns);
     }
-
-    interrupt_->Complete();
-    registers::MasterInterruptControl::write(register_io_.get(), true);
 
     return MAGMA_STATUS_OK;
 }

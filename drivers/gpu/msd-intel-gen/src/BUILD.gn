@@ -31,6 +31,8 @@ source_set("src") {
     "gpu_mapping_cache.h",
     "gtt.cc",
     "gtt.h",
+    "interrupt_manager.cc",
+    "interrupt_manager.h",
     "modeset/displayport.cc",
     "modeset/displayport.h",
     "modeset/edid.cc",

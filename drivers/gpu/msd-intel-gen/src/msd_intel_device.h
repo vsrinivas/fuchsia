@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MSD_DEVICE_H
-#define MSD_DEVICE_H
+#ifndef MSD_INTEL_DEVICE_H
+#define MSD_INTEL_DEVICE_H
 
-#include <deque>
 #include <list>
 #include <mutex>
 #include <thread>
+
 #include "device_request.h"
 #include "engine_command_streamer.h"
 #include "global_context.h"
 #include "gpu_progress.h"
 #include "gtt.h"
+#include "interrupt_manager.h"
 #include "magma_util/fps_printer.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
@@ -27,6 +28,7 @@
 
 class MsdIntelDevice : public msd_device_t,
                        public EngineCommandStreamer::Owner,
+                       public InterruptManager::Owner,
                        public MsdIntelConnection::Owner {
 public:
     // Creates a device for the given |device_handle| and returns ownership.
@@ -101,6 +103,13 @@ private:
         return register_io_.get();
     }
 
+    // InterruptManager::Owner
+    RegisterIo* register_io_for_interrupt() override
+    {
+        DASSERT(register_io_);
+        return register_io_.get();
+    }
+
     // EngineCommandStreamer::Owner
     Sequencer* sequencer() override
     {
@@ -142,7 +151,7 @@ private:
                 const magma_system_image_descriptor& image_desc,
                 std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
                 present_buffer_callback_t callback);
-    magma::Status ProcessInterrupts(uint64_t interrupt_time_ns);
+    magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control);
     magma::Status ProcessDumpStatusToLog();
 
     void ProcessPendingFlip();
@@ -161,7 +170,7 @@ private:
 
     int DeviceThreadLoop();
     void FrequencyMonitorDeviceThreadLoop();
-    int InterruptThreadLoop();
+    static void InterruptCallback(void* data, uint32_t master_interrupt_control);
     void WaitThreadLoop();
 
     void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
@@ -187,10 +196,8 @@ private:
     std::thread freq_monitor_device_thread_;
     std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
     std::atomic_bool device_thread_quit_flag_{false};
-    std::atomic_bool interrupt_thread_quit_flag_{false};
     std::unique_ptr<GpuProgress> progress_;
 
-    std::thread interrupt_thread_;
     std::thread wait_thread_;
 
     std::unique_ptr<magma::PlatformPciDevice> platform_device_;
@@ -200,7 +207,7 @@ private:
     std::shared_ptr<GlobalContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
     std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
-    std::unique_ptr<magma::PlatformInterrupt> interrupt_;
+    std::unique_ptr<InterruptManager> interrupt_manager_;
     std::shared_ptr<GpuMappingCache> mapping_cache_;
     std::unique_ptr<magma::SemaphorePort> semaphore_port_;
 
@@ -238,4 +245,4 @@ private:
     friend class TestCommandBuffer;
 };
 
-#endif // MSD_DEVICE_H
+#endif // MSD_INTEL_DEVICE_H
