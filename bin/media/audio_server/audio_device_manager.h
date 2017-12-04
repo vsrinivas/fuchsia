@@ -129,6 +129,8 @@ class AudioDeviceManager {
   void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device);
   void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device);
 
+  void LinkToCapturers(const fbl::RefPtr<AudioDevice>& device);
+
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
