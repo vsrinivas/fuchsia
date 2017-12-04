@@ -99,7 +99,7 @@ For vendor layers, specify the Topaz revision with --topaz-revision.""")
     parser.add_argument('--layer',
                         help='Name of the layer to inspect',
                         choices=LAYERS,
-                        required=True)
+                        default='topaz')
     parser.add_argument('--topaz-revision',
                         help='(vendor only) revision of the Topaz layer')
     args = parser.parse_args()
