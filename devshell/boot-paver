@@ -25,7 +25,11 @@ shift
 case "${machine_type}" in
   # TODO(raggi): ramdisk isn't a paver, but, this script will replace `fx boot` at which point this is correct behavior
   ram)
-    ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${ZIRCON_PLATFORM}.bin"
+    netbootbin="netboot-${ZIRCON_PROJECT}.bin"
+    ramdisk="${FUCHSIA_BUILD_DIR}/${netbootbin}"
+    # TODO(raggi): temporary build invocation until build produces all boot
+    # volumes by default
+    fx-command-run build "${netbootbin}"
     disks=()
   ;;
   efi|acer|nuc)
