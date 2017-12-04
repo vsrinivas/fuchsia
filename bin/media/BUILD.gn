@@ -21,14 +21,15 @@ group("tools") {
 }
 
 package("audio_server") {
-  system_image = true
-
   deps = [
     "//garnet/bin/media/audio_server",
   ]
 
-  binaries = [ {
-        name = "audio_server"
+  binary = "audio_server"
+
+  meta = [ {
+        path = rebase_path("audio_server/meta/sandbox")
+        dest = "sandbox"
       } ]
 }
 

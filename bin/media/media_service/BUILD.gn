@@ -5,17 +5,16 @@
 import("//build/package.gni")
 
 package("media_service") {
-  system_image = true
-
   deps = [
     ":media_service_bin",
   ]
 
-  binaries = [
-    {
-        name = "media_service"
-    },
-  ]
+  binary = "media_service"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 executable("media_service_bin") {
