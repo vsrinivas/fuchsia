@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
@@ -16,6 +15,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/ledger/fidl/ledger.fidl-sync.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/app_test.h"
@@ -50,10 +50,10 @@ class LedgerAppTest : public ::test::TestWithMessageLoop {
 
  protected:
   void Init(std::vector<std::string> additional_args) {
-    app::ServiceProviderPtr child_services;
+    app::Services child_services;
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "ledger";
-    launch_info->services = child_services.NewRequest();
+    launch_info->service_request = child_services.NewRequest();
     launch_info->arguments.push_back("--no_minfs_wait");
     launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
     for (auto& additional_arg : additional_args) {
@@ -68,10 +68,8 @@ class LedgerAppTest : public ::test::TestWithMessageLoop {
       }
     });
 
-    app::ConnectToService(child_services.get(),
-                          ledger_repository_factory_.NewRequest());
-    app::ConnectToService(child_services.get(),
-                          fidl::GetSynchronousProxy(&controller_));
+    child_services.ConnectToService(ledger_repository_factory_.NewRequest());
+    child_services.ConnectToService(fidl::GetSynchronousProxy(&controller_));
   }
 
   void RegisterShutdownCallback(std::function<void()> callback) {

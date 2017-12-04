@@ -6,10 +6,10 @@
 
 #include <utility>
 
-#include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/svc/cpp/services.h"
 
 namespace test {
 namespace {
@@ -29,14 +29,13 @@ CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
 
 void CloudProviderFirebaseFactory::Init() {
   services_thread_ = fsl::CreateThread(&services_task_runner_);
-  app::ServiceProviderPtr child_services;
+  app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kCloudProviderFirebaseAppUrl;
-  launch_info->services = child_services.NewRequest();
+  launch_info->service_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
-  app::ConnectToService(child_services.get(),
-                        cloud_provider_factory_.NewRequest());
+  child_services.ConnectToService(cloud_provider_factory_.NewRequest());
 }
 
 cloud_provider::CloudProviderPtr

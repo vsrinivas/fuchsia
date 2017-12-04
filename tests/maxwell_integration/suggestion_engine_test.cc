@@ -9,6 +9,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
 #include "peridot/bin/agents/ideas.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -187,14 +188,13 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   void SetUp() override {
     ContextEngineTestBase::SetUp();
 
-    app::ServiceProviderPtr suggestion_services =
-        StartServiceProvider("suggestion_engine");
+    app::Services suggestion_services = StartServices("suggestion_engine");
     suggestion_engine_ =
-        app::ConnectToService<SuggestionEngine>(suggestion_services.get());
+        suggestion_services.ConnectToService<SuggestionEngine>();
     suggestion_provider_ =
-        app::ConnectToService<SuggestionProvider>(suggestion_services.get());
+        suggestion_services.ConnectToService<SuggestionProvider>();
     suggestion_debug_ =
-        app::ConnectToService<SuggestionDebug>(suggestion_services.get());
+        suggestion_services.ConnectToService<SuggestionDebug>();
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;

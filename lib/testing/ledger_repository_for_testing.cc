@@ -28,8 +28,8 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting(
   ledger_app_client_ = std::make_unique<AppClient<ledger::LedgerController>>(
       app_launcher.get(), std::move(ledger_config));
 
-  ConnectToService(ledger_app_client_->services(),
-                   ledger_repo_factory_.NewRequest());
+  ledger_app_client_->services().ConnectToService(
+      ledger_repo_factory_.NewRequest());
 }
 
 LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;

@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "lib/app/cpp/connect.h"
 #include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -51,8 +50,8 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
     FlowToken flow{this};
 
-    ConnectToService(agent_context_impl_->app_client_->services(),
-                     agent_context_impl_->agent_.NewRequest());
+    agent_context_impl_->app_client_->services().ConnectToService(
+        agent_context_impl_->agent_.NewRequest());
 
     // We only want to use Lifecycle if it exists.
     agent_context_impl_->app_client_->primary_service()
@@ -198,8 +197,8 @@ void AgentContextImpl::NewEntityProviderConnection(
            agent_controller_request =
                std::move(agent_controller_request)]() mutable {
             FXL_CHECK(state_ == State::RUNNING);
-            ConnectToService(app_client_->services(),
-                             std::move(entity_provider_request));
+            app_client_->services().ConnectToService(
+                std::move(entity_provider_request));
             agent_controller_bindings_.AddBinding(
                 this, std::move(agent_controller_request));
           }));

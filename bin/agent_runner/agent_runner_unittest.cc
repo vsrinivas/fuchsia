@@ -74,14 +74,14 @@ class MyDummyAgent : Agent,
                      public app::ApplicationController,
                      public testing::MockBase {
  public:
-  MyDummyAgent(fidl::InterfaceRequest<app::ServiceProvider> outgoing_services,
+  MyDummyAgent(zx::channel service_request,
                fidl::InterfaceRequest<app::ApplicationController> ctrl)
       : app_controller_(this, std::move(ctrl)), agent_binding_(this) {
     outgoing_services_.AddService<Agent>(
         [this](fidl::InterfaceRequest<Agent> request) {
           agent_binding_.Bind(std::move(request));
         });
-    outgoing_services_.AddBinding(std::move(outgoing_services));
+    outgoing_services_.ServeDirectory(std::move(service_request));
   }
 
   void KillApplication() { app_controller_.Close(); }
@@ -110,7 +110,7 @@ class MyDummyAgent : Agent,
   }
 
  private:
-  app::ServiceProviderImpl outgoing_services_;
+  app::ServiceNamespace outgoing_services_;
   fidl::Binding<app::ApplicationController> app_controller_;
   fidl::Binding<modular::Agent> agent_binding_;
 
@@ -129,7 +129,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
           app::ApplicationLaunchInfoPtr launch_info,
           fidl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
-            std::move(launch_info->services), std::move(ctrl));
+            std::move(launch_info->service_request), std::move(ctrl));
         ++agent_launch_count;
       });
 
@@ -171,7 +171,7 @@ TEST_F(AgentRunnerTest, AgentController) {
       [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
                      fidl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
-            std::move(launch_info->services), std::move(ctrl));
+            std::move(launch_info->service_request), std::move(ctrl));
       });
 
   app::ServiceProviderPtr incoming_services;

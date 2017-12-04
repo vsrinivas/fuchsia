@@ -6,10 +6,10 @@
 
 #include <utility>
 
-#include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -31,16 +31,16 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
                          ledger::LedgerPtr* ledger_ptr,
                          Erase erase) {
   ledger::LedgerRepositoryFactoryPtr repository_factory;
-  app::ServiceProviderPtr child_services;
+  app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = "ledger";
-  launch_info->services = child_services.NewRequest();
+  launch_info->service_request = child_services.NewRequest();
   launch_info->arguments.push_back("--no_minfs_wait");
   launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
 
   context->launcher()->CreateApplication(std::move(launch_info),
                                          controller->NewRequest());
-  app::ConnectToService(child_services.get(), repository_factory.NewRequest());
+  child_services.ConnectToService(repository_factory.NewRequest());
   ledger::LedgerRepositoryPtr repository;
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;

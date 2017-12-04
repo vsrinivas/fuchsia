@@ -10,6 +10,7 @@
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
+#include "lib/svc/cpp/services.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/user/agent_launcher.h"
@@ -51,22 +52,22 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   // Starts an app in the parent environment, with full access to environment
   // services.
-  app::ServiceProviderPtr StartTrustedApp(const std::string& url);
+  app::Services StartTrustedApp(const std::string& url);
   // Starts an app in a child environment, with access only to standard agent
   // services (see AddStandardServices).
-  app::ServiceProviderPtr StartAgent(const std::string& url);
+  app::Services StartAgent(const std::string& url);
   // Starts an app in a child environment, with access only to services added by
   // the given ServiceProviderInitializer.
-  app::ServiceProviderPtr StartAgent(const std::string& url,
-                                     ServiceProviderInitializer services);
+  app::Services StartAgent(const std::string& url,
+                           ServiceProviderInitializer services);
   void StartActionLog(SuggestionEngine* suggestion_engine);
   void StartKronk();
 
   app::ApplicationContext* app_context_;  // Not owned.
 
-  app::ServiceProviderPtr context_services_;
+  app::Services context_services_;
   ContextEnginePtr context_engine_;
-  app::ServiceProviderPtr suggestion_services_;
+  app::Services suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
   UserActionLogPtr user_action_log_;
 

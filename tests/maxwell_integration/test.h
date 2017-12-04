@@ -101,12 +101,12 @@ class MaxwellTestBase : public modular::testing::TestWithMessageLoop {
     agent_launcher_->StartAgent(url, std::move(env_host));
   }
 
-  app::ServiceProviderPtr StartServiceProvider(const std::string& url);
+  app::Services StartServices(const std::string& url);
 
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
-    auto services = StartServiceProvider(url);
-    return app::ConnectToService<Interface>(services.get());
+    auto services = StartServices(url);
+    return services.ConnectToService<Interface>();
   }
 
   app::ApplicationEnvironment* root_environment();

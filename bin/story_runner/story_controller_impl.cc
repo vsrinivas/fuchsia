@@ -1748,7 +1748,7 @@ void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<mozart::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
-  ConnectToService(story_shell_app_->services(), story_shell_.NewRequest());
+  story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
   story_shell_->Initialize(story_context_binding_.NewBinding());
 }
 

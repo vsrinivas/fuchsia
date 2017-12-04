@@ -52,12 +52,12 @@ ModuleControllerImpl::ModuleControllerImpl(
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
 
-  ConnectToService(app_client_.services(), module_service_.NewRequest());
+  app_client_.services().ConnectToService(module_service_.NewRequest());
   module_service_.set_connection_error_handler([this] { OnConnectionError(); });
   module_service_->Initialize(std::move(module_context),
                               std::move(incoming_services));
 
-  ConnectToService(app_client_.services(), std::move(view_provider_request));
+  app_client_.services().ConnectToService(std::move(view_provider_request));
 
   // Push the initial module state to story controller. TODO(mesch): This is
   // only needed for the root module to transition the story state to STARTING

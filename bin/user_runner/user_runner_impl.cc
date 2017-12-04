@@ -8,7 +8,6 @@
 #include <string>
 
 #include "lib/agent/fidl/agent_provider.fidl.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -197,16 +196,16 @@ void UserRunnerImpl::InitializeLedger() {
     cloud_provider_config->args = fidl::Array<fidl::String>::New(0);
     cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(cloud_provider_config));
-    ConnectToService(cloud_provider_app_->services(),
-                     cloud_provider_factory_.NewRequest());
+    cloud_provider_app_->services().ConnectToService(
+        cloud_provider_factory_.NewRequest());
 
     cloud_provider = GetCloudProvider();
 
     // TODO(mesch): Teardown cloud_provider_app_ ?
   }
 
-  ConnectToService(ledger_app_->services(),
-                   ledger_repository_factory_.NewRequest());
+  ledger_app_->services().ConnectToService(
+      ledger_repository_factory_.NewRequest());
   AtEnd(Reset(&ledger_repository_factory_));
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
@@ -442,8 +441,8 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   AtEnd(Reset(&module_resolver_app_));
   AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
 
-  ConnectToService(module_resolver_app_->services(),
-                   module_resolver_service_.NewRequest());
+  module_resolver_app_->services().ConnectToService(
+      module_resolver_service_.NewRequest());
   AtEnd(Reset(&module_resolver_service_));
 
   // End kModuleResolverUrl
@@ -494,7 +493,7 @@ void UserRunnerImpl::InitializeUserShell(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), std::move(user_shell));
-  ConnectToService(user_shell_app_->services(), user_shell_.NewRequest());
+  user_shell_app_->services().ConnectToService(user_shell_.NewRequest());
 
   AtEnd(Reset(&user_shell_app_));
   AtEnd(Reset(&user_shell_));
@@ -507,7 +506,7 @@ void UserRunnerImpl::InitializeUserShell(
   });
 
   mozart::ViewProviderPtr view_provider;
-  ConnectToService(user_shell_app_->services(), view_provider.NewRequest());
+  user_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(std::move(view_owner_request), nullptr);
 
   user_shell_->Initialize(user_shell_context_binding_.NewBinding());

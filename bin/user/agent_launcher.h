@@ -7,6 +7,7 @@
 
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/lib/environment_host/application_environment_host_impl.h"
 
 namespace maxwell {
@@ -15,7 +16,7 @@ class AgentLauncher {
  public:
   AgentLauncher(app::ApplicationEnvironment* environment)
       : environment_(environment) {}
-  app::ServiceProviderPtr StartAgent(
+  app::Services StartAgent(
       const std::string& url,
       std::unique_ptr<app::ApplicationEnvironmentHost> env_host);
 

@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -674,7 +673,8 @@ void StoryProviderImpl::LoadStoryShell() {
   // CreateView must be called in order to get the Flutter application to run
 
   mozart::ViewProviderPtr view_provider;
-  ConnectToService(story_shell_app->services(), view_provider.NewRequest());
+  story_shell_app->services().ConnectToService(
+      view_provider.NewRequest());
 
   mozart::ViewOwnerPtr story_shell_view;
   view_provider->CreateView(story_shell_view.NewRequest(), nullptr);

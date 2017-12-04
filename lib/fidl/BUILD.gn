@@ -15,9 +15,9 @@ source_set("app_client") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
     "//peridot/lib/common:async_holder",
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/lifecycle/fidl",

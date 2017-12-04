@@ -7,7 +7,6 @@
 #include <memory>
 #include <utility>
 
-#include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/user/fidl/user_runner.fidl-sync.h"
 #include "peridot/lib/common/async_holder.h"
@@ -57,7 +56,7 @@ UserControllerImpl::UserControllerImpl(
       application_launcher, std::move(user_runner), data_origin);
 
   // 2. Initialize the UserRunner service.
-  ConnectToService(user_runner_app_->services(), user_runner_.NewRequest());
+  user_runner_app_->services().ConnectToService(user_runner_.NewRequest());
   user_runner_->Initialize(
       std::move(account), std::move(user_shell), std::move(story_shell),
       std::move(token_provider_factory), user_context_binding_.NewBinding(),
@@ -66,8 +65,8 @@ UserControllerImpl::UserControllerImpl(
 
 std::string UserControllerImpl::DumpState() {
   UserRunnerDebugSyncPtr debug;
-  ConnectToService(user_runner_app_->services(),
-                   fidl::GetSynchronousProxy(&debug));
+  user_runner_app_->services().ConnectToService(
+      fidl::GetSynchronousProxy(&debug));
   fidl::String output;
   debug->DumpState(&output);
   return output;

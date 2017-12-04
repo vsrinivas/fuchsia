@@ -8,12 +8,12 @@
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/cloud_provider_firebase_factory.h"
@@ -93,16 +93,16 @@ std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   app::ApplicationControllerPtr controller;
   ledger::LedgerRepositoryFactoryPtr repository_factory;
-  app::ServiceProviderPtr child_services;
+  app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = "ledger";
-  launch_info->services = child_services.NewRequest();
+  launch_info->service_request = child_services.NewRequest();
   launch_info->arguments.push_back("--no_minfs_wait");
   launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
 
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());
-  app::ConnectToService(child_services.get(), repository_factory.NewRequest());
+  child_services.ConnectToService(repository_factory.NewRequest());
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(
       std::move(controller), std::move(repository_factory),

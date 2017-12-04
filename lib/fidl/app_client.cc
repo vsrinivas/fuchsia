@@ -49,7 +49,7 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
                              app::ServiceListPtr additional_services)
     : AsyncHolderBase(config->url) {
   auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->services = services_.NewRequest();
+  launch_info->service_request = services_.NewRequest();
   launch_info->url = config->url;
   launch_info->arguments = config->args.Clone();
 
@@ -91,7 +91,6 @@ void AppClientBase::ImplTeardown(std::function<void()> done) {
 
 void AppClientBase::ImplReset() {
   app_.reset();
-  services_.reset();
   ServiceReset();
 }
 

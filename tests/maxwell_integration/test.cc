@@ -95,12 +95,11 @@ MaxwellTestBase::MaxwellTestBase() {
       std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
 }
 
-app::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(
-    const std::string& url) {
-  app::ServiceProviderPtr services;
+app::Services MaxwellTestBase::StartServices(const std::string& url) {
+  app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
-  launch_info->services = services.NewRequest();
+  launch_info->service_request = services.NewRequest();
 
   test_launcher_->CreateApplication(std::move(launch_info), nullptr);
   return services;

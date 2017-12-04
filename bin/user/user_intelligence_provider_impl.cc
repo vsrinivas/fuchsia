@@ -78,10 +78,10 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   // these processes.
   context_services_ = StartTrustedApp("context_engine");
   context_engine_ =
-      app::ConnectToService<maxwell::ContextEngine>(context_services_.get());
+      context_services_.ConnectToService<maxwell::ContextEngine>();
   suggestion_services_ = StartTrustedApp("suggestion_engine");
-  suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
-      suggestion_services_.get());
+  suggestion_engine_ =
+      suggestion_services_.ConnectToService<maxwell::SuggestionEngine>();
 
   // Generate a ContextWriter to pass to the SuggestionEngine.
   fidl::InterfaceHandle<ContextWriter> context_writer;
@@ -115,8 +115,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
               });
           agent_host->AddService<maxwell::SuggestionDebug>(
               [=](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
-                app::ConnectToService(suggestion_services_.get(),
-                                      std::move(request));
+                suggestion_services_.ConnectToService(std::move(request));
               });
           agent_host->AddService<maxwell::UserActionLog>(
               [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
@@ -146,7 +145,7 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
 
 void UserIntelligenceProviderImpl::GetSuggestionProvider(
     fidl::InterfaceRequest<SuggestionProvider> request) {
-  app::ConnectToService(suggestion_services_.get(), std::move(request));
+  suggestion_services_.ConnectToService(std::move(request));
 }
 
 void UserIntelligenceProviderImpl::GetResolver(
@@ -155,12 +154,12 @@ void UserIntelligenceProviderImpl::GetResolver(
   // topaz.
 }
 
-app::ServiceProviderPtr UserIntelligenceProviderImpl::StartTrustedApp(
+app::Services UserIntelligenceProviderImpl::StartTrustedApp(
     const std::string& url) {
-  app::ServiceProviderPtr services;
+  app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
-  launch_info->services = services.NewRequest();
+  launch_info->service_request = services.NewRequest();
   app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
   return services;
 }
@@ -168,10 +167,9 @@ app::ServiceProviderPtr UserIntelligenceProviderImpl::StartTrustedApp(
 void UserIntelligenceProviderImpl::StartActionLog(
     SuggestionEngine* suggestion_engine) {
   std::string url = "action_log";
-  app::ServiceProviderPtr action_log_services = StartTrustedApp(url);
+  app::Services action_log_services = StartTrustedApp(url);
   maxwell::UserActionLogFactoryPtr action_log_factory =
-      app::ConnectToService<maxwell::UserActionLogFactory>(
-          action_log_services.get());
+      action_log_services.ConnectToService<maxwell::UserActionLogFactory>();
   maxwell::ProposalPublisherPtr proposal_publisher;
   suggestion_engine->RegisterProposalPublisher(
       url, fidl::GetProxy(&proposal_publisher));
@@ -250,14 +248,14 @@ void UserIntelligenceProviderImpl::AddStandardServices(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
 }
 
-app::ServiceProviderPtr UserIntelligenceProviderImpl::StartAgent(
+app::Services UserIntelligenceProviderImpl::StartAgent(
     const std::string& url) {
   return StartAgent(
       url, std::bind(&UserIntelligenceProviderImpl::AddStandardServices, this,
                      std::placeholders::_1, std::placeholders::_2));
 }
 
-app::ServiceProviderPtr UserIntelligenceProviderImpl::StartAgent(
+app::Services UserIntelligenceProviderImpl::StartAgent(
     const std::string& url,
     ServiceProviderInitializer services) {
   auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(

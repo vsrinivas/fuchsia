@@ -76,10 +76,8 @@ void LaunchBenchmark::StartNext() {
     return;
   }
 
-  app::ServiceProviderPtr child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = app_url_;
-  launch_info->services = child_services.NewRequest();
   launch_info->arguments.push_back("--" + test_arg_ + "=" +
                                    fxl::NumberToString(current_value_));
   for (auto& arg : args_) {

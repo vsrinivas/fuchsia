@@ -10,7 +10,6 @@
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
@@ -255,11 +254,11 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // other things come up.
     device_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
         app_context_->launcher().get(), settings_.device_shell.Clone());
-    ConnectToService(device_shell_app_->services(), device_shell_.NewRequest());
+    device_shell_app_->services().ConnectToService(device_shell_.NewRequest());
 
     mozart::ViewProviderPtr device_shell_view_provider;
-    ConnectToService(device_shell_app_->services(),
-                     device_shell_view_provider.NewRequest());
+    device_shell_app_->services().ConnectToService(
+        device_shell_view_provider.NewRequest());
 
     // We still need to pass a request for root view to device shell since
     // dev_device_shell (which mimics flutter behavior) blocks until it receives

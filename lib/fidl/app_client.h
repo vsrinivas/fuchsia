@@ -8,7 +8,6 @@
 #include <memory>
 #include <string>
 
-#include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -18,6 +17,7 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"
 
 namespace modular {
@@ -46,10 +46,10 @@ class AppClientBase : public AsyncHolderBase {
                 app::ServiceListPtr additional_services = nullptr);
   virtual ~AppClientBase();
 
-  // Gives access to the service provider of the started application. Services
+  // Gives access to the services of the started application. Services
   // obtained from it are not involved in life cycle management provided by
   // AppClient, however. This is used for example to obtain the ViewProvider.
-  app::ServiceProvider* services() { return services_.get(); }
+  app::Services& services() { return services_; }
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this
@@ -67,7 +67,7 @@ class AppClientBase : public AsyncHolderBase {
   virtual void ServiceReset();
 
   app::ApplicationControllerPtr app_;
-  app::ServiceProviderPtr services_;
+  app::Services services_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 
@@ -84,7 +84,7 @@ class AppClient : public AppClientBase {
                       std::move(config),
                       std::move(data_origin),
                       std::move(additional_services)) {
-    ConnectToService(services(), service_.NewRequest());
+    services().ConnectToService(service_.NewRequest());
   }
 
   ~AppClient() override = default;

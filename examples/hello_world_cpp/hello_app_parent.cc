@@ -8,11 +8,11 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/services.h"
 #include "peridot/examples/hello_world_cpp/hello.fidl.h"
 
 using examples::HelloPtr;
@@ -33,11 +33,11 @@ class HelloAppParent {
         launch_info->arguments.push_back(args[i]);
       }
     }
-    launch_info->services = child_services_.NewRequest();
+    launch_info->service_request = child_services_.NewRequest();
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                child_.NewRequest());
 
-    ConnectToService(child_services_.get(), hello_.NewRequest());
+    child_services_.ConnectToService(hello_.NewRequest());
 
     DoIt("hello");
     DoIt("goodbye");
@@ -54,7 +54,7 @@ class HelloAppParent {
   }
 
   app::ApplicationControllerPtr child_;
-  app::ServiceProviderPtr child_services_;
+  app::Services child_services_;
   HelloPtr hello_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);
