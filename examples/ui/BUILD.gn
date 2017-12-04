@@ -55,22 +55,25 @@ package("paint_view") {
   binary = "paint_view"
 }
 
-package("shadertoy") {
-  system_image = true
-
+package("shadertoy_client") {
   deps = [
     "shadertoy/client",
+  ]
+
+  binary = "shadertoy_client"
+}
+
+package("shadertoy_service") {
+  deps = [
     "shadertoy/service",
   ]
 
-  binaries = [
-    {
-      name = "shadertoy_service"
-    },
-    {
-      name = "shadertoy_client"
-    },
-  ]
+  binary = "shadertoy_service"
+
+  meta = [ {
+        path = rebase_path("shadertoy/service/meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 package("shapes_view") {
