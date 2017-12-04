@@ -23,7 +23,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/glue.cpp \
     $(LOCAL_DIR)/guest_dispatcher.cpp \
     $(LOCAL_DIR)/handle.cpp \
-    $(LOCAL_DIR)/handle_reaper.cpp \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/iommu_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \

@@ -204,7 +204,6 @@ bool kill_channel_handle_cycle() {
     ASSERT_EQ(zx_thread_create(proc2, "th2", 3u, 0u, &thread2), ZX_OK);
 
     // Now we stuff duplicated process and thread handles into each side of the channel.
-
     EXPECT_EQ(dup_send_handle(chan[0], proc2), ZX_OK);
     EXPECT_EQ(dup_send_handle(chan[0], thread2), ZX_OK);
 
@@ -236,17 +235,13 @@ bool kill_channel_handle_cycle() {
     EXPECT_EQ(zx_object_wait_one(
         thread2, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals), ZX_ERR_TIMED_OUT);
 
-    // At this point the two processes have each other thread/process handles. For example
-    // if we close the thread handles, unlike the previous test, the processes will
-    // still be alive.
-
+    // At this point the two processes have each other thread/process handles.
     EXPECT_EQ(zx_handle_close(thread1), ZX_OK);
 
     EXPECT_EQ(zx_object_wait_one(
         thread2, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals), ZX_ERR_TIMED_OUT);
 
     // The only way out of this situation is to use the job handle.
-
     EXPECT_EQ(zx_task_kill(job_child), ZX_OK);
 
     EXPECT_EQ(zx_object_wait_one(

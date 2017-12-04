@@ -12,12 +12,16 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
+#include <fbl/recycler.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+
 #include <kernel/spinlock.h>
 #include <object/state_observer.h>
+
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
@@ -58,7 +62,8 @@ DECLARE_DISPTAG(IommuDispatcher, ZX_OBJ_TYPE_IOMMU)
 
 #undef DECLARE_DISPTAG
 
-class Dispatcher : public fbl::RefCounted<Dispatcher> {
+class Dispatcher : public fbl::RefCounted<Dispatcher>,
+                   public fbl::Recyclable<Dispatcher> {
 public:
     // At construction, the object's state tracker is asserting
     // |signals|.
@@ -137,6 +142,13 @@ public:
     // a CookieJar for those cookies to be stored in.
     virtual CookieJar* get_cookie_jar() { return nullptr; }
 
+    struct DeleterListTraits {
+        static fbl::SinglyLinkedListNodeState<Dispatcher*>& node_state(
+            Dispatcher& obj) {
+            return obj.deleter_ll_;
+        }
+    };
+
 protected:
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
@@ -152,6 +164,9 @@ protected:
     fbl::Mutex lock_;
 
 private:
+    friend class fbl::Recyclable<Dispatcher>;
+    void fbl_recycle();
+
     // The common implementation of UpdateState and UpdateStateLocked.
     template <typename Mutex>
     void UpdateStateHelper(zx_signals_t clear_mask,
@@ -179,6 +194,9 @@ private:
 
     // Active observers are elements in |observers_|.
     ObserverList observers_ TA_GUARDED(lock_);
+
+    // Used to store this dispatcher on the dispatcher deleter list.
+    fbl::SinglyLinkedListNodeState<Dispatcher*> deleter_ll_;
 };
 
 // DownCastDispatcher checks if a RefPtr<Dispatcher> points to a

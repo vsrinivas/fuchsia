@@ -28,7 +28,6 @@
 #include <object/diagnostics.h>
 #include <object/futex_context.h>
 #include <object/handle.h>
-#include <object/handle_reaper.h>
 #include <object/job_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
@@ -315,15 +314,20 @@ void ProcessDispatcher::SetStateLocked(State s) {
     } else if (s == State::DEAD) {
         // clean up the handle table
         LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
+        fbl::DoublyLinkedList<Handle*> to_clean;
         {
             AutoLock lock(&handle_table_lock_);
             for (auto& handle : handles_) {
                 handle.set_process_id(0u);
             }
-            // Delete handles out-of-band to avoid the worst case recursive
-            // destruction behavior.
-            HandleReaper::Reap(&handles_);
+            to_clean.swap(handles_);
         }
+
+        while (!to_clean.is_empty()) {
+            // Delete handle via HandleOwner dtor.
+            HandleOwner ho(to_clean.pop_front());
+        }
+
         LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
 
         // tear down the address space

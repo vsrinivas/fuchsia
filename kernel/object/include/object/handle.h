@@ -153,9 +153,8 @@ private:
     void TearDown() TA_EXCL(mutex_);
     void Delete();
 
-    // These two are allowed to call Delete.
+    // Only HandleOwner is allowed to call Delete.
     friend class HandleOwner;
-    friend class HandleReaper;
 
     // process_id_ is atomic because threads from different processes can
     // access it concurrently, while holding different instances of

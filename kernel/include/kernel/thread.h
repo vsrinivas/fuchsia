@@ -294,7 +294,10 @@ static inline bool thread_lock_held(void) {
     return spin_lock_held(&thread_lock);
 }
 
-/* thread local storage */
+/* Thread local storage. See tls_slots.h in the object layer above for
+   the current slot usage.
+*/
+
 static inline void* tls_get(uint entry) {
     return get_current_thread()->tls[entry];
 }

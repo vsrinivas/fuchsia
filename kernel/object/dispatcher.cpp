@@ -6,12 +6,16 @@
 
 #include <object/dispatcher.h>
 
+#include <inttypes.h>
+
 #include <arch/ops.h>
 #include <lib/ktrace.h>
 #include <lib/counters.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+
+#include <object/tls_slots.h>
 
 using fbl::AutoLock;
 
@@ -36,6 +40,52 @@ zx_koid_t GenerateKernelObjectId() {
     return global_koid.fetch_add(1ULL, fbl::memory_order_relaxed);
 }
 
+// Helper class that safely allows deleting Dispatchers without
+// risk of blowing up the kernel stack. It uses one TLS slot to
+// unwind the recursion.
+class SafeDeleter {
+public:
+    static SafeDeleter* Get() {
+        auto self = reinterpret_cast<SafeDeleter*>(tls_get(TLS_ENTRY_KOBJ_DELETER));
+        if (self == nullptr) {
+            fbl::AllocChecker ac;
+            self = new (&ac) SafeDeleter;
+            if (!ac.check())
+                return nullptr;
+
+            tls_set(TLS_ENTRY_KOBJ_DELETER, self);
+            tls_set_callback(TLS_ENTRY_KOBJ_DELETER, &CleanTLS);
+        }
+        return self;
+    }
+
+    void Delete(Dispatcher* kobj) {
+        if (level_ > 0) {
+            pending_.push_front(kobj);
+            return;
+        }
+        // The delete calls below can recurse here via fbl_recycle().
+        level_++;
+        delete kobj;
+
+        while ((kobj = pending_.pop_front()) != nullptr) {
+            delete kobj;
+        }
+        level_--;
+    }
+
+private:
+    static void CleanTLS(void* tls) {
+        delete reinterpret_cast<SafeDeleter*>(tls);
+    }
+
+    SafeDeleter() : level_(0) {}
+    ~SafeDeleter() { DEBUG_ASSERT(level_ == 0); }
+
+    int level_;
+    fbl::SinglyLinkedList<Dispatcher*, Dispatcher::DeleterListTraits> pending_;
+};
+
 }  // namespace
 
 Dispatcher::Dispatcher(zx_signals_t signals)
@@ -51,6 +101,25 @@ Dispatcher::~Dispatcher() {
     ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
 #endif
     kcounter_add(dispatcher_destroy_count, 1u);
+}
+
+// The refcount of this object has reached zero: delete self
+// using the SafeDeleter to avoid potential recursion hazards.
+// TODO(cpu): Not all object need the SafeDeleter. Only objects
+// that can control the lifetime of dispatchers that in turn
+// can control the lifetime of others. For example events do
+// not fall in this category.
+void Dispatcher::fbl_recycle() {
+    auto deleter = SafeDeleter::Get();
+    if (likely(deleter != nullptr)) {
+        deleter->Delete(this);
+    } else {
+        // We failed to allocate the safe deleter. As an OOM
+        // case one is extremely unlikely but possible. Attempt
+        // to delete the dispatcher directly which very likely
+        // can be done without blowing the stack.
+        delete this;
+    }
 }
 
 zx_status_t Dispatcher::add_observer(StateObserver* observer) {

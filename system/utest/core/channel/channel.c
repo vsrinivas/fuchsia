@@ -826,7 +826,10 @@ static bool channel_nest(void) {
     ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
 
     zx_handle_t end;
-    ASSERT_TRUE(create_and_nest(channel[0], &end, 10), "");
+    // Nest 200 channels, each one in the payload of the previous one. Without
+    // the SafeDeleter in fbl_recycle() this blows the kernel stack when calling
+    // the destructors.
+    ASSERT_TRUE(create_and_nest(channel[0], &end, 200), "");
     EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
     EXPECT_EQ(zx_object_wait_one(channel[0], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
