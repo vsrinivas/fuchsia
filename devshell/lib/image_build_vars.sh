@@ -22,7 +22,7 @@ ramdisk_bin="bootdata-blobstore-${ZIRCON_PROJECT}.bin"
 
 images_dir="images"
 cmdline_txt="${images_dir}/cmdline.txt"
-efi_block="${images_dir}/efi-${ZIRCON_PROJECT}.blk"
+efi_block="${images_dir}/local-${ZIRCON_PROJECT}.esp.blk"
 fvm_block="${images_dir}/fvm.blk"
 fvm_sparse_block="${images_dir}/fvm.sparse.blk"
 kernc_vboot="${images_dir}/zircon-${ZIRCON_PROJECT}.vboot"
