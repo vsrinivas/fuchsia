@@ -41,17 +41,20 @@ public:
     static zx_status_t GetTagLen(Algorithm aead, size_t* out);
 
     // Sets up the AEAD to use the algorithm indicated by |aead| to encrypt data using the given
-    // |key| and |iv|.  If |ad_len| is non-zero, a region of that many bytes will be allocated and
-    // returned in |out_ad|.  This memory will be included as additional authenticated data each
-    // time data is |Seal|ed.
-    zx_status_t InitSeal(Algorithm aead, const Bytes& key, const Bytes& iv, size_t ad_len,
-                         uintptr_t* out_ad);
+    // |key| and |iv|.
+    zx_status_t InitSeal(Algorithm aead, const Bytes& key, const Bytes& iv);
 
     // Sets up the AEAD to use the algorithm indicated by |aead| to decrypt data using the given
-    // |key|.  If |ad_len| is non-zero, a region of that many bytes will be allocated and returned
-    // in |out_ad|.  This memory will be included as additional authenticated data each time data is
-    // |Open|ed.
-    zx_status_t InitOpen(Algorithm aead, const Bytes& key, size_t ad_len, uintptr_t* out_ad);
+    // |key|.
+    zx_status_t InitOpen(Algorithm aead, const Bytes& key);
+
+    // Copies the additional authenticated data from the given |ad|.
+    zx_status_t SetAD(const Bytes& ad);
+
+    // Allocates |ad_len| bytes and returns a handle to the region in |out_ad|.  This memory will be
+    // included as additional authenticated data each time data is |Seal|ed or |Open|ed, and may be
+    // modified between those calls.
+    zx_status_t AllocAD(size_t ad_len, uintptr_t* out_ad);
 
     // Encrypts data from |ptext| to |ctext|, based on the parameters set in |InitSeal|.  Saves the
     // |iv| used;  |iv| will be resized and filled automatically.  The AEAD tag is stored at the end
@@ -72,9 +75,8 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AEAD);
 
     // Sets up the aead to encrypt or decrypt data using the given |key| based on the
-    // given |direction|.  Allocates a region of |ad_len| bytes and saves it in |out_ad|.
-    zx_status_t Init(Algorithm aead, const Bytes& key, Cipher::Direction direction, size_t ad_len,
-                     uintptr_t* out_ad);
+    // given |direction|.
+    zx_status_t Init(Algorithm aead, const Bytes& key, Cipher::Direction direction);
 
     // Opaque crypto implementation context.
     struct Context;
@@ -86,9 +88,7 @@ private:
     // Buffer and length used to hold the initial vector.
     Bytes iv_;
     // Additional authenticated data (AAD).
-    fbl::unique_ptr<uint8_t[]> ad_;
-    // Length of AAD.
-    size_t ad_len_;
+    Bytes ad_;
     // Length of authentication tag.
     size_t tag_len_;
 };
