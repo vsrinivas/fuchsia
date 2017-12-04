@@ -37,9 +37,8 @@ class VirtioGpu : public VirtioDevice {
   virtio_queue_t& control_queue() { return queues_[VIRTIO_GPU_Q_CONTROLQ]; }
   virtio_queue_t& cursor_queue() { return queues_[VIRTIO_GPU_Q_CURSORQ]; }
 
-  // Opens the framebuffer device located at |path| and starts processing
-  // any descriptors that become available in the queues.
-  zx_status_t Init(const char* path);
+  // Begins processing any descriptors that become available in the queues.
+  zx_status_t Init();
 
   // Adds a scanout to the GPU.
   //

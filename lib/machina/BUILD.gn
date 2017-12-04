@@ -10,6 +10,8 @@ shared_library("machina") {
     "balloon.h",
     "block.cc",
     "block.h",
+    "framebuffer_scanout.cc",
+    "framebuffer_scanout.h",
     "gpu.cc",
     "gpu.h",
     "gpu_bitmap.cc",

@@ -23,6 +23,7 @@
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/balloon.h"
 #include "garnet/lib/machina/block.h"
+#include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/gpu.h"
 #include "garnet/lib/machina/input.h"
 #include "garnet/lib/machina/interrupt_controller.h"
@@ -385,7 +386,16 @@ int main(int argc, char** argv) {
   machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
                              "serial-number");
   if (use_gpu) {
-    status = gpu.Init("/dev/class/framebuffer/000");
+    fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
+    status = machina::FramebufferScanout::Create("/dev/class/framebuffer/000",
+                                                 &gpu_scanout);
+    if (status != ZX_OK)
+      return status;
+    status = gpu.AddScanout(fbl::move(gpu_scanout));
+    if (status != ZX_OK)
+      return status;
+
+    status = gpu.Init();
     if (status != ZX_OK)
       return status;
 
