@@ -226,7 +226,9 @@ static int completer_thread(void *arg) {
         zx_status_t wait_res;
         wait_res = zx_interrupt_wait(irq_handle);
         if (wait_res != ZX_OK) {
-            zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            if (wait_res != ZX_ERR_CANCELED) {
+                zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            }
             zx_interrupt_complete(irq_handle);
             break;
         }
