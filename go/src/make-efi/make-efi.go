@@ -31,6 +31,7 @@ var (
 	efiBootloader = flag.String("efi-bootloader", "", "(optional) Path to source file for EFI/BOOT/BOOTX64.EFI")
 	manifest      = flag.String("manifest", "", "(optional) Path to a manifest file of the form `dst=src\n` to import to partition")
 	zedboot       = flag.String("zedboot", "", "(optional) Path to a source file for zedboot.bin")
+	cmdline       = flag.String("cmdline", "", "(optional) Bootloader cmdline file")
 )
 
 // minSize is the minimum image size, as the tool currently always builds fat32.
@@ -69,6 +70,9 @@ func main() {
 	}
 	if *zedboot != "" {
 		dstSrc["zedboot.bin"] = *zedboot
+	}
+	if *cmdline != "" {
+		dstSrc["cmdline"] = *cmdline
 	}
 	if *manifest != "" {
 		r, err := newManifestReader(*manifest)
