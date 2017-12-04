@@ -126,6 +126,7 @@ public:
     zx_status_t AddPartition(const char* path, const char* type_name) final;
 
 private:
+    size_t disk_size_;
     fvm::sparse_image_t image_;
     fbl::Vector<partition_info_t> partitions_;
 

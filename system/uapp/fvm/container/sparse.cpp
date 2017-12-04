@@ -39,6 +39,8 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size)
     }
 
     if (s.st_size > 0) {
+        disk_size_ = s.st_size;
+
         if (read(fd_.get(), &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
             fprintf(stderr, "SparseContainer: Failed to read the sparse header\n");
             exit(-1);
@@ -93,7 +95,6 @@ zx_status_t SparseContainer::Verify() const {
 
     off_t start = 0;
     off_t end = image_.header_length;
-
     for (unsigned i = 0; i < image_.partition_count; i++) {
         fbl::Vector<size_t> extent_lengths;
         start = end;
@@ -123,6 +124,13 @@ zx_status_t SparseContainer::Verify() const {
             return status;
         }
     }
+
+    if (end != disk_size_) {
+        fprintf(stderr, "Header + extent sizes (%" PRIu64 ") do not match sparse file size "
+                "(%" PRIu64 ")\n", end, disk_size_);
+        return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
     return ZX_OK;
 }
 
@@ -200,6 +208,14 @@ zx_status_t SparseContainer::Commit() {
             }
         }
     }
+
+    struct stat s;
+    if (fstat(fd_.get(), &s) < 0) {
+        fprintf(stderr, "Failed to stat container\n");
+        return ZX_ERR_IO;
+    }
+
+    disk_size_ = s.st_size;
 
     xprintf("Successfully wrote sparse data to disk.\n");
     return ZX_OK;
