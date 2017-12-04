@@ -16,7 +16,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ramdisk.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/fs \
+    system/ulib/zx \
 
 MODULE_LIBS := \
     system/ulib/launchpad \

@@ -20,6 +20,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <fbl/unique_fd.h>
 #include <fdio/watcher.h>
 
 #include <fs-management/ramdisk.h>
@@ -28,7 +29,7 @@
 #define BLOCK_EXTENSION "block"
 
 static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
-    const char* wanted = *(const char**)cookie;
+    const char* wanted = *reinterpret_cast<const char**>(cookie);
     if (event == WATCH_EVENT_ADD_FILE && strcmp(fn, wanted) == 0) {
         return ZX_ERR_STOP;
     }
@@ -40,7 +41,7 @@ int wait_for_driver_bind(const char* parent, const char* driver) {
 
     // Create the watcher before calling readdir; this prevents a
     // race where the driver shows up between readdir + watching.
-    if ((dir = opendir(parent)) == NULL) {
+    if ((dir = opendir(parent)) == nullptr) {
         return -1;
     }
 
@@ -108,18 +109,14 @@ int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path) {
 }
 
 int destroy_ramdisk(const char* ramdisk_path) {
-    int fd = open(ramdisk_path, O_RDWR);
-    if (fd < 0) {
+    fbl::unique_fd ramdisk(open(ramdisk_path, O_RDWR));
+    if (!ramdisk) {
         fprintf(stderr, "Could not open ramdisk\n");
         return -1;
     }
-    ssize_t r = ioctl_ramdisk_unlink(fd);
+    ssize_t r = ioctl_ramdisk_unlink(ramdisk.get());
     if (r != ZX_OK) {
         fprintf(stderr, "Could not shut off ramdisk\n");
-        return -1;
-    }
-    if (close(fd) < 0) {
-        fprintf(stderr, "Could not close ramdisk fd\n");
         return -1;
     }
     return 0;
