@@ -16,6 +16,7 @@
 
 static const uintptr_t kKernelOffset = 0x00100000;
 static const uintptr_t kBootdataOffset = 0x04000000;
+static const uint64_t kBuildSigStartMagic = 0x5452545347495342;  // BSIGSTRT
 
 #if __aarch64__
 static const uint16_t kMzSignature = 0x5a4d;  // MZ
@@ -67,18 +68,29 @@ static zx_status_t load_zircon(const int fd,
                                const uintptr_t kernel_off,
                                const uintptr_t kernel_len) {
   // Move the first page to the kernel offset.
-  memmove(reinterpret_cast<void*>(addr + kernel_off),
-          reinterpret_cast<void*>(first_page), PAGE_SIZE);
+  void* kernel_loc = reinterpret_cast<void*>(addr + kernel_off);
+  memmove(kernel_loc, reinterpret_cast<void*>(first_page), PAGE_SIZE);
 
   // Read in the rest of the kernel.
   const uintptr_t data_off = kernel_off + PAGE_SIZE;
   const size_t data_len = kernel_len - PAGE_SIZE;
-  const ssize_t ret =
-      read(fd, reinterpret_cast<void*>(addr + data_off), data_len);
-  if (ret < 0 || (size_t)ret != data_len) {
+  uint64_t* read_loc = reinterpret_cast<uint64_t*>(addr + data_off);
+  const ssize_t ret = read(fd, read_loc, data_len);
+  if (ret < 0 || static_cast<size_t>(ret) != data_len) {
+    // We now need to distinguish between:
+    // 1. Did we load a corrupted Zircon kernel image.
+    // 2. Did we load an EFI kernel image for a different kernel.
+    if (*read_loc != kBuildSigStartMagic)
+      return ZX_ERR_NOT_SUPPORTED;
     fprintf(stderr, "Failed to read Zircon kernel data\n");
     return ZX_ERR_IO;
   }
+
+  // Find build signature.
+  void* signature = memmem(kernel_loc, kernel_len, &kBuildSigStartMagic,
+                           sizeof(kBuildSigStartMagic));
+  if (signature == nullptr)
+    return ZX_ERR_NOT_SUPPORTED;
 
   return ZX_OK;
 }
