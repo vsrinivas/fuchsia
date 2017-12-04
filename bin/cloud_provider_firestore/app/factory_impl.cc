@@ -4,11 +4,22 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
+#include <grpc++/grpc++.h>
+
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firestore {
+
+namespace {
+std::shared_ptr<grpc::Channel> MakeChannel() {
+  auto opts = grpc::SslCredentialsOptions();
+  auto credentials = grpc::SslCredentials(opts);
+  return grpc::CreateChannel("firestore.googleapis.com:443", credentials);
+}
+}  // namespace
 
 FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner)
     : main_runner_(std::move(main_runner)) {}
@@ -42,7 +53,11 @@ void FactoryImpl::GetCloudProvider(
               return;
             }
 
+            auto firestore_service = std::make_unique<FirestoreServiceImpl>(
+                config->server_id, main_runner_, MakeChannel());
+
             providers_.emplace(user_id, std::move(firebase_auth),
+                               std::move(firestore_service),
                                std::move(cloud_provider_request));
             callback(cloud_provider::Status::OK);
           }));

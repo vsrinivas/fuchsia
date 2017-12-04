@@ -38,6 +38,7 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/fidl",
+    "//peridot/bin/cloud_provider_firestore/firestore",
     "//peridot/lib/firebase_auth",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",

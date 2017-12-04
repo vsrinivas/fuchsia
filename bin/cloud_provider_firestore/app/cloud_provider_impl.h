@@ -10,6 +10,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
 
 namespace cloud_provider_firestore {
@@ -23,6 +24,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   CloudProviderImpl(
       std::string user_id,
       std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
+      std::unique_ptr<FirestoreService> firestore_service,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
@@ -44,6 +46,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   const std::string user_id_;
 
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
+  std::unique_ptr<FirestoreService> firestore_service_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;
 

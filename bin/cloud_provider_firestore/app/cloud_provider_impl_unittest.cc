@@ -19,8 +19,10 @@ class CloudProviderImplTest : public test::TestWithMessageLoop {
         std::make_unique<firebase_auth::test::TestFirebaseAuth>(
             message_loop_.task_runner());
     firebase_auth_ = firebase_auth.get();
+    std::unique_ptr<FirestoreService> firestore_service;
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
-        "some user id", std::move(firebase_auth), cloud_provider_.NewRequest());
+        "some user id", std::move(firebase_auth), std::move(firestore_service),
+        cloud_provider_.NewRequest());
   }
   ~CloudProviderImplTest() override {}
 

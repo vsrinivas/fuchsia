@@ -9,7 +9,6 @@
 
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
-#include <grpc++/grpc++.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
