@@ -443,7 +443,7 @@ zx_status_t SocketDispatcher::ShareSelf(Handle* h) {
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Accept(Handle** h) {
+zx_status_t SocketDispatcher::Accept(HandleOwner* h) {
     canary_.Assert();
 
     if (!(flags_ & ZX_SOCKET_HAS_ACCEPT))
@@ -454,7 +454,7 @@ zx_status_t SocketDispatcher::Accept(Handle** h) {
     if (!accept_queue_)
         return ZX_ERR_SHOULD_WAIT;
 
-    *h = accept_queue_.release();
+    *h = fbl::move(accept_queue_);
 
     UpdateState(ZX_SOCKET_ACCEPT, 0);
     if (other_)

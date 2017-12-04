@@ -179,19 +179,16 @@ zx_status_t sys_socket_accept(zx_handle_t handle, user_out_ptr<zx_handle_t> out)
     if (status != ZX_OK)
         return status;
 
-    Handle* h = NULL;
-    status = socket->Accept(&h);
+    HandleOwner outhandle;
+    status = socket->Accept(&outhandle);
     if (status != ZX_OK)
         return status;
 
-    zx_handle_t hv = up->MapHandleToValue(h);
+    status = out.copy_to_user(up->MapHandleToValue(outhandle));
+    if (status != ZX_OK)
+        return status;
 
-    HandleOwner outhandle(h);
     up->AddHandle(fbl::move(outhandle));
-
-    status = out.copy_to_user(hv);
-    if (status != ZX_OK)
-        return status;
 
     return ZX_OK;
 }

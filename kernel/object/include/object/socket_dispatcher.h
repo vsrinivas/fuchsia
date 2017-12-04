@@ -52,8 +52,8 @@ public:
     // On success, share takes ownership of h
     zx_status_t Share(Handle* h);
 
-    // On success, a Handle is returned via h
-    zx_status_t Accept(Handle** h);
+    // On success, a HandleOwner is returned via h
+    zx_status_t Accept(HandleOwner* h);
 
     void OnPeerZeroHandles();
 
