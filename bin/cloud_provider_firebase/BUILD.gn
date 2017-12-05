@@ -7,15 +7,11 @@ import("//build/package.gni")
 visibility = [ "//peridot/*" ]
 
 package("cloud_provider_firebase") {
-  system_image = true
-
   deps = [
     "app",
   ]
 
-  binaries = [ {
-        name = "cloud_provider_firebase"
-      } ]
+  binary = "cloud_provider_firebase"
 }
 
 executable("cloud_provider_firebase_unittests") {
