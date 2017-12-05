@@ -529,7 +529,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/inet_ntop.c \
     $(LOCAL_DIR)/src/network/inet_pton.c \
     $(LOCAL_DIR)/src/network/lookup_ipliteral.c \
-    $(LOCAL_DIR)/src/network/lookup_name.c \
     $(LOCAL_DIR)/src/network/lookup_serv.c \
     $(LOCAL_DIR)/src/network/netlink.c \
     $(LOCAL_DIR)/src/network/netname.c \
