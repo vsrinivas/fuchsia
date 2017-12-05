@@ -20,6 +20,15 @@ GpuBitmap::GpuBitmap(GpuBitmap&& o)
   o.ptr_ = nullptr;
 }
 
+GpuBitmap& GpuBitmap::operator=(GpuBitmap&& o) {
+  width_ = o.width_;
+  height_ = o.height_;
+  buffer_ = fbl::move(o.buffer_);
+  ptr_ = o.ptr_;
+  o.ptr_ = nullptr;
+  return *this;
+}
+
 GpuBitmap::GpuBitmap(uint32_t width, uint32_t height, uint8_t* ptr)
     : width_(width), height_(height), ptr_(ptr) {}
 

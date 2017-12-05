@@ -10,12 +10,15 @@ executable("bin") {
   sources = [
     "efi.cc",
     "guest.cc",
+    "guest_view.cc",
+    "guest_view.h",
     "linux.cc",
     "zircon.cc",
   ]
 
   deps = [
     "//garnet/lib/machina",
+    "//garnet/public/lib/ui/view_framework:view_provider",
     "//zircon/system/ulib/fbl",
     "//zircon/third_party/lib/fdt",
   ]

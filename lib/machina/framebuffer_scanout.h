@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_FRAMEBUFFER_SCANOUT_H_
+#define GARNET_LIB_MACHINA_FRAMEBUFFER_SCANOUT_H_
 
 #include <fbl/unique_ptr.h>
 #include <virtio/gpu.h>
@@ -29,3 +30,5 @@ class FramebufferScanout : public GpuScanout {
 };
 
 }  // namespace machina
+
+#endif  // GARNET_LIB_MACHINA_FRAMEBUFFER_SCANOUT_H_

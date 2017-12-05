@@ -44,7 +44,7 @@ class VirtioGpu : public VirtioDevice {
   //
   // Currently only a single scanout is supported. ZX_ERR_ALREADY_EXISTS will
   // be returned if this method is called multiple times.
-  zx_status_t AddScanout(fbl::unique_ptr<GpuScanout> scanout);
+  zx_status_t AddScanout(GpuScanout* scanout);
 
   zx_status_t HandleGpuCommand(virtio_queue_t* queue,
                                uint16_t head,
@@ -92,7 +92,7 @@ class VirtioGpu : public VirtioDevice {
                      virtio_gpu_ctrl_hdr_t* response);
 
  private:
-  fbl::unique_ptr<GpuScanout> scanout_;
+  GpuScanout* scanout_ = nullptr;
 
   // Fix the number of hash table buckets to 1 because linux and zircon
   // virtcons only use a single resource.

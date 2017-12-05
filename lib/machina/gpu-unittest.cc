@@ -57,8 +57,8 @@ class VirtioGpuTest {
     scanout_size_ = width * height * VirtioGpu::kBytesPerPixel;
     scanout_buffer_ = surface.buffer();
 
-    auto scanout = fbl::make_unique<GpuScanout>(fbl::move(surface));
-    gpu_.AddScanout(fbl::move(scanout));
+    scanout_.SetBitmap(fbl::move(surface));
+    gpu_.AddScanout(&scanout_);
     return ZX_OK;
   }
 
@@ -182,6 +182,7 @@ class VirtioGpuTest {
 
  private:
   VirtioGpu gpu_;
+  GpuScanout scanout_;
   VirtioQueueFake control_queue_;
   // Backing pages for the root resource.
   fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>> backing_pages_;

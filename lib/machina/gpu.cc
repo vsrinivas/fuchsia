@@ -42,12 +42,12 @@ zx_status_t VirtioGpu::Init() {
   return ZX_OK;
 }
 
-zx_status_t VirtioGpu::AddScanout(fbl::unique_ptr<GpuScanout> scanout) {
+zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
   if (scanout_ != nullptr)
     return ZX_ERR_ALREADY_EXISTS;
 
   config_.num_scanouts = 1;
-  scanout_ = fbl::move(scanout);
+  scanout_ = scanout;
   return ZX_OK;
 }
 

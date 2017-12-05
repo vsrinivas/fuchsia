@@ -19,6 +19,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "garnet/bin/guest/guest_view.h"
 #include "garnet/bin/guest/linux.h"
 #include "garnet/bin/guest/zircon.h"
 #include "garnet/lib/machina/address.h"
@@ -177,6 +178,20 @@ static const char* linux_cmdline(const char* cmdline,
   return buf;
 }
 
+zx_status_t setup_zircon_framebuffer(
+    machina::VirtioGpu* gpu,
+    fbl::unique_ptr<machina::GpuScanout>* scanout) {
+  zx_status_t status = machina::FramebufferScanout::Create(
+      "/dev/class/framebuffer/000", scanout);
+  if (status != ZX_OK)
+    return status;
+  return gpu->AddScanout(scanout->get());
+}
+
+zx_status_t setup_scenic_framebuffer(machina::VirtioGpu* gpu) {
+  return GuestView::Start(gpu);
+}
+
 int main(int argc, char** argv) {
   const char* cmd = basename(argv[0]);
   const char* block_path = NULL;
@@ -228,8 +243,16 @@ int main(int argc, char** argv) {
         return usage(cmd);
     }
   }
-  if (optind >= argc)
-    return usage(cmd);
+  const char* kernel_path;
+  if (optind < argc) {
+    kernel_path = argv[optind];
+  } else {
+    // Default configuration.
+    // TODO(ZX-1487): Avoid hard-coding these.
+    use_gpu = true;
+    ramdisk_path = "/system/data/bootdata.bin";
+    kernel_path = "/system/data/zircon.bin";
+  }
 
   Guest guest;
   zx_status_t status = guest.Init(kVmoSize);
@@ -262,7 +285,7 @@ int main(int argc, char** argv) {
 #endif  // __x86_64__
 
   // Open the kernel image.
-  fbl::unique_fd fd(open(argv[optind], O_RDONLY));
+  fbl::unique_fd fd(open(kernel_path, O_RDONLY));
   if (!fd) {
     fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[optind]);
     return ZX_ERR_IO;
@@ -411,15 +434,14 @@ int main(int argc, char** argv) {
   machina::VirtioGpu gpu(physmem_addr, physmem_size);
   machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
                              "serial-number");
+  fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
   if (use_gpu) {
-    fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
-    status = machina::FramebufferScanout::Create("/dev/class/framebuffer/000",
-                                                 &gpu_scanout);
-    if (status != ZX_OK)
-      return status;
-    status = gpu.AddScanout(fbl::move(gpu_scanout));
-    if (status != ZX_OK)
-      return status;
+    status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
+    if (status != ZX_OK) {
+      status = setup_scenic_framebuffer(&gpu);
+      if (status != ZX_OK)
+        return status;
+    }
 
     status = gpu.Init();
     if (status != ZX_OK)

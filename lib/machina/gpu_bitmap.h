@@ -33,6 +33,8 @@ class GpuBitmap {
 
   // Move semantics.
   GpuBitmap(GpuBitmap&&);
+  GpuBitmap& operator=(GpuBitmap&& o);
+
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GpuBitmap);
 
   uint32_t width() const { return width_; }
