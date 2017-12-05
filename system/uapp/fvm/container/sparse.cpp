@@ -127,7 +127,7 @@ zx_status_t SparseContainer::Verify() const {
 
     if (end != disk_size_) {
         fprintf(stderr, "Header + extent sizes (%" PRIu64 ") do not match sparse file size "
-                "(%" PRIu64 ")\n", end, disk_size_);
+                "(%zu)\n", end, disk_size_);
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
