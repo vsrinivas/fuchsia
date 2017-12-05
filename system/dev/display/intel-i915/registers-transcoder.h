@@ -62,6 +62,54 @@ public:
     DEF_FIELD(31, 29, trans_clock_select);
 };
 
+
+// DATAM
+class TransDataM : public RegisterBase<TransDataM> {
+public:
+    DEF_FIELD(30, 25, tu_or_vcpayload_size);
+    DEF_FIELD(23, 0, data_m_value);
+};
+
+// DATAN
+class TransDataN : public RegisterBase<TransDataN> {
+public:
+    DEF_FIELD(23, 0, data_n_value);
+};
+
+// LINKM1
+class TransLinkM : public RegisterBase<TransLinkM> {
+public:
+    DEF_FIELD(23, 0, link_m_value);
+};
+
+// LINKN1
+class TransLinkN : public RegisterBase<TransLinkN> {
+public:
+    DEF_FIELD(23, 0, link_n_value);
+};
+
+// TRANS_MSA_MISC
+class TransMsaMisc : public RegisterBase<TransMsaMisc> {
+public:
+    // Byte 1 is MISC1 from DP spec
+    DEF_FIELD(10, 9, stereo_video);
+    DEF_BIT(8, interlaced_vertical_total_even);
+    // Byte 0 is MISC0 from DP spec
+    DEF_FIELD(7, 5, bits_per_color);
+    static constexpr uint32_t k6Bbc = 0;
+    static constexpr uint32_t k8Bbc = 1;
+    static constexpr uint32_t k10Bbc = 2;
+    static constexpr uint32_t k12Bbc = 3;
+    static constexpr uint32_t k16Bbc = 4;
+    DEF_BIT(4, colorimetry);
+    DEF_BIT(3, dynamic_range);
+    DEF_FIELD(2, 1, color_format);
+    static constexpr uint32_t kRgb = 0;
+    static constexpr uint32_t kYcbCr422 = 1;
+    static constexpr uint32_t kYcbCr444 = 2;
+    DEF_BIT(0, sync_clock);
+};
+
 class TranscoderRegs {
 public:
     TranscoderRegs(Pipe pipe) : pipe_(pipe) {
@@ -83,6 +131,11 @@ public:
         // This uses a different offset from the other transcoder registers.
         return RegisterAddr<TransClockSelect>(0x46140 + pipe_ * 4);
     }
+    RegisterAddr<TransDataM> DataM() { return GetReg<TransDataM>(0x60030); }
+    RegisterAddr<TransDataN> DataN() { return GetReg<TransDataN>(0x60034); }
+    RegisterAddr<TransLinkM> LinkM() { return GetReg<TransLinkM>(0x60040); }
+    RegisterAddr<TransLinkN> LinkN() { return GetReg<TransLinkN>(0x60044); }
+    RegisterAddr<TransMsaMisc> MsaMisc() { return GetReg<TransMsaMisc>(0x60410); }
 
 private:
     template <class RegType> RegisterAddr<RegType> GetReg(uint32_t base_addr) {

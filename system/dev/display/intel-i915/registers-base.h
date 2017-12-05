@@ -13,7 +13,7 @@ namespace registers {
 
 template <class RegType> class RegisterBase {
 public:
-    uint32_t reg_value() { return reg_value_; }
+    uint32_t reg_value() const { return reg_value_; }
     uint32_t* reg_value_ptr() { return &reg_value_; }
     void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
     void set_reg_value(uint32_t value) { reg_value_ = value; }

@@ -52,6 +52,7 @@ public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
     DEF_FIELD(9, 0, stride);
+    // TODO(ZX-1413): this should be 64 bytes, not 16 4-byte pixels
     static constexpr uint32_t kLinearStrideChunkSize = 16;
 };
 

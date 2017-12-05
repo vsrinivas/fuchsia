@@ -145,6 +145,47 @@ public:
     }
 };
 
+// DDI_AUX_CTL
+class DdiAuxControl : public RegisterBase<DdiAuxControl> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x64010;
+
+    DEF_BIT(31, send_busy);
+    DEF_BIT(30, done);
+    DEF_BIT(29, interrupt_on_done);
+    DEF_BIT(28, timeout);
+    DEF_FIELD(27, 26, timeout_timer_value);
+    DEF_BIT(25, rcv_error);
+    DEF_FIELD(24, 20, message_size);
+    DEF_FIELD(4, 0, sync_pulse_count);
+};
+
+// DDI_AUX_DATA
+class DdiAuxData : public RegisterBase<DdiAuxData> {
+public:
+    // There are 5 32-bit words at this register's address.
+    static constexpr uint32_t kBaseAddr = 0x64014;
+};
+
+// DP_TP_CTL
+class DdiDpTransportControl : public RegisterBase<DdiDpTransportControl> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x64040;
+
+    DEF_BIT(31, transport_enable);
+    DEF_BIT(27, transport_mode_select);
+    DEF_BIT(25, force_act);
+    DEF_BIT(18, enhanced_framing_enable);
+
+    DEF_FIELD(10, 8, dp_link_training_pattern);
+    static constexpr int kTrainingPattern1 = 0;
+    static constexpr int kTrainingPattern2 = 1;
+    static constexpr int kIdlePattern = 2;
+    static constexpr int kSendPixelData = 3;
+
+    DEF_BIT(6, alternate_sr_enable);
+};
+
 // An instance of DdiRegs represents the registers for a particular DDI.
 class DdiRegs {
 public:
@@ -152,6 +193,13 @@ public:
 
     RegisterAddr<registers::DdiBufControl> DdiBufControl() {
         return GetReg<registers::DdiBufControl>();
+    }
+    RegisterAddr<registers::DdiAuxControl> DdiAuxControl() {
+        return GetReg<registers::DdiAuxControl>();
+    }
+    RegisterAddr<registers::DdiAuxData> DdiAuxData() { return GetReg<registers::DdiAuxData>(); }
+    RegisterAddr<registers::DdiDpTransportControl> DdiDpTransportControl() {
+        return GetReg<registers::DdiDpTransportControl>();
     }
     RegisterAddr<registers::DdiBufTransHi> DdiBufTransHi(int index) {
         return RegisterAddr<registers::DdiBufTransHi>(0x64e00 + 0x60 * ddi_number_ + 8 * index + 4);

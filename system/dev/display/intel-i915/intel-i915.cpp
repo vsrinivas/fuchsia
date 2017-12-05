@@ -26,6 +26,7 @@
 #include <zx/vmo.h>
 
 #include "bootloader-display.h"
+#include "dp-display.h"
 #include "hdmi-display.h"
 #include "intel-i915.h"
 #include "macros.h"
@@ -338,6 +339,11 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
     ddi_buf_ctl.ddi_buffer_enable().set(0);
     ddi_buf_ctl.WriteTo(mmio_space());
 
+    auto ddi_dp_tp_ctl = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
+    ddi_dp_tp_ctl.transport_enable().set(0);
+    ddi_dp_tp_ctl.dp_link_training_pattern().set(ddi_dp_tp_ctl.kTrainingPattern1);
+    ddi_dp_tp_ctl.WriteTo(mmio_space());
+
     if (was_enabled && !WAIT_ON_MS(
             ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status().get(), 8)) {
         zxlogf(ERROR, "Port failed to go idle\n");
@@ -418,12 +424,21 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
         AllocDisplayBuffers();
 
         for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
-            zxlogf(SPEW, "Trying to init display %d\n", registers::kDdis[i]);
-
+            zxlogf(TRACE, "Trying to init display %d\n", registers::kDdis[i]);
+            zxlogf(SPEW, "Trying hdmi\n");
             fbl::unique_ptr<DisplayDevice> hdmi_disp(
                     new (&ac) HdmiDisplay(this, registers::kDdis[i], registers::PIPE_A));
             if (ac.check() && hdmi_disp->Init()) {
                 disp_device = fbl::move(hdmi_disp);
+            }
+
+            if (!disp_device) {
+                zxlogf(SPEW, "Trying dp\n");
+                fbl::unique_ptr<DisplayDevice> dp_disp(
+                        new (&ac) DpDisplay(this, registers::kDdis[i], registers::PIPE_A));
+                if (ac.check() && dp_disp->Init()) {
+                    disp_device = fbl::move(dp_disp);
+                }
             }
         }
 
