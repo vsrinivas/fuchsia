@@ -254,13 +254,13 @@ int main(int argc, char** argv) {
   }
 
   uintptr_t guest_ip;
-  uintptr_t bootdata_off = 0;
+  uintptr_t ramdisk_off = 0;
 
   char guest_cmdline[PATH_MAX];
   const char* zircon_fmt_string = "TERM=uart %s";
   snprintf(guest_cmdline, PATH_MAX, zircon_fmt_string, cmdline ? cmdline : "");
   status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off, fd,
-                        ramdisk_path, guest_cmdline, &guest_ip, &bootdata_off);
+                        ramdisk_path, guest_cmdline, &guest_ip, &ramdisk_off);
 
   if (status == ZX_ERR_NOT_SUPPORTED) {
     const char* linux_fmt_string =
@@ -269,7 +269,7 @@ int main(int argc, char** argv) {
     snprintf(guest_cmdline, PATH_MAX, linux_fmt_string, pt_end_off,
              cmdline ? cmdline : "");
     status = setup_linux(physmem_addr, physmem_size, first_page, fd,
-                         ramdisk_path, guest_cmdline, &guest_ip, &bootdata_off);
+                         ramdisk_path, guest_cmdline, &guest_ip, &ramdisk_off);
   }
   if (status == ZX_ERR_NOT_SUPPORTED) {
     fprintf(stderr, "Unknown kernel\n");
@@ -424,9 +424,9 @@ int main(int argc, char** argv) {
   // Setup initial VCPU state.
   zx_vcpu_state_t vcpu_state = {};
 #if __aarch64__
-  vcpu_state.x[0] = bootdata_off;
+  vcpu_state.x[0] = ramdisk_off;
 #elif __x86_64__
-  vcpu_state.rsi = bootdata_off;
+  vcpu_state.rsi = ramdisk_off;
 #endif
   status = vcpu.WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
   if (status != ZX_OK) {

@@ -14,6 +14,6 @@ zx_status_t setup_linux(const uintptr_t addr,
                         const char* initrd_path,
                         const char* cmdline,
                         uintptr_t* guest_ip,
-                        uintptr_t* zero_page);
+                        uintptr_t* ramdisk_off);
 
 #endif  // GARNET_BIN_GUEST_LINUX_H_

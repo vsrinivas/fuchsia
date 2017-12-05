@@ -33,7 +33,7 @@ static bool is_mz(const MzHeader* header) {
 zx_status_t read_efi(const uintptr_t first_page,
                      uintptr_t* guest_ip,
                      uintptr_t* kernel_off,
-                     uintptr_t* kernel_len) {
+                     size_t* kernel_len) {
   MzHeader* mz_header = reinterpret_cast<MzHeader*>(first_page);
   if (!is_mz(mz_header))
     return ZX_ERR_NOT_SUPPORTED;

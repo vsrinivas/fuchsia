@@ -10,6 +10,6 @@
 zx_status_t read_efi(const uintptr_t first_page,
                      uintptr_t* guest_ip,
                      uintptr_t* kernel_off,
-                     uintptr_t* kernel_len);
+                     size_t* kernel_len);
 
 #endif  // GARNET_BIN_GUEST_EFI_H_

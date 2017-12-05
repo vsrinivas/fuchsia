@@ -13,10 +13,9 @@
 #include <zircon/boot/bootdata.h>
 
 #include "garnet/bin/guest/efi.h"
+#include "garnet/bin/guest/kernel.h"
 #include "garnet/bin/guest/zircon.h"
 
-static const uintptr_t kKernelOffset = 0x00100000;
-static const uintptr_t kBootdataOffset = 0x04000000;
 static const uint64_t kBuildSigStartMagic = 0x5452545347495342;  // BSIGSTRT
 
 static bool is_bootdata(const bootdata_t* header) {
@@ -39,7 +38,7 @@ static zx_status_t load_zircon(const int fd,
                                const uintptr_t addr,
                                const uintptr_t first_page,
                                const uintptr_t kernel_off,
-                               const uintptr_t kernel_len) {
+                               const size_t kernel_len) {
   // Move the first page to the kernel offset.
   void* kernel_loc = reinterpret_cast<void*>(addr + kernel_off);
   memmove(kernel_loc, reinterpret_cast<void*>(first_page), PAGE_SIZE);
@@ -70,17 +69,19 @@ static zx_status_t load_zircon(const int fd,
 
 static zx_status_t load_cmdline(const char* cmdline,
                                 const uintptr_t addr,
+                                const size_t size,
                                 const uintptr_t bootdata_off) {
-  const size_t cmdline_len = strlen(cmdline) + 1;
-  if (cmdline_len > UINT32_MAX) {
-    fprintf(stderr, "Command line is too long\n");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
 
   bootdata_t* container_hdr =
       reinterpret_cast<bootdata_t*>(addr + bootdata_off);
-  uintptr_t data_off =
+  const uintptr_t data_off =
       bootdata_off + sizeof(bootdata_t) + BOOTDATA_ALIGN(container_hdr->length);
+
+  const size_t cmdline_len = strlen(cmdline) + 1;
+  if (cmdline_len > UINT32_MAX || data_off + cmdline_len > size) {
+    fprintf(stderr, "Command line is too long\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
   bootdata_t* cmdline_hdr = reinterpret_cast<bootdata_t*>(addr + data_off);
   set_bootdata(cmdline_hdr, BOOTDATA_CMDLINE,
@@ -94,6 +95,7 @@ static zx_status_t load_cmdline(const char* cmdline,
 
 static zx_status_t load_bootfs(const int fd,
                                const uintptr_t addr,
+                               const size_t size,
                                const uintptr_t bootdata_off) {
   bootdata_t ramdisk_hdr;
   ssize_t ret = read(fd, &ramdisk_hdr, sizeof(bootdata_t));
@@ -104,6 +106,10 @@ static zx_status_t load_bootfs(const int fd,
   if (!is_bootdata(&ramdisk_hdr)) {
     fprintf(stderr, "Invalid BOOTFS image header\n");
     return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (ramdisk_hdr.length > size - bootdata_off) {
+    fprintf(stderr, "BOOTFS image is too large\n");
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   bootdata_t* container_hdr =
@@ -172,7 +178,7 @@ static zx_status_t create_bootdata(const uintptr_t addr,
 static zx_status_t is_zircon(const uintptr_t first_page,
                              uintptr_t* guest_ip,
                              uintptr_t* kernel_off,
-                             uintptr_t* kernel_len) {
+                             size_t* kernel_len) {
   zircon_kernel_t* kernel_header =
       reinterpret_cast<zircon_kernel_t*>(first_page);
 
@@ -190,10 +196,6 @@ static zx_status_t is_zircon(const uintptr_t first_page,
   return ZX_OK;
 }
 
-static bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
-  return x >= addr && x < addr + size;
-}
-
 zx_status_t setup_zircon(const uintptr_t addr,
                          const size_t size,
                          const uintptr_t first_page,
@@ -202,28 +204,17 @@ zx_status_t setup_zircon(const uintptr_t addr,
                          const char* bootdata_path,
                          const char* cmdline,
                          uintptr_t* guest_ip,
-                         uintptr_t* bootdata_off) {
+                         uintptr_t* ramdisk_off) {
   uintptr_t kernel_off = 0;
-  uintptr_t kernel_len = 0;
+  size_t kernel_len = 0;
   zx_status_t status =
       is_zircon(first_page, guest_ip, &kernel_off, &kernel_len);
   if (status != ZX_OK)
     return status;
+  if (!valid_location(size, *guest_ip, kernel_off, kernel_len))
+    return ZX_ERR_IO_DATA_INTEGRITY;
 
-  if (!is_within(*guest_ip, kernel_off, kernel_len)) {
-    fprintf(stderr, "Kernel entry point is outside of kernel location\n");
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-  if (kernel_off + kernel_len >= size) {
-    fprintf(stderr, "Kernel location is outside of guest physical memory\n");
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-  if (is_within(kBootdataOffset, kernel_off, kernel_len)) {
-    fprintf(stderr, "Kernel location overlaps BOOTFS location\n");
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-
-  status = create_bootdata(addr, size, acpi_off, kBootdataOffset);
+  status = create_bootdata(addr, size, acpi_off, kRamdiskOffset);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create BOOTDATA\n");
     return status;
@@ -234,8 +225,8 @@ zx_status_t setup_zircon(const uintptr_t addr,
     return status;
 
   // If we have a command line, load it.
-  if (cmdline != NULL) {
-    status = load_cmdline(cmdline, addr, kBootdataOffset);
+  if (cmdline != nullptr) {
+    status = load_cmdline(cmdline, addr, size, kRamdiskOffset);
     if (status != ZX_OK)
       return status;
   }
@@ -248,12 +239,12 @@ zx_status_t setup_zircon(const uintptr_t addr,
       return ZX_ERR_IO;
     }
 
-    status = load_bootfs(boot_fd, addr, kBootdataOffset);
+    status = load_bootfs(boot_fd, addr, size, kRamdiskOffset);
     close(boot_fd);
     if (status != ZX_OK)
       return status;
   }
 
-  *bootdata_off = kBootdataOffset;
+  *ramdisk_off = kRamdiskOffset;
   return ZX_OK;
 }
