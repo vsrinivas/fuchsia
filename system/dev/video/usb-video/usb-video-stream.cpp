@@ -66,6 +66,75 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
     iface_num_ = intf->bInterfaceNumber;
     usb_ep_addr_ = input_header->bEndpointAddress;
 
+    uint16_t max_packet_size = 0;
+    for (const auto& setting : streaming_settings_) {
+        if (setting.max_packet_size > max_packet_size) {
+            max_packet_size = setting.max_packet_size;
+        }
+    }
+
+    zxlogf(TRACE, "allocating %d usb requests of size %u\n",
+           MAX_OUTSTANDING_REQS, max_packet_size);
+
+    {
+        fbl::AutoLock lock(&lock_);
+
+        list_initialize(&free_reqs_);
+
+        for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
+            usb_request_t* req;
+            zx_status_t status = usb_request_alloc(&req,
+                                                   max_packet_size,
+                                                   usb_ep_addr_);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
+                return status;
+            }
+
+            req->cookie = this;
+            req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
+                ZX_DEBUG_ASSERT(cookie != nullptr);
+                reinterpret_cast<UsbVideoStream*>(cookie)->RequestComplete(req);
+            };
+            list_add_head(&free_reqs_, &req->node);
+            num_free_reqs_++;
+            num_allocated_reqs_++;
+        }
+    }
+
+    zx_status_t status = UsbVideoStreamBase::DdkAdd(devname, DEVICE_ADD_INVISIBLE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    thrd_t thread;
+    int ret = thrd_create_with_name(&thread, Init, this, "usb_video:init");
+    if (ret != thrd_success) {
+        DdkRemove();
+        return ZX_ERR_INTERNAL;
+    }
+    thrd_detach(thread);
+    return ZX_OK;
+}
+
+zx_status_t UsbVideoStream::Init() {
+    zx_status_t status = SetFormat();
+    if (status != ZX_OK) {
+        DdkRemove();
+        return status;
+    }
+    DdkMakeVisible();
+    return ZX_OK;
+}
+
+zx_status_t UsbVideoStream::SetFormat() {
+    fbl::AutoLock lock(&lock_);
+
+    if (ring_buffer_state_ != RingBufferState::STOPPED) {
+        // TODO(jocelyndang): stop the ring buffer rather than returning an error.
+        return ZX_ERR_BAD_STATE;
+    }
+
     // TODO(jocelyndang): add a way for the client to select the format and
     // frame type. Just use the first format for now.
     UsbVideoFormat* format = formats_.get();
@@ -117,12 +186,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
            cur_streaming_setting_->max_packet_size,
            cur_streaming_setting_->transactions_per_microframe);
 
-    status = AllocUsbRequests();
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to alloc usb requests: %d\n", status);
-        return status;
-    }
-    return UsbVideoStreamBase::DdkAdd(devname);
+    return ZX_OK;
 }
 
 zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
@@ -176,37 +240,6 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
     return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::AllocUsbRequests() {
-    fbl::AutoLock lock(&lock_);
-
-    if (!cur_streaming_setting_) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    list_initialize(&free_reqs_);
-
-    for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
-        usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req,
-                                               cur_streaming_setting_->max_packet_size,
-                                               usb_ep_addr_);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
-            return status;
-        }
-
-        req->cookie = this;
-        req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
-            ZX_DEBUG_ASSERT(cookie != nullptr);
-            reinterpret_cast<UsbVideoStream*>(cookie)->RequestComplete(req);
-        };
-        list_add_head(&free_reqs_, &req->node);
-        num_free_reqs_++;
-        num_allocated_reqs_++;
-    }
-    return ZX_OK;
-}
-
 zx_status_t UsbVideoStream::CreateRingBuffer() {
     fbl::AutoLock lock(&lock_);
 
@@ -235,7 +268,7 @@ zx_status_t UsbVideoStream::CreateRingBuffer() {
 zx_status_t UsbVideoStream::StartStreaming() {
     fbl::AutoLock lock(&lock_);
 
-    if (ring_buffer_state_ != RingBufferState::STOPPED) {
+    if (!ring_buffer_virt_ || ring_buffer_state_ != RingBufferState::STOPPED) {
         return ZX_ERR_BAD_STATE;
     }
     zx_status_t status = usb_set_interface(&usb_, iface_num_,

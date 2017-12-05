@@ -64,6 +64,14 @@ private:
                      usb_interface_descriptor_t* intf,
                      usb_video_vs_input_header_desc* input_header);
 
+    // Deferred initialization of the device via a thread.  Once complete, this
+    // marks the device as visible.
+    static zx_status_t Init(void* device) {
+        return reinterpret_cast<UsbVideoStream*>(device)->Init();
+    }
+    zx_status_t Init();
+    zx_status_t SetFormat();
+
     // Requests the device use the given format and frame descriptor,
     // then finds a streaming setting that supports the required
     // data throughput.
@@ -78,9 +86,6 @@ private:
                           const UsbVideoFrameDesc* frame_desc,
                           usb_video_vc_probe_and_commit_controls* out_result,
                           const UsbVideoStreamingSetting** out_setting);
-
-    // Populates the free_reqs_ list.
-    zx_status_t AllocUsbRequests();
 
     // Creates a new ring buffer and maps it into our address space.
     // The current ring buffer state must be RingBufferState::STOPPED.
