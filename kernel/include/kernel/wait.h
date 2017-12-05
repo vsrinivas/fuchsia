@@ -22,15 +22,15 @@ __BEGIN_CDECLS
 
 typedef struct wait_queue {
     int magic;
-    struct list_node list;
     int count;
+    struct list_node list;
 } wait_queue_t;
 
 #define WAIT_QUEUE_INITIAL_VALUE(q)           \
     {                                         \
         .magic = WAIT_QUEUE_MAGIC,            \
-        .list = LIST_INITIAL_VALUE((q).list), \
-        .count = 0                            \
+        .count = 0,                           \
+        .list = LIST_INITIAL_VALUE((q).list)  \
     }
 
 /* wait queue primitive */
