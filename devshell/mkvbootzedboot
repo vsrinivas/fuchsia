@@ -3,20 +3,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### make a zedboot configuration in a target directory
+### make a unified zedboot USB key
 
-## usage: fx mkvbootzedboot </dev/your/usb/disk>
-## Builds Fuchsia bootloader and zedboot and copies it to a drive of
-## your choice. Makes zedboot the default boot option.
+## usage: fx mkvbootzedboot [options] <usb device>
+##  -f  force writing to a non-usb target
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
-# TODO(raggi): this defensiveness can probably get in the way, and should
-# probably be removed at the first sign of trouble.
+force=false
+if [[ "$1" == "-f" ]]; then
+  shift
+  force=true
+fi
+
 is_usb() {
-  fx-command-run list-usb-disks | grep "$1"
+  if ! ${force}; then
+    fx-command-run list-usb-disks | grep "$1"
+  fi
 }
 
 USB_DEVICE="$1"
@@ -33,28 +38,65 @@ if ! is_usb "${USB_DEVICE}"; then
   exit 1
 fi
 
-if [[ "$(uname)" == "Darwin" ]]; then
-  diskutil unmountDisk "${USB_DEVICE}"
-fi
-
 sudo chown "${USER}" "${USB_DEVICE}"
 
+# Linux doesn't automount things aggressively, so no work to do.
+unmountcmd=""
+# MacOS is really persistent about remounting disks after the raw block device
+# is closed, so, keep doing this. In the future we will replace CGPT with our
+# own tool that can do everything in one shot, like make-fuchsia-vol does. The
+# hack here keeps an open reference to the disk device, which prevents
+# re-initialization of the gpt driver.
+if [[ "$(uname)" == "Darwin" ]]; then
+  echo
+  echo "### NOTE:"
+  echo "### NOTE: Click 'ignore' on any disk dialog boxes"
+  echo "### NOTE:"
+  echo
+
+  unmountcmd="diskutil quiet unmountDisk ${USB_DEVICE}"
+fi
+
 # Destroy any existing GPT/MBR on the device and re-create
-echo -n "Create new GPT partition table... "
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" repair "${USB_DEVICE}"
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" create -z "${USB_DEVICE}"
+echo "Create new GPT partition table... "
+$unmountcmd
 "${FUCHSIA_BUILD_DIR}/tools/cgpt" create "${USB_DEVICE}"
+$unmountcmd
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" boot -p "${USB_DEVICE}"
+$unmountcmd
 echo "done"
 
-echo -n "Create new partitions... "
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s 32768 -t kernel -b 64 -l kernel "${USB_DEVICE}"
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -i 1 -T 1 -S 1 -P 2 "${USB_DEVICE}"
+echo "Create new partitions... "
+# ESP needs to be a FAT compatible size
+esp_size=$(((63*1024*1024)/512))
+vboot_size=$(((64*1024*1024)/512))
+esp_offset=2048
+vboot_offset=$(($esp_size + $esp_offset))
+$unmountcmd
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${esp_size}" -t efi -b "${esp_offset}" -l esp "${USB_DEVICE}"
+$unmountcmd
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${vboot_size}" -t kernel -b "${vboot_offset}" -l zedboot "${USB_DEVICE}"
+$unmountcmd
+"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -i 2 -T 1 -S 1 -P 2 "${USB_DEVICE}"
 echo "done"
 
-echo "Building signed zedboot image"
-fx-command-run build "images/zedboot-${ZIRCON_PROJECT}.vboot"
+echo "Building zedboot partitions..."
+fx-command-run build "images/zedboot-${ZIRCON_PROJECT}.vboot" "images/zedboot-${ZIRCON_PROJECT}.esp.blk"
 echo "done"
 
-echo -n "Writing zedboot"
-dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.vboot" of="${USB_DEVICE}" seek=64
+echo "Writing zedboot for EFI"
+$unmountcmd
+dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.esp.blk" of="${USB_DEVICE}" seek=${esp_offset}
+echo "Writing zedboot for Cros"
+$unmountcmd
+dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.vboot" of="${USB_DEVICE}" seek=${vboot_offset}
 echo "done"
+
+case "$(uname)" in
+  Linux)
+    eject "${USB_DEVICE}"
+    ;;
+  Darwin)
+    diskutil eject "${USB_DEVICE}"
+    ;;
+esac
