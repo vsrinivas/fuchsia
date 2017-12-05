@@ -88,12 +88,6 @@ static zx_status_t kpci_op_reset_device(void* ctx) {
     return resp.ordinal;
 }
 
-
-static zx_status_t kpci_op_enable_pio(void* ctx, bool enable) {
-    kpci_device_t* device = ctx;
-    return zx_pci_enable_pio(device->handle, enable);
-}
-
 // TODO(cja): Figure out how to handle passing PIO privileges to other
 // processes in the future when PCI is moved out of the kernel into
 // userspace.
@@ -360,7 +354,6 @@ static zx_status_t kpci_op_get_auxdata(void* ctx, const char* args, void* data,
 
 static pci_protocol_ops_t _pci_protocol = {
     .enable_bus_master = kpci_op_enable_bus_master,
-    .enable_pio = kpci_op_enable_pio,
     .reset_device = kpci_op_reset_device,
     .get_resource = kpci_op_get_resource,
     .map_resource = kpci_op_map_resource,

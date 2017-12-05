@@ -411,24 +411,6 @@ zx_status_t sys_pci_enable_bus_master(zx_handle_t dev_handle, bool enable) {
     return pci_device->EnableBusMaster(enable);
 }
 
-zx_status_t sys_pci_enable_pio(zx_handle_t dev_handle, bool enable) {
-    /**
-     * Enables or disables PIO accesss for the PCI device associated with the handle.
-     * @param handle Handle associated with a PCI device
-     * @param enable true if PIO access should be enabled.
-     */
-    LTRACEF("handle %x\n", dev_handle);
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    fbl::RefPtr<PciDeviceDispatcher> pci_device;
-    zx_status_t status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
-    if (status != ZX_OK)
-        return status;
-
-    return pci_device->EnablePio(enable);
-}
-
 zx_status_t sys_pci_reset_device(zx_handle_t dev_handle) {
     /**
      * Resets the PCI device associated with the handle.
@@ -766,10 +748,6 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t, uint32_t, user_inout_ptr<zx_pcie
 }
 
 zx_status_t sys_pci_enable_bus_master(zx_handle_t, bool) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_pci_enable_pio(zx_handle_t, bool) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

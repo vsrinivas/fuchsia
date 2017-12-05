@@ -579,10 +579,6 @@ syscall pci_enable_bus_master
     (handle: zx_handle_t, enable: bool)
     returns (zx_status_t);
 
-syscall pci_enable_pio
-    (handle: zx_handle_t, enable: bool)
-    returns (zx_status_t);
-
 syscall pci_reset_device
     (handle: zx_handle_t)
     returns (zx_status_t);

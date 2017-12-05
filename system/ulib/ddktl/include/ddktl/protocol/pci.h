@@ -76,10 +76,6 @@ class PciProtocolProxy {
         return ops_->enable_bus_master(ctx_, enable);
     }
 
-    zx_status_t EnablePio(bool enable) {
-        return ops_->enable_pio(ctx_, enable);
-    }
-
     zx_status_t ResetDevice() {
         return ops_->reset_device(ctx_);
     }
