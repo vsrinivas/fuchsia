@@ -56,6 +56,11 @@ zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline);
 zx_status_t wait_queue_block_with_mask(wait_queue_t*, zx_time_t deadline,
                                        uint signal_mask);
 
+/* returns the highest priority of all the blocked threads on this wait queue.
+ * returns -1 if no threads are blocked.
+ */
+int wait_queue_blocked_priority(wait_queue_t*);
+
 /*
  * release one or more threads from the wait queue.
  * reschedule = should the system reschedule if any is released.

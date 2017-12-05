@@ -15,6 +15,7 @@
 /* not intended to be used by regular kernel code */
 void sched_init_early(void);
 
+void sched_init_thread(thread_t* t, int priority);
 void sched_block(void);
 void sched_yield(void);
 void sched_preempt(void);
@@ -22,6 +23,11 @@ void sched_reschedule(void);
 void sched_resched_internal(void);
 void sched_unblock_idle(thread_t* t);
 void sched_migrate(thread_t* t);
+
+/* set the inheirited priority of a thread and return if the caller should locally reschedule.
+ * pri should be <= MAX_PRIORITY, negative values disable priority inheiritance
+ */
+void sched_inheirit_priority(thread_t* t, int pri, bool* local_resched);
 
 /* return true if the thread was placed on the current cpu's run queue */
 /* this usually means the caller should locally reschedule soon */

@@ -74,6 +74,7 @@ retry:
     oldval = 0;
     if (likely(atomic_cmpxchg_u64(&m->val, &oldval, (uintptr_t)ct))) {
         // acquired it cleanly
+        ct->mutexes_held++;
         return;
     }
 
@@ -100,6 +101,11 @@ retry:
         goto retry;
     }
 
+    // have the holder inheirit our priority
+    // discard the local reschedule flag because we're just about to block anyway
+    bool unused;
+    sched_inheirit_priority(mutex_holder(m), ct->effec_priority, &unused);
+
     // we have signalled that we're blocking, so drop into the wait queue
     zx_status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
     if (unlikely(ret < ZX_OK)) {
@@ -112,6 +118,9 @@ retry:
     // someone must have woken us up, we should own the mutex now
     DEBUG_ASSERT(ct == mutex_holder(m));
 
+    // record that we hold it
+    ct->mutexes_held++;
+
     THREAD_UNLOCK(state);
 }
 
@@ -121,12 +130,32 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
     thread_t* ct = get_current_thread();
     uintptr_t oldval;
 
+    // we're going to release it, mark as such
+    ct->mutexes_held--;
+
     // in case there's no contention, try the fast path
     oldval = (uintptr_t)ct;
     if (likely(atomic_cmpxchg_u64(&m->val, &oldval, 0))) {
         // we're done, exit
+        // if we had inheirited any priorities, undo it if we are no longer holding any mutexes
+        if (unlikely(ct->inheirited_priority >= 0) && ct->mutexes_held == 0) {
+            spin_lock_saved_state_t state;
+            if (!thread_lock_held)
+                spin_lock_irqsave(&thread_lock, state);
+
+            bool local_resched = false;
+            sched_inheirit_priority(ct, -1, &local_resched);
+            if (reschedule && local_resched) {
+                sched_reschedule();
+            }
+
+            if (!thread_lock_held)
+                spin_unlock_irqrestore(&thread_lock, state);
+        }
         return;
     }
+
+    DEBUG_ASSERT(ct->mutexes_held >= 0);
 
 // must have been some contention, try the slow release
 
@@ -159,9 +188,22 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
 
     ktrace(TAG_KWAIT_WAKE, (uintptr_t)&m->wait >> 32, (uintptr_t)&m->wait, 1, 0);
 
+    // boost the priority of the new thread we're waking
+    // if the wait queue is empty, it'll return -1 and we'll deboost the thread if
+    // it's not already holding a mutex
+    bool local_resched = false;
+    int blocked_priority = wait_queue_blocked_priority(&m->wait);
+    if (blocked_priority >= 0 || t->mutexes_held == 0) {
+        sched_inheirit_priority(t, blocked_priority, &local_resched);
+    }
+
+    // deboost ourself if this is the last mutex we held
+    if (ct->inheirited_priority >= 0 && ct->mutexes_held == 0)
+        sched_inheirit_priority(ct, -1, &local_resched);
+
     // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
     // cpu run queue was modified
-    bool local_resched = sched_unblock(t);
+    local_resched |= sched_unblock(t);
     if (reschedule && local_resched)
         sched_reschedule();
 

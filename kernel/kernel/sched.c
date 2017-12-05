@@ -55,10 +55,14 @@
 static bool local_migrate_if_needed(thread_t* curr_thread);
 
 /* compute the effective priority of a thread */
-static int effec_priority(const thread_t* t) {
+static void compute_effec_priority(thread_t* t) {
     int ep = t->base_priority + t->priority_boost;
+    if (t->inheirited_priority > ep)
+        ep = t->inheirited_priority;
+
     DEBUG_ASSERT(ep >= LOWEST_PRIORITY && ep <= HIGHEST_PRIORITY);
-    return ep;
+
+    t->effec_priority = ep;
 }
 
 /* boost the priority of the thread by +1 */
@@ -72,6 +76,7 @@ static void boost_thread(thread_t* t) {
     if (t->priority_boost < MAX_PRIORITY_ADJ &&
         likely((t->base_priority + t->priority_boost) < HIGHEST_PRIORITY)) {
         t->priority_boost++;
+        compute_effec_priority(t);
     }
 }
 
@@ -106,6 +111,7 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
 
     /* drop a level */
     t->priority_boost--;
+    compute_effec_priority(t);
 }
 
 /* pick a 'random' cpu out of the passed in mask of cpus */
@@ -198,10 +204,8 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
 static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
-    int ep = effec_priority(t);
-
-    list_add_head(&percpu[cpu].run_queue[ep], &t->queue_node);
-    percpu[cpu].run_queue_bitmap |= (1u << ep);
+    list_add_head(&percpu[cpu].run_queue[t->effec_priority], &t->queue_node);
+    percpu[cpu].run_queue_bitmap |= (1u << t->effec_priority);
 
     /* mark the cpu as busy since the run queue now has at least one item in it */
     mp_set_cpu_busy(cpu);
@@ -210,10 +214,8 @@ static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) {
 static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
-    int ep = effec_priority(t);
-
-    list_add_tail(&percpu[cpu].run_queue[ep], &t->queue_node);
-    percpu[cpu].run_queue_bitmap |= (1u << ep);
+    list_add_tail(&percpu[cpu].run_queue[t->effec_priority], &t->queue_node);
+    percpu[cpu].run_queue_bitmap |= (1u << t->effec_priority);
 
     /* mark the cpu as busy since the run queue now has at least one item in it */
     mp_set_cpu_busy(cpu);
@@ -246,6 +248,13 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) {
 
     /* no threads to run, select the idle thread for this cpu */
     return &c->idle_thread;
+}
+
+void sched_init_thread(thread_t* t, int priority) {
+    t->base_priority = priority;
+    t->priority_boost = 0;
+    t->inheirited_priority = -1;
+    compute_effec_priority(t);
 }
 
 void sched_block(void) {
@@ -533,9 +542,8 @@ void sched_migrate(thread_t* t) {
         DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
 
         struct percpu* c = &percpu[t->curr_cpu];
-        int pri = effec_priority(t);
-        if (list_is_empty(&c->run_queue[pri])) {
-            c->run_queue_bitmap &= ~(1u << pri);
+        if (list_is_empty(&c->run_queue[t->effec_priority])) {
+            c->run_queue_bitmap &= ~(1u << t->effec_priority);
         }
 
         find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
@@ -551,6 +559,75 @@ void sched_migrate(thread_t* t) {
     }
     if (local_resched) {
         sched_reschedule();
+    }
+}
+
+/* set the priority to the higher value of what it was before and the newly inheirited value */
+/* pri < 0 disables priority inheiritance and goes back to the naturally computed values */
+void sched_inheirit_priority(thread_t* t, int pri, bool *local_resched) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    if (pri > HIGHEST_PRIORITY)
+        pri = HIGHEST_PRIORITY;
+
+    // if we're setting it to something real and it's less than the current, skip
+    if (pri >= 0 && pri <= t->inheirited_priority)
+        return;
+
+    // adjust the priority and remember the old value
+    t->inheirited_priority = pri;
+    int old_ep = t->effec_priority;
+    compute_effec_priority(t);
+    if (old_ep == t->effec_priority) {
+        // same effective priority, nothing to do
+        return;
+    }
+
+    // see if we need to do something based on the state of the thread
+    cpu_mask_t accum_cpu_mask = 0;
+    switch (t->state) {
+    case THREAD_RUNNING:
+        if (t->effec_priority < old_ep) {
+            // we're currently running and dropped our effective priority, might want to resched
+            if (t == get_current_thread()) {
+                *local_resched |= true;
+            } else {
+                accum_cpu_mask = cpu_num_to_mask(t->curr_cpu);
+            }
+        }
+        break;
+    case THREAD_READY:
+        // it's sitting in a run queue somewhere, remove and add back to the proper queue on that cpu
+        DEBUG_ASSERT_MSG(list_in_list(&t->queue_node), "thread %p name %s curr_cpu %u\n", t, t->name, t->curr_cpu);
+        list_delete(&t->queue_node);
+
+        DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
+
+        struct percpu* c = &percpu[t->curr_cpu];
+        if (list_is_empty(&c->run_queue[old_ep])) {
+            c->run_queue_bitmap &= ~(1u << old_ep);
+        }
+
+        if (t->effec_priority > old_ep) {
+            insert_in_run_queue_head(t->curr_cpu, t);
+            if (t->curr_cpu == arch_curr_cpu_num()) {
+                *local_resched |= true;
+            } else {
+                accum_cpu_mask = cpu_num_to_mask(t->curr_cpu);
+            }
+        } else {
+            insert_in_run_queue_tail(t->curr_cpu, t);
+        }
+
+        break;
+    default:
+        // the other states do not matter, exit
+        return;
+    }
+
+    // send some ipis based on the previous code
+    if (accum_cpu_mask) {
+        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
     }
 }
 
@@ -697,10 +774,13 @@ void sched_resched_internal(void) {
     /* set some optional target debug leds */
     target_set_debug_led(0, !thread_is_idle(newthread));
 
-    TRACE_CONTEXT_SWITCH("cpu %u, old %p (%s, pri %d:%d, flags 0x%x), new %p (%s, pri %d:%d, flags 0x%x)\n",
-                         cpu, oldthread, oldthread->name, oldthread->base_priority, oldthread->priority_boost,
+    TRACE_CONTEXT_SWITCH("cpu %u old %p (%s, pri %d [%d:%d], flags 0x%x) "
+                         "new %p (%s, pri %d [%d:%d], flags 0x%x)\n",
+                         cpu, oldthread, oldthread->name, oldthread->effec_priority,
+                         oldthread->base_priority, oldthread->priority_boost,
                          oldthread->flags, newthread, newthread->name,
-                         newthread->base_priority, newthread->priority_boost, newthread->flags);
+                         newthread->effec_priority, newthread->base_priority,
+                         newthread->priority_boost, newthread->flags);
 
     /* check that the old thread has not blown its stack just before pushing its context */
     if (THREAD_STACK_BOUNDS_CHECK &&

@@ -59,17 +59,17 @@ static void wait_queue_insert(wait_queue_t* wait, thread_t* t) {
         list_initialize(&t->queue_node);
         list_add_head(&wait->heads, &t->wait_queue_heads_node);
     } else {
-        int pri = t->base_priority; // TODO: get the effective priority from sched.c
+        int pri = t->effec_priority;
 
         // walk through the sorted list of wait queue heads
         thread_t* temp;
         list_for_every_entry(&wait->heads, temp, thread_t, wait_queue_heads_node) {
-            if (pri > temp->base_priority) {
+            if (pri > temp->effec_priority) {
                 // insert ourself here as a new queue head
                 list_initialize(&t->queue_node);
                 list_add_before(&temp->wait_queue_heads_node, &t->wait_queue_heads_node);
                 return;
-            } else if (temp->base_priority == pri) {
+            } else if (temp->effec_priority == pri) {
                 // same priority, add ourself to the tail of this queue
                 list_add_tail(&temp->queue_node, &t->queue_node);
                 list_clear_node(&t->wait_queue_heads_node);
@@ -123,6 +123,15 @@ static void wait_queue_remove_thread(thread_t* t) {
         // we're the head of a queue
         remove_queue_head(t);
     }
+}
+
+// return the numeric priority of the highest priority thread queued
+int wait_queue_blocked_priority(wait_queue_t* wait) {
+    thread_t* t = list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
+    if (!t)
+        return -1;
+
+    return t->effec_priority;
 }
 
 // Disable thread safety analysis here since Clang has trouble with the analysis
