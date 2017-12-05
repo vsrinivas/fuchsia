@@ -551,17 +551,11 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
     error_cb_called = true;
   };
 
-  // This request will remain pending.
+  // This will send an HCI command to the fake controller. We delete the
+  // connection manager before a connection event gets received which should
+  // cancel the connection.
   EXPECT_TRUE(conn_mgr()->Connect(dev1->identifier(), error_cb));
-
-  // The message loop will be stopped by OnConnectionStateChanged().
-  message_loop()->task_runner()->PostTask([this] {
-    // This will synchronously notify |conn_ref|'s closed callback so it is
-    // expected to execute before the test harness receives the connection
-    // callback. Thus it is OK to quit the message loop in the connection
-    // callback.
-    DeleteConnMgr();
-  });
+  DeleteConnMgr();
 
   set_quit_message_loop_on_state_change(true);
   RunMessageLoop();
