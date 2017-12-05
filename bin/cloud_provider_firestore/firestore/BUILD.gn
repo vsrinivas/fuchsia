@@ -6,6 +6,8 @@ visibility = [ "//peridot/bin/cloud_provider_firestore/*" ]
 
 source_set("firestore") {
   sources = [
+    "encoding.cc",
+    "encoding.h",
     "firestore_service.h",
     "firestore_service_impl.cc",
     "firestore_service_impl.h",
@@ -22,6 +24,10 @@ source_set("firestore") {
     "//third_party/grpc:grpc++",
   ]
 
+  deps = [
+    "//peridot/lib/base64url",
+  ]
+
   public_configs = [ "//third_party/googleapis:googleapis_config" ]
 }
 
@@ -29,6 +35,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "encoding_unittest.cc",
     "listen_call_unittest.cc",
   ]
 
