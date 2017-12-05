@@ -13,7 +13,7 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 
-class LogDispatcher final : public Dispatcher {
+class LogDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
@@ -33,6 +33,6 @@ private:
 
     fbl::Canary<fbl::magic("LOGD")> canary_;
 
-    dlog_reader reader_ TA_GUARDED(lock_);
+    dlog_reader reader_ TA_GUARDED(get_lock());
     const uint32_t flags_;
 };

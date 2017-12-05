@@ -34,11 +34,16 @@ zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
                                       fbl::RefPtr<Dispatcher>* dispatcher1,
                                       zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto ch0 = fbl::AdoptRef(new (&ac) ChannelDispatcher());
+    auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<ChannelDispatcher>());
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+    auto holder1 = holder0;
+
+    auto ch0 = fbl::AdoptRef(new (&ac) ChannelDispatcher(fbl::move(holder0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto ch1 = fbl::AdoptRef(new (&ac) ChannelDispatcher());
+    auto ch1 = fbl::AdoptRef(new (&ac) ChannelDispatcher(fbl::move(holder1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -51,8 +56,8 @@ zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
     return ZX_OK;
 }
 
-ChannelDispatcher::ChannelDispatcher()
-    : Dispatcher(ZX_CHANNEL_WRITABLE) {
+ChannelDispatcher::ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder)
+    : PeeredDispatcher(fbl::move(holder), ZX_CHANNEL_WRITABLE) {
 }
 
 // This is called before either ChannelDispatcher is accessible from threads other than the one

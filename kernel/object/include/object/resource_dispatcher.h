@@ -19,7 +19,7 @@
 
 class ResourceRecord;
 
-class ResourceDispatcher final : public Dispatcher,
+class ResourceDispatcher final : public SoloDispatcher,
     public fbl::DoublyLinkedListable<fbl::RefPtr<ResourceDispatcher>> {
 public:
     static zx_status_t Create(fbl::RefPtr<ResourceDispatcher>* dispatcher,

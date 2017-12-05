@@ -11,7 +11,7 @@
 
 namespace {
 
-class TestDispatcher final : public Dispatcher {
+class TestDispatcher final : public SoloDispatcher {
 public:
     TestDispatcher() {}
     ~TestDispatcher() final = default;

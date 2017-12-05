@@ -18,7 +18,7 @@
 
 // Note that unlike most Dispatcher subclasses, this one is further
 // subclassed, and so cannot be final.
-class InterruptDispatcher : public Dispatcher {
+class InterruptDispatcher : public SoloDispatcher {
 public:
     InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
 

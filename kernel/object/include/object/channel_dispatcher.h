@@ -19,7 +19,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/unique_ptr.h>
 
-class ChannelDispatcher final : public Dispatcher {
+class ChannelDispatcher final : public PeeredDispatcher<ChannelDispatcher> {
 public:
     class MessageWaiter;
 
@@ -98,7 +98,7 @@ private:
 
     void RemoveWaiter(MessageWaiter* waiter);
 
-    ChannelDispatcher();
+    explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
     void Init(fbl::RefPtr<ChannelDispatcher> other);
     int WriteSelf(fbl::unique_ptr<MessagePacket> msg);
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);

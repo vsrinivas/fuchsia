@@ -30,11 +30,17 @@ zx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t o
     }
 
     fbl::AllocChecker ac;
+    auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<FifoDispatcher>());
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+    auto holder1 = holder0;
+
     auto data0 = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto fifo0 = fbl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, fbl::move(data0)));
+    auto fifo0 = fbl::AdoptRef(new (&ac) FifoDispatcher(fbl::move(holder0), options, count,
+                                                        elemsize, fbl::move(data0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -42,7 +48,8 @@ zx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t o
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto fifo1 = fbl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, fbl::move(data1)));
+    auto fifo1 = fbl::AdoptRef(new (&ac) FifoDispatcher(fbl::move(holder1), options, count,
+                                                        elemsize, fbl::move(data1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -55,9 +62,10 @@ zx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t o
     return ZX_OK;
 }
 
-FifoDispatcher::FifoDispatcher(uint32_t /*options*/, uint32_t count, uint32_t elem_size,
+FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
+                               uint32_t /*options*/, uint32_t count, uint32_t elem_size,
                                fbl::unique_ptr<uint8_t[]> data)
-    : Dispatcher(ZX_FIFO_WRITABLE),
+    : PeeredDispatcher(fbl::move(holder), ZX_FIFO_WRITABLE),
       elem_count_(count), elem_size_(elem_size), mask_(count - 1),
       peer_koid_(0u), head_(0u), tail_(0u), data_(fbl::move(data)) {
 }

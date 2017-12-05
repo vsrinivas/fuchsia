@@ -17,7 +17,7 @@
 class VmObject;
 class VmAspace;
 
-class VmObjectDispatcher final : public Dispatcher {
+class VmObjectDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> vmo, fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);

@@ -29,7 +29,7 @@
 
 class ProcessDispatcher;
 
-class ThreadDispatcher final : public Dispatcher {
+class ThreadDispatcher final : public SoloDispatcher {
 public:
     // Traits to belong in the parent process's list.
     struct ThreadListTraits {

@@ -13,7 +13,7 @@
 #include <object/dispatcher.h>
 #include <sys/types.h>
 
-class EventPairDispatcher final : public Dispatcher {
+class EventPairDispatcher final : public PeeredDispatcher<EventPairDispatcher> {
 public:
     static zx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher0,
                               fbl::RefPtr<Dispatcher>* dispatcher1,
@@ -28,7 +28,7 @@ public:
     zx_koid_t get_related_koid() const final { return other_koid_; }
 
 private:
-    EventPairDispatcher();
+    explicit EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder);
     void Init(fbl::RefPtr<EventPairDispatcher> other);
 
     CookieJar cookie_jar_;

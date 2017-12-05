@@ -68,6 +68,9 @@ public:
     // At construction, the object's state tracker is asserting
     // |signals|.
     explicit Dispatcher(zx_signals_t signals = 0u);
+
+    // Dispatchers are either Solo or Peered. They handle refcounting
+    // and locking differently.
     virtual ~Dispatcher();
 
     zx_koid_t get_koid() const { return koid_; }
@@ -95,7 +98,8 @@ public:
 
     // Add an observer.
     void AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo);
-    void AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) TA_REQ(lock_);
+    void AddObserverLocked(StateObserver* observer,
+                           const StateObserver::CountInfo* cinfo) TA_REQ(get_lock());
 
     // Remove an observer (which must have been added).
     void RemoveObserver(StateObserver* observer);
@@ -153,7 +157,7 @@ protected:
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
     void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
-    void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(lock_);
+    void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(get_lock());
 
     zx_signals_t GetSignalsState() const {
         ZX_DEBUG_ASSERT(has_state_tracker());
@@ -161,7 +165,7 @@ protected:
     }
 
     // Dispatcher subtypes should use this lock to protect their internal state.
-    fbl::Mutex lock_;
+    virtual fbl::Mutex* get_lock() const = 0;
 
 private:
     friend class fbl::Recyclable<Dispatcher>;
@@ -175,15 +179,17 @@ private:
 
     // The common implementation of AddObserver and AddObserverLocked.
     template <typename Mutex>
-    void AddObserverHelper(StateObserver* observer, const StateObserver::CountInfo* cinfo, Mutex* mutex);
+    void AddObserverHelper(StateObserver* observer,
+                           const StateObserver::CountInfo* cinfo, Mutex* mutex);
 
     // Returns flag kHandled if one of the observers have been signaled.
-    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) TA_REQ(lock_);
+    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove,
+                                              zx_signals_t signals) TA_REQ(get_lock());
 
     const zx_koid_t koid_;
     uint32_t handle_count_;
 
-    // TODO(kulakowski) Make signals_ TA_GUARDED(lock_).
+    // TODO(kulakowski) Make signals_ TA_GUARDED(get_lock()).
     // Right now, signals_ is almost entirely accessed under the
     // common dispatcher lock_. Once we migrate the per-object locks
     // to instead use the common dispatcher lock_, all of the unlocked
@@ -193,10 +199,72 @@ private:
     zx_signals_t signals_;
 
     // Active observers are elements in |observers_|.
-    ObserverList observers_ TA_GUARDED(lock_);
+    ObserverList observers_ TA_GUARDED(get_lock());
 
     // Used to store this dispatcher on the dispatcher deleter list.
     fbl::SinglyLinkedListNodeState<Dispatcher*> deleter_ll_;
+};
+
+// PeeredDispatchers have opposing endpoints to coordinate state
+// with. For example, writing into one endpoint of a Channel needs to
+// modify zx_signal_t state (for the readability bit) on the opposite
+// side. To coordinate their state, they share a mutex, which is held
+// by the PeerHolder. Both endpoints have a RefPtr back to the
+// PeerHolder; no one else ever does.
+
+// Thus creating a pair of peered objects will typically look
+// something like
+//     // Make the two RefPtrs for each endpoint's handle to the mutex.
+//     auto holder0 = AdoptRef(new PeerHolder<Foo>(...));
+//     auto holder1 = peer_holder0;
+//     // Create the opposing sides.
+//     auto foo0 = AdoptRef(new Foo(std::move(holder0, ...));
+//     auto foo1 = AdoptRef(new Foo(std::move(holder1, ...));
+//     // Initialize the opposing sides, teaching them about each other.
+//     foo0->Init(&foo1);
+//     foo1->Init(&foo0);
+
+// TODO(kulakowski) We should investigate turning this into one
+// allocation. This would mean PeerHolder would have two EndPoint
+// members, and that PeeredDispatcher would have custom refcounting.
+template <typename Endpoint>
+class PeerHolder : public fbl::RefCounted<PeerHolder<Endpoint>> {
+public:
+    PeerHolder() = default;
+    ~PeerHolder() = default;
+
+    fbl::Mutex* get_lock() const { return &lock_; }
+
+    mutable fbl::Mutex lock_;
+};
+
+template <typename Self>
+class PeeredDispatcher : public Dispatcher {
+public:
+    // At construction, the object's state tracker is asserting
+    // |signals|.
+    explicit PeeredDispatcher(fbl::RefPtr<PeerHolder<Self>> holder,
+                              zx_signals_t signals = 0u)
+        : Dispatcher(signals),
+          holder_(fbl::move(holder)) {}
+    virtual ~PeeredDispatcher() = default;
+
+    fbl::Mutex* get_lock() const override { return holder_->get_lock(); }
+
+    fbl::RefPtr<PeerHolder<Self>> holder_;
+};
+
+// SoloDispatchers stand alone. Since they have no peer to coordinate
+// with, they directly contain their state lock.
+class SoloDispatcher : public Dispatcher {
+public:
+    // At construction, the object's state tracker is asserting
+    // |signals|.
+    explicit SoloDispatcher(zx_signals_t signals = 0u) : Dispatcher(signals) {}
+
+protected:
+    fbl::Mutex* get_lock() const override { return &lock_; }
+    mutable fbl::Mutex lock_;
 };
 
 // DownCastDispatcher checks if a RefPtr<Dispatcher> points to a

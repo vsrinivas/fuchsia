@@ -16,7 +16,7 @@
 #include <fbl/ref_counted.h>
 #include <lib/user_copy/user_ptr.h>
 
-class FifoDispatcher final : public Dispatcher {
+class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher> {
 public:
     static zx_status_t Create(uint32_t elem_count, uint32_t elem_size, uint32_t options,
                               fbl::RefPtr<Dispatcher>* dispatcher0,
@@ -35,7 +35,8 @@ public:
     zx_status_t ReadToUser(user_out_ptr<uint8_t> dst, size_t len, uint32_t* actual);
 
 private:
-    FifoDispatcher(uint32_t options, uint32_t elem_count, uint32_t elem_size,
+    FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
+                   uint32_t options, uint32_t elem_count, uint32_t elem_size,
                    fbl::unique_ptr<uint8_t[]> data);
     void Init(fbl::RefPtr<FifoDispatcher> other);
     zx_status_t WriteSelf(user_in_ptr<const uint8_t> ptr, size_t len, uint32_t* actual);

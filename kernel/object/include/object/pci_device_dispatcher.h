@@ -23,7 +23,7 @@
 
 class PciInterruptDispatcher;
 
-class PciDeviceDispatcher final : public Dispatcher {
+class PciDeviceDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(uint32_t index,
                               zx_pcie_device_info_t*    out_info,

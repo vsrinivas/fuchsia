@@ -21,7 +21,7 @@
 
 constexpr size_t kControlMsgSize = 1024;
 
-class SocketDispatcher final : public Dispatcher {
+class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher> {
 public:
     static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher0,
                               fbl::RefPtr<Dispatcher>* dispatcher1, zx_rights_t* rights);
@@ -62,7 +62,8 @@ public:
 private:
     // The control_msg must be either nullptr or an allocation of
     // size kControlMsgSize.
-    SocketDispatcher(zx_signals_t starting_signals, uint32_t flags,
+    SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
+                     zx_signals_t starting_signals, uint32_t flags,
                      fbl::unique_ptr<char[]> control_msg);
     void Init(fbl::RefPtr<SocketDispatcher> other);
     zx_status_t WriteSelf(user_in_ptr<const void> src, size_t len, size_t* nwritten);

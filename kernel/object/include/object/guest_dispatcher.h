@@ -13,7 +13,7 @@
 class Guest;
 class VmObject;
 
-class GuestDispatcher final : public Dispatcher {
+class GuestDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> physmem,
                               fbl::RefPtr<Dispatcher>* dispatcher,

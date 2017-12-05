@@ -207,7 +207,7 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
 }
 
 void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
-    AddObserverHelper(observer, cinfo, &lock_);
+    AddObserverHelper(observer, cinfo, get_lock());
 }
 
 void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
@@ -218,7 +218,7 @@ void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver:
 void Dispatcher::RemoveObserver(StateObserver* observer) {
     ZX_DEBUG_ASSERT(has_state_tracker());
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     DEBUG_ASSERT(observer != nullptr);
     observers_.erase(*observer);
 }
@@ -226,7 +226,8 @@ void Dispatcher::RemoveObserver(StateObserver* observer) {
 bool Dispatcher::Cancel(Handle* handle) {
     ZX_DEBUG_ASSERT(has_state_tracker());
 
-    StateObserver::Flags flags = CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
+    StateObserver::Flags flags = CancelWithFunc(&observers_, get_lock(),
+                                                [handle](StateObserver* obs) {
         return obs->OnCancel(handle);
     });
 
@@ -241,7 +242,8 @@ bool Dispatcher::Cancel(Handle* handle) {
 bool Dispatcher::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     ZX_DEBUG_ASSERT(has_state_tracker());
 
-    StateObserver::Flags flags = CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
+    StateObserver::Flags flags = CancelWithFunc(&observers_, get_lock(),
+                                                [handle, port, key](StateObserver* obs) {
         return obs->OnCancelByKey(handle, port, key);
     });
 
@@ -288,7 +290,7 @@ void Dispatcher::UpdateState(zx_signals_t clear_mask,
                              zx_signals_t set_mask) {
     ZX_DEBUG_ASSERT(has_state_tracker());
 
-    UpdateStateHelper(clear_mask, set_mask, &lock_);
+    UpdateStateHelper(clear_mask, set_mask, get_lock());
 }
 
 void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
@@ -305,7 +307,7 @@ zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
 
     if (cookiejar->scope_ == ZX_KOID_INVALID) {
         cookiejar->scope_ = scope;
@@ -331,7 +333,7 @@ zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
 
     if (cookiejar->scope_ == scope) {
         *cookie = cookiejar->cookie_;
@@ -347,7 +349,7 @@ zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
 
     cookiejar->scope_ = ZX_KOID_KERNEL;
     return ZX_OK;

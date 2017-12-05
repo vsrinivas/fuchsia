@@ -37,7 +37,7 @@ protected:
     virtual ~JobEnumerator() = default;
 };
 
-class JobDispatcher final : public Dispatcher {
+class JobDispatcher final : public SoloDispatcher {
 public:
     // Traits to belong to the parent's raw job list.
     struct ListTraitsRaw {

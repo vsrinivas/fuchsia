@@ -61,11 +61,18 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
             return ZX_ERR_NO_MEMORY;
     }
 
-    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(starting_signals, flags, fbl::move(control0)));
+    auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<SocketDispatcher>());
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+    auto holder1 = holder0;
+
+    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(fbl::move(holder0), starting_signals,
+                                                            flags, fbl::move(control0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(starting_signals, flags, fbl::move(control1)));
+    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(fbl::move(holder1), starting_signals,
+                                                            flags, fbl::move(control1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -78,9 +85,10 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     return ZX_OK;
 }
 
-SocketDispatcher::SocketDispatcher(zx_signals_t starting_signals, uint32_t flags,
+SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
+                                   zx_signals_t starting_signals, uint32_t flags,
                                    fbl::unique_ptr<char[]> control_msg)
-    : Dispatcher(starting_signals),
+    : PeeredDispatcher(fbl::move(holder), starting_signals),
       flags_(flags),
       peer_koid_(0u),
       control_msg_(fbl::move(control_msg)),

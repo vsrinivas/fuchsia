@@ -12,7 +12,7 @@
 
 #include <sys/types.h>
 
-class IommuDispatcher final : public Dispatcher {
+class IommuDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(uint32_t type, fbl::unique_ptr<const uint8_t[]> desc,
                               uint32_t desc_len, fbl::RefPtr<Dispatcher>* dispatcher,

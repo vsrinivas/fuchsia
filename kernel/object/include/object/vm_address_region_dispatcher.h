@@ -16,7 +16,7 @@ class VmAddressRegion;
 class VmMapping;
 class VmObject;
 
-class VmAddressRegionDispatcher final : public Dispatcher {
+class VmAddressRegionDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
                               fbl::RefPtr<Dispatcher>* dispatcher,

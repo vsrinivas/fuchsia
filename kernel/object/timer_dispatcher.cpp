@@ -73,7 +73,7 @@ TimerDispatcher::~TimerDispatcher() {
 void TimerDispatcher::on_zero_handles() {
     // The timers can be kept alive indefinitely by the callbacks, so
     // we need to cancel when there are no more user-mode clients.
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
 
     // We must ensure that the timer callback (running in interrupt context,
     // possibly on a different CPU) has completed before possibly destroy
@@ -85,7 +85,7 @@ void TimerDispatcher::on_zero_handles() {
 zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
     canary_.Assert();
 
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
 
     bool did_cancel = CancelTimerLocked();
 
@@ -120,7 +120,7 @@ zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
 
 zx_status_t TimerDispatcher::Cancel() {
     canary_.Assert();
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
     CancelTimerLocked();
     return ZX_OK;
 }
@@ -166,7 +166,7 @@ void TimerDispatcher::OnTimerFired() {
     canary_.Assert();
 
     {
-        AutoLock al(&lock_);
+        AutoLock al(get_lock());
 
         if (cancel_pending_) {
             // We previously attempted to cancel the timer but the dpc had already

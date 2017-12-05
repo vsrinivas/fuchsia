@@ -15,7 +15,7 @@
 
 #include <sys/types.h>
 
-class TimerDispatcher final : public Dispatcher {
+class TimerDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(uint32_t options,
                               fbl::RefPtr<Dispatcher>* dispatcher,
@@ -35,14 +35,14 @@ public:
 
 private:
     explicit TimerDispatcher(slack_mode slack_mode);
-    void SetTimerLocked(bool cancel_first) TA_REQ(lock_);
-    bool CancelTimerLocked() TA_REQ(lock_);
+    void SetTimerLocked(bool cancel_first) TA_REQ(get_lock());
+    bool CancelTimerLocked() TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("TIMR")> canary_;
     const slack_mode slack_mode_;
     dpc_t timer_dpc_;
-    zx_time_t deadline_ TA_GUARDED(lock_);
-    zx_duration_t slack_ TA_GUARDED(lock_);
-    bool cancel_pending_ TA_GUARDED(lock_);
-    timer_t timer_ TA_GUARDED(lock_);
+    zx_time_t deadline_ TA_GUARDED(get_lock());
+    zx_duration_t slack_ TA_GUARDED(get_lock());
+    bool cancel_pending_ TA_GUARDED(get_lock());
+    timer_t timer_ TA_GUARDED(get_lock());
 };

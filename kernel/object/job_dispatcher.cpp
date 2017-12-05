@@ -141,7 +141,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              fbl::RefPtr<JobDispatcher> parent,
                              pol_cookie_t policy)
-    : Dispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
+    : SoloDispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
       parent_(fbl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),

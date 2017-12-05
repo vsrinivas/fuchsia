@@ -19,11 +19,16 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
                                         fbl::RefPtr<Dispatcher>* dispatcher1,
                                         zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto disp0 = fbl::AdoptRef(new (&ac) EventPairDispatcher());
+    auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<EventPairDispatcher>());
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+    auto holder1 = holder0;
+
+    auto disp0 = fbl::AdoptRef(new (&ac) EventPairDispatcher(fbl::move(holder0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto disp1 = fbl::AdoptRef(new (&ac) EventPairDispatcher());
+    auto disp1 = fbl::AdoptRef(new (&ac) EventPairDispatcher(fbl::move(holder1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -69,8 +74,9 @@ zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_m
     return ZX_OK;
 }
 
-EventPairDispatcher::EventPairDispatcher()
-        : other_koid_(0ull) {}
+EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)
+    : PeeredDispatcher(fbl::move(holder)), other_koid_(0ull)
+{}
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
 // initializing the event pair, so it does not need locking.

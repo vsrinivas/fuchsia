@@ -30,7 +30,7 @@ zx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispa
 }
 
 LogDispatcher::LogDispatcher(uint32_t flags)
-    : Dispatcher(ZX_LOG_WRITABLE), flags_(flags) {
+    : SoloDispatcher(ZX_LOG_WRITABLE), flags_(flags) {
 }
 
 LogDispatcher::~LogDispatcher() {
@@ -63,7 +63,7 @@ zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* a
     if (!(flags_ & ZX_LOG_FLAG_READABLE))
         return ZX_ERR_BAD_STATE;
 
-    fbl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(get_lock());
 
     zx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
     if (status == ZX_ERR_SHOULD_WAIT) {

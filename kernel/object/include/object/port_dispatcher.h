@@ -136,7 +136,7 @@ private:
     fbl::RefPtr<PortDispatcher> const port_;
 };
 
-class PortDispatcher final : public Dispatcher {
+class PortDispatcher final : public SoloDispatcher {
 public:
     static void Init();
     static PortAllocator* DefaultPortAllocator();

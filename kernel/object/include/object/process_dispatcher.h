@@ -28,7 +28,7 @@
 
 class JobDispatcher;
 
-class ProcessDispatcher final : public Dispatcher {
+class ProcessDispatcher final : public SoloDispatcher {
 public:
     static zx_status_t Create(
         fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
