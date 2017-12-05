@@ -50,6 +50,10 @@ package("ledger_tests") {
     },
 
     {
+      name = "ledger_benchmark_delete_entry"
+    },
+
+    {
       name = "ledger_benchmark_convergence"
     },
 
@@ -175,6 +179,18 @@ package("ledger_tests") {
       path = rebase_path(
               "//peridot/bin/ledger/test/benchmark/fetch/fetch_partial.tspec")
       dest = "ledger/benchmark/fetch_partial.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/delete_entry/delete_entry.tspec")
+      dest = "ledger/benchmark/delete_entry.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/test/benchmark/delete_entry/delete_entry_transaction.tspec")
+      dest = "ledger/benchmark/delete_entry_transaction.tspec"
     },
   ]
 }

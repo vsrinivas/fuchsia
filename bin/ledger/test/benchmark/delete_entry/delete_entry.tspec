@@ -1,0 +1,15 @@
+{
+  "test_suite_name": "fuchsia.ledger",
+  "app": "ledger_benchmark_delete_entry",
+  "args": ["--entry-count=500", "--key-size=100", "--value-size=10000", "--transaction-size=0"],
+  "categories": ["benchmark", "ledger"],
+  "duration": 120,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "delete_entry",
+      "event_category": "benchmark",
+      "split_samples_at": [1, 100]
+    }
+  ]
+}
