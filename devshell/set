@@ -128,7 +128,7 @@ function main {
         fi
         goma_dir=$2
         if [[ ! -d "${goma_dir}" ]]; then
-          echo -e "GOMA directory does not exist: "${goma_dir}""
+          echo -e "error: GOMA directory does not exist: "${goma_dir}""
           return 1
         fi
         shift
@@ -162,8 +162,8 @@ function main {
     # TODO(pylaligand): remove this check once the Fuchsia population has moved
     # away from that specific manifest.
     if grep -q "\"fuchsia\"" "${jiri_manifest}"; then
-      echo -e "You are using the obsolete 'fuchsia' manifest."
-      echo -e "Please switch to the Topaz manifest instead: fx set-layer topaz"
+      echo -e "error: You are using the obsolete 'fuchsia' manifest."
+      echo -e "error: Please switch to the Topaz manifest instead: fx set-layer topaz"
       return 1
     fi
 
