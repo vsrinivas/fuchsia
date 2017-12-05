@@ -151,7 +151,6 @@ zx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
     memcpy(&vn->inode_, inode, kMinfsInodeSize);
     vn->ino_ = ino;
 
-    size_t prev_off = 0;
     size_t off = 0;
     while (true) {
         uint32_t data[MINFS_DIRENT_SIZE];
@@ -162,33 +161,10 @@ zx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
             if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
                 // So we couldn't read the last direntry, for whatever reason, but our
                 // inode says that we shouldn't have been able to read it anyway.
-                FS_TRACE_ERROR("check: de count (%u) > inode_dirent_count (%u)\n", eno, inode->dirent_count);
-                FS_TRACE_ERROR("This directory and its inode disagree; the directory contents indicate\n"
-                      "there might be more contents, but the inode says that the last entry\n"
-                      "should already be marked as last.\n\n"
-                      "Mark the directory as holding [%u] entries? (DEFAULT: y) [y/n] > ",
-                      inode->dirent_count);
-                int c = getchar();
-                if (c == 'y') {
-                    // Mark the 'last' visible direntry as last.
-                    status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, prev_off, &actual);
-                    if (status != ZX_OK || actual != MINFS_DIRENT_SIZE) {
-                        FS_TRACE_ERROR("check: Error trying to update last dirent as 'last': %d.\n"
-                              "Can't read the last dirent even though we just did earlier.\n",
-                              status);
-                        return status < 0 ? status : ZX_ERR_IO;
-                    }
-                    minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
-                    de->reclen |= kMinfsReclenLast;
-                    WriteTxn txn(fs_->bc_.get());
-                    vn->WriteInternal(&txn, data, MINFS_DIRENT_SIZE, prev_off, &actual);
-                    return ZX_OK;
-                } else {
-                    return ZX_ERR_IO;
-                }
-            } else {
-                return status < 0 ? status : ZX_ERR_IO;
+                FS_TRACE_ERROR("check: de count (%u) > inode_dirent_count (%u)\n", eno,
+                               inode->dirent_count);
             }
+            return status != ZX_OK ? status : ZX_ERR_IO;
         }
         minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
         uint32_t rlen = static_cast<uint32_t>(MinfsReclen(de, off));
@@ -254,7 +230,6 @@ zx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
         if (is_last) {
             break;
         } else {
-            prev_off = off;
             off += rlen;
         }
         eno++;
