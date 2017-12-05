@@ -15,7 +15,7 @@ __BEGIN_CDECLS
 
 struct k_counter_desc {
     uint32_t* counter;
-    char name[56];
+    const char* name;
 };
 
 #define KCOUNTER(var, name)                                         \

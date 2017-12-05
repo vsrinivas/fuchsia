@@ -20,9 +20,6 @@
 // code to function properly a specific set of linker entries are
 // needed, see kernel.ld for details.
 
-// TODO(cpu): k_counter_desc seems to need power-of-2 size.
-static_assert(sizeof(k_counter_desc) == 64, "");
-
 extern const k_counter_desc __kcountdesc_start[];
 extern const k_counter_desc __kcountdesc_stop[];
 extern uint64_t kcounters_arena[];
