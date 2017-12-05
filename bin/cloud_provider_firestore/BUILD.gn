@@ -5,21 +5,29 @@
 import("//build/package.gni")
 
 package("cloud_provider_firestore") {
-  system_image = true
-
   deps = [
     "app",
+  ]
+
+  binary = "cloud_provider_firestore"
+
+  meta = [ {
+        path = rebase_path("app/meta/sandbox")
+        dest = "sandbox"
+      } ]
+}
+
+package("firestore_demo") {
+  deps = [
     "demo",
   ]
 
-  binaries = [
-    {
-      name = "cloud_provider_firestore"
-    },
-    {
-      name = "firestore_demo"
-    },
-  ]
+  binary = "firestore_demo"
+
+  meta = [ {
+        path = rebase_path("demo/meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 executable("unittests") {

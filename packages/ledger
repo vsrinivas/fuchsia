@@ -9,6 +9,7 @@
     "packages": {
         "cloud_provider_firebase": "//peridot/bin/cloud_provider_firebase",
         "cloud_provider_firestore": "//peridot/bin/cloud_provider_firestore",
+        "firestore_demo": "//peridot/bin/cloud_provider_firestore:firestore_demo",
         "ledger_tests": "//peridot/bin/ledger:ledger_tests",
         "ledger_tool": "//peridot/bin/ledger:ledger_tool",
         "ledger": "//peridot/bin/ledger"

@@ -126,8 +126,9 @@ class Demo : public modular::Lifecycle, ListenCallClient {
 }  // namespace cloud_provider_firestore
 
 int main(int argc, const char** argv) {
-  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/system/data/boringssl/cert.pem",
-         1);
+  // The trust root file is made available by the sandbox feature
+  // "root-ssl-certificates"
+  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/etc/ssl/cert.pem", 1);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
