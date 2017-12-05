@@ -16,16 +16,11 @@
 
 #include <lib/console.h>
 
-// These three symbols are linker defined and in order for this
-// code to function properly a specific set of linker entries are
-// needed, see kernel.ld for details.
-
-extern const k_counter_desc __kcountdesc_start[];
-extern const k_counter_desc __kcountdesc_stop[];
+// The arena is allocated in kernel.ld, which see.
 extern uint64_t kcounters_arena[];
 
 static size_t get_num_counters() {
-    return __kcountdesc_stop - __kcountdesc_start;
+    return kcountdesc_end - kcountdesc_begin;
 }
 
 // Binary search the sorted counter descriptors.
@@ -54,16 +49,10 @@ static void counters_init(unsigned level) {
     for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
         percpu[ix].counters = &kcounters_arena[ix * get_num_counters()];
     }
-
-    // Adjust every counter, which are really just offsets into the
-    // percpu arena of counters.
-    for (auto it = __kcountdesc_start; it != __kcountdesc_stop; ++it) {
-        *(it->counter) = static_cast<uint32_t>(it - __kcountdesc_start);
-    }
 }
 
 static void dump_counter(const k_counter_desc* desc) {
-    auto counter_index = static_cast<size_t>(desc - __kcountdesc_start);
+    size_t counter_index = kcounter_index(desc);
 
     printf("[%zu] %s", counter_index, desc->name);
 
@@ -90,7 +79,7 @@ static void dump_counter(const k_counter_desc* desc) {
 
 static void dump_all_counters() {
     printf("%zu counters available:\n", get_num_counters());
-    for (auto it = __kcountdesc_start; it != __kcountdesc_stop; ++it) {
+    for (auto it = kcountdesc_begin; it != kcountdesc_end; ++it) {
         dump_counter(it);
     }
 }
@@ -103,9 +92,9 @@ static int get_counter(int argc, const cmd_args* argv, uint32_t flags) {
             dump_all_counters();
         } else {
             const k_counter_desc* desc =
-                upper_bound(argv[1].str, __kcountdesc_start, get_num_counters());
+                upper_bound(argv[1].str, kcountdesc_begin, get_num_counters());
 
-            if (desc == __kcountdesc_stop) {
+            if (desc == kcountdesc_end) {
                 printf("counter not found\n");
             } else {
                 dump_counter(desc);

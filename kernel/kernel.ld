@@ -68,10 +68,10 @@ SECTIONS
      * by name so that tools can provide binary search lookup
      * for k_counter_desc::name[] variables.
      */
-    .kcounter.desc : {
-        PROVIDE_HIDDEN(__kcountdesc_start = .);
+    .kcounter.desc : ALIGN(8) {
+        PROVIDE_HIDDEN(kcountdesc_begin = .);
         KEEP(*(SORT_BY_NAME(kcountdesc.*)))
-        PROVIDE_HIDDEN(__kcountdesc_stop = .);
+        PROVIDE_HIDDEN(kcountdesc_end = .);
     } :rodata
 
     .rodata : {
@@ -168,23 +168,14 @@ SECTIONS
     }
 
     /*
-     * The macro KCOUNTER generates one entry per invocation
-     * in this section, which each k_counter_desc::counters
-     * points at. See the .kcounter.desc section above.
-     */
-    .kcounter.offsets : {
-        KEEP(*(.kcounter.offsets))
-    }
-
-    /*
-     * The per-cpu arena keeps the actual kernel counters
-     * which are 8 bytes long each, one per core. How many
-     * counters is computed from how many counters offset
-     * entries exist in the .kcounter.offsets section.
+     * The per-cpu arena keeps the actual kernel counters which are 8 bytes
+     * long each, one per core.  How many counters is computed from how
+     * many k_counter_desc entries exist in the .kcounter.offsets section.
+     * Each k_counter_desc is 8 bytes long, so the sizes match exactly.
      */
     .kcounter.percpu.arena : ALIGN(8) {
         PROVIDE_HIDDEN(kcounters_arena = .);
-        . += (SIZEOF(.kcounter.offsets) / 4) * (SMP_MAX_CPUS * 8);
+        . += SIZEOF(.kcounter.desc) * SMP_MAX_CPUS;
     }
 
     /*

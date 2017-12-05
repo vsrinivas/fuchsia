@@ -14,25 +14,34 @@
 __BEGIN_CDECLS
 
 struct k_counter_desc {
-    uint32_t* counter;
     const char* name;
 };
+static_assert(sizeof(struct k_counter_desc) ==
+              sizeof(((struct percpu){}).counters[0]),
+              "kernel.ld knows that these sizes match");
 
-// We have to define the slot in assembly to put it into a named SHT_NOBITS
-// section.  Otherwise the compiler will make it a SHT_PROGBITS section.
 #define KCOUNTER(var, name)                                         \
-    extern uint32_t var __asm__(".kcounter.offset." name);          \
-    __asm__(".pushsection \".kcounter.offsets\",\"aw\",%nobits\n"   \
-            ".kcounter.offset." name ": .skip 4\n"                  \
-            ".popsection");                                         \
     __USED __SECTION("kcountdesc." name)                            \
-    static const struct k_counter_desc kcc_desc_##var = {           \
-        &var, name }
+    static const struct k_counter_desc var[] = { { name } }
+
+// Via magic in kernel.ld, all the descriptors wind up in a contiguous
+// array bounded by these two symbols, sorted by name.
+extern const struct k_counter_desc kcountdesc_begin[], kcountdesc_end[];
+
+// The order of the descriptors is the order of the slots in each percpu array.
+static inline size_t kcounter_index(const struct k_counter_desc* var) {
+    return var - kcountdesc_begin;
+}
 
 // The counter, as named |var| and defined is just an offset into
 // per-cpu table, therefore to add an atomic is not required.
-static inline void kcounter_add(uint32_t var, uint64_t add) {
-    get_local_percpu()->counters[var] += (add);
+static inline uint64_t* kcounter_slot(const struct k_counter_desc* var) {
+    return &get_local_percpu()->counters[kcounter_index(var)];
+}
+
+static inline void kcounter_add(const struct k_counter_desc* var,
+                                uint64_t add) {
+    *kcounter_slot(var) += add;
 }
 
 __END_CDECLS
