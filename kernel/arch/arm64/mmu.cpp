@@ -38,8 +38,8 @@ static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
-static uint64_t asid_pool[(1 << MMU_ARM64_ASID_BITS) / 64];
-static mutex_t asid_lock = MUTEX_INITIAL_VALUE(asid_lock);
+static fbl::Mutex asid_lock;
+static uint64_t asid_pool[(1 << MMU_ARM64_ASID_BITS) / 64] TA_GUARDED(asid_lock);
 
 // The main translation table.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
@@ -50,23 +50,21 @@ pte_t *arm64_get_kernel_ptable() {
 }
 
 static zx_status_t arm64_mmu_alloc_asid(uint16_t* asid) {
-
     uint16_t new_asid;
     uint32_t retry = 1 << MMU_ARM64_ASID_BITS;
 
-    mutex_acquire(&asid_lock);
-    do {
-        new_asid = static_cast<uint16_t>(rand()) & ~(-(1 << MMU_ARM64_ASID_BITS));
-        retry--;
-        if (retry == 0) {
-            mutex_release(&asid_lock);
-            return ZX_ERR_NO_MEMORY;
-        }
-    } while ((asid_pool[new_asid >> 6] & (1 << (new_asid % 64))) || (new_asid == 0));
+    {
+        fbl::AutoLock lock(&asid_lock);
+        do {
+            new_asid = static_cast<uint16_t>(rand()) & ~(-(1 << MMU_ARM64_ASID_BITS));
+            retry--;
+            if (retry == 0) {
+                return ZX_ERR_NO_MEMORY;
+            }
+        } while ((asid_pool[new_asid >> 6] & (1 << (new_asid % 64))) || (new_asid == 0));
 
-    asid_pool[new_asid >> 6] = asid_pool[new_asid >> 6] | (1 << (new_asid % 64));
-
-    mutex_release(&asid_lock);
+        asid_pool[new_asid >> 6] = asid_pool[new_asid >> 6] | (1 << (new_asid % 64));
+    }
 
     *asid = new_asid;
 
@@ -74,13 +72,8 @@ static zx_status_t arm64_mmu_alloc_asid(uint16_t* asid) {
 }
 
 static zx_status_t arm64_mmu_free_asid(uint16_t asid) {
-
-    mutex_acquire(&asid_lock);
-
+    fbl::AutoLock lock(&asid_lock);
     asid_pool[asid >> 6] = asid_pool[asid >> 6] & ~(1 << (asid % 64));
-
-    mutex_release(&asid_lock);
-
     return ZX_OK;
 }
 
