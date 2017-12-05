@@ -36,6 +36,8 @@ func parseArgs() (string, error) {
 		return "", errors.New("Invalid number of arguments")
 	}
 
+	flag.Set("logtostderr", "true")
+
 	switch flag.Arg(0) {
 	case "mount":
 		if *blockFDPtr == -1 {
