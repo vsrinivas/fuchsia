@@ -113,12 +113,12 @@ buildtools_whitelist="gn ninja go"
 
 fuchsia_dir="${FUCHSIA_DIR}"
 if [[ -z "${fuchsia_dir}" ]]; then
-  # We walk the parent directories looking for .jiri_manifest rather than using
+  # We walk the parent directories looking for .jiri_root rather than using
   # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
   # directory instead of the one containing this file in case the user has
   # multiple Fuchsia source trees and is picking up this file from another one.
   fuchsia_dir="$(pwd)"
-  while [[ ! -f "${fuchsia_dir}/.jiri_manifest" ]]; do
+  while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
     fuchsia_dir="$(dirname "${fuchsia_dir}")"
     if [[ "${fuchsia_dir}" == "/" ]]; then
       echo >& 2 "error: Cannot find Fuchsia source tree containing $(pwd)"

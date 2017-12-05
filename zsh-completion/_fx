@@ -11,7 +11,7 @@ _fx() {
 
   local fuchsia_dir
   fuchsia_dir="$(pwd)"
-  while [[ ! -f "${fuchsia_dir}/.jiri_manifest" ]]; do
+  while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
     fuchsia_dir="$(dirname "${fuchsia_dir}")"
     if [[ "${fuchsia_dir}" == "/" ]]; then
       _message -r "Cannot find Fuchsia source tree containing $(pwd)"
