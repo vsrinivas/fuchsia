@@ -44,8 +44,8 @@ static const uint64_t kUartBases[kNumUarts] = {
 #include "garnet/lib/machina/arch/x86/io_port.h"
 #include "garnet/lib/machina/arch/x86/tpm.h"
 
-static const char kDsdtPath[] = "/system/data/dsdt.aml";
-static const char kMcfgPath[] = "/system/data/mcfg.aml";
+static const char kDsdtPath[] = "/pkg/data/dsdt.aml";
+static const char kMcfgPath[] = "/pkg/data/mcfg.aml";
 static const size_t kNumUarts = 4;
 static const uint64_t kUartBases[kNumUarts] = {
     machina::kI8250Base0,

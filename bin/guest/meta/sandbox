@@ -1,0 +1,9 @@
+{
+  "dev": [
+    "class/block",
+    "class/framebuffer",
+    "class/input",
+    "misc"
+  ],
+  "system": [ "data" ]
+}

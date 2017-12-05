@@ -12,12 +12,14 @@ GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
 cd "${FUCHSIA_DIR}"
 
+DEFAULT_GN_PACKAGES="garnet/packages/guest,garnet/packages/runtime,garnet/packages/runtime_config"
+
 usage() {
   echo "usage: ${0} [options] {arm64, x86}"
   echo
   echo "  -A            Use ASAN in GN"
   echo "  -g            Use Goma"
-  echo "  -p [package]  Set package, defaults to 'garnet/packages/guest'"
+  echo "  -p [package]  Set package, defaults to ${DEFAULT_GN_PACKAGES}"
   echo
   exit 1
 }
@@ -51,7 +53,7 @@ scripts/build-zircon.sh \
 build/gn/gen.py \
   --target_cpu=$ARCH \
   --platforms=$PLATFORM \
-  --packages="${PACKAGE:-garnet/packages/guest}" \
+  --packages="${PACKAGE:-${DEFAULT_GN_PACKAGES}}" \
   $GN_ASAN \
   $GN_GOMA
 
