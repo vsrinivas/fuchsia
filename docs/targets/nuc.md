@@ -52,7 +52,7 @@ freshly-built OS on your network-connected host development machine (or
 alternately from the OS on the flash drive itself).
 
 + Format the first partition of your USB flash drive as FAT; keep it connected
-+ Execute `fx set x86` (if you haven't already)
++ Execute `fx set x86-64` (if you haven't already)
 + To network-boot via __GigaBoot20x6__, execute `fx mkbootloader`. This command
   does the following for you:
   + Builds Zircon (for x86, as you have set)
