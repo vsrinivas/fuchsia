@@ -105,8 +105,11 @@ def main():
     retcode = subprocess.call(cmd, env=env)
 
     if retcode == 0 and args.unstripped_binname:
-      retcode = subprocess.call([os.path.join(args.toolchain_prefix, 'strip'),
-                                 '-o', stripped_output_name, output_name],
+      retcode = subprocess.call([os.path.join(args.toolchain_prefix,
+                                              'llvm-objcopy'),
+                                 '--strip-sections',
+                                 output_name,
+                                 stripped_output_name],
                                 env=env)
 
     if retcode == 0:
