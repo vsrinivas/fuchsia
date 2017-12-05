@@ -18,9 +18,13 @@ struct k_counter_desc {
     const char* name;
 };
 
+// We have to define the slot in assembly to put it into a named SHT_NOBITS
+// section.  Otherwise the compiler will make it a SHT_PROGBITS section.
 #define KCOUNTER(var, name)                                         \
-    __SECTION(".kcounter.offsets")                                  \
-    static uint32_t var = 0;                                        \
+    extern uint32_t var __asm__(".kcounter.offset." name);          \
+    __asm__(".pushsection \".kcounter.offsets\",\"aw\",%nobits\n"   \
+            ".kcounter.offset." name ": .skip 4\n"                  \
+            ".popsection");                                         \
     __USED __SECTION("kcountdesc." name)                            \
     static const struct k_counter_desc kcc_desc_##var = {           \
         &var, name }
