@@ -93,6 +93,9 @@ to use that feature.
 
 The set of currently known features are as follows:
 
+- `introspection`, which requests access to introspect the system. The
+  introspection namespace will be located at `/info_experimental`.
+
 - `persistent-storage`, which requests access to persistent storage for the
   device, located in `/data` in the package's namespace. (Future work will
   likely make this access more fine-grained than just the `/data` directory.)
