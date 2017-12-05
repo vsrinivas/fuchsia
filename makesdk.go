@@ -150,7 +150,7 @@ func init() {
 	files := []file{
 		{
 			kernelImg,
-			"out/build-zircon/build-zircon-pc-x86-64/zircon.bin",
+			"out/build-zircon/build-x86/zircon.bin",
 			"target/x86_64/zircon.bin",
 		},
 		{
@@ -160,7 +160,7 @@ func init() {
 		},
 		{
 			kernelImg,
-			"out/build-zircon/build-zircon-qemu-arm64/zircon.bin",
+			"out/build-zircon/build-arm64/zircon.bin",
 			"target/aarch64/zircon.bin",
 		},
 		{
