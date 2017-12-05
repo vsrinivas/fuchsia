@@ -20,8 +20,14 @@ _fx() {
   done
 
   # list of commands based on //scripts/devshell/
-  local -a commands
-  commands=(${fuchsia_dir}/scripts/devshell/*(.:t))
+  # each file is read to find the description line (starts with "### ").
+  local -a commands lines
+  local desc command
+  for command in ${fuchsia_dir}/scripts/devshell/*(.); do
+    lines=("${(f)$(<${command})}")
+    desc=${${lines[${lines[(i)\#\#\# *]}]}#????}
+    commands+=("${command#*devshell/}:${desc}")
+  done
 
   _arguments \
     "--config[config file]:filename:_files" \
