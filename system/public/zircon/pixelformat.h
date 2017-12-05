@@ -17,6 +17,7 @@ typedef uint32_t zx_pixel_format_t;
 #define ZX_PIXEL_FORMAT_ARGB_8888  (0x00040004)
 #define ZX_PIXEL_FORMAT_RGB_x888   (0x00040005)
 #define ZX_PIXEL_FORMAT_MONO_8     (0x00010007)
+#define ZX_PIXEL_FORMAT_GRAY_8     (0x00010007)
 
 // to be removed:
 #define ZX_PIXEL_FORMAT_MONO_1     (0x00000006)

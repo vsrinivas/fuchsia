@@ -458,7 +458,7 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
         height = target->height - desty;
 
     // XXX total hack to deal with various blends
-    if (source->format == GFX_FORMAT_RGB_565 && target->format == GFX_FORMAT_RGB_565) {
+    if (source->format == ZX_PIXEL_FORMAT_RGB_565 && target->format == ZX_PIXEL_FORMAT_RGB_565) {
         // 16 bit to 16 bit
         const uint16_t *src = (const uint16_t *)source->ptr;
         uint16_t *dest = &((uint16_t *)target->ptr)[destx + desty * target->stride];
@@ -477,7 +477,7 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
             dest += dest_stride_diff;
             src += source_stride_diff;
         }
-    } else if (source->format == GFX_FORMAT_ARGB_8888 && target->format == GFX_FORMAT_ARGB_8888) {
+    } else if (source->format == ZX_PIXEL_FORMAT_RGB_x888 && target->format == ZX_PIXEL_FORMAT_RGB_x888) {
         // both are 32 bit modes, both alpha
         const uint32_t *src = (const uint32_t *)source->ptr;
         uint32_t *dest = &((uint32_t *)target->ptr)[destx + desty * target->stride];
@@ -497,7 +497,7 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
             dest += dest_stride_diff;
             src += source_stride_diff;
         }
-    } else if (source->format == GFX_FORMAT_RGB_x888 && target->format == GFX_FORMAT_RGB_x888) {
+    } else if (source->format == ZX_PIXEL_FORMAT_RGB_x888 && target->format == ZX_PIXEL_FORMAT_RGB_x888) {
         // both are 32 bit modes, no alpha
         const uint32_t *src = (const uint32_t *)source->ptr;
         uint32_t *dest = &((uint32_t *)target->ptr)[destx + desty * target->stride];
@@ -516,7 +516,7 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
             dest += dest_stride_diff;
             src += source_stride_diff;
         }
-    } else if (source->format == GFX_FORMAT_MONO && target->format == GFX_FORMAT_MONO) {
+    } else if (source->format == ZX_PIXEL_FORMAT_MONO_8 && target->format == ZX_PIXEL_FORMAT_MONO_8) {
         // both are 8 bit modes, no alpha
         const uint8_t *src = (const uint8_t *)source->ptr;
         uint8_t *dest = &((uint8_t *)target->ptr)[destx + desty * target->stride];
@@ -645,7 +645,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
 
     // set up some function pointers
     switch (format) {
-        case GFX_FORMAT_RGB_565:
+        case ZX_PIXEL_FORMAT_RGB_565:
             surface->translate_color = &ARGB8888_to_RGB565;
             surface->copyrect = &copyrect16;
             surface->fillrect = &fillrect16;
@@ -654,8 +654,8 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->pixelsize = 2;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
-        case GFX_FORMAT_RGB_x888:
-        case GFX_FORMAT_ARGB_8888:
+        case ZX_PIXEL_FORMAT_RGB_x888:
+        case ZX_PIXEL_FORMAT_ARGB_8888:
             surface->translate_color = NULL;
             surface->copyrect = &copyrect32;
             surface->fillrect = &fillrect32;
@@ -664,7 +664,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->pixelsize = 4;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
-        case GFX_FORMAT_MONO:
+        case ZX_PIXEL_FORMAT_MONO_8:
             surface->translate_color = &ARGB8888_to_Luma;
             surface->copyrect = &copyrect8;
             surface->fillrect = &fillrect8;
@@ -673,7 +673,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->pixelsize = 1;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
-        case GFX_FORMAT_RGB_332:
+        case ZX_PIXEL_FORMAT_RGB_332:
             surface->translate_color = &ARGB8888_to_RGB332;
             surface->copyrect = &copyrect8;
             surface->fillrect = &fillrect8;
@@ -682,7 +682,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->pixelsize = 1;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
-        case GFX_FORMAT_RGB_2220:
+        case ZX_PIXEL_FORMAT_RGB_2220:
             surface->translate_color = &ARGB8888_to_RGB2220;
             surface->copyrect = &copyrect8;
             surface->fillrect = &fillrect8;
@@ -727,36 +727,22 @@ gfx_surface *gfx_create_surface_from_display(struct display_info *info)
 int gfx_init_surface_from_display(gfx_surface *surface, struct display_info *info)
 {
     int r;
-    gfx_format format;
     switch (info->format) {
-        case DISPLAY_FORMAT_RGB_565:
-            format = GFX_FORMAT_RGB_565;
-            break;
-        case DISPLAY_FORMAT_RGB_332:
-            format = GFX_FORMAT_RGB_332;
-            break;
-        case DISPLAY_FORMAT_RGB_2220:
-            format = GFX_FORMAT_RGB_2220;
-            break;
-        case DISPLAY_FORMAT_ARGB_8888:
-            format = GFX_FORMAT_ARGB_8888;
-            break;
-        case DISPLAY_FORMAT_RGB_x888:
-            format = GFX_FORMAT_RGB_x888;
-            break;
-        case DISPLAY_FORMAT_MONO_8:
-            format = GFX_FORMAT_MONO;
-            break;
-        case DISPLAY_FORMAT_MONO_1:
-            format = GFX_FORMAT_MONO;
-            break;
-        default:
-            dprintf(CRITICAL, "invalid graphics format %d", info->format);
-            return ZX_ERR_INVALID_ARGS;
+    case ZX_PIXEL_FORMAT_RGB_565:
+    case ZX_PIXEL_FORMAT_RGB_332:
+    case ZX_PIXEL_FORMAT_RGB_2220:
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+    case ZX_PIXEL_FORMAT_RGB_x888:
+    case ZX_PIXEL_FORMAT_MONO_8:
+        // supported formats
+        break;
+    default:
+        dprintf(CRITICAL, "invalid graphics format %x", info->format);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     uint32_t flags = (info->flags & DISPLAY_FLAG_NEEDS_CACHE_FLUSH) ? GFX_FLAG_FLUSH_CPU_CACHE : 0;
-    r = gfx_init_surface(surface, info->framebuffer, info->width, info->height, info->stride, format, flags);
+    r = gfx_init_surface(surface, info->framebuffer, info->width, info->height, info->stride, info->format, flags);
 
     surface->flush = info->flush;
     return r;
@@ -890,7 +876,7 @@ static int cmd_gfx(int argc, const cmd_args *argv, uint32_t flags)
         printf("display:\n");
         printf("\tframebuffer %p\n", info.framebuffer);
         printf("\twidth %u height %u stride %u\n", info.width, info.height, info.stride);
-        printf("\tformat %d\n", info.format);
+        printf("\tformat 0x%x\n", info.format);
         printf("\tflags 0x%x\n", info.flags);
     } else if (!strcmp(argv[1].str, "rgb_bars")) {
         gfx_draw_rgb_bars(surface);

@@ -15,16 +15,7 @@
 
 // gfx library
 
-// different graphics formats
-typedef enum {
-    GFX_FORMAT_NONE = ZX_PIXEL_FORMAT_NONE,
-    GFX_FORMAT_RGB_565 = ZX_PIXEL_FORMAT_RGB_565,
-    GFX_FORMAT_RGB_332 = ZX_PIXEL_FORMAT_RGB_332,
-    GFX_FORMAT_RGB_2220 = ZX_PIXEL_FORMAT_RGB_2220,
-    GFX_FORMAT_ARGB_8888 = ZX_PIXEL_FORMAT_ARGB_8888,
-    GFX_FORMAT_RGB_x888 = ZX_PIXEL_FORMAT_RGB_x888,
-    GFX_FORMAT_MONO = ZX_PIXEL_FORMAT_MONO_1,
-} gfx_format;
+typedef zx_pixel_format_t gfx_format;
 
 #define MAX_ALPHA 255
 

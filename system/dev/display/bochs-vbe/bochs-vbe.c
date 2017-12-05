@@ -58,35 +58,13 @@ typedef struct bochs_vbe_device {
 #define BOCHS_VBE_DISPI_VIDEO_MEMORY_64K 0xa
 
 static int zx_display_format_to_bpp(unsigned format) {
-    unsigned bpp;
-    switch (format) {
-    case ZX_PIXEL_FORMAT_RGB_565:
-        bpp = 16;
-        break;
-    case ZX_PIXEL_FORMAT_RGB_332:
-        bpp = 8;
-        break;
-    case ZX_PIXEL_FORMAT_RGB_2220:
-        bpp = 6;
-        break;
-    case ZX_PIXEL_FORMAT_ARGB_8888:
-        bpp = 32;
-        break;
-    case ZX_PIXEL_FORMAT_RGB_x888:
-        bpp = 24;
-        break;
-    case ZX_PIXEL_FORMAT_MONO_1:
-        bpp = 1;
-        break;
-    case ZX_PIXEL_FORMAT_MONO_8:
-        bpp = 8;
-        break;
-    default:
-        // unsupported
-        bpp = -1;
-        break;
+    unsigned bpp = ZX_PIXEL_FORMAT_BYTES(format) * 8;
+    if (bpp == 0) {
+        // unknown
+        return -1;
+    } else {
+        return bpp;
     }
-    return bpp;
 }
 
 static void set_hw_mode(bochs_vbe_device_t* dev) {

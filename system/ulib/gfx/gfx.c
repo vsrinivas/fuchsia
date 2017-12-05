@@ -548,7 +548,7 @@ void gfx_blend(gfx_surface* target, gfx_surface* source, unsigned srcx, unsigned
             dest += dest_stride_diff;
             src += source_stride_diff;
         }
-    } else if (source->format == ZX_PIXEL_FORMAT_MONO_1 && target->format == ZX_PIXEL_FORMAT_MONO_1) {
+    } else if (source->format == ZX_PIXEL_FORMAT_MONO_8 && target->format == ZX_PIXEL_FORMAT_MONO_8) {
         // both are 8 bit modes, no alpha
         const uint8_t* src = &((const uint8_t*)source->ptr)[srcx + srcy * source->stride];
         uint8_t* dest = &((uint8_t*)target->ptr)[destx + desty * target->stride];
@@ -661,7 +661,7 @@ int gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned h
         surface->pixelsize = 4;
         surface->len = (surface->height * surface->stride * surface->pixelsize);
         break;
-    case ZX_PIXEL_FORMAT_MONO_1:
+    case ZX_PIXEL_FORMAT_MONO_8:
         surface->translate_color = &ARGB8888_to_Luma;
         surface->copyrect = &copyrect8;
         surface->fillrect = &fillrect8;

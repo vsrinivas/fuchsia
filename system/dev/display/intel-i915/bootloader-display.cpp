@@ -27,7 +27,10 @@ bool BootloaderDisplay::Init(zx_display_info_t* di) {
         di->stride = 2560 / 2;
     }
     di->flags = ZX_DISPLAY_FLAG_HW_FRAMEBUFFER;
-    di->pixelsize =  ZX_PIXEL_FORMAT_BYTES(di->format);
+    if ((di->pixelsize = ZX_PIXEL_FORMAT_BYTES(di->format)) == 0) {
+        zxlogf(ERROR, "i915: unknown format %u\n", di->format);
+        return false;
+    }
 
     return true;
 }

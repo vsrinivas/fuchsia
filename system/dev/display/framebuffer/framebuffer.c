@@ -346,23 +346,7 @@ static zx_status_t fb_bind(void* ctx, zx_device_t* dev) {
     }
     zx_object_signal(fb->event, 0, ZX_USER_SIGNAL_0);
 
-    // Our display drivers do not initialize pixelsize
-    // Determine it based on pixel format
-    switch (fb->info.format) {
-    case ZX_PIXEL_FORMAT_RGB_565:
-        fb->info.pixelsize = 2;
-        break;
-    case ZX_PIXEL_FORMAT_RGB_x888:
-    case ZX_PIXEL_FORMAT_ARGB_8888:
-        fb->info.pixelsize = 4;
-        break;
-    case ZX_PIXEL_FORMAT_RGB_332:
-        fb->info.pixelsize = 1;
-        break;
-    case ZX_PIXEL_FORMAT_RGB_2220:
-        fb->info.pixelsize = 1;
-        break;
-    default:
+    if ((fb->info.pixelsize = ZX_PIXEL_FORMAT_BYTES(fb->info.format)) == 0) {
         printf("fb: unknown format %u\n", fb->info.format);
         r = ZX_ERR_NOT_SUPPORTED;
         goto fail;
