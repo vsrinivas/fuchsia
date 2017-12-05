@@ -5,6 +5,7 @@
     "packages": {
         "bluetooth": "//garnet/bin/bluetooth",
         "bluetooth_tools": "//garnet/bin/bluetooth_tools",
-        "bluetooth_tests": "//garnet/bin/bluetooth:bluetooth_tests"
+        "bluetooth_tests": "//garnet/bin/bluetooth:bluetooth_tests",
+        "bthci_passthrough": "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough"
     }
 }
