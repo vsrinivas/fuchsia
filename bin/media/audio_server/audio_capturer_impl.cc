@@ -263,11 +263,11 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
 
   FXL_CHECK(bytes_per_frame_ > 0);
   constexpr uint64_t max_uint32 = std::numeric_limits<uint32_t>::max();
-  if ((payload_buf_size_ == 0) ||
-      (payload_buf_size_ > (max_uint32 * bytes_per_frame_)) ||
-      (payload_buf_size_ % bytes_per_frame_)) {
+  if ((payload_buf_size_ < bytes_per_frame_) ||
+      (payload_buf_size_ > (max_uint32 * bytes_per_frame_))) {
     FXL_LOG(ERROR) << "Bad payload buffer VMO size (size = "
-                   << payload_buf_size_ << ")";
+                   << payload_buf_size_
+                   << ", bytes per frame = " << bytes_per_frame_ << ")";
     return;
   }
 
@@ -292,7 +292,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
 
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
 
-  // Activate the dispatcher primatives we will use to drive the mixing process.
+  // Activate the dispatcher primitives we will use to drive the mixing process.
   // clang-format off
   res = mix_wakeup_->Activate(
       mix_domain_,
@@ -518,11 +518,12 @@ void AudioCapturerImpl::StartAsyncCapture(
   }
 
   FXL_DCHECK(payload_buf_frames_ > 0);
-  if (payload_buf_frames_ % frames_per_packet != 0) {
-    FXL_LOG(ERROR)
-        << "The requested number of frames per packet (" << frames_per_packet
-        << ") must divide the number of frames in the shared payload buffer ("
-        << payload_buf_frames_ << ")";
+  if (frames_per_packet > (payload_buf_frames_ / 2)) {
+    FXL_LOG(ERROR) << "There must be enough room in the shared payload buffer ("
+                   << payload_buf_frames_
+                   << " frames) to fit at least two packets of the requested "
+                      "number of frames per packet ("
+                   << frames_per_packet << " frames).";
     return;
   }
 
@@ -1186,7 +1187,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
   // Sanity check our async offset bookkeeping.
   FXL_DCHECK(async_next_frame_offset_ < payload_buf_frames_);
-  FXL_DCHECK(async_frames_per_packet_ <= payload_buf_frames_);
+  FXL_DCHECK(async_frames_per_packet_ <= (payload_buf_frames_ / 2));
   FXL_DCHECK(async_next_frame_offset_ <=
              (payload_buf_frames_ - async_frames_per_packet_));
 
@@ -1202,14 +1203,15 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
     return false;
   }
 
-  // Update our next frame offset.
+  // Update our next frame offset.  If the new position of the next frame offset
+  // does not leave enough room to produce another contiguous payload for our
+  // user, reset the next frame offset to zero.  We made sure that we have space
+  // for at least two contiguous payload buffers when we started, so the worst
+  // case is that we will end up ping-ponging back and forth between two payload
+  // buffers located at the start of our shared buffer.
   async_next_frame_offset_ += async_frames_per_packet_;
-  if (async_next_frame_offset_ >= payload_buf_frames_) {
-    // One of the invariants which is supposed to be enforced is that
-    // async_frames_per_packet is supposed to divide payload_buf_frames (this
-    // should be enforced during StartAsyncCapture).  During debug builds,
-    // DCHECK that this is the case.
-    FXL_DCHECK(async_next_frame_offset_ == payload_buf_frames_);
+  uint32_t next_frame_end = async_next_frame_offset_ + async_frames_per_packet_;
+  if (next_frame_end > payload_buf_frames_) {
     async_next_frame_offset_ = 0;
   }
 

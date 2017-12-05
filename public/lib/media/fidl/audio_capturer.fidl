@@ -54,7 +54,7 @@ interface AudioCapturerClient {
 // ++ The payload buffer must be an integral number of audio frame sizes (in
 //    bytes)
 // ++ When running in 'async' mode (see below), the payload buffer must be at
-//    least as large as the frames_per_packet size specified during
+//    least as large as twice the frames_per_packet size specified during
 //    StartAsyncCapture.
 // ++ The handle to the payload buffer supplied by the user must be readable,
 //    writable, and mappable.
@@ -115,8 +115,9 @@ interface AudioCapturerClient {
 //
 // ++ To attempt to enter 'async' capture mode when no payload buffer has been
 //    established.
-// ++ To specify a number of frames to capture per payload which does not evenly
-//    divide the number of frames in the established shared payload buffer.
+// ++ To specify a number of frames to capture per payload which does not permit
+//    at least two contiguous capture payloads to exist in the established
+//    shared payload buffer simultaneously.
 // ++ To send a region to capture into using the CaptureAt method while the
 //    AudioCapturer instance is running in 'async' mode.
 // ++ To attempt to call Flush while the AudioCapturer instance is running in
@@ -280,8 +281,7 @@ interface AudioCapturer {
   // Sets the media type of the stream to be delivered.  Causes the source
   // material to be reformatted/resampled if needed in order to produce the
   // requested media type.  Note that the media type may not be changed after
-  // the payload buffer has been established, and that the payload buffer which
-  // is set must be a multiple of audio frames in size.
+  // the payload buffer has been established.
   SetMediaType(MediaType media_type);
 
   // Set the gain (in dB) applied to the input.  Gain may be adjusted at any
@@ -289,9 +289,7 @@ interface AudioCapturer {
   // [AudioRenderer::kMutedGain, AudioRenderer::kMaxGain]
   SetGain(float gain);
 
-  // Set the shared buffer used to transport captured data.  Note that the size
-  // of the VMO must be a multiple of the configured audio frame size (in
-  // bytes).
+  // Set the shared buffer used to transport captured data.
   //
   // TODO(johngro) : consider extending this so that multiple payload buffers
   // may be assigned if needed.
