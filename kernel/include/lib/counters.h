@@ -18,9 +18,19 @@ struct k_counter_desc {
 };
 static_assert(sizeof(struct k_counter_desc) ==
               sizeof(((struct percpu){}).counters[0]),
-              "kernel.ld knows that these sizes match");
+              "the kernel.ld ASSERT knows that these sizes match");
 
+// Define the descriptor and reserve the arena space for the counters.
+// Because of -fdata-sections, each kcounter_arena_* array will be
+// placed in a .bss.kcounter.* section; kernel.ld recognizes those names
+// and places them all together to become the contiguous kcounters_arena
+// array.  Note that each kcounter_arena_* does not correspond with the
+// slots used for this particular counter (that would have terrible
+// cache effects); it just reserves enough space for counters_init() to
+// dole out in per-CPU chunks.
 #define KCOUNTER(var, name)                                         \
+    __USED uint64_t kcounter_arena_##var[SMP_MAX_CPUS]              \
+        __asm__("kcounter." name);                                  \
     __USED __SECTION("kcountdesc." name)                            \
     static const struct k_counter_desc var[] = { { name } }
 

@@ -162,20 +162,32 @@ SECTIONS
 
     .bss : ALIGN(4096) {
         PROVIDE_HIDDEN(__bss_start = .);
+
+        /*
+         * See kernel/include/lib/counters.h; the KCOUNTER macro defines a
+         * kcounter.NAME array in the .bss.kcounter.NAME section that
+         * allocates SMP_MAX_CPUS counter slots.  Here we collect all those
+         * together to make up the kcounters_arena contiguous array.  There
+         * is no particular reason to sort these, but doing so makes them
+         * line up in parallel with the sorted .kcounter.desc section.
+         */
+        . = ALIGN(8);
+        PROVIDE_HIDDEN(kcounters_arena = .);
+	KEEP(*(SORT_BY_NAME(.bss.kcounter.*)))
+
+        /*
+         * Sanity check that the aggregate size of kcounters_arena
+         * SMP_MAX_CPUS slots for each counter.  The k_counter_desc structs
+         * in .kcounter.desc are 8 bytes each, which matches the size of a
+         * single counter.  (It's only for this sanity check that we need
+         * to care how big k_counter_desc is.)
+         */
+	ASSERT(. - kcounters_arena == SIZEOF(.kcounter.desc) * SMP_MAX_CPUS,
+               "kcounters_arena size mismatch");
+
         *(.bss*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
-    }
-
-    /*
-     * The per-cpu arena keeps the actual kernel counters which are 8 bytes
-     * long each, one per core.  How many counters is computed from how
-     * many k_counter_desc entries exist in the .kcounter.offsets section.
-     * Each k_counter_desc is 8 bytes long, so the sizes match exactly.
-     */
-    .kcounter.percpu.arena : ALIGN(8) {
-        PROVIDE_HIDDEN(kcounters_arena = .);
-        . += SIZEOF(.kcounter.desc) * SMP_MAX_CPUS;
     }
 
     /*

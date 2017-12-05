@@ -7,7 +7,6 @@
 
 # use linker garbage collection, if requested
 ifeq ($(call TOBOOL,$(USE_LINKER_GC)),true)
-GLOBAL_COMPILEFLAGS += -ffunction-sections -fdata-sections
 GLOBAL_LDFLAGS += --gc-sections
 endif
 
