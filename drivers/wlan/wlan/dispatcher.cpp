@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "ap_mlme.h"
 #include "dispatcher.h"
 #include "client_mlme.h"
 #include "frame_handler.h"
@@ -73,21 +74,15 @@ void DumpFrameHeader(const FrameHeader& hdr, size_t len) {
 
 }  // namespace
 
-Dispatcher::Dispatcher(DeviceInterface* device) {
+Dispatcher::Dispatcher(DeviceInterface* device) : device_(device) {
     debugfn();
-    mlme_.reset(new ClientMlme(device));
 }
 
 Dispatcher::~Dispatcher() {}
 
-zx_status_t Dispatcher::Init() {
-    debugfn();
-
-    return mlme_->Init();
-}
-
 zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     debugfn();
+
     ZX_DEBUG_ASSERT(packet != nullptr);
     ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
     debughdr("packet data=%p len=%zu peer=%s\n", packet->data(), packet->len(),
@@ -98,6 +93,14 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
                        : packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
     if (kLogLevel & kLogDataPacketTrace) { DumpPacket(*packet); }
+
+    // If there is no active MLME, block all packets but service ones.
+    // MLME-JOIN.request and MLME-START.request implicitly select a mode and initialize the MLME.
+    auto service_msg = (packet->peer() == Packet::Peer::kService);
+    if (mlme_ == nullptr && !service_msg) {
+        errorf("received packet with no active MLME\n");
+        return ZX_OK;
+    }
 
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
@@ -166,6 +169,7 @@ zx_status_t Dispatcher::HandlePortPacket(uint64_t key) {
 
 zx_status_t Dispatcher::HandleCtrlPacket(const Packet* packet) {
     debugfn();
+
     // Currently not used.
     return ZX_OK;
 }
@@ -381,10 +385,46 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n", hdr->txn_id, hdr->flags,
              hdr->ordinal);
 
-    // TODO(hahnr): Add logic to switch between Client and AP mode.
-
     auto method = static_cast<Method>(hdr->ordinal);
+
+    // If there is no active MLME only JOIN.req/SCAN.req and START.req are accepted.
+    // Those will then either move the MLME into AP or Client mode.
+    if (mlme_ == nullptr) {
+        switch (method) {
+            case Method::SCAN_request:
+            // fallthrough
+            case Method::JOIN_request: {
+                mlme_.reset(new ClientMlme(device_));
+                auto status = mlme_->Init();
+                if (status != ZX_OK) {
+                    errorf("Client MLME could not be initialized\n");
+                    mlme_.reset();
+                    return status;
+                }
+                break;
+            }
+            case Method::START_request: {
+                mlme_.reset(new ApMlme(device_));
+                auto status = mlme_->Init();
+                if (status != ZX_OK) {
+                    errorf("AP MLME could not be initialized\n");
+                    mlme_.reset();
+                    return status;
+                }
+                break;
+            }
+            default:
+                warnf("unknown MLME method %u with no active MLME\n", method);
+                return ZX_OK;
+        }
+    }
+
     switch (method) {
+    case Method::RESET_request:
+        // Let currently active MLME handle RESET request, then, reset MLME.
+        HandleMlmeMethod<ResetRequest>(packet, method);
+        mlme_.reset();
+        return ZX_OK;
     case Method::SCAN_request:
         return HandleMlmeMethod<ScanRequest>(packet, method);
     case Method::JOIN_request:
@@ -419,13 +459,17 @@ zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, Method method) {
 
 zx_status_t Dispatcher::PreChannelChange(wlan_channel_t chan) {
     debugfn();
-    mlme_->PreChannelChange(chan);
+    if (mlme_ != nullptr) {
+        mlme_->PreChannelChange(chan);
+    }
     return ZX_OK;
 }
 
 zx_status_t Dispatcher::PostChannelChange() {
     debugfn();
-    mlme_->PostChannelChange();
+    if (mlme_ != nullptr) {
+        mlme_->PostChannelChange();
+    }
     return ZX_OK;
 }
 

@@ -46,9 +46,6 @@ class Dispatcher {
     explicit Dispatcher(DeviceInterface* device);
     ~Dispatcher();
 
-    // TODO(hahnr): Let's try to get rid of this and other Init() methods inside the MLME.
-    zx_status_t Init();
-
     zx_status_t HandlePacket(const Packet* packet);
     zx_status_t HandlePortPacket(uint64_t key);
 
@@ -69,6 +66,7 @@ class Dispatcher {
     zx_status_t HandleActionPacket(const Packet* packet, const MgmtFrameHeader* hdr,
                                    const ActionFrame* action, const wlan_rx_info_t* rxinfo);
 
+    DeviceInterface* device_;
     fbl::unique_ptr<Mlme> mlme_;
 };
 

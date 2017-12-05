@@ -49,12 +49,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
 
-    status = dispatcher_.Init();
-    if (status != ZX_OK) {
-        errorf("could not initialize mlme: %d\n", status);
-        return status;
-    }
-
     status = wlanmac_proxy_.Query(0, &wlanmac_info_);
     if (status != ZX_OK) {
         errorf("could not query wlanmac device: %d\n", status);

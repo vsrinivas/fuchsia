@@ -96,6 +96,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
     // Service Message handlers.
     virtual bool ShouldDropMlmeMessage(Method& method) { return false; }
+    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeAuthReq, AuthenticateRequest)
@@ -123,6 +124,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
    private:
     // Internal Service Message handlers.
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeAuthReq, AuthenticateRequest)
