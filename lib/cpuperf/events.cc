@@ -28,6 +28,12 @@ const EventDetails g_skl_event_details[] = {
 #include <zircon/device/cpu-trace/skylake-pm-events.inc>
 };
 
+const EventDetails g_misc_event_details[] = {
+#define DEF_MISC_EVENT(symbol, id, flags, name, description) \
+  [id] = { CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id), name, description },
+#include <zircon/device/cpu-trace/intel-misc-events.inc>
+};
+
 bool EventIdToEventDetails(cpuperf_event_id_t id,
                            const EventDetails** out_details) {
   unsigned event = CPUPERF_EVENT_ID_EVENT(id);
@@ -43,6 +49,10 @@ bool EventIdToEventDetails(cpuperf_event_id_t id,
     case CPUPERF_UNIT_MODEL:
       // TODO(dje): For now assume Skylake, Kaby Lake.
       details = &g_skl_event_details[event];
+      break;
+    case CPUPERF_UNIT_MISC:
+      // TODO(dje): For now assume Skylake, Kaby Lake.
+      details = &g_misc_event_details[event];
       break;
     default:
       return false;

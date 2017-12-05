@@ -40,8 +40,11 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
     // +1 because index thread refs start at 1
     trace_thread_index_t index = cpu + 1;
     cpu_thread_refs_[cpu] = trace_make_indexed_thread_ref(index);
-    // +1 because thread ids of zero is invalid
-    trace_context_write_thread_record(context, index, kCpuProcess, cpu + 1);
+    // Note: Thread ids of zero are invalid. We use "thread 0" (aka cpu 0)
+    // for system-wide events.
+    trace_context_write_thread_record(context, index, kCpuProcess, cpu);
+    // TODO(dje): In time emit "cpuN" for thread names, but it won't do any
+    // good at the moment as we use "Count" records which ignore the thread.
   }
 #undef MAKE_STRING
 }
@@ -206,7 +209,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
                                 uint64_t value) {
   trace_ticks_t end_time = record.time();
   FXL_DCHECK(start_time < end_time);
-  trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu)};
+  trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, details->id)};
   trace_string_ref_t name_ref{trace_context_make_registered_string_literal(
       context_, details->name)};
 #if 0
@@ -307,7 +310,7 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
                                cpuperf_event_id_t event_id,
                                trace_ticks_t time,
                                uint64_t value) {
-  trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu)};
+  trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, event_id)};
   trace_arg_t args[1] = {
     {trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))},
   };
@@ -323,8 +326,15 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
   }
 }
 
-trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu) {
+trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu,
+                                             cpuperf_event_id_t id) {
   FXL_DCHECK(cpu < countof(cpu_thread_refs_));
+  // TODO(dje): Misc events are currently all system-wide, not attached
+  // to any specific cpu. That won't always be the case.
+  if (CPUPERF_EVENT_ID_UNIT(id) == CPUPERF_UNIT_MISC)
+    cpu = 0;
+  else
+    ++cpu;
   return cpu_thread_refs_[cpu];
 }
 

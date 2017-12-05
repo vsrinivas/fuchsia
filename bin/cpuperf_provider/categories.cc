@@ -23,6 +23,10 @@ enum EventId {
 #define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MODEL, id),
 #include <zircon/device/cpu-trace/skylake-pm-events.inc>
+
+#define DEF_MISC_EVENT(symbol, id, flags, name, description) \
+  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#include <zircon/device/cpu-trace/intel-misc-events.inc>
 };
 
 #define DEF_FIXED_CATEGORY(symbol, name, counters...) \
@@ -34,6 +38,10 @@ enum EventId {
 #define DEF_SKL_CATEGORY(symbol, name, counters...) \
   static const cpuperf_event_id_t symbol ## _events[] = { counters };
 #include "skylake-pm-categories.inc"
+
+#define DEF_MISC_CATEGORY(symbol, name, counters...) \
+  static const cpuperf_event_id_t symbol ## _events[] = { counters };
+#include "intel-misc-categories.inc"
 
 static const CategorySpec kCategories[] = {
   // Options
@@ -74,6 +82,12 @@ static const CategorySpec kCategories[] = {
   { "cpu:" name, CategoryGroup::kProgrammableArch, 0, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "intel-pm-categories.inc"
+
+  // Misc events.
+#define DEF_MISC_CATEGORY(symbol, name, counters...) \
+  { "cpu:" name, CategoryGroup::kFixedModel, 0, \
+    countof(symbol ## _events), &symbol ## _events[0] },
+#include "intel-misc-categories.inc"
 
   // Model-specific programmable events.
 #define DEF_SKL_CATEGORY(symbol, name, counters...) \

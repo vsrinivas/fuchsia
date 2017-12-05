@@ -116,7 +116,8 @@ private:
                        trace_ticks_t time,
                        uint64_t value);
 
-  trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu);
+  trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu,
+                                     cpuperf_event_id_t id);
 
   trace_context* const context_;
   const TraceConfig* trace_config_;
@@ -137,7 +138,8 @@ private:
   trace_string_ref_t const aspace_name_ref_;
   trace_string_ref_t const pc_name_ref_;
 
-  trace_thread_ref_t cpu_thread_refs_[kMaxNumCpus];
+  // Add one for events that are system-wide (e.g., memory controller events).
+  trace_thread_ref_t cpu_thread_refs_[kMaxNumCpus + 1];
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Importer);
 };
