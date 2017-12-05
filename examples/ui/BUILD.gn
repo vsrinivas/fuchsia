@@ -84,20 +84,16 @@ package("shapes_view") {
   binary = "shapes_view"
 }
 
-package("sketchy") {
+package("sketchy_client") {
   system_image = true
 
   deps = [
     "sketchy",
-    "//garnet/bin/ui/sketchy",
   ]
 
   binaries = [
     {
       name = "sketchy_client"
-    },
-    {
-      name = "sketchy_service"
     },
   ]
 }

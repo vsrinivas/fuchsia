@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("sketchy") {
+import("//build/package.gni")
+
+executable("bin") {
   output_name = "sketchy_service"
 
   sources = [
@@ -50,4 +52,17 @@ executable("sketchy") {
     "//garnet/examples/escher/sketchy",
     "//third_party/glm",
   ]
+}
+
+package("sketchy_service") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "sketchy_service"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
