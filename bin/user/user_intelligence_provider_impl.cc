@@ -107,14 +107,14 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   if (config.mi_dashboard) {
     StartAgent(
         "agents/mi_dashboard.dartx",
-        [=](const std::string& url, app::ServiceNamespace* agent_host) {
+        [this](const std::string& url, app::ServiceNamespace* agent_host) {
           AddStandardServices(url, agent_host);
           agent_host->AddService<maxwell::ContextDebug>(
-              [=](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
+              [this](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
                 context_engine_->GetContextDebug(std::move(request));
               });
           agent_host->AddService<maxwell::SuggestionDebug>(
-              [=](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
+              [this](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
                 suggestion_services_.ConnectToService(std::move(request));
               });
           agent_host->AddService<maxwell::UserActionLog>(
