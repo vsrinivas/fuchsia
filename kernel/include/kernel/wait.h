@@ -23,14 +23,14 @@ __BEGIN_CDECLS
 typedef struct wait_queue {
     int magic;
     int count;
-    struct list_node list;
+    struct list_node heads;
 } wait_queue_t;
 
-#define WAIT_QUEUE_INITIAL_VALUE(q)           \
-    {                                         \
-        .magic = WAIT_QUEUE_MAGIC,            \
-        .count = 0,                           \
-        .list = LIST_INITIAL_VALUE((q).list)  \
+#define WAIT_QUEUE_INITIAL_VALUE(q)             \
+    {                                           \
+        .magic = WAIT_QUEUE_MAGIC,              \
+        .count = 0,                             \
+        .heads = LIST_INITIAL_VALUE((q).heads), \
     }
 
 /* wait queue primitive */

@@ -63,6 +63,17 @@ static inline void list_delete(list_node_t* item) {
     item->prev = item->next = 0;
 }
 
+static inline void list_replace_node(list_node_t* old_node, list_node_t* new_node) {
+    // replace a spot in a list with a new node
+    // assumes old_node is part of a list and new_node is not
+    new_node->next = old_node->next;
+    new_node->prev = old_node->prev;
+    old_node->prev = old_node->next = 0;
+
+    new_node->next->prev = new_node;
+    new_node->prev->next = new_node;
+}
+
 static inline list_node_t* list_remove_head(list_node_t* list) {
     if (list->next != list) {
         list_node_t* item = list->next;
