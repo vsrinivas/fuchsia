@@ -92,7 +92,7 @@ static zx_status_t acpi_pwrsrc_ioctl(void* ctx, uint32_t op,
         }
         zx_handle_t* out = (zx_handle_t*)out_buf;
         zx_status_t status = zx_handle_duplicate(dev->event,
-                                                 ZX_RIGHT_READ | ZX_RIGHT_TRANSFER,
+                                                 ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER,
                                                  out);
         if (status != ZX_OK) {
             goto err;
