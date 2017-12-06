@@ -26,7 +26,6 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
     }
 
     fbl::AllocChecker ac;
-
     if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
         fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(data);
 
@@ -49,7 +48,8 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
 
         // Found sparse container
         fbl::unique_ptr<Container> sparseContainer(new (&ac) SparseContainer(path,
-                                                                             image->slice_size));
+                                                                             image->slice_size,
+                                                                             NONE));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

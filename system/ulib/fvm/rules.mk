@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fvm.cpp \
+    $(LOCAL_DIR)/fvm-lz4.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/digest \
@@ -20,6 +21,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
     third_party/ulib/uboringssl \
+    third_party/ulib/lz4 \
+
 
 MODULE_LIBS := \
     system/ulib/zircon \
@@ -35,10 +38,12 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/fvm.cpp \
+    $(LOCAL_DIR)/fvm-lz4.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
+    -Ithird_party/ulib/lz4/include \
     -Isystem/ulib/zircon/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/digest/include \
@@ -50,6 +55,7 @@ MODULE_COMPILEFLAGS := \
 
 MODULE_HOST_LIBS := \
     third_party/ulib/uboringssl.hostlib \
+    third_party/ulib/lz4.hostlib \
     system/ulib/digest.hostlib \
     system/ulib/fbl.hostlib \
 

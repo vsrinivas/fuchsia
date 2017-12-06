@@ -43,7 +43,9 @@ namespace fvm {
 //   P2, Extent 0
 
 constexpr uint64_t kSparseFormatMagic = (0x53525053204d5646ull); // 'FVM SPRS'
-constexpr uint64_t kSparseFormatVersion = 0x1;
+constexpr uint64_t kSparseFormatVersion = 0x2;
+
+constexpr uint32_t kSparseFlagLz4 = 0x1;
 
 typedef struct sparse_image {
     uint64_t magic;
@@ -51,6 +53,7 @@ typedef struct sparse_image {
     uint64_t header_length;
     uint64_t slice_size; // Unit: Bytes
     uint64_t partition_count;
+    uint32_t flags;
 } __attribute__((packed)) sparse_image_t;
 
 constexpr uint64_t kPartitionDescriptorMagic = (0x0bde4df7cf5c4c5dull);

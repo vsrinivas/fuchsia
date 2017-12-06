@@ -22,6 +22,7 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fs/mapped-vmo.h>
+#include <fvm/fvm-lz4.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
@@ -109,9 +110,10 @@ zx_status_t register_fast_block_io(const fbl::unique_fd& fd, zx_handle_t vmo,
 }
 
 // Stream an FVM partition to disk.
-zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
-                                 fifo_client_t* client, size_t slice_size, size_t block_size,
-                                 block_fifo_request_t* request, const fbl::unique_fd& src_fd) {
+zx_status_t stream_fvm_partition(fvm::SparseReader* reader, partition_info* part,
+                                 MappedVmo* mvmo, fifo_client_t* client, size_t block_size,
+                                 block_fifo_request_t* request) {
+    size_t slice_size = reader->Image()->slice_size;
     const size_t vmo_cap = mvmo->GetSize();
     for (size_t e = 0; e < part->pd->extent_count; e++) {
         LOG("Writing extent %zu... \n", e);
@@ -121,31 +123,30 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
 
         // Write real data
         while (bytes_left > 0) {
-            ssize_t r;
             size_t vmo_sz = 0;
-            while ((r = read(src_fd.get(), &reinterpret_cast<uint8_t*>(mvmo->GetData())[vmo_sz],
-                             fbl::min(bytes_left, vmo_cap - vmo_sz))) > 0) {
-                vmo_sz += r;
-                bytes_left -= r;
-                if (bytes_left == 0) {
-                    break;
-                }
-            }
+            size_t actual;
+            zx_status_t status = reader->ReadData(
+                                    &reinterpret_cast<uint8_t*>(mvmo->GetData())[vmo_sz],
+                                    fbl::min(bytes_left, vmo_cap - vmo_sz), &actual);
+            vmo_sz += actual;
+            bytes_left -= actual;
+
             if (vmo_sz == 0) {
                 ERROR("Read nothing from src_fd; %zu bytes left\n", bytes_left);
                 return ZX_ERR_IO;
             } else if (vmo_sz % block_size != 0) {
                 ERROR("Cannot write non-block size multiple: %zu\n", vmo_sz);
                 return ZX_ERR_IO;
-            } else if (r < 0) {
+            } else if (status != ZX_OK) {
                 ERROR("Error reading partition data\n");
-                return static_cast<zx_status_t>(r);
+                return status;
             }
 
             request->length = vmo_sz / block_size;
             request->vmo_offset = 0;
             request->dev_offset = offset / block_size;
 
+            ssize_t r;
             if ((r = block_fifo_txn(client, request, 1)) != ZX_OK) {
                 ERROR("Error writing partition data\n");
                 return static_cast<zx_status_t>(r);
@@ -304,12 +305,14 @@ void recommend_wipe(const char* reason) {
     ERROR("-----------------------------------------------------\n");
 }
 
-zx_status_t fvm_parse_sparse_header(const fbl::unique_fd& src_fd, fvm::sparse_image_t* hdr) {
-    if (read(src_fd.get(), hdr, sizeof(*hdr)) != sizeof(*hdr)) {
-        ERROR("Failed to read the sparse header\n");
-        return ZX_ERR_IO;
+zx_status_t fvm_init_sparse_reader(fbl::unique_fd src_fd,
+                                   fbl::unique_ptr<fvm::SparseReader>* reader) {
+    zx_status_t status;
+    if ((status = fvm::SparseReader::Create(fbl::move(src_fd), reader)) != ZX_OK) {
+        return status;
     }
 
+    fvm::sparse_image_t* hdr = (*reader)->Image();
     // Verify the header, then allocate and stream the remaining metadata
     if (hdr->magic != fvm::kSparseFormatMagic) {
         ERROR("Bad magic\n");
@@ -328,17 +331,18 @@ zx_status_t fvm_parse_sparse_header(const fbl::unique_fd& src_fd, fvm::sparse_im
 // Decides to overwrite or create new partitions based on the type
 // GUID, not the instance GUID.
 zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
-    fvm::sparse_image_t hdr;
-    zx_status_t status = fvm_parse_sparse_header(src_fd, &hdr);
+    fbl::unique_ptr<fvm::SparseReader> reader;
+    zx_status_t status = fvm_init_sparse_reader(fbl::move(src_fd), &reader);
     if (status != ZX_OK) {
         return status;
     }
 
     LOG("Header Validated - OK\n");
 
+    fvm::sparse_image_t* hdr = reader->Image();
     // Acquire an fd to the fvm, either by finding one that already
     // exists, or creating a new one.
-    fbl::unique_fd fvm_fd(fvm_find_or_format(hdr.slice_size));
+    fbl::unique_fd fvm_fd(fvm_find_or_format(hdr->slice_size));
     if (!fvm_fd) {
         ERROR("Couldn't find FVM partition\n");
         return ZX_ERR_IO;
@@ -352,33 +356,17 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
     if (ioctl_block_fvm_query(fvm_fd.get(), &info) < 0) {
         ERROR("Couldn't query underlying FVM\n");
         return ZX_ERR_IO;
-    } else if (info.slice_size != hdr.slice_size) {
-        ERROR("Unexpected slice size (%zu vs %zu)\n", info.slice_size, hdr.slice_size);
+    } else if (info.slice_size != hdr->slice_size) {
+        ERROR("Unexpected slice size (%zu vs %zu)\n", info.slice_size, hdr->slice_size);
         return ZX_ERR_IO;
     }
 
-    fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[hdr.header_length]);
-    memcpy(metadata.get(), &hdr, sizeof(hdr));
+    fbl::Array<partition_info> parts(new partition_info[hdr->partition_count],
+                                     hdr->partition_count);
 
-    size_t off = sizeof(hdr);
-    while (off < hdr.header_length) {
-        ssize_t r = read(src_fd.get(), &metadata[off], hdr.header_length - off);
-        if (r < 0) {
-            ERROR("Failed to stream metadata\n");
-            return ZX_ERR_IO;
-        }
-        off += r;
-    }
+    fvm::partition_descriptor_t* part = reader->Partitions();
 
-    fbl::Array<partition_info> parts(new partition_info[hdr.partition_count],
-                                     hdr.partition_count);
-
-    fvm::partition_descriptor_t* part =
-        reinterpret_cast<fvm::partition_descriptor_t*>(
-            reinterpret_cast<uintptr_t>(metadata.get()) +
-            sizeof(fvm::sparse_image_t));
-
-    for (size_t p = 0; p < hdr.partition_count; p++) {
+    for (size_t p = 0; p < hdr->partition_count; p++) {
         parts[p].pd = part;
         parts[p].old_part.reset(open_partition(nullptr, part->type, ZX_SEC(2), nullptr));
 
@@ -411,7 +399,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         } else if (ext->slice_count == 0) {
             ERROR("Extents must have > 0 slices\n");
             return ZX_ERR_IO;
-        } else if (ext->extent_length > ext->slice_count * hdr.slice_size) {
+        } else if (ext->extent_length > ext->slice_count * hdr->slice_size) {
             ERROR("Extent length must fit within allocated slice count\n");
             return ZX_ERR_IO;
         }
@@ -453,7 +441,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             } else if (ext->slice_count == 0) {
                 ERROR("Extents must have > 0 slices\n");
                 return ZX_ERR_IO;
-            } else if (ext->extent_length > ext->slice_count * hdr.slice_size) {
+            } else if (ext->extent_length > ext->slice_count * hdr->slice_size) {
                 ERROR("Extent must fit within allocated slice count\n");
                 return ZX_ERR_IO;
             }
@@ -483,7 +471,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
     }
 
     // Now that all partitions are preallocated, begin streaming data to them.
-    for (size_t p = 0; p < hdr.partition_count; p++) {
+    for (size_t p = 0; p < hdr->partition_count; p++) {
         txnid_t txnid;
         vmoid_t vmoid;
         fifo_client_t* client;
@@ -501,8 +489,8 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         request.opcode = BLOCKIO_WRITE;
 
         LOG("Streaming partition %zu\n", p);
-        status = stream_fvm_partition(&parts[p], mvmo.get(), client,
-                                      hdr.slice_size, block_size, &request, src_fd);
+        status = stream_fvm_partition(reader.get(), &parts[p], mvmo.get(), client, block_size,
+                                      &request);
         LOG("Done streaming partition %zu\n", p);
         block_fifo_release_client(client);
         if (status != ZX_OK) {
@@ -511,7 +499,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         }
     }
 
-    for (size_t p = 0; p < hdr.partition_count; p++) {
+    for (size_t p = 0; p < hdr->partition_count; p++) {
         // Upgrade the old partition (currently active) to the new partition (currently
         // inactive), so when the new partition becomes active, the old
         // partition is destroyed.

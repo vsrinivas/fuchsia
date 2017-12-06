@@ -16,9 +16,10 @@ int usage(void) {
     fprintf(stderr, " add : Adds a Minfs or Blobstore partition to an FVM (input path is"
                     " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
-    fprintf(stderr, "Flags (neither or both must be specified):\n");
+    fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
     fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
+    fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
     fprintf(stderr, "Input options:\n");
     fprintf(stderr, " --blobstore [path] - Add path as blobstore type (must be blobstore)\n");
     fprintf(stderr, " --data [path] - Add path as data type (must be minfs)\n");
@@ -55,6 +56,7 @@ int main(int argc, char** argv) {
     size_t length = 0;
     size_t offset = 0;
     bool should_unlink = true;
+    compress_type_t compress = NONE;
 
     while (i < argc) {
         if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
@@ -62,6 +64,13 @@ int main(int argc, char** argv) {
             offset = atoll(argv[++i]);
         } else if (!strcmp(argv[i], "--length") && i + 1 < argc) {
             length = atoll(argv[++i]);
+        } else if (!strcmp(argv[i], "--compress")) {
+            if (!strcmp(argv[++i], "lz4")) {
+                compress = LZ4;
+            } else {
+                fprintf(stderr, "Invalid compression type\n");
+                return -1;
+            }
         } else {
             break;
         }
@@ -73,8 +82,8 @@ int main(int argc, char** argv) {
         unlink(path);
     }
 
-    // If length was not specified, use length of file.
-    if (i == 3) {
+    // If length was not specified, use remainder of file after offset
+    if (length == 0) {
         fbl::unique_fd fd(open(path, O_RDONLY, 0644));
 
         if (fd) {
@@ -84,11 +93,8 @@ int main(int argc, char** argv) {
                 return -1;
             }
 
-            length = s.st_size;
+            length = s.st_size - offset;
         }
-    } else if (i != 7) {
-        fprintf(stderr, "Invalid flags\n");
-        return -1;
     }
 
     //TODO(planders): take this as argument?
@@ -138,7 +144,7 @@ int main(int argc, char** argv) {
         }
 
         fbl::unique_ptr<SparseContainer> sparseContainer;
-        if (SparseContainer::Create(path, slice_size, &sparseContainer) != ZX_OK) {
+        if (SparseContainer::Create(path, slice_size, compress, &sparseContainer) != ZX_OK) {
             return -1;
         }
 

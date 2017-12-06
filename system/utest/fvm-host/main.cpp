@@ -8,6 +8,8 @@
 #include <minfs/host.h>
 #include <unittest/unittest.h>
 
+#include <fvm/fvm-lz4.h>
+
 #define PARTITION_SIZE (1lu << 30)  // 1 gb
 #define CONTAINER_SIZE (4lu << 30)  // 4 gb
 #define SLICE_SIZE (64lu * (1 << 20)) // 64 mb
@@ -18,13 +20,15 @@ static char data_path[PATH_MAX];
 static char system_path[PATH_MAX];
 static char blobfs_path[PATH_MAX];
 static char sparse_path[PATH_MAX];
+static char sparse_lz4_path[PATH_MAX];
 static char fvm_path[PATH_MAX];
 
-constexpr uint32_t kData   = 1;
-constexpr uint32_t kSystem = 2;
-constexpr uint32_t kBlobfs = 4;
-constexpr uint32_t kSparse = 8;
-constexpr uint32_t kFvm    = 16;
+constexpr uint32_t kData      = 1;
+constexpr uint32_t kSystem    = 2;
+constexpr uint32_t kBlobfs    = 4;
+constexpr uint32_t kSparse    = 8;
+constexpr uint32_t kSparseLz4 = 16;
+constexpr uint32_t kFvm       = 32;
 
 // gFileFlags indicates which of the above files has been successfully created.
 // Keeping track of these across each individual test allows us to unlink only files that actually
@@ -38,6 +42,7 @@ static uint32_t gFileFlags = 0;
 
 typedef enum {
     SPARSE,
+    SPARSE_LZ4,
     FVM,
     FVM_NEW,
     FVM_OFFSET,
@@ -113,13 +118,14 @@ bool AddPartitions(Container* container) {
 }
 
 
-bool CreateSparse() {
+bool CreateSparse(compress_type_t compress) {
     BEGIN_HELPER;
-    printf("Creating sparse container: %s\n", sparse_path);
+    char* path = compress ? sparse_lz4_path : sparse_path;
+    printf("Creating sparse container: %s\n", path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
-    ASSERT_EQ(SparseContainer::Create(sparse_path, SLICE_SIZE, &sparseContainer), ZX_OK,
+    ASSERT_EQ(SparseContainer::Create(path, SLICE_SIZE, compress, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
-    gFileFlags |= kSparse;
+    gFileFlags |= compress ? kSparseLz4 : kSparse;
     ASSERT_TRUE(AddPartitions(sparseContainer.get()));
     ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
     END_HELPER;
@@ -145,7 +151,14 @@ bool ReportContainer(const char* path, off_t offset) {
     return true;
 }
 
-bool ReportSparse() {
+bool ReportSparse(bool compress) {
+    if (compress) {
+        printf("Decompressing sparse file\n");
+        if (fvm::decompress_sparse(sparse_lz4_path, sparse_path) != ZX_OK) {
+            return false;
+        }
+        gFileFlags |= kSparse;
+    }
     return ReportContainer(sparse_path, 0);
 }
 
@@ -322,6 +335,10 @@ bool DestroyAll() {
         ASSERT_TRUE(Destroy(sparse_path, kSparse));
     }
 
+    if (gFileFlags & kSparseLz4) {
+        ASSERT_TRUE(Destroy(sparse_lz4_path, kSparseLz4));
+    }
+
     if (gFileFlags & kFvm) {
         ASSERT_TRUE(Destroy(fvm_path, kFvm));
     }
@@ -342,8 +359,13 @@ bool CreateAndReport(container_t type) {
     BEGIN_HELPER;
     switch (type) {
         case SPARSE: {
-            ASSERT_TRUE(CreateSparse());
-            ASSERT_TRUE(ReportSparse());
+            ASSERT_TRUE(CreateSparse(NONE));
+            ASSERT_TRUE(ReportSparse(NONE));
+            break;
+        }
+        case SPARSE_LZ4: {
+            ASSERT_TRUE(CreateSparse(LZ4));
+            ASSERT_TRUE(ReportSparse(LZ4));
             break;
         }
         case FVM: {
@@ -397,6 +419,7 @@ bool Setup() {
     sprintf(system_path, "%ssystem.bin", test_dir);
     sprintf(blobfs_path, "%sblobfs.bin", test_dir);
     sprintf(sparse_path, "%ssparse.bin", test_dir);
+    sprintf(sparse_lz4_path, "%ssparse.bin.lz4", test_dir);
     sprintf(fvm_path, "%sfvm.bin", test_dir);
     END_HELPER;
 }
@@ -428,10 +451,12 @@ bool Cleanup() {
 //TODO(planders): add tests for FVM on GPT (with offset)
 BEGIN_TEST_CASE(fvm_host_tests)
 RUN_TEST_MEDIUM(TestEmptyPartitions<SPARSE>)
+RUN_TEST_MEDIUM(TestEmptyPartitions<SPARSE_LZ4>)
 RUN_TEST_MEDIUM(TestEmptyPartitions<FVM>)
 RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_NEW>)
 RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_OFFSET>)
 RUN_TEST_MEDIUM((TestPartitions<SPARSE, 10, 100, (1 << 20)>))
+RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, 10, 100, (1 << 20)>))
 RUN_TEST_MEDIUM((TestPartitions<FVM, 10, 100, (1 << 20)>))
 RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, 10, 100, (1 << 20)>))
 RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, 10, 100, (1 << 20)>))

@@ -22,6 +22,8 @@ MODULE_NAME := fvm-host-test
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
+    -Ithird_party/ulib/lz4/include \
+    -Isystem/uapp/lz4/include \
     -Isystem/host/fvm/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fvm/include \
@@ -38,6 +40,7 @@ MODULE_COMPILEFLAGS := \
 
 MODULE_HOST_LIBS := \
     third_party/ulib/uboringssl.hostlib \
+    third_party/ulib/lz4.hostlib \
     system/ulib/fvm.hostlib \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib \
