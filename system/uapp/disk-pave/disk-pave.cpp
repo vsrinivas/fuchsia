@@ -698,8 +698,7 @@ zx_status_t find_first_fit(const gpt_device_t* gpt, const fbl::unique_fd& gpt_fd
 
 // Returns "true" if the corresponding partition should
 // be used for paving.
-using PartitionFilterCb = bool (*)(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
-                                   const uint8_t name[GPT_NAME_LEN]);
+using PartitionFilterCb = bool (*)(const block_info_t* info, const gpt_partition_t* part);
 
 // Optional callback.
 // Returns "true" if a new partition should be created.
@@ -719,7 +718,8 @@ using PartitionFinalizeCb = bool (*)(gpt_partition_t* partition);
 // Returns a file descriptor to a partition which can be paved,
 // if one exists.
 template <PartitionFilterCb filterCb>
-zx_status_t partition_find(gpt_device_t* gpt, gpt_partition_t** out, fbl::unique_fd* out_fd) {
+zx_status_t partition_find(const block_info_t* info, gpt_device_t* gpt,
+                           gpt_partition_t** out, fbl::unique_fd* out_fd) {
     for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
         gpt_partition_t* p = gpt->partitions[i];
         if (!p) {
@@ -727,7 +727,7 @@ zx_status_t partition_find(gpt_device_t* gpt, gpt_partition_t** out, fbl::unique
         }
 
         static_assert(filterCb != nullptr, "Filter callback required to find partition");
-        if (filterCb(i, p->type, p->name)) {
+        if (filterCb(info, p)) {
             LOG("Found partition in GPT, partition %zu\n", i);
             if (out) {
                 *out = p;
@@ -920,30 +920,40 @@ done:
     return status;
 }
 
-bool efi_filter_cb(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
-                   const uint8_t name[GPT_NAME_LEN]) {
+// Name used by previous Fuchsia Installer
+const char* oldEfiName = "EFI";
+
+// Name used for EFI partitions added by paver
+const char* efiName = "EFI Gigaboot";
+
+bool efi_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
     uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
-    // Skip the first partition in the GPT; if it is EFI, we don't
-    // want to overwrite it.
-    return gpt_index != 0 && memcmp(type, efi_type, GPT_GUID_LEN) == 0;
+    char cstring_name[GPT_NAME_LEN];
+    utf16_to_cstring(cstring_name, (uint16_t*) part->name, GPT_NAME_LEN);
+    // Old EFI: Installed by the legacy Fuchsia installer, identified by
+    // large size and "EFI" label.
+    bool oldEfi = strncmp(cstring_name, oldEfiName, strlen(oldEfiName)) == 0 &&
+                  ((part->last - part->first + 1) * info->block_size) > (1 << 29);
+    // More recent EFI: Identified by "EFI Gigaboot" label.
+    bool newEfi = strncmp(cstring_name, efiName, strlen(efiName)) == 0;
+    return memcmp(part->type, efi_type, GPT_GUID_LEN) == 0 && (oldEfi || newEfi);
 }
 
 bool efi_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** name_out) {
     uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
     memcpy(type_out, efi_type, GPT_GUID_LEN);
     *size_bytes_out = 1LU * (1 << 30);
-    *name_out = "EFI Gigaboot";
+    *name_out = efiName;
     return true;
 }
 
 const char* kerncName = "KERN-C";
 
-bool kernc_filter_cb(size_t gpt_index, const uint8_t type[GPT_GUID_LEN],
-                     const uint8_t name[GPT_NAME_LEN]) {
+bool kernc_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
     uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
     char cstring_name[GPT_NAME_LEN];
-    utf16_to_cstring(cstring_name, (uint16_t*) name, GPT_NAME_LEN);
-    return memcmp(type, kernc_type, GPT_GUID_LEN) == 0 &&
+    utf16_to_cstring(cstring_name, (uint16_t*) part->name, GPT_NAME_LEN);
+    return memcmp(part->type, kernc_type, GPT_GUID_LEN) == 0 &&
         strncmp(cstring_name, kerncName, strlen(kerncName)) == 0;
 }
 
@@ -1020,8 +1030,14 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
         return status;
     }
 
+    block_info_t info;
+    if ((status = static_cast<zx_status_t>(ioctl_block_get_info(gpt_fd.get(), &info))) < 0) {
+        ERROR("Couldn't get GPT block info\n");
+        return status;
+    }
+
     fbl::unique_fd part_fd;
-    if ((status = partition_find<filterCb>(gpt, nullptr, &part_fd)) != ZX_OK) {
+    if ((status = partition_find<filterCb>(&info, gpt, nullptr, &part_fd)) != ZX_OK) {
         if (status != ZX_ERR_NOT_FOUND || (void*) createCb == nullptr) {
             ERROR("Failure looking for partition: %d\n", status);
             gpt_device_release(gpt);
@@ -1035,9 +1051,8 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
     }
     gpt_device_release(gpt);
 
-    block_info_t info;
     if ((status = static_cast<zx_status_t>(ioctl_block_get_info(part_fd.get(), &info))) < 0) {
-        ERROR("Couldn't get GPT block info\n");
+        ERROR("Couldn't get GPT partition block info\n");
         return status;
     }
 
@@ -1075,7 +1090,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
             return status;
         }
         gpt_partition_t* partition;
-        if ((status = partition_find<filterCb>(gpt, &partition, nullptr)) != ZX_OK) {
+        if ((status = partition_find<filterCb>(&info, gpt, &partition, nullptr)) != ZX_OK) {
             ERROR("Cannot re-find partition\n");
             return status;
         }
@@ -1101,13 +1116,22 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
 int fvm_clean() {
     char gpt_path[PATH_MAX];
     if (find_target_gpt(gpt_path)) {
+        ERROR("Couldn't find target GPT\n");
         return -1;
     }
 
     fbl::unique_fd fd;
     gpt_device_t* gpt;
     if (initialize_gpt(gpt_path, &fd, &gpt)) {
+        ERROR("Couldn't initialize GPT\n");
         return -1;
+    }
+
+    block_info_t info;
+    zx_status_t status;
+    if ((status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &info))) < 0) {
+        ERROR("Couldn't get GPT block info\n");
+        return status;
     }
 
     bool modify = false;
@@ -1120,7 +1144,6 @@ int fvm_clean() {
         const uint8_t install_type[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
         const uint8_t blobfs_type[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
         const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-        const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
         char name[GPT_NAME_LEN];
         memset(name, 0, sizeof(name));
@@ -1136,8 +1159,7 @@ int fvm_clean() {
             LOG("Removing blobstore partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, fvm_type, GPT_GUID_LEN)) {
             LOG("Removing FVM partition\n");
-        } else if (!memcmp(gpt->partitions[i]->type, efi_type, GPT_GUID_LEN)
-                   && !strncmp(name, "EFI", GPT_NAME_LEN)) {
+        } else if (efi_filter_cb(&info, gpt->partitions[i])) {
             LOG("Removing EFI partition\n");
         } else {
             continue;
