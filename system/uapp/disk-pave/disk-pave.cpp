@@ -1157,9 +1157,15 @@ int fvm_clean() {
             write(pfd.get(), buf, sizeof(buf));
         }
 
-        // Delete the partition by clearing the GPT entry.
-        constexpr size_t kGPTEntrySize = 0x80;
-        memset(gpt->partitions[i], 0, kGPTEntrySize);
+        if (gpt_partition_remove(gpt, gpt->partitions[i]->guid)) {
+            ERROR("Warning: Could not remove partition\n");
+        } else {
+            // If we successfully clear the partition, then all subsequent
+            // partitions get shifted down. If we just deleted partition 'i',
+            // we now need to look at partition 'i' again, since it's now
+            // occupied by what was in 'i+1'.
+            i--;
+        }
     }
     if (modify) {
         gpt_device_sync(gpt);
