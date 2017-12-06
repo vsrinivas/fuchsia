@@ -5,6 +5,7 @@
         "garnet/packages/auth",
         "garnet/packages/benchmark_examples",
         "garnet/packages/bluetooth",
+        "garnet/packages/bluetooth_examples",
         "garnet/packages/boringssl",
         "garnet/packages/build_info",
         "garnet/packages/cmdutils",
