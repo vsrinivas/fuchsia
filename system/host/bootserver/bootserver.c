@@ -37,6 +37,8 @@
 #define ANSI_RESET "\x1b[0m"
 #define ANSI_LINESTART "\33[2K\r"
 
+#define MAX_FVM_IMAGES 4
+
 #define ANSI(name) (use_color == false || is_redirected) ? "" : ANSI_##name
 
 #define log(args...)                                                      \
@@ -176,7 +178,7 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --fvm <file>   use the supplied file as a sparse FVM image\n"
+            "  --fvm <file>   use the supplied file as a sparse FVM image (up to 4 times)\n"
             "  --efi <file>   use the supplied file as an EFI image\n"
             "  --kernc <file> use the supplied file as a KERN-C CrOS image\n"
             "  --netboot    use the netboot protocol\n"
@@ -231,9 +233,10 @@ int main(int argc, char** argv) {
     char* cmdnext = cmdline;
     char* nodename = NULL;
     int r, s, n = 1;
+    int num_fvms = 0;
     const char* efi_image = NULL;
     const char* kernc_image = NULL;
-    const char* fvm_image = NULL;
+    const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
     int once = 0;
@@ -263,7 +266,11 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "'--fvm' option requires an argument (FVM image)\n");
                 return -1;
             }
-            fvm_image = argv[1];
+            if (num_fvms == MAX_FVM_IMAGES) {
+                fprintf(stderr, "'--fvm' supplied too many times\n");
+                return -1;
+            }
+            fvm_images[num_fvms++] = argv[1];
         } else if (!strcmp(argv[1], "--efi")) {
             argc--;
             argv++;
@@ -516,9 +523,11 @@ int main(int argc, char** argv) {
                               use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
             }
         }
-        if (status == 0 && fvm_image) {
-            status = xfer(&ra, fvm_image, use_filename_prefix ? NB_FVM_FILENAME
-                          : NB_FVM_HOST_FILENAME);
+        for(size_t i = 0; i < num_fvms; i++) {
+          if (status == 0 && fvm_images[i]) {
+              status = xfer(&ra, fvm_images[i], use_filename_prefix ? NB_FVM_FILENAME
+                            : NB_FVM_HOST_FILENAME);
+          }
         }
         if (status == 0 && efi_image) {
             status = xfer(&ra, efi_image, use_filename_prefix ? NB_EFI_FILENAME
