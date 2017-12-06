@@ -38,8 +38,7 @@ private:
     IntermediatePtFlags intermediate_flags() final;
     PtFlags terminal_flags(page_table_levels level, uint flags) final;
     PtFlags split_flags(page_table_levels level, PtFlags flags) final;
-    void TlbInvalidatePage(page_table_levels level, X86PageTableBase* pt, vaddr_t vaddr,
-                           bool global_page) final;
+    void TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) final;
     uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) final;
     bool needs_cache_flushes() final { return false; }
 
@@ -58,8 +57,7 @@ private:
     IntermediatePtFlags intermediate_flags() final;
     PtFlags terminal_flags(page_table_levels level, uint flags) final;
     PtFlags split_flags(page_table_levels level, PtFlags flags) final;
-    void TlbInvalidatePage(page_table_levels level, X86PageTableBase* pt, vaddr_t vaddr,
-                           bool global_page) final;
+    void TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) final;
     uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) final;
     bool needs_cache_flushes() final { return false; }
 };

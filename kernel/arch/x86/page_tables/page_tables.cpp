@@ -171,7 +171,7 @@ void X86PageTableBase::UpdateEntry(page_table_levels level, vaddr_t vaddr, volat
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
-        TlbInvalidatePage(level, this, vaddr, is_kernel_address(vaddr));
+        TlbInvalidatePage(level, vaddr, is_kernel_address(vaddr));
     }
 }
 
@@ -184,7 +184,7 @@ void X86PageTableBase::UnmapEntry(page_table_levels level, vaddr_t vaddr, volati
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
-        TlbInvalidatePage(level, this, vaddr, is_kernel_address(vaddr));
+        TlbInvalidatePage(level, vaddr, is_kernel_address(vaddr));
     }
 }
 

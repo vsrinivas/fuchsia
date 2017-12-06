@@ -77,8 +77,7 @@ protected:
     // large page with flags |flags|.
     virtual PtFlags split_flags(page_table_levels level, PtFlags flags) = 0;
     // Invalidate a single page at the given level
-    virtual void TlbInvalidatePage(page_table_levels level, X86PageTableBase* pt, vaddr_t vaddr,
-                                   bool global_page) = 0;
+    virtual void TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) = 0;
     // Convert PtFlags to ARCH_MMU_* flags.
     virtual uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) = 0;
     // Returns true if a cache flush is necessary for pagetable changes to be
