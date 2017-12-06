@@ -375,11 +375,6 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       kMaxwellUrl);
   AtEnd(Reset(&maxwell_component_context_impl_));
 
-  maxwell_component_context_binding_ =
-      std::make_unique<fidl::Binding<ComponentContext>>(
-          maxwell_component_context_impl_.get());
-  AtEnd(Reset(&maxwell_component_context_binding_));
-
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
   if (test_) {
@@ -392,7 +387,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
           user_scope_->GetLauncher(), std::move(maxwell_config));
 
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
-      maxwell_component_context_binding_->NewBinding(),
+      maxwell_component_context_impl_->NewBinding(),
       std::move(story_provider), std::move(focus_provider_maxwell),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
@@ -548,8 +543,7 @@ void UserRunnerImpl::GetAgentProvider(
 
 void UserRunnerImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> request) {
-  user_shell_component_context_bindings_.AddBinding(
-      user_shell_component_context_impl_.get(), std::move(request));
+  user_shell_component_context_impl_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetContextReader(

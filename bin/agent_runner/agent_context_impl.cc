@@ -219,8 +219,7 @@ void AgentContextImpl::NewTask(const std::string& task_id) {
 
 void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> request) {
-  component_context_bindings_.AddBinding(&component_context_impl_,
-                                         std::move(request));
+  component_context_impl_.Connect(std::move(request));
 }
 
 void AgentContextImpl::GetTokenProvider(

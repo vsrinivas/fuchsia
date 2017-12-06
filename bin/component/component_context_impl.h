@@ -50,6 +50,9 @@ class ComponentContextImpl : public ComponentContext {
 
   const std::string& component_instance_id() { return component_instance_id_; }
 
+  void Connect(fidl::InterfaceRequest<ComponentContext> request);
+  ComponentContextPtr NewBinding();
+
  private:
   // |ComponentContext|
   void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
@@ -91,6 +94,8 @@ class ComponentContextImpl : public ComponentContext {
   const std::string component_namespace_;
   const std::string component_instance_id_;
   const std::string component_url_;
+
+  fidl::BindingSet<ComponentContext> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

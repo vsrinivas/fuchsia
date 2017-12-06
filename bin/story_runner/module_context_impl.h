@@ -125,7 +125,6 @@ class ModuleContextImpl : ModuleContext {
   ModuleControllerImpl* const module_controller_impl_;
 
   ComponentContextImpl component_context_impl_;
-  fidl::BindingSet<ComponentContext> component_context_bindings_;
 
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned

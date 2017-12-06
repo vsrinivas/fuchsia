@@ -31,6 +31,16 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
 
 ComponentContextImpl::~ComponentContextImpl() = default;
 
+void ComponentContextImpl::Connect(fidl::InterfaceRequest<ComponentContext> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+ComponentContextPtr ComponentContextImpl::NewBinding() {
+  ComponentContextPtr ptr;
+  Connect(ptr.NewRequest());
+  return ptr;
+}
+
 void ComponentContextImpl::GetLedger(
     fidl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {

@@ -195,8 +195,6 @@ class UserRunnerImpl : UserRunner,
   // This component context is supplied to the user intelligence provider,
   // below, so it can run agents and create message queues.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
-  std::unique_ptr<fidl::Binding<ComponentContext>>
-      maxwell_component_context_binding_;
 
   // Service provider interfaces for maxwell services. They are created with
   // the component context above as parameters.
@@ -214,7 +212,6 @@ class UserRunnerImpl : UserRunner,
   // Component context given to user shell so that it can run agents and
   // create message queues.
   std::unique_ptr<ComponentContextImpl> user_shell_component_context_impl_;
-  fidl::BindingSet<ComponentContext> user_shell_component_context_bindings_;
 
   // Given to the user shell so it can store its own data. These data are
   // shared between all user shells (so it's not private to the user shell

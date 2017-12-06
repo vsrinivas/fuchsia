@@ -111,7 +111,6 @@ class AgentContextImpl : AgentContext, AgentController {
   AgentRunner* const agent_runner_;
 
   ComponentContextImpl component_context_impl_;
-  fidl::BindingSet<ComponentContext> component_context_bindings_;
 
   // A service provider that represents the services to be added into an
   // application's namespace.

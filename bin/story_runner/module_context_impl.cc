@@ -184,8 +184,7 @@ void ModuleContextImpl::EmbedModule(
 
 void ModuleContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context_request) {
-  component_context_bindings_.AddBinding(&component_context_impl_,
-                                         std::move(context_request));
+  component_context_impl_.Connect(std::move(context_request));
 }
 
 void ModuleContextImpl::GetIntelligenceServices(
