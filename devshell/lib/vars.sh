@@ -43,13 +43,10 @@ function fx-config-read-if-present {
 }
 
 function fx-config-read {
-  fx-config-read-if-present
-
-  if [[ $? -ne 0 ]]; then
+  if ! fx-config-read-if-present ; then
     echo >& 2 "error: Cannot read config from ${FUCHSIA_CONFIG}. Did you run \"fx set\"?"
     exit 1
   fi
-
 }
 
 function fx-command-run {
