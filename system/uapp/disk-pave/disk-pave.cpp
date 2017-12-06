@@ -295,6 +295,12 @@ zx_status_t fvm_partition_match(const fbl::unique_fd& fvm_fd, const fbl::unique_
     return ZX_OK;
 }
 
+void recommend_wipe(const char* reason) {
+    fprintf(stderr, "-----------------------------------------------------\n\n");
+    fprintf(stderr, "%s\nPlease run 'install-disk-image wipe' to wipe your partitions\n", reason);
+    fprintf(stderr, "\n-----------------------------------------------------\n");
+}
+
 // Given an fd representing a "sparse FVM format", fill the FVM with the
 // provided partitions described by |src_fd|.
 //
@@ -374,12 +380,10 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
                 fprintf(stderr, "[fvm_stream_partitions] Couldn't confirm old vpartition type\n");
                 return ZX_ERR_IO;
             } else if (fvm_partition_match(fvm_fd, parts[p].old_part) != ZX_OK) {
-                fprintf(stderr, "Streaming a partition type which also exists outside FVM\n");
-                fprintf(stderr, "Please run 'install-disk-image wipe' to clear your partitions\n");
+                recommend_wipe("Streaming a partition type which also exists outside FVM");
                 return ZX_ERR_BAD_STATE;
             } else if (!is_vpartition) {
-                fprintf(stderr, "Streaming a partition type which also exists in a GPT\n");
-                fprintf(stderr, "Please run 'install-disk-image wipe' to clear your GPT.\n");
+                recommend_wipe("Streaming a partition type which also exists in a GPT");
                 return ZX_ERR_BAD_STATE;
             }
         }
@@ -1085,6 +1089,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
 // - Data
 // - Blobstore
 // - FVM
+// - EFI
 //
 // From the target GPT, leaving it (hopefully) in a state
 // ready for a sparse FVM image to be installed.
@@ -1109,6 +1114,12 @@ int fvm_clean() {
         const uint8_t data_type[GPT_GUID_LEN] = GUID_DATA_VALUE;
         const uint8_t blobfs_type[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
         const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
+        const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
+
+        char name[GPT_NAME_LEN];
+        memset(name, 0, sizeof(name));
+        utf16_to_cstring(name, (uint16_t*) gpt->partitions[i]->name, GPT_NAME_LEN);
+
         if (!memcmp(gpt->partitions[i]->type, system_type, GPT_GUID_LEN)) {
             printf("Removing system partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, data_type, GPT_GUID_LEN)) {
@@ -1116,21 +1127,31 @@ int fvm_clean() {
         } else if (!memcmp(gpt->partitions[i]->type, blobfs_type, GPT_GUID_LEN)) {
             printf("Removing blobstore partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, fvm_type, GPT_GUID_LEN)) {
-            printf("Removing fvm partition\n");
+            printf("Removing FVM partition\n");
+        } else if (!memcmp(gpt->partitions[i]->type, efi_type, GPT_GUID_LEN)
+                   && !strncmp(name, "EFI", GPT_NAME_LEN)) {
+            printf("Removing EFI partition\n");
         } else {
             continue;
         }
         modify = true;
 
-        // Overwrite the first 4k to (hackily) ensure the destroyed partition
+        // Overwrite the first 8k to (hackily) ensure the destroyed partition
         // doesn't "reappear" in place.
-        char buf[4192];
+        char buf[8192];
         memset(buf, 0, sizeof(buf));
         fbl::unique_fd pfd(open_partition(gpt->partitions[i]->guid,
                                           gpt->partitions[i]->type, ZX_SEC(2),
                                           nullptr));
-        write(pfd.get(), buf, sizeof(buf));
-        gpt_partition_remove(gpt, gpt->partitions[i]->guid);
+        if (!pfd) {
+            fprintf(stderr, "Warning: Could not open partition to overwrite first 8KB\n");
+        } else {
+            write(pfd.get(), buf, sizeof(buf));
+        }
+
+        // Delete the partition by clearing the GPT entry.
+        constexpr size_t kGPTEntrySize = 0x80;
+        memset(gpt->partitions[i], 0, kGPTEntrySize);
     }
     if (modify) {
         gpt_device_sync(gpt);
