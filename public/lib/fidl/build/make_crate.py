@@ -53,7 +53,7 @@ def make_crate(output, gen_dir, inputs, srcroot, dep_inputs):
     basename = os.path.splitext(os.path.basename(i))[0]
     if rel != basename + '.rs':
       src_f.write('#[path="%s"]\n' % rel)
-    src_f.write('mod %s;\n' % basename)
+    src_f.write('pub mod %s;\n' % basename)
   src_f.write('\n')
   for i in inputs:
     basename = os.path.splitext(os.path.basename(i))[0]
