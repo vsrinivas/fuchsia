@@ -51,6 +51,9 @@ declare_args() {
   #  Workaround for Ledger open failures against minfs on FVM.
   disable_data_minfs = false
 
+  # Build boot images that prefer Zedboot over local boot.
+  always_zedboot = false
+
   # Whether to automatically generate BUILD.gn files for Zircon artifacts.
   generate_zircon_gn_files = false
 }
@@ -840,7 +843,11 @@ foreach(platform, zircon_platforms) {
 
   # EFI ESP images.
   esp("local-${platform}") {
-    cmdline = "efi_local_cmdline"
+    if (always_zedboot) {
+      cmdline = "efi_zedboot_cmdline"
+    } else {
+      cmdline = "efi_local_cmdline"
+    }
     zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
     zedboot = ":zedboot-${platform}"
     deps = [ ":bootdata-blobstore-${platform}" ]
