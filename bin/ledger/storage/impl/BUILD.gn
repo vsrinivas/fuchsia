@@ -165,6 +165,7 @@ source_set("unittests") {
     ":test_utils",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test",
     "//peridot/bin/ledger/cloud_sync/impl",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/fake:lib",

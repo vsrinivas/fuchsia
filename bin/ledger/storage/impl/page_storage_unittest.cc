@@ -25,6 +25,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/test/fake_task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
@@ -91,50 +92,6 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
   return result;
 }
 
-// TaskRunner that stores tasks in a queue, instead of using a MessageLoop.
-class FakeTaskRunner : public fxl::TaskRunner {
- public:
-  void PostTask(fxl::Closure task) {
-    task_queue_.push(task);
-  }
-
-  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay) {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  bool RunsTasksOnCurrentThread() {
-    return true;
-  }
-
-  // Run the tasks in the queue until it's empty or until QuitNow() is called.
-  void Run() {
-    FXL_DCHECK(!running_);
-    running_ = true;
-
-    while (!should_quit_ && !task_queue_.empty()) {
-      fxl::Closure task = task_queue_.front();
-      task_queue_.pop();
-      task();
-    }
-    should_quit_ = false;
-    running_ = false;
-  }
-
-  // Immediately stops iteration in Run().
-  void QuitNow() {
-    should_quit_ = true;
-  }
-
- private:
-  std::queue<fxl::Closure> task_queue_;
-  bool should_quit_ = false;
-  bool running_ = false;
-};
-
 // Wrapper around CoroutineHandler, which prevents nested calls to
 // FakeTaskRunner::Run().
 //
@@ -144,7 +101,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
   explicit TestCoroutineHandler(
       coroutine::CoroutineHandler* delegate,
-      fxl::RefPtr<FakeTaskRunner> task_runner)
+      fxl::RefPtr<fxl::FakeTaskRunner> task_runner)
       : delegate_(delegate),
         task_runner_(task_runner) {}
 
@@ -171,7 +128,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
  private:
   coroutine::CoroutineHandler* delegate_;
-  fxl::RefPtr<FakeTaskRunner> task_runner_;
+  fxl::RefPtr<fxl::FakeTaskRunner> task_runner_;
   bool need_to_continue_ = false;
 };
 
@@ -277,7 +234,7 @@ class PageStorageTest : public ::testing::Test {
   // Test:
   void SetUp() override {
     PageId id = RandomString(10);
-    task_runner_ = fxl::AdoptRef(new FakeTaskRunner());
+    task_runner_ = fxl::MakeRefCounted<fxl::FakeTaskRunner>();
     storage_ = std::make_unique<PageStorageImpl>(
         task_runner_, &coroutine_service_, tmp_dir_.path(), id);
 
@@ -667,7 +624,7 @@ class PageStorageTest : public ::testing::Test {
   coroutine::CoroutineServiceImpl coroutine_service_;
   std::thread io_thread_;
   files::ScopedTempDir tmp_dir_;
-  fxl::RefPtr<FakeTaskRunner> task_runner_;
+  fxl::RefPtr<fxl::FakeTaskRunner> task_runner_;
   std::unique_ptr<PageStorageImpl> storage_;
 
  private:
