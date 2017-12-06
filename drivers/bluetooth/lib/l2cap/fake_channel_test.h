@@ -44,6 +44,16 @@ class FakeChannelTest : public ::btlib::testing::TestBase {
   // by tests even if its ownership is passed outside of the test harness.
   std::unique_ptr<Channel> CreateFakeChannel(const ChannelOptions& options);
 
+  // Runs the event loop and returns true if |expected| is received within a 10
+  // second period.
+  //
+  // Returns false if no such response is received or no FakeChannel has been
+  // initialized via CreateFakeChannel().
+  //
+  // NOTE: This overwrites the underlying FakeChannel's "send callback" by
+  // calling FakeChannel::SetSendCallback().
+  bool Expect(const common::ByteBuffer& expected);
+
   // Emulates the receipt of |packet| and returns true if a response that
   // matches |expected_response| is sent back over the underlying FakeChannel.
   // Returns false if no such response is received or no FakeChannel has been

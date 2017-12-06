@@ -18,24 +18,31 @@ std::unique_ptr<Channel> FakeChannelTest::CreateFakeChannel(
   return fake_chan;
 }
 
-bool FakeChannelTest::ReceiveAndExpect(
-    const common::ByteBuffer& packet,
-    const common::ByteBuffer& expected_response) {
-  if (!fake_chan_)
+bool FakeChannelTest::Expect(const common::ByteBuffer& expected) {
+  if (!fake_chan())
     return false;
 
   bool success = false;
-  auto cb = [&expected_response, &success, this](auto cb_packet) {
-    success = common::ContainersEqual(expected_response, *cb_packet);
+  auto cb = [&expected, &success, this](auto cb_packet) {
+    success = common::ContainersEqual(expected, *cb_packet);
     fsl::MessageLoop::GetCurrent()->QuitNow();
   };
 
   fake_chan()->SetSendCallback(cb, message_loop()->task_runner());
-  fake_chan()->Receive(packet);
-
   RunMessageLoop();
 
   return success;
+}
+
+bool FakeChannelTest::ReceiveAndExpect(
+    const common::ByteBuffer& packet,
+    const common::ByteBuffer& expected_response) {
+  if (!fake_chan())
+    return false;
+
+  fake_chan()->Receive(packet);
+
+  return Expect(expected_response);
 }
 
 }  // namespace testing

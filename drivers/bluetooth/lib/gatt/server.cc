@@ -10,6 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "gatt.h"
 
@@ -82,6 +83,34 @@ Server::~Server() {
   att_->UnregisterHandler(read_by_group_type_id_);
   att_->UnregisterHandler(find_information_id_);
   att_->UnregisterHandler(exchange_mtu_id_);
+}
+
+void Server::SendNotification(att::Handle handle,
+                              const common::ByteBuffer& value,
+                              bool indicate) {
+  auto buffer = common::NewSlabBuffer(sizeof(att::Header) + sizeof(handle) +
+                                      value.size());
+  FXL_CHECK(buffer);
+
+  att::PacketWriter writer(indicate ? att::kIndication : att::kNotification,
+                           buffer.get());
+  auto rsp_params = writer.mutable_payload<att::AttributeData>();
+  rsp_params->handle = htole16(handle);
+  writer.mutable_payload_data().Write(value, sizeof(att::AttributeData));
+
+  if (!indicate) {
+    att_->SendWithoutResponse(std::move(buffer));
+    return;
+  }
+
+  att_->StartTransaction(
+      std::move(buffer),
+      [](const auto&) { FXL_VLOG(2) << "Got confirmation!"; },
+      [](bool timeout, att::ErrorCode ecode, att::Handle handle) {
+        FXL_VLOG(1) << fxl::StringPrintf(
+            "Indication failed (timeout: %s, error: 0x%02hhx, handle: 0x%04x)",
+            timeout ? "true" : "false", ecode, handle);
+      });
 }
 
 void Server::OnExchangeMTU(att::Bearer::TransactionId tid,

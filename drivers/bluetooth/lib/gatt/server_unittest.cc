@@ -1569,6 +1569,76 @@ TEST_F(GATT_ServerTest, ReadRequestSuccess) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
+TEST_F(GATT_ServerTest, SendNotificationEmpty) {
+  constexpr att::Handle kHandle = 0x1234;
+  const common::BufferView kTestValue;
+
+  // clang-format off
+  const auto kExpected = common::CreateStaticByteBuffer(
+    0x1B,         // opcode: notification
+    0x34, 0x12    // handle: |kHandle|
+  );
+  // clang-format on
+
+  message_loop()->task_runner()->PostTask(
+      [=] { server()->SendNotification(kHandle, kTestValue, false); });
+
+  EXPECT_TRUE(Expect(kExpected));
+}
+
+TEST_F(GATT_ServerTest, SendNotification) {
+  constexpr att::Handle kHandle = 0x1234;
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+
+  // clang-format off
+  const auto kExpected = common::CreateStaticByteBuffer(
+    0x1B,          // opcode: notification
+    0x34, 0x12,    // handle: |kHandle|
+    'f', 'o', 'o'  // value: |kTestValue|
+  );
+  // clang-format on
+
+  message_loop()->task_runner()->PostTask(
+      [=] { server()->SendNotification(kHandle, kTestValue, false); });
+
+  EXPECT_TRUE(Expect(kExpected));
+}
+
+TEST_F(GATT_ServerTest, SendIndicationEmpty) {
+  constexpr att::Handle kHandle = 0x1234;
+  const common::BufferView kTestValue;
+
+  // clang-format off
+  const auto kExpected = common::CreateStaticByteBuffer(
+    0x1D,         // opcode: indication
+    0x34, 0x12    // handle: |kHandle|
+  );
+  // clang-format on
+
+  message_loop()->task_runner()->PostTask(
+      [=] { server()->SendNotification(kHandle, kTestValue, true); });
+
+  EXPECT_TRUE(Expect(kExpected));
+}
+
+TEST_F(GATT_ServerTest, SendIndication) {
+  constexpr att::Handle kHandle = 0x1234;
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+
+  // clang-format off
+  const auto kExpected = common::CreateStaticByteBuffer(
+    0x1D,          // opcode: indication
+    0x34, 0x12,    // handle: |kHandle|
+    'f', 'o', 'o'  // value: |kTestValue|
+  );
+  // clang-format on
+
+  message_loop()->task_runner()->PostTask(
+      [=] { server()->SendNotification(kHandle, kTestValue, true); });
+
+  EXPECT_TRUE(Expect(kExpected));
+}
+
 }  // namespace
 }  // namespace gatt
 }  // namespace btlib

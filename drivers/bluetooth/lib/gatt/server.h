@@ -37,6 +37,14 @@ class Server final {
          fxl::RefPtr<att::Bearer> bearer);
   ~Server();
 
+  // Sends a Handle-Value notification or indication PDU with the given
+  // attribute handle. If |indicate| is true, then an indication will be sent.
+  // The underlying att::Bearer will disconnect the link if a confirmation is
+  // not received in a timely manner.
+  void SendNotification(att::Handle handle,
+                        const common::ByteBuffer& value,
+                        bool indicate);
+
  private:
   // ATT protocol request handlers:
   void OnExchangeMTU(att::Bearer::TransactionId tid,
