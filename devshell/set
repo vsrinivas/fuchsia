@@ -5,7 +5,7 @@
 
 ### set build configuration
 
-## usage: fx set x86-64|aarch64|gauss|hikey960|odroidc2
+## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2
 ##               [--release] [--packages P1,P2,...]
 ##               [--args ARG] [--build-dir DIR]
 ##               [--goma|--no-goma] [--no-ensure-goma]
