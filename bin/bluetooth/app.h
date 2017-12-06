@@ -9,6 +9,7 @@
 
 #include "garnet/bin/bluetooth/adapter_manager.h"
 #include "garnet/bin/bluetooth/adapter_manager_fidl_impl.h"
+#include "garnet/bin/bluetooth/gatt_server_fidl_impl.h"
 #include "garnet/bin/bluetooth/low_energy_central_fidl_impl.h"
 #include "garnet/bin/bluetooth/low_energy_peripheral_fidl_impl.h"
 #include "lib/app/cpp/application_context.h"
@@ -49,6 +50,11 @@ class App final : public AdapterManager::Observer {
   void OnLowEnergyPeripheralRequest(
       ::fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request);
 
+  // Called when there is an interface request for the gatt::Server FIDL
+  // service.
+  void OnGattServerRequest(
+      ::fidl::InterfaceRequest<::bluetooth::gatt::Server> request);
+
   // Called when a AdapterManagerFidlImpl that we own notifies a connection
   // error handler.
   void OnAdapterManagerFidlImplDisconnected(
@@ -63,6 +69,11 @@ class App final : public AdapterManager::Observer {
   // connection error handler.
   void OnLowEnergyPeripheralFidlImplDisconnected(
       LowEnergyPeripheralFidlImpl* low_energy_peripheral_fidl_impl);
+
+  // Called when a GattServerFidlImpl that we own notifies its connection error
+  // handler.
+  void OnGattServerFidlImplDisconnected(
+      GattServerFidlImpl* gatt_server_fidl_impl);
 
   // Provides access to the environment. This is used to publish outgoing
   // services.
@@ -86,6 +97,9 @@ class App final : public AdapterManager::Observer {
   // vended out.
   std::vector<std::unique_ptr<LowEnergyPeripheralFidlImpl>>
       low_energy_peripheral_fidl_impls_;
+
+  // The list of gatt::Server FIDL interface handles that have been vended out.
+  std::vector<std::unique_ptr<GattServerFidlImpl>> gatt_server_fidl_impls_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

@@ -37,6 +37,8 @@ class Connection final {
              fxl::RefPtr<att::Database> local_db);
   ~Connection();
 
+  gatt::Server* server() const { return server_.get(); }
+
  private:
   std::unique_ptr<gatt::Server> server_;
 

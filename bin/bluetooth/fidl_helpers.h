@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "lib/bluetooth/fidl/common.fidl.h"
 #include "lib/bluetooth/fidl/control.fidl.h"
+#include "lib/bluetooth/fidl/gatt.fidl.h"
 #include "lib/bluetooth/fidl/low_energy.fidl.h"
 
 // Helpers for implementing the Bluetooth FIDL interfaces.
@@ -47,3 +49,13 @@ bool PopulateDiscoveryFilter(
 
 }  // namespace fidl_helpers
 }  // namespace bluetooth_service
+
+// fidl::TypeConverter specializations for common::ByteBuffer and friends.
+namespace fidl {
+
+template <>
+struct TypeConverter<Array<uint8_t>, ::btlib::common::ByteBuffer> {
+  static Array<uint8_t> Convert(const ::btlib::common::ByteBuffer& from);
+};
+
+}  // namespace fidl

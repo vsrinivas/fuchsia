@@ -18,6 +18,8 @@ executable("bin") {
     "app.h",
     "fidl_helpers.cc",
     "fidl_helpers.h",
+    "gatt_server_fidl_impl.cc",
+    "gatt_server_fidl_impl.h",
     "low_energy_central_fidl_impl.cc",
     "low_energy_central_fidl_impl.h",
     "low_energy_peripheral_fidl_impl.cc",

@@ -87,6 +87,7 @@ class LowEnergyConnection {
   const std::string& id() const { return id_; }
   hci::ConnectionHandle handle() const { return link_->handle(); }
   hci::Connection* link() const { return link_.get(); }
+  gatt::Connection* gatt() const { return gatt_.get(); }
 
  private:
   void CloseRefs() {
@@ -335,6 +336,15 @@ LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
   // Currently this will refuse the connection and disconnect the link if |peer|
   // is already connected to us by a different local address.
   return InitializeConnection(peer->identifier(), std::move(link));
+}
+
+gatt::Connection* LowEnergyConnectionManager::GetGattConnection(
+    const std::string& peer_id) {
+  auto iter = connections_.find(peer_id);
+  if (iter == connections_.end())
+    return nullptr;
+
+  return iter->second->gatt();
 }
 
 void LowEnergyConnectionManager::SetConnectionParametersCallbackForTesting(

@@ -26,6 +26,9 @@ App::App(std::unique_ptr<app::ApplicationContext> application_context)
   application_context_->outgoing_services()
       ->AddService<::bluetooth::low_energy::Peripheral>(
           std::bind(&App::OnLowEnergyPeripheralRequest, this, _1));
+  application_context_->outgoing_services()
+      ->AddService<::bluetooth::gatt::Server>(
+          std::bind(&App::OnGattServerRequest, this, _1));
 }
 
 App::~App() {
@@ -70,6 +73,14 @@ void App::OnLowEnergyPeripheralRequest(
       &adapter_manager_, std::move(request),
       std::bind(&App::OnLowEnergyPeripheralFidlImplDisconnected, this, _1));
   low_energy_peripheral_fidl_impls_.push_back(std::move(impl));
+}
+
+void App::OnGattServerRequest(
+    ::fidl::InterfaceRequest<::bluetooth::gatt::Server> request) {
+  auto impl = std::make_unique<GattServerFidlImpl>(
+      &adapter_manager_, std::move(request),
+      std::bind(&App::OnGattServerFidlImplDisconnected, this, _1));
+  gatt_server_fidl_impls_.push_back(std::move(impl));
 }
 
 void App::OnAdapterManagerFidlImplDisconnected(
@@ -121,6 +132,23 @@ void App::OnLowEnergyPeripheralFidlImplDisconnected(
   // An entry MUST be in the list.
   FXL_DCHECK(iter != low_energy_peripheral_fidl_impls_.end());
   low_energy_peripheral_fidl_impls_.erase(iter);
+}
+
+void App::OnGattServerFidlImplDisconnected(
+    GattServerFidlImpl* gatt_server_fidl_impl) {
+  FXL_DCHECK(gatt_server_fidl_impl);
+
+  FXL_LOG(INFO) << "GattServerFidlImpl disconnected";
+
+  auto iter = gatt_server_fidl_impls_.begin();
+  for (; iter != gatt_server_fidl_impls_.end(); ++iter) {
+    if (iter->get() == gatt_server_fidl_impl)
+      break;
+  }
+
+  // An entry MUST be in the list.
+  FXL_DCHECK(iter != gatt_server_fidl_impls_.end());
+  gatt_server_fidl_impls_.erase(iter);
 }
 
 }  // namespace bluetooth_service

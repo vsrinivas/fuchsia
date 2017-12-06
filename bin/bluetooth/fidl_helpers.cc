@@ -199,3 +199,17 @@ bool PopulateDiscoveryFilter(
 
 }  // namespace fidl_helpers
 }  // namespace bluetooth_service
+
+namespace fidl {
+
+// static
+Array<uint8_t>
+TypeConverter<Array<uint8_t>, ::btlib::common::ByteBuffer>::Convert(
+    const ::btlib::common::ByteBuffer& from) {
+  auto to = Array<uint8_t>::New(from.size());
+  ::btlib::common::MutableBufferView view(to.data(), to.size());
+  view.Write(from);
+  return to;
+}
+
+}  // namespace fidl

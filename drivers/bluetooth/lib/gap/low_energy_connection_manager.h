@@ -32,6 +32,7 @@ class ChannelManager;
 }  // namespace l2cap
 
 namespace gatt {
+class Connection;
 class LocalServiceManager;
 }  // namespace gatt
 
@@ -136,6 +137,14 @@ class LowEnergyConnectionManager final {
   // A link with the given handle should not have been previously registered.
   LowEnergyConnectionRefPtr RegisterRemoteInitiatedLink(
       hci::ConnectionPtr link);
+
+  gatt::LocalServiceManager* gatt_registry() const {
+    return gatt_registry_.get();
+  }
+
+  // Returns the GATT bearer that corresponds to |peer_id|. Returns false if
+  // |peer_id| does not correspond to a connected device.
+  gatt::Connection* GetGattConnection(const std::string& peer_id);
 
   // TODO(armansito): Add a RemoteDeviceCache::Observer interface and move these
   // callbacks there.
