@@ -601,6 +601,9 @@ template("vboot") {
 #   deps (optional)
 #     Must be bootdata labels defined earlier in the file.
 #
+#   zircon_bin (optional)
+#     A zircon kernel
+#
 #   zedboot (optional)
 #     A Zedboot bootdata label defined earlier in the file.
 #
@@ -617,7 +620,6 @@ template("esp") {
 
     mkfs_msdosfs_bin = "//out/build-zircon/tools/mkfs-msdosfs"
     kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
-    zircon_bin = "$kernel_build_dir/zircon.bin"
 
     make_efi_out_dir = get_label_info(make_efi_label, "root_out_dir")
     make_efi_bin = "$make_efi_out_dir/make-efi"
@@ -626,7 +628,6 @@ template("esp") {
 
     inputs = [
       mkfs_msdosfs_bin,
-      zircon_bin,
     ]
 
     script = "//build/gn_run_binary.sh"
@@ -637,9 +638,14 @@ template("esp") {
       rebase_path(efi_image_path),
       "--mkfs",
       rebase_path(mkfs_msdosfs_bin),
-      "--zircon",
-      rebase_path(zircon_bin),
     ]
+
+    if (defined(invoker.zircon_bin)) {
+      args += [
+        "--zircon",
+        rebase_path(invoker.zircon_bin),
+      ]
+    }
 
     if (defined(invoker.deps)) {
       bootdata_bins = []
@@ -835,6 +841,7 @@ foreach(platform, zircon_platforms) {
   # EFI ESP images.
   esp("local-${platform}") {
     cmdline = "efi_local_cmdline"
+    zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
     zedboot = ":zedboot-${platform}"
     deps = [ ":bootdata-blobstore-${platform}" ]
   }
