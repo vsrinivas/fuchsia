@@ -619,7 +619,6 @@ template("esp") {
     ]
 
     mkfs_msdosfs_bin = "//out/build-zircon/tools/mkfs-msdosfs"
-    kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
 
     make_efi_out_dir = get_label_info(make_efi_label, "root_out_dir")
     make_efi_bin = "$make_efi_out_dir/make-efi"
@@ -683,6 +682,7 @@ template("esp") {
     }
 
     if (target_cpu == "x64") {
+      kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
       gigaboot_bin = "$kernel_build_dir/bootloader/bootx64.efi"
       args += [
         "--efi-bootloader",
