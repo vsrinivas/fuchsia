@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("test") {
+  testonly = true
+
+  sources = [
+    "fake_task_runner.cc",
+    "fake_task_runner.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
 # Generic main entry point target for GTest executables.
 source_set("gtest_main") {
   testonly = true
