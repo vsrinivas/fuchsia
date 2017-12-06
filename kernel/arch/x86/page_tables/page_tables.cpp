@@ -913,7 +913,7 @@ zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mm
     return ZX_OK;
 }
 
-zx_status_t X86PageTableBase::Destroy(vaddr_t base, size_t size) {
+void X86PageTableBase::Destroy(vaddr_t base, size_t size) {
     canary_.Assert();
 
 #if LK_DEBUGLEVEL > 1
@@ -938,5 +938,4 @@ zx_status_t X86PageTableBase::Destroy(vaddr_t base, size_t size) {
 
     pmm_free_page(paddr_to_vm_page(phys_));
     phys_ = 0;
-    return ZX_OK;
 }

@@ -57,7 +57,7 @@ protected:
 
     // Release the resources associated with this page table.  |base| and |size|
     // are only used for debug checks that the page tables have no more mappings.
-    zx_status_t Destroy(vaddr_t base, size_t size);
+    void Destroy(vaddr_t base, size_t size);
 
     // Returns the highest level of the page tables
     virtual page_table_levels top_level() = 0;
