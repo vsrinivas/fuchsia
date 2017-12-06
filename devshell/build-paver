@@ -14,7 +14,7 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
 if [[ "$ZIRCON_PROJECT" == "x86" ]]; then
-  fx-command-run build "${kernc_vboot}" "${efi_block}" "${fvm_sparse_block}" "${ramdisk_bin}" "$@"
+  fx-command-run build "${kernc_vboot}" "${efi_block}" "${fvm_data_sparse_block}" "${fvm_sparse_block}" "${ramdisk_bin}" "$@"
 else
   fx-command-run build "${ramdisk_bin}" "$@"
 fi
