@@ -13,6 +13,7 @@ import "lib/entity/fidl/entity_resolver.fidl";
 // Provided to all components in their respective intialization methods by the
 // framework. For example, a Module gets it in Module::Initialize() and an Agent
 // gets it in Agent::Initialize().
+[ServiceName="modular.ComponentContext"]
 interface ComponentContext {
   // Gets the Ledger associated with this component. This ledger instance
   // is unique to this component under this user.
