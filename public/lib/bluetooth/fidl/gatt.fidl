@@ -1,0 +1,199 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module bluetooth.gatt;
+
+import "lib/bluetooth/fidl/common.fidl";
+
+// Codes that can be returned in the |protocol_error_code| field of a
+// common.Error.
+enum ErrorCode {
+  // Indicates that the operation was successful.
+  NO_ERROR,
+
+  // Indicates that the offset used in a read or write request exceeds the
+  // bounds of the value.
+  INVALID_OFFSET,
+
+  // Indicates that the value given in a write request would exceed the maximum
+  // length allowed for the destionation characteristic or descriptor.
+  INVALID_VALUE_LENGTH,
+
+  // Indicates that a read or write request is not permitted.
+  NOT_PERMITTED,
+};
+
+// Represents encryption, authentication, and authorization permissions that can
+// be assigned to a specific access permission.
+struct SecurityRequirements {
+  // If true, the physical link must be encrypted to access this attribute.
+  bool encryption_required;
+
+  // If true, the physical link must be authenticated to access this
+  // attribute.
+  bool authentication_required;
+
+  // If true, the client needs to be authorized before accessing this
+  // attribute.
+  bool authorization_required;
+};
+
+// Specifies the access permissions for a specific attribute value.
+struct AttributePermissions {
+  // Specifies whether or not an attribute has the read permission. If null,
+  // then the attribute value cannot be read. Otherwise, it can be read only if
+  // the permissions specified in the Permissions struct are satisfied.
+  SecurityRequirements? read;
+
+  // Specifies whether or not an attribute has the write permission. If null,
+  // then the attribute value cannot be written. Otherwise, it be written only
+  // if the permissions specified in the Permissions struct are satisfied.
+  SecurityRequirements? write;
+
+  // Specifies the security requirements for a client to subscribe to
+  // notifications or indications on a characteristic. A characteristic's
+  // support for notifications or indiciations is specified using the NOTIFY and
+  // INDICATE characteristic properties. If a local characteristic has one of
+  // these properties then this field can not be null. Otherwise, this field
+  // must be left as null.
+  //
+  // This field is ignored for Descriptors.
+  SecurityRequirements? update;
+};
+
+// Possible values of characteristic properties. These specify the GATT
+// procedures that are allowed for a particular characteristic.
+enum CharacteristicProperty {
+  BROADCAST,
+  READ,
+  WRITE_WITHOUT_RESPONSE,
+  WRITE,
+  NOTIFY,
+  INDICATE,
+  AUTHENTICATED_SIGNED_WRITES,
+  RELIABLE_WRITE,
+  WRITABLE_AUXILIARIES,
+};
+
+// Represents a local or remote GATT service.
+struct ServiceInfo {
+  // Uniquely identifies this GATT service. This value will be ignored for local
+  // services. Remote services will always have an identifier.
+  uint64 id;
+
+  // Indicates whether this is a primary or secondary service.
+  bool primary;
+
+  // The 128-bit UUID that identifies the type of this service. This is a string
+  // in the canonical 8-4-4-4-12 format.
+  string type;
+
+  // The characteristics of this service.
+  array<Characteristic>? characteristics;
+
+  // Other services that are included from this service.
+  array<Service>? includes;
+};
+
+// Represents a local or remote GATT characteristic.
+struct Characteristic {
+  // Uniquely identifies this characteristic within a service.
+  uint64 id;
+
+  // The 128-bit UUID that identifies the type of this characteristic. This is a
+  // string in the canonical 8-4-4-4-12 format.
+  string type;
+
+  // The properties of this characteristic.
+  array<CharacteristicProperty> properties;
+
+  // The attribute permissions of this characteristic. For remote
+  // characteristics, this value will be null until the permissions are
+  // discovered via read and write requests.
+  //
+  // For local characteristics, this value is mandatory.
+  AttributePermissions? permissions;
+
+  // The descriptors of this characteristic.
+  array<Descriptor>? descriptors;
+};
+
+// Represents a local or remote GATT characteristic descriptor.
+struct Descriptor {
+  // Uniquely identifies this descriptor within the characteristic that it
+  // belongs to.
+  uint64 id;
+
+  // The 128-bit UUID that identifies the type of this descriptor. This is a
+  // string in the canonical 8-4-4-4-12 format.
+  string type;
+
+  // The attribute permissions of this descriptor. For remote
+  // descriptors, this value will be null until the permissions are
+  // discovered via read and write requests.
+  //
+  // For local descriptors, this value is mandatory.
+  AttributePermissions? permissions;
+};
+
+// Interface for responding to requests on a local service.
+interface ServiceDelegate {
+  // Notifies the delegate when a remote device with |peer_id| enables or
+  // disables notifications or indications on the characteristic with the given
+  // |characteristic_id|.
+  OnCharacteristicConfiguration(uint64 characteristic_id, string peer_id,
+                                bool notify, bool indicate);
+
+  // Called when a remote device issues a request to read the value of the
+  // of the characteristic or descriptor with given identifier. The delegate
+  // must respond to the request by returning the characteristic value. If the
+  // read request resulted in an error it should be returned in |error_code|.
+  // On success, |error_code| should be set to NO_ERROR and a |value| should be
+  // provided.
+  OnReadValue(uint64 id, int32 offset) => (array<uint8>? value, ErrorCode status);
+
+  // Called when a remote device issues a request to write the value of the
+  // characteristic or descriptor with the given identifier.
+  OnWriteValue(uint64 id, uint16 offset, array<uint8> value) => (ErrorCode status);
+
+  // Called when a remote device issues a request to write the value of the
+  // characteristic with the given identifier. This can be called on a
+  // characteristic with the WRITE_WITHOUT_RESPONSE property.
+  OnWriteWithoutResponse(uint64 id, uint16 offset, array<uint8> value);
+};
+
+// Interface for communicating with a published service.
+interface Service {
+  // Removes the service that this interface instance corresponds to. Does
+  // nothing if the service is already removed.
+  RemoveService();
+
+  // Sends a notification carrying the |value| of the characteristic with the
+  // given |characteristic_id| to the device with |peer_id|.
+  //
+  // If |confirm| is true, then this method sends an indication instead. If the
+  // peer fails to confirm the indication, the link between the peer and the
+  // local adapter will be closed.
+  //
+  // This method has no effect if the peer has not enabled notifications or
+  // indications on the requested characteristic.
+  NotifyValue(uint64 characteristic_id, string peer_id, array<uint8> value, bool confirm);
+};
+
+[ServiceName="bluetooth::gatt::Server"]
+interface Server {
+  // Publishes the given service so that it is available to all remote peers.
+  // A ServiceDelegate must be provided over which to receive service requests.
+  //
+  // The caller must assign distinct identifiers to the characteristics and
+  // descriptors listed in |info|. These identifiers will be used in requests
+  // sent to |delegate|.
+  //
+  // |service| can be used to interact with the pubished service. If this
+  // service cannot be published then the handle for |service| will be closed.
+  //
+  // Returns the success or failure status of the call and a unique identifier
+  // that can be used to unregister the service.
+  PublishService(ServiceInfo info, ServiceDelegate delegate, Service& service) => (Status status);
+};
