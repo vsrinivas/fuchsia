@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
@@ -31,6 +32,13 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
       [] {}, environment, storage,
       std::make_unique<backoff::ExponentialBackoff>(
           fxl::TimeDelta::FromSeconds(0), 1u, fxl::TimeDelta::FromSeconds(0)));
+}
+
+std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
+  std::string value;
+  bool status = fsl::StringFromVmo(vmo, &value);
+  FXL_DCHECK(status);
+  return value;
 }
 
 class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
@@ -366,6 +374,93 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
+}
+
+TEST_F(PageManagerTest, GetHeadCommitEntries) {
+  auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
+  auto merger = GetDummyResolver(&environment_, storage.get());
+  PageManager page_manager(&environment_, std::move(storage), nullptr,
+                           std::move(merger),
+                           PageManager::PageStorageState::NEW);
+  Status status;
+  PagePtr page;
+  page_manager.BindPage(page.NewRequest(),
+                        callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  PageDebugPtr page_debug;
+  page_manager.BindPageDebug(page_debug.NewRequest(),
+                             callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  std::string key1("001-some_key");
+  std::string value1("a small value");
+
+  page->Put(convert::ToArray(key1), convert::ToArray(value1),
+            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  fidl::Array<fidl::Array<uint8_t>> heads1;
+  page_debug->GetHeadCommitsIds(
+      callback::Capture(MakeQuitTask(), &status, &heads1));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, heads1.size());
+
+  std::string key2("002-some_key2");
+  std::string value2("another value");
+
+  page->Put(convert::ToArray(key2), convert::ToArray(value2),
+            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  fidl::Array<fidl::Array<uint8_t>> heads2;
+  page_debug->GetHeadCommitsIds(
+      callback::Capture(MakeQuitTask(), &status, &heads2));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, heads2.size());
+
+  EXPECT_NE(convert::ToString(heads1[0]), convert::ToString(heads2[0]));
+
+  PageSnapshotPtr snapshot1;
+  page_debug->GetSnapshot(std::move(heads1[0]), snapshot1.NewRequest(),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  PageSnapshotPtr snapshot2;
+  page_debug->GetSnapshot(std::move(heads2[0]), snapshot2.NewRequest(),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  fidl::Array<EntryPtr> expected_entries1;
+  fidl::Array<uint8_t> next_token;
+  snapshot1->GetEntries(NULL, NULL,
+                        callback::Capture(MakeQuitTask(), &status,
+                                          &expected_entries1, &next_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, expected_entries1.size());
+  EXPECT_EQ(key1, convert::ToString(expected_entries1[0]->key));
+  EXPECT_EQ(value1, ToString(expected_entries1[0]->value));
+
+  fidl::Array<EntryPtr> expected_entries2;
+  snapshot2->GetEntries(NULL, NULL,
+                        callback::Capture(MakeQuitTask(), &status,
+                                          &expected_entries2, &next_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(2u, expected_entries2.size());
+  EXPECT_EQ(key1, convert::ToString(expected_entries2[0]->key));
+  EXPECT_EQ(value1, ToString(expected_entries2[0]->value));
+  EXPECT_EQ(key2, convert::ToString(expected_entries2[1]->key));
+  EXPECT_EQ(value2, ToString(expected_entries2[1]->value));
 }
 
 }  // namespace

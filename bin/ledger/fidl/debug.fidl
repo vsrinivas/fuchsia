@@ -28,4 +28,8 @@ interface LedgerDebug {
 interface PageDebug {
   // Returns OK and a list of the head commits IDs.
   GetHeadCommitsIds() => (Status status, array<array<uint8>> result);
+
+  // Returns OK and creates a snapshot of the page, allowing the client app to read a
+  // consistent view of the content of the page.
+  GetSnapshot(array<uint8> commit_id, PageSnapshot& snapshot_request) => (Status status);
 };

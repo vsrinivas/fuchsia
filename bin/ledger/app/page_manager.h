@@ -79,6 +79,10 @@ class PageManager : public PageDebug {
 
   void GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) override;
 
+  void GetSnapshot(fidl::Array<uint8_t> commit_id,
+                   fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   const GetSnapshotCallback& callback) override;
+
   Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;

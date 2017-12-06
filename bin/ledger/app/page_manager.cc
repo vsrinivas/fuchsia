@@ -124,4 +124,23 @@ void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
         callback(PageUtils::ConvertStatus(status), std::move(result));
       }));
 }
+
+void PageManager::GetSnapshot(
+    fidl::Array<uint8_t> commit_id,
+    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+    const GetSnapshotCallback& callback) {
+  page_storage_->GetCommit(
+      convert::ToStringView(commit_id),
+      fxl::MakeCopyable(
+          [this, snapshot_request = std::move(snapshot_request),
+           callback = std::move(callback)](
+              storage::Status status,
+              std::unique_ptr<const storage::Commit> commit) mutable {
+            if (status == storage::Status::OK) {
+              BindPageSnapshot(std::move(commit), std::move(snapshot_request),
+                               "");
+            }
+            callback(PageUtils::ConvertStatus(status));
+          }));
+}
 }  // namespace ledger
