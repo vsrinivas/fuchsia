@@ -11,6 +11,10 @@
 ##               [--goma|--no-goma] [--no-ensure-goma]
 ##               [--goma-dir DIR]
 ##               [--ccache|--no-ccache]
+##
+## x86 is accepted as an alias for x86-64.
+## arm64 is accepted as an alias for aarch64.
+##
 ## Sets build options.
 ##
 ## optional arguments:
@@ -51,11 +55,11 @@ function main {
   local arch=
   local zircon_project=
   case $1 in
-    x86-64)
+    x86 | x86-64)
       arch=x86-64
       zircon_project=x86
       ;;
-    aarch64)
+    arm64 | aarch64)
       arch=aarch64
       zircon_project=arm64
       ;;
