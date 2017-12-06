@@ -47,10 +47,6 @@ declare_args() {
   # 10mb (the default) in order to be succesfully initialized.
   data_image_size = "10m"
 
-  # Disable addition of data.blk to fvm.sparse.blk.
-  #  Workaround for Ledger open failures against minfs on FVM.
-  disable_data_minfs = false
-
   # Build boot images that prefer Zedboot over local boot.
   always_zedboot = false
 
@@ -136,6 +132,7 @@ blobstore_image_path = "$images_dir/blobstore.blk"
 data_image_path = "$images_dir/data.blk"
 fvm_image_path = "$images_dir/fvm.blk"
 fvm_sparse_image_path = "$images_dir/fvm.sparse.blk"
+fvm_data_sparse_image_path = "$images_dir/fvm.data.sparse.blk"
 
 finalize_manifests_extra = [
   "elfinfo.py",
@@ -427,8 +424,7 @@ bootdata("system_bootfs") {
 }
 
 # data.blk creates an empty but initialized minfs data partition. The partition
-# is included in fvm.blk and fvm-sparse.blk so that they contain the start of a
-# data partition, without which /data would not be mounted on target.
+# is included in fvm.data.sparse.blk.
 action("data.blk") {
   minfs_path = "//out/build-zircon/tools/minfs"
   inputs = [
@@ -492,9 +488,8 @@ bootdata_ramdisk("bootdata-fvm") {
 }
 
 # fvm.sparse.blk creates a sparse FVM partition image containing the blobstore
-# partition produced by blobstore.blk and the data partition produced by
-# data.blk. fvm.sparse.blk is primarily invoked and used by the paver boot, via
-# `fx boot-paver`.
+# partition produced by blobstore.blk.  fvm.sparse.blk is primarily invoked and
+# used by the paver boot, via `fx boot-paver`.
 action("fvm.sparse.blk") {
   visibility = [ ":*" ]
   fvm_path = "//out/build-zircon/tools/fvm"
@@ -518,15 +513,33 @@ action("fvm.sparse.blk") {
   outputs = [
     fvm_sparse_image_path,
   ]
+}
 
-  if (!disable_data_minfs) {
-    inputs += [ data_image_path ]
-    deps += [ ":data.blk" ]
-    args += [
-      "--data",
-      rebase_path(data_image_path),
-    ]
-  }
+# fmv.data.sparse.blk is an FVM image containing only data.blk. It is
+# used to pave new data partitions to a device.
+action("fvm.data.sparse.blk") {
+  visibility = [ ":*" ]
+  fvm_path = "//out/build-zircon/tools/fvm"
+  inputs = [
+    data_image_path,
+    fvm_path,
+  ]
+  deps = [
+    ":data.blk",
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path(fvm_path),
+    rebase_path(fvm_data_sparse_image_path),
+    "sparse",
+    "--data",
+    rebase_path(data_image_path),
+  ]
+  outputs = [
+    fvm_data_sparse_image_path,
+  ]
 }
 
 # Build a "kernel partition" target for ChromeOS targets.
