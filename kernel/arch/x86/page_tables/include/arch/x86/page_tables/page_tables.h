@@ -36,13 +36,6 @@ public:
     // entries.
     using IntermediatePtFlags = uint64_t;
 
-    // Initialize an empty page table, assigning this given context to it.
-    zx_status_t Init(void* ctx);
-
-    // Release the resources associated with this page table.  |base| and |size|
-    // are only used for debug checks that the page tables have no more mappings.
-    zx_status_t Destroy(vaddr_t base, size_t size);
-
     paddr_t phys() const { return phys_; }
     void* virt() const { return virt_; }
 
@@ -59,6 +52,13 @@ public:
     zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
 
 protected:
+    // Initialize an empty page table, assigning this given context to it.
+    zx_status_t Init(void* ctx);
+
+    // Release the resources associated with this page table.  |base| and |size|
+    // are only used for debug checks that the page tables have no more mappings.
+    zx_status_t Destroy(vaddr_t base, size_t size);
+
     // Returns the highest level of the page tables
     virtual page_table_levels top_level() = 0;
     // Returns true if the given ARCH_MMU_FLAG_* flag combination is valid.

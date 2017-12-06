@@ -531,7 +531,10 @@ zx_status_t X86ArchVmAspace::Destroy() {
     canary_.Assert();
     DEBUG_ASSERT(active_cpus_.load() == 0);
 
-    return pt_->Destroy(base_, size_);
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        return static_cast<X86PageTableEpt*>(pt_)->Destroy(base_, size_);
+    }
+    return static_cast<X86PageTableMmu*>(pt_)->Destroy(base_, size_);
 }
 
 zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {

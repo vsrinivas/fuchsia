@@ -20,6 +20,9 @@
 // Implementation of page tables used by x86-64 CPUs.
 class X86PageTableMmu final : public X86PageTableBase {
 public:
+    using X86PageTableBase::Init;
+    using X86PageTableBase::Destroy;
+
     // Initialize the kernel page table, assigning the given context to it.
     // This X86PageTable will be special in that its mappings will all have
     // the G (global) bit set, and are expected to be aliased across all page
@@ -48,6 +51,9 @@ private:
 
 // Implementation of Intel's Extended Page Tables, for use in virtualization.
 class X86PageTableEpt final : public X86PageTableBase {
+public:
+    using X86PageTableBase::Init;
+    using X86PageTableBase::Destroy;
 private:
     page_table_levels top_level() final { return PML4_L; }
     bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
