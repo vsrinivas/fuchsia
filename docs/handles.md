@@ -61,17 +61,19 @@ with fewer rights), invalidating the original handle:
 There is one syscall that just destroys a handle:
 + `zx_handle_close`
 
-There is only one syscall that takes a handle bound to calling
+There are two syscalls that takes a handle bound to calling
 process and binds it into kernel (puts the handle in-transit):
 + `zx_channel_write`
++ `zx_socket_share`
 
-There are two syscalls that takes an in-transit handle and
+There are three syscalls that takes an in-transit handle and
 binds it to the calling process:
 + `zx_channel_read`
 + `zx_channel_call`
++ `zx_socket_accept`
 
-The channel syscalls above are used to transfer a handle from
-one process to another. The gist is that it is possible to connect
+The channel and socket syscalls above are used to transfer a handle from
+one process to another. For example it is possible to connect
 two processes with a channel. To transfer a handle the source process
 calls `zx_channel_write` or `zx_channel_call` and then the destination
 process calls `zx_channel_read` on the same channel.
@@ -94,16 +96,18 @@ and each handle holds a reference to its kernel object.
 The opposite does not hold. When a handle is destroyed it does not
 mean its object is destroyed. There could be other handles pointing
 to the object or the kernel itself could be holding a reference to
-the kernel object.
+the kernel object. An example of this is a handle to a thread; the
+fact that the last handle to a thread is closed it does not mean that
+the thread has been terminated.
 
-When there is but one handle referencing a kernel object and the
-handle is being closed, the kernel object is either destroyed then or
-the kernel marks the object for garbage collection; the object will be
-destroyed when the current set of operations on it are completed.
+When the last reference to a kernel object is released, the kernel
+object is either destroyed or the kernel marks the object for
+garbage collection; the object will be destroyed at a later time
+when the current set of pending operations on it are completed.
 
 ## Special Cases
-+ When a handle is in-transit and the channel it was written to
-is destroyed, the handle is closed.
++ When a handle is in-transit and the channel or socket it was written
+to is destroyed, the handle is closed.
 + Debugging sessions (and debuggers) might have special syscalls to
 get access to handles.
 
