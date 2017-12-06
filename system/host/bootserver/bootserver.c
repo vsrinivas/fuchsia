@@ -430,7 +430,7 @@ int main(int argc, char** argv) {
         r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
         if (r < 0) {
             log("socket read error %d", r);
-            break;
+            return -1;
         }
         if (r < sizeof(nbmsg))
             continue;
@@ -454,7 +454,7 @@ int main(int argc, char** argv) {
                 "detected from %s, please upgrade your bootloader%s",
                 ANSI(RED), msg->arg, sockaddr_str(&ra), ANSI(RESET));
             if (once) {
-                break;
+                return -1;
             }
             continue;
         }
@@ -536,7 +536,7 @@ int main(int argc, char** argv) {
             }
         }
         if (once) {
-            break;
+            return status == 0 ? 0 : -1;
         }
         drain(s);
     }
