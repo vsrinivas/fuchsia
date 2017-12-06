@@ -18,7 +18,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
 #include <fdio/watcher.h>
 #include <fs/mapped-vmo.h>
 #include <fs-management/mount.h>
@@ -35,10 +34,12 @@
 #include "fvm/fvm.h"
 #include "fvm/fvm-sparse.h"
 
-#define MXDEBUG 0
-
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
+
+#define PAVER_PREFIX "paver:"
+#define ERROR(fmt, ...) fprintf(stderr, PAVER_PREFIX "[%s] " fmt, __FUNCTION__, ##__VA_ARGS__);
+#define LOG(fmt, ...) fprintf(stdout, PAVER_PREFIX "[%s] " fmt, __FUNCTION__, ##__VA_ARGS__);
 
 namespace {
 
@@ -82,26 +83,26 @@ zx_status_t register_fast_block_io(const fbl::unique_fd& fd, zx_handle_t vmo,
                                    fifo_client_t** client_out) {
     zx::fifo fifo;
     if (ioctl_block_get_fifos(fd.get(), fifo.reset_and_get_address()) < 0) {
-        fprintf(stderr, "[register_fast_block_io] Couldn't attach fifo to partition\n");
+        ERROR("Couldn't attach fifo to partition\n");
         return ZX_ERR_IO;
     }
     if (ioctl_block_alloc_txn(fd.get(), txnid_out) < 0) {
-        fprintf(stderr, "[register_fast_block_io] Couldn't allocate transaction\n");
+        ERROR("Couldn't allocate transaction\n");
         return ZX_ERR_IO;
     }
     zx::vmo dup;
     if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS,
                             dup.reset_and_get_address()) != ZX_OK) {
-        fprintf(stderr, "[register_fast_block_io] Couldn't duplicate buffer vmo\n");
+        ERROR("Couldn't duplicate buffer vmo\n");
         return ZX_ERR_IO;
     }
     zx_handle_t h = dup.release();
     if (ioctl_block_attach_vmo(fd.get(), &h, vmoid_out) < 0) {
-        fprintf(stderr, "[register_fast_block_io] Couldn't attach VMO\n");
+        ERROR("Couldn't attach VMO\n");
         return ZX_ERR_IO;
     }
     if (block_fifo_create_client(fifo.release(), client_out) != ZX_OK) {
-        fprintf(stderr, "[register_fast_block_io] Couldn't create block client\n");
+        ERROR("Couldn't create block client\n");
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -113,7 +114,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
                                  block_fifo_request_t* request, const fbl::unique_fd& src_fd) {
     const size_t vmo_cap = mvmo->GetSize();
     for (size_t e = 0; e < part->pd->extent_count; e++) {
-        printf("[stream_fvm_partition] Writing extent %zu... \n", e);
+        LOG("Writing extent %zu... \n", e);
         fvm::extent_descriptor_t* ext = get_extent(part->pd, e);
         size_t offset = ext->slice_start * slice_size;
         size_t bytes_left = ext->extent_length;
@@ -131,12 +132,11 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
                 }
             }
             if (vmo_sz == 0) {
-                fprintf(stderr, "[stream_fvm_partition] Read nothing from src_fd; %zu bytes left\n",
-                        bytes_left);
+                ERROR("Read nothing from src_fd; %zu bytes left\n", bytes_left);
                 return ZX_ERR_IO;
             }
             if (r < 0) {
-                fprintf(stderr, "[stream_fvm_partition] Error reading partition data\n");
+                ERROR("Error reading partition data\n");
                 return static_cast<zx_status_t>(r);
             }
 
@@ -145,7 +145,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
             request->dev_offset = offset;
 
             if ((r = block_fifo_txn(client, request, 1)) != ZX_OK) {
-                fprintf(stderr, "[stream_fvm_partition] Error writing partition data\n");
+                ERROR("Error writing partition data\n");
                 return static_cast<zx_status_t>(r);
             }
 
@@ -156,8 +156,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
         // transfer).
         bytes_left = (ext->slice_count * slice_size) - ext->extent_length;
         if (bytes_left > 0) {
-            printf("[stream_fvm_partition] %zu bytes written, %zu zeroes left\n",
-                   ext->extent_length, bytes_left);
+            LOG("%zu bytes written, %zu zeroes left\n", ext->extent_length, bytes_left);
             memset(mvmo->GetData(), 0, vmo_cap);
         }
         while(bytes_left > 0) {
@@ -167,7 +166,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
 
             zx_status_t status;
             if ((status = block_fifo_txn(client, request, 1)) != ZX_OK) {
-                fprintf(stderr, "[stream_fvm_partition] Error writing trailing zeroes\n");
+                ERROR("Error writing trailing zeroes\n");
                 return status;
             }
 
@@ -198,7 +197,7 @@ zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
             }
         }
         if (r < 0) {
-            fprintf(stderr, "[stream_partition] Error reading partition data\n");
+            ERROR("Error reading partition data\n");
             return static_cast<zx_status_t>(r);
         }
         if (vmo_sz == 0) {
@@ -220,7 +219,7 @@ zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
 
         zx_status_t status;
         if ((status = block_fifo_txn(client, request, 1)) != ZX_OK) {
-            fprintf(stderr, "[stream_partition] Error writing partition data\n");
+            ERROR("Error writing partition data\n");
             return status;
         }
 
@@ -243,33 +242,33 @@ fbl::unique_fd fvm_find_or_format(size_t slice_size) {
     const uint8_t type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     fbl::unique_fd fd(open_partition(nullptr, type, 0, nullptr));
     if (!fd) {
-        fprintf(stderr, "[fvm_find_or_format] Couldn't find a GPT partition for FVM\n");
+        ERROR("Couldn't find a GPT partition for FVM\n");
         return fbl::unique_fd();
     }
 
     disk_format_t df = detect_disk_format(fd.get());
     if (df != DISK_FORMAT_FVM) {
-        printf("[fvm_find_or_format] Initializing partition as FVM\n");
+        ERROR("Initializing partition as FVM\n");
         if (fvm_init(fd.get(), slice_size)) {
-            fprintf(stderr, "[fvm_find_or_format] Failed to initialize fvm\n");
+            ERROR("Failed to initialize fvm\n");
             return fbl::unique_fd();
         }
     }
     char path[PATH_MAX];
     ssize_t r = ioctl_device_get_topo_path(fd.get(), path, sizeof(path));
     if (r < 0) {
-        fprintf(stderr, "[fvm_find_or_format] Failed to get topological path\n");
+        ERROR("Failed to get topological path\n");
         return fbl::unique_fd();
     }
 
     r = ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
     if (r < 0) {
-        fprintf(stderr, "[fvm_find_or_format] Could not bind fvm driver\n");
+        ERROR("Could not bind fvm driver\n");
         return fbl::unique_fd();
     }
 
     if (wait_for_driver_bind(path, "fvm")) {
-        fprintf(stderr, "[fvm_find_or_format]: Error waiting for fvm driver to bind\n");
+        ERROR("Error waiting for fvm driver to bind\n");
         return fbl::unique_fd();
     }
     strcat(path, "/fvm");
@@ -282,23 +281,43 @@ zx_status_t fvm_partition_match(const fbl::unique_fd& fvm_fd, const fbl::unique_
     char part_path[PATH_MAX];
     ssize_t r;
     if ((r = ioctl_device_get_topo_path(fvm_fd.get(), fvm_path, sizeof(fvm_path))) < 0) {
-        fprintf(stderr, "[fvm_partition_match] Couldn't get topological path of FVM\n");
+        ERROR("Couldn't get topological path of FVM\n");
         return static_cast<zx_status_t>(r);
     } else if ((r = ioctl_device_get_topo_path(part_fd.get(), part_path, sizeof(part_path))) < 0) {
-        fprintf(stderr, "[fvm_partition_match] Couldn't get topological path of partition\n");
+        ERROR("Couldn't get topological path of partition\n");
         return static_cast<zx_status_t>(r);
     }
     if (strncmp(fvm_path, part_path, strlen(fvm_path))) {
-        fprintf(stderr, "[fvm_partition_match] Partition does not exist within FVM\n");
+        ERROR("Partition does not exist within FVM\n");
         return ZX_ERR_BAD_STATE;
     }
     return ZX_OK;
 }
 
 void recommend_wipe(const char* reason) {
-    fprintf(stderr, "-----------------------------------------------------\n\n");
-    fprintf(stderr, "%s\nPlease run 'install-disk-image wipe' to wipe your partitions\n", reason);
-    fprintf(stderr, "\n-----------------------------------------------------\n");
+    ERROR("-----------------------------------------------------\n");
+    ERROR("\n");
+    ERROR("%s: Please run 'install-disk-image wipe' to wipe your partitions\n", reason);
+    ERROR("\n");
+    ERROR("-----------------------------------------------------\n");
+}
+
+zx_status_t fvm_parse_sparse_header(const fbl::unique_fd& src_fd, fvm::sparse_image_t* hdr) {
+    if (read(src_fd.get(), hdr, sizeof(*hdr)) != sizeof(*hdr)) {
+        ERROR("Failed to read the sparse header\n");
+        return ZX_ERR_IO;
+    }
+
+    // Verify the header, then allocate and stream the remaining metadata
+    if (hdr->magic != fvm::kSparseFormatMagic) {
+        ERROR("Bad magic\n");
+        return ZX_ERR_IO;
+    } else if (hdr->version != fvm::kSparseFormatVersion) {
+        ERROR("Unexpected sparse file version\n");
+        return ZX_ERR_IO;
+    }
+
+    return ZX_OK;
 }
 
 // Given an fd representing a "sparse FVM format", fill the FVM with the
@@ -308,27 +327,18 @@ void recommend_wipe(const char* reason) {
 // GUID, not the instance GUID.
 zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
     fvm::sparse_image_t hdr;
-    if (read(src_fd.get(), &hdr, sizeof(hdr)) != sizeof(hdr)) {
-        fprintf(stderr, "[fvm_stream_partitions] Failed to read the sparse header\n");
-        return ZX_ERR_IO;
+    zx_status_t status = fvm_parse_sparse_header(src_fd, &hdr);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    // Verify the header, then allocate and stream the remaining metadata
-    if (hdr.magic != fvm::kSparseFormatMagic) {
-        fprintf(stderr, "[fvm_stream_partitions] Bad magic\n");
-        return ZX_ERR_IO;
-    } else if (hdr.version != fvm::kSparseFormatVersion) {
-        fprintf(stderr, "[fvm_stream_partitions] Unexpected sparse file version\n");
-        return ZX_ERR_IO;
-    }
-
-    printf("[fvm_stream_partitions] Header Validated - OK\n");
+    LOG("Header Validated - OK\n");
 
     // Acquire an fd to the fvm, either by finding one that already
     // exists, or creating a new one.
     fbl::unique_fd fvm_fd(fvm_find_or_format(hdr.slice_size));
     if (!fvm_fd) {
-        fprintf(stderr, "[fvm_stream_partitions] Couldn't find FVM partition\n");
+        ERROR("Couldn't find FVM partition\n");
         return ZX_ERR_IO;
     }
 
@@ -336,11 +346,10 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
     // create a new FVM with the updated slice size, and rebind.
     fvm_info_t info;
     if (ioctl_block_fvm_query(fvm_fd.get(), &info) < 0) {
-        fprintf(stderr, "[fvm_stream_partitions] Couldn't query underlying FVM\n");
+        ERROR("Couldn't query underlying FVM\n");
         return ZX_ERR_IO;
     } else if (info.slice_size != hdr.slice_size) {
-        fprintf(stderr, "[fvm_stream_partitions] Unexpected slice size (%zu vs %zu)\n",
-                info.slice_size, hdr.slice_size);
+        ERROR("Unexpected slice size (%zu vs %zu)\n", info.slice_size, hdr.slice_size);
         return ZX_ERR_IO;
     }
 
@@ -351,7 +360,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
     while (off < hdr.header_length) {
         ssize_t r = read(src_fd.get(), &metadata[off], hdr.header_length - off);
         if (r < 0) {
-            fprintf(stderr, "[fvm_stream_partitions] Failed to stream metadata\n");
+            ERROR("Failed to stream metadata\n");
             return ZX_ERR_IO;
         }
         off += r;
@@ -370,14 +379,14 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         parts[p].old_part.reset(open_partition(nullptr, part->type, ZX_SEC(2), nullptr));
 
         if (parts[p].pd->magic != fvm::kPartitionDescriptorMagic) {
-            fprintf(stderr, "[fvm_stream_partitions] Bad partition magic\n");
+            ERROR("Bad partition magic\n");
             return ZX_ERR_IO;
         }
 
         if (parts[p].old_part) {
             bool is_vpartition;
             if (fvm_is_vpartition(parts[p].old_part, &is_vpartition)) {
-                fprintf(stderr, "[fvm_stream_partitions] Couldn't confirm old vpartition type\n");
+                ERROR("Couldn't confirm old vpartition type\n");
                 return ZX_ERR_IO;
             } else if (fvm_partition_match(fvm_fd, parts[p].old_part) != ZX_OK) {
                 recommend_wipe("Streaming a partition type which also exists outside FVM");
@@ -390,16 +399,16 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
 
         fvm::extent_descriptor_t* ext = get_extent(part, 0);
         if (ext->magic != fvm::kExtentDescriptorMagic) {
-            fprintf(stderr, "[fvm_stream_partitions] Bad extent magic\n");
+            ERROR("Bad extent magic\n");
             return ZX_ERR_IO;
         } else if (ext->slice_start != 0) {
-            fprintf(stderr, "[fvm_stream_partitions] First slice must start at zero\n");
+            ERROR("First slice must start at zero\n");
             return ZX_ERR_IO;
         } else if (ext->slice_count == 0) {
-            fprintf(stderr, "[fvm_stream_partitions] Extents must have > 0 slices\n");
+            ERROR("Extents must have > 0 slices\n");
             return ZX_ERR_IO;
         } else if (ext->extent_length > ext->slice_count * hdr.slice_size) {
-            fprintf(stderr, "[fvm_stream_partitions] Extent length must fit within allocated slice count\n");
+            ERROR("Extent length must fit within allocated slice count\n");
             return ZX_ERR_IO;
         }
 
@@ -412,39 +421,38 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         size_t sz;
         if (zx_cprng_draw(alloc.guid, GPT_GUID_LEN, &sz) != ZX_OK ||
             sz != GPT_GUID_LEN) {
-            fprintf(stderr, "[fvm_stream_partitions] Couldn't generate unique GUID\n");
+            ERROR("Couldn't generate unique GUID\n");
             return ZX_ERR_IO;
         }
         memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
-        printf("[fvm_stream_partitions] allocating partition %s consisting of %zu slices\n",
-               alloc.name, alloc.slice_count);
+        LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
         parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));
 
         if (!parts[p].new_part) {
-            fprintf(stderr, "[fvm_stream_partitions] Couldn't allocate partition\n");
+            ERROR("Couldn't allocate partition\n");
             return ZX_ERR_BAD_STATE;
         }
 
         for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
             ext = get_extent(parts[p].pd, e);
             if (ext->magic != fvm::kExtentDescriptorMagic) {
-                fprintf(stderr, "[fvm_stream_partitions] Bad extent magic\n");
+                ERROR("Bad extent magic\n");
                 return ZX_ERR_IO;
             } else if (ext->slice_count == 0) {
-                fprintf(stderr, "[fvm_stream_partitions] Extents must have > 0 slices\n");
+                ERROR("Extents must have > 0 slices\n");
                 return ZX_ERR_IO;
             } else if (ext->extent_length > ext->slice_count * hdr.slice_size) {
-                fprintf(stderr, "[fvm_stream_partitions] Extent must fit within allocated slice count\n");
+                ERROR("Extent must fit within allocated slice count\n");
                 return ZX_ERR_IO;
             }
 
             extend_request_t request;
             request.offset = ext->slice_start;
             request.length = ext->slice_count;
-            printf("[fvm_stream_partitions] Extending partition[%zu] at offset %zu by length %zu\n",
-                   p, request.offset, request.length);
+            LOG("Extending partition[%zu] at offset %zu by length %zu\n", p, request.offset,
+                request.length);
             if (ioctl_block_fvm_extend(parts[p].new_part.get(), &request) < 0) {
-                fprintf(stderr, "[fvm_stream_partitions] Failed to extend partition\n");
+                ERROR("Failed to extend partition\n");
                 return ZX_ERR_BAD_STATE;
             }
         }
@@ -452,14 +460,13 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
                 reinterpret_cast<uintptr_t>(ext) + sizeof(fvm::extent_descriptor_t));
     }
 
-    printf("[fvm_stream_partitions] Partition space pre-allocated\n");
+    LOG("Partition space pre-allocated\n");
 
     const size_t vmo_sz = 1 << 20;
 
     fbl::unique_ptr<MappedVmo> mvmo;
-    zx_status_t status = MappedVmo::Create(vmo_sz, "fvm-stream", &mvmo);
-    if (status != ZX_OK) {
-        fprintf(stderr, "[fvm_stream_partitions] Failed to create stream VMO\n");
+    if ((status = MappedVmo::Create(vmo_sz, "fvm-stream", &mvmo)) != ZX_OK) {
+        ERROR("Failed to create stream VMO\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -472,7 +479,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
                                                     mvmo->GetVmo(), &txnid,
                                                     &vmoid, &client);
         if (status != ZX_OK) {
-            fprintf(stderr, "[fvm_stream_partitions] Failed to register fast block IO\n");
+            ERROR("Failed to register fast block IO\n");
             return status;
         }
 
@@ -481,13 +488,13 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         request.vmoid = vmoid;
         request.opcode = BLOCKIO_WRITE;
 
-        printf("[fvm_stream_partitions] streaming partition %zu\n", p);
+        LOG("Streaming partition %zu\n", p);
         status = stream_fvm_partition(&parts[p], mvmo.get(), client,
                                       hdr.slice_size, &request, src_fd);
-        printf("[fvm_stream_partitions] done streaming partition %zu\n", p);
+        LOG("Done streaming partition %zu\n", p);
         block_fifo_release_client(client);
         if (status != ZX_OK) {
-            fprintf(stderr, "[fvm_stream_partitions] Failed to stream partition\n");
+            ERROR("Failed to stream partition\n");
             return status;
         }
     }
@@ -501,17 +508,17 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         if (parts[p].old_part) {
             if (ioctl_block_get_partition_guid(parts[p].old_part.get(),
                                                &upgrade.old_guid, GUID_LEN) < 0) {
-                fprintf(stderr, "[fvm_stream_partitions] Failed to get unique GUID of old partition\n");
+                ERROR("Failed to get unique GUID of old partition\n");
                 return ZX_ERR_BAD_STATE;
             }
         }
         if (ioctl_block_get_partition_guid(parts[p].new_part.get(), &upgrade.new_guid, GUID_LEN) < 0) {
-            fprintf(stderr, "[fvm_stream_partitions] Failed to get unique GUID of new partition\n");
+            ERROR("Failed to get unique GUID of new partition\n");
             return ZX_ERR_BAD_STATE;
         }
 
         if (ioctl_block_fvm_upgrade(fvm_fd.get(), &upgrade) < 0) {
-            fprintf(stderr, "[fvm_stream_partitions] Failed to upgrade partition\n");
+            ERROR("Failed to upgrade partition\n");
             return ZX_ERR_IO;
         }
 
@@ -521,7 +528,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             // is a vpartition.
             ssize_t r;
             if ((r = ioctl_block_fvm_destroy(parts[p].old_part.get())) < 0) {
-                fprintf(stderr, "[fvm_stream_partitions] Couldn't destroy partition: %ld\n", r);
+                ERROR("Couldn't destroy partition: %ld\n", r);
                 return static_cast<zx_status_t>(r);
             }
         }
@@ -535,7 +542,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
 zx_status_t find_target_gpt(char* out_path) {
     DIR* d = opendir(kBlockDevPath);
     if (d == nullptr) {
-        fprintf(stderr, "[find_target_gpt] Cannot inspect block devices\n");
+        ERROR("Cannot inspect block devices\n");
         return ZX_ERR_BAD_STATE;
     }
 
@@ -567,7 +574,7 @@ zx_status_t find_target_gpt(char* out_path) {
     }
     closedir(d);
 
-    fprintf(stderr, "[find_target_gpt] No candidate GPT found\n");
+    ERROR("No candidate GPT found\n");
     return ZX_ERR_NOT_FOUND;
 }
 
@@ -575,31 +582,31 @@ zx_status_t find_target_gpt(char* out_path) {
 zx_status_t initialize_gpt(const char* gpt_path, fbl::unique_fd* out_fd, gpt_device_t** out_gpt) {
     fbl::unique_fd fd(open(gpt_path, O_RDWR));
     if (!fd) {
-        fprintf(stderr, "[initialize_gpt] Failed to open GPT\n");
+        ERROR("Failed to open GPT\n");
         return ZX_ERR_IO;
     }
     block_info_t info;
     ssize_t rc = ioctl_block_get_info(fd.get(), &info);
     if (rc < 0) {
-        fprintf(stderr, "[initialize_gpt] Couldn't get GPT block info\n");
+        ERROR("Couldn't get GPT block info\n");
         return ZX_ERR_IO;
     }
 
     if (gpt_device_init(fd.get(), info.block_size, info.block_count, out_gpt)) {
-        fprintf(stderr, "[initialize_gpt] Failed to get GPT info\n");
+        ERROR("Failed to get GPT info\n");
         return ZX_ERR_IO;
     } else if (!(*out_gpt)->valid) {
-        fprintf(stderr, "[initialize_gpt] Located GPT is invalid; Attempting to initialize\n");
+        ERROR("Located GPT is invalid; Attempting to initialize\n");
         if (gpt_partition_remove_all(*out_gpt)) {
-            fprintf(stderr, "[initialize_gpt] Failed to create empty GPT\n");
+            ERROR("Failed to create empty GPT\n");
             gpt_device_release(*out_gpt);
             return ZX_ERR_IO;
         } else if (gpt_device_sync(*out_gpt)) {
-            fprintf(stderr, "[initialize_gpt] Failed to sync empty GPT\n");
+            ERROR("Failed to sync empty GPT\n");
             gpt_device_release(*out_gpt);
             return ZX_ERR_IO;
         } else if ((rc = ioctl_block_rr_part(fd.get())) != ZX_OK) {
-            fprintf(stderr, "[initialize_gpt] Failed to re-read GPT\n");
+            ERROR("Failed to re-read GPT\n");
             gpt_device_release(*out_gpt);
             return static_cast<zx_status_t>(rc);
         }
@@ -626,12 +633,12 @@ constexpr size_t kReservedHeaderBlocks(size_t blk_size) {
 // the number of bytes requested.
 zx_status_t find_first_fit(const gpt_device_t* gpt, const fbl::unique_fd& gpt_fd,
                            size_t bytes_requested, size_t* start_out, size_t* length_out) {
-    printf("[find_first_fit]\n");
+    LOG("Looking for space\n");
     // Gather GPT-related information.
     block_info_t info;
     ssize_t rc = ioctl_block_get_info(gpt_fd.get(), &info);
     if (rc < 0) {
-        fprintf(stderr, "[find_first_fit] Cannot acquire GPT info\n");
+        ERROR("Cannot acquire GPT info\n");
         return static_cast<zx_status_t>(rc);
     }
     size_t blocks_requested = (bytes_requested + info.block_size - 1) / info.block_size;
@@ -654,11 +661,11 @@ zx_status_t find_first_fit(const gpt_device_t* gpt, const fbl::unique_fd& gpt_fd
         }
         partitions[partc].start = p->first;
         partitions[partc].length = p->last - p->first + 1;
-        printf("[find_first_fit] Partition seen with start %zu, end %zu (length %zu)\n",
-               p->first, p->last, partitions[partc].length);
+        LOG("Partition seen with start %zu, end %zu (length %zu)\n", p->first, p->last,
+            partitions[partc].length);
         partc++;
     }
-    printf("[find_first_fit] Sorting\n");
+    LOG("Sorting\n");
     qsort(partitions, partc, sizeof(Partition), [](const void* p1, const void* p2) {
         ssize_t s1 = static_cast<ssize_t>(static_cast<const Partition*>(p1)->start);
         ssize_t s2 = static_cast<ssize_t>(static_cast<const Partition*>(p2)->start);
@@ -670,24 +677,22 @@ zx_status_t find_first_fit(const gpt_device_t* gpt, const fbl::unique_fd& gpt_fd
     // "between" partitions.
     for (size_t i = 0; i < partc - 1; i++) {
         size_t next = partitions[i].start + partitions[i].length;
-        printf("[find_first_fit] Partition[%zu] From Block [%zu, %zu) ..."
-                "(next partition starts at block %zu)\n",
-               i, partitions[i].start, next, partitions[i + 1].start);
+        LOG("Partition[%zu] From Block [%zu, %zu) ... (next partition starts at block %zu)\n",
+            i, partitions[i].start, next, partitions[i + 1].start);
 
         if (next > partitions[i + 1].start) {
-            fprintf(stderr, "[find_first_fit] Corrupted GPT\n");
+            ERROR("Corrupted GPT\n");
             return ZX_ERR_IO;
         }
         size_t free_blocks = partitions[i + 1].start - next;
-        printf("[find_first_fit]    There are %zu free blocks (%zu requested)\n", free_blocks,
-                blocks_requested);
+        LOG("    There are %zu free blocks (%zu requested)\n", free_blocks, blocks_requested);
         if (free_blocks >= blocks_requested) {
             *start_out = next;
             *length_out = free_blocks;
             return ZX_OK;
         }
     }
-    fprintf(stderr, "[find_first_fit] No GPT space found\n");
+    ERROR("No GPT space found\n");
     return ZX_ERR_NO_RESOURCES;
 }
 
@@ -723,14 +728,14 @@ zx_status_t partition_find(gpt_device_t* gpt, gpt_partition_t** out, fbl::unique
 
         static_assert(filterCb != nullptr, "Filter callback required to find partition");
         if (filterCb(i, p->type, p->name)) {
-            printf("[partition_find] Found partition in GPT, partition %zu\n", i);
+            LOG("Found partition in GPT, partition %zu\n", i);
             if (out) {
                 *out = p;
             }
             if (out_fd) {
                 out_fd->reset(open_partition(p->guid, p->type, ZX_SEC(5), nullptr));
                 if (!*out_fd) {
-                    fprintf(stderr, "[partition_find] Couldn't open partition\n");
+                    ERROR("Couldn't open partition\n");
                     return ZX_ERR_IO;
                 }
             }
@@ -756,14 +761,14 @@ zx_status_t partition_add(gpt_device_t* gpt, fbl::unique_fd gpt_fd, fbl::unique_
     uint64_t start, length;
     zx_status_t r;
     if ((r = find_first_fit(gpt, gpt_fd, minimumSizeBytes, &start, &length)) != ZX_OK) {
-        fprintf(stderr, "[partition_add] Couldn't find fit\n");
+        ERROR("Couldn't find fit\n");
         return r;
     }
 
     block_info_t info;
     ssize_t rc = ioctl_block_get_info(gpt_fd.get(), &info);
     if (rc < 0) {
-        fprintf(stderr, "[partition_add] Cannot acquire GPT info\n");
+        ERROR("Cannot acquire GPT info\n");
         return static_cast<zx_status_t>(rc);
     }
 
@@ -771,16 +776,16 @@ zx_status_t partition_add(gpt_device_t* gpt, fbl::unique_fd gpt_fd, fbl::unique_
     size_t sz;
     uint8_t guid[GPT_GUID_LEN];
     if ((r = zx_cprng_draw(guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
-        fprintf(stderr, "[partition_add] Failed to get random GUID\n");
+        ERROR("Failed to get random GUID\n");
         return r;
     } else if ((r = gpt_partition_add(gpt, name, type, guid, start, length, 0))) {
-        fprintf(stderr, "[partition_add] Failed to add partition\n");
+        ERROR("Failed to add partition\n");
         return r;
     } else if ((r = gpt_device_sync(gpt))) {
-        fprintf(stderr, "[partition_add] Failed to sync GPT\n");
+        ERROR("Failed to sync GPT\n");
         return r;
     } else if ((r = (int) ioctl_block_rr_part(gpt_fd.get())) < 0) {
-        fprintf(stderr, "[partition_add] Failed to rebind GPT\n");
+        ERROR("Failed to rebind GPT\n");
         return r;
     }
     out_fd->reset(open_partition(guid, type, ZX_SEC(5), nullptr));
@@ -803,7 +808,7 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
     block_info_t info;
     ssize_t rc = ioctl_block_get_info(gpt_fd.get(), &info);
     if (rc < 0) {
-        fprintf(stderr, "[fvm_add_to_gpt] Cannot acquire GPT info\n");
+        ERROR("Cannot acquire GPT info\n");
         return static_cast<zx_status_t>(rc);
     }
 
@@ -824,17 +829,17 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
         }
         // If the FVM already exists within the GPT, return early.
         if (memcmp(p->type, type, GPT_GUID_LEN) == 0) {
-            printf("[fvm_add_to_gpt] FVM partition already exists within GPT\n");
+            LOG("FVM partition already exists within GPT\n");
             memcpy(guid, p->guid, GPT_GUID_LEN);
             goto done;
         }
     }
 
     if ((r = find_first_fit(gpt, gpt_fd, kMinimumFVMSizeBytes, &start, &length)) != ZX_OK) {
-        fprintf(stderr, "[fvm_add_to_gpt] Couldn't find space in GPT: %d\n", r);
+        ERROR("Couldn't find space in GPT: %d\n", r);
         goto done;
     }
-    printf("[fvm_add_to_gpt] Found space in GPT - OK %zu @ %zu\n", length, start);
+    LOG("Found space in GPT - OK %zu @ %zu\n", length, start);
 
     // If can fulfill the requested size, and we still have space for the
     // optional reserve section, then we should shorten the amount of blocks
@@ -842,36 +847,36 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
     //
     // This isn't necessary, but it allows growing the GPT later, if necessary.
     if (length - kOptionalReserveBlocks > (kMinimumFVMSizeBytes / info.block_size)) {
-        printf("[fvm_add_to_gpt] Space for reserve - OK\n");
+        LOG("Space for reserve - OK\n");
         length -= kOptionalReserveBlocks;
     }
-    printf("[fvm_add_to_gpt] Final space in GPT - OK %zu @ %zu\n", length, start);
+    LOG("Final space in GPT - OK %zu @ %zu\n", length, start);
 
     if ((r = zx_cprng_draw(guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
-        fprintf(stderr, "[fvm_add_to_gpt] Failed to get random GUID\n");
+        ERROR("Failed to get random GUID\n");
         goto done;
     } else if ((r = gpt_partition_add(gpt, "fvm", type, guid, start, length, 0))) {
-        fprintf(stderr, "[fvm_add_to_gpt] Failed to add FVM partition\n");
+        ERROR("Failed to add FVM partition\n");
         goto done;
     } else if ((r = gpt_device_sync(gpt))) {
-        fprintf(stderr, "[fvm_add_to_gpt] Failed to sync GPT\n");
+        ERROR("Failed to sync GPT\n");
         goto done;
     } else if ((r = (int) ioctl_block_rr_part(gpt_fd.get())) < 0) {
-        fprintf(stderr, "[fvm_add_to_gpt] Failed to rebind GPT\n");
+        ERROR("Failed to rebind GPT\n");
         goto done;
     }
 
-    printf("[fvm_add_to_gpt] Added partition, waiting for bind\n");
+    LOG("Added partition, waiting for bind\n");
 done:
     if (r == 0) {
         // Before we return, claiming that the FVM partition is ready, we should
         // check the GPT partition has actually appeared in devfs.
         partition_fd.reset(open_partition(guid, type, ZX_SEC(5), nullptr));
         if (!partition_fd) {
-            fprintf(stderr, "[fvm_add_to_gpt] Added partition, waiting for bind - NOT FOUND\n");
+            ERROR("Added partition, waiting for bind - NOT FOUND\n");
             r = -1;
         } else {
-            printf("[fvm_add_to_gpt] Added partition, waiting for bind - OK\n");
+            ERROR("Added partition, waiting for bind - OK\n");
             r = 0;
         }
     }
@@ -968,44 +973,44 @@ bool kernc_finalize_cb(gpt_partition_t* partition) {
 // Paves a sparse_file to the underlying disk, on top
 // of a GPT.
 int fvm_pave(fbl::unique_fd fd) {
-    printf("[fvm_pave]\n");
+    LOG("Paving FVM\n");
     char gpt_path[PATH_MAX];
     if (find_target_gpt(gpt_path)) {
-        fprintf(stderr, "[fvm_pave] Couldn't find target GPT\n");
+        ERROR("Couldn't find target GPT\n");
         return -1;
     }
     zx_status_t status = device_specific_disk_prep(gpt_path);
     if (status != ZX_OK) {
-        fprintf(stderr, "[fvm_pave] Failed to complete device-specific prep\n");
+        ERROR("Failed to complete device-specific prep\n");
         return -1;
     }
-    printf("[fvm_pave] Found Target GPT %s - OK\n", gpt_path);
+    LOG("Found Target GPT %s - OK\n", gpt_path);
     if (fvm_add_to_gpt(gpt_path)) {
-        fprintf(stderr, "[fvm_pave] Couldn't format FVM partition\n");
+        ERROR("Couldn't format FVM partition\n");
         return -1;
     }
-    printf("[fvm_pave] Added to GPT - OK\n");
+    LOG("Added to GPT - OK\n");
 
-    printf("[fvm_pave] Streaming partitions...\n");
+    LOG("Streaming partitions...\n");
     if ((status = fvm_stream_partitions(fbl::move(fd))) != ZX_OK) {
-        fprintf(stderr, "[fvm_pave] Failed to stream partitions: %d\n", status);
+        ERROR("Failed to stream partitions: %d\n", status);
         return -1;
     }
-    printf("[fvm_pave] DONE\n");
+    LOG("DONE\n");
     return 0;
 }
 
 // Paves an image onto the disk, within the GPT.
 template <PartitionFilterCb filterCb, PartitionCreateCb createCb, PartitionFinalizeCb finalizeCb>
 zx_status_t partition_pave(fbl::unique_fd fd) {
-    printf("[partition_pave]\n");
+    LOG("Paving a partition to the GPT\n");
     char gpt_path[PATH_MAX];
     if (find_target_gpt(gpt_path)) {
         return ZX_ERR_IO;
     }
     zx_status_t status = device_specific_disk_prep(gpt_path);
     if (status != ZX_OK) {
-        fprintf(stderr, "[partition_pave] Failed to complete device-specific prep\n");
+        ERROR("Failed to complete device-specific prep\n");
         return -1;
     }
 
@@ -1018,12 +1023,12 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
     fbl::unique_fd part_fd;
     if ((status = partition_find<filterCb>(gpt, nullptr, &part_fd)) != ZX_OK) {
         if (status != ZX_ERR_NOT_FOUND || (void*) createCb == nullptr) {
-            fprintf(stderr, "[partition_pave] Failure looking for partition: %d\n", status);
+            ERROR("Failure looking for partition: %d\n", status);
             gpt_device_release(gpt);
             return status;
         }
         if ((status = partition_add<createCb>(gpt, fbl::move(gpt_fd), &part_fd)) != ZX_OK) {
-            fprintf(stderr, "[partition_pave] Failure creating partition: %d\n", status);
+            ERROR("Failure creating partition: %d\n", status);
             gpt_device_release(gpt);
             return status;
         }
@@ -1032,14 +1037,14 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
 
     block_info_t info;
     if ((status = static_cast<zx_status_t>(ioctl_block_get_info(part_fd.get(), &info))) < 0) {
-        fprintf(stderr, "[partition_pave] Couldn't get GPT block info\n");
+        ERROR("Couldn't get GPT block info\n");
         return status;
     }
 
     const size_t vmo_sz = fbl::round_up(1LU << 20, info.block_size);
     fbl::unique_ptr<MappedVmo> mvmo;
     if ((status = MappedVmo::Create(vmo_sz, "partition-pave", &mvmo)) != ZX_OK) {
-        fprintf(stderr, "[partition_pave] Failed to create stream VMO\n");
+        ERROR("Failed to create stream VMO\n");
         return status;
     }
 
@@ -1049,7 +1054,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
     status = register_fast_block_io(part_fd, mvmo->GetVmo(), &txnid,
                                     &vmoid, &client);
     if (status != ZX_OK) {
-        fprintf(stderr, "[partition_pave] Cannot register fast block I/O\n");
+        ERROR("Cannot register fast block I/O\n");
         return status;
     }
 
@@ -1060,18 +1065,18 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
     status = stream_partition(mvmo.get(), client, &request, fd, info);
     block_fifo_release_client(client);
     if (status != ZX_OK) {
-        fprintf(stderr, "[partition_pave] Failed to stream partition\n");
+        ERROR("Failed to stream partition\n");
         return status;
     }
 
     if ((void*) finalizeCb != nullptr) {
         if ((status = initialize_gpt(gpt_path, &gpt_fd, &gpt)) != ZX_OK) {
-            fprintf(stderr, "[partition_pave] Cannot re-initialize GPT\n");
+            ERROR("Cannot re-initialize GPT\n");
             return status;
         }
         gpt_partition_t* partition;
         if ((status = partition_find<filterCb>(gpt, &partition, nullptr)) != ZX_OK) {
-            fprintf(stderr, "[partition_pave] Cannot re-find partition\n");
+            ERROR("Cannot re-find partition\n");
             return status;
         }
         if (finalizeCb(partition)) {
@@ -1080,7 +1085,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
         gpt_device_release(gpt);
     }
 
-    printf("[partition_pave] Completed successfully\n");
+    LOG("Completed successfully\n");
     return ZX_OK;
 }
 
@@ -1121,16 +1126,16 @@ int fvm_clean() {
         utf16_to_cstring(name, (uint16_t*) gpt->partitions[i]->name, GPT_NAME_LEN);
 
         if (!memcmp(gpt->partitions[i]->type, system_type, GPT_GUID_LEN)) {
-            printf("Removing system partition\n");
+            LOG("Removing system partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, data_type, GPT_GUID_LEN)) {
-            printf("Removing data partition\n");
+            LOG("Removing data partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, blobfs_type, GPT_GUID_LEN)) {
-            printf("Removing blobstore partition\n");
+            LOG("Removing blobstore partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, fvm_type, GPT_GUID_LEN)) {
-            printf("Removing FVM partition\n");
+            LOG("Removing FVM partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, efi_type, GPT_GUID_LEN)
                    && !strncmp(name, "EFI", GPT_NAME_LEN)) {
-            printf("Removing EFI partition\n");
+            LOG("Removing EFI partition\n");
         } else {
             continue;
         }
@@ -1144,7 +1149,7 @@ int fvm_clean() {
                                           gpt->partitions[i]->type, ZX_SEC(2),
                                           nullptr));
         if (!pfd) {
-            fprintf(stderr, "Warning: Could not open partition to overwrite first 8KB\n");
+            ERROR("Warning: Could not open partition to overwrite first 8KB\n");
         } else {
             write(pfd.get(), buf, sizeof(buf));
         }
@@ -1155,7 +1160,7 @@ int fvm_clean() {
     }
     if (modify) {
         gpt_device_sync(gpt);
-        printf("GPT updated, reboot strongly recommended immediately\n");
+        LOG("GPT updated, reboot strongly recommended immediately\n");
     }
     gpt_device_release(gpt);
     ioctl_block_rr_part(fd.get());
@@ -1163,20 +1168,20 @@ int fvm_clean() {
 }
 
 int usage() {
-    fprintf(stderr, "install-disk-image [command] <options*>\n");
-    fprintf(stderr, "Commands:\n");
-    fprintf(stderr, "  install-fvm   : Install a sparse FVM to the device\n");
-    fprintf(stderr, "  install-efi   : Install an EFI partition to the device\n");
-    fprintf(stderr, "  install-kernc : Install a KERN-C CrOS partition to the device\n");
-    fprintf(stderr, "  wipe          : Clean up the install disk\n");
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  --file <file>: Read from FILE instead of stdin\n");
+    ERROR("install-disk-image [command] <options*>\n");
+    ERROR("Commands:\n");
+    ERROR("  install-fvm   : Install a sparse FVM to the device\n");
+    ERROR("  install-efi   : Install an EFI partition to the device\n");
+    ERROR("  install-kernc : Install a KERN-C CrOS partition to the device\n");
+    ERROR("  wipe          : Clean up the install disk\n");
+    ERROR("Options:\n");
+    ERROR("  --file <file>: Read from FILE instead of stdin\n");
     return -1;
 }
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        fprintf(stderr, "install-disk-image needs a command\n");
+        ERROR("install-disk-image needs a command\n");
         return usage();
     }
     argc--;
@@ -1192,12 +1197,12 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
             if (argc < 1) {
-                fprintf(stderr, "'--file' argument requires a file\n");
+                ERROR("'--file' argument requires a file\n");
                 return -1;
             }
             fd.reset(open(argv[0], O_RDONLY));
             if (!fd) {
-                fprintf(stderr, "Couldn't open supplied file\n");
+                ERROR("Couldn't open supplied file\n");
                 return -1;
             }
             argc--;
