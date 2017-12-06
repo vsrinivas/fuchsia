@@ -202,6 +202,7 @@ ifeq ($(MODULE),system/ulib/c)
 MODULE_PKG_SRCS += lib/libm.so=SOURCE/third_party/ulib/musl/lib.ld
 MODULE_PKG_SRCS += lib/libdl.so=SOURCE/third_party/ulib/musl/lib.ld
 MODULE_PKG_SRCS += lib/libpthread.so=SOURCE/third_party/ulib/musl/lib.ld
+MODULE_PKG_SRCS += lib/librt.so=SOURCE/third_party/ulib/musl/lib.ld
 
 # crt1
 MODULE_PKG_SRCS += lib/Scrt1.o=$(patsubst $(BUILDDIR)/%,BUILD/%,$(USER_SCRT1_OBJ))

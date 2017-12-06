@@ -31,6 +31,9 @@ $(BUILDSYSROOT)/lib/libdl.so: third_party/ulib/musl/lib.ld
 $(BUILDSYSROOT)/lib/libpthread.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
 	$(NOECHO)cp $< $@
+$(BUILDSYSROOT)/lib/librt.so: third_party/ulib/musl/lib.ld
+	@$(MKDIR)
+	$(NOECHO)cp $< $@
 
 SYSROOT_DEPS += $(BUILDSYSROOT)/lib/libm.so $(BUILDSYSROOT)/lib/libdl.so $(BUILDSYSROOT)/lib/libpthread.so
 
