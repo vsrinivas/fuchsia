@@ -71,7 +71,7 @@ function help {
     local cmd_path="$(find_command "${cmd}")"
     if [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]] &&
          grep '^## ' "${cmd_path}" > /dev/null; then
-      sed -n 's/^## //p' < "${cmd_path}"
+      sed -n -e 's/^## //p' -e 's/^##$//p' < "${cmd_path}"
     else
       echo "No help found. Try \`fx ${cmd} -h\`"
     fi
