@@ -171,6 +171,7 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
         goto done;
     }
 
+    drv->driver_rec = dr;
     drv->name = dn->payload.name;
     drv->ops = dr->ops;
     dr->driver = drv;

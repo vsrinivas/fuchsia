@@ -30,6 +30,7 @@
 
 typedef struct zx_driver {
     const char* name;
+    zx_driver_rec_t* driver_rec;
     const zx_driver_ops_t* ops;
     void* ctx;
     const char* libname;

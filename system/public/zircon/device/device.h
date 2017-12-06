@@ -8,6 +8,11 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
 
+typedef struct {
+    uint32_t clear; // log flags to clear
+    uint32_t set;   // log flags to set
+} driver_log_flags_t;
+
 // Bind to a driver
 //   in: path to the driver to bind (optional)
 //   out: none
@@ -58,6 +63,20 @@
 #define IOCTL_DEVICE_DEBUG_RESUME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 8)
 
+// Returns the log flags for driver bound to this device
+//   in: none
+//   out: uint32_t
+#define IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 9)
+
+// Sets the log flags for driver bound to this device
+// Flags to set are in low 32 bits, mask for setting the flags
+// are in the high 32 bits
+//   in: driver_log_flags_t
+//   out: none
+#define IOCTL_DEVICE_SET_DRIVER_LOG_FLAGS \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 10)
+
 // Indicates if there's data available to read,
 // or room to write, or an error condition.
 #define DEVICE_SIGNAL_READABLE ZX_USER_SIGNAL_0
@@ -89,3 +108,9 @@ IOCTL_WRAPPER(ioctl_device_debug_resume, IOCTL_DEVICE_DEBUG_RESUME);
 
 // ssize_t ioctl_device_sync(int fd);
 IOCTL_WRAPPER(ioctl_device_sync, IOCTL_DEVICE_SYNC);
+
+// ssize_t ioctl_device_get_log_flags(int fd, uint32_t* out);
+IOCTL_WRAPPER_OUT(ioctl_device_get_log_flags, IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS, uint32_t);
+
+// ssize_t ioctl_device_set_log_flags(int fd, driver_log_flags_t in);
+IOCTL_WRAPPER_IN(ioctl_device_set_log_flags, IOCTL_DEVICE_SET_DRIVER_LOG_FLAGS, driver_log_flags_t);

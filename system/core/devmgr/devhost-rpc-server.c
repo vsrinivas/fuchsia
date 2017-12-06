@@ -267,6 +267,28 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         memcpy(info->name, devhost_name, strlen(devhost_name));
         return sizeof(vfs_query_info_t) + strlen(devhost_name);
     }
+    case IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS: {
+        if (!dev->driver) {
+            return ZX_ERR_UNAVAILABLE;
+        }
+        if (out_len < sizeof(uint32_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        *((uint32_t *)out_buf) = dev->driver->driver_rec->log_flags;
+        return sizeof(uint32_t);
+    }
+    case IOCTL_DEVICE_SET_DRIVER_LOG_FLAGS: {
+        if (!dev->driver) {
+            return ZX_ERR_UNAVAILABLE;
+        }
+        if (in_len < sizeof(driver_log_flags_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        driver_log_flags_t* flags = (driver_log_flags_t *)in_buf;
+        dev->driver->driver_rec->log_flags &= ~flags->clear;
+        dev->driver->driver_rec->log_flags |= flags->set;
+        return sizeof(driver_log_flags_t);
+    }
     default: {
         size_t actual = 0;
         r = dev_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, &actual);
