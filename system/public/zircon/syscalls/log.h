@@ -33,8 +33,8 @@ typedef struct zx_log_record {
 // Custom Log Levels
 #define ZX_LOG_DEBUG1         (0x0010)
 #define ZX_LOG_DEBUG2         (0x0020)
-#define ZX_LOG_DEBUG3         (0x0030)
-#define ZX_LOG_DEBUG4         (0x0040)
+#define ZX_LOG_DEBUG3         (0x0040)
+#define ZX_LOG_DEBUG4         (0x0080)
 
 // Filter Flags
 
