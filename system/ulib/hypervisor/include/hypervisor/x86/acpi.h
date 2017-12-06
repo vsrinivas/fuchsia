@@ -15,6 +15,3 @@ struct acpi_config {
 
 zx_status_t create_acpi_table(const struct acpi_config& cfg, uintptr_t addr, size_t size,
                               uintptr_t acpi_off);
-
-// TODO(alexlegg): Remove this stub.
-zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off);

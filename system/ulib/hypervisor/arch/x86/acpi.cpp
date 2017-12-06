@@ -158,14 +158,3 @@ zx_status_t create_acpi_table(const acpi_config& cfg, uintptr_t addr, size_t siz
     acpi_header(&rsdt->Header, "ZX ACPI", ACPI_SIG_RSDT, rsdt_length);
     return ZX_OK;
 }
-
-// TODO(alexlegg): Remove this stub.
-zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off) {
-    struct acpi_config cfg = {
-        .dsdt_path = "/system/data/dsdt.aml",
-        .mcfg_path = "/system/data/mcfg.aml",
-        .io_apic_addr = 0xfec00000,
-        .num_cpus = 1,
-    };
-    return create_acpi_table(cfg, addr, size, acpi_off);
-}
