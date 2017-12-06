@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "dispatcher.h"
-#include "ap_mlme.h"
+#include "client_mlme.h"
 #include "frame_handler.h"
 #include "packet.h"
 #include "serialize.h"
@@ -75,7 +75,7 @@ void DumpFrameHeader(const FrameHeader& hdr, size_t len) {
 
 Dispatcher::Dispatcher(DeviceInterface* device) {
     debugfn();
-    mlme_.reset(new ApMlme(device));
+    mlme_.reset(new ClientMlme(device));
 }
 
 Dispatcher::~Dispatcher() {}
