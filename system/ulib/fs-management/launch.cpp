@@ -27,7 +27,7 @@ namespace {
 launchpad_t* InitStdio(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
                        size_t len, uint32_t clone_what) {
     launchpad_t* lp;
-    launchpad_create(0, argv[0], &lp);
+    launchpad_create(ZX_HANDLE_INVALID, argv[0], &lp);
     launchpad_clone(lp, clone_what);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);

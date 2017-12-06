@@ -454,7 +454,8 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_out_p
     zx_status_t status;
 
     LTRACEF("handle %x\n", dev_handle);
-    if (!dev_handle || !out_bar || bar_num >= PCIE_MAX_BAR_REGS) {
+    if (dev_handle == ZX_HANDLE_INVALID ||
+        !out_bar || bar_num >= PCIE_MAX_BAR_REGS) {
         return ZX_ERR_INVALID_ARGS;
     }
 

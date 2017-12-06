@@ -65,7 +65,7 @@ int do_blobstore_mount(fbl::unique_fd fd, const blob_options_t& options) {
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("blobstore: Could not access startup handle to mount point\n");
-        return h;
+        return -1;
     }
 
     async::Loop loop;
@@ -76,7 +76,7 @@ int do_blobstore_mount(fbl::unique_fd fd, const blob_options_t& options) {
         return status;
     }
     loop.Run();
-    return 0;
+    return ZX_OK;
 }
 
 #else

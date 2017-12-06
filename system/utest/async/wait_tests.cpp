@@ -55,7 +55,7 @@ struct Handler {
 };
 
 bool wait_test() {
-    const zx_handle_t dummy_handle = 1;
+    const zx_handle_t dummy_handle = static_cast<zx_handle_t>(1);
     const zx_signals_t dummy_trigger = ZX_USER_SIGNAL_0;
     const zx_packet_signal_t dummy_signal{
         .trigger = dummy_trigger,
@@ -119,7 +119,7 @@ bool wait_test() {
 bool auto_wait_test() {
     BEGIN_TEST;
 
-    const zx_handle_t dummy_handle = 1;
+    const zx_handle_t dummy_handle = static_cast<zx_handle_t>(1);
     const zx_signals_t dummy_trigger = ZX_USER_SIGNAL_0;
     const zx_packet_signal_t dummy_signal{
         .trigger = dummy_trigger,

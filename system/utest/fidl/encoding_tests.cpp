@@ -26,36 +26,36 @@ namespace {
 // TODO(kulakowski) Change the tests to check for more specific error
 // values, once those are settled.
 
-constexpr zx_handle_t dummy_handle_0 = 23;
-constexpr zx_handle_t dummy_handle_1 = 24;
-constexpr zx_handle_t dummy_handle_2 = 25;
-constexpr zx_handle_t dummy_handle_3 = 26;
-constexpr zx_handle_t dummy_handle_4 = 27;
-constexpr zx_handle_t dummy_handle_5 = 28;
-constexpr zx_handle_t dummy_handle_6 = 29;
-constexpr zx_handle_t dummy_handle_7 = 30;
-constexpr zx_handle_t dummy_handle_8 = 31;
-constexpr zx_handle_t dummy_handle_9 = 32;
-constexpr zx_handle_t dummy_handle_10 = 33;
-constexpr zx_handle_t dummy_handle_11 = 34;
-constexpr zx_handle_t dummy_handle_12 = 35;
-constexpr zx_handle_t dummy_handle_13 = 36;
-constexpr zx_handle_t dummy_handle_14 = 37;
-constexpr zx_handle_t dummy_handle_15 = 38;
-constexpr zx_handle_t dummy_handle_16 = 39;
-constexpr zx_handle_t dummy_handle_17 = 40;
-constexpr zx_handle_t dummy_handle_18 = 41;
-constexpr zx_handle_t dummy_handle_19 = 42;
-constexpr zx_handle_t dummy_handle_20 = 43;
-constexpr zx_handle_t dummy_handle_21 = 44;
-constexpr zx_handle_t dummy_handle_22 = 45;
-constexpr zx_handle_t dummy_handle_23 = 46;
-constexpr zx_handle_t dummy_handle_24 = 47;
-constexpr zx_handle_t dummy_handle_25 = 48;
-constexpr zx_handle_t dummy_handle_26 = 49;
-constexpr zx_handle_t dummy_handle_27 = 50;
-constexpr zx_handle_t dummy_handle_28 = 51;
-constexpr zx_handle_t dummy_handle_29 = 52;
+constexpr zx_handle_t dummy_handle_0 = static_cast<zx_handle_t>(23);
+constexpr zx_handle_t dummy_handle_1 = static_cast<zx_handle_t>(24);
+constexpr zx_handle_t dummy_handle_2 = static_cast<zx_handle_t>(25);
+constexpr zx_handle_t dummy_handle_3 = static_cast<zx_handle_t>(26);
+constexpr zx_handle_t dummy_handle_4 = static_cast<zx_handle_t>(27);
+constexpr zx_handle_t dummy_handle_5 = static_cast<zx_handle_t>(28);
+constexpr zx_handle_t dummy_handle_6 = static_cast<zx_handle_t>(29);
+constexpr zx_handle_t dummy_handle_7 = static_cast<zx_handle_t>(30);
+constexpr zx_handle_t dummy_handle_8 = static_cast<zx_handle_t>(31);
+constexpr zx_handle_t dummy_handle_9 = static_cast<zx_handle_t>(32);
+constexpr zx_handle_t dummy_handle_10 = static_cast<zx_handle_t>(33);
+constexpr zx_handle_t dummy_handle_11 = static_cast<zx_handle_t>(34);
+constexpr zx_handle_t dummy_handle_12 = static_cast<zx_handle_t>(35);
+constexpr zx_handle_t dummy_handle_13 = static_cast<zx_handle_t>(36);
+constexpr zx_handle_t dummy_handle_14 = static_cast<zx_handle_t>(37);
+constexpr zx_handle_t dummy_handle_15 = static_cast<zx_handle_t>(38);
+constexpr zx_handle_t dummy_handle_16 = static_cast<zx_handle_t>(39);
+constexpr zx_handle_t dummy_handle_17 = static_cast<zx_handle_t>(40);
+constexpr zx_handle_t dummy_handle_18 = static_cast<zx_handle_t>(41);
+constexpr zx_handle_t dummy_handle_19 = static_cast<zx_handle_t>(42);
+constexpr zx_handle_t dummy_handle_20 = static_cast<zx_handle_t>(43);
+constexpr zx_handle_t dummy_handle_21 = static_cast<zx_handle_t>(44);
+constexpr zx_handle_t dummy_handle_22 = static_cast<zx_handle_t>(45);
+constexpr zx_handle_t dummy_handle_23 = static_cast<zx_handle_t>(46);
+constexpr zx_handle_t dummy_handle_24 = static_cast<zx_handle_t>(47);
+constexpr zx_handle_t dummy_handle_25 = static_cast<zx_handle_t>(48);
+constexpr zx_handle_t dummy_handle_26 = static_cast<zx_handle_t>(49);
+constexpr zx_handle_t dummy_handle_27 = static_cast<zx_handle_t>(50);
+constexpr zx_handle_t dummy_handle_28 = static_cast<zx_handle_t>(51);
+constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.

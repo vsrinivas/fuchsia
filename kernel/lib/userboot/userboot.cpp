@@ -398,7 +398,7 @@ static zx_status_t attempt_userboot() {
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
 
     // Start the process's initial thread.
-    status = thread->Start(entry, sp, hv, vdso_base,
+    status = thread->Start(entry, sp, static_cast<uintptr_t>(hv), vdso_base,
                            /* initial_thread= */ true);
     if (status != ZX_OK) {
         printf("userboot: failed to start initial thread: %d\n", status);

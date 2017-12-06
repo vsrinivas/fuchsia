@@ -82,7 +82,7 @@ void handle_crash_arg(int argc, char** argv) {
 bool test_crash(const char* crash_arg) {
     const char* argv[] = { g_executable_filename, "--crash", crash_arg };
     launchpad_t* crasher_lp;
-    launchpad_create(0, "crash-test", &crasher_lp);
+    launchpad_create(ZX_HANDLE_INVALID, "crash-test", &crasher_lp);
 
     // Make sure we bind an exception port to the process before we start
     // it running.
@@ -102,7 +102,8 @@ bool test_crash(const char* crash_arg) {
     // Launch a test instance of crashlogger.
     const char* crashlogger_argv[] = { "/boot/bin/crashlogger" };
     launchpad_t* crashlogger_lp;
-    launchpad_create(0, "crashlogger-test-instance", &crashlogger_lp);
+    launchpad_create(ZX_HANDLE_INVALID,
+                     "crashlogger-test-instance", &crashlogger_lp);
     launchpad_load_from_file(crashlogger_lp, crashlogger_argv[0]);
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
     launchpad_set_args(crashlogger_lp, fbl::count_of(crashlogger_argv),

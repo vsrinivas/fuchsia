@@ -402,7 +402,8 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
     auto arg_nhv = process->MapHandleToValue(arg_handle);
     process->AddHandle(fbl::move(arg_handle));
 
-    status = thread->Start(pc, sp, arg_nhv, arg2, /* initial_thread */ true);
+    status = thread->Start(pc, sp, static_cast<uintptr_t>(arg_nhv),
+                           arg2, /* initial_thread */ true);
     if (status != ZX_OK) {
         // Put back the |arg_handle| into the calling process.
         auto handle = process->RemoveHandle(arg_nhv);

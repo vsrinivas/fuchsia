@@ -42,7 +42,7 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-static zx_handle_t map_handle_to_value(const Handle* handle, zx_handle_t mixer) {
+static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
     // Ensure that the last bit of the result is not zero, and make sure
     // we don't lose any base_value bits or make the result negative
     // when shifting.
@@ -50,11 +50,11 @@ static zx_handle_t map_handle_to_value(const Handle* handle, zx_handle_t mixer) 
     DEBUG_ASSERT((handle->base_value() & 0xc0000000) == 0);
 
     auto handle_id = (handle->base_value() << 1) | 0x1;
-    return mixer ^ handle_id;
+    return static_cast<zx_handle_t>(mixer ^ handle_id);
 }
 
-static Handle* map_value_to_handle(zx_handle_t value, zx_handle_t mixer) {
-    auto handle_id = (value ^ mixer) >> 1;
+static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
+    auto handle_id = (static_cast<uint32_t>(value) ^ mixer) >> 1;
     return MapU32ToHandle(handle_id);
 }
 

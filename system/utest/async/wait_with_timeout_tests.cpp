@@ -60,7 +60,7 @@ struct Handler {
 };
 
 bool timeout_test() {
-    const zx_handle_t dummy_handle = 1;
+    const zx_handle_t dummy_handle = static_cast<zx_handle_t>(1);
     const zx_signals_t dummy_trigger = ZX_USER_SIGNAL_0;
     const zx_packet_signal_t dummy_signal{
         .trigger = dummy_trigger,
@@ -165,7 +165,7 @@ bool timeout_test() {
 }
 
 bool begin_wait_cleans_up() {
-    const zx_handle_t dummy_handle = 1;
+    const zx_handle_t dummy_handle = static_cast<zx_handle_t>(1);
     const zx_signals_t dummy_trigger = ZX_USER_SIGNAL_0;
     const zx_time_t dummy_deadline = 100u;
     const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;

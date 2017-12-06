@@ -361,7 +361,7 @@ bool destroyed_vmar_test() {
     zx_handle_t process;
     zx_handle_t vmar;
     zx_handle_t vmo;
-    zx_handle_t region[3] = {0};
+    zx_handle_t region[3] = {};
     uintptr_t region_addr[3];
     uintptr_t map_addr[2];
 
@@ -462,7 +462,7 @@ bool map_over_destroyed_test() {
     zx_handle_t process;
     zx_handle_t vmar;
     zx_handle_t vmo, vmo2;
-    zx_handle_t region[2] = {0};
+    zx_handle_t region[2] = {};
     uintptr_t region_addr[2];
     uintptr_t map_addr;
 
@@ -549,7 +549,7 @@ bool overmapping_test() {
     BEGIN_TEST;
 
     zx_handle_t process;
-    zx_handle_t region[3] = {0};
+    zx_handle_t region[3] = {};
     zx_handle_t vmar;
     zx_handle_t vmo, vmo2;
     uintptr_t region_addr[3];
@@ -1032,7 +1032,7 @@ bool nested_region_perms_test() {
     zx_handle_t process;
     zx_handle_t vmar;
     zx_handle_t vmo;
-    zx_handle_t region[2] = {0};
+    zx_handle_t region[2] = {};
     uintptr_t region_addr[2];
     uintptr_t map_addr;
 

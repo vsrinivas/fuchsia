@@ -300,7 +300,7 @@ private:
     fbl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
     fbl::SinglyLinkedListNodeState<fbl::RefPtr<ProcessDispatcher>> dll_job_;
 
-    zx_handle_t handle_rand_ = 0;
+    uint32_t handle_rand_ = 0;
 
     // list of threads in this process
     using ThreadList = fbl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;

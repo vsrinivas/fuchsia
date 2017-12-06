@@ -35,7 +35,7 @@ bool address_space_limits_test() {
     size_t page_size = getpagesize();
     zx_handle_t vmo;
     EXPECT_EQ(zx_vmo_create(page_size, 0, &vmo), ZX_OK);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    EXPECT_NE(vmo, ZX_HANDLE_INVALID, "vm_object_create");
 
     // This is the lowest non-canonical address on x86-64.  We want to
     // make sure that userland cannot map a page immediately below

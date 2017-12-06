@@ -53,7 +53,7 @@ VmoFile::VmoFile(const zx::vmo& unowned_vmo,
                  VmoSharing vmo_sharing)
     : vmo_handle_(unowned_vmo.get()),
       offset_(offset), length_(length), writable_(writable), vmo_sharing_(vmo_sharing) {
-    ZX_DEBUG_ASSERT(vmo_handle_);
+    ZX_DEBUG_ASSERT(vmo_handle_ != ZX_HANDLE_INVALID);
 }
 
 VmoFile::~VmoFile() {}

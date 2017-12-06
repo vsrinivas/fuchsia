@@ -453,7 +453,7 @@ int fifo_vmo_thread(void* arg) {
     test_vmo_object_t* obj = fifoarg->obj;
     size_t i = fifoarg->i;
     size_t objs = fifoarg->objs;
-    zx_handle_t fd = fifoarg->fd;
+    int fd = fifoarg->fd;
     fifo_client_t* client = fifoarg->client;
     size_t kBlockSize = fifoarg->kBlockSize;
 

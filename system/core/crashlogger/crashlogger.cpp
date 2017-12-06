@@ -250,7 +250,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
         return;
 
     zx_handle_t process;
-    zx_status_t status = zx_object_get_child(0, pid, ZX_RIGHT_SAME_RIGHTS, &process);
+    zx_status_t status = zx_object_get_child(ZX_HANDLE_INVALID, pid, ZX_RIGHT_SAME_RIGHTS, &process);
     if (status < 0) {
         printf("failed to get a handle to [%" PRIu64 "] : error %d\n", pid, status);
         return;
