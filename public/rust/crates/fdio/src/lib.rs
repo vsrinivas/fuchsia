@@ -117,7 +117,6 @@ where
 }
 
 // TODO(raggi): when const fn is stable, replace the macro with const fn.
-#[macro_export]
 macro_rules! make_ioctl {
     ($kind:expr, $family:expr, $number:expr) => {
         (((($kind) & 0xF) << 20) | ((($family) & 0xFF) << 8) | (($number) & 0xFF))

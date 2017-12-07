@@ -2,8 +2,45 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
+
+go_binary("power_manager_bin") {
+  output_name = "power_manager"
+
+  gopackage = "power_manager"
+
+  go_dependencies = [
+    {
+      package = "power_manager"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "garnet/public/lib/power/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/power/fidl"
+    },
+  ]
+  deps = [
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/power/fidl",
+  ]
+}
 
 go_test("power_manager_test") {
   gopackage = "power_manager"
@@ -37,6 +74,19 @@ go_test("power_manager_test") {
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/power/fidl",
   ]
+}
+
+package("power_manager") {
+  deps = [
+    ":power_manager_bin",
+  ]
+
+  binary = "power_manager"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 package("power_manager_gotests") {
