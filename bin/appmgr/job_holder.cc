@@ -357,7 +357,6 @@ void JobHolder::CreateApplicationWithRunner(
     return;
 
   NamespaceBuilder builder;
-  builder.AddDeprecatedDefaultDirectories();
   builder.AddServices(std::move(svc));
   AddInfoDir(&builder);
 
@@ -365,7 +364,9 @@ void JobHolder::CreateApplicationWithRunner(
   // Note that this must be the last |builder| step adding entries to the
   // namespace so that we can filter out entries already added in previous
   // steps.
+  // HACK(alhaad): We add deprecated default directories after this.
   builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
+  builder.AddDeprecatedDefaultDirectories();
 
   auto startup_info = ApplicationStartupInfo::New();
   startup_info->launch_info = std::move(launch_info);
@@ -391,9 +392,6 @@ void JobHolder::CreateApplicationWithProcess(
     return;
 
   NamespaceBuilder builder;
-  // TODO(abarth): Remove this call to AddDeprecatedDefaultDirectories once
-  // every application has a proper sandbox configuration.
-  builder.AddDeprecatedDefaultDirectories();
   builder.AddServices(std::move(svc));
   AddInfoDir(&builder);
 
@@ -401,7 +399,11 @@ void JobHolder::CreateApplicationWithProcess(
   // Note that this must be the last |builder| step adding entries to the
   // namespace so that we can filter out entries already added in previous
   // steps.
+  // HACK(alhaad): We add deprecated default directories after this.
   builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
+  // TODO(abarth): Remove this call to AddDeprecatedDefaultDirectories once
+  // every application has a proper sandbox configuration.
+  builder.AddDeprecatedDefaultDirectories();
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());

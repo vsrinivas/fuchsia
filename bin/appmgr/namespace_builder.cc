@@ -107,9 +107,9 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
 
 void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   // TODO(abarth): Remove items from this list as clients no longer need them.
-  PushDirectoryFromPath("/data");
-  PushDirectoryFromPath("/system");
-  PushDirectoryFromPath("/tmp");
+  PushDirectoryFromPathIfNotPresent("/data");
+  PushDirectoryFromPathIfNotPresent("/system");
+  PushDirectoryFromPathIfNotPresent("/tmp");
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
@@ -129,6 +129,12 @@ void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path,
     return;
   }
   PushDirectoryFromChannel(std::move(dst_path), std::move(handle));
+}
+
+void NamespaceBuilder::PushDirectoryFromPathIfNotPresent(std::string path) {
+  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
+    return;
+  PushDirectoryFromPathAs(path, path);
 }
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path,
