@@ -185,24 +185,25 @@ zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree) {
     zx_status_t status = parent->Create(&vn, fbl::StringPiece(name), S_IFDIR);
     if (status != ZX_OK)
         return status;
-    zx_handle_t h = vfs_create_root_handle(subtree);
-    // TODO(abarth): vfs_create_root_handle can fail but has no way to report
-    // its failures now that zx_handle_t is unsigned.
+    zx_handle_t h;
+    status = vfs_create_root_handle(subtree, &h);
+    if (status != ZX_OK)
+        return status;
     return parent->vfs()->InstallRemote(fbl::move(vn), fs::MountChannel(h));
 }
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
-zx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
-    zx_status_t r;
+zx_status_t vfs_create_root_handle(VnodeMemfs* vn, zx_handle_t* out) {
     zx::channel h1, h2;
-    if ((r = zx::channel::create(0, &h1, &h2)) != ZX_OK) {
-        return r;
+    zx_status_t r = zx::channel::create(0, &h1, &h2);
+    if (r == ZX_OK) {
+        r = vn->vfs()->ServeDirectory(fbl::RefPtr<fs::Vnode>(vn),
+                                      fbl::move(h1));
     }
-    if ((r = vn->vfs()->ServeDirectory(fbl::RefPtr<fs::Vnode>(vn),
-                                       fbl::move(h1))) != ZX_OK) {
-        return r;
+    if (r == ZX_OK) {
+        *out = h2.release();
     }
-    return h2.release();
+    return r;
 }
 
 zx_status_t vfs_connect_root_handle(VnodeMemfs* vn, zx_handle_t h) {
@@ -215,8 +216,8 @@ void vfs_global_init(VnodeDir* root) {
 }
 
 // Return a RIO handle to the global root
-zx_handle_t vfs_create_global_root_handle() {
-    return vfs_create_root_handle(memfs::global_vfs_root);
+zx_status_t vfs_create_global_root_handle(zx_handle_t* out) {
+    return vfs_create_root_handle(memfs::global_vfs_root, out);
 }
 
 zx_status_t vfs_connect_global_root_handle(zx_handle_t h) {

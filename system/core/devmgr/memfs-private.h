@@ -34,9 +34,9 @@ __BEGIN_CDECLS
 void vfs_global_init(VnodeDir* root);
 
 // generate mxremoteio handles
-zx_handle_t vfs_create_global_root_handle(void);
+zx_status_t vfs_create_global_root_handle(zx_handle_t* out);
 zx_status_t vfs_connect_global_root_handle(zx_handle_t h);
-zx_handle_t vfs_create_root_handle(VnodeMemfs* vn);
+zx_status_t vfs_create_root_handle(VnodeMemfs* vn, zx_handle_t* out);
 zx_status_t vfs_connect_root_handle(VnodeMemfs* vn, zx_handle_t h);
 
 // device fs

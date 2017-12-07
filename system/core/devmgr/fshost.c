@@ -314,7 +314,11 @@ void fshost_start(void) {
 }
 
 zx_handle_t fs_root_clone(void) {
-    return vfs_create_global_root_handle();
+    zx_handle_t h;
+    zx_status_t status = vfs_create_global_root_handle(&h);
+    if (status != ZX_OK)
+        return ZX_HANDLE_INVALID;
+    return h;
 }
 
 zx_handle_t devmgr_load_file(const char* path) {
