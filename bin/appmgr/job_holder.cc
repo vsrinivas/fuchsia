@@ -467,23 +467,11 @@ void JobHolder::CreateApplicationFromArchive(
     }
 
     auto inner_package = ApplicationPackage::New();
-    inner_package->data = file_system->GetFileAsVMO(kAppPath).ToTransport();
     inner_package->resolved_url = package->resolved_url;
 
     auto startup_info = ApplicationStartupInfo::New();
     startup_info->launch_info = std::move(launch_info);
-    // NOTE: startup_info->flat_namespace is currently (7/2017) mostly ignored
-    // by all runners: https://fuchsia.atlassian.net/browse/US-313. They only
-    // extract /svc to expose to children through app::ApplicationContext.
-    // We would rather expose everything in |builder| as the effective global
-    // namespace for each child application.
-    auto flat_namespace = FlatNamespace::New();
-    flat_namespace->paths.resize(1);
-    flat_namespace->paths[0] = "/svc";
-    flat_namespace->directories.resize(1);
-    flat_namespace->directories[0] =
-        application_namespace->services().OpenAsDirectory();
-    startup_info->flat_namespace = std::move(flat_namespace);
+    startup_info->flat_namespace = builder.BuildForRunner();
 
     auto* runner = GetOrCreateRunner(runtime.runner());
     if (runner == nullptr) {
