@@ -22,7 +22,6 @@ group("platform_driver_nodeps") {
   }
   deps = [
     ":magma",
-    ":magma-dev",
     "tests:magma-test",
     "tests:magma-test-build-only",
   ]
@@ -30,6 +29,9 @@ group("platform_driver_nodeps") {
 
 package("magma") {
   system_image = true
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
 
   deps = []
   if (have_libvulkan) {
@@ -43,11 +45,18 @@ package("magma") {
         } ]
 
     if (build_intel_gen) {
-      deps += [ "$msd_intel_gen_build_root:msd_intel" ]
+      if (magma_enable_developer_build) {
+        deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
+        drivers = [ {
+              name = "libmsd_intel_test.so"
+            } ]
+      } else {
+        deps += [ "$msd_intel_gen_build_root:msd_intel" ]
+        drivers = [ {
+              name = "libmsd_intel.so"
+            } ]
+      }
 
-      drivers = [ {
-            name = "libmsd_intel.so"
-          } ]
       libraries += [ {
             name = "libvulkan_intel.so"
           } ]
@@ -77,68 +86,17 @@ package("magma") {
   }
 
   if (build_msd_arm_mali) {
-    deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
-    drivers = [ {
-          name = "libmsd_arm.so"
-        } ]
-  }
-}
-
-package("magma-dev") {
-  testonly = true
-  system_image = true
-
-  deps = []
-
-  if (have_libvulkan) {
-    deps += [
-      ":libmagma",
-      ":libvulkan",
-    ]
-
-    libraries = [ {
-          name = "libmagma.so"
-        } ]
-
-    if (build_intel_gen) {
-      deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
-
+    if (magma_enable_developer_build) {
+      deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
       drivers = [ {
-            name = "libmsd_intel_test.so"
+            name = "libmsd_arm_test.so"
           } ]
-      libraries += [ {
-            name = "libvulkan_intel.so"
-          } ]
-      resources = [ {
-            path = rebase_path("icd/intel_icd.json")
-            dest = "vulkan/icd.d/intel_icd.json"
+    } else {
+      deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+      drivers = [ {
+            name = "libmsd_arm.so"
           } ]
     }
-    if (build_libvulkan_arm_mali) {
-      libraries += [ {
-            name = "libvulkan_arm.so"
-          } ]
-      resources = [ {
-            path = rebase_path("icd/arm_icd.json")
-            dest = "vulkan/icd.d/arm_icd.json"
-          } ]
-    } else if (have_prebuilt_libvulkan_arm) {
-      libraries += [ {
-            source = "$libvulkan_gen_path/libvulkan_arm.so"
-            name = "libvulkan_arm.so"
-          } ]
-      resources = [ {
-            path = rebase_path("icd/arm_icd.json")
-            dest = "vulkan/icd.d/arm_icd.json"
-          } ]
-    }
-  }
-
-  if (build_msd_arm_mali) {
-    deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
-    drivers = [ {
-          name = "libmsd_arm_test.so"
-        } ]
   }
 }
 
