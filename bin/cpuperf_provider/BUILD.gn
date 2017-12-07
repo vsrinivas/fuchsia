@@ -21,6 +21,7 @@ executable("bin") {
       "importer.cc",
       "importer.h",
       "intel-pm-categories.inc",
+      "intel-timebase-categories.inc",
       "skylake-pm-categories.inc",
     ]
   }

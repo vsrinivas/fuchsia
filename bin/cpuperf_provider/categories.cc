@@ -79,6 +79,12 @@ static const CategorySpec kCategories[] = {
 #include "skylake-pm-categories.inc"
 };
 
+static const TimebaseSpec kTimebaseCategories[] = {
+#define DEF_TIMEBASE_CATEGORY(symbol, name, counter) \
+  { "cpu:" name, counter },
+#include "intel-timebase-categories.inc"
+};
+
 
 void TraceConfig::Reset() {
   is_enabled_ = false;
@@ -86,12 +92,11 @@ void TraceConfig::Reset() {
   trace_user_ = false;
   trace_pc_ = false;
   sample_rate_ = 0;
+  timebase_event_ = CPUPERF_EVENT_ID_NONE;
   selected_categories_.clear();
 }
 
-void TraceConfig::Update() {
-  Reset();
-
+bool TraceConfig::ProcessCategories() {
   // The default, if the user doesn't specify any categories, is that every
   // trace category is enabled. This doesn't work for us as the h/w doesn't
   // support enabling all counters at once. And event when multiplexing support
@@ -108,7 +113,7 @@ void TraceConfig::Update() {
   // Our default is to not trace anything: This is fairly specialized tracing
   // so we only provide it if the user explicitly requests it.
   if (is_default_case)
-    return;
+    return false;
 
   bool have_something = false;
   bool have_sample_rate = false;
@@ -134,7 +139,7 @@ void TraceConfig::Update() {
         case CategoryGroup::kSample:
           if (have_sample_rate) {
             FXL_LOG(ERROR) << "Only one sampling mode at a time is currenty supported";
-            return;
+            return false;
           }
           have_sample_rate = true;
           sample_rate_ = cat.id;
@@ -149,7 +154,7 @@ void TraceConfig::Update() {
           if (have_programmable_category) {
             // TODO(dje): Temporary limitation.
             FXL_LOG(ERROR) << "Only one programmable category at a time is currenty supported";
-            return;
+            return false;
           }
           have_programmable_category = true;
           have_something = true;
@@ -166,6 +171,39 @@ void TraceConfig::Update() {
   }
 
   is_enabled_ = have_something;
+  return true;
+}
+
+bool TraceConfig::ProcessTimebase() {
+  for (const auto& cat : kTimebaseCategories) {
+    if (trace_is_category_enabled(cat.name)) {
+      FXL_VLOG(1) << "Category " << cat.name << " enabled";
+      if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
+        FXL_LOG(ERROR) << "Timebase already specified";
+        return false;
+      }
+      if (sample_rate_ == 0) {
+        FXL_LOG(ERROR) << "Timebase cannot be used in tally mode";
+        return false;
+      }
+      timebase_event_ = cat.event;
+    }
+  }
+
+  return true;
+}
+
+void TraceConfig::Update() {
+  Reset();
+
+  if (ProcessCategories()) {
+    if (ProcessTimebase()) {
+      return;
+    }
+  }
+
+  // Some error occurred while parsing the selected categories.
+  Reset();
 }
 
 bool TraceConfig::Changed(const TraceConfig& old) const {
@@ -179,6 +217,8 @@ bool TraceConfig::Changed(const TraceConfig& old) const {
     return true;
   if (sample_rate_ != old.sample_rate_)
     return true;
+  if (timebase_event_ != old.timebase_event_)
+    return true;
   if (selected_categories_ != old.selected_categories_)
     return true;
   return false;
@@ -189,6 +229,14 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
   memset(cfg, 0, sizeof(*cfg));
 
   unsigned ctr = 0;
+
+  // If a timebase is requested, it is the first counter.
+  if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
+    const cpuperf::EventDetails* details;
+    FXL_CHECK(cpuperf::EventIdToEventDetails(timebase_event_, &details));
+    FXL_VLOG(2) << fxl::StringPrintf("Using timebase %s", details->name);
+    cfg->counters[ctr++] = timebase_event_;
+  }
 
   for (const auto& cat : selected_categories_) {
     const char* group_name;
@@ -229,6 +277,8 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
     flags |= CPUPERF_CONFIG_FLAG_USER;
   if (trace_pc_)
     flags |= CPUPERF_CONFIG_FLAG_PC;
+  if (timebase_event_ != CPUPERF_EVENT_ID_NONE)
+    flags |= CPUPERF_CONFIG_FLAG_TIMEBASE0;
 
   for (unsigned i = 0; i < num_used_counters; ++i) {
     cfg->rate[i] = sample_rate_;
@@ -243,6 +293,13 @@ std::string TraceConfig::ToString() const {
 
   if (!is_enabled_)
     return "disabled";
+
+  if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
+    const cpuperf::EventDetails* details;
+    FXL_CHECK(cpuperf::EventIdToEventDetails(timebase_event_, &details));
+    result += fxl::StringPrintf("Timebase 0x%x(%s)",
+                                timebase_event_, details->name);
+  }
 
   if (sample_rate_ > 0) {
     result += fxl::StringPrintf("@%u", sample_rate_);

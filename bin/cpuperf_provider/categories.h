@@ -52,6 +52,11 @@ struct CategorySpec {
   const cpuperf_event_id_t* events;
 };
 
+struct TimebaseSpec {
+  const char* name;
+  const cpuperf_event_id_t event;
+};
+
 // A data collection run is called a "trace".
 // This records the user-specified configuration of the trace.
 class TraceConfig final {
@@ -65,6 +70,8 @@ public:
   bool trace_pc() const { return trace_pc_; }
 
   uint32_t sample_rate() const { return sample_rate_; }
+
+  cpuperf_event_id_t timebase_event() const { return timebase_event_; }
 
   // Reset state so that nothing is traced.
   void Reset();
@@ -81,12 +88,16 @@ public:
   std::string ToString() const;
 
 private:
+  bool ProcessCategories();
+  bool ProcessTimebase();
+
   bool is_enabled_ = false;
 
   bool trace_os_ = false;
   bool trace_user_ = false;
   bool trace_pc_ = false;
   uint32_t sample_rate_ = 0;
+  cpuperf_event_id_t timebase_event_ = CPUPERF_EVENT_ID_NONE;
 
   // Set of selected fixed + programmable categories.
   std::unordered_set<const CategorySpec*> selected_categories_;  
