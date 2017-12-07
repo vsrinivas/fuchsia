@@ -29,6 +29,8 @@ type Watcher struct {
 	failures map[string]struct{}
 }
 
+var logInterval = -60 * time.Second
+
 // NewWatcher initializes a new Watcher
 func NewWatcher(d *Daemon) *Watcher {
 	return &Watcher{
@@ -43,9 +45,20 @@ func NewWatcher(d *Daemon) *Watcher {
 	}
 }
 
+func printThrottle(msg string, previous time.Time) time.Time {
+	present := time.Now()
+	if present.Add(logInterval).After(previous) {
+		log.Printf(msg)
+		return present
+	} else {
+		return previous
+	}
+}
+
 // Watch watches path for new packages and path/blobs for new blobs to request.
 func (w *Watcher) Watch(path string) {
 	lastClear := time.Now()
+	errTime := time.Now().Add(logInterval)
 	for {
 		time.Sleep(w.pollDelay) // TODO(raggi): configurable polling rate
 
@@ -58,13 +71,15 @@ func (w *Watcher) Watch(path string) {
 
 		d, err := os.Open(path)
 		if err != nil {
-			log.Printf("unable to open %s: %s", path, err)
+			errTime = printThrottle(fmt.Sprintf("unable to open %s: %s", path, err),
+				errTime)
 			continue
 		}
 		names, err := d.Readdirnames(-1)
 		d.Close()
 		if err != nil {
-			log.Printf("unable to readdirnames %s: %s", path, err)
+			errTime = printThrottle(fmt.Sprintf("unable to readdirnames %s: %s", path, err),
+				errTime)
 			continue
 		}
 		for _, name := range names {
@@ -101,13 +116,15 @@ func (w *Watcher) Watch(path string) {
 
 		d, err = os.Open(filepath.Join(path, "blobs"))
 		if err != nil {
-			log.Printf("unable to open %s: %s", path, err)
+			errTime = printThrottle(fmt.Sprintf("unable to open %s: %s", path, err),
+				errTime)
 			continue
 		}
 		names, err = d.Readdirnames(-1)
 		d.Close()
 		if err != nil {
-			log.Printf("unable to readdirnames %s: %s", path, err)
+			errTime = printThrottle(fmt.Sprintf("unable to readdirnames %s: %s", path, err),
+				errTime)
 			continue
 		}
 		for _, name := range names {
