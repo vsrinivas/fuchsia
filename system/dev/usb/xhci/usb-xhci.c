@@ -171,7 +171,7 @@ static void xhci_shutdown(xhci_t* xhci) {
 }
 
 static zx_status_t xhci_suspend(void* ctx, uint32_t flags) {
-    zxlogf(INFO, "xhci_suspend %u\n", flags);
+    zxlogf(TRACE, "xhci_suspend %u\n", flags);
     xhci_t* xhci = ctx;
 
     // TODO(voydanoff) do different things based on the flags.
