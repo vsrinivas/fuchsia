@@ -4,6 +4,7 @@
 
 #include "peridot/lib/module_manifest_source/directory_source.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fdio/watcher.h>
@@ -52,6 +53,31 @@ bool ShouldIgnoreFile(const std::string& name) {
     return true;
   }
   return false;
+}
+
+void ReadDirectory(const std::string dir_path, WatcherState* state) {
+  auto dir = opendir(dir_path.c_str());
+  struct dirent* entry;
+  while ((entry = readdir(dir)) != NULL) {
+    std::string name_str{entry->d_name};
+    if (name_str == "." || name_str == "..") {
+      continue;
+    }
+    state->task_runner->PostTask(
+        [source = state->source, state, name_str = std::move(name_str)] {
+          // If the repository has gone out of scope, |state| either already
+          // did, or it will soon.
+          if (!source)
+            return;
+          state->on_new(name_str);
+        });
+  }
+
+  state->task_runner->PostTask([source = state->source, state] {
+    if (!source)
+      return;
+    state->on_idle();
+  });
 }
 
 zx_status_t WatcherHandler(const int dirfd,
@@ -169,9 +195,14 @@ void DirectoryModuleManifestSource::Watch(
         return;
       weak_this->OnRemoveFile(name, removed_fn);
     };
-    fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
-                         static_cast<void*>(state));
+    auto status = fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
+                                       static_cast<void*>(state));
     close(dirfd);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      // The filesystem that contains the directory doesn't support watching.
+      // Read through the files and return.
+      ReadDirectory(weak_this->dir_, state);
+    }
   });
 
   // We rely on the fact that the thread will kill itself eventually if either:
