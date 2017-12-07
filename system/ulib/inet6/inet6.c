@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
 #include <inet6/inet6.h>
+#include <zircon/misc/fnv1hash.h>
+#include <zircon/syscalls.h>
 
 #define REPORT_BAD_PACKETS 0
 
@@ -94,12 +98,35 @@ static mac_addr_t snm_mac_addr;
 static ip6_addr_t snm_ip6_addr;
 
 // cache for the last source addresses we've seen
-static mac_addr_t rx_mac_addr;
-static ip6_addr_t rx_ip6_addr;
+#define MAC_TBL_BUCKETS 256
+#define MAC_TBL_ENTRIES 5
+typedef struct ip6_to_mac {
+    zx_time_t last_used;  // A value of 0 indicates "unused"
+    ip6_addr_t ip6;
+    mac_addr_t mac;
+} ip6_to_mac_t;
+static ip6_to_mac_t mac_lookup_tbl[MAC_TBL_BUCKETS][MAC_TBL_ENTRIES];
+static mtx_t mac_cache_lock = MTX_INIT;
+
+// Clear all entries
+static void mac_cache_init(void) {
+    size_t bucket_ndx;
+    size_t entry_ndx;
+    mtx_lock(&mac_cache_lock);
+    for (bucket_ndx = 0; bucket_ndx < MAC_TBL_BUCKETS; bucket_ndx++) {
+        for (entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+            mac_lookup_tbl[bucket_ndx][entry_ndx].last_used = 0;
+        }
+    }
+    mtx_unlock(&mac_cache_lock);
+}
 
 void ip6_init(void* macaddr) {
     char tmp[IP6TOAMAX];
     mac_addr_t all;
+
+    // Clear our ip6 -> MAC address lookup table
+    mac_cache_init();
 
     // save our ethernet MAC and synthesize link layer addresses
     memcpy(&ll_mac_addr, macaddr, 6);
@@ -119,6 +146,37 @@ void ip6_init(void* macaddr) {
     printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
 }
 
+static uint8_t mac_cache_hash(const ip6_addr_t* ip) {
+    static_assert(MAC_TBL_BUCKETS == 256, "hash algorithms must be updated");
+    uint32_t hash = fnv1a32(ip, sizeof(*ip));
+    return ((hash >> 8) ^ hash) & 0xff;
+}
+
+// Find the MAC corresponding to a given IP6 address
+static int mac_cache_lookup(mac_addr_t* mac, const ip6_addr_t* ip) {
+    int result = -1;
+    uint8_t key = mac_cache_hash(ip);
+
+    mtx_lock(&mac_cache_lock);
+    for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+        ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
+
+        if (entry->last_used == 0) {
+            // All out of entries
+            break;
+        }
+
+        if (!memcmp(ip, &entry->ip6, sizeof(ip6_addr_t))) {
+            // Match!
+            memcpy(mac, &entry->mac, sizeof(*mac));
+            result = 0;
+            break;
+        }
+    }
+    mtx_unlock(&mac_cache_lock);
+    return result;
+}
+
 static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
     const uint8_t* ip = _ip->u8;
 
@@ -128,15 +186,7 @@ static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
         return 0;
     }
 
-    // Trying to send to the IP that we last received a packet from?
-    // Assume their mac address has not changed
-    if (ip6_addr_eq(_ip, &rx_ip6_addr)) {
-        memcpy(_mac, &rx_mac_addr, sizeof(rx_mac_addr));
-        return 0;
-    }
-
-    // We don't know how to find peers or routers yet, so give up...
-    return -1;
+    return mac_cache_lookup(_mac, _ip);
 }
 
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
@@ -381,6 +431,47 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     }
 }
 
+// If ip is not in cache already, add it. Otherwise, update its last access time.
+static void mac_cache_save(mac_addr_t* mac, ip6_addr_t* ip) {
+    uint8_t key = mac_cache_hash(ip);
+
+    mtx_lock(&mac_cache_lock);
+    ip6_to_mac_t* oldest_entry = &mac_lookup_tbl[key][0];
+    zx_time_t curr_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+
+    for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+        ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
+
+        if (entry->last_used == 0) {
+            // Unused entry -- fill it
+            oldest_entry = entry;
+            break;
+        }
+
+        if (!memcmp(ip, &entry->ip6, sizeof(ip6_addr_t))) {
+            // Match found
+            if (memcmp(mac, &entry->mac, sizeof(mac_addr_t))) {
+                // If mac has changed, update it
+                memcpy(&entry->mac, mac, sizeof(mac_addr_t));
+            }
+            entry->last_used = curr_time;
+            goto done;
+        }
+
+        if ((entry_ndx > 0) && (entry->last_used < oldest_entry->last_used)) {
+            oldest_entry = entry;
+        }
+    }
+
+    // No available entry found -- replace oldest
+    memcpy(&oldest_entry->mac, mac, sizeof(mac_addr_t));
+    memcpy(&oldest_entry->ip6, ip, sizeof(ip6_addr_t));
+    oldest_entry->last_used = curr_time;
+
+done:
+    mtx_unlock(&mac_cache_lock);
+}
+
 void eth_recv(void* _data, size_t len) {
     uint8_t* data = _data;
     ip6_hdr_t* ip;
@@ -423,8 +514,7 @@ void eth_recv(void* _data, size_t len) {
     }
 
     // stash the sender's info to simplify replies
-    memcpy(&rx_mac_addr, (uint8_t*)_data + 6, ETH_ADDR_LEN);
-    rx_ip6_addr = ip->src;
+    mac_cache_save((void*)_data + 6, &ip->src);
 
     switch (ip->next_header) {
     case HDR_ICMP6:
