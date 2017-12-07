@@ -5,12 +5,22 @@
 package netiface
 
 import (
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/google/netstack/tcpip"
 )
+
+func indexedByID(nics []*NIC) map[tcpip.NICID]*NIC {
+	res := make(map[tcpip.NICID]*NIC)
+	for _, v := range nics {
+		res[v.ID] = v
+	}
+
+	return res
+}
 
 func (n *NIC) setID(id tcpip.NICID) {
 	n.ID = id
@@ -73,13 +83,39 @@ func TestLoopbackBeforeAny(t *testing.T) {
 	n.setID(2)
 	nics = append(nics, n)
 
-	sort.Slice(nics, func(i, j int) bool {
-		return Less(nics[i], nics[j])
+	routes := make([]tcpip.Route, 0)
+	for i := 0; i < len(nics); i++ {
+		routes = append(routes, nics[i].Routes...)
+	}
+	sort.Slice(routes, func(i, j int) bool {
+		return Less(&routes[i], &routes[j], indexedByID(nics))
 	})
 
-	// NIC 2 should be before NIC 1.
-	if !(nics[0].ID == 2 && nics[1].ID == 1) {
-		t.Fatal("Loopback-if should be before any-dest-if")
+	expected := []tcpip.Route{
+		{
+			Destination: tcpip.Parse("127.0.0.1"),
+			Mask:        tcpip.Parse("255.255.255.255"),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Parse("::1"),
+			Mask:        tcpip.Address(strings.Repeat("\xff", 16)),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			NIC:         1,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			NIC:         1,
+		},
+	}
+
+	if !reflect.DeepEqual(expected, routes) {
+		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
 	}
 }
 
@@ -98,17 +134,46 @@ func TestGatewayBeforeAddr(t *testing.T) {
 	n.setGateway(tcpip.Parse("1.1.1.1"))
 	nics = append(nics, n)
 
-	sort.Slice(nics, func(i, j int) bool {
-		return Less(nics[i], nics[j])
+	routes := make([]tcpip.Route, 0)
+	for i := 0; i < len(nics); i++ {
+		routes = append(routes, nics[i].Routes...)
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		return Less(&routes[i], &routes[j], indexedByID(nics))
 	})
 
-	// NIC 2 should be before NIC 1.
-	if !(nics[0].ID == 2 && nics[1].ID == 1) {
-		t.Fatal("netif with gateway should be before netif with addr")
+	expected := []tcpip.Route{
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Gateway:     tcpip.Parse("1.1.1.1"),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			Gateway:     tcpip.Parse("1.1.1.1"),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			NIC:         1,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			NIC:         1,
+		},
+	}
+
+	if !reflect.DeepEqual(expected, routes) {
+		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
 	}
 }
 
-func TestAddr(t *testing.T) {
+func TestAddrBeforeAny(t *testing.T) {
 	nics := []*NIC{}
 
 	// Create NIC 1 for any destination.
@@ -122,17 +187,44 @@ func TestAddr(t *testing.T) {
 	n.setAddr(tcpip.Parse("1.2.3.4"))
 	nics = append(nics, n)
 
-	sort.Slice(nics, func(i, j int) bool {
-		return Less(nics[i], nics[j])
+	routes := make([]tcpip.Route, 0)
+	for i := 0; i < len(nics); i++ {
+		routes = append(routes, nics[i].Routes...)
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		return Less(&routes[i], &routes[j], indexedByID(nics))
 	})
 
-	// NIC 2 should be before NIC 1.
-	if !(nics[0].ID == 2 && nics[1].ID == 1) {
-		t.Fatal("netif with gateway should be before netif with addr")
+	expected := []tcpip.Route{
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			NIC:         1,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			NIC:         1,
+		},
+	}
+
+	if !reflect.DeepEqual(expected, routes) {
+		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
 	}
 }
 
-func TestID(t *testing.T) {
+func TestSortByIDAsFallback(t *testing.T) {
 	nics := []*NIC{}
 
 	// Create NIC 2 for any destination with an address.
@@ -147,12 +239,103 @@ func TestID(t *testing.T) {
 	n.setAddr(tcpip.Parse("::1"))
 	nics = append(nics, n)
 
-	sort.Slice(nics, func(i, j int) bool {
-		return Less(nics[i], nics[j])
+	routes := make([]tcpip.Route, 0)
+	for i := 0; i < len(nics); i++ {
+		routes = append(routes, nics[i].Routes...)
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		return Less(&routes[i], &routes[j], indexedByID(nics))
 	})
 
-	// NIC 1 should be before NIC 2.
-	if !(nics[0].ID == 1 && nics[1].ID == 2) {
-		t.Fatal("netif with smaller ID should be before the other")
+	expected := []tcpip.Route{
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			NIC:         1,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			NIC:         1,
+		},
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			NIC:         2,
+		},
+		{
+			Destination: tcpip.Parse("::"),
+			Mask:        tcpip.Parse("::"),
+			NIC:         2,
+		},
+	}
+
+	if !reflect.DeepEqual(expected, routes) {
+		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	}
+}
+
+func TestSpecificGatewayBeforeAnyGateway(t *testing.T) {
+	nics := []*NIC{
+		&NIC{
+			ID: 1,
+			Routes: []tcpip.Route{
+				{
+					Gateway: tcpip.Parse("192.168.42.1"),
+					NIC:     1,
+				},
+				{
+					Gateway: tcpip.Parse("::"),
+					NIC:     1,
+				},
+			},
+		},
+		&NIC{
+			ID: 2,
+			Routes: []tcpip.Route{
+				{
+					Gateway: tcpip.Parse("10.0.1.1"),
+					NIC:     2,
+				},
+				{
+					Gateway: tcpip.Parse("::"),
+					NIC:     2,
+				},
+			},
+		},
+	}
+
+	expected := []tcpip.Route{
+		{
+			Gateway: tcpip.Parse("192.168.42.1"),
+			NIC:     1,
+		},
+		{
+			Gateway: tcpip.Parse("10.0.1.1"),
+			NIC:     2,
+		},
+		{
+			Gateway: tcpip.Parse("::"),
+			NIC:     1,
+		},
+		{
+			Gateway: tcpip.Parse("::"),
+			NIC:     2,
+		},
+	}
+	routes := make([]tcpip.Route, 0)
+	for i := 0; i < len(nics); i++ {
+		routes = append(routes, nics[i].Routes...)
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		r := Less(&routes[i], &routes[j], indexedByID(nics))
+		t.Logf("Comparing:\n\t%+v\n\t%+v\n\tLess:%b", &routes[i], &routes[j], r)
+		return r
+	})
+
+	if !reflect.DeepEqual(expected, routes) {
+		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
 	}
 }

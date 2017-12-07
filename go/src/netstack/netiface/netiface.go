@@ -27,35 +27,32 @@ func isAny(a tcpip.Address) bool {
 	return true
 }
 
-func hasGateway(n *NIC) bool {
-	for _, r := range n.Routes {
-		if r.Gateway != "" {
-			return true
-		}
-	}
-	return false
+func hasGateway(r *tcpip.Route) bool {
+	return r.Gateway != ""
 }
 
-func Less(ni, nj *NIC) bool {
+func Less(ri, rj *tcpip.Route, nics map[tcpip.NICID]*NIC) bool {
+	ni, nj := nics[ri.NIC], nics[rj.NIC]
 	// If only one of them has a route for specific address (i.e. not a route
 	// for Any destination), that element should sort before the other.
-	// TODO: should also check routes[1:]?
-	ri, rj := ni.Routes, nj.Routes
-	if len(ri) > 0 && len(rj) > 0 {
-		if isAny(ri[0].Destination) != isAny(rj[0].Destination) {
-			return !isAny(ri[0].Destination)
-		}
+	if isAny(ri.Destination) != isAny(rj.Destination) {
+		return !isAny(ri.Destination)
 	}
 	// If only one of them has a gateway, that element should sort before
 	// the other.
-	if hasGateway(ni) != hasGateway(nj) {
-		return hasGateway(ni)
+	if hasGateway(ri) != hasGateway(rj) {
+		return hasGateway(ri)
 	}
-	// If only one them has an IP address, that element should sort before
-	// the other.
+	// If both have gateways and only one is for a specific address, that
+	// element should sort before the other.
+	if isAny(ri.Gateway) != isAny(rj.Gateway) {
+		return !isAny(ri.Gateway)
+	}
+	// If only one them has a NIC with an IP address, that element should sort
+	// before the other.
 	if (ni.Addr != "") != (nj.Addr != "") {
 		return ni.Addr != ""
 	}
-	// Otherwise, the element with a small nicid should sort before the other.
+	// Otherwise, sort them by the IDs of their NICs.
 	return ni.ID < nj.ID
 }

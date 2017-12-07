@@ -138,25 +138,23 @@ func (ns *netstack) flattenRouteTables() []tcpip.Route {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	ifss := make([]*ifState, 0, len(ns.ifStates))
+	routes := make([]tcpip.Route, 0)
+	nics := make(map[tcpip.NICID]*netiface.NIC)
 	for _, ifs := range ns.ifStates {
-		ifss = append(ifss, ifs)
+		routes = append(routes, ifs.nic.Routes...)
+		nics[ifs.nic.ID] = ifs.nic
 	}
-	sort.Slice(ifss, func(i, j int) bool {
-		return netiface.Less(ifss[i].nic, ifss[j].nic)
+	sort.Slice(routes, func(i, j int) bool {
+		return netiface.Less(&routes[i], &routes[j], nics)
 	})
 	if debug2 {
-		for i, ifs := range ifss {
+		for i, ifs := range ns.ifStates {
 			log.Printf("[%v] nicid: %v, addr: %v, routes: %v",
 				i, ifs.nic.ID, ifs.nic.Addr, ifs.nic.Routes)
 		}
 	}
 
-	routeTable := []tcpip.Route{}
-	for _, ifs := range ifss {
-		routeTable = append(routeTable, ifs.nic.Routes...)
-	}
-	return routeTable
+	return routes
 }
 
 func (ns *netstack) flattenDNSServers() []tcpip.Address {
