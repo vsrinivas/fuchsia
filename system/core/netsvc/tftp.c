@@ -7,11 +7,12 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <inet6/inet6.h>
-#include <tftp/tftp.h>
 #include <launchpad/launchpad.h>
+#include <tftp/tftp.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 
@@ -49,13 +50,13 @@ static char tftp_session_scratch[SCRATCHSZ];
 char tftp_out_scratch[SCRATCHSZ];
 
 static size_t last_msg_size = 0;
-static tftp_session *session = NULL;
+static tftp_session* session = NULL;
 static file_info_t file_info;
 static transport_info_t transport_info;
 
 zx_time_t tftp_next_timeout = ZX_TIME_INFINITE;
 
-void file_init(file_info_t *file_info) {
+void file_init(file_info_t* file_info) {
     file_info->is_write = true;
     file_info->filename[0] = '\0';
     file_info->netboot_file = NULL;
@@ -71,6 +72,21 @@ static ssize_t file_open_read(const char* filename, void* cookie) {
         return (ssize_t)file_size;
     }
     return TFTP_ERR_NOT_FOUND;
+}
+
+static int drain_pipe(void* arg) {
+    char buf[4096];
+    int fd = (uintptr_t)arg;
+
+    ssize_t sz;
+    while ((sz = read(fd, buf, sizeof(buf) - 1)) > 0) {
+        // ensure null termination
+        buf[sz] = '\0';
+        printf("%s", buf);
+    }
+
+    close(fd);
+    return sz;
 }
 
 static tftp_status file_open_write(const char* filename, size_t size,
@@ -97,15 +113,15 @@ static tftp_status file_open_write(const char* filename, size_t size,
         launchpad_load_from_file(lp, bin);
         if (!strcmp(filename + image_prefix_len, NB_FVM_HOST_FILENAME)) {
             printf("netsvc: Running FVM Paver\n");
-            const char* args[] = { bin, "install-fvm" };
+            const char* args[] = {bin, "install-fvm"};
             launchpad_set_args(lp, 2, args);
         } else if (!strcmp(filename + image_prefix_len, NB_EFI_HOST_FILENAME)) {
             printf("netsvc: Running EFI Paver\n");
-            const char* args[] = { bin, "install-efi" };
+            const char* args[] = {bin, "install-efi"};
             launchpad_set_args(lp, 2, args);
         } else if (!strcmp(filename + image_prefix_len, NB_KERNC_HOST_FILENAME)) {
             printf("netsvc: Running KERN-C Paver\n");
-            const char* args[] = { bin, "install-kernc" };
+            const char* args[] = {bin, "install-kernc"};
             launchpad_set_args(lp, 2, args);
         } else {
             fprintf(stderr, "netsvc: Unknown Paver\n");
@@ -118,10 +134,25 @@ static tftp_status file_open_write(const char* filename, size_t size,
             return TFTP_ERR_IO;
         }
         launchpad_transfer_fd(lp, fds[0], STDIN_FILENO);
+
+        int logfds[2];
+        if (pipe(logfds)) {
+            return TFTP_ERR_IO;
+        }
+        launchpad_transfer_fd(lp, logfds[1], STDERR_FILENO);
+
         if (launchpad_go(lp, &file_info->paver.process, NULL) != ZX_OK) {
             printf("netsvc: tftp couldn't launch paver\n");
             close(fds[1]);
+            close(logfds[0]);
             return TFTP_ERR_IO;
+        }
+
+        thrd_t log_thrd;
+        if ((thrd_create(&log_thrd, drain_pipe, (void*)(uintptr_t)logfds[0])) == thrd_success) {
+            thrd_detach(log_thrd);
+        } else {
+            close(logfds[0]);
         }
 
         file_info->type = paver;
@@ -175,7 +206,7 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
         return TFTP_NO_ERROR;
     } else {
         int write_result = netfile_offset_write(data, offset, *length);
-        if ((size_t) write_result == *length) {
+        if ((size_t)write_result == *length) {
             return TFTP_NO_ERROR;
         }
         if (write_result == -EBADF) {
@@ -241,7 +272,7 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     // Initialize transport interface
     memcpy(&transport_info.dest_addr, saddr, sizeof(ip6_addr_t));
     transport_info.dest_port = sport;
-    transport_info.timeout_ms = 1000;  // Reasonable default for now
+    transport_info.timeout_ms = 1000; // Reasonable default for now
     tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
     tftp_session_set_transport_interface(session, &transport_ifc);
 }
@@ -293,12 +324,12 @@ void tftp_recv(void* data, size_t len,
     last_msg_size = sizeof(tftp_out_scratch);
 
     char err_msg[128];
-    tftp_handler_opts handler_opts = { .inbuf = data,
-                                       .inbuf_sz = len,
-                                       .outbuf = tftp_out_scratch,
-                                       .outbuf_sz = &last_msg_size,
-                                       .err_msg = err_msg,
-                                       .err_msg_sz = sizeof(err_msg) };
+    tftp_handler_opts handler_opts = {.inbuf = data,
+                                      .inbuf_sz = len,
+                                      .outbuf = tftp_out_scratch,
+                                      .outbuf_sz = &last_msg_size,
+                                      .err_msg = err_msg,
+                                      .err_msg_sz = sizeof(err_msg)};
     tftp_status status = tftp_handle_msg(session, &transport_info, &file_info,
                                          &handler_opts);
     if (status < 0) {
