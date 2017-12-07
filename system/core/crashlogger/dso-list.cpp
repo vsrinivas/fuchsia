@@ -68,7 +68,7 @@ dsoinfo_t* dso_fetch_list(zx_handle_t h, const char* name) {
     dsoinfo_t* dsolist = nullptr;
     int iter = 0;
     while (lmap != 0) {
-        if (iter++ > 50) {
+        if (iter++ > 500) {
             print_error("dso_fetch_list detected too many entries, possible infinite loop");
             return nullptr;
         }
