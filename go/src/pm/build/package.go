@@ -12,7 +12,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strings"
+	"sync"
 
 	"golang.org/x/crypto/ed25519"
 
@@ -74,38 +77,71 @@ func Update(cfg *Config) error {
 	}
 
 	contentsPath := filepath.Join(metadir, "contents")
-	f, err := os.Create(contentsPath)
-	if err != nil {
+
+	// manifestLines is a channel containing unpacked manifest paths
+	var manifestLines = make(chan struct{ src, dest string }, len(manifest.Paths))
+	for dest, src := range manifest.Paths {
+		manifestLines <- struct{ src, dest string }{src, dest}
+	}
+	close(manifestLines)
+
+	// contentCollector receives "contents" lines to added to contentsPath
+	var contentCollector = make(chan string, len(manifest.Paths))
+	var errors = make(chan error)
+
+	// w is a group that is done when contentCollector is fully populated
+	var w sync.WaitGroup
+	for i := runtime.NumCPU(); i > 0; i-- {
+		w.Add(1)
+
+		go func() {
+			defer w.Done()
+
+			for in := range manifestLines {
+				var t merkle.Tree
+				cf, err := os.Open(in.src)
+				if err != nil {
+					errors <- fmt.Errorf("build.Update: open %s for %s: %s", in.src, in.dest, err)
+					return
+				}
+				_, err = t.ReadFrom(bufio.NewReader(cf))
+				cf.Close()
+				if err != nil {
+					errors <- err
+					return
+				}
+
+				contentCollector <- fmt.Sprintf("%s=%x", in.dest, t.Root())
+			}
+		}()
+	}
+
+	// done proxies the waitgroup completion so it is selectable
+	var done = make(chan struct{})
+	go func() {
+		w.Wait()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-done:
+		// if we're done, close contentCollector so we can iterate it's buffer
+		close(contentCollector)
+	case err := <-errors:
+		// exit on the first error
 		return err
 	}
-	defer f.Close()
 
-	var sortedDests = make([]string, 0, len(manifest.Paths))
-	for dest := range manifest.Content() {
-		sortedDests = append(sortedDests, dest)
+	var contentLines = []string{}
+	for line := range contentCollector {
+		contentLines = append(contentLines, line)
 	}
-	sort.Strings(sortedDests)
+	sort.Strings(contentLines)
 
-	for _, dest := range sortedDests {
-		var t merkle.Tree
-		cf, err := os.Open(manifest.Paths[dest])
-		if err != nil {
-			return fmt.Errorf("build.Update: open %s for %s: %s", manifest.Paths[dest], dest, err)
-		}
-		_, err = t.ReadFrom(bufio.NewReader(cf))
-		cf.Close()
-		if err != nil {
-			return err
-		}
-
-		// TODO(raggi): consider moving to %s\x00%x\x00\x00 or the like
-		_, err = fmt.Fprintf(f, "%s=%x\n", dest, t.Root())
-		if err != nil {
-			return err
-		}
-	}
 	manifest.Paths["meta/contents"] = contentsPath
-	return nil
+
+	return ioutil.WriteFile(contentsPath,
+		[]byte(strings.Join(contentLines, "\n")), os.ModePerm)
 }
 
 // Sign creates a pubkey and signature file in the meta directory of the given
