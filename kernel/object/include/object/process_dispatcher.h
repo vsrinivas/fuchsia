@@ -12,7 +12,6 @@
 #include <object/dispatcher.h>
 #include <object/futex_context.h>
 #include <object/handle.h>
-#include <object/handle_owner.h>
 #include <object/policy_manager.h>
 #include <object/thread_dispatcher.h>
 

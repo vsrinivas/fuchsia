@@ -13,7 +13,7 @@
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <fbl/auto_lock.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -687,8 +687,9 @@ static void DumpAddressSpace(const cmd_args* arg) {
 }
 
 static void DumpHandleTable() {
-    printf("outstanding handles: %zu\n", diagnostics::OutstandingHandles());
-    diagnostics::DumpHandleTableInfo();
+    printf("outstanding handles: %zu\n",
+           Handle::diagnostics::OutstandingHandles());
+    Handle::diagnostics::DumpTableInfo();
 }
 
 static size_t mwd_limit = 32 * 256;
@@ -701,7 +702,7 @@ static int hwd_thread(void* arg) {
     static size_t previous_handle_count = 0u;
 
     for (;;) {
-        auto handle_count = diagnostics::OutstandingHandles();
+        auto handle_count = Handle::diagnostics::OutstandingHandles();
         if (handle_count != previous_handle_count) {
             if (handle_count > hwd_limit) {
                 printf("HandleWatchdog! %zu handles outstanding (greater than limit %zu)\n",

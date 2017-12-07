@@ -11,8 +11,7 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
@@ -50,7 +49,7 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
 }
 
 HandleOwner RoDso::vmo_handle() const {
-    return HandleOwner(MakeHandle(vmo_, vmo_rights_));
+    return Handle::Make(vmo_, vmo_rights_);
 }
 
 // Map one segment from our VM object.

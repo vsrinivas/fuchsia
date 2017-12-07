@@ -16,8 +16,7 @@
 #include <vm/vm_object_physical.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
 #include <object/vm_object_dispatcher.h>
@@ -311,7 +310,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
         return result;
     }
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -488,7 +487,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_out_p
             return status;
         }
 
-        mmio_handle = HandleOwner(MakeHandle(fbl::move(dispatcher), rights));
+        mmio_handle = HandleOwner(Handle::Make(fbl::move(dispatcher), rights));
         if (!mmio_handle) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -579,7 +578,7 @@ zx_status_t sys_pci_get_config(zx_handle_t dev_handle, user_out_ptr<zx_pci_resou
         // Drivers are not granted access to write to their own config space. It is
         // restricted to the bus driver.
         rights &= ~ZX_RIGHT_WRITE;
-        mmio_handle = HandleOwner(MakeHandle(fbl::move(dispatcher), rights));
+        mmio_handle = HandleOwner(Handle::Make(fbl::move(dispatcher), rights));
         if (!mmio_handle) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -659,7 +658,7 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(fbl::move(interrupt_dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(interrupt_dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 

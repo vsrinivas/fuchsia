@@ -10,8 +10,7 @@
 
 #include <lib/ktrace.h>
 
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/timer_dispatcher.h>
 
@@ -39,7 +38,7 @@ zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_out_ptr<z
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 

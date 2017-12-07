@@ -20,8 +20,7 @@
 #include <lib/vdso.h>
 #include <lk/init.h>
 #include <object/channel_dispatcher.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
@@ -114,7 +113,7 @@ static zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
         if (readonly)
             rights &= ~ZX_RIGHT_WRITE;
         if (ptr)
-            *ptr = MakeHandle(fbl::move(dispatcher), rights);
+            *ptr = Handle::Make(fbl::move(dispatcher), rights).release();
     }
     return result;
 }
@@ -125,7 +124,7 @@ static zx_status_t get_job_handle(Handle** ptr) {
     zx_status_t result = JobDispatcher::Create(
         0u, GetRootJobDispatcher(), &dispatcher, &rights);
     if (result == ZX_OK)
-        *ptr = MakeHandle(fbl::move(dispatcher), rights);
+        *ptr = Handle::Make(fbl::move(dispatcher), rights).release();
     return result;
 }
 
@@ -134,7 +133,8 @@ static zx_status_t get_resource_handle(Handle** ptr) {
     fbl::RefPtr<ResourceDispatcher> root;
     zx_status_t result = ResourceDispatcher::Create(&root, &rights, ZX_RSRC_KIND_ROOT, 0, 0);
     if (result == ZX_OK)
-        *ptr = MakeHandle(fbl::RefPtr<Dispatcher>(root.get()), rights);
+        *ptr = Handle::Make(fbl::RefPtr<Dispatcher>(root.get()),
+                            rights).release();
     return result;
 }
 
@@ -153,7 +153,7 @@ static zx_status_t make_bootstrap_channel(
         zx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
         if (status != ZX_OK)
             return status;
-        user_channel_handle.reset(MakeHandle(fbl::move(mpd0), rights));
+        user_channel_handle = Handle::Make(fbl::move(mpd0), rights);
         kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
     }
 
@@ -342,12 +342,12 @@ static zx_status_t attempt_userboot() {
     if (status < 0)
         return status;
 
-    handles[BOOTSTRAP_PROC] = MakeHandle(proc_disp, rights);
+    handles[BOOTSTRAP_PROC] = Handle::Make(proc_disp, rights).release();
 
     auto proc = DownCastDispatcher<ProcessDispatcher>(&proc_disp);
     ASSERT(proc);
 
-    handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar, vmar_rights);
+    handles[BOOTSTRAP_VMAR_ROOT] = Handle::Make(vmar, vmar_rights).release();
 
     const VDso* vdso = VDso::Create();
     for (size_t i = BOOTSTRAP_VDSO; i <= BOOTSTRAP_VDSO_LAST_VARIANT; ++i) {
@@ -384,7 +384,7 @@ static zx_status_t attempt_userboot() {
         status = ThreadDispatcher::Create(proc, 0, "userboot", &ut_disp, &rights);
         if (status < 0)
             return status;
-        handles[BOOTSTRAP_THREAD] = MakeHandle(ut_disp, rights);
+        handles[BOOTSTRAP_THREAD] = Handle::Make(ut_disp, rights).release();
         thread = DownCastDispatcher<ThreadDispatcher>(&ut_disp);
     }
     DEBUG_ASSERT(thread);

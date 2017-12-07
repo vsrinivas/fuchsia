@@ -7,15 +7,15 @@
 #include <lib/vdso.h>
 #include <lib/vdso-constants.h>
 
-#include <kernel/cmdline.h>
-#include <vm/vm.h>
-#include <vm/pmm.h>
-#include <vm/vm_aspace.h>
-#include <vm/vm_object.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/type_support.h>
-#include <object/handles.h>
+#include <kernel/cmdline.h>
+#include <object/handle.h>
 #include <platform.h>
+#include <vm/pmm.h>
+#include <vm/vm.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 #include <zircon/types.h>
 
 #include "vdso-code.h"
@@ -265,8 +265,7 @@ HandleOwner VDso::vmo_handle(Variant variant) const {
         return RoDso::vmo_handle();
 
     DEBUG_ASSERT(!(vmo_rights() & ZX_RIGHT_WRITE));
-    return HandleOwner(MakeHandle(variant_vmo_[variant_index(variant)],
-                                  vmo_rights()));
+    return Handle::Make(variant_vmo_[variant_index(variant)], vmo_rights());
 }
 
 // Each vDSO variant VMO is made via a COW clone of the main/default vDSO

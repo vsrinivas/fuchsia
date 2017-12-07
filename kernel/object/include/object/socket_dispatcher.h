@@ -10,7 +10,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <object/dispatcher.h>
-#include <object/handle_owner.h>
+#include <object/handle.h>
 #include <object/mbuf.h>
 
 #include <zircon/types.h>

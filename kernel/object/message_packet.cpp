@@ -80,7 +80,7 @@ MessagePacket::~MessagePacket() {
     if (owns_handles_) {
         // Delete handles out-of-band to avoid the worst case recursive
         // destruction behavior.
-        ReapHandles(handles_, num_handles_);
+        HandleReaper::Reap(handles_, num_handles_);
     }
 }
 

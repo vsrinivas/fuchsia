@@ -16,8 +16,7 @@
 #include <zircon/types.h>
 
 #include <object/diagnostics.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
@@ -536,7 +535,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 return status;
 
             zx_info_handle_count_t info = {
-                .handle_count = GetHandleCount(fbl::move(dispatcher))
+                .handle_count = Handle::Count(fbl::move(dispatcher))
             };
 
             return single_record_result(
@@ -757,7 +756,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
             return ZX_ERR_NOT_FOUND;
 
         HandleOwner process_h(
-            MakeHandle(fbl::RefPtr<Dispatcher>(process.get()), rights));
+            Handle::Make(fbl::RefPtr<Dispatcher>(process.get()), rights));
         if (!process_h)
             return ZX_ERR_NO_MEMORY;
 
@@ -788,7 +787,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
         auto thread = process->LookupThreadById(koid);
         if (!thread)
             return ZX_ERR_NOT_FOUND;
-        HandleOwner thread_h(MakeHandle(thread, rights));
+        HandleOwner thread_h(Handle::Make(thread, rights));
         if (!thread_h)
             return ZX_ERR_NO_MEMORY;
 
@@ -803,7 +802,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
     if (job) {
         auto child = job->LookupJobById(koid);
         if (child) {
-            HandleOwner child_h(MakeHandle(child, rights));
+            HandleOwner child_h(Handle::Make(child, rights));
             if (!child_h)
                 return ZX_ERR_NO_MEMORY;
 
@@ -815,7 +814,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
         }
         auto proc = job->LookupProcessById(koid);
         if (proc) {
-            HandleOwner child_h(MakeHandle(proc, rights));
+            HandleOwner child_h(Handle::Make(proc, rights));
             if (!child_h)
                 return ZX_ERR_NO_MEMORY;
 

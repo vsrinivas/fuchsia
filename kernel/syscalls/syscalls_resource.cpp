@@ -9,8 +9,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
 
@@ -64,7 +63,7 @@ zx_status_t sys_resource_create(zx_handle_t handle, uint32_t kind,
         return result;
 
     // Create a handle for the child
-    HandleOwner child_h(MakeHandle(fbl::RefPtr<Dispatcher>(child.get()), rights));
+    HandleOwner child_h(Handle::Make(fbl::RefPtr<Dispatcher>(child.get()), rights));
     if (!child_h)
         return ZX_ERR_NO_MEMORY;
 

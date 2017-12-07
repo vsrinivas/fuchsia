@@ -20,8 +20,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <object/event_dispatcher.h>
 #include <object/event_pair_dispatcher.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/log_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
@@ -108,7 +107,7 @@ zx_status_t sys_event_create(uint32_t options, user_out_ptr<zx_handle_t> event_o
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
@@ -139,11 +138,11 @@ zx_status_t sys_eventpair_create(uint32_t options,
     if (result != ZX_OK)
         return result;
 
-    HandleOwner h0(MakeHandle(fbl::move(epd0), rights));
+    HandleOwner h0(Handle::Make(fbl::move(epd0), rights));
     if (!h0)
         return ZX_ERR_NO_MEMORY;
 
-    HandleOwner h1(MakeHandle(fbl::move(epd1), rights));
+    HandleOwner h1(Handle::Make(fbl::move(epd1), rights));
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 
@@ -178,7 +177,7 @@ zx_status_t sys_log_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
     }
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 

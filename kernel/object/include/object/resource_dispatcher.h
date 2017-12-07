@@ -14,7 +14,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/name.h>
 #include <object/dispatcher.h>
-#include <object/handle_owner.h>
+#include <object/handle.h>
 #include <sys/types.h>
 
 class ResourceRecord;

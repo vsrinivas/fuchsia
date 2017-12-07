@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <object/handle_owner.h>
+#include <object/handle.h>
 #include <object/vm_object_dispatcher.h>
 
 // An RoDso object describes one DSO image built with the rodso.ld layout.

@@ -13,8 +13,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <object/fifo_dispatcher.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 
 #include <zircon/syscalls/policy.h>
@@ -39,10 +38,10 @@ zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle0(MakeHandle(fbl::move(dispatcher0), rights));
+    HandleOwner handle0(Handle::Make(fbl::move(dispatcher0), rights));
     if (!handle0)
         return ZX_ERR_NO_MEMORY;
-    HandleOwner handle1(MakeHandle(fbl::move(dispatcher1), rights));
+    HandleOwner handle1(Handle::Make(fbl::move(dispatcher1), rights));
     if (!handle1)
         return ZX_ERR_NO_MEMORY;
 

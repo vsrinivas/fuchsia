@@ -13,8 +13,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
@@ -66,7 +65,7 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
     uintptr_t base = new_vmar->vmar()->base();
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(fbl::move(new_vmar), new_rights));
+    HandleOwner handle(Handle::Make(fbl::move(new_vmar), new_rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 

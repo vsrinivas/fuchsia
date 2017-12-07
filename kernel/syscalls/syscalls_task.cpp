@@ -17,8 +17,7 @@
 
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
@@ -142,7 +141,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
-    HandleOwner handle(MakeHandle(fbl::move(thread_dispatcher), thread_rights));
+    HandleOwner handle(Handle::Make(fbl::move(thread_dispatcher), thread_rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
@@ -330,12 +329,12 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     arch_trace_process_create(koid, vmar_dispatcher->vmar()->aspace()->arch_aspace().arch_table_phys());
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner proc_h(MakeHandle(fbl::move(proc_dispatcher), proc_rights));
+    HandleOwner proc_h(Handle::Make(fbl::move(proc_dispatcher), proc_rights));
     if (!proc_h)
         return ZX_ERR_NO_MEMORY;
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner vmar_h(MakeHandle(fbl::move(vmar_dispatcher), vmar_rights));
+    HandleOwner vmar_h(Handle::Make(fbl::move(vmar_dispatcher), vmar_rights));
     if (!vmar_h)
         return ZX_ERR_NO_MEMORY;
 
@@ -608,7 +607,7 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_pt
     if (status != ZX_OK)
         return status;
 
-    HandleOwner job_handle(MakeHandle(fbl::move(job), rights));
+    HandleOwner job_handle(Handle::Make(fbl::move(job), rights));
     status = _out.copy_to_user(up->MapHandleToValue(job_handle));
     if (status != ZX_OK)
         return status;

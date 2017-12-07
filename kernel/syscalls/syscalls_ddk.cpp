@@ -18,8 +18,7 @@
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -60,7 +59,7 @@ zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t vector, uint32_t op
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
 
     auto up = ProcessDispatcher::GetCurrent();
     zx_handle_t hv = up->MapHandleToValue(handle);
@@ -154,7 +153,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
@@ -196,7 +195,7 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 

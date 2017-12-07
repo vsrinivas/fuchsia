@@ -13,8 +13,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
@@ -49,7 +48,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_ptr<zx_hand
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 
@@ -268,7 +267,7 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t offset,
     DEBUG_ASSERT((default_rights & rights) == rights);
 
     // create a handle and attach the dispatcher to it
-    HandleOwner clone_handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner clone_handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!clone_handle)
         return ZX_ERR_NO_MEMORY;
 

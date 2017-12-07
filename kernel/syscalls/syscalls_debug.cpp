@@ -17,7 +17,7 @@
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
 #include <lib/io.h>
-#include <object/handle_owner.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
 

@@ -14,8 +14,7 @@
 #include <trace.h>
 
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/socket_dispatcher.h>
 
@@ -43,11 +42,11 @@ zx_status_t sys_socket_create(uint32_t options, user_out_ptr<zx_handle_t> out0, 
     if (result != ZX_OK)
         return result;
 
-    HandleOwner h0(MakeHandle(fbl::move(socket0), rights));
+    HandleOwner h0(Handle::Make(fbl::move(socket0), rights));
     if (!h0)
         return ZX_ERR_NO_MEMORY;
 
-    HandleOwner h1(MakeHandle(fbl::move(socket1), rights));
+    HandleOwner h1(Handle::Make(fbl::move(socket1), rights));
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 

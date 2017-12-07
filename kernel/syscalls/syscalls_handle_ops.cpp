@@ -8,8 +8,7 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <fbl/auto_lock.h>
 
@@ -54,7 +53,7 @@ static zx_status_t handle_dup_replace(
             return ZX_ERR_INVALID_ARGS;
         }
 
-        HandleOwner dest(DupHandle(source, rights));
+        HandleOwner dest = Handle::Dup(source, rights);
         if (!dest)
             return ZX_ERR_NO_MEMORY;
 

@@ -9,8 +9,7 @@
 #include <trace.h>
 
 #include <lib/ktrace.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
@@ -47,7 +46,7 @@ zx_status_t sys_port_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
 

@@ -179,7 +179,7 @@ static void oom_lowmem(size_t shortfall_bytes) {
 }
 
 static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
-    HandleTableInit();
+    Handle::Init();
     root_job = JobDispatcher::CreateRootJob();
     policy_manager = PolicyManager::Create();
     PortDispatcher::Init();

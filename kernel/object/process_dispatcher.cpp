@@ -27,9 +27,8 @@
 
 #include <object/diagnostics.h>
 #include <object/futex_context.h>
-#include <object/handle_owner.h>
+#include <object/handle.h>
 #include <object/handle_reaper.h>
-#include <object/handles.h>
 #include <object/job_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
@@ -55,7 +54,7 @@ static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
 
 static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
     auto handle_id = (static_cast<uint32_t>(value) ^ mixer) >> 1;
-    return MapU32ToHandle(handle_id);
+    return Handle::FromU32(handle_id);
 }
 
 zx_status_t ProcessDispatcher::Create(
@@ -330,7 +329,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
             }
             // Delete handles out-of-band to avoid the worst case recursive
             // destruction behavior.
-            ReapHandles(&handles_);
+            HandleReaper::Reap(&handles_);
         }
         LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
 

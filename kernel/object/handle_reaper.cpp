@@ -12,50 +12,49 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <object/dispatcher.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
 
-static void ReaperRoutine(dpc_t* dpc);
-
-static fbl::Mutex reaper_mutex;
-static fbl::DoublyLinkedList<Handle*> reaper_handles TA_GUARDED(reaper_mutex);
-static dpc_t reaper_dpc = {
+fbl::Mutex HandleReaper::mutex;
+fbl::DoublyLinkedList<Handle*> HandleReaper::pending;
+dpc_t HandleReaper::dpc = {
     .node = LIST_INITIAL_CLEARED_VALUE,
-    .func = ReaperRoutine,
+    .func = &HandleReaper::ReaperRoutine,
     .arg = nullptr,
 };
 
-void ReapHandles(fbl::DoublyLinkedList<Handle*>* handles) {
+void HandleReaper::Reap(fbl::DoublyLinkedList<Handle*>* handles) {
     LTRACE_ENTRY;
-    fbl::AutoLock lock(&reaper_mutex);
-    reaper_handles.splice(reaper_handles.end(), *handles);
-    dpc_queue(&reaper_dpc, false);
+    fbl::AutoLock lock(&mutex);
+    pending.splice(pending.end(), *handles);
+    dpc_queue(&dpc, false);
+    LTRACE_EXIT;
 }
 
-void ReapHandles(Handle** handles, uint32_t num_handles) {
+void HandleReaper::Reap(Handle** handles, uint32_t num_handles) {
     LTRACE_ENTRY;
     fbl::DoublyLinkedList<Handle*> list;
     for (uint32_t i = 0; i < num_handles; i++)
         list.push_back(handles[i]);
-    ReapHandles(&list);
+    Reap(&list);
+    LTRACE_EXIT;
 }
 
-static void ReaperRoutine(dpc_t* dpc) {
+void HandleReaper::ReaperRoutine(dpc_t*) {
     LTRACE_ENTRY;
     fbl::DoublyLinkedList<Handle*> list;
     {
-        fbl::AutoLock lock(&reaper_mutex);
-        list.swap(reaper_handles);
+        fbl::AutoLock lock(&mutex);
+        list.swap(pending);
     }
     Handle* handle;
     while ((handle = list.pop_front()) != nullptr) {
         LTRACEF("Reaping handle of koid %" PRIu64 " of pid %" PRIu64 "\n",
                 handle->dispatcher()->get_koid(), handle->process_id());
         DEBUG_ASSERT(handle->process_id() == 0u);
-        DeleteHandle(handle);
+        handle->Delete();
     }
     LTRACE_EXIT;
-;
 }

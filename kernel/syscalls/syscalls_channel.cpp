@@ -11,8 +11,7 @@
 #include <lib/ktrace.h>
 
 #include <object/channel_dispatcher.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 #include <zircon/syscalls/policy.h>
@@ -49,11 +48,11 @@ zx_status_t sys_channel_create(
     uint64_t id0 = mpd0->get_koid();
     uint64_t id1 = mpd1->get_koid();
 
-    HandleOwner h0(MakeHandle(fbl::move(mpd0), rights));
+    HandleOwner h0(Handle::Make(fbl::move(mpd0), rights));
     if (!h0)
         return ZX_ERR_NO_MEMORY;
 
-    HandleOwner h1(MakeHandle(fbl::move(mpd1), rights));
+    HandleOwner h1(Handle::Make(fbl::move(mpd1), rights));
     if (!h1)
         return ZX_ERR_NO_MEMORY;
 

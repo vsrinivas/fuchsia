@@ -7,8 +7,7 @@
 #include <zircon/syscalls/hypervisor.h>
 
 #include <object/guest_dispatcher.h>
-#include <object/handle_owner.h>
-#include <object/handles.h>
+#include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
@@ -40,7 +39,7 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t
     if (status != ZX_OK)
         return status;
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
     status = out.copy_to_user(up->MapHandleToValue(handle));
@@ -108,7 +107,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     return ZX_ERR_NOT_SUPPORTED;
 #endif
 
-    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
+    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
     if (!handle)
         return ZX_ERR_NO_MEMORY;
     status = out.copy_to_user(up->MapHandleToValue(handle));
