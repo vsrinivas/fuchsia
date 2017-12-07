@@ -25,24 +25,24 @@ enum EventId {
 #include <zircon/device/cpu-trace/skylake-pm-events.inc>
 };
 
-#define DEF_FIXED_CATEGORY(symbol, id, name, counters...) \
+#define DEF_FIXED_CATEGORY(symbol, name, counters...) \
   static const cpuperf_event_id_t symbol ## _events[] = { counters };
-#define DEF_ARCH_CATEGORY(symbol, id, name, counters...) \
+#define DEF_ARCH_CATEGORY(symbol, name, counters...) \
   static const cpuperf_event_id_t symbol ## _events[] = { counters };
 #include "intel-pm-categories.inc"
 
-#define DEF_SKL_CATEGORY(symbol, id, name, counters...) \
+#define DEF_SKL_CATEGORY(symbol, name, counters...) \
   static const cpuperf_event_id_t symbol ## _events[] = { counters };
 #include "skylake-pm-categories.inc"
 
 static const CategorySpec kCategories[] = {
   // Options
   { "cpu:os",   CategoryGroup::kOption,
-    static_cast<CategoryId>(TraceOption::kOs), 0, nullptr },
+    static_cast<CategoryValue>(TraceOption::kOs), 0, nullptr },
   { "cpu:user", CategoryGroup::kOption,
-    static_cast<CategoryId>(TraceOption::kUser), 0, nullptr },
+    static_cast<CategoryValue>(TraceOption::kUser), 0, nullptr },
   { "cpu:pc",   CategoryGroup::kOption,
-    static_cast<CategoryId>(TraceOption::kPc), 0, nullptr },
+    static_cast<CategoryValue>(TraceOption::kPc), 0, nullptr },
 
   // Sampling rates.
   // Only one of the following is allowed.
@@ -60,21 +60,24 @@ static const CategorySpec kCategories[] = {
   DEF_SAMPLE("sample:1000000", 1000000),
 #undef DEF_SAMPLE
 
+  // TODO(dje): Reorganize fixed,arch,skl(model),misc vs
+  // fixed/programmable+arch/model.
+
   // Fixed events.
-#define DEF_FIXED_CATEGORY(symbol, id, name, counters...) \
-  { "cpu:" name, CategoryGroup::kFixedArch, id, \
+#define DEF_FIXED_CATEGORY(symbol, name, counters...) \
+  { "cpu:" name, CategoryGroup::kFixedArch, 0, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "intel-pm-categories.inc"
 
   // Architecturally specified programmable events.
-#define DEF_ARCH_CATEGORY(symbol, id, name, counters...) \
-  { "cpu:" name, CategoryGroup::kProgrammableArch, id, \
+#define DEF_ARCH_CATEGORY(symbol, name, counters...) \
+  { "cpu:" name, CategoryGroup::kProgrammableArch, 0, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "intel-pm-categories.inc"
 
   // Model-specific programmable events.
-#define DEF_SKL_CATEGORY(symbol, id, name, counters...) \
-  { "cpu:" name, CategoryGroup::kProgrammableModel, id, \
+#define DEF_SKL_CATEGORY(symbol, name, counters...) \
+  { "cpu:" name, CategoryGroup::kProgrammableModel, 0, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "skylake-pm-categories.inc"
 };
@@ -124,7 +127,7 @@ bool TraceConfig::ProcessCategories() {
       FXL_VLOG(1) << "Category " << cat.name << " enabled";
       switch (cat.group) {
         case CategoryGroup::kOption:
-          switch (static_cast<TraceOption>(cat.id)) {
+          switch (static_cast<TraceOption>(cat.value)) {
             case TraceOption::kOs:
               trace_os_ = true;
               break;
@@ -142,7 +145,7 @@ bool TraceConfig::ProcessCategories() {
             return false;
           }
           have_sample_rate = true;
-          sample_rate_ = cat.id;
+          sample_rate_ = cat.value;
           break;
         case CategoryGroup::kFixedArch:
         case CategoryGroup::kFixedModel:

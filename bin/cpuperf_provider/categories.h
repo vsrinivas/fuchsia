@@ -42,12 +42,13 @@ enum class CategoryGroup {
   kProgrammableModel,
 };
 
-using CategoryId = uint32_t;
+using CategoryValue = uint32_t;
 
 struct CategorySpec {
   const char* name;
   CategoryGroup group;
-  CategoryId id;
+  // This is only used by kOption and kSample.
+  CategoryValue value;
   size_t count;
   const cpuperf_event_id_t* events;
 };

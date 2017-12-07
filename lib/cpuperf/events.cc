@@ -54,13 +54,4 @@ bool EventIdToEventDetails(cpuperf_event_id_t id,
   return true;
 }
 
-cpuperf_event_id_t GetFixedCounterId(unsigned ctr) {
-  switch (ctr) {
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
-  case regnum: return CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_FIXED, id);
-#include <zircon/device/cpu-trace/intel-pm-events.inc>
-  default: return CPUPERF_EVENT_ID_NONE;
-  }
-}
-
 }  // namespace cpuperf

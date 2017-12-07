@@ -23,9 +23,6 @@ struct EventDetails {
 bool EventIdToEventDetails(cpuperf_event_id_t id,
                            const EventDetails** out_details);
 
-// Return the event id for fixed counter |ctr|.
-cpuperf_event_id_t GetFixedCounterId(unsigned ctr);
-
 }  // namespace cpuperf
 
 #endif  // GARNET_LIB_CPUPERF_EVENTS_H_
