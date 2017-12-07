@@ -606,21 +606,8 @@ static zx_status_t x86_ipm_verify_programmable_config(
     return ZX_OK;
 }
 
-// Stage the configuration for later activation by START.
-// One of the main goals of this function is to verify the provided config
-// is ok, e.g., it won't cause us to crash.
-zx_status_t x86_ipm_stage_config(const zx_x86_ipm_config_t* config) {
-    fbl::AutoLock al(&perfmon_lock);
-
-    if (!supports_perfmon)
-        return ZX_ERR_NOT_SUPPORTED;
-    if (atomic_load(&perfmon_active))
-        return ZX_ERR_BAD_STATE;
-    if (!perfmon_state)
-        return ZX_ERR_BAD_STATE;
-
-    auto state = perfmon_state.get();
-
+static zx_status_t x86_ipm_verify_config(const zx_x86_ipm_config_t* config,
+                                         PerfmonState* state) {
     auto status = x86_ipm_verify_control_config(config);
     if (status != ZX_OK)
         return status;
@@ -637,42 +624,80 @@ zx_status_t x86_ipm_stage_config(const zx_x86_ipm_config_t* config) {
         return status;
     state->num_used_programmable = num_used_programmable;
 
-    state->global_ctrl = config->global_ctrl;
-    static_assert(sizeof(state->events) == sizeof(config->programmable_events), "");
-    memcpy(state->events, config->programmable_events, sizeof(state->events));
-    state->fixed_ctrl = config->fixed_ctrl;
-    state->debug_ctrl = config->debug_ctrl;
+    return ZX_OK;
+}
 
-    static_assert(sizeof(state->programmable_initial_value) ==
-                  sizeof(config->programmable_initial_value), "");
-    memcpy(state->programmable_initial_value, config->programmable_initial_value,
-           sizeof(state->programmable_initial_value));
-    static_assert(sizeof(state->fixed_initial_value) ==
-                  sizeof(config->fixed_initial_value), "");
-    memcpy(state->fixed_initial_value, config->fixed_initial_value,
-           sizeof(state->fixed_initial_value));
-
-    static_assert(sizeof(state->programmable_flags) ==
-                  sizeof(config->programmable_flags), "");
-    memcpy(state->programmable_flags, config->programmable_flags,
-           sizeof(state->programmable_flags));
-    static_assert(sizeof(state->fixed_flags) ==
-                  sizeof(config->fixed_flags), "");
-    memcpy(state->fixed_flags, config->fixed_flags,
-           sizeof(state->fixed_flags));
-
-    static_assert(sizeof(state->programmable_ids) ==
-                  sizeof(config->programmable_ids), "");
-    memcpy(state->programmable_ids, config->programmable_ids,
-           sizeof(state->programmable_ids));
+static void x86_ipm_stage_fixed_config(const zx_x86_ipm_config_t* config,
+                                       PerfmonState* state) {
     static_assert(sizeof(state->fixed_ids) ==
                   sizeof(config->fixed_ids), "");
     memcpy(state->fixed_ids, config->fixed_ids,
            sizeof(state->fixed_ids));
 
+    static_assert(sizeof(state->fixed_initial_value) ==
+                  sizeof(config->fixed_initial_value), "");
+    memcpy(state->fixed_initial_value, config->fixed_initial_value,
+           sizeof(state->fixed_initial_value));
+
+    static_assert(sizeof(state->fixed_flags) ==
+                  sizeof(config->fixed_flags), "");
+    memcpy(state->fixed_flags, config->fixed_flags,
+           sizeof(state->fixed_flags));
+
     for (unsigned i = 0; i < countof(state->fixed_hw_map); ++i) {
         state->fixed_hw_map[i] = x86_perfmon_lookup_fixed_counter(config->fixed_ids[i]);
     }
+}
+
+static void x86_ipm_stage_programmable_config(const zx_x86_ipm_config_t* config,
+                                              PerfmonState* state) {
+    static_assert(sizeof(state->programmable_ids) ==
+                  sizeof(config->programmable_ids), "");
+    memcpy(state->programmable_ids, config->programmable_ids,
+           sizeof(state->programmable_ids));
+    static_assert(sizeof(state->programmable_initial_value) ==
+                  sizeof(config->programmable_initial_value), "");
+    memcpy(state->programmable_initial_value, config->programmable_initial_value,
+           sizeof(state->programmable_initial_value));
+
+    static_assert(sizeof(state->programmable_flags) ==
+                  sizeof(config->programmable_flags), "");
+    memcpy(state->programmable_flags, config->programmable_flags,
+           sizeof(state->programmable_flags));
+
+    static_assert(sizeof(state->events) ==
+                  sizeof(config->programmable_events), "");
+    memcpy(state->events, config->programmable_events, sizeof(state->events));
+}
+
+// Stage the configuration for later activation by START.
+// One of the main goals of this function is to verify the provided config
+// is ok, e.g., it won't cause us to crash.
+zx_status_t x86_ipm_stage_config(const zx_x86_ipm_config_t* config) {
+    fbl::AutoLock al(&perfmon_lock);
+
+    if (!supports_perfmon)
+        return ZX_ERR_NOT_SUPPORTED;
+    if (atomic_load(&perfmon_active))
+        return ZX_ERR_BAD_STATE;
+    if (!perfmon_state)
+        return ZX_ERR_BAD_STATE;
+
+    auto state = perfmon_state.get();
+
+    // Note: The verification pass may also alter |config| to make things
+    // simpler for the implementation.
+    auto status = x86_ipm_verify_config(config, state);
+    if (status != ZX_OK)
+        return status;
+
+    state->global_ctrl = config->global_ctrl;
+    state->fixed_ctrl = config->fixed_ctrl;
+    state->debug_ctrl = config->debug_ctrl;
+    state->timebase_id = config->timebase_id;
+
+    x86_ipm_stage_fixed_config(config, state);
+    x86_ipm_stage_programmable_config(config, state);
 
     return ZX_OK;
 }

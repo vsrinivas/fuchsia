@@ -366,6 +366,161 @@ static zx_status_t ipm_get_buffer_handle(cpu_trace_device_t* dev,
     return ZX_OK;
 }
 
+typedef struct {
+    // Note: This is the max for the current model, whereas
+    // IPM_MAX_*_COUNTERS is the max over all models.
+    unsigned max_num_fixed;
+    unsigned max_num_programmable;
+
+    // The number of counters in use.
+    unsigned num_fixed;
+    unsigned num_programmable;
+
+    // The maximum value the counter can have before overflowing.
+    uint64_t max_fixed_value;
+    uint64_t max_programmable_value;
+
+    // For catching duplicates of the fixed counters.
+    bool have_fixed[IPM_MAX_FIXED_COUNTERS];
+
+    bool have_timebase0_user;
+} staging_state_t;
+
+static zx_status_t ipm_stage_fixed_config(const cpuperf_config_t* icfg,
+                                          staging_state_t* ss,
+                                          unsigned input_index,
+                                          zx_x86_ipm_config_t* ocfg) {
+    const unsigned ii = input_index;
+    const cpuperf_event_id_t id = icfg->counters[ii];
+    bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
+    unsigned counter = ipm_fixed_counter_number(id);
+
+    if (counter == IPM_MAX_FIXED_COUNTERS ||
+            counter >= countof(ocfg->fixed_ids) ||
+            counter >= ss->max_num_fixed) {
+        zxlogf(ERROR, "%s: Invalid fixed counter [%u]\n", __func__, ii);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (ss->have_fixed[counter]) {
+        zxlogf(ERROR, "%s: Fixed counter [%u] already provided\n",
+               __func__, counter);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    ss->have_fixed[counter] = true;
+    ocfg->fixed_ids[ss->num_fixed] = id;
+    if ((uses_timebase0 && input_index != 0) || icfg->rate[ii] == 0) {
+        ocfg->fixed_initial_value[ss->num_fixed] = 0;
+    } else {
+        if (icfg->rate[ii] > ss->max_fixed_value) {
+            zxlogf(ERROR, "%s: Rate too large, counter [%u]\n",
+                   __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        ocfg->fixed_initial_value[ss->num_fixed] =
+            ss->max_fixed_value - icfg->rate[ii] + 1;
+    }
+    // KISS: For now don't generate PMI's for counters that use
+    // another as the timebase.
+    if (!uses_timebase0 || ii == 0)
+        ocfg->fixed_ctrl |= IA32_FIXED_CTR_CTRL_PMI_MASK(counter);
+    unsigned enable = 0;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_OS)
+        enable |= FIXED_CTR_ENABLE_OS;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_USER)
+        enable |= FIXED_CTR_ENABLE_USR;
+    ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(counter);
+    ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(counter);
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0)
+        ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_TIMEBASE;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_PC)
+        ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_PC;
+
+    ++ss->num_fixed;
+    return ZX_OK;
+}
+
+static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
+                                                 staging_state_t* ss,
+                                                 unsigned input_index,
+                                                 zx_x86_ipm_config_t* ocfg) {
+    const unsigned ii = input_index;
+    cpuperf_event_id_t id = icfg->counters[ii];
+    unsigned unit = CPUPERF_EVENT_ID_UNIT(id);
+    unsigned event = CPUPERF_EVENT_ID_EVENT(id);
+    bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
+
+    // TODO(dje): Verify no duplicates.
+    if (ss->num_programmable == ss->max_num_programmable) {
+        zxlogf(ERROR, "%s: Too many programmable counters provided\n",
+               __func__);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    ocfg->programmable_ids[ss->num_programmable] = id;
+    if ((uses_timebase0 && input_index != 0) || icfg->rate[ii] == 0) {
+        ocfg->programmable_initial_value[ss->num_programmable] = 0;
+    } else {
+        if (icfg->rate[ii] > ss->max_programmable_value) {
+            zxlogf(ERROR, "%s: Rate too large, counter [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        ocfg->programmable_initial_value[ss->num_programmable] =
+            ss->max_programmable_value - icfg->rate[ii] + 1;
+    }
+    const event_details_t* details = NULL;
+    switch (unit) {
+    case CPUPERF_UNIT_ARCH:
+        if (event >= countof(kArchEventMap)) {
+            zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        details = &kArchEvents[kArchEventMap[event]];
+        break;
+    case CPUPERF_UNIT_MODEL:
+        if (event >= countof(kModelEventMap)) {
+            zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        details = &kModelEvents[kModelEventMap[event]];
+        break;
+    default:
+        zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (details->event == 0 && details->umask == 0) {
+        zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    uint64_t evtsel = 0;
+    evtsel |= details->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
+    evtsel |= details->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_OS)
+        evtsel |= IA32_PERFEVTSEL_OS_MASK;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_USER)
+        evtsel |= IA32_PERFEVTSEL_USR_MASK;
+    if (details->flags & IPM_REG_FLAG_EDG)
+        evtsel |= IA32_PERFEVTSEL_E_MASK;
+    if (details->flags & IPM_REG_FLAG_ANYT)
+        evtsel |= IA32_PERFEVTSEL_ANY_MASK;
+    if (details->flags & IPM_REG_FLAG_INV)
+        evtsel |= IA32_PERFEVTSEL_INV_MASK;
+    evtsel |= (details->flags & IPM_REG_FLAG_CMSK_MASK) << IA32_PERFEVTSEL_CMASK_SHIFT;
+    // KISS: For now don't generate PMI's for counters that use
+    // another as the timebase. We still generate interrupts in
+    // "counting mode" in case the counter overflows.
+    if (!uses_timebase0 || ii == 0)
+        evtsel |= IA32_PERFEVTSEL_INT_MASK;
+    evtsel |= IA32_PERFEVTSEL_EN_MASK;
+    ocfg->programmable_events[ss->num_programmable] = evtsel;
+    ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(ss->num_programmable);
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0)
+        ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_TIMEBASE;
+    if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_PC)
+        ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_PC;
+
+    ++ss->num_programmable;
+    return ZX_OK;
+}
+
 static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
                                     const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
@@ -392,167 +547,69 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
 
     // Validate the config and convert it to our internal form.
     // TODO(dje): Multiplexing support.
-    const unsigned max_num_fixed = ipm_properties.num_fixed_counters;
-    const unsigned max_num_programmable = ipm_properties.num_programmable_counters;
-    unsigned num_fixed = 0;
-    unsigned num_programmable = 0;
 
-    const uint64_t max_fixed_value =
+    staging_state_t staging_state;
+    staging_state_t* ss = &staging_state;
+    ss->max_num_fixed = ipm_properties.num_fixed_counters;
+    ss->max_num_programmable = ipm_properties.num_programmable_counters;
+    ss->num_fixed = 0;
+    ss->num_programmable = 0;
+    ss->max_fixed_value =
         (ipm_properties.fixed_counter_width < 64
          ? (1ul << ipm_properties.fixed_counter_width) - 1
          : ~0ul);
-    const uint64_t max_programmable_value =
+    ss->max_programmable_value =
         (ipm_properties.programmable_counter_width < 64
          ? (1ul << ipm_properties.programmable_counter_width) - 1
          : ~0ul);
+    for (unsigned i = 0; i < countof(ss->have_fixed); ++i)
+        ss->have_fixed[i] = false;
+    ss->have_timebase0_user = false;
 
-    // For catching duplicates of the fixed counters.
-    bool have_fixed[max_num_fixed];
-    for (unsigned i = 0; i < max_num_fixed; ++i)
-        have_fixed[i] = false;
-
-    bool have_timebase0 = false;
-    unsigned i;
-    for (i = 0; i < countof(icfg->counters); ++i) {
-        cpuperf_event_id_t id = icfg->counters[i];
-        zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, i, id);
+    zx_status_t status;
+    unsigned ii;  // ii: input index
+    for (ii = 0; ii < countof(icfg->counters); ++ii) {
+        cpuperf_event_id_t id = icfg->counters[ii];
+        zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
         if (id == 0)
             break;
         unsigned unit = CPUPERF_EVENT_ID_UNIT(id);
-        unsigned event = CPUPERF_EVENT_ID_EVENT(id);
-        unsigned fixed = ipm_fixed_counter_number(id);
-        bool uses_timebase0 = !!(icfg->flags[i] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
 
-        if (fixed != IPM_MAX_FIXED_COUNTERS) {
-            assert(fixed < countof(ocfg->fixed_ids));
-            assert(fixed < max_num_fixed);
-            if (have_fixed[fixed]) {
-                zxlogf(ERROR, "%s: Fixed counter %d already provided\n",
-                       __func__, fixed);
-                return ZX_ERR_INVALID_ARGS;
-            }
-            have_fixed[fixed] = true;
-            ocfg->fixed_ids[num_fixed] = id;
-            if (uses_timebase0 || icfg->rate[i] == 0) {
-                ocfg->fixed_initial_value[num_fixed] = 0;
-            } else {
-                if (icfg->rate[i] > max_fixed_value) {
-                    zxlogf(ERROR, "%s: Rate too large, counter %u\n",
-                           __func__, i);
-                    return ZX_ERR_INVALID_ARGS;
-                }
-                ocfg->fixed_initial_value[num_fixed] =
-                    max_fixed_value - icfg->rate[i] + 1;
-            }
-            // KISS: For now don't generate PMI's for counters that use
-            // another as the timebase.
-            if (!uses_timebase0)
-                ocfg->fixed_ctrl |= IA32_FIXED_CTR_CTRL_PMI_MASK(fixed);
-            unsigned enable = 0;
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_OS)
-                enable |= FIXED_CTR_ENABLE_OS;
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_USER)
-                enable |= FIXED_CTR_ENABLE_USR;
-            ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(fixed);
-            ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(fixed);
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_TIMEBASE0)
-                ocfg->fixed_flags[num_fixed] |= IPM_CONFIG_FLAG_TIMEBASE;
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_PC)
-                ocfg->fixed_flags[num_fixed] |= IPM_CONFIG_FLAG_PC;
-            ++num_fixed;
-        } else {
-            // TODO(dje): Verify no duplicates.
-            if (num_programmable == max_num_programmable) {
-                zxlogf(ERROR, "%s: Too many programmable counters provided\n",
-                       __func__);
-                return ZX_ERR_INVALID_ARGS;
-            }
-            ocfg->programmable_ids[num_programmable] = id;
-            if (uses_timebase0 || icfg->rate[i] == 0) {
-                ocfg->programmable_initial_value[num_programmable] = 0;
-            } else {
-                if (icfg->rate[i] > max_programmable_value) {
-                    zxlogf(ERROR, "%s: Rate too large, counter %u\n",
-                           __func__, i);
-                    return ZX_ERR_INVALID_ARGS;
-                }
-                ocfg->programmable_initial_value[num_programmable] =
-                    max_programmable_value - icfg->rate[i] + 1;
-            }
-            const event_details_t* details = NULL;
-            switch (unit) {
-                case CPUPERF_UNIT_ARCH:
-                    if (event >= countof(kArchEventMap)) {
-                        zxlogf(ERROR, "%s: Invalid event id, counter %u\n",
-                               __func__, i);
-                        return ZX_ERR_INVALID_ARGS;
-                    }
-                    details = &kArchEvents[kArchEventMap[event]];
-                    break;
-                case CPUPERF_UNIT_MODEL:
-                    if (event >= countof(kModelEventMap)) {
-                        zxlogf(ERROR, "%s: Invalid event id, counter %u\n",
-                               __func__, i);
-                        return ZX_ERR_INVALID_ARGS;
-                    }
-                    details = &kModelEvents[kModelEventMap[event]];
-                    break;
-                default:
-                    zxlogf(ERROR, "%s: Invalid event id, counter %u\n",
-                           __func__, i);
-                    return ZX_ERR_INVALID_ARGS;
-            }
-            if (details->event == 0 && details->umask == 0) {
-                zxlogf(ERROR, "%s: Invalid event id, counter %u\n",
-                       __func__, i);
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint64_t evtsel = 0;
-            evtsel |= details->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
-            evtsel |= details->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_OS)
-                evtsel |= IA32_PERFEVTSEL_OS_MASK;
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_USER)
-                evtsel |= IA32_PERFEVTSEL_USR_MASK;
-            if (details->flags & IPM_REG_FLAG_EDG)
-                evtsel |= IA32_PERFEVTSEL_E_MASK;
-            if (details->flags & IPM_REG_FLAG_ANYT)
-                evtsel |= IA32_PERFEVTSEL_ANY_MASK;
-            if (details->flags & IPM_REG_FLAG_INV)
-                evtsel |= IA32_PERFEVTSEL_INV_MASK;
-            evtsel |= (details->flags & IPM_REG_FLAG_CMSK_MASK) << IA32_PERFEVTSEL_CMASK_SHIFT;
-            // KISS: For now don't generate PMI's for counters that use
-            // another as the timebase. We still generate interrupts in
-            // "counting mode" in case the counter overflows.
-            if (!uses_timebase0)
-                evtsel |= IA32_PERFEVTSEL_INT_MASK;
-            evtsel |= IA32_PERFEVTSEL_EN_MASK;
-            ocfg->programmable_events[num_programmable] = evtsel;
-            ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(num_programmable);
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_TIMEBASE0)
-                ocfg->programmable_flags[num_programmable] |= IPM_CONFIG_FLAG_TIMEBASE;
-            if (icfg->flags[i] & CPUPERF_CONFIG_FLAG_PC)
-                ocfg->programmable_flags[num_programmable] |= IPM_CONFIG_FLAG_PC;
-            ++num_programmable;
+        switch (unit) {
+        case CPUPERF_UNIT_FIXED:
+            status = ipm_stage_fixed_config(icfg, ss, ii, ocfg);
+            if (status != ZX_OK)
+                return status;
+            break;
+        case CPUPERF_UNIT_ARCH:
+        case CPUPERF_UNIT_MODEL:
+            status = ipm_stage_programmable_config(icfg, ss, ii, ocfg);
+            if (status != ZX_OK)
+                return status;
+            break;
+        default:
+            zxlogf(ERROR, "%s: Invalid counter [%u] (bad unit)\n",
+                   __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        if (uses_timebase0)
-            have_timebase0 = true;
+        if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0)
+            ss->have_timebase0_user = true;
     }
-    if (i == 0) {
+    if (ii == 0) {
         zxlogf(ERROR, "%s: No counters provided\n", __func__);
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Ensure there are no holes.
-    for (; i < countof(icfg->counters); ++i) {
-        if (icfg->counters[i] != 0) {
-            zxlogf(ERROR, "%s: Hole at counter %u\n", __func__, i);
+    for (; ii < countof(icfg->counters); ++ii) {
+        if (icfg->counters[ii] != 0) {
+            zxlogf(ERROR, "%s: Hole at counter [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
     }
 
-    if (have_timebase0) {
+    if (ss->have_timebase0_user) {
         ocfg->timebase_id = icfg->counters[0];
     }
 
