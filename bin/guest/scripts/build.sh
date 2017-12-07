@@ -39,10 +39,10 @@ shift $((OPTIND - 1))
 case "${1}" in
 arm64)
   ARCH="aarch64";
-  PLATFORM="zircon-hikey960-arm64";;
+  PLATFORM="hikey960";;
 x86)
   ARCH="x86-64";
-  PLATFORM="zircon-pc-x86-64";;
+  PLATFORM="x86";;
 *)
   usage;;
 esac

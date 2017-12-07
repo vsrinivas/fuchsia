@@ -37,7 +37,7 @@ shift $((OPTIND-1))
 case "${1}" in
 arm64)
   cd out/debug-aarch64;
-  PLATFORM="zircon-hikey960-arm64";
+  PLATFORM="hikey960";
   GUEST_BOOTDATA="\
     guest-mdi.bin
     guest-platform-id.bin";
@@ -55,7 +55,7 @@ arm64)
   IMAGE=${IMAGE:-/tmp/linux/arch/arm64/boot/Image};;
 x86)
   cd out/debug-x86-64;
-  PLATFORM="zircon-pc-x86-64";
+  PLATFORM="x86";
   IMAGE=${IMAGE:-/tmp/linux/arch/x86/boot/bzImage};;
 *)
   usage;;
