@@ -439,11 +439,10 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     // TODO remove when the gfxconsole moves to user space
     EnableBacklight(true);
     if (display_device_) {
-        zx_set_framebuffer(get_root_resource(),
-                           reinterpret_cast<void*>(display_device_->framebuffer()),
-                           static_cast<uint32_t>(display_device_->framebuffer_size()),
-                           display_device_->info().format, display_device_->info().width,
-                           display_device_->info().height, display_device_->info().stride);
+        zx_set_framebuffer_vmo(get_root_resource(), display_device_->framebuffer_vmo().get(),
+                               static_cast<uint32_t>(display_device_->framebuffer_size()),
+                               display_device_->info().format, display_device_->info().width,
+                               display_device_->info().height, display_device_->info().stride);
     }
 
     zxlogf(TRACE, "i915: initialization done\n");

@@ -34,7 +34,7 @@ public:
 
     bool Init();
 
-    uintptr_t framebuffer() const { return framebuffer_; }
+    const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
     const zx_display_info_t& info() const { return info_; }
     registers::Ddi ddi() const { return ddi_; }
