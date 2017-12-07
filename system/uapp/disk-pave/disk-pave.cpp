@@ -1117,6 +1117,7 @@ int fvm_clean() {
         }
         const uint8_t system_type[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
         const uint8_t data_type[GPT_GUID_LEN] = GUID_DATA_VALUE;
+        const uint8_t install_type[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
         const uint8_t blobfs_type[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
         const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
         const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
@@ -1129,6 +1130,8 @@ int fvm_clean() {
             LOG("Removing system partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, data_type, GPT_GUID_LEN)) {
             LOG("Removing data partition\n");
+        } else if (!memcmp(gpt->partitions[i]->type, install_type, GPT_GUID_LEN)) {
+            LOG("Removing install partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, blobfs_type, GPT_GUID_LEN)) {
             LOG("Removing blobstore partition\n");
         } else if (!memcmp(gpt->partitions[i]->type, fvm_type, GPT_GUID_LEN)) {

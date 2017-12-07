@@ -42,6 +42,15 @@ __BEGIN_CDECLS
     0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a \
 }
 
+// GUID for a installer partition
+#define GUID_INSTALL_STRING "48435546-4953-2041-494E-5354414C4C52"
+#define GUID_INSTALL_VALUE {                       \
+    0x46, 0x55, 0x43, 0x48,                        \
+    0x53, 0x49,                                    \
+    0x41, 0x20,                                    \
+    0x49, 0x4E, 0x53, 0x54, 0x41, 0x4C, 0x4C, 0x52 \
+}
+
 #define GUID_BLOBFS_STRING "2967380E-134C-4CBB-B6DA-17E7CE1CA45D"
 #define GUID_BLOBFS_VALUE {                        \
     0x0e, 0x38, 0x67, 0x29,                        \
@@ -91,6 +100,9 @@ bool gpt_is_sys_guid(uint8_t* guid, ssize_t len);
 
 // determines whether guid is data guid
 bool gpt_is_data_guid(uint8_t* guid, ssize_t len);
+
+// determines whether guid is install guid
+bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
 
 // determines whether guid is efi guid
 bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);

@@ -436,6 +436,7 @@ static bool expand_special(char* in, uint8_t* out) {
 
     static const uint8_t blobfs[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
     static const uint8_t data[GPT_GUID_LEN] = GUID_DATA_VALUE;
+    static const uint8_t install[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
     static const uint8_t system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
     static const uint8_t efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
@@ -449,6 +450,11 @@ static bool expand_special(char* in, uint8_t* out) {
 
     if (len == 4 && !strncmp("data", in, 4)) {
         memcpy(out, data, GPT_GUID_LEN);
+        return true;
+    }
+
+    if (len == 7 && !strncmp("install", in, 7)) {
+        memcpy(out, install, GPT_GUID_LEN);
         return true;
     }
 

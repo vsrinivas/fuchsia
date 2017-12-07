@@ -14,6 +14,7 @@
 __BEGIN_CDECLS
 
 #define PATH_DATA "/data"
+#define PATH_INSTALL "/install"
 #define PATH_SYSTEM "/system"
 #define PATH_BLOBSTORE "/blobstore"
 #define PATH_VOLUME "/volume"

@@ -80,6 +80,7 @@ static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
 }
 
 static bool data_mounted = false;
+static bool install_mounted = false;
 static bool blobstore_mounted = false;
 
 /*
@@ -145,6 +146,21 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             zx_status_t st = mount(fd, PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
                 printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_DATA, st);
+            }
+
+            return st;
+        } else if (gpt_is_install_guid(type_guid, read_sz)) {
+            if (install_mounted) {
+                return ZX_ERR_ALREADY_BOUND;
+            }
+            install_mounted = true;
+            options->readonly = true;
+            options->wait_until_ready = true;
+            options->create_mountpoint = true;
+
+            zx_status_t st = mount(fd, PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
+            if (st != ZX_OK) {
+                printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_INSTALL, st);
             }
 
             return st;
