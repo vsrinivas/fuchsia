@@ -1100,6 +1100,8 @@ void thread_secondary_cpu_entry(void) {
     mp_set_curr_cpu_active(true);
     mp_set_cpu_idle(cpu);
 
+    dpc_init_for_cpu();
+
     /* Exit from our bootstrap thread, and enter the scheduler on this cpu */
     thread_exit(0);
 }

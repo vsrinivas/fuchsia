@@ -6,6 +6,7 @@
 #pragma once
 
 #include <arch/ops.h>
+#include <kernel/event.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
@@ -38,6 +39,10 @@ struct percpu {
 
     /* kernel counters arena */
     uint64_t* counters;
+
+    /* dpc context */
+    list_node_t dpc_list;
+    event_t dpc_event;
 } __CPU_ALIGN;
 
 /* the kernel per-cpu structure */

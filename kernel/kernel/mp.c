@@ -20,6 +20,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
+#include <lib/dpc.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <stdlib.h>
@@ -331,6 +332,8 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
 
     /* Now that the CPU is no longer processing tasks, move all of its timers */
     timer_transition_off_cpu(cpu_id);
+    /* Move the CPU's DPCs to the current CPU. */
+    dpc_transition_off_cpu(cpu_id);
 
     status = platform_mp_cpu_unplug(cpu_id);
     if (status != ZX_OK) {

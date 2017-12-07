@@ -31,6 +31,9 @@ typedef struct dpc {
     .arg = 0, \
 }
 
+/* initializes dpc for the current cpu */
+void dpc_init_for_cpu(void);
+
 /* queue an already filled out dpc, optionally reschedule immediately to run the dpc thread */
 /* the deferred procedure runs in a dedicated thread that runs at DPC_THREAD_PRIORITY */
 zx_status_t dpc_queue(dpc_t *dpc, bool reschedule);
@@ -39,8 +42,7 @@ zx_status_t dpc_queue(dpc_t *dpc, bool reschedule);
 /* does not force a reschedule */
 zx_status_t dpc_queue_thread_locked(dpc_t *dpc);
 
-/* Cancels a previously queued dpc. Returns true if the the dpc was canceled */
-/* before it was scheduled to run. */
-bool dpc_cancel(dpc_t *dpc);
+/* Moves pending dpcs for the given CPU to the caller's CPU */
+void dpc_transition_off_cpu(uint cpu);
 
 __END_CDECLS
