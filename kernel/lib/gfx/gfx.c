@@ -477,7 +477,7 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
             dest += dest_stride_diff;
             src += source_stride_diff;
         }
-    } else if (source->format == ZX_PIXEL_FORMAT_RGB_x888 && target->format == ZX_PIXEL_FORMAT_RGB_x888) {
+    } else if (source->format == ZX_PIXEL_FORMAT_ARGB_8888 && target->format == ZX_PIXEL_FORMAT_ARGB_8888) {
         // both are 32 bit modes, both alpha
         const uint32_t *src = (const uint32_t *)source->ptr;
         uint32_t *dest = &((uint32_t *)target->ptr)[destx + desty * target->stride];
