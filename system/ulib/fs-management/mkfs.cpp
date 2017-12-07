@@ -34,14 +34,15 @@ static zx_status_t mkfs_mxfs(const char* binary, const char* devicepath,
     }
     n += status;
 
-    const char** argv = calloc(sizeof(char*), (2 + NUM_MKFS_OPTIONS));
-    size_t argc = 0;
+    const char** argv =
+            reinterpret_cast<const char**>(calloc(sizeof(char*), (2 + NUM_MKFS_OPTIONS)));
+    int argc = 0;
     argv[argc++] = binary;
     if (options->verbose) {
         argv[argc++] = "-v";
     }
     argv[argc++] = "mkfs";
-    status = cb(argc, argv, hnd, ids, n);
+    status = static_cast<zx_status_t>(cb(argc, argv, hnd, ids, n));
     free(argv);
     return status;
 }

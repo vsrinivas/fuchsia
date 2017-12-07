@@ -22,7 +22,7 @@ disk_format_t detect_disk_format(int fd) {
     uint8_t data[HEADER_SIZE];
     if (read(fd, data, sizeof(data)) != sizeof(data)) {
         fprintf(stderr, "Error reading block device\n");
-        return -1;
+        return DISK_FORMAT_UNKNOWN;
     }
 
     if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
@@ -109,7 +109,7 @@ static zx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         }
 
         size_t config_size = sizeof(mount_mkdir_config_t) + strlen(mp->path) + 1;
-        mount_mkdir_config_t* config = malloc(config_size);
+        mount_mkdir_config_t* config = reinterpret_cast<mount_mkdir_config_t*>(malloc(config_size));
         if (config == NULL) {
             close(fd);
             goto fail;
@@ -118,13 +118,13 @@ static zx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         config->flags = mp->flags;
         strcpy(config->name, mp->path);
         // Ioctl will close root for us if an error occurs
-        status = ioctl_vfs_mount_mkdir_fs(fd, config, config_size);
+        status = static_cast<zx_status_t>(ioctl_vfs_mount_mkdir_fs(fd, config, config_size));
         close(fd);
         free(config);
         return status;
     }
     // Ioctl will close root for us if an error occurs
-    return ioctl_vfs_mount_fs(mp->fd, &root);
+    return static_cast<zx_status_t>(ioctl_vfs_mount_fs(mp->fd, &root));
 fail:
     // We've entered a failure case where the filesystem process (which may or may not be alive)
     // had a *chance* to be spawned, but cannot be attached to a vnode (for whatever reason).
@@ -237,7 +237,7 @@ zx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
 
 zx_status_t fumount(int mountfd) {
     zx_handle_t h;
-    zx_status_t status = ioctl_vfs_unmount_node(mountfd, &h);
+    zx_status_t status = static_cast<zx_status_t>(ioctl_vfs_unmount_node(mountfd, &h));
     if (status < 0) {
         fprintf(stderr, "Could not unmount filesystem: %d\n", status);
     } else {

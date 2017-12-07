@@ -34,8 +34,9 @@ static zx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* optio
     }
     n += status;
 
-    const char** argv = calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS));
-    size_t argc = 0;
+    const char** argv =
+            reinterpret_cast<const char**>(calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS)));
+    int argc = 0;
     argv[argc++] = cmdpath;
     if (options->verbose) {
         argv[argc++] = "-v";
@@ -43,15 +44,16 @@ static zx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* optio
     // TODO(smklein): Add support for modify, force flags. Without them,
     // we have "always_modify=true" and "force=true" effectively on by default.
     argv[argc++] = "fsck";
-    status = cb(argc, argv, hnd, ids, n);
+    status = static_cast<zx_status_t>(cb(argc, argv, hnd, ids, n));
     free(argv);
     return status;
 }
 
 static zx_status_t fsck_fat(const char* devicepath, const fsck_options_t* options,
                             LaunchCallback cb) {
-    const char** argv = calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS));
-    size_t argc = 0;
+    const char** argv =
+            reinterpret_cast<const char**>(calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS)));
+    int argc = 0;
     argv[argc++] = "/boot/bin/fsck-msdosfs";
     if (options->never_modify) {
         argv[argc++] = "-n";
@@ -62,7 +64,7 @@ static zx_status_t fsck_fat(const char* devicepath, const fsck_options_t* option
         argv[argc++] = "-f";
     }
     argv[argc++] = devicepath;
-    zx_status_t status = cb(argc, argv, NULL, NULL, 0);
+    zx_status_t status = static_cast<zx_status_t>(cb(argc, argv, NULL, NULL, 0));
     free(argv);
     return status;
 }
