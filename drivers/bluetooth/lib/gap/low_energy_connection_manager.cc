@@ -444,19 +444,63 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
                                initial_params, result_cb, request_timeout_ms_);
 }
 
-std::pair<LowEnergyConnectionRefPtr, internal::LowEnergyConnection*>
-LowEnergyConnectionManager::InitializeConnection(
-    const std::string& device_identifier,
+LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
+    const std::string& device_id,
     std::unique_ptr<hci::Connection> link) {
-  FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
+  FXL_DCHECK(link);
 
+  // TODO(armansito): For now reject having more than one link with the same
+  // peer. This should change once this has more context on the local
+  // destination for remote initiated connections (see NET-321).
+  if (connections_.find(device_id) != connections_.end()) {
+    FXL_LOG(WARNING)
+        << "gap: Multiple connections from same device; closing link";
+    link->Close();
+    return nullptr;
+  }
+
+  // Add the connection to the L2CAP table. Incoming data will be buffered until
+  // the channels are open.
+  if (link->ll_type() == hci::Connection::LinkType::kLE) {
+    auto self = weak_ptr_factory_.GetWeakPtr();
+    auto conn_param_update_cb = [self, handle = link->handle(),
+                                 device_id](const auto& params) {
+      if (self) {
+        self->OnNewLEConnectionParams(device_id, handle, params);
+      }
+    };
+    l2cap_->RegisterLE(link->handle(), link->role(), conn_param_update_cb,
+                       task_runner_);
+  } else {
+    l2cap_->Register(link->handle(), link->ll_type(), link->role());
+  }
+
+  // Open fixed channels.
+  auto att = l2cap_->OpenFixedChannel(link->handle(), l2cap::kATTChannelId);
+  FXL_DCHECK(att);
+
+  // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
-      device_identifier, std::move(link), weak_ptr_factory_.GetWeakPtr());
+      device_id, std::move(link), weak_ptr_factory_.GetWeakPtr());
+  conn->InitializeGATT(gatt_registry_->database(), std::move(att));
 
-  auto result = std::make_pair(conn->AddRef(), conn.get());
+  auto first_ref = conn->AddRef();
+  connections_[device_id] = std::move(conn);
 
-  connections_[device_identifier] = std::move(conn);
-  return result;
+  // TODO(armansito): Listeners and pending request handlers should not be
+  // called yet since there are still a few more things to complete:
+  //    1. Initialize SMP bearer
+  //    2. If this is the first time we connected to this device:
+  //      a. Obtain LE remote features
+  //      b. If master, obtain Peripheral Preferred Connection Parameters via
+  //         GATT if available
+  //      c. Initiate name discovery over GATT if complete name is unknown
+  //      d. Initiate service discovery over GATT
+  //      e. If master, allow slave to initiate procedures (service discovery,
+  //         encryption setup, etc) for kLEConnectionPauseCentralMs before
+  //         updating the connection parameters to the slave's preferred values.
+
+  return first_ref;
 }
 
 LowEnergyConnectionRefPtr LowEnergyConnectionManager::AddConnectionRef(
@@ -494,71 +538,32 @@ void LowEnergyConnectionManager::CleanUpConnection(
 }
 
 void LowEnergyConnectionManager::OnConnectionCreated(
-    std::unique_ptr<hci::Connection> connection) {
-  FXL_DCHECK(connection);
-  FXL_DCHECK(connection->ll_type() == hci::Connection::LinkType::kLE);
+    std::unique_ptr<hci::Connection> link) {
+  FXL_DCHECK(link);
+  FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
   FXL_LOG(INFO) << "gap: LowEnergyConnectionManager: new connection: "
-                << connection->ToString();
+                << link->ToString();
 
-  RemoteDevice* peer =
-      device_cache_->FindDeviceByAddress(connection->peer_address());
+  RemoteDevice* peer = device_cache_->FindDeviceByAddress(link->peer_address());
   if (!peer) {
-    peer = device_cache_->NewDevice(connection->peer_address(), true);
+    peer = device_cache_->NewDevice(link->peer_address(), true);
   }
 
   peer->TryMakeNonTemporary();
-  peer->set_le_connection_params(connection->low_energy_parameters());
+  peer->set_le_connection_params(link->low_energy_parameters());
 
-  // Add the connection to the connection map and obtain the initial reference.
+  // Initialize the connection  and obtain the initial reference.
   // This reference lasts until this method returns to prevent it from dropping
   // to 0 due to an unclaimed reference while notifying pending callbacks and
   // listeners below.
-  auto conn_ptr = connection.get();
-  auto ref_state_pair =
-      InitializeConnection(peer->identifier(), std::move(connection));
+  auto first_ref = InitializeConnection(peer->identifier(), std::move(link));
 
-  LowEnergyConnectionRefPtr first_ref = std::move(ref_state_pair.first);
-  internal::LowEnergyConnection* conn = ref_state_pair.second;
+  // Abort if the connection was rejected.
+  if (!first_ref)
+    return;
 
-  FXL_DCHECK(first_ref);
-  FXL_DCHECK(conn);
-
-  // Add the connection to the L2CAP table. Incoming data will be buffered until
-  // the channels are open.
-  if (conn_ptr->ll_type() == hci::Connection::LinkType::kLE) {
-    auto self = weak_ptr_factory_.GetWeakPtr();
-    auto conn_param_update_cb = [self, handle = conn_ptr->handle(),
-                                 device_id =
-                                     peer->identifier()](const auto& params) {
-      if (self) {
-        self->OnNewLEConnectionParams(device_id, handle, params);
-      }
-    };
-    l2cap_->RegisterLE(conn_ptr->handle(), conn_ptr->role(),
-                       conn_param_update_cb, task_runner_);
-  } else {
-    l2cap_->Register(conn_ptr->handle(), conn_ptr->ll_type(), conn_ptr->role());
-  }
-
-  // TODO(armansito): Listeners and pending request handlers should not be
-  // called yet since there are still a few more things to complete:
-  //    1. Initialize SMP bearer
-  //    2. Initialize ATT bearer
-  //    3. If this is the first time we connected to this device:
-  //      a. Obtain LE remote features
-  //      b. If master, obtain Peripheral Preferred Connection Parameters via
-  //         GATT if available
-  //      c. Initiate name discovery over GATT if complete name is unknown
-  //      d. Initiate service discovery over GATT
-  //      e. If master, allow slave to initiate procedures (service discovery,
-  //         encryption setup, etc) for kLEConnectionPauseCentralMs before
-  //         updating the connection parameters to the slave's preferred values.
-
-  // Initialize GATT
-  auto att_chan =
-      l2cap_->OpenFixedChannel(conn_ptr->handle(), l2cap::kATTChannelId);
-  FXL_DCHECK(att_chan);
-  conn->InitializeGATT(gatt_registry_->database(), std::move(att_chan));
+  auto conn_iter = connections_.find(peer->identifier());
+  FXL_DCHECK(conn_iter != connections_.end());
 
   // For now, jump to the initialized state.
   peer->set_connection_state(RemoteDevice::ConnectionState::kConnected);
@@ -569,19 +574,14 @@ void LowEnergyConnectionManager::OnConnectionCreated(
     auto pending_req_data = std::move(iter->second);
     pending_requests_.erase(iter);
 
-    pending_req_data.NotifyCallbacks(hci::Status::kSuccess, [this, peer] {
-      auto new_ref = AddConnectionRef(peer->identifier());
-      FXL_CHECK(new_ref);
-      return new_ref;
+    pending_req_data.NotifyCallbacks(hci::Status::kSuccess, [&conn_iter] {
+      return conn_iter->second->AddRef();
     });
   }
 
   // Notify each listener with a unique reference.
   for (const auto& iter : listeners_) {
-    auto new_ref = AddConnectionRef(peer->identifier());
-    FXL_DCHECK(new_ref);
-
-    iter.second(std::move(new_ref));
+    iter.second(conn_iter->second->AddRef());
   }
 
   // Release the extra reference before attempting the next connection. This

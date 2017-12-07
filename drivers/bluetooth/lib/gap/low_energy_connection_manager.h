@@ -208,11 +208,12 @@ class LowEnergyConnectionManager final {
   // Initiates a connection attempt to |peer|.
   void RequestCreateConnection(RemoteDevice* peer);
 
-  // Initializes the connection state for the device with the given identifier
-  // and returns the initial reference.
-  std::pair<LowEnergyConnectionRefPtr, internal::LowEnergyConnection*>
-  InitializeConnection(const std::string& device_identifier,
-                       std::unique_ptr<hci::Connection> link);
+  // Initializes the connection to the peer with the given identifier and
+  // returns the initial reference to it. This method is responsible for setting
+  // up all data bearers.
+  LowEnergyConnectionRefPtr InitializeConnection(
+      const std::string& device_id,
+      std::unique_ptr<hci::Connection> link);
 
   // Adds a new connection reference to an existing connection to the device
   // with the ID |device_identifier| and returns it. Returns nullptr if
@@ -220,7 +221,7 @@ class LowEnergyConnectionManager final {
   LowEnergyConnectionRefPtr AddConnectionRef(
       const std::string& device_identifier);
 
-  // Cleans up a connection state. This result in a HCI_Disconnect command
+  // Cleans up a connection state. This results in a HCI_Disconnect command
   // if |close_link| is true, and notifies any referenced
   // LowEnergyConnectionRefs of the disconnection. Marks the corresponding
   // RemoteDeviceCache entry as disconnected and cleans up all data bearers.
