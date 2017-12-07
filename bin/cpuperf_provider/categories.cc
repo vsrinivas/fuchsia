@@ -62,19 +62,19 @@ static const CategorySpec kCategories[] = {
 
   // Fixed events.
 #define DEF_FIXED_CATEGORY(symbol, id, name, counters...) \
-  { "cpu:" name, CategoryGroup::kFixed, id, \
+  { "cpu:" name, CategoryGroup::kFixedArch, id, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "intel-pm-categories.inc"
 
   // Architecturally specified programmable events.
 #define DEF_ARCH_CATEGORY(symbol, id, name, counters...) \
-  { "cpu:" name, CategoryGroup::kArch, id, \
+  { "cpu:" name, CategoryGroup::kProgrammableArch, id, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "intel-pm-categories.inc"
 
   // Model-specific programmable events.
 #define DEF_SKL_CATEGORY(symbol, id, name, counters...) \
-  { "cpu:" name, CategoryGroup::kModel, id, \
+  { "cpu:" name, CategoryGroup::kProgrammableModel, id, \
     countof(symbol ## _events), &symbol ## _events[0] },
 #include "skylake-pm-categories.inc"
 };
@@ -139,13 +139,15 @@ void TraceConfig::Update() {
           have_sample_rate = true;
           sample_rate_ = cat.id;
           break;
-        case CategoryGroup::kFixed:
+        case CategoryGroup::kFixedArch:
+        case CategoryGroup::kFixedModel:
           selected_categories_.insert(&cat);
           have_something = true;
           break;
-        case CategoryGroup::kArch:
-        case CategoryGroup::kModel:
+        case CategoryGroup::kProgrammableArch:
+        case CategoryGroup::kProgrammableModel:
           if (have_programmable_category) {
+            // TODO(dje): Temporary limitation.
             FXL_LOG(ERROR) << "Only one programmable category at a time is currenty supported";
             return;
           }
@@ -189,34 +191,33 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
   unsigned ctr = 0;
 
   for (const auto& cat : selected_categories_) {
+    const char* group_name;
     switch (cat->group) {
-      case CategoryGroup::kFixed:
-        if (ctr < countof(cfg->counters)) {
-          FXL_VLOG(2) << fxl::StringPrintf("Adding fixed event id %u to trace",
-                                           cat->id);
-          cfg->counters[ctr++] = cpuperf::GetFixedCounterId(cat->id);
-        } else {
-          FXL_LOG(ERROR) << "Maximum number of counters exceeded";
-          return false;
-        }
+      case CategoryGroup::kFixedArch:
+        group_name = "fixed-arch";
         break;
-      case CategoryGroup::kArch:
-      case CategoryGroup::kModel:
-        for (size_t i = 0; i < cat->count; ++i) {
-          if (ctr < countof(cfg->counters)) {
-            const char* group =
-              cat->group == CategoryGroup::kArch ? "arch" : "model";
-            FXL_VLOG(2) << fxl::StringPrintf("Adding %s event id %u to trace",
-                                             group, cat->id);
-            cfg->counters[ctr++] = cat->events[i];
-          } else {
-            FXL_LOG(ERROR) << "Maximum number of counters exceeded";
-            return false;
-          }
-        }
+      case CategoryGroup::kFixedModel:
+        group_name = "fixed-model";
+        break;
+      case CategoryGroup::kProgrammableArch:
+        group_name = "programmable-arch";
+        break;
+      case CategoryGroup::kProgrammableModel:
+        group_name = "programmable-model";
         break;
       default:
         FXL_NOTREACHED();
+    }
+    for (size_t i = 0; i < cat->count; ++i) {
+      if (ctr < countof(cfg->counters)) {
+        cpuperf_event_id_t id = cat->events[i];
+        FXL_VLOG(2) << fxl::StringPrintf("Adding %s event id %u to trace",
+                                         group_name, id);
+        cfg->counters[ctr++] = id;
+      } else {
+        FXL_LOG(ERROR) << "Maximum number of counters exceeded";
+        return false;
+      }
     }
   }
   unsigned num_used_counters = ctr;

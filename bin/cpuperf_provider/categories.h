@@ -32,12 +32,14 @@ enum class CategoryGroup {
   kOption,
   // The sampling mode and frequency.
   kSample,
-  // Collection of architectural fixed-purpose events.
-  kFixed,
+  // Collection of architecturally defined fixed-purpose events.
+  kFixedArch,
   // Collection of architecturally defined programmable events.
-  kArch,
+  kProgrammableArch,
+  // Collection of model-specific fixed-purpose events.
+  kFixedModel,
   // Collection of model-specific programmable events.
-  kModel,
+  kProgrammableModel,
 };
 
 using CategoryId = uint32_t;
