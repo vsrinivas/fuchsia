@@ -12,22 +12,27 @@
 // - symbol
 // - id (10 bits, must be unique for each DEF_FIXED_EVENT entry)
 // - event number as known to hardware
-// - flags (IPM_FIXEDREG_FLAG_* values) (uint32_t) [at present there are none]
+// - flags (IPM_FIXED_REG_FLAG_* values) (uint32_t) [at present there are none]
 // - short name (ideally max 24 chars for legibility in display in chrome)
 // - description (if empty use "")
+//
+// Fixed counter id rule: They start at one and there are no holes (excepting
+// counters that get deprecated). The reason they start at one is to help
+// prevent code getting written that assumes id == regnum.
+// |regnum| must be < IPM_MAX_FIXED_COUNTERS.
 
 #ifndef DEF_FIXED_EVENT
 #define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) /* nothing */
 #endif
 
 DEF_FIXED_EVENT(FIXED_INSTRUCTIONS_RETIRED,
-  0, 0, 0,
+  1, 0, 0,
   "Instructions Retired",      "")
 DEF_FIXED_EVENT(FIXED_UNHALTED_CORE_CYCLES,
-  1, 1, 0,
+  2, 1, 0,
   "Unhalted Core Cycles",      "")
 DEF_FIXED_EVENT(FIXED_UNHALTED_REFERENCE_CYCLES,
-  2, 2, 0,
+  3, 2, 0,
   "Unhalted Reference Cycles", "")
 
 // Architectural performance counters
