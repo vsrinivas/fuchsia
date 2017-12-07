@@ -12,27 +12,46 @@
 
 class MockInterrupt : public magma::PlatformInterrupt {
 public:
-    void Signal() override { semaphore_->Signal(); }
-    bool Wait() override { return semaphore_->Wait(); }
-    void Complete() override { completed_count_++; }
+    void Signal() override { state_->semaphore->Signal(); }
+    bool Wait() override { return state_->semaphore->Wait(); }
+    void Complete() override { state_->completed_count++; }
 
-    uint32_t completed_count() { return completed_count_; }
+    uint32_t completed_count() { return state_->completed_count; }
 
-    std::unique_ptr<magma::PlatformSemaphore> semaphore_ = magma::PlatformSemaphore::Create();
-    uint32_t completed_count_{};
+    struct State {
+        std::unique_ptr<magma::PlatformSemaphore> semaphore = magma::PlatformSemaphore::Create();
+        uint32_t completed_count{};
+    };
+    std::shared_ptr<State> state_ = std::make_shared<State>();
+};
+
+class MockPlatformDevice : public magma::PlatformPciDevice {
+public:
+    void* GetDeviceHandle() override { return nullptr; }
+
+    std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt() override
+    {
+        auto interrupt = std::make_unique<MockInterrupt>();
+        state_ = interrupt->state_;
+        return interrupt;
+    }
+
+    std::shared_ptr<MockInterrupt::State> state_;
 };
 
 class TestInterruptManager : public InterruptManager::Owner {
 public:
     TestInterruptManager()
     {
+        platform_device_ = std::make_unique<MockPlatformDevice>();
+
         register_io_ =
             std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8 * 1024 * 1024)));
 
-        interrupt_manager_ = InterruptManager::Create(this, std::make_unique<MockInterrupt>());
+        interrupt_manager_ = InterruptManager::CreateCore(this);
     }
 
-    MockInterrupt* mock_interrupt() { return static_cast<MockInterrupt*>(interrupt_manager_->platform_interrupt()); }
+    MockInterrupt::State* mock_interrupt_state() { return platform_device_->state_.get(); }
 
     static constexpr uint32_t kRegisterStatus = 0x10;
 
@@ -66,13 +85,15 @@ public:
 
         auto start = std::chrono::high_resolution_clock::now();
         while (register_io_->Read32(registers::MasterInterruptControl::kOffset) != 0x80000000 &&
-            std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count() < 1000) {
+               std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() -
+                                                         start)
+                       .count() < 1000) {
             std::this_thread::yield();
         }
         EXPECT_EQ(register_io_->Read32(registers::MasterInterruptControl::kOffset), 0x80000000u);
 
         ASSERT_EQ(callback_count_, 0u);
-        mock_interrupt()->Signal();
+        mock_interrupt_state()->semaphore->Signal();
 
         start = std::chrono::high_resolution_clock::now();
         while (callback_count_ != 1 && std::chrono::duration<double, std::milli>(
@@ -81,7 +102,7 @@ public:
             std::this_thread::yield();
         }
         EXPECT_EQ(callback_count_, 1u);
-        EXPECT_EQ(mock_interrupt()->completed_count(), 1u);
+        EXPECT_EQ(mock_interrupt_state()->completed_count, 1u);
         EXPECT_EQ(register_io_->Read32(registers::MasterInterruptControl::kOffset), 0x80000000u);
     }
 
@@ -94,6 +115,9 @@ public:
 private:
     RegisterIo* register_io_for_interrupt() override { return register_io_.get(); }
 
+    magma::PlatformPciDevice* platform_device() override { return platform_device_.get(); }
+
+    std::unique_ptr<MockPlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<InterruptManager> interrupt_manager_;
     std::atomic_uint32_t callback_count_{};

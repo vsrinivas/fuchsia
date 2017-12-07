@@ -22,7 +22,7 @@
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
-#include "platform_pci_device.h"
+#include "msd_intel_pci_device.h"
 #include "platform_semaphore.h"
 #include "sequencer.h"
 
@@ -108,6 +108,11 @@ private:
     {
         DASSERT(register_io_);
         return register_io_.get();
+    }
+    magma::PlatformPciDevice* platform_device() override
+    {
+        DASSERT(platform_device_);
+        return platform_device_.get();
     }
 
     // EngineCommandStreamer::Owner
@@ -200,7 +205,7 @@ private:
 
     std::thread wait_thread_;
 
-    std::unique_ptr<magma::PlatformPciDevice> platform_device_;
+    std::unique_ptr<MsdIntelPciDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
     std::shared_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;

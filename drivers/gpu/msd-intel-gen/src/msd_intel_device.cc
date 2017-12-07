@@ -202,9 +202,9 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     DLOG("Init device_handle %p", device_handle);
 
-    platform_device_ = magma::PlatformPciDevice::Create(device_handle);
+    platform_device_ = MsdIntelPciDevice::Create(device_handle);
     if (!platform_device_)
-        return DRETF(false, "failed to create platform device");
+        return DRETF(false, "failed to create pci device");
 
     uint16_t pci_dev_id;
     if (!platform_device_->ReadPciConfig16(2, &pci_dev_id))
@@ -249,11 +249,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     QuerySliceInfo(&subslice_total_, &eu_total_);
     ReadDisplaySize();
 
-    auto platform_interrupt = platform_device_->RegisterInterrupt();
-    if (!platform_interrupt)
-        return DRETF(false, "failed to register interrupt");
-
-    interrupt_manager_ = InterruptManager::Create(this, std::move(platform_interrupt));
+    interrupt_manager_ = InterruptManager::CreateShim(this);
     if (!interrupt_manager_)
         return DRETF(false, "failed to create interrupt manager");
 

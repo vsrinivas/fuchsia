@@ -31,7 +31,7 @@ source_set("src") {
     "gpu_mapping_cache.h",
     "gtt.cc",
     "gtt.h",
-    "interrupt_manager.cc",
+    "interrupt_manager_shim.cc",
     "interrupt_manager.h",
     "modeset/displayport.cc",
     "modeset/displayport.h",
@@ -48,6 +48,8 @@ source_set("src") {
     "msd_intel_device_dump.cc",
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
+    "msd_intel_pci_device.cc",
+    "msd_intel_pci_device.h",
     "msd_intel_semaphore.cc",
     "pagetable.h",
     "ppgtt.cc",
@@ -61,6 +63,13 @@ source_set("src") {
     "scheduler.cc",
     "scheduler.h",
     "types.h",
+  ]
+
+  # 'Core' functionality contains everything replaced by
+  # the display driver.
+  sources += [
+    "core/interrupt_manager_core.cc",
+    "core/msd_intel_device_core.cc",
   ]
 
   deps = [
