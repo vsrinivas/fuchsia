@@ -240,7 +240,8 @@ class LowEnergyConnectionManager final {
   // Called by |connector_| to indicate the result of a connect request.
   void OnConnectResult(const std::string& device_identifier,
                        hci::LowEnergyConnector::Result result,
-                       hci::Status status);
+                       hci::Status status,
+                       hci::ConnectionPtr link);
 
   // Event handler for the HCI Disconnection Complete event.
   // TODO(armansito): This needs to be shared between the BR/EDR and LE

@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
@@ -44,15 +45,12 @@ class LowEnergyConnector {
   //     LowEnergyConnector is created.
   //
   //   - |delegate|: The delegate that will be notified when a new logical link
-  //     is established. This can be due to either an explicit request via
-  //     CreateConnection() (local host initiated), an incoming request (remote
-  //     initiated), or autonomously created using the controller white list
-  //     (local controller initiated).
-  using ConnectionDelegate =
-      std::function<void(std::unique_ptr<Connection> connection)>;
+  //     is established due to an incoming request (remote initiated).
+  using IncomingConnectionDelegate =
+      std::function<void(ConnectionPtr connection)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
                      fxl::RefPtr<fxl::TaskRunner> task_runner,
-                     const ConnectionDelegate& delegate);
+                     IncomingConnectionDelegate delegate);
 
   // Deleting an instance cancels any pending connection request.
   ~LowEnergyConnector();
@@ -68,9 +66,8 @@ class LowEnergyConnector {
   // determine which advertiser to connect to. Otherwise, the controller will
   // connect to |peer_address|.
   //
-  // |result_callback| is called asynchronously to notify the result of the
-  // operation. On success, the delegate will be notified with a new connection
-  // object.
+  // |result_callback| is called asynchronously to notify the status of the
+  // operation. A valid |link| will be provided on success.
   //
   // |timeout_ms| specifies a time period after which the request will time out.
   // When a request to create connection times out, |result_callback| will be
@@ -81,7 +78,8 @@ class LowEnergyConnector {
     kCanceled,
     kFailed,
   };
-  using ResultCallback = std::function<void(Result result, Status hci_status)>;
+  using ResultCallback =
+      std::function<void(Result result, Status hci_status, ConnectionPtr link)>;
   bool CreateConnection(
       LEOwnAddressType own_address_type,
       bool use_whitelist,
@@ -117,7 +115,9 @@ class LowEnergyConnector {
   void OnConnectionCompleteEvent(const EventPacket& event);
 
   // Called when a LE Create Connection request has completed.
-  void OnCreateConnectionComplete(Result result, Status hci_status);
+  void OnCreateConnectionComplete(Result result,
+                                  Status hci_status,
+                                  ConnectionPtr link);
 
   // Called when a LE Create Connection request has timed out.
   void OnCreateConnectionTimeout();
@@ -130,15 +130,15 @@ class LowEnergyConnector {
 
   // The delegate that gets notified when a new link layer connection gets
   // created.
-  ConnectionDelegate delegate_;
+  IncomingConnectionDelegate delegate_;
 
   // The currently pending request.
   common::Optional<PendingRequest> pending_request_;
 
-  // Callback that is invoked when a request to create connection times out. We
-  // do not rely on CommandChannel's timer since the request completes when we
-  // receive the HCI Command Status event.
-  fxl::CancelableClosure request_timeout_cb_;
+  // Task that runs when a request to create connection times out. We do not
+  // rely on CommandChannel's timer since that request completes when we receive
+  // the HCI Command Status event.
+  common::CancelableTask request_timeout_task_;
 
   // Our event handle ID for the LE Connection Complete event.
   CommandChannel::EventHandlerId event_handler_id_;

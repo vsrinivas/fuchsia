@@ -120,5 +120,7 @@ class Connection final {
   FXL_DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
+using ConnectionPtr = std::unique_ptr<Connection>;
+
 }  // namespace hci
 }  // namespace btlib

@@ -177,6 +177,8 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
   auto self = weak_ptr_factory_.GetWeakPtr();
   connector_ = std::make_unique<hci::LowEnergyConnector>(
       hci_, task_runner_, [self](auto conn) {
+        // TODO(armansito): Adapter should assign this delegate as
+        // LowEnergyAdvertiser.
         if (self)
           self->OnConnectionCreated(std::move(conn));
       });
@@ -429,10 +431,10 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
       hci::defaults::kLESupervisionTimeout);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto result_cb =
-      [ self, device_id = peer->identifier() ](auto result, auto status) {
+  auto result_cb = [self, device_id = peer->identifier()](
+                       auto result, auto status, auto link) {
     if (self)
-      self->OnConnectResult(device_id, result, status);
+      self->OnConnectResult(device_id, result, status, std::move(link));
   };
 
   // We set the scan window and interval to the same value for continuous
@@ -595,15 +597,14 @@ void LowEnergyConnectionManager::OnConnectionCreated(
 void LowEnergyConnectionManager::OnConnectResult(
     const std::string& device_identifier,
     hci::LowEnergyConnector::Result result,
-    hci::Status status) {
+    hci::Status status,
+    hci::ConnectionPtr link) {
   FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
 
   if (result == hci::LowEnergyConnector::Result::kSuccess) {
     FXL_VLOG(1)
         << "gap: LowEnergyConnectionManager: LE connection request successful";
-
-    // We'll complete the request when we obtain a Connection object in
-    // OnConnectionCreated().
+    OnConnectionCreated(std::move(link));
     return;
   }
 
