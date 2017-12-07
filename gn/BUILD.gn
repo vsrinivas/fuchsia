@@ -796,19 +796,21 @@ foreach(platform, zircon_platforms) {
     }
   }
 
-  # images/zedboot-${platform}.bin combines the kernel image itself with
-  # the BOOTDATA bits.  This single file can be booted by Gigaboot.
-  bootdata("zedboot-${platform}") {
-    output_name = "images/$target_name"
-    deps = [
-      ":zedboot-data-${platform}",
-    ]
-    kernel_build_dir = "//out/build-zircon/build-${platform}"
-    inputs = [
-      "$kernel_build_dir/zircon.bin",
-    ]
-    foreach(label, deps) {
-      inputs += get_target_outputs(label)
+  if (target_cpu == "x64") {
+    # images/zedboot-${platform}.bin combines the kernel image itself with
+    # the BOOTDATA bits.  This single file can be booted by Gigaboot.
+    bootdata("zedboot-${platform}") {
+      output_name = "images/$target_name"
+      deps = [
+        ":zedboot-data-${platform}",
+      ]
+      kernel_build_dir = "//out/build-zircon/build-${platform}"
+      inputs = [
+        "$kernel_build_dir/zircon.bin",
+      ]
+      foreach(label, deps) {
+        inputs += get_target_outputs(label)
+      }
     }
   }
 
@@ -841,28 +843,32 @@ foreach(platform, zircon_platforms) {
     ]
   }
 
-  # EFI ESP images.
-  esp("local-${platform}") {
-    if (always_zedboot) {
-      cmdline = "efi_zedboot_cmdline"
-    } else {
-      cmdline = "efi_local_cmdline"
+  if (target_cpu == "x64") {
+    # EFI ESP images.
+    esp("local-${platform}") {
+      if (always_zedboot) {
+        cmdline = "efi_zedboot_cmdline"
+      } else {
+        cmdline = "efi_local_cmdline"
+      }
+      zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
+      zedboot = ":zedboot-${platform}"
+      deps = [ ":bootdata-blobstore-${platform}" ]
     }
-    zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
-    zedboot = ":zedboot-${platform}"
-    deps = [ ":bootdata-blobstore-${platform}" ]
-  }
 
-  esp("zedboot-${platform}") {
-    cmdline = "efi_zedboot_cmdline"
-    zedboot = ":zedboot-${platform}"
+    esp("zedboot-${platform}") {
+      cmdline = "efi_zedboot_cmdline"
+      zedboot = ":zedboot-${platform}"
+    }
   }
 }
 
-group("zedboot") {
-  deps = []
-  foreach(platform, zircon_platforms) {
-    deps += [ ":zedboot-${platform}" ]
+if (target_cpu == "x64") {
+  group("zedboot") {
+    deps = []
+    foreach(platform, zircon_platforms) {
+      deps += [ ":zedboot-${platform}" ]
+    }
   }
 }
 
