@@ -21,6 +21,7 @@ source_set("sync") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
+    "//peridot/lib/firebase_auth/test",
   ]
 
   public_deps = [

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
 
 namespace test {
 

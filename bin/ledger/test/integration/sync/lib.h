@@ -16,10 +16,10 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/get_ledger.h"
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
 
 namespace test {
 namespace integration {

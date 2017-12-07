@@ -22,8 +22,6 @@ source_set("lib") {
     "cloud_provider_firebase_factory.h",
     "data_generator.cc",
     "data_generator.h",
-    "fake_token_provider.cc",
-    "fake_token_provider.h",
     "get_ledger.cc",
     "get_ledger.h",
     "test_with_coroutines.cc",
@@ -53,6 +51,7 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
+    "//peridot/lib/firebase_auth/test",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

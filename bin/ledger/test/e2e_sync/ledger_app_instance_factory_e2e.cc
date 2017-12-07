@@ -17,9 +17,9 @@
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/cloud_provider_firebase_factory.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/lib/callback/synchronous_task.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
 
 namespace test {
 namespace {

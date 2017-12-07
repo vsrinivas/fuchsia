@@ -11,6 +11,8 @@ source_set("test") {
   testonly = true
 
   sources = [
+    "fake_token_provider.cc",
+    "fake_token_provider.h",
     "test_firebase_auth.cc",
     "test_firebase_auth.h",
     "test_token_provider.cc",
