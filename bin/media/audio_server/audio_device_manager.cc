@@ -103,7 +103,17 @@ MediaResult AudioDeviceManager::AddDevice(
   }
 
   if (device->plugged()) {
-    OnDevicePlugged(device);
+    // TODO(johngro): Remove this gross kludge when routing decisions move up to
+    // the policy layer (where they belong).  Right now, OnDevicePlugged will
+    // not bother to re-route if it things that there has been no actual plug
+    // state change (for example, if there was a spurious plug state change sent
+    // by a driver or something).  To work around this, if a device came into
+    // being in the already-plugged-state, we force it into the unplugged state
+    // before calling OnDevicePlugged, just to make sure that OnDevicePlugged
+    // sees a plug state change.
+    zx_time_t plug_time = device->plug_time();
+    device->UpdatePlugState(false, plug_time);
+    OnDevicePlugged(device, plug_time);
   }
 
   return res;
@@ -118,9 +128,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   device->Unlink();
 
   if (device->in_object_list()) {
-    if (device->UpdatePlugState(false, device->plug_time())) {
-      OnDeviceUnplugged(device);
-    }
+    OnDeviceUnplugged(device, device->plug_time());
     device->Shutdown();
     devices_.erase(*device);
   }
@@ -131,12 +139,10 @@ void AudioDeviceManager::HandlePlugStateChange(
     bool plugged,
     zx_time_t plug_time) {
   FXL_DCHECK(device != nullptr);
-  if (device->UpdatePlugState(plugged, plug_time)) {
-    if (plugged) {
-      OnDevicePlugged(device);
-    } else {
-      OnDeviceUnplugged(device);
-    }
+  if (plugged) {
+    OnDevicePlugged(device, plug_time);
+  } else {
+    OnDeviceUnplugged(device, plug_time);
   }
 }
 
@@ -271,8 +277,18 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
 }
 
 void AudioDeviceManager::OnDeviceUnplugged(
-    const fbl::RefPtr<AudioDevice>& device) {
-  FXL_DCHECK(device && !device->plugged());
+    const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time) {
+  FXL_DCHECK(device);
+
+  // Start by checking to see if this device was the last plugged device (before
+  // we update the plug state).
+  bool was_last_plugged = FindLastPlugged(device->type()) == device;
+
+  // Update the plug state of the device.  If this was not an actual change in
+  // the plug state of the device, then we are done.
+  if (!device->UpdatePlugState(false, plug_time)) {
+    return;
+  }
 
   // This device was just unplugged.  Unlink it from everything it is currently
   // linked to.
@@ -283,6 +299,13 @@ void AudioDeviceManager::OnDeviceUnplugged(
   // output volume doubling, if non-default output removed during playback.
   // We should check whether an object is already attached, before linking to
   // the new target device.
+
+  // If the device which was unplugged was not the last plugged device in the
+  // system, then there has been no change in who was the last plugged device,
+  // and no updates to the routing state are needed.
+  if (!was_last_plugged) {
+    return;
+  }
 
   if (device->is_output()) {
     // This was an output.  If we are applying 'last plugged output' policy, go
@@ -319,8 +342,14 @@ void AudioDeviceManager::OnDeviceUnplugged(
 }
 
 void AudioDeviceManager::OnDevicePlugged(
-    const fbl::RefPtr<AudioDevice>& device) {
-  FXL_DCHECK(device && device->plugged());
+    const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time) {
+  FXL_DCHECK(device);
+
+  // Update the plug state of the device.  If this was not an actual change in
+  // the plug state of the device, then we are done.
+  if (!device->UpdatePlugState(true, plug_time)) {
+    return;
+  }
 
   if (device->is_output()) {
     // This new device is an output.  Go over our list of renderers and "do the
