@@ -1,0 +1,68 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("btintel_driver") {
+  output_name = "btintel"
+
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "firmware_loader.cpp",
+    "firmware_loader.h",
+    "logging.h",
+    "vendor_hci.cpp",
+    "vendor_hci.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "sync",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+copy("btintel-firmware") {
+  sources = [
+    "firmware/ibt-12-16.sfi",
+  ]
+  outputs = [
+    "$root_out_dir/firmware/ibt-12-16.sfi",
+  ]
+}
+
+package("btintel") {
+  system_image = true
+
+  deps = [
+    ":btintel_driver",
+
+    # The copy step has to be in the shared-library toolchain to use the
+    # expected output directory, since we treat firmware blobs as if they
+    # were libraries which always use the shared-library toolchain to build.
+    ":btintel-firmware($shlib_toolchain)",
+  ]
+
+  drivers = [ {
+        name = "btintel.so"
+      } ]
+
+  libraries = [ {
+        name = "firmware/ibt-12-16.sfi"
+      } ]
+}

@@ -13,6 +13,9 @@
     <hook name="download-rt2870-bin"
           project="garnet"
           action="drivers/wlan/mediatek/ralink/download-firmware.sh"/>
+    <hook name="download-btintel-bin"
+          project="garnet"
+          action="drivers/bluetooth/hci/intel/download-firmware.sh"/>
     <hook name="download-vulkan-sdk"
           project="garnet"
           action="public/lib/escher/scripts/download-vulkan-sdk"/>

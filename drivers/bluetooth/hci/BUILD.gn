@@ -4,6 +4,7 @@
 
 group("bluetooth_hci") {
   deps = [
+    "//garnet/drivers/bluetooth/hci/intel:btintel",
     "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",
   ]
 }
