@@ -617,6 +617,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
         }
         attr->size = 0;
         attr->nlink = 1;
+        attr->inode = dn->ino;
         return msg->datalen;
     case ZXRIO_READDIR:
         if (arg > FDIO_CHUNK_SIZE) {
