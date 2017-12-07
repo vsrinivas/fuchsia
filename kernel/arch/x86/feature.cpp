@@ -266,6 +266,22 @@ void x86_feature_debug(void)
     printf("F/M/S: %x/%x/%x\n", model_info.display_family, model_info.display_model,
            model_info.stepping);
 
+    char brand_string[50];
+    memset(brand_string, 0, sizeof(brand_string));
+    const struct cpuid_leaf* leaf;
+    uint32_t leaf_num = X86_CPUID_BRAND;
+    for (int i = 0; i < 3; i++) {
+        leaf = x86_get_cpuid_leaf((enum x86_cpuid_leaf_num)(leaf_num + i));
+        if (!leaf) {
+            break;
+        }
+        memcpy(brand_string + (i * 16), &leaf->a, sizeof(uint32_t));
+        memcpy(brand_string + (i * 16) + 4, &leaf->b, sizeof(uint32_t));
+        memcpy(brand_string + (i * 16) + 8, &leaf->c, sizeof(uint32_t));
+        memcpy(brand_string + (i * 16) + 12, &leaf->d, sizeof(uint32_t));
+    }
+    printf("Brand: %s\n", brand_string);
+
     printf("Features: ");
     uint col = 0;
     for (uint i = 0; i < fbl::count_of(features); ++i) {
