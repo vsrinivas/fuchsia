@@ -4,9 +4,6 @@
 
 #include "bearer.h"
 
-#include <zircon/status.h>
-#include <zx/time.h>
-
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
@@ -136,24 +133,12 @@ Bearer::PendingRemoteTransaction::PendingRemoteTransaction(TransactionId id,
                                                            OpCode opcode)
     : id(id), opcode(opcode) {}
 
-Bearer::TransactionQueue::~TransactionQueue() {
-  if (timeout_task_)
-    CancelTimeout();
-}
-
-void Bearer::TransactionQueue::CancelTimeout() {
-  FXL_DCHECK(timeout_task_);
-  zx_status_t status =
-      timeout_task_->Cancel(fsl::MessageLoop::GetCurrent()->async());
-  if (status != ZX_OK) {
-    FXL_VLOG(2) << "att: timeout task failed: " << zx_status_get_string(status);
-  }
-  timeout_task_ = nullptr;
-}
-
 Bearer::PendingTransactionPtr Bearer::TransactionQueue::ClearCurrent() {
   FXL_DCHECK(current_);
-  CancelTimeout();
+  FXL_DCHECK(timeout_task_.posted());
+
+  timeout_task_.Cancel();
+
   return std::move(current_);
 }
 
@@ -162,7 +147,7 @@ void Bearer::TransactionQueue::Enqueue(PendingTransactionPtr transaction) {
 }
 
 void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
-                                           const fxl::Closure& timeout_cb,
+                                           fxl::Closure timeout_cb,
                                            uint32_t timeout_ms) {
   FXL_DCHECK(chan);
 
@@ -173,33 +158,14 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
   // Advance to the next transaction.
   current_ = queue_.pop_front();
   if (current()) {
-    SetTimeout(timeout_cb, timeout_ms);
+    FXL_DCHECK(!timeout_task_.posted());
+    timeout_task_.Post(std::move(timeout_cb), ZX_MSEC(timeout_ms));
     chan->Send(std::move(current()->pdu));
   }
 }
 
-void Bearer::TransactionQueue::SetTimeout(const fxl::Closure& callback,
-                                          uint32_t timeout_ms) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(current_);
-  FXL_DCHECK(!timeout_task_);
-
-  timeout_task_ =
-      std::make_unique<async::Task>(zx::deadline_after(ZX_MSEC(timeout_ms)), 0);
-  timeout_task_->set_handler(
-      [callback = std::move(callback)](async_t*, zx_status_t status) {
-        if (status == ZX_OK)
-          callback();
-        return ASYNC_TASK_FINISHED;
-      });
-  timeout_task_->Post(fsl::MessageLoop::GetCurrent()->async());
-}
-
 void Bearer::TransactionQueue::Reset() {
-  if (timeout_task_) {
-    CancelTimeout();
-  }
-
+  timeout_task_.Cancel();
   queue_.clear();
   current_ = nullptr;
 }
