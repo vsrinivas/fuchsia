@@ -546,6 +546,11 @@ static zx_status_t x86_ipm_verify_fixed_config(
                 TRACEF("Unused bits set in |fixed_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
+            if ((config->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
+                    config->timebase_id == CPUPERF_EVENT_ID_NONE) {
+                TRACEF("Timebase requested for |fixed_flags[%u]|, but not provided\n", i);
+                return ZX_ERR_INVALID_ARGS;
+            }
             unsigned hw_regnum = x86_perfmon_lookup_fixed_counter(id);
             if (hw_regnum == IPM_MAX_FIXED_COUNTERS) {
                 TRACEF("Invalid fixed counter id |fixed_ids[%u]|\n", i);
@@ -599,6 +604,11 @@ static zx_status_t x86_ipm_verify_programmable_config(
                 TRACEF("Unused bits set in |programmable_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
+            if ((config->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
+                    config->timebase_id == CPUPERF_EVENT_ID_NONE) {
+                TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
+                return ZX_ERR_INVALID_ARGS;
+            }
         }
     }
 
@@ -606,7 +616,34 @@ static zx_status_t x86_ipm_verify_programmable_config(
     return ZX_OK;
 }
 
-static zx_status_t x86_ipm_verify_config(const zx_x86_ipm_config_t* config,
+static zx_status_t x86_ipm_verify_timebase_config(
+        zx_x86_ipm_config_t* config,
+        unsigned num_fixed, unsigned num_programmable) {
+    if (config->timebase_id == CPUPERF_EVENT_ID_NONE) {
+        return ZX_OK;
+    }
+
+    for (unsigned i = 0; i < num_fixed; ++i) {
+        if (config->fixed_ids[i] == config->timebase_id) {
+            // The PMI code is simpler if this is the case.
+            config->fixed_flags[i] &= ~IPM_CONFIG_FLAG_TIMEBASE;
+            return ZX_OK;
+        }
+    }
+
+    for (unsigned i = 0; i < num_programmable; ++i) {
+        if (config->programmable_ids[i] == config->timebase_id) {
+            // The PMI code is simpler if this is the case.
+            config->programmable_flags[i] &= ~IPM_CONFIG_FLAG_TIMEBASE;
+            return ZX_OK;
+        }
+    }
+
+    TRACEF("Timebase 0x%x requested but not present\n", config->timebase_id);
+    return ZX_ERR_INVALID_ARGS;
+}
+
+static zx_status_t x86_ipm_verify_config(zx_x86_ipm_config_t* config,
                                          PerfmonState* state) {
     auto status = x86_ipm_verify_control_config(config);
     if (status != ZX_OK)
@@ -623,6 +660,12 @@ static zx_status_t x86_ipm_verify_config(const zx_x86_ipm_config_t* config,
     if (status != ZX_OK)
         return status;
     state->num_used_programmable = num_used_programmable;
+
+    status = x86_ipm_verify_timebase_config(config,
+                                            state->num_used_fixed,
+                                            state->num_used_programmable);
+    if (status != ZX_OK)
+        return status;
 
     return ZX_OK;
 }
@@ -673,7 +716,7 @@ static void x86_ipm_stage_programmable_config(const zx_x86_ipm_config_t* config,
 // Stage the configuration for later activation by START.
 // One of the main goals of this function is to verify the provided config
 // is ok, e.g., it won't cause us to crash.
-zx_status_t x86_ipm_stage_config(const zx_x86_ipm_config_t* config) {
+zx_status_t x86_ipm_stage_config(zx_x86_ipm_config_t* config) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -1056,6 +1099,8 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
         // Note: We don't write "value" records here instead prefering the
         // smaller "tick" record. If the user is tallying the counts the user
         // is required to recognize this and apply the tick rate.
+        // TODO(dje): Precompute mask to detect whether the interrupt is for
+        // the timebase counter, and then combine the loops.
 
         for (unsigned i = 0; i < state->num_used_programmable; ++i) {
             if (!(status & IA32_PERF_GLOBAL_STATUS_PMC_OVF_MASK(i)))
