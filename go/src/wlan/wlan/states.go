@@ -211,7 +211,10 @@ func newScanRequest(ssid string, c *Client) *mlme.ScanRequest {
 	channels := []uint16{}
 	for _, band := range c.wlanInfo.Bands {
 		for _, ch := range band.Channels {
-			channels = append(channels, uint16(ch))
+			ch := uint16(ch)
+			if _, ok := supportedChannelMap[ch]; ok {
+				channels = append(channels, ch)
+			}
 		}
 	}
 	return &mlme.ScanRequest{
