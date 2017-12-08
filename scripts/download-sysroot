@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This script downloads the Zircon sysroot as prebuilts from Google Storage.
+
+# This script is expected to be executed by Jiri as a runhook, or by individual
+# developers who want to grab the latest prebuilts.  It takes no arguments, will
+# download the latest version of the Zircon sysroot, install it in the
+# prebuilt/downloads directory, and update prebuilt/config.mk with the sysroot
+# path.
+
+set -e
+
+readonly FUCHSIA_GS_BUCKET="https://storage.googleapis.com/fuchsia"
+
+# We assume the following directory structure:
+# ./zircon/scripts
+# ./zircon/prebuilt
+readonly SCRIPT_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+readonly ZIRCON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly PREBUILTS_DIR="$(cd "${ZIRCON_ROOT}/prebuilt" && pwd)"
+
+# Install prebuilts into a .gitignore'd directory to keep things clean
+mkdir -p "${PREBUILTS_DIR}/downloads"
+readonly INSTALL_DIR="$(cd "${PREBUILTS_DIR}/downloads" && pwd)"
+
+# Download the tools if they don't already exist, or if their versions are out of date.
+SYSROOT_MAKEVARS=()
+PREBUILT_NAMES=()
+
+function downloadSysroot() {
+  local host_platform="${1}"
+
+  # These are files and paths we expect to already exist.
+  local common_path="sysroot/${host_platform}"
+  local version_file="${PREBUILTS_DIR}/versions/${common_path}/sysroot.sha1"
+  if [[ ! -f "${version_file}" ]]; then
+    echo "File ${version_file} does not exist."
+    return
+  fi
+  local required_version="$(cat "${version_file}" )"
+  local prebuilt_url="${FUCHSIA_GS_BUCKET}/sysroot/${host_platform}/${required_version}"
+
+  # These are files and paths we control in this script.
+  local stamp_path="${INSTALL_DIR}/${host_platform}.stamp"
+  local tool_path="${INSTALL_DIR}/${host_platform}.zip"
+
+  # The stamp file contains the SHA of the last version we downloaded.  If it doesn't
+  # match the SHA found in the version file, download and unpack the new one.
+  cd ${INSTALL_DIR}
+  if [[ ! -f "${stamp_path}" || "${required_version}" != "$(cat ${stamp_path})" ]]; then
+    rm -f -- "${tool_path}"
+    echo "Downloading ${prebuilt_url}"
+    curl --progress-bar -continue-at=- --location --output "${tool_path}" "${prebuilt_url}"
+    rm -rf -- "${host_platform}"
+    echo "Unpacking ${tool_path}"
+    unzip -q -d "${INSTALL_DIR}/${host_platform}" "${tool_path}"
+    echo "${required_version}" > "${stamp_path}"
+  fi
+
+  # Record the locations of the various sysroots.
+  local sysroot_dir="${host_platform}"
+  local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${ZIRCON_ROOT}}"
+  SYSROOT_MAKEVARS+=("SYSROOT_${host_platform}_PATH = ${relative_install_dir}/${sysroot_dir}")
+
+  # Leave some breadcrumbs in the makefile so `make ...` can check if the sysroot is up-to-date.
+  PREBUILT_NAMES+=" ${host_platform}"  # FYI: That's load-bearing leading whitespace.
+  SYSROOT_MAKEVARS+=("SYSROOT_${host_platform}_STAMP = \$(LKMAKEROOT)${stamp_path#${ZIRCON_ROOT}}")
+  SYSROOT_MAKEVARS+=("SYSROOT_${host_platform}_SHAFILE = \$(LKMAKEROOT)${version_file#${ZIRCON_ROOT}}")
+}
+
+# We want the sysroot for all hosts.
+readonly TARGETS=("linux-arm64" "linux-amd64")
+for target in "${TARGETS[@]}"; do
+  downloadSysroot "${target}"
+done
+
+# Clear old config lines from prebuilt/config.mk.
+readonly ENV_MK="${PREBUILTS_DIR}/config.mk"
+echo "generating ${ENV_MK}"
+if [[ -f "${ENV_MK}" ]]; then
+  sed -i.bak '/SYSROOT.*/d' "${ENV_MK}"
+fi
+
+# Update prebuilt/config.mk to point at the sysroots we just installed.
+SYSROOT_MAKEVARS+=("SYSROOTS :=${PREBUILT_NAMES[@]}")
+for line in "${SYSROOT_MAKEVARS[@]}"; do
+  echo $line >> "${ENV_MK}"
+done
