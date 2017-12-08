@@ -184,6 +184,7 @@ go_binary("amber_ctl") {
 
   deps = [
     "//garnet/public/lib/amber/fidl",
+    "//garnet/public/lib/app/fidl",
   ]
 
   go_dependencies = [
