@@ -35,9 +35,8 @@ class Hif;
 class Device;
 using BaseDevice = ddk::Device<Device, ddk::Unbindable>;
 
-class Device : public BaseDevice,
-               public ddk::WlanmacProtocol<Device> {
-  public:
+class Device : public BaseDevice, public ddk::WlanmacProtocol<Device> {
+   public:
     Device(zx_device_t* device, fbl::unique_ptr<Hif> hif);
 
     zx_status_t Bind();
@@ -56,7 +55,7 @@ class Device : public BaseDevice,
     zx_status_t WlanmacSetBss(uint32_t options, const uint8_t* mac, uint8_t type);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* config);
 
-  private:
+   private:
     fbl::unique_ptr<Hif> hif_;
     fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 

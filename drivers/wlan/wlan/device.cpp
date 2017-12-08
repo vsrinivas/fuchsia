@@ -231,9 +231,7 @@ zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
         .data = packet->mut_data(),
         .len = static_cast<uint16_t>(packet->len()),
     };
-    wlan_tx_packet_t pkt = {
-        .packet_head = &netbuf
-    };
+    wlan_tx_packet_t pkt = {.packet_head = &netbuf};
     if (packet->has_ext_data()) {
         pkt.packet_tail = packet->ext_data();
         pkt.tail_offset = packet->ext_offset();
@@ -265,8 +263,8 @@ zx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_S
 
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing dispatcher_.
 zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    debugf("%s chan=%u\n", __PRETTY_FUNCTION__, chan.channel_num);
-    if (chan.channel_num == state_->channel().channel_num) { return ZX_OK; }
+    debugf("%s chan=%u\n", __PRETTY_FUNCTION__, chan.primary);
+    if (chan.primary == state_->channel().primary) { return ZX_OK; }
 
     zx_status_t status = dispatcher_.PreChannelChange(chan);
     if (status != ZX_OK) { return status; }

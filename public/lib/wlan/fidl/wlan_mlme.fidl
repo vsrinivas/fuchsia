@@ -31,7 +31,7 @@ struct ScanRequest {
     string ssid;
     ScanTypes scan_type;
     uint32 probe_delay;
-    array<uint16>? channel_list;
+    array<uint8>? channel_list;
     uint32 min_channel_time;
     uint32 max_channel_time;
     // RequestInformation

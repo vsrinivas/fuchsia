@@ -65,7 +65,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     bss_ = std::move(req_clone->selected_bss);
     bssid_.Set(bss_->bssid.data());
     debugjoin("setting channel to %u\n", bss_->channel);
-    zx_status_t status = device_->SetChannel(wlan_channel_t{bss_->channel});
+    zx_status_t status = device_->SetChannel(wlan_channel_t{.primary = bss_->channel});
     if (status != ZX_OK) {
         errorf("could not set wlan channel: %d\n", status);
         Reset();
@@ -1118,8 +1118,8 @@ zx_status_t Station::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
-    auto assoc_chan_num = channel().channel_num;
-    auto current_chan_num = device_->GetState()->channel().channel_num;
+    auto assoc_chan_num = channel().primary;
+    auto current_chan_num = device_->GetState()->channel().primary;
     if (current_chan_num == assoc_chan_num) {
         SetPowerManagementMode(true);
         // TODO(hahnr): start buffering tx packets (not here though)
@@ -1131,8 +1131,8 @@ zx_status_t Station::PostChannelChange() {
     debugfn();
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
-    auto assoc_chan_num = channel().channel_num;
-    auto current_chan_num = device_->GetState()->channel().channel_num;
+    auto assoc_chan_num = channel().primary;
+    auto current_chan_num = device_->GetState()->channel().primary;
     if (current_chan_num == assoc_chan_num) {
         SetPowerManagementMode(false);
         // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.

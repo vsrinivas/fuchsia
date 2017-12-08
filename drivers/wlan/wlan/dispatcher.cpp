@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ap_mlme.h"
 #include "dispatcher.h"
+#include "ap_mlme.h"
 #include "client_mlme.h"
 #include "frame_handler.h"
 #include "packet.h"
@@ -44,7 +44,7 @@ void DumpRxInfo(const wlan_rx_info_t& rxinfo) {
         "flags %08x valid_fields %08x phy %u chan_width %u data_rate %u chan %u "
         "mcs %u rssi %u rcpi %u snr %u \n",
         rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.chan_width, rxinfo.data_rate,
-        rxinfo.chan.channel_num, rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
+        rxinfo.chan.primary, rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
 }
 
 void DumpFrameHeader(const FrameHeader& hdr, size_t len) {
@@ -399,31 +399,31 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     // Only a subset of requests are supported before an MLME has been initialized.
     if (mlme_ == nullptr) {
         switch (method) {
-            case Method::SCAN_request:
-            // fallthrough
-            case Method::JOIN_request: {
-                mlme_.reset(new ClientMlme(device_));
-                auto status = mlme_->Init();
-                if (status != ZX_OK) {
-                    errorf("Client MLME could not be initialized\n");
-                    mlme_.reset();
-                    return status;
-                }
-                break;
+        case Method::SCAN_request:
+        // fallthrough
+        case Method::JOIN_request: {
+            mlme_.reset(new ClientMlme(device_));
+            auto status = mlme_->Init();
+            if (status != ZX_OK) {
+                errorf("Client MLME could not be initialized\n");
+                mlme_.reset();
+                return status;
             }
-            case Method::START_request: {
-                mlme_.reset(new ApMlme(device_));
-                auto status = mlme_->Init();
-                if (status != ZX_OK) {
-                    errorf("AP MLME could not be initialized\n");
-                    mlme_.reset();
-                    return status;
-                }
-                break;
+            break;
+        }
+        case Method::START_request: {
+            mlme_.reset(new ApMlme(device_));
+            auto status = mlme_->Init();
+            if (status != ZX_OK) {
+                errorf("AP MLME could not be initialized\n");
+                mlme_.reset();
+                return status;
             }
-            default:
-                warnf("unknown MLME method %u with no active MLME\n", method);
-                return ZX_OK;
+            break;
+        }
+        default:
+            warnf("unknown MLME method %u with no active MLME\n", method);
+            return ZX_OK;
         }
     }
 
@@ -466,18 +466,15 @@ zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, Method method) {
 }
 
 template <>
-zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* unused_packet, Method method) {
+zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* unused_packet,
+                                                             Method method) {
     debugfn();
     ZX_DEBUG_ASSERT(method == Method::DEVICE_QUERY_request);
 
     auto resp = DeviceQueryResponse::New();
     const wlanmac_info_t& info = device_->GetWlanInfo();
-    if (info.mac_modes & WLAN_MAC_MODE_STA) {
-        resp->modes.push_back(MacMode::STA);
-    }
-    if (info.mac_modes & WLAN_MAC_MODE_AP) {
-        resp->modes.push_back(MacMode::AP);
-    }
+    if (info.mac_modes & WLAN_MAC_MODE_STA) { resp->modes.push_back(MacMode::STA); }
+    if (info.mac_modes & WLAN_MAC_MODE_AP) { resp->modes.push_back(MacMode::AP); }
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
         const wlan_band_info_t& band_info = info.bands[band_idx];
         auto band = BandCapabilities::New();
@@ -515,17 +512,13 @@ zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* unuse
 
 zx_status_t Dispatcher::PreChannelChange(wlan_channel_t chan) {
     debugfn();
-    if (mlme_ != nullptr) {
-        mlme_->PreChannelChange(chan);
-    }
+    if (mlme_ != nullptr) { mlme_->PreChannelChange(chan); }
     return ZX_OK;
 }
 
 zx_status_t Dispatcher::PostChannelChange() {
     debugfn();
-    if (mlme_ != nullptr) {
-        mlme_->PostChannelChange();
-    }
+    if (mlme_ != nullptr) { mlme_->PostChannelChange(); }
     return ZX_OK;
 }
 

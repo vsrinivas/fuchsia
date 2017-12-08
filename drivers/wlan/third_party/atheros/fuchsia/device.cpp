@@ -30,21 +30,17 @@ int device_init(void* arg) {
 }
 
 Device::Device(zx_device_t* device, fbl::unique_ptr<Hif> hif)
-  : BaseDevice(device), hif_(fbl::move(hif)) {}
+    : BaseDevice(device), hif_(fbl::move(hif)) {}
 
 zx_status_t Device::Bind() {
     zx_status_t status = hif_->Bind();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     DdkAdd("ath10k", DEVICE_ADD_INVISIBLE);
 
     int ret = thrd_create_with_name(&init_thread_, device_init, reinterpret_cast<void*>(this),
-            "ath10k-init");
-    if (ret != thrd_success) {
-        DdkRemove();
-    }
+                                    "ath10k-init");
+    if (ret != thrd_success) { DdkRemove(); }
 
     return ZX_OK;
 }
@@ -83,9 +79,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
 
 zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::lock_guard<std::mutex> guard(lock_);
-    if (wlanmac_proxy_ != nullptr) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
+    if (wlanmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
     wlanmac_proxy_.swap(proxy);
     return ZX_OK;
 }

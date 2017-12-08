@@ -16,7 +16,6 @@
 #include "mac_frame.h"
 #include "macaddr_map.h"
 
-#include "garnet/drivers/wlan/common/channel.h"
 #include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <fbl/ref_counted.h>
@@ -90,9 +89,8 @@ class Bss : public fbl::RefCounted<Bss> {
     BeaconHash bcn_hash_{0};
     size_t bcn_len_{0};
     // A channel from which the beacon is received.
-    // Different from current_channel.primary20.
-    Channel bcn_chan_{Channel::kUnspecified, Channel::kUnspecified, Channel::kUnspecified,
-                      Channel::kUnspecified};
+    // Different from current_channel.primary.
+    wlan_channel_t bcn_chan_;
 
     // TODO(porce): Add ProbeResponse.
 
@@ -107,8 +105,7 @@ class Bss : public fbl::RefCounted<Bss> {
     uint8_t ssid_[SsidElement::kMaxLen]{0};
     size_t ssid_len_{0};
     std::vector<uint8_t> supported_rates_{0};
-    Channel current_chan_{Channel::kUnspecified, Channel::kUnspecified, Channel::kUnspecified,
-                          Channel::kUnspecified};
+    wlan_channel_t current_chan_;
     std::string country_{""};
     std::unique_ptr<uint8_t[]> rsne_;
     size_t rsne_len_{0};

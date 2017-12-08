@@ -208,10 +208,9 @@ func (s *scanState) String() string {
 func newScanRequest(ssid string, c *Client) *mlme.ScanRequest {
 	// TODO(tkilbourn): unify all our channel representations.
 	// TODO(tkilbourn): filter out the supported channels to a reasonable subset for now
-	channels := []uint16{}
+	channels := []uint8{}
 	for _, band := range c.wlanInfo.Bands {
 		for _, ch := range band.Channels {
-			ch := uint16(ch)
 			if _, ok := supportedChannelMap[ch]; ok {
 				channels = append(channels, ch)
 			}

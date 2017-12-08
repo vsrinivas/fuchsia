@@ -41,7 +41,7 @@ std::string Bss::ToString() const {
     snprintf(buf, sizeof(buf),
              "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %3u Cap %04x SSID [%s]",
              bssid_.ToString().c_str(), GetBssType() == BSSTypes::INFRASTRUCTURE ? "Y" : "N", rssi_,
-             country_.c_str(), current_chan_.primary20, cap_.val(), SsidToString().c_str());
+             country_.c_str(), current_chan_.primary, cap_.val(), SsidToString().c_str());
     return std::string(buf);
 }
 
@@ -54,7 +54,7 @@ bool Bss::IsBeaconValid(const Beacon* beacon, size_t len) const {
     }
 
     // TODO(porce): Size check.
-    // TODO(porce): Drop if bcn_chan_ != current_chan_.primary20.
+    // TODO(porce): Drop if bcn_chan_ != current_chan_.primary.
     return true;
 }
 
@@ -67,7 +67,7 @@ void Bss::Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info) {
     // Radio statistics.
     if (rx_info == nullptr) return;
 
-    bcn_chan_.primary20 = rx_info->chan.channel_num;
+    bcn_chan_.primary = rx_info->chan.primary;
 
     // If the latest beacons lack measurements, keep the last report.
     if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) { rssi_ = rx_info->rssi; }
@@ -155,7 +155,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            current_chan_.primary20 = ie->current_chan;
+            current_chan_.primary = ie->current_chan;
             debugbcn("%s Current channel: %u\n", dbgmsghdr, ie->current_chan);
             break;
         }
@@ -236,7 +236,7 @@ BSSDescriptionPtr Bss::ToFidl() {
 
     fidl->beacon_period = bcn_interval_;  // TODO(porce): consistent naming.
     fidl->timestamp = timestamp_;
-    fidl->channel = current_chan_.primary20;
+    fidl->channel = current_chan_.primary;
 
     // Stats
     fidl->rssi_measurement = rssi_;

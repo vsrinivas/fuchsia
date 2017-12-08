@@ -106,8 +106,9 @@ wlan_channel_t Scanner::ScanChannel() const {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
     ZX_DEBUG_ASSERT(channel_index_ < req_->channel_list.size());
-
-    return wlan_channel_t{req_->channel_list[channel_index_]};
+    return wlan_channel_t{
+        .primary = req_->channel_list[channel_index_],
+    };
 }
 
 bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {

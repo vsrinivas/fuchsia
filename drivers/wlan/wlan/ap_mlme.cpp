@@ -28,9 +28,7 @@ zx_status_t ApMlme::Init() {
     auto& bssid = device_->GetState()->address();
     auto bss = fbl::AdoptRef(new InfraBss(device_, bssid));
     status = bss_map_.Insert(bssid, bss);
-    if (status != ZX_OK) {
-        errorf("[ap-mlme] BSS could not be registered: %s\n", MACSTR(bssid));
-    }
+    if (status != ZX_OK) { errorf("[ap-mlme] BSS could not be registered: %s\n", MACSTR(bssid)); }
 
     // TODO(hahnr): For development only to unblock from SME changes.
     // To be removed soon.
@@ -56,9 +54,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     // TODO(hahnr): Evolve to support multiple BSS at some point.
     auto& bssid = device_->GetState()->address();
     auto bss = bss_map_.Lookup(bssid);
-    if (bss != nullptr) {
-        AddChildHandler(bss);
-    }
+    if (bss != nullptr) { AddChildHandler(bss); }
 
     return ZX_OK;
 }
@@ -71,9 +67,7 @@ zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     // TODO(hahnr): Evolve to support multiple BSS at some point.
     auto& bssid = device_->GetState()->address();
     auto bss = bss_map_.Lookup(bssid);
-    if (bss != nullptr) {
-        RemoveChildHandler(bss);
-    }
+    if (bss != nullptr) { RemoveChildHandler(bss); }
 
     return ZX_OK;
 }

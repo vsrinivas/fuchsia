@@ -62,13 +62,9 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
-    zx_status_t SetBss(const common::MacAddr& mac, uint8_t type) override final {
-        return ZX_OK;
-    }
+    zx_status_t SetBss(const common::MacAddr& mac, uint8_t type) override final { return ZX_OK; }
 
-    zx_status_t SetKey(wlan_key_config_t* key_config) override final {
-      return ZX_OK;
-    }
+    zx_status_t SetKey(wlan_key_config_t* key_config) override final { return ZX_OK; }
 
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
@@ -98,11 +94,9 @@ class ScannerTest : public ::testing::Test {
 
     void SetActive() { req_->scan_type = ScanTypes::ACTIVE; }
 
-    zx_status_t Start() {
-        return scanner_.Start(*req_.Clone().get());
-    }
+    zx_status_t Start() { return scanner_.Start(*req_.Clone().get()); }
 
-    uint16_t CurrentChannel() { return mock_dev_.GetState()->channel().channel_num; }
+    uint16_t CurrentChannel() { return mock_dev_.GetState()->channel().primary; }
 
     zx_status_t DeserializeResponse() {
         EXPECT_EQ(1u, mock_dev_.svc_queue.size());
@@ -183,7 +177,7 @@ TEST_F(ScannerTest, ActiveScan) {
 TEST_F(ScannerTest, ScanChannel) {
     ASSERT_EQ(ZX_OK, Start());
     auto chan = scanner_.ScanChannel();
-    EXPECT_EQ(1u, chan.channel_num);
+    EXPECT_EQ(1u, chan.primary);
 }
 
 TEST_F(ScannerTest, Timeout_MinChannelTime) {
@@ -226,7 +220,7 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
     EXPECT_EQ(0u, CurrentChannel());
 
     ASSERT_EQ(ZX_OK, Start());
-    ASSERT_EQ(1u, scanner_.ScanChannel().channel_num);
+    ASSERT_EQ(1u, scanner_.ScanChannel().primary);
 
     EXPECT_EQ(1u, CurrentChannel());
 
@@ -235,7 +229,7 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
 
     clock_.Set(WLAN_TU(req_->max_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
-    EXPECT_EQ(2u, scanner_.ScanChannel().channel_num);
+    EXPECT_EQ(2u, scanner_.ScanChannel().primary);
     EXPECT_EQ(clock_.Now() + WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 
     EXPECT_EQ(2u, CurrentChannel());
@@ -262,7 +256,9 @@ TEST_F(ScannerTest, ScanResponse) {
 
     wlan_rx_info_t info;
     info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
-    info.chan = {1};
+    info.chan = {
+        .primary = 1,
+    };
     info.rssi = 10;
     info.snr = 60;
 
