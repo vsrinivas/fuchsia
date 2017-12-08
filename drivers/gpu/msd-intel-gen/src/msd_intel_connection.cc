@@ -40,9 +40,18 @@ void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_
         signal_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
     }
 
+    // We can't use our buffer wrapper objects here because there's no thread safety.
+    uint32_t buffer_handle;
+    if (!MsdIntelAbiBuffer::cast(abi_buffer)
+             ->ptr()
+             ->platform_buffer()
+             ->duplicate_handle(&buffer_handle)) {
+        magma::log(magma::LOG_WARNING, "Failed to duplicate handle; can't present this buffer");
+        return;
+    }
+
     connection->PresentBuffer(
-        MsdIntelAbiBuffer::cast(abi_buffer)->ptr(), image_desc, std::move(wait_semaphores),
-        std::move(signal_semaphores),
+        buffer_handle, image_desc, std::move(wait_semaphores), std::move(signal_semaphores),
         [callback, callback_data](magma_status_t status, uint64_t vblank_time_ns) {
             if (callback)
                 callback(status, vblank_time_ns, callback_data);

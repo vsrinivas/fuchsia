@@ -15,10 +15,8 @@
 #include "gpu_progress.h"
 #include "gtt.h"
 #include "interrupt_manager.h"
-#include "magma_util/fps_printer.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
-#include "magma_util/semaphore_port.h"
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
@@ -32,6 +30,8 @@ class MsdIntelDevice : public msd_device_t,
                        public InterruptManager::Owner,
                        public MsdIntelConnection::Owner {
 public:
+    using DeviceRequest = DeviceRequest<MsdIntelDevice>;
+
     // Creates a device for the given |device_handle| and returns ownership.
     // If |start_device_thread| is false, then StartDeviceThread should be called
     // to enable device request processing.
@@ -78,12 +78,6 @@ public:
     void DumpStatusToLog();
 
     void DisplayGetSize(magma_display_size* size_out);
-
-    void PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
-                       magma_system_image_descriptor* image_desc,
-                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
-                       present_buffer_callback_t callback) override;
 
 private:
     MsdIntelDevice();
@@ -152,17 +146,9 @@ private:
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
     magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                        std::shared_ptr<MsdIntelBuffer> buffer);
-    magma::Status
-    ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
-                const magma_system_image_descriptor& image_desc,
-                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
-                present_buffer_callback_t callback);
     magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control);
     magma::Status ProcessDumpStatusToLog();
 
-    void ProcessPendingFlip();
-    void ProcessPendingFlipSync();
-    void ProcessFlipComplete(uint64_t interrupt_time_ns);
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
     bool WaitIdle();
@@ -177,7 +163,6 @@ private:
     int DeviceThreadLoop();
     void FrequencyMonitorDeviceThreadLoop();
     static void InterruptCallback(void* data, uint32_t master_interrupt_control);
-    void WaitThreadLoop();
 
     void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
     void ReadDisplaySize();
@@ -204,8 +189,6 @@ private:
     std::atomic_bool device_thread_quit_flag_{false};
     std::unique_ptr<GpuProgress> progress_;
 
-    std::thread wait_thread_;
-
     std::unique_ptr<MsdIntelPciDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
     std::shared_ptr<Gtt> gtt_;
@@ -214,16 +197,8 @@ private:
     std::unique_ptr<Sequencer> sequencer_;
     std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
     std::unique_ptr<InterruptManager> interrupt_manager_;
-    std::unique_ptr<magma::SemaphorePort> semaphore_port_;
-
-    // page flipping
-    std::shared_ptr<magma::PlatformSemaphore> flip_ready_semaphore_;
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_[2];
-    std::shared_ptr<GpuMapping> saved_display_mapping_[2];
-    present_buffer_callback_t flip_callback_;
 
     class CommandBufferRequest;
-    class FlipRequest;
     class DestroyContextRequest;
     class ReleaseBufferRequest;
     class InterruptRequest;
@@ -239,12 +214,6 @@ private:
         std::atomic_bool tracing_enabled{false};
     };
     std::shared_ptr<FreqMonitorContext> freq_monitor_context_;
-
-    std::mutex pageflip_request_mutex_;
-    std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_queue_;
-    std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_sync_queue_;
-
-    magma::FpsPrinter fps_printer_;
 
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;

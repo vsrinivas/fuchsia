@@ -10,9 +10,7 @@
 #include "platform_event.h"
 #include <memory>
 
-class MsdIntelDevice;
-
-class DeviceRequest {
+template <class Processor> class DeviceRequest {
 public:
     virtual ~DeviceRequest() {}
 
@@ -47,16 +45,16 @@ public:
         return reply_;
     }
 
-    void ProcessAndReply(MsdIntelDevice* device)
+    void ProcessAndReply(Processor* processor)
     {
-        magma::Status status = Process(device);
+        magma::Status status = Process(processor);
 
         if (reply_)
             reply_->Signal(status);
     }
 
 protected:
-    virtual magma::Status Process(MsdIntelDevice* device) { return MAGMA_STATUS_OK; }
+    virtual magma::Status Process(Processor* processor) { return MAGMA_STATUS_OK; }
 
 private:
     std::shared_ptr<Reply> reply_;

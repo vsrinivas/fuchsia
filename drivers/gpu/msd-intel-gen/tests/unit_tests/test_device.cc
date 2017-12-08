@@ -236,7 +236,7 @@ public:
             MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false));
         ASSERT_NE(device, nullptr);
 
-        class TestRequest : public DeviceRequest {
+        class TestRequest : public MsdIntelDevice::DeviceRequest {
         public:
             TestRequest(std::shared_ptr<bool> processing_complete)
                 : processing_complete_(processing_complete)

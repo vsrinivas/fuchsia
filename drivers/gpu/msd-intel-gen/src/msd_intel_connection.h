@@ -9,6 +9,7 @@
 #include "engine_command_streamer.h"
 #include "magma_util/macros.h"
 #include "msd.h"
+#include "msd_intel_pci_device.h"
 #include <memory>
 
 class ClientContext;
@@ -23,12 +24,7 @@ public:
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
         virtual void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                    std::shared_ptr<MsdIntelBuffer> buffer) = 0;
-        virtual void
-        PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
-                      magma_system_image_descriptor* image_desc,
-                      std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                      std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
-                      present_buffer_callback_t callback) = 0;
+        virtual magma::PlatformPciDevice* platform_device() = 0;
     };
 
     static std::unique_ptr<MsdIntelConnection> Create(Owner* owner, msd_client_id_t client_id);
@@ -54,14 +50,15 @@ public:
         return owner_->DestroyContext(std::move(client_context));
     }
 
-    void PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
-                       magma_system_image_descriptor* image_desc,
+    void PresentBuffer(uint32_t buffer_handle, magma_system_image_descriptor* image_desc,
                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
                        present_buffer_callback_t callback)
     {
-        return owner_->PresentBuffer(std::move(buffer), image_desc, std::move(wait_semaphores),
-                                     std::move(signal_semaphores), std::move(callback));
+        auto pci_device = static_cast<MsdIntelPciDevice*>(owner_->platform_device());
+        return pci_device->device()->PresentBuffer(
+            buffer_handle, image_desc, std::move(wait_semaphores), std::move(signal_semaphores),
+            std::move(callback));
     }
 
     bool context_killed() { return context_killed_; }

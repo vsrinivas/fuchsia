@@ -7,6 +7,14 @@
 #include "msd_intel_device.h"
 #include "gtest/gtest.h"
 
+class TestMsdIntelDevice {
+public:
+    static MsdIntelPciDevice* pci_device(MsdIntelDevice* device)
+    {
+        return static_cast<MsdIntelPciDevice*>(device->platform_device());
+    }
+};
+
 class TestDisplay {
 public:
     static void Flip(uint32_t num_buffers, uint32_t num_frames)
@@ -47,17 +55,23 @@ public:
 
         for (uint32_t frame = 0; frame < num_frames; frame++) {
             uint32_t buffer_index = frame % buffers.size();
-            device->PresentBuffer(buffers[buffer_index], &image_desc, {}, {signal_semaphore},
-                                  [frame](magma_status_t status, uint64_t vblank_time_ns) {
-                                      static uint32_t callback_frame = 0;
-                                      static uint64_t last_time_ns = 0;
-                                      DLOG("present callback status %d frame %u ns %lu", status,
-                                           frame, vblank_time_ns);
-                                      EXPECT_EQ(status, MAGMA_STATUS_OK);
-                                      EXPECT_EQ(callback_frame++, frame);
-                                      EXPECT_GT(vblank_time_ns, last_time_ns);
-                                      last_time_ns = vblank_time_ns;
-                                  });
+
+            uint32_t handle;
+            EXPECT_TRUE(buffers[buffer_index]->platform_buffer()->duplicate_handle(&handle));
+
+            TestMsdIntelDevice::pci_device(device.get())
+                ->device()
+                ->PresentBuffer(handle, &image_desc, {}, {signal_semaphore},
+                                [frame](magma_status_t status, uint64_t vblank_time_ns) {
+                                    static uint32_t callback_frame = 0;
+                                    static uint64_t last_time_ns = 0;
+                                    DLOG("present callback status %d frame %u ns %lu", status,
+                                         frame, vblank_time_ns);
+                                    EXPECT_EQ(status, MAGMA_STATUS_OK);
+                                    EXPECT_EQ(callback_frame++, frame);
+                                    EXPECT_GT(vblank_time_ns, last_time_ns);
+                                    last_time_ns = vblank_time_ns;
+                                });
             if (frame > 0)
                 EXPECT_TRUE(signal_semaphore->Wait(1000));
         }
@@ -121,15 +135,26 @@ public:
         for (uint32_t i = 0; i < buffers_.size(); i++) {
             DLOG("flipping wait semaphore %lu signal semaphore %lu",
                  this->wait_semaphores_[i]->id(), this->signal_semaphores_[i]->id());
-            this->device_->PresentBuffer(
-                this->buffers_[i], &image_desc,
-                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{this->wait_semaphores_[i]},
-                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{this->signal_semaphores_[i]},
-                nullptr);
+            uint32_t handle;
+            EXPECT_TRUE(buffers_[i]->platform_buffer()->duplicate_handle(&handle));
+
+            TestMsdIntelDevice::pci_device(device_.get())
+                ->device()
+                ->PresentBuffer(handle, &image_desc,
+                                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{
+                                    this->wait_semaphores_[i]},
+                                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{
+                                    this->signal_semaphores_[i]},
+                                nullptr);
 
             // Flip another buffer to push the previous one off the display
-            if (i > 0)
-                this->device_->PresentBuffer(follow_on, &image_desc, {}, {}, nullptr);
+            if (i > 0) {
+                EXPECT_TRUE(follow_on->platform_buffer()->duplicate_handle(&handle));
+
+                TestMsdIntelDevice::pci_device(device_.get())
+                    ->device()
+                    ->PresentBuffer(handle, &image_desc, {}, {}, nullptr);
+            }
 
             // Delay must be long enough to flush out buffer that's been erroneously
             // advanced before its wait semaphore was signaled
@@ -141,11 +166,15 @@ public:
             semaphore->Signal();
         }
 
+        uint32_t handle;
+        EXPECT_TRUE(buffers_[0]->platform_buffer()->duplicate_handle(&handle));
+
         // Extra flip to release the last buffer
-        this->device_->PresentBuffer(this->buffers_[0], &image_desc,
-                                     std::vector<std::shared_ptr<magma::PlatformSemaphore>>{},
-                                     std::vector<std::shared_ptr<magma::PlatformSemaphore>>{},
-                                     nullptr);
+        TestMsdIntelDevice::pci_device(device_.get())
+            ->device()
+            ->PresentBuffer(handle, &image_desc,
+                            std::vector<std::shared_ptr<magma::PlatformSemaphore>>{},
+                            std::vector<std::shared_ptr<magma::PlatformSemaphore>>{}, nullptr);
 
         DLOG("joining wait thread");
         wait_thread.join();
