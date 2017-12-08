@@ -50,17 +50,31 @@ static_assert(1
 
 // There's only a few misc events, so handle them directly.
 typedef enum {
-#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
-// Verify each misc counter id < IPM_MAX_MISC_COUNTERS.
-#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
-    && (id) < IPM_MAX_MISC_EVENTS
-static_assert(1
+// Misc event ids needn't be consecutive.
+// Build a lookup table we can use to track duplicates.
+typedef enum {
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+    symbol ## _NUMBER,
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
-    , "");
+    NUM_MISC_EVENTS
+} misc_event_number_t;
+
+// This table is sorted at startup.
+static cpuperf_event_id_t misc_event_table_contents[NUM_MISC_EVENTS] = {
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+    CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
+};
+
+// Const accessor to give the illusion of the table being const.
+static const cpuperf_event_id_t* misc_event_table = &misc_event_table_contents[0];
+
+static void ipm_init_misc_event_table(void);
 
 typedef enum {
 #define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
@@ -153,6 +167,8 @@ static zx_x86_ipm_properties_t ipm_properties;
 
 void ipm_init_once(void)
 {
+    ipm_init_misc_event_table();
+
     zx_x86_ipm_properties_t props;
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
@@ -226,17 +242,36 @@ static unsigned ipm_fixed_counter_number(cpuperf_event_id_t id) {
     }
 }
 
-static unsigned ipm_misc_event_number(cpuperf_event_id_t id) {
-    switch (id) {
-    case MISC_MEM_BYTES_READ_ID:
-    case MISC_MEM_BYTES_WRITTEN_ID:
-    case MISC_MEM_GT_REQUESTS_ID:
-    case MISC_MEM_IA_REQUESTS_ID:
-    case MISC_MEM_IO_REQUESTS_ID:
-        return CPUPERF_EVENT_ID_EVENT(id);
-    default:
-        return IPM_MAX_MISC_EVENTS;
-    }
+static int ipm_compare_cpuperf_event_id(const void* ap, const void* bp) {
+    const cpuperf_event_id_t* a = ap;
+    const cpuperf_event_id_t* b = bp;
+    if (*a < *b)
+        return -1;
+    if (*a > *b)
+        return 1;
+    return 0;
+}
+
+static void ipm_init_misc_event_table(void) {
+    qsort(misc_event_table_contents,
+          countof(misc_event_table_contents),
+          sizeof(misc_event_table_contents[0]),
+          ipm_compare_cpuperf_event_id);
+}
+
+// Map a misc event id to its ordinal (unique number in range
+// 0 ... NUM_MISC_EVENTS - 1).
+// Returns -1 if |id| is unknown.
+static int ipm_lookup_misc_event(cpuperf_event_id_t id) {
+    cpuperf_event_id_t* p = bsearch(&id, misc_event_table,
+                                    countof(misc_event_table_contents),
+                                    sizeof(id),
+                                    ipm_compare_cpuperf_event_id);
+    if (!p)
+        return -1;
+    ptrdiff_t result = p - misc_event_table;
+    assert(result < NUM_MISC_EVENTS);
+    return (int) result;
 }
 
 
@@ -420,8 +455,8 @@ typedef struct {
 
     // For catching duplicates of the fixed counters.
     bool have_fixed[IPM_MAX_FIXED_COUNTERS];
-    // For catching duplicates of the misc events.
-    bool have_misc[IPM_MAX_MISC_EVENTS];
+    // For catching duplicates of the misc events, 1 bit per event.
+    uint64_t have_misc[(NUM_MISC_EVENTS + 63) / 64];
 
     bool have_timebase0_user;
 } staging_state_t;
@@ -566,18 +601,23 @@ static zx_status_t ipm_stage_misc_config(const cpuperf_config_t* icfg,
                                          zx_x86_ipm_config_t* ocfg) {
     const unsigned ii = input_index;
     cpuperf_event_id_t id = icfg->events[ii];
-    unsigned event = ipm_misc_event_number(id);
+    int event = ipm_lookup_misc_event(id);
 
-    if (event == IPM_MAX_MISC_EVENTS) {
+    if (event < 0) {
         zxlogf(ERROR, "%s: Invalid misc event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
-    if (ss->have_misc[event]) {
+    if (ss->num_misc == ss->max_num_misc) {
+        zxlogf(ERROR, "%s: Too many misc counters provided\n",
+               __func__);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (ss->have_misc[event / 64] & (1ul << (event % 64))) {
         zxlogf(ERROR, "%s: Misc event [%u] already provided\n",
                __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
-    ss->have_misc[event] = true;
+    ss->have_misc[event / 64] |= 1ul << (event % 64);
     ocfg->misc_ids[ss->num_misc] = id;
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0) {
         ocfg->misc_flags[ss->num_misc] |= IPM_CONFIG_FLAG_TIMEBASE;

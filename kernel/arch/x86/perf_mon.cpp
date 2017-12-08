@@ -77,10 +77,17 @@
 // There's only a few misc events, and they're non-homogenous,
 // so handle them directly.
 typedef enum {
-#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
+
+// h/w address of misc events.
+typedef enum {
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+    symbol ## _OFFSET = offset,
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
+} misc_event_offset_t;
 
 // TODO(dje): Freeze-on-PMI doesn't work in skylake.
 // This is here for experimentation purposes.
@@ -134,21 +141,16 @@ const uint16_t supported_mem_device_ids[] = {
 // platform.
 // The BEGIN/END values are for computing the page(s) we need to map.
 // Offset from BAR of the first byte we need to map.
-#define UNC_IMC_STATS_BEGIN             0x5040
-// Offset from UNC_IMC_STATS_BEGIN of GT request count, 32 bits.
-#define UNC_IMC_DRAM_GT_REQUESTS_OFFSET 0x0
-// Offset from UNC_IMC_STATS_BEGIN of IA request count, 32 bits.
-#define UNC_IMC_DRAM_IA_REQUESTS_OFFSET 0x4
-// Offset from UNC_IMC_STATS_BEGIN of IO request count.
-#define UNC_IMC_DRAM_IO_REQUESTS_OFFSET 0x8
-// Offset from UNC_IMC_STATS_BEGIN of #bytes read, 32 bit counter
-// of 64 byte lines.
-#define UNC_IMC_DRAM_DATA_READS_OFFSET  0x10
-// Offset from UNC_IMC_STATS_BEGIN of #bytes written, 32 bit counter
-// of 64 byte lines.
-#define UNC_IMC_DRAM_DATA_WRITES_OFFSET 0x14
+#define UNC_IMC_STATS_BEGIN 0x5040 // MISC_MEM_GT_REQUESTS
 // Offset from BAR of the last byte we need to map.
-#define UNC_IMC_STATS_END               0x5057
+#define UNC_IMC_STATS_END   0x5057 // MISC_MEM_BYTES_WRITTEN
+
+// Verify all values are within [BEGIN,END].
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+    && (offset >= UNC_IMC_STATS_BEGIN && (offset + size/8) <= UNC_IMC_STATS_END + 1)
+static_assert(1
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
+    , "");
 
 // These aren't constexpr as we iterate to fill in values for each counter.
 static uint64_t kGlobalCtrlWritableBits;
@@ -229,20 +231,16 @@ struct MemoryControllerHubData {
     // Where the regs are mapped.
     fbl::RefPtr<VmMapping> mapping;
 
-    // The addresses where these counters are mapped, or zero if not mapped.
-    volatile uint32_t* bytes64_read_addr = 0;
-    volatile uint32_t* bytes64_written_addr = 0;
-    volatile uint32_t* gt_requests_addr = 0;
-    volatile uint32_t* ia_requests_addr = 0;
-    volatile uint32_t* io_requests_addr = 0;
+    // The address where UNC_IMC_STATS_BEGIN is mapped, or zero if not mapped.
+    volatile void* stats_addr = 0;
 
     // We can't reset the events, and even if we could it's preferable to
     // avoid making the device writable (lots of critical stuff in there),
     // so record the previous values so that we can emit into the trace buffer
     // the delta since the last interrupt.
     struct {
-        uint32_t bytes64_read = 0;
-        uint32_t bytes64_written = 0;
+        uint32_t bytes_read = 0;
+        uint32_t bytes_written = 0;
         uint32_t gt_requests = 0;
         uint32_t ia_requests = 0;
         uint32_t io_requests = 0;
@@ -803,13 +801,10 @@ static zx_status_t x86_ipm_verify_misc_config(
                 TRACEF("Timebase requested for |misc_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            switch (id) {
-            case MISC_MEM_BYTES_READ_ID:
-            case MISC_MEM_BYTES_WRITTEN_ID:
-            case MISC_MEM_GT_REQUESTS_ID:
-            case MISC_MEM_IA_REQUESTS_ID:
-            case MISC_MEM_IO_REQUESTS_ID:
-                break;
+            switch (CPUPERF_EVENT_ID_EVENT(id)) {
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+            case id: break;
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
             default:
                 TRACEF("Invalid misc event id |misc_ids[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -939,13 +934,15 @@ static void x86_ipm_stage_misc_config(const zx_x86_ipm_config_t* config,
 
     state->need_mchbar = false;
     for (unsigned i = 0; i < state->num_used_misc; ++i) {
-        switch (state->misc_ids[i]) {
-        case MISC_MEM_BYTES_READ_ID:
-        case MISC_MEM_BYTES_WRITTEN_ID:
-        case MISC_MEM_GT_REQUESTS_ID:
-        case MISC_MEM_IA_REQUESTS_ID:
-        case MISC_MEM_IO_REQUESTS_ID:
+        // All misc events currently come from the memory controller.
+        // When needed we can add a flag to the event to denote origin.
+        switch (CPUPERF_EVENT_ID_EVENT(state->misc_ids[i])) {
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+        case id:
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
             state->need_mchbar = true;
+            break;
+        default:
             break;
         }
     }
@@ -988,14 +985,29 @@ zx_status_t x86_ipm_stage_config(zx_x86_ipm_config_t* config) {
 
     return ZX_OK;
 }
+
+// System statistics that come from MCHBAR.
+// See, e.g., desktop-6th-gen-core-family-datasheet-vol-2.
+// TODO(dje): Consider moving misc event support to a separate file
+// when the amount of code to support them gets large enough.
 
-// Read the byte counter from the MCHBAR and return the delta
-// since the last read. We do this in order to catch the cases of the counter
-// wrapping that we can (they're only 32 bits in h/w and are read-only).
+// Take advantage of the ABI's support for returning two values so that
+// we can return both in registers.
+struct ReadMiscResult {
+    // The value of the register.
+    uint64_t value;
+    // The record type to use, either CPUPERF_RECORD_COUNT or
+    // CPUPERF_RECORD_VALUE.
+    uint8_t type;
+};
+
+// Read the 32-bit counter from the MCHBAR and return the delta
+// since the last read. We do this in part because it's easier for clients
+// to process and in part to catch the cases of the counter wrapping that
+// we can (they're only 32 bits in h/w and are read-only).
 // WARNING: This function has the side-effect of updating |*last_value|.
-static uint32_t read_mchbar_counter(volatile uint32_t* addr,
-                                    uint32_t* last_value_addr) {
-    DEBUG_ASSERT(addr);
+static uint32_t read_mc_counter32(volatile uint32_t* addr,
+                                  uint32_t* last_value_addr) {
     uint32_t value = *addr;
     uint32_t last_value = *last_value_addr;
     *last_value_addr = value;
@@ -1012,67 +1024,74 @@ static uint32_t read_mchbar_counter(volatile uint32_t* addr,
     }
 }
 
-static uint32_t read_mchbar_bytes64_read(PerfmonState* state) {
-    return read_mchbar_counter(
-        state->mchbar_data.bytes64_read_addr,
-        &state->mchbar_data.last_mem.bytes64_read);
+static ReadMiscResult read_mc_typed_counter32(volatile uint32_t* addr,
+                                              uint32_t* last_value_addr) {
+    return ReadMiscResult{
+        read_mc_counter32(addr, last_value_addr), CPUPERF_RECORD_COUNT};
 }
 
-static uint32_t read_mchbar_bytes64_written(PerfmonState* state) {
-    return read_mchbar_counter(
-        state->mchbar_data.bytes64_written_addr,
-        &state->mchbar_data.last_mem.bytes64_written);
+static volatile uint32_t* get_mc_addr32(PerfmonState* state,
+                                        uint32_t hw_addr) {
+    return reinterpret_cast<volatile uint32_t*>(
+        reinterpret_cast<volatile char*>(state->mchbar_data.stats_addr)
+        + hw_addr - UNC_IMC_STATS_BEGIN);
 }
 
-static uint32_t read_mchbar_gt_requests(PerfmonState* state) {
-    return read_mchbar_counter(
-        state->mchbar_data.gt_requests_addr,
+static ReadMiscResult read_mc_bytes_read(PerfmonState* state) {
+    uint32_t value = read_mc_counter32(
+        get_mc_addr32(state, MISC_MEM_BYTES_READ_OFFSET),
+        &state->mchbar_data.last_mem.bytes_read);
+    // Return the value in bytes, easier for human readers of the
+    // resulting report.
+    return ReadMiscResult{value * 64ul, CPUPERF_RECORD_COUNT};
+}
+
+static ReadMiscResult read_mc_bytes_written(PerfmonState* state) {
+    uint32_t value = read_mc_counter32(
+        get_mc_addr32(state, MISC_MEM_BYTES_WRITTEN_OFFSET),
+        &state->mchbar_data.last_mem.bytes_written);
+    // Return the value in bytes, easier for human readers of the
+    // resulting report.
+    return ReadMiscResult{value * 64ul, CPUPERF_RECORD_COUNT};
+}
+
+static ReadMiscResult read_mc_gt_requests(PerfmonState* state) {
+    return read_mc_typed_counter32(
+        get_mc_addr32(state, MISC_MEM_GT_REQUESTS_OFFSET),
         &state->mchbar_data.last_mem.gt_requests);
 }
 
-static uint32_t read_mchbar_ia_requests(PerfmonState* state) {
-    return read_mchbar_counter(
-        state->mchbar_data.ia_requests_addr,
+static ReadMiscResult read_mc_ia_requests(PerfmonState* state) {
+    return read_mc_typed_counter32(
+        get_mc_addr32(state, MISC_MEM_IA_REQUESTS_OFFSET),
         &state->mchbar_data.last_mem.ia_requests);
 }
 
-static uint32_t read_mchbar_io_requests(PerfmonState* state) {
-    return read_mchbar_counter(
-        state->mchbar_data.io_requests_addr,
+static ReadMiscResult read_mc_io_requests(PerfmonState* state) {
+    return read_mc_typed_counter32(
+        get_mc_addr32(state, MISC_MEM_IO_REQUESTS_OFFSET),
         &state->mchbar_data.last_mem.io_requests);
 }
 
-static uint64_t read_misc_counter(PerfmonState* state,
-                                  cpuperf_event_id_t id) {
-    uint64_t value = 0;
+static ReadMiscResult read_misc_event(PerfmonState* state,
+                                      cpuperf_event_id_t id) {
     switch (id) {
-    case MISC_MEM_BYTES_READ_ID: {
-        uint32_t value32 = read_mchbar_bytes64_read(state);
-        // Return the value in bytes, easier for human readers of the
-        // resulting report.
-        value = value32 * 64ul;
-        break;
-    }
-    case MISC_MEM_BYTES_WRITTEN_ID: {
-        uint32_t value32 = read_mchbar_bytes64_written(state);
-        // Return the value in bytes, easier for human readers of the
-        // resulting report.
-        value = value32 * 64ul;
-        break;
-    }
+    case MISC_MEM_BYTES_READ_ID:
+        return read_mc_bytes_read(state);
+    case MISC_MEM_BYTES_WRITTEN_ID:
+        return read_mc_bytes_written(state);
     case MISC_MEM_GT_REQUESTS_ID:
-        value = read_mchbar_gt_requests(state);
-        break;
+        return read_mc_gt_requests(state);
     case MISC_MEM_IA_REQUESTS_ID:
-        value = read_mchbar_ia_requests(state);
-        break;
+        return read_mc_ia_requests(state);
     case MISC_MEM_IO_REQUESTS_ID:
-        value = read_mchbar_io_requests(state);
-        break;
+        return read_mc_io_requests(state);
+    default:
+        __UNREACHABLE;
     }
-    return value;
 }
 
+
 static void x86_ipm_unmap_buffers_locked(PerfmonState* state) {
     unsigned num_cpus = state->num_cpus;
     for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
@@ -1090,11 +1109,7 @@ static void x86_ipm_unmap_buffers_locked(PerfmonState* state) {
         state->mchbar_data.mapping->Destroy();
     }
     state->mchbar_data.mapping.reset();
-    state->mchbar_data.bytes64_read_addr = nullptr;
-    state->mchbar_data.bytes64_written_addr = nullptr;
-    state->mchbar_data.gt_requests_addr = nullptr;
-    state->mchbar_data.ia_requests_addr = nullptr;
-    state->mchbar_data.io_requests_addr = nullptr;
+    state->mchbar_data.stats_addr = nullptr;
 }
 
 static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
@@ -1135,28 +1150,18 @@ static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
         return status;
 
     state->mchbar_data.mapping = mapping;
-#define INIT_MC_ADDR(member, offset) \
-    do { \
-        state->mchbar_data.member = \
-            reinterpret_cast<uint32_t*>( \
-                mapping->base() + begin_offset + offset); \
-    } while (0)
-    INIT_MC_ADDR(bytes64_read_addr, UNC_IMC_DRAM_DATA_READS_OFFSET);
-    INIT_MC_ADDR(bytes64_written_addr, UNC_IMC_DRAM_DATA_WRITES_OFFSET);
-    INIT_MC_ADDR(gt_requests_addr, UNC_IMC_DRAM_GT_REQUESTS_OFFSET);
-    INIT_MC_ADDR(ia_requests_addr, UNC_IMC_DRAM_IA_REQUESTS_OFFSET);
-    INIT_MC_ADDR(io_requests_addr, UNC_IMC_DRAM_IO_REQUESTS_OFFSET);
-#undef INIT_MC_ADDR
+    state->mchbar_data.stats_addr =
+            reinterpret_cast<void*>(mapping->base() + begin_offset);
 
     // Record the current values of these so that the trace will only include
     // the delta since tracing started.
 #define INIT_MC_COUNT(member) \
     do { \
         state->mchbar_data.last_mem.member = 0; \
-        (void) read_mchbar_ ## member(state); \
+        (void) read_mc_ ## member(state); \
     } while (0)
-    INIT_MC_COUNT(bytes64_read);
-    INIT_MC_COUNT(bytes64_written);
+    INIT_MC_COUNT(bytes_read);
+    INIT_MC_COUNT(bytes_written);
     INIT_MC_COUNT(gt_requests);
     INIT_MC_COUNT(ia_requests);
     INIT_MC_COUNT(io_requests);
@@ -1386,8 +1391,8 @@ static void x86_ipm_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
                     break;
                 }
                 cpuperf_event_id_t id = state->misc_ids[i];
-                uint64_t value = read_misc_counter(state, id);
-                next = x86_perfmon_write_count_record(next, id, now, value);
+                ReadMiscResult typed_value = read_misc_event(state, id);
+                next = x86_perfmon_write_count_record(next, id, now, typed_value.value);
             }
         }
 
@@ -1627,8 +1632,8 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                         continue;
                     }
                     cpuperf_event_id_t id = state->misc_ids[i];
-                    uint64_t value = read_misc_counter(state, id);
-                    next = x86_perfmon_write_count_record(next, id, now, value);
+                    ReadMiscResult typed_value = read_misc_event(state, id);
+                    next = x86_perfmon_write_count_record(next, id, now, typed_value.value);
                 }
             }
         }
