@@ -165,7 +165,11 @@ MODULE_PKG_FILES := $(shell find $(MODULE_SRCDIR) -type f)
 MODULE_PKG_INCS := $(filter %.h,$(filter $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
 MODULE_PKG_INCS := $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
 
-MODULE_PKG_DEPS := $(foreach dep,$(MODULE_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
+# We replace . with - in module dep names to handle async.xyz which are defined
+# as sub-libraries of async in the same directory.  If we ever introduce more
+# libraries this way they will have to maintain the pattern where foo.bar in the
+# MODULE is foo-bar in the MODULE_NAME:
+MODULE_PKG_DEPS := $(subst .,-,$(foreach dep,$(MODULE_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
 
 ifeq ($(filter src,$(MODULE_PACKAGE)),src)
 MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
@@ -173,7 +177,8 @@ MODULE_PKG_SRCS := $(foreach inc,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/
 MODULE_PKG_ARCH := src
 MODULE_PKG_TAG := "[src]"
 # source modules need to include their static deps to be buildable
-MODULE_PKG_SDEPS := $(foreach dep,$(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep))))
+# we apply the same . to - transform as in PKG_DEPS
+MODULE_PKG_SDEPS := $(subst .,-,$(foreach dep,$(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
 else
 MODULE_PKG_SRCS :=
 MODULE_PKG_ARCH := $(ARCH)
