@@ -10,6 +10,10 @@
   #address-cells = <2>;
   #size-cells = <2>;
 
+  chosen {
+    bootargs = "earlycon=pl011,0xfff32000 console=ttyS0";
+  };
+
   cpus {
     #address-cells = <2>;
     #size-cells = <0>;
@@ -41,6 +45,8 @@
   };
 
   soc {
+    compatible = "simple-bus";
+    ranges;
     #address-cells = <2>;
     #size-cells = <2>;
 
@@ -51,19 +57,19 @@
     };
 
     gic: interrupt-controller@e82b0000 {
-        interrupt-controller;
-        compatible = "arm,gic-400";
-        reg = <0 0xe82b1000 0 0x1000>,  /* GICD */
-              <0 0xe82b2000 0 0x2000>,  /* GICC */
-              <0 0xe82b4000 0 0x2000>,  /* GICH */
-              <0 0xe82b6000 0 0x2000>;  /* GICV */
-        #address-cells = <0>;
-        #interrupt-cells = <3>;
+      interrupt-controller;
+      compatible = "arm,gic-400";
+      reg = <0 0xe82b1000 0 0x1000>,    /* GICD */
+            <0 0xe82b2000 0 0x2000>,    /* GICC */
+            <0 0xe82b4000 0 0x2000>,    /* GICH */
+            <0 0xe82b6000 0 0x2000>;    /* GICV */
+      #address-cells = <0>;
+      #interrupt-cells = <3>;
     };
 
     timer {
-        compatible = "arm,armv8-timer";
-        interrupts = <1 27 4>;          /* PPI 27 HIGH/CPU-0 */
+      compatible = "arm,armv8-timer";
+      interrupts = <1 27 4>;            /* PPI 27 HIGH/CPU-0 */
     };
   };
 };
