@@ -137,7 +137,13 @@ to a kernel object.  They can be passed to other processes over [Channel](#Chann
 
 #### **Jiri**
 
-TODO(anmittal): add definition
+Jiri is a tool for multi-repo development. It is used to checkout the Fuchsia
+codebase. It supports various subcommands which makes it easy for developers to
+manage their local checkouts.
+- [Reference](https://fuchsia.googlesource.com/jiri/+/master/README.md)
+- [Sub commands](https://fuchsia.googlesource.com/jiri/+/master/README.md#main-commands-are)
+- [Behaviour](https://fuchsia.googlesource.com/jiri/+/master/behaviour.md)
+- [Tips and tricks](https://fuchsia.googlesource.com/jiri/+/master/howdoi.md)
 
 #### **Job**
 
