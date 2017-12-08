@@ -11,6 +11,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#ifndef __Fuchsia__
+#include <future>
+#include <vector>
+#endif
 
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
@@ -111,8 +115,17 @@ int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
         return -1;
     }
 
+    std::vector<std::future<int>> futures;
+
     for (unsigned i = 0; i < options.blob_list.size(); i++) {
-        if (do_blobstore_add_blob(bs.get(), options.blob_list[i].c_str()) < 0) {
+        const char *filename = options.blob_list[i].c_str();
+        futures.push_back(std::async(std::launch::async, [bs, filename] {
+            return do_blobstore_add_blob(bs.get(), filename);
+        }));
+    }
+
+    for (unsigned i = 0; i < options.blob_list.size(); i++) {
+        if (futures[i].get() < 0) {
             return -1;
         }
     }

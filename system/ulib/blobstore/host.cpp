@@ -147,6 +147,8 @@ zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd 
     return ZX_OK;
 }
 
+std::mutex add_blob_mutex_;
+
 zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
     // Mmap user-provided file, create the corresponding merkle tree
     struct stat s;
@@ -174,6 +176,7 @@ zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
         return status;
     }
 
+    std::lock_guard<std::mutex> lock(add_blob_mutex_);
     fbl::unique_ptr<InodeBlock> inode_block;
     if ((status = bs->NewBlob(digest, &inode_block)) < 0) {
         return status;

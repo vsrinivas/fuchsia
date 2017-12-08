@@ -26,6 +26,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <mutex>
 
 #include <blobstore/format.h>
 #include <blobstore/common.h>
@@ -133,6 +134,9 @@ private:
 };
 
 zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd);
+
+// blobstore_add_blob may be called by multiple threads to gain concurrent
+// merkle tree generation. No other methods are thread safe.
 zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd);
 zx_status_t blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
                            const fbl::Vector<size_t>& extent_lengths);
