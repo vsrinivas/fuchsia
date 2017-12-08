@@ -22,6 +22,7 @@ MODULE_NAME := fs-vnode-test
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/async \
+    system/ulib/async.loop \
     system/ulib/trace \
     system/ulib/vmofs \
     system/ulib/zx \
@@ -29,6 +30,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/trace-engine \

@@ -424,7 +424,9 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
     }
 
     // Tell the calling process that we've mounted the directory.
-    if ((r = channel.signal_peer(0, ZX_USER_SIGNAL_0)) != ZX_OK) {
+    r = channel.signal_peer(0, ZX_USER_SIGNAL_0);
+    // ZX_ERR_PEER_CLOSED is ok because the channel may still be readable.
+    if (r != ZX_OK && r != ZX_ERR_PEER_CLOSED) {
         return r;
     }
 

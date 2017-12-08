@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <async/loop.h>
+#include <fdio/util.h>
+#include <fs/pseudo-dir.h>
 #include <fs/service.h>
 
 #include <unittest/unittest.h>
@@ -53,8 +56,44 @@ bool test_service() {
     END_TEST;
 }
 
+bool test_serve_directory() {
+    BEGIN_TEST;
+
+    zx::channel client, server;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &client, &server));
+
+    // open client
+    zx::channel c1, c2;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &c1, &c2));
+    EXPECT_EQ(ZX_OK,
+              fdio_service_connect_at(client.get(), "abc", c2.release()));
+
+    // close client
+    // We test the semantic that a pending open is processed even if the client
+    // has been closed.
+    client.reset();
+
+    // serve
+    async::Loop loop;
+    fs::Vfs vfs(loop.async());
+
+    auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+    auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service(
+        [&loop](zx::channel channel) {
+            loop.Quit();
+            return ZX_OK;
+        }));
+    directory->AddEntry("abc", vnode);
+
+    EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, fbl::move(server)));
+    EXPECT_EQ(ZX_ERR_CANCELED, loop.Run());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(service_tests)
 RUN_TEST(test_service)
+RUN_TEST(test_serve_directory)
 END_TEST_CASE(service_tests)
