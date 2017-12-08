@@ -18,7 +18,7 @@ using std::vector;
 const map<string, string> user_attrs = {
     {"noreturn", "__NO_RETURN"},
     {"const", "__CONST"},
-    {"deprecated", "__DEPRECATED"},
+    {"deprecated", "__DEPRECATE"},
 
     // All vDSO calls are "leaf" in the sense of the GCC attribute.
     // It just means they can't ever call back into their callers'

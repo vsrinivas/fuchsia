@@ -76,9 +76,7 @@
 #define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(__scoped_lockable__)
 #define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(__no_thread_safety_analysis__)
 
-#if !defined __DEPRECATED
-#define __DEPRECATED __attribute__((__deprecated__))
-#endif
+#define __DEPRECATE __attribute__((__deprecated__))
 
 #else  // if __GNUC__ || defined(__clang__)
 
@@ -121,8 +119,8 @@
 #define __LOCAL
 #define __THREAD
 
-#if !defined __DEPRECATED
-#define __DEPRECATED
+#if !defined __DEPRECATE
+#define __DEPRECATE
 #endif
 
 #endif  // if __GNUC__ || defined(__clang__)
