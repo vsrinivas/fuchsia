@@ -103,6 +103,15 @@ def filter_deps(deps):
     return filter(lambda x: x not in SYSROOT_PACKAGES, deps)
 
 
+def generate_build_file(path, template_name, data, context):
+    """Creates a build file based on a template."""
+    make_dir(path)
+    template = context.templates.get_template(template_name)
+    contents = template.render(data=data)
+    with open(path, 'w') as build_file:
+        build_file.write(contents)
+
+
 class SourceLibrary(object):
     """Represents a library built from sources.
 
@@ -138,11 +147,7 @@ def generate_source_library(package, context):
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
-    make_dir(build_path)
-    template = context.templates.get_template('source_library.mako')
-    contents = template.render(data=data)
-    with open(build_path, 'w') as build_file:
-        build_file.write(contents)
+    generate_build_file(build_path, 'source_library.mako', data, context)
 
 
 class CompiledLibrary(object):
@@ -200,11 +205,35 @@ def generate_compiled_library(package, context):
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
-    make_dir(build_path)
-    template = context.templates.get_template('compiled_library.mako')
-    contents = template.render(data=data)
-    with open(build_path, 'w') as build_file:
-        build_file.write(contents)
+    generate_build_file(build_path, 'compiled_library.mako', data, context)
+
+
+class Sysroot(object):
+    """Represents the sysroot created by Zircon.
+
+       Convenience storage object to be consumed by Mako templates."""
+
+    def __init__(self):
+        self.files = {}
+
+
+def generate_sysroot(package, context):
+    """Generates the build glue for the sysroot."""
+    data = Sysroot()
+
+    # Includes.
+    for name, path in package.get('includes', {}).iteritems():
+        (file, _) = extract_file(name, path, context)
+        data.files['include/%s' % name] = '//%s' % file
+
+    # Lib.
+    for name, path in package.get('lib', {}).iteritems():
+        (file, _) = extract_file(name, path, context)
+        data.files[name] = '//%s' % file
+
+    # Generate the build file.
+    build_path = os.path.join(context.out_dir, 'sysroot', 'BUILD.gn')
+    generate_build_file(build_path, 'sysroot.mako', data, context)
 
 
 class GenerationContext(object):
@@ -284,6 +313,9 @@ def main():
         if arch == 'src':
             type = 'source'
             generate_source_library(package, context)
+        elif name == 'c':
+            type = 'sysroot'
+            generate_sysroot(package, context)
         else:
             type = 'prebuilt'
             generate_compiled_library(package, context)
