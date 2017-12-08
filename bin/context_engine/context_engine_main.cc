@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/context_engine_impl.h"
@@ -10,17 +11,23 @@
 namespace maxwell {
 namespace {
 
-class App {
+class ContextEngineApp {
  public:
-  App(app::ApplicationContext* app_context) {
+  ContextEngineApp(app::ApplicationContext* app_context) {
     app_context->outgoing_services()->AddService<ContextEngine>(
         [this](fidl::InterfaceRequest<ContextEngine> request) {
           context_engine_impl_.AddBinding(std::move(request));
         });
   }
 
+  void Terminate(std::function<void()> done) {
+    done();
+  }
+
  private:
   ContextEngineImpl context_engine_impl_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextEngineApp);
 };
 
 }  // namespace
@@ -28,8 +35,11 @@ class App {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-  maxwell::App app(app_context.get());
+  auto context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AppDriver<maxwell::ContextEngineApp> driver(
+      context->outgoing_services(),
+      std::make_unique<maxwell::ContextEngineApp>(context.get()),
+      [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

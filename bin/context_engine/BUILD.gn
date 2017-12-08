@@ -23,6 +23,7 @@ executable("bin") {
     ":context_engine_impl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp",
   ]
 }
 
