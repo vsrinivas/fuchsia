@@ -5,60 +5,11 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
-#include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 #include "peridot/public/lib/module_resolver/cpp/formatting.h"
 
 namespace maxwell {
 namespace {
-
-const char* kManifests[] = {
-    R"END(
-{
-  "binary": "module1",
-  "local_name": "module1",
-  "verb": "com.google.fuchsia.navigate.v1",
-  "noun_constraints": [
-    {
-      "name": "start",
-      "types": [ "foo", "bar" ]
-    },
-    {
-      "name": "destination",
-      "types": [ "baz" ]
-    }
-  ]
-})END",
-    R"END(
-{
-  "binary": "module2",
-  "local_name": "module2",
-  "verb": "com.google.fuchsia.navigate.v1",
-  "noun_constraints": [
-    {
-      "name": "start",
-      "types": [ "frob" ]
-    },
-    {
-      "name": "destination",
-      "types": [ "froozle" ]
-    }
-  ]
-}
-)END",
-    R"END(
-{
-  "binary": "module3",
-  "local_name": "module3",
-  "verb": "com.google.fuchsia.exist.vinfinity",
-  "noun_constraints": [
-    {
-      "name": "with",
-      "types": [ "companionCube" ]
-    }
-  ]
-})END"};
-const int kNumManifests = 3;
 
 class DaisyBuilder {
  public:
@@ -116,39 +67,9 @@ class TestManifestSource : public modular::ModuleManifestSource {
 };
 
 class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
- public:
-  void SetUp() override {
-    // Set up a temp dir for the repository.
-    char temp_dir[] = "/tmp/module_manifest_repo_XXXXXX";
-    FXL_CHECK(mkdtemp(temp_dir)) << strerror(errno);
-    repo_dir_ = temp_dir;
-
-    for (int i = 0; i < kNumManifests; ++i) {
-      WriteManifestFile(std::string("manifest") + std::to_string(i),
-                        kManifests[i]);
-    }
-  }
-
-  void TearDown() override {
-    // Clean up.
-    resolver_.reset();
-    RemoveManifestFiles();
-    rmdir(repo_dir_.c_str());
-  }
-
-  void RemoveManifestFiles() {
-    for (const auto& path : manifests_written_) {
-      remove(path.c_str());
-    }
-  }
-
  protected:
   void ResetResolver() {
     impl_.reset(new ModuleResolverImpl);
-    // TODO(thatguy): Remove this source now that we have TestManifestSource.
-    impl_->AddSource("__test_dir",
-                     std::make_unique<modular::DirectoryModuleManifestSource>(
-                         repo_dir_, false));
     for (auto entry : test_sources_) {
       impl_->AddSource(
           entry.first,
@@ -163,13 +84,6 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     auto ptr = new TestManifestSource;
     test_sources_.emplace(name, ptr);
     return ptr;
-  }
-
-  void WriteManifestFile(const std::string& name, const char* contents) {
-    const auto path = repo_dir_ + '/' + name;
-    manifests_written_.push_back(path);
-
-    FXL_CHECK(files::WriteFile(path, contents, strlen(contents)));
   }
 
   void FindModules(modular::DaisyPtr daisy) {
@@ -190,8 +104,6 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     return result_->modules;
   }
 
-  std::vector<std::string> manifests_written_;
-  std::string repo_dir_;
   std::unique_ptr<ModuleResolverImpl> impl_;
 
   std::map<std::string, modular::ModuleManifestSource*> test_sources_;
@@ -205,7 +117,14 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   EXPECT_EQ("resolution_failed", results[0]->module_id);
 
 TEST_F(ModuleResolverImplTest, Null) {
+  auto source = AddSource("test");
   ResetResolver();
+
+  modular::ModuleManifestSource::Entry entry;
+  entry.binary = "id1";
+  entry.verb = "verb wont match";
+  source->add("1", entry);
+  source->idle();
 
   auto daisy = DaisyBuilder("no matchy!").build();
 
@@ -216,7 +135,32 @@ TEST_F(ModuleResolverImplTest, Null) {
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
+  // Also add Modules from multiple different sources.
+  auto source1 = AddSource("test1");
+  auto source2 = AddSource("test2");
   ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    source1->add("1", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module2";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    source2->add("1", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module3";
+    entry.verb = "com.google.fuchsia.exist.vinfinity";
+    source1->add("2", entry);
+  }
+
+  source1->idle();
+  source2->idle();
 
   auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1").build();
   FindModules(std::move(daisy));
@@ -224,19 +168,44 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   EXPECT_EQ("module1", results()[0]->module_id);
   EXPECT_EQ("module2", results()[1]->module_id);
 
-  // Remove the manifest files and we should see no more results.
-  RemoveManifestFiles();
-  // TODO(thatguy): Use a fake ModuleManifestSource instead of a
-  // DirectoryModuleManifestSource in this test, so we have more control over
-  // synchronization.
-  RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
+  // Remove the entries and we should see no more results. Our
+  // TestManifestSource implementation above doesn't send its tasks to the
+  // task_runner so we don't have to wait.
+  source1->remove("1");
+  source2->remove("1");
 
   FindModules(DaisyBuilder("com.google.fuchsia.navigate.v1").build());
   ASSERT_DEFAULT_RESULT(results());
 }
 
 TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
+  auto source = AddSource("test");
   ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"foo", "bar"}},
+                              {"destination", {"baz"}}};
+    source->add("1", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module2";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"frob"}},
+                              {"destination", {"froozle"}}};
+    source->add("2", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module3";
+    entry.verb = "com.google.fuchsia.exist.vinfinity";
+    entry.noun_constraints = {{"with", {"compantionCube"}}};
+    source->add("3", entry);
+  }
+  source->idle();
 
   // Either 'foo' or 'tangoTown' would be acceptible types. Only 'foo' will
   // actually match.
@@ -258,7 +227,33 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
 }
 
 TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
+  auto source = AddSource("test");
   ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"foo", "bar"}},
+                              {"destination", {"baz"}}};
+    source->add("1", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module2";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"frob"}},
+                              {"destination", {"froozle"}}};
+    source->add("2", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module3";
+    entry.verb = "com.google.fuchsia.exist.vinfinity";
+    entry.noun_constraints = {{"with", {"compantionCube"}}};
+    source->add("3", entry);
+  }
+  source->idle();
 
   // Same thing as above, but we'll use JSON with embedded type information and
   // should see the same exactly results.

@@ -80,6 +80,5 @@ source_set("module_resolver_impl_unittest") {
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",
-    "//peridot/lib/module_manifest_source:directory_source",
   ]
 }
