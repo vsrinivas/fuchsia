@@ -7,6 +7,7 @@ module maxwell;
 import "lib/resolver/fidl/resolver.fidl";
 import "lib/suggestion/fidl/suggestion_provider.fidl";
 import "lib/component/fidl/component_context.fidl";
+import "lib/context/fidl/context_engine.fidl";
 import "lib/story/fidl/story_provider.fidl";
 import "lib/user/fidl/focus.fidl";
 
@@ -23,6 +24,7 @@ interface UserIntelligenceProviderFactory {
   // be scoped to the user.
   GetUserIntelligenceProvider(
       modular.ComponentContext user_intelligence_context,
+      maxwell.ContextEngine context_engine,
       modular.StoryProvider story_provider,
       modular.FocusProvider focus_provider,
       modular.VisibleStoriesProvider visible_stories_provider,

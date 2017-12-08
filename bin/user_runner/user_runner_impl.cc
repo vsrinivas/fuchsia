@@ -60,6 +60,7 @@ namespace {
 constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "maxwell";
+constexpr char kContextEngineUrl[] = "context_engine";
 constexpr char kModuleResolverUrl[] = "module_resolver";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
@@ -370,6 +371,16 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       message_queue_manager_.get(), agent_runner_.get(),
       ledger_repository_.get(), entity_provider_runner_.get()};
 
+  // Start kContextEngineUrl.
+  auto context_engine_config = AppConfig::New();
+  context_engine_config->url = kContextEngineUrl;
+  context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
+      user_scope_->GetLauncher(), std::move(context_engine_config),
+      "" /* data_origin */);
+  AtEnd(Reset(&context_engine_app_));
+  AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
+
+  // Start kMaxwellUrl
   maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
       kMaxwellUrl);
@@ -386,8 +397,11 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
           user_scope_->GetLauncher(), std::move(maxwell_config));
 
+  maxwell::ContextEnginePtr context_engine;
+  context_engine_app_->services().ConnectToService(context_engine.NewRequest());
+
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
-      maxwell_component_context_impl_->NewBinding(),
+      maxwell_component_context_impl_->NewBinding(), std::move(context_engine),
       std::move(story_provider), std::move(focus_provider_maxwell),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
@@ -439,7 +453,6 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   module_resolver_app_->services().ConnectToService(
       module_resolver_service_.NewRequest());
   AtEnd(Reset(&module_resolver_service_));
-
   // End kModuleResolverUrl
 
   user_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(

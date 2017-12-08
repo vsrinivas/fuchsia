@@ -60,6 +60,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     app::ApplicationContext* app_context,
     const Config& config,
     fidl::InterfaceHandle<modular::ComponentContext> component_context_handle,
+    fidl::InterfaceHandle<maxwell::ContextEngine> context_engine_handle,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
     fidl::InterfaceHandle<modular::VisibleStoriesProvider>
@@ -68,6 +69,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       kronk_restart_(kKronkRetryLimit),
       agent_launcher_(app_context_->environment().get()) {
   component_context_.Bind(std::move(component_context_handle));
+  context_engine_.Bind(std::move(context_engine_handle));
   auto story_provider =
       modular::StoryProviderPtr::Create(std::move(story_provider_handle));
   auto focus_provider =
@@ -76,9 +78,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // Start dependent processes. We get some component-scope services from
   // these processes.
-  context_services_ = StartTrustedApp("context_engine");
-  context_engine_ =
-      context_services_.ConnectToService<maxwell::ContextEngine>();
   suggestion_services_ = StartTrustedApp("suggestion_engine");
   suggestion_engine_ =
       suggestion_services_.ConnectToService<maxwell::SuggestionEngine>();
@@ -275,6 +274,7 @@ UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
     fidl::InterfaceHandle<modular::ComponentContext> component_context,
+    fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<modular::VisibleStoriesProvider>
@@ -286,6 +286,7 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
       app_context_, config_, std::move(component_context),
+      std::move(context_engine),
       std::move(story_provider), std::move(focus_provider),
       std::move(visible_stories_provider)));
   binding_.reset(new fidl::Binding<UserIntelligenceProvider>(impl_.get()));

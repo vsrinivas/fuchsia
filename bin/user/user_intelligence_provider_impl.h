@@ -26,6 +26,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
       app::ApplicationContext* app_context,
       const Config& config,
       fidl::InterfaceHandle<modular::ComponentContext> component_context,
+      fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
       fidl::InterfaceHandle<modular::VisibleStoriesProvider>
@@ -65,7 +66,6 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   app::ApplicationContext* app_context_;  // Not owned.
 
-  app::Services context_services_;
   ContextEnginePtr context_engine_;
   app::Services suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
@@ -99,6 +99,7 @@ class UserIntelligenceProviderFactoryImpl
 
   void GetUserIntelligenceProvider(
       fidl::InterfaceHandle<modular::ComponentContext> component_context,
+      fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
       fidl::InterfaceHandle<modular::VisibleStoriesProvider>
