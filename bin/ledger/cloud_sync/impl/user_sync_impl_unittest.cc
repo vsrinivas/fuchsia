@@ -12,7 +12,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
-#include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/backoff/testing/test_backoff.h"
 
 namespace cloud_sync {
 
@@ -37,8 +37,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
 
     user_sync_ = std::make_unique<UserSyncImpl>(
         &environment_, std::move(user_config),
-        std::make_unique<backoff::test::TestBackoff>(), &sync_state_watcher_,
-        [this] {
+        std::make_unique<backoff::TestBackoff>(), &sync_state_watcher_, [this] {
           on_version_mismatch_calls_++;
           message_loop_.PostQuitTask();
         });

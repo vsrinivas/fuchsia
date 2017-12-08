@@ -23,7 +23,7 @@
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
-#include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
@@ -37,7 +37,7 @@ class PageUploadTest : public ::test::TestWithMessageLoop,
         encryption_service_(message_loop_.task_runner()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(message_loop_.task_runner()) {
-    auto test_backoff = std::make_unique<backoff::test::TestBackoff>();
+    auto test_backoff = std::make_unique<backoff::TestBackoff>();
     backoff_ = test_backoff.get();
     page_upload_ = std::make_unique<PageUpload>(
         &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
@@ -65,7 +65,7 @@ class PageUploadTest : public ::test::TestWithMessageLoop,
   test::TestPageCloud page_cloud_;
   std::vector<UploadSyncState> states_;
   std::unique_ptr<PageUpload> page_upload_;
-  backoff::test::TestBackoff* backoff_;
+  backoff::TestBackoff* backoff_;
   bool is_download_idle_ = true;
 
  private:

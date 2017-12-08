@@ -24,7 +24,7 @@
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
-#include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
@@ -40,7 +40,7 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
         task_runner_(message_loop_.task_runner()) {
     page_download_ = std::make_unique<PageDownload>(
         &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
-        std::make_unique<backoff::test::TestBackoff>());
+        std::make_unique<backoff::TestBackoff>());
   }
   ~PageDownloadTest() override {}
 
@@ -51,16 +51,16 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
 
   std::string GetData(storage::DataSource* data_source) {
     std::stringstream data;
-    data_source->Get([this, &data](
-        std::unique_ptr<storage::DataSource::DataChunk> chunk,
-        storage::DataSource::Status status) {
-      EXPECT_NE(storage::DataSource::Status::ERROR, status);
-      if (status == storage::DataSource::Status::TO_BE_CONTINUED) {
-        data << chunk->Get();
-      } else {
-        message_loop_.PostQuitTask();
-      }
-    });
+    data_source->Get(
+        [this, &data](std::unique_ptr<storage::DataSource::DataChunk> chunk,
+                      storage::DataSource::Status status) {
+          EXPECT_NE(storage::DataSource::Status::ERROR, status);
+          if (status == storage::DataSource::Status::TO_BE_CONTINUED) {
+            data << chunk->Get();
+          } else {
+            message_loop_.PostQuitTask();
+          }
+        });
     EXPECT_FALSE(RunLoopWithTimeout());
     return data.str();
   }

@@ -128,7 +128,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
     "//peridot/bin/ledger/test:lib",
-    "//peridot/lib/backoff/test",
+    "//peridot/lib/backoff/testing",
     "//peridot/lib/convert",
     "//peridot/public/lib/auth/fidl",
     "//third_party/gtest",

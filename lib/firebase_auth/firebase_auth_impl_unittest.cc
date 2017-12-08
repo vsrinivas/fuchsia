@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase_auth/test/test_token_provider.h"
 
@@ -32,7 +32,7 @@ class FirebaseAuthImplTest : public ::test::TestWithMessageLoop {
 
  protected:
   std::unique_ptr<backoff::Backoff> InitBackoff() {
-    auto backoff = std::make_unique<backoff::test::TestBackoff>();
+    auto backoff = std::make_unique<backoff::TestBackoff>();
     backoff_ = backoff.get();
     return backoff;
   }
@@ -40,7 +40,7 @@ class FirebaseAuthImplTest : public ::test::TestWithMessageLoop {
   test::TestTokenProvider token_provider_;
   fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
   FirebaseAuthImpl firebase_auth_;
-  backoff::test::TestBackoff* backoff_;
+  backoff::TestBackoff* backoff_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuthImplTest);

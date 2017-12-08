@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/backoff/test/test_backoff.h"
+#include "peridot/lib/backoff/testing/test_backoff.h"
 
 namespace backoff {
-
-namespace test {
 
 TestBackoff::TestBackoff() {}
 
@@ -27,7 +25,5 @@ void TestBackoff::Reset() {
 void TestBackoff::SetOnGetNext(fxl::Closure on_get_next) {
   on_get_next_ = on_get_next;
 }
-
-}  // namespace test
 
 }  // namespace backoff
