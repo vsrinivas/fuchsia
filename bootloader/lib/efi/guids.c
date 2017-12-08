@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/device-path-to-text.h>
+#include <efi/protocol/disk-io.h>
 #include <efi/protocol/driver-binding.h>
 #include <efi/protocol/file.h>
 #include <efi/protocol/graphics-output.h>
@@ -16,8 +18,10 @@
 #include <efi/protocol/simple-text-output.h>
 #include <efi/protocol/usb-io.h>
 
+efi_guid BlockIoProtocol = EFI_BLOCK_IO_PROTOCOL_GUID;
 efi_guid DevicePathProtocol = EFI_DEVICE_PATH_PROTOCOL_GUID;
 efi_guid DevicePathToTextProtocol = EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID;
+efi_guid DiskIoProtocol = EFI_DISK_IO_PROTOCOL_GUID;
 efi_guid DriverBindingProtocol = EFI_DRIVER_BINDING_PROTOCOL_GUID;
 efi_guid FileInfoGuid = EFI_FILE_INFO_GUID;
 efi_guid FileSystemInfoGuid = EFI_FILE_SYSTEM_INFO_GUID;
