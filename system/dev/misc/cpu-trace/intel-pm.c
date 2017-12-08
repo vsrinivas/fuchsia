@@ -50,16 +50,16 @@ static_assert(1
 
 // There's only a few misc events, so handle them directly.
 typedef enum {
-#define DEF_MISC_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
-#include <zircon/device/cpu-trace/intel-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
 // Verify each misc counter id < IPM_MAX_MISC_COUNTERS.
-#define DEF_MISC_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
     && (id) < IPM_MAX_MISC_COUNTERS
 static_assert(1
-#include <zircon/device/cpu-trace/intel-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
     , "");
 
 typedef enum {
