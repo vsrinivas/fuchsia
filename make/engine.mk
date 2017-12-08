@@ -722,17 +722,35 @@ HOST_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti
 HOST_LDFLAGS :=
 ifneq ($(HOST_USE_CLANG),)
 # We need to use our provided libc++ and libc++abi (and their pthread
-# dependency) rather than the host library. For host tools without
-# C++, ignore the unused arguments.
+# dependency) rather than the host library. The only exception is the
+# case when we are cross-compiling the host tools in which case we use
+# the C++ library from the sysroot.
+# TODO: This can be removed once the Clang toolchain ships with a
+# cross-compiled C++ runtime.
+ifeq ($(HOST_TARGET),)
 HOST_CPPFLAGS += -stdlib=libc++
-HOST_LDFLAGS += -stdlib=libc++ -static-libstdc++
+HOST_LDFLAGS += -stdlib=libc++
 # We don't need to link libc++abi.a on OS X.
 ifneq ($(HOST_PLATFORM),darwin)
 HOST_LDFLAGS += -Lprebuilt/downloads/clang+llvm-$(HOST_ARCH)-$(HOST_PLATFORM)/lib -Wl,-Bstatic -lc++abi -Wl,-Bdynamic -lpthread
 endif
+endif
+HOST_LDFLAGS += -static-libstdc++
+# For host tools without C++, ignore the unused arguments.
 HOST_LDFLAGS += -Wno-unused-command-line-argument
 endif
 HOST_ASMFLAGS :=
+
+ifneq ($(HOST_TARGET),)
+HOST_COMPILEFLAGS += --target=$(HOST_TARGET)
+ifeq ($(call TOBOOL,$(HOST_USE_SYSROOT)),true)
+ifeq ($(HOST_TARGET),x86_64-linux-gnu)
+HOST_SYSROOT ?= $(SYSROOT_linux-amd64_PATH)
+else ifeq ($(HOST_TARGET),aarch64-linux-gnu)
+HOST_SYSROOT ?= $(SYSROOT_linux-arm64_PATH)
+endif
+endif
+endif
 
 ifneq ($(HOST_USE_CLANG),)
 ifeq ($(HOST_PLATFORM),darwin)

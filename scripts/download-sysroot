@@ -41,9 +41,9 @@ function downloadSysroot() {
   local version_file="${PREBUILTS_DIR}/versions/${common_path}/sysroot.sha1"
   if [[ ! -f "${version_file}" ]]; then
     echo "File ${version_file} does not exist."
-    return
+    return 1
   fi
-  local required_version="$(cat "${version_file}" )"
+  local required_version="$(<"${version_file}")"
   local prebuilt_url="${FUCHSIA_GS_BUCKET}/sysroot/${host_platform}/${required_version}"
 
   # These are files and paths we control in this script.

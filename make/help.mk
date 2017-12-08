@@ -25,6 +25,7 @@ help:
 	@echo "EXTERNAL_DEFINES = <additional defines to add to GLOBAL_DEFINES>"
 	@echo "EXTERNAL_KERNEL_DEFINES = <additional defines to add to the kernel build>"
 	@echo "EXTERNAL_MODULES = <additional modules to include in the project build>"
+	@echo "HOST_TARGET = <host target to build the host tools for>"
 	@echo "These variables may be also placed in a root level local.mk."
 	@echo ""
 	@echo "Special make targets:"
