@@ -193,9 +193,15 @@ class UserRunnerImpl : UserRunner,
   std::unique_ptr<RemoteInvokerImpl> remote_invoker_impl_;
   std::string device_name_;
 
-  // This component context is supplied to the user intelligence provider,
-  // below, so it can run agents and create message queues.
+  // This component context is supplied to the user intelligence provider (from
+  // |maxwell_app_|), so it can run agents and create message queues.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
+
+  // ComponentContext given to |context_engine_app_| so it can resolve Entities.
+  // TODO(thatguy): Oh God naming...
+  std::unique_ptr<ComponentContextImpl> context_engine_context_impl_;
+  // Services we provide to |context_engine_app_|.
+  app::ServiceProviderImpl context_engine_ns_services_;
 
   // Service provider interfaces for maxwell services. They are created with
   // the component context above as parameters.

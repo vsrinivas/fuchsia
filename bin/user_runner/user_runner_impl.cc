@@ -61,6 +61,7 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "maxwell";
 constexpr char kContextEngineUrl[] = "context_engine";
+constexpr char kContextEngineComonentNamespace[] = "context_engine";
 constexpr char kModuleResolverUrl[] = "module_resolver";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
@@ -372,13 +373,27 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       ledger_repository_.get(), entity_provider_runner_.get()};
 
   // Start kContextEngineUrl.
-  auto context_engine_config = AppConfig::New();
-  context_engine_config->url = kContextEngineUrl;
-  context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), std::move(context_engine_config),
-      "" /* data_origin */);
-  AtEnd(Reset(&context_engine_app_));
-  AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
+  {
+    context_engine_context_impl_ = std::make_unique<ComponentContextImpl>(
+        component_context_info, kContextEngineComonentNamespace,
+        kContextEngineUrl, kContextEngineUrl);
+    context_engine_ns_services_.AddService<ComponentContext>(
+        [this](fidl::InterfaceRequest<ComponentContext> request) {
+          context_engine_context_impl_->Connect(std::move(request));
+        });
+    auto service_list = app::ServiceList::New();
+    service_list->names.push_back(ComponentContext::Name_);
+    context_engine_ns_services_.AddBinding(service_list->provider.NewRequest());
+
+    auto context_engine_config = AppConfig::New();
+    context_engine_config->url = kContextEngineUrl;
+
+    context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
+        user_scope_->GetLauncher(), std::move(context_engine_config),
+        "" /* data_origin */, std::move(service_list));
+    AtEnd(Reset(&context_engine_app_));
+    AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
+  }
 
   // Start kMaxwellUrl
   maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
@@ -422,33 +437,35 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       });
 
   // Setup for kModuleResolverUrl
-  module_resolver_ns_services_.AddService<maxwell::IntelligenceServices>(
-      [this](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
-        auto component_scope = maxwell::ComponentScope::New();
-        component_scope->set_global_scope(maxwell::GlobalScope::New());
-        fidl::InterfaceHandle<maxwell::IntelligenceServices>
-            intelligence_services;
-        if (user_intelligence_provider_) {
-          user_intelligence_provider_->GetComponentIntelligenceServices(
-              std::move(component_scope), std::move(request));
-        }
-      });
+  {
+    module_resolver_ns_services_.AddService<maxwell::IntelligenceServices>(
+        [this](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+          auto component_scope = maxwell::ComponentScope::New();
+          component_scope->set_global_scope(maxwell::GlobalScope::New());
+          fidl::InterfaceHandle<maxwell::IntelligenceServices>
+              intelligence_services;
+          if (user_intelligence_provider_) {
+            user_intelligence_provider_->GetComponentIntelligenceServices(
+                std::move(component_scope), std::move(request));
+          }
+        });
 
-  auto service_list = app::ServiceList::New();
-  service_list->names.push_back(maxwell::IntelligenceServices::Name_);
-  module_resolver_ns_services_.AddBinding(service_list->provider.NewRequest());
+    auto service_list = app::ServiceList::New();
+    service_list->names.push_back(maxwell::IntelligenceServices::Name_);
+    module_resolver_ns_services_.AddBinding(
+        service_list->provider.NewRequest());
 
-  auto module_resolver_config = AppConfig::New();
-  module_resolver_config->url = kModuleResolverUrl;
-  // For now, we want data_origin to be "", which uses our (parent process's)
-  // /data. This is appropriate for the module_resolver, for now. We can in the
-  // future isolate the data it reads to a subdir of /data and map that in
-  // here.
-  module_resolver_app_ = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), std::move(module_resolver_config),
-      "" /* data_origin */, std::move(service_list));
-  AtEnd(Reset(&module_resolver_app_));
-  AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
+    auto module_resolver_config = AppConfig::New();
+    module_resolver_config->url = kModuleResolverUrl;
+    // For now, we want data_origin to be "", which uses our (parent process's)
+    // /data. This is appropriate for the module_resolver. We can in the future
+    // isolate the data it reads to a subdir of /data and map that in here.
+    module_resolver_app_ = std::make_unique<AppClient<Lifecycle>>(
+        user_scope_->GetLauncher(), std::move(module_resolver_config),
+        "" /* data_origin */, std::move(service_list));
+    AtEnd(Reset(&module_resolver_app_));
+    AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
+  }
 
   module_resolver_app_->services().ConnectToService(
       module_resolver_service_.NewRequest());
