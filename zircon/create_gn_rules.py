@@ -24,6 +24,10 @@ from mako.lookup import TemplateLookup
 from mako.template import Template
 
 
+# Packages included in the sysroot.
+SYSROOT_PACKAGES = ['c', 'zircon']
+
+
 def make_dir(path, is_dir=False):
     """Creates the directory at `path`."""
     target = path if is_dir else os.path.dirname(path)
@@ -94,6 +98,11 @@ def extract_file(name, path, context):
     return (file, folder)
 
 
+def filter_deps(deps):
+    """Sanitizes a given dependency list."""
+    return filter(lambda x: x not in SYSROOT_PACKAGES, deps)
+
+
 class SourceLibrary(object):
     """Represents a library built from sources.
 
@@ -124,7 +133,8 @@ def generate_source_library(package, context):
         data.sources.append('//%s' % file)
 
     # Dependencies.
-    data.deps += package.get('deps', [])
+    data.deps += filter_deps(package.get('deps', []))
+    data.deps += filter_deps(package.get('static-deps', []))
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
@@ -186,7 +196,7 @@ def generate_compiled_library(package, context):
                                                        ', '.join(libs.keys())))
 
     # Dependencies.
-    data.deps += package.get('deps', [])
+    data.deps += filter_deps(package.get('deps', []))
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
@@ -264,6 +274,9 @@ def main():
         name = package['package']['name']
         type = package['package']['type']
         arch = package['package']['arch']
+        if name in SYSROOT_PACKAGES:
+            print('Ignoring sysroot part: %s' % name)
+            continue
         if type != 'lib':
             print('(%s) Unsupported package type: %s/%s, skipping'
                   % (name, type, arch))
