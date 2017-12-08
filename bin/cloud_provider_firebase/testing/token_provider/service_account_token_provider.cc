@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/test/token_provider/service_account_token_provider.h"
+#include "peridot/bin/cloud_provider_firebase/testing/token_provider/service_account_token_provider.h"
 
 #include <openssl/bio.h>
 #include <openssl/digest.h>
@@ -23,7 +23,7 @@
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 
-namespace test {
+namespace service_account {
 
 namespace {
 const char kServiceAccountConfigurationSchema[] = R"({
@@ -437,4 +437,4 @@ void ServiceAccountTokenProvider::ResolveCallbacks(
   }
 }
 
-}  // namespace test
+}  // namespace service_account

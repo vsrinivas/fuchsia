@@ -4,7 +4,7 @@
 
 visibility = [ "//peridot/bin/cloud_provider_firebase/*" ]
 
-source_set("test") {
+source_set("testing") {
   testonly = true
 
   sources = [

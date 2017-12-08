@@ -7,7 +7,7 @@ visibility = [
   "//peridot/bin/ledger/*",
 ]
 
-source_set("test") {
+source_set("testing") {
   testonly = true
 
   sources = [

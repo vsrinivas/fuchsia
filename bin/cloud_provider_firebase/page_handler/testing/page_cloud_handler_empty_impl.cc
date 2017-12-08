@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/page_handler/test/page_cloud_handler_empty_impl.h"
+#include "peridot/bin/cloud_provider_firebase/page_handler/testing/page_cloud_handler_empty_impl.h"
 
 #include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
-namespace test {
-
 void PageCloudHandlerEmptyImpl::AddCommits(
     const std::string& /*auth_token*/,
     std::vector<Commit> /*commits*/,
@@ -49,6 +47,4 @@ void PageCloudHandlerEmptyImpl::GetObject(
     /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
-
-}  // namespace test
 }  // namespace cloud_provider_firebase

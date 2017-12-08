@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TEST_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TEST_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
 
 #include <functional>
 #include <string>
@@ -14,7 +14,6 @@
 #include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
-namespace test {
 
 // Empty implementation of PageCloudHandler.  All methods do nothing and return
 // dummy or empty responses.
@@ -50,7 +49,6 @@ class PageCloudHandlerEmptyImpl : public PageCloudHandler {
           callback) override;
 };
 
-}  // namespace test
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TEST_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_

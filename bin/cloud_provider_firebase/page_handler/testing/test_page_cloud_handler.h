@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TEST_TEST_PAGE_CLOUD_HANDLER_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TEST_TEST_PAGE_CLOUD_HANDLER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_TEST_PAGE_CLOUD_HANDLER_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_TEST_PAGE_CLOUD_HANDLER_H_
 
 #include <map>
 #include <string>
@@ -12,10 +12,9 @@
 #include "garnet/public/lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
-#include "peridot/bin/cloud_provider_firebase/page_handler/test/page_cloud_handler_empty_impl.h"
+#include "peridot/bin/cloud_provider_firebase/page_handler/testing/page_cloud_handler_empty_impl.h"
 
 namespace cloud_provider_firebase {
-namespace test {
 
 // Fake implementation of PageCloudHandler.
 //
@@ -79,8 +78,6 @@ class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestPageCloudHandler);
 };
 
-}  // namespace test
-
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TEST_TEST_PAGE_CLOUD_HANDLER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_TEST_PAGE_CLOUD_HANDLER_H_

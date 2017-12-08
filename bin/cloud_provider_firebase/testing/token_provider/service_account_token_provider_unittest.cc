@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/test/token_provider/service_account_token_provider.h"
+#include "peridot/bin/cloud_provider_firebase/testing/token_provider/service_account_token_provider.h"
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -18,7 +18,7 @@
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/network/fake_network_service.h"
 
-namespace test {
+namespace service_account {
 namespace {
 
 constexpr fxl::StringView kTestConfig =
@@ -54,7 +54,7 @@ constexpr fxl::StringView kWrongKeyTestConfig =
     "\"client_id\": \"fake_id\""
     "}";
 
-class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
+class ServiceAccountTokenProviderTest : public test::TestWithMessageLoop {
  public:
   ServiceAccountTokenProviderTest()
       : network_service_(message_loop_.task_runner()),
@@ -234,4 +234,4 @@ TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
 }
 
 }  // namespace
-}  // namespace test
+}  // namespace service_account

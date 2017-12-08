@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/page_handler/test/test_page_cloud_handler.h"
+#include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace cloud_provider_firebase {
-namespace test {
-
 TestPageCloudHandler::TestPageCloudHandler(
     fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
@@ -105,6 +103,4 @@ void TestPageCloudHandler::GetObject(
                  fsl::WriteStringToSocket(objects_to_return[object_digest]));
       });
 }
-
-}  // namespace test
 }  // namespace cloud_provider_firebase

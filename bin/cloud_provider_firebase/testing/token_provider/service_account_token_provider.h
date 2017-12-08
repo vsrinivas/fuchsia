@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
 
 #include <map>
 
@@ -13,7 +13,7 @@
 
 #include "lib/fxl/macros.h"
 
-namespace test {
+namespace service_account {
 
 // An implementation of |TokenProvider| that uses a firebase service account to
 // register an user and mint token for it.
@@ -63,6 +63,6 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceAccountTokenProvider);
 };
 
-};  // namespace test
+};  // namespace service_account
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_

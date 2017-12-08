@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/test/server/fake_cloud_network_service.h"
+#include "peridot/bin/cloud_provider_firebase/testing/server/fake_cloud_network_service.h"
 
 #include "lib/fxl/macros.h"
 
