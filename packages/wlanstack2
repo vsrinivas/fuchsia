@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "rust"
+    ],
+    "packages": {
+        "wlanstack2": "//garnet/bin/wlanstack:wlanstack2"
+    }
+}
