@@ -10,9 +10,26 @@
 
 __BEGIN_CDECLS;
 
+enum CBW {
+    // Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
+    // VHT notation
+
+    CBW20 = 0, // Default. Corresponds to SecondaryChannelOffset-None
+    CBW40 = 1,
+    CBW40ABOVE = CBW40, // Corresponds to SecondaryChannelOffset-Above
+    CBW40BELOW = 2,     // Corresponds to SecondaryChannelOffset-Below
+    CBW80 = 3,
+    CBW160 = 4,
+    CBW80P80 = 5, // Non-contiguous frequency segments
+
+    CBW_COUNT,
+};
+
 typedef struct wlan_channel {
     uint16_t channel_num;
-    // etc
+    uint8_t primary;
+    uint8_t cbw; // Channel Bandwidth
+    uint8_t secondary80;
 } wlan_channel_t;
 
 enum {
@@ -159,6 +176,7 @@ typedef struct wlan_rx_info {
     uint32_t valid_fields;
     // The PHY format of the device at the time of the operation.
     uint16_t phy;
+    // TODO(porce): Deprecate gracefully. This information is part of wlan_channel_t.
     // The channel width of the device.
     uint16_t chan_width;
     // The data rate of the device, measured in units of 0.5 Mb/s.

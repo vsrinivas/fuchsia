@@ -19,8 +19,9 @@ namespace {
 
 class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
                        public ddk::WlanmacIfc<TestWlanmacIfc> {
-  public:
-    TestWlanmacIfc() : ddk::Device<TestWlanmacIfc>(nullptr) {
+public:
+    TestWlanmacIfc()
+        : ddk::Device<TestWlanmacIfc>(nullptr) {
         this_ = get_this();
     }
 
@@ -56,7 +57,7 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
         return proxy->Start(this);
     }
 
-  private:
+private:
     uintptr_t this_ = 0u;
     uintptr_t status_this_ = 0u;
     uintptr_t recv_this_ = 0u;
@@ -68,14 +69,15 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
 
 class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>,
                             public ddk::WlanmacProtocol<TestWlanmacProtocol> {
-  public:
+public:
     TestWlanmacProtocol()
-      : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {
+        : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {
         this_ = get_this();
     }
 
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
-        if (proto_id != ZX_PROTOCOL_WLANMAC) return ZX_ERR_INVALID_ARGS;
+        if (proto_id != ZX_PROTOCOL_WLANMAC)
+            return ZX_ERR_INVALID_ARGS;
         ddk::AnyProtocol* proto = static_cast<ddk::AnyProtocol*>(out);
         proto->ops = ddk_proto_ops_;
         proto->ctx = this;
@@ -146,7 +148,8 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     }
 
     bool TestIfc() {
-        if (!proxy_) return false;
+        if (!proxy_)
+            return false;
         // Use the provided proxy to test the ifc proxy.
         proxy_->Status(0);
         proxy_->Recv(0, nullptr, 0, nullptr);
@@ -154,7 +157,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         return true;
     }
 
-  private:
+private:
     uintptr_t this_ = 0u;
     uintptr_t query_this_ = 0u;
     uintptr_t stop_this_ = 0u;
@@ -283,7 +286,7 @@ static bool test_wlanmac_protocol_ifc_proxy() {
     END_TEST;
 }
 
-}  // namespace
+} // namespace
 
 BEGIN_TEST_CASE(ddktl_wlan_device)
 RUN_NAMED_TEST("ddk::WlanmacIfc", test_wlanmac_ifc);

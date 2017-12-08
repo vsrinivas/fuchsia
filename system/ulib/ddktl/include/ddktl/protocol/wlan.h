@@ -6,9 +6,9 @@
 
 #include <ddk/protocol/wlan.h>
 #include <ddktl/protocol/wlan-internal.h>
-#include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/assert.h>
 
 // DDK wlan protocol support
 //
@@ -136,7 +136,7 @@ namespace ddk {
 
 template <typename D>
 class WlanmacIfc {
-  public:
+public:
     WlanmacIfc() {
         internal::CheckWlanmacIfc<D>();
         ifc_.status = Status;
@@ -146,7 +146,7 @@ class WlanmacIfc {
 
     wlanmac_ifc_t* wlanmac_ifc() { return &ifc_; }
 
-  private:
+private:
     static void Status(void* cookie, uint32_t status) {
         static_cast<D*>(cookie)->WlanmacStatus(status);
     }
@@ -164,9 +164,9 @@ class WlanmacIfc {
 };
 
 class WlanmacIfcProxy {
-  public:
+public:
     WlanmacIfcProxy(wlanmac_ifc_t* ifc, void* cookie)
-      : ifc_(ifc), cookie_(cookie) {}
+        : ifc_(ifc), cookie_(cookie) {}
 
     void Status(uint32_t status) {
         ifc_->status(cookie_, status);
@@ -180,14 +180,14 @@ class WlanmacIfcProxy {
         ifc_->complete_tx(cookie_, pkt, status);
     }
 
-  private:
+private:
     wlanmac_ifc_t* ifc_;
     void* cookie_;
 };
 
 template <typename D>
 class WlanmacProtocol : public internal::base_protocol {
-  public:
+public:
     WlanmacProtocol() {
         internal::CheckWlanmacProtocolSubclass<D>();
         ops_.query = Query;
@@ -204,7 +204,7 @@ class WlanmacProtocol : public internal::base_protocol {
         ddk_proto_ops_ = &ops_;
     }
 
-  private:
+private:
     static zx_status_t Query(void* ctx, uint32_t options, wlanmac_info_t* info) {
         return static_cast<D*>(ctx)->WlanmacQuery(options, info);
     }
@@ -238,9 +238,9 @@ class WlanmacProtocol : public internal::base_protocol {
 };
 
 class WlanmacProtocolProxy {
-  public:
+public:
     WlanmacProtocolProxy(wlanmac_protocol_t* proto)
-      : ops_(proto->ops), ctx_(proto->ctx) {}
+        : ops_(proto->ops), ctx_(proto->ctx) {}
 
     zx_status_t Query(uint32_t options, wlanmac_info_t* info) {
         return ops_->query(ctx_, options, info);
@@ -273,9 +273,9 @@ class WlanmacProtocolProxy {
         return ops_->set_key(ctx_, options, key_config);
     }
 
-  private:
+private:
     wlanmac_protocol_ops_t* ops_;
     void* ctx_;
 };
 
-}  // namespace ddk
+} // namespace ddk
