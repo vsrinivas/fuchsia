@@ -18,18 +18,24 @@ static const uint64_t kGicRevision = 2;
 // clang-format off
 
 enum class GicdRegister : uint64_t {
-    CTL         = 0x000,
-    TYPE        = 0x004,
-    ISENABLE0   = 0x100,
-    ISENABLE15  = 0x13c,
-    ICENABLE0   = 0x180,
-    ICENABLE15  = 0x1bc,
-    ICPEND0     = 0x280,
-    ICPEND15    = 0x2bc,
-    ICFG0       = 0xc00,
-    ICFG31      = 0xc7c,
-    SGI         = 0xf00,
-    PID2        = 0xfe8,
+    CTL           = 0x000,
+    TYPE          = 0x004,
+    ISENABLE0     = 0x100,
+    ISENABLE15    = 0x13c,
+    ICENABLE0     = 0x180,
+    ICENABLE15    = 0x1bc,
+    ICPEND0       = 0x280,
+    ICPEND15      = 0x2bc,
+    ICFG0         = 0xc00,
+    ICFG31        = 0xc7c,
+    ICACTIVE0     = 0x380,
+    ICACTIVE15    = 0x3bc,
+    IPRIORITY0    = 0x400,
+    IPRIORITY255  = 0x500,
+    ITARGETS0     = 0x800,
+    ITARGETS255   = 0x900,
+    SGI           = 0xf00,
+    PID2          = 0xfe8,
 };
 
 // clang-format on
@@ -64,6 +70,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = typer_it_lines(kNumInterrupts);
       return ZX_OK;
     case GicdRegister::ICFG0... GicdRegister::ICFG31:
+    case GicdRegister::ITARGETS0... GicdRegister::ITARGETS255:
       if (addr % 4)
         return ZX_ERR_IO_DATA_INTEGRITY;
       value->u32 = 0;
@@ -72,7 +79,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = pidr2_arch_rev(kGicRevision);
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled GIC distributor address %#lx\n", addr);
+      fprintf(stderr, "Unhandled GIC distributor address read %#lx\n", addr);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -85,6 +92,9 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     case GicdRegister::ICENABLE0... GicdRegister::ICENABLE15:
     case GicdRegister::ICPEND0... GicdRegister::ICPEND15:
     case GicdRegister::ICFG0... GicdRegister::ICFG31:
+    case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
+    case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY255:
+    case GicdRegister::ITARGETS0... GicdRegister::ITARGETS255:
       if (addr % 4)
         return ZX_ERR_IO_DATA_INTEGRITY;
       return ZX_OK;
@@ -98,7 +108,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
     default:
-      fprintf(stderr, "Unhandled GIC distributor address %#lx\n", addr);
+      fprintf(stderr, "Unhandled GIC distributor address write %#lx\n", addr);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
