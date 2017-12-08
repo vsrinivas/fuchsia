@@ -31,4 +31,8 @@ source_set("${data.name}") {
   public_configs = [
     ":${data.name}_config",
   ]
+
+  defines = [
+    "_ALL_SOURCE=1",
+  ]
 }
