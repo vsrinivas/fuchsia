@@ -57,7 +57,7 @@ typedef enum {
 
 // Verify each misc counter id < IPM_MAX_MISC_COUNTERS.
 #define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
-    && (id) < IPM_MAX_MISC_COUNTERS
+    && (id) < IPM_MAX_MISC_EVENTS
 static_assert(1
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
     , "");
@@ -179,12 +179,12 @@ void ipm_init_once(void)
 
     zxlogf(TRACE, "Intel Performance Monitor configuration for this chipset:\n");
     zxlogf(TRACE, "IPM: version: %u\n", ipm_properties.pm_version);
-    zxlogf(TRACE, "IPM: num_programmable_counters: %u\n",
-           ipm_properties.num_programmable_counters);
-    zxlogf(TRACE, "IPM: num_fixed_counters: %u\n",
-           ipm_properties.num_fixed_counters);
-    zxlogf(TRACE, "IPM: num_misc_counters: %u\n",
-           ipm_properties.num_misc_counters);
+    zxlogf(TRACE, "IPM: num_programmable_events: %u\n",
+           ipm_properties.num_programmable_events);
+    zxlogf(TRACE, "IPM: num_fixed_events: %u\n",
+           ipm_properties.num_fixed_events);
+    zxlogf(TRACE, "IPM: num_misc_events: %u\n",
+           ipm_properties.num_misc_events);
     zxlogf(TRACE, "IPM: programmable_counter_width: %u\n",
            ipm_properties.programmable_counter_width);
     zxlogf(TRACE, "IPM: fixed_counter_width: %u\n",
@@ -226,7 +226,7 @@ static unsigned ipm_fixed_counter_number(cpuperf_event_id_t id) {
     }
 }
 
-static unsigned ipm_misc_counter_number(cpuperf_event_id_t id) {
+static unsigned ipm_misc_event_number(cpuperf_event_id_t id) {
     switch (id) {
     case MISC_MEM_BYTES_READ_ID:
     case MISC_MEM_BYTES_WRITTEN_ID:
@@ -235,7 +235,7 @@ static unsigned ipm_misc_counter_number(cpuperf_event_id_t id) {
     case MISC_MEM_IO_REQUESTS_ID:
         return CPUPERF_EVENT_ID_EVENT(id);
     default:
-        return IPM_MAX_MISC_COUNTERS;
+        return IPM_MAX_MISC_EVENTS;
     }
 }
 
@@ -256,16 +256,16 @@ static zx_status_t ipm_get_properties(cpu_trace_device_t* dev,
 
     props.api_version = CPUPERF_API_VERSION;
     props.pm_version = ipm_properties.pm_version;
-    // To the arch-independent API, the misc counters on Intel are currently
+    // To the arch-independent API, the misc events on Intel are currently
     // all "fixed" in the sense that they don't occupy a limited number of
     // programmable slots. Ultimately there could still be limitations (e.g.,
-    // some combination of counters can't be supported) but that's ok. This
+    // some combination of events can't be supported) but that's ok. This
     // data is for informational/debug purposes.
     // TODO(dje): Something more elaborate can wait for publishing them via
     // some namespace.
-    props.num_fixed_counters = (ipm_properties.num_fixed_counters +
-                                ipm_properties.num_misc_counters);
-    props.num_programmable_counters = ipm_properties.num_programmable_counters;
+    props.num_fixed_events = (ipm_properties.num_fixed_events +
+                              ipm_properties.num_misc_events);
+    props.num_programmable_events = ipm_properties.num_programmable_events;
     props.fixed_counter_width = ipm_properties.fixed_counter_width;
     props.programmable_counter_width = ipm_properties.programmable_counter_width;
 
@@ -404,13 +404,12 @@ static zx_status_t ipm_get_buffer_handle(cpu_trace_device_t* dev,
 }
 
 typedef struct {
-    // Note: This is the max for the current model, whereas
-    // IPM_MAX_*_COUNTERS is the max over all models.
+    // Maximum number of each event we can handle.
     unsigned max_num_fixed;
     unsigned max_num_programmable;
     unsigned max_num_misc;
 
-    // The number of counters in use.
+    // The number of events in use.
     unsigned num_fixed;
     unsigned num_programmable;
     unsigned num_misc;
@@ -421,8 +420,8 @@ typedef struct {
 
     // For catching duplicates of the fixed counters.
     bool have_fixed[IPM_MAX_FIXED_COUNTERS];
-    // For catching duplicates of the misc counters.
-    bool have_misc[IPM_MAX_MISC_COUNTERS];
+    // For catching duplicates of the misc events.
+    bool have_misc[IPM_MAX_MISC_EVENTS];
 
     bool have_timebase0_user;
 } staging_state_t;
@@ -432,18 +431,18 @@ static zx_status_t ipm_stage_fixed_config(const cpuperf_config_t* icfg,
                                           unsigned input_index,
                                           zx_x86_ipm_config_t* ocfg) {
     const unsigned ii = input_index;
-    const cpuperf_event_id_t id = icfg->counters[ii];
+    const cpuperf_event_id_t id = icfg->events[ii];
     bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
     unsigned counter = ipm_fixed_counter_number(id);
 
     if (counter == IPM_MAX_FIXED_COUNTERS ||
             counter >= countof(ocfg->fixed_ids) ||
             counter >= ss->max_num_fixed) {
-        zxlogf(ERROR, "%s: Invalid fixed counter [%u]\n", __func__, ii);
+        zxlogf(ERROR, "%s: Invalid fixed event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
     if (ss->have_fixed[counter]) {
-        zxlogf(ERROR, "%s: Fixed counter [%u] already provided\n",
+        zxlogf(ERROR, "%s: Fixed event [%u] already provided\n",
                __func__, counter);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -453,8 +452,7 @@ static zx_status_t ipm_stage_fixed_config(const cpuperf_config_t* icfg,
         ocfg->fixed_initial_value[ss->num_fixed] = 0;
     } else {
         if (icfg->rate[ii] > ss->max_fixed_value) {
-            zxlogf(ERROR, "%s: Rate too large, counter [%u]\n",
-                   __func__, ii);
+            zxlogf(ERROR, "%s: Rate too large, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         ocfg->fixed_initial_value[ss->num_fixed] =
@@ -485,7 +483,7 @@ static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
                                                  unsigned input_index,
                                                  zx_x86_ipm_config_t* ocfg) {
     const unsigned ii = input_index;
-    cpuperf_event_id_t id = icfg->counters[ii];
+    cpuperf_event_id_t id = icfg->events[ii];
     unsigned unit = CPUPERF_EVENT_ID_UNIT(id);
     unsigned event = CPUPERF_EVENT_ID_EVENT(id);
     bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
@@ -501,7 +499,7 @@ static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
         ocfg->programmable_initial_value[ss->num_programmable] = 0;
     } else {
         if (icfg->rate[ii] > ss->max_programmable_value) {
-            zxlogf(ERROR, "%s: Rate too large, counter [%u]\n", __func__, ii);
+            zxlogf(ERROR, "%s: Rate too large, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         ocfg->programmable_initial_value[ss->num_programmable] =
@@ -511,24 +509,24 @@ static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
     switch (unit) {
     case CPUPERF_UNIT_ARCH:
         if (event >= countof(kArchEventMap)) {
-            zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+            zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         details = &kArchEvents[kArchEventMap[event]];
         break;
     case CPUPERF_UNIT_MODEL:
         if (event >= countof(kModelEventMap)) {
-            zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+            zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         details = &kModelEvents[kModelEventMap[event]];
         break;
     default:
-        zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+        zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
     if (details->event == 0 && details->umask == 0) {
-        zxlogf(ERROR, "%s: Invalid event id, counter [%u]\n", __func__, ii);
+        zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
     uint64_t evtsel = 0;
@@ -567,25 +565,25 @@ static zx_status_t ipm_stage_misc_config(const cpuperf_config_t* icfg,
                                          unsigned input_index,
                                          zx_x86_ipm_config_t* ocfg) {
     const unsigned ii = input_index;
-    cpuperf_event_id_t id = icfg->counters[ii];
-    unsigned counter = ipm_misc_counter_number(id);
+    cpuperf_event_id_t id = icfg->events[ii];
+    unsigned event = ipm_misc_event_number(id);
 
-    if (counter == IPM_MAX_MISC_COUNTERS) {
-        zxlogf(ERROR, "%s: Invalid misc counter [%u]\n", __func__, ii);
+    if (event == IPM_MAX_MISC_EVENTS) {
+        zxlogf(ERROR, "%s: Invalid misc event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
-    if (ss->have_misc[counter]) {
-        zxlogf(ERROR, "%s: Misc counter [%u] already provided\n",
+    if (ss->have_misc[event]) {
+        zxlogf(ERROR, "%s: Misc event [%u] already provided\n",
                __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
-    ss->have_misc[counter] = true;
+    ss->have_misc[event] = true;
     ocfg->misc_ids[ss->num_misc] = id;
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0) {
         ocfg->misc_flags[ss->num_misc] |= IPM_CONFIG_FLAG_TIMEBASE;
     } else {
         if (icfg->rate[ii] != 0) {
-            zxlogf(ERROR, "%s: Misc counter [%u] requires a timebase\n",
+            zxlogf(ERROR, "%s: Misc event [%u] requires a timebase\n",
                    __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -624,9 +622,9 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
 
     staging_state_t staging_state;
     staging_state_t* ss = &staging_state;
-    ss->max_num_fixed = ipm_properties.num_fixed_counters;
-    ss->max_num_programmable = ipm_properties.num_programmable_counters;
-    ss->max_num_misc = ipm_properties.num_misc_counters;
+    ss->max_num_fixed = ipm_properties.num_fixed_events;
+    ss->max_num_programmable = ipm_properties.num_programmable_events;
+    ss->max_num_misc = ipm_properties.num_misc_events;
     ss->num_fixed = 0;
     ss->num_programmable = 0;
     ss->num_misc = 0;
@@ -646,8 +644,8 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
 
     zx_status_t status;
     unsigned ii;  // ii: input index
-    for (ii = 0; ii < countof(icfg->counters); ++ii) {
-        cpuperf_event_id_t id = icfg->counters[ii];
+    for (ii = 0; ii < countof(icfg->events); ++ii) {
+        cpuperf_event_id_t id = icfg->events[ii];
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
         if (id == 0)
             break;
@@ -671,7 +669,7 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
                 return status;
             break;
         default:
-            zxlogf(ERROR, "%s: Invalid counter [%u] (bad unit)\n",
+            zxlogf(ERROR, "%s: Invalid event [%u] (bad unit)\n",
                    __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -680,20 +678,20 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
             ss->have_timebase0_user = true;
     }
     if (ii == 0) {
-        zxlogf(ERROR, "%s: No counters provided\n", __func__);
+        zxlogf(ERROR, "%s: No events provided\n", __func__);
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Ensure there are no holes.
-    for (; ii < countof(icfg->counters); ++ii) {
-        if (icfg->counters[ii] != 0) {
-            zxlogf(ERROR, "%s: Hole at counter [%u]\n", __func__, ii);
+    for (; ii < countof(icfg->events); ++ii) {
+        if (icfg->events[ii] != 0) {
+            zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
     }
 
     if (ss->have_timebase0_user) {
-        ocfg->timebase_id = icfg->counters[0];
+        ocfg->timebase_id = icfg->events[0];
     }
 
 #if TRY_FREEZE_ON_PMI

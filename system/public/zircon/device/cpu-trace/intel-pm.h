@@ -249,13 +249,22 @@ __BEGIN_CDECLS
   IPM_MSR_MASK(IA32_DEBUGCTL_RTM_LEN, IA32_DEBUGCTL_RTM_SHIFT)
 
 // maximum number of programmable counters
+// These are all "events" in our parlance, but on Intel these are all
+// counter events, so we use the more specific term "counter".
 #define IPM_MAX_PROGRAMMABLE_COUNTERS 8
 
 // maximum number of fixed-use counters
+// These are all "events" in our parlance, but on Intel these are all
+// counter events, so we use the more specific term "counter".
 #define IPM_MAX_FIXED_COUNTERS 3
 
-// misc counters, see intel-misc-events.inc
-#define IPM_MAX_MISC_COUNTERS 5
+// misc events
+// Some of these events are counters, but not all of them are, so we use
+// the more generic term "events".
+// See, e.g., skylake-misc-events.inc.
+// This isn't the total number of events, it's just the maximum
+// we can collect at one time.
+#define IPM_MAX_MISC_EVENTS 16
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -266,15 +275,15 @@ __BEGIN_CDECLS
 typedef struct {
     // The H/W Performance Monitor version.
     uint32_t pm_version;
-    // The number of fixed counters.
-    uint32_t num_fixed_counters;
-    // The number of programmable counters.
-    uint32_t num_programmable_counters;
-    // The number of misc counters.
-    uint32_t num_misc_counters;
-    // Width in bits of fixed counters.
+    // The number of fixed events.
+    uint32_t num_fixed_events;
+    // The number of programmable events.
+    uint32_t num_programmable_events;
+    // The number of misc events.
+    uint32_t num_misc_events;
+    // For fixed events that are counters, the width in bits.
     uint32_t fixed_counter_width;
-    // Width in bits of programmable counters.
+    // For programmable events that are counters, the width in bits.
     uint32_t programmable_counter_width;
     // The PERF_CAPABILITIES MSR.
     uint64_t perf_capabilities;
@@ -298,19 +307,19 @@ typedef struct {
 
     // The id of the timebase counter to use.
     // A "timebase counter" is used to trigger collection of data from other
-    // counters. In other words it sets the sample rate for those counters.
-    // If zero, then no timebase is in use: Each counter must trigger its own
+    // events. In other words it sets the sample rate for those events.
+    // If zero, then no timebase is in use: Each event must trigger its own
     // data collection. Otherwise the value is the id of the timebase counter
     // to use, which must appear in one of |programmable_ids| or |fixed_ids|.
     cpuperf_event_id_t timebase_id;
 
-    // Ids of each counter. These values are written to the trace buffer to
-    // identify the counter.
+    // Ids of each event. These values are written to the trace buffer to
+    // identify the event.
     // The used entries begin at index zero and are consecutive (no holes).
     cpuperf_event_id_t fixed_ids[IPM_MAX_FIXED_COUNTERS];
     cpuperf_event_id_t programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
-    // Ids of other h/w counters to collect data for.
-    cpuperf_event_id_t misc_ids[IPM_MAX_MISC_COUNTERS];
+    // Ids of other h/w events to collect data for.
+    cpuperf_event_id_t misc_ids[IPM_MAX_MISC_EVENTS];
 
     // Initial value of each counter.
     // The "misc" counters currently do not support initial values.
@@ -320,12 +329,12 @@ typedef struct {
     // Flags for each counter.
     uint32_t fixed_flags[IPM_MAX_FIXED_COUNTERS];
     uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS];
-    uint32_t misc_flags[IPM_MAX_MISC_COUNTERS];
+    uint32_t misc_flags[IPM_MAX_MISC_EVENTS];
 // Both of IPM_CONFIG_FLAG_{PC,TIMEBASE} cannot be set.
 #define IPM_CONFIG_FLAG_MASK     0x3
 // Collect aspace+pc values.
 #define IPM_CONFIG_FLAG_PC       (1u << 0)
-// Collect this counter's value when |timebase_id| counter's data is collected.
+// Collect this event's value when |timebase_id| counter's data is collected.
 // While redundant, it is ok to set this for the |timebase_id| counter.
 #define IPM_CONFIG_FLAG_TIMEBASE (1u << 1)
 
@@ -335,7 +344,7 @@ typedef struct {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Flags for the counters in Intel *-pm-events.inc.
+// Flags for the events in Intel *-pm-events.inc.
 // See for example Intel Volume 3, Table 19-3.
 // "Non-Architectural Performance Events of the Processor Core Supported by
 // Skylake Microarchitecture and Kaby Lake Microarchitecture"

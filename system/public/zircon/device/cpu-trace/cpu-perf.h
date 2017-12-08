@@ -22,11 +22,11 @@ __BEGIN_CDECLS
 // Buffer format version
 #define CPUPERF_BUFFER_VERSION 0
 
-// The maximum number of counters we support simultaneously.
+// The maximum number of events we support simultaneously.
 // Typically the h/w supports less than this, e.g., 7 or so.
-// TODO(dje): Have the device driver multiplex the counters when more is
+// TODO(dje): Have the device driver multiplex the events when more is
 // asked for than the h/w supports.
-#define CPUPERF_MAX_COUNTERS 32
+#define CPUPERF_MAX_EVENTS 32
 
 // Header for each data buffer.
 typedef struct {
@@ -64,7 +64,7 @@ typedef enum {
 } cpuperf_record_type_t;
 
 // Trace buffer space is expensive, we want to keep records small.
-// Having more than 64K different counters for any one arch is unlikely
+// Having more than 64K different events for any one arch is unlikely
 // so we use 16 bits for the event id.
 // To help each arch manage the plethora of different events, the event id
 // is split it two parts: 6 bit event unit, and 10 bit event within that unit.
@@ -109,15 +109,15 @@ typedef struct {
 static_assert(sizeof(cpuperf_record_header_t) % 8 == 0,
               "record header not multiple of 64 bits");
 
-// Record the time a counter was sampled.
-// This does not include the counter value in order to keep the size small.
-// This is for use when the counter is its own trigger so the user should know
+// Record the time an event was sampled.
+// This does not include the event value in order to keep the size small.
+// This is for use when the event is its own trigger so the user should know
 // what value was: it's the sample rate.
 typedef struct {
     cpuperf_record_header_t header;
 } __PACKED cpuperf_tick_record_t;
 
-// Record the value of a counter at a particular time.
+// Record the value of an event at a particular time.
 // This is used when another timebase is driving the sampling, e.g., another
 // counter.
 typedef struct {
@@ -142,48 +142,49 @@ typedef struct {
     uint32_t api_version;
     // The H/W Performance Monitor version.
     uint32_t pm_version;
-    // The number of fixed counters.
-    uint32_t num_fixed_counters;
-    // The number of programmable counters.
-    uint32_t num_programmable_counters;
-    // The width in bits of the fixed counters.
+    // The number of fixed events.
+    uint32_t num_fixed_events;
+    // The number of programmable events.
+    uint32_t num_programmable_events;
+    // For fixed events that are counters, the width in bits.
     uint32_t fixed_counter_width;
-    // The width in bits of the programmable counters.
+    // For programmable events that are counters, the width in bits.
     uint32_t programmable_counter_width;
 } cpuperf_properties_t;
 
 // Passed to STAGE_CONFIG to select the data to be collected.
-// Counters must be consecutively allocated from the front with no holes.
-// A value of CPUPERF_EVENT_ID_NONE in |counters| marks the end.
+// Events must be consecutively allocated from the front with no holes.
+// A value of CPUPERF_EVENT_ID_NONE in |events| marks the end.
 typedef struct {
-    // Counters to collect data for.
+    // Events to collect data for.
     // The values are architecture specific ids: cpuperf_<arch>_event_id_t
-    // Each counter may appear at most once.
-    // |counters[0]| is special: It is used as the timebase when any other
-    // counter has CPUPERF_CONFIG_FLAG_TIMEBASE0 set.
-    cpuperf_event_id_t counters[CPUPERF_MAX_COUNTERS];
+    // Each event may appear at most once.
+    // |events[0]| is special: It is used as the timebase when any other
+    // event has CPUPERF_CONFIG_FLAG_TIMEBASE0 set.
+    cpuperf_event_id_t events[CPUPERF_MAX_EVENTS];
 
-    // Sampling rate for each counter in |counters|.
+    // Sampling rate for each event in |events|.
     // If zero then do simple counting (collect a tally of the count and
-    // report at the end). Otherwise (non-zero) then when the counter gets
+    // report at the end). Otherwise (non-zero) then when the event gets
     // this many hits data is collected (e.g., pc, time).
+    // The value can be non-zero only for counting based events.
     // This value is ignored if CPUPERF_CONFIG_FLAG_TIMEBASE0 is set.
     // Setting CPUPERF_CONFIG_FLAG_TIMEBASE0 in |flags[0]| is redundant but ok.
-    uint32_t rate[CPUPERF_MAX_COUNTERS];
+    uint32_t rate[CPUPERF_MAX_EVENTS];
 
-    // Flags for each counter in |counters|.
+    // Flags for each event in |events|.
     // TODO(dje): hypervisor, host/guest os/user
-    uint32_t flags[CPUPERF_MAX_COUNTERS];
+    uint32_t flags[CPUPERF_MAX_EVENTS];
 // Collect os data.
 #define CPUPERF_CONFIG_FLAG_OS        (1u << 0)
 // Collect userspace data.
 #define CPUPERF_CONFIG_FLAG_USER      (1u << 1)
 // Collect aspace+pc values.
 #define CPUPERF_CONFIG_FLAG_PC        (1u << 2)
-// If set then use |counters[0]| as the timebase: data for this counter is
-// collected when data for |counters[0]| is collected, and the record emitted
-// for this counter is a CPUPERF_RECORD_VALUE record.
-// It is an error to have this bit set for a counter and have rate[0] be zero.
+// If set then use |events[0]| as the timebase: data for this event is
+// collected when data for |events[0]| is collected, and the record emitted
+// for this event is a CPUPERF_RECORD_VALUE record.
+// It is an error to have this bit set for an event and have rate[0] be zero.
 #define CPUPERF_CONFIG_FLAG_TIMEBASE0 (1u << 3)
 } cpuperf_config_t;
 
@@ -214,7 +215,7 @@ typedef struct {
 
 // Create a trace, allocating the needed trace buffers and other resources.
 // "other resources" is basically a catch-all for other things that will
-// be needed. This does not include reserving the counters, that is done later
+// be needed. This does not include reserving the events, that is done later
 // by STAGE_CONFIG.
 // Input: ioctl_cpuperf_alloc_t
 #define IOCTL_CPUPERF_ALLOC_TRACE \
