@@ -20,6 +20,7 @@ using a distributed offline-first storage system.
    - [Modular](docs/modular)
    - [Ledger](docs/ledger)
  - developer workflow:
+   - [Conventions](docs/conventions.md)
    - [Lint](docs/lint.md)
  - [examples](examples) - examples of applications that use Peridot components
  - [public](public) - public FIDL APIs of Peridot components
