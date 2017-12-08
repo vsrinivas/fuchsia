@@ -5,12 +5,13 @@
 #ifndef MSD_INTEL_DEVICE_CORE_H
 #define MSD_INTEL_DEVICE_CORE_H
 
+#include "gtt.h"
 #include "interrupt_manager.h"
 #include "platform_pci_device.h"
 
 // Implements core device functionality;
 // May be replaced with a shim to a different driver.
-class MsdIntelDeviceCore final : public InterruptManager::Owner {
+class MsdIntelDeviceCore final : public Gtt::Owner, InterruptManager::Owner {
 public:
     magma::PlatformPciDevice* platform_device() override { return platform_device_.get(); }
 
@@ -23,6 +24,8 @@ public:
 
     void DeleteInterruptManager() { interrupt_manager_.reset(); }
 
+    Gtt* gtt() { return gtt_.get(); }
+
     static std::unique_ptr<MsdIntelDeviceCore> Create(void* device_handle);
 
 private:
@@ -32,6 +35,7 @@ private:
 
     RegisterIo* register_io_for_interrupt() override { return register_io_.get(); }
 
+    std::unique_ptr<Gtt> gtt_;
     std::unique_ptr<magma::PlatformPciDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<InterruptManager> interrupt_manager_;

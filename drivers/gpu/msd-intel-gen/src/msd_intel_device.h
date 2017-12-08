@@ -28,6 +28,7 @@
 
 class MsdIntelDevice : public msd_device_t,
                        public EngineCommandStreamer::Owner,
+                       public Gtt::Owner,
                        public InterruptManager::Owner,
                        public MsdIntelConnection::Owner {
 public:
@@ -213,7 +214,6 @@ private:
     std::unique_ptr<Sequencer> sequencer_;
     std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
     std::unique_ptr<InterruptManager> interrupt_manager_;
-    std::shared_ptr<GpuMappingCache> mapping_cache_;
     std::unique_ptr<magma::SemaphorePort> semaphore_port_;
 
     // page flipping

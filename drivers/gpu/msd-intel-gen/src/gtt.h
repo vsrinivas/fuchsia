@@ -7,43 +7,22 @@
 
 #include <memory>
 #include "address_space.h"
-#include "magma_util/address_space_allocator.h"
-#include "magma_util/register_io.h"
-#include "platform_buffer.h"
 #include "platform_pci_device.h"
 
 class Gtt : public AddressSpace {
 public:
-    Gtt(std::shared_ptr<GpuMappingCache> cache);
+    class Owner {
+    public:
+        virtual magma::PlatformPciDevice* platform_device() = 0;
+    };
 
-    uint64_t Size() const override { return size_; }
+    Gtt() : AddressSpace(ADDRESS_SPACE_GGTT, nullptr) {}
 
-    bool Init(uint64_t gtt_size, magma::PlatformPciDevice* platform_device);
+    virtual uint64_t Size() const = 0;
+    virtual bool Init(uint64_t gtt_size) = 0;
 
-    // AddressSpace overrides
-    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
-    bool Free(uint64_t addr) override;
-
-    bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
-                CachingType caching_type) override;
-
-private:
-    uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
-
-    magma::PlatformBuffer* scratch_buffer() { return scratch_.get(); }
-
-    bool MapGttMmio(magma::PlatformPciDevice* platform_device);
-    bool InitScratch();
-    bool InitPageTables(uint64_t start);
-    bool Clear(uint64_t start, uint64_t length);
-
-private:
-    std::unique_ptr<magma::PlatformMmio> mmio_;
-    std::unique_ptr<magma::PlatformBuffer> scratch_;
-    std::unique_ptr<magma::AddressSpaceAllocator> allocator_;
-    uint64_t scratch_bus_addr_;
-    uint64_t size_;
+    static std::unique_ptr<Gtt> CreateShim(Owner* owner);
+    static std::unique_ptr<Gtt> CreateCore(Owner* owner);
 
     friend class TestGtt;
 };

@@ -29,6 +29,8 @@ bool MsdIntelDeviceCore::Init(void* device_handle)
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
+    gtt_ = Gtt::CreateCore(this);
+
     interrupt_manager_ = InterruptManager::CreateCore(this);
     if (!interrupt_manager_)
         return DRETF(false, "failed to create interrupt manager");

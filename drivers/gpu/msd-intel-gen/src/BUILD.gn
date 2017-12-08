@@ -29,7 +29,7 @@ source_set("src") {
     "gpu_mapping.h",
     "gpu_mapping_cache.cc",
     "gpu_mapping_cache.h",
-    "gtt.cc",
+    "gtt_shim.cc",
     "gtt.h",
     "interrupt_manager_shim.cc",
     "interrupt_manager.h",
@@ -68,6 +68,7 @@ source_set("src") {
   # 'Core' functionality contains everything replaced by
   # the display driver.
   sources += [
+    "core/gtt_core.cc",
     "core/interrupt_manager_core.cc",
     "core/msd_intel_device_core.cc",
   ]

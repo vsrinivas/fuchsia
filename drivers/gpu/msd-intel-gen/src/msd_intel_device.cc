@@ -255,13 +255,9 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     PerProcessGtt::InitPrivatePat(register_io_.get());
 
-#if MSD_INTEL_ENABLE_MAPPING_CACHE
-    mapping_cache_ = GpuMappingCache::Create();
-#endif
+    gtt_ = std::shared_ptr<Gtt>(Gtt::CreateShim(this));
 
-    gtt_ = std::make_shared<Gtt>(mapping_cache_);
-
-    if (!gtt_->Init(gtt_size, platform_device_.get()))
+    if (!gtt_->Init(gtt_size))
         return DRETF(false, "failed to Init gtt");
 
     // Arbitrary

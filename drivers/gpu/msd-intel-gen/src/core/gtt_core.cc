@@ -1,12 +1,59 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "gtt.h"
+
+#include <vector>
+
+#include "address_space.h"
+#include "gpu_mapping_cache.h"
+#include "magma_util/address_space_allocator.h"
 #include "magma_util/macros.h"
 #include "magma_util/simple_allocator.h"
-#include "registers.h"
-#include <vector>
+#include "platform_buffer.h"
+#include "platform_pci_device.h"
+
+class GttCore : public Gtt {
+public:
+    GttCore(Owner* owner);
+
+    uint64_t Size() const override { return size_; }
+
+    bool Init(uint64_t gtt_size) override;
+
+    // AddressSpace overrides
+    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
+    bool Free(uint64_t addr) override;
+
+    bool Clear(uint64_t addr) override;
+    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+                CachingType caching_type) override;
+
+private:
+    uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
+
+    magma::PlatformBuffer* scratch_buffer() { return scratch_.get(); }
+
+    bool MapGttMmio(magma::PlatformPciDevice* platform_device);
+    bool InitScratch();
+    bool InitPageTables(uint64_t start);
+    bool Clear(uint64_t start, uint64_t length);
+
+private:
+    Owner* owner_;
+    std::unique_ptr<magma::PlatformMmio> mmio_;
+    std::unique_ptr<magma::PlatformBuffer> scratch_;
+    std::unique_ptr<magma::AddressSpaceAllocator> allocator_;
+
+    // Protect all AddressSpace methods because of access from gpu and core device.
+    std::mutex mutex_;
+
+    uint64_t scratch_bus_addr_;
+    uint64_t size_;
+
+    friend class TestGtt;
+};
 
 static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, bool valid)
 {
@@ -17,16 +64,16 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, bool valid)
     return pte;
 }
 
-Gtt::Gtt(std::shared_ptr<GpuMappingCache> cache) : AddressSpace(ADDRESS_SPACE_GGTT, cache) {}
+GttCore::GttCore(Owner* owner) : owner_(owner) {}
 
-bool Gtt::Init(uint64_t gtt_size, magma::PlatformPciDevice* platform_device)
+bool GttCore::Init(uint64_t gtt_size)
 {
     // address space size
     size_ = (gtt_size / sizeof(gen_pte_t)) * PAGE_SIZE;
 
     DLOG("Gtt::Init gtt_size (for page tables) 0x%lx size (address space) 0x%lx ", gtt_size, size_);
 
-    if (!MapGttMmio(platform_device))
+    if (!MapGttMmio(owner_->platform_device()))
         return DRETF(false, "MapGttMmio failed");
 
     // gtt pagetables are in the 2nd half of bar 0
@@ -44,7 +91,7 @@ bool Gtt::Init(uint64_t gtt_size, magma::PlatformPciDevice* platform_device)
     return true;
 }
 
-bool Gtt::InitPageTables(uint64_t start)
+bool GttCore::InitPageTables(uint64_t start)
 {
     // leave space for a guard page
     allocator_ = magma::SimpleAllocator::Create(start, size_ - PAGE_SIZE);
@@ -57,7 +104,7 @@ bool Gtt::InitPageTables(uint64_t start)
     return true;
 }
 
-bool Gtt::MapGttMmio(magma::PlatformPciDevice* platform_device)
+bool GttCore::MapGttMmio(magma::PlatformPciDevice* platform_device)
 {
     mmio_ = platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
     if (!mmio_)
@@ -66,7 +113,7 @@ bool Gtt::MapGttMmio(magma::PlatformPciDevice* platform_device)
     return true;
 }
 
-bool Gtt::InitScratch()
+bool GttCore::InitScratch()
 {
     scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE, "gtt-scratch");
 
@@ -79,9 +126,10 @@ bool Gtt::InitScratch()
     return true;
 }
 
-bool Gtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
+bool GttCore::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
     DASSERT(allocator_);
+    std::lock_guard<std::mutex> lock(mutex_);
     // allocate an extra page on the end to avoid page faults from over fetch
     // see
     // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf
@@ -90,15 +138,19 @@ bool Gtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
     return allocator_->Alloc(alloc_size, align_pow2, addr_out);
 }
 
-bool Gtt::Free(uint64_t addr)
+bool GttCore::Free(uint64_t addr)
 {
     DASSERT(allocator_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return allocator_->Free(addr);
 }
 
-bool Gtt::Clear(uint64_t addr)
+bool GttCore::Clear(uint64_t addr)
 {
     DASSERT(allocator_);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
     size_t length;
     if (!allocator_->GetSize(addr, &length))
         return DRETF(false, "couldn't get size for addr");
@@ -107,7 +159,7 @@ bool Gtt::Clear(uint64_t addr)
     return true;
 }
 
-bool Gtt::Clear(uint64_t start, uint64_t length)
+bool GttCore::Clear(uint64_t start, uint64_t length)
 {
     DASSERT((start & (PAGE_SIZE - 1)) == 0);
     DASSERT((length & (PAGE_SIZE - 1)) == 0);
@@ -135,13 +187,14 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     return true;
 }
 
-bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
-                 CachingType caching_type)
+bool GttCore::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+                     CachingType caching_type)
 {
     DLOG("InsertEntries addr 0x%lx", addr);
-
     DASSERT(magma::is_page_aligned(offset));
     DASSERT(magma::is_page_aligned(length));
+
+    std::lock_guard<std::mutex> lock(mutex_);
 
     size_t allocated_length;
     if (!allocator_->GetSize(addr, &allocated_length))
@@ -186,4 +239,9 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
     }
 
     return true;
+}
+
+std::unique_ptr<Gtt> Gtt::CreateCore(Owner* owner)
+{
+    return std::make_unique<GttCore>(owner);
 }

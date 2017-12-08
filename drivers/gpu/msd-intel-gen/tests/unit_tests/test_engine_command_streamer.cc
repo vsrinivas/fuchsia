@@ -43,6 +43,7 @@ public:
 };
 
 class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
+                                  public Gtt::Owner,
                                   public HardwareStatusPage::Owner {
 public:
     static constexpr uint32_t kFirstSequenceNumber = 5;
@@ -54,8 +55,8 @@ public:
 
         std::weak_ptr<MsdIntelConnection> connection;
 
-        context_ = std::shared_ptr<MsdIntelContext>(
-            new ClientContext(connection, std::make_shared<Gtt>(GpuMappingCache::Create())));
+        context_ =
+            std::shared_ptr<MsdIntelContext>(new ClientContext(connection, Gtt::CreateCore(this)));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
@@ -319,6 +320,12 @@ private:
     {
         EXPECT_EQ(id, engine_cs_->id());
         return mock_status_page_->gpu_addr;
+    }
+
+    magma::PlatformPciDevice* platform_device() override
+    {
+        DASSERT(false);
+        return nullptr;
     }
 
     uint32_t device_id_;

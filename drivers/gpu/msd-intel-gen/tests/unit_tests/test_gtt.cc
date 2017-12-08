@@ -8,11 +8,6 @@
 #include "registers.h"
 #include "gtest/gtest.h"
 
-class TestGtt {
-public:
-    static magma::PlatformBuffer* scratch_buffer(Gtt* gtt) { return gtt->scratch_buffer(); }
-};
-
 namespace {
 
 class MockPlatformPciDevice : public magma::PlatformPciDevice {
@@ -42,8 +37,7 @@ private:
     MockMmio* mmio_{};
 };
 
-void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint64_t size,
-                             uint64_t bus_addr)
+void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint64_t size)
 {
     ASSERT_NE(mmio, nullptr);
 
@@ -55,14 +49,13 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
     // Note: <= is intentional here to accout for ofer-fetch protection page
     for (unsigned int i = 0; i <= page_count; i++) {
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
-        EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
         EXPECT_FALSE(pte & 0x1); // page should not be present
         EXPECT_TRUE(pte & 0x3);  // rw
     }
 }
 
 void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer, uint64_t gpu_addr,
-                       uint64_t scratch_bus_addr, CachingType caching_type)
+                       CachingType caching_type)
 {
     ASSERT_NE(mmio, nullptr);
 
@@ -84,13 +77,15 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
     EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
 
     uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + page_count];
-    EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
+    EXPECT_NE(pte & ~(PAGE_SIZE - 1), 0u);
     EXPECT_TRUE(pte & 0x1); // page present
     EXPECT_TRUE(pte & 0x3); // rw
 }
 
-class TestDevice {
+class TestDevice : public Gtt::Owner {
 public:
+    magma::PlatformPciDevice* platform_device() override { return platform_device_.get(); }
+
     // size_bits: 1 (2MB), 2 (4MB), 3 (8MB)
     void Init(unsigned int size_bits)
     {
@@ -98,22 +93,18 @@ public:
         uint64_t gtt_size = (1 << size_bits) * 1024 * 1024;
         uint64_t reg_size = gtt_size;
 
-        platform_device =
+        platform_device_ =
             std::unique_ptr<MockPlatformPciDevice>(new MockPlatformPciDevice(reg_size + gtt_size));
-        reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
-        gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
+        auto reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
 
-        EXPECT_TRUE(gtt->Init(gtt_size, platform_device.get()));
+        auto gtt = Gtt::CreateCore(this);
 
-        uint64_t scratch_bus_addr;
-        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr));
+        EXPECT_TRUE(gtt->Init(gtt_size));
 
-        auto mmio = platform_device->mmio();
+        auto mmio = platform_device_->mmio();
         ASSERT_NE(mmio, nullptr);
 
-        check_pte_entries_clear(mmio, 0, mmio->size(), scratch_bus_addr);
-
-        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1));
+        check_pte_entries_clear(mmio, 0, mmio->size());
     }
 
     void Insert()
@@ -121,15 +112,12 @@ public:
         uint64_t gtt_size = 8ULL * 1024 * 1024;
         uint64_t bar0_size = gtt_size * 2;
 
-        platform_device =
+        platform_device_ =
             std::shared_ptr<MockPlatformPciDevice>(new MockPlatformPciDevice(bar0_size));
-        reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
-        gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
+        auto reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
+        auto gtt = Gtt::CreateCore(this);
 
-        EXPECT_TRUE(gtt->Init(gtt_size, platform_device.get()));
-
-        uint64_t scratch_bus_addr;
-        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr));
+        EXPECT_TRUE(gtt->Init(gtt_size));
 
         // create some buffers
         std::vector<uint64_t> addr(2);
@@ -156,14 +144,12 @@ public:
         // Correct
         EXPECT_TRUE(gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
 
-        check_pte_entries(platform_device->mmio(), buffer[0].get(), addr[0], scratch_bus_addr,
-                          CACHING_NONE);
+        check_pte_entries(platform_device_->mmio(), buffer[0].get(), addr[0], CACHING_NONE);
 
         // Also correct
         EXPECT_TRUE(gtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE));
 
-        check_pte_entries(platform_device->mmio(), buffer[1].get(), addr[1], scratch_bus_addr,
-                          CACHING_NONE);
+        check_pte_entries(platform_device_->mmio(), buffer[1].get(), addr[1], CACHING_NONE);
 
         // Bogus addr
         EXPECT_FALSE(gtt->Clear(0xdead1000));
@@ -171,13 +157,11 @@ public:
         // Cool
         EXPECT_TRUE(gtt->Clear(addr[1]));
 
-        check_pte_entries_clear(platform_device->mmio(), addr[1], buffer[1]->size(),
-                                scratch_bus_addr);
+        check_pte_entries_clear(platform_device_->mmio(), addr[1], buffer[1]->size());
 
         EXPECT_TRUE(gtt->Clear(addr[0]));
 
-        check_pte_entries_clear(platform_device->mmio(), addr[0], buffer[0]->size(),
-                                scratch_bus_addr);
+        check_pte_entries_clear(platform_device_->mmio(), addr[0], buffer[0]->size());
 
         // Bogus addr
         EXPECT_FALSE(gtt->Free(0xdead1000));
@@ -185,13 +169,9 @@ public:
         // Cool
         EXPECT_TRUE(gtt->Free(addr[0]));
         EXPECT_TRUE(gtt->Free(addr[1]));
-
-        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1));
     }
 
-    std::shared_ptr<MockPlatformPciDevice> platform_device;
-    std::unique_ptr<RegisterIo> reg_io;
-    std::unique_ptr<Gtt> gtt;
+    std::shared_ptr<MockPlatformPciDevice> platform_device_;
 };
 
 TEST(Gtt, Init3) { TestDevice().Init(3); }
