@@ -84,9 +84,13 @@ Extra flags will be passed to the supporting Dart tool if applicable.
         print 'Invalid output directory: %s' % args.out
         return 1
 
+    tree = args.tree
+    if args.action == 'analyze':
+        tree = '%s(//build/dart/config:dartlang)' % tree
+
     # Ask gn about all the dart analyzer scripts.
     scripts = []
-    targets = gn_describe(args.out, args.tree)
+    targets = gn_describe(args.out, tree)
     if not targets:
         print 'No targets found...'
         exit(1)
