@@ -24,7 +24,7 @@ enum EventId {
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MODEL, id),
 #include <zircon/device/cpu-trace/skylake-pm-events.inc>
 
-#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
 };

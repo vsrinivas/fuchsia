@@ -29,7 +29,7 @@ const EventDetails g_skl_event_details[] = {
 };
 
 const EventDetails g_misc_event_details[] = {
-#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
   [id] = { CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id), name, description },
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
 };
