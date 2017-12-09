@@ -19,6 +19,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fs \
     system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/launchpad \

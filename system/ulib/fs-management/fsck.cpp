@@ -9,21 +9,25 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_ptr.h>
+#include <fdio/limits.h>
+#include <fdio/util.h>
+#include <fdio/vfs.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <fdio/limits.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
+#include <zxcpp/new.h>
 
-static zx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* options,
-                              LaunchCallback cb, const char* cmdpath) {
+namespace {
+
+zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
+                         LaunchCallback cb, const char* cmd_path) {
     zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
     uint32_t ids[FDIO_MAX_HANDLES * 2];
     size_t n = 0;
     int device_fd;
-    if ((device_fd = open(devicepath, O_RDWR)) < 0) {
+    if ((device_fd = open(device_path, O_RDWR)) < 0) {
         fprintf(stderr, "Failed to open device\n");
         return ZX_ERR_BAD_STATE;
     }
@@ -34,25 +38,22 @@ static zx_status_t fsck_mxfs(const char* devicepath, const fsck_options_t* optio
     }
     n += status;
 
-    const char** argv =
-            reinterpret_cast<const char**>(calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS)));
+    fbl::unique_ptr<const char*[]> argv(new const char*[2 + NUM_FSCK_OPTIONS]);
     int argc = 0;
-    argv[argc++] = cmdpath;
+    argv[argc++] = cmd_path;
     if (options->verbose) {
         argv[argc++] = "-v";
     }
     // TODO(smklein): Add support for modify, force flags. Without them,
     // we have "always_modify=true" and "force=true" effectively on by default.
     argv[argc++] = "fsck";
-    status = static_cast<zx_status_t>(cb(argc, argv, hnd, ids, n));
-    free(argv);
+    status = static_cast<zx_status_t>(cb(argc, argv.get(), hnd, ids, n));
     return status;
 }
 
-static zx_status_t fsck_fat(const char* devicepath, const fsck_options_t* options,
-                            LaunchCallback cb) {
-    const char** argv =
-            reinterpret_cast<const char**>(calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS)));
+zx_status_t FsckFat(const char* device_path, const fsck_options_t* options,
+                    LaunchCallback cb) {
+    fbl::unique_ptr<const char*[]> argv(new const char*[2 + NUM_FSCK_OPTIONS]);
     int argc = 0;
     argv[argc++] = "/boot/bin/fsck-msdosfs";
     if (options->never_modify) {
@@ -63,21 +64,22 @@ static zx_status_t fsck_fat(const char* devicepath, const fsck_options_t* option
     if (options->force) {
         argv[argc++] = "-f";
     }
-    argv[argc++] = devicepath;
-    zx_status_t status = static_cast<zx_status_t>(cb(argc, argv, NULL, NULL, 0));
-    free(argv);
+    argv[argc++] = device_path;
+    zx_status_t status = static_cast<zx_status_t>(cb(argc, argv.get(), NULL, NULL, 0));
     return status;
 }
 
-zx_status_t fsck(const char* devicepath, disk_format_t df,
+}  // namespace
+
+zx_status_t fsck(const char* device_path, disk_format_t df,
                  const fsck_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return fsck_mxfs(devicepath, options, cb, "/boot/bin/minfs");
+        return FsckNativeFs(device_path, options, cb, "/boot/bin/minfs");
     case DISK_FORMAT_FAT:
-        return fsck_fat(devicepath, options, cb);
+        return FsckFat(device_path, options, cb);
     case DISK_FORMAT_BLOBFS:
-        return fsck_mxfs(devicepath, options, cb, "/boot/bin/blobstore");
+        return FsckNativeFs(device_path, options, cb, "/boot/bin/blobstore");
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

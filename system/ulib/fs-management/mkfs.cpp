@@ -9,21 +9,25 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_ptr.h>
+#include <fdio/limits.h>
+#include <fdio/util.h>
+#include <fdio/vfs.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <fdio/limits.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
+#include <zxcpp/new.h>
 
-static zx_status_t mkfs_mxfs(const char* binary, const char* devicepath,
-                             LaunchCallback cb, const mkfs_options_t* options) {
+namespace {
+
+zx_status_t MkfsNativeFs(const char* binary, const char* device_path,
+                         LaunchCallback cb, const mkfs_options_t* options) {
     zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
     uint32_t ids[FDIO_MAX_HANDLES * 2];
     size_t n = 0;
     int device_fd;
-    if ((device_fd = open(devicepath, O_RDWR)) < 0) {
+    if ((device_fd = open(device_path, O_RDWR)) < 0) {
         fprintf(stderr, "Failed to open device\n");
         return ZX_ERR_BAD_STATE;
     }
@@ -34,34 +38,34 @@ static zx_status_t mkfs_mxfs(const char* binary, const char* devicepath,
     }
     n += status;
 
-    const char** argv =
-            reinterpret_cast<const char**>(calloc(sizeof(char*), (2 + NUM_MKFS_OPTIONS)));
+    fbl::unique_ptr<const char*[]> argv(new const char*[2 + NUM_MKFS_OPTIONS]);
     int argc = 0;
     argv[argc++] = binary;
     if (options->verbose) {
         argv[argc++] = "-v";
     }
     argv[argc++] = "mkfs";
-    status = static_cast<zx_status_t>(cb(argc, argv, hnd, ids, n));
-    free(argv);
+    status = static_cast<zx_status_t>(cb(argc, argv.get(), hnd, ids, n));
     return status;
 }
 
-static zx_status_t mkfs_fat(const char* devicepath, LaunchCallback cb,
-                            const mkfs_options_t* options) {
-    const char* argv[] = {"/boot/bin/mkfs-msdosfs", devicepath};
+zx_status_t MkfsFat(const char* device_path, LaunchCallback cb,
+                    const mkfs_options_t* options) {
+    const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path};
     return cb(countof(argv), argv, NULL, NULL, 0);
 }
 
-zx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb,
+}  // namespace
+
+zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mkfs_mxfs("/boot/bin/minfs", devicepath, cb, options);
+        return MkfsNativeFs("/boot/bin/minfs", device_path, cb, options);
     case DISK_FORMAT_FAT:
-        return mkfs_fat(devicepath, cb, options);
+        return MkfsFat(device_path, cb, options);
     case DISK_FORMAT_BLOBFS:
-        return mkfs_mxfs("/boot/bin/blobstore", devicepath, cb, options);
+        return MkfsNativeFs("/boot/bin/blobstore", device_path, cb, options);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
