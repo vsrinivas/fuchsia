@@ -28,27 +28,12 @@ public:
         if (!port)
             return DRETP(nullptr, "failed to created port");
 
-        auto quit_semaphore = magma::PlatformSemaphore::Create();
-        if (!quit_semaphore)
-            return DRETP(nullptr, "failed to create quit semaphore");
-
-        if (!quit_semaphore->WaitAsync(port.get()))
-            return DRETP(nullptr, "WaitAsync failed on quit semaphore");
-
-        return std::make_unique<SemaphorePort>(std::move(port), std::move(quit_semaphore));
+        return std::make_unique<SemaphorePort>(std::move(port));
     }
 
-    SemaphorePort(std::unique_ptr<magma::PlatformPort> port,
-                  std::unique_ptr<magma::PlatformSemaphore> quit_semaphore)
-        : port_(std::move(port)), quit_semaphore_(std::move(quit_semaphore))
-    {
-    }
+    SemaphorePort(std::unique_ptr<magma::PlatformPort> port) : port_(std::move(port)) {}
 
-    void Close()
-    {
-        // TODO(ZX-594): replace quit semaphore with port_.reset()
-        quit_semaphore_->Signal();
-    }
+    void Close() { port_->Close(); }
 
     class WaitSet {
     public:
@@ -118,14 +103,10 @@ public:
     {
         TRACE_DURATION("magma:sync", "SemaphorePort::WaitOne");
         uint64_t id;
+
         Status status = port_->Wait(&id);
         if (!status)
-            return DRET_MSG(status.get(), "port wait failed: %d", status.get());
-
-        DLOG("Wait returned id 0x%" PRIx64, id);
-
-        if (id == quit_semaphore_->id())
-            return MAGMA_STATUS_INTERNAL_ERROR; // matches the case where port_ is closed
+            return DRET_MSG(status.get(), "port wait failed");
 
         std::unique_lock<std::mutex> lock(map_mutex_);
 
@@ -144,7 +125,6 @@ public:
 
 private:
     std::unique_ptr<magma::PlatformPort> port_;
-    std::unique_ptr<magma::PlatformSemaphore> quit_semaphore_;
     std::mutex map_mutex_;
     std::unordered_map<uint64_t, std::shared_ptr<WaitSet>> map_;
 };

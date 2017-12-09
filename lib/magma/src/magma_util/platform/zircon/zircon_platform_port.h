@@ -14,7 +14,13 @@ class ZirconPlatformPort : public PlatformPort {
 public:
     ZirconPlatformPort(zx::port port) : port_(std::move(port)) {}
 
-    void Close() override { port_.reset(); }
+    void Close() override
+    {
+        zx_port_packet_t packet = {};
+        packet.type = ZX_PKT_TYPE_USER;
+        zx_status_t status = port_.queue(&packet, 1);
+        DASSERT(status == ZX_OK);
+    }
 
     Status Wait(uint64_t* key_out, uint64_t timeout_ms) override;
 

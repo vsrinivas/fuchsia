@@ -20,12 +20,18 @@ Status ZirconPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
     zx_status_t status =
         port_.wait(timeout_ms == UINT64_MAX ? ZX_TIME_INFINITE : zx::deadline_after(ZX_MSEC(timeout_ms)), &packet, 0);
     if (status == ZX_ERR_TIMED_OUT)
-        return MAGMA_STATUS_TIMED_OUT;
+        return DRET_MSG(MAGMA_STATUS_TIMED_OUT, "port wait timed out");
 
     DLOG("port received key 0x%" PRIx64 " status %d", packet.key, status);
 
     if (status != ZX_OK)
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "port wait returned error: %d", status);
+
+    if (packet.type == ZX_PKT_TYPE_USER) {
+        // Port has been closed.
+        port_.reset();
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "port was closed");
+    }
 
     *key_out = packet.key;
     return MAGMA_STATUS_OK;
