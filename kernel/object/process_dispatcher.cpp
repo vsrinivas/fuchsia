@@ -279,13 +279,6 @@ void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
         job_->RemoveChildProcess(this);
 }
 
-void ProcessDispatcher::on_zero_handles() {
-    LTRACE_ENTRY_OBJ;
-
-    // last handle going away acts as a kill to the process object
-    Kill();
-}
-
 zx_koid_t ProcessDispatcher::get_related_koid() const {
     return job_->get_koid();
 }

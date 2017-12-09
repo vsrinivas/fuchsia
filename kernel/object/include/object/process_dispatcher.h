@@ -61,7 +61,6 @@ public:
     // Dispatcher implementation
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PROCESS; }
     bool has_state_tracker() const final { return true; }
-    void on_zero_handles() final;
     zx_koid_t get_related_koid() const final;
 
     ~ProcessDispatcher() final;

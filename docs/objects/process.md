@@ -26,12 +26,17 @@ composed by more than one process to be treated as a single entity, from the
 perspective of resource and permission limits, as well as lifetime control.
 
 ### Lifetime
-A process is created via `sys_process_create()` which take no parameters.
-The process starts destruction when main thread terminates or the last handle
-is closed. [⚠ not implemented].
+A process is created via `zx_process_create()` and its execution begins with
+`zx_process_start()`.
 
-Next, the main binary is loaded into the process via `sys_process_load()` and
-its execution begins with `sys_process_start()`.
+The process stops execution when:
++ the last thread is terminated or exits
++ the process calls  ``zx_process_exit()``
++ the parent job terminates the process
++ the parent job is destroyed
+
+The call to `zx_process_start()` cannot be issued twice. New threads cannot
+be added to a process that was started and then its last thread has exited.
 
 ## SYSCALLS
 
