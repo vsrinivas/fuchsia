@@ -8,20 +8,24 @@ Device Hosts, Device Coordinator and the driver and device lifecycles.
 ## Directory structure
 
 Zircon drivers are found under [system/dev](../../system/dev). They are
-grouped by device class. In the driver's `rules.mk`, the `MODULE_TYPE` should
+grouped by a device class. Device classes are defined in
+[ddk/include/ddk/protodefs.h](../../system/ulib/ddk/include/ddk/protodefs.h).
+In the driver's `rules.mk`, the `MODULE_TYPE` should
 be `driver`. This will install the driver shared lib in `/boot/driver/`.
 
-If your driver is built outside Zircon, install them in `/system/driver/`. The
-Device Coordinator looks in those directories for loadable drivers.
+If your driver is built outside Zircon, install them in `/system/driver/`
+. The Device Coordinator looks in those directories for loadable
+drivers.
 
 ## Declaring a driver
 
 At a minimum, a driver should contain the driver declaration and implement the
 `bind()` driver op.
 
-Drivers are loaded and bound to a device when the devcoordinator
+Drivers are loaded and bound to a device when the Device Coordinator
 successfully finds a matching driver for a device. A driver declares the
-devices it is compatible with via bindings. The following bind program
+devices it is compatible with via bindings.
+The following bind program
 declares the [AHCI driver](../../system/dev/block/ahci/ahci.c):
 
 ```
@@ -56,23 +60,23 @@ zx_device_prop_t device_props[] = {
 
 Binding variables and macros are defined in
 [zircon/driver/binding.h](../../system/public/zircon/driver/binding.h).
-
 If you are introducing a new device class, you may need to introduce new
-binding variables in that file. Binding variables are 32-bit values. If your
-variable value is bigger, split them into multiple 32-bit variables. An
-example is ACPI HID values, which are 8 characters (64-bits) long. We define
-`BIND_ACPI_HID_0_3` and `BIND_ACPI_HID_4_7`.
+binding variables in that file.
+Binding variables are 32-bit values. If your
+variable value requires greater than a 32-bit value,
+split them into multiple 32-bit variables. An
+example is ACPI HID values, which are 8 characters (64-bits) long.
+It is split into `BIND_ACPI_HID_0_3` and `BIND_ACPI_HID_4_7`.
 
 Binding directives are evaluated sequentially. The branching directives
-`BI_GOTO()` and `BI_GOTO_IF()` allows you to jump forward to the matching
+`BI_GOTO()` and `BI_GOTO_IF()` allow you to jump forward to the matching
 label, defined by `BI_LABEL()`.
 
-`BI_ABORT_IF_AUTOBIND` means the driver will not be considered in automatic
-device matching. It is only bindable manually. To bind a driver to a device,
-call `ioctl_device_bind()` on the device to bind.
+`BI_ABORT_IF_AUTOBIND` may be used (usually as the first instruction)
+to prevent the default automatic binding behaviour.
+In that case, a driver can be bound to a device using
+`ioctl_device_bind()` call
 
-Device classes are defined in
-[ddk/include/ddk/protodefs.h](../../system/ulib/ddk/include/ddk/protodefs.h).
 
 ## Driver binding
 
@@ -80,16 +84,18 @@ A driver’s `bind()` function is called when it is matched to a device.
 Generally a driver will initialize any data structures needed for the device
 and initialize hardware in this function. It should not perform any
 time-consuming tasks or block in this function, because it is invoked from the
-devhost’s RPC thread and it will not be able to service other requests in the
+devhost's RPC thread and it will not be able to service other requests in the
 meantime. Instead, it should spawn a new thread to perform lengthy tasks.
 
-The driver should not make assumptions about the state of the hardware in
-`bind()` and should reset the hardware. Because the system recovers from a
+The driver should make no assumptions about the state of the hardware in
+`bind()`, resetting the hardware or otherwise ensuring it is in a known state.
+Because the system recovers from a
 driver crash by re-spawning the devhost, the hardware may be in an unknown
 state when `bind()` is invoked.
 
 A driver is required to publish a `zx_device_t` in `bind()` by calling
-`device_add()`. This is necessary for the devcoordinator to keep track of the
+`device_add()`. This is necessary for the Device Coordinator to keep
+track of the
 device lifecycle. If the driver is not able to publish a functional device in
 `bind()`, for example if it is initializing the full device in a thread, it
 should publish an invisible device, and make this device visible when
@@ -99,13 +105,13 @@ initialization is completed. See `DEVICE_ADD_INVISIBLE` and
 
 There are generally four outcomes from `bind()`:
 
-1. The driver determines that even though the bind program matched, the device
-cannot be supported (maybe due to checking hw version bits or whatnot) and
-returns an error.
-
-2. The driver determines the device is supported and does not need to do any
+1. The driver determines the device is supported and does not need to do any
 heavy lifting, so publishes a new device via `device_add()` and returns
 `ZX_OK`.
+
+2. The driver determines that even though the bind program matched, the device
+cannot be supported (maybe due to checking hw version bits or whatnot) and
+returns an error.
 
 3. The driver needs to do further initialization before the device is ready or
 it’s sure it can support it, so it publishes an invisible device and kicks off
@@ -162,7 +168,7 @@ Sync operations will be submitted as iotxns.
 
 ## Iotxns
 
-[Iotxns](../../system/ulib/ddk/include/ddk/iotxn.h) is a mechanism to
+[Iotxns](../../system/ulib/ddk/include/ddk/iotxn.h) are a mechanism to
 implement asynchronous transactions. New transactions are submitted to the
 driver in `iotxn_queue()`. The `completion()` callback in the iotxn is invoked
 when the driver finishes processing the iotxn. A driver may handle the iotxn
@@ -197,7 +203,8 @@ maximum length for each entry of the scatter-gather table.
 
 ## Device interrupts
 
-Device interrupts are implemented by interrupt objects, a kernel object. A
+Device interrupts are implemented by interrupt objects, which are a type of
+kernel objects. A
 driver requests a handle to the device interrupt from its parent device in a
 device protocol method. For example, the PCI protocol implements
 `map_interrupt()` for PCI children. A driver should spawn a thread to wait on
@@ -214,7 +221,7 @@ You can signal an interrupt handle with
 `zx_interrupt_wait()`. This is necessary to shut down the interrupt thread
 during driver clean up.
 
-## ioctls
+## Ioctl
 
 Ioctls for each device class are defined in
 [zircon/device/](../../system/public/zircon/device). Ioctls may accept or
