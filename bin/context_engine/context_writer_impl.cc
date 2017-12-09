@@ -2,19 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "peridot/bin/context_engine/context_writer_impl.h"
-#include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
+#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "rapidjson/document.h"
 
 namespace maxwell {
 
 ContextWriterImpl::ContextWriterImpl(
     const ComponentScopePtr& client_info,
-    ContextRepository* repository,
+    ContextRepository* const repository,
+    modular::EntityResolver* const entity_resolver,
     fidl::InterfaceRequest<ContextWriter> request)
-    : binding_(this, std::move(request)), repository_(repository) {
+    : binding_(this, std::move(request)),
+      repository_(repository),
+      entity_resolver_(entity_resolver),
+      weak_factory_(this) {
   FXL_DCHECK(repository != nullptr);
 
   // Set up a query to the repository to get our parent id.
@@ -36,29 +43,34 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
-  ContextValuePtr& value = *value_ptr;  // For sanity.
-  if (value->type != ContextValueType::ENTITY)
-    return;
-
+fidl::Array<fidl::String> Deprecated_GetTypesFromJsonEntity(
+    const fidl::String& content) {
   // If the content has the @type attribute, take its contents and populate the
   // EntityMetadata appropriately, overriding whatever is there.
   std::vector<std::string> types;
-  if (!modular::ExtractEntityTypesFromJson(value->content, &types)) {
-    FXL_LOG(WARNING) << "Invalid JSON in value: " << value;
-    return;
+  if (!modular::ExtractEntityTypesFromJson(content, &types)) {
+    FXL_LOG(WARNING) << "Invalid JSON in value: " << content;
+    return {};
   }
   if (types.empty())
+    return {};
+
+  return fidl::Array<fidl::String>::From(types);
+}
+
+void MaybeFillEntityTypeMetadata(const fidl::Array<fidl::String>& types,
+                                 ContextValuePtr* value_ptr) {
+  auto& value = *value_ptr;
+  if (value->type != ContextValueType::ENTITY || !types)
     return;
 
-  auto new_types = fidl::Array<fidl::String>::From(types);
   if (!value->meta) {
     value->meta = ContextMetadata::New();
   }
   if (!value->meta->entity) {
     value->meta->entity = EntityMetadata::New();
   }
-  value->meta->entity->type = std::move(new_types);
+  value->meta->entity->type = types.Clone();
 }
 
 bool MaybeFindParentValueId(ContextRepository* repository,
@@ -121,28 +133,55 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
     return;
   }
 
-  auto value_ptr = ContextValue::New();
-  value_ptr->type = ContextValueType::ENTITY;
-  value_ptr->content = value;
-  value_ptr->meta = ContextMetadata::New();
-  value_ptr->meta->entity = EntityMetadata::New();
-  value_ptr->meta->entity->topic = topic;
-  MaybeFillEntityMetadata(&value_ptr);
+  GetEntityTypesFromEntityReference(
+      value, [this, topic, value](const fidl::Array<fidl::String>& types) {
+        auto value_ptr = ContextValue::New();
+        value_ptr->type = ContextValueType::ENTITY;
+        value_ptr->content = value;
+        value_ptr->meta = ContextMetadata::New();
+        value_ptr->meta->entity = EntityMetadata::New();
+        value_ptr->meta->entity->topic = topic;
+        value_ptr->meta->entity->type = types.Clone();
 
-  auto it = topic_value_ids_.find(topic);
-  if (it == topic_value_ids_.end()) {
-    ContextRepository::Id parent_id;
-    ContextRepository::Id id;
-    if (MaybeFindParentValueId(repository_, parent_value_selector_,
-                               &parent_id)) {
-      id = repository_->Add(parent_id, std::move(value_ptr));
-    } else {
-      id = repository_->Add(std::move(value_ptr));
-    }
-    topic_value_ids_[topic] = id;
-  } else {
-    repository_->Update(it->second, std::move(value_ptr));
-  }
+        auto it = topic_value_ids_.find(topic);
+        if (it == topic_value_ids_.end()) {
+          ContextRepository::Id parent_id;
+          ContextRepository::Id id;
+          if (MaybeFindParentValueId(repository_, parent_value_selector_,
+                                     &parent_id)) {
+            id = repository_->Add(parent_id, std::move(value_ptr));
+          } else {
+            id = repository_->Add(std::move(value_ptr));
+          }
+          topic_value_ids_[topic] = id;
+        } else {
+          repository_->Update(it->second, std::move(value_ptr));
+        }
+      });
+}
+
+void ContextWriterImpl::GetEntityTypesFromEntityReference(
+    const fidl::String& reference,
+    std::function<void(const fidl::Array<fidl::String>&)> done) {
+  // TODO(thatguy): This function could be re-used in multiple places. Move it
+  // to somewhere where other places can reach it.
+  std::shared_ptr<modular::EntityPtr> entity(new modular::EntityPtr);
+  entity_resolver_->ResolveEntity(reference, entity->NewRequest());
+  entity->set_connection_error_handler(
+      [weak_this = weak_factory_.GetWeakPtr(), entity, reference, done] {
+        if (!weak_this)
+          return;
+        // The contents of the Entity value could be a deprecated JSON Entity,
+        // not an Entity reference.
+        done(Deprecated_GetTypesFromJsonEntity(reference));
+      });
+
+  (*entity)->GetTypes([weak_this = weak_factory_.GetWeakPtr(), entity,
+                    done](const fidl::Array<fidl::String>& types) {
+    if (!weak_this)
+      return;
+    done(types);
+  });
 }
 
 ContextValueWriterImpl::ContextValueWriterImpl(
@@ -153,7 +192,8 @@ ContextValueWriterImpl::ContextValueWriterImpl(
     : binding_(this, std::move(request)),
       writer_(writer),
       parent_id_(parent_id),
-      type_(type) {
+      type_(type),
+      weak_factory_(this) {
   binding_.set_connection_error_handler(
       [this] { writer_->DestroyContextValueWriter(this); });
 }
@@ -181,35 +221,56 @@ void ContextValueWriterImpl::CreateChildValue(
 
 void ContextValueWriterImpl::Set(const fidl::String& content,
                                  ContextMetadataPtr metadata) {
-  if (!value_id_) {
-    // We're creating this value for the first time.
-    auto value = ContextValue::New();
-    value->type = type_;
-    value->content = content;
-    value->meta = std::move(metadata);
-    MaybeFillEntityMetadata(&value);
-
-    if (parent_id_.empty()) {
-      value_id_ = writer_->repository()->Add(std::move(value));
-    } else {
-      value_id_ = writer_->repository()->Add(parent_id_, std::move(value));
-    }
-  } else {
-    if (!writer_->repository()->Contains(value_id_.get())) {
-      FXL_LOG(FATAL) << "Trying to update non-existent context value ("
-                     << value_id_.get() << "). New content: " << content
-                     << ", new metadata: " << metadata;
-    }
-
-    auto value = writer_->repository()->Get(value_id_.get());
-    if (content) {
+  auto done_getting_types = [weak_this = weak_factory_.GetWeakPtr(), content,
+                             metadata = std::move(metadata)](
+                                const fidl::Array<fidl::String>& entity_types) {
+    if (!weak_this)
+      return;
+    if (!weak_this->value_id_) {
+      // We're creating this value for the first time.
+      auto value = ContextValue::New();
+      value->type = weak_this->type_;
       value->content = content;
+      // value->meta = std::move(metadata);  // Why won't this compile??
+      value->meta = metadata.Clone();
+      MaybeFillEntityTypeMetadata(entity_types, &value);
+
+      if (weak_this->parent_id_.empty()) {
+        weak_this->value_id_ =
+            weak_this->writer_->repository()->Add(std::move(value));
+      } else {
+        weak_this->value_id_ = weak_this->writer_->repository()->Add(
+            weak_this->parent_id_, std::move(value));
+      }
+    } else {
+      if (!weak_this->writer_->repository()->Contains(
+              weak_this->value_id_.get())) {
+        FXL_LOG(FATAL) << "Trying to update non-existent context value ("
+                       << weak_this->value_id_.get()
+                       << "). New content: " << content
+                       << ", new metadata: " << metadata;
+      }
+
+      auto value =
+          weak_this->writer_->repository()->Get(weak_this->value_id_.get());
+      if (content) {
+        value->content = content;
+      }
+      if (metadata) {
+        value->meta = metadata.Clone();
+      }
+      MaybeFillEntityTypeMetadata(entity_types, &value);
+      weak_this->writer_->repository()->Update(weak_this->value_id_.get(),
+                                               std::move(value));
     }
-    if (metadata) {
-      value->meta = std::move(metadata);
-    }
-    MaybeFillEntityMetadata(&value);
-    writer_->repository()->Update(value_id_.get(), std::move(value));
+  };
+
+  if (type_ != ContextValueType::ENTITY) {
+    // Avoid an extra round-trip to EntityResolver that won't get us anything.
+    done_getting_types({});
+  } else {
+    writer_->GetEntityTypesFromEntityReference(
+        content, fxl::MakeCopyable(std::move(done_getting_types)));
   }
 }
 

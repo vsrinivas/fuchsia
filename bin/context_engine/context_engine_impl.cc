@@ -11,7 +11,9 @@
 
 namespace maxwell {
 
-ContextEngineImpl::ContextEngineImpl() = default;
+ContextEngineImpl::ContextEngineImpl(
+    modular::EntityResolver* const entity_resolver)
+    : entity_resolver_(entity_resolver) {}
 ContextEngineImpl::~ContextEngineImpl() = default;
 
 void ContextEngineImpl::AddBinding(
@@ -23,7 +25,8 @@ void ContextEngineImpl::GetWriter(
     ComponentScopePtr client_info,
     fidl::InterfaceRequest<ContextWriter> request) {
   writers_.emplace_back(std::make_unique<ContextWriterImpl>(
-      std::move(client_info), &repository_, std::move(request)));
+      std::move(client_info), &repository_, entity_resolver_,
+      std::move(request)));
 }
 
 void ContextEngineImpl::GetReader(

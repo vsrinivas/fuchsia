@@ -8,10 +8,13 @@
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 #include "peridot/bin/user/agent_launcher.h"
 #include "peridot/lib/environment_host/application_environment_host_impl.h"
+#include "peridot/lib/testing/component_context_fake.h"
+#include "peridot/lib/testing/entity_resolver_fake.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 
 // 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
@@ -111,6 +114,10 @@ class MaxwellTestBase : public modular::testing::TestWithMessageLoop {
 
   app::ApplicationEnvironment* root_environment();
 
+  modular::EntityResolverFake& entity_resolver() {
+    return child_component_context_.entity_resolver_fake();
+  }
+
  private:
   std::unique_ptr<ApplicationEnvironmentHostImpl> test_environment_host_;
   std::unique_ptr<fidl::Binding<app::ApplicationEnvironmentHost>>
@@ -120,6 +127,9 @@ class MaxwellTestBase : public modular::testing::TestWithMessageLoop {
   app::ApplicationEnvironmentControllerPtr test_environment_controller_;
   app::ApplicationLauncherPtr test_launcher_;
   std::unique_ptr<AgentLauncher> agent_launcher_;
+
+  app::ServiceProviderImpl child_app_services_;
+  modular::ComponentContextFake child_component_context_;
 };
 
 }  // namespace maxwell

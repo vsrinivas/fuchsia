@@ -5,11 +5,16 @@
 #include <map>
 #include <string>
 
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/async/cpp/future_value.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/value.fidl.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
+
+namespace modular {
+class EntityResolver;
+}
 
 namespace maxwell {
 
@@ -20,6 +25,7 @@ class ContextWriterImpl : ContextWriter {
  public:
   ContextWriterImpl(const ComponentScopePtr& client_info,
                     ContextRepository* repository,
+                    modular::EntityResolver* entity_resolver,
                     fidl::InterfaceRequest<ContextWriter> request);
   ~ContextWriterImpl() override;
 
@@ -34,6 +40,11 @@ class ContextWriterImpl : ContextWriter {
   // Used by ContextValueWriterImpl.
   ContextRepository* repository() const { return repository_; }
 
+  // Used by ContextValueWriterImpl.
+  void GetEntityTypesFromEntityReference(
+      const fidl::String& reference,
+      std::function<void(const fidl::Array<fidl::String>&)> done);
+
  private:
   // |ContextWriter|
   void CreateValue(fidl::InterfaceRequest<ContextValueWriter> request,
@@ -47,12 +58,17 @@ class ContextWriterImpl : ContextWriter {
 
   ContextSelectorPtr parent_value_selector_;
   ContextRepository* const repository_;
+  modular::EntityResolver* const entity_resolver_;
 
   // Supports WriteEntityTopic.
   std::map<fidl::String, ContextRepository::Id> topic_value_ids_;
 
   // Supports CreateValue().
   std::vector<std::unique_ptr<ContextValueWriterImpl>> value_writer_storage_;
+
+  fxl::WeakPtrFactory<ContextWriterImpl> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextWriterImpl);
 };
 
 class ContextValueWriterImpl : ContextValueWriter {
@@ -84,6 +100,10 @@ class ContextValueWriterImpl : ContextValueWriter {
   const ContextRepository::Id parent_id_;
   ContextValueType type_;
   FutureValue<ContextRepository::Id> value_id_;
+
+  fxl::WeakPtrFactory<ContextValueWriterImpl> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ContextValueWriterImpl);
 };
 
 }  // namespace maxwell

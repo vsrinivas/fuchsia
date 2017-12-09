@@ -93,6 +93,11 @@ MaxwellTestBase::MaxwellTestBase() {
   test_environment_->GetApplicationLauncher(test_launcher_.NewRequest());
   agent_launcher_ =
       std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
+
+  child_app_services_.AddService<modular::ComponentContext>(
+      [this](fidl::InterfaceRequest<modular::ComponentContext> request) {
+        child_component_context_.Connect(std::move(request));
+      });
 }
 
 app::Services MaxwellTestBase::StartServices(const std::string& url) {
@@ -100,6 +105,11 @@ app::Services MaxwellTestBase::StartServices(const std::string& url) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->service_request = services.NewRequest();
+
+  auto service_list = app::ServiceList::New();
+  service_list->names.push_back(modular::ComponentContext::Name_);
+  child_app_services_.AddBinding(service_list->provider.NewRequest());
+  launch_info->additional_services = std::move(service_list);
 
   test_launcher_->CreateApplication(std::move(launch_info), nullptr);
   return services;

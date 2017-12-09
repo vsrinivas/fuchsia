@@ -24,6 +24,7 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/component/fidl",
   ]
 }
 
@@ -120,6 +121,7 @@ source_set("context_writer_impl") {
 
   deps = [
     ":context_repository",
+    "//garnet/public/lib/fxl",
     "//peridot/public/lib/async/cpp:future_value",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
@@ -145,6 +147,7 @@ source_set("context_engine_impl") {
     ":context_writer_impl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/entity/fidl",
   ]
 }
 

@@ -30,6 +30,7 @@ executable("context_engine_test") {
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
+    "//peridot/lib/testing:entity_resolver_fake",
   ]
 }
 
@@ -104,6 +105,8 @@ source_set("common") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/user:agent_launcher",
     "//peridot/lib/environment_host",
+    "//peridot/lib/testing:component_context_fake",
+    "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/lib/testing:test_with_message_loop",
   ]
 

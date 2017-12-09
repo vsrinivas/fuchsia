@@ -12,6 +12,10 @@
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/debug.h"
 
+namespace modular {
+class EntityResolver;
+}
+
 namespace maxwell {
 
 class ContextReaderImpl;
@@ -19,7 +23,8 @@ class ContextWriterImpl;
 
 class ContextEngineImpl : ContextEngine {
  public:
-  ContextEngineImpl();
+  // Does not take ownership of |entity_resolver|.
+  ContextEngineImpl(modular::EntityResolver* entity_resolver);
   ~ContextEngineImpl() override;
 
   void AddBinding(fidl::InterfaceRequest<ContextEngine> request);
@@ -35,6 +40,8 @@ class ContextEngineImpl : ContextEngine {
 
   // |ContextEngine|
   void GetContextDebug(fidl::InterfaceRequest<ContextDebug> request) override;
+
+  modular::EntityResolver* const entity_resolver_;
 
   ContextRepository repository_;
 

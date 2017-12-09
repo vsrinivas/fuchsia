@@ -96,6 +96,12 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   value2->Set(R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })",
               ContextMetadataBuilder().SetEntityTopic("frob").Build());
 
+  ContextValueWriterPtr value3;
+  writer_->CreateValue(value3.NewRequest(), ContextValueType::ENTITY);
+  value3->Set(
+      entity_resolver().AddEntity({{"someType", ""}, {"evenMoreType", ""}}),
+      ContextMetadataBuilder().SetEntityTopic("borf").Build());
+
   // Subscribe to those values.
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
@@ -105,20 +111,24 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   TestListener listener;
   reader_->Subscribe(std::move(query), listener.GetHandle());
-  RunLoopUntil([&listener] {
+  ASSERT_TRUE(RunLoopUntil([&listener] {
     return listener.last_update &&
-           listener.last_update->values["a"].size() == 2;
-  });
+           listener.last_update->values["a"].size() == 3;
+  }));
 
   EXPECT_EQ("topic", listener.last_update->values["a"][0]->meta->entity->topic);
   EXPECT_EQ("frob", listener.last_update->values["a"][1]->meta->entity->topic);
+  EXPECT_EQ("borf", listener.last_update->values["a"][2]->meta->entity->topic);
 
-  // Update value1 so it no longer matches for the 'someType' query.
+  // Update value1 and value3 so they no longer matches for the 'someType' query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
-  RunLoopUntil([&listener] { return !!listener.last_update; });
+  value3->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
+  ASSERT_TRUE(RunLoopUntil([&listener] {
+    return !!listener.last_update &&
+           listener.last_update->values["a"].size() == 1;
+  }));
 
-  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
   EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
 
   // Create two new values: A Story value and a child Entity value, where the
@@ -129,20 +139,20 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   story_value->Set(nullptr,
                    ContextMetadataBuilder().SetStoryId("story").Build());
 
-  ContextValueWriterPtr value3;
-  story_value->CreateChildValue(value3.NewRequest(), ContextValueType::ENTITY);
-  value3->Set("1", ContextMetadataBuilder().AddEntityType("someType").Build());
+  ContextValueWriterPtr value4;
+  story_value->CreateChildValue(value4.NewRequest(), ContextValueType::ENTITY);
+  value4->Set("1", ContextMetadataBuilder().AddEntityType("someType").Build());
 
-  RunLoopUntil([&listener] { return !!listener.last_update; });
-  EXPECT_EQ(2lu, listener.last_update->values["a"].size());
+  ASSERT_TRUE(RunLoopUntil([&listener] { return !!listener.last_update; }));
+  ASSERT_EQ(2lu, listener.last_update->values["a"].size());
   EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
   EXPECT_EQ("1", listener.last_update->values["a"][1]->content);
   EXPECT_EQ("story", listener.last_update->values["a"][1]->meta->story->id);
 
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
-  value3.reset();
-  // TODO(thatguy): For some reason, |value3.reset()| doesn't cause the
+  value4.reset();
+  // TODO(thatguy): For some reason, |value4.reset()| doesn't cause the
   // receiving side's error handler to be called immediately, and this
   // condition times out.  However, I can see in the logs that once this times
   // out, the value(s) are correctly deleted.
@@ -167,7 +177,8 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
     reader_->Subscribe(query.Clone(), listener1.GetHandle());
     reader_->Subscribe(query.Clone(), listener2.GetHandle());
     InitReader(MakeGlobalScope());
-    RunLoopUntil([&listener2] { return !!listener2.last_update; });
+    ASSERT_FALSE(
+        RunLoopUntil([&listener2] { return !!listener2.last_update; }));
     listener2.Reset();
   }
 
@@ -177,7 +188,7 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   writer_->CreateValue(value.NewRequest(), ContextValueType::ENTITY);
   value->Set(nullptr /* content */,
              ContextMetadataBuilder().SetEntityTopic("topic").Build());
-  RunLoopUntil([&listener2] { return !!listener2.last_update; });
+  ASSERT_FALSE(RunLoopUntil([&listener2] { return !!listener2.last_update; }));
 }
 
 }  // namespace maxwell
