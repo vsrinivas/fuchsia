@@ -19,7 +19,7 @@ const char kCpuPerfDev[] = "/dev/misc/cpu-trace";
 
 static bool IsSampleMode(const cpuperf_config_t& config) {
   for (size_t i = 0; i < countof(config.rate); ++i) {
-    // If any counter is doing sampling, then we're in "sample mode".
+    // If any event is doing sampling, then we're in "sample mode".
     if (config.rate[i] != 0) {
       return true;
     }
@@ -31,10 +31,10 @@ static uint32_t GetBufferSize(bool sample_mode, uint32_t requested_size) {
   if (sample_mode)
     return requested_size;
   // For "counting mode" we just need something large enough to hold
-  // the header + records for each counter.
-  unsigned num_counters = CPUPERF_MAX_COUNTERS;
+  // the header + records for each event.
+  unsigned num_events = CPUPERF_MAX_EVENTS;
   uint32_t size = (sizeof(cpuperf_buffer_header_t) +
-                   num_counters * sizeof(cpuperf_value_record_t));
+                   num_events * sizeof(cpuperf_value_record_t));
   return (size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 }
 

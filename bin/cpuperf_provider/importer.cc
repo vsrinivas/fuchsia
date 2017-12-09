@@ -81,7 +81,7 @@ uint64_t Importer::ImportRecords(
     cpuperf::Reader& reader,
     const cpuperf_properties_t& props,
     const cpuperf_config_t& config) {
-  CounterTracker counter_data(start_time_);
+  EventTracker event_data(start_time_);
   uint32_t record_count = 0;
   // Only print these warnings once, and then again at the end with
   // the total count. We don't want a broken trace to flood the screen
@@ -101,7 +101,7 @@ uint64_t Importer::ImportRecords(
     FXL_DCHECK(cpu < kMaxNumCpus);
     cpuperf_event_id_t event_id = record.event();
     trace_ticks_t prev_time;
-    prev_time = counter_data.GetTime(cpu, event_id);
+    prev_time = event_data.GetTime(cpu, event_id);
 
     // There can be millions of records. This log message is useful for small
     // test runs, but otherwise is too painful. The verbosity level is chosen
@@ -134,7 +134,7 @@ uint64_t Importer::ImportRecords(
       switch (record.type()) {
         case CPUPERF_RECORD_TICK:
           if (is_tally_mode) {
-            counter_data.AccumulateValue(cpu, event_id, sample_rate);
+            event_data.AccumulateValue(cpu, event_id, sample_rate);
           } else {
             ImportSampleRecord(cpu, config, record, prev_time,
                                ticks_per_second, sample_rate);
@@ -142,7 +142,7 @@ uint64_t Importer::ImportRecords(
           break;
         case CPUPERF_RECORD_VALUE:
           if (is_tally_mode) {
-            counter_data.AccumulateValue(cpu, event_id, record.value.value);
+            event_data.AccumulateValue(cpu, event_id, record.value.value);
           } else {
             ImportSampleRecord(cpu, config, record, prev_time,
                                ticks_per_second, record.value.value);
@@ -155,15 +155,16 @@ uint64_t Importer::ImportRecords(
         default:
           // The reader shouldn't be returning unknown records.
           FXL_NOTREACHED();
+          break;
       }
     }
 
-    counter_data.UpdateTime(cpu, event_id, record.time());
+    event_data.UpdateTime(cpu, event_id, record.time());
     ++record_count;
   }
 
   if (is_tally_mode) {
-    EmitTallyCounts(config, &counter_data);
+    EmitTallyCounts(config, &event_data);
   }
 
   if (printed_old_time_warning_count > 0) {
@@ -188,14 +189,14 @@ void Importer::ImportSampleRecord(
     const cpuperf::Reader::SampleRecord& record,
     trace_ticks_t previous_time,
     uint64_t ticks_per_second,
-    uint64_t counter_value) {
+    uint64_t event_value) {
   cpuperf_event_id_t event_id = record.event();
   const cpuperf::EventDetails* details;
   // Note: Errors here are generally rare, so at present we don't get clever
   // with minimizing the noise.
   if (cpuperf::EventIdToEventDetails(event_id, &details)) {
     EmitSampleRecord(cpu, details, record, previous_time, ticks_per_second,
-                     counter_value);
+                     event_value);
   } else {
     FXL_LOG(ERROR) << "Invalid event id: " << event_id;
   }
@@ -250,6 +251,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
       break;
     default:
       FXL_NOTREACHED();
+      return;
   }
 
 #if 0
@@ -288,18 +290,18 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
 // json output file, and thus there would otherwise be no way for the
 // report printer to know the duration over which the count was collected.
 void Importer::EmitTallyCounts(const cpuperf_config_t& config,
-                               const CounterTracker* counter_data) {
+                               const EventTracker* event_data) {
   unsigned num_cpus = zx_system_get_num_cpus();
 
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
     for (unsigned ctr = 0;
-         ctr < countof(config.counters) &&
-           config.counters[ctr] != CPUPERF_EVENT_ID_NONE;
+         ctr < countof(config.events) &&
+           config.events[ctr] != CPUPERF_EVENT_ID_NONE;
          ++ctr) {
-      cpuperf_event_id_t event_id = config.counters[ctr];
-      if (counter_data->HaveValue(cpu, event_id)) {
+      cpuperf_event_id_t event_id = config.events[ctr];
+      if (event_data->HaveValue(cpu, event_id)) {
         EmitTallyRecord(cpu, event_id, start_time_, 0);
-        uint64_t value = counter_data->GetValue(cpu, event_id);
+        uint64_t value = event_data->GetValue(cpu, event_id);
         EmitTallyRecord(cpu, event_id, stop_time_, value);
       }
     }

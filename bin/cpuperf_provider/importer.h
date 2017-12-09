@@ -35,13 +35,13 @@ private:
   static_assert(kMaxNumCpus <= TRACE_ENCODED_THREAD_REF_MAX_INDEX,
                 "bad value for kMaxNumCpus");
 
-  class CounterTracker final {
+  class EventTracker final {
   public:
-    CounterTracker(trace_ticks_t start_time) : start_time_(start_time) {}
+    EventTracker(trace_ticks_t start_time) : start_time_(start_time) {}
 
     bool HaveValue(unsigned cpu, cpuperf_event_id_t id) const {
       Key key = GenKey(cpu, id);
-      CounterData::const_iterator iter = data_.find(key);
+      EventData::const_iterator iter = data_.find(key);
       return iter != data_.end();
     }
 
@@ -53,7 +53,7 @@ private:
 
     trace_ticks_t GetTime(unsigned cpu, cpuperf_event_id_t id) const {
       Key key = GenKey(cpu, id);
-      CounterData::const_iterator iter = data_.find(key);
+      EventData::const_iterator iter = data_.find(key);
       if (iter == data_.end())
         return start_time_;
       return iter->second.time;
@@ -67,7 +67,7 @@ private:
 
     uint64_t GetValue(unsigned cpu, cpuperf_event_id_t id) const {
       Key key = GenKey(cpu, id);
-      CounterData::const_iterator iter = data_.find(key);
+      EventData::const_iterator iter = data_.find(key);
       if (iter == data_.end())
         return 0;
       return iter->second.value;
@@ -79,7 +79,7 @@ private:
       trace_ticks_t time = 0;
       uint64_t value = 0;
     };
-    using CounterData = std::unordered_map<Key, Data>;
+    using EventData = std::unordered_map<Key, Data>;
 
     Key GenKey(unsigned cpu, cpuperf_event_id_t id) const {
       FXL_DCHECK(cpu < kMaxNumCpus);
@@ -88,7 +88,7 @@ private:
     }
 
     const trace_ticks_t start_time_;
-    CounterData data_;
+    EventData data_;
   };
 
   uint64_t ImportRecords(cpuperf::Reader& reader,
@@ -100,7 +100,7 @@ private:
                           const cpuperf::Reader::SampleRecord& record,
                           trace_ticks_t previous_time,
                           uint64_t ticks_per_second,
-                          uint64_t counter_value);
+                          uint64_t event_value);
 
   void EmitSampleRecord(trace_cpu_number_t cpu,
                         const cpuperf::EventDetails* details,
@@ -109,7 +109,7 @@ private:
                         uint64_t ticks_per_second, uint64_t value);
 
   void EmitTallyCounts(const cpuperf_config_t& config,
-                       const CounterTracker* counter_data);
+                       const EventTracker* event_data);
 
   void EmitTallyRecord(trace_cpu_number_t cpu,
                        cpuperf_event_id_t event_id,
@@ -127,11 +127,11 @@ private:
   trace_string_ref_t const cpu_string_ref_;
   // Our use of the "category" argument to trace_context_write_* functions
   // is a bit abnormal. The argument "should" be the name of the category
-  // the user provided. However, users can select individual counters or
-  // collections of counters and the mapping from user-provided category
+  // the user provided. However, users can select individual events or
+  // collections of events and the mapping from user-provided category
   // name to our output is problematic. So just use a single category to
   // encompass all of them ("cpu:perf") and use the name argument to
-  // identify each counter.
+  // identify each event.
   trace_string_ref_t const cpuperf_category_ref_;
   trace_string_ref_t const value_name_ref_;
   trace_string_ref_t const rate_name_ref_;
