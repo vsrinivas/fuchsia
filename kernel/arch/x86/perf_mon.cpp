@@ -143,7 +143,7 @@ const uint16_t supported_mem_device_ids[] = {
 // Offset from BAR of the first byte we need to map.
 #define UNC_IMC_STATS_BEGIN 0x5040 // MISC_MEM_GT_REQUESTS
 // Offset from BAR of the last byte we need to map.
-#define UNC_IMC_STATS_END   0x5057 // MISC_MEM_BYTES_WRITTEN
+#define UNC_IMC_STATS_END   0x5983 // MISC_PKG_GT_TEMP
 
 // Verify all values are within [BEGIN,END].
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
@@ -244,6 +244,13 @@ struct MemoryControllerHubData {
         uint32_t gt_requests = 0;
         uint32_t ia_requests = 0;
         uint32_t io_requests = 0;
+        uint64_t all_active_core_cycles = 0;
+        uint64_t any_active_core_cycles = 0;
+        uint64_t active_gt_cycles = 0;
+        uint64_t active_ia_gt_cycles = 0;
+        uint64_t active_gt_slice_cycles = 0;
+        uint64_t active_gt_engine_cycles = 0;
+        // The remaining registers don't count anything.
     } last_mem;
 };
 
@@ -1024,15 +1031,50 @@ static uint32_t read_mc_counter32(volatile uint32_t* addr,
     }
 }
 
+// Read the 64-bit counter from the memory controller and return the delta
+// since the last read. We do this because it's easier for clients to process.
+// Overflow is highly unlikely with a 64-bit counter.
+// WARNING: This function has the side-effect of updating |*last_value|.
+static uint64_t read_mc_counter64(volatile uint64_t* addr,
+                                  uint64_t* last_value_addr) {
+    uint64_t value = *addr;
+    uint64_t last_value = *last_value_addr;
+    *last_value_addr = value;
+    return value - last_value;
+}
+
+// Read the 32-bit non-counter value from the memory controller.
+static uint32_t read_mc_value32(volatile uint32_t* addr) {
+    return *addr;
+}
+
 static ReadMiscResult read_mc_typed_counter32(volatile uint32_t* addr,
                                               uint32_t* last_value_addr) {
     return ReadMiscResult{
         read_mc_counter32(addr, last_value_addr), CPUPERF_RECORD_COUNT};
 }
 
+static ReadMiscResult read_mc_typed_counter64(volatile uint64_t* addr,
+                                              uint64_t* last_value_addr) {
+    return ReadMiscResult{
+        read_mc_counter64(addr, last_value_addr), CPUPERF_RECORD_COUNT};
+}
+
+static ReadMiscResult read_mc_typed_value32(volatile uint32_t* addr) {
+    return ReadMiscResult{
+        read_mc_value32(addr), CPUPERF_RECORD_VALUE};
+}
+
 static volatile uint32_t* get_mc_addr32(PerfmonState* state,
                                         uint32_t hw_addr) {
     return reinterpret_cast<volatile uint32_t*>(
+        reinterpret_cast<volatile char*>(state->mchbar_data.stats_addr)
+        + hw_addr - UNC_IMC_STATS_BEGIN);
+}
+
+static volatile uint64_t* get_mc_addr64(PerfmonState* state,
+                                        uint32_t hw_addr) {
+    return reinterpret_cast<volatile uint64_t*>(
         reinterpret_cast<volatile char*>(state->mchbar_data.stats_addr)
         + hw_addr - UNC_IMC_STATS_BEGIN);
 }
@@ -1073,6 +1115,126 @@ static ReadMiscResult read_mc_io_requests(PerfmonState* state) {
         &state->mchbar_data.last_mem.io_requests);
 }
 
+static ReadMiscResult read_mc_all_active_core_cycles(PerfmonState* state) {
+    return read_mc_typed_counter64(
+        get_mc_addr64(state, MISC_PKG_ALL_ACTIVE_CORE_CYCLES_OFFSET),
+        &state->mchbar_data.last_mem.all_active_core_cycles);
+}
+
+static ReadMiscResult read_mc_any_active_core_cycles(PerfmonState* state) {
+    return read_mc_typed_counter64(
+        get_mc_addr64(state, MISC_PKG_ANY_ACTIVE_CORE_CYCLES_OFFSET),
+        &state->mchbar_data.last_mem.any_active_core_cycles);
+}
+
+static ReadMiscResult read_mc_active_gt_cycles(PerfmonState* state) {
+    return read_mc_typed_counter64(
+        get_mc_addr64(state, MISC_PKG_ACTIVE_GT_CYCLES_OFFSET),
+        &state->mchbar_data.last_mem.active_gt_cycles);
+}
+
+static ReadMiscResult read_mc_active_ia_gt_cycles(PerfmonState* state) {
+    return read_mc_typed_counter64(
+        get_mc_addr64(state, MISC_PKG_ACTIVE_IA_GT_CYCLES_OFFSET),
+        &state->mchbar_data.last_mem.active_ia_gt_cycles);
+}
+
+static ReadMiscResult read_mc_active_gt_slice_cycles(PerfmonState* state) {
+    return read_mc_typed_counter64(
+        get_mc_addr64(state, MISC_PKG_ACTIVE_GT_SLICE_CYCLES_OFFSET),
+        &state->mchbar_data.last_mem.active_gt_slice_cycles);
+}
+
+static ReadMiscResult read_mc_active_gt_engine_cycles(PerfmonState* state) {
+    return read_mc_typed_counter64(
+        get_mc_addr64(state, MISC_PKG_ACTIVE_GT_ENGINE_CYCLES_OFFSET),
+        &state->mchbar_data.last_mem.active_gt_engine_cycles);
+}
+
+static ReadMiscResult read_mc_peci_therm_margin(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+                get_mc_addr32(state, MISC_PKG_PECI_THERM_MARGIN_OFFSET));
+    return ReadMiscResult{value & 0xffff, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_rapl_perf_status(PerfmonState* state) {
+    return read_mc_typed_value32(
+        get_mc_addr32(state, MISC_PKG_RAPL_PERF_STATUS_OFFSET));
+}
+
+static ReadMiscResult read_mc_ia_freq_clamping_reasons(PerfmonState* state) {
+    // Some of the reserved bits have read as ones. Remove them to make the
+    // reported value easier to read.
+    const uint32_t kReserved =
+        (1u << 31) | (1u << 30) | (1u << 25) | (1u << 19) | (1u << 18) |
+        (1u << 15) | (1u << 14) | (1u << 9)  | (1u << 3)  | (1u << 2);
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_IA_FREQ_CLAMPING_REASONS_OFFSET));
+    return ReadMiscResult{value & ~kReserved, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_gt_freq_clamping_reasons(PerfmonState* state) {
+    // Some of the reserved bits have read as ones. Remove them to make the
+    // reported value easier to read.
+    const uint32_t kReserved =
+        (1u << 31) | (1u << 30) | (1u << 29) | (1u << 25) | (1u << 20) |
+        (1u << 19) | (1u << 18) | (1u << 15) | (1u << 14) | (1u << 13) |
+        (1u << 9)  | (1u << 4)  | (1u << 3)  | (1u << 2);
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_GT_FREQ_CLAMPING_REASONS_OFFSET));
+    return ReadMiscResult{value & ~kReserved, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_rp_slice_freq(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_RP_SLICE_FREQ_OFFSET));
+    value = (value >> 17) & 0x1ff;
+    // Convert the value to Mhz.
+    // We can't do floating point, and this doesn't have to be perfect.
+    uint64_t scaled_value = value * 16667ul / 1000 /*16.667*/;
+    return ReadMiscResult{scaled_value, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_rp_unslice_freq(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_RP_UNSLICE_FREQ_OFFSET));
+    value = (value >> 8) & 0x1ff;
+    // Convert the value to Mhz.
+    // We can't do floating point, and this doesn't have to be perfect.
+    uint64_t scaled_value = value * 16667ul / 1000 /*16.667*/;
+    return ReadMiscResult{scaled_value, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_rp_volt(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_RP_VOLT_OFFSET));
+    return ReadMiscResult{value & 0xff, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_edram_temp(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_EDRAM_TEMP_OFFSET));
+    return ReadMiscResult{value & 0xff, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_pkg_temp(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_PKG_TEMP_OFFSET));
+    return ReadMiscResult{value & 0xff, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_ia_temp(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_IA_TEMP_OFFSET));
+    return ReadMiscResult{value & 0xff, CPUPERF_RECORD_VALUE};
+}
+
+static ReadMiscResult read_mc_gt_temp(PerfmonState* state) {
+    uint32_t value = read_mc_value32(
+        get_mc_addr32(state, MISC_PKG_GT_TEMP_OFFSET));
+    return ReadMiscResult{value & 0xff, CPUPERF_RECORD_VALUE};
+}
+
 static ReadMiscResult read_misc_event(PerfmonState* state,
                                       cpuperf_event_id_t id) {
     switch (id) {
@@ -1086,6 +1248,40 @@ static ReadMiscResult read_misc_event(PerfmonState* state,
         return read_mc_ia_requests(state);
     case MISC_MEM_IO_REQUESTS_ID:
         return read_mc_io_requests(state);
+    case MISC_PKG_ALL_ACTIVE_CORE_CYCLES_ID:
+        return read_mc_all_active_core_cycles(state);
+    case MISC_PKG_ANY_ACTIVE_CORE_CYCLES_ID:
+        return read_mc_any_active_core_cycles(state);
+    case MISC_PKG_ACTIVE_GT_CYCLES_ID:
+        return read_mc_active_gt_cycles(state);
+    case MISC_PKG_ACTIVE_IA_GT_CYCLES_ID:
+        return read_mc_active_ia_gt_cycles(state);
+    case MISC_PKG_ACTIVE_GT_SLICE_CYCLES_ID:
+        return read_mc_active_gt_slice_cycles(state);
+    case MISC_PKG_ACTIVE_GT_ENGINE_CYCLES_ID:
+        return read_mc_active_gt_engine_cycles(state);
+    case MISC_PKG_PECI_THERM_MARGIN_ID:
+        return read_mc_peci_therm_margin(state);
+    case MISC_PKG_RAPL_PERF_STATUS_ID:
+        return read_mc_rapl_perf_status(state);
+    case MISC_PKG_IA_FREQ_CLAMPING_REASONS_ID:
+        return read_mc_ia_freq_clamping_reasons(state);
+    case MISC_PKG_GT_FREQ_CLAMPING_REASONS_ID:
+        return read_mc_gt_freq_clamping_reasons(state);
+    case MISC_PKG_RP_SLICE_FREQ_ID:
+        return read_mc_rp_slice_freq(state);
+    case MISC_PKG_RP_UNSLICE_FREQ_ID:
+        return read_mc_rp_unslice_freq(state);
+    case MISC_PKG_RP_VOLT_ID:
+        return read_mc_rp_volt(state);
+    case MISC_PKG_EDRAM_TEMP_ID:
+        return read_mc_edram_temp(state);
+    case MISC_PKG_PKG_TEMP_ID:
+        return read_mc_pkg_temp(state);
+    case MISC_PKG_IA_TEMP_ID:
+        return read_mc_ia_temp(state);
+    case MISC_PKG_GT_TEMP_ID:
+        return read_mc_gt_temp(state);
     default:
         __UNREACHABLE;
     }
@@ -1165,6 +1361,12 @@ static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
     INIT_MC_COUNT(gt_requests);
     INIT_MC_COUNT(ia_requests);
     INIT_MC_COUNT(io_requests);
+    INIT_MC_COUNT(all_active_core_cycles);
+    INIT_MC_COUNT(any_active_core_cycles);
+    INIT_MC_COUNT(active_gt_cycles);
+    INIT_MC_COUNT(active_ia_gt_cycles);
+    INIT_MC_COUNT(active_gt_slice_cycles);
+    INIT_MC_COUNT(active_gt_engine_cycles);
 #undef INIT_MC_COUNT
 
     TRACEF("memory stats mapped: begin 0x%lx, %zu bytes\n",
@@ -1392,7 +1594,16 @@ static void x86_ipm_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
                 }
                 cpuperf_event_id_t id = state->misc_ids[i];
                 ReadMiscResult typed_value = read_misc_event(state, id);
-                next = x86_perfmon_write_count_record(next, id, now, typed_value.value);
+                switch (typed_value.type) {
+                case CPUPERF_RECORD_COUNT:
+                    next = x86_perfmon_write_count_record(next, id, now, typed_value.value);
+                    break;
+                case CPUPERF_RECORD_VALUE:
+                    next = x86_perfmon_write_value_record(next, id, now, typed_value.value);
+                    break;
+                default:
+                    __UNREACHABLE;
+                }
             }
         }
 
@@ -1633,7 +1844,16 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                     }
                     cpuperf_event_id_t id = state->misc_ids[i];
                     ReadMiscResult typed_value = read_misc_event(state, id);
-                    next = x86_perfmon_write_count_record(next, id, now, typed_value.value);
+                    switch (typed_value.type) {
+                    case CPUPERF_RECORD_COUNT:
+                        next = x86_perfmon_write_count_record(next, id, now, typed_value.value);
+                        break;
+                    case CPUPERF_RECORD_VALUE:
+                        next = x86_perfmon_write_value_record(next, id, now, typed_value.value);
+                        break;
+                    default:
+                        __UNREACHABLE;
+                    }
                 }
             }
         }

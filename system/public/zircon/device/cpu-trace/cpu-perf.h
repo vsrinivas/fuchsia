@@ -202,7 +202,8 @@ typedef struct {
 #define CPUPERF_CONFIG_FLAG_PC        (1u << 2)
 // If set then use |events[0]| as the timebase: data for this event is
 // collected when data for |events[0]| is collected, and the record emitted
-// for this event is a CPUPERF_RECORD_VALUE record.
+// for this event is either a CPUPERF_RECORD_COUNT or CPUPERF_RECORD_VALUE
+// record (depending on what the event is).
 // It is an error to have this bit set for an event and have rate[0] be zero.
 #define CPUPERF_CONFIG_FLAG_TIMEBASE0 (1u << 3)
 } cpuperf_config_t;

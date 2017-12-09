@@ -48,7 +48,6 @@ static_assert(1
 #include <zircon/device/cpu-trace/intel-pm-events.inc>
     , "");
 
-// There's only a few misc events, so handle them directly.
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),

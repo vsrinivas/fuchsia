@@ -384,4 +384,13 @@ typedef struct {
 #define IPM_REG_FLAG_FIXED1     0x200000
 #define IPM_REG_FLAG_FIXED2     0x300000
 
+// Flags for misc registers
+
+// The register consists of a set of fields (not a counter).
+// Just print in hex.
+#define IPM_MISC_REG_FLAG_FIELDS (1u << 0)
+// The value uses a non-standard encoding.
+// Just print in hex.
+#define IPM_MISC_REG_FLAG_RAW (1u << 1)
+
 __END_CDECLS
