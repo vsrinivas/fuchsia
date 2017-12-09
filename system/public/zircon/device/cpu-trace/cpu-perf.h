@@ -55,12 +55,16 @@ typedef struct {
 typedef enum {
   // Reserved, unused.
   CPUPERF_RECORD_RESERVED = 0,
-  // The record is an |cpuperf_tick_record_t|.
+  // The record is a |cpuperf_tick_record_t|.
   CPUPERF_RECORD_TICK = 1,
-  // The record is an |cpuperf_value_record_t|.
-  CPUPERF_RECORD_VALUE = 2,
-  // The record is an |cpuperf_pc_record_t|.
-  CPUPERF_RECORD_PC = 3,
+  // The record is a |cpuperf_count_record_t|.
+  CPUPERF_RECORD_COUNT = 2,
+  // The record is a |cpuperf_value_record_t|.
+  CPUPERF_RECORD_VALUE = 3,
+  // The record is a |cpuperf_pc_record_t|.
+  CPUPERF_RECORD_PC = 4,
+  // non-ABI
+  CPUPERF_NUM_RECORD_TYPES = 5,
 } cpuperf_record_type_t;
 
 // Trace buffer space is expensive, we want to keep records small.
@@ -90,6 +94,7 @@ typedef enum {
 // Sampling mode data header.
 // Note: Avoid holes in trace records.
 typedef struct {
+    // One of CPUPERF_RECORD_*.
     uint8_t type;
 
     // A possible usage of this field is to add some type-specific flags.
@@ -111,13 +116,27 @@ static_assert(sizeof(cpuperf_record_header_t) % 8 == 0,
 
 // Record the time an event was sampled.
 // This does not include the event value in order to keep the size small.
+// This can only be used for values that count something.
 // This is for use when the event is its own trigger so the user should know
 // what value was: it's the sample rate.
 typedef struct {
     cpuperf_record_header_t header;
 } __PACKED cpuperf_tick_record_t;
 
+// Record the value of a counter at a particular time, with the count starting
+// from the last occurrence of this record (the counter is effectively reset
+// to zero when the record is emitted).
+// This is used when another timebase is driving the sampling, e.g., another
+// counter. Otherwise the "tick" record is generally used as it takes less
+// space.
+typedef struct {
+    cpuperf_record_header_t header;
+    uint64_t count;
+} __PACKED cpuperf_count_record_t;
+
 // Record the value of an event at a particular time.
+// This value is not a count and cannot be used to produce a "rate"
+// (e.g., some value per second).
 // This is used when another timebase is driving the sampling, e.g., another
 // counter.
 typedef struct {

@@ -533,6 +533,18 @@ static cpuperf_record_header_t* x86_perfmon_write_tick_record(
     return reinterpret_cast<cpuperf_record_header_t*>(rec);
 }
 
+static cpuperf_record_header_t* x86_perfmon_write_count_record(
+        cpuperf_record_header_t* hdr,
+        cpuperf_event_id_t event, zx_time_t time,
+        uint64_t count) {
+    auto rec = reinterpret_cast<cpuperf_count_record_t*>(hdr);
+    x86_perfmon_write_header(&rec->header, CPUPERF_RECORD_COUNT,
+                             event, time);
+    rec->count = count;
+    ++rec;
+    return reinterpret_cast<cpuperf_record_header_t*>(rec);
+}
+
 static cpuperf_record_header_t* x86_perfmon_write_value_record(
         cpuperf_record_header_t* hdr,
         cpuperf_event_id_t event, zx_time_t time,
@@ -1336,15 +1348,15 @@ static void x86_ipm_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
             }
             cpuperf_event_id_t id = state->programmable_ids[i];
             DEBUG_ASSERT(id != 0);
-            uint64_t value = read_msr(IA32_PMC_FIRST + i);
-            if (value >= state->programmable_initial_value[i]) {
-                value -= state->programmable_initial_value[i];
+            uint64_t count = read_msr(IA32_PMC_FIRST + i);
+            if (count >= state->programmable_initial_value[i]) {
+                count -= state->programmable_initial_value[i];
             } else {
                 // The max counter value is generally not 64 bits.
-                value += (perfmon_max_programmable_counter_value -
+                count += (perfmon_max_programmable_counter_value -
                           state->programmable_initial_value[i] + 1);
             }
-            next = x86_perfmon_write_value_record(next, id, now, value);
+            next = x86_perfmon_write_count_record(next, id, now, count);
         }
         for (unsigned i = 0; i < state->num_used_fixed; ++i) {
             if (next > last) {
@@ -1355,15 +1367,15 @@ static void x86_ipm_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
             DEBUG_ASSERT(id != 0);
             unsigned hw_num = state->fixed_hw_map[i];
             DEBUG_ASSERT(hw_num < perfmon_num_fixed_counters);
-            uint64_t value = read_msr(IA32_FIXED_CTR0 + hw_num);
-            if (value >= state->fixed_initial_value[i]) {
-                value -= state->fixed_initial_value[i];
+            uint64_t count = read_msr(IA32_FIXED_CTR0 + hw_num);
+            if (count >= state->fixed_initial_value[i]) {
+                count -= state->fixed_initial_value[i];
             } else {
                 // The max counter value is generally not 64 bits.
-                value += (perfmon_max_fixed_counter_value -
+                count += (perfmon_max_fixed_counter_value -
                           state->fixed_initial_value[i] + 1);
             }
-            next = x86_perfmon_write_value_record(next, id, now, value);
+            next = x86_perfmon_write_count_record(next, id, now, count);
         }
         // Misc events are currently all non-cpu-specific.
         // Just report for cpu 0. See pmi_interrupt_handler.
@@ -1375,7 +1387,7 @@ static void x86_ipm_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
                 }
                 cpuperf_event_id_t id = state->misc_ids[i];
                 uint64_t value = read_misc_counter(state, id);
-                next = x86_perfmon_write_value_record(next, id, now, value);
+                next = x86_perfmon_write_count_record(next, id, now, value);
             }
         }
 
@@ -1577,8 +1589,8 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 if (!(state->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE))
                     continue;
                 cpuperf_event_id_t id = state->programmable_ids[i];
-                uint64_t value = read_msr(IA32_PMC_FIRST + i);
-                next = x86_perfmon_write_value_record(next, id, now, value);
+                uint64_t count = read_msr(IA32_PMC_FIRST + i);
+                next = x86_perfmon_write_count_record(next, id, now, count);
                 // We could leave the counter alone, but it could overflow.
                 // Instead reduce the risk and just always reset to zero.
                 LTRACEF("cpu %u: resetting PMC %u to 0x%" PRIx64 "\n",
@@ -1591,8 +1603,8 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 cpuperf_event_id_t id = state->fixed_ids[i];
                 unsigned hw_num = state->fixed_hw_map[i];
                 DEBUG_ASSERT(hw_num < perfmon_num_fixed_counters);
-                uint64_t value = read_msr(IA32_FIXED_CTR0 + hw_num);
-                next = x86_perfmon_write_value_record(next, id, now, value);
+                uint64_t count = read_msr(IA32_FIXED_CTR0 + hw_num);
+                next = x86_perfmon_write_count_record(next, id, now, count);
                 // We could leave the counter alone, but it could overflow.
                 // Instead reduce the risk and just always reset to zero.
                 LTRACEF("cpu %u: resetting FIXED %u to 0x%" PRIx64 "\n",
@@ -1616,7 +1628,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                     }
                     cpuperf_event_id_t id = state->misc_ids[i];
                     uint64_t value = read_misc_counter(state, id);
-                    next = x86_perfmon_write_value_record(next, id, now, value);
+                    next = x86_perfmon_write_count_record(next, id, now, value);
                 }
             }
         }
