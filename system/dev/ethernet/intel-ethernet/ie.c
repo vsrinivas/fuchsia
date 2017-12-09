@@ -76,17 +76,17 @@ void eth_rx_ack(ethdev_t* eth) {
     eth->rx_rd_ptr = n;
 }
 
-status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
-    if ((len < 60) || (len > ETH_TXBUF_DSIZE)) {
-        printf("intel-eth: unsupported packet length %zu\n", len);
-        return ZX_ERR_INVALID_ARGS;
-    }
+void eth_enable_rx(ethdev_t* eth) {
+    uint32_t rctl = readl(IE_RCTL);
+    writel(rctl | IE_RCTL_EN, IE_RCTL);
+}
 
-    zx_status_t status = ZX_OK;
+void eth_disable_rx(ethdev_t* eth) {
+    uint32_t rctl = readl(IE_RCTL);
+    writel(rctl & ~IE_RCTL_EN, IE_RCTL);
+}
 
-    mtx_lock(&eth->send_lock);
-
-    // reclaim completed buffers from hw
+static void reap_tx_buffers(ethdev_t* eth) {
     uint32_t n = eth->tx_rd_ptr;
     for (;;) {
         uint64_t info = eth->txd[n].info;
@@ -103,6 +103,19 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
         n = (n + 1) & (ETH_TXBUF_COUNT - 1);
     }
     eth->tx_rd_ptr = n;
+}
+
+status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
+    if ((len < 60) || (len > ETH_TXBUF_DSIZE)) {
+        printf("intel-eth: unsupported packet length %zu\n", len);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&eth->send_lock);
+
+    reap_tx_buffers(eth);
 
     // obtain buffer, copy into it, setup descriptor
     framebuf_t *frame = list_remove_head_type(&eth->free_frames, framebuf_t, node);
@@ -111,7 +124,7 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
         goto out;
     }
 
-    n = eth->tx_wr_ptr;
+    uint32_t n = eth->tx_wr_ptr;
     memcpy(frame->data, data, len);
     eth->txd[n].addr = frame->phys;
     eth->txd[n].info = IE_TXD_LEN(len) | IE_TXD_EOP | IE_TXD_IFCS | IE_TXD_RS;
@@ -125,6 +138,115 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
 out:
     mtx_unlock(&eth->send_lock);
     return status;
+}
+
+// Returns the number of Tx packets in the hw queue
+size_t eth_tx_queued(ethdev_t* eth) {
+    reap_tx_buffers(eth);
+    return ((eth->tx_wr_ptr + ETH_TXBUF_COUNT) - eth->tx_rd_ptr) & (ETH_TXBUF_COUNT - 1);
+}
+
+void eth_enable_tx(ethdev_t* eth) {
+    uint32_t tctl = readl(IE_TCTL);
+    writel(tctl | IE_TCTL_EN, IE_TCTL);
+}
+
+void eth_disable_tx(ethdev_t* eth) {
+    uint32_t tctl = readl(IE_TCTL);
+    writel(tctl & ~IE_TCTL_EN, IE_TCTL);
+}
+
+static zx_status_t wait_for_mdic(ethdev_t* eth, uint32_t* reg_value) {
+    uint32_t mdic;
+    uint32_t iterations = 0;
+    do {
+        __nanosleep(50);
+        mdic = readl(IE_MDIC);
+        if (mdic & IE_MDIC_R) {
+            goto success;
+        }
+        iterations++;
+    } while (!(mdic & IE_MDIC_R) && (iterations < 100));
+    printf("intel-eth: timed out waiting for MDIC to be ready\n");
+    return ZX_ERR_TIMED_OUT;
+
+success:
+    if (reg_value) {
+        *reg_value = mdic;
+    }
+    return ZX_OK;
+}
+
+static zx_status_t phy_read(ethdev_t* eth, uint8_t phyadd, uint8_t regadd, uint16_t* result) {
+    uint32_t mdic = IE_MDIC_PUT_PHYADD(phyadd) |
+                    IE_MDIC_PUT_REGADD(regadd) |
+                    IE_MDIC_OP_READ;
+    writel(mdic, IE_MDIC);
+    zx_status_t status = wait_for_mdic(eth, &mdic);
+    if (status == ZX_OK) {
+        *result = IE_MDIC_GET_DATA(mdic);
+    }
+    return status;
+}
+
+static zx_status_t phy_write(ethdev_t* eth, uint8_t phyadd, uint8_t regadd, uint16_t value) {
+    uint32_t mdic = IE_MDIC_PUT_DATA(value) |
+                    IE_MDIC_PUT_PHYADD(phyadd) |
+                    IE_MDIC_PUT_REGADD(regadd) |
+                    IE_MDIC_OP_WRITE;
+    writel(mdic, IE_MDIC);
+    return wait_for_mdic(eth, NULL);
+}
+
+static zx_status_t get_phy_addr(ethdev_t* eth, uint8_t* phy_addr) {
+    if (eth->phy_addr != 0) {
+        *phy_addr = eth->phy_addr;
+    }
+    for (uint8_t addr = 1; addr <= IE_MAX_PHY_ADDR; addr++) {
+        uint16_t pid;
+        zx_status_t status = phy_read(eth, addr, IE_PHY_PID, &pid);
+        // TODO: Identify the PHY more precisely
+        if (status == ZX_OK && pid != 0) {
+            *phy_addr = pid;
+            return ZX_OK;
+        }
+    }
+    printf("intel-eth: unable to identify valid PHY address\n");
+    return ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t eth_enable_phy(ethdev_t* eth) {
+    uint8_t phy_addr;
+    zx_status_t status = get_phy_addr(eth, &phy_addr);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    uint16_t phy_ctrl;
+    status = phy_read(eth, phy_addr, IE_PHY_PCTRL, &phy_ctrl);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (phy_ctrl & IE_PHY_PCTRL_POWER_DOWN) {
+        return phy_write(eth, phy_addr, IE_PHY_PCTRL, phy_ctrl & ~IE_PHY_PCTRL_POWER_DOWN);
+    }
+    return ZX_OK;
+}
+
+zx_status_t eth_disable_phy(ethdev_t* eth) {
+    uint8_t phy_addr;
+    zx_status_t status = get_phy_addr(eth, &phy_addr);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    uint16_t phy_ctrl;
+    status = phy_read(eth, phy_addr, IE_PHY_PCTRL, &phy_ctrl);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return phy_write(eth, phy_addr, IE_PHY_PCTRL, phy_ctrl | IE_PHY_PCTRL_POWER_DOWN);
 }
 
 status_t eth_reset_hw(ethdev_t* eth) {

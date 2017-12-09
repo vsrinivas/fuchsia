@@ -22,9 +22,16 @@
 typedef zx_status_t status_t;
 #include "ie.h"
 
+typedef enum {
+    ETH_RUNNING = 0,
+    ETH_SUSPENDING,
+    ETH_SUSPENDED,
+} eth_state;
+
 typedef struct ethernet_device {
     ethdev_t eth;
     mtx_t lock;
+    eth_state state;
     zx_device_t* zxdev;
     pci_protocol_t pci;
     zx_handle_t ioh;
@@ -59,7 +66,7 @@ static int irq_thread(void* arg) {
             size_t len;
 
             while (eth_rx(&edev->eth, &data, &len) == ZX_OK) {
-                if (edev->ifc) {
+                if (edev->ifc && (edev->state == ETH_RUNNING)) {
                     edev->ifc->recv(edev->cookie, data, len, 0);
                 }
                 eth_rx_ack(&edev->eth);
@@ -74,7 +81,6 @@ static int irq_thread(void* arg) {
                     edev->ifc->status(edev->cookie, online ? ETH_STATUS_ONLINE : 0);
                 }
             }
-
         }
         mtx_unlock(&edev->lock);
 
@@ -125,6 +131,9 @@ static zx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
 
 static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
     ethernet_device_t* edev = ctx;
+    if (edev->state != ETH_RUNNING) {
+        return ZX_ERR_BAD_STATE;
+    }
     // TODO: Add support for DMA directly from netbuf
     return eth_tx(&edev->eth, netbuf->data, netbuf->len);
 }
@@ -135,6 +144,46 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .start = eth_start,
     .queue_tx = eth_queue_tx,
 };
+
+static zx_status_t eth_suspend(void* ctx, uint32_t flags) {
+    ethernet_device_t* edev = ctx;
+    mtx_lock(&edev->lock);
+    edev->state = ETH_SUSPENDING;
+
+    // Immediately disable the rx queue
+    eth_disable_rx(&edev->eth);
+
+    // Wait for queued tx packets to complete
+    int iterations = 0;
+    do {
+        if (!eth_tx_queued(&edev->eth)) {
+            goto tx_done;
+        }
+        mtx_unlock(&edev->lock);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        iterations++;
+        mtx_lock(&edev->lock);
+    } while (iterations < 10);
+    printf("intel-eth: timed out waiting for tx queue to drain when suspending\n");
+
+tx_done:
+    eth_disable_tx(&edev->eth);
+    eth_disable_phy(&edev->eth);
+    edev->state = ETH_SUSPENDED;
+    mtx_unlock(&edev->lock);
+    return ZX_OK;
+}
+
+static zx_status_t eth_resume(void* ctx, uint32_t flags) {
+    ethernet_device_t* edev = ctx;
+    mtx_lock(&edev->lock);
+    eth_enable_phy(&edev->eth);
+    eth_enable_rx(&edev->eth);
+    eth_enable_tx(&edev->eth);
+    edev->state = ETH_RUNNING;
+    mtx_unlock(&edev->lock);
+    return ZX_OK;
+}
 
 static void eth_release(void* ctx) {
     ethernet_device_t* edev = ctx;
@@ -147,6 +196,8 @@ static void eth_release(void* ctx) {
 
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
+    .suspend = eth_suspend,
+    .resume = eth_resume,
     .release = eth_release,
 };
 
@@ -198,6 +249,10 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
 
     if ((r = pci_enable_bus_master(&edev->pci, true)) < 0) {
         printf("eth: cannot enable bus master %d\n", r);
+        goto fail;
+    }
+
+    if (eth_enable_phy(&edev->eth) != ZX_OK) {
         goto fail;
     }
 

@@ -12,6 +12,7 @@
 #define IE_CTRL      0x0000 // Device Control
 #define IE_STATUS    0x0008 // Device Status
 #define IE_CTRL_EXT  0x0018 // Extended Device Control
+#define IE_MDIC      0x0020 // MDI control (PHY access)
 #define IE_TXCW      0x0178 // TX Config Word
 #define IE_RXCW      0x0180 // RX Config Word
 #define IE_ICR       0x00C0 // Interrupt Cause Read
@@ -68,6 +69,18 @@
 #define IE_STATUS_10M     (0 << 6)
 #define IE_STATUS_100M    (1 << 6)
 #define IE_STATUS_1000M   (2 << 6)
+
+#define IE_MDIC_GET_DATA(val)    ((val) & 0xffff)
+#define IE_MDIC_PUT_DATA(val)    ((val) & 0xffff)
+#define IE_MDIC_GET_REGADD(val)  (((val) >> 16) & 0x1f)
+#define IE_MDIC_PUT_REGADD(val)  (((val) & 0x1f) << 16)
+#define IE_MDIC_GET_PHYADD(val)  (((val) >> 21) & 0x1f)
+#define IE_MDIC_PUT_PHYADD(val)  (((val) & 0x1f) << 21)
+#define IE_MDIC_OP_WRITE         (1 << 26)
+#define IE_MDIC_OP_READ          (2 << 26)
+#define IE_MDIC_R                (1 << 28)      // Ready
+#define IE_MDIC_I                (1 << 29)      // Interrupt enable
+#define IE_MDIC_E                (1 << 30)      // Error
 
 #define IE_INT_TXDW       (1 << 0) // TX Descriptor Written Back
 #define IE_INT_TXQE       (1 << 1) // TX Queue Empty
@@ -160,4 +173,25 @@ typedef struct ie_txd {
 #define IE_TXD_CSO(n) ((((uint64_t)(n)) & 0xFFULL) << 16)
 #define IE_TXD_LEN(n) (((uint64_t)(n)) & 0xFFFFULL)
 
+#define IE_MAX_PHY_ADDR               0x1f
+
+// PHY registers
+
+// PHY Control Register
+#define IE_PHY_PCTRL                  (0x00)
+#define IE_PHY_PCTRL_MASK             ((1 << 6) | (1 << 13))
+#define IE_PHY_PCTRL_SPEED_1000       ((1 << 6) | (0 << 13))
+#define IE_PHY_PCTRL_SPEED_100        ((0 << 6) | (1 << 13))
+#define IE_PHY_PCTRL_SPEED_10         ((0 << 6) | (0 << 13))
+#define IE_PHY_PCTRL_EN_COLL_TEST     (1 << 7)
+#define IE_PHY_PCTRL_FULL_DUPLEX      (1 << 8)
+#define IE_PHY_PCTRL_RESTART_AUTONEG  (1 << 9)
+#define IE_PHY_PCTRL_ISOLATE          (1 << 10)
+#define IE_PHY_PCTRL_POWER_DOWN       (1 << 11)
+#define IE_PHY_PCTRL_EN_AUTONEG       (1 << 12)
+#define IE_PHY_PCTRL_EN_LOOPBACK      (1 << 14)
+#define IE_PHY_PCTRL_RESET            (1 << 15)
+
+// PHY Identifier Register (LSB)
+#define IE_PHY_PID                    (0x02)
 
