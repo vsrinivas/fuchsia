@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 // Table of categories for configuring perf collection of misc bits
-// of Intel h/w.
+// of Intel Skylake h/w.
+// N.B. Unless otherwise noted, use of these categories in sampling mode
+// requires provision of a separate "timebase" event to collect the data.
+// See, e.g., desktop-6th-gen-core-family-datasheet-vol-2.
 
-#ifndef DEF_MISC_CATEGORY
-#define DEF_MISC_CATEGORY(symbol, name, events...)
+#ifndef DEF_MISC_SKL_CATEGORY
+#error DEF_MISC_SKL_CATEGORY not defined
 #endif
 
 // Categories for fixed events
@@ -16,19 +19,15 @@
 //         cannot have any spaces: used in trace category name)
 // - varargs list of event names (from intel-misc-events.inc)
 
-// N.B. In sampling mode this category requires provision of a separate
-// "timebase" event to use to collect the data.
-DEF_MISC_CATEGORY(IPM_CATEGORY_MISC_MEM_BYTES,
+DEF_MISC_SKL_CATEGORY(IPM_CATEGORY_MISC_MEM_BYTES,
   "mem:bytes",
   MISC_MEM_BYTES_READ,
   MISC_MEM_BYTES_WRITTEN)
 
-// N.B. In sampling mode this category requires provision of a separate
-// "timebase" event to use to collect the data.
-DEF_MISC_CATEGORY(IPM_CATEGORY_MISC_MEM_REQUESTS,
+DEF_MISC_SKL_CATEGORY(IPM_CATEGORY_MISC_MEM_REQUESTS,
   "mem:requests",
   MISC_MEM_GT_REQUESTS,
   MISC_MEM_IA_REQUESTS,
   MISC_MEM_IO_REQUESTS)
 
-#undef DEF_MISC_CATEGORY
+#undef DEF_MISC_SKL_CATEGORY

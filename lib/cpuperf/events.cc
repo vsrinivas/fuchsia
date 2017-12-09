@@ -29,9 +29,9 @@ const EventDetails g_skl_event_details[] = {
 };
 
 const EventDetails g_misc_event_details[] = {
-#define DEF_MISC_EVENT(symbol, id, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, id, flags, name, description) \
   [id] = { CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id), name, description },
-#include <zircon/device/cpu-trace/intel-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
 };
 
 bool EventIdToEventDetails(cpuperf_event_id_t id,
