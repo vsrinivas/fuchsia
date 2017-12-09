@@ -112,6 +112,22 @@ blobstore_inode_t* Blobstore::GetNode(size_t index) const {
     return &reinterpret_cast<blobstore_inode_t*>(node_map_->GetData())[index];
 }
 
+zx_status_t VnodeBlob::Verify() const {
+    TRACE_DURATION("blobstore", "Blobstore::Verify");
+    ZX_DEBUG_ASSERT(blob_ != nullptr);
+
+    const blobstore_inode_t* inode = blobstore_->GetNode(map_index_);
+    // TODO(smklein): We could lazily verify more of the VMO if
+    // we could fault in pages on-demand.
+    //
+    // For now, we aggressively verify the entire VMO up front.
+    Digest d;
+    d = reinterpret_cast<const uint8_t*>(&digest_[0]);
+    return MerkleTree::Verify(GetData(), inode->blob_size, GetMerkle(),
+                              MerkleTree::GetTreeLength(inode->blob_size), 0,
+                              inode->blob_size, d);
+}
+
 zx_status_t VnodeBlob::InitVmos() {
     TRACE_DURATION("blobstore", "Blobstore::InitVmos");
 
@@ -120,7 +136,7 @@ zx_status_t VnodeBlob::InitVmos() {
     }
 
     zx_status_t status;
-    blobstore_inode_t* inode = blobstore_->GetNode(map_index_);
+    const blobstore_inode_t* inode = blobstore_->GetNode(map_index_);
 
     uint64_t num_blocks = BlobDataBlocks(*inode) + MerkleTreeBlocks(*inode);
     if ((status = MappedVmo::Create(num_blocks * kBlobstoreBlockSize, "blob", &blob_)) != ZX_OK) {
@@ -137,7 +153,11 @@ zx_status_t VnodeBlob::InitVmos() {
     ReadTxn txn(blobstore_.get());
     txn.Enqueue(vmoid_, 0, inode->start_block + DataStartBlock(blobstore_->info_),
                 BlobDataBlocks(*inode) + MerkleTreeBlocks(*inode));
-    return txn.Flush();
+    if ((status = txn.Flush()) != ZX_OK) {
+        return status;
+    }
+
+    return Verify();
 }
 
 uint64_t VnodeBlob::SizeData() const {
@@ -333,6 +353,12 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
                 SetState(kBlobStateError);
                 return status;
             }
+        } else if ((status = Verify()) != ZX_OK) {
+            // Small blobs may not have associated Merkle Trees, and will
+            // require validation, since we are not regenerating and checking
+            // the digest.
+            SetState(kBlobStateError);
+            return status;
         }
 
         // No more data to write. Flush to disk.
@@ -375,22 +401,7 @@ zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
         return status;
     }
 
-    // TODO(smklein): We could lazily verify more of the VMO if
-    // we could fault in pages on-demand.
-    //
-    // For now, we aggressively verify the entire VMO up front.
-    Digest d;
-    d = ((const uint8_t*)&digest_[0]);
     auto inode = blobstore_->GetNode(map_index_);
-    uint64_t size_merkle = MerkleTree::GetTreeLength(inode->blob_size);
-    const void* merkle_data = GetMerkle();
-    const void* blob_data = GetData();
-    status = MerkleTree::Verify(blob_data, inode->blob_size, merkle_data,
-                                size_merkle, 0, inode->blob_size, d);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     // TODO(smklein): Only clone / verify the part of the vmo that
     // was requested.
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
@@ -420,7 +431,7 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     }
 
     Digest d;
-    d = ((const uint8_t*)&digest_[0]);
+    d = reinterpret_cast<const uint8_t*>(&digest_[0]);
     auto inode = blobstore_->GetNode(map_index_);
     if (off >= inode->blob_size) {
         *actual = 0;
@@ -428,15 +439,6 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     }
     if (len > (inode->blob_size - off)) {
         len = inode->blob_size - off;
-    }
-
-    uint64_t size_merkle = MerkleTree::GetTreeLength(inode->blob_size);
-    const void* merkle_data = GetMerkle();
-    const void* blob_data = GetData();
-    status = MerkleTree::Verify(blob_data, inode->blob_size, merkle_data,
-                                size_merkle, off, len, d);
-    if (status != ZX_OK) {
-        return status;
     }
 
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;

@@ -40,7 +40,6 @@
 namespace blobstore {
 
 class Blobstore;
-class VnodeBlob;
 
 using WriteTxn = fs::WriteTxn<kBlobstoreBlockSize, Blobstore>;
 using ReadTxn = fs::ReadTxn<kBlobstoreBlockSize, Blobstore>;
@@ -166,11 +165,15 @@ private:
 
     // Read both VMOs into memory, if we haven't already.
     //
-    // TODO(smklein): When we have can register the Blob Store as a pager
+    // TODO(ZX-1481): When we have can register the Blob Store as a pager
     // service, and it can properly handle pages faults on a vnode's contents,
     // then we can avoid reading the entire blob up-front. Until then, read
     // the contents of a VMO into memory when it is opened.
     zx_status_t InitVmos();
+
+    // Verify the integrity of the in-memory Blob.
+    // InitVmos() must have already been called for this blob.
+    zx_status_t Verify() const;
 
     zx_status_t WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block);
     // Called by Blob once the last write has completed, updating the
