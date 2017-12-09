@@ -32,6 +32,7 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
       stop_time_(stop_time),
       cpu_string_ref_(MAKE_STRING("cpu")),
       cpuperf_category_ref_(MAKE_STRING("cpu:perf")),
+      count_name_ref_(MAKE_STRING("count")),
       value_name_ref_(MAKE_STRING("value")),
       rate_name_ref_(MAKE_STRING("rate")),
       aspace_name_ref_(MAKE_STRING("aspace")),
@@ -134,15 +135,23 @@ uint64_t Importer::ImportRecords(
       switch (record.type()) {
         case CPUPERF_RECORD_TICK:
           if (is_tally_mode) {
-            event_data.AccumulateValue(cpu, event_id, sample_rate);
+            event_data.AccumulateCount(cpu, event_id, sample_rate);
           } else {
             ImportSampleRecord(cpu, config, record, prev_time,
                                ticks_per_second, sample_rate);
           }
           break;
+        case CPUPERF_RECORD_COUNT:
+          if (is_tally_mode) {
+            event_data.AccumulateCount(cpu, event_id, record.count.count);
+          } else {
+            ImportSampleRecord(cpu, config, record, prev_time,
+                               ticks_per_second, record.count.count);
+          }
+          break;
         case CPUPERF_RECORD_VALUE:
           if (is_tally_mode) {
-            event_data.AccumulateValue(cpu, event_id, record.value.value);
+            event_data.UpdateValue(cpu, event_id, record.value.value);
           } else {
             ImportSampleRecord(cpu, config, record, prev_time,
                                ticks_per_second, record.value.value);
@@ -231,18 +240,34 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   // ticks_per_second could be zero if there's bad data in the buffer.
   // Don't crash because of it. If it's zero just punt and compute the rate
   // per tick.
+  // TODO(dje): Perhaps the rate calculation should be done in the report
+  // generator, but it's done this way so that catapult reports in chrome
+  // are usable. Maybe add a new phase type to the catapult format?
   rate_per_second = static_cast<double>(value) / interval_ticks;
   if (ticks_per_second != 0) {
     rate_per_second *= ticks_per_second;
   }
 
   trace_arg_t args[3];
-  args[0] = {trace_make_arg(rate_name_ref_,
-                            trace_make_double_arg_value(rate_per_second))};
-  size_t n_args = 1;
+  size_t n_args;
   switch (record.type()) {
     case CPUPERF_RECORD_TICK:
+      args[0] = {trace_make_arg(rate_name_ref_,
+                                trace_make_double_arg_value(rate_per_second))};
+      n_args = 1;
+      break;
+    case CPUPERF_RECORD_COUNT:
+      args[0] = {trace_make_arg(rate_name_ref_,
+                                trace_make_double_arg_value(rate_per_second))};
+      n_args = 1;
+      break;
     case CPUPERF_RECORD_VALUE:
+      // We somehow need to make the value as not being a count. This is
+      // important for some consumers to guide how to print the value.
+      // Do this by using a different name for the value.
+      args[0] = {trace_make_arg(value_name_ref_,
+                                trace_make_uint64_arg_value(value))};
+      n_args = 1;
       break;
     case CPUPERF_RECORD_PC:
       args[1] = {trace_make_arg(aspace_name_ref_, trace_make_uint64_arg_value(record.pc.aspace))};
@@ -300,9 +325,13 @@ void Importer::EmitTallyCounts(const cpuperf_config_t& config,
          ++ctr) {
       cpuperf_event_id_t event_id = config.events[ctr];
       if (event_data->HaveValue(cpu, event_id)) {
-        EmitTallyRecord(cpu, event_id, start_time_, 0);
-        uint64_t value = event_data->GetValue(cpu, event_id);
-        EmitTallyRecord(cpu, event_id, stop_time_, value);
+        uint64_t value = event_data->GetCountOrValue(cpu, event_id);
+        if (event_data->IsValue(cpu, event_id)) {
+          EmitTallyRecord(cpu, event_id, stop_time_, true, value);
+        } else {
+          EmitTallyRecord(cpu, event_id, start_time_, false, 0);
+          EmitTallyRecord(cpu, event_id, stop_time_, false, value);
+        }
       }
     }
   }
@@ -311,10 +340,12 @@ void Importer::EmitTallyCounts(const cpuperf_config_t& config,
 void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
                                cpuperf_event_id_t event_id,
                                trace_ticks_t time,
+                               bool is_value,
                                uint64_t value) {
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, event_id)};
   trace_arg_t args[1] = {
-    {trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))},
+    {trace_make_arg(is_value ? value_name_ref_ : count_name_ref_,
+                    trace_make_uint64_arg_value(value))},
   };
   const cpuperf::EventDetails* details;
   if (cpuperf::EventIdToEventDetails(event_id, &details)) {

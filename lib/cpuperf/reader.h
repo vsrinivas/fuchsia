@@ -19,6 +19,7 @@ public:
   union SampleRecord {
     cpuperf_record_header_t header;
     cpuperf_tick_record_t tick;
+    cpuperf_count_record_t count;
     cpuperf_value_record_t value;
     cpuperf_pc_record_t pc;
 

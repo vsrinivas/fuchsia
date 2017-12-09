@@ -59,25 +59,44 @@ private:
       return iter->second.time;
     }
 
-    void AccumulateValue(unsigned cpu, cpuperf_event_id_t id,
-                         uint64_t value) {
+    void UpdateValue(unsigned cpu, cpuperf_event_id_t id, uint64_t value) {
       Key key = GenKey(cpu, id);
-      data_[key].value += value;
+      data_[key].is_value = true;
+      data_[key].count_or_value = value;
     }
 
-    uint64_t GetValue(unsigned cpu, cpuperf_event_id_t id) const {
+    void AccumulateCount(unsigned cpu, cpuperf_event_id_t id, uint64_t value) {
+      Key key = GenKey(cpu, id);
+      data_[key].is_value = false;
+      data_[key].count_or_value += value;
+    }
+
+    bool IsValue(unsigned cpu, cpuperf_event_id_t id) const {
+      Key key = GenKey(cpu, id);
+      EventData::const_iterator iter = data_.find(key);
+      FXL_DCHECK(iter != data_.end());
+      return iter->second.is_value;
+    }
+
+    uint64_t GetCountOrValue(unsigned cpu, cpuperf_event_id_t id) const {
       Key key = GenKey(cpu, id);
       EventData::const_iterator iter = data_.find(key);
       if (iter == data_.end())
         return 0;
-      return iter->second.value;
+      return iter->second.count_or_value;
     }
 
   private:
     using Key = uint32_t;
     struct Data {
       trace_ticks_t time = 0;
-      uint64_t value = 0;
+      // false -> count (CPUPERF_RECORD_COUNT),
+      // true -> value (CPUPERF_RECORD_VALUE).
+      bool is_value;
+      // This is either a count or a value.
+      // Records for any particular event should only be using one
+      // of CPUPERF_RECORD_{COUNT,VALUE}.
+      uint64_t count_or_value = 0;
     };
     using EventData = std::unordered_map<Key, Data>;
 
@@ -114,6 +133,7 @@ private:
   void EmitTallyRecord(trace_cpu_number_t cpu,
                        cpuperf_event_id_t event_id,
                        trace_ticks_t time,
+                       bool is_value,
                        uint64_t value);
 
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu,
@@ -133,6 +153,7 @@ private:
   // encompass all of them ("cpu:perf") and use the name argument to
   // identify each event.
   trace_string_ref_t const cpuperf_category_ref_;
+  trace_string_ref_t const count_name_ref_;
   trace_string_ref_t const value_name_ref_;
   trace_string_ref_t const rate_name_ref_;
   trace_string_ref_t const aspace_name_ref_;

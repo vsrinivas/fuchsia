@@ -182,6 +182,9 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
       case CPUPERF_RECORD_TICK:
         memcpy(&record->tick, next_record_, sizeof(record->tick));
         break;
+      case CPUPERF_RECORD_COUNT:
+        memcpy(&record->count, next_record_, sizeof(record->count));
+        break;
       case CPUPERF_RECORD_VALUE:
         memcpy(&record->value, next_record_, sizeof(record->value));
         break;
@@ -204,6 +207,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
 cpuperf_record_type_t Reader::RecordType(const cpuperf_record_header_t* hdr) {
   switch (hdr->type) {
     case CPUPERF_RECORD_TICK:
+    case CPUPERF_RECORD_COUNT:
     case CPUPERF_RECORD_VALUE:
     case CPUPERF_RECORD_PC:
       return static_cast<cpuperf_record_type_t>(hdr->type);
@@ -216,6 +220,8 @@ size_t Reader::RecordSize(const cpuperf_record_header_t* hdr) {
   switch (hdr->type) {
     case CPUPERF_RECORD_TICK:
       return sizeof(cpuperf_tick_record_t);
+    case CPUPERF_RECORD_COUNT:
+      return sizeof(cpuperf_count_record_t);
     case CPUPERF_RECORD_VALUE:
       return sizeof(cpuperf_value_record_t);
     case CPUPERF_RECORD_PC:
