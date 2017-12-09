@@ -19,6 +19,7 @@ import (
 )
 
 type EventArgs struct {
+	Count uint64
 	Value uint64
 }
 
@@ -52,10 +53,19 @@ func makeEventKey(event Event) EventKey {
 		event.Tid}
 }
 
+type RecordType int
+const (
+	CountRecordType RecordType = iota
+	ValueRecordType
+)
+
 type CpuRecord struct {
 	Name     string
 	Id       string
+	Type     RecordType
 	Value    uint64
+	// Duration over which the count applies or zero for non-counter
+	// events.
 	Duration float64
 }
 
@@ -135,9 +145,13 @@ func main() {
 	perCpuRecords := make(map[uint]CpuRecordArray)
 
 	// First pass: Collect data for each cpu.
+
 	for _, event := range json.TraceEvents {
 		if !strings.HasPrefix(event.Cat, "cpu:") {
 			continue
+		}
+		if (event.Ph != "C") {
+			continue;
 		}
 		key := makeEventKey(event)
 		start, start_ok := startEvents[key]
@@ -147,7 +161,7 @@ func main() {
 		}
 		// TODO(dje): For now we assume there are only two records
 		// for each event: start and end. Instead accumulate the
-		// results.
+		// results for counter events.
 		_, end_ok := endEvents[key]
 		if end_ok {
 			log.Println("WARNING: unexpected extra record")
@@ -155,11 +169,46 @@ func main() {
 		}
 		endEvents[key] = event
 		cpu := event.Tid
+		// Assume we have a value, unless Count is non-zero.
+		// If they're both zero we don't want to print the value
+		// as a rate.
+		countOrValue := event.Args.Value
+		recordType := ValueRecordType
+		if (event.Args.Count != 0) {
+			recordType = CountRecordType
+			countOrValue = event.Args.Count
+		}
+		if recordType == CountRecordType {
+			countOrValue = countOrValue - start.Args.Count
+		}
 		perCpuRecords[cpu] = append(perCpuRecords[cpu], CpuRecord{
 			event.Name,
 			event.Id,
-			event.Args.Value - start.Args.Value,
+			recordType,
+			countOrValue,
 			event.Ts - start.Ts})
+	}
+
+	// Value records are only emitted once, for the end value.
+	// We don't process value records in the above loop because if the
+	// value is zero we can't tell if the record is the initial count
+	// record.
+	for key, event := range startEvents {
+		_, end_ok := endEvents[key]
+		if !end_ok {
+			// A non-zero count field for the first record
+			// is an error.
+			if event.Args.Count != 0 {
+				continue
+			}
+			cpu := event.Tid
+			perCpuRecords[cpu] = append(perCpuRecords[cpu], CpuRecord{
+				event.Name,
+				event.Id,
+				ValueRecordType,
+				event.Args.Value,
+				event.Ts})
+		}
 	}
 
 	// Second pass: Print
@@ -179,7 +228,7 @@ func main() {
 		sort.Sort(records)
 		for _, record := range records {
 			value_string := fmt.Sprintf("%16s", commaFormat(record.Value))
-			if record.Duration != 0 {
+			if record.Type == CountRecordType && record.Duration != 0 {
 				microsecsPerSec := uint64(1000 * 1000)
 				value_string += fmt.Sprintf(
 					" (%s/sec)",
