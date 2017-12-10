@@ -42,14 +42,14 @@ private:
     static void virtio_block_set_callbacks(void* ctx, block_callbacks_t* cb);
     static void virtio_block_get_info(void* ctx, block_info_t* info);
     static void virtio_block_complete(iotxn_t* txn, void* cookie);
-    static void virtio_block_read(void* ctx, zx_handle_t vmo,
+    static void virtio_block_read(void* ctx, uint32_t flags, zx_handle_t vmo,
                                   uint64_t length, uint64_t vmo_offset,
                                   uint64_t dev_offset, void* cookie);
-    static void virtio_block_write(void* ctx, zx_handle_t vmo,
+    static void virtio_block_write(void* ctx, uint32_t flags, zx_handle_t vmo,
                                    uint64_t length, uint64_t vmo_offset,
                                    uint64_t dev_offset, void* cookie);
-    static void block_do_txn(BlockDevice* dev, uint32_t opcode, zx_handle_t vmo,
-                             uint64_t length, uint64_t vmo_offset,
+    static void block_do_txn(BlockDevice* dev, uint32_t opcode, uint32_t flags,
+                             zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                              uint64_t dev_offset, void* cookie);
 
     void GetInfo(block_info_t* info);

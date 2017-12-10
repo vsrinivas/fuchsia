@@ -102,7 +102,7 @@ static void ums_async_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void ums_async_read(void* ctx, zx_handle_t vmo, uint64_t length,
+static void ums_async_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = ctx;
 
@@ -113,6 +113,7 @@ static void ums_async_read(void* ctx, zx_handle_t vmo, uint64_t length,
         return;
     }
     txn->opcode = IOTXN_OP_READ;
+    txn->flags = flags;
     txn->offset = dev_offset;
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
@@ -120,7 +121,7 @@ static void ums_async_read(void* ctx, zx_handle_t vmo, uint64_t length,
     iotxn_queue(dev->zxdev, txn);
 }
 
-static void ums_async_write(void* ctx, zx_handle_t vmo, uint64_t length,
+static void ums_async_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = ctx;
 
@@ -131,6 +132,7 @@ static void ums_async_write(void* ctx, zx_handle_t vmo, uint64_t length,
         return;
     }
     txn->opcode = IOTXN_OP_WRITE;
+    txn->flags = flags;
     txn->offset = dev_offset;
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;

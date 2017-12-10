@@ -117,7 +117,7 @@ static void ramdisk_fifo_set_callbacks(void* ctx, block_callbacks_t* cb) {
     rdev->cb = cb;
 }
 
-static void ramdisk_fifo_read(void* ctx, zx_handle_t vmo, uint64_t length,
+static void ramdisk_fifo_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
                               uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ramdisk_device_t* rdev = ctx;
     zx_off_t len = length;
@@ -140,7 +140,7 @@ static void ramdisk_fifo_read(void* ctx, zx_handle_t vmo, uint64_t length,
     rdev->cb->complete(cookie, status);
 }
 
-static void ramdisk_fifo_write(void* ctx, zx_handle_t vmo, uint64_t length,
+static void ramdisk_fifo_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
                                uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ramdisk_device_t* rdev = ctx;
     zx_off_t len = length;

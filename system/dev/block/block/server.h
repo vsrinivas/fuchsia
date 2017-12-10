@@ -56,6 +56,7 @@ typedef struct {
     fbl::RefPtr<BlockTransaction> txn;
     fbl::RefPtr<IoBuffer> iobuf;
     uint32_t opcode;
+    uint32_t flags;
     uint32_t len_remaining;
     uint64_t vmo_offset;
     uint64_t dev_offset;

@@ -289,7 +289,7 @@ static void sata_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void sata_block_txn(sata_device_t* dev, uint32_t opcode, zx_handle_t vmo,
+static void sata_block_txn(sata_device_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
                            uint64_t length, uint64_t vmo_offset, uint64_t dev_offset,
                            void* cookie) {
     if ((dev_offset % dev->sector_sz) || (length % dev->sector_sz)) {
@@ -307,6 +307,7 @@ static void sata_block_txn(sata_device_t* dev, uint32_t opcode, zx_handle_t vmo,
         dev->callbacks->complete(cookie, status);
         return;
     }
+    txn->flags = flags;
     txn->opcode = opcode;
     txn->offset = dev_offset;
     txn->complete_cb = sata_block_complete;
@@ -316,14 +317,14 @@ static void sata_block_txn(sata_device_t* dev, uint32_t opcode, zx_handle_t vmo,
     iotxn_queue(dev->zxdev, txn);
 }
 
-static void sata_block_read(void* ctx, zx_handle_t vmo, uint64_t length,
+static void sata_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_block_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+    sata_block_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void sata_block_write(void* ctx, zx_handle_t vmo, uint64_t length,
+static void sata_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_block_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+    sata_block_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 static block_protocol_ops_t sata_block_ops = {

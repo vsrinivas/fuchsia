@@ -113,7 +113,7 @@ void BlockDevice::virtio_block_complete(iotxn_t* txn, void* cookie) {
 }
 
 void BlockDevice::block_do_txn(BlockDevice* dev, uint32_t opcode,
-                               zx_handle_t vmo, uint64_t length,
+                               uint32_t flags, zx_handle_t vmo, uint64_t length,
                                uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     LTRACEF("vmo offset %#lx dev_offset %#lx length %#lx\n", vmo_offset, dev_offset, length);
     if ((dev_offset % dev->GetBlockSize()) || (length % dev->GetBlockSize())) {
@@ -134,6 +134,7 @@ void BlockDevice::block_do_txn(BlockDevice* dev, uint32_t opcode,
         return;
     }
     txn->opcode = opcode;
+    txn->flags = flags;
     txn->length = length;
     txn->offset = dev_offset;
     txn->complete_cb = virtio_block_complete;
@@ -143,16 +144,18 @@ void BlockDevice::block_do_txn(BlockDevice* dev, uint32_t opcode,
     iotxn_queue(dev->device_, txn);
 }
 
-void BlockDevice::virtio_block_read(void* ctx, zx_handle_t vmo,
+void BlockDevice::virtio_block_read(void* ctx, uint32_t flags, zx_handle_t vmo,
                                     uint64_t length, uint64_t vmo_offset,
                                     uint64_t dev_offset, void* cookie) {
-    block_do_txn((BlockDevice*)ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+    block_do_txn((BlockDevice*)ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset,
+                 cookie);
 }
 
-void BlockDevice::virtio_block_write(void* ctx, zx_handle_t vmo,
+void BlockDevice::virtio_block_write(void* ctx, uint32_t flags, zx_handle_t vmo,
                                      uint64_t length, uint64_t vmo_offset,
                                      uint64_t dev_offset, void* cookie) {
-    block_do_txn((BlockDevice*)ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+    block_do_txn((BlockDevice*)ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset,
+                 cookie);
 }
 
 zx_status_t BlockDevice::Init() {

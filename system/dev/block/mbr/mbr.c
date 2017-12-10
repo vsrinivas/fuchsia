@@ -222,7 +222,8 @@ static void mbr_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
+                         uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_info_t* info = &dev->info;
     if ((dev_offset % info->block_size) || (length % info->block_size)) {
         dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
@@ -241,6 +242,7 @@ static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, zx_handle_t vmo
         return;
     }
     txn->opcode = opcode;
+    txn->flags = flags;
     txn->length = length;
     txn->offset = to_parent_offset(dev, dev_offset);
     txn->complete_cb = mbr_block_complete;
@@ -249,12 +251,14 @@ static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, zx_handle_t vmo
     iotxn_queue(dev->parent, txn);
 }
 
-static void mbr_block_read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+static void mbr_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void mbr_block_write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+static void mbr_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 static block_protocol_ops_t mbr_block_ops = {

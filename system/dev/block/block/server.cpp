@@ -7,15 +7,16 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>
-#include <zx/fifo.h>
+#include <ddk/iotxn.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
+#include <zx/fifo.h>
 
 #include "server.h"
 
@@ -63,6 +64,13 @@ zx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
         do_respond = true;
     }
     ZX_DEBUG_ASSERT(goal_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
+    if (goal_ == 0) {
+        msgs_[goal_].flags = IOTXN_SYNC_BEFORE;
+    } else if (do_respond) {
+        msgs_[goal_].flags = IOTXN_SYNC_AFTER;
+    } else {
+        msgs_[goal_].flags = 0;
+    }
     *msg_out = &msgs_[goal_++];
     flags_ |= do_respond ? kTxnFlagRespond : 0;
     return ZX_OK;
@@ -86,12 +94,17 @@ void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
         uint64_t dev_offset = msg->dev_offset;
         msg->dev_offset += length;
 
+        // If we used SYNC_BEFORE on an earlier sub-message, then there is no
+        // need to retransmit it here.
+        // Additionally, only send IOTXN_SYNC_AFTER on the final message (when
+        // len_remaining is zero).
+        uint32_t flags = msg->flags & ~(IOTXN_SYNC_BEFORE |
+                                        (msg->len_remaining > 0 ? IOTXN_SYNC_AFTER : 0));
+
         if (msg->opcode == BLOCKIO_READ) {
-            block_read(proto_, msg->iobuf->vmo(), length, vmo_offset,
-                       dev_offset, msg);
+            block_read(proto_, flags, msg->iobuf->vmo(), length, vmo_offset, dev_offset, msg);
         } else {
-            block_write(proto_, msg->iobuf->vmo(), length, vmo_offset,
-                        dev_offset, msg);
+            block_write(proto_, flags, msg->iobuf->vmo(), length, vmo_offset, dev_offset, msg);
         }
         return;
     }
@@ -322,6 +335,7 @@ zx_status_t BlockServer::Serve() {
                     break;
                 }
 
+                uint32_t flags = msg->flags;
                 uint64_t length = requests[i].length;
                 const uint32_t max_xfer = info_.max_transfer_size;
                 if (max_xfer != 0 && max_xfer < requests[i].length) {
@@ -329,16 +343,21 @@ zx_status_t BlockServer::Serve() {
                     msg->vmo_offset = requests[i].vmo_offset + max_xfer;
                     msg->dev_offset = requests[i].dev_offset + max_xfer;
                     length = max_xfer;
+
+                    // If the final message in this transaction group
+                    // is split across multiple sub-messages, then only sync on
+                    // the final sub-message.
+                    flags |= ~IOTXN_SYNC_AFTER;
                 } else {
                     msg->len_remaining = 0;
                 }
                 msg->opcode = requests[i].opcode & BLOCKIO_OP_MASK;
 
                 if (msg->opcode == BLOCKIO_READ) {
-                    block_read(proto_, iobuf->vmo(), length,
+                    block_read(proto_, flags, iobuf->vmo(), length,
                                requests[i].vmo_offset, requests[i].dev_offset, msg);
                 } else {
-                    block_write(proto_, iobuf->vmo(), length,
+                    block_write(proto_, flags, iobuf->vmo(), length,
                                 requests[i].vmo_offset, requests[i].dev_offset, msg);
                 }
                 break;

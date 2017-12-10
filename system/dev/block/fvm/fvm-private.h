@@ -205,13 +205,13 @@ public:
     void DdkRelease();
 
     // Block Protocol
-    void Txn(uint32_t opcode, zx_handle_t vmo, uint64_t length,
+    void Txn(uint32_t opcode, uint32_t flags, zx_handle_t vmo, uint64_t length,
              uint64_t vmo_offset, uint64_t dev_offset, void* cookie);
     void BlockSetCallbacks(block_callbacks_t* cb);
     void BlockGetInfo(block_info_t* info);
-    void BlockRead(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+    void BlockRead(uint32_t flags, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                    uint64_t dev_offset, void* cookie);
-    void BlockWrite(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+    void BlockWrite(uint32_t flags, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                     uint64_t dev_offset, void* cookie);
 
     auto ExtentBegin() TA_REQ(lock_) {

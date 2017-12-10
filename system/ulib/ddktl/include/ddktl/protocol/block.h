@@ -74,14 +74,14 @@ class BlockProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->BlockGetInfo(info);
     }
 
-    static void Read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
-                     uint64_t dev_offset, void* cookie) {
-        static_cast<D*>(ctx)->BlockRead(vmo, length, vmo_offset, dev_offset, cookie);
+    static void Read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                     uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+        static_cast<D*>(ctx)->BlockRead(flags, vmo, length, vmo_offset, dev_offset, cookie);
     }
 
-    static void Write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
-                      uint64_t dev_offset, void* cookie) {
-        static_cast<D*>(ctx)->BlockWrite(vmo, length, vmo_offset, dev_offset, cookie);
+    static void Write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                      uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+        static_cast<D*>(ctx)->BlockWrite(flags, vmo, length, vmo_offset, dev_offset, cookie);
     }
 
     block_protocol_ops_t ops_ = {};

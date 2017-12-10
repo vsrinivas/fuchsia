@@ -702,7 +702,7 @@ bool VPartition::SliceFreeLocked(size_t vslice) {
     return true;
 }
 
-void VPartition::Txn(uint32_t opcode, zx_handle_t vmo, uint64_t length,
+void VPartition::Txn(uint32_t opcode, uint32_t flags, zx_handle_t vmo, uint64_t length,
                      uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     zx_status_t status;
     iotxn_t* txn;
@@ -711,6 +711,7 @@ void VPartition::Txn(uint32_t opcode, zx_handle_t vmo, uint64_t length,
         callbacks_->complete(cookie, status);
         return;
     }
+    txn->flags = flags;
     txn->opcode = opcode;
     txn->offset = dev_offset;
     txn->complete_cb = vpart_block_complete;
@@ -1030,14 +1031,14 @@ void VPartition::BlockGetInfo(block_info_t* info) {
     *info = info_;
 }
 
-void VPartition::BlockRead(zx_handle_t vmo, uint64_t length,
+void VPartition::BlockRead(uint32_t flags, zx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    Txn(IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+    Txn(IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-void VPartition::BlockWrite(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+void VPartition::BlockWrite(uint32_t flags, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                             uint64_t dev_offset, void* cookie) {
-    Txn(IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+    Txn(IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 } // namespace fvm

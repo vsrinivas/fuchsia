@@ -40,19 +40,21 @@ constexpr void CheckBlockProtocolSubclass() {
     static_assert(internal::has_block_read<D>::value,
                   "BlockProtocol subclasses must implement BlockRead");
     static_assert(fbl::is_same<decltype(&D::BlockRead),
-                                void (D::*)(zx_handle_t, uint64_t, uint64_t, uint64_t, void*)>::value,
+                                void (D::*)(uint32_t, zx_handle_t, uint64_t, uint64_t, uint64_t,
+                                            void*)>::value,
                   "BlockRead must be a non-static member function with signature "
-                  "'void BlockRead(zx_handle_t, uint64_t, uint64_t, uint64_t, void*)', and be "
-                  "visible to ddk::BlockProtocol<D> (either because they are public, or because of "
-                  "friendship).");
+                  "'void BlockRead(uint32_t, zx_handle_t, uint64_t, uint64_t, uint64_t, void*)', "
+                  "and be visible to ddk::BlockProtocol<D> (either because they are public, or "
+                  "because of friendship).");
     static_assert(internal::has_block_write<D>::value,
                   "BlockProtocol subclasses must implement BlockWrite");
     static_assert(fbl::is_same<decltype(&D::BlockWrite),
-                                void (D::*)(zx_handle_t, uint64_t, uint64_t, uint64_t, void*)>::value,
+                                void (D::*)(uint32_t, zx_handle_t, uint64_t, uint64_t, uint64_t,
+                                            void*)>::value,
                   "BlockWrite must be a non-static member function with signature "
-                  "'void BlockWrite(zx_handle_t, uint64_t, uint64_t, uint64_t, void*)', and be "
-                  "visible to ddk::BlockProtocol<D> (either because they are public, or because of "
-                  "friendship).");
+                  "'void BlockWrite(uint32_t, zx_handle_t, uint64_t, uint64_t, uint64_t, void*)', "
+                  "and be visible to ddk::BlockProtocol<D> (either because they are public, or "
+                  "because of friendship).");
 }
 
 }  // namespace internal

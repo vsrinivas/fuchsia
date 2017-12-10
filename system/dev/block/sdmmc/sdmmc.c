@@ -208,7 +208,8 @@ static void sdmmc_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+static void block_do_txn(sdmmc_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
+                         uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     block_info_t info;
     sdmmc_get_info(&info, dev);
 
@@ -239,6 +240,7 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_
         return;
     }
     txn->opcode = opcode;
+    txn->flags = flags;
     txn->length = length;
     txn->offset = dev_offset;
     txn->complete_cb = sdmmc_block_complete;
@@ -247,12 +249,14 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_
     iotxn_queue(dev->zxdev, txn);
 }
 
-static void sdmmc_block_read(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+static void sdmmc_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void sdmmc_block_write(void* ctx, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+static void sdmmc_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                              uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 // Block core protocol
