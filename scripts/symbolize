@@ -242,7 +242,7 @@ def main():
         # Plus this is only used as a fallback in case the file isn't found
         # in ids.txt.
         fuchsia_build_dir = os.path.abspath(os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86"))
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
         fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir,
             "exe.unstripped")
         build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
