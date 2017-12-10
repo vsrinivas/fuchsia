@@ -10,8 +10,8 @@
 #include <zircon/compiler.h>
 
 #include "backends/backend.h"
-#include <ddk/protocol/block.h>
 #include <virtio/block.h>
+#include <zircon/device/block.h>
 
 namespace virtio {
 
@@ -38,19 +38,6 @@ private:
     static zx_off_t virtio_block_get_size(void* ctx);
     static zx_status_t virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                           void* out_buf, size_t out_len, size_t* out_actual);
-
-    static void virtio_block_set_callbacks(void* ctx, block_callbacks_t* cb);
-    static void virtio_block_get_info(void* ctx, block_info_t* info);
-    static void virtio_block_complete(iotxn_t* txn, void* cookie);
-    static void virtio_block_read(void* ctx, uint32_t flags, zx_handle_t vmo,
-                                  uint64_t length, uint64_t vmo_offset,
-                                  uint64_t dev_offset, void* cookie);
-    static void virtio_block_write(void* ctx, uint32_t flags, zx_handle_t vmo,
-                                   uint64_t length, uint64_t vmo_offset,
-                                   uint64_t dev_offset, void* cookie);
-    static void block_do_txn(BlockDevice* dev, uint32_t opcode, uint32_t flags,
-                             zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
-                             uint64_t dev_offset, void* cookie);
 
     void GetInfo(block_info_t* info);
 
@@ -87,10 +74,6 @@ private:
     void free_blk_req(size_t i) {
         blk_req_bitmap_ &= ~(1 << i);
     }
-
-    // Callbacks for PROTOCOL_BLOCK
-    block_callbacks_t* callbacks_;
-    block_protocol_ops_t device_block_ops_;
 
     // pending iotxns
     list_node iotxn_list = LIST_INITIAL_VALUE(iotxn_list);

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -29,7 +30,9 @@
 // block clients will also be able to manipulate them.
 constexpr zx_signals_t kSignalFifoTerminate = ZX_USER_SIGNAL_0;
 
-static void OutOfBandErrorRespond(const zx::fifo& fifo, zx_status_t status, txnid_t txnid) {
+namespace {
+
+void OutOfBandErrorRespond(const zx::fifo& fifo, zx_status_t status, txnid_t txnid) {
     block_fifo_response_t response;
     response.status = status;
     response.txnid = txnid;
@@ -42,9 +45,48 @@ static void OutOfBandErrorRespond(const zx::fifo& fifo, zx_status_t status, txni
     }
 }
 
-BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid, block_protocol_t* proto,
+void BlockComplete(void* cookie, zx_status_t status) {
+    block_msg_t* msg = static_cast<block_msg_t*>(cookie);
+    // Since iobuf is a RefPtr, it lives at least as long as the txn,
+    // and is not discarded underneath the block device driver.
+    ZX_DEBUG_ASSERT(msg->iobuf != nullptr);
+    ZX_DEBUG_ASSERT(msg->txn != nullptr);
+    // Hold an extra copy of the 'blktxn' refptr; if we don't, and 'msg->txn' is
+    // the last copy, then when we nullify 'msg->txn' in Complete we end up
+    // trying to unlock a lock in a deleted BlockTxn.
+    auto blktxn = msg->txn;
+    // Pass msg to complete so 'msg->txn' can be nullified while protected
+    // by the BlockTransaction's lock.
+    blktxn->Complete(msg, status);
+}
+
+void BlockCompleteIotxn(iotxn_t* txn, void* cookie) {
+    BlockComplete(cookie, txn->status);
+    iotxn_release(txn);
+}
+
+void IotxnQueue(zx_device_t* dev, uint32_t flags, zx_handle_t vmo, uint64_t length,
+                uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg) {
+    iotxn_t* txn;
+    zx_status_t status;
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo,
+                                  vmo_offset, length)) != ZX_OK) {
+        BlockComplete(msg, status);
+        return;
+    }
+    txn->flags = flags;
+    txn->opcode = msg->opcode;
+    txn->offset = dev_offset;
+    txn->cookie = msg;
+    txn->complete_cb = BlockCompleteIotxn;
+    iotxn_queue(dev, txn);
+}
+
+}  // namespace
+
+BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid, zx_device_t* dev,
                                    uint32_t max_xfer) :
-    fifo_(fifo), proto_(proto), max_xfer_(max_xfer), flags_(0), goal_(0) {
+    fifo_(fifo), dev_(dev), max_xfer_(max_xfer), flags_(0), goal_(0) {
     memset(&response_, 0, sizeof(response_));
     response_.txnid = txnid;
 }
@@ -101,11 +143,7 @@ void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
         uint32_t flags = msg->flags & ~(IOTXN_SYNC_BEFORE |
                                         (msg->len_remaining > 0 ? IOTXN_SYNC_AFTER : 0));
 
-        if (msg->opcode == BLOCKIO_READ) {
-            block_read(proto_, flags, msg->iobuf->vmo(), length, vmo_offset, dev_offset, msg);
-        } else {
-            block_write(proto_, flags, msg->iobuf->vmo(), length, vmo_offset, dev_offset, msg);
-        }
+        IotxnQueue(dev_, flags, msg->iobuf->vmo(), length, vmo_offset, dev_offset, msg);
         return;
     }
     fbl::AutoLock lock(&lock_);
@@ -214,7 +252,7 @@ zx_status_t BlockServer::AllocateTxn(txnid_t* out) {
             txnid_t txnid = static_cast<txnid_t>(i);
             fbl::AllocChecker ac;
             txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(),
-                                                                txnid, proto_,
+                                                                txnid, dev_,
                                                                 info_.max_transfer_size));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
@@ -235,9 +273,9 @@ void BlockServer::FreeTxn(txnid_t txnid) {
     txns_[txnid] = nullptr;
 }
 
-zx_status_t BlockServer::Create(block_protocol_t* proto, zx::fifo* fifo_out, BlockServer** out) {
+zx_status_t BlockServer::Create(zx_device_t* dev, zx::fifo* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
-    BlockServer* bs = new (&ac) BlockServer(proto);
+    BlockServer* bs = new (&ac) BlockServer(dev);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -253,28 +291,7 @@ zx_status_t BlockServer::Create(block_protocol_t* proto, zx::fifo* fifo_out, Blo
     return ZX_OK;
 }
 
-void blockserver_fifo_complete(void* cookie, zx_status_t status) {
-    block_msg_t* msg = static_cast<block_msg_t*>(cookie);
-    // Since iobuf is a RefPtr, it lives at least as long as the txn,
-    // and is not discarded underneath the block device driver.
-    ZX_DEBUG_ASSERT(msg->iobuf != nullptr);
-    ZX_DEBUG_ASSERT(msg->txn != nullptr);
-    // Hold an extra copy of the 'txn' refptr; if we don't, and 'msg->txn' is
-    // the last copy, then when we nullify 'msg->txn' in Complete we end up
-    // trying to unlock a lock in a deleted BlockTxn.
-    auto txn = msg->txn;
-    // Pass msg to complete so 'msg->txn' can be nullified while protected
-    // by the BlockTransaction's lock.
-    txn->Complete(msg, status);
-}
-
-static block_callbacks_t cb = {
-    blockserver_fifo_complete,
-};
-
 zx_status_t BlockServer::Serve() {
-    block_set_callbacks(proto_, &cb);
-
     zx_status_t status;
     block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
     uint32_t count;
@@ -331,7 +348,7 @@ zx_status_t BlockServer::Serve() {
                 // and the completion will be responsible for un-pinning those same pages.
                 status = iobuf->ValidateVmoHack(requests[i].length, requests[i].vmo_offset);
                 if (status != ZX_OK) {
-                    cb.complete(msg, status);
+                    BlockComplete(msg, status);
                     break;
                 }
 
@@ -353,13 +370,8 @@ zx_status_t BlockServer::Serve() {
                 }
                 msg->opcode = requests[i].opcode & BLOCKIO_OP_MASK;
 
-                if (msg->opcode == BLOCKIO_READ) {
-                    block_read(proto_, flags, iobuf->vmo(), length,
-                               requests[i].vmo_offset, requests[i].dev_offset, msg);
-                } else {
-                    block_write(proto_, flags, iobuf->vmo(), length,
-                                requests[i].vmo_offset, requests[i].dev_offset, msg);
-                }
+                IotxnQueue(dev_, flags, iobuf->vmo(), length, requests[i].vmo_offset,
+                           requests[i].dev_offset, msg);
                 break;
             }
             case BLOCKIO_SYNC: {
@@ -383,8 +395,9 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(block_protocol_t* proto) : proto_(proto), last_id_(VMOID_INVALID + 1) {
-    block_get_info(proto_, &info_);
+BlockServer::BlockServer(zx_device_t* dev) : dev_(dev), last_id_(VMOID_INVALID + 1) {
+    size_t actual;
+    device_ioctl(dev_, IOCTL_BLOCK_GET_INFO, nullptr, 0, &info_, sizeof(info_), &actual);
 }
 
 BlockServer::~BlockServer() {
@@ -398,9 +411,9 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(block_protocol_t* proto, zx_handle_t* fifo_out, BlockServer** out) {
+zx_status_t blockserver_create(zx_device_t* dev, zx_handle_t* fifo_out, BlockServer** out) {
     zx::fifo fifo;
-    zx_status_t status = BlockServer::Create(proto, &fifo, out);
+    zx_status_t status = BlockServer::Create(dev, &fifo, out);
     *fifo_out = fifo.release();
     return status;
 }

@@ -5,25 +5,24 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/block.h>
 
-#include <zircon/process.h>
-#include <zircon/types.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>
+#include <sys/param.h>
 #include <threads.h>
+#include <zircon/device/block.h>
+#include <zircon/process.h>
+#include <zircon/types.h>
 
 #include "server.h"
 
 typedef struct blkdev {
     zx_device_t* zxdev;
     zx_device_t* parent;
-    block_protocol_t proto;
 
     mtx_t lock;
     uint32_t threadcount;
@@ -77,7 +76,7 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     }
 
     BlockServer* bs;
-    if ((status = blockserver_create(&bdev->proto, out_buf, &bs)) != ZX_OK) {
+    if ((status = blockserver_create(bdev->parent, out_buf, &bs)) != ZX_OK) {
         goto done;
     }
 
@@ -255,12 +254,6 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
-    zx_status_t status;
-    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_CORE, &bdev->proto)) {
-        status = ZX_ERR_INTERNAL;
-        goto fail;
-    }
-
    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "block",
@@ -269,7 +262,7 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
         .proto_id = ZX_PROTOCOL_BLOCK,
     };
 
-    status = device_add(dev, &args, &bdev->zxdev);
+    zx_status_t status = device_add(dev, &args, &bdev->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }

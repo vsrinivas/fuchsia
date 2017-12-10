@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ddk/protocol/block.h>
 #include <zircon/device/block.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -64,7 +63,7 @@ typedef struct {
 
 class BlockTransaction : public fbl::RefCounted<BlockTransaction> {
 public:
-    BlockTransaction(zx_handle_t fifo, txnid_t txnid, block_protocol_t* proto,
+    BlockTransaction(zx_handle_t fifo, txnid_t txnid, zx_device_t* dev,
                      uint32_t max_xfer);
     ~BlockTransaction();
 
@@ -80,7 +79,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockTransaction);
 
     const zx_handle_t fifo_;
-    block_protocol_t* proto_;
+    zx_device_t* dev_;
     const uint32_t max_xfer_;
 
     fbl::Mutex lock_;
@@ -93,7 +92,7 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer
-    static zx_status_t Create(block_protocol_t* proto, zx::fifo* fifo_out, BlockServer** out);
+    static zx_status_t Create(zx_device_t* dev, zx::fifo* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
     zx_status_t Serve();
@@ -106,13 +105,13 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer(block_protocol_t* proto);
+    BlockServer(zx_device_t* dev);
 
     zx_status_t Read(block_fifo_request_t* requests, uint32_t* count);
     zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
     zx::fifo fifo_;
-    block_protocol_t* proto_;
+    zx_device_t* dev_;
     block_info_t info_;
 
     fbl::Mutex server_lock_;
@@ -131,7 +130,7 @@ typedef struct BlockServer BlockServer;
 __BEGIN_CDECLS
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(block_protocol_t* proto, zx_handle_t* fifo_out, BlockServer** out);
+zx_status_t blockserver_create(zx_device_t* dev, zx_handle_t* fifo_out, BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.
 void blockserver_shutdown(BlockServer* bs);

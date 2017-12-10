@@ -5,7 +5,6 @@
 #include "block.h"
 
 #include <ddk/debug.h>
-#include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
@@ -96,68 +95,6 @@ BlockDevice::~BlockDevice() {
     // TODO: clean up allocated physical memory
 }
 
-void BlockDevice::virtio_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    BlockDevice* device = static_cast<BlockDevice*>(ctx);
-    device->callbacks_ = cb;
-}
-
-void BlockDevice::virtio_block_get_info(void* ctx, block_info_t* info) {
-    BlockDevice* device = static_cast<BlockDevice*>(ctx);
-    device->GetInfo(info);
-}
-
-void BlockDevice::virtio_block_complete(iotxn_t* txn, void* cookie) {
-    BlockDevice* dev = (BlockDevice*)txn->extra[0];
-    dev->callbacks_->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
-void BlockDevice::block_do_txn(BlockDevice* dev, uint32_t opcode,
-                               uint32_t flags, zx_handle_t vmo, uint64_t length,
-                               uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    LTRACEF("vmo offset %#lx dev_offset %#lx length %#lx\n", vmo_offset, dev_offset, length);
-    if ((dev_offset % dev->GetBlockSize()) || (length % dev->GetBlockSize())) {
-        dev->callbacks_->complete(cookie, ZX_ERR_INVALID_ARGS);
-        return;
-    }
-    uint64_t size = dev->GetSize();
-    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks_->complete(cookie, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    zx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL,
-                                  vmo, vmo_offset, length)) != ZX_OK) {
-        dev->callbacks_->complete(cookie, status);
-        return;
-    }
-    txn->opcode = opcode;
-    txn->flags = flags;
-    txn->length = length;
-    txn->offset = dev_offset;
-    txn->complete_cb = virtio_block_complete;
-    txn->cookie = cookie;
-    txn->extra[0] = (uint64_t)dev;
-
-    iotxn_queue(dev->device_, txn);
-}
-
-void BlockDevice::virtio_block_read(void* ctx, uint32_t flags, zx_handle_t vmo,
-                                    uint64_t length, uint64_t vmo_offset,
-                                    uint64_t dev_offset, void* cookie) {
-    block_do_txn((BlockDevice*)ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset,
-                 cookie);
-}
-
-void BlockDevice::virtio_block_write(void* ctx, uint32_t flags, zx_handle_t vmo,
-                                     uint64_t length, uint64_t vmo_offset,
-                                     uint64_t dev_offset, void* cookie) {
-    block_do_txn((BlockDevice*)ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset,
-                 cookie);
-}
-
 zx_status_t BlockDevice::Init() {
     LTRACE_ENTRY;
 
@@ -220,18 +157,12 @@ zx_status_t BlockDevice::Init() {
     device_ops_.get_size = &virtio_block_get_size;
     device_ops_.ioctl = &virtio_block_ioctl;
 
-    device_block_ops_.set_callbacks = &virtio_block_set_callbacks;
-    device_block_ops_.get_info = &virtio_block_get_info;
-    device_block_ops_.read = &virtio_block_read;
-    device_block_ops_.write = &virtio_block_write;
-
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "virtio-block";
     args.ctx = this;
     args.ops = &device_ops_;
     args.proto_id = ZX_PROTOCOL_BLOCK_CORE;
-    args.proto_ops = &device_block_ops_;
 
     auto status = device_add(bus_device_, &args, &device_);
     if (status < 0) {

@@ -5,22 +5,22 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/block.h>
 
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-#include <sys/param.h>
-#include <sync/completion.h>
-#include <lib/cksum.h>
 #include <assert.h>
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <lib/cksum.h>
+#include <limits.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>
+#include <sys/param.h>
+#include <sync/completion.h>
 #include <threads.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "gpt.h"
 
@@ -43,7 +43,6 @@ typedef struct gptpart_device {
     gpt_entry_t gpt_entry;
 
     block_info_t info;
-    block_callbacks_t* callbacks;
 
     atomic_int writercount;
 } gptpart_device_t;
@@ -222,69 +221,6 @@ static zx_protocol_device_t gpt_proto = {
     .close = gpt_close,
 };
 
-static void gpt_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    gptpart_device_t* device = ctx;
-    device->callbacks = cb;
-}
-
-static void gpt_block_get_info(void* ctx, block_info_t* info) {
-    gptpart_device_t* device = ctx;
-    memcpy(info, &device->info, sizeof(*info));
-}
-
-static void gpt_block_complete(iotxn_t* txn, void* cookie) {
-    gptpart_device_t* dev;
-    memcpy(&dev, txn->extra, sizeof(gptpart_device_t*));
-    dev->callbacks->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
-static void block_do_txn(gptpart_device_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
-                         uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_info_t* info = &dev->info;
-    if ((dev_offset % info->block_size) || (length % info->block_size)) {
-        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
-        return;
-    }
-    uint64_t size = getsize(dev);
-    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    zx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
-        dev->callbacks->complete(cookie, status);
-        return;
-    }
-    txn->opcode = opcode;
-    txn->flags = flags;
-    txn->length = length;
-    txn->offset = to_parent_offset(dev, dev_offset);
-    txn->complete_cb = gpt_block_complete;
-    txn->cookie = cookie;
-    memcpy(txn->extra, &dev, sizeof(gptpart_device_t*));
-    iotxn_queue(dev->parent, txn);
-}
-
-static void gpt_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static void gpt_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static block_protocol_ops_t gpt_block_ops = {
-    .set_callbacks = gpt_block_set_callbacks,
-    .get_info = gpt_block_get_info,
-    .read = gpt_block_read,
-    .write = gpt_block_write,
-};
-
 static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
@@ -435,7 +371,6 @@ static int gpt_bind_thread(void* arg) {
                 .ctx = device,
                 .ops = &gpt_proto,
                 .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-                .proto_ops = &gpt_block_ops,
             };
 
             if (device_add(dev, &args, &device->zxdev) != ZX_OK) {
@@ -477,7 +412,6 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
         .ctx = device,
         .ops = &gpt_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-        .proto_ops = &gpt_block_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };
 

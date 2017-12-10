@@ -19,9 +19,10 @@
 #include <ddk/protocol/sdmmc.h>
 
 // Zircon Includes
-#include <zircon/threads.h>
 #include <sync/completion.h>
 #include <pretty/hexdump.h>
+#include <zircon/threads.h>
+#include <zircon/device/block.h>
 
 #include "sdmmc.h"
 
@@ -187,84 +188,6 @@ static zx_protocol_device_t sdmmc_device_proto = {
     .release = sdmmc_release,
     .iotxn_queue = sdmmc_iotxn_queue,
     .get_size = sdmmc_get_size,
-};
-
-static void sdmmc_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    sdmmc_t* device = ctx;
-    device->callbacks = cb;
-}
-
-static void sdmmc_block_get_info(void* ctx, block_info_t* info) {
-    sdmmc_t* device = ctx;
-    sdmmc_get_info(info, device);
-}
-
-static void sdmmc_block_complete(iotxn_t* txn, void* cookie) {
-    sdmmc_t* dev;
-    memcpy(&dev, txn->extra, sizeof(sdmmc_t*));
-    zxlogf(SPEW, "sdmmc: block_complete cookie %p status %d\n",
-            cookie, txn->status);
-    dev->callbacks->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
-static void block_do_txn(sdmmc_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
-                         uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_info_t info;
-    sdmmc_get_info(&info, dev);
-
-    zxlogf(SPEW, "sdmmc: block_do_txn cookie %p opcode %d length 0x%" PRIx64
-            " vmo_offset 0x%" PRIx64 " dev_offset 0x%" PRIx64 "\n",
-            cookie, opcode, length, vmo_offset, dev_offset);
-
-    if ((dev_offset % info.block_size) || (length % info.block_size)) {
-        zxlogf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
-                cookie, ZX_ERR_INVALID_ARGS);
-        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
-        return;
-    }
-    uint64_t size = info.block_size * info.block_count;
-    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        zxlogf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
-                cookie, ZX_ERR_OUT_OF_RANGE);
-        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    zx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
-        zxlogf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
-                cookie, status);
-        dev->callbacks->complete(cookie, status);
-        return;
-    }
-    txn->opcode = opcode;
-    txn->flags = flags;
-    txn->length = length;
-    txn->offset = dev_offset;
-    txn->complete_cb = sdmmc_block_complete;
-    txn->cookie = cookie;
-    memcpy(txn->extra, &dev, sizeof(sdmmc_t*));
-    iotxn_queue(dev->zxdev, txn);
-}
-
-static void sdmmc_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static void sdmmc_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                              uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-// Block core protocol
-static block_protocol_ops_t sdmmc_block_ops = {
-    .set_callbacks = sdmmc_block_set_callbacks,
-    .get_info = sdmmc_block_get_info,
-    .read = sdmmc_block_read,
-    .write = sdmmc_block_write,
 };
 
 static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
@@ -467,7 +390,6 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev) {
         .ctx = sdmmc,
         .ops = &sdmmc_device_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-        .proto_ops = &sdmmc_block_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };
 

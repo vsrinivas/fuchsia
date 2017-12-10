@@ -587,13 +587,6 @@ zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
     return ZX_OK;
 }
 
-static void vpart_block_complete(iotxn_t* txn, void* cookie) {
-    block_callbacks_t* cb;
-    memcpy(&cb, txn->extra, sizeof(void*));
-    cb->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
 uint32_t VPartition::SliceGetLocked(size_t vslice) const {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     auto extent = --slice_map_.upper_bound(vslice);
@@ -700,24 +693,6 @@ bool VPartition::SliceFreeLocked(size_t vslice) {
 
     AddBlocksLocked(-(mgr_->SliceSize() / info_.block_size));
     return true;
-}
-
-void VPartition::Txn(uint32_t opcode, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                     uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    zx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset,
-                                  length)) != ZX_OK) {
-        callbacks_->complete(cookie, status);
-        return;
-    }
-    txn->flags = flags;
-    txn->opcode = opcode;
-    txn->offset = dev_offset;
-    txn->complete_cb = vpart_block_complete;
-    txn->cookie = cookie;
-    memcpy(txn->extra, &callbacks_, sizeof(void*));
-    iotxn_queue(zxdev(), txn);
 }
 
 static zx_status_t RequestBoundCheck(const extend_request_t* request,
@@ -1018,27 +993,6 @@ void VPartition::DdkUnbind() {
 
 void VPartition::DdkRelease() {
     delete this;
-}
-
-// Block Protocol (VPartition)
-
-void VPartition::BlockSetCallbacks(block_callbacks_t* cb) {
-    callbacks_ = cb;
-}
-
-void VPartition::BlockGetInfo(block_info_t* info) {
-    fbl::AutoLock lock(&lock_);
-    *info = info_;
-}
-
-void VPartition::BlockRead(uint32_t flags, zx_handle_t vmo, uint64_t length,
-                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    Txn(IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-void VPartition::BlockWrite(uint32_t flags, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
-                            uint64_t dev_offset, void* cookie) {
-    Txn(IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 } // namespace fvm

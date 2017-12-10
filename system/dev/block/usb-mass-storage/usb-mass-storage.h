@@ -7,10 +7,10 @@
 #include <inttypes.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
-#include <ddk/protocol/block.h>
 #include <ddk/protocol/usb.h>
-#include <zircon/listnode.h>
 #include <sync/completion.h>
+#include <zircon/device/block.h>
+#include <zircon/listnode.h>
 
 #include <threads.h>
 
@@ -24,7 +24,6 @@ typedef struct {
 // struct representing a block device for a logical unit
 typedef struct {
     zx_device_t* zxdev;         // block device we publish
-    block_callbacks_t* cb;      // callbacks for async block protocol
 
     uint64_t total_blocks;
     uint32_t block_size;

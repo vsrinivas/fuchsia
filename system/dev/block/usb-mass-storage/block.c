@@ -91,65 +91,7 @@ static zx_protocol_device_t ums_block_proto = {
     .get_size = ums_block_get_size,
 };
 
-static void ums_async_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    ums_block_t* dev = ctx;
-    dev->cb = cb;
-}
-
-static void ums_async_complete(iotxn_t* txn, void* cookie) {
-    ums_block_t* dev = (ums_block_t*)txn->extra[0];
-    dev->cb->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
-static void ums_async_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ums_block_t* dev = ctx;
-
-    iotxn_t* txn;
-    zx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
-    if (status != ZX_OK) {
-        dev->cb->complete(cookie, status);
-        return;
-    }
-    txn->opcode = IOTXN_OP_READ;
-    txn->flags = flags;
-    txn->offset = dev_offset;
-    txn->complete_cb = ums_async_complete;
-    txn->cookie = cookie;
-    txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(dev->zxdev, txn);
-}
-
-static void ums_async_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ums_block_t* dev = ctx;
-
-    iotxn_t* txn;
-    zx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
-    if (status != ZX_OK) {
-        dev->cb->complete(cookie, status);
-        return;
-    }
-    txn->opcode = IOTXN_OP_WRITE;
-    txn->flags = flags;
-    txn->offset = dev_offset;
-    txn->complete_cb = ums_async_complete;
-    txn->cookie = cookie;
-    txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(dev->zxdev, txn);
-}
-
-static block_protocol_ops_t ums_block_ops = {
-    .set_callbacks = ums_async_set_callbacks,
-    .get_info = ums_get_info,
-    .read = ums_async_read,
-    .write = ums_async_write,
-};
-
 zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
-    dev->cb = NULL;
-
     char name[16];
     snprintf(name, sizeof(name), "lun-%03d", dev->lun);
 
@@ -159,7 +101,6 @@ zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
         .ctx = dev,
         .ops = &ums_block_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-        .proto_ops = &ums_block_ops,
     };
 
     return device_add(ums->zxdev, &args, &dev->zxdev);

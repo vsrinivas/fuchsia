@@ -9,7 +9,6 @@
 #include <stdlib.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/block.h>
 #include <fvm/fvm.h>
 #include <zircon/device/block.h>
 #include <zircon/thread_annotations.h>
@@ -204,16 +203,6 @@ public:
     void DdkUnbind();
     void DdkRelease();
 
-    // Block Protocol
-    void Txn(uint32_t opcode, uint32_t flags, zx_handle_t vmo, uint64_t length,
-             uint64_t vmo_offset, uint64_t dev_offset, void* cookie);
-    void BlockSetCallbacks(block_callbacks_t* cb);
-    void BlockGetInfo(block_info_t* info);
-    void BlockRead(uint32_t flags, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
-                   uint64_t dev_offset, void* cookie);
-    void BlockWrite(uint32_t flags, zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
-                    uint64_t dev_offset, void* cookie);
-
     auto ExtentBegin() TA_REQ(lock_) {
         return slice_map_.begin();
     }
@@ -261,7 +250,6 @@ private:
 
     VPartitionManager* mgr_;
     size_t entry_index_;
-    block_callbacks_t* callbacks_;
 
     // Mapping of virtual slice number (index) to physical slice number (value).
     // Physical slice zero is reserved to mean "unmapped", so a zeroed slice_map

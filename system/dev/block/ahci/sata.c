@@ -6,19 +6,19 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/block.h>
 
-#include <zircon/types.h>
-#include <pretty/hexdump.h>
-#include <sync/completion.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <pretty/hexdump.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sync/completion.h>
+#include <sys/param.h>
+#include <zircon/device/block.h>
+#include <zircon/types.h>
 
 #include "sata.h"
 
@@ -32,7 +32,6 @@ typedef struct sata_device {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
-    block_callbacks_t* callbacks;
     block_info_t info;
 
     int port;
@@ -270,70 +269,6 @@ static zx_protocol_device_t sata_device_proto = {
     .release = sata_release,
 };
 
-static void sata_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    sata_device_t* device = ctx;
-    device->callbacks = cb;
-}
-
-static void sata_block_get_info(void* ctx, block_info_t* info) {
-    sata_device_t* device = ctx;
-    sata_get_info(device, info);
-}
-
-static void sata_block_complete(iotxn_t* txn, void* cookie) {
-    sata_device_t* dev;
-    memcpy(&dev, txn->extra, sizeof(sata_device_t*));
-    zxlogf(SPEW, "sata: fifo_complete dev %p cookie %p callbacks %p status %d actual 0x%"
-            PRIx64 "\n", dev, cookie, dev->callbacks, txn->status, txn->actual);
-    dev->callbacks->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
-static void sata_block_txn(sata_device_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
-                           uint64_t length, uint64_t vmo_offset, uint64_t dev_offset,
-                           void* cookie) {
-    if ((dev_offset % dev->sector_sz) || (length % dev->sector_sz)) {
-        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
-        return;
-    }
-    if ((dev_offset >= dev->capacity) || (length > (dev->capacity - dev_offset))) {
-        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    zx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
-        dev->callbacks->complete(cookie, status);
-        return;
-    }
-    txn->flags = flags;
-    txn->opcode = opcode;
-    txn->offset = dev_offset;
-    txn->complete_cb = sata_block_complete;
-    txn->cookie = cookie;
-    memcpy(txn->extra, &dev, sizeof(sata_device_t*));
-
-    iotxn_queue(dev->zxdev, txn);
-}
-
-static void sata_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_block_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static void sata_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_block_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static block_protocol_ops_t sata_block_ops = {
-    .set_callbacks = sata_block_set_callbacks,
-    .get_info = sata_block_get_info,
-    .read = sata_block_read,
-    .write = sata_block_write,
-};
-
 zx_status_t sata_bind(zx_device_t* dev, int port) {
     // initialize the device
     sata_device_t* device = calloc(1, sizeof(sata_device_t));
@@ -362,7 +297,6 @@ zx_status_t sata_bind(zx_device_t* dev, int port) {
         .ctx = device,
         .ops = &sata_device_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-        .proto_ops = &sata_block_ops,
     };
 
     status = device_add(dev, &args, &device->zxdev);

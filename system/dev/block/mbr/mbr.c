@@ -15,12 +15,11 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/block.h>
-
-#include <zircon/threads.h>
-#include <sync/completion.h>
 
 #include <gpt/gpt.h>
+#include <sync/completion.h>
+#include <zircon/device/block.h>
+#include <zircon/threads.h>
 
 #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 #define MBR_SIZE 512
@@ -68,7 +67,6 @@ typedef struct mbrpart_device {
     zx_device_t* parent;
     mbr_partition_entry_t partition;
     block_info_t info;
-    block_callbacks_t* callbacks;
     atomic_int writercount;
 } mbrpart_device_t;
 
@@ -205,69 +203,6 @@ static zx_protocol_device_t mbr_proto = {
     .close = mbr_close,
 };
 
-static void mbr_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    mbrpart_device_t* device = ctx;
-    device->callbacks = cb;
-}
-
-static void mbr_block_get_info(void* ctx, block_info_t* info) {
-    mbrpart_device_t* device = ctx;
-    memcpy(info, &device->info, sizeof(*info));
-}
-
-static void mbr_block_complete(iotxn_t* txn, void* cookie) {
-    mbrpart_device_t* dev;
-    memcpy(&dev, txn->extra, sizeof(mbrpart_device_t*));
-    dev->callbacks->complete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
-static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, uint32_t flags, zx_handle_t vmo,
-                         uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_info_t* info = &dev->info;
-    if ((dev_offset % info->block_size) || (length % info->block_size)) {
-        dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
-        return;
-    }
-    uint64_t size = getsize(dev);
-    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    zx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
-        dev->callbacks->complete(cookie, status);
-        return;
-    }
-    txn->opcode = opcode;
-    txn->flags = flags;
-    txn->length = length;
-    txn->offset = to_parent_offset(dev, dev_offset);
-    txn->complete_cb = mbr_block_complete;
-    txn->cookie = cookie;
-    memcpy(txn->extra, &dev, sizeof(mbrpart_device_t*));
-    iotxn_queue(dev->parent, txn);
-}
-
-static void mbr_block_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_READ, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static void mbr_block_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn(ctx, IOTXN_OP_WRITE, flags, vmo, length, vmo_offset, dev_offset, cookie);
-}
-
-static block_protocol_ops_t mbr_block_ops = {
-    .set_callbacks = mbr_block_set_callbacks,
-    .get_info = mbr_block_get_info,
-    .read = mbr_block_read,
-    .write = mbr_block_write,
-};
-
 static int mbr_bind_thread(void* arg) {
     mbrpart_device_t* first_dev = (mbrpart_device_t*)arg;
     zx_device_t* dev = first_dev->parent;
@@ -380,7 +315,6 @@ static int mbr_bind_thread(void* arg) {
                 .ctx = pdev,
                 .ops = &mbr_proto,
                 .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-                .proto_ops = &mbr_block_ops,
             };
 
             if ((st = device_add(dev, &args, &pdev->zxdev)) != ZX_OK) {
@@ -428,7 +362,6 @@ static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
         .ctx = device,
         .ops = &mbr_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-        .proto_ops = &mbr_block_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };
 

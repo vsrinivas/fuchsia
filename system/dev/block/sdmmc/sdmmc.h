@@ -7,7 +7,6 @@
 #include <zircon/compiler.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/block.h>
 #include <hw/sdmmc.h>
 
 #include <threads.h>
@@ -49,7 +48,6 @@ typedef struct sdmmc {
     zx_handle_t worker_event;
     bool worker_thread_running;
 
-    block_callbacks_t* callbacks;
     uint32_t max_transfer_size;
 } sdmmc_t;
 

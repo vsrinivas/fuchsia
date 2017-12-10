@@ -5,7 +5,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/block.h>
 
 #include <limits.h>
 #include <zircon/types.h>

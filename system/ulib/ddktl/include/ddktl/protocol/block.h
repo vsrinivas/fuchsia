@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <ddk/protocol/block.h>
-#include <ddktl/protocol/block-internal.h>
 #include <zircon/assert.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
@@ -38,10 +36,6 @@
 //         // Clean up
 //     }
 //
-//     void BlockSetCallbacks(block_callbacks_t* cb) {
-//         // Fill out callbacks
-//     }
-//
 //     ...
 //   private:
 //     ...
@@ -53,38 +47,10 @@ template <typename D>
 class BlockProtocol : public internal::base_protocol {
   public:
     BlockProtocol() {
-        internal::CheckBlockProtocolSubclass<D>();
-        ops_.set_callbacks = SetCallbacks;
-        ops_.get_info = GetInfo;
-        ops_.read = Read;
-        ops_.write = Write;
-
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_ops_ == nullptr);
         ddk_proto_id_ = ZX_PROTOCOL_BLOCK_CORE;
-        ddk_proto_ops_ = &ops_;
     }
-
-  private:
-    static void SetCallbacks(void* ctx, block_callbacks_t* cb) {
-        static_cast<D*>(ctx)->BlockSetCallbacks(cb);
-    }
-
-    static void GetInfo(void* ctx, block_info_t* info) {
-        static_cast<D*>(ctx)->BlockGetInfo(info);
-    }
-
-    static void Read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                     uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-        static_cast<D*>(ctx)->BlockRead(flags, vmo, length, vmo_offset, dev_offset, cookie);
-    }
-
-    static void Write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                      uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-        static_cast<D*>(ctx)->BlockWrite(flags, vmo, length, vmo_offset, dev_offset, cookie);
-    }
-
-    block_protocol_ops_t ops_ = {};
 };
 
 }  // namespace ddk

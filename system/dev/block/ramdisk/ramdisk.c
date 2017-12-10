@@ -5,22 +5,22 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/block.h>
 #include <zircon/device/ramdisk.h>
 #include <sync/completion.h>
 
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-#include <zircon/listnode.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>
+#include <sys/param.h>
 #include <threads.h>
+#include <zircon/device/block.h>
+#include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 typedef struct {
     zx_device_t* zxdev;
@@ -33,7 +33,6 @@ typedef struct ramdisk_device {
     uint32_t flags;
     zx_handle_t vmo;
     uintptr_t mapped_addr;
-    block_callbacks_t* cb;
     char name[NAME_MAX];
 
     mtx_t lock;
@@ -111,64 +110,6 @@ static void ramdisk_get_info(void* ctx, block_info_t* info) {
     info->max_transfer_size = (1 << 25);
     info->flags = ramdev->flags;
 }
-
-static void ramdisk_fifo_set_callbacks(void* ctx, block_callbacks_t* cb) {
-    ramdisk_device_t* rdev = ctx;
-    rdev->cb = cb;
-}
-
-static void ramdisk_fifo_read(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                              uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ramdisk_device_t* rdev = ctx;
-    zx_off_t len = length;
-    zx_status_t status = constrain_args(rdev, &dev_offset, &len);
-    if (status != ZX_OK) {
-        rdev->cb->complete(cookie, status);
-        return;
-    }
-
-    mtx_lock(&rdev->lock);
-    if (rdev->dead) {
-        status = ZX_ERR_BAD_STATE;
-    } else {
-        size_t actual;
-        // Reading from disk --> Write to file VMO
-        status = zx_vmo_write(vmo, (void*)rdev->mapped_addr + dev_offset,
-                              vmo_offset, len, &actual);
-    }
-    mtx_unlock(&rdev->lock);
-    rdev->cb->complete(cookie, status);
-}
-
-static void ramdisk_fifo_write(void* ctx, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                               uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ramdisk_device_t* rdev = ctx;
-    zx_off_t len = length;
-    zx_status_t status = constrain_args(rdev, &dev_offset, &len);
-    if (status != ZX_OK) {
-        rdev->cb->complete(cookie, status);
-        return;
-    }
-
-    mtx_lock(&rdev->lock);
-    if (rdev->dead) {
-        status = ZX_ERR_BAD_STATE;
-    } else {
-        size_t actual = 0;
-        // Writing to disk --> Read from file VMO
-        status = zx_vmo_read(vmo, (void*)rdev->mapped_addr + dev_offset,
-                             vmo_offset, len, &actual);
-    }
-    mtx_unlock(&rdev->lock);
-    rdev->cb->complete(cookie, status);
-}
-
-static block_protocol_ops_t ramdisk_block_ops = {
-    .set_callbacks = ramdisk_fifo_set_callbacks,
-    .get_info = ramdisk_get_info,
-    .read = ramdisk_fifo_read,
-    .write = ramdisk_fifo_write,
-};
 
 // implement device protocol:
 
@@ -324,7 +265,6 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
         .ctx = ramdev,
         .ops = &ramdisk_instance_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
-        .proto_ops = &ramdisk_block_ops,
     };
 
     if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
