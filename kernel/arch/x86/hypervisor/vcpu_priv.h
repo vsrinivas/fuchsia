@@ -21,9 +21,9 @@
 #define X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS                0x0490
 
 // PROCBASED_CTLS2 flags.
-static const uint32_t kProcbasedCtls2ApicAccess         = 1u << 0;
 static const uint32_t kProcbasedCtls2Ept                = 1u << 1;
 static const uint32_t kProcbasedCtls2Rdtscp             = 1u << 3;
+static const uint32_t kProcbasedCtls2x2Apic             = 1u << 4;
 static const uint32_t kProcbasedCtls2Vpid               = 1u << 5;
 static const uint32_t kProcbasedCtls2Invpcid            = 1u << 12;
 
@@ -96,8 +96,6 @@ enum class VmcsField64 : uint64_t {
     EXIT_MSR_STORE_ADDRESS                              = 0x2006,
     EXIT_MSR_LOAD_ADDRESS                               = 0x2008,
     ENTRY_MSR_LOAD_ADDRESS                              = 0x200a,
-    VIRTUAL_APIC_ADDRESS                                = 0x2012,
-    APIC_ACCESS_ADDRESS                                 = 0x2014,
     EPT_POINTER                                         = 0x201a,
     GUEST_PHYSICAL_ADDRESS                              = 0x2400,
     LINK_POINTER                                        = 0x2800,
@@ -171,12 +169,6 @@ enum class VmcsFieldXX : uint64_t {
     HOST_IA32_SYSENTER_EIP                              = 0x6c12,
     HOST_RSP                                            = 0x6c14,
     HOST_RIP                                            = 0x6c16,
-};
-
-// INVEPT invalidation types.
-enum class InvEpt : uint64_t {
-    SINGLE_CONTEXT                                      = 1,
-    ALL_CONTEXT                                         = 2,
 };
 
 // clang-format on

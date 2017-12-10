@@ -85,14 +85,9 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 #elif ARCH_X86_64
-    fbl::RefPtr<VmObjectDispatcher> apic;
-    status = up->GetDispatcherWithRights(args.apic_vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &apic);
-    if (status != ZX_OK)
-        return status;
-
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    status = VcpuDispatcher::Create(guest, args.ip, args.cr3, apic->vmo(), &dispatcher, &rights);
+    status = VcpuDispatcher::Create(guest, args.ip, args.cr3, &dispatcher, &rights);
     if (status != ZX_OK)
         return status;
 #else

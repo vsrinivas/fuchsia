@@ -6,30 +6,34 @@
 
 #include <assert.h>
 
-#include <zircon/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
+// clang-format off
 enum {
     ZX_GUEST_TRAP_BELL  = 0,
     ZX_GUEST_TRAP_MEM   = 1,
     ZX_GUEST_TRAP_IO    = 2,
 };
 
+enum {
+    ZX_VCPU_STATE       = 0,
+    ZX_VCPU_IO          = 1,
+};
+// clang-format on
+
 // Structure to create a VCPU for a guest.
 typedef struct zx_vcpu_create_args {
     zx_vaddr_t ip;
 #if __x86_64__
     zx_vaddr_t cr3;
+    // TODO(alexlegg): Remove apic_vmo once the x2apic change propagates to
+    // Garnet.
     zx_handle_t apic_vmo;
 #endif
 } zx_vcpu_create_args_t;
-
-enum {
-    ZX_VCPU_STATE   = 0,
-    ZX_VCPU_IO      = 1,
-};
 
 // Structure to read and write VCPU state.
 typedef struct zx_vcpu_state {

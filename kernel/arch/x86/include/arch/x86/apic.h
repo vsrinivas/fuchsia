@@ -13,6 +13,7 @@
 
 __BEGIN_CDECLS
 
+// clang-format off
 #define INVALID_APIC_ID              0xffffffff
 #define APIC_PHYS_BASE               0xfee00000
 #define IA32_APIC_BASE_BSP           (1u << 8)
@@ -26,7 +27,9 @@ __BEGIN_CDECLS
 #define LVT_TIMER_MODE_ONESHOT      (0u << 17)
 #define LVT_TIMER_MODE_PERIODIC     (1u << 17)
 #define LVT_TIMER_MODE_TSC_DEADLINE (2u << 17)
+#define LVT_TIMER_MODE_RESERVED     (3u << 17)
 #define LVT_MASKED                  (1u << 16)
+// clang-format on
 
 enum apic_interrupt_delivery_mode {
     // Unless you know what you're doing, you want FIXED.
@@ -51,16 +54,16 @@ uint8_t apic_local_id(void);
 uint8_t apic_bsp_id(void); // The APIC ID of the bootstrap processor
 void apic_irq_set(unsigned int vector, bool enable);
 void apic_send_ipi(
-        uint8_t vector,
-        uint32_t dst_apic_id,
-        enum apic_interrupt_delivery_mode dm);
+    uint8_t vector,
+    uint32_t dst_apic_id,
+    enum apic_interrupt_delivery_mode dm);
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
 void apic_send_broadcast_ipi(
-        uint8_t vector,
-        enum apic_interrupt_delivery_mode dm);
+    uint8_t vector,
+    enum apic_interrupt_delivery_mode dm);
 void apic_send_broadcast_self_ipi(
-        uint8_t vector,
-        enum apic_interrupt_delivery_mode dm);
+    uint8_t vector,
+    enum apic_interrupt_delivery_mode dm);
 void apic_issue_eoi(void);
 
 zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked);
@@ -101,6 +104,7 @@ struct io_apic_isa_override {
 };
 
 // Functionality provided by the IO APICs
+// clang-format off
 #define IO_APIC_IOREGSEL    0x00
 #define IO_APIC_IOWIN       0x10
 
@@ -108,30 +112,31 @@ struct io_apic_isa_override {
 #define IO_APIC_REG_VER     0x01
 #define IO_APIC_IRQ_MASK    true
 #define IO_APIC_IRQ_UNMASK  false
+// clang-format on
 
 void apic_io_init(
-        struct io_apic_descriptor *io_apics_descs,
-        unsigned int num_io_apics,
-        struct io_apic_isa_override *overrides,
-        unsigned int num_overrides);
+    struct io_apic_descriptor* io_apics_descs,
+    unsigned int num_io_apics,
+    struct io_apic_isa_override* overrides,
+    unsigned int num_overrides);
 bool apic_io_is_valid_irq(uint32_t global_irq);
 void apic_io_mask_irq(uint32_t global_irq, bool mask);
 void apic_io_configure_irq(
-        uint32_t global_irq,
-        enum interrupt_trigger_mode trig_mode,
-        enum interrupt_polarity polarity,
-        enum apic_interrupt_delivery_mode del_mode,
-        bool mask,
-        enum apic_interrupt_dst_mode dst_mode,
-        uint8_t dst,
-        uint8_t vector);
+    uint32_t global_irq,
+    enum interrupt_trigger_mode trig_mode,
+    enum interrupt_polarity polarity,
+    enum apic_interrupt_delivery_mode del_mode,
+    bool mask,
+    enum apic_interrupt_dst_mode dst_mode,
+    uint8_t dst,
+    uint8_t vector);
 zx_status_t apic_io_fetch_irq_config(
-        uint32_t global_irq,
-        enum interrupt_trigger_mode* trig_mode,
-        enum interrupt_polarity* polarity);
+    uint32_t global_irq,
+    enum interrupt_trigger_mode* trig_mode,
+    enum interrupt_polarity* polarity);
 void apic_io_configure_irq_vector(
-        uint32_t global_irq,
-        uint8_t vector);
+    uint32_t global_irq,
+    uint8_t vector);
 uint8_t apic_io_fetch_irq_vector(uint32_t global_irq);
 
 void apic_io_mask_isa_irq(uint8_t isa_irq, bool mask);
@@ -139,12 +144,12 @@ void apic_io_mask_isa_irq(uint8_t isa_irq, bool mask);
 // and polarity since we initialize these to match the ISA bus or
 // any overrides we've been told about.
 void apic_io_configure_isa_irq(
-        uint8_t isa_irq,
-        enum apic_interrupt_delivery_mode del_mode,
-        bool mask,
-        enum apic_interrupt_dst_mode dst_mode,
-        uint8_t dst,
-        uint8_t vector);
+    uint8_t isa_irq,
+    enum apic_interrupt_delivery_mode del_mode,
+    bool mask,
+    enum apic_interrupt_dst_mode dst_mode,
+    uint8_t dst,
+    uint8_t vector);
 void apic_io_issue_eoi(uint32_t global_irq, uint8_t vec);
 uint32_t apic_io_isa_to_global(uint8_t isa_irq);
 

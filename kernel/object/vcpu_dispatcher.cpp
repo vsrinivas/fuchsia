@@ -7,16 +7,16 @@
 #include <object/vcpu_dispatcher.h>
 
 #include <arch/hypervisor.h>
+#include <fbl/alloc_checker.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <object/guest_dispatcher.h>
 #include <vm/vm_object.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
-#include <fbl/alloc_checker.h>
-#include <object/guest_dispatcher.h>
 
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t ip,
 #if ARCH_X86_64
-                                   zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+                                   zx_vaddr_t cr3,
 #endif
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
@@ -30,8 +30,8 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
 #elif ARCH_X86_64
     if (cr3 >= gpas->size() - PAGE_SIZE)
         return ZX_ERR_INVALID_ARGS;
-    zx_status_t status = x86_vcpu_create(ip, cr3, apic_vmo, guest->ApicAccessAddress(),
-                                         guest->MsrBitmapsAddress(), gpas, guest->Traps(), &vcpu);
+    zx_status_t status = x86_vcpu_create(ip, cr3, guest->MsrBitmapsAddress(), gpas, guest->Traps(),
+                                         &vcpu);
 #else
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 #endif

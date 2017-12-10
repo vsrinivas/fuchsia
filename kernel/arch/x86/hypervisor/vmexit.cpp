@@ -20,20 +20,24 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <kernel/auto_lock.h>
+#include <platform.h>
+#include <platform/pc/timer.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
-#include <platform/pc/timer.h>
 
 #include "vcpu_priv.h"
 
 #define LOCAL_TRACE 0
 
-static const uint16_t kLocalApicLvtTimer = 0x320;
 static const uint64_t kLocalApicPhysBase =
-    APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
+    APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE |
+    IA32_APIC_BASE_X2APIC_ENABLE;
+
+static const uint64_t kX2ApicMsrBase = 0x800;
+static const uint64_t kX2ApicMsrMax = 0x83f;
 
 static const uint64_t kMiscEnableFastStrings = 1u << 0;
 
@@ -43,7 +47,7 @@ static const uint32_t kLastExtendedStateComponent = 9;
 static const uint32_t kXsaveLegacyRegionSize = 512;
 static const uint32_t kXsaveHeaderSize = 64;
 
-static const char kHypVendorId[] = "ZirconZircon";
+static const char kHypVendorId[] = "KVMKVMKVM\0\0\0";
 static const size_t kHypVendorIdLength = 12;
 static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
 
@@ -91,11 +95,6 @@ IoInfo::IoInfo(uint64_t qualification) {
     port = static_cast<uint16_t>(BITS_SHIFT(qualification, 31, 16));
 }
 
-ApicAccessInfo::ApicAccessInfo(uint64_t qualification) {
-    offset = static_cast<uint16_t>(BITS(qualification, 11, 0));
-    access_type = static_cast<ApicAccessType>(BITS_SHIFT(qualification, 15, 12));
-}
-
 EptViolationInfo::EptViolationInfo(uint64_t qualification) {
     // From Volume 3C, Table 27-7.
     read = BIT(qualification, 0);
@@ -109,7 +108,7 @@ static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     // Clear any flags blocking interrupt injection for a single instruction.
     uint32_t guest_interruptibility = vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
     uint32_t new_interruptibility = guest_interruptibility &
-        ~(kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking);
+                                    ~(kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking);
     if (new_interruptibility != guest_interruptibility) {
         vmcs->Write(VmcsField32::GUEST_INTERRUPTIBILITY_STATE, new_interruptibility);
     }
@@ -183,12 +182,12 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
         case X86_CPUID_MODEL_FEATURES:
             // Enable the hypervisor bit.
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
+            // Enable the x2APIC bit.
+            guest_state->rcx |= 1u << X86_FEATURE_X2APIC.bit;
             // Disable the VMX bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_VMX.bit);
             // Disable the PDCM bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
-            // Disable the x2APIC bit.
-            guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
             // Disable MONITOR/MWAIT.
             guest_state->rcx &= ~(1u << X86_FEATURE_MON.bit);
             // Disable the SEP (SYSENTER support).
@@ -313,8 +312,59 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
     return ZX_ERR_NEXT;
 }
 
+static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                     GuestState* guest_state, LocalApicState* local_apic_state) {
+    switch (static_cast<X2ApicMsr>(guest_state->rcx)) {
+    case X2ApicMsr::ID:
+        next_rip(exit_info, vmcs);
+        // TODO: Handle multiple VCPUs.
+        guest_state->rax = 0;
+        return ZX_OK;
+    case X2ApicMsr::VERSION: {
+        next_rip(exit_info, vmcs);
+        // We choose 15H as it causes us to be seen as a modern APIC by Linux,
+        // and is the highest non-reserved value. See Volume 3 Section 10.4.8.
+        const uint32_t version = 0x15;
+        const uint32_t max_lvt_entry = 0x6; // LVT entries minus 1.
+        const uint32_t eoi_suppression = 0; // Disable support for EOI-broadcast suppression.
+        guest_state->rax = version | (max_lvt_entry << 16) | (eoi_suppression << 24);
+        return ZX_OK;
+    }
+    case X2ApicMsr::SVR:
+        // Spurious interrupt vector resets to 0xff. See Volume 3 Section 10.12.5.1.
+        next_rip(exit_info, vmcs);
+        guest_state->rax = 0xff;
+        return ZX_OK;
+    case X2ApicMsr::TPR:
+    case X2ApicMsr::LDR:
+    case X2ApicMsr::ISR_31_0... X2ApicMsr::ISR_255_224:
+    case X2ApicMsr::TMR_31_0... X2ApicMsr::TMR_255_224:
+    case X2ApicMsr::IRR_31_0... X2ApicMsr::IRR_255_224:
+    case X2ApicMsr::ESR:
+        // These registers reset to 0. See Volume 3 Section 10.12.5.1.
+        next_rip(exit_info, vmcs);
+        guest_state->rax = 0;
+        return ZX_OK;
+    case X2ApicMsr::LVT_LINT0:
+    case X2ApicMsr::LVT_LINT1:
+        // LVT registers reset with the mask bit set. See Volume 3 Section 10.12.5.1.
+        next_rip(exit_info, vmcs);
+        guest_state->rax = LVT_MASKED;
+        return ZX_OK;
+    case X2ApicMsr::LVT_TIMER:
+        next_rip(exit_info, vmcs);
+        guest_state->rax = local_apic_state->lvt_timer;
+        return ZX_OK;
+    default:
+        // Issue a general protection fault for write only and unimplemented
+        // registers.
+        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
+    }
+}
+
 static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                GuestState* guest_state) {
+                                GuestState* guest_state, LocalApicState* local_apic_state) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info, vmcs);
@@ -332,9 +382,9 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X86_MSR_IA32_MTRRCAP:
     case X86_MSR_IA32_MTRR_DEF_TYPE:
     case X86_MSR_IA32_MTRR_FIX64K_00000:
-    case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
-    case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
-    case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+    case X86_MSR_IA32_MTRR_FIX16K_80000... X86_MSR_IA32_MTRR_FIX16K_A0000:
+    case X86_MSR_IA32_MTRR_FIX4K_C0000... X86_MSR_IA32_MTRR_FIX4K_F8000:
+    case X86_MSR_IA32_MTRR_PHYSBASE0... X86_MSR_IA32_MTRR_PHYSMASK9:
     // From Volume 3, Section 9.11.4: For now, 0.
     case X86_MSR_IA32_PLATFORM_ID:
     // From Volume 3, Section 9.11.7: 0 indicates no microcode update is loaded.
@@ -347,30 +397,103 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         guest_state->rax = 0;
         guest_state->rdx = 0;
         return ZX_OK;
+    case kX2ApicMsrBase... kX2ApicMsrMax:
+        return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
     }
 }
 
-static uint32_t* apic_reg(LocalApicState* local_apic_state, uint16_t reg) {
-    uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->apic_addr);
-    return reinterpret_cast<uint32_t*>(addr + reg);
+zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
+    if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_ONESHOT &&
+        (local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_PERIODIC) {
+        return 0;
+    }
+    uint32_t shift = BITS_SHIFT(local_apic_state->lvt_divide_config, 1, 0) |
+                     (BIT_SHIFT(local_apic_state->lvt_divide_config, 3) << 2);
+    uint32_t divisor_shift = (shift + 1) & 7;
+    return current_time() + ticks_to_nanos(local_apic_state->lvt_initial_count << divisor_shift);
 }
+
+static void update_timer(LocalApicState* local_apic_state, uint64_t deadline);
 
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
-    uint32_t* lvt_timer = apic_reg(local_apic_state, kLocalApicLvtTimer);
-    if (*lvt_timer & LVT_MASKED)
+    if (local_apic_state->lvt_timer & LVT_MASKED) {
         return INT_NO_RESCHEDULE;
-
-    uint8_t vector = *lvt_timer & LVT_TIMER_VECTOR_MASK;
+    }
+    if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_PERIODIC) {
+        update_timer(local_apic_state, lvt_deadline(local_apic_state));
+    }
+    uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
     bool signaled;
     zx_status_t status = local_apic_state->interrupt_tracker.Signal(vector, false, &signaled);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return INT_NO_RESCHEDULE;
-
+    }
     return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+}
+
+static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
+    timer_cancel(&local_apic_state->timer);
+    if (deadline > 0) {
+        timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback, local_apic_state);
+    }
+}
+
+static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                     GuestState* guest_state, LocalApicState* local_apic_state) {
+    switch (static_cast<X2ApicMsr>(guest_state->rcx)) {
+    case X2ApicMsr::EOI:
+    case X2ApicMsr::ESR:
+        if (guest_state->rax != 0) {
+            // Non-zero writes to EOI and ESR cause GP fault. See Volume 3 Section 10.12.1.2.
+            vmcs->IssueInterrupt(X86_INT_GP_FAULT);
+            return ZX_OK;
+        }
+    // Fall through.
+    case X2ApicMsr::TPR:
+    case X2ApicMsr::SVR:
+    case X2ApicMsr::LVT_MONITOR:
+    case X2ApicMsr::LVT_ERROR:
+    case X2ApicMsr::LVT_LINT0:
+    case X2ApicMsr::LVT_LINT1:
+        if (guest_state->rdx != 0 || guest_state->rax > UINT32_MAX)
+            return ZX_ERR_INVALID_ARGS;
+        next_rip(exit_info, vmcs);
+        return ZX_OK;
+    case X2ApicMsr::LVT_TIMER:
+        if (guest_state->rax > UINT32_MAX)
+            return ZX_ERR_INVALID_ARGS;
+        if ((guest_state->rax & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_RESERVED)
+            return ZX_ERR_INVALID_ARGS;
+        next_rip(exit_info, vmcs);
+        local_apic_state->lvt_timer = static_cast<uint32_t>(guest_state->rax);
+        update_timer(local_apic_state, lvt_deadline(local_apic_state));
+        return ZX_OK;
+    case X2ApicMsr::INITIAL_COUNT:
+        if (guest_state->rax > UINT32_MAX)
+            return ZX_ERR_INVALID_ARGS;
+        next_rip(exit_info, vmcs);
+        local_apic_state->lvt_initial_count = static_cast<uint32_t>(guest_state->rax);
+        update_timer(local_apic_state, lvt_deadline(local_apic_state));
+        return ZX_OK;
+    case X2ApicMsr::DCR:
+        if (guest_state->rax > UINT32_MAX)
+            return ZX_ERR_INVALID_ARGS;
+        next_rip(exit_info, vmcs);
+        local_apic_state->lvt_divide_config = static_cast<uint32_t>(guest_state->rax);
+        update_timer(local_apic_state, lvt_deadline(local_apic_state));
+        return ZX_OK;
+    case X2ApicMsr::SELF_IPI:
+        return ZX_ERR_NOT_SUPPORTED;
+    default:
+        // Issue a general protection fault for read only and unimplemented
+        // registers.
+        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
+    }
 }
 
 static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
@@ -385,9 +508,9 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case X86_MSR_IA32_MTRRCAP:
     case X86_MSR_IA32_MTRR_DEF_TYPE:
     case X86_MSR_IA32_MTRR_FIX64K_00000:
-    case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
-    case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
-    case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+    case X86_MSR_IA32_MTRR_FIX16K_80000... X86_MSR_IA32_MTRR_FIX16K_A0000:
+    case X86_MSR_IA32_MTRR_FIX4K_C0000... X86_MSR_IA32_MTRR_FIX4K_F8000:
+    case X86_MSR_IA32_MTRR_PHYSBASE0... X86_MSR_IA32_MTRR_PHYSMASK9:
     case X86_MSR_IA32_BIOS_SIGN_ID:
     // From AMD64 Volume 2, Section 6.1.1: CSTAR is unused, but Linux likes to set
     // a null handler, even when not in compatibility mode. Just ignore it.
@@ -395,19 +518,15 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         next_rip(exit_info, vmcs);
         return ZX_OK;
     case X86_MSR_IA32_TSC_DEADLINE: {
-        uint32_t* reg = apic_reg(local_apic_state, kLocalApicLvtTimer);
-        if ((*reg & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
+        if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
             return ZX_ERR_INVALID_ARGS;
         next_rip(exit_info, vmcs);
-        timer_cancel(&local_apic_state->timer);
         uint64_t tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & UINT32_MAX);
-        if (tsc_deadline > 0) {
-            zx_time_t deadline = ticks_to_nanos(tsc_deadline);
-            timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback,
-                              local_apic_state);
-        }
+        update_timer(local_apic_state, ticks_to_nanos(tsc_deadline));
         return ZX_OK;
     }
+    case kX2ApicMsrBase... kX2ApicMsrMax:
+        return handle_apic_wrmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
@@ -525,21 +644,6 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vad
     return ZX_ERR_NEXT;
 }
 
-static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                      LocalApicState* local_apic_state,
-                                      GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                                      zx_port_packet_t* packet) {
-    ApicAccessInfo apic_access_info(exit_info.exit_qualification);
-    switch (apic_access_info.access_type) {
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    case ApicAccessType::LINEAR_ACCESS_WRITE:
-    case ApicAccessType::LINEAR_ACCESS_READ:
-        zx_vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
-        return handle_trap(exit_info, vmcs, guest_paddr, gpas, traps, packet);
-    }
-}
-
 static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                         GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                                         zx_port_packet_t* packet) {
@@ -621,7 +725,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         return handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
     case ExitReason::RDMSR:
         LTRACEF("handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
-        return handle_rdmsr(exit_info, vmcs, guest_state);
+        return handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     case ExitReason::WRMSR:
         LTRACEF("handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state);
@@ -629,9 +733,6 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         LTRACEF("handling VM entry failure\n\n");
         return ZX_ERR_BAD_STATE;
-    case ExitReason::APIC_ACCESS:
-        LTRACEF("handling APIC access\n\n");
-        return handle_apic_access(exit_info, vmcs, local_apic_state, gpas, traps, packet);
     case ExitReason::EPT_VIOLATION:
         LTRACEF("handling EPT violation\n\n");
         return handle_ept_violation(exit_info, vmcs, gpas, traps, packet);

@@ -23,7 +23,6 @@ enum class ExitReason : uint32_t {
     WRMSR                       = 32u,
     ENTRY_FAILURE_GUEST_STATE   = 33u,
     ENTRY_FAILURE_MSR_LOADING   = 34u,
-    APIC_ACCESS                 = 44u,
     EPT_VIOLATION               = 48u,
     XSETBV                      = 55u,
 };
@@ -36,14 +35,48 @@ enum class InterruptionType : uint8_t {
     SOFTWARE_EXCEPTION          = 6u,
 };
 
-// APIC access types.
-enum class ApicAccessType : uint8_t {
-    LINEAR_ACCESS_READ          = 0u,
-    LINEAR_ACCESS_WRITE         = 1u,
-    LINEAR_ACCESS_EXECUTE       = 2u,
-    LINEAR_ACCESS_EVENT         = 3u,
-    GUEST_PHYSICAL_EVENT        = 10u,
-    GUEST_PHYSICAL_RWX          = 15u,
+// X2APIC MSR addresses from Volume 3, Section 10.12.1.2.
+enum class X2ApicMsr : uint64_t {
+    ID                  = 0x802,
+    VERSION             = 0x803,
+    EOI                 = 0x80b,
+    TPR                 = 0x808,
+    LDR                 = 0x80d,
+    SVR                 = 0x80f,
+    ISR_31_0            = 0x810,
+    ISR_63_32           = 0x811,
+    ISR_95_64           = 0x812,
+    ISR_127_96          = 0x813,
+    ISR_159_128         = 0x814,
+    ISR_191_160         = 0x815,
+    ISR_223_192         = 0x816,
+    ISR_255_224         = 0x817,
+    TMR_31_0            = 0x818,
+    TMR_63_32           = 0x819,
+    TMR_95_64           = 0x81a,
+    TMR_127_96          = 0x81b,
+    TMR_159_128         = 0x81c,
+    TMR_191_160         = 0x81d,
+    TMR_223_192         = 0x81e,
+    TMR_255_224         = 0x81f,
+    IRR_31_0            = 0x820,
+    IRR_63_32           = 0x821,
+    IRR_95_64           = 0x822,
+    IRR_127_96          = 0x823,
+    IRR_159_128         = 0x824,
+    IRR_191_160         = 0x825,
+    IRR_223_192         = 0x826,
+    IRR_255_224         = 0x827,
+    ESR                 = 0x828,
+    ICR                 = 0x830,
+    LVT_TIMER           = 0x832,
+    LVT_MONITOR         = 0x834,
+    LVT_LINT0           = 0x835,
+    LVT_LINT1           = 0x836,
+    LVT_ERROR           = 0x837,
+    INITIAL_COUNT       = 0x838,
+    DCR                 = 0x83e,
+    SELF_IPI            = 0x83f,
 };
 
 // clang-format on
@@ -95,14 +128,6 @@ struct IoInfo {
     uint16_t port;
 
     IoInfo(uint64_t qualification);
-};
-
-// Stores local APIC access info from the VMCS exit qualification field.
-struct ApicAccessInfo {
-    uint16_t offset;
-    ApicAccessType access_type;
-
-    ApicAccessInfo(uint64_t qualification);
 };
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,

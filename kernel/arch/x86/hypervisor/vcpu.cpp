@@ -8,6 +8,7 @@
 
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/mp.h>
@@ -16,7 +17,6 @@
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
 #include <zircon/syscalls/hypervisor.h>
-#include <fbl/auto_call.h>
 
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
@@ -24,24 +24,9 @@
 
 extern uint8_t _gdt[];
 
-static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
-
 static const uint32_t kInterruptInfoValid = 1u << 31;
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptTypeHardwareException = 3u << 8;
-
-static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
-    uint8_t err;
-    uint64_t descriptor[] = { eptp, 0 };
-
-    __asm__ volatile(
-        "invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
-        : [err] "=r"(err)
-        : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
-        : "cc");
-
-    return err ? ZX_ERR_INTERNAL : ZX_OK;
-}
 
 static zx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
@@ -265,7 +250,6 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
 }
 
 zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t cr3,
-                      paddr_t virtual_apic_address, paddr_t apic_access_address,
                       paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page) {
     zx_status_t status = vmclear(vmcs_address);
@@ -277,12 +261,12 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     status = vmcs.SetControl(VmcsField32::PROCBASED_CTLS2,
                              read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
                              0,
-                             // Enable APIC access virtualization.
-                             kProcbasedCtls2ApicAccess |
-                                 // Enable use of extended page tables.
-                                 kProcbasedCtls2Ept |
+                             // Enable use of extended page tables.
+                             kProcbasedCtls2Ept |
                                  // Enable use of RDTSCP instruction.
                                  kProcbasedCtls2Rdtscp |
+                                 // Enable X2APIC.
+                                 kProcbasedCtls2x2Apic |
                                  // Associate cached translations of linear
                                  // addresses with a virtual processor ID.
                                  kProcbasedCtls2Vpid,
@@ -426,19 +410,6 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     const auto eptp = ept_pointer(pml4_address);
     vmcs.Write(VmcsField64::EPT_POINTER, eptp);
 
-    // From Volume 3, Section 28.3.3.4: If EPT was in use on a logical processor
-    // at one time with EPTP X, it is recommended that software use the INVEPT
-    // instruction with the “single-context” INVEPT type and with EPTP X in the
-    // INVEPT descriptor before a VM entry on the same logical processor that
-    // enables EPT with EPTP X and either (a) the “virtualize APIC accesses” VM-
-    // execution control was changed from 0 to 1; or (b) the value of the APIC-
-    // access address was changed.
-    invept(InvEpt::SINGLE_CONTEXT, eptp);
-
-    // Setup APIC handling.
-    vmcs.Write(VmcsField64::APIC_ACCESS_ADDRESS, apic_access_address);
-    vmcs.Write(VmcsField64::VIRTUAL_APIC_ADDRESS, virtual_apic_address);
-
     // Setup MSR handling.
     vmcs.Write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_address);
 
@@ -495,7 +466,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     // Setup VMCS guest state.
     uint64_t cr0 = X86_CR0_PE | // Enable protected mode
                    X86_CR0_PG | // Enable paging
-                   X86_CR0_NE; // Enable internal x87 exception handling
+                   X86_CR0_NE;  // Enable internal x87 exception handling
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
         return ZX_ERR_BAD_STATE;
     }
@@ -575,8 +546,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
 }
 
 // static
-zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
-                         paddr_t apic_access_address, paddr_t msr_bitmaps_address,
+zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_address,
                          GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                          fbl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
@@ -598,7 +568,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     thread_t* thread = pin_thread(vpid);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, traps));
+    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, gpas, traps));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -606,13 +576,6 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     status = vcpu->local_apic_state_.interrupt_tracker.Init();
     if (status != ZX_OK)
         return status;
-
-    paddr_t virtual_apic_address;
-    status = vcpu->apic_vmo_->Lookup(0, PAGE_SIZE, kPfFlags, guest_lookup_page,
-                                     &virtual_apic_address);
-    if (status != ZX_OK)
-        return status;
-    vcpu->local_apic_state_.apic_addr = paddr_to_physmap(virtual_apic_address);
 
     VmxInfo vmx_info;
     status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
@@ -630,9 +593,9 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
 
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
-    status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, ip, cr3, virtual_apic_address,
-                       apic_access_address, msr_bitmaps_address, gpas->table_phys(),
-                       &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
+    status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, ip, cr3, msr_bitmaps_address,
+                       gpas->table_phys(), &vcpu->vmx_state_, &vcpu->host_msr_page_,
+                       &vcpu->guest_msr_page_);
     if (status != ZX_OK)
         return status;
 
@@ -640,9 +603,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     return ZX_OK;
 }
 
-Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, fbl::RefPtr<VmObject> apic_vmo,
-           GuestPhysicalAddressSpace* gpas, TrapMap* traps)
-    : thread_(thread), vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), traps_(traps),
+Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
+    : thread_(thread), vpid_(vpid), gpas_(gpas), traps_(traps),
       vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
@@ -805,12 +767,10 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
-                            paddr_t apic_access_address, paddr_t msr_bitmaps_address,
+zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_address,
                             GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                             fbl::unique_ptr<Vcpu>* out) {
-    return Vcpu::Create(ip, cr3, apic_vmo, apic_access_address, msr_bitmaps_address, gpas, traps,
-                        out);
+    return Vcpu::Create(ip, cr3, msr_bitmaps_address, gpas, traps, out);
 }
 
 zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {
