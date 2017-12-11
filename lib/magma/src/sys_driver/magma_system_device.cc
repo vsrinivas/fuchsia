@@ -116,6 +116,8 @@ void MagmaSystemDevice::PageFlip(
                  semaphores[i]->platform_semaphore()->id());
             deferred_flip.signal.push_back(semaphores[i]);
         }
+        deferred_flip.signal.push_back(
+            MagmaSystemSemaphore::Create(std::move(buffer_presented_semaphore)));
 
         auto iter = std::find(std::begin(deferred_flip_buffers_), std::end(deferred_flip_buffers_),
                               buf->platform_buffer()->id());

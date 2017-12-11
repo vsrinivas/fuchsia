@@ -329,12 +329,12 @@ public:
 
             if (frame > 0) {
                 uint32_t last_index = (frame - 1) % buffers.size();
-                status = magma_wait_semaphore(buffer_presented_semaphores[last_index], 100);
+                status = magma_wait_semaphore(buffer_presented_semaphores[last_index], 1000);
                 if (status != MAGMA_STATUS_OK)
                     return DRETF(false, "wait on signal semaphore failed");
                 DLOG("buffer presented");
 
-                status = magma_wait_semaphore(signal_semaphores[last_index], 100);
+                status = magma_wait_semaphore(signal_semaphores[last_index], 1000);
                 if (status != MAGMA_STATUS_OK)
                     return DRETF(false, "wait on signal semaphore failed");
             }
@@ -418,11 +418,11 @@ TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }
 TEST(MagmaAbi, DisplayDoubleBuffered)
 {
     TestDisplayConnection test;
-    EXPECT_TRUE(test.Display(2, 10));
+    EXPECT_TRUE(test.Display(2, 60));
 }
 
 TEST(MagmaAbi, DisplayTripleBuffered)
 {
     TestDisplayConnection test;
-    EXPECT_TRUE(test.Display(3, 10));
+    EXPECT_TRUE(test.Display(3, 60));
 }
