@@ -48,52 +48,13 @@ out. The account is usable again immediately after logging back in.
 
 ## Debug and inspect
 
-The `inspect` command of `ledger_tool` allows you to inspect the local state of
-the Ledger.
+The **Ledger Debug Dashboard** allows you to inspect the local state of the Ledger.
 
-Note that Ledger should not be running while `ledger_tool inspect` is used to
-avoid internal conflicts, so remember to use `killall ledger` beforehand, or
-run in headless mode. Thus, `ledger_tool inspect` can only be used post-mortem.
+You need to point your browser to the port 4001 of the Fuchsia machine to access
+the dashboard of the current user.
+The dashboard is also accessible from any device connected to the fuchsia machine
+on the same local network.
 
-Note also that this tool exposes commits, which are internal structures used by
-the Ledger and not exposed to clients.
-
-The `inspect` command has three main subcommands:
-
-### Pages
-To get a list of local pages for the provided app, along with the current head
-commits, use the `pages` subcommand:
-
-```
-ledger_tool inspect <REPOSITORY_PATH> <APP_NAME> pages
-```
-
-### Commits
-To get the metadata of a commit (timestamp, parents), as well as the contents
-of the page at this commit, use the `commit` subcommand:
-
-```
-ledger_tool inspect <REPOSITORY_PATH> <APP_NAME> commit <PAGE_ID> <COMMIT_ID>
-```
-
-### Commit graph
-To get a graph of all commits of a page, use the `commit_graph` subcommand:
-
-```
-ledger_tool inspect <REPOSITORY_PATH> <APP_NAME> commit_graph <PAGE_ID>
-```
-
-`commit_graph` writes a .dot file in `/tmp` containing the full commit graph of
-the provided page. One can then use `scp` to download the file to the host and
-compile it with dot. Use the SVG format to get additional information, such as
-the commit timestamp and the content hash as tooltips. Unsynced commits are
-displayed in red.
-
-### Parameters
-
-* **REPOSITORY_PATH**: The Ledger repository path
-  (e.g. `/data/modular/<USER_ID>/LEDGER/content`)
-* **APP_NAME**: The application name associated with the Ledger instance
-  (e.g. `modular_user_runner` or `file:///system/bin/<user_app_name>`)
-* **PAGE_ID**: The page id in hex value
-* **COMMIT_ID**: The commit id in hex value
+The dashboard exposes the instances for the current user. For each instance, it displays
+its pages. For each page, it displays its commits. And then for each commit, it displays
+its entries (keys, values, priorities).
