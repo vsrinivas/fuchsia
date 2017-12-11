@@ -12,30 +12,31 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/status.h>
 
-#include "utils.h"
+#include "utils-impl.h"
 
-// Same as basename, except will not modify |file|.
-// This assumes there are no trailing /s. If there are then |file| is returned
-// as is.
-
-const char* cl_basename(const char* s) {
-    // This implementation is copied from musl's basename.c.
-    size_t i;
-    if (!s || !*s)
-        return ".";
-    i = strlen(s) - 1;
-    if (i > 0 && s[i] == '/')
-        return s;
-    for (; i && s[i - 1] != '/'; i--)
-        ;
-    return s + i;
-}
+namespace inspector {
 
 int verbosity_level = 0;
 
+void set_verbosity(int level) {
+    verbosity_level = level;
+}
+
+// Same as basename, except will not modify |path|.
+// If |path| has a trailing / then |path| is returned unchanged.
+
+const char* path_basename(const char* path) {
+    const char* base = strrchr(path, '/');
+    if (base == nullptr)
+        return path;
+    if (*base == '\0')
+        return path;
+    return base + 1;
+}
+
 void do_print_debug(const char* file, int line, const char* func, const char* fmt, ...) {
     fflush(stdout);
-    const char* base = cl_basename(file);
+    const char* base = path_basename(file);
     va_list args;
     va_start(args, fmt);
     fprintf(stderr, "%s:%d: %s: ", base, line, func);
@@ -45,10 +46,10 @@ void do_print_debug(const char* file, int line, const char* func, const char* fm
 }
 
 void do_print_error(const char* file, int line, const char* fmt, ...) {
-    const char* base = cl_basename(file);
+    const char* base = path_basename(file);
     va_list args;
     va_start(args, fmt);
-    fprintf(stderr, "crashlogger: %s:%d: ", base, line);
+    fprintf(stderr, "inspector: %s:%d: ", base, line);
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
     va_end(args);
@@ -57,23 +58,6 @@ void do_print_error(const char* file, int line, const char* fmt, ...) {
 void do_print_zx_error(const char* file, int line, const char* what, zx_status_t status) {
     do_print_error(file, line, "%s: %d (%s)",
                    what, status, zx_status_get_string(status));
-}
-
-// While this should never fail given a valid handle,
-// returns ZX_KOID_INVALID on failure.
-
-zx_koid_t get_koid(zx_handle_t handle) {
-    zx_info_handle_basic_t info;
-    if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) < 0) {
-        // This shouldn't ever happen, so don't just ignore it.
-        fprintf(stderr, "Eh? ZX_INFO_HANDLE_BASIC failed\n");
-        // OTOH we can't just fail, we have to be robust about reporting back
-        // to the kernel that we handled the exception.
-        // TODO: Provide ability to safely terminate at any point (e.g., for assert
-        // failures and such).
-        return ZX_KOID_INVALID;
-    }
-    return info.koid;
 }
 
 zx_status_t read_mem(zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len) {
@@ -218,3 +202,5 @@ zx_status_t fetch_build_id(zx_handle_t h, zx_vaddr_t base, char* buf, size_t buf
 
     return ZX_ERR_NOT_FOUND;
 }
+
+}  // namespace inspector

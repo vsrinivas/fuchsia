@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 
-#include "utils.h"
+#include "inspector/utils.h"
 
 #if defined(__x86_64__)  // entire file
 

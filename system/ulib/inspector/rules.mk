@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,29 +6,23 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
-MODULE_GROUP := core
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/crashlogger.cpp \
-    $(LOCAL_DIR)/dump-pt.cpp \
-
-MODULE_NAME := crashlogger
+    $(LOCAL_DIR)/backtrace.cpp \
+    $(LOCAL_DIR)/dso-list.cpp \
+    $(LOCAL_DIR)/registers.cpp \
+    $(LOCAL_DIR)/utils.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/inspector \
     system/ulib/zxcpp \
     system/ulib/fbl \
-    system/ulib/pretty \
-    system/ulib/runtime
 
 MODULE_LIBS := \
     third_party/ulib/backtrace \
     third_party/ulib/ngunwind \
-    system/ulib/launchpad \
-    system/ulib/fdio \
     system/ulib/zircon \
-    system/ulib/c
+    system/ulib/c \
 
 # Compile this with frame pointers so that if we crash
 # the simplistic unwinder will work.

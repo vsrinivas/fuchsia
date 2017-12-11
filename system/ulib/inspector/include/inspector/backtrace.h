@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include <inttypes.h>
+
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
-
-#include <inttypes.h>
+namespace inspector {
 
 void backtrace(zx_handle_t process, zx_handle_t thread,
                uintptr_t pc, uintptr_t sp, uintptr_t fp,
                bool use_libunwind);
 
-__END_CDECLS;
+}  // namespace inspector

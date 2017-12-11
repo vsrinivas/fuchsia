@@ -14,25 +14,21 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 #include <fdio/util.h>
 #include <pretty/hexdump.h>
 
-#include "backtrace.h"
-#include "dso-list.h"
+#include "inspector/backtrace.h"
+#include "inspector/dso-list.h"
+#include "inspector/registers.h"
+#include "inspector/utils.h"
 #include "dump-pt.h"
-#include "utils.h"
 
-#if defined(__x86_64__)
-using gregs_type = zx_x86_64_general_regs_t;
-#elif defined(__aarch64__)
-using gregs_type = zx_arm64_general_regs_t;
-#else
-using gregs_type = int; // unsupported arch
-#endif
+using inspector::general_regs_type;
+
+static int verbosity_level = 0;
 
 // If true then s/w breakpoint instructions do not kill the process.
 // After the backtrace is printed the thread quietly resumes.
@@ -46,6 +42,23 @@ static bool swbreak_backtrace_enabled = true;
 static bool pt_dump_enabled = false;
 #endif
 
+// While this should never fail given a valid handle,
+// returns ZX_KOID_INVALID on failure.
+
+static zx_koid_t get_koid(zx_handle_t handle) {
+    zx_info_handle_basic_t info;
+    if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) < 0) {
+        // This shouldn't ever happen, so don't just ignore it.
+        fprintf(stderr, "Eh? ZX_INFO_HANDLE_BASIC failed\n");
+        // OTOH we can't just fail, we have to be robust about reporting back
+        // to the kernel that we handled the exception.
+        // TODO: Provide ability to safely terminate at any point (e.g., for assert
+        // failures and such).
+        return ZX_KOID_INVALID;
+    }
+    return info.koid;
+}
+
 // Return true if the thread is to be resumed "successfully" (meaning the o/s
 // won't kill it, and thus the kill process).
 
@@ -57,19 +70,19 @@ static bool is_resumable_swbreak(uint32_t excp_type) {
 
 #if defined(__x86_64__)
 
-int have_swbreak_magic(const gregs_type* regs) {
+int have_swbreak_magic(const general_regs_type* regs) {
     return regs->rax == CRASHLOGGER_RESUME_MAGIC;
 }
 
 #elif defined(__aarch64__)
 
-int have_swbreak_magic(const gregs_type* regs) {
+int have_swbreak_magic(const general_regs_type* regs) {
     return regs->r[0] == CRASHLOGGER_RESUME_MAGIC;
 }
 
 #else
 
-int have_swbreak_magic(const gregs_type* regs) {
+int have_swbreak_magic(const general_regs_type* regs) {
     return 0;
 }
 
@@ -115,60 +128,6 @@ zx_handle_t crashed_thread = ZX_HANDLE_INVALID;
 // The exception that |crashed_thread| got.
 uint32_t crashed_thread_excp_type;
 
-void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
-                         const zx_x86_64_general_regs_t& regs) {
-    printf(" CS:  %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18" PRIx64 "\n",
-           0ull, regs.rip, regs.rflags, exc_data.cr2);
-    printf(" RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
-           regs.rax, regs.rbx, regs.rcx, regs.rdx);
-    printf(" RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
-           regs.rsi, regs.rdi, regs.rbp, regs.rsp);
-    printf("  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
-           regs.r8, regs.r9, regs.r10, regs.r11);
-    printf(" R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
-           regs.r12, regs.r13, regs.r14, regs.r15);
-    // errc value is 17 on purpose, errc is 4 characters
-    printf(" errc: %#17" PRIx64 "\n", exc_data.err_code);
-}
-
-void output_frame_arm64(const arm64_exc_data_t& exc_data,
-                        const zx_arm64_general_regs_t& regs) {
-    printf(" x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
-           regs.r[0], regs.r[1], regs.r[2], regs.r[3]);
-    printf(" x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n",
-           regs.r[4], regs.r[5], regs.r[6], regs.r[7]);
-    printf(" x8  %#18" PRIx64 " x9  %#18" PRIx64 " x10 %#18" PRIx64 " x11 %#18" PRIx64 "\n",
-           regs.r[8], regs.r[9], regs.r[10], regs.r[11]);
-    printf(" x12 %#18" PRIx64 " x13 %#18" PRIx64 " x14 %#18" PRIx64 " x15 %#18" PRIx64 "\n",
-           regs.r[12], regs.r[13], regs.r[14], regs.r[15]);
-    printf(" x16 %#18" PRIx64 " x17 %#18" PRIx64 " x18 %#18" PRIx64 " x19 %#18" PRIx64 "\n",
-           regs.r[16], regs.r[17], regs.r[18], regs.r[19]);
-    printf(" x20 %#18" PRIx64 " x21 %#18" PRIx64 " x22 %#18" PRIx64 " x23 %#18" PRIx64 "\n",
-           regs.r[20], regs.r[21], regs.r[22], regs.r[23]);
-    printf(" x24 %#18" PRIx64 " x25 %#18" PRIx64 " x26 %#18" PRIx64 " x27 %#18" PRIx64 "\n",
-           regs.r[24], regs.r[25], regs.r[26], regs.r[27]);
-    printf(" x28 %#18" PRIx64 " x29 %#18" PRIx64 " lr  %#18" PRIx64 " sp  %#18" PRIx64 "\n",
-           regs.r[28], regs.r[29], regs.lr, regs.sp);
-    printf(" pc  %#18" PRIx64 " psr %#18" PRIx64 "\n",
-           regs.pc, regs.cpsr);
-};
-
-bool read_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
-    // The syscall takes a uint32_t.
-    auto to_xfer = static_cast<uint32_t>(buf_size);
-    uint32_t bytes_read;
-    auto status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, buf, to_xfer, &bytes_read);
-    if (status < 0) {
-        print_zx_error("unable to access general regs", status);
-        return false;
-    }
-    if (bytes_read != buf_size) {
-        print_error("general regs size mismatch: %u != %zu\n", bytes_read, buf_size);
-        return false;
-    }
-    return true;
-}
-
 bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
     // The syscall takes a uint32_t.
     auto to_xfer = static_cast<uint32_t> (buf_size);
@@ -208,14 +167,14 @@ void resume_thread(zx_handle_t thread, bool handled) {
 
 void resume_thread_from_exception(zx_handle_t thread,
                                   uint32_t excp_type,
-                                  const gregs_type* gregs) {
+                                  const general_regs_type* gregs) {
     if (is_resumable_swbreak(excp_type) &&
         gregs != nullptr && have_swbreak_magic(gregs)) {
 #if defined(__x86_64__)
         // On x86, the pc is left at one past the s/w break insn,
         // so there's nothing more we need to do.
 #elif defined(__aarch64__)
-        gregs_type regs = *gregs;
+        general_regs_type regs = *gregs;
         // Skip past the brk instruction.
         regs.pc += 4;
         if (!write_general_regs(thread, &regs, sizeof(regs)))
@@ -279,13 +238,13 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     }
     auto context = report.context;
 
-    gregs_type reg_buf;
-    gregs_type *regs = nullptr;
+    general_regs_type reg_buf;
+    general_regs_type *regs = nullptr;
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
     const char* fatal = "fatal ";
 
-    if (!read_general_regs(thread, &reg_buf, sizeof(reg_buf)))
+    if (!inspector::read_general_regs(thread, &reg_buf))
         goto Fail;
     // Delay setting this until here so Fail will know we now have the regs.
     regs = &reg_buf;
@@ -332,9 +291,9 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), pc);
 
 #if defined(__x86_64__)
-    output_frame_x86_64(context.arch.u.x86_64, *regs);
+    inspector::print_general_regs(regs, &context.arch.u.x86_64);
 #elif defined(__aarch64__)
-    output_frame_arm64(context.arch.u.arm_64, *regs);
+    inspector::print_general_regs(regs, &context.arch.u.arm_64);
 
     // Only output the Fault address register and ESR if there's a data fault.
     if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type) {
@@ -348,7 +307,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     printf("bottom of user stack:\n");
     dump_memory(process, sp, kMemoryDumpSize);
     printf("arch: %s\n", arch);
-    backtrace(process, thread, pc, sp, fp, use_libunwind);
+    inspector::backtrace(process, thread, pc, sp, fp, use_libunwind);
 
     // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
@@ -359,7 +318,8 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
 #endif
 
 Fail:
-    debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
+    if (verbosity_level >= 1)
+        printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
 
     // allow the thread (and then process) to die, unless the exception is
     // to just trigger a backtrace (if enabled)
@@ -504,14 +464,17 @@ int main(int argc, char** argv) {
         }
     }
 
+    inspector::set_verbosity(verbosity_level);
+
     // At debugging level 1 print our dso list (in case we crash in a way
     // that prevents printing it later).
     if (verbosity_level >= 1) {
         zx_handle_t self = zx_process_self();
-        dsoinfo_t* dso_list = dso_fetch_list(self, "crashlogger");
+        inspector::dsoinfo_t* dso_list =
+            inspector::dso_fetch_list(self, "crashlogger");
         printf("Crashlogger dso list:\n");
-        dso_print_list(dso_list);
-        dso_free_list(dso_list);
+        inspector::dso_print_list(dso_list);
+        inspector::dso_free_list(dso_list);
     }
 
     // If asked, undo any previously installed exception port.

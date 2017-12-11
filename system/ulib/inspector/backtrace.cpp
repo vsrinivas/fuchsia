@@ -23,9 +23,11 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 
-#include "backtrace.h"
-#include "dso-list.h"
-#include "utils.h"
+#include "inspector/backtrace.h"
+#include "dso-list-impl.h"
+#include "utils-impl.h"
+
+namespace inspector {
 
 // Keep open debug info for this many files.
 constexpr size_t kDebugInfoCacheNumWays = 2;
@@ -247,7 +249,7 @@ static void btprint(DebugInfoCache* di_cache, int n, uintptr_t pc, uintptr_t sp)
     printf("bt#%02d: pc %p sp %p (%s,%p)",
            n, (void*) pc, (void*) sp, dso->name, (void*) (pc - dso->base));
     if (pcinfo_data.filename != nullptr && pcinfo_data.lineno > 0) {
-        const char* base = cl_basename(pcinfo_data.filename);
+        const char* base = path_basename(pcinfo_data.filename);
         printf(" %s:%d", base, pcinfo_data.lineno);
     }
     if (pcinfo_data.function != nullptr)
@@ -377,3 +379,5 @@ void backtrace(zx_handle_t process, zx_handle_t thread,
     unw_destroy_addr_space(remote_as);
     unw_destroy_fuchsia(fuchsia);
 }
+
+}  // namespace inspector

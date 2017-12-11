@@ -13,14 +13,16 @@
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
 
-#include "dso-list.h"
-#include "utils.h"
+#include "dso-list-impl.h"
+#include "utils-impl.h"
 
 #define rdebug_off_lmap offsetof(struct r_debug, r_map)
 
 #define lmap_off_next offsetof(struct link_map, l_next)
 #define lmap_off_name offsetof(struct link_map, l_name)
 #define lmap_off_addr offsetof(struct link_map, l_addr)
+
+namespace inspector {
 
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
@@ -168,3 +170,5 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
 
     return dso->debug_file_status;
 }
+
+}  // namespace inspector
