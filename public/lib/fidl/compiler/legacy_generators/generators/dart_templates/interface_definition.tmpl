@@ -91,10 +91,11 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
       ctrl.proxyError("The Proxy is closed.");
       return;
     }
-    var params = new {{request_struct|name}}();
+    var params = new {{request_struct|name}}.init(
 {%- for parameter in method.parameters %}
-    params.{{parameter|name}} = {{parameter|name}};
+        {{parameter|name}}: {{parameter|name}}{% if not loop.last %}, {% endif %}
 {%- endfor %}
+    );
     ctrl.sendMessage(params, _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name);
   }
 {%- else %}

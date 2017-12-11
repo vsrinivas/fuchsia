@@ -26,11 +26,20 @@ class {{struct|name}} extends bindings.Struct {
 
   {{struct|name}}() : super(kVersions.last.size);
 
-  {{struct|name}}.init(
+  {{struct|name}}.init({%- if struct.packed.packed_fields %}{
 {%- for packed_field in struct.packed.packed_fields %}
+{%- if not packed_field.field.kind|is_nullable_kind %}
+    @required
+{%- endif %}
     this.{{packed_field.field|name}}{% if not loop.last %}, {% endif %}
 {%- endfor %}
-  ) : super(kVersions.last.size);
+  }{%- endif %}) : super(kVersions.last.size) {
+{%- for packed_field in struct.packed.packed_fields %}
+{%- if not packed_field.field.kind|is_nullable_kind %}
+    assert(this.{{packed_field.field|name}} != null);
+{%- endif %}
+{%- endfor %}
+}
 
   static {{struct|name}} deserialize(bindings.Message message) =>
       bindings.Struct.deserialize(decode, message);
