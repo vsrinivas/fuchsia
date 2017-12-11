@@ -17,11 +17,10 @@ executable("bin") {
   deps = [
     "//garnet/lib/machina",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/lib/fdt",
   ]
 
-  libs = [
-    "hypervisor",
-  ]
+  libs = [ "hypervisor" ]
 }
 
 package("guest") {
@@ -31,20 +30,26 @@ package("guest") {
 
   binary = "guest"
 
-  meta = [{
-    path = rebase_path("meta/sandbox")
-    dest = "sandbox"
-  }]
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 
-  if (current_cpu == "x64") {
+  if (target_cpu == "arm64") {
+    resources = [ {
+          path = rebase_path("//garnet/lib/machina/arch/arm64/dts/board.dtb")
+          dest = "board.dtb"
+        } ]
+  } else if (current_cpu == "x64") {
     resources = [
       {
         path = rebase_path("//garnet/lib/machina/arch/x86/acpi/dsdt.aml")
         dest = "dsdt.aml"
-      }, {
+      },
+      {
         path = rebase_path("//garnet/lib/machina/arch/x86/acpi/mcfg.aml")
         dest = "mcfg.aml"
-      }
+      },
     ]
   }
 }

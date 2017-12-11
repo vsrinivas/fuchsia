@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <hypervisor/guest.h>
 #include <zircon/assert.h>
 #include <zircon/boot/bootdata.h>
@@ -54,7 +55,7 @@ static zx_status_t load_zircon(const int fd,
     // 2. Did we load an EFI kernel image for a different kernel.
     if (*read_loc != kBuildSigStartMagic)
       return ZX_ERR_NOT_SUPPORTED;
-    fprintf(stderr, "Failed to read Zircon kernel data\n");
+    fprintf(stderr, "Failed to read Zircon kernel image\n");
     return ZX_ERR_IO;
   }
 
@@ -71,7 +72,6 @@ static zx_status_t load_cmdline(const char* cmdline,
                                 const uintptr_t addr,
                                 const size_t size,
                                 const uintptr_t bootdata_off) {
-
   bootdata_t* container_hdr =
       reinterpret_cast<bootdata_t*>(addr + bootdata_off);
   const uintptr_t data_off =
@@ -175,10 +175,10 @@ static zx_status_t create_bootdata(const uintptr_t addr,
 #endif
 }
 
-static zx_status_t is_zircon(const uintptr_t first_page,
-                             uintptr_t* guest_ip,
-                             uintptr_t* kernel_off,
-                             size_t* kernel_len) {
+static zx_status_t read_bootdata(const uintptr_t first_page,
+                                 uintptr_t* guest_ip,
+                                 uintptr_t* kernel_off,
+                                 size_t* kernel_len) {
   zircon_kernel_t* kernel_header =
       reinterpret_cast<zircon_kernel_t*>(first_page);
 
@@ -208,7 +208,7 @@ zx_status_t setup_zircon(const uintptr_t addr,
   uintptr_t kernel_off = 0;
   size_t kernel_len = 0;
   zx_status_t status =
-      is_zircon(first_page, guest_ip, &kernel_off, &kernel_len);
+      read_bootdata(first_page, guest_ip, &kernel_off, &kernel_len);
   if (status != ZX_OK)
     return status;
   if (!valid_location(size, *guest_ip, kernel_off, kernel_len))
@@ -224,23 +224,20 @@ zx_status_t setup_zircon(const uintptr_t addr,
   if (status != ZX_OK)
     return status;
 
-  // If we have a command line, load it.
-  if (cmdline != nullptr) {
-    status = load_cmdline(cmdline, addr, size, kRamdiskOffset);
-    if (status != ZX_OK)
-      return status;
-  }
+  // Load the kernel command line.
+  status = load_cmdline(cmdline, addr, size, kRamdiskOffset);
+  if (status != ZX_OK)
+    return status;
 
   // If we have been provided a BOOTFS image, load it.
   if (bootdata_path) {
-    int boot_fd = open(bootdata_path, O_RDONLY);
-    if (boot_fd < 0) {
+    fbl::unique_fd boot_fd(open(bootdata_path, O_RDONLY));
+    if (!boot_fd) {
       fprintf(stderr, "Failed to open BOOTFS image \"%s\"\n", bootdata_path);
       return ZX_ERR_IO;
     }
 
-    status = load_bootfs(boot_fd, addr, size, kRamdiskOffset);
-    close(boot_fd);
+    status = load_bootfs(boot_fd.get(), addr, size, kRamdiskOffset);
     if (status != ZX_OK)
       return status;
   }

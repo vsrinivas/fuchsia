@@ -4,15 +4,18 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <libfdt.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 
+#include "garnet/bin/guest/efi.h"
 #include "garnet/bin/guest/kernel.h"
 #include "garnet/bin/guest/linux.h"
 
@@ -20,10 +23,12 @@ static const uint8_t kLoaderTypeUnspecified = 0xff;  // Unknown bootloader
 static const uint16_t kMinBootProtocol = 0x200;      // bzImage boot protocol
 static const uint16_t kBootFlagMagic = 0xaa55;
 static const uint32_t kHeaderMagic = 0x53726448;
-static const uintptr_t kE820MapOffset = 0x02d0;
 static const uintptr_t kEntryOffset = 0x200;
+static const uintptr_t kE820MapOffset = 0x02d0;
 static const size_t kMaxE820Entries = 128;
-static const size_t kSectorSize = 512;
+__UNUSED static const size_t kSectorSize = 512;
+
+static const char kDtbPath[] = "/pkg/data/board.dtb";
 
 // clang-format off
 
@@ -93,117 +98,84 @@ static bool is_boot_params(const uintptr_t first_page) {
          bp(first_page, HEADER) == kHeaderMagic;
 }
 
-static zx_status_t load_linux(const int fd,
-                              const uintptr_t addr,
-                              const uintptr_t first_page,
-                              const uintptr_t kernel_off,
-                              const size_t kernel_len) {
-  int setup_sects = bp(first_page, SETUP_SECTS);
-  if (setup_sects == 0) {
-    // 0 here actually means 4, see boot.txt.
-    setup_sects = 4;
-  }
-
-  int protected_mode_off = (setup_sects + 1) * kSectorSize;
-  off_t ret = lseek(fd, protected_mode_off, SEEK_SET);
+static zx_status_t read_fd(const uintptr_t addr,
+                           const size_t size,
+                           const int fd,
+                           const uintptr_t off,
+                           size_t* file_size) {
+  struct stat stat;
+  ssize_t ret = fstat(fd, &stat);
   if (ret < 0) {
-    fprintf(stderr, "Failed seek to protected mode kernel\n");
+    fprintf(stderr, "Failed to stat file\n");
     return ZX_ERR_IO;
   }
-
-  ret = read(fd, reinterpret_cast<void*>(addr + kernel_off), kernel_len);
-  if (static_cast<size_t>(ret) != kernel_len) {
-    fprintf(stderr, "Failed to read Linux kernel data\n");
-    return ZX_ERR_IO;
-  }
-
-  return ZX_OK;
-}
-
-static zx_status_t load_cmdline(const char* cmdline,
-                                const uintptr_t addr,
-                                const size_t size,
-                                const uintptr_t first_page,
-                                const uintptr_t cmdline_off) {
-  // Copy the command line string below the zero page.
-  size_t cmdline_len = strlen(cmdline) + 1;
-  if (cmdline_off > UINT32_MAX || cmdline_len > size - cmdline_off) {
-    fprintf(stderr, "Command line is too long\n");
+  if (stat.st_size > size - off) {
+    fprintf(stderr, "File is too large\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
-
-  memcpy(reinterpret_cast<void*>(addr + cmdline_off), cmdline, cmdline_len);
-
-  bp(first_page, COMMAND_LINE) = static_cast<uint32_t>(cmdline_off);
+  off_t fd_off = lseek(fd, 0, SEEK_CUR);
+  if (fd_off < 0) {
+    fprintf(stderr, "Failed to get file position\n");
+    return ZX_ERR_IO;
+  }
+  ret = read(fd, reinterpret_cast<void*>(addr + off), stat.st_size);
+  if (ret != stat.st_size - fd_off) {
+    fprintf(stderr, "Failed to read file\n");
+    return ZX_ERR_IO;
+  }
+  if (file_size != nullptr)
+    *file_size = stat.st_size;
   return ZX_OK;
 }
 
-static zx_status_t load_initrd(const int fd,
-                               const uintptr_t addr,
+#if __x86_64__
+static zx_status_t load_initrd(const uintptr_t addr,
                                const size_t size,
                                const uintptr_t first_page,
+                               const int fd,
                                const uintptr_t bootdata_off) {
-  struct stat stat;
-  off_t ret = fstat(fd, &stat);
-  if (ret < 0) {
-    fprintf(stderr, "Failed to stat initial RAM disk\n");
-    return ZX_ERR_IO;
-  }
-
-  size_t initrd_size = stat.st_size;
-  if (initrd_size > UINT32_MAX || initrd_size > size - bootdata_off) {
-    fprintf(stderr, "Initial RAM disk is too large\n");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  ret = read(fd, reinterpret_cast<void*>(addr + bootdata_off), initrd_size);
-  if (static_cast<size_t>(ret) != initrd_size) {
+  size_t initrd_size = 0;
+  zx_status_t status = read_fd(addr, size, fd, bootdata_off, &initrd_size);
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to read initial RAM disk\n");
-    return ZX_ERR_IO;
+    return status;
   }
 
   bp(first_page, RAMDISK_IMAGE) = kRamdiskOffset;
   bp(first_page, RAMDISK_SIZE) = static_cast<uint32_t>(initrd_size);
   return ZX_OK;
 }
+#endif  // __x86_64__
 
-static zx_status_t create_boot_params(const uintptr_t addr,
-                                      const size_t size,
-                                      const uintptr_t first_page) {
-  // Set type of bootloader.
-  bp(first_page, LOADER_TYPE) = kLoaderTypeUnspecified;
-
-  // Zero video, columns and lines to skip early video init.
-  bp(first_page, VIDEO_MODE) = 0;
-  bp(first_page, VIDEO_COLS) = 0;
-  bp(first_page, VIDEO_LINES) = 0;
-
-  // Setup e820 memory map.
-  size_t e820_entries = guest_e820_size(size) / sizeof(e820entry_t);
-  if (e820_entries > kMaxE820Entries) {
-    fprintf(stderr, "Not enough space for e820 memory map\n");
-    return ZX_ERR_BAD_STATE;
-  }
-  bp(first_page, E820_COUNT) = static_cast<uint8_t>(e820_entries);
-
-  return guest_create_e820(addr, size, first_page - addr + kE820MapOffset);
-}
-
-static zx_status_t is_linux(const uintptr_t first_page,
-                            uintptr_t* guest_ip,
-                            uintptr_t* kernel_off,
-                            size_t* kernel_len) {
+static zx_status_t read_boot_params(const uintptr_t first_page,
+                                    const int fd,
+                                    uintptr_t* guest_ip,
+                                    uintptr_t* kernel_off,
+                                    size_t* kernel_len) {
+  // Validate kernel configuration.
   uint16_t xloadflags = bp(first_page, XLOADFLAGS);
   if (~xloadflags & (KERNEL_64 | CAN_BE_LOADED_ABOVE_4G)) {
-    fprintf(stderr, "Unsupported kernel type\n");
+    fprintf(stderr, "Unsupported Linux kernel\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   uint16_t protocol = bp(first_page, VERSION);
   uint8_t loadflags = bp(first_page, LOADFLAGS);
   if (protocol < kMinBootProtocol || !(loadflags & LOAD_HIGH)) {
-    fprintf(stderr, "Kernel is not a bzImage, use a newer kernel\n");
+    fprintf(stderr, "Linux kernel is not a bzImage\n");
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Seek to the protected mode kernel.
+  uint8_t setup_sects = bp(first_page, SETUP_SECTS);
+  if (setup_sects == 0) {
+    // 0 here actually means 4, see boot.txt.
+    setup_sects = 4;
+  }
+  off_t seek_off = (setup_sects + 1) * kSectorSize;
+  off_t ret = lseek(fd, seek_off, SEEK_SET);
+  if (ret < 0) {
+    fprintf(stderr, "Failed seek to protected mode Linux kernel\n");
+    return ZX_ERR_IO;
   }
 
   // Default to the preferred address, then change if we're relocatable.
@@ -219,6 +191,75 @@ static zx_status_t is_linux(const uintptr_t first_page,
   return ZX_OK;
 }
 
+static zx_status_t write_boot_params(const uintptr_t addr,
+                                     const size_t size,
+                                     const uintptr_t first_page,
+                                     const char* cmdline,
+                                     const uintptr_t cmdline_off) {
+  // Set type of bootloader.
+  bp(first_page, LOADER_TYPE) = kLoaderTypeUnspecified;
+
+  // Zero video, columns and lines to skip early video init.
+  bp(first_page, VIDEO_MODE) = 0;
+  bp(first_page, VIDEO_COLS) = 0;
+  bp(first_page, VIDEO_LINES) = 0;
+
+  // Copy the command line string.
+  size_t cmdline_len = strlen(cmdline) + 1;
+  if (cmdline_off > UINT32_MAX || cmdline_len > size - cmdline_off) {
+    fprintf(stderr, "Command line is too long\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  memcpy(reinterpret_cast<void*>(addr + cmdline_off), cmdline, cmdline_len);
+  bp(first_page, COMMAND_LINE) = static_cast<uint32_t>(cmdline_off);
+
+  // Setup e820 memory map.
+  size_t e820_entries = guest_e820_size(size) / sizeof(e820entry_t);
+  if (e820_entries > kMaxE820Entries) {
+    fprintf(stderr, "Not enough space for e820 memory map\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  bp(first_page, E820_COUNT) = static_cast<uint8_t>(e820_entries);
+
+  return guest_create_e820(addr, size, first_page - addr + kE820MapOffset);
+}
+
+static zx_status_t load_device_tree(const uintptr_t addr,
+                                    const size_t size,
+                                    const int fd,
+                                    const char* cmdline,
+                                    const uintptr_t dtb_off) {
+  size_t dtb_size = 0;
+  zx_status_t status = read_fd(addr, size, fd, dtb_off, &dtb_size);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to load device tree\n");
+    return status;
+  }
+
+  // Validate device tree.
+  void* dtb = reinterpret_cast<void*>(addr + dtb_off);
+  int ret = fdt_check_header(dtb);
+  if (ret < 0) {
+    fprintf(stderr, "Invalid device tree\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  // Add command line to device tree.
+  ret = fdt_path_offset(dtb, "/chosen");
+  if (ret < 0) {
+    fprintf(stderr, "Failed to find \"/chosen\" in device tree\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  ret = fdt_setprop_string(dtb, ret, "bootargs", cmdline);
+  if (ret < 0) {
+    fprintf(stderr,
+            "Failed to add \"bootargs\" property to device tree, space must be "
+            "reserved in the device tree\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
+}
+
 zx_status_t setup_linux(const uintptr_t addr,
                         const size_t size,
                         const uintptr_t first_page,
@@ -227,45 +268,64 @@ zx_status_t setup_linux(const uintptr_t addr,
                         const char* cmdline,
                         uintptr_t* guest_ip,
                         uintptr_t* ramdisk_off) {
-  if (!is_boot_params(first_page))
-    return ZX_ERR_NOT_SUPPORTED;
-
   uintptr_t kernel_off = 0;
   size_t kernel_len = 0;
-  zx_status_t status = is_linux(first_page, guest_ip, &kernel_off, &kernel_len);
-  if (status != ZX_OK)
-    return ZX_ERR_NOT_SUPPORTED;
+
+  if (is_boot_params(first_page)) {
+    zx_status_t status =
+        read_boot_params(first_page, fd, guest_ip, &kernel_off, &kernel_len);
+    if (status != ZX_OK)
+      return status;
+
+    uintptr_t cmdline_off = kernel_off + kernel_len;
+    status = write_boot_params(addr, size, first_page, cmdline, cmdline_off);
+    if (status != ZX_OK)
+      return status;
+
+    *ramdisk_off = first_page - addr;
+  } else {
+    zx_status_t status =
+        read_efi(first_page, guest_ip, &kernel_off, &kernel_len);
+    if (status != ZX_OK)
+      return status;
+
+    fbl::unique_fd dtb_fd(open(kDtbPath, O_RDONLY));
+    if (!dtb_fd) {
+      fprintf(stderr, "Failed to open device tree\n");
+      return ZX_ERR_IO;
+    }
+
+    status =
+        load_device_tree(addr, size, dtb_fd.get(), cmdline, kRamdiskOffset);
+    if (status != ZX_OK)
+      return status;
+
+    *ramdisk_off = kRamdiskOffset;
+  }
+
   if (!valid_location(size, *guest_ip, kernel_off, kernel_len))
     return ZX_ERR_IO_DATA_INTEGRITY;
 
-  status = create_boot_params(addr, size, first_page);
-  if (status != ZX_OK)
+  zx_status_t status = read_fd(addr, size, fd, kernel_off, nullptr);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to read Linux kernel\n");
     return status;
-
-  status = load_linux(fd, addr, first_page, kernel_off, kernel_len);
-  if (status != ZX_OK)
-    return status;
-
-  if (cmdline != nullptr) {
-    uintptr_t cmdline_off = kernel_off + kernel_len;
-    status = load_cmdline(cmdline, addr, size, first_page, cmdline_off);
-    if (status != ZX_OK)
-      return status;
   }
 
+#if __x86_64__
   if (initrd_path != nullptr) {
-    int initrd_fd = open(initrd_path, O_RDONLY);
-    if (initrd_fd < 0) {
+    fbl::unique_fd initrd_fd(open(initrd_path, O_RDONLY));
+    if (!initrd_fd) {
       fprintf(stderr, "Failed to open initial RAM disk\n");
       return ZX_ERR_IO;
     }
 
-    status = load_initrd(initrd_fd, addr, size, first_page, kRamdiskOffset);
-    close(initrd_fd);
+    status =
+        load_initrd(addr, size, first_page, initrd_fd.get(), kRamdiskOffset);
     if (status != ZX_OK)
       return status;
   }
+#endif
 
-  *ramdisk_off = first_page - addr;
   return ZX_OK;
 }

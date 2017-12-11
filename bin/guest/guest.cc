@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
@@ -154,11 +155,33 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
   return ZX_OK;
 }
 
+static const char* zircon_cmdline(const char* cmdline) {
+  static char buf[128];
+  snprintf(buf, sizeof(buf), "TERM=uart %s", cmdline);
+  return buf;
+}
+
+static const char* linux_cmdline(const char* cmdline,
+                                 uintptr_t uart_addr,
+                                 uintptr_t acpi_addr) {
+  static char buf[128];
+#if __aarch64__
+  auto fmt = "earlycon=pl011,%#lx console=ttyS0 %s";
+  snprintf(buf, sizeof(buf), fmt, uart_addr, cmdline);
+#elif __x86_64__
+  auto fmt =
+      "earlycon=uart,io,%#lx console=ttyS0 io_delay=none clocksource=tsc "
+      "acpi_rsdp=%#lx %s";
+  snprintf(buf, sizeof(buf), fmt, uart_addr, acpi_addr, cmdline);
+#endif
+  return buf;
+}
+
 int main(int argc, char** argv) {
   const char* cmd = basename(argv[0]);
   const char* block_path = NULL;
   const char* ramdisk_path = NULL;
-  const char* cmdline = NULL;
+  const char* cmdline = "";
   zx_duration_t balloon_poll_interval = 0;
   bool balloon_deflate_on_demand = false;
   bool use_gpu = false;
@@ -225,60 +248,54 @@ int main(int argc, char** argv) {
   }
 
   struct acpi_config acpi_config = {
-    .dsdt_path = kDsdtPath,
-    .mcfg_path = kMcfgPath,
-    .io_apic_addr = machina::kIoApicPhysBase,
-    .num_cpus = 1,
+      .dsdt_path = kDsdtPath,
+      .mcfg_path = kMcfgPath,
+      .io_apic_addr = machina::kIoApicPhysBase,
+      .num_cpus = 1,
   };
-  status = create_acpi_table(acpi_config, physmem_addr, physmem_size, pt_end_off);
+  status =
+      create_acpi_table(acpi_config, physmem_addr, physmem_size, pt_end_off);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create ACPI table\n");
     return status;
   }
 #endif  // __x86_64__
 
-  // Prepare the OS image
-  int fd = open(argv[optind], O_RDONLY);
-  if (fd < 0) {
+  // Open the kernel image.
+  fbl::unique_fd fd(open(argv[optind], O_RDONLY));
+  if (!fd) {
     fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[optind]);
     return ZX_ERR_IO;
   }
 
-  // Load the first page in to allow OS detection without requiring
-  // us to seek backwards later.
+  // Load the first page to pass to setup functions.
   uintptr_t first_page = physmem_addr + physmem_size - PAGE_SIZE;
-  ssize_t ret = read(fd, (void*)first_page, PAGE_SIZE);
+  ssize_t ret = read(fd.get(), (void*)first_page, PAGE_SIZE);
   if (ret != PAGE_SIZE) {
     fprintf(stderr, "Failed to read first page of kernel\n");
     return ZX_ERR_IO;
   }
 
-  uintptr_t guest_ip;
+  uintptr_t guest_ip = 0;
   uintptr_t ramdisk_off = 0;
-
-  char guest_cmdline[PATH_MAX];
-  const char* zircon_fmt_string = "TERM=uart %s";
-  snprintf(guest_cmdline, PATH_MAX, zircon_fmt_string, cmdline ? cmdline : "");
-  status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off, fd,
-                        ramdisk_path, guest_cmdline, &guest_ip, &ramdisk_off);
-
+  status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off,
+                        fd.get(), ramdisk_path, zircon_cmdline(cmdline),
+                        &guest_ip, &ramdisk_off);
   if (status == ZX_ERR_NOT_SUPPORTED) {
-    const char* linux_fmt_string =
-        "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
-        "io_delay=none acpi_rsdp=%#lx clocksource=tsc %s";
-    snprintf(guest_cmdline, PATH_MAX, linux_fmt_string, pt_end_off,
-             cmdline ? cmdline : "");
-    status = setup_linux(physmem_addr, physmem_size, first_page, fd,
-                         ramdisk_path, guest_cmdline, &guest_ip, &ramdisk_off);
+    ret = lseek(fd.get(), 0, SEEK_SET);
+    if (ret < 0) {
+      fprintf(stderr, "Failed to seek to start of kernel\n");
+      return ZX_ERR_IO;
+    }
+    status = setup_linux(physmem_addr, physmem_size, first_page, fd.get(),
+                         ramdisk_path,
+                         linux_cmdline(cmdline, kUartBases[0], pt_end_off),
+                         &guest_ip, &ramdisk_off);
   }
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    fprintf(stderr, "Unknown kernel\n");
-    return status;
-  } else if (status != ZX_OK) {
+  if (status != ZX_OK) {
     fprintf(stderr, "Failed to load kernel\n");
     return status;
   }
-  close(fd);
 
 #if __x86_64__
   uintptr_t apic_addr;
