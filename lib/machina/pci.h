@@ -207,12 +207,6 @@ class PciEcamHandler : public IoHandler {
 
 class PciBus {
  public:
-  // Base address in PIO space to map device BAR registers.
-  static const uint32_t kPioBarBase = 0x8000;
-
-  // Base address in MMIO space to map device BAR registers.
-  static const uint32_t kMmioBarBase = kPciMmioBarPhysBase;
-
   PciBus(Guest* guest, const InterruptController* interrupt_controller);
 
   zx_status_t Init();
@@ -270,9 +264,9 @@ class PciBus {
   // Embedded root complex device.
   PciDevice root_complex_;
   // Next pio window to be allocated to connected devices.
-  uint32_t pio_base_ = kPioBarBase;
+  uint32_t pio_base_ = 0x8000;
   // Next mmio window to be allocated to connected devices.
-  uint32_t mmio_base_ = kMmioBarBase;
+  uint32_t mmio_base_ = kPciMmioBarPhysBase;
 };
 
 }  // namespace machina
