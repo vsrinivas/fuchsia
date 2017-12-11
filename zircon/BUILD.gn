@@ -1,0 +1,20 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define a toolchain to build Zircon in.
+# This allows us to let the target and host toolchains depend on Zircon, which
+# in turn ensure Zircon is built before everything else.
+toolchain("zircon_toolchain") {
+  tool("stamp") {
+    command = "touch {{output}}"
+    description = "STAMP {{output}}"
+  }
+
+  tool("copy") {
+    # We use link instead of copy; the way "copy" tool is being used is
+    # compatible with links since Ninja is tracking changes to the source.
+    command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+    description = "COPY {{source}} {{output}}"
+  }
+}

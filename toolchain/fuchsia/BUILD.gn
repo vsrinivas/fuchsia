@@ -9,4 +9,10 @@ clang_toolchain_suite(target_cpu) {
   toolchain_os = target_os
 
   use_strip = true
+
+  # Depend on the Zircon build to ensure the sysroot is available by the time
+  # we start compiling stuff.
+  deps = [
+    "//zircon/public/sysroot(//build/zircon:zircon_toolchain)",
+  ]
 }

@@ -129,10 +129,6 @@ config("shared_library_config") {
   cflags = [ "-fPIC" ]
 }
 
-config("fdio_config") {
-  libs = [ "fdio" ]
-}
-
 config("executable_config") {
 }
 

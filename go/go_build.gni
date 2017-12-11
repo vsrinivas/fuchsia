@@ -74,13 +74,18 @@ template("go_build") {
       go_dependencies = invoker.go_dependencies
     }
 
+    zircon_sysroot = sysroot
+    if (is_fuchsia) {
+      zircon_sysroot = rebase_path("$root_out_dir/sdks/zircon_sysroot/sysroot")
+    }
+
     args = [
       "--fuchsia-root",
       rebase_path("//."),
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
       "--zircon-sysroot",
-      sysroot,
+      zircon_sysroot,
       "--depfile",
       rebase_path(depfile),
       "--current-cpu",
@@ -124,5 +129,11 @@ template("go_build") {
     }
 
     deps += [ "//third_party/go:go_runtime" ]
+
+    if (is_fuchsia) {
+      deps += [
+        "//garnet/public/sdk:zircon_sysroot_export",
+      ]
+    }
   }
 }

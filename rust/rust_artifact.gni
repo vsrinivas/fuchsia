@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/sysroot.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
 declare_args() {
@@ -208,11 +207,15 @@ template("rust_artifact") {
     }
 
     if (is_fuchsia) {
+      deps += [
+        "//garnet/public/sdk:zircon_sysroot_export",
+      ]
+
       args += [
         "--clang_prefix",
         rebase_path(clang_prefix, "", root_out_dir),
         "--sysroot",
-        rebase_path(sysroot),
+        rebase_path("$root_out_dir/sdks/zircon_sysroot/sysroot"),
       ]
     }
   }

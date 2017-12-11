@@ -15,7 +15,8 @@ if (current_os == target_os && target_sysroot != "") {
   } else {
     _zircon_cpu = current_cpu
   }
-  sysroot = rebase_path("//out/build-zircon/build-user-${_zircon_cpu}/sysroot")
+  _out_dir = get_label_info("//zircon/public/sysroot(//build/zircon:zircon_toolchain)", "target_out_dir")
+  sysroot = rebase_path("$_out_dir/sysroot")
 } else if (is_linux) {
   sysroot = rebase_path("//buildtools/${host_platform}/sysroot")
 } else if (is_mac) {

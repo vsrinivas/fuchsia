@@ -897,30 +897,28 @@ group("images") {
   }
 }
 
-if (generate_zircon_gn_files) {
-  zircon_files =
-      exec_script("//build/zircon/list_source_files.py", [], "list lines")
+zircon_files =
+    exec_script("//build/zircon/list_source_files.py", [], "list lines")
 
-  supporting_templates = [
-    "//build/zircon/header.mako",
-    "//build/zircon/shared_library.mako",
-    "//build/zircon/source_library.mako",
-    "//build/zircon/static_library.mako",
-    "//build/zircon/sysroot.mako",
-  ]
+supporting_templates = [
+  "//build/zircon/header.mako",
+  "//build/zircon/shared_library.mako",
+  "//build/zircon/source_library.mako",
+  "//build/zircon/static_library.mako",
+  "//build/zircon/sysroot.mako",
+]
 
-  exec_script("//build/zircon/create_gn_rules.py",
-              [
-                "--out",
-                rebase_path("//zircon/public"),
-                "--staging",
-                rebase_path("$root_out_dir/zircon-gn"),
-                "--zircon-build",
-                rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
-              ],
-              "",
-              zircon_files + supporting_templates)
-}
+exec_script("//build/zircon/create_gn_rules.py",
+            [
+              "--out",
+              rebase_path("//zircon/public"),
+              "--staging",
+              rebase_path("$root_out_dir/zircon-gn"),
+              "--zircon-build",
+              rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
+            ],
+            "",
+            zircon_files + supporting_templates)
 
 group("default") {
   deps = [ ":images" ] + packages_labels

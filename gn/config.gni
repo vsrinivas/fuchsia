@@ -42,9 +42,6 @@ declare_args() {
 
   # Build boot images that prefer Zedboot over local boot.
   always_zedboot = false
-
-  # Whether to automatically generate BUILD.gn files for Zircon artifacts.
-  generate_zircon_gn_files = false
 }
 
 declare_args() {
