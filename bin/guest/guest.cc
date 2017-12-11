@@ -277,10 +277,10 @@ int main(int argc, char** argv) {
   }
 
   uintptr_t guest_ip = 0;
-  uintptr_t ramdisk_off = 0;
-  status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off,
-                        fd.get(), ramdisk_path, zircon_cmdline(cmdline),
-                        &guest_ip, &ramdisk_off);
+  uintptr_t boot_ptr = 0;
+  status =
+      setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off, fd.get(),
+                   ramdisk_path, zircon_cmdline(cmdline), &guest_ip, &boot_ptr);
   if (status == ZX_ERR_NOT_SUPPORTED) {
     ret = lseek(fd.get(), 0, SEEK_SET);
     if (ret < 0) {
@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
     status = setup_linux(physmem_addr, physmem_size, first_page, fd.get(),
                          ramdisk_path,
                          linux_cmdline(cmdline, kUartBases[0], pt_end_off),
-                         &guest_ip, &ramdisk_off);
+                         &guest_ip, &boot_ptr);
   }
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to load kernel\n");
@@ -441,9 +441,9 @@ int main(int argc, char** argv) {
   // Setup initial VCPU state.
   zx_vcpu_state_t vcpu_state = {};
 #if __aarch64__
-  vcpu_state.x[0] = ramdisk_off;
+  vcpu_state.x[0] = boot_ptr;
 #elif __x86_64__
-  vcpu_state.rsi = ramdisk_off;
+  vcpu_state.rsi = boot_ptr;
 #endif
   status = vcpu.WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
   if (status != ZX_OK) {

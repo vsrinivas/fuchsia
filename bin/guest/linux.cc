@@ -128,25 +128,6 @@ static zx_status_t read_fd(const uintptr_t addr,
   return ZX_OK;
 }
 
-#if __x86_64__
-static zx_status_t load_initrd(const uintptr_t addr,
-                               const size_t size,
-                               const uintptr_t first_page,
-                               const int fd,
-                               const uintptr_t bootdata_off) {
-  size_t initrd_size = 0;
-  zx_status_t status = read_fd(addr, size, fd, bootdata_off, &initrd_size);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to read initial RAM disk\n");
-    return status;
-  }
-
-  bp(first_page, RAMDISK_IMAGE) = kRamdiskOffset;
-  bp(first_page, RAMDISK_SIZE) = static_cast<uint32_t>(initrd_size);
-  return ZX_OK;
-}
-#endif  // __x86_64__
-
 static zx_status_t read_boot_params(const uintptr_t first_page,
                                     const int fd,
                                     uintptr_t* guest_ip,
@@ -195,7 +176,8 @@ static zx_status_t write_boot_params(const uintptr_t addr,
                                      const size_t size,
                                      const uintptr_t first_page,
                                      const char* cmdline,
-                                     const uintptr_t cmdline_off) {
+                                     const uintptr_t cmdline_off,
+                                     const size_t initrd_size) {
   // Set type of bootloader.
   bp(first_page, LOADER_TYPE) = kLoaderTypeUnspecified;
 
@@ -203,6 +185,10 @@ static zx_status_t write_boot_params(const uintptr_t addr,
   bp(first_page, VIDEO_MODE) = 0;
   bp(first_page, VIDEO_COLS) = 0;
   bp(first_page, VIDEO_LINES) = 0;
+
+  // Set the address and size of the initial RAM disk.
+  bp(first_page, RAMDISK_IMAGE) = kRamdiskOffset;
+  bp(first_page, RAMDISK_SIZE) = static_cast<uint32_t>(initrd_size);
 
   // Copy the command line string.
   size_t cmdline_len = strlen(cmdline) + 1;
@@ -228,6 +214,7 @@ static zx_status_t load_device_tree(const uintptr_t addr,
                                     const size_t size,
                                     const int fd,
                                     const char* cmdline,
+                                    const size_t initrd_size,
                                     const uintptr_t dtb_off) {
   size_t dtb_size = 0;
   zx_status_t status = read_fd(addr, size, fd, dtb_off, &dtb_size);
@@ -244,17 +231,33 @@ static zx_status_t load_device_tree(const uintptr_t addr,
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  // Add command line to device tree.
-  ret = fdt_path_offset(dtb, "/chosen");
-  if (ret < 0) {
+  int off = fdt_path_offset(dtb, "/chosen");
+  if (off < 0) {
     fprintf(stderr, "Failed to find \"/chosen\" in device tree\n");
     return ZX_ERR_BAD_STATE;
   }
-  ret = fdt_setprop_string(dtb, ret, "bootargs", cmdline);
+  // Add command line to device tree.
+  ret = fdt_setprop_string(dtb, off, "bootargs", cmdline);
   if (ret < 0) {
     fprintf(stderr,
             "Failed to add \"bootargs\" property to device tree, space must be "
             "reserved in the device tree\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  // Add the memory range of the initial RAM disk.
+  ret = fdt_setprop_u64(dtb, off, "linux,initrd-start", kRamdiskOffset);
+  if (ret < 0) {
+    fprintf(stderr,
+            "Failed to add \"linux,initrd-start\" property to device tree, "
+            "space must be reserved in the device tree\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  ret = fdt_setprop_u64(dtb, off, "linux,initrd-end",
+                        kRamdiskOffset + initrd_size);
+  if (ret < 0) {
+    fprintf(stderr,
+            "Failed to add \"linux,initrd-end\" property to device tree, space "
+            "must be reserved in the device tree\n");
     return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;
@@ -267,10 +270,25 @@ zx_status_t setup_linux(const uintptr_t addr,
                         const char* initrd_path,
                         const char* cmdline,
                         uintptr_t* guest_ip,
-                        uintptr_t* ramdisk_off) {
+                        uintptr_t* boot_ptr) {
+  size_t initrd_size = 0;
+  if (initrd_path != nullptr) {
+    fbl::unique_fd initrd_fd(open(initrd_path, O_RDONLY));
+    if (!initrd_fd) {
+      fprintf(stderr, "Failed to open initial RAM disk\n");
+      return ZX_ERR_IO;
+    }
+
+    zx_status_t status =
+        read_fd(addr, size, initrd_fd.get(), kRamdiskOffset, &initrd_size);
+    if (status != ZX_OK) {
+      fprintf(stderr, "Failed to read initial RAM disk\n");
+      return status;
+    }
+  }
+
   uintptr_t kernel_off = 0;
   size_t kernel_len = 0;
-
   if (is_boot_params(first_page)) {
     zx_status_t status =
         read_boot_params(first_page, fd, guest_ip, &kernel_off, &kernel_len);
@@ -278,11 +296,10 @@ zx_status_t setup_linux(const uintptr_t addr,
       return status;
 
     uintptr_t cmdline_off = kernel_off + kernel_len;
-    status = write_boot_params(addr, size, first_page, cmdline, cmdline_off);
+    status = write_boot_params(addr, size, first_page, cmdline, cmdline_off,
+                               initrd_size);
     if (status != ZX_OK)
       return status;
-
-    *ramdisk_off = first_page - addr;
   } else {
     zx_status_t status =
         read_efi(first_page, guest_ip, &kernel_off, &kernel_len);
@@ -295,12 +312,10 @@ zx_status_t setup_linux(const uintptr_t addr,
       return ZX_ERR_IO;
     }
 
-    status =
-        load_device_tree(addr, size, dtb_fd.get(), cmdline, kRamdiskOffset);
+    status = load_device_tree(addr, size, dtb_fd.get(), cmdline, initrd_size,
+                              first_page - addr);
     if (status != ZX_OK)
       return status;
-
-    *ramdisk_off = kRamdiskOffset;
   }
 
   if (!valid_location(size, *guest_ip, kernel_off, kernel_len))
@@ -312,20 +327,6 @@ zx_status_t setup_linux(const uintptr_t addr,
     return status;
   }
 
-#if __x86_64__
-  if (initrd_path != nullptr) {
-    fbl::unique_fd initrd_fd(open(initrd_path, O_RDONLY));
-    if (!initrd_fd) {
-      fprintf(stderr, "Failed to open initial RAM disk\n");
-      return ZX_ERR_IO;
-    }
-
-    status =
-        load_initrd(addr, size, first_page, initrd_fd.get(), kRamdiskOffset);
-    if (status != ZX_OK)
-      return status;
-  }
-#endif
-
+  *boot_ptr = first_page - addr;
   return ZX_OK;
 }

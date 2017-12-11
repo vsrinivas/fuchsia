@@ -204,7 +204,7 @@ zx_status_t setup_zircon(const uintptr_t addr,
                          const char* bootdata_path,
                          const char* cmdline,
                          uintptr_t* guest_ip,
-                         uintptr_t* ramdisk_off) {
+                         uintptr_t* boot_ptr) {
   uintptr_t kernel_off = 0;
   size_t kernel_len = 0;
   zx_status_t status =
@@ -242,6 +242,6 @@ zx_status_t setup_zircon(const uintptr_t addr,
       return status;
   }
 
-  *ramdisk_off = kRamdiskOffset;
+  *boot_ptr = kRamdiskOffset;
   return ZX_OK;
 }

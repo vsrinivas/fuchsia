@@ -15,6 +15,6 @@ zx_status_t setup_zircon(const uintptr_t addr,
                          const char* bootdata_path,
                          const char* cmdline,
                          uintptr_t* guest_ip,
-                         uintptr_t* ramdisk_off);
+                         uintptr_t* boot_ptr);
 
 #endif  // GARNET_BIN_GUEST_ZIRCON_H_
