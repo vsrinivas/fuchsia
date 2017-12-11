@@ -547,7 +547,8 @@ _header word_
 - `[0 .. 3]`: record type (5)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: blob name (string ref)
-- `[32 .. 47]`: blob payload size in bytes (excluding padding)
+- `[32 .. 46]`: blob payload size in bytes (excluding padding)
+- `[47 .. 47]`: reserved (must be zero)
 - `[48 .. 55]`: blob type
 - `[56 .. 63]`: reserved (must be zero)
 
