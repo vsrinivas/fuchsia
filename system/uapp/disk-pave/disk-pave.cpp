@@ -926,6 +926,8 @@ const char* oldEfiName = "EFI";
 // Name used for EFI partitions added by paver
 const char* efiName = "EFI Gigaboot";
 
+#define MB (1LU << 20)
+
 bool efi_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
     uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
     char cstring_name[GPT_NAME_LEN];
@@ -933,8 +935,8 @@ bool efi_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
     // Old EFI: Installed by the legacy Fuchsia installer, identified by
     // large size and "EFI" label.
     bool oldEfi = strncmp(cstring_name, oldEfiName, strlen(oldEfiName)) == 0 &&
-                  ((part->last - part->first + 1) * info->block_size) > (1 << 29);
-    // More recent EFI: Identified by "EFI Gigaboot" label.
+                  ((part->last - part->first + 1) * info->block_size) > (512 * MB);
+    // Disk-paved EFI: Identified by "EFI Gigaboot" label.
     bool newEfi = strncmp(cstring_name, efiName, strlen(efiName)) == 0;
     return memcmp(part->type, efi_type, GPT_GUID_LEN) == 0 && (oldEfi || newEfi);
 }
