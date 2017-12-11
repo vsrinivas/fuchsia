@@ -14,8 +14,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -59,10 +59,10 @@ class PageUploadTest : public ::test::TestWithMessageLoop,
 
   bool IsDownloadIdle() override { return is_download_idle_; }
 
-  test::TestPageStorage storage_;
+  TestPageStorage storage_;
   encryption::FakeEncryptionService encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
-  test::TestPageCloud page_cloud_;
+  TestPageCloud page_cloud_;
   std::vector<UploadSyncState> states_;
   std::unique_ptr<PageUpload> page_upload_;
   backoff::TestBackoff* backoff_;
@@ -151,9 +151,9 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   storage_.NewCommit("local2", "content2");
 
   page_cloud_.commits_to_return.push_back(
-      test::MakeCommit(&encryption_service_, "remote3", "content3"));
+      MakeTestCommit(&encryption_service_, "remote3", "content3"));
   page_cloud_.commits_to_return.push_back(
-      test::MakeCommit(&encryption_service_, "remote4", "content4"));
+      MakeTestCommit(&encryption_service_, "remote4", "content4"));
   page_cloud_.position_token_to_return = convert::ToArray("44");
 
   is_download_idle_ = false;
@@ -419,7 +419,7 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
   page_upload_->StartUpload();
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  auto commit = std::make_unique<test::TestCommit>("id", "content");
+  auto commit = std::make_unique<TestCommit>("id", "content");
   storage_.new_commits_to_return["id"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(),
                                   storage::ChangeSource::LOCAL);

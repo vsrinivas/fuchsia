@@ -11,7 +11,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -82,7 +82,7 @@ TEST_F(BatchDownloadTest, AddCommit) {
   int done_calls = 0;
   int error_calls = 0;
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
                                [this, &done_calls] {
@@ -104,8 +104,8 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   int done_calls = 0;
   int error_calls = 0;
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
-  commits.push_back(test::MakeCommit(&encryption_service_, "id2", "content2"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("43"),
                                [this, &done_calls] {
@@ -128,7 +128,7 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   int done_calls = 0;
   int error_calls = 0;
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
                                [&done_calls] { done_calls++; },

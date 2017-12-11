@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_CLOUD_H_
-#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_CLOUD_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -12,14 +12,13 @@
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 
 namespace cloud_sync {
-namespace test {
 
 struct ReceivedCommit {
   std::string id;
   std::string data;
 };
 
-cloud_provider::CommitPtr MakeCommit(
+cloud_provider::CommitPtr MakeTestCommit(
     encryption::FakeEncryptionService* encryption_service,
     const std::string& id,
     const std::string& data);
@@ -81,7 +80,6 @@ class TestPageCloud : public cloud_provider::PageCloud {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestPageCloud);
 };
 
-}  // namespace test
 }  // namespace cloud_sync
 
-#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_CLOUD_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_

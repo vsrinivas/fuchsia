@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
 
 #include <memory>
 #include <set>
@@ -13,13 +13,12 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_commit.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
-namespace test {
 TestPageStorage::TestPageStorage(fsl::MessageLoop* message_loop)
     : message_loop_(message_loop) {}
 
@@ -193,5 +192,4 @@ void TestPageStorage::GetSyncMetadata(
       });
 }
 
-}  // namespace test
 }  // namespace cloud_sync

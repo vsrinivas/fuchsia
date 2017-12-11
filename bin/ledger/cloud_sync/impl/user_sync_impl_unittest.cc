@@ -9,7 +9,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
@@ -53,7 +53,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   files::ScopedTempDir tmp_dir;
   ledger::Environment environment_;
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
-  test::TestCloudProvider cloud_provider_;
+  TestCloudProvider cloud_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;
   TestSyncStateWatcher sync_state_watcher_;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_STORAGE_H_
-#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_STORAGE_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
 
 #include <map>
 #include <memory>
@@ -13,13 +13,12 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_commit.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
-namespace test {
 // Fake implementation of storage::PageStorage. Injects the data that PageSync
 // asks about: page id, existing unsynced commits to be retrieved through
 // GetUnsyncedCommits() and new commits to be retrieved through GetCommit().
@@ -101,7 +100,6 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   fsl::MessageLoop* message_loop_;
 };
 
-}  // namespace test
 }  // namespace cloud_sync
 
-#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_STORAGE_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_

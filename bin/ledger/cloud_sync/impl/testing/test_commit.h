@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_COMMIT_H_
-#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_COMMIT_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_COMMIT_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_COMMIT_H_
 
 #include <memory>
 #include <vector>
@@ -12,7 +12,6 @@
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 
 namespace cloud_sync {
-namespace test {
 
 // Fake implementation of storage::Commit.
 class TestCommit : public storage::test::CommitEmptyImpl {
@@ -33,7 +32,6 @@ class TestCommit : public storage::test::CommitEmptyImpl {
   std::string content;
 };
 
-}  // namespace test
 }  // namespace cloud_sync
 
-#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_COMMIT_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_COMMIT_H_

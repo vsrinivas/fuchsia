@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_sync {
-namespace test {
 
-cloud_provider::CommitPtr MakeCommit(
+cloud_provider::CommitPtr MakeTestCommit(
     encryption::FakeEncryptionService* encryption_service,
     const std::string& id,
     const std::string& data) {
@@ -105,5 +104,4 @@ void TestPageCloud::SetWatcher(
   callback(status_to_return);
 }
 
-}  // namespace test
 }  // namespace cloud_sync

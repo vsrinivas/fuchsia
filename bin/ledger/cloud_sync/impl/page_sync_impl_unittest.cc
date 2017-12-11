@@ -14,8 +14,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -94,10 +94,10 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
     page_sync_->Start();
   }
 
-  test::TestPageStorage storage_;
+  TestPageStorage storage_;
   encryption::FakeEncryptionService encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
-  test::TestPageCloud page_cloud_;
+  TestPageCloud page_cloud_;
   int download_backoff_get_next_calls_ = 0;
   int upload_backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;
@@ -189,7 +189,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_TRUE(page_cloud_.set_watcher.is_bound());
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("44"), [] {});
   EXPECT_TRUE(RunLoopUntil(
@@ -216,9 +216,9 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   storage_.NewCommit("local2", "content2");
 
   page_cloud_.commits_to_return.push_back(
-      test::MakeCommit(&encryption_service_, "remote3", "content3"));
+      MakeTestCommit(&encryption_service_, "remote3", "content3"));
   page_cloud_.commits_to_return.push_back(
-      test::MakeCommit(&encryption_service_, "remote4", "content4"));
+      MakeTestCommit(&encryption_service_, "remote4", "content4"));
   page_cloud_.position_token_to_return = convert::ToArray("43");
   bool backlog_downloaded_called = false;
   page_sync_->SetOnBacklogDownloaded([this, &backlog_downloaded_called] {
@@ -314,7 +314,7 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   ASSERT_TRUE(page_cloud_.set_watcher.is_bound());
 
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   storage_.should_fail_add_commit_from_sync = true;
   EXPECT_EQ(0, error_callback_calls_);
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
@@ -329,9 +329,9 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
 // progress.
 TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   page_cloud_.commits_to_return.push_back(
-      test::MakeCommit(&encryption_service_, "id1", "content1"));
+      MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
-      test::MakeCommit(&encryption_service_, "id2", "content2"));
+      MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = convert::ToArray("43");
 
   int on_idle_calls = 0;
@@ -353,7 +353,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id3", "content3"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id3", "content3"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("44"), [] {});
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -409,7 +409,7 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
 
   // Let's receive the same commit from the remote side.
   fidl::Array<cloud_provider::CommitPtr> commits;
-  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("44"), [] {});
   EXPECT_TRUE(RunLoopUntil([this] { return page_sync_->IsIdle(); }));

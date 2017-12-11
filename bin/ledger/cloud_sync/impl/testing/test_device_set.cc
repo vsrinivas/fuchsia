@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_device_set.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_device_set.h"
 
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_sync {
-namespace test {
 
 TestDeviceSet::TestDeviceSet() {}
 TestDeviceSet::~TestDeviceSet() {}
@@ -41,5 +40,4 @@ void TestDeviceSet::Erase(const EraseCallback& callback) {
   callback(status_to_return);
 }
 
-}  // namespace test
 }  // namespace cloud_sync

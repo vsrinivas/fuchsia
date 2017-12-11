@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_commit.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 
 #include <memory>
 #include <vector>
@@ -11,7 +11,6 @@
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 
 namespace cloud_sync {
-namespace test {
 TestCommit::TestCommit(storage::CommitId id, std::string content)
     : id(std::move(id)), content(std::move(content)) {}
 
@@ -33,5 +32,4 @@ fxl::StringView TestCommit::GetStorageBytes() const {
   return content;
 }
 
-}  // namespace test
 }  // namespace cloud_sync

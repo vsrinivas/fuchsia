@@ -13,7 +13,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/make_object_identifier.h"
@@ -171,7 +171,7 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
   TestPageStorage storage_;
   encryption::FakeEncryptionService encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
-  test::TestPageCloud page_cloud_;
+  TestPageCloud page_cloud_;
 
   unsigned int done_calls_ = 0u;
   unsigned int error_calls_ = 0u;

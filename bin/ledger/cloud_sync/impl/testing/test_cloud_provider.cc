@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
+#include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
 
 #include "lib/fxl/logging.h"
 
 namespace cloud_sync {
-namespace test {
 
 TestCloudProvider::TestCloudProvider(
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
@@ -34,5 +33,4 @@ void TestCloudProvider::EraseAllData(const EraseAllDataCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-}  // namespace test
 }  // namespace cloud_sync
