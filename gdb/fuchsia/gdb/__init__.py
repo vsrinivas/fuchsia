@@ -35,7 +35,7 @@ if len(_GDB_DASH_VERSION) >= 2:
 _TOP_ZIRCON_BUILD_DIR = "out/build-zircon"
 
 # Prefix of zircon build directories within _TOP_ZIRCON_BUILD_DIR.
-_ZIRCON_BUILD_SUBDIR_PREFIX = "build-zircon-"
+_ZIRCON_BUILD_SUBDIR_PREFIX = "build"
 
 # True if fuchsia support has been initialized.
 _INITIALIZED_FUCHSIA_SUPPORT = False
@@ -122,7 +122,7 @@ def _ClearObjfilesHandler(event):
 def _FindSysroot(arch):
     """Return the path to the sysroot for arch."""
     if arch == "x86-64":
-        suffix = "-x86-64"
+        suffix = "-x86"
     elif arch == "arm64":
         suffix = "-arm64"
     else:
