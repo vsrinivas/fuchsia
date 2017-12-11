@@ -109,6 +109,15 @@ void App::CreateExampleScene(float display_width, float display_height) {
   layer.SetRenderer(renderer);
   renderer.SetCamera(camera_->id());
 
+  // Set up lights.
+  AmbientLight ambient_light(session);
+  DirectionalLight directional_light(session);
+  scene.AddLight(ambient_light);
+  scene.AddLight(directional_light);
+  ambient_light.SetColor(0.3f, 0.3f, 0.3f);
+  directional_light.SetColor(0.7f, 0.7f, 0.7f);
+  directional_light.SetDirection(1.f, 1.f, -2.f);
+
   // Create an EntityNode to serve as the scene root.
   EntityNode root_node(session);
   scene.AddChild(root_node.id());

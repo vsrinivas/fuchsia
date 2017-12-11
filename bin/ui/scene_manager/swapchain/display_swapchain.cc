@@ -21,7 +21,36 @@ namespace {
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
-const uint32_t kDesiredSwapchainImageCount = 2;
+// TODO(MZ-400): Don't triple buffer.  This is done to avoid "tearing", but it
+// wastes memory, and can result in the "permanent" addition of an extra Vsync
+// period of latency.  An alternative would be to use an acquire fence; this
+// saves memory, but can still result in the permanent extra latency.  Here's
+// how:
+//
+// First, let's see how tearing occurs in the 2-framebuffer case.
+//
+// Let's say we have framebuffers A and B in a world that conveniently starts at
+// some negative time, such that the first frame rendered into A has a target
+// presentation time of 0ms, and the next frame is rendered into B with a target
+// presentation time of 16ms.
+//
+// However, assume that frame being rendered into A takes a bit too long, so
+// that instead of being presented at 0ms, it is instead presented at 16ms.  The
+// frame to render into B has already been scheduled, and starts rendering at
+// 8ms to hit the target presentation time of 16ms.  Even if it's fast, it
+// cannot present at 16ms, because that frame has already been "claimed" by A,
+// and so it is instead presented at 32ms.
+//
+// The tearing occurs when it is time to render A again.  We don't know that B
+// has been deferred to present at 32ms.  So, we wake up at 24ms to render into
+// A to hit the 32ms target.  Oops!
+//
+// The problem is that A is still being displayed from 16-32ms, until it is
+// replaced by B at 32ms.  Thus, tearing.
+//
+// If you followed that, it should be clear both why triple-buffering fixes the
+// tearing, and why it adds the frame of latency.
+const uint32_t kSwapchainImageCount = 3;
 
 // Helper functions
 
@@ -38,37 +67,23 @@ DisplaySwapchain::DisplaySwapchain(Display* display,
                                    EventTimestamper* timestamper,
                                    escher::Escher* escher)
     : display_(display),
-      event_timestamper_(timestamper),
       device_(escher->vk_device()),
       queue_(escher->device()->vk_main_queue()),
-      vulkan_proc_addresses_(escher->device()->proc_addrs()) {
+      vulkan_proc_addresses_(escher->device()->proc_addrs()),
+      timestamper_(timestamper) {
+  FXL_DCHECK(display);
+  FXL_DCHECK(timestamper);
+  FXL_DCHECK(escher);
+
   display_->Claim();
   magma_connection_.Open();
 
   format_ = GetDisplayImageFormat(escher->device());
 
-  image_available_semaphores_.reserve(kDesiredSwapchainImageCount);
-  for (size_t i = 0; i < kDesiredSwapchainImageCount; ++i) {
-// TODO: Use timestamper to listen for event notifications
-#if 1
-
-    image_available_semaphores_.push_back(
-        Export(escher::Semaphore::New(device_)));
-
-    // The images are all available initially.
-    image_available_semaphores_[i].fence->event().signal(
-        0u, escher::kFenceSignalled);
-#else
-    auto pair = NewSemaphoreEventPair(escher);
-    image_available_semaphores_.push_back(std::move(pair.first));
-    watches_.push_back(
-        timestamper, std::move(pair.second), escher::kFenceSignalled,
-        [this, i](zx_time_t timestamp) { OnFramePresented(i, timestamp); });
-#endif
-  }
+  frames_.resize(kSwapchainImageCount);
 
   if (!InitializeFramebuffers(escher->resource_recycler())) {
-    FXL_DLOG(ERROR) << "Initializing buffers for display swapchain failed.";
+    FXL_LOG(ERROR) << "Initializing buffers for display swapchain failed.";
   }
 }
 
@@ -76,7 +91,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
     escher::ResourceRecycler* resource_recycler) {
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
 
-  for (uint32_t i = 0; i < kDesiredSwapchainImageCount; i++) {
+  for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
     // Allocate a framebuffer.
     uint32_t width = display_->metrics().width_in_px();
     uint32_t height = display_->metrics().height_in_px();
@@ -179,74 +194,90 @@ DisplaySwapchain::~DisplaySwapchain() {
   display_->Unclaim();
 }
 
-DisplaySwapchain::Semaphore DisplaySwapchain::Export(
-    escher::SemaphorePtr escher_semaphore) {
-  Semaphore semaphore;
-  semaphore.escher_semaphore = escher_semaphore;
-  zx::event fence =
-      GetEventForSemaphore(vulkan_proc_addresses_, device_, escher_semaphore);
-  FXL_CHECK(fence);
-  semaphore.magma_semaphore =
-      MagmaSemaphore::NewFromEvent(&magma_connection_, fence);
-  semaphore.fence = std::make_unique<escher::FenceListener>(std::move(fence));
-  return semaphore;
+std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
+    const FrameTimingsPtr& frame_timings) {
+  auto render_finished_escher_semaphore = escher::Semaphore::New(device_);
+
+  zx::event render_finished_event = GetEventForSemaphore(
+      vulkan_proc_addresses_, device_, render_finished_escher_semaphore);
+  auto render_finished_magma_semaphore =
+      MagmaSemaphore::NewFromEvent(&magma_connection_, render_finished_event);
+
+  zx::event frame_presented_event;
+  zx_status_t status = zx::event::create(0u, &frame_presented_event);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "DisplaySwapchain::NewFrameRecord() failed to create event.";
+    return std::unique_ptr<FrameRecord>();
+  }
+  auto frame_presented_magma_semaphore =
+      MagmaSemaphore::NewFromEvent(&magma_connection_, frame_presented_event);
+
+  if (!render_finished_escher_semaphore || !render_finished_magma_semaphore ||
+      !frame_presented_magma_semaphore) {
+    FXL_LOG(ERROR)
+        << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
+    return std::unique_ptr<FrameRecord>();
+  }
+
+  auto record = std::make_unique<FrameRecord>();
+  record->frame_timings = frame_timings;
+  record->swapchain_index = frame_timings->AddSwapchain(this);
+  record->render_finished_escher_semaphore =
+      std::move(render_finished_escher_semaphore);
+  record->render_finished_magma_semaphore =
+      std::move(render_finished_magma_semaphore);
+  record->frame_presented_magma_semaphore =
+      std::move(frame_presented_magma_semaphore);
+  record->render_finished_watch = EventTimestamper::Watch(
+      timestamper_, std::move(render_finished_event), escher::kFenceSignalled,
+      [ this, index = next_frame_index_ ](zx_time_t timestamp) {
+        OnFrameRendered(index, timestamp);
+      });
+  record->frame_presented_watch = EventTimestamper::Watch(
+      timestamper_, std::move(frame_presented_event), escher::kFenceSignalled,
+      [ this, index = next_frame_index_ ](zx_time_t timestamp) {
+        OnFramePresented(index, timestamp);
+      });
+
+  return record;
 }
 
 bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
                                            DrawCallback draw_callback) {
-  // TODO(MZ-260): Use EventTimestamper::Wait to notify |frame_timings| when the
-  // frame is finished finished rendering, and when it is presented.
+  // Find the next framebuffer to render into, and other corresponding data.
+  auto& buffer = swapchain_buffers_[next_frame_index_];
+
+  // Create a record that can be used to notify |frame_timings| (and hence
+  // ultimately the FrameScheduler) that the frame has been presented.
   //
-  // auto timing_index = frame_timings->AddSwapchain(this);
-  if (event_timestamper_ && !event_timestamper_) {
-    // Avoid unused-variable error.
-    FXL_CHECK(false) << "I don't believe you.";
-  }
+  // There must not already exist a record.  If there is, it indicates an error
+  // in the FrameScheduler logic (or somewhere similar), which should not have
+  // scheduled another frame when there are no framebuffers available.
+  FXL_CHECK(!frames_[next_frame_index_]);
+  auto& frame_record = frames_[next_frame_index_] =
+      NewFrameRecord(frame_timings);
 
-  // Obtain a semaphore to wait for the next available image, and
-  // replace it with another semaphore that will be signaled when
-  // the about-to-be-rendered frame is no longer used.
-  auto image_available_semaphore =
-      std::move(image_available_semaphores_[next_semaphore_index_]);
-  image_available_semaphores_[next_semaphore_index_] =
-      Export(escher::Semaphore::New(device_));
-  auto& image_available_next_frame_semaphore =
-      image_available_semaphores_[next_semaphore_index_];
-  auto render_finished = Export(escher::Semaphore::New(device_));
+  // TODO(MZ-244): See below.  What to do if rendering fails?
+  frame_record->render_finished_watch.Start();
+  frame_record->frame_presented_watch.Start();
 
-  auto& buffer = swapchain_buffers_[next_semaphore_index_];
-
-  next_semaphore_index_ =
-      (next_semaphore_index_ + 1) % kDesiredSwapchainImageCount;
-
-  {
-    TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() acquire");
-
-    // TODO(MZ-260): once FrameScheduler back-pressure is implemented,
-    // it will no longer be necessary to wait for the image to become
-    // available (this is currently done to avoid a backlog of frames that
-    // we cannot keep up with).
-    image_available_semaphore.fence->WaitReady();
-  }
+  next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;
 
   // Render the scene.
   {
     TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() draw");
-    draw_callback(buffer.escher_image,
-                  image_available_semaphore.escher_semaphore,
-                  render_finished.escher_semaphore);
+    draw_callback(buffer.escher_image, escher::SemaphorePtr(),
+                  frame_record->render_finished_escher_semaphore);
   }
 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  // Present semaphore
-  Semaphore present_semaphore = Export(escher::Semaphore::New(device_));
-
   bool status = magma_connection_.DisplayPageFlip(
-      buffer.magma_buffer.get(), 1, &render_finished.magma_semaphore.get(), 1,
-      &image_available_next_frame_semaphore.magma_semaphore.get(),
-      present_semaphore.magma_semaphore.get());
+      buffer.magma_buffer.get(), 1,
+      &frame_record->render_finished_magma_semaphore.get(), 0, nullptr,
+      frame_record->frame_presented_magma_semaphore.get());
 
   // TODO(MZ-244): handle this more robustly.
   if (!status) {
@@ -254,8 +285,24 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
                          "present rendered image with magma_display_page_flip.";
     return false;
   }
-
   return true;
+}
+
+void DisplaySwapchain::OnFrameRendered(size_t frame_index,
+                                       zx_time_t render_finished_time) {
+  FXL_DCHECK(frame_index < kSwapchainImageCount);
+  auto& record = frames_[frame_index];
+  FXL_DCHECK(record);
+  record->frame_timings->OnFrameRendered(record->swapchain_index,
+                                         render_finished_time);
+}
+
+void DisplaySwapchain::OnFramePresented(size_t frame_index,
+                                        zx_time_t vsync_time) {
+  FXL_DCHECK(frame_index < kSwapchainImageCount);
+  auto record = std::move(frames_[frame_index]);
+  FXL_DCHECK(record);
+  record->frame_timings->OnFramePresented(record->swapchain_index, vsync_time);
 }
 
 namespace {

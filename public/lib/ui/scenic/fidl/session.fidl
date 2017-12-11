@@ -119,6 +119,13 @@ interface Session {
   // Note: |acquire_fences| and |release_fences| are only necessary to synchronize
   // access to memory (and other external resources).  Any modification to
   // resources made via the Session API are automatically synchronized.
+  //
+  // TODO(MZ-400): document invariants that apply to |presentation_info|.  Is it
+  // strong enough to guarantee that receiving the response means that all
+  // previously-enqueued Ops have been applied?  Or does it need to be stronger,
+  // e.g. that all frames based on previous presentations are completely done,
+  // and subsequent frames will be rendered based on the most recent presented
+  // content?
   Present(uint64 presentation_time,
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
       (PresentationInfo presentation_info);

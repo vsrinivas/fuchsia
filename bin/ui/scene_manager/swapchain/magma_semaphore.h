@@ -29,6 +29,8 @@ class MagmaSemaphore {
                                      const zx::event& event);
   const magma_semaphore_t& get() const { return semaphore_; }
 
+  operator bool() const { return semaphore_; }
+
  private:
   MagmaConnection* magma_connection_;
   magma_semaphore_t semaphore_;

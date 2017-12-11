@@ -14,26 +14,26 @@ Display::Display(DisplayMetrics metrics)
     : last_vsync_time_(zx_time_get(ZX_CLOCK_MONOTONIC)), metrics_(metrics) {}
 
 zx_time_t Display::GetLastVsyncTime() {
-  zx_time_t current_time = zx_time_get(ZX_CLOCK_MONOTONIC);
-  uint64_t num_elapsed_intervals =
-      (current_time - last_vsync_time_) / kHardcodedPresentationIntervalNanos;
-  uint64_t kMaxElapsedIntervals = 10000;
-  if (num_elapsed_intervals > kMaxElapsedIntervals) {
-    // A significant amount of time has elapsed since we were last provided with
-    // a VSync time by the FrameScheduler, so don't assume we can accurately
-    // compute the most recent Vsync.  Instead, pretend that a VSync just
-    // happened; the FrameScheduler should quickly align us with reality.
-    // TODO: log when this happens (at a higher verbosity setting)
-    last_vsync_time_ = current_time;
-    return last_vsync_time_;
-  }
-
-  return last_vsync_time_ +
-         num_elapsed_intervals * kHardcodedPresentationIntervalNanos;
+  // Since listening for frame presentation events is our only way of knowing
+  // when vsyncs have occurred, we often need to make an educated guess.
+  const zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t interval_duration = GetVsyncInterval();
+  const uint64_t num_intervals = (now - last_vsync_time_) / interval_duration;
+  return last_vsync_time_ + (num_intervals * interval_duration);
 }
 
-uint64_t Display::GetVsyncInterval() const {
+zx_time_t Display::GetVsyncInterval() const {
+  // TODO(MZ-124): We should derive an appropriate value from the rendering
+  // targets, in particular giving priority to couple to the display refresh
+  // (vsync).
+  constexpr zx_time_t kHardcodedPresentationIntervalNanos = 16'666'667;
   return kHardcodedPresentationIntervalNanos;
+}
+
+void Display::set_last_vsync_time(zx_time_t vsync_time) {
+  FXL_DCHECK(vsync_time >= last_vsync_time_ &&
+             vsync_time <= zx_time_get(ZX_CLOCK_MONOTONIC));
+  last_vsync_time_ = vsync_time;
 }
 
 void Display::Claim() {

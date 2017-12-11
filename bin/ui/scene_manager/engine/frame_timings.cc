@@ -21,22 +21,21 @@ size_t FrameTimings::AddSwapchain(Swapchain* swapchain) {
   // All swapchains that we are timing must be added before any of them finish.
   // The purpose of this is to verify that we cannot notify the FrameScheduler
   // that the frame has finished before all swapchains have been added.
-  FXL_DCHECK(frame_finished_rendering_count_ == 0);
+  FXL_DCHECK(frame_rendered_count_ == 0);
   FXL_DCHECK(frame_presented_count_ == 0);
   swapchain_records_.push_back({});
   return swapchain_records_.size() - 1;
 }
 
-void FrameTimings::OnFrameFinishedRendering(size_t swapchain_index,
-                                            zx_time_t time) {
+void FrameTimings::OnFrameRendered(size_t swapchain_index, zx_time_t time) {
   FXL_DCHECK(swapchain_index < swapchain_records_.size());
-  FXL_DCHECK(frame_finished_rendering_count_ < swapchain_records_.size());
-  FXL_DCHECK(swapchain_records_[swapchain_index].frame_finished_time == 0);
+  FXL_DCHECK(frame_rendered_count_ < swapchain_records_.size());
+  FXL_DCHECK(swapchain_records_[swapchain_index].frame_rendered_time == 0);
   FXL_DCHECK(time > 0);
-  swapchain_records_[swapchain_index].frame_finished_time = time;
+  swapchain_records_[swapchain_index].frame_rendered_time = time;
 
-  ++frame_finished_rendering_count_;
-  if (frame_finished_rendering_count_ == swapchain_records_.size() &&
+  ++frame_rendered_count_;
+  if (frame_rendered_count_ == swapchain_records_.size() &&
       frame_presented_count_ == swapchain_records_.size()) {
     Finalize();
   }
@@ -49,17 +48,18 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx_time_t time) {
   FXL_DCHECK(time > 0);
   swapchain_records_[swapchain_index].frame_presented_time = time;
 
+  if (time > actual_presentation_time_) {
+    actual_presentation_time_ = time;
+  }
+
   ++frame_presented_count_;
-  if (frame_finished_rendering_count_ == swapchain_records_.size() &&
+  if (frame_rendered_count_ == swapchain_records_.size() &&
       frame_presented_count_ == swapchain_records_.size()) {
     Finalize();
   }
 }
 
 void FrameTimings::Finalize() {
-  // TODO: compute actual presentation time.
-  FXL_CHECK(false);
-
   frame_scheduler_->ReceiveFrameTimings(this);
 }
 

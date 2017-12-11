@@ -72,21 +72,25 @@ class FrameScheduler {
   // back-pressure if we can't hit our target frame rate.  Or, after this frame
   // was scheduled, another frame was scheduled to be rendered at an earlier
   // time, and not enough time has elapsed to render this frame.  Etc.
-  void MaybeRenderFrame();
+  void MaybeRenderFrame(zx_time_t presentation_time, zx_time_t wakeup_time);
 
-  // Helper function that posts a task if there are pending presentation
-  // requests.
-  void MaybeScheduleFrame();
+  // Schedule a frame for the earliest of |requested_presentation_times_|.  The
+  // scheduled time will be the earliest achievable time, such that rendering
+  // can start early enough to hit the next Vsync.
+  void ScheduleFrame();
 
   // Returns true to apply back-pressure when we cannot hit our target frame
   // rate.  Otherwise, return false to indicate that it is OK to immediately
   // render a frame.
   bool TooMuchBackPressure();
 
-  // Return a time > last_presentation_time_ if a frame should be scheduled.
-  // Otherwise, return last_presentation_time_ to indicate that no frame needs
-  // to be scheduled.
-  uint64_t ComputeTargetPresentationTime(uint64_t now) const;
+  // Helper method for ScheduleFrame().  Returns the target presentation time
+  // for the next frame, and a wake-up time that is early enough to start
+  // rendering in order to hit the target presentation time.
+  std::pair<zx_time_t, zx_time_t> ComputePresentationAndWakeupTimes() const;
+
+  // Return the predicted amount of time required to render a frame.
+  zx_time_t PredictRequiredFrameRenderTime() const;
 
   // Called by the delegate when the frame drawn by RenderFrame() has been
   // presented to the display.
@@ -97,8 +101,6 @@ class FrameScheduler {
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 
-  uint64_t last_presentation_time_ = 0;
-  uint64_t next_presentation_time_ = 0;
   std::priority_queue<uint64_t> requested_presentation_times_;
 
   uint64_t frame_number_ = 0;

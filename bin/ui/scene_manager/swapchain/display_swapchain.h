@@ -14,6 +14,7 @@
 #include "garnet/bin/ui/scene_manager/swapchain/magma_buffer.h"
 #include "garnet/bin/ui/scene_manager/swapchain/magma_connection.h"
 #include "garnet/bin/ui/scene_manager/swapchain/magma_semaphore.h"
+#include "garnet/bin/ui/scene_manager/util/event_timestamper.h"
 #include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/resources/resource_recycler.h"
@@ -46,18 +47,28 @@ class DisplaySwapchain : public Swapchain {
     MagmaBuffer magma_buffer;
   };
 
-  struct Semaphore {
-    std::unique_ptr<escher::FenceListener> fence;
-    escher::SemaphorePtr escher_semaphore;
-    MagmaSemaphore magma_semaphore;
+  struct FrameRecord {
+    FrameTimingsPtr frame_timings;
+    size_t swapchain_index;
+
+    escher::SemaphorePtr render_finished_escher_semaphore;
+    MagmaSemaphore render_finished_magma_semaphore;
+    EventTimestamper::Watch render_finished_watch;
+
+    MagmaSemaphore frame_presented_magma_semaphore;
+    EventTimestamper::Watch frame_presented_watch;
   };
+  std::unique_ptr<FrameRecord> NewFrameRecord(
+      const FrameTimingsPtr& frame_timings);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler);
 
-  Semaphore Export(escher::SemaphorePtr escher_semaphore);
+  // When a frame is presented, the previously-presented frame becomes available
+  // as a render target.
+  void OnFrameRendered(size_t frame_index, zx_time_t render_finished_time);
+  void OnFramePresented(size_t frame_index, zx_time_t vsync_time);
 
   Display* const display_;
-  EventTimestamper* const event_timestamper_;
   MagmaConnection magma_connection_;
 
   vk::Format format_;
@@ -66,10 +77,12 @@ class DisplaySwapchain : public Swapchain {
 
   const escher::VulkanDeviceQueues::ProcAddrs& vulkan_proc_addresses_;
 
-  size_t next_semaphore_index_ = 0;
+  size_t next_frame_index_ = 0;
+  EventTimestamper* const timestamper_;
 
   std::vector<Framebuffer> swapchain_buffers_;
-  std::vector<Semaphore> image_available_semaphores_;
+
+  std::vector<std::unique_ptr<FrameRecord>> frames_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };

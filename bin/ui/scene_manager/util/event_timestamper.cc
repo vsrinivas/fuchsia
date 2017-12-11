@@ -49,10 +49,20 @@ EventTimestamper::Watch::Watch(EventTimestamper* ts,
 #endif
 }
 
-EventTimestamper::Watch::Watch(Watch&& other)
-    : wait_(other.wait_), timestamper_(other.timestamper_) {
-  other.wait_ = nullptr;
-  other.timestamper_ = nullptr;
+EventTimestamper::Watch::Watch(Watch&& rhs)
+    : wait_(rhs.wait_), timestamper_(rhs.timestamper_) {
+  rhs.wait_ = nullptr;
+  rhs.timestamper_ = nullptr;
+}
+
+EventTimestamper::Watch& EventTimestamper::Watch::operator=(
+    EventTimestamper::Watch&& rhs) {
+  FXL_DCHECK(!wait_ && !timestamper_);
+  wait_ = rhs.wait_;
+  timestamper_ = rhs.timestamper_;
+  rhs.wait_ = nullptr;
+  rhs.timestamper_ = nullptr;
+  return *this;
 }
 
 EventTimestamper::Watch::~Watch() {
@@ -88,6 +98,12 @@ void EventTimestamper::Watch::Start() {
       << "illegal to call Start() again before callback has been received.";
   wait_->set_state(Wait::State::STARTED);
   wait_->wait().Begin(timestamper_->background_loop_.async());
+}
+
+// Return the watched event (or a null handle, if this Watch was moved).
+const zx::event& EventTimestamper::Watch::event() const {
+  static const zx::event null_handle;
+  return wait_ ? wait_->event() : null_handle;
 }
 
 EventTimestamper::Wait::Wait(const fxl::RefPtr<fxl::TaskRunner>& task_runner,

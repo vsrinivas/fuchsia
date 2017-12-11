@@ -4,6 +4,8 @@
 
 #include "garnet/bin/ui/scene_manager/swapchain/magma_semaphore.h"
 
+#include "lib/fxl/logging.h"
+
 namespace scene_manager {
 
 MagmaSemaphore::MagmaSemaphore() : magma_connection_(nullptr), semaphore_(0) {}
@@ -19,6 +21,7 @@ MagmaSemaphore::MagmaSemaphore(MagmaSemaphore&& rhs)
 }
 
 MagmaSemaphore& MagmaSemaphore::operator=(MagmaSemaphore&& rhs) {
+  FXL_DCHECK(!magma_connection_ && !semaphore_);
   magma_connection_ = rhs.magma_connection_;
   semaphore_ = rhs.semaphore_;
   rhs.magma_connection_ = nullptr;
