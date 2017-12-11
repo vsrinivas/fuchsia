@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "hid-parser/item.h"
+
+#include <string.h>
 #include <zircon/assert.h>
 
 namespace hid {
@@ -58,13 +60,13 @@ Item::Tag get_local_tag(uint8_t b_tag) {
 // library does not support.
 constexpr uint8_t kLongItemMarker = 0xfe;
 
-Item::Type get_type_and_size(uint8_t data, size_t* size) {
+Item::Type get_type_and_size(uint8_t data, uint8_t* size) {
     if (data == kLongItemMarker)
         return Item::Type::kLongItem;
 
     // Short item.
     // Payload size is 0,1,2,4 bytes.
-    auto b_size = (data & 0x03);
+    auto b_size = static_cast<uint8_t>(data & 0x03);
     *size = ( b_size != 3) ? b_size : 4;
 
     switch ((data >> 2) & 0x03) {
@@ -90,7 +92,7 @@ Item::Tag get_tag(Item::Type type, uint8_t data) {
 Item Item::ReadNext(const uint8_t* data, size_t len, size_t* actual) {
     ZX_DEBUG_ASSERT(len != 0);
 
-    size_t size = 0;
+    uint8_t size = 0;
 
     auto type = impl::get_type_and_size(data[0], &size);
     auto tag = impl::get_tag(type, data[0]);
@@ -101,12 +103,31 @@ Item Item::ReadNext(const uint8_t* data, size_t len, size_t* actual) {
 
     uint32_t item_data = 0;
     if (*actual <= len) {
-        for (size_t ix = 0; ix < size; ++ix) {
+        for (uint8_t ix = 0; ix < size; ++ix) {
             item_data |= data[1 + ix] << (8 * ix);
         }
     }
 
-    return Item(type, tag, item_data);
+    return Item(type, tag, size, item_data);
+}
+
+// Type punning beyond the magic 'char' type is no longer tolerated
+// for example the simpler  "return *reinterpret_cast<T*>(data);"
+// generates a warning even on gcc.
+template <typename T>
+T bit_cast(const uint32_t* data) {
+    T dest;
+    memcpy(&dest, data, sizeof(dest));
+    return dest;
+}
+
+int32_t Item::signed_data() const {
+    switch (size_) {
+    case 1: return bit_cast<int8_t>(&data_);
+    case 2: return bit_cast<int16_t>(&data_);
+    case 4: return bit_cast<int32_t>(&data_);
+    default: return 0;
+    }
 }
 
 }  // namespace hid

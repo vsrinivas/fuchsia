@@ -23,6 +23,7 @@ uint32_t expand_bitfield(uint32_t bitfield) {
     }
     return result;
 }
+
 }  // namespace
 
 
@@ -77,6 +78,10 @@ bool is_valid_collection(uint32_t col) {
 
 bool is_app_collection(uint32_t col) {
     return (col == static_cast<uint32_t>(CollectionType::kApplication));
+}
+
+bool field_flag(FieldTypeFlags flag, uint32_t field_type) {
+    return (((field_type >> static_cast<uint8_t>(flag)) & 0x1) == 0x1);
 }
 
 class ParseState {
@@ -138,15 +143,25 @@ public:
         if (coll_.size() == 0)
             return kParseUnexectedItem;
 
+        if (!validate_ranges())
+            return kParseInvalidRange;
+
+        auto field_type = expand_bitfield(data);
+        Attributes attributes = table_.attributes;
+
+        UsageIterator usage_it(this, field_type);
+
         for (uint32_t ix = 0; ix != table_.report_count; ++ ix) {
+            if (!usage_it.next_usage(&attributes.usage.usage))
+                return kParseInvalidUsage;
 
             auto curr_col = &coll_[coll_.size() - 1];
 
             ReportField field {
                 table_.report_id,
-                {},          // TODO(cpu): attributes!
+                attributes,
                 type,
-                expand_bitfield(data),
+                field_type,
                 curr_col,
                 nullptr     // next node. It will be wired
             };              // during post-processing.
@@ -155,8 +170,6 @@ public:
             fields_.push_back(field, &ac);
             if (!ac.check())
                 return kParseNoMemory;
-
-            // TOD(cpu): handle usages and sizes!
         }
 
         return kParseOk;
@@ -204,22 +217,22 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_logical_min(uint32_t data) {                // Global
+    ParseResult set_logical_min(int32_t data) {                // Global
         table_.attributes.logc_mm.min = data;
         return kParseOk;
     }
 
-    ParseResult set_logical_max(uint32_t data) {                // Global
+    ParseResult set_logical_max(int32_t data) {                // Global
         table_.attributes.logc_mm.max = data;
         return kParseOk;
     }
 
-    ParseResult set_physical_min(uint32_t data) {                // Global
+    ParseResult set_physical_min(int32_t data) {                // Global
         table_.attributes.phys_mm.min = data;
         return kParseOk;
     }
 
-    ParseResult set_physical_max(uint32_t data) {                // Global
+    ParseResult set_physical_max(int32_t data) {                // Global
         table_.attributes.phys_mm.max = data;
         return kParseOk;
     }
@@ -259,7 +272,7 @@ public:
     ParseResult set_report_size(uint32_t data) {                // Global
         if (data > UINT8_MAX)
             return kParseInvalidRange;
-        table_.bits_size = static_cast<uint8_t>(data);
+        table_.attributes.bit_sz = static_cast<uint8_t>(data);
         return kParseOk;
     }
 
@@ -283,8 +296,75 @@ private:
         Attributes attributes;
         uint32_t report_count;
         uint8_t report_id;
-        uint8_t bits_size;
     };
+
+    // Helper class that encapsulates the logic of assigning usages
+    // to input, output and feature items. There are 2 ways to
+    // assign usages:
+    // 1- from the UsageMinimum and UsageMaximum items
+    // 2- from the existing Usage items stored in the usages_ vector
+    //
+    // For method #2, the number of calls to next_usage() can be
+    // greater than the available usages. The standard requires in
+    // this case to return the last usage in all remaining calls.
+    //
+    // If the item is an array, only returns the first usage.
+    // TODO(cpu): this is not completely right, at least reading
+    // from the example in the spec pages 76-77, we are presented
+    // the 17-key keypad:
+    //      Usage(0), Usage Minimum(53h), Usage Maximum(63h),
+    //      Logical Minimum (0), Logical Maximum (17),
+    //      Report Size (8), Report Count (3)
+    //      Input (Data, Array)
+    //  But on the other hand, the adafruit trinket presents:
+    //      Report Count (1), Report Size (2)
+    //      Usage (Sys Sleep (82)), Usage (Sys Power Down(81)), Usage (Sys Wake Up(83))
+    //      Input (Data,Array)
+
+    class UsageIterator {
+    public:
+        UsageIterator(ParseState* ps, uint32_t field_type)
+            : usages_(nullptr),
+              usage_range_(),
+              index_(0),
+              last_usage_(0),
+              is_array_(field_flag(FieldTypeFlags::kArray, field_type)) {
+            if ((ps->usage_range_.max == 0) && (ps->usage_range_.min == 0)) {
+                usages_ = &ps->usages_;
+            } else {
+                usage_range_ = ps->usage_range_;
+            }
+        }
+
+        bool next_usage(uint16_t* usage) {
+            if (usages_ == nullptr) {
+                *usage = static_cast<uint16_t>(usage_range_.min + index_);
+                if (*usage > usage_range_.max)
+                    return false;
+            } else {
+                *usage = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
+                last_usage_ = *usage;
+            }
+            if (!is_array_)
+                ++index_;
+            return true;
+        }
+
+    private:
+        const fbl::Vector<uint16_t>* usages_;
+        MinMax usage_range_;
+        uint32_t index_;
+        uint16_t last_usage_;
+        bool is_array_;
+    };
+
+    bool validate_ranges() const {
+        if (usage_range_.min > usage_range_.max)
+            return false;
+        if (table_.attributes.logc_mm.min > table_.attributes.logc_mm.max)
+            return false;
+        return true;
+    }
 
     // Internal state per spec:
     MinMax usage_range_;
@@ -297,28 +377,32 @@ private:
     fbl::Vector<ReportField> fields_;
 };
 
+
 ParseResult ProcessMainItem(const hid::Item& item, ParseState* state) {
+    ParseResult res;
     switch (item.tag()) {
     case Item::Tag::kInput:
     case Item::Tag::kOutput:
-    case Item::Tag::kFeature:  // fall thru
-        return state->add_field(static_cast<NodeType>(item.tag()), item.data());
-
-    case Item::Tag::kCollection: return state->start_collection(item.data());
-    case Item::Tag::kEndCollection: return state->end_collection(item.data());
-    default: return kParseInvalidTag;
+    case Item::Tag::kFeature:
+        res = state->add_field(static_cast<NodeType>(item.tag()), item.data());
+        break;
+    case Item::Tag::kCollection: res = state->start_collection(item.data());
+        break;
+    case Item::Tag::kEndCollection: res = state->end_collection(item.data());
+        break;
+    default: res = kParseInvalidTag;
     }
 
-    return state->reset_usage();
+    return (res == kParseOk)? state->reset_usage() : res;
 }
 
 ParseResult ProcessGlobalItem(const hid::Item& item, ParseState* state) {
     switch (item.tag()) {
     case Item::Tag::kUsagePage: return state->set_usage_page(item.data());
-    case Item::Tag::kLogicalMinimum: return state->set_logical_min(item.data());
-    case Item::Tag::kLogicalMaximum: return state->set_logical_max(item.data());
-    case Item::Tag::kPhysicalMinimum: return state->set_physical_min(item.data());
-    case Item::Tag::kPhysicalMaximum: return state->set_physical_max(item.data());
+    case Item::Tag::kLogicalMinimum: return state->set_logical_min(item.signed_data());
+    case Item::Tag::kLogicalMaximum: return state->set_logical_max(item.signed_data());
+    case Item::Tag::kPhysicalMinimum: return state->set_physical_min(item.signed_data());
+    case Item::Tag::kPhysicalMaximum: return state->set_physical_max(item.signed_data());
     case Item::Tag::kUnitExponent: return state->set_unit_exp(item.data());
     case Item::Tag::kUnit: return state->set_unit(item.data());
     case Item::Tag::kReportSize: return state->set_report_size(item.data());

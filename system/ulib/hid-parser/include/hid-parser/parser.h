@@ -26,7 +26,7 @@ namespace hid {
 //                                 +parent ------> Collection
 //                             1
 // The structure describes all the information returned by the device;
-// no information information present in the original stream is lost.
+// no information present in the original stream is lost.
 //
 // When using it to parse reports sent by the device, two scenarios
 // are important:
@@ -83,7 +83,7 @@ namespace hid {
 // Now given the following report stream, with byte-order
 // left to right:
 //
-//   03 b4 67 01 02 03 13 02 b5 6a
+//   03 b4 67 01 02 04 13 03 b5 6a
 //   ------>--------->----------->
 //
 //  Can be parsed as the following 4 reports:
@@ -98,7 +98,7 @@ namespace hid {
 //          1 is 2/button (1-bit)
 //          0 is none/button (7-bit)       padding
 //
-//  - 03 is report id, so Node [5] and Node [6] are in play
+//  - 04 is report id, so Node [5] and Node [6] are in play
 //       13 is split into bits
 //          13 is desktop/wheel (5-bit)
 //           0 is desktop/none  (3-bit)    padding
@@ -147,24 +147,35 @@ enum NodeType : uint32_t {
 };
 
 enum FieldTypeFlags : uint8_t {
+    // Indicates if field can be modfied. Constant often means is padding.
     kData,
     kConstant,
+    // The field is either an array or scalar. If it is an array only
+    // the kData|kConstant and kAbsolute|kRelative flags are valid.
     kArray,
     kVariable,
+    // Value is absolute wrt to a fixed origin or not.
     kAbsolute,
     kRelative,
+    // Whether the data rolls over wrt to the logical min/max.
     kNoWrap,
     kWrap,
+    // Data has been pre-processed, for example dead-zone.
     kLinear,
     kNonLinear,
+    // Value returns to a preset value when the user is not interacting with control.
     kPreferredState,
     kNoPreferred,
+    // If the control can enter a state when it does not report data.
     kNoNullPosition,
     kNullState,
+    // Output-only: can the value be modified without host interaction.
     kNonVolatile,
     kVolatile,
+    // Data is a fixed size stream.
     kBitField,
     kBufferedBytes,
+
     kReserved,
 };
 

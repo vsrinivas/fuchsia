@@ -80,17 +80,19 @@ public:
 
     // Construct an Item from explicit values.
     // No validation is performed.
-    constexpr Item(Type type, Tag tag, uint32_t data)
-        : type_(type), tag_(tag), data_(data) {
+    constexpr Item(Type type, Tag tag, uint8_t size, uint32_t data)
+        : type_(type), tag_(tag), size_(size), data_(data) {
     }
 
     Type type() const { return type_; }
     Tag tag() const { return tag_; }
     uint32_t data() const { return data_; }
+    int32_t signed_data() const;
 
 private:
     const Type type_;
     const Tag tag_;
+    const uint8_t size_;
     const uint32_t data_;
 };
 
