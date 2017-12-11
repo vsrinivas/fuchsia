@@ -1,0 +1,144 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines an SDK element.
+#
+# Parameters
+#
+#   name (optional)
+#     Name of the element.
+#     Defaults to the GN target name.
+#
+#   files (optional)
+#     List of scopes describing the contents of this element.
+#     See the "File scopes" section for how to describe files.
+#     At least one of "files" and "file_mappings" must be set.
+#
+#   file_manifest (optional)
+#     File containing a description of the files contributing to this element.
+#     Lines in this file should be formatted as "destination=source". See
+#     the next section for expected values of "source" and "destination"; note
+#     that sources in a manifest file must be passed as absolute paths.
+#     This parameter is useful to specify files that are only known at build
+#     time.
+#     At least one of "files" and "file_mappings" must be set.
+#
+#   deps (optional)
+#     List of GN labels for other SDK elements this element depends on.
+#     These labels must point to "sdk_atom" targets.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
+#
+#   tags (optional)
+#     List of strings characterizing this element.
+#     Examples: "service:networking", "language:rust", "layer:garnet"
+#
+# File scopes
+#
+# Each scope describe a file to be added to the SDK element. The supported
+# attributes are:
+#
+#   source (required)
+#     Path to the original file.
+#     This path may be absolute or relative to the target's directory.
+#
+#   dest (optional)
+#     Destination path of the file relative to the element's base directory in
+#     the SDK.
+#     This attribute is required unless "source" points to a file located under
+#     the target's source directory, in which case the relative path of that
+#     file to the target's directory will be used as the default value.
+
+template("sdk_atom") {
+
+  atom_name = target_name
+  if (defined(invoker.name)) {
+    atom_name = invoker.name
+  }
+
+  gn_deps = []
+  if (defined(invoker.non_sdk_deps)) {
+    gn_deps = invoker.non_sdk_deps
+  }
+
+  dep_manifests = []
+  if (defined(invoker.deps)) {
+    gn_deps += invoker.deps
+    foreach(dep, invoker.deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+    }
+  }
+
+  assert(defined(invoker.files) || defined(invoker.file_manifest),
+      "At least one of 'files' and 'file_manifest' must be defined")
+  file_mappings = []
+  file_inputs = []
+  if (defined(invoker.files)) {
+    foreach(file, invoker.files) {
+      assert(defined(file.source), "File $file does not specify a source.")
+      file_inputs += [
+        file.source,
+      ]
+      source = rebase_path(file.source)
+      destination = ""
+      if (defined(file.dest)) {
+        destination = file.dest
+      }
+      file_mappings += [
+        "$destination=$source",
+      ]
+    }
+  }
+
+  tags = []
+  if (defined(invoker.tags)) {
+    tags = invoker.tags
+  }
+  full_label = get_label_info(":$target_name", "label_with_toolchain")
+  tags += [ "gn-label:$full_label" ]
+
+  # Builds a manifest representing this element.
+  action(target_name) {
+
+    manifest = "$target_gen_dir/$target_name.sdk"
+
+    script = "//build/sdk/create_atom_manifest.py"
+
+    deps = gn_deps
+
+    inputs = dep_manifests + file_inputs
+
+    outputs = [
+      manifest,
+    ]
+
+    args = [
+      "--name",
+      atom_name,
+      "--out",
+      rebase_path(manifest),
+      "--base",
+      rebase_path("."),
+      "--deps",
+    ] + dep_manifests + [
+      "--files",
+    ] + file_mappings + [
+      "--tags",
+    ] + tags
+
+    if (defined(invoker.file_manifest)) {
+      inputs += [
+        invoker.file_manifest,
+      ]
+
+      args += [
+        "--file-manifest",
+        rebase_path(invoker.file_manifest),
+      ]
+    }
+  }
+}
