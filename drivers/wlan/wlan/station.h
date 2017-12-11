@@ -58,7 +58,7 @@ class Station : public FrameHandler {
     wlan_channel_t channel() const {
         ZX_DEBUG_ASSERT(state_ != WlanState::kUnjoined);
         ZX_DEBUG_ASSERT(!bss_.is_null());
-        return wlan_channel_t{.primary = bss_->channel};
+        return wlan_channel_t{.primary = bss_->chan->primary};
     }
 
     zx_status_t SendKeepAliveResponse();

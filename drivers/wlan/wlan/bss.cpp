@@ -236,7 +236,9 @@ BSSDescriptionPtr Bss::ToFidl() {
 
     fidl->beacon_period = bcn_interval_;  // TODO(porce): consistent naming.
     fidl->timestamp = timestamp_;
-    fidl->channel = current_chan_.primary;
+
+    fidl->chan = WlanChan::New();
+    fidl->chan.get()->primary = current_chan_.primary;
 
     // Stats
     fidl->rssi_measurement = rssi_;

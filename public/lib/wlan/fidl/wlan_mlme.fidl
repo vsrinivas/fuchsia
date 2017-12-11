@@ -25,6 +25,27 @@ enum ScanTypes {
     LAST = PASSIVE,
 };
 
+// LINT analyzer keyword intended for humans:
+// LINT.IfChange
+enum CBW {	// Channel Bandwidth
+    CBW20 = 0,
+    CBW40 = 1,
+    CBW40ABOVE = CBW40,
+    CBW40BELOW = 2,
+    CBW80 = 3,
+    CBW160 = 4,
+    CBW80P80 = 5,
+
+    CBW_COUNT = 6,
+};
+
+struct WlanChan {
+    uint8 primary;
+    CBW cbw;
+    uint8 secondary80;
+};
+// LINT.ThenChange(//zircon/system/ulib/ddk/include/ddk/protocol/wlan.h)
+
 struct ScanRequest {
     BSSTypes bss_type;
     array<uint8, 6> bssid;
@@ -57,7 +78,7 @@ struct BSSDescription {
     uint64 local_time;
     array<uint8>? rsn;
 
-    uint8 channel;
+    WlanChan chan;
 
     // For the following measurements, 255 means measurement not available.
     uint8 rssi_measurement;  // not in the standard

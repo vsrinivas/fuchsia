@@ -12,10 +12,12 @@ import (
 
 func addBss(index int, ssid string, channel uint8, rssi uint8, resp *mlme.ScanResponse) {
 	bssDesc := mlme.BssDescription{
-		Bssid:           [6]uint8{uint8(index), 1, 2, 3, 4, 5},
-		Ssid:            ssid,
-		BssType:         mlme.BssTypes_Infrastructure,
-		Channel:         channel,
+		Bssid:   [6]uint8{uint8(index), 1, 2, 3, 4, 5},
+		Ssid:    ssid,
+		BssType: mlme.BssTypes_Infrastructure,
+		Chan: mlme.WlanChan{
+			Primary: channel,
+		},
 		RssiMeasurement: rssi,
 	}
 	resp.BssDescriptionSet = append(resp.BssDescriptionSet, bssDesc)
