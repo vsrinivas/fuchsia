@@ -55,8 +55,10 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       server_id_(std::move(server_id)) {}
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
-  return cloud_provider_firebase_factory_->MakeCloudProvider(server_id_,
-                                                             "client_id");
+  cloud_provider::CloudProviderPtr cloud_provider;
+  cloud_provider_firebase_factory_->MakeCloudProvider(
+      server_id_, "client_id", cloud_provider.NewRequest());
+  return cloud_provider;
 }
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {

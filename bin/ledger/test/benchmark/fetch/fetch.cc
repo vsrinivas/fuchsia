@@ -78,8 +78,9 @@ void FetchBenchmark::Run() {
   bool ret = files::CreateDirectory(writer_path);
   FXL_DCHECK(ret);
 
-  cloud_provider::CloudProviderPtr cloud_provider_writer =
-      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
+  cloud_provider::CloudProviderPtr cloud_provider_writer;
+  cloud_provider_firebase_factory_.MakeCloudProvider(
+      server_id_, "", cloud_provider_writer.NewRequest());
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &writer_controller_, std::move(cloud_provider_writer), "fetch",
@@ -159,8 +160,9 @@ void FetchBenchmark::ConnectReader() {
   bool ret = files::CreateDirectory(reader_path);
   FXL_DCHECK(ret);
 
-  cloud_provider::CloudProviderPtr cloud_provider_reader =
-      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
+  cloud_provider::CloudProviderPtr cloud_provider_reader;
+  cloud_provider_firebase_factory_.MakeCloudProvider(
+      server_id_, "", cloud_provider_reader.NewRequest());
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &reader_controller_, std::move(cloud_provider_reader), "fetch",

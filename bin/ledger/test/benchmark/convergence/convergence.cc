@@ -67,16 +67,18 @@ void ConvergenceBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FXL_DCHECK(ret);
 
-  cloud_provider::CloudProviderPtr cloud_provider_alpha =
-      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
+  cloud_provider::CloudProviderPtr cloud_provider_alpha;
+  cloud_provider_firebase_factory_.MakeCloudProvider(
+      server_id_, "", cloud_provider_alpha.NewRequest());
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &alpha_controller_, std::move(cloud_provider_alpha), "sync", alpha_path,
       &alpha_ledger_);
   QuitOnError(status, "alpha ledger");
 
-  cloud_provider::CloudProviderPtr cloud_provider_beta =
-      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
+  cloud_provider::CloudProviderPtr cloud_provider_beta;
+  cloud_provider_firebase_factory_.MakeCloudProvider(
+      server_id_, "", cloud_provider_beta.NewRequest());
   status = test::GetLedger(fsl::MessageLoop::GetCurrent(),
                            application_context_.get(), &beta_controller_,
                            std::move(cloud_provider_beta), "sync", beta_path,

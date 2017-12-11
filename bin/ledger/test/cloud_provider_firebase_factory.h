@@ -13,7 +13,6 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/test/fake_token_provider.h"
 
 namespace test {
@@ -30,8 +29,10 @@ class CloudProviderFirebaseFactory {
 
   void Init();
 
-  cloud_provider::CloudProviderPtr MakeCloudProvider(std::string server_id,
-                                                     std::string api_key);
+  void MakeCloudProvider(
+      std::string server_id,
+      std::string api_key,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
   app::ApplicationContext* application_context_;

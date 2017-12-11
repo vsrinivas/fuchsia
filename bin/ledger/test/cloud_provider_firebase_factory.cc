@@ -38,9 +38,10 @@ void CloudProviderFirebaseFactory::Init() {
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());
 }
 
-cloud_provider::CloudProviderPtr
-CloudProviderFirebaseFactory::MakeCloudProvider(std::string server_id,
-                                                std::string api_key) {
+void CloudProviderFirebaseFactory::MakeCloudProvider(
+    std::string server_id,
+    std::string api_key,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   modular::auth::TokenProviderPtr token_provider;
   services_task_runner_->PostTask(fxl::MakeCopyable(
       [this, request = token_provider.NewRequest()]() mutable {
@@ -51,15 +52,13 @@ CloudProviderFirebaseFactory::MakeCloudProvider(std::string server_id,
   firebase_config->server_id = server_id;
   firebase_config->api_key = api_key;
 
-  cloud_provider::CloudProviderPtr cloud_provider;
   cloud_provider_factory_->GetCloudProvider(
-      std::move(firebase_config), std::move(token_provider),
-      cloud_provider.NewRequest(), [](cloud_provider::Status status) {
+      std::move(firebase_config), std::move(token_provider), std::move(request),
+      [](cloud_provider::Status status) {
         if (status != cloud_provider::Status::OK) {
           FXL_LOG(ERROR) << "Failed to create a cloud provider: " << status;
         }
       });
-  return cloud_provider;
 }
 
 }  // namespace test
