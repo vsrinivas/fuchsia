@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <time.h>
+#include <zircon/syscalls.h>
 #include <iostream>
 
 #include "lib/app/cpp/application_context.h"
@@ -34,12 +34,11 @@ class TzUtil {
       command_line.GetOptionValue(kSetTimezoneIdCmd, &timezone_id);
       if (!timezone_id.empty()) {
         bool status;
-        time_svc_->SetTimezone(timezone_id, &status);
-        if (status) {
-          return;
+        if (!time_svc_->SetTimezone(timezone_id, &status) || !status) {
+          std::cerr << "ERROR: Unable to set ID." << std::endl;
+          exit(1);
         }
-        std::cerr << "ERROR: Unable to set ID." << std::endl;
-        exit(1);
+        return;
       } else {
         Usage();
       }
@@ -47,16 +46,23 @@ class TzUtil {
     }
     if (command_line.HasOption(kGetTimezoneIdCmd)) {
       fidl::String timezone_id;
-      time_svc_->GetTimezoneId(&timezone_id);
-      std::cout << timezone_id << std::endl;
+      if (time_svc_->GetTimezoneId(&timezone_id)) {
+        std::cout << timezone_id << std::endl;
+      } else {
+        std::cerr << "ERROR: Unable to get timezone ID." << std::endl;
+      }
       return;
     }
     if (command_line.HasOption(kGetOffsetCmd)) {
-      int32_t offset;
-      time_t seconds_since_epoch = time(NULL);
-      int64_t now_gmt_ms = seconds_since_epoch * 1000;
-      time_svc_->GetTimezoneOffsetMinutes(now_gmt_ms, &offset);
-      std::cout << offset << std::endl;
+      int32_t local_offset, dst_offset;
+      zx_time_t milliseconds_since_epoch =
+          zx_time_get(ZX_CLOCK_UTC) / ZX_MSEC(1);
+      if (time_svc_->GetTimezoneOffsetMinutes(milliseconds_since_epoch,
+                                              &local_offset, &dst_offset)) {
+        std::cout << local_offset + dst_offset << std::endl;
+      } else {
+        std::cerr << "ERROR: Unable to get offset." << std::endl;
+      }
       return;
     }
 

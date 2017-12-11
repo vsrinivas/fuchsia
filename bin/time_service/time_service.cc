@@ -68,23 +68,25 @@ void TimeServiceImpl::GetTimezoneOffsetMinutes(
     int64_t milliseconds_since_epoch,
     const GetTimezoneOffsetMinutesCallback& callback) {
   if (!valid_) {
-    callback(0);
+    callback(0, 0);
     return;
   }
   fidl::String timezone_id = GetTimezoneIdImpl();
   std::unique_ptr<icu::TimeZone> timezone(
       icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
-  int32_t raw_offset, dst_offset;
+  int32_t local_offset = 0, dst_offset = 0;
   UErrorCode error;
-  // Local time is set to false, and raw_offset/dst_offset/error are mutated
+  // Local time is set to false, and local_offset/dst_offset/error are mutated
   // via non-const references.
   timezone->getOffset(static_cast<UDate>(milliseconds_since_epoch), false,
-                      raw_offset, dst_offset, error);
+                      local_offset, dst_offset, error);
   if (error != U_ZERO_ERROR) {
-    callback(0);
+    callback(0, 0);
     return;
   }
-  callback((raw_offset + dst_offset) / kMillisecondsInMinute);
+  local_offset /= kMillisecondsInMinute;
+  dst_offset /= kMillisecondsInMinute;
+  callback(local_offset, dst_offset);
 }
 
 void TimeServiceImpl::NotifyWatchers(const fidl::String& new_timezone_id) {
