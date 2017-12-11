@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/fidl.gni")
 # For consumption outside modular.
 fidl("fidl") {
   sources = [
+    "chain.fidl",
+    "create_link.fidl",
     "link.fidl",
     "link_change.fidl",
     "per_device_story_info.fidl",

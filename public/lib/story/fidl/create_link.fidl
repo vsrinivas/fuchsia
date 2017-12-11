@@ -1,0 +1,37 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Defines the attributes for a Link when the Link is created.
+struct CreateLinkInfo {
+  // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
+  // Link.Set() to set the value in the root link of the new Story's primary
+  // module.
+  string initial_data;
+
+  LinkPermissions permissions;
+
+  // If |allowed_types| is null, the Link contains JSON. No schema validation
+  // is performed.
+  LinkAllowedTypes? allowed_types;
+};
+
+// Permissions assigned to a Link in a Chain when the Link is created.
+enum LinkPermissions {
+  // A mutable Link whose contents can be set by anyone that has a handle
+  // to the Link.
+  READ_WRITE,
+  // A Link that is only mutable by the creator of the Link, and
+  // is read-only to everyone else.
+  READ_ONLY_FOR_OTHERS,
+};
+
+struct LinkAllowedTypes {
+  // The Link must contain an Entity (see Link.SetEntity()) that has at least
+  // one of |allowed_entity_types| in its |Entity.GetTypes()| return value.
+  //
+  // If empty, allows any Entity type.
+  array<string> allowed_entity_types;
+};

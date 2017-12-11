@@ -1,0 +1,33 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "lib/module/fidl/link_path.fidl";
+import "lib/story/fidl/link.fidl";
+import "lib/story/fidl/create_link.fidl";
+
+// This interface is implemented by the story runner. The Story
+// service instance acts as a factory for it.
+//
+// An instance of Chain holds zero or more instances of Link. The Links
+// themselves are mutable, but the mapping of keys to Links is not mutable.
+//
+// No service name: returned from ModuleContext.GetChain().
+interface Chain {
+  // Return the list of keys that were provided when the Chain was created.
+  GetKeys() => (array<string> keys);
+
+  // Gets a Link instance for the given key. If |key| is not in GetKeys(),
+  // closes |request| immediately.
+  GetLink(string key, Link& request);
+};
+
+struct ChainPath {
+  // Name of the Chain itself.
+  //
+  // If |module_path| is left empty and ChainPath is used in the
+  // context of a Module, the system will fill it in.
+  array<string> module_path;
+};

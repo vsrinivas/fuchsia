@@ -1,0 +1,18 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Chains contain Links that are each keyed by a string.
+struct CreateChainInfo {
+  // Contains instructions to create each key in the Chain.
+  map<string, CreateChainPropertyInfo> property_info;
+};
+
+union CreateChainPropertyInfo {
+  // Instructs the Chain to either re-use an existing Link (|link_path| is set)
+  // or create a new one (|create_link|) is set.
+  LinkPath link_path;
+  CreateLinkInfo create_link;
+};
