@@ -536,7 +536,8 @@ static void pc_init_timer(uint level)
             set_pit_frequency(1000); // ~1ms granularity
 
             uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-            register_int_handler(irq, &pit_timer_tick, NULL);
+            zx_status_t status = register_int_handler(irq, &pit_timer_tick, NULL);
+            DEBUG_ASSERT(status == ZX_OK);
             unmask_interrupt(irq);
         }
     }

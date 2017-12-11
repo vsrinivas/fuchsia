@@ -214,12 +214,15 @@ enum handler_return platform_irq(x86_iframe_t *frame)
     return ret;
 }
 
-void register_int_handler(unsigned int vector, int_handler handler, void *arg)
+zx_status_t register_int_handler(unsigned int vector, int_handler handler, void *arg)
 {
-    DEBUG_ASSERT(is_valid_interrupt(vector, 0));
+    if (!is_valid_interrupt(vector, 0)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);
+    zx_status_t result = ZX_OK;
 
     /* Fetch the x86 vector currently configured for this global irq.  Force
      * it's value to zero if it is currently invalid */
@@ -237,7 +240,6 @@ void register_int_handler(unsigned int vector, int_handler handler, void *arg)
         /* If the x86 vector is invalid, and we are registering a handler,
          * attempt to get a new x86 vector from the pool. */
         uint        range_start;
-        zx_status_t result;
 
         /* Right now, there is not much we can do if the allocation fails.  In
          * debug builds, we ASSERT that everything went well.  In release
@@ -263,6 +265,14 @@ void register_int_handler(unsigned int vector, int_handler handler, void *arg)
 
     // No need to irq_save; we already did that when we grabbed the outer lock.
     spin_lock(&int_handler_table[x86_vector].lock);
+
+    if (handler && int_handler_table[x86_vector].handler) {
+        p2ra_free_range(&x86_irq_vector_allocator, x86_vector, 1);
+        result = ZX_ERR_ALREADY_BOUND;
+        spin_unlock(&int_handler_table[x86_vector].lock);
+        goto finished;
+    }
+
     int_handler_table[x86_vector].handler = handler;
     int_handler_table[x86_vector].arg = handler ? arg : NULL;
     spin_unlock(&int_handler_table[x86_vector].lock);
@@ -271,6 +281,7 @@ void register_int_handler(unsigned int vector, int_handler handler, void *arg)
 
 finished:
     spin_unlock_irqrestore(&lock, state);
+    return result;
 }
 
 bool is_valid_interrupt(unsigned int vector, uint32_t flags)

@@ -350,7 +350,8 @@ void arm_generic_timer_init(int irq, uint32_t freq_override)
     test_time_conversions(cntfrq);
 
     LTRACEF("register irq %d on cpu %u\n", irq, arch_curr_cpu_num());
-    register_int_handler(irq, &platform_tick, NULL);
+    zx_status_t status = register_int_handler(irq, &platform_tick, NULL);
+    DEBUG_ASSERT(status == ZX_OK);
     unmask_interrupt(irq);
 
     timer_irq = irq;

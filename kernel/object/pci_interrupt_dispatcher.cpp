@@ -50,6 +50,9 @@ zx_status_t PciInterruptDispatcher::Create(
     if (!device || !out_rights || !out_interrupt) {
         return ZX_ERR_INVALID_ARGS;
     }
+    if (!is_valid_interrupt(irq_id, 0)) {
+        return ZX_ERR_INTERNAL;
+    }
 
     fbl::AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.

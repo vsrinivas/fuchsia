@@ -76,7 +76,8 @@ static void pl011_uart_init(mdi_node_ref_t* node, uint level)
     cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
     // assumes interrupts are contiguous
-    register_int_handler(uart_irq, &pl011_uart_irq, NULL);
+    zx_status_t status = register_int_handler(uart_irq, &pl011_uart_irq, NULL);
+    DEBUG_ASSERT(status == ZX_OK);
 
     // clear all irqs
     UARTREG(uart_base, UART_ICR) = 0x3ff;

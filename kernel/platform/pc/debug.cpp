@@ -136,7 +136,8 @@ void pc_init_debug(void)
         platform_debug_start_uart_timer();
     } else {
         uart_irq = apic_io_isa_to_global(static_cast<uint8_t>(uart_irq));
-        register_int_handler(uart_irq, uart_irq_handler, NULL);
+        zx_status_t status = register_int_handler(uart_irq, uart_irq_handler, NULL);
+        DEBUG_ASSERT(status == ZX_OK);
         unmask_interrupt(uart_irq);
 
         uart_write(1, 0x1); // enable receive data available interrupt

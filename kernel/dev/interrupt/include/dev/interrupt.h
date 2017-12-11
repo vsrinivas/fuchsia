@@ -40,7 +40,7 @@ zx_status_t get_interrupt_config(unsigned int vector,
 
 typedef enum handler_return (*int_handler)(void* arg);
 
-void register_int_handler(unsigned int vector, int_handler handler, void* arg);
+zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg);
 
 bool is_valid_interrupt(unsigned int vector, uint32_t flags);
 

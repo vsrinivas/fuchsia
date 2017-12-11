@@ -21,23 +21,27 @@ struct int_handler_struct* pdev_get_int_handler(unsigned int vector)
     return &int_handler_table[vector];
 }
 
-void register_int_handler(unsigned int vector, int_handler handler, void* arg)
+zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg)
 {
+    if (!is_valid_interrupt(vector, 0)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     struct int_handler_struct *h;
 
     spin_lock_saved_state_t state;
-
-    if (!is_valid_interrupt(vector, 0)) {
-        panic("register_int_handler: vector out of range %u\n", vector);
-    }
-
     spin_lock_save(&lock, &state, SPIN_LOCK_FLAG_INTERRUPTS);
 
     h = pdev_get_int_handler(vector);
+    if (handler && h->handler) {
+        spin_unlock_restore(&lock, state, SPIN_LOCK_FLAG_INTERRUPTS);
+        return ZX_ERR_ALREADY_BOUND;
+    }
     h->handler = handler;
     h->arg = arg;
 
     spin_unlock_restore(&lock, state, SPIN_LOCK_FLAG_INTERRUPTS);
+    return ZX_OK;
 }
 
 static zx_status_t default_mask(unsigned int vector) {

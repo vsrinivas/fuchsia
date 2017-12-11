@@ -15,10 +15,6 @@
 
 #include <err.h>
 
-// Static storage
-fbl::Mutex InterruptEventDispatcher::vectors_lock_;
-InterruptEventDispatcher::VectorCollection InterruptEventDispatcher::vectors_;
-
 // static
 zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
                                              uint32_t flags,
@@ -71,13 +67,6 @@ zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
     // cleaned up automatically.
     auto disp_ref = fbl::AdoptRef<Dispatcher>(disp);
 
-    // Attempt to add ourselves to the vector collection.
-    {
-        fbl::AutoLock lock(&vectors_lock_);
-        if (!vectors_.insert_or_find(disp))
-            return ZX_ERR_ALREADY_EXISTS;
-    }
-
     // Looks like things went well.  Register our callback and unmask our
     // interrupt.
     if (!default_mode) {
@@ -86,8 +75,12 @@ zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
             return status;
         }
     }
-    register_int_handler(vector, IrqHandler, disp);
+    zx_status_t status = register_int_handler(vector, IrqHandler, disp);
+    if (status != ZX_OK) {
+        return status;
+    }
     unmask_interrupt(vector);
+    disp->handler_registered_ = true;
 
     // Transfer control of the new dispatcher to the creator and we are done.
     *rights     = ZX_DEFAULT_INTERRUPT_RIGHTS;
@@ -97,17 +90,11 @@ zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
 }
 
 InterruptEventDispatcher::~InterruptEventDispatcher() {
-    // If we were successfully instantiated, then we must exist in the vector
-    // collection.  Unconditionally mask our vector, clear out our handler and
-    // remove ourselves from the collection bookkeeping (allowing others to
-    // claim the vector if they desire).
-    if (wavl_node_state_.InContainer()) {
+    // If we were successfully instantiated, then unconditionally mask our vector and
+    // clear out our handler (allowing others to  claim the vector if they desire).
+    if (handler_registered_) {
         mask_interrupt(vector_);
         register_int_handler(vector_, nullptr, nullptr);
-        {
-            fbl::AutoLock lock(&vectors_lock_);
-            vectors_.erase(*this);
-        }
     }
 }
 

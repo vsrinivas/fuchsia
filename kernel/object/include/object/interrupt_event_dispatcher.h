@@ -8,7 +8,6 @@
 
 #include <zircon/types.h>
 #include <fbl/canary.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <object/interrupt_dispatcher.h>
 #include <sys/types.h>
@@ -27,21 +26,14 @@ public:
     zx_status_t InterruptComplete() final;
     zx_status_t UserSignal() final;
 
-    // requred to exist in our collection of allocated vectors.
-    uint32_t GetKey() const { return vector_; }
-
 private:
-    using VectorCollection = fbl::WAVLTree<uint32_t, InterruptEventDispatcher*>;
-    friend fbl::DefaultWAVLTreeTraits<InterruptEventDispatcher*>;
-
-    explicit InterruptEventDispatcher(uint32_t vector) : vector_(vector) { }
+    explicit InterruptEventDispatcher(uint32_t vector)
+            : vector_(vector),
+              handler_registered_(false) {}
 
     static enum handler_return IrqHandler(void* ctx);
 
     fbl::Canary<fbl::magic("INED")> canary_;
     const uint32_t vector_;
-    fbl::WAVLTreeNodeState<InterruptEventDispatcher*> wavl_node_state_;
-
-    static fbl::Mutex vectors_lock_;
-    static VectorCollection vectors_ TA_GUARDED(vectors_lock_);
+    bool handler_registered_;
 };

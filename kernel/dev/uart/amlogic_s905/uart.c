@@ -103,39 +103,40 @@ static enum handler_return uart_irq(void *arg)
 
 static void s905_uart_init(mdi_node_ref_t* node, uint level)
 {
-        assert(s905_uart_base);
-        assert(s905_uart_irq);
+    assert(s905_uart_base);
+    assert(s905_uart_irq);
 
-        // create circular buffer to hold received data
-        cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+    // create circular buffer to hold received data
+    cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
-        //reset the port
-        UARTREG(s905_uart_base,S905_UART_CONTROL) |=  S905_UART_CONTROL_RSTRX |
-                                                      S905_UART_CONTROL_RSTTX |
-                                                      S905_UART_CONTROL_CLRERR;
-        UARTREG(s905_uart_base,S905_UART_CONTROL) &= ~(S905_UART_CONTROL_RSTRX |
-                                                       S905_UART_CONTROL_RSTTX |
-                                                       S905_UART_CONTROL_CLRERR);
-        // enable rx and tx
-        UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_TXEN |
-                                                     S905_UART_CONTROL_RXEN;
+    //reset the port
+    UARTREG(s905_uart_base,S905_UART_CONTROL) |=  S905_UART_CONTROL_RSTRX |
+                                                  S905_UART_CONTROL_RSTTX |
+                                                  S905_UART_CONTROL_CLRERR;
+    UARTREG(s905_uart_base,S905_UART_CONTROL) &= ~(S905_UART_CONTROL_RSTRX |
+                                                   S905_UART_CONTROL_RSTTX |
+                                                   S905_UART_CONTROL_CLRERR);
+    // enable rx and tx
+    UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_TXEN |
+                                                 S905_UART_CONTROL_RXEN;
 
-        UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_INVRTS |
-                                                     S905_UART_CONTROL_RXINTEN |
-                                                     S905_UART_CONTROL_TWOWIRE;
+    UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_INVRTS |
+                                                 S905_UART_CONTROL_RXINTEN |
+                                                 S905_UART_CONTROL_TWOWIRE;
 
-        // Set to interrupt every 1 rx byte
-        uint32_t temp2 = UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL);
-        temp2 &= 0xffff0000;
-        temp2 |= (1 << 8) | ( 1 );
-        UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL) = temp2;
+    // Set to interrupt every 1 rx byte
+    uint32_t temp2 = UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL);
+    temp2 &= 0xffff0000;
+    temp2 |= (1 << 8) | ( 1 );
+    UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL) = temp2;
 
-        register_int_handler(s905_uart_irq, &uart_irq, (void *)s905_uart_base);
+    zx_status_t status = register_int_handler(s905_uart_irq, &uart_irq, (void *)s905_uart_base);
+    DEBUG_ASSERT(status == ZX_OK);
 
-        initialized = true;
+    initialized = true;
 
-        // enable interrupt
-        unmask_interrupt(s905_uart_irq);
+    // enable interrupt
+    unmask_interrupt(s905_uart_irq);
 }
 
 /* panic-time getc/putc */

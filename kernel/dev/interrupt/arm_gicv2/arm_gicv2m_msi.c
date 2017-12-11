@@ -156,7 +156,8 @@ void arm_gicv2m_register_msi_handler(const pcie_msi_block_t* block,
                                      void*                   ctx) {
     DEBUG_ASSERT(block && block->allocated);
     DEBUG_ASSERT(msi_id < block->num_irq);
-    register_int_handler(block->base_irq_id + msi_id, handler, ctx);
+    zx_status_t status = register_int_handler(block->base_irq_id + msi_id, handler, ctx);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 void arm_gicv2m_mask_unmask_msi(const pcie_msi_block_t* block,

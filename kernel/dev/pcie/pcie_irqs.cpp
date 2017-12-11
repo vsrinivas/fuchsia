@@ -101,13 +101,15 @@ SharedLegacyIrqHandler::SharedLegacyIrqHandler(uint irq_id)
     : irq_id_(irq_id) {
     list_initialize(&device_handler_list_);
     mask_interrupt(irq_id_);  // This should not be needed, but just in case.
-    register_int_handler(irq_id_, HandlerThunk, this);
+    zx_status_t status = register_int_handler(irq_id_, HandlerThunk, this);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 SharedLegacyIrqHandler::~SharedLegacyIrqHandler() {
     DEBUG_ASSERT(list_is_empty(&device_handler_list_));
     mask_interrupt(irq_id_);
-    register_int_handler(irq_id_, nullptr, nullptr);
+    zx_status_t status = register_int_handler(irq_id_, nullptr, nullptr);
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 enum handler_return SharedLegacyIrqHandler::Handler() {
