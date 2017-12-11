@@ -18,7 +18,6 @@ C_STRING_OPS := \
 	strcmp \
 	strcoll \
 	strcpy \
-	strerror \
 	strlcat \
 	strlcpy \
 	strlen \
