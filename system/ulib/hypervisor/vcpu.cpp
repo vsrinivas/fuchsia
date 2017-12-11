@@ -8,8 +8,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fbl/auto_lock.h>
+#include <fbl/string_buffer.h>
 #include <hypervisor/io.h>
 #include <hypervisor/guest.h>
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
@@ -162,8 +165,81 @@ static zx_status_t handle_io(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_
     return io->input ? handle_input(vcpu, io, trap_key) : handle_output(vcpu, io, trap_key);
 }
 
+struct Vcpu::ThreadEntryArgs {
+    const Guest* guest;
+    Vcpu* vcpu;
+    zx_vcpu_create_args_t* vcpu_create_args;
+};
+
+zx_status_t Vcpu::Create(const Guest* guest, zx_vcpu_create_args_t* vcpu_create_args) {
+    ThreadEntryArgs args = {
+        .guest = guest,
+        .vcpu = this,
+        .vcpu_create_args = vcpu_create_args,
+    };
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
+    name_buffer.AppendPrintf("vcpu-%d", 0);
+    auto thread_entry = [](void* arg) {
+        ThreadEntryArgs* thread_args = reinterpret_cast<ThreadEntryArgs*>(arg);
+        return thread_args->vcpu->ThreadEntry(thread_args);
+    };
+    int ret = thrd_create_with_name(&thread_, thread_entry, &args, name_buffer.c_str());
+    if (ret != thrd_success) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    fbl::AutoLock lock(&mutex_);
+    WaitForStateChangeLocked(State::UNINITIALIZED);
+    if (state_ != State::WAITING_TO_START) {
+        return ZX_ERR_BAD_STATE;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
+    {
+        fbl::AutoLock lock(&mutex_);
+        if (state_ != State::UNINITIALIZED) {
+            return ZX_ERR_BAD_STATE;
+        }
+
+        zx_status_t status = zx_vcpu_create(args->guest->handle(), 0, args->vcpu_create_args, &vcpu_);
+        if (status != ZX_OK) {
+            SetStateLocked(State::ERROR_FAILED_TO_CREATE);
+            return status;
+        }
+
+        SetStateLocked(State::WAITING_TO_START);
+        WaitForStateChangeLocked(State::WAITING_TO_START);
+        if (state_ != State::STARTING) {
+            return ZX_ERR_BAD_STATE;
+        }
+
+        if (initial_vcpu_state_ != nullptr) {
+            status = WriteState(ZX_VCPU_STATE, initial_vcpu_state_, sizeof(*initial_vcpu_state_));
+            if (status != ZX_OK) {
+                SetStateLocked(State::ERROR_FAILED_TO_START);
+                return status;
+            }
+        }
+    }
+
+    return Loop();
+}
+
 zx_status_t Vcpu::Init(const Guest& guest, zx_vcpu_create_args_t* args) {
     return zx_vcpu_create(guest.handle(), 0, args, &vcpu_);
+}
+
+void Vcpu::SetStateLocked(State new_state) {
+    state_ = new_state;
+    cnd_signal(&state_cnd_);
+}
+
+void Vcpu::WaitForStateChangeLocked(State initial_state) {
+    while (state_ == initial_state) {
+        cnd_wait(&state_cnd_, mutex_.GetInternal());
+    }
 }
 
 static zx_status_t handle_packet(Vcpu* vcpu, zx_port_packet_t* packet) {
@@ -186,16 +262,46 @@ zx_status_t Vcpu::Loop() {
         zx_status_t status = zx_vcpu_resume(vcpu_, &packet);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to resume VCPU %d\n", status);
+            fbl::AutoLock lock(&mutex_);
+            SetStateLocked(State::ERROR_FAILED_TO_RESUME);
             return status;
         }
         status = handle_packet(this, &packet);
-        if (status == ZX_ERR_STOP)
+        if (status == ZX_ERR_STOP) {
+            fbl::AutoLock lock(&mutex_);
+            SetStateLocked(State::TERMINATED);
             return ZX_OK;
+        }
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
+            fbl::AutoLock lock(&mutex_);
+            SetStateLocked(State::ERROR_ABORTED);
             return status;
         }
     }
+}
+
+zx_status_t Vcpu::Start(zx_vcpu_state_t* initial_vcpu_state) {
+    fbl::AutoLock lock(&mutex_);
+    if (state_ != State::WAITING_TO_START) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Place the VCPU in the |STARTING| state which will cause the VCPU to
+    // write the initial state and begin VCPU execution.
+    initial_vcpu_state_ = initial_vcpu_state;
+    SetStateLocked(State::STARTING);
+    WaitForStateChangeLocked(State::STARTING);
+    if (state_ != State::STARTED) {
+        return ZX_ERR_BAD_STATE;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Vcpu::Join() {
+    zx_status_t vcpu_result = ZX_ERR_INTERNAL;
+    int ret = thrd_join(thread_, &vcpu_result);
+    return ret == thrd_success ? vcpu_result : ZX_ERR_INTERNAL;
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
