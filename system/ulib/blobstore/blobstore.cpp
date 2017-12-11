@@ -775,12 +775,12 @@ zx_status_t Blobstore::AddBlocks(size_t nblocks) {
 
     if (abmblks > kBlocksPerSlice) {
         //TODO(planders): Allocate more slices for the block bitmap.
-        fprintf(stderr, "Blobstore::AddBlocks needs to increase block bitmap size");
+        fprintf(stderr, "Blobstore::AddBlocks needs to increase block bitmap size\n");
         return ZX_ERR_NO_SPACE;
     }
 
     if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
-        fprintf(stderr, "Blobstore::AddBlocks FVM Extend failure");
+        fprintf(stderr, "Blobstore::AddBlocks FVM Extend failure\n");
         return ZX_ERR_NO_SPACE;
     }
 

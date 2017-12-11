@@ -58,19 +58,22 @@ typedef enum fs_test_type {
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
-#define TEST_FVM_SLICE_SIZE (8 * (1 << 20))
 
+// FVM slice size used for tests
+constexpr size_t kTestFvmSliceSize = 16 * (1 << 10); // 16kb
 // Minimum blobstore size required by CreateUmountRemountLargeMultithreaded test
 constexpr size_t kBytesNormalMinimum = 5 * (1 << 20); // 5mb
 // Minimum blobstore size required by ResizePartition test
-constexpr size_t kBytesFvmMinimum = TEST_FVM_SLICE_SIZE * 9; // 72mb
+constexpr size_t kSliceBytesFvmMinimum = 507 * kTestFvmSliceSize;
+constexpr size_t kTotalBytesFvmMinimum = fvm::MetadataSize(kSliceBytesFvmMinimum,
+                                         kTestFvmSliceSize) * 2 + kSliceBytesFvmMinimum; // ~8.5mb
 
 constexpr uint8_t kTestUniqueGUID[] = {
     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
 };
 constexpr uint8_t kTestPartGUID[] = GUID_DATA_VALUE;
-constexpr size_t kBlocksPerSlice = TEST_FVM_SLICE_SIZE / blobstore::kBlobstoreBlockSize;
+constexpr size_t kBlocksPerSlice = kTestFvmSliceSize / blobstore::kBlobstoreBlockSize;
 
 const fsck_options_t test_fsck_options = {
     .verbose = false,
@@ -193,13 +196,13 @@ static int StartBlobstoreTest(test_info_t* test_info) {
     }
 
     if (TestType == FS_TEST_FVM) {
-        ASSERT_EQ(TEST_FVM_SLICE_SIZE % blobstore::kBlobstoreBlockSize, 0);
+        ASSERT_EQ(kTestFvmSliceSize % blobstore::kBlobstoreBlockSize, 0);
 
         int fd = open(test_info->ramdisk_path, O_RDWR);
         if (fd < 0) {
             fprintf(stderr, "[FAILED]: Could not open test disk\n");
             return -1;
-        } else if (fvm_init(fd, TEST_FVM_SLICE_SIZE) != ZX_OK) {
+        } else if (fvm_init(fd, kTestFvmSliceSize) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
             return -1;
         } else if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
@@ -385,7 +388,7 @@ static bool GenerateBlob(size_t size_data, fbl::unique_ptr<blob_info_t>* out) {
     return true;
 }
 
-bool QueryInfo(size_t expected_nodes) {
+bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     int fd = open(MOUNT_PATH, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0);
 
@@ -402,8 +405,14 @@ bool QueryInfo(size_t expected_nodes) {
     ASSERT_EQ(info->max_filename_size, Digest::kLength * 2);
     ASSERT_EQ(info->fs_type, VFS_TYPE_BLOBSTORE);
 
-    ASSERT_EQ(info->total_bytes, TEST_FVM_SLICE_SIZE);
-    ASSERT_EQ(info->total_nodes, TEST_FVM_SLICE_SIZE / blobstore::kBlobstoreInodeSize);
+    // Check that used_bytes are within a reasonable range
+    ASSERT_GE(info->used_bytes, expected_bytes);
+    ASSERT_LE(info->used_bytes, info->total_bytes);
+
+    // Check that total_bytes are a multiple of slice_size
+    ASSERT_GE(info->total_bytes, kTestFvmSliceSize);
+    ASSERT_EQ(info->total_bytes % kTestFvmSliceSize, 0);
+    ASSERT_EQ(info->total_nodes, kTestFvmSliceSize / blobstore::kBlobstoreInodeSize);
     ASSERT_EQ(info->used_nodes, expected_nodes);
     return true;
 }
@@ -542,7 +551,8 @@ static bool TestQueryInfo(void) {
     test_info_t test_info;
     ASSERT_EQ(StartBlobstoreTest<TestType>(&test_info), 0, "Mounting Blobstore");
 
-    ASSERT_TRUE(QueryInfo(0));
+    size_t total_bytes = 0;
+    ASSERT_TRUE(QueryInfo(0, 0));
     for (size_t i = 10; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateBlob(1 << i, &info));
@@ -551,9 +561,11 @@ static bool TestQueryInfo(void) {
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                              info->data.get(), info->size_data, &fd));
         ASSERT_EQ(close(fd), 0);
+        total_bytes += fbl::round_up(info->size_merkle + info->size_data,
+                       blobstore::kBlobstoreBlockSize);
     }
 
-    ASSERT_TRUE(QueryInfo(6));
+    ASSERT_TRUE(QueryInfo(6, total_bytes));
     ASSERT_EQ(EndBlobstoreTest<TestType>(&test_info), 0, "unmounting blobstore");
     END_TEST;
 }
@@ -1505,10 +1517,10 @@ static bool ResizePartition(void) {
     test_info_t test_info;
     ASSERT_EQ(StartBlobstoreTest<TestType>(&test_info), 0, "Mounting Blobstore");
 
-    // Create 5000 blobs. Test slices are small enough that this will require both inodes and
+    // Create 1000 blobs. Test slices are small enough that this will require both inodes and
     // blocks to be added
-    for (size_t d = 0; d < 5000; d++) {
-        if (d % 500 == 0) {
+    for (size_t d = 0; d < 1000; d++) {
+        if (d % 100 == 0) {
             printf("Creating blob: %lu\n", d);
         }
 
@@ -1521,6 +1533,7 @@ static bool ResizePartition(void) {
         ASSERT_EQ(close(fd), 0);
     }
 
+    printf("Remounting blobstore\n");
     // Remount partition
     ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobstore");
     ASSERT_EQ(MountBlobstore(test_info.ramdisk_path), 0, "Could not re-mount blobstore");
@@ -1533,14 +1546,18 @@ static bool ResizePartition(void) {
 
     // Unlink all blobs
     while ((de = readdir(dir)) != nullptr) {
+        if (entries_deleted % 100 == 0) {
+            printf("Unlinking blob: %u\n", entries_deleted);
+        }
         strcpy(path, MOUNT_PATH "/");
         strcat(path, de->d_name);
         ASSERT_EQ(unlink(path), 0);
         entries_deleted++;
     }
 
+    printf("Completing test\n");
     ASSERT_EQ(closedir(dir), 0);
-    ASSERT_EQ(entries_deleted, 5000);
+    ASSERT_EQ(entries_deleted, 1000);
     ASSERT_EQ(EndBlobstoreTest<TestType>(&test_info), 0, "unmounting blobstore");
     END_TEST;
 }
@@ -1641,7 +1658,7 @@ int main(int argc, char** argv) {
                 if (disk_size < kBytesNormalMinimum) {
                     fprintf(stderr, "Error: Insufficient disk space for tests");
                     return -1;
-                } else if (disk_size < kBytesFvmMinimum) {
+                } else if (disk_size < kTotalBytesFvmMinimum) {
                     fprintf(stderr, "Error: Insufficient disk space for FVM tests");
                     return -1;
                 }
