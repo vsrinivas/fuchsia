@@ -940,7 +940,7 @@ if (generate_zircon_gn_files) {
   exec_script("//build/zircon/create_gn_rules.py",
               [
                 "--out",
-                rebase_path("//sdk"),
+                rebase_path("//zircon/public"),
                 "--zircon-build",
                 rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
               ],
