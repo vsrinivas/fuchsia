@@ -56,6 +56,7 @@ source_set("module_resolver_impl") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/fidl",
@@ -77,6 +78,7 @@ source_set("module_resolver_impl_unittest") {
     "//garnet/public/lib/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",

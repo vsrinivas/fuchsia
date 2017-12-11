@@ -56,9 +56,11 @@ modular::FindModulesResultPtr CreateDefaultResult(
 
 }  // namespace
 
-ModuleResolverImpl::ModuleResolverImpl()
+ModuleResolverImpl::ModuleResolverImpl(
+    modular::EntityResolverPtr entity_resolver)
     : query_handler_binding_(this),
       already_checking_if_sources_are_ready_(false),
+      type_helper_(std::move(entity_resolver)),
       weak_factory_(this) {}
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
@@ -95,76 +97,134 @@ void ModuleResolverImpl::BindQueryHandler(
   query_handler_binding_.Bind(std::move(request));
 }
 
+class ModuleResolverImpl::FindModulesCall
+    : modular::Operation<modular::FindModulesResultPtr> {
+ public:
+  FindModulesCall(modular::OperationContainer* container,
+                  ModuleResolverImpl* module_resolver_impl,
+                  modular::DaisyPtr daisy,
+                  modular::ResolverScoringInfoPtr scoring_info,
+                  ResultCall result_call)
+      : Operation("ModuleResolverImpl::FindModulesCall",
+                  container,
+                  std::move(result_call)),
+        module_resolver_impl_(module_resolver_impl),
+        daisy_(std::move(daisy)),
+        scoring_info_(std::move(scoring_info)) {
+    Ready();
+  }
+
+  // Given a verb, we:
+  // 1) Find all modules that can handle the verb in this daisy.
+  // 2) Find all modules that can handle any of the (noun,type)s in this daisy.
+  //    Note that this includes modules that only satisfy a subset of the daisy
+  //    input.
+  // 3) Intersect 1) and 2) to find modules that satisfy the daisy.
+  void Run() {
+    FlowToken flow{this, &result_};
+
+    if (!daisy_->verb) {
+      // TODO(thatguy): Add no-verb resolution.
+      result_ = CreateDefaultResult(daisy_);
+      return;
+    }
+
+    auto verb_it = module_resolver_impl_->verb_to_entries_.find(daisy_->verb);
+    if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
+      result_ = CreateDefaultResult(daisy_);
+      return;
+    }
+
+    candidates_ = verb_it->second;
+
+    // For each noun in the Daisy, try to find Modules that provide the types in
+    // the noun as constraints.
+    if (daisy_->nouns.is_null() || daisy_->nouns.size() == 0) {
+      Finally(flow);
+      return;
+    }
+
+    num_nouns_countdown_ = daisy_->nouns.size();
+    for (const auto& noun_entry : daisy_->nouns) {
+      const auto& noun_name = noun_entry.GetKey();
+      const auto& noun_value = noun_entry.GetValue();
+
+      module_resolver_impl_->type_helper_.GetNounTypes(
+          noun_value, [noun_name, flow, this](std::vector<std::string> types) {
+            ProcessNounTypes(noun_name, std::move(types));
+            if (--num_nouns_countdown_ == 0) {
+              Finally(flow);
+            }
+          });
+    }
+  }
+
+ private:
+  // |noun_name| and |types| come from the daisy.
+  void ProcessNounTypes(const std::string& noun_name,
+                        std::vector<std::string> types) {
+    // The types list we have is an OR - any Module that can handle any of the
+    // types for this noun is valid, so we union all valid resolutions. First,
+    // we gather all such modules, regardless of if they handle the verb.
+    std::set<EntryId> noun_type_entries;
+    for (const auto& type : types) {
+      auto noun_it = module_resolver_impl_->noun_type_to_entries_.find(
+          std::make_pair(type, noun_name));
+      if (noun_it == module_resolver_impl_->noun_type_to_entries_.end())
+        continue;
+
+      noun_type_entries.insert(noun_it->second.begin(), noun_it->second.end());
+    }
+
+    // The target Module must match the types in every noun specified in the
+    // Daisy, so here we do a set intersection with our possible set of
+    // candidates.
+    std::set<EntryId> new_result_entries;
+    std::set_intersection(
+        candidates_.begin(), candidates_.end(), noun_type_entries.begin(),
+        noun_type_entries.end(),
+        std::inserter(new_result_entries, new_result_entries.begin()));
+    candidates_.swap(new_result_entries);
+  }
+
+  void Finally(FlowToken flow) {
+    if (candidates_.empty()) {
+      result_ = CreateDefaultResult(daisy_);
+      return;
+    }
+
+    result_ = modular::FindModulesResult::New();
+    for (auto id : candidates_) {
+      auto entry_it = module_resolver_impl_->entries_.find(id);
+      FXL_CHECK(entry_it != module_resolver_impl_->entries_.end()) << id;
+      const auto& entry = entry_it->second;
+
+      auto result = modular::ModuleResolverResult::New();
+      result->module_id = entry.binary;
+      result->local_name = entry.local_name;
+      CopyNounsToModuleResolverResult(daisy_, &result);
+
+      result_->modules.push_back(std::move(result));
+    }
+  }
+
+  modular::FindModulesResultPtr result_;
+
+  ModuleResolverImpl* const module_resolver_impl_;
+  modular::DaisyPtr daisy_;
+  modular::ResolverScoringInfoPtr scoring_info_;
+  std::set<EntryId> candidates_;
+  uint32_t num_nouns_countdown_ = 0;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
+};
+
 void ModuleResolverImpl::FindModules(
     modular::DaisyPtr daisy,
     modular::ResolverScoringInfoPtr scoring_info,
     const FindModulesCallback& done) {
-  if (!daisy->verb) {
-    // TODO(thatguy): Add no-verb resolution.
-    done(CreateDefaultResult(daisy));
-    return;
-  }
-
-  auto verb_it = verb_to_entry_.find(daisy->verb);
-  if (verb_it == verb_to_entry_.end()) {
-    done(CreateDefaultResult(daisy));
-    return;
-  }
-
-  std::set<EntryId> result_entries(verb_it->second);
-
-  // For each noun in the Daisy, try to find Modules that provide the types in
-  // the noun as constraints.
-  for (const auto& noun_entry : daisy->nouns) {
-    const auto& name = noun_entry.GetKey();
-    const auto& noun = noun_entry.GetValue();
-
-    // TODO(thatguy): Once we grab Entity types from an Entity reference, this
-    // will have to be an async call. At this point we'll have to break this
-    // entire operation up into parts.
-    auto types = type_helper_.GetEntityTypes(noun);
-
-    // The types list we have is an OR - any Module that can handle any of the
-    // types is valid, So, we union all valid resolutions.
-    std::set<EntryId> this_noun_entries;
-    for (const auto& type : types) {
-      auto noun_it = noun_type_to_entry_.find(std::make_pair(type, name));
-      if (noun_it == noun_type_to_entry_.end())
-        continue;
-
-      this_noun_entries.insert(noun_it->second.begin(), noun_it->second.end());
-    }
-
-    // The target Module must match the types in every noun specified in the
-    // Daisy, so here we do a set intersection.
-    std::set<EntryId> new_result_entries;
-    std::set_intersection(
-        result_entries.begin(), result_entries.end(), this_noun_entries.begin(),
-        this_noun_entries.end(),
-        std::inserter(new_result_entries, new_result_entries.begin()));
-    result_entries.swap(new_result_entries);
-  }
-
-  if (result_entries.empty()) {
-    done(CreateDefaultResult(daisy));
-    return;
-  }
-
-  auto results = modular::FindModulesResult::New();
-  for (auto id : result_entries) {
-    auto entry_it = entries_.find(id);
-    FXL_CHECK(entry_it != entries_.end()) << id;
-    const auto& entry = entry_it->second;
-
-    auto result = modular::ModuleResolverResult::New();
-    result->module_id = entry.binary;
-    result->local_name = entry.local_name;
-    CopyNounsToModuleResolverResult(daisy, &result);
-
-    results->modules.push_back(std::move(result));
-  }
-
-  done(std::move(results));
+  new FindModulesCall(&operations_, this, std::move(daisy),
+                      std::move(scoring_info), done);
 }
 
 namespace {
@@ -267,15 +327,13 @@ void ModuleResolverImpl::OnNewManifestEntry(
   auto ret =
       entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
   FXL_CHECK(ret.second);
-
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;
-
-  verb_to_entry_[entry.verb].insert(id);
+  verb_to_entries_[entry.verb].insert(id);
 
   for (const auto& constraint : entry.noun_constraints) {
     for (const auto& type : constraint.types) {
-      noun_type_to_entry_[std::make_pair(type, constraint.name)].insert(id);
+      noun_type_to_entries_[std::make_pair(type, constraint.name)].insert(id);
     }
   }
 }
@@ -290,11 +348,11 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   }
 
   const auto& entry = it->second;
-  verb_to_entry_[entry.verb].erase(id);
+  verb_to_entries_[entry.verb].erase(id);
 
   for (const auto& constraint : entry.noun_constraints) {
     for (const auto& type : constraint.types) {
-      noun_type_to_entry_[std::make_pair(type, constraint.name)].erase(id);
+      noun_type_to_entries_[std::make_pair(type, constraint.name)].erase(id);
     }
   }
 

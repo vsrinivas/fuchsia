@@ -62,7 +62,7 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "maxwell";
 constexpr char kContextEngineUrl[] = "context_engine";
-constexpr char kContextEngineComonentNamespace[] = "context_engine";
+constexpr char kContextEngineComponentNamespace[] = "context_engine";
 constexpr char kModuleResolverUrl[] = "module_resolver";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
@@ -382,18 +382,23 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
+  maxwell_component_context_bindings_ = std::make_unique<fidl::BindingSet<
+      ComponentContext, std::unique_ptr<ComponentContextImpl>>>();
+  AtEnd(Reset(&maxwell_component_context_bindings_));
+
   ComponentContextInfo component_context_info{
       message_queue_manager_.get(), agent_runner_.get(),
       ledger_repository_.get(), entity_provider_runner_.get()};
-
   // Start kContextEngineUrl.
   {
-    context_engine_context_impl_ = std::make_unique<ComponentContextImpl>(
-        component_context_info, kContextEngineComonentNamespace,
-        kContextEngineUrl, kContextEngineUrl);
     context_engine_ns_services_.AddService<ComponentContext>(
-        [this](fidl::InterfaceRequest<ComponentContext> request) {
-          context_engine_context_impl_->Connect(std::move(request));
+        [this, component_context_info](
+            fidl::InterfaceRequest<ComponentContext> request) {
+          maxwell_component_context_bindings_->AddBinding(
+              std::make_unique<ComponentContextImpl>(
+                  component_context_info, kContextEngineComponentNamespace,
+                  kContextEngineUrl, kContextEngineUrl),
+              std::move(request));
         });
     auto service_list = app::ServiceList::New();
     service_list->names.push_back(ComponentContext::Name_);
@@ -410,11 +415,6 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   }
 
   // Start kMaxwellUrl
-  maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
-      component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
-      kMaxwellUrl);
-  AtEnd(Reset(&maxwell_component_context_impl_));
-
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
   if (test_) {
@@ -428,9 +428,13 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
 
   maxwell::ContextEnginePtr context_engine;
   context_engine_app_->services().ConnectToService(context_engine.NewRequest());
-
+  auto maxwell_app_component_context =
+      maxwell_component_context_bindings_->AddBinding(
+          std::make_unique<ComponentContextImpl>(component_context_info,
+                                                 kMaxwellComponentNamespace,
+                                                 kMaxwellUrl, kMaxwellUrl));
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
-      maxwell_component_context_impl_->NewBinding(), std::move(context_engine),
+      std::move(maxwell_app_component_context), std::move(context_engine),
       std::move(story_provider), std::move(focus_provider_maxwell),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
@@ -463,9 +467,18 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
                 std::move(component_scope), std::move(request));
           }
         });
-
+    module_resolver_ns_services_.AddService<modular::ComponentContext>(
+        [this, component_context_info](
+            fidl::InterfaceRequest<modular::ComponentContext> request) {
+          maxwell_component_context_bindings_->AddBinding(
+              std::make_unique<ComponentContextImpl>(
+                  component_context_info, kMaxwellComponentNamespace,
+                  kModuleResolverUrl, kModuleResolverUrl),
+              std::move(request));
+        });
     auto service_list = app::ServiceList::New();
     service_list->names.push_back(maxwell::IntelligenceServices::Name_);
+    service_list->names.push_back(modular::ComponentContext::Name_);
     module_resolver_ns_services_.AddBinding(
         service_list->provider.NewRequest());
 

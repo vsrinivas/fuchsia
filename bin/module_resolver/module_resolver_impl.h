@@ -12,6 +12,8 @@
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/async/cpp/operation.h"
+#include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/suggestion/fidl/query_handler.fidl.h"
 #include "peridot/bin/module_resolver/type_inference.h"
@@ -21,7 +23,7 @@ namespace maxwell {
 
 class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
  public:
-  ModuleResolverImpl();
+  ModuleResolverImpl(modular::EntityResolverPtr entity_resolver);
   ~ModuleResolverImpl() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
@@ -34,7 +36,9 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   void BindQueryHandler(fidl::InterfaceRequest<QueryHandler> request);
 
  private:
-  // repo name, entry id
+  class FindModulesCall;
+
+  // repo name, module manifest ID
   using EntryId = std::pair<std::string, std::string>;
 
   // |ModuleResolver|
@@ -57,8 +61,6 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
     return ready_sources_.size() == sources_.size();
   }
 
-  NounTypeInferenceHelper type_helper_;
-
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules
   // Ask handler.
@@ -67,14 +69,14 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   // Set of sources that have told us they are idle, meaning they have
   // sent us all entries they knew about at construction time.
   std::set<std::string> ready_sources_;
-  // Map of (repo name, entry name) -> entry.
+  // Map of (repo name, module manifest ID) -> entry.
   std::map<EntryId, modular::ModuleManifestSource::Entry> entries_;
 
   // verb -> key in |entries_|
-  std::map<std::string, std::set<EntryId>> verb_to_entry_;
+  std::map<std::string, std::set<EntryId>> verb_to_entries_;
   // (type, noun name) -> key in |entries_|
   std::map<std::pair<std::string, std::string>, std::set<EntryId>>
-      noun_type_to_entry_;
+      noun_type_to_entries_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
   fidl::Binding<QueryHandler> query_handler_binding_;
@@ -82,6 +84,9 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
   bool already_checking_if_sources_are_ready_;
+  NounTypeInferenceHelper type_helper_;
+
+  modular::OperationCollection operations_;
 
   fxl::WeakPtrFactory<ModuleResolverImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);

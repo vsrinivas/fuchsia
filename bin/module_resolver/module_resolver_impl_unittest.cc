@@ -5,6 +5,7 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
+#include "peridot/lib/testing/entity_resolver_fake.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 #include "peridot/public/lib/module_resolver/cpp/formatting.h"
 
@@ -33,6 +34,13 @@ class DaisyBuilder {
     auto noun = modular::Noun::New();
     auto types_array = fidl::Array<fidl::String>::From(types);
     noun->set_entity_type(std::move(types_array));
+    daisy->nouns.insert(name, std::move(noun));
+    return *this;
+  }
+
+  DaisyBuilder& AddEntityNoun(std::string name, std::string entity_reference) {
+    auto noun = modular::Noun::New();
+    noun->set_entity_reference(entity_reference);
     daisy->nouns.insert(name, std::move(noun));
     return *this;
   }
@@ -69,7 +77,12 @@ class TestManifestSource : public modular::ModuleManifestSource {
 class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
  protected:
   void ResetResolver() {
-    impl_.reset(new ModuleResolverImpl);
+    modular::EntityResolverPtr entity_resolver_ptr;
+    entity_resolver_.reset(new modular::EntityResolverFake());
+    entity_resolver_->Connect(entity_resolver_ptr.NewRequest());
+    // TODO: |impl_| will fail to resolve any daisys whose nouns are entity
+    // references.
+    impl_.reset(new ModuleResolverImpl(std::move(entity_resolver_ptr)));
     for (auto entry : test_sources_) {
       impl_->AddSource(
           entry.first,
@@ -86,6 +99,10 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     return ptr;
   }
 
+  fidl::String AddEntity(std::map<std::string, std::string> entity_data) {
+    return entity_resolver_->AddEntity(std::move(entity_data));
+  }
+
   void FindModules(modular::DaisyPtr daisy) {
     auto scoring_info = modular::ResolverScoringInfo::New();
 
@@ -96,8 +113,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
           got_response = true;
           result_ = result.Clone();
         });
-    RunLoopUntil([&got_response] { return got_response; });
-    ASSERT_TRUE(got_response) << daisy;
+    ASSERT_TRUE(RunLoopUntil([&got_response] { return got_response; }));
   }
 
   const fidl::Array<modular::ModuleResolverResultPtr>& results() const {
@@ -105,6 +121,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   }
 
   std::unique_ptr<ModuleResolverImpl> impl_;
+  std::unique_ptr<modular::EntityResolverFake> entity_resolver_;
 
   std::map<std::string, modular::ModuleManifestSource*> test_sources_;
   modular::ModuleResolverPtr resolver_;
@@ -224,6 +241,18 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
               .build();
   FindModules(std::move(daisy));
   ASSERT_DEFAULT_RESULT(results());
+
+  // Given an entity of type "frob", find a module with verb
+  // com.google.fuchsia.navigate.v1.
+  fidl::String location_entity = AddEntity({{"frob", ""}});
+  ASSERT_TRUE(!location_entity.empty());
+
+  daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+              .AddEntityNoun("start", location_entity)
+              .build();
+  FindModules(std::move(daisy));
+  ASSERT_EQ(1u, results().size());
+  EXPECT_EQ("module2", results()[0]->module_id);
 }
 
 TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {

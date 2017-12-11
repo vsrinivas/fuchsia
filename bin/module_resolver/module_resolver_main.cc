@@ -5,6 +5,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
+#include "lib/component/fidl/component_context.fidl.h"
+#include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -32,14 +34,22 @@ constexpr char kRWModuleRepositoryPath[] = "/data/module_manifest_repository";
 class ModuleResolverApp {
  public:
   ModuleResolverApp(app::ApplicationContext* const context) {
+    modular::ComponentContextPtr component_context;
+    context->ConnectToEnvironmentService<modular::ComponentContext>(
+        component_context.NewRequest());
+    modular::EntityResolverPtr entity_resolver;
+    component_context->GetEntityResolver(entity_resolver.NewRequest());
+
+    resolver_impl_ =
+        std::make_unique<ModuleResolverImpl>(std::move(entity_resolver));
     // Set up |resolver_impl_|.
-    resolver_impl_.AddSource(
+    resolver_impl_->AddSource(
         "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kROModuleRepositoryPath, false /* create */));
-    resolver_impl_.AddSource(
+    resolver_impl_->AddSource(
         "local_rw", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kRWModuleRepositoryPath, true /* create */));
-    resolver_impl_.AddSource(
+    resolver_impl_->AddSource(
         "firebase_mods",
         std::make_unique<modular::FirebaseModuleManifestSource>(
             fsl::MessageLoop::GetCurrent()->task_runner(),
@@ -55,19 +65,19 @@ class ModuleResolverApp {
     IntelligenceServicesPtr intelligence_services;
     context->ConnectToEnvironmentService(intelligence_services.NewRequest());
     fidl::InterfaceHandle<QueryHandler> query_handler;
-    resolver_impl_.BindQueryHandler(query_handler.NewRequest());
+    resolver_impl_->BindQueryHandler(query_handler.NewRequest());
     intelligence_services->RegisterQueryHandler(std::move(query_handler));
 
     context->outgoing_services()->AddService<modular::ModuleResolver>(
         [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
-          resolver_impl_.Connect(std::move(request));
+          resolver_impl_->Connect(std::move(request));
         });
   }
 
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
-  ModuleResolverImpl resolver_impl_;
+  std::unique_ptr<ModuleResolverImpl> resolver_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverApp);
 };
