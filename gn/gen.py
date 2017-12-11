@@ -52,8 +52,9 @@ STANDARD_VARIANTS = COMMON_VARIANTS.copy()
 STANDARD_VARIANTS.update({
     'host_asan': standard_variant(False, ['''
     # TODO(TO-565): The yasm host tools have leaks.
+    # TODO(TO-666): replace futiltiy & cgpt with 1p tools
     host = true
-    dir = [ "//third_party/yasm" ]
+    dir = [ "//third_party/yasm", "//third_party/vboot_reference", "//garnet/tools/vboot_reference" ]
     variant = "asan_no_detect_leaks"
 ''', '''
     host = true

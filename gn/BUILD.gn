@@ -809,24 +809,6 @@ foreach(platform, zircon_platforms) {
     }
   }
 
-  if (target_cpu == "x64") {
-    # images/zedboot-${platform}.bin combines the kernel image itself with
-    # the BOOTDATA bits.  This single file can be booted by Gigaboot.
-    bootdata("zedboot-${platform}") {
-      output_name = "images/$target_name"
-      deps = [
-        ":zedboot-data-${platform}",
-      ]
-      kernel_build_dir = "//out/build-zircon/build-${platform}"
-      inputs = [
-        "$kernel_build_dir/zircon.bin",
-      ]
-      foreach(label, deps) {
-        inputs += get_target_outputs(label)
-      }
-    }
-  }
-
   # This packs up a single BOOTDATA container that includes fvm.blk as a
   # RAMDISK image.  This can be used for network booting the full system
   # without using any real storage.  The system decompresses the fvm.blk
@@ -850,13 +832,32 @@ foreach(platform, zircon_platforms) {
     ]
   }
 
-  vboot("zedboot-${platform}") {
-    deps = [
-      ":zedboot-data-${platform}",
-    ]
-  }
-
+  # NOTE(raggi): zircon.bin from //out/build-zircon/build-${platform} is not a
+  # bootdata image on ARM, as such, all targets that try to use it as such are
+  # disabled here.
   if (target_cpu == "x64") {
+    # images/zedboot-${platform}.bin combines the kernel image itself with
+    # the BOOTDATA bits.  This single file can be booted by Gigaboot.
+    bootdata("zedboot-${platform}") {
+      output_name = "images/$target_name"
+      deps = [
+        ":zedboot-data-${platform}",
+      ]
+      kernel_build_dir = "//out/build-zircon/build-${platform}"
+      inputs = [
+        "$kernel_build_dir/zircon.bin",
+      ]
+      foreach(label, deps) {
+        inputs += get_target_outputs(label)
+      }
+    }
+
+    vboot("zedboot-${platform}") {
+      deps = [
+        ":zedboot-data-${platform}",
+      ]
+    }
+
     # EFI ESP images.
     esp("local-${platform}") {
       if (always_zedboot) {
@@ -876,9 +877,9 @@ foreach(platform, zircon_platforms) {
   }
 }
 
-if (target_cpu == "x64") {
-  group("zedboot") {
-    deps = []
+group("zedboot") {
+  deps = []
+  if (target_cpu == "x64") {
     foreach(platform, zircon_platforms) {
       deps += [ ":zedboot-${platform}" ]
     }
@@ -889,6 +890,24 @@ group("netboot") {
   deps = []
   foreach(platform, zircon_platforms) {
     deps += [ ":netboot-${platform}" ]
+  }
+}
+
+group("images") {
+  deps = [
+    ":blobstore.blk",
+    ":fvm.blk",
+    ":fvm.sparse.blk",
+    ":fvm.data.sparse.blk"
+  ]
+  if (target_cpu == "x64") {
+    foreach(platform, zircon_platforms) {
+      deps += [
+        ":local-${platform}.esp.blk",
+        ":zedboot-${platform}.esp.blk",
+        ":zedboot-${platform}.vboot",
+      ]
+    }
   }
 }
 
@@ -930,21 +949,16 @@ if (generate_zircon_gn_files) {
 }
 
 group("default") {
+  deps = [ ":images" ]
+
   if (build_ramdisk) {
     # TODO(mcgrathr): Remove dep when deprecated user.bootfs is gone.
-    deps = [
+    deps += [
       ":mkbootfs",
       ":system_bootfs",
     ]
     foreach(platform, zircon_platforms) {
       deps += [ ":bootdata-${platform}" ]
-    }
-  } else {
-    deps = [
-      ":blobstore.blk",
-    ]
-    foreach(platform, zircon_platforms) {
-      deps += [ ":bootdata-blobstore-${platform}" ]
     }
   }
 }
