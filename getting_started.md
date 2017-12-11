@@ -112,22 +112,10 @@ To override the default behaviors, pass flags to `fx set`:
 
 ## Boot Fuchsia
 
-### Boot from hardware
+### Installing and booting from hardware
 
-There are three options for booting Fuchsia on hardware: network booting (see
-below), booting from USB (see below), or [installing](https://fuchsia.googlesource.com/install-fuchsia/+/master/README.md)
-Fuchsia on internal storage. In all cases you'll need to put some code on the
-target hardware, using a USB drive is a good option for doing this.
-
-If you want to netboot or create a bootable USB drive, but not install Fuchsia,
-you can use the [build-bootable-usb-gigaboot.sh script](https://fuchsia.googlesource.com/scripts/+/master/build-bootable-usb-gigaboot.sh).
-If you plan to netboot, pass the `-m` and `-f` options to skip copying over the
-Zircon kernel and Fuchsia system images since the bootserver will supply these.
-
-* [Acer Switch Alpha 12](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md)
-* [Intel NUC](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md)
-
-Once your hardware is configured, you can run `fx boot` to start the bootserver.
+To get Fuchsia running on hardware requires using the paver, which these
+[instructions](fuchsia_paver.md) will help you get up and running with.
 
 ### Boot from QEMU
 
