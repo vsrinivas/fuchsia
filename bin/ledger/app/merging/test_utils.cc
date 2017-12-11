@@ -26,7 +26,8 @@ fxl::TimeDelta TestBackoff::GetNext() {
 
 void TestBackoff::Reset() {}
 
-TestWithPageStorage::TestWithPageStorage(){};
+TestWithPageStorage::TestWithPageStorage()
+    : encryption_service_(message_loop_.task_runner()){};
 
 TestWithPageStorage::~TestWithPageStorage() {}
 
@@ -92,8 +93,8 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
     std::unique_ptr<storage::PageStorage>* page_storage) {
   std::unique_ptr<storage::PageStorageImpl> local_page_storage =
       std::make_unique<storage::PageStorageImpl>(
-          message_loop_.task_runner(), &coroutine_service_, tmp_dir_.path(),
-          kRootPageId.ToString());
+          message_loop_.task_runner(), &coroutine_service_,
+          &encryption_service_, tmp_dir_.path(), kRootPageId.ToString());
   storage::Status status;
   local_page_storage->Init(callback::Capture(MakeQuitTask(), &status));
   if (RunLoopWithTimeout()) {

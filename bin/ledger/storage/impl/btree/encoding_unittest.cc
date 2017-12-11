@@ -6,11 +6,11 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 namespace btree {
@@ -161,8 +161,7 @@ TEST(EncodingTest, Errors) {
       children.push_back(CreateChildStorage(
           builder, 1,
           ToObjectIdentifierStorage(
-              &builder, MakeDefaultObjectIdentifier(
-                            MakeObjectDigest(fxl::StringPrintf("c%lu", i))))));
+              &builder, MakeObjectIdentifier(fxl::StringPrintf("c%lu", i)))));
     }
     return builder.CreateVector(children);
   };
@@ -195,9 +194,8 @@ TEST(EncodingTest, Errors) {
               [&](size_t i) {
                 return CreateEntryStorage(
                     builder, convert::ToFlatBufferVector(&builder, "hello"),
-                    ToObjectIdentifierStorage(
-                        &builder,
-                        MakeDefaultObjectIdentifier(MakeObjectDigest("world"))),
+                    ToObjectIdentifierStorage(&builder,
+                                              MakeObjectIdentifier("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       create_children(2)));
@@ -213,9 +211,8 @@ TEST(EncodingTest, Errors) {
               [&](size_t i) {
                 return CreateEntryStorage(
                     builder, convert::ToFlatBufferVector(&builder, "hello"),
-                    ToObjectIdentifierStorage(
-                        &builder,
-                        MakeDefaultObjectIdentifier(MakeObjectDigest("world"))),
+                    ToObjectIdentifierStorage(&builder,
+                                              MakeObjectIdentifier("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       create_children(0)));

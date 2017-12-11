@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -15,7 +16,6 @@
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 namespace {
@@ -100,7 +100,8 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
                       result.reset();
                       callback(std::move(to_send));
                     }
-                    return MakeDefaultObjectIdentifier(std::move(digest));
+                    return encryption::MakeDefaultObjectIdentifier(
+                        std::move(digest));
                   }));
 }
 
@@ -257,7 +258,7 @@ ObjectIdentifier MakeIndexId(size_t i) {
   std::string value;
   value.resize(sizeof(i));
   memcpy(&value[0], &i, sizeof(i));
-  return MakeDefaultObjectIdentifier(
+  return encryption::MakeDefaultObjectIdentifier(
       ComputeObjectDigest(ObjectType::INDEX, value));
 }
 

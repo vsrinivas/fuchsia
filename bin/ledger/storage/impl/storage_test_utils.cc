@@ -9,6 +9,7 @@
 #include <numeric>
 
 #include "lib/fxl/strings/string_printf.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
@@ -16,7 +17,6 @@
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace storage {
@@ -51,9 +51,10 @@ ObjectIdentifier GetObjectIdentifier(std::string value) {
         if (status == IterationStatus::DONE) {
           result = object_digest;
         }
-        return MakeDefaultObjectIdentifier(std::move(object_digest));
+        return encryption::MakeDefaultObjectIdentifier(
+            std::move(object_digest));
       });
-  return MakeDefaultObjectIdentifier(std::move(result));
+  return encryption::MakeDefaultObjectIdentifier(std::move(result));
 }
 
 // Pre-determined node level function.
@@ -117,7 +118,7 @@ ObjectDigest RandomObjectDigest() {
 }
 
 ObjectIdentifier RandomObjectIdentifier() {
-  return MakeDefaultObjectIdentifier(RandomObjectDigest());
+  return encryption::MakeDefaultObjectIdentifier(RandomObjectDigest());
 }
 
 EntryChange NewEntryChange(std::string key,

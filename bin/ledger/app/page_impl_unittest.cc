@@ -24,7 +24,6 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/callback/capture.h"

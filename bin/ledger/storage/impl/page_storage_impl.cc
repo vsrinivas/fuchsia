@@ -41,7 +41,6 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/trace_callback.h"
 #include "peridot/lib/callback/waiter.h"
 #include "zx/vmar.h"
@@ -73,21 +72,27 @@ struct StringPointerComparator {
 
 }  // namespace
 
-PageStorageImpl::PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                                 coroutine::CoroutineService* coroutine_service,
-                                 std::string page_dir,
-                                 PageId page_id)
+PageStorageImpl::PageStorageImpl(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    coroutine::CoroutineService* coroutine_service,
+    encryption::EncryptionService* encryption_service,
+    std::string page_dir,
+    PageId page_id)
     : PageStorageImpl(task_runner,
                       coroutine_service,
+                      encryption_service,
                       std::make_unique<PageDbImpl>(std::move(task_runner),
                                                    page_dir + kLevelDbDir),
                       std::move(page_id)) {}
 
-PageStorageImpl::PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> /*task_runner*/,
-                                 coroutine::CoroutineService* coroutine_service,
-                                 std::unique_ptr<PageDb> page_db,
-                                 PageId page_id)
+PageStorageImpl::PageStorageImpl(
+    fxl::RefPtr<fxl::TaskRunner> /*task_runner*/,
+    coroutine::CoroutineService* coroutine_service,
+    encryption::EncryptionService* encryption_service,
+    std::unique_ptr<PageDb> page_db,
+    PageId page_id)
     : coroutine_service_(coroutine_service),
+      encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
       db_(std::move(page_db)),
       page_sync_(nullptr) {}
@@ -369,7 +374,8 @@ void PageStorageImpl::AddObjectFromLocal(
             FXL_DCHECK(IsDigestValid(object_digest));
 
             ObjectIdentifier identifier =
-                MakeDefaultObjectIdentifier(std::move(object_digest));
+                encryption_service_->MakeObjectIdentifier(
+                    std::move(object_digest));
 
             if (chunk) {
               FXL_DCHECK(status == IterationStatus::IN_PROGRESS);

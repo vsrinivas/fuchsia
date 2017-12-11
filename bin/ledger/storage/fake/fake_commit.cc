@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
@@ -39,7 +40,7 @@ uint64_t FakeCommit::GetGeneration() const {
 }
 
 ObjectIdentifier FakeCommit::GetRootIdentifier() const {
-  return {kDefaultKeyIndex, kDefaultDeletionScopeId, journal_->GetId()};
+  return encryption::MakeDefaultObjectIdentifier(journal_->GetId());
 }
 
 fxl::StringView FakeCommit::GetStorageBytes() const {

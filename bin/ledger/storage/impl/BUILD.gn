@@ -99,7 +99,9 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cobalt",
+    "//peridot/bin/ledger/encryption/impl",
     "//peridot/bin/ledger/encryption/primitives",
+    "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/base64url",
@@ -128,6 +130,7 @@ source_set("test_utils") {
 
   deps = [
     ":lib",
+    "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/lib/callback",
   ]
@@ -167,6 +170,7 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test",
     "//peridot/bin/ledger/cloud_sync/impl",
+    "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl/btree:lib",

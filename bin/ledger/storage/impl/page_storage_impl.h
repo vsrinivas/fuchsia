@@ -15,6 +15,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "peridot/lib/callback/managed_container.h"
@@ -30,6 +31,7 @@ class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                   coroutine::CoroutineService* coroutine_service,
+                  encryption::EncryptionService* encryption_service,
                   std::string page_dir,
                   PageId page_id);
   ~PageStorageImpl() override;
@@ -147,6 +149,7 @@ class PageStorageImpl : public PageStorage {
 
   PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                   coroutine::CoroutineService* coroutine_service,
+                  encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db,
                   PageId page_id);
 
@@ -248,6 +251,7 @@ class PageStorageImpl : public PageStorage {
 
   fxl::RefPtr<fxl::TaskRunner> task_runner;
   coroutine::CoroutineService* const coroutine_service_;
+  encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
   std::unique_ptr<PageDb> db_;
   std::vector<CommitWatcher*> watchers_;

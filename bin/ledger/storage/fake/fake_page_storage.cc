@@ -18,14 +18,13 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 namespace fake {
 namespace {
 
-storage::ObjectIdentifier ComputeObjectIdentifier(fxl::StringView value) {
-  return MakeDefaultObjectIdentifier(encryption::SHA256WithLengthHash(value));
+storage::ObjectDigest ComputeDigest(fxl::StringView value) {
+  return encryption::SHA256WithLengthHash(value);
 }
 
 }  // namespace
@@ -33,10 +32,14 @@ storage::ObjectIdentifier ComputeObjectIdentifier(fxl::StringView value) {
 FakePageStorage::FakePageStorage(PageId page_id)
     : rng_(0),
       message_loop_(fsl::MessageLoop::GetCurrent()),
-      page_id_(std::move(page_id)) {}
+      page_id_(std::move(page_id)),
+      encryption_service_(message_loop_->task_runner()) {}
 
 FakePageStorage::FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id)
-    : rng_(0), message_loop_(message_loop), page_id_(std::move(page_id)) {}
+    : rng_(0),
+      message_loop_(message_loop),
+      page_id_(std::move(page_id)),
+      encryption_service_(message_loop_->task_runner()) {}
 
 FakePageStorage::~FakePageStorage() {}
 
@@ -162,7 +165,8 @@ void FakePageStorage::AddObjectFromLocal(
         auto view = chunk->Get();
         value->append(view.data(), view.size());
         if (status == DataSource::Status::DONE) {
-          ObjectIdentifier object_identifier = ComputeObjectIdentifier(*value);
+          ObjectIdentifier object_identifier =
+              encryption_service_.MakeObjectIdentifier(ComputeDigest(*value));
           objects_[object_identifier] = std::move(*value);
           callback(Status::OK, std::move(object_identifier));
         }

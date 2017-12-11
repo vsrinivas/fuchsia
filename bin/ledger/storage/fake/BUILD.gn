@@ -37,6 +37,7 @@ source_set("lib") {
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
+    "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",
   ]
 

@@ -15,6 +15,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
@@ -94,6 +95,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::vector<fxl::Closure> object_requests_;
   fsl::MessageLoop* message_loop_;
   PageId page_id_;
+  encryption::FakeEncryptionService encryption_service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);
 };

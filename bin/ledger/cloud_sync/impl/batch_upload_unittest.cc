@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
@@ -265,8 +264,8 @@ TEST_F(BatchUploadTest, MultipleCommits) {
 TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
-  auto id1 = storage::MakeDefaultObjectIdentifier("obj_digest1");
-  auto id2 = storage::MakeDefaultObjectIdentifier("obj_digest2");
+  auto id1 = encryption_service_.MakeObjectIdentifier("obj_digest1");
+  auto id2 = encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -294,9 +293,9 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
 }
 
 // Verifies that the number of concurrent object uploads is limited to
@@ -305,11 +304,11 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
   storage::ObjectIdentifier id0 =
-      storage::MakeDefaultObjectIdentifier("obj_digest0");
+      encryption_service_.MakeObjectIdentifier("obj_digest0");
   storage::ObjectIdentifier id1 =
-      storage::MakeDefaultObjectIdentifier("obj_digest1");
+      encryption_service_.MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 =
-      storage::MakeDefaultObjectIdentifier("obj_digest2");
+      encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id0] =
       std::make_unique<TestObject>(id0, "obj_data0");
@@ -342,11 +341,11 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   // Verify the sync status in storage.
   EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest0")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest0")));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
 }
 
 // Test an upload that fails on uploading objects.
@@ -355,9 +354,9 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   commits.push_back(storage_.NewCommit("id", "content"));
 
   storage::ObjectIdentifier id1 =
-      storage::MakeDefaultObjectIdentifier("obj_digest1");
+      encryption_service_.MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 =
-      storage::MakeDefaultObjectIdentifier("obj_digest2");
+      encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -387,9 +386,9 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   commits.push_back(storage_.NewCommit("id", "content"));
 
   storage::ObjectIdentifier id1 =
-      storage::MakeDefaultObjectIdentifier("obj_digest1");
+      encryption_service_.MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 =
-      storage::MakeDefaultObjectIdentifier("obj_digest2");
+      encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -412,9 +411,9 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   EXPECT_EQ("obj_data2", page_cloud_.received_objects["obj_digest2"]);
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
 
   // Verify that neither the commit wasn't marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -426,9 +425,9 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   commits.push_back(storage_.NewCommit("id", "content"));
 
   storage::ObjectIdentifier id1 =
-      storage::MakeDefaultObjectIdentifier("obj_digest1");
+      encryption_service_.MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 =
-      storage::MakeDefaultObjectIdentifier("obj_digest2");
+      encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -471,9 +470,9 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest1")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    storage::MakeDefaultObjectIdentifier("obj_digest2")));
+                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
 }
 
 // Test a commit upload that gets an error from storage.
@@ -502,9 +501,9 @@ TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
   commits.push_back(storage_.NewCommit("id", "content"));
 
   storage::ObjectIdentifier id1 =
-      storage::MakeDefaultObjectIdentifier("obj_digest1");
+      encryption_service_.MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 =
-      storage::MakeDefaultObjectIdentifier("obj_digest2");
+      encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   test_storage.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -532,11 +531,11 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   commits.push_back(storage_.NewCommit("id", "content"));
 
   storage::ObjectIdentifier id0 =
-      storage::MakeDefaultObjectIdentifier("obj_digest0");
+      encryption_service_.MakeObjectIdentifier("obj_digest0");
   storage::ObjectIdentifier id1 =
-      storage::MakeDefaultObjectIdentifier("obj_digest1");
+      encryption_service_.MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 =
-      storage::MakeDefaultObjectIdentifier("obj_digest2");
+      encryption_service_.MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id0] =
       std::make_unique<TestObject>(id0, "obj_data0");

@@ -9,6 +9,7 @@
 
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 
 namespace storage {
@@ -40,6 +41,7 @@ class LedgerStorageImpl : public LedgerStorage {
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   coroutine::CoroutineService* const coroutine_service_;
+  encryption::EncryptionServiceImpl encryption_service_;
   std::string storage_dir_;
 };
 

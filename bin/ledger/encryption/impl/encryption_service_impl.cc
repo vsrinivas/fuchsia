@@ -9,10 +9,21 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
-#include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace encryption {
 namespace {
+
+// The default encryption values. Only used until real encryption is
+// implemented: LE-286
+//
+// Use max_int32 for key_index as it will never be used in practice as it is not
+// expected that any user will change its key 2^32 times.
+constexpr uint32_t kDefaultKeyIndex = std::numeric_limits<uint32_t>::max();
+// Use max_int32 - 1 for default deletion scoped id. max_int32 has a special
+// meaning in the specification and is used to have per object deletion scope.
+constexpr uint32_t kDefaultDeletionScopeId =
+    std::numeric_limits<uint32_t>::max() - 1;
+
 // Checks whether the given |storage_bytes| are a valid serialization of an
 // encrypted commit.
 bool CheckValidSerialization(fxl::StringView storage_bytes) {
@@ -38,14 +49,18 @@ EncryptionServiceImpl::EncryptionServiceImpl(
 
 EncryptionServiceImpl::~EncryptionServiceImpl() {}
 
+storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
+    storage::ObjectDigest digest) {
+  return {kDefaultKeyIndex, kDefaultDeletionScopeId, std::move(digest)};
+}
+
 void EncryptionServiceImpl::EncryptCommit(
     convert::ExtendedStringView commit_storage,
     std::function<void(Status, std::string)> callback) {
   flatbuffers::FlatBufferBuilder builder;
 
-  auto storage =
-      CreateEncryptedCommitStorage(builder, storage::kDefaultKeyIndex,
-                                   commit_storage.ToFlatBufferVector(&builder));
+  auto storage = CreateEncryptedCommitStorage(
+      builder, kDefaultKeyIndex, commit_storage.ToFlatBufferVector(&builder));
   builder.Finish(storage);
 
   std::string encrypted_storage(

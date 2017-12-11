@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"

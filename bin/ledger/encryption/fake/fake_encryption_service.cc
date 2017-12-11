@@ -6,6 +6,7 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace encryption {
 
@@ -19,11 +20,21 @@ std::string Decode(fxl::StringView encrypted_content) {
 }
 }  // namespace
 
+storage::ObjectIdentifier MakeDefaultObjectIdentifier(
+    storage::ObjectDigest digest) {
+  return {1u, 1u, std::move(digest)};
+}
+
 FakeEncryptionService::FakeEncryptionService(
     fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
 FakeEncryptionService::~FakeEncryptionService() {}
+
+storage::ObjectIdentifier FakeEncryptionService::MakeObjectIdentifier(
+    storage::ObjectDigest digest) {
+  return MakeDefaultObjectIdentifier(std::move(digest));
+}
 
 void FakeEncryptionService::EncryptCommit(
     convert::ExtendedStringView commit_storage,

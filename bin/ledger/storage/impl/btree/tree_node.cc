@@ -15,7 +15,6 @@
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 

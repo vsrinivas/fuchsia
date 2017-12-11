@@ -122,6 +122,7 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cloud_sync/impl",
     "//peridot/bin/ledger/cloud_sync/testing",
+    "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl:lib",

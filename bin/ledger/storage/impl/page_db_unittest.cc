@@ -15,6 +15,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
@@ -23,7 +24,6 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
 namespace storage {
@@ -43,8 +43,10 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
-      : page_storage_(message_loop_.task_runner(),
+      : encryption_service_(message_loop_.task_runner()),
+        page_storage_(message_loop_.task_runner(),
                       &coroutine_service_,
+                      &encryption_service_,
                       tmp_dir_.path(),
                       "page_id"),
         page_db_(message_loop_.task_runner(), tmp_dir_.path()) {}
@@ -65,6 +67,7 @@ class PageDbTest : public ::test::TestWithCoroutines {
 
  protected:
   files::ScopedTempDir tmp_dir_;
+  encryption::FakeEncryptionService encryption_service_;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;
 
@@ -197,17 +200,20 @@ TEST_F(PageDbTest, JournalEntries) {
               page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
                                        commit_id, &journal_id));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
-                                       MakeDefaultObjectIdentifier("value1"),
-                                       KeyPriority::LAZY));
+              page_db_.AddJournalEntry(
+                  handler, journal_id, "add-key-1",
+                  encryption_service_.MakeObjectIdentifier("value1"),
+                  KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(handler, journal_id, "add-key-2",
-                                       MakeDefaultObjectIdentifier("value2"),
-                                       KeyPriority::EAGER));
+              page_db_.AddJournalEntry(
+                  handler, journal_id, "add-key-2",
+                  encryption_service_.MakeObjectIdentifier("value2"),
+                  KeyPriority::EAGER));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
-                                       MakeDefaultObjectIdentifier("value3"),
-                                       KeyPriority::LAZY));
+              page_db_.AddJournalEntry(
+                  handler, journal_id, "add-key-1",
+                  encryption_service_.MakeObjectIdentifier("value3"),
+                  KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
               page_db_.RemoveJournalEntry(handler, journal_id, "remove-key"));
 

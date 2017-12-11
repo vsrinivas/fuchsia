@@ -14,7 +14,6 @@
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/convert/convert.h"
 
 #define RETURN_ON_ERROR(expr)   \

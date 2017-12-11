@@ -12,7 +12,6 @@
 #include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/callback/capture.h"
 

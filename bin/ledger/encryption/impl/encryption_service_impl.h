@@ -21,6 +21,8 @@ class EncryptionServiceImpl : public EncryptionService {
   ~EncryptionServiceImpl() override;
 
   // EncryptionService:
+  storage::ObjectIdentifier MakeObjectIdentifier(
+      storage::ObjectDigest digest) override;
   void EncryptCommit(
       convert::ExtendedStringView commit_storage,
       std::function<void(Status, std::string)> callback) override;

@@ -14,12 +14,21 @@
 
 namespace encryption {
 
+// Creates an |ObjectIdentifier| from an |ObjectDigest|.
+//
+// This method is always constructing the indentifier with the same key index
+// and deletion scope.
+storage::ObjectIdentifier MakeDefaultObjectIdentifier(
+    storage::ObjectDigest digest);
+
 class FakeEncryptionService : public EncryptionService {
  public:
   explicit FakeEncryptionService(fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~FakeEncryptionService() override;
 
   // EncryptionService:
+  storage::ObjectIdentifier MakeObjectIdentifier(
+      storage::ObjectDigest digest) override;
   void EncryptCommit(
       convert::ExtendedStringView commit_storage,
       std::function<void(Status, std::string)> callback) override;

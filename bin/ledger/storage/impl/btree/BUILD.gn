@@ -88,6 +88,7 @@ source_set("unittests") {
     ":tree_node_storage",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",

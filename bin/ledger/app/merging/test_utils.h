@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -62,6 +63,7 @@ class TestWithPageStorage : public gtest::TestWithMessageLoop {
  private:
   files::ScopedTempDir tmp_dir_;
   coroutine::CoroutineServiceImpl coroutine_service_;
+  encryption::FakeEncryptionService encryption_service_;
 };
 
 }  // namespace test

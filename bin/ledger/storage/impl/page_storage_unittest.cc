@@ -26,6 +26,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
@@ -41,7 +42,6 @@
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 #include "peridot/lib/callback/capture.h"
@@ -67,11 +67,12 @@ class PageStorageImplAccessorForTest {
   static std::unique_ptr<PageStorageImpl> CreateStorage(
       fxl::RefPtr<fxl::TaskRunner> task_runner,
       coroutine::CoroutineService* coroutine_service,
+      encryption::EncryptionService* encryption_service,
       std::unique_ptr<PageDb> page_db,
       PageId page_id) {
-    return std::unique_ptr<PageStorageImpl>(
-        new PageStorageImpl(std::move(task_runner), coroutine_service,
-                            std::move(page_db), std::move(page_id)));
+    return std::unique_ptr<PageStorageImpl>(new PageStorageImpl(
+        std::move(task_runner), coroutine_service, encryption_service,
+        std::move(page_db), std::move(page_id)));
   }
 };
 
@@ -178,7 +179,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
 
 class PageStorageTest : public ::test::TestWithCoroutines {
  public:
-  PageStorageTest() {}
+  PageStorageTest() : encryption_service_(message_loop_.task_runner()) {}
 
   ~PageStorageTest() override {}
 
@@ -193,7 +194,8 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     tmp_dir_ = files::ScopedTempDir();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
-        message_loop_.task_runner(), &coroutine_service_, tmp_dir_.path(), id);
+        message_loop_.task_runner(), &coroutine_service_, &encryption_service_,
+        tmp_dir_.path(), id);
 
     bool called;
     Status status;
@@ -553,6 +555,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   coroutine::CoroutineServiceImpl coroutine_service_;
   std::thread io_thread_;
   files::ScopedTempDir tmp_dir_;
+  encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
 
  private:
@@ -974,7 +977,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   std::unique_ptr<PageStorageImpl> test_storage =
       PageStorageImplAccessorForTest::CreateStorage(
           message_loop_.task_runner(), &coroutine_service_,
-          std::make_unique<FakePageDbImpl>(), RandomString(10));
+          &encryption_service_, std::make_unique<FakePageDbImpl>(),
+          RandomString(10));
 
   bool called;
   Status status;
@@ -1720,9 +1724,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
       ComputeObjectDigest(ObjectType::VALUE, child_data);
   sync.AddObject(child_digest, child_data);
 
-  std::string root_data =
-      btree::EncodeNode(0u, std::vector<Entry>(),
-                        {{0u, MakeDefaultObjectIdentifier(child_digest)}});
+  std::string root_data = btree::EncodeNode(
+      0u, std::vector<Entry>(),
+      {{0u, encryption_service_.MakeObjectIdentifier(child_digest)}});
   ObjectDigest root_digest = ComputeObjectDigest(ObjectType::VALUE, root_data);
   sync.AddObject(root_digest, root_data);
 
@@ -1730,7 +1734,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   parent.emplace_back(GetFirstHead());
 
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), MakeDefaultObjectIdentifier(root_digest),
+      storage_.get(), encryption_service_.MakeObjectIdentifier(root_digest),
       std::move(parent));
   CommitId id = commit->GetId();
 
