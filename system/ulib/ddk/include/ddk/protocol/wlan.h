@@ -26,7 +26,6 @@ enum CBW {
 };
 
 typedef struct wlan_channel {
-    uint16_t channel_num;
     uint8_t primary;
     uint8_t cbw; // Channel Bandwidth
     uint8_t secondary80;
