@@ -605,6 +605,17 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
         }
     }
 
+    if (bootloader.nvram.base) {
+        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.nvram,
+                                      sizeof(bootloader.nvram), BOOTDATA_LASTLOG_NVRAM2, 0, 0);
+        if (ret != ZX_OK) {
+            printf("mexec: Failed to append nvram data to bootdata. len = %lu, "
+                   "section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.nvram), ret);
+            return ret;
+        }
+    }
+
     return ZX_OK;
 }
 
