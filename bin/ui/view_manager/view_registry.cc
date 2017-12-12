@@ -10,6 +10,8 @@
 
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
+#include "garnet/bin/ui/scene_manager/util/unwrap.h"
+#include "garnet/public/lib/escher/util/type_utils.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -23,9 +25,6 @@
 
 namespace view_manager {
 namespace {
-// The height at which hit tests originate.
-// TODO(MZ-163): This shouldn't be hardcoded here.
-constexpr float kHitTestOriginZ = 10000.f;
 
 bool Validate(const mozart::DisplayMetrics& value) {
   return std::isnormal(value.device_pixel_ratio) &&
@@ -75,6 +74,25 @@ std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
     }
   }
   return new_chain;
+}
+
+// Transforms the provided hit information into a mozart::Point local to the hit
+// node, suitable for passing to a HitTestCallback.
+mozart::PointF TransformHitToLocalPoint(const scenic::HitPtr& hit) {
+  escher::vec4 ray_origin = scene_manager::Unwrap(hit->ray_origin);
+  escher::vec4 ray_direction = scene_manager::Unwrap(hit->ray_direction);
+  escher::mat4 inverse_transform =
+      scene_manager::Unwrap(hit->inverse_transform);
+  float distance = hit->distance;
+
+  escher::vec4 scaled_distance = ray_direction * distance;
+  escher::vec4 hit_point = ray_origin + scaled_distance;
+  escher::vec4 local_point = escher::homogenize(inverse_transform * hit_point);
+
+  mozart::PointF out_point;
+  out_point.x = local_point[0];
+  out_point.y = local_point[1];
+  return out_point;
 }
 
 mozart::TransformPtr ToTransform(scenic::mat4Ptr matrix) {
@@ -725,12 +743,8 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
     return;
   }
 
-  // TODO(MZ-163): We're making 2D assumptions all over view manager.
-  // We should redesign the relevant input related APIs to handle 3D content
-  // and revisit this.
-  session_.HitTest(
-      view_tree->GetRoot()->host_node()->id(),
-      (float[3]){point.x, point.y, kHitTestOriginZ}, (float[3]){0.f, 0.f, -1.f},
+  session_.HitTestDeviceRay(
+      (float[3]){point.x, point.y, -1.f}, (float[3]){0.f, 0.f, 1.f},
       [ this,
         callback = std::move(callback) ](fidl::Array<scenic::HitPtr> hits) {
         std::vector<ViewHit> view_hits;
@@ -739,9 +753,9 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
           auto it = views_by_token_.find(hit->tag_value);
           if (it != views_by_token_.end()) {
             ViewState* view_state = it->second;
-            view_hits.emplace_back(
-                ViewHit{*view_state->view_token(),
-                        ToTransform(std::move(hit->inverse_transform))});
+            view_hits.emplace_back(ViewHit{
+                *view_state->view_token(), TransformHitToLocalPoint(hit),
+                ToTransform(std::move(hit->inverse_transform))});
           }
         }
         callback(std::move(view_hits));
@@ -870,8 +884,9 @@ void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
         FXL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
 
         view_state->set_invalidation_flags(
-            old_flags & ~(ViewState::INVALIDATION_IN_PROGRESS |
-                          ViewState::INVALIDATION_STALLED));
+            old_flags &
+            ~(ViewState::INVALIDATION_IN_PROGRESS |
+              ViewState::INVALIDATION_STALLED));
 
         if (old_flags & ViewState::INVALIDATION_STALLED) {
           FXL_VLOG(2) << "View recovered from stalled invalidation: view_state="

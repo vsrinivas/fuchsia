@@ -5,29 +5,18 @@
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 
 #include <queue>
-
 #include "lib/ui/geometry/cpp/geometry_util.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
+#include "lib/escher/scene/camera.h"
+#include "lib/escher/util/type_utils.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace view_manager {
 namespace {
-void TransformEvent(const mozart::Transform& transform,
-                    mozart::InputEvent* event) {
-  if (!event->is_pointer())
-    return;
-  const mozart::PointerEventPtr& pointer = event->get_pointer();
-  mozart::PointF point;
-  point.x = pointer->x;
-  point.y = pointer->y;
-  point = TransformPoint(transform, point);
-  pointer->x = point.x;
-  pointer->y = point.y;
-}
 
 // The input event fidl is currently defined to expect some number
 // of milliseconds.
@@ -91,9 +80,9 @@ void InputDispatcherImpl::ProcessNextEvent() {
       }
     } else if (event->is_keyboard()) {
       inspector_->ResolveFocusChain(
-          view_tree_token_.Clone(), [weak = weak_factory_.GetWeakPtr()](
-                                        std::unique_ptr<FocusChain>
-                                            focus_chain) {
+          view_tree_token_.Clone(),
+          [weak = weak_factory_.GetWeakPtr()](
+              std::unique_ptr<FocusChain> focus_chain) {
             if (weak) {
               // Make sure to keep processing events when no focus is defined
               if (focus_chain) {
@@ -122,7 +111,9 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
   // TODO(MZ-33) once input arena is in place, we won't need the "handled"
   // boolean on the callback anymore.
   mozart::InputEventPtr view_event = event.Clone();
-  TransformEvent(*event_path_[index].inverse_transform, view_event.get());
+  const mozart::PointerEventPtr& pointer = view_event->get_pointer();
+  pointer->x = event_path_[index].point.x;
+  pointer->y = event_path_[index].point.y;
   FXL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " to "
               << event_path_[index].view_token << ": " << *view_event;
   owner_->DeliverEvent(
@@ -220,8 +211,9 @@ void InputDispatcherImpl::OnHitTestResult(const mozart::PointF& point,
   inspector_->ActivateFocusChain(
       view_hits.front().view_token.Clone(),
       [this](std::unique_ptr<FocusChain> new_chain) {
-        if (!active_focus_chain_ || active_focus_chain_->chain.front()->value !=
-                                        new_chain->chain.front()->value) {
+        if (!active_focus_chain_ ||
+            active_focus_chain_->chain.front()->value !=
+                new_chain->chain.front()->value) {
           if (active_focus_chain_) {
             FXL_VLOG(1) << "Input focus lost by "
                         << *(active_focus_chain_->chain.front().get());

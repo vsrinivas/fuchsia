@@ -17,6 +17,16 @@ LayerStack::LayerStack(Session* session, scenic::ResourceId id)
 
 LayerStack::~LayerStack() = default;
 
+std::vector<Hit> LayerStack::HitTest(const escher::ray4& ray,
+                                     Session* session) const {
+  std::vector<Hit> hits;
+  for (auto layer : layers_) {
+    std::vector<Hit> layer_hits = layer->HitTest(ray, session);
+    hits.insert(hits.end(), layer_hits.begin(), layer_hits.end());
+  }
+  return hits;
+}
+
 bool LayerStack::AddLayer(LayerPtr layer) {
   if (layer->layer_stack_) {
     error_reporter()->ERROR()

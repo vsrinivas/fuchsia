@@ -192,6 +192,11 @@ void Engine::RemoveCompositor(Compositor* compositor) {
   FXL_DCHECK(count == 1);
 }
 
+Compositor* Engine::GetFirstCompositor() const {
+  FXL_DCHECK(!compositors_.empty());
+  return compositors_.empty() ? nullptr : *compositors_.begin();
+}
+
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
 
