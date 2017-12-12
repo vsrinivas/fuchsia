@@ -113,4 +113,38 @@ constexpr size_t count_of(T const(&)[N]) {
     return N;
 }
 
+// 2017-12-10: On ARM/release/GCC, a div(mod)-based implementation runs at 2x
+// the speed of subtract-based ones, with no O(n) scaling as input values grow.
+// For x86-64/release/GCC, sub-based methods are initially 20-40% faster (depending
+// on int type) but scale linearly; they are comparable for values 100000-200000.
+//
+// gcd (greatest common divisor) returns the largest non-negative integer that cleanly
+// divides both inputs. Inputs are unsigned integers. gcd(x,0)=x; gcd(x,1)=1
+template <typename T, class = typename enable_if<is_unsigned_integer<T>::value>::type>
+T gcd(T first, T second) {
+    // If function need not support uint8 or uint16, static_casts can be removed
+    while (second != 0) {
+        first = static_cast<T>(first % second);
+        if (first == 0) {
+            return second;
+        }
+        second = static_cast<T>(second % first);
+    }
+
+    return first;
+}
+
+// lcm (least common multiple) returns the smallest non-negative integer that is
+// cleanly divided by both inputs.
+// Inputs are unsigned integers. lcm(x,0)=0; lcm(x,1)=x
+template <typename T, class = typename enable_if<is_unsigned_integer<T>::value>::type>
+T lcm(T first, T second) {
+    if (first == 0 && second == 0) {
+        return 0;
+    }
+
+    // If function need not support uint8 or uint16, static_cast can be removed
+    return static_cast<T>((first / gcd(first, second)) * second);
+}
+
 }  // namespace fbl
