@@ -227,7 +227,7 @@ MODULE_PKG_SRCS += lib/libzircon.so=BUILD/system/ulib/zircon/libzircon.so.abi
 MODULE_PKG_SRCS += lib/debug/libzircon.so=BUILD/system/ulib/zircon/libzircon.so
 
 # global headers
-GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
+GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc -o -name \*\.modulemap)
 MODULE_PKG_INCS += $(foreach inc,$(GLOBAL_HEADERS),$(patsubst system/public/%,%,$(inc))=SOURCE/$(inc))
 
 # generated headers

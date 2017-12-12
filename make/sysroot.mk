@@ -7,12 +7,13 @@
 # rules for generating the sysroot/ dir and contents in the builddir
 
 # identify global headers to copy to the sysroot
-GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
+GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc -o -name \*\.modulemap)
 SYSROOT_HEADERS := $(patsubst system/public/%,$(BUILDSYSROOT)/include/%,$(GLOBAL_HEADERS))
 
 # generate rule to copy them
 $(call copy-dst-src,$(BUILDSYSROOT)/include/%.h,system/public/%.h)
 $(call copy-dst-src,$(BUILDSYSROOT)/include/%.inc,system/public/%.inc)
+$(call copy-dst-src,$(BUILDSYSROOT)/include/%.modulemap,system/public/%.modulemap)
 
 SYSROOT_DEPS += $(SYSROOT_HEADERS)
 
