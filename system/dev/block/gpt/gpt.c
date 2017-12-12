@@ -22,7 +22,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "gpt.h"
+#include <zircon/hw/gpt.h>
+
+typedef gpt_header_t gpt_t;
 
 #define TRACE 0
 
@@ -71,12 +73,12 @@ static void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
 
 static uint64_t getsize(gptpart_device_t* dev) {
     // last LBA is inclusive
-    uint64_t lbacount = dev->gpt_entry.last_lba - dev->gpt_entry.first_lba + 1;
+    uint64_t lbacount = dev->gpt_entry.last - dev->gpt_entry.first + 1;
     return lbacount * dev->info.block_size;
 }
 
 static zx_off_t to_parent_offset(gptpart_device_t* dev, zx_off_t offset) {
-    return offset + dev->gpt_entry.first_lba * dev->info.block_size;
+    return offset + dev->gpt_entry.first * dev->info.block_size;
 }
 
 static bool validate_header(const gpt_t* header, const block_info_t* info) {
@@ -92,11 +94,11 @@ static bool validate_header(const gpt_t* header, const block_info_t* info) {
         xprintf("gpt: header crc invalid\n");
         return false;
     }
-    if (header->last_lba >= info->block_count) {
+    if (header->last >= info->block_count) {
         xprintf("gpt: last block > block count\n");
         return false;
     }
-    if (header->entries_count * header->entries_sz > TXN_SIZE) {
+    if (header->entries_count * header->entries_size > TXN_SIZE) {
         xprintf("gpt: entry table too big\n");
         return false;
     }
@@ -285,7 +287,7 @@ static int gpt_bind_thread(void* arg) {
     xprintf("gpt: found gpt header %u entries @ lba%" PRIu64 "\n", header.entries_count, header.entries);
 
     // read partition table entries
-    size_t table_sz = header.entries_count * header.entries_sz;
+    size_t table_sz = header.entries_count * header.entries_size;
     if (table_sz > TXN_SIZE) {
         xprintf("gpt: partition table is bigger than the iotxn!\n");
         // FIXME read the whole partition table. ok for now because on pixel2, this is
@@ -314,17 +316,17 @@ static int gpt_bind_thread(void* arg) {
     uint64_t dev_block_count = block_info.block_count;
 
     for (partitions = 0; partitions < header.entries_count; partitions++) {
-        if (partitions * header.entries_sz > txn->actual) break;
+        if (partitions * header.entries_size > txn->actual) break;
 
         // skip over entries that look invalid
         gpt_entry_t* entry = (gpt_entry_t*)(entries + (partitions * sizeof(gpt_entry_t)));
-        if (entry->first_lba < header.first_lba || entry->last_lba > header.last_lba) {
+        if (entry->first < header.first || entry->last > header.last) {
             continue;
         }
-        if (entry->first_lba == entry->last_lba) {
+        if (entry->first == entry->last) {
             continue;
         }
-        if ((entry->last_lba - entry->first_lba + 1) > dev_block_count) {
+        if ((entry->last - entry->first + 1) > dev_block_count) {
             xprintf("gpt: entry %u too big, last = 0x%" PRIx64 " first = 0x%" PRIx64 " block_count = 0x%" PRIx64 "\n", partitions, entry->last_lba, entry->first_lba, dev_block_count);
             continue;
         }
@@ -343,7 +345,7 @@ static int gpt_bind_thread(void* arg) {
         }
 
         memcpy(&device->gpt_entry, entry, sizeof(gpt_entry_t));
-        block_info.block_count = device->gpt_entry.last_lba - device->gpt_entry.first_lba + 1;
+        block_info.block_count = device->gpt_entry.last - device->gpt_entry.first + 1;
         memcpy(&device->info, &block_info, sizeof(block_info));
 
         char type_guid[GPT_GUID_STRLEN];

@@ -17,11 +17,8 @@
 
 #include "gpt/gpt.h"
 
-#define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
-#define GPT_HEADER_SIZE 0x5c
-#define GPT_ENTRY_SIZE  0x80
-
-typedef struct gpt_header {
+//TODO: rearrange to use gpt_header_t someday
+typedef struct gpt_hdr_blk {
     uint64_t magic;
     uint32_t revision;
     uint32_t size;
@@ -37,7 +34,7 @@ typedef struct gpt_header {
     uint32_t entries_size;
     uint32_t entries_crc;
     uint8_t reserved[420]; // for 512-byte block size
-} gpt_header_t;
+} gpt_hdr_blk_t;
 
 typedef struct mbr_partition {
     uint8_t status;
@@ -48,7 +45,7 @@ typedef struct mbr_partition {
     uint32_t sectors;
 } mbr_partition_t;
 
-static_assert(sizeof(gpt_header_t) == 512, "unexpected gpt header size");
+static_assert(sizeof(gpt_hdr_blk_t) == 512, "unexpected gpt header size");
 static_assert(sizeof(gpt_partition_t) == GPT_ENTRY_SIZE, "unexpected gpt entry size");
 
 typedef struct gpt_priv {
@@ -65,7 +62,7 @@ typedef struct gpt_priv {
     bool mbr;
 
     // header buffer, should be primary copy
-    gpt_header_t header;
+    gpt_hdr_blk_t header;
 
     // partition table buffer
     gpt_partition_t ptable[PARTITIONS_COUNT];
@@ -216,7 +213,7 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
     priv->mbr = mbr[0x1fe] == 0x55 && mbr[0x1ff] == 0xaa;
 
     // read the gpt header (lba 1)
-    gpt_header_t* header = &priv->header;
+    gpt_hdr_blk_t* header = &priv->header;
     rc = read(fd, header, blocksize);
     if (rc < 0 || (uint64_t)rc != blocksize) {
         goto fail;
@@ -297,7 +294,7 @@ void gpt_device_release(gpt_device_t* dev) {
     free(priv);
 }
 
-static int gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header, gpt_partition_t* ptable) {
+static int gpt_sync_current(int fd, uint64_t blocksize, gpt_hdr_blk_t* header, gpt_partition_t* ptable) {
     // write partition table first
     ssize_t rc = lseek(fd, header->entries * blocksize, SEEK_SET);
     if (rc < 0) {
@@ -313,8 +310,8 @@ static int gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header, gp
     if (rc < 0) {
         return -1;
     }
-    rc = write(fd, header, sizeof(gpt_header_t));
-    if (rc != sizeof(gpt_header_t)) {
+    rc = write(fd, header, sizeof(gpt_hdr_blk_t));
+    if (rc != sizeof(gpt_hdr_blk_t)) {
         return -1;
     }
     return 0;
@@ -350,8 +347,8 @@ static int gpt_device_finalize_and_sync(gpt_device_t* dev, bool persist) {
     }
 
     // fill in the new header fields
-    gpt_header_t header;
-    memset(&header, 0, sizeof(gpt_header_t));
+    gpt_hdr_blk_t header;
+    memset(&header, 0, sizeof(gpt_hdr_blk_t));
     header.magic = GPT_MAGIC;
     header.revision = 0x00010000; // gpt version 1.0
     header.size = GPT_HEADER_SIZE;
@@ -564,6 +561,6 @@ void uint8_to_guid_string(char* dst, const uint8_t* src) {
 
 void gpt_device_get_header_guid(gpt_device_t* dev,
                                 uint8_t (*disk_guid_out)[GPT_GUID_LEN]) {
-    gpt_header_t* header = &get_priv(dev)->header;
+    gpt_hdr_blk_t* header = &get_priv(dev)->header;
     memcpy(disk_guid_out, header->guid, GPT_GUID_LEN);
 }
