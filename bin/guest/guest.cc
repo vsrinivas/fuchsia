@@ -315,7 +315,7 @@ int main(int argc, char** argv) {
 #endif  // __x86_64__
   };
   Vcpu vcpu;
-  status = vcpu.Init(guest, &args);
+  status = vcpu.Create(&guest, &args);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create VCPU\n");
     return status;
@@ -445,12 +445,10 @@ int main(int argc, char** argv) {
 #elif __x86_64__
   vcpu_state.rsi = boot_ptr;
 #endif
-  status = vcpu.WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to write VCPU state\n");
-    return status;
-  }
-
   // Begin VCPU execution.
-  return vcpu.Loop();
+  status = vcpu.Start(&vcpu_state);
+  if (status != ZX_OK)
+    return status;
+
+  return vcpu.Join();
 }
