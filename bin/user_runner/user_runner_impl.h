@@ -83,6 +83,7 @@ class UserRunnerImpl : UserRunner,
   void InitializeLedger();
   void InitializeLedgerDashboard();
   void InitializeDeviceMap();
+  void InitializeClipboard();
   void InitializeRemoteInvoker();
   void InitializeMessageQueueManager();
   void InitializeMaxwell(const fidl::String& user_shell_url,
@@ -236,6 +237,13 @@ class UserRunnerImpl : UserRunner,
   // executed. We can rely on Terminate() only being called once. (And if not,
   // this could simply be made a vector as usual.)
   std::function<void()> at_end_done_;
+
+  // The service provider used to connect to services advertised by the
+  // clipboard agent.
+  app::ServiceProviderPtr services_from_clipboard_agent_;
+
+  // The agent controller used to control the clipboard agent.
+  AgentControllerPtr clipboard_agent_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

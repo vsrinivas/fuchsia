@@ -8,6 +8,7 @@
 #include <string>
 
 #include "lib/agent/fidl/agent_provider.fidl.h"
+#include "lib/clipboard/fidl/clipboard.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -70,6 +71,7 @@ constexpr char kUserShellLinkName[] = "user-shell-link";
 constexpr char kLedgerDashboardUrl[] =
     "file:///system/apps/ledger_dashboard.dartx";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
+constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
 cloud_provider_firebase::ConfigPtr GetLedgerFirebaseConfig() {
   auto firebase_config = cloud_provider_firebase::Config::New();
@@ -152,6 +154,7 @@ void UserRunnerImpl::Initialize(
   InitializeRemoteInvoker();
   InitializeMessageQueueManager();
   InitializeMaxwell(user_shell->url, std::move(story_shell));
+  InitializeClipboard();
   InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
 }
 
@@ -289,6 +292,17 @@ void UserRunnerImpl::InitializeDeviceMap() {
         }
       });
   AtEnd(Reset(&device_map_impl_));
+}
+
+void UserRunnerImpl::InitializeClipboard() {
+  agent_runner_->ConnectToAgent(kAppId, kClipboardAgentUrl,
+                                services_from_clipboard_agent_.NewRequest(),
+                                clipboard_agent_controller_.NewRequest());
+  user_scope_->AddService<Clipboard>(
+      [this](fidl::InterfaceRequest<Clipboard> request) {
+        services_from_clipboard_agent_->ConnectToService(Clipboard::Name_,
+                                                         request.PassChannel());
+      });
 }
 
 void UserRunnerImpl::InitializeRemoteInvoker() {
@@ -492,7 +506,8 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       ledger_client_.get(), fidl::Array<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
-      user_intelligence_provider_.get(), module_resolver_service_.get(), test_));
+      user_intelligence_provider_.get(), module_resolver_service_.get(),
+      test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(
@@ -553,8 +568,9 @@ void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
   XdrWrite(&account_json, &account_, XdrAccount);
   output << account_json << std::endl;
 
-  story_provider_impl_->DumpState(fxl::MakeCopyable(
-      [output = std::move(output), callback](const std::string& debug) mutable {
+  story_provider_impl_->DumpState(
+      fxl::MakeCopyable([ output = std::move(output),
+                          callback ](const std::string& debug) mutable {
         output << debug;
         callback(output.str());
       }));
