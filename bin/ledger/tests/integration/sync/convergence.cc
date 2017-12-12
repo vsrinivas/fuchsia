@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/tests/integration/sync/lib.h"
 
+#include <trace/event.h>
+
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -360,8 +362,13 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     EXPECT_EQ(ledger::Status::OK, status);
   }
 
-  std::function<bool()> until = [this, &watchers, &sync_watchers]() {
-    // At least one change was propagated, and all synchronization is idle.
+  // Function to verify if the visible Ledger state has not changed since last
+  // call and all values are identical.
+  std::function<bool()> has_state_converged = [this, &watchers,
+                                               &sync_watchers]() {
+    // Counts the number of visible changes. Used to verify that the minimal
+    // number of changes for all Ledgers to have communicated is accounted for
+    // (see also below).
     int num_changes = 0;
     for (int i = 0; i < num_ledgers_; i++) {
       num_changes += watchers[i]->changes;
@@ -381,23 +388,63 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
           sync_watchers[i]->new_state) {
         idle = false;
       }
-      // It turns out that merges are not instantaneous (who knew?), so we may
-      // be idle on the synchronization, but merging behind the scenes, which
-      // will trigger a new upload. So here we don't stop as soon as we have an
-      // idle state, but wait a bit to be *really* sure nothing is happening.
-      // Once LE-313 is done we may want to do something cleaner.
+      // With this, we make sure we can verify if the state changes during the
+      // next cycle. If it has changed, we are sure the convergence has not
+      // happened yet.
       sync_watchers[i]->new_state = false;
     }
 
     return idle && AreValuesIdentical(watchers, "value");
   };
 
+  bool merge_done = false;
+  ledger::ConflictResolutionWaitStatus wait_status =
+      ledger::ConflictResolutionWaitStatus::NO_CONFLICTS;
+  fxl::RefPtr<callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>>
+      waiter;
+
+  // In addition of verifying that the external states of the ledgers have
+  // converged, we also verify we are not currently performing a merge in the
+  // background, indicating that the convergence did not finish.
+  std::function<bool()> is_sync_and_merge_complete = [this,
+                                                      &has_state_converged,
+                                                      &merge_done, &wait_status,
+                                                      &waiter] {
+    TRACE_DURATION("ledger", "ledger_test_is_sync_and_merge_complete");
+
+    if (has_state_converged()) {
+      if (merge_done &&
+          wait_status == ledger::ConflictResolutionWaitStatus::NO_CONFLICTS) {
+        return true;
+      }
+      if (!waiter) {
+        waiter = callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>::
+            Create(ledger::ConflictResolutionWaitStatus::NO_CONFLICTS);
+        for (int i = 0; i < num_ledgers_; i++) {
+          pages_[i]->WaitForConflictResolution(waiter->NewCallback());
+        }
+        waiter->Finalize([&merge_done, &wait_status, &waiter](
+                             ledger::ConflictResolutionWaitStatus status) {
+          merge_done = true;
+          wait_status = status;
+          waiter = nullptr;
+        });
+      }
+      return false;
+    } else {
+      merge_done = false;
+      if (waiter) {
+        waiter->Cancel();
+        waiter = nullptr;
+      }
+      return false;
+    }
+  };
+
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
   // converged.
-  EXPECT_TRUE(RunLoopUntil(until, fxl::TimeDelta::FromSeconds(60),
-                           // Checking every 10 milliseconds (the default at
-                           // this time) is too short to catch merges.
-                           fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopUntil(is_sync_and_merge_complete,
+                           fxl::TimeDelta::FromSeconds(60)));
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;
@@ -417,9 +464,8 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 INSTANTIATE_TEST_CASE_P(
     ManyLedgersConvergenceTest,
     ConvergenceTest,
-    // TODO(LE-313): MergeType::LAST_ONE_WINS is disabled as it is flaky.
-    // Re-enable once LE-313 is done.
-    ::testing::Combine(::testing::Values(MergeType::NON_ASSOCIATIVE_CUSTOM),
+    ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
+                                         MergeType::NON_ASSOCIATIVE_CUSTOM),
                        ::testing::Range(2, 6)));
 
 }  // namespace
