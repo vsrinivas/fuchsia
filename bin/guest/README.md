@@ -20,7 +20,7 @@ directory that contains `.jiri_root`):
 ```
 # Optional: Build Linux, an initial RAM disk, and an EXT2 file-system.
 garnet/bin/guest/scripts/mklinux.sh x86
-garnet/bin/guest/scripts/mksysroot.sh -ri
+garnet/bin/guest/scripts/mksysroot.sh -ri x86
 
 # Optional: Build a GPT disk image for Zircon guests.
 garnet/bin/guest/scripts/mkgpt.sh

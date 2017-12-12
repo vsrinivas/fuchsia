@@ -31,7 +31,7 @@ TOYBOX_SYSROOT="$TOYBOX_SRC_DIR/fs"
 DASH_SRC_DIR="/tmp/dash"
 
 usage() {
-    echo "usage: ${0} [-rif] [-d toybox_dir] [-s dash_dir]"
+    echo "usage: ${0} [-rif] [-d toybox_dir] [-s dash_dir] {arm64, x86}"
     echo ""
     echo "    -r Build ext2 filesystem image."
     echo "    -i Build initrd CPIO archive."
@@ -62,8 +62,7 @@ build_toybox() {
   local sysroot_dir="$2"
 
   make -C "$toybox_src" defconfig
-
-  LDFLAGS="--static" make -C "$toybox_src" -j100
+  CC="gcc" LDFLAGS="--static" make -C "$toybox_src" -j100
 
   mkdir -p "$sysroot_dir"/{bin,sbin,etc,proc,sys,usr/{bin,sbin},dev,tmp}
   PREFIX=$sysroot_dir make -C "$toybox_src" install
@@ -88,10 +87,14 @@ build_dash() {
   local dash_src=$1
   local sysroot_dir="$2"
 
-  ( cd $dash_src && ./autogen.sh && ./configure LDFLAGS="-static" && make )
+  pushd $dash_src
+  ./autogen.sh
+  ./configure CC="${CROSS_COMPILE}gcc" LDFLAGS="-static" --host=arm64-linux-gnueabi
+  make -j100
+  popd
+
   mkdir -p "$sysroot_dir/bin"
-  # TODO(andymutton): Remove the -f when we can disable toysh in the toybox repo
-  cp -f "$dash_src/src/dash" "$sysroot_dir/bin/sh"
+  cp "$dash_src/src/dash" "$sysroot_dir/bin/sh"
 }
 
 # Generate a simple init script at /init in the target sysroot.
@@ -109,7 +112,7 @@ mount -t proc none /proc
 mount -t sysfs none /sys
 mount -t devtmpfs none /dev
 echo Launched toybox
-/bin/sh
+exec /bin/sh
 _EOF
 
   chmod +x "$sysroot_dir/init"
@@ -171,14 +174,26 @@ declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
 
 while getopts "fird:s:" opt; do
   case "${opt}" in
-    f) FORCE="true" ;;
-    i) BUILD_INITRD="true" ;;
-    r) BUILD_ROOTFS="true" ;;
-    d) TOYBOX_SRC_DIR="${OPTARG}" ;;
-    s) DASH_SRC_DIR="${OPTARG}" ;;
-    *) usage ;;
+  f) FORCE="true" ;;
+  i) BUILD_INITRD="true" ;;
+  r) BUILD_ROOTFS="true" ;;
+  d) TOYBOX_SRC_DIR="${OPTARG}" ;;
+  s) DASH_SRC_DIR="${OPTARG}" ;;
+  *) usage ;;
   esac
 done
+shift $((OPTIND - 1))
+
+case "${1}" in
+arm64)
+  declare -x ARCH=arm64;
+  declare -x CROSS_COMPILE=aarch64-linux-gnu-;;
+x86)
+  declare -x ARCH=x86;
+  declare -x CROSS_COMPILE=x86_64-linux-gnu-;;
+*)
+  usage;;
+esac
 
 # Do we have something to build?
 if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then

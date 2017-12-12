@@ -26,6 +26,7 @@ while getopts "c:d:" OPT; do
   *) usage;;
   esac
 done
+shift $((OPTIND - 1))
 
 case "${1}" in
 arm64)

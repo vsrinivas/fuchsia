@@ -32,7 +32,7 @@ while getopts "g:l:i:r:" opt; do
   *) usage ;;
   esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
 case "${1}" in
 arm64)
