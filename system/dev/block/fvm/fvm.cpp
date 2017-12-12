@@ -445,11 +445,10 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
         if (vslice_start == 0) {
             // Special case: Freeing entire VPartition
             for (auto extent = vp->ExtentBegin(); extent.IsValid(); extent = vp->ExtentBegin()) {
-                while (!extent->is_empty()) {
-                    auto vslice = extent->end() - 1;
-                    GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = PSLICE_UNALLOCATED;
-                    ZX_ASSERT(vp->SliceFreeLocked(vslice));
+                for (size_t i = extent->start(); i < extent->end(); i++) {
+                    GetSliceEntryLocked(vp->SliceGetLocked(i))->vpart = PSLICE_UNALLOCATED;
                 }
+                vp->ExtentDestroyLocked(extent->start());
             }
 
             // Remove device, VPartition if this was a request to free all slices.
@@ -693,6 +692,15 @@ bool VPartition::SliceFreeLocked(size_t vslice) {
 
     AddBlocksLocked(-(mgr_->SliceSize() / info_.block_size));
     return true;
+}
+
+void VPartition::ExtentDestroyLocked(size_t vslice) TA_REQ(lock_) {
+    ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
+    ZX_DEBUG_ASSERT(SliceCanFree(vslice));
+    auto extent = --slice_map_.upper_bound(vslice);
+    size_t length = extent->size();
+    slice_map_.erase(*extent);
+    AddBlocksLocked(-((length * mgr_->SliceSize()) / info_.block_size));
 }
 
 static zx_status_t RequestBoundCheck(const extend_request_t* request,

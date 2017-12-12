@@ -227,6 +227,9 @@ public:
     // If freeing from the back of an extent, guaranteed not to fail.
     bool SliceFreeLocked(size_t vslice) TA_REQ(lock_);
 
+    // Destroy the extent containing the vslice.
+    void ExtentDestroyLocked(size_t vslice) TA_REQ(lock_);
+
     size_t BlockSize() const TA_NO_THREAD_SAFETY_ANALYSIS {
         return info_.block_size;
     }
