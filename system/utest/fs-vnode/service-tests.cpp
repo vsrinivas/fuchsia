@@ -80,13 +80,13 @@ bool test_serve_directory() {
     auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
     auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service(
         [&loop](zx::channel channel) {
-            loop.Quit();
+            loop.Shutdown();
             return ZX_OK;
         }));
     directory->AddEntry("abc", vnode);
 
     EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, fbl::move(server)));
-    EXPECT_EQ(ZX_ERR_CANCELED, loop.Run());
+    EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run());
 
     END_TEST;
 }
