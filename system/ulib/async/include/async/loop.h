@@ -89,6 +89,15 @@ void async_loop_destroy(async_t* async);
 // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
 zx_status_t async_loop_run(async_t* async, zx_time_t deadline, bool once);
 
+// Dispatches events until there are none remaining, and then returns without
+// waiting. This is useful for unit testing, because the behavior doesn't depend
+// on time.
+//
+// Returns |ZX_OK| if the dispatcher reaches an idle state.
+// Returns |ZX_ERR_CANCELED| if the loop quitted.
+// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+zx_status_t async_loop_run_until_idle(async_t* async);
+
 // Quits the message loop.
 // Active invocations of |async_loop_run()| and threads started using
 // |async_loop_start_thread()| will eventually terminate upon completion of their
@@ -183,6 +192,15 @@ public:
     // Returns |ZX_ERR_CANCELED| if the loop quitted.
     // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
     zx_status_t Run(zx_time_t deadline = ZX_TIME_INFINITE, bool once = false);
+
+    // Dispatches events until there are none remaining, and then returns
+    // without waiting. This is useful for unit testing, because the behavior
+    // doesn't depend on time.
+    //
+    // Returns |ZX_OK| if the dispatcher reaches an idle state.
+    // Returns |ZX_ERR_CANCELED| if the loop quitted.
+    // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
+    zx_status_t RunUntilIdle();
 
     // Quits the message loop.
     // Active invocations of |Run()| and threads started using |StartThread()|

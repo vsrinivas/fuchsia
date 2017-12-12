@@ -204,6 +204,14 @@ zx_status_t async_loop_run(async_t* async, zx_time_t deadline, bool once) {
     return status;
 }
 
+zx_status_t async_loop_run_until_idle(async_t* async) {
+    zx_status_t status = async_loop_run(async, 0, false);
+    if (status == ZX_ERR_TIMED_OUT) {
+      status = ZX_OK;
+    }
+    return status;
+}
+
 static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
     async_loop_state_t state = atomic_load_explicit(&loop->state, memory_order_acquire);
     if (state == ASYNC_LOOP_SHUTDOWN)

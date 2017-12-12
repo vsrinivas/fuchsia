@@ -296,7 +296,7 @@ bool wait_test() {
     EXPECT_EQ(ZX_OK, wait3.op.Begin(loop.async()), "wait 3");
 
     // Initially nothing is signaled.
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(0u, wait1.run_count, "run count 1");
     EXPECT_EQ(0u, wait2.run_count, "run count 2");
     EXPECT_EQ(0u, wait3.run_count, "run count 3");
@@ -304,7 +304,7 @@ bool wait_test() {
     // Set signal 1: notifies |wait1| which sets signal 2 and notifies |wait2|
     // which clears signal 1 and 2 again.
     EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1), "signal 1");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(ZX_OK, wait1.last_status, "status 1");
     EXPECT_NONNULL(wait1.last_signal);
@@ -321,14 +321,14 @@ bool wait_test() {
 
     // Set signal 1 again: does nothing because |wait1| was a one-shot.
     EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1), "signal 1");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(1u, wait2.run_count, "run count 2");
     EXPECT_EQ(0u, wait3.run_count, "run count 3");
 
     // Set signal 2 again: notifies |wait2| which clears signal 1 and 2 again.
     EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_2), "signal 2");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
     EXPECT_EQ(ZX_OK, wait2.last_status, "status 2");
@@ -342,7 +342,7 @@ bool wait_test() {
     // Do this a couple of times.
     for (uint32_t i = 0; i < 3; i++) {
         EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_3), "signal 3");
-        EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
         EXPECT_EQ(1u, wait1.run_count, "run count 1");
         EXPECT_EQ(2u, wait2.run_count, "run count 2");
         EXPECT_EQ(i + 1u, wait3.run_count, "run count 3");
@@ -356,14 +356,14 @@ bool wait_test() {
     // Cancel wait 3 then set signal 3 again: nothing happens this time.
     EXPECT_EQ(ZX_OK, wait3.op.Cancel(loop.async()), "cancel");
     EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_3), "signal 3");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
     EXPECT_EQ(3u, wait3.run_count, "run count 3");
 
     // Redundant cancel returns an error.
     EXPECT_EQ(ZX_ERR_NOT_FOUND, wait3.op.Cancel(loop.async()), "cancel again");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
     EXPECT_EQ(3u, wait3.run_count, "run count 3");
@@ -379,7 +379,7 @@ bool wait_invalid_handle_test() {
     TestWait wait(ZX_HANDLE_INVALID, ZX_USER_SIGNAL_0);
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, wait.op.Begin(loop.async()), "begin");
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, wait.op.Cancel(loop.async()), "cancel");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(0u, wait.run_count, "run count");
 
     END_TEST;
@@ -406,7 +406,7 @@ bool wait_shutdown_test() {
     EXPECT_EQ(ZX_OK, wait4.op.Begin(loop.async()), "begin 4");
 
     // Nothing signaled so nothing happens at first.
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(0u, wait1.run_count, "run count 1");
     EXPECT_EQ(0u, wait2.run_count, "run count 2");
     EXPECT_EQ(0u, wait3.run_count, "run count 3");
@@ -414,7 +414,7 @@ bool wait_shutdown_test() {
 
     // Set signal 1: notifies both waiters, |wait2| clears the signal and repeats
     EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0), "signal 1");
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(ZX_OK, wait1.last_status, "status 1");
     EXPECT_NONNULL(wait1.last_signal);
@@ -594,7 +594,7 @@ bool receiver_test() {
     EXPECT_EQ(ZX_OK, receiver2.op.Queue(loop.async(), &data2), "queue 2");
     EXPECT_EQ(ZX_OK, receiver3.op.Queue(loop.async()), "queue 3");
 
-    EXPECT_EQ(ZX_ERR_TIMED_OUT, loop.Run(zx_deadline_after(ZX_MSEC(1))), "run loop");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(2u, receiver1.run_count, "run count 1");
     EXPECT_EQ(ZX_OK, receiver1.last_status, "status 1");
     EXPECT_NONNULL(receiver1.last_data);

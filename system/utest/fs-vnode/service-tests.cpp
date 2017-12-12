@@ -86,7 +86,7 @@ bool test_serve_directory() {
     directory->AddEntry("abc", vnode);
 
     EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, fbl::move(server)));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run());
+    EXPECT_EQ(ZX_ERR_BAD_STATE, loop.RunUntilIdle());
 
     END_TEST;
 }

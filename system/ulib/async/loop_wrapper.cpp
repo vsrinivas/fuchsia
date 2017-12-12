@@ -25,6 +25,10 @@ zx_status_t Loop::Run(zx_time_t deadline, bool once) {
     return async_loop_run(async_, deadline, once);
 }
 
+zx_status_t Loop::RunUntilIdle() {
+    return async_loop_run_until_idle(async_);
+}
+
 void Loop::Quit() {
     async_loop_quit(async_);
 }
