@@ -163,11 +163,11 @@ static inline bool intervals_intersect(const void* start1, const size_t len1,
     return false;
 }
 
-
-/* Takes a buffer to a bootimage and appends a section to the end of it */
-zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
-                                    const uint8_t* section, uint32_t section_length,
-                                    uint32_t type, uint32_t extra, uint32_t flags) {
+/* Takes a buffer to a bootimage and appends a section to the end of it,
+ * returning a pointer to where the section payload can be written. */
+static zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
+                                           uint32_t section_length, uint32_t type,
+                                           uint32_t extra, uint32_t flags, uint8_t** section) {
     bootdata_t* hdr = (bootdata_t*)bootdata_buf;
 
     if ((hdr->type != BOOTDATA_CONTAINER) ||
@@ -199,11 +199,25 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
     new_hdr->crc32 = BOOTITEM_NO_CRC32;
 
     bootdata_buf += sizeof(bootdata_t);
-
-    memcpy(bootdata_buf, section, section_length);
-
+    *section = bootdata_buf;
     hdr->length += (uint32_t)new_section_length;
+    return ZX_OK;
+}
 
+/* Takes a buffer to a bootimage and appends a section to the end of it,
+ * including copying the |section_length| bytes of data from |section| into the
+ * bootimage. */
+zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
+                                    const uint8_t* section, uint32_t section_length,
+                                    uint32_t type, uint32_t extra, uint32_t flags) {
+    uint8_t* bootdata_section;
+    zx_status_t status = bootdata_append_section(bootdata_buf, buflen, section_length, type, extra,
+                                                 flags, &bootdata_section);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    memcpy(bootdata_section, section, section_length);
     return ZX_OK;
 }
 
@@ -243,6 +257,33 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
     if (result != ZX_OK) {
         printf("mexec: could not patch bootdata\n");
         return result;
+    }
+
+    if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
+        size_t crashlog_len = stashed_crashlog->size();
+        uint8_t* bootdata_section;
+        result = bootdata_append_section(bootimage_buffer, new_bootimage_len,
+                                         static_cast<uint32_t>(crashlog_len),
+                                         BOOTDATA_LAST_CRASHLOG, 0, 0, &bootdata_section);
+        if (result != ZX_OK) {
+            printf("mexec: could not append crashlog\n");
+            return result;
+        }
+
+        size_t bytes_remaining = crashlog_len;
+        size_t offset = 0;
+        while (bytes_remaining) {
+            size_t bytes_read;
+
+            result = stashed_crashlog->Read(bootdata_section + offset, offset, bytes_remaining,
+                                            &bytes_read);
+            if (result != ZX_OK) {
+                return result;
+            }
+
+            bytes_remaining -= bytes_read;
+            offset += bytes_read;
+        }
     }
 
     // WARNING

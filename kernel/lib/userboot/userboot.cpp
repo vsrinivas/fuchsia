@@ -323,7 +323,7 @@ static zx_status_t attempt_userboot() {
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
                                 &handles[BOOTSTRAP_STACK]);
     if (status == ZX_OK)
-        status = get_vmo_handle(crashlog_vmo, false, nullptr,
+        status = get_vmo_handle(crashlog_vmo, true, nullptr,
                                 &handles[BOOTSTRAP_CRASHLOG]);
     if (status == ZX_OK)
         status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
