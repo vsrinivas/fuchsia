@@ -33,6 +33,7 @@ endif
 # Bootloader sources
 EFI_SOURCES := \
     $(LOCAL_DIR)/src/osboot.c \
+    $(LOCAL_DIR)/src/diskio.c \
     $(LOCAL_DIR)/src/cmdline.c \
     $(LOCAL_DIR)/src/zircon.c \
     $(LOCAL_DIR)/src/misc.c \

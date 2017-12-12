@@ -47,3 +47,11 @@ int zedboot(efi_handle img, efi_system_table* sys,
 
 
 unsigned identify_image(void* image, size_t sz);
+
+// sz may be just one block or sector
+// if the header looks like a kernel image, return expected size
+// otherwise returns 0
+size_t image_getsize(void* imageheader, size_t sz);
+
+
+void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz);

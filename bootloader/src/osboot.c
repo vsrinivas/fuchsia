@@ -400,8 +400,9 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // First look for a self-contained zirconboot image
     size_t zedboot_size = 0;
-    void* zedboot_kernel = xefi_load_file(L"zedboot.bin", &zedboot_size, 0);
+    void* zedboot_kernel = NULL;
 
+    zedboot_kernel = xefi_load_file(L"zedboot.bin", &zedboot_size, 0);
     switch (identify_image(zedboot_kernel, zedboot_size)) {
     case IMAGE_COMBO:
         printf("zedboot.bin is a valid kernel+ramdisk combo image\n");
@@ -416,24 +417,31 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // Look for a kernel image on disk
     size_t ksz = 0;
     unsigned ktype = IMAGE_INVALID;
-    void* kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
+    void* kernel = NULL;
 
-    switch ((ktype = identify_image(kernel, ksz))) {
-    case IMAGE_EMPTY:
-        break;
-    case IMAGE_KERNEL:
-        printf("zircon.bin is a kernel image\n");
-        break;
-    case IMAGE_COMBO:
-        printf("zircon.bin is a kernel+ramdisk combo image\n");
-        break;
-    case IMAGE_RAMDISK:
-        printf("zircon.bin is a ramdisk?!\n");
-    case IMAGE_INVALID:
-        printf("zircon.bin is not a valid kernel or combo image\n");
-        ktype = IMAGE_INVALID;
-        ksz = 0;
-        kernel = NULL;
+    kernel = image_load_from_disk(img, sys, &ksz);
+    if (kernel != NULL) {
+        printf("zircon image loaded from zircon partition\n");
+        ktype = IMAGE_COMBO;
+    } else {
+        kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
+        switch ((ktype = identify_image(kernel, ksz))) {
+        case IMAGE_EMPTY:
+            break;
+        case IMAGE_KERNEL:
+            printf("zircon.bin is a kernel image\n");
+            break;
+        case IMAGE_COMBO:
+            printf("zircon.bin is a kernel+ramdisk combo image\n");
+            break;
+        case IMAGE_RAMDISK:
+            printf("zircon.bin is a ramdisk?!\n");
+        case IMAGE_INVALID:
+            printf("zircon.bin is not a valid kernel or combo image\n");
+            ktype = IMAGE_INVALID;
+            ksz = 0;
+            kernel = NULL;
+        }
     }
 
     if (!have_network && zedboot_kernel == NULL && kernel == NULL) {

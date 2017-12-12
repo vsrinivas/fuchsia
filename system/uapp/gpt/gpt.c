@@ -423,6 +423,20 @@ static zx_status_t get_gpt_and_part(char* path_device, long idx_part,
     return ZX_OK;
 }
 
+static struct {
+    const char* name;
+    const uint8_t guid[GPT_GUID_LEN];
+} nametab[] = {
+    { .name = "blobfs", .guid = GUID_BLOB_VALUE, },
+    { .name = "data", .guid = GUID_DATA_VALUE, },
+    { .name = "install", .guid = GUID_INSTALL_VALUE, },
+    { .name = "system", .guid = GUID_SYSTEM_VALUE, },
+    { .name = "efi", .guid = GUID_EFI_VALUE, },
+    { .name = "zircon-a", .guid = GUID_ZIRCON_A_VALUE, },
+    { .name = "zircon-b", .guid = GUID_ZIRCON_B_VALUE, },
+    { .name = "zircon-r", .guid = GUID_ZIRCON_R_VALUE, },
+};
+
 /*
  * Match keywords "BLOBFS", "DATA", "SYSTEM", or "EFI" and convert them to their
  * corresponding byte sequences. 'out' should point to a GPT_GUID_LEN array.
@@ -432,38 +446,11 @@ static bool expand_special(char* in, uint8_t* out) {
         return false;
     }
 
-    static const uint8_t blobfs[GPT_GUID_LEN] = GUID_BLOB_VALUE;
-    static const uint8_t data[GPT_GUID_LEN] = GUID_DATA_VALUE;
-    static const uint8_t install[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
-    static const uint8_t system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-    static const uint8_t efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
-
-    int len = strlen(in);
-    for (int i = 0; i < len; i++) in[i] = tolower(in[i]);
-
-    if (len == 6 && !strncmp("blobfs", in, 6)) {
-        memcpy(out, blobfs, GPT_GUID_LEN);
-        return true;
-    }
-
-    if (len == 4 && !strncmp("data", in, 4)) {
-        memcpy(out, data, GPT_GUID_LEN);
-        return true;
-    }
-
-    if (len == 7 && !strncmp("install", in, 7)) {
-        memcpy(out, install, GPT_GUID_LEN);
-        return true;
-    }
-
-    if (len == 6 && !strncmp("system", in, 6)) {
-        memcpy(out, system, GPT_GUID_LEN);
-        return true;
-    }
-
-    if (len == 3 && !strncmp("efi", in, 3)) {
-        memcpy(out, efi, GPT_GUID_LEN);
-        return true;
+    for (unsigned n = 0; n < countof(nametab); n++) {
+        if (!strcmp(in, nametab[n].name)) {
+            memcpy(out, nametab[n].guid, GPT_GUID_LEN);
+            return true;
+        }
     }
 
     return false;

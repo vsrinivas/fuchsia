@@ -77,6 +77,20 @@ static int add_bootdata(void** ptr, size_t* avail,
     return 0;
 }
 
+size_t image_getsize(void* image, size_t sz) {
+    if (sz < sizeof(zircon_kernel_t)) {
+        return 0;
+    }
+    zircon_kernel_t* kernel = image;
+    if ((kernel->hdr_file.type != ZBI_TYPE_CONTAINER) ||
+        (kernel->hdr_file.magic != ZBI_ITEM_MAGIC) ||
+        (kernel->hdr_kernel.type != ZBI_TYPE_KERNEL_X64) ||
+        (kernel->hdr_kernel.magic != ZBI_ITEM_MAGIC)) {
+        return 0;
+    }
+    return ZBI_ALIGN(kernel->hdr_file.length) + sizeof(zbi_header_t);
+}
+
 static int header_check(void* image, size_t sz, uint64_t* _entry,
                         size_t* _flen, size_t* _klen) {
     zbi_header_t* bd = image;
