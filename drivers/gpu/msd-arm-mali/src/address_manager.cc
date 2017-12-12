@@ -13,8 +13,8 @@
 // definition of this is similar to normal LPAE memory attributes, but is
 // undocumented.
 constexpr uint8_t kMmuNormalMemoryAttr = 0x4d;
-
-constexpr uint8_t kMmuUnusedAttr = 0;
+// Memory with this attribute is also outer cacheable read+write alloc.
+constexpr uint8_t kMmuOuterCacheableMemoryAttr = 0x8d;
 
 // The memory attribute register has 8 8-bit slots.
 static constexpr uint64_t SlotAttribute(int slot, uint8_t attributes)
@@ -22,13 +22,9 @@ static constexpr uint64_t SlotAttribute(int slot, uint8_t attributes)
     return static_cast<uint64_t>(attributes) << (slot * 8);
 }
 
-// Only one type of memory is ever used, so that attribute is put in slot 0
-// and slot 0 is referenced by all page table entries.
 constexpr uint64_t kMemoryAttributes =
-    SlotAttribute(0, kMmuNormalMemoryAttr) | SlotAttribute(1, kMmuUnusedAttr) |
-    SlotAttribute(2, kMmuUnusedAttr) | SlotAttribute(3, kMmuUnusedAttr) |
-    SlotAttribute(4, kMmuUnusedAttr) | SlotAttribute(5, kMmuUnusedAttr) |
-    SlotAttribute(6, kMmuUnusedAttr) | SlotAttribute(7, kMmuUnusedAttr);
+    SlotAttribute(AddressSpace::kNormalMemoryAttributeSlot, kMmuNormalMemoryAttr) |
+    SlotAttribute(AddressSpace::kOuterCacheableAttributeSlot, kMmuOuterCacheableMemoryAttr);
 
 AddressManager::AddressManager(Owner* owner, uint32_t address_slot_count) : owner_(owner)
 {

@@ -161,6 +161,12 @@ bool MsdArmDevice::Init(void* device_handle)
     gpu_features_.ReadFrom(register_io_.get());
     magma::log(magma::LOG_INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
 
+#if defined(MSD_ARM_ENABLE_CACHE_COHERENCY)
+    if (!gpu_features_.coherency_features.ace().get())
+        return DRETF(false, "ACE cache coherency not available");
+    cache_coherency_status_ = kArmMaliCacheCoherencyAce;
+#endif
+
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
     device_port_ = magma::PlatformPort::Create();
 
@@ -287,6 +293,12 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
         irq_status.power_changed_single().set(0);
         irq_status.power_changed_all().set(0);
         power_manager_->ReceivedPowerInterrupt(register_io_.get());
+        if (power_manager_->l2_ready_status() &&
+            (cache_coherency_status_ == kArmMaliCacheCoherencyAce)) {
+            auto enable_reg = registers::CoherencyFeatures::GetEnable().FromValue(0);
+            enable_reg.ace().set(true);
+            enable_reg.WriteTo(register_io_.get());
+        }
     }
 
     if (irq_status.reg_value()) {
@@ -697,6 +709,10 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
 
         case kMsdArmVendorQueryMmuFeatures:
             *value_out = gpu_features_.mmu_features.reg_value();
+            return MAGMA_STATUS_OK;
+
+        case kMsdArmVendorQueryCoherencyEnabled:
+            *value_out = cache_coherency_status_;
             return MAGMA_STATUS_OK;
 
         default:

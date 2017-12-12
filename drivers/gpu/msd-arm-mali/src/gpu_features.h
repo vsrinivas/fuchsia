@@ -50,6 +50,7 @@ struct GpuFeatures {
     uint32_t thread_max_threads;
     uint32_t thread_max_workgroup_size;
     uint32_t thread_max_barrier_size;
+    registers::CoherencyFeatures coherency_features;
 
     uint32_t job_slot_features[kMaxJobSlots];
     uint32_t texture_features[kNumTextureFeaturesRegisters];
@@ -76,6 +77,7 @@ struct GpuFeatures {
         thread_max_workgroup_size = io->Read32(kThreadMaxWorkgroupSizeOffset);
         thread_max_barrier_size = io->Read32(kThreadMaxBarrierSizeOffset);
         thread_features = registers::ThreadFeatures::Get().ReadFrom(io);
+        coherency_features = registers::CoherencyFeatures::GetPresent().ReadFrom(io);
 
         for (size_t i = 0; i < kMaxJobSlots; i++)
             job_slot_features[i] = io->Read32(kJsFeaturesOffset + i * 4);

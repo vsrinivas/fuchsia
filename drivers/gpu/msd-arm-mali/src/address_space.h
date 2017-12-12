@@ -60,8 +60,12 @@ public:
     };
 
     static constexpr uint32_t kVirtualAddressSize = 48;
+    static constexpr uint32_t kNormalMemoryAttributeSlot = 0;
+    static constexpr uint32_t kOuterCacheableAttributeSlot = 1;
 
-    static std::unique_ptr<AddressSpace> Create(Owner* owner);
+    // If cache_coherent is true, then updates to the page tables themselves
+    // should be cache coherent with the GPU.
+    static std::unique_ptr<AddressSpace> Create(Owner* owner, bool cache_coherent);
 
     ~AddressSpace();
 
@@ -93,7 +97,7 @@ private:
 
     class PageTable {
     public:
-        static std::unique_ptr<PageTable> Create(uint32_t level);
+        static std::unique_ptr<PageTable> Create(uint32_t level, bool cache_coherent);
 
         PageTableGpu* gpu() { return gpu_; }
 
@@ -114,11 +118,13 @@ private:
     private:
         static mali_pte_t get_directory_entry(uint64_t physical_address);
 
-        PageTable(uint32_t level, std::unique_ptr<magma::PlatformBuffer> buffer, PageTableGpu* gpu,
+        PageTable(uint32_t level, bool cache_coherent,
+                  std::unique_ptr<magma::PlatformBuffer> buffer, PageTableGpu* gpu,
                   uint64_t page_bus_address);
 
         // The root page table has level 3, and the leaves have level 0.
-        uint32_t level_;
+        const uint32_t level_;
+        const bool cache_coherent_;
         std::unique_ptr<magma::PlatformBuffer> buffer_;
         PageTableGpu* gpu_;
         uint64_t page_bus_address_;
@@ -127,9 +133,10 @@ private:
         friend class TestAddressSpace;
     };
 
-    AddressSpace(Owner* owner, std::unique_ptr<PageTable> root_page_directory);
+    AddressSpace(Owner* owner, bool cache_coherent, std::unique_ptr<PageTable> root_page_directory);
 
     Owner* owner_;
+    bool cache_coherent_;
     std::unique_ptr<PageTable> root_page_directory_;
 
     friend class TestAddressSpace;

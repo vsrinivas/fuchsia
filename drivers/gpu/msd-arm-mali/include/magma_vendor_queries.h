@@ -17,6 +17,7 @@ enum MsdArmVendorQuery {
     kMsdArmVendorQueryL2Features = MAGMA_QUERY_VENDOR_PARAM_0 + 7,
     kMsdArmVendorQueryMemoryFeatures = MAGMA_QUERY_VENDOR_PARAM_0 + 8,
     kMsdArmVendorQueryMmuFeatures = MAGMA_QUERY_VENDOR_PARAM_0 + 9,
+    kMsdArmVendorQueryCoherencyEnabled = MAGMA_QUERY_VENDOR_PARAM_0 + 10,
 };
 
 #endif // MAGMA_VENDOR_QUERIES_H_

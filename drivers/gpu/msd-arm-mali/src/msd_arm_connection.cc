@@ -178,7 +178,10 @@ std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t clien
 
 bool MsdArmConnection::Init()
 {
-    address_space_ = AddressSpace::Create(this);
+    // If coherent memory is supported, use it for page tables to avoid
+    // unnecessary cache flushes.
+    address_space_ =
+        AddressSpace::Create(this, owner_->cache_coherency_status() == kArmMaliCacheCoherencyAce);
     if (!address_space_)
         return DRETF(false, "Couldn't create address space");
     return true;
@@ -232,9 +235,15 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
         access_flags |= kAccessFlagNoExecute;
     if (mapping->flags() & kMagmaArmMaliGpuMapFlagInnerShareable)
         access_flags |= kAccessFlagShareInner;
+    if (mapping->flags() & kMagmaArmMaliGpuMapFlagBothShareable) {
+        if (owner_->cache_coherency_status() != kArmMaliCacheCoherencyAce)
+            return DRETF(false, "Attempting to use cache coherency while disabled.");
+        access_flags |= kAccessFlagShareBoth;
+    }
 
-    if (mapping->flags() & ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE |
-                             MAGMA_GPU_MAP_FLAG_EXECUTE | kMagmaArmMaliGpuMapFlagInnerShareable))
+    if (mapping->flags() &
+        ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
+          kMagmaArmMaliGpuMapFlagInnerShareable | kMagmaArmMaliGpuMapFlagBothShareable))
         return DRETF(false, "Unsupported map flags %lx\n", mapping->flags());
 
     if (!address_space_->Insert(gpu_va, buffer->platform_buffer(), 0, mapping->size(),

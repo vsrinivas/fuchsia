@@ -65,6 +65,20 @@ public:
     static auto Get() { return RegisterAddr<ThreadFeatures>(0xac); }
 };
 
+class CoherencyFeatures : public RegisterBase {
+public:
+    // ACE-lite lets the GPU snoop on changes made by the CPU
+    DEF_BIT(0, ace_lite);
+
+    // ACE lets the GPU and CPU snoop on each other.
+    DEF_BIT(1, ace);
+
+    DEF_BIT(31, none);
+
+    static auto GetPresent() { return RegisterAddr<CoherencyFeatures>(0x300); }
+    static auto GetEnable() { return RegisterAddr<CoherencyFeatures>(0x304); }
+};
+
 class GpuCommand {
 public:
     static constexpr uint32_t kOffset = 0x30;

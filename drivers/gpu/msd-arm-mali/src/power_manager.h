@@ -16,6 +16,7 @@ public:
     void ReceivedPowerInterrupt(RegisterIo* io);
 
     uint64_t shader_ready_status() const { return shader_ready_status_; }
+    uint64_t l2_ready_status() const { return l2_ready_status_; }
 
 private:
     friend class TestMsdArmDevice;

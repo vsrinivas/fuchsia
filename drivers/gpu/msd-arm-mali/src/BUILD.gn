@@ -7,6 +7,10 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 declare_args() {
   # Enable all 8 cores, which is faster but emits more heat.
   msd_arm_enable_all_cores = false
+
+  # This is disabled by default because it's not guaranteed that it actually
+  # works on all systems (including the hikey960).
+  msd_arm_enable_cache_coherency = false
 }
 
 source_set("src") {
@@ -44,6 +48,10 @@ source_set("src") {
   defines = []
   if (msd_arm_enable_all_cores) {
     defines += [ "MSD_ARM_ENABLE_ALL_CORES" ]
+  }
+
+  if (msd_arm_enable_cache_coherency) {
+    defines += ["MSD_ARM_ENABLE_CACHE_COHERENCY"]
   }
 
   deps = [

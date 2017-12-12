@@ -35,6 +35,12 @@ static uint64_t get_mmu_flags(uint64_t access_flags)
     if (access_flags & kAccessFlagNoExecute)
         mmu_flags |= kLpaeFlagNoExecute;
 
+    uint8_t attribute_slot = (access_flags & kAccessFlagShareBoth)
+                                 ? AddressSpace::kOuterCacheableAttributeSlot
+                                 : AddressSpace::kNormalMemoryAttributeSlot;
+
+    mmu_flags |= attribute_slot << 2;
+
     if (access_flags & kAccessFlagShareBoth)
         mmu_flags |= kLpaeFlagShareBoth;
     else if (access_flags & kAccessFlagShareInner)
@@ -44,12 +50,13 @@ static uint64_t get_mmu_flags(uint64_t access_flags)
 
 AddressSpace::Owner::~Owner() = default;
 
-std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner)
+std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner, bool cache_coherent)
 {
-    auto page_directory = AddressSpace::PageTable::Create(kPageDirectoryLevels - 1);
+    auto page_directory = AddressSpace::PageTable::Create(kPageDirectoryLevels - 1, cache_coherent);
     if (!page_directory)
         return DRETP(nullptr, "failed to create root page table");
-    return std::unique_ptr<AddressSpace>(new AddressSpace(owner, std::move(page_directory)));
+    return std::unique_ptr<AddressSpace>(
+        new AddressSpace(owner, cache_coherent, std::move(page_directory)));
 }
 
 AddressSpace::~AddressSpace() { owner_->GetAddressSpaceObserver()->ReleaseSpaceMappings(this); }
@@ -143,7 +150,14 @@ uint64_t AddressSpace::translation_table_entry() const
     };
     constexpr uint64_t kLpaeReadInner = (1u << 2);
 
-    return root_page_directory_->page_bus_address() | kLpaeReadInner | kLpaeAddressModeTable;
+    // If set, page table reads are coherent with main memory.
+    constexpr uint64_t kLpaeReadOuter = (1u << 4);
+
+    uint64_t flags =
+        root_page_directory_->page_bus_address() | kLpaeReadInner | kLpaeAddressModeTable;
+    if (cache_coherent_)
+        flags |= kLpaeReadOuter;
+    return flags;
 }
 
 AddressSpace::PageTable* AddressSpace::PageTable::GetPageTableLevel0(uint64_t page_number,
@@ -159,12 +173,13 @@ AddressSpace::PageTable* AddressSpace::PageTable::GetPageTableLevel0(uint64_t pa
         if (!create)
             return nullptr;
 
-        auto directory = PageTable::Create(level_ - 1);
+        auto directory = PageTable::Create(level_ - 1, cache_coherent_);
         if (!directory)
             return DRETP(nullptr, "failed to create page table");
         gpu_->entry[offset] = get_directory_entry(directory->page_bus_address());
         next_levels_[offset] = std::move(directory);
-        buffer_->CleanCache(offset * sizeof(gpu_->entry[0]), sizeof(gpu_->entry[0]), false);
+        if (!cache_coherent_)
+            buffer_->CleanCache(offset * sizeof(gpu_->entry[0]), sizeof(gpu_->entry[0]), false);
     }
     return next_levels_[offset].get()->GetPageTableLevel0(page_number, create);
 }
@@ -173,7 +188,8 @@ void AddressSpace::PageTable::WritePte(uint64_t page_index, mali_pte_t pte)
 {
     page_index &= kPageTableMask;
     gpu_->entry[page_index] = pte;
-    buffer_->CleanCache(page_index * sizeof(gpu_->entry[0]), sizeof(gpu_->entry[0]), false);
+    if (!cache_coherent_)
+        buffer_->CleanCache(page_index * sizeof(gpu_->entry[0]), sizeof(gpu_->entry[0]), false);
 }
 
 void AddressSpace::PageTable::GarbageCollectChildren(
@@ -216,7 +232,8 @@ mali_pte_t AddressSpace::PageTable::get_directory_entry(uint64_t physical_addres
     return physical_address | kLpaeEntryTypePte;
 }
 
-std::unique_ptr<AddressSpace::PageTable> AddressSpace::PageTable::Create(uint32_t level)
+std::unique_ptr<AddressSpace::PageTable> AddressSpace::PageTable::Create(uint32_t level,
+                                                                         bool cache_coherent)
 {
     constexpr uint32_t kPageCount = 1;
 
@@ -236,21 +253,26 @@ std::unique_ptr<AddressSpace::PageTable> AddressSpace::PageTable::Create(uint32_
         return DRETP(nullptr, "failed to map page range bus");
 
     return std::unique_ptr<PageTable>(
-        new PageTable(level, std::move(buffer), gpu, page_bus_address));
+        new PageTable(level, cache_coherent, std::move(buffer), gpu, page_bus_address));
 }
 
-AddressSpace::PageTable::PageTable(uint32_t level, std::unique_ptr<magma::PlatformBuffer> buffer,
-                                   PageTableGpu* gpu, uint64_t page_bus_address)
-    : level_(level), buffer_(std::move(buffer)), gpu_(gpu), page_bus_address_(page_bus_address)
+AddressSpace::PageTable::PageTable(uint32_t level, bool cache_coherent,
+                                   std::unique_ptr<magma::PlatformBuffer> buffer, PageTableGpu* gpu,
+                                   uint64_t page_bus_address)
+    : level_(level), cache_coherent_(cache_coherent), buffer_(std::move(buffer)), gpu_(gpu),
+      page_bus_address_(page_bus_address)
 {
     if (level_ != 0)
         next_levels_.resize(kPageTableEntries);
     for (uint32_t i = 0; i < kPageTableEntries; i++)
         gpu_->entry[i] = kLpaeEntryTypeInvalid;
-    buffer_->CleanCache(0, sizeof(*gpu_), false);
+    if (!cache_coherent_)
+        buffer_->CleanCache(0, sizeof(*gpu_), false);
 }
 
-AddressSpace::AddressSpace(Owner* owner, std::unique_ptr<PageTable> page_directory)
-    : owner_(owner), root_page_directory_(std::move(page_directory))
+AddressSpace::AddressSpace(Owner* owner, bool cache_coherent,
+                           std::unique_ptr<PageTable> page_directory)
+    : owner_(owner), cache_coherent_(cache_coherent),
+      root_page_directory_(std::move(page_directory))
 {
 }

@@ -82,6 +82,10 @@ public:
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
     void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override;
     AddressSpaceObserver* GetAddressSpaceObserver() override { return address_manager_.get(); }
+    ArmMaliCacheCoherencyStatus cache_coherency_status() override
+    {
+        return cache_coherency_status_;
+    }
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -155,6 +159,7 @@ private:
     std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
 
     GpuFeatures gpu_features_;
+    ArmMaliCacheCoherencyStatus cache_coherency_status_ = kArmMaliCacheCoherencyNone;
 
     std::unique_ptr<PowerManager> power_manager_;
     std::unique_ptr<AddressManager> address_manager_;

@@ -29,6 +29,10 @@ public:
         virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
         virtual void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) = 0;
         virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
+        virtual ArmMaliCacheCoherencyStatus cache_coherency_status()
+        {
+            return kArmMaliCacheCoherencyNone;
+        }
     };
 
     static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);

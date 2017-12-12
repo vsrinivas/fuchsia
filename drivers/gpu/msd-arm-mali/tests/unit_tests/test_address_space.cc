@@ -69,15 +69,26 @@ public:
     static void Init()
     {
         FakeAddressSpaceOwner owner;
-        auto address_space = AddressSpace::Create(&owner);
+        auto address_space = AddressSpace::Create(&owner, false);
 
         check_pte_entries_clear(address_space.get(), 0, 1024);
+    }
+
+    static void CoherentPageTable()
+    {
+        FakeAddressSpaceOwner owner;
+        auto coherent_address_space = AddressSpace::Create(&owner, true);
+        EXPECT_EQ((1u << 4) | (1u << 2) | (3u),
+                  0x1f & coherent_address_space->translation_table_entry());
+
+        auto address_space = AddressSpace::Create(&owner, false);
+        EXPECT_EQ((1u << 2) | (3u), 0x1f & address_space->translation_table_entry());
     }
 
     static void Insert()
     {
         FakeAddressSpaceOwner owner;
-        auto address_space = AddressSpace::Create(&owner);
+        auto address_space = AddressSpace::Create(&owner, false);
 
         // create some buffers
         std::vector<uint64_t> addr = {PAGE_SIZE * 0xbdefcccef, PAGE_SIZE * 100};
@@ -141,7 +152,7 @@ public:
     static void GarbageCollect()
     {
         FakeAddressSpaceOwner owner;
-        auto address_space = AddressSpace::Create(&owner);
+        auto address_space = AddressSpace::Create(&owner, false);
 
         // buffer[0] should overlap two level 0 page tables.
         constexpr uint64_t kInitialAddress = PAGE_SIZE * 511;
@@ -191,6 +202,8 @@ public:
 };
 
 TEST(AddressSpace, Init) { TestAddressSpace::Init(); }
+
+TEST(AddressSpace, CoherentPageTable) { TestAddressSpace::CoherentPageTable(); }
 
 TEST(AddressSpace, Insert) { TestAddressSpace::Insert(); }
 
