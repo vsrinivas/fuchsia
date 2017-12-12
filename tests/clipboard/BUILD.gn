@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("clipboard") {
+  testonly = true
+
+  public_deps = [
+    ":clipboard_test",
+  ]
+}
+
+executable("clipboard_test") {
+  testonly = true
+
+  sources = [
+    "clipboard_test.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/clipboard/fidl",
+    "//peridot/lib/testing",
+  ]
+}

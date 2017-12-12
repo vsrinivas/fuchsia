@@ -5,6 +5,7 @@
 group("agents") {
   public_deps = [
     "basic_text_listener",
+    "clipboard",
     "entity_selector",
     "proposal_maker",
   ]

@@ -10,6 +10,7 @@ package("modular_tests") {
 
   deps = [
     ":modular_tests.json",
+    "clipboard",
     "common",
     "component_context",
     "context_link",
@@ -65,6 +66,10 @@ package("modular_tests") {
     {
       name = "child_module"
       dest = "modular_tests/child_module"
+    },
+    {
+      name = "clipboard_test"
+      dest = "modular_tests/clipboard_test"
     },
     {
       name = "context_link_module"

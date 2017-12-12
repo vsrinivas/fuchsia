@@ -30,6 +30,9 @@ package("maxwell_agents") {
       name = "agents/carmen_sandiego"
     },
     {
+      name = "agents/clipboard"
+    },
+    {
       name = "agents/ideas"
     },
     {

@@ -6,6 +6,7 @@ group("services") {
   deps = [
     "agent/fidl",
     "auth/fidl",
+    "clipboard/fidl",
     "component/fidl",
     "config/fidl",
     "device/fidl",
