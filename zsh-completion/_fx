@@ -9,15 +9,17 @@ __fx_nodename() {
 _fx() {
   typeset -A opt_args
 
-  local fuchsia_dir
-  fuchsia_dir="$(pwd)"
-  while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
-    fuchsia_dir="$(dirname "${fuchsia_dir}")"
-    if [[ "${fuchsia_dir}" == "/" ]]; then
-      _message -r "Cannot find Fuchsia source tree containing $(pwd)"
-      return
-    fi
-  done
+  local fuchsia_dir="${FUCHSIA_DIR}"
+  if [[ -z "${fuchsia_dir}" ]]; then
+    fuchsia_dir="$(pwd)"
+    while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
+      fuchsia_dir="$(dirname "${fuchsia_dir}")"
+      if [[ "${fuchsia_dir}" == "/" ]]; then
+        _message -r "Cannot find Fuchsia source tree containing $(pwd)"
+        return
+      fi
+    done
+  fi
 
   # list of commands based on //scripts/devshell/
   # each file is read to find the description line (starts with "### ").
