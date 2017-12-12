@@ -343,7 +343,7 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     /* set up the descriptor pointing to the head */
     desc->addr = blk_req_pa_ + index * sizeof(virtio_blk_req_t);
     desc->len = sizeof(virtio_blk_req_t);
-    desc->flags |= VRING_DESC_F_NEXT;
+    desc->flags = VRING_DESC_F_NEXT;
     LTRACE_DO(virtio_dump_desc(desc));
     {
         auto new_run_callback = [this, write, &desc](uint64_t start, uint64_t len) {
@@ -352,11 +352,11 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
 
             desc->addr = start;
             desc->len = (uint32_t)len;
+            desc->flags = VRING_DESC_F_NEXT;
             LTRACEF("pa %#lx, len %#x\n", desc->addr, desc->len);
 
             if (!write)
                 desc->flags |= VRING_DESC_F_WRITE; /* mark buffer as write-only if its a block read */
-            desc->flags |= VRING_DESC_F_NEXT;
         };
 
         ScatterGatherHelper(txn, new_run_callback);
