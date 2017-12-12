@@ -13,5 +13,7 @@ fidl("fidl") {
 
   deps = [
     "//peridot/public/lib/entity/fidl",
+    "//peridot/public/lib/module/fidl:module_data",
+    "//peridot/public/lib/story/fidl",
   ]
 }

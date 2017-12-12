@@ -4,6 +4,9 @@
 
 module modular;
 
+import "lib/story/fidl/chain.fidl";
+import "lib/module/fidl/link_path.fidl";
+
 // The Daisy struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/daisy.md.
 struct Daisy {
@@ -54,4 +57,21 @@ union Noun {
   // Only one entry in |entity_type| must match the constraint specified by
   // the Module for the constraint to be considered satisfied.
   array<string> entity_type;
+
+  // Allows a Noun in a Daisy to be a pointer to a Link used to back a Chain
+  // key.
+  ChainKey chain_key;
+
+  // This allows a Noun to directly reference a Link. If |link.module_path|
+  // is left empty and the Daisy is created by a Module, the system will
+  // fill it in.
+  LinkPath link;
+};
+
+struct ChainKey {
+  // Module path to this Chain. If |chain_path.module_path| is left empty and
+  // the Daisy is created by a Module, the system will fill it in.
+  ChainPath chain_path;
+
+  string key;
 };
