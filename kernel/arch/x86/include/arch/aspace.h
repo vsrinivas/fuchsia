@@ -56,7 +56,7 @@ public:
     using X86PageTableBase::Destroy;
 private:
     PageTableLevel top_level() final { return PML4_L; }
-    bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
+    bool allowed_flags(uint flags) final;
     bool check_paddr(paddr_t paddr) final;
     bool check_vaddr(vaddr_t vaddr) final;
     bool supports_page_size(PageTableLevel level) final;
