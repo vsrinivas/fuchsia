@@ -125,7 +125,7 @@ static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
 }
 
 static pte_t mmu_flags_to_s2_pte_attr(uint flags) {
-    DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHED) == ARCH_MMU_FLAG_CACHED);
+    DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHE_MASK) == ARCH_MMU_FLAG_CACHED);
     // Only the inner-shareable, normal memory type is supported.
     pte_t attr = MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE | MMU_S2_PTE_ATTR_NORMAL_MEMORY;
 

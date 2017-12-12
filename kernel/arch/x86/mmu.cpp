@@ -358,7 +358,7 @@ X86PageTableBase::PtFlags X86PageTableEpt::intermediate_flags() {
 
 X86PageTableBase::PtFlags X86PageTableEpt::terminal_flags(PageTableLevel level,
                                                           uint flags) {
-    DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHED) == ARCH_MMU_FLAG_CACHED);
+    DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHE_MASK) == ARCH_MMU_FLAG_CACHED);
     // Only the write-back memory type is supported.
     X86PageTableBase::PtFlags terminal_flags = X86_EPT_WB;
 
