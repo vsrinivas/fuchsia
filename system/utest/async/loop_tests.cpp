@@ -505,6 +505,8 @@ bool task_test() {
     EXPECT_EQ(ZX_OK, task6.last_status, "status 6");
     EXPECT_EQ(0u, task7.run_count, "run count 7");
 
+    loop.Shutdown();
+
     END_TEST;
 }
 
