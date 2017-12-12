@@ -457,7 +457,7 @@ zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
 }
 
 /* Discover the basic memory map */
-void platform_mem_init(void)
+void pc_mem_init(void)
 {
     if (platform_mem_range_init() != ZX_OK) {
         TRACEF("Error adding arenas from provided memory tables.\n");

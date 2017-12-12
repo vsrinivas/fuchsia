@@ -27,15 +27,15 @@ extern size_t pcie_mem_lo_size;
 extern uint16_t pcie_pio_base;
 extern uint16_t pcie_pio_size;
 
-void platform_init_debug_early(void);
-void platform_init_debug(void);
-void platform_init_timer_percpu(void);
-void platform_mem_init(void);
+void pc_init_debug_early(void);
+void pc_init_debug(void);
+void pc_init_timer_percpu(void);
+void pc_mem_init(void);
 
-void platform_prep_suspend_timer(void);
-void platform_resume_timer(void);
-void platform_resume_debug(void);
-void platform_suspend_debug(void);
+void pc_prep_suspend_timer(void);
+void pc_resume_timer(void);
+void pc_resume_debug(void);
+void pc_suspend_debug(void);
 
 zx_status_t x86_alloc_msi_block(uint requested_irqs, bool can_target_64bit,
                                 bool is_msix, pcie_msi_block_t* out_block);

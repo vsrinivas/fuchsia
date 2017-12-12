@@ -108,7 +108,7 @@ static void init_uart(void) {
     uart_write(2, 0xc7); // enable FIFO, clear, 14-byte threshold
 }
 
-void platform_init_debug_early(void)
+void pc_init_debug_early(void)
 {
     switch (bootloader.uart.type) {
     case BOOTDATA_UART_PC_PORT:
@@ -126,7 +126,7 @@ void platform_init_debug_early(void)
     output_enabled = true;
 }
 
-void platform_init_debug(void)
+void pc_init_debug(void)
 {
     /* finish uart init to get rx going */
     cbuf_initialize(&console_input_buf, 1024);
@@ -147,11 +147,11 @@ void platform_init_debug(void)
     }
 }
 
-void platform_suspend_debug(void) {
+void pc_suspend_debug(void) {
     output_enabled = false;
 }
 
-void platform_resume_debug(void) {
+void pc_resume_debug(void) {
     init_uart();
     output_enabled = true;
 }

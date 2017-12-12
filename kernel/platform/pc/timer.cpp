@@ -469,7 +469,7 @@ static void calibrate_tsc(void)
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
-static void platform_init_timer(uint level)
+static void pc_init_timer(uint level)
 {
     const struct x86_model_info *cpu_model = x86_get_model();
 
@@ -545,7 +545,7 @@ static void platform_init_timer(uint level)
             constant_tsc, invariant_tsc, use_tsc_deadline);
     printf("Using %s as wallclock\n", clock_name[wall_clock]);
 }
-LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
+LK_INIT_HOOK(timer, &pc_init_timer, LK_INIT_LEVEL_VM + 3);
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
 {
@@ -618,14 +618,14 @@ void platform_stop_timer(void)
 }
 
 static uint64_t saved_hpet_val;
-void platform_prep_suspend_timer(void)
+void pc_prep_suspend_timer(void)
 {
     if (hpet_is_present()) {
         saved_hpet_val = hpet_get_value();
     }
 }
 
-void platform_resume_timer(void)
+void pc_resume_timer(void)
 {
     switch (wall_clock) {
         case CLOCK_HPET:

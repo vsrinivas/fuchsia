@@ -730,7 +730,7 @@ void platform_early_init(void)
     platform_save_bootloader_data(false);
 
     /* get the debug output working */
-    platform_init_debug_early();
+    pc_init_debug_early();
 
 #if WITH_LEGACY_PC_CONSOLE
     /* get the text console working */
@@ -746,7 +746,7 @@ void platform_early_init(void)
 #endif
 
     /* initialize physical memory arenas */
-    platform_mem_init();
+    pc_mem_init();
 
     platform_preserve_ramdisk();
 }
@@ -860,7 +860,7 @@ zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id)
 
 void platform_init(void)
 {
-    platform_init_debug();
+    pc_init_debug();
 
     platform_init_crashlog();
 
@@ -873,12 +873,12 @@ void platform_init(void)
 
 void platform_suspend(void)
 {
-    platform_prep_suspend_timer();
-    platform_suspend_debug();
+    pc_prep_suspend_timer();
+    pc_suspend_debug();
 }
 
 void platform_resume(void)
 {
-    platform_resume_debug();
-    platform_resume_timer();
+    pc_resume_debug();
+    pc_resume_timer();
 }
