@@ -23,8 +23,7 @@ void RespondingServiceHost::RegisterSingleton(
     app::ApplicationLaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
       fxl::MakeCopyable([
-        this, service_name, launch_info = std::move(launch_info),
-        controller = app::ApplicationControllerPtr()
+        this, service_name, launch_info = std::move(launch_info)
       ](zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Handling request for service " << service_name;
 
@@ -42,25 +41,26 @@ void RespondingServiceHost::RegisterSingleton(
           auto dup_launch_info = app::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
-          app::ServiceProviderPtr service_provider;
-          dup_launch_info->services = service_provider.NewRequest();
+          app::Services services;
+          dup_launch_info->service_request = services.NewRequest();
 
+          app::ApplicationControllerPtr controller;
           launcher_->CreateApplication(std::move(dup_launch_info),
                                        controller.NewRequest());
 
-          service_provider.set_connection_error_handler(
-              [this, service_name, &controller] {
+          controller.set_connection_error_handler(
+              [this, service_name] {
                 FXL_LOG(INFO)
                     << "Service " << service_name << " provider disconnected";
-                controller.reset();  // kills the singleton application
                 service_providers_by_name_.erase(service_name);
               });
 
           std::tie(iter, std::ignore) = service_providers_by_name_.emplace(
-              service_name, std::move(service_provider));
+              std::make_pair<const std::string&, ServicesHolder>(
+                  service_name, {std::move(services), std::move(controller)}));
         }
 
-        iter->second->ConnectToService(service_name, std::move(client_handle));
+        iter->second.ConnectToService(service_name, std::move(client_handle));
       }),
       service_name);
 }
@@ -84,9 +84,19 @@ void RespondingServiceHost::RegisterProvider(
                     << service_name;
         auto iter = service_providers_by_name_.find(service_name);
         FXL_DCHECK(iter != service_providers_by_name_.end());
-        iter->second->ConnectToService(service_name, std::move(client_handle));
+        iter->second.ConnectToService(service_name, std::move(client_handle));
       },
       service_name);
+}
+
+void RespondingServiceHost::ServicesHolder::ConnectToService(
+    const std::string& service_name, zx::channel c) {
+  if (is_service_provider_) {
+    service_provider_->ConnectToService(service_name, std::move(c));
+    return;
+  }
+
+  services_.ConnectToService(std::move(c), service_name);
 }
 
 }  // namespace netconnector

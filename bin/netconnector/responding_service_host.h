@@ -9,6 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/services.h"
 #include "lib/svc/cpp/service_namespace.h"
 
 namespace netconnector {
@@ -38,8 +39,22 @@ class RespondingServiceHost {
   }
 
  private:
-  std::unordered_map<std::string, app::ServiceProviderPtr>
-      service_providers_by_name_;
+  class ServicesHolder {
+   public:
+    ServicesHolder(app::Services services,
+                   app::ApplicationControllerPtr controller)
+        : services_(std::move(services)) {}
+    ServicesHolder(app::ServiceProviderPtr service_provider)
+        : service_provider_(std::move(service_provider)),
+          is_service_provider_(true) {}
+    void ConnectToService(const std::string& service_name, zx::channel c);
+   private:
+    app::Services services_;
+    app::ServiceProviderPtr service_provider_;
+    const bool is_service_provider_{};
+  };
+  std::unordered_map<std::string, ServicesHolder> service_providers_by_name_;
+
   app::ServiceNamespace service_namespace_;
   app::ApplicationLauncherPtr launcher_;
 
