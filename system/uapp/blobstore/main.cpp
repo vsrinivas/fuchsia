@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -180,12 +181,10 @@ zx_status_t process_manifest_line(FILE* manifest, const char* dir_path, blob_opt
     char* line = nullptr;
 
     int r = getline(&line, &size, manifest);
-
     if (r < 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-
-    fbl::unique_free_ptr<char> ptr(line);
+    auto cleanup = fbl::MakeAutoCall([line]() { free(line); });
 
     // Exit early if line is commented out
     if (line[0] == '#') {
