@@ -110,7 +110,6 @@ generate_init() {
 #!/bin/sh
 mount -t proc none /proc
 mount -t sysfs none /sys
-mount -t devtmpfs none /dev
 echo Launched toybox
 exec /bin/sh
 _EOF
