@@ -107,8 +107,6 @@ void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags)
 void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread);
 
 uint64_t arm64_get_boot_el(void);
-void arm64_get_cache_info(arm64_cache_info_t* info);
-void arm64_dump_cache_info(uint32_t cpu);
 
 void arm_reset(void);
 /*
@@ -118,11 +116,6 @@ void arm_reset(void);
  */
 zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
                                    void* sp, void* unsafe_sp);
-
-/* block size of the dc zva instruction, dcache cache line and icache cache line */
-extern uint32_t arm64_zva_size;
-extern uint32_t arm64_icache_size;
-extern uint32_t arm64_dcache_size;
 
 __END_CDECLS
 

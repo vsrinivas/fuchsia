@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 #include <reg.h>
 #include <arch/arm64.h>
+#include <arch/arm64/feature.h>
 #include <arch/arm64/mp.h>
 #include <arch/arm64/interrupt.h>
 

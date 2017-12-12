@@ -18,6 +18,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/efi.cpp \
 	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/exceptions_c.cpp \
+	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/fpu.cpp \
 	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/mexec.S \

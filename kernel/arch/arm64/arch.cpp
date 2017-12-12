@@ -11,6 +11,7 @@
 #include <arch.h>
 #include <arch/ops.h>
 #include <arch/arm64.h>
+#include <arch/arm64/feature.h>
 #include <arch/arm64/mmu.h>
 #include <arch/mp.h>
 #include <bits.h>
@@ -64,13 +65,6 @@ static volatile int secondaries_to_init = 0;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 
-static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
-
-/* cache size parameters for the current cpu, default to a reasonable minimum */
-uint32_t arm64_zva_size = 32;
-uint32_t arm64_icache_size = 32;
-uint32_t arm64_dcache_size = 32;
-
 extern uint64_t arch_boot_el; // Defined in start.S.
 
 uint64_t arm64_get_boot_el(void)
@@ -102,93 +96,10 @@ zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
     return ZX_OK;
 }
 
-static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {
-    desc->write_through = BIT(ccsid, 31) > 0;
-    desc->write_back    = BIT(ccsid, 30) > 0;
-    desc->read_alloc    = BIT(ccsid, 29) > 0;
-    desc->write_alloc   = BIT(ccsid, 28) > 0;
-    desc->num_sets      = (uint32_t)BITS_SHIFT(ccsid, 27, 13) + 1;
-    desc->associativity = (uint32_t)BITS_SHIFT(ccsid, 12, 3)  + 1;
-    desc->line_size     = 1u << (BITS(ccsid, 2, 0) + 4);
-}
-
-void arm64_get_cache_info(arm64_cache_info_t* info) {
-    uint64_t temp=0;
-
-    uint64_t sysreg = ARM64_READ_SYSREG(clidr_el1);
-    info->inner_boundary    = (uint8_t)BITS_SHIFT(sysreg, 32, 30);
-    info->lou_u             = (uint8_t)BITS_SHIFT(sysreg, 29, 27);
-    info->loc               = (uint8_t)BITS_SHIFT(sysreg, 26, 24);
-    info->lou_is            = (uint8_t)BITS_SHIFT(sysreg, 23, 21);
-    for (int i = 0; i < 7; i++) {
-        uint8_t ctype = (sysreg >> (3*i)) & 0x07;
-        if (ctype == 0) {
-            info->level_data_type[i].ctype = 0;
-            info->level_inst_type[i].ctype = 0;
-        } else if (ctype == 4) {                                // Unified
-            ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1));  // Select cache level
-            temp = ARM64_READ_SYSREG(ccsidr_el1);
-            info->level_data_type[i].ctype = 4;
-            parse_ccsid(&(info->level_data_type[i]),temp);
-        } else {
-            if (ctype & 0x02) {
-                ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1));
-                temp = ARM64_READ_SYSREG(ccsidr_el1);
-                info->level_data_type[i].ctype = 2;
-                parse_ccsid(&(info->level_data_type[i]),temp);
-            }
-            if (ctype & 0x01) {
-                ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1) | 0x01);
-                temp = ARM64_READ_SYSREG(ccsidr_el1);
-                info->level_inst_type[i].ctype = 1;
-                parse_ccsid(&(info->level_inst_type[i]),temp);
-            }
-        }
-    }
-}
-
-void arm64_dump_cache_info(uint32_t cpu) {
-
-    arm64_cache_info_t*  info = &(cache_info[cpu]);
-    printf("==== ARM64 CACHE INFO CORE %u ====\n",cpu);
-    printf("Inner Boundary = L%u\n",info->inner_boundary);
-    printf("Level of Unification Uniprocessor = L%u\n", info->lou_u);
-    printf("Level of Coherence = L%u\n", info->loc);
-    printf("Level of Unification Inner Shareable = L%u\n",info->lou_is);
-    for (int i = 0; i < 7; i++) {
-        printf("L%d Details:",i+1);
-        if ((info->level_data_type[i].ctype == 0) && (info->level_inst_type[i].ctype == 0)) {
-            printf("\tNot Implemented\n");
-        } else {
-            if (info->level_data_type[i].ctype == 4) {
-                printf("\tUnified Cache, sets=%u, associativity=%u, line size=%u bytes\n", info->level_data_type[i].num_sets,
-                                                                    info->level_data_type[i].associativity,
-                                                                    info->level_data_type[i].line_size);
-            } else {
-                if (info->level_data_type[i].ctype & 0x02) {
-                    printf("\tData Cache, sets=%u, associativity=%u, line size=%u bytes\n", info->level_data_type[i].num_sets,
-                                                                    info->level_data_type[i].associativity,
-                                                                    info->level_data_type[i].line_size);
-                }
-                if (info->level_inst_type[i].ctype & 0x01) {
-                    printf("\tInstruction Cache, sets=%u, associativity=%u, line size=%u bytes\n", info->level_inst_type[i].num_sets,
-                                                                    info->level_inst_type[i].associativity,
-                                                                    info->level_inst_type[i].line_size);
-                }
-            }
-        }
-    }
-}
-
 static void arm64_cpu_early_init(void)
 {
     /* make sure the per cpu pointer is set up */
     arm64_init_percpu_early();
-
-    uint64_t mmfr0 = ARM64_READ_SYSREG(ID_AA64MMFR0_EL1);
-
-    /* check to make sure implementation supports 16 bit asids */
-    ASSERT( (mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16);
 
     /* set the vector base */
     ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_el1_exception_base);
@@ -203,7 +114,8 @@ static void arm64_cpu_early_init(void)
     sctlr &= ~(1<<1);  /* AC  - Disable Alignment Checking for EL1 EL0 */
     ARM64_WRITE_SYSREG(sctlr_el1, sctlr);
 
-    arch_enable_fiqs();
+    /* save all of the features of the cpu */
+    arm64_feature_init();
 
     /* enable cycle counter */
     ARM64_WRITE_SYSREG(pmcr_el0, (uint64_t)(PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT));
@@ -215,82 +127,21 @@ static void arm64_cpu_early_init(void)
     /* enable user space access to virtual counter (CNTVCT_EL0) */
     ARM64_WRITE_SYSREG(cntkctl_el1, 1UL << 1);
 
-    uint32_t cpu = arch_curr_cpu_num();
-    arm64_get_cache_info(&(cache_info[cpu]));
+    arch_enable_fiqs();
 }
 
 void arch_early_init(void)
 {
     arm64_cpu_early_init();
 
-    /* read the block size of DC ZVA */
-    uint64_t dczid = ARM64_READ_SYSREG(dczid_el0);
-    uint32_t arm64_zva_shift = 0;
-    if (BIT(dczid, 4) == 0) {
-        arm64_zva_shift = (uint32_t)(ARM64_READ_SYSREG(dczid_el0) & 0xf) + 2;
-    }
-    ASSERT(arm64_zva_shift != 0); /* for now, fail if DC ZVA is unavailable */
-    arm64_zva_size = (1u << arm64_zva_shift);
-
-    /* read the dcache and icache line size */
-    uint64_t ctr = ARM64_READ_SYSREG(ctr_el0);
-    uint32_t arm64_dcache_shift = (uint32_t)BITS_SHIFT(ctr, 19, 16) + 2;
-    arm64_dcache_size = (1u << arm64_dcache_shift);
-    uint32_t arm64_icache_shift = (uint32_t)BITS(ctr, 3, 0) + 2;
-    arm64_icache_size = (1u << arm64_icache_shift);
-
     platform_init_mmu_mappings();
-}
-
-static void midr_to_core(uint32_t midr, char *str, size_t len)
-{
-    __UNUSED uint32_t implementer = BITS_SHIFT(midr, 31, 24);
-    __UNUSED uint32_t variant = BITS_SHIFT(midr, 23, 20);
-    __UNUSED uint32_t architecture = BITS_SHIFT(midr, 19, 16);
-    __UNUSED uint32_t partnum = BITS_SHIFT(midr, 15, 4);
-    __UNUSED uint32_t revision = BITS_SHIFT(midr, 3, 0);
-
-    const char *partnum_str = "unknown";
-    if (implementer == 'A') {
-        // ARM cores
-        switch (partnum) {
-            case 0xd03: partnum_str = "ARM Cortex-a53"; break;
-            case 0xd04: partnum_str = "ARM Cortex-a35"; break;
-            case 0xd07: partnum_str = "ARM Cortex-a57"; break;
-            case 0xd08: partnum_str = "ARM Cortex-a72"; break;
-            case 0xd09: partnum_str = "ARM Cortex-a73"; break;
-        }
-    } else if (implementer == 'C' && partnum == 0xa1) {
-        // Cavium
-        partnum_str = "Cavium CN88XX";
-    }
-
-    snprintf(str, len, "%s r%up%u", partnum_str, variant, revision);
-}
-
-static void print_cpu_info()
-{
-    uint32_t midr = (uint32_t)ARM64_READ_SYSREG(midr_el1);
-    char cpu_name[128];
-    midr_to_core(midr, cpu_name, sizeof(cpu_name));
-
-    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
-
-    dprintf(INFO, "ARM cpu %u: midr %#x '%s' mpidr %#" PRIx64 " aff %u:%u:%u:%u\n", arch_curr_cpu_num(), midr, cpu_name,
-            mpidr,
-            (uint32_t)((mpidr & MPIDR_AFF3_MASK) >> MPIDR_AFF3_SHIFT),
-            (uint32_t)((mpidr & MPIDR_AFF2_MASK) >> MPIDR_AFF2_SHIFT),
-            (uint32_t)((mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT),
-            (uint32_t)((mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT));
 }
 
 void arch_init(void)
 {
     arch_mp_init_percpu();
 
-    dprintf(INFO, "ARM cache line sizes: icache %u dcache %u zva %u\n",
-            arm64_icache_size, arm64_dcache_size, arm64_zva_size);
-    print_cpu_info();
+    arm64_feature_debug(true);
 
     uint32_t max_cpus = arch_max_num_cpus();
     uint32_t cmdline_max_cpus = cmdline_get_uint32("kernel.smp.maxcpus", max_cpus);
@@ -359,7 +210,7 @@ extern "C" void arm64_secondary_entry(void)
 
     arch_mp_init_percpu();
 
-    print_cpu_info();
+    arm64_feature_debug(false);
 
     lk_secondary_cpu_entry();
 }
