@@ -2934,7 +2934,8 @@ static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi
     }
 
     info->valid_fields |= WLAN_RX_INFO_VALID_CHAN_WIDTH;
-    info->chan_width = rxwi1.bw() ? WLAN_CHAN_WIDTH_40MHZ : WLAN_CHAN_WIDTH_20MHZ;
+    // TODO(porce): Study how to distinguish CBW40ABOVE from CBW40BELOW, from rxwi.
+    info->chan.cbw = rxwi1.bw() ? CBW40 : CBW20;
 
     uint8_t phy_mode = rxwi1.phy_mode();
     bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtGreenfield;
@@ -3269,8 +3270,7 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
 
     wlan_channel_t chan;
     chan.primary = 1;
-    // TODO(porce): Support CBW
-    // chan.cbw = CBW20;
+    chan.cbw = CBW20;
     status = WlanmacSetChannel(0, &chan);
     if (status != ZX_OK) { warnf("could not set channel err=%d\n", status); }
 
@@ -3372,11 +3372,12 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     }
     txwi0.set_mcs(mcs);
 
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH &&
-        pkt->info.chan_width == WLAN_CHAN_WIDTH_40MHZ) {
-        txwi0.set_bw(1);  // for 40 Mhz
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH && pkt->info.cbw == CBW40) {
+        // TODO(porce): Investigate how to configure txwi differently
+        // for CBW40ABOVE and CBW40BELOW
+        txwi0.set_bw(1);  // for 40 MHz
     } else {
-        txwi0.set_bw(0);  // for 20 Mhz
+        txwi0.set_bw(0);  // for 20 MHz
     }
     txwi0.set_sgi(1);
     txwi0.set_stbc(0);  // TODO(porce): Define the value.

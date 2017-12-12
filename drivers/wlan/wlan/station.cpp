@@ -689,7 +689,14 @@ zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>& frame) {
     auto buffer = GetBuffer(wlan_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    wlan_tx_info_t txinfo = {};
+    wlan_tx_info_t txinfo = {
+        // TODO(porce): Specify CBW together with corresponding valid_fields.
+        //.tx_flags = 0x0,
+        //.valid_fields = 0x0,
+        //.cbw = CBW20,
+        //.date_rate = 0x0,
+        //.mcs = 0x0,
+    };
     auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
     // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
     // the payload

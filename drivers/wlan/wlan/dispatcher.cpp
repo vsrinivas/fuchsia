@@ -41,9 +41,9 @@ void DumpPacket(const Packet& packet) {
 void DumpRxInfo(const wlan_rx_info_t& rxinfo) {
     std::printf(
         "WLAN RxInfo: "
-        "flags %08x valid_fields %08x phy %u chan_width %u data_rate %u chan %u "
+        "flags %08x valid_fields %08x phy %u cbw %u data_rate %u chan %u "
         "mcs %u rssi %u rcpi %u snr %u \n",
-        rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.chan_width, rxinfo.data_rate,
+        rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.chan.cbw, rxinfo.data_rate,
         rxinfo.chan.primary, rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
 }
 
