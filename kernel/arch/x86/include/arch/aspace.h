@@ -33,16 +33,16 @@ public:
     zx_status_t AliasKernelMappings();
 
 private:
-    page_table_levels top_level() final { return PML4_L; }
+    PageTableLevel top_level() final { return PML4_L; }
     bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
     bool check_paddr(paddr_t paddr) final;
     bool check_vaddr(vaddr_t vaddr) final;
-    bool supports_page_size(page_table_levels level) final;
+    bool supports_page_size(PageTableLevel level) final;
     IntermediatePtFlags intermediate_flags() final;
-    PtFlags terminal_flags(page_table_levels level, uint flags) final;
-    PtFlags split_flags(page_table_levels level, PtFlags flags) final;
-    void TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) final;
-    uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) final;
+    PtFlags terminal_flags(PageTableLevel level, uint flags) final;
+    PtFlags split_flags(PageTableLevel level, PtFlags flags) final;
+    void TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) final;
+    uint pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) final;
     bool needs_cache_flushes() final { return false; }
 
     // If true, all mappings will have the global bit set.
@@ -55,16 +55,16 @@ public:
     using X86PageTableBase::Init;
     using X86PageTableBase::Destroy;
 private:
-    page_table_levels top_level() final { return PML4_L; }
+    PageTableLevel top_level() final { return PML4_L; }
     bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
     bool check_paddr(paddr_t paddr) final;
     bool check_vaddr(vaddr_t vaddr) final;
-    bool supports_page_size(page_table_levels level) final;
+    bool supports_page_size(PageTableLevel level) final;
     IntermediatePtFlags intermediate_flags() final;
-    PtFlags terminal_flags(page_table_levels level, uint flags) final;
-    PtFlags split_flags(page_table_levels level, PtFlags flags) final;
-    void TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) final;
-    uint pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) final;
+    PtFlags terminal_flags(PageTableLevel level, uint flags) final;
+    PtFlags split_flags(PageTableLevel level, PtFlags flags) final;
+    void TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) final;
+    uint pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) final;
     bool needs_cache_flushes() final { return false; }
 };
 

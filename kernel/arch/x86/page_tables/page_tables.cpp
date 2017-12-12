@@ -67,7 +67,7 @@ void CacheLineFlusher::FlushPtEntry(const volatile pt_entry_t* entry) {
 }
 
 // Return the page size for this level
-size_t page_size(page_table_levels level) {
+size_t page_size(PageTableLevel level) {
     switch (level) {
         case PT_L:
             return 1ULL << PT_SHIFT;
@@ -83,12 +83,12 @@ size_t page_size(page_table_levels level) {
 }
 
 // Whether an address is aligned to the page size of this level
-bool page_aligned(page_table_levels level, vaddr_t vaddr) {
+bool page_aligned(PageTableLevel level, vaddr_t vaddr) {
     return (vaddr & (page_size(level) - 1)) == 0;
 }
 
 // Extract the index needed for finding |vaddr| for the given level
-uint vaddr_to_index(page_table_levels level, vaddr_t vaddr) {
+uint vaddr_to_index(PageTableLevel level, vaddr_t vaddr) {
     switch (level) {
     case PML4_L:
         return VADDR_TO_PML4_INDEX(vaddr);
@@ -104,7 +104,7 @@ uint vaddr_to_index(page_table_levels level, vaddr_t vaddr) {
 }
 
 // Convert a PTE to a physical address
-paddr_t paddr_from_pte(page_table_levels level, pt_entry_t pte) {
+paddr_t paddr_from_pte(PageTableLevel level, pt_entry_t pte) {
     DEBUG_ASSERT(IS_PAGE_PRESENT(pte));
 
     paddr_t pa;
@@ -125,9 +125,9 @@ paddr_t paddr_from_pte(page_table_levels level, pt_entry_t pte) {
     return pa;
 }
 
-page_table_levels lower_level(page_table_levels level) {
+PageTableLevel lower_level(PageTableLevel level) {
     DEBUG_ASSERT(level != 0);
-    return (page_table_levels)(level - 1);
+    return (PageTableLevel)(level - 1);
 }
 
 } // namespace
@@ -137,7 +137,7 @@ public:
     /**
    * @brief Update the cursor to skip over a not-present page table entry.
    */
-    void SkipEntry(page_table_levels level) {
+    void SkipEntry(PageTableLevel level) {
         const size_t ps = page_size(level);
         // Calculate the amount the cursor should skip to get to the next entry at
         // this page table level.
@@ -159,7 +159,7 @@ public:
 // CacheLineFlusher more visible within the library and take it as an argument
 // to this function (and UnmapEntry below).  This will make it harder to
 // accidentally skip an invalidation.
-void X86PageTableBase::UpdateEntry(page_table_levels level, vaddr_t vaddr, volatile pt_entry_t* pte,
+void X86PageTableBase::UpdateEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
                                    paddr_t paddr, PtFlags flags) {
     DEBUG_ASSERT(pte);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
@@ -175,7 +175,7 @@ void X86PageTableBase::UpdateEntry(page_table_levels level, vaddr_t vaddr, volat
     }
 }
 
-void X86PageTableBase::UnmapEntry(page_table_levels level, vaddr_t vaddr, volatile pt_entry_t* pte) {
+void X86PageTableBase::UnmapEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte) {
     DEBUG_ASSERT(pte);
 
     pt_entry_t olde = *pte;
@@ -207,7 +207,7 @@ static volatile pt_entry_t* _map_alloc_page(void) {
 /*
  * @brief Split the given large page into smaller pages
  */
-zx_status_t X86PageTableBase::SplitLargePage(page_table_levels level, vaddr_t vaddr,
+zx_status_t X86PageTableBase::SplitLargePage(PageTableLevel level, vaddr_t vaddr,
                                              volatile pt_entry_t* pte) {
     DEBUG_ASSERT_MSG(level != PT_L, "tried splitting PT_L");
     LTRACEF_LEVEL(2, "splitting table %p at level %d\n", pte, level);
@@ -267,8 +267,8 @@ static inline volatile pt_entry_t* get_next_table_from_entry(pt_entry_t entry) {
  * @return ZX_ERR_NOT_FOUND if mapping is not found
  */
 zx_status_t X86PageTableBase::GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
-                                         page_table_levels level,
-                                         page_table_levels* ret_level,
+                                         PageTableLevel level,
+                                         PageTableLevel* ret_level,
                                          volatile pt_entry_t** mapping) {
     DEBUG_ASSERT(table);
     DEBUG_ASSERT(ret_level);
@@ -298,7 +298,7 @@ zx_status_t X86PageTableBase::GetMapping(volatile pt_entry_t* table, vaddr_t vad
 }
 
 zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t vaddr,
-                                           page_table_levels* ret_level,
+                                           PageTableLevel* ret_level,
                                            volatile pt_entry_t** mapping) {
     /* do the final page table lookup */
     uint index = vaddr_to_index(PT_L, vaddr);
@@ -324,7 +324,7 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
  *
  * @return true if at least one page was unmapped at this level
  */
-bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, page_table_levels level,
+bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
                                      const MappingCursor& start_cursor, MappingCursor* new_cursor) {
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr,
@@ -472,7 +472,7 @@ bool X86PageTableBase::RemoveMappingL0(volatile pt_entry_t* table,
  * @return ZX_ERR_NO_MEMORY if intermediate page tables could not be allocated
  */
 zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
-                                         page_table_levels level, const MappingCursor& start_cursor,
+                                         PageTableLevel level, const MappingCursor& start_cursor,
                                          MappingCursor* new_cursor) {
     DEBUG_ASSERT(table);
     DEBUG_ASSERT(check_vaddr(start_cursor.vaddr));
@@ -602,7 +602,7 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
  * completed.  Must be non-null.
  */
 zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
-                                            page_table_levels level, const MappingCursor& start_cursor,
+                                            PageTableLevel level, const MappingCursor& start_cursor,
                                             MappingCursor* new_cursor) {
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr,
@@ -758,7 +758,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     fbl::AutoLock a(&lock_);
     DEBUG_ASSERT(virt_);
 
-    page_table_levels top = top_level();
+    PageTableLevel top = top_level();
 
     // TODO(teisenbe): Improve performance of this function by integrating deeper into
     // the algorithm (e.g. make the cursors aware of the page array).
@@ -867,7 +867,7 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
 zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     canary_.Assert();
 
-    page_table_levels ret_level;
+    PageTableLevel ret_level;
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", paddr %p, mmu_flags %p\n", this, vaddr, paddr,
             mmu_flags);
@@ -917,7 +917,7 @@ void X86PageTableBase::Destroy(vaddr_t base, size_t size) {
     canary_.Assert();
 
 #if LK_DEBUGLEVEL > 1
-    page_table_levels top = top_level();
+    PageTableLevel top = top_level();
     pt_entry_t* table = static_cast<pt_entry_t*>(virt_);
     uint start = vaddr_to_index(top, base);
     uint end = vaddr_to_index(top, base + size - 1);

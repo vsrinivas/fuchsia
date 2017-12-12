@@ -123,7 +123,7 @@ static void x86_tlb_global_invalidate() {
 struct TlbInvalidatePage_context {
     ulong target_cr3;
     vaddr_t vaddr;
-    enum page_table_levels level;
+    enum PageTableLevel level;
     bool global_page;
 };
 static void TlbInvalidatePage_task(void* raw_context) {
@@ -162,7 +162,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
  * transaction, rather than one per page.
  */
 static void x86_tlb_invalidate_page(X86PageTableBase* pt, vaddr_t vaddr,
-                                    enum page_table_levels level, bool global_page) {
+                                    enum PageTableLevel level, bool global_page) {
     ulong cr3 = pt ? pt->phys() : x86_get_cr3();
     struct TlbInvalidatePage_context task_context = {
         .target_cr3 = cr3, .vaddr = vaddr, .level = level, .global_page = global_page,
@@ -193,7 +193,7 @@ bool X86PageTableMmu::check_vaddr(vaddr_t vaddr) {
     return x86_mmu_check_vaddr(vaddr);
 }
 
-bool X86PageTableMmu::supports_page_size(page_table_levels level) {
+bool X86PageTableMmu::supports_page_size(PageTableLevel level) {
     DEBUG_ASSERT(level != PT_L);
     switch (level) {
     case PD_L:
@@ -211,7 +211,7 @@ X86PageTableBase::IntermediatePtFlags X86PageTableMmu::intermediate_flags() {
     return X86_MMU_PG_RW | X86_MMU_PG_U;
 }
 
-X86PageTableBase::PtFlags X86PageTableMmu::terminal_flags(page_table_levels level,
+X86PageTableBase::PtFlags X86PageTableMmu::terminal_flags(PageTableLevel level,
                                                           uint flags) {
     X86PageTableBase::PtFlags terminal_flags = 0;
 
@@ -263,7 +263,7 @@ X86PageTableBase::PtFlags X86PageTableMmu::terminal_flags(page_table_levels leve
     return terminal_flags;
 }
 
-X86PageTableBase::PtFlags X86PageTableMmu::split_flags(page_table_levels level,
+X86PageTableBase::PtFlags X86PageTableMmu::split_flags(PageTableLevel level,
                                                        X86PageTableBase::PtFlags flags) {
     DEBUG_ASSERT(level != PML4_L && level != PT_L);
     DEBUG_ASSERT(flags & X86_MMU_PG_PS);
@@ -282,11 +282,11 @@ X86PageTableBase::PtFlags X86PageTableMmu::split_flags(page_table_levels level,
     return flags;
 }
 
-void X86PageTableMmu::TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) {
+void X86PageTableMmu::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) {
     x86_tlb_invalidate_page(this, vaddr, level, global_page);
 }
 
-uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) {
+uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
     uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
 
     if (flags & X86_MMU_PG_RW)
@@ -338,7 +338,7 @@ bool X86PageTableEpt::check_vaddr(vaddr_t vaddr) {
     return x86_mmu_check_vaddr(vaddr);
 }
 
-bool X86PageTableEpt::supports_page_size(page_table_levels level) {
+bool X86PageTableEpt::supports_page_size(PageTableLevel level) {
     DEBUG_ASSERT(level != PT_L);
     switch (level) {
     case PD_L:
@@ -356,7 +356,7 @@ X86PageTableBase::PtFlags X86PageTableEpt::intermediate_flags() {
     return X86_EPT_R | X86_EPT_W | X86_EPT_X;
 }
 
-X86PageTableBase::PtFlags X86PageTableEpt::terminal_flags(page_table_levels level,
+X86PageTableBase::PtFlags X86PageTableEpt::terminal_flags(PageTableLevel level,
                                                           uint flags) {
     DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHED) == ARCH_MMU_FLAG_CACHED);
     // Only the write-back memory type is supported.
@@ -374,18 +374,18 @@ X86PageTableBase::PtFlags X86PageTableEpt::terminal_flags(page_table_levels leve
     return terminal_flags;
 }
 
-X86PageTableBase::PtFlags X86PageTableEpt::split_flags(page_table_levels level,
+X86PageTableBase::PtFlags X86PageTableEpt::split_flags(PageTableLevel level,
                                                        X86PageTableBase::PtFlags flags) {
     DEBUG_ASSERT(level != PML4_L && level != PT_L);
     // We don't need to relocate any flags on split for EPT.
     return flags;
 }
 
-void X86PageTableEpt::TlbInvalidatePage(page_table_levels level, vaddr_t vaddr, bool global_page) {
+void X86PageTableEpt::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) {
     // TODO(ZX-981): Implement this.
 }
 
-uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, page_table_levels level) {
+uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
     // Only the write-back memory type is supported.
     uint mmu_flags = ARCH_MMU_FLAG_CACHED;
 
