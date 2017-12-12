@@ -22,8 +22,7 @@ namespace benchmark {
 // Parameters:
 //   --entry-count=<int> the number of entries to be put
 //   --transaction-size=<int> the size of a single transaction in number of put
-//     operations. If equal to 1, every put operation will be executed
-//     individually.
+//     operations. If equal to 0, no explicit transactions will be made.
 //   --key-size=<int> the size of a single key in bytes
 //   --value-size=<int> the size of a single value in bytes
 //   --refs=(on|off|auto) the reference strategy: on if every value is inserted

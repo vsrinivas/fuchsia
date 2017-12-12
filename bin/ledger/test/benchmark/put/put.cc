@@ -42,7 +42,7 @@ PutBenchmark::PutBenchmark(int entry_count,
       update_(update),
       page_watcher_binding_(this) {
   FXL_DCHECK(entry_count > 0);
-  FXL_DCHECK(transaction_size > 0);
+  FXL_DCHECK(transaction_size >= 0);
   FXL_DCHECK(key_size > 0);
   FXL_DCHECK(value_size > 0);
   switch (reference_strategy) {
@@ -78,7 +78,7 @@ void PutBenchmark::Run() {
         ledger::Status status = test::GetPageEnsureInitialized(
             fsl::MessageLoop::GetCurrent(), &ledger, nullptr, &page_, &id);
         QuitOnError(status, "GetPageEnsureInitialized");
-        if (transaction_size_ > 1) {
+        if (transaction_size_ > 0) {
           page_->StartTransaction(fxl::MakeCopyable(
               [this, keys = std::move(keys)](ledger::Status status) mutable {
                 if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
@@ -115,7 +115,8 @@ void PutBenchmark::InitializeKeys(
   keys.reserve(entry_count_);
   for (int i = 0; i < entry_count_; ++i) {
     keys.push_back(generator_.MakeKey(i, key_size_));
-    if (i % transaction_size_ == transaction_size_ - 1) {
+    if (transaction_size_ == 0 ||
+        i % transaction_size_ == transaction_size_ - 1) {
       keys_to_receive_.insert(std::stoul(convert::ToString(keys.back())));
     }
   }
@@ -193,7 +194,7 @@ void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
 
   fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   size_t key_number = std::stoul(convert::ToString(keys[i]));
-  if (transaction_size_ == 1) {
+  if (transaction_size_ == 0) {
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   }
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
@@ -204,7 +205,7 @@ void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
                return;
              }
              TRACE_ASYNC_END("benchmark", "put", i);
-             if (transaction_size_ > 1 &&
+             if (transaction_size_ > 0 &&
                  (i % transaction_size_ == transaction_size_ - 1 ||
                   i + 1 == entry_count_)) {
                CommitAndRunNext(i, key_number, std::move(keys));
@@ -227,7 +228,7 @@ void PutBenchmark::CommitAndRunNext(int i,
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
 
-    if (i == entry_count_) {
+    if (i == entry_count_ - 1) {
       RunSingle(i + 1, std::move(keys));
       return;
     }

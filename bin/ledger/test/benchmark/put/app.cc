@@ -55,13 +55,16 @@ int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   int entry_count;
+  std::string transaction_size_str;
   int transaction_size;
   int key_size;
   int value_size;
   bool update = command_line.HasOption(kUpdateFlag.ToString());
   if (!GetPositiveIntValue(command_line, kEntryCountFlag, &entry_count) ||
-      !GetPositiveIntValue(command_line, kTransactionSizeFlag,
-                           &transaction_size) ||
+      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(),
+                                   &transaction_size_str) ||
+      !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
+      transaction_size < 0 ||
       !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
       !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
     PrintUsage(argv[0]);

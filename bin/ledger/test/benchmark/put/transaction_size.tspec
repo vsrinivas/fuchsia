@@ -5,7 +5,7 @@
   "args": [
     "--app=ledger_benchmark_put",
     "--test-arg=transaction-size",
-    "--min-value=2",
+    "--min-value=1",
     "--max-value=20",
     "--step=1",
     "--append-args=--entry-count=500,--key-size=64,--value-size=1000,--refs=auto,--seed=0"
