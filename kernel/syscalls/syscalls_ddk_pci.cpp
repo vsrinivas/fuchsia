@@ -354,9 +354,9 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
     // cases.
     auto config = device->config();
     switch(width) {
-    case 8u:  return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg8(offset))));
-    case 16u: return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg16(offset))));
-    case 32u: return out_val.copy_to_user(config->Read(PciReg32(offset)));
+    case 1u:  return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg8(offset))));
+    case 2u: return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg16(offset))));
+    case 4u: return out_val.copy_to_user(config->Read(PciReg32(offset)));
     default: return ZX_ERR_INVALID_ARGS;
     }
 

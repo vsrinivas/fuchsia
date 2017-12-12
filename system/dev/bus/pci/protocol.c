@@ -123,33 +123,69 @@ static zx_status_t do_resource_bookkeeping(zx_pci_resource_t* res) {
 // along the lines of hardware failure or a device being removed from the bus. Due to this,
 // those statuses will be asserted upon rather than forcing callers to add additional checks
 // every time they wish to do a config read / write.
-static uint32_t kpci_op_config_read(void* ctx, uint8_t offset, size_t width) {
-    ZX_DEBUG_ASSERT(ctx);
-    kpci_device_t* device = ctx;
-    uint32_t val;
+static zx_status_t kpci_op_config_read(void* ctx, uint16_t offset, size_t width, uint32_t* val) {
+    kpci_device_t* dev = ctx;
+    if (width > sizeof(uint32_t) ||
+            val == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    // TODO(cja): Investigate whether config reads / writes should return status codes
-    // so that failures (largely around bad offsets) can be signaled.
-    zx_status_t status = zx_pci_config_read(device->handle, offset & 0xFFF, width, &val);
-    ZX_ASSERT_MSG(status == ZX_OK, "pci_config_read: %d\n", status);
-    return val;
+    pci_msg_t resp = {};
+    pci_msg_t req = {
+        .txid = pci_next_txid(),
+        .ordinal = PCI_OP_CONFIG_READ,
+    };
+    zx_channel_call_args_t cc_args = {
+        .wr_bytes = &req,
+        .rd_bytes = &resp,
+        .wr_num_bytes = sizeof(req),
+        .rd_num_bytes = sizeof(resp),
+    };
+    pci_msg_cfg_read_t* tx_args = (pci_msg_cfg_read_t*)req.data;
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+
+    tx_args->offset = offset;
+    tx_args->width = width;
+    zx_status_t st = zx_channel_call(dev->pciroot_rpcch, 0, ZX_TIME_INFINITE,
+                                     &cc_args, &actual_bytes, &actual_handles, NULL);
+
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // The read value is passsed back in the same structure as we send in the earlier call
+    pci_msg_cfg_read_t* rx_args = (pci_msg_cfg_read_t*)resp.data;
+    *val = rx_args->value;
+    return ZX_OK;;
 }
 
 static uint8_t kpci_op_get_next_capability(void* ctx, uint8_t offset, uint8_t type) {
-    uint8_t cap_offset = (uint8_t)kpci_op_config_read(ctx, offset + 1, 8);
+    uint32_t cap_offset = 0;
+    kpci_op_config_read(ctx, offset + 1, sizeof(uint8_t), &cap_offset);
     uint8_t limit = 64;
+    zx_status_t st;
 
     // Walk the capability list looking for the type requested, starting at the offset
     // passed in. limit acts as a barrier in case of an invalid capability pointer list
     // that causes us to iterate forever otherwise.
     while (cap_offset != 0 && limit--) {
-        uint8_t type_id = (uint8_t)kpci_op_config_read(ctx, cap_offset, 8);
+        uint32_t type_id = 0;
+        st = kpci_op_config_read(ctx, cap_offset, sizeof(uint8_t), &type_id);
+        ZX_DEBUG_ASSERT(st == ZX_OK);
+
         if (type_id == type) {
             return cap_offset;
         }
 
-        // We didn't find the right type, move on
-        cap_offset = (uint8_t)kpci_op_config_read(ctx, cap_offset + 1, 8);
+        // We didn't find the right type, move on, but ensure we're still
+        // within the first 256 bytes of standard config space.
+        if (cap_offset >= UINT8_MAX) {
+            zxlogf(ERROR, "%#x is an invalid capability offset!\n", cap_offset);
+            return 0;
+        }
+        st = kpci_op_config_read(ctx, cap_offset + 1, sizeof(uint8_t), &cap_offset);
+        ZX_DEBUG_ASSERT(st == ZX_OK);
     }
 
     // No more entries are in the list

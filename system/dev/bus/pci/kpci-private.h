@@ -59,3 +59,11 @@ typedef struct {
     uint32_t datalen;
     uint8_t data[PCI_MAX_DATA];
 } pci_msg_t;
+
+typedef struct {
+    uint16_t offset;
+    uint16_t width;
+    uint32_t value;
+} pci_msg_cfg_read_t;
+
+typedef pci_msg_cfg_read_t pci_msg_cfg_write_t;

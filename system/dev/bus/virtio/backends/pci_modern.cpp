@@ -9,13 +9,13 @@ namespace {
 // For reading the virtio specific vendor capabilities that can be PIO or MMIO space
 #define cap_field(offset, field) static_cast<uint8_t>(offset + offsetof(virtio_pci_cap_t, field))
 static void ReadVirtioCap(pci_protocol_t* pci, uint8_t offset, virtio_pci_cap& cap) {
-    cap.cap_vndr = pci_config_read8(pci, cap_field(offset, cap_vndr));
-    cap.cap_next = pci_config_read8(pci, cap_field(offset, cap_next));
-    cap.cap_len = pci_config_read8(pci, cap_field(offset, cap_len));
-    cap.cfg_type = pci_config_read8(pci, cap_field(offset, cfg_type));
-    cap.bar = pci_config_read8(pci, cap_field(offset, bar));
-    cap.offset = pci_config_read32(pci, cap_field(offset, offset));
-    cap.length = pci_config_read32(pci, cap_field(offset, length));
+    pci_config_read8(pci, cap_field(offset, cap_vndr), &cap.cap_vndr);
+    pci_config_read8(pci, cap_field(offset, cap_next), &cap.cap_next);
+    pci_config_read8(pci, cap_field(offset, cap_len), &cap.cap_len);
+    pci_config_read8(pci, cap_field(offset, cfg_type), &cap.cfg_type);
+    pci_config_read8(pci, cap_field(offset, bar), &cap.bar);
+    pci_config_read32(pci, cap_field(offset, offset), &cap.offset);
+    pci_config_read32(pci, cap_field(offset, length), &cap.length);
 }
 #undef cap_field
 
@@ -71,8 +71,8 @@ zx_status_t PciModernBackend::Init() {
         case VIRTIO_PCI_CAP_NOTIFY_CFG:
             // Virtio 1.0 section 4.1.4.4
             // notify_off_multiplier is a 32bit field following this capability
-            notify_off_mul_ = pci_config_read32(&pci_,
-                                                static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)));
+            pci_config_read32(&pci_, static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)),
+                    &notify_off_mul_);
             NotifyCfgCallbackLocked(cap);
             break;
         case VIRTIO_PCI_CAP_ISR_CFG:

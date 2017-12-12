@@ -74,7 +74,7 @@ typedef struct pci_protocol_ops {
     zx_status_t (*set_irq_mode)(void* ctx, zx_pci_irq_mode_t mode,
                                 uint32_t requested_irq_count);
     zx_status_t (*get_device_info)(void* ctx, zx_pcie_device_info_t* out_info);
-    uint32_t    (*config_read)(void* ctx, uint8_t offset, size_t width);
+    zx_status_t    (*config_read)(void* ctx, uint16_t offset, size_t width, uint32_t* value);
     uint8_t     (*get_next_capability)(void* ctx, uint8_t type, uint8_t offset);
     zx_status_t (*get_auxdata)(void* ctx, const char* args,
                                void* data, uint32_t bytes, uint32_t* actual);
@@ -123,16 +123,25 @@ static inline zx_status_t pci_get_device_info(pci_protocol_t* pci,
     return pci->ops->get_device_info(pci->ctx, out_info);
 }
 
-static inline uint8_t pci_config_read8(pci_protocol_t* pci, uint8_t offset) {
-    return (uint8_t)(pci->ops->config_read(pci->ctx, offset, 8u) & 0XFF);
+static inline zx_status_t pci_config_read8(pci_protocol_t* pci, uint16_t offset, uint8_t* value) {
+    uint32_t value_;
+    zx_status_t st = pci->ops->config_read(pci->ctx, offset, sizeof(uint8_t), &value_);
+    *value = value_ & UINT8_MAX;
+    return st;
 }
 
-static inline uint16_t pci_config_read16(pci_protocol_t* pci, uint8_t offset) {
-    return (uint16_t)(pci->ops->config_read(pci->ctx, offset, 16u) & 0xFFFF);
+static inline zx_status_t pci_config_read16(pci_protocol_t* pci, uint16_t offset, uint16_t* value) {
+    uint32_t value_;
+    zx_status_t st = pci->ops->config_read(pci->ctx, offset, sizeof(uint16_t), &value_);
+    *value = value_ & UINT16_MAX;
+    return st;
 }
 
-static inline uint32_t pci_config_read32(pci_protocol_t* pci, uint8_t offset) {
-    return pci->ops->config_read(pci->ctx, offset, 32u);
+static inline zx_status_t pci_config_read32(pci_protocol_t* pci, uint16_t offset, uint32_t* value) {
+    uint32_t value_;
+    zx_status_t st = pci->ops->config_read(pci->ctx, offset, sizeof(uint32_t), &value_);
+    *value = value_ & UINT32_MAX;
+    return st;
 }
 
 static uint8_t pci_get_next_capability(pci_protocol_t* pci, uint8_t type, uint8_t offset) {

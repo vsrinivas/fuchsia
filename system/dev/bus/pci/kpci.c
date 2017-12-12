@@ -54,6 +54,25 @@ static zx_status_t kpci_reset_device(pci_msg_t* req, kpci_device_t* device, zx_h
     return pci_rpc_reply_ok(ch, req);
 }
 
+// Reads from a config space address for a given device handle. Most of the heavy lifting
+// is offloaded to the zx_pci_config_read syscall itself, and the rpc client that
+// formats the arguments.
+static zx_status_t kpci_config_read(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
+    pci_msg_t resp = {
+        .txid = req->txid,
+    };
+    pci_msg_cfg_read_t* in_args = (pci_msg_cfg_read_t*)req->data;
+    pci_msg_cfg_read_t* out_args = (pci_msg_cfg_read_t*)resp.data;
+
+    zx_status_t st = zx_pci_config_read(device->handle, in_args->offset, in_args->width,
+                                        &out_args->value);
+    if(st != ZX_OK) {
+        return st;
+    }
+
+    return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
+}
+
 static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
     char args[32];
     snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req->data,
@@ -75,6 +94,7 @@ static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_ha
     return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 
+
 // All callbacks corresponding to protocol operations match this signature.
 // Rather than passing the outgoing message back to kpci_rxrpc, the callback
 // itself is expected to write to the channel directly. This greatly simplifies
@@ -87,7 +107,7 @@ rxrpc_cbk_t rxrpc_cbk_tbl[] = {
         [PCI_OP_RESET_DEVICE] = kpci_reset_device,
         [PCI_OP_ENABLE_BUS_MASTER] = kpci_enable_bus_master,
         [PCI_OP_ENABLE_PIO] = NULL,
-        [PCI_OP_CONFIG_READ] = NULL,
+        [PCI_OP_CONFIG_READ] = kpci_config_read,
         [PCI_OP_GET_NEXT_CAPABILITY] = NULL,
         [PCI_OP_GET_RESOURCE] = NULL,
         [PCI_OP_QUERY_IRQ_MODE_CAPS] = NULL,
