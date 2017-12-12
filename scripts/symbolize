@@ -249,12 +249,15 @@ def main():
 
     # Parsing vars
     arch = "x86_64"
+    bias = 0
     name_to_buildid = {}
     processed_lines = []
     prev_sp = None
     prev_frame_num = None
     frame_sizes = []
     total_stack_size = 0
+    # If True and we see a dso line, start over collecting the list.
+    done_dso_list = True
 
     # Regex for parsing
     # Either nothing, or something like "[00007.268] 00304.00325> "
@@ -304,7 +307,6 @@ def main():
                 # when warning about stackoverflow
                 processed_lines = []
                 frames_sizes = []
-                name_to_buildid = {}
                 total_stack_size = 0
                 prev_sp = None
                 zircon_bt = False
@@ -316,11 +318,17 @@ def main():
             continue
         m = build_id_re.match(line)
         if m:
+            if done_dso_list:
+                name_to_buildid = {}
+                done_dso_list = False
             buildid = m.group(2)
             bias = int(m.group(3), 16)
             name = m.group(4)
             name_to_buildid[name] = buildid
             continue
+        # We didn't see a dso line, so we're done with this list.
+        # The next time we see one means we're starting a new list.
+        done_dso_list = True
         m = btre.match(line)
         if m and not zircon_bt:
             frame_num = m.group(2)

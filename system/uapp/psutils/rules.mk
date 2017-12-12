@@ -201,3 +201,29 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty
 
 include make/module.mk
+
+
+MODULE := $(LOCAL_DIR).threads
+
+MODULE_TYPE := userapp
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/threads.cpp
+
+MODULE_NAME := threads
+MODULE_GROUP := core
+
+MODULE_LIBS := \
+    third_party/ulib/backtrace \
+    third_party/ulib/ngunwind \
+    system/ulib/fdio \
+    system/ulib/zircon \
+    system/ulib/c
+
+MODULE_STATIC_LIBS := \
+    system/ulib/inspector \
+    system/ulib/pretty \
+    system/ulib/fbl \
+    system/ulib/zxcpp
+
+include make/module.mk
