@@ -145,7 +145,7 @@ private:
     bool RenderEngineReset();
 
     void ProcessCompletedCommandBuffers();
-    void SuspectedGpuHang();
+    void HangCheckTimeout();
 
     magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
