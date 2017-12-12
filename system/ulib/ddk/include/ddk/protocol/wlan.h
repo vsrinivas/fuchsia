@@ -217,7 +217,8 @@ typedef struct wlan_tx_info {
     // The PHY format to be used to transmit this packet.
     uint16_t phy;
     // The channel width to be used to transmit this packet.
-    uint16_t chan_width;
+    uint16_t chan_width; // TODO(porce): Deprecate together with chan_width in rx_info
+    uint8_t cbw;
     // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
     uint32_t data_rate;
     // The modulation and coding scheme index for this packet. Depends on the PHY format and
