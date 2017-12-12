@@ -47,7 +47,7 @@ bool EntityReferenceFromJson(const std::string& json, std::string* ref) {
   return EntityReferenceFromJson(doc, ref);
 }
 bool EntityReferenceFromJson(const rapidjson::Value& value, std::string* ref) {
-  if (!value.HasMember(kEntityRefAttribute))
+  if (!value.IsObject() || !value.HasMember(kEntityRefAttribute))
     return false;
 
   auto& attr = value[kEntityRefAttribute];

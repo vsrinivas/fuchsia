@@ -25,6 +25,7 @@ TEST(EntityJsonTest, EntityReferenceToJsonDoc) {
 TEST(EntityJsonTest, EntityReferenceFromJson) {
   std::string ret;
   EXPECT_FALSE(EntityReferenceFromJson("invalid", &ret));
+  EXPECT_FALSE(EntityReferenceFromJson("1", &ret));
   EXPECT_FALSE(EntityReferenceFromJson(R"({"@entityRoof":"reference"})", &ret));
   EXPECT_FALSE(EntityReferenceFromJson(R"({"@entityRef":12345})", &ret));
   EXPECT_FALSE(
