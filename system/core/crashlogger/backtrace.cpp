@@ -255,8 +255,9 @@ static void btprint(DebugInfoCache* di_cache, int n, uintptr_t pc, uintptr_t sp)
     printf("\n");
 }
 
-static int dso_lookup_for_unw(dsoinfo_t* dso_list, unw_word_t pc,
+static int dso_lookup_for_unw(void* context, unw_word_t pc,
                               unw_word_t* base, const char** name) {
+    auto dso_list = reinterpret_cast<dsoinfo_t*>(context);
     dsoinfo_t* dso = dso_lookup(dso_list, pc);
     if (dso == nullptr)
         return 0;

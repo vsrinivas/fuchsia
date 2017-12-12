@@ -32,15 +32,14 @@ extern "C" {
 
 #include "libunwind.h"
 
-struct dsoinfo;
-typedef int (unw_dso_lookup_func_t) (struct dsoinfo* dsos, unw_word_t pc,
+typedef int (unw_dso_lookup_func_t) (void* context, unw_word_t pc,
                                      unw_word_t* base, const char** name);
 
 typedef struct unw_fuchsia_info unw_fuchsia_info_t;
 
 extern unw_fuchsia_info_t* unw_create_fuchsia(zx_handle_t process,
                                               zx_handle_t thread,
-                                              struct dsoinfo* dsos,
+                                              void* context,
                                               unw_dso_lookup_func_t* lookup_dso);
 
 extern void unw_destroy_fuchsia(unw_fuchsia_info_t*);

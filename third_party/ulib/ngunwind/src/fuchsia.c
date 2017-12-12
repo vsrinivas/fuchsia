@@ -125,7 +125,7 @@ get_unwind_info (unw_fuchsia_info_t* cxt, unw_addr_space_t as, unw_word_t ip)
 
   unw_word_t base;
   const char* name;
-  if (!cxt->lookup_dso (cxt->dsos, ip, &base, &name))
+  if (!cxt->lookup_dso (cxt->context, ip, &base, &name))
   {
     Debug (3, "pc 0x%lx not in any dso\n", (long) ip);
     return -UNW_ENOINFO;
@@ -362,7 +362,7 @@ const unw_accessors_t _UFuchsia_accessors =
 
 unw_fuchsia_info_t*
 unw_create_fuchsia(zx_handle_t process, zx_handle_t thread,
-                   struct dsoinfo* dsos, unw_dso_lookup_func_t* lookup_dso)
+                   void* context, unw_dso_lookup_func_t* lookup_dso)
 {
     unw_fuchsia_info_t* result = malloc (sizeof (*result));
     if (result == NULL)
@@ -371,7 +371,7 @@ unw_create_fuchsia(zx_handle_t process, zx_handle_t thread,
     memset (result, 0, sizeof (*result));
     result->process = process;
     result->thread = thread;
-    result->dsos = dsos;
+    result->context = context;
     result->lookup_dso = lookup_dso;
 
     return result;

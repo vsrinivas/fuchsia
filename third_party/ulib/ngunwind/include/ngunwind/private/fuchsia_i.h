@@ -40,8 +40,10 @@ struct unw_fuchsia_info {
     zx_handle_t process;
     zx_handle_t thread;
 
-    // List of dsos, and lookup function.
-    struct dsoinfo* dsos;
+    // Dso lookup context, and lookup function.
+    // The context is passed in to unw_create_fuchsia and is maintained by
+    // lookup_dso.
+    void* context;
     unw_dso_lookup_func_t* lookup_dso;
 
     uintptr_t segbase;
