@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_TESTS_UTIL_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_TESTS_UTIL_H_
 
 #include <zx/event.h>
 
@@ -51,3 +52,5 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 
 }  // namespace test
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_TESTS_UTIL_H_

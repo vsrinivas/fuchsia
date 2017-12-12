@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_SKIA_HOST_SURFACES_H_
+#define LIB_UI_SCENIC_SKIA_HOST_SURFACES_H_
 
 #include "lib/ui/scenic/client/host_memory.h"
 #include "third_party/skia/include/core/SkSurface.h"
@@ -75,3 +76,5 @@ class HostSkSurfacePool {
 
 }  // namespace skia
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_SKIA_HOST_SURFACES_H_

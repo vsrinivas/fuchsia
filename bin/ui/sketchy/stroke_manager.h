@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_STROKE_MANAGER_H_
+#define GARNET_BIN_UI_SKETCHY_STROKE_MANAGER_H_
 
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
@@ -32,3 +33,5 @@ class StrokeManager {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_STROKE_MANAGER_H_

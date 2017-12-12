@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_CANVAS_H_
+#define GARNET_BIN_UI_SKETCHY_CANVAS_H_
 
 #include <unordered_map>
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
@@ -67,3 +68,5 @@ class CanvasImpl final : public sketchy::Canvas {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_CANVAS_H_

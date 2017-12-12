@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_NODES_TRAVERSAL_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_NODES_TRAVERSAL_H_
 
 #include "garnet/bin/ui/scene_manager/resources/import.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/node.h"
@@ -104,3 +105,5 @@ bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node,
 }
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_NODES_TRAVERSAL_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_CLIENT_HOST_IMAGE_CYCLER_H_
+#define LIB_UI_SCENIC_CLIENT_HOST_IMAGE_CYCLER_H_
 
 #include "lib/ui/scenic/client/host_memory.h"
 
@@ -45,3 +46,5 @@ class HostImageCycler : public scenic_lib::EntityNode {
 };
 
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_CLIENT_HOST_IMAGE_CYCLER_H_

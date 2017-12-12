@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_HOST_MEMORY_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_HOST_MEMORY_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -56,3 +57,5 @@ class HostMemory : public Memory {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_HOST_MEMORY_H_

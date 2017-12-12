@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_CLIENT_SESSION_H_
+#define LIB_UI_SCENIC_CLIENT_SESSION_H_
 
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
@@ -112,3 +113,5 @@ class Session : private scenic::SessionListener {
 };
 
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_CLIENT_SESSION_H_

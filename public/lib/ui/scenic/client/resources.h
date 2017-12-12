@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_CLIENT_RESOURCES_H_
+#define LIB_UI_SCENIC_CLIENT_RESOURCES_H_
 
 #include "lib/ui/scenic/client/session.h"
 
@@ -542,3 +543,5 @@ class DisplayCompositor final : public Resource {
 };
 
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_CLIENT_RESOURCES_H_

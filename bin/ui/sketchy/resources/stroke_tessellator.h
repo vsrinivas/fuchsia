@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_TESSELLATOR_H_
+#define GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_TESSELLATOR_H_
 
 #include "garnet/public/lib/escher/impl/compute_shader.h"
 
@@ -29,3 +30,5 @@ class StrokeTessellator final {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_TESSELLATOR_H_

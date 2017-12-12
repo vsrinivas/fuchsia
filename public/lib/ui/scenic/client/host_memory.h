@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_CLIENT_HOST_MEMORY_H_
+#define LIB_UI_SCENIC_CLIENT_HOST_MEMORY_H_
 
 #include <memory>
 #include <utility>
@@ -147,3 +148,5 @@ class HostImagePool {
 };
 
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_CLIENT_HOST_MEMORY_H_

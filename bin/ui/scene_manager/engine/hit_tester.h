@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_ENGINE_HIT_TESTER_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_ENGINE_HIT_TESTER_H_
 
 #include <vector>
 
@@ -99,3 +100,5 @@ class HitTester {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_ENGINE_HIT_TESTER_H_

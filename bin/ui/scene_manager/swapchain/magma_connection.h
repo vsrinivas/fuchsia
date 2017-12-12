@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_SWAPCHAIN_MAGMA_CONNECTION_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_SWAPCHAIN_MAGMA_CONNECTION_H_
 
 #include <zx/event.h>
 #include <zx/vmo.h>
@@ -49,3 +50,5 @@ class MagmaConnection {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_SWAPCHAIN_MAGMA_CONNECTION_H_

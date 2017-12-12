@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_LIGHTS_AMBIENT_LIGHT_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_LIGHTS_AMBIENT_LIGHT_H_
 
 #include "garnet/bin/ui/scene_manager/resources/lights/light.h"
 
@@ -19,3 +20,5 @@ class AmbientLight final : public Light {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_LIGHTS_AMBIENT_LIGHT_H_

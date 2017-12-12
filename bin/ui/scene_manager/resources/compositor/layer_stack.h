@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_COMPOSITOR_LAYER_STACK_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_COMPOSITOR_LAYER_STACK_H_
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 
@@ -39,3 +40,5 @@ class LayerStack : public Resource {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_COMPOSITOR_LAYER_STACK_H_

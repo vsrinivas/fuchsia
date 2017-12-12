@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_ENGINE_ENGINE_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_ENGINE_ENGINE_H_
 
 #include <set>
 #include <vector>
@@ -163,3 +164,5 @@ class Engine : private FrameSchedulerDelegate {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_ENGINE_ENGINE_H_

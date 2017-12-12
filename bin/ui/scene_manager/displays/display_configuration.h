@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_CONFIGURATION_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_CONFIGURATION_H_
 
 #include "garnet/bin/ui/scene_manager/displays/display_model.h"
 
@@ -22,3 +23,5 @@ void ConfigureDisplay(uint32_t width_in_px,
                       DisplayModel* model);
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_CONFIGURATION_H_

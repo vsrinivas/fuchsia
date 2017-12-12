@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_TEXT_INPUT_STATE_UPDATE_FUNCTIONS_H_
-#define GARNET_BIN_UI_TEXT_INPUT_STATE_UPDATE_FUNCTIONS_H_
+#ifndef GARNET_BIN_UI_IME_TEXT_INPUT_STATE_UPDATE_FUNCTIONS_H_
+#define GARNET_BIN_UI_IME_TEXT_INPUT_STATE_UPDATE_FUNCTIONS_H_
 
 #include <memory>
 #include <vector>
@@ -21,4 +21,4 @@ void DeleteBackward(const mozart::TextInputStatePtr& current_state);
 
 }  // namespace ime
 
-#endif  // GARNET_BIN_UI_TEXT_INPUT_STATE_UPDATE_FUNCTIONS_H_
+#endif  // GARNET_BIN_UI_IME_TEXT_INPUT_STATE_UPDATE_FUNCTIONS_H_

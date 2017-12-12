@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_UTIL_UNWRAP_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_UTIL_UNWRAP_H_
 
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
@@ -188,3 +189,5 @@ inline bool Unwrap(const scenic::ValuePtr& value, escher::Transform* out) {
 }
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_UTIL_UNWRAP_H_

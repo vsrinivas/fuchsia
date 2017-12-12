@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_FIDL_HELPERS_H_
+#define LIB_UI_SCENIC_FIDL_HELPERS_H_
 
 #include <string>
 
@@ -210,3 +211,5 @@ scenic::ColorRgbaValuePtr NewColorRgbaValue(uint32_t variable_id);
 scenic::QuaternionValuePtr NewQuaternionValue(const float value[4]);
 
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_FIDL_HELPERS_H_

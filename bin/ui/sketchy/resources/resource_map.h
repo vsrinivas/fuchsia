@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_RESOURCE_MAP_H_
+#define GARNET_BIN_UI_SKETCHY_RESOURCES_RESOURCE_MAP_H_
 
 #include <unordered_map>
 
@@ -41,3 +42,5 @@ class ResourceMap {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_RESOURCE_MAP_H_

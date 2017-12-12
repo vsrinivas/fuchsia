@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SKETCHY_CANVAS_H_
+#define LIB_UI_SKETCHY_CANVAS_H_
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/scenic/client/resources.h"
@@ -29,3 +30,5 @@ class Canvas final {
 };
 
 }  // namespace sketchy_lib
+
+#endif  // LIB_UI_SKETCHY_CANVAS_H_

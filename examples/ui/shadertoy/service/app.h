@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
@@ -61,3 +62,5 @@ class App : public mozart::example::ShadertoyFactory {
 };
 
 }  // namespace shadertoy
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_

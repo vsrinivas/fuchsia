@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_
 
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
@@ -58,3 +59,5 @@ class View : public mozart::BaseView {
 };
 
 }  // namespace shadertoy_client
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_

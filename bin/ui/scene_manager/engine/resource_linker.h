@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_ENGINE_RESOURCE_LINKER_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_ENGINE_RESOURCE_LINKER_H_
 
 #include <unordered_map>
 #include <unordered_set>
@@ -137,3 +138,5 @@ class ResourceLinker {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_ENGINE_RESOURCE_LINKER_H_

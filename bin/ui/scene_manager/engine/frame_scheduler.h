@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_ENGINE_FRAME_SCHEDULER_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_ENGINE_FRAME_SCHEDULER_H_
 
 #include <zx/time.h>
 #include <queue>
@@ -114,3 +115,5 @@ class FrameScheduler {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_ENGINE_FRAME_SCHEDULER_H_

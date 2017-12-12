@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_TESTS_ESCHER_TEST_ENVIRONMENT_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_TESTS_ESCHER_TEST_ENVIRONMENT_H_
+
 #include "gtest/gtest.h"
 #include "lib/escher/escher.h"
 
@@ -23,3 +26,5 @@ class EscherTestEnvironment {
 
 }  // namespace test
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_TESTS_ESCHER_TEST_ENVIRONMENT_H_

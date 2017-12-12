@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_POOL_H_
+#define GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_POOL_H_
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
 #include "lib/escher/flib/fence_listener.h"
@@ -57,3 +58,5 @@ class SharedBufferPool final {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_POOL_H_

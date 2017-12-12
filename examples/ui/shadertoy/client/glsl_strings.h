@@ -4,7 +4,8 @@
 
 // Selected examples from the Shadertoy website.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_GLSL_STRINGS_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_GLSL_STRINGS_H_
 
 #include <string>
 
@@ -14,3 +15,5 @@ std::string GetSeascapeSourceCode();
 std::string GetMouseInputSourceCode();
 
 }  // namespace shadertoy_client
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_GLSL_STRINGS_H_

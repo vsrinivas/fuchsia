@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_
+#define GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_
 
 #include <unordered_map>
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
@@ -57,3 +58,5 @@ class MeshBuffer final {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_

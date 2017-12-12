@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_EXAMPLES_UI_HELLO_SCENE_MANAGER_APP_H_
+#define GARNET_EXAMPLES_UI_HELLO_SCENE_MANAGER_APP_H_
+
 #include "lib/app/cpp/application_context.h"
 
 #include "lib/fsl/tasks/message_loop.h"
@@ -52,3 +55,5 @@ class App {
 };
 
 }  // namespace hello_scene_manager
+
+#endif  // GARNET_EXAMPLES_UI_HELLO_SCENE_MANAGER_APP_H_

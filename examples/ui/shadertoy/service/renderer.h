@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_
 
 #include "lib/escher/renderer/renderer.h"
 
@@ -73,3 +74,5 @@ class Renderer : public escher::Renderer {
 };
 
 }  // namespace shadertoy
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_

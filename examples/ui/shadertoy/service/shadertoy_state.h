@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
@@ -104,3 +105,5 @@ class ShadertoyState : public escher::Resource {
 };
 
 }  // namespace shadertoy
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_SHAPES_MESH_SHAPE_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_SHAPES_MESH_SHAPE_H_
 
 #include "garnet/bin/ui/scene_manager/resources/buffer.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/shape.h"
@@ -54,3 +55,5 @@ class MeshShape final : public Shape {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_SHAPES_MESH_SHAPE_H_

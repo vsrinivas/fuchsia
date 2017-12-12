@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_SKIA_HOST_CANVAS_CYCLER_H_
+#define LIB_UI_SCENIC_SKIA_HOST_CANVAS_CYCLER_H_
 
 #include "lib/ui/scenic/skia/host_surfaces.h"
 #include "third_party/skia/include/core/SkCanvas.h"
@@ -46,3 +47,5 @@ class HostCanvasCycler : public EntityNode {
 
 }  // namespace skia
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_SKIA_HOST_CANVAS_CYCLER_H_

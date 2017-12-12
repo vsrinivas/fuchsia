@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_TESTS_SESSION_TEST_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_TESTS_SESSION_TEST_H_
 
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
 #include "garnet/bin/ui/scene_manager/engine/session.h"
@@ -81,3 +82,5 @@ class SessionThreadedTest : public SessionTest {
 
 }  // namespace test
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_TESTS_SESSION_TEST_H_

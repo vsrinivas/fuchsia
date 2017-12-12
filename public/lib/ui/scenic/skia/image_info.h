@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SCENIC_SKIA_IMAGE_INFO_H_
+#define LIB_UI_SCENIC_SKIA_IMAGE_INFO_H_
 
 #include "lib/images/fidl/image_info.fidl.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
@@ -15,3 +16,5 @@ SkImageInfo MakeSkImageInfo(const scenic::ImageInfo& image_info);
 
 }  // namespace skia
 }  // namespace scenic_lib
+
+#endif  // LIB_UI_SCENIC_SKIA_IMAGE_INFO_H_

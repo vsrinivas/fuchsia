@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_UI_SKETCHY_RESOURCES_H_
+#define LIB_UI_SKETCHY_RESOURCES_H_
 
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/fun/sketchy/fidl/ops.fidl.h"
@@ -91,3 +92,5 @@ class ImportNode final : public Resource {
 };
 
 }  // namespace sketchy_lib
+
+#endif  // LIB_UI_SKETCHY_RESOURCES_H_

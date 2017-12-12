@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_GROUP_H_
+#define GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_GROUP_H_
 
 #include <set>
 #include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
@@ -57,3 +58,5 @@ class StrokeGroup final : public Resource {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_GROUP_H_

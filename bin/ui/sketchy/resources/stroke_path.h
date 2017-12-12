@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_PATH_H_
+#define GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_PATH_H_
 
 #include <vector>
 #include "garnet/public/lib/escher/geometry/bounding_box.h"
@@ -60,3 +61,5 @@ class StrokePath final {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_PATH_H_

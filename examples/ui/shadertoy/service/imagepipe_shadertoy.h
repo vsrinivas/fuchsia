@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_IMAGEPIPE_SHADERTOY_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_IMAGEPIPE_SHADERTOY_H_
 
 #include "garnet/examples/ui/shadertoy/service/shadertoy_state.h"
 
@@ -49,3 +50,5 @@ class ShadertoyStateForImagePipe : public ShadertoyState {
 };
 
 }  // namespace shadertoy
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_IMAGEPIPE_SHADERTOY_H_

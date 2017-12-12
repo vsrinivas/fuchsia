@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_PIPELINE_H_
+#define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_PIPELINE_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -30,3 +31,5 @@ class Pipeline : public fxl::RefCountedThreadSafe<Pipeline> {
 };
 
 }  // namespace shadertoy
+
+#endif  // GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_PIPELINE_H_

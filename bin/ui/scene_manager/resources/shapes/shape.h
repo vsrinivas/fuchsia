@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_SHAPES_SHAPE_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_SHAPES_SHAPE_H_
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "lib/escher/geometry/types.h"
@@ -39,3 +40,5 @@ class Shape : public Resource {
 using ShapePtr = fxl::RefPtr<Shape>;
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_SHAPES_SHAPE_H_

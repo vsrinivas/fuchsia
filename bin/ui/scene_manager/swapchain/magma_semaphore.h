@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_SWAPCHAIN_MAGMA_SEMAPHORE_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_SWAPCHAIN_MAGMA_SEMAPHORE_H_
 
 #include <memory>
 
@@ -40,3 +41,5 @@ class MagmaSemaphore {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_SWAPCHAIN_MAGMA_SEMAPHORE_H_

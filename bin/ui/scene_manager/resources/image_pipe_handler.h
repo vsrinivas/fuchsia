@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_IMAGE_PIPE_HANDLER_H_
+#define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_IMAGE_PIPE_HANDLER_H_
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/images/fidl/image_pipe.fidl.h"
@@ -35,3 +36,5 @@ class ImagePipeHandler : public scenic::ImagePipe {
 };
 
 }  // namespace scene_manager
+
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_IMAGE_PIPE_HANDLER_H_

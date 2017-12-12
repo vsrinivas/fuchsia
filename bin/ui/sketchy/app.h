@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_APP_H_
+#define GARNET_BIN_UI_SKETCHY_APP_H_
 
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/app/cpp/application_context.h"
@@ -27,3 +28,5 @@ class App {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_APP_H_

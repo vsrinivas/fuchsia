@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_IMPORT_NODE_H_
+#define GARNET_BIN_UI_SKETCHY_RESOURCES_IMPORT_NODE_H_
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
@@ -35,3 +36,5 @@ class ImportNode final : public Resource {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_IMPORT_NODE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
+#define GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
 
 #include "lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/client/resources.h"
@@ -63,3 +64,5 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
 };
 
 }  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
