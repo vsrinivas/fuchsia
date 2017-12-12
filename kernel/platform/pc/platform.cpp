@@ -59,6 +59,10 @@ extern bootdata_t* _bootdata_base;
 
 pc_bootloader_info_t bootloader;
 
+// Stashed values from BOOTDATA_LAST_CRASHLOG if we saw it
+static const void* last_crashlog = nullptr;
+static size_t last_crashlog_len = 0;
+
 // convert from legacy format
 static unsigned pixel_format_fixup(unsigned pf) {
     switch (pf) {
@@ -122,6 +126,10 @@ static int process_bootitem(bootdata_t* bd, void* item) {
         if (bd->length >= sizeof(bootdata_uart_t)) {
             memcpy(&bootloader.uart, item, sizeof(bootdata_uart_t));
         }
+        break;
+    case BOOTDATA_LAST_CRASHLOG:
+        last_crashlog = item;
+        last_crashlog_len = bd->length;
         break;
     case BOOTDATA_IGNORE:
         break;
@@ -485,9 +493,13 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
                                  void (*func)(const void* data, size_t, size_t len, void* cookie)) {
     if (bootloader.nvram.base != 0) {
         return nvram_recover_crashlog(len, cookie, func);
-    } else {
-        return 0;
+    } else if (last_crashlog != nullptr) {
+        if (len != 0) {
+            func(last_crashlog, 0, last_crashlog_len, cookie);
+        }
+        return last_crashlog_len;
     }
+    return 0;
 }
 
 typedef struct e820_walk_ctx {
