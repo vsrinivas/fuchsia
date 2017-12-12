@@ -68,6 +68,16 @@ struct Reference {
   array<uint8> opaque_id;
 };
 
+// The result of a wait for conflict resolution. See
+// |Page.WaitForConflictResolution| for details.
+enum ConflictResolutionWaitStatus {
+  // No conflict was observed when the callback was registered.
+  NO_CONFLICTS = 0,
+  // Some conflicts were observed when the callback was registered, and all
+  // have been resolved.
+  CONFLICTS_RESOLVED
+};
+
 // A page is the smallest unit of syncable data.
 interface Page {
   // Returns the identifier for the page.
@@ -168,10 +178,11 @@ interface Page {
   // Waits until all conflicts are resolved before calling the callback.
   // The client can call this method multiple times, even before the previous
   // calls are completed. Callbacks will be executed in the order they were
-  // added.
+  // added and indicate whether a merge happened between the callback
+  // registration and its execution.
   // If there are no pending conflicts at the time this is called, the callback
   // gets executed right away.
-  WaitForConflictResolution@12() => ();
+  WaitForConflictResolution@12() => (ConflictResolutionWaitStatus wait_status);
 };
 
 // The synchronization priority of a reference.

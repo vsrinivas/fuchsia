@@ -37,6 +37,11 @@ class MergeResolver : public storage::CommitWatcher {
   // true, does not mean that there are no pending conflicts.
   bool IsEmpty();
 
+  // Returns true if a merge is pending or in progress. A merge is pending when
+  // a merge is currently processed (|IsEmpty| returns false), but also when
+  // checking for conflict, or when in backoff delay between merges.
+  bool HasUnfinishedMerges();
+
   // Changes the current merge strategy. Any pending merge will be cancelled.
   void SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy);
 
@@ -44,7 +49,8 @@ class MergeResolver : public storage::CommitWatcher {
 
   // Adds an action to perform when all the pending conflicts are resolved
   // (once).
-  void RegisterNoConflictCallback(fxl::Closure callback);
+  void RegisterNoConflictCallback(
+      std::function<void(ConflictResolutionWaitStatus)> callback);
 
  private:
   // DelayedStatus allows us to avoid merge storms (several devices battling
@@ -87,12 +93,23 @@ class MergeResolver : public storage::CommitWatcher {
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;
   bool has_next_strategy_ = false;
+  // TODO(LE-384): Convert the fields below into a single enum to track the
+  // state of this class.
   bool merge_in_progress_ = false;
+  // True between the time we commit a merge and we check if there are more
+  // conflicts. It is used to report to conflict callbacks (see
+  // |no_conflict_callbacks_|) whether a conflict has been merged while waiting.
+  bool has_merged_ = false;
+  // Counts the number of currently pending |CheckConflict| tasks posted on the
+  // run loop. We use a counter instead of a single flag as multiple
+  // |CheckConflict| tasks could be pending at the same time.
+  int check_conflicts_task_count_ = 0;
   bool check_conflicts_in_progress_ = false;
   bool in_delay_ = false;
   fxl::Closure on_empty_callback_;
   fxl::Closure on_destroyed_;
-  std::vector<fxl::Closure> no_conflict_callbacks_;
+  std::vector<std::function<void(ConflictResolutionWaitStatus)>>
+      no_conflict_callbacks_;
 
   // ScopedTaskRunner must be the last member of the class.
   callback::ScopedTaskRunner task_runner_;

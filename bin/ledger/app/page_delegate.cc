@@ -320,8 +320,8 @@ void PageDelegate::SetSyncStateWatcher(
 
 void PageDelegate::WaitForConflictResolution(
     const Page::WaitForConflictResolutionCallback& callback) {
-  if (merge_resolver_->IsEmpty()) {
-    callback();
+  if (!merge_resolver_->HasUnfinishedMerges()) {
+    callback(ConflictResolutionWaitStatus::NO_CONFLICTS);
     return;
   }
   merge_resolver_->RegisterNoConflictCallback(callback);

@@ -51,6 +51,11 @@ bool MergeResolver::IsEmpty() {
   return !merge_in_progress_;
 }
 
+bool MergeResolver::HasUnfinishedMerges() {
+  return merge_in_progress_ || check_conflicts_in_progress_ ||
+         check_conflicts_task_count_ != 0 || in_delay_;
+}
+
 void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   if (merge_in_progress_) {
     FXL_DCHECK(strategy_);
@@ -72,7 +77,8 @@ void MergeResolver::SetPageManager(PageManager* page_manager) {
   page_manager_ = page_manager;
 }
 
-void MergeResolver::RegisterNoConflictCallback(fxl::Closure callback) {
+void MergeResolver::RegisterNoConflictCallback(
+    std::function<void(ConflictResolutionWaitStatus)> callback) {
   no_conflict_callbacks_.push_back(std::move(callback));
 }
 
@@ -86,8 +92,11 @@ void MergeResolver::OnNewCommits(
 }
 
 void MergeResolver::PostCheckConflicts(DelayedStatus delayed_status) {
-  task_runner_.PostTask(
-      [this, delayed_status] { CheckConflicts(delayed_status); });
+  check_conflicts_task_count_++;
+  task_runner_.PostTask([this, delayed_status] {
+    check_conflicts_task_count_--;
+    CheckConflicts(delayed_status);
+  });
 }
 
 void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
@@ -109,9 +118,12 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
             FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
           } else {
             for (auto& callback : no_conflict_callbacks_) {
-              callback();
+              callback(has_merged_
+                           ? ConflictResolutionWaitStatus::CONFLICTS_RESOLVED
+                           : ConflictResolutionWaitStatus::NO_CONFLICTS);
             }
             no_conflict_callbacks_.clear();
+            has_merged_ = false;
           }
           if (on_empty_callback_) {
             on_empty_callback_();
@@ -133,7 +145,6 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                      std::vector<storage::CommitId> heads) {
   FXL_DCHECK(heads.size() == 2);
-
   auto cleanup =
       fxl::MakeAutoCall(task_runner_.MakeScoped([this, delayed_status] {
         // |merge_in_progress_| must be reset before calling
@@ -230,6 +241,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                              "for identical commits.";
                                       return;
                                     }
+                                    has_merged_ = true;
                                     storage_->CommitJournal(
                                         std::move(journal),
                                         fxl::MakeCopyable(
@@ -308,6 +320,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                         ReportEvent(
                                             CobaltEvent::COMMITS_MERGED);
                                       });
+                                  has_merged_ = true;
                                   strategy_->Merge(
                                       storage_, page_manager_, std::move(head1),
                                       std::move(head2),

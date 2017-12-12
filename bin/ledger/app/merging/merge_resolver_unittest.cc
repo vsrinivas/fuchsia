@@ -515,8 +515,8 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
   EXPECT_EQ(0u, merge_strategy_ptr->merge_calls);
 }
 
-TEST_F(MergeResolverTest, DelayedUntilEmpty) {
-  // Set up conflict
+TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
+  // Set up conflict.
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
@@ -539,13 +539,17 @@ TEST_F(MergeResolverTest, DelayedUntilEmpty) {
     EXPECT_TRUE(resolver.IsEmpty());
     callback_calls++;
   };
-  resolver.RegisterNoConflictCallback(conflicts_resolved_callback);
-  resolver.RegisterNoConflictCallback(conflicts_resolved_callback);
+  ConflictResolutionWaitStatus wait_status;
+  resolver.RegisterNoConflictCallback(
+      callback::Capture(conflicts_resolved_callback, &wait_status));
+  resolver.RegisterNoConflictCallback(
+      callback::Capture(conflicts_resolved_callback, &wait_status));
 
   // Check that the callback was called 2 times.
   EXPECT_TRUE(RunLoopUntil([&] { return callback_calls >= 2; }));
   EXPECT_TRUE(resolver.IsEmpty());
   EXPECT_EQ(2u, callback_calls);
+  EXPECT_EQ(ConflictResolutionWaitStatus::CONFLICTS_RESOLVED, wait_status);
 
   ids.clear();
   page_storage_->GetHeadCommitIds(
@@ -563,6 +567,79 @@ TEST_F(MergeResolverTest, DelayedUntilEmpty) {
   // callbacks in it were called).
   EXPECT_FALSE(RunLoopUntil([&] { return callback_calls > 0; },
                             fxl::TimeDelta::FromMilliseconds(50)));
+}
+
+TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
+      std::make_unique<LastOneWinsMergeStrategy>();
+  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
+                         std::make_unique<test::TestBackoff>(nullptr));
+  resolver.SetMergeStrategy(std::move(strategy));
+  resolver.set_on_empty(MakeQuitTaskOnce());
+
+  size_t callback_calls = 0;
+  auto conflicts_resolved_callback = [&resolver, &callback_calls]() {
+    EXPECT_TRUE(resolver.IsEmpty());
+    callback_calls++;
+  };
+  ConflictResolutionWaitStatus wait_status;
+  resolver.RegisterNoConflictCallback(
+      callback::Capture(conflicts_resolved_callback, &wait_status));
+
+  // Check that the callback was called 1 times.
+  EXPECT_TRUE(RunLoopUntil([&] { return callback_calls >= 1; }));
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_EQ(1u, callback_calls);
+  EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, wait_status);
+}
+
+TEST_F(MergeResolverTest, HasUnfinishedMerges) {
+  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
+                         std::make_unique<test::TestBackoff>(nullptr));
+  resolver.SetMergeStrategy(nullptr);
+  resolver.set_on_empty(MakeQuitTask());
+  EXPECT_TRUE(RunLoopUntil([&] { return !resolver.HasUnfinishedMerges(); }));
+  EXPECT_FALSE(resolver.HasUnfinishedMerges());
+
+  // Set up conflict.
+  storage::CommitId commit_1 = CreateCommit(storage::kFirstPageCommitId,
+                                            AddKeyValueToJournal("foo", "bar"));
+  storage::CommitId commit_2 = CreateCommit(storage::kFirstPageCommitId,
+                                            AddKeyValueToJournal("foo", "baz"));
+
+  storage::Status status;
+  std::vector<storage::CommitId> ids;
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(2u, ids.size());
+
+  std::unique_ptr<VerifyingMergeStrategy> strategy =
+      std::make_unique<VerifyingMergeStrategy>(
+          message_loop_.task_runner(), commit_1, commit_2,
+          storage::kFirstPageCommitId.ToString());
+  resolver.SetMergeStrategy(std::move(strategy));
+  resolver.set_on_empty(MakeQuitTask());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+
+  // VerifyingResolver tells MergeResolver that the conflict is finished, but
+  // doesn't touch storage. Thus, there is still two head commits at this point:
+  // MergeResolver should be empty (no merge in progress), but a merge should be
+  // pending still.
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.HasUnfinishedMerges());
+
+  std::unique_ptr<LastOneWinsMergeStrategy> new_strategy =
+      std::make_unique<LastOneWinsMergeStrategy>();
+  resolver.SetMergeStrategy(std::move(new_strategy));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopUntil([&] { return !resolver.HasUnfinishedMerges(); }));
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_FALSE(resolver.HasUnfinishedMerges());
 }
 
 }  // namespace

@@ -1373,17 +1373,22 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
     message_loop_.PostQuitTask();
   };
 
-  page_ptr_->WaitForConflictResolution(conflicts_resolved_callback);
+  ConflictResolutionWaitStatus status;
+  page_ptr_->WaitForConflictResolution(
+      callback::Capture(conflicts_resolved_callback, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_TRUE(callback_called);
+  EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, status);
 
   // Special case: no changes from the previous call; event OnEmpty is not
   // triggered, but WaitForConflictResolution should return right away, as there
   // are no pending merges.
   callback_called = false;
-  page_ptr_->WaitForConflictResolution(conflicts_resolved_callback);
+  page_ptr_->WaitForConflictResolution(
+      callback::Capture(conflicts_resolved_callback, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_TRUE(callback_called);
+  EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, status);
 }
 
 }  // namespace

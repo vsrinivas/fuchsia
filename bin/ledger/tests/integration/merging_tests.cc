@@ -1749,13 +1749,15 @@ TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
   // Try to wait for conflicts resolution.
   bool merged = false;
   bool conflicts_resolved_callback_called = false;
+  ledger::ConflictResolutionWaitStatus wait_status;
   auto conflicts_resolved_callback = [&merged,
                                       &conflicts_resolved_callback_called]() {
     conflicts_resolved_callback_called = true;
     EXPECT_TRUE(merged);
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   };
-  page1->WaitForConflictResolution(conflicts_resolved_callback);
+  page1->WaitForConflictResolution(
+      callback::Capture(conflicts_resolved_callback, &wait_status));
 
   // Check that conflicts_resolved_callback is not called, as there are merge
   // requests pending.
@@ -1772,6 +1774,7 @@ TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
   // Now conflict_resolved_callback can run.
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(conflicts_resolved_callback_called);
+  EXPECT_EQ(ledger::ConflictResolutionWaitStatus::CONFLICTS_RESOLVED, wait_status);
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
