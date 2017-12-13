@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,20 +14,16 @@
 #include <zircon/crashlogger.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 #include <fdio/util.h>
+#include <inspector/inspector.h>
 #include <pretty/hexdump.h>
 
-#include "inspector/backtrace.h"
-#include "inspector/dso-list.h"
-#include "inspector/registers.h"
-#include "inspector/utils.h"
 #include "dump-pt.h"
-
-using inspector::general_regs_type;
 
 static int verbosity_level = 0;
 
@@ -41,6 +38,40 @@ static bool swbreak_backtrace_enabled = true;
 // Requires processor tracing turned on in the kernel.
 static bool pt_dump_enabled = false;
 #endif
+
+// Same as basename, except will not modify |path|.
+// This assumes there are no trailing /s.
+
+static const char* cl_basename(const char* path) {
+    const char* base = strrchr(path, '/');
+    return base ? base + 1 : path;
+}
+
+void do_print_error(const char* file, int line, const char* fmt, ...) {
+    const char* base = cl_basename(file);
+    va_list args;
+    va_start(args, fmt);
+    fprintf(stderr, "crashlogger: %s:%d: ", base, line);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+}
+
+void do_print_zx_error(const char* file, int line, const char* what, zx_status_t status) {
+    do_print_error(file, line, "%s: %d (%s)",
+                   what, status, zx_status_get_string(status));
+}
+
+#define print_error(fmt...) \
+  do { \
+    do_print_error(__FILE__, __LINE__, fmt); \
+  } while (0)
+
+#define print_zx_error(what, status) \
+  do { \
+    do_print_zx_error(__FILE__, __LINE__, \
+                      (what), static_cast<zx_status_t>(status)); \
+  } while (0)
 
 // While this should never fail given a valid handle,
 // returns ZX_KOID_INVALID on failure.
@@ -70,19 +101,19 @@ static bool is_resumable_swbreak(uint32_t excp_type) {
 
 #if defined(__x86_64__)
 
-int have_swbreak_magic(const general_regs_type* regs) {
+int have_swbreak_magic(const inspector_general_regs_t* regs) {
     return regs->rax == CRASHLOGGER_RESUME_MAGIC;
 }
 
 #elif defined(__aarch64__)
 
-int have_swbreak_magic(const general_regs_type* regs) {
+int have_swbreak_magic(const inspector_general_regs_t* regs) {
     return regs->r[0] == CRASHLOGGER_RESUME_MAGIC;
 }
 
 #else
 
-int have_swbreak_magic(const general_regs_type* regs) {
+int have_swbreak_magic(const inspector_general_regs_t* regs) {
     return 0;
 }
 
@@ -167,14 +198,14 @@ void resume_thread(zx_handle_t thread, bool handled) {
 
 void resume_thread_from_exception(zx_handle_t thread,
                                   uint32_t excp_type,
-                                  const general_regs_type* gregs) {
+                                  const inspector_general_regs_t* gregs) {
     if (is_resumable_swbreak(excp_type) &&
         gregs != nullptr && have_swbreak_magic(gregs)) {
 #if defined(__x86_64__)
         // On x86, the pc is left at one past the s/w break insn,
         // so there's nothing more we need to do.
 #elif defined(__aarch64__)
-        general_regs_type regs = *gregs;
+        inspector_general_regs_t regs = *gregs;
         // Skip past the brk instruction.
         regs.pc += 4;
         if (!write_general_regs(thread, &regs, sizeof(regs)))
@@ -238,13 +269,13 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     }
     auto context = report.context;
 
-    general_regs_type reg_buf;
-    general_regs_type *regs = nullptr;
+    inspector_general_regs_t reg_buf;
+    inspector_general_regs_t *regs = nullptr;
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
     const char* fatal = "fatal ";
 
-    if (!inspector::read_general_regs(thread, &reg_buf))
+    if (inspector_read_general_regs(thread, &reg_buf) != ZX_OK)
         goto Fail;
     // Delay setting this until here so Fail will know we now have the regs.
     regs = &reg_buf;
@@ -291,9 +322,9 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), pc);
 
 #if defined(__x86_64__)
-    inspector::print_general_regs(regs, &context.arch.u.x86_64);
+    inspector_print_general_regs(stdout, regs, &context.arch.u.x86_64);
 #elif defined(__aarch64__)
-    inspector::print_general_regs(regs, &context.arch.u.arm_64);
+    inspector_print_general_regs(stdout, regs, &context.arch.u.arm_64);
 
     // Only output the Fault address register and ESR if there's a data fault.
     if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type) {
@@ -307,7 +338,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     printf("bottom of user stack:\n");
     dump_memory(process, sp, kMemoryDumpSize);
     printf("arch: %s\n", arch);
-    inspector::backtrace(process, thread, pc, sp, fp, use_libunwind);
+    inspector_print_backtrace(stdout, process, thread, pc, sp, fp, use_libunwind);
 
     // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
@@ -464,17 +495,17 @@ int main(int argc, char** argv) {
         }
     }
 
-    inspector::set_verbosity(verbosity_level);
+    inspector_set_verbosity(verbosity_level);
 
     // At debugging level 1 print our dso list (in case we crash in a way
     // that prevents printing it later).
     if (verbosity_level >= 1) {
         zx_handle_t self = zx_process_self();
-        inspector::dsoinfo_t* dso_list =
-            inspector::dso_fetch_list(self, "crashlogger");
+        inspector_dsoinfo_t* dso_list =
+            inspector_dso_fetch_list(self, "crashlogger");
         printf("Crashlogger dso list:\n");
-        inspector::dso_print_list(dso_list);
-        inspector::dso_free_list(dso_list);
+        inspector_dso_print_list(stdout, dso_list);
+        inspector_dso_free_list(dso_list);
     }
 
     // If asked, undo any previously installed exception port.

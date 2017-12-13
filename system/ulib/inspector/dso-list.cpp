@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
 
+#include "inspector/inspector.h"
 #include "dso-list-impl.h"
 #include "utils-impl.h"
 
@@ -22,19 +23,23 @@
 #define lmap_off_name offsetof(struct link_map, l_name)
 #define lmap_off_addr offsetof(struct link_map, l_addr)
 
-namespace inspector {
+using inspector::read_mem;
+using inspector::fetch_string;
+using inspector::fetch_build_id;
 
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
 
-static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base) {
+static inspector_dsoinfo_t* dsolist_add(inspector_dsoinfo_t** list,
+                                        const char* name, uintptr_t base) {
     if (!strncmp(name, "app:devhost:", 12)) {
         // devhost processes use their name field to describe
         // the root of their device sub-tree.
         name = "app:/boot/bin/devhost";
     }
     size_t len = strlen(name);
-    auto dso = reinterpret_cast<dsoinfo_t*> (calloc(1, sizeof(dsoinfo_t) + len + 1));
+    auto dso = reinterpret_cast<inspector_dsoinfo_t*> (
+        calloc(1, sizeof(inspector_dsoinfo_t) + len + 1));
     if (dso == nullptr) {
         return nullptr;
     }
@@ -56,7 +61,8 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
     return dso;
 }
 
-dsoinfo_t* dso_fetch_list(zx_handle_t h, const char* name) {
+inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h,
+                                              const char* name) {
     uintptr_t lmap, debug_addr;
     zx_status_t status = zx_object_get_property(h, ZX_PROP_PROCESS_DEBUG_ADDR,
                                                 &debug_addr, sizeof(debug_addr));
@@ -67,7 +73,7 @@ dsoinfo_t* dso_fetch_list(zx_handle_t h, const char* name) {
     if (read_mem(h, debug_addr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
         return nullptr;
     }
-    dsoinfo_t* dsolist = nullptr;
+    inspector_dsoinfo_t* dsolist = nullptr;
     int iter = 0;
     while (lmap != 0) {
         if (iter++ > 500) {
@@ -90,7 +96,9 @@ dsoinfo_t* dso_fetch_list(zx_handle_t h, const char* name) {
         if (fetch_string(h, str, dsoname, sizeof(dsoname))) {
             break;
         }
-        dsoinfo_t* dso = dsolist_add(&dsolist, dsoname[0] ? dsoname : name, base);
+        inspector_dsoinfo_t* dso = dsolist_add(&dsolist,
+                                               dsoname[0] ? dsoname : name,
+                                               base);
         if (dso != nullptr) {
             fetch_build_id(h, dso->base, dso->buildid, sizeof(dso->buildid));
         }
@@ -100,17 +108,18 @@ dsoinfo_t* dso_fetch_list(zx_handle_t h, const char* name) {
     return dsolist;
 }
 
-void dso_free_list(dsoinfo_t* list) {
+void inspector_dso_free_list(inspector_dsoinfo_t* list) {
     while (list != NULL) {
-        dsoinfo_t* next = list->next;
+        inspector_dsoinfo_t* next = list->next;
         free(list->debug_file);
         free(list);
         list = next;
     }
 }
 
-dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc) {
-    for (dsoinfo_t* dso = dso_list; dso != NULL; dso = dso->next) {
+inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list,
+                                          zx_vaddr_t pc) {
+    for (inspector_dsoinfo_t* dso = dso_list; dso != NULL; dso = dso->next) {
         if (pc >= dso->base) {
             return dso;
         }
@@ -119,14 +128,15 @@ dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc) {
     return nullptr;
 }
 
-void dso_print_list(dsoinfo_t* dso_list) {
-    for (dsoinfo_t* dso = dso_list; dso != nullptr; dso = dso->next) {
-        printf("dso: id=%s base=%p name=%s\n",
-               dso->buildid, (void*) dso->base, dso->name);
+void inspector_dso_print_list(FILE* f, inspector_dsoinfo_t* dso_list) {
+    for (inspector_dsoinfo_t* dso = dso_list; dso != nullptr; dso = dso->next) {
+        fprintf(f, "dso: id=%s base=%p name=%s\n",
+                dso->buildid, (void*) dso->base, dso->name);
     }
 }
 
-zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
+zx_status_t inspector_dso_find_debug_file(inspector_dsoinfo_t* dso,
+                                          const char** out_debug_file) {
     // Have we already tried?
     // Yeah, if we OOM it's possible it'll succeed next time, but
     // it's not worth the extra complexity to avoid printing the debugging
@@ -170,5 +180,3 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
 
     return dso->debug_file_status;
 }
-
-}  // namespace inspector

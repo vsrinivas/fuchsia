@@ -12,24 +12,24 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/status.h>
 
+#include "inspector/inspector.h"
 #include "utils-impl.h"
 
 namespace inspector {
 
 int verbosity_level = 0;
 
-void set_verbosity(int level) {
+extern "C"
+void inspector_set_verbosity(int level) {
     verbosity_level = level;
 }
 
 // Same as basename, except will not modify |path|.
-// If |path| has a trailing / then |path| is returned unchanged.
+// Returns "" if |path| has a trailing /.
 
 const char* path_basename(const char* path) {
     const char* base = strrchr(path, '/');
     if (base == nullptr)
-        return path;
-    if (*base == '\0')
         return path;
     return base + 1;
 }

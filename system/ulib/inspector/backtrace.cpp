@@ -23,7 +23,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 
-#include "inspector/backtrace.h"
+#include "inspector/inspector.h"
 #include "dso-list-impl.h"
 #include "utils-impl.h"
 
@@ -58,15 +58,16 @@ bt_so_iterator (void* iter_state, backtrace_so_callback* callback, void* data) {
 // a subset of it in memory.
 class DebugInfoCache {
  public:
-    DebugInfoCache(dsoinfo_t* dso_list, size_t nr_ways);
+    DebugInfoCache(inspector_dsoinfo_t* dso_list, size_t nr_ways);
     ~DebugInfoCache();
 
-    dsoinfo_t* dso_list() { return dso_list_; }
+    inspector_dsoinfo_t* dso_list() { return dso_list_; }
 
-    zx_status_t GetDebugInfo(uintptr_t pc, dsoinfo_t** out_dso, backtrace_state** out_bt_state);
+    zx_status_t GetDebugInfo(uintptr_t pc, inspector_dsoinfo_t** out_dso,
+                             backtrace_state** out_bt_state);
     
  private:
-    dsoinfo_t* dso_list_;
+    inspector_dsoinfo_t* dso_list_;
 
     size_t last_used_ = 0;
 
@@ -74,7 +75,7 @@ class DebugInfoCache {
 
     struct way {
         // Not owned by us. This is the "tag".
-        dsoinfo_t* dso = nullptr;
+        inspector_dsoinfo_t* dso = nullptr;
         // Owned by us.
         backtrace_state* bt_state = nullptr;
     };
@@ -84,7 +85,7 @@ class DebugInfoCache {
 
 // Note: We take ownership of |dso_list|.
 
-DebugInfoCache::DebugInfoCache(dsoinfo_t* dso_list, size_t nr_ways)
+DebugInfoCache::DebugInfoCache(inspector_dsoinfo_t* dso_list, size_t nr_ways)
     : dso_list_(dso_list) {
     fbl::AllocChecker ac;
     auto ways = new (&ac) way[nr_ways];
@@ -103,7 +104,7 @@ DebugInfoCache::~DebugInfoCache() {
         }
     }
 
-    dso_free_list(dso_list_);
+    inspector_dso_free_list(dso_list_);
 }
 
 // Find the DSO and debug info (backtrace_state) for PC.
@@ -115,9 +116,9 @@ DebugInfoCache::~DebugInfoCache() {
 // accompanying libbacktrace state if available or nullptr if not.
 
 zx_status_t DebugInfoCache::GetDebugInfo(uintptr_t pc,
-                                         dsoinfo_t** out_dso,
+                                         inspector_dsoinfo_t** out_dso,
                                          backtrace_state** out_bt_state) {
-    dsoinfo_t* dso = dso_lookup(dso_list_, pc);
+    inspector_dsoinfo_t* dso = inspector_dso_lookup(dso_list_, pc);
     if (dso == nullptr) {
         debugf(1, "No DSO found for pc %p\n", (void*) pc);
         return ZX_ERR_NOT_FOUND;
@@ -158,7 +159,7 @@ zx_status_t DebugInfoCache::GetDebugInfo(uintptr_t pc,
     *out_bt_state = nullptr;
 
     const char* debug_file = nullptr;
-    auto status = dso_find_debug_file(dso, &debug_file);
+    auto status = inspector_dso_find_debug_file(dso, &debug_file);
     if (status != ZX_OK) {
         // There's no additional debug file available, but we did find the DSO.
         return ZX_OK;
@@ -218,15 +219,16 @@ btprint_callback(void* vdata, uintptr_t pc, const char* filename, int lineno,
     return 0;
 }
 
-static void btprint(DebugInfoCache* di_cache, int n, uintptr_t pc, uintptr_t sp) {
-    dsoinfo_t* dso;
+static void btprint(FILE* f, DebugInfoCache* di_cache,
+                    int n, uintptr_t pc, uintptr_t sp) {
+    inspector_dsoinfo_t* dso;
     backtrace_state* bt_state;
     auto status = di_cache->GetDebugInfo(pc, &dso, &bt_state);
 
     if (status != ZX_OK) {
         // The pc is not in any DSO.
-        printf("bt#%02d: pc %p sp %p\n",
-               n, (void*) pc, (void*) sp);
+        fprintf(f, "bt#%02d: pc %p sp %p\n",
+                n, (void*) pc, (void*) sp);
         return;
     }
 
@@ -246,21 +248,25 @@ static void btprint(DebugInfoCache* di_cache, int n, uintptr_t pc, uintptr_t sp)
         }
     }
 
-    printf("bt#%02d: pc %p sp %p (%s,%p)",
-           n, (void*) pc, (void*) sp, dso->name, (void*) (pc - dso->base));
+    fprintf(f, "bt#%02d: pc %p sp %p (%s,%p)",
+            n, (void*) pc, (void*) sp, dso->name, (void*) (pc - dso->base));
     if (pcinfo_data.filename != nullptr && pcinfo_data.lineno > 0) {
         const char* base = path_basename(pcinfo_data.filename);
-        printf(" %s:%d", base, pcinfo_data.lineno);
+        // Be paranoid and handle |pcinfo_data.filename| having a trailing /.
+        // If so, just print the whole thing and let the user figure it out.
+        if (*base == '\0')
+            base = pcinfo_data.filename;
+        fprintf(f, " %s:%d", base, pcinfo_data.lineno);
     }
     if (pcinfo_data.function != nullptr)
-        printf(" %s", pcinfo_data.function);
-    printf("\n");
+        fprintf(f, " %s", pcinfo_data.function);
+    fprintf(f, "\n");
 }
 
 static int dso_lookup_for_unw(void* context, unw_word_t pc,
                               unw_word_t* base, const char** name) {
-    auto dso_list = reinterpret_cast<dsoinfo_t*>(context);
-    dsoinfo_t* dso = dso_lookup(dso_list, pc);
+    auto dso_list = reinterpret_cast<inspector_dsoinfo_t*>(context);
+    inspector_dsoinfo_t* dso = inspector_dso_lookup(dso_list, pc);
     if (dso == nullptr)
         return 0;
     *base = dso->base;
@@ -268,9 +274,11 @@ static int dso_lookup_for_unw(void* context, unw_word_t pc,
     return 1;
 }
 
-void backtrace(zx_handle_t process, zx_handle_t thread,
-               uintptr_t pc, uintptr_t sp, uintptr_t fp,
-               bool use_libunwind) {
+extern "C"
+void inspector_print_backtrace(FILE* f,
+                               zx_handle_t process, zx_handle_t thread,
+                               uintptr_t pc, uintptr_t sp, uintptr_t fp,
+                               bool use_libunwind) {
     // Prepend "app:" to the name we print for the process binary to tell the
     // reader (and the symbolize script!) that the name is the process's.
     // The name property is only 32 characters which may be insufficient.
@@ -285,9 +293,9 @@ void backtrace(zx_handle_t process, zx_handle_t thread,
         print_zx_error("zx_object_get_property, falling back to \"app\" for program name", status);
         strlcpy(name, "app", sizeof(name));
     }
-    dsoinfo_t* dso_list = dso_fetch_list(process, name);
+    inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process, name);
 
-    dso_print_list(dso_list);
+    inspector_dso_print_list(f, dso_list);
 
     // Set up libunwind if requested.
 
@@ -347,7 +355,7 @@ void backtrace(zx_handle_t process, zx_handle_t thread,
     // On with the show.
 
     int n = 1;
-    btprint(&di_cache, n++, pc, sp);
+    btprint(f, &di_cache, n++, pc, sp);
     while ((sp >= 0x1000000) && (n < 50)) {
         if (libunwind_ok) {
             int ret = unw_step(&cursor);
@@ -372,9 +380,9 @@ void backtrace(zx_handle_t process, zx_handle_t thread,
                 break;
             }
         }
-        btprint(&di_cache, n++, pc, sp);
+        btprint(f, &di_cache, n++, pc, sp);
     }
-    printf("bt#%02d: end\n", n);
+    fprintf(f, "bt#%02d: end\n", n);
 
     unw_destroy_addr_space(remote_as);
     unw_destroy_fuchsia(fuchsia);
