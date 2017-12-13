@@ -399,23 +399,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // Setup block device.
-  machina::VirtioBlock block(physmem_addr, physmem_size);
-  machina::PciDevice& virtio_block = block.pci_device();
-  if (block_path != NULL) {
-    status = block.Init(block_path, guest.phys_mem());
-    if (status != ZX_OK)
-      return status;
-
-    status = block.Start();
-    if (status != ZX_OK)
-      return status;
-
-    status = bus.Connect(&virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
-    if (status != ZX_OK)
-      return status;
-  }
-  // Setup memory balloon.
+  // Setup balloon device.
   machina::VirtioBalloon balloon(physmem_addr, physmem_size,
                                  guest.phys_mem().vmo());
   balloon.set_deflate_on_demand(balloon_deflate_on_demand);
@@ -424,10 +408,23 @@ int main(int argc, char** argv) {
     return status;
   if (balloon_poll_interval > 0)
     poll_balloon_stats(&balloon, balloon_poll_interval);
-  // Setup Virtio GPU.
+
+  // Setup block device.
+  machina::VirtioBlock block(physmem_addr, physmem_size);
+  if (block_path != NULL) {
+    status = block.Init(block_path, guest.phys_mem());
+    if (status != ZX_OK)
+      return status;
+    status = block.Start();
+    if (status != ZX_OK)
+      return status;
+    status = bus.Connect(&block.pci_device(), PCI_DEVICE_VIRTIO_BLOCK);
+    if (status != ZX_OK)
+      return status;
+  }
+
+  // Setup GPU device.
   machina::VirtioGpu gpu(physmem_addr, physmem_size);
-  machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
-                             "serial-number");
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
   status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
   if (status != ZX_OK) {
@@ -435,16 +432,16 @@ int main(int argc, char** argv) {
     if (status != ZX_OK)
       return status;
   }
-
   status = gpu.Init();
   if (status != ZX_OK)
     return status;
-
   status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
   if (status != ZX_OK)
     return status;
 
   // Setup input device.
+  machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
+                             "serial-number");
   status = input.Start();
   if (status != ZX_OK)
     return status;
