@@ -46,8 +46,11 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device,
     if (!usb || !intf || !input_header || !formats || formats->size() == 0 || !settings) {
         return ZX_ERR_INVALID_ARGS;
     }
+    auto domain = dispatcher::ExecutionDomain::Create();
+    if (domain == nullptr) { return ZX_ERR_NO_MEMORY; }
+
     auto dev = fbl::unique_ptr<UsbVideoStream>(
-        new UsbVideoStream(device, usb, formats, settings));
+        new UsbVideoStream(device, usb, formats, settings, fbl::move(domain)));
 
     char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "usb-video-source-%d", index);
@@ -237,6 +240,110 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
     return ZX_OK;
 }
 
+zx_status_t UsbVideoStream::DdkIoctl(uint32_t op,
+                                     const void* in_buf, size_t in_len,
+                                     void* out_buf, size_t out_len, size_t* out_actual) {
+    // The only IOCTL we support is get channel.
+    if (op != CAMERA_IOCTL_GET_CHANNEL) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if ((out_buf == nullptr) ||
+        (out_actual == nullptr) ||
+        (out_len != sizeof(zx_handle_t))) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::AutoLock lock(&lock_);
+
+    if (stream_channel_ != nullptr) {
+        // TODO(jocelyndang): support multiple concurrent clients.
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    auto channel = dispatcher::Channel::Create();
+    if (channel == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    dispatcher::Channel::ProcessHandler phandler(
+    [stream = this](dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+        return stream->ProcessChannel(channel);
+    });
+
+    dispatcher::Channel::ChannelClosedHandler chandler(
+    [stream = this](const dispatcher::Channel* channel) -> void {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+        stream->DeactivateStreamChannel(channel);
+    });
+
+    zx::channel client_endpoint;
+    zx_status_t res = channel->Activate(&client_endpoint,
+                                        default_domain_,
+                                        fbl::move(phandler),
+                                        fbl::move(chandler));
+    if (res == ZX_OK) {
+        stream_channel_ = channel;
+        *(reinterpret_cast<zx_handle_t*>(out_buf)) = client_endpoint.release();
+        *out_actual = sizeof(zx_handle_t);
+    }
+    return res;
+}
+
+#define HREQ(_cmd, _payload, _handler, ...)                     \
+case _cmd:                                                      \
+    if (req_size != sizeof(req._payload)) {                     \
+        zxlogf(ERROR, "Bad " #_cmd                              \
+                  " response length (%u != %zu)\n",             \
+                  req_size, sizeof(req._payload));              \
+        return ZX_ERR_INVALID_ARGS;                             \
+    }                                                           \
+    return _handler(channel, req._payload, ##__VA_ARGS__);
+
+zx_status_t UsbVideoStream::ProcessChannel(dispatcher::Channel* channel) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    fbl::AutoLock lock(&lock_);
+
+    union {
+        camera::camera_proto::CmdHdr        hdr;
+        camera::camera_proto::GetFormatsReq get_formats;
+        camera::camera_proto::SetFormatReq  set_format;
+    } req;
+
+    static_assert(sizeof(req) <= 256,
+                  "Request buffer is getting to be too large to hold on the stack!");
+
+    uint32_t req_size;
+    zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
+    if (res != ZX_OK)
+        return res;
+
+    if (req_size < sizeof(req.hdr)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    switch (req.hdr.cmd) {
+    HREQ(CAMERA_STREAM_CMD_GET_FORMATS, get_formats, GetFormatsLocked);
+    HREQ(CAMERA_STREAM_CMD_SET_FORMAT,  set_format,  SetFormatLocked);
+    default:
+        zxlogf(ERROR, "Unrecognized command 0x%04x\n", req.hdr.cmd);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+#undef HREQ
+
+
+zx_status_t UsbVideoStream::GetFormatsLocked(dispatcher::Channel* channel,
+                                             const camera::camera_proto::GetFormatsReq& req) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t UsbVideoStream::SetFormatLocked(dispatcher::Channel* channel,
+                                            const camera::camera_proto::SetFormatReq& req) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t UsbVideoStream::RingBuffer::Init(uint32_t size) {
     zx_status_t status = zx::vmo::create(size, 0, &this->vmo);
     if (status != ZX_OK) {
@@ -409,7 +516,16 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     cur_frame_bytes_ += data_size;
 }
 
+void UsbVideoStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
+    fbl::AutoLock lock(&lock_);
+
+    ZX_DEBUG_ASSERT(stream_channel_.get() == channel);
+    stream_channel_.reset();
+}
+
 void UsbVideoStream::DdkUnbind() {
+    default_domain_->Deactivate();
+
     // Unpublish our device node.
     DdkRemove();
 }

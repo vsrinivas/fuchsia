@@ -67,6 +67,7 @@
 #define IOCTL_FAMILY_CPUPERF        0x2A
 #define IOCTL_FAMILY_POWER          0x30
 #define IOCTL_FAMILY_THERMAL        0x31
+#define IOCTL_FAMILY_CAMERA         0x32
 
 // IOCTL constructor
 // --K-FFNN

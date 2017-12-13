@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <camera-proto/camera-proto.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <driver/usb.h>
@@ -25,6 +28,7 @@ struct VideoStreamProtocol : public ddk::internal::base_protocol {
 
 class UsbVideoStream;
 using UsbVideoStreamBase = ddk::Device<UsbVideoStream,
+                                       ddk::Ioctlable,
                                        ddk::Unbindable>;
 
 class UsbVideoStream : public UsbVideoStreamBase,
@@ -42,6 +46,9 @@ public:
     // DDK device implementation
     void DdkUnbind();
     void DdkRelease();
+    zx_status_t DdkIoctl(uint32_t op,
+                         const void* in_buf, size_t in_len,
+                         void* out_buf, size_t out_len, size_t* out_actual);
     ~UsbVideoStream();
 
 private:
@@ -60,14 +67,16 @@ private:
         uint32_t offset = 0;
     };
 
-    UsbVideoStream(zx_device_t* parent,
-                   usb_protocol_t* usb,
-                   fbl::Vector<UsbVideoFormat>* formats,
-                   fbl::Vector<UsbVideoStreamingSetting>* settings)
-        : UsbVideoStreamBase(parent),
-          usb_(*usb),
-          formats_(fbl::move(*formats)),
-          streaming_settings_(fbl::move(*settings)) {}
+     UsbVideoStream(zx_device_t* parent,
+                    usb_protocol_t* usb,
+                    fbl::Vector<UsbVideoFormat>* formats,
+                    fbl::Vector<UsbVideoStreamingSetting>* settings,
+                    fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
+         : UsbVideoStreamBase(parent),
+           usb_(*usb),
+           formats_(fbl::move(*formats)),
+           streaming_settings_(fbl::move(*settings)),
+           default_domain_(fbl::move(default_domain)) {}
 
     zx_status_t Bind(const char* devname,
                      usb_interface_descriptor_t* intf,
@@ -96,6 +105,16 @@ private:
                           usb_video_vc_probe_and_commit_controls* out_result,
                           const UsbVideoStreamingSetting** out_setting);
 
+
+    zx_status_t ProcessChannel(dispatcher::Channel* channel);
+
+    zx_status_t GetFormatsLocked(dispatcher::Channel* channel,
+                                 const camera::camera_proto::GetFormatsReq& req)
+        __TA_REQUIRES(lock_);
+    zx_status_t SetFormatLocked(dispatcher::Channel* channel,
+                                const camera::camera_proto::SetFormatReq& req)
+        __TA_REQUIRES(lock_);
+
     // Creates a new ring buffer and maps it into our address space.
     // The current streaming state must be StreamingState::STOPPED.
     zx_status_t CreateDataRingBuffer();
@@ -109,6 +128,8 @@ private:
     // and stores it in the ring buffer.
     void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);
 
+    void DeactivateStreamChannel(const dispatcher::Channel* channel);
+
     usb_protocol_t usb_;
 
     fbl::Vector<UsbVideoFormat> formats_;
@@ -121,6 +142,10 @@ private:
 
     uint8_t iface_num_ = 0;
     uint8_t usb_ep_addr_ = 0;
+
+    // Dispatcher framework state
+    fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
+    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // Statistics for frame based formats.
     uint32_t max_frame_size_;
