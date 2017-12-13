@@ -73,14 +73,27 @@ void BaseView::InvalidateScene() {
     return;
 
   invalidate_pending_ = true;
+
+  // Present the scene ASAP. Pass in the last presentation time; otherwise, if
+  // presentation_time argument is less than the previous time passed to
+  // PresentScene, the Session will be closed.
+  // (We cannot use the current time because the last requested presentation
+  // time, |last_presentation_time_|, could still be in the future. This is
+  // because Session.Present() returns after it _begins_ preparing the given
+  // frame, not after it is presented.)
   if (!present_pending_)
-    PresentScene(zx_time_get(ZX_CLOCK_MONOTONIC));
+    PresentScene(last_presentation_time_);
 }
 
 void BaseView::PresentScene(zx_time_t presentation_time) {
   FXL_DCHECK(!present_pending_);
 
   present_pending_ = true;
+
+  // Keep track of the most recent presentation time we've passed to
+  // Session.Present(), for use in InvalidateScene().
+  last_presentation_time_ = presentation_time;
+
   session()->Present(
       presentation_time, [this](scenic::PresentationInfoPtr info) {
         FXL_DCHECK(present_pending_);

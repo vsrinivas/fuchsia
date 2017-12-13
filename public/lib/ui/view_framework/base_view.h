@@ -9,15 +9,15 @@
 #include <string>
 
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
-#include "lib/ui/input/fidl/input_connection.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/input/fidl/input_connection.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 
 namespace mozart {
 
@@ -188,6 +188,8 @@ class BaseView : private ViewListener,
 
   bool invalidate_pending_ = false;
   bool present_pending_ = false;
+
+  zx_time_t last_presentation_time_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BaseView);
 };
