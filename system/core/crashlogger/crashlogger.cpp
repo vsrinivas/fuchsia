@@ -337,8 +337,15 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
 
     printf("bottom of user stack:\n");
     dump_memory(process, sp, kMemoryDumpSize);
+
     printf("arch: %s\n", arch);
-    inspector_print_backtrace(stdout, process, thread, pc, sp, fp, use_libunwind);
+
+    {
+        inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
+        inspector_dso_print_list(stdout, dso_list);
+        inspector_print_backtrace(stdout, process, thread, dso_list,
+                                  pc, sp, fp, use_libunwind);
+    }
 
     // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
@@ -501,8 +508,7 @@ int main(int argc, char** argv) {
     // that prevents printing it later).
     if (verbosity_level >= 1) {
         zx_handle_t self = zx_process_self();
-        inspector_dsoinfo_t* dso_list =
-            inspector_dso_fetch_list(self, "crashlogger");
+        inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(self);
         printf("Crashlogger dso list:\n");
         inspector_dso_print_list(stdout, dso_list);
         inspector_dso_free_list(dso_list);

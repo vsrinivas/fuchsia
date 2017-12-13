@@ -41,13 +41,13 @@ extern void inspector_set_verbosity(int level);
 // zircon/scripts/symbolize in order to add source location to the output.
 extern void inspector_print_backtrace(FILE* f,
                                       zx_handle_t process, zx_handle_t thread,
+                                      inspector_dsoinfo_t* dso_list,
                                       uintptr_t pc, uintptr_t sp, uintptr_t fp,
                                       bool use_libunwind);
 
 // Fetch the list of the DSOs of |process|.
 // |name| is the name of the application binary.
-extern inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t process,
-                                                     const char* name);
+extern inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t process);
 
 // Free the value returned by dso_fetch_list().
 extern void inspector_dso_free_list(inspector_dsoinfo_t*);

@@ -61,11 +61,25 @@ static inspector_dsoinfo_t* dsolist_add(inspector_dsoinfo_t** list,
     return dso;
 }
 
-inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h,
-                                              const char* name) {
+inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h) {
+    // Prepend "app:" to the name we print for the process binary to tell the
+    // reader (and the symbolize script!) that the name is the process's.
+    // The name property is only 32 characters which may be insufficient.
+    // N.B. The symbolize script looks for "app" and "app:".
+#define PROCESS_NAME_PREFIX "app:"
+#define PROCESS_NAME_PREFIX_LEN (sizeof(PROCESS_NAME_PREFIX) - 1)
+    char name[ZX_MAX_NAME_LEN + PROCESS_NAME_PREFIX_LEN];
+    strcpy(name, PROCESS_NAME_PREFIX);
+    auto status = zx_object_get_property(h, ZX_PROP_NAME, name + PROCESS_NAME_PREFIX_LEN,
+                                         sizeof(name) - PROCESS_NAME_PREFIX_LEN);
+    if (status != ZX_OK) {
+        print_zx_error("zx_object_get_property, falling back to \"app\" for program name", status);
+        strlcpy(name, "app", sizeof(name));
+    }
+
     uintptr_t lmap, debug_addr;
-    zx_status_t status = zx_object_get_property(h, ZX_PROP_PROCESS_DEBUG_ADDR,
-                                                &debug_addr, sizeof(debug_addr));
+    status = zx_object_get_property(h, ZX_PROP_PROCESS_DEBUG_ADDR,
+                                    &debug_addr, sizeof(debug_addr));
     if (status != ZX_OK) {
         print_zx_error("zx_object_get_property(ZX_PROP_PROCESS_DEBUG_ADDR), unable to fetch dso list", status);
         return nullptr;

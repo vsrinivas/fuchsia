@@ -277,26 +277,9 @@ static int dso_lookup_for_unw(void* context, unw_word_t pc,
 extern "C"
 void inspector_print_backtrace(FILE* f,
                                zx_handle_t process, zx_handle_t thread,
+                               inspector_dsoinfo_t* dso_list,
                                uintptr_t pc, uintptr_t sp, uintptr_t fp,
                                bool use_libunwind) {
-    // Prepend "app:" to the name we print for the process binary to tell the
-    // reader (and the symbolize script!) that the name is the process's.
-    // The name property is only 32 characters which may be insufficient.
-    // N.B. The symbolize script looks for "app" and "app:".
-#define PROCESS_NAME_PREFIX "app:"
-#define PROCESS_NAME_PREFIX_LEN (sizeof(PROCESS_NAME_PREFIX) - 1)
-    char name[ZX_MAX_NAME_LEN + PROCESS_NAME_PREFIX_LEN];
-    strcpy(name, PROCESS_NAME_PREFIX);
-    auto status = zx_object_get_property(process, ZX_PROP_NAME, name + PROCESS_NAME_PREFIX_LEN,
-                                         sizeof(name) - PROCESS_NAME_PREFIX_LEN);
-    if (status != ZX_OK) {
-        print_zx_error("zx_object_get_property, falling back to \"app\" for program name", status);
-        strlcpy(name, "app", sizeof(name));
-    }
-    inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process, name);
-
-    inspector_dso_print_list(f, dso_list);
-
     // Set up libunwind if requested.
 
     bool libunwind_ok = use_libunwind;
