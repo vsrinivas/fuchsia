@@ -22,18 +22,10 @@ static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev) {
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
         return ZX_ERR_NOT_SUPPORTED;
 
-    const pci_config_t* pci_config;
-    size_t config_size;
-    zx_handle_t config_handle = ZX_HANDLE_INVALID;
-    res = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                           (void**)&pci_config, &config_size, &config_handle);
+    uint16_t device_id;
+    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
 
-    if (res != ZX_OK) {
-        xprintf("serialio: failed to map pci config: %d\n", res);
-        return res;
-    }
-
-    switch (pci_config->device_id) {
+    switch (device_id) {
     case INTEL_WILDCAT_POINT_SERIALIO_DMA_DID:
         res = intel_serialio_bind_dma(dev);
         break;
@@ -65,7 +57,6 @@ static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev) {
         break;
     }
 
-    zx_handle_close(config_handle);
     return res;
 }
 
