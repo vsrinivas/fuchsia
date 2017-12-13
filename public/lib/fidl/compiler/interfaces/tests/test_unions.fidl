@@ -110,12 +110,12 @@ struct SmallObjStruct {
 };
 
 interface SmallCache {
-  SetIntValue(int64 int_value);
-  GetIntValue() => (int64 int_value);
+  SetIntValue@0(int64 int_value);
+  GetIntValue@1() => (int64 int_value);
 };
 
 interface UnionInterface {
-  Echo(PodUnion in_val) => (PodUnion out_val);
+  Echo@0(PodUnion in_val) => (PodUnion out_val);
 };
 
 struct TryNonNullStruct {

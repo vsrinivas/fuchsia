@@ -12,17 +12,17 @@ enum Enum {
 };
 
 interface Provider {
-  EchoString(string a) => (string a);
-  EchoStrings(string a, string b) => (string a, string b);
-  EchoMessagePipeHandle(handle<channel> a) => (handle<channel> a);
-  EchoEnum(Enum a) => (Enum a);
-  EchoInt(int32 a) => (int32 a);
+  EchoString@0(string a) => (string a);
+  EchoStrings@1(string a, string b) => (string a, string b);
+  EchoMessagePipeHandle@2(handle<channel> a) => (handle<channel> a);
+  EchoEnum@3(Enum a) => (Enum a);
+  EchoInt@4(int32 a) => (int32 a);
 };
 
 interface IntegerAccessor {
-  GetInteger() => (int64 data, [MinVersion=2] Enum type);
+  GetInteger@0() => (int64 data, [MinVersion=2] Enum type);
   [MinVersion=1]
-  SetInteger(int64 data, [MinVersion=3] Enum type);
+  SetInteger@1(int64 data, [MinVersion=3] Enum type);
 };
 
 // Used for testing that structs are generated for request params and response

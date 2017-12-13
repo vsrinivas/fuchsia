@@ -362,7 +362,7 @@ struct MultiVersionStructV7 {
 // same file.
 
 interface SomeInterface {
-  SomeMethod(RectPair pair) => (RectPair other_pair);
+  SomeMethod@0(RectPair pair) => (RectPair other_pair);
 };
 
 struct ContainsInterface {

@@ -25,16 +25,16 @@ struct Response {
 
 [ServiceName="sample::NamedObject"]
 interface NamedObject {
-  SetName(string name);
-  GetName() => (string name);
+  SetName@0(string name);
+  GetName@1() => (string name);
 };
 
 interface Factory {
-  DoStuff(Request request, handle<channel>? pipe)
+  DoStuff@0(Request request, handle<channel>? pipe)
       => (Response response, string text);
-  CreateNamedObject(NamedObject& obj);
-  RequestImportedInterface(imported.ImportedInterface& obj)
+  CreateNamedObject@1(NamedObject& obj);
+  RequestImportedInterface@2(imported.ImportedInterface& obj)
       => (imported.ImportedInterface& obj);
-  TakeImportedInterface(imported.ImportedInterface obj)
+  TakeImportedInterface@3(imported.ImportedInterface obj)
       => (imported.ImportedInterface obj);
 };

@@ -7,12 +7,12 @@
 module regression_tests;
 
 interface CheckMethodWithEmptyResponse {
-  WithoutParameterAndEmptyResponse() => ();
-  WithParameterAndEmptyResponse(bool b) => ();
+  WithoutParameterAndEmptyResponse@0() => ();
+  WithParameterAndEmptyResponse@1(bool b) => ();
 };
 
 interface CheckNameCollision {
-  WithNameCollision(bool message, bool response)
+  WithNameCollision@0(bool message, bool response)
       => (bool message, bool response);
 };
 
@@ -59,7 +59,7 @@ enum EnumWithINTERNALAllCaps {
 };
 
 interface CheckEnumCaps {
-  SetEnumWithINTERNALAllCaps(EnumWithINTERNALAllCaps e);
+  SetEnumWithINTERNALAllCaps@0(EnumWithINTERNALAllCaps e);
 };
 
 struct StructWithHandleCalledHandles {
@@ -71,7 +71,7 @@ struct StructWithArrayOfHandlesCalledHandles {
 };
 
 interface TestInterface {
-  SomeMessage();
+  SomeMessage@0();
 };
 
 struct StructWithInterfaceCalledHandles {
@@ -92,11 +92,11 @@ struct ContainsNullableArrayOfEnum {
 };
 
 interface Regression551 {
-  Get(array<string> key_prefixes) => (int32 result);
+  Get@0(array<string> key_prefixes) => (int32 result);
 };
 
 interface ServiceName {
-  serviceName() => (string serviceName);
+  serviceName@0() => (string serviceName);
 };
 
 enum CamelCaseTestEnum {

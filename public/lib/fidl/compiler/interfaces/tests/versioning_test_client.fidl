@@ -21,14 +21,14 @@ struct Employee {
 
 [ServiceName="fidl::test::versioning::HumanResourceDatabase"]
 interface HumanResourceDatabase {
-  AddEmployee(Employee employee) => (bool success);
+  AddEmployee@0(Employee employee) => (bool success);
 
-  QueryEmployee(uint64 id, [MinVersion=1] bool retrieve_finger_print)
+  QueryEmployee@1(uint64 id, [MinVersion=1] bool retrieve_finger_print)
       => (Employee? employee, [MinVersion=1] array<uint8>? finger_print);
 
   [MinVersion=1]
-  AttachFingerPrint(uint64 id, array<uint8> finger_print) => (bool success);
+  AttachFingerPrint@2(uint64 id, array<uint8> finger_print) => (bool success);
 
   [MinVersion=2]
-  ListEmployeeIds() => (array<uint64>? ids);
+  ListEmployeeIds@3() => (array<uint64>? ids);
 };

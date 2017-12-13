@@ -33,5 +33,5 @@ struct Point {
 };
 
 interface ImportedInterface {
-  DoSomething();
+  DoSomething@0();
 };

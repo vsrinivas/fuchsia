@@ -18,8 +18,8 @@ interface ServiceDescriber {
   // to ServiceProvider.ConnectToService() in order to request the service
   // with the given name. If the host is not willing or able to describe the
   // service with the given name it will close the |description_request| pipe.
-  DescribeService(string interface_name,
-                  ServiceDescription& description_request);
+  DescribeService@0(string interface_name,
+                    ServiceDescription& description_request);
 };
 
 // A ServiceDescription allows a client to request information about the Fidl
@@ -39,16 +39,16 @@ interface ServiceDescriber {
 // of the types in the complete type set of the service.
 interface ServiceDescription {
   // Returns a FidlInterface for the top-level interface of this service.
-  GetTopLevelInterface() => (FidlInterface fidlInterface);
+  GetTopLevelInterface@0() => (FidlInterface fidlInterface);
 
   // Returns the |UserDefinedType| for the given |type_key|. Valid keys are
   // those that are embedded in the structures returned from earlier queries
   // of this ServiceDescription. If the key is invalid then |type| will be null.
-  GetTypeDefinition(string type_key)
+  GetTypeDefinition@1(string type_key)
       => (UserDefinedType? type);
 
   // Returns all the data queryable via GetTypeDefinition in a single
   // structure, or null if the implementation is not willing or not able to
   // provide all of the data at once.
-  GetAllTypeDefinitions() => (map<string, UserDefinedType>? definitions);
+  GetAllTypeDefinitions@2() => (map<string, UserDefinedType>? definitions);
 };

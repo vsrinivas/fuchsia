@@ -5,5 +5,5 @@
 module fidl.test;
 
 interface MinimalInterface {
-  Message();
+  Message@0();
 };

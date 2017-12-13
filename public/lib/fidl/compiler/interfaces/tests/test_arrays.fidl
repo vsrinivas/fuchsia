@@ -5,7 +5,7 @@
 module fidl.test;
 
 interface TestInterface {
-  Foo();
+  Foo@0();
 };
 
 struct StructWithInterface {
