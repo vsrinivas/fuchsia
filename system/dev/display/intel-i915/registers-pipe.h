@@ -13,6 +13,10 @@ static constexpr uint32_t kPipeCount = 3;
 
 enum Pipe { PIPE_A, PIPE_B, PIPE_C };
 
+static const Pipe kPipes[kPipeCount] = {
+    PIPE_A, PIPE_B, PIPE_C,
+};
+
 // PIPE_SRCSZ
 class PipeSourceSize : public RegisterBase<PipeSourceSize> {
 public:
@@ -99,7 +103,7 @@ public:
 // PLANE_BUF_CFG
 class PlaneBufCfg : public RegisterBase<PlaneBufCfg> {
 public:
-    static constexpr uint32_t kBaseAddr = 0x7027c;
+    static constexpr uint32_t kBaseAddr = 0x7017c;
 
     DEF_FIELD(25, 16, buffer_end);
     DEF_FIELD(9, 0, buffer_start);
@@ -137,10 +141,14 @@ public:
     RegisterAddr<registers::PlaneControl> PlaneControl() {
         return GetReg<registers::PlaneControl>();
     }
-    RegisterAddr<registers::PlaneBufCfg> PlaneBufCfg() { return GetReg<registers::PlaneBufCfg>(); }
+    // 0 == cursor, 1-3 are regular planes
+    RegisterAddr<registers::PlaneBufCfg> PlaneBufCfg(int plane) {
+        return RegisterAddr<registers::PlaneBufCfg>(
+                PlaneBufCfg::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane);
+    }
 
     RegisterAddr<registers::PlaneWm>PlaneWatermark(int wm_num) {
-        return RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 4 * wm_num);
+        return RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_ + 4 * wm_num);
     }
 
 private:

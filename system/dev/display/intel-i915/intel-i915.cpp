@@ -33,6 +33,7 @@
 #include "registers-ddi.h"
 #include "registers-dpll.h"
 #include "registers-pipe.h"
+#include "registers-transcoder.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 
@@ -298,11 +299,123 @@ bool Controller::BringUpDisplayEngine() {
     return true;
 }
 
+bool Controller::ResetPipe(registers::Pipe pipe) {
+    registers::PipeRegs pipe_regs(pipe);
+    registers::TranscoderRegs trans_regs(pipe);
+
+    // Disable planes
+    pipe_regs.PlaneControl().FromValue(0).WriteTo(mmio_space());
+    pipe_regs.PlaneSurface().FromValue(0).WriteTo(mmio_space());
+
+    // Disable transcoder and wait it to stop
+    auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
+    trans_conf.transcoder_enable().set(0);
+    trans_conf.WriteTo(mmio_space());
+    if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state().get(), 60)) {
+        zxlogf(ERROR, "Failed to reset transcoder\n");
+        return false;
+    }
+
+    // Disable transcoder ddi select and clock select
+    auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
+    trans_ddi_ctl.trans_ddi_function_enable().set(0);
+    trans_ddi_ctl.ddi_select().set(0);
+    trans_ddi_ctl.WriteTo(mmio_space());
+
+    auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
+    trans_clk_sel.trans_clock_select().set(0);
+    trans_clk_sel.WriteTo(mmio_space());
+
+    return true;
+}
+
+bool Controller::ResetDdi(registers::Ddi ddi) {
+    registers::DdiRegs ddi_regs(ddi);
+
+    // Disable the port
+    auto ddi_buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
+    bool was_enabled = ddi_buf_ctl.ddi_buffer_enable().get();
+    ddi_buf_ctl.ddi_buffer_enable().set(0);
+    ddi_buf_ctl.WriteTo(mmio_space());
+
+    if (was_enabled && !WAIT_ON_MS(
+            ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status().get(), 8)) {
+        zxlogf(ERROR, "Port failed to go idle\n");
+        return false;
+    }
+
+    // Disable IO power
+    auto pwc2 = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
+    pwc2.ddi_io_power_request(ddi).set(0);
+    pwc2.WriteTo(mmio_space());
+
+    // Remove the PLL mapping and disable the PLL (we don't share PLLs)
+    auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
+    dpll_ctrl2.ddi_clock_off(ddi).set(1);
+    dpll_ctrl2.WriteTo(mmio_space());
+
+    uint8_t dpll_number = static_cast<uint8_t>(dpll_ctrl2.ddi_clock_select(ddi).get());
+    auto dpll_enable = registers::DpllEnable::Get(dpll_number).ReadFrom(mmio_space());
+    dpll_enable.enable_dpll().set(1);
+    dpll_enable.WriteTo(mmio_space());
+
+    return true;
+}
+
+void Controller::AllocDisplayBuffers() {
+    // Do display buffer alloc and watermark programming with fixed allocation from
+    // intel docs. This allows the display to work but prevents power management.
+    // TODO(ZX-1413): Calculate these dynamically based on what's enabled.
+    for (unsigned i = 0; i < registers::kPipeCount; i++) {
+        registers::Pipe pipe = registers::kPipes[i];
+        registers::PipeRegs pipe_regs(pipe);
+
+        // Plane 1 gets everything
+        constexpr uint32_t kPerDdi = 891 / 3;
+        auto buf_cfg = pipe_regs.PlaneBufCfg(1).FromValue(0);
+        buf_cfg.buffer_start().set(kPerDdi * pipe);
+        buf_cfg.buffer_end().set(kPerDdi * (pipe + 1) - 1);
+        buf_cfg.WriteTo(mmio_space());
+
+        // Cursor and planes 2 and 3 get nothing
+        pipe_regs.PlaneBufCfg(0).FromValue(0).WriteTo(mmio_space());
+        pipe_regs.PlaneBufCfg(2).FromValue(0).WriteTo(mmio_space());
+        pipe_regs.PlaneBufCfg(3).FromValue(0).WriteTo(mmio_space());
+
+        auto wm0 = pipe_regs.PlaneWatermark(0).FromValue(0);
+        wm0.enable().set(1);
+        wm0.lines().set(2);
+        wm0.blocks().set(kPerDdi);
+        wm0.WriteTo(mmio_space());
+
+        for (int i = 1; i < 8; i++) {
+            auto wm = pipe_regs.PlaneWatermark(i).FromValue(0);
+            wm.WriteTo(mmio_space());
+        }
+
+        // Write so double-buffered regs are updated
+        auto base = pipe_regs.PlaneSurface().ReadFrom(mmio_space());
+        base.WriteTo(mmio_space());
+    }
+    // TODO(ZX-1413): Wait for vblank instead of sleeping
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
+}
+
 zx_status_t Controller::InitDisplays(uint16_t device_id) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<DisplayDevice> disp_device(nullptr);
     if (ENABLE_MODESETTING && is_gen9(device_id)) {
         BringUpDisplayEngine();
+
+        for (unsigned i = 0; i < registers::kPipeCount; i++) {
+            ResetPipe(registers::kPipes[i]);
+        }
+
+        for (unsigned i = 0; i < registers::kDdiCount; i++) {
+            ResetDdi(registers::kDdis[i]);
+        }
+
+        AllocDisplayBuffers();
 
         for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
             zxlogf(SPEW, "Trying to init display %d\n", registers::kDdis[i]);

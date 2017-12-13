@@ -473,25 +473,6 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     pipe_size.vertical_source_size().set(v_active);
     pipe_size.WriteTo(mmio_space());
 
-    // Do display buffer alloc and watermark programming with fixed allocation from
-    // intel docs. This allows the display to work but prevents power management.
-    // TODO(ZX-1413): Calculate these dynamically based on what's enabled.
-    auto buf_cfg = pipe_regs.PlaneBufCfg().FromValue(0);
-    buf_cfg.buffer_start().set(160 * pipe());
-    buf_cfg.buffer_end().set(160 * pipe() + 159);
-    buf_cfg.WriteTo(mmio_space());
-
-    auto wm0 = pipe_regs.PlaneWatermark(0).FromValue(0);
-    wm0.enable().set(1);
-    wm0.lines().set(2);
-    wm0.blocks().set(160);
-    wm0.WriteTo(mmio_space());
-
-    for (int i = 1; i < 8; i++) {
-        auto wm = pipe_regs.PlaneWatermark(i).FromValue(0);
-        wm.WriteTo(mmio_space());
-    }
-
     auto plane_control = pipe_regs.PlaneControl().FromValue(0);
     plane_control.plane_enable().set(1);
     plane_control.source_pixel_format().set(plane_control.kFormatRgb8888);

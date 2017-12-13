@@ -36,11 +36,15 @@ public:
 
     int IrqLoop();
 
+    bool ResetPipe(registers::Pipe pipe);
+    bool ResetDdi(registers::Ddi ddi);
+
 private:
     void EnableBacklight(bool enable);
     zx_status_t InitHotplug(pci_protocol_t* pci);
     zx_status_t InitDisplays(uint16_t device_id);
     bool BringUpDisplayEngine();
+    void AllocDisplayBuffers();
 
     Gtt gtt_;
 

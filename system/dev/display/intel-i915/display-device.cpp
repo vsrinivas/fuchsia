@@ -122,65 +122,11 @@ bool DisplayDevice::EnablePowerWell2() {
 }
 
 bool DisplayDevice::ResetPipe() {
-    registers::PipeRegs pipe_regs(pipe());
-    registers::TranscoderRegs trans_regs(pipe());
-
-    // Disable planes
-    pipe_regs.PlaneControl().FromValue(0).WriteTo(mmio_space());
-    pipe_regs.PlaneSurface().FromValue(0).WriteTo(mmio_space());
-
-    // Disable transcoder and wait it to stop
-    auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-    trans_conf.transcoder_enable().set(0);
-    trans_conf.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state().get(), 60)) {
-        zxlogf(ERROR, "Failed to reset transcoder\n");
-        return false;
-    }
-
-    // Disable transcoder ddi select and clock select
-    auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-    trans_ddi_ctl.trans_ddi_function_enable().set(0);
-    trans_ddi_ctl.ddi_select().set(0);
-    trans_ddi_ctl.WriteTo(mmio_space());
-
-    auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    trans_clk_sel.trans_clock_select().set(0);
-    trans_clk_sel.WriteTo(mmio_space());
-
-    return true;
+    return controller_->ResetPipe(pipe_);
 }
 
 bool DisplayDevice::ResetDdi() {
-    registers::DdiRegs ddi_regs(ddi());
-
-    // Disable the port
-    auto ddi_buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-    bool was_enabled = ddi_buf_ctl.ddi_buffer_enable().get();
-    ddi_buf_ctl.ddi_buffer_enable().set(0);
-    ddi_buf_ctl.WriteTo(mmio_space());
-
-    if (was_enabled && !WAIT_ON_MS(
-            ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status().get(), 8)) {
-        zxlogf(ERROR, "Port failed to go idle\n");
-        return false;
-    }
-
-    // Disable IO power
-    auto pwc2 = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-    pwc2.ddi_io_power_request(ddi()).set(0);
-    pwc2.WriteTo(mmio_space());
-
-    // Remove the PLL mapping and disable the PLL (we don't share PLLs)
-    auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-    dpll_ctrl2.ddi_clock_off(ddi()).set(1);
-    dpll_ctrl2.WriteTo(mmio_space());
-
-    auto dpll_enable = registers::DpllEnable::Get(dpll()).ReadFrom(mmio_space());
-    dpll_enable.enable_dpll().set(1);
-    dpll_enable.WriteTo(mmio_space());
-
-    return true;
+    return controller_->ResetDdi(ddi_);
 }
 
 bool DisplayDevice::Init() {
