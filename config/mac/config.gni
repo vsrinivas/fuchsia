@@ -6,7 +6,7 @@ assert(current_os == "mac")
 
 declare_args() {
   # Minimum supported version of Mac SDK.
-  mac_sdk_min = "10.9"
+  mac_sdk_min = "10.10"
 
   # Path to Mac SDK.
   mac_sdk_path = ""
