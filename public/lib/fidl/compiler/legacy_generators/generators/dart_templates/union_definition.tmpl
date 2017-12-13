@@ -30,6 +30,9 @@ class {{union|name}} extends bindings.Union {
   {{union|name}}Tag get tag => _tag;
 
 {%-   for field in union.fields %}
+  {{union|name}}.with{{field|name|upper_camel}}({{field.kind|dart_type}} {{field|name}}) {
+    this.{{field|name}} = {{field|name}};
+  }
   {{field.kind|dart_type}} get {{field|name}} {
     if (_tag != {{union|name}}Tag.{{field|name}}) {
       throw new bindings.UnsetUnionTagError(_tag, {{union|name}}Tag.{{field|name}});

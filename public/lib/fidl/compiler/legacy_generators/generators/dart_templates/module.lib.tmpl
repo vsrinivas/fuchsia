@@ -27,6 +27,9 @@ import 'dart:zircon' as zircon;
 {{fidl_types_import}}
 {%- endif %}
 
+// ignore: UNUSED_IMPORT
+import 'package:meta/meta.dart';
+
 {%- for import in imports %}
 import 'package:{{import.rebased_path}}.dart' as {{import.unique_name}};
 {%- endfor %}
