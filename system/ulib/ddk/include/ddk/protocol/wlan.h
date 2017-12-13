@@ -54,16 +54,6 @@ enum {
 };
 
 enum {
-    WLAN_CHAN_WIDTH_5MHZ = 1,
-    WLAN_CHAN_WIDTH_10MHZ = 2,
-    WLAN_CHAN_WIDTH_20MHZ = 3,
-    WLAN_CHAN_WIDTH_40MHZ = 4,
-    WLAN_CHAN_WIDTH_80MHZ = 5,
-    WLAN_CHAN_WIDTH_160MHZ = 6,
-    WLAN_CHAN_WIDTH_80_80MHZ = 7,
-};
-
-enum {
     WLAN_BSS_TYPE_INFRASTRUCTURE = 1,
     WLAN_BSS_TYPE_IBSS = 2,
 };
@@ -175,9 +165,6 @@ typedef struct wlan_rx_info {
     uint32_t valid_fields;
     // The PHY format of the device at the time of the operation.
     uint16_t phy;
-    // TODO(porce): Deprecate gracefully. This information is part of wlan_channel_t.
-    // The channel width of the device.
-    uint16_t chan_width;
     // The data rate of the device, measured in units of 0.5 Mb/s.
     uint32_t data_rate;
     // The channel of the device at the time of the operation. This field must be included.
@@ -217,7 +204,6 @@ typedef struct wlan_tx_info {
     // The PHY format to be used to transmit this packet.
     uint16_t phy;
     // The channel width to be used to transmit this packet.
-    uint16_t chan_width; // TODO(porce): Deprecate together with chan_width in rx_info
     uint8_t cbw;
     // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
     uint32_t data_rate;
