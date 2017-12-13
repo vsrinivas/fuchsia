@@ -741,9 +741,10 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
 
     if (handle == ZX_HANDLE_INVALID) {
         //TODO: lookup process from job instead of treating INVALID as magic
+        // TODO(ZX-923): Rights handling for debug purposes.
         const auto kDebugRights =
-            ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER |
-            ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY | ZX_RIGHT_ENUMERATE;
+            ZX_RIGHTS_BASIC | ZX_RIGHTS_IO |
+            ZX_RIGHTS_PROPERTY | ZX_RIGHT_ENUMERATE;
 
         if (rights == ZX_RIGHT_SAME_RIGHTS) {
             rights = kDebugRights;
