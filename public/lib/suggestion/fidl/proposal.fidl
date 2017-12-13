@@ -30,7 +30,7 @@ struct Proposal {
   // if it were the only proposal presented to the user. A confidence of 0
   // indicates no hint. The confidence assigned by the system may be subject to
   // other considerations such as performance metrics.
-  float confidence;
+  float confidence = 0;
 
   SuggestionDisplay display;
 };

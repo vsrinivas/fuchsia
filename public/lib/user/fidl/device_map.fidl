@@ -34,10 +34,10 @@ struct DeviceMapEntry {
   // that no another hardware will be using while this device is syncing.
   // WARNING: This ID is persisted for an arbitrary amount of time and MAY be
   // revoked or changed between launches of this service on this hardware.
-  string device_id;
+  string? device_id;
 
   // The device's intended usage profile (stored as JSON)
-  string profile;
+  string? profile;
 
   // The last known hostname of this device.
   // HACK(zbowling): this is temporary to assist with matching devices in
