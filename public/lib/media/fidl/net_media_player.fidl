@@ -14,20 +14,20 @@ interface NetMediaPlayer {
 
   // Sets the content url. Passing a null string closes the current content
   // source.
-  SetUrl(string? url);
+  SetUrl@0(string? url);
 
   // Starts playback.
-  Play();
+  Play@1();
 
   // Pauses playback.
-  Pause();
+  Pause@2();
 
   // Seeks to the specified position, specified in nanoseconds.
-  Seek(int64 position);
+  Seek@3(int64 position);
 
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus(uint64 version_last_seen)
+  GetStatus@4(uint64 version_last_seen)
       => (uint64 version, MediaPlayerStatus status);
 };

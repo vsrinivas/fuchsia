@@ -20,50 +20,50 @@ import "lib/media/fidl/video_renderer.fidl";
 [ServiceName="media::MediaService"]
 interface MediaService {
   // Creates a player.
-  CreatePlayer(SeekingReader? reader,
-               MediaRenderer? audio_renderer,
-               MediaRenderer? video_renderer,
-               MediaPlayer& player);
+  CreatePlayer@0(SeekingReader? reader,
+                 MediaRenderer? audio_renderer,
+                 MediaRenderer? video_renderer,
+                 MediaPlayer& player);
 
   // Creates a source. If allowed_media_types is supplied, conversions will be
   // added to each stream as needed to make the media type of the stream match
   // one of the allowed types. If a stream cannot be converted to one of the
   // allowed types, the source will not expose that stream.
-  CreateSource(SeekingReader reader,
-               array<MediaTypeSet>? allowed_media_types,
-               MediaSource& source);
+  CreateSource@1(SeekingReader reader,
+                 array<MediaTypeSet>? allowed_media_types,
+                 MediaSource& source);
 
   // Creates a sink.
-  CreateSink(MediaRenderer renderer, MediaSink& sink);
+  CreateSink@2(MediaRenderer renderer, MediaSink& sink);
 
   // Creates a demux.
-  CreateDemux(SeekingReader reader, MediaSource& demux);
+  CreateDemux@3(SeekingReader reader, MediaSource& demux);
 
   // Creates a decoder.
-  CreateDecoder(MediaType input_media_type, MediaTypeConverter& decoder);
+  CreateDecoder@4(MediaType input_media_type, MediaTypeConverter& decoder);
 
   // Creates a network reader.
-  CreateNetworkReader(string url, SeekingReader& reader);
+  CreateNetworkReader@5(string url, SeekingReader& reader);
 
   // Creates a file reader.
-  CreateFileReader(string path, SeekingReader& reader);
+  CreateFileReader@6(string path, SeekingReader& reader);
 
   // Creates an audio renderer.
-  CreateAudioRenderer(AudioRenderer& audio_renderer,
-                      MediaRenderer& media_renderer);
+  CreateAudioRenderer@7(AudioRenderer& audio_renderer,
+                        MediaRenderer& media_renderer);
 
   // Creates a video renderer.
-  CreateVideoRenderer(VideoRenderer& video_renderer,
-                      MediaRenderer& media_renderer);
+  CreateVideoRenderer@8(VideoRenderer& video_renderer,
+                        MediaRenderer& media_renderer);
 
   // Creates an audio capturer.
-  CreateAudioCapturer(MediaCapturer& media_capturer);
+  CreateAudioCapturer@9(MediaCapturer& media_capturer);
 
   // Creates a timeline controller reader.
-  CreateTimelineController(MediaTimelineController& timeline_controller);
+  CreateTimelineController@10(MediaTimelineController& timeline_controller);
 
   // Creates a reformatter for LPCM audio.
-  CreateLpcmReformatter(MediaType input_media_type,
-                        AudioSampleFormat output_sample_format,
-                        MediaTypeConverter& lpcm_reformatter);
+  CreateLpcmReformatter@11(MediaType input_media_type,
+                          AudioSampleFormat output_sample_format,
+                          MediaTypeConverter& lpcm_reformatter);
 };

@@ -16,24 +16,24 @@ interface MediaSource {
   const uint64 kInitialStatus = 0;
 
   // Describes the source.
-  Describe() => (array<MediaType> stream_types);
+  Describe@0() => (array<MediaType> stream_types);
 
   // Gets the packet producer for the specified stream.
-  GetPacketProducer(uint32 stream_index, MediaPacketProducer& packet_producer);
+  GetPacketProducer@1(uint32 stream_index, MediaPacketProducer& packet_producer);
 
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus(uint64 version_last_seen)
+  GetStatus@2(uint64 version_last_seen)
       => (uint64 version, MediaSourceStatus status);
 
   // Flushes the source and downstream components. |hold_frame| indicates
   // whether a video renderer (if any) should continue to display the last
   // displayed frame.
-  Flush(bool hold_frame) => ();
+  Flush@3(bool hold_frame) => ();
 
   // Seeks to the specified position, specified in nanoseconds.
-  Seek(int64 position) => ();
+  Seek@4(int64 position) => ();
 };
 
 // Describes the status of the media source.

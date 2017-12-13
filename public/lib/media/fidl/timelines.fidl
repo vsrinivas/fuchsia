@@ -74,10 +74,10 @@ interface TimelineConsumer {
   // The callback is called at the effective time or when a pending operation is
   // cancelled due to a subsequent call, in which case the 'completed' value is
   // false.
-  SetTimelineTransform(TimelineTransform timeline_transform) =>
+  SetTimelineTransform@0(TimelineTransform timeline_transform) =>
       (bool completed);
 
   // Same as above, but without the completion callback. This version is useful
   // for clients that use a synchronous proxy or if the reply isn't needed.
-  SetTimelineTransformNoReply(TimelineTransform timeline_transform);
+  SetTimelineTransformNoReply@1(TimelineTransform timeline_transform);
 };

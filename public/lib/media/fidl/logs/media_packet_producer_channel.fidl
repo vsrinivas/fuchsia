@@ -8,16 +8,16 @@ import "lib/media/fidl/media_transport.fidl";
 
 [ServiceName="media::logs::MediaPacketProducerChannel"]
 interface MediaPacketProducerChannel {
-  ConnectedTo(uint64 related_koid);
-  Resetting();
-  RequestingFlush();
-  FlushCompleted();
-  PayloadBufferAllocationFailure(uint32 index, uint64 size);
-  DemandUpdated(MediaPacketDemand demand);
-  ProducingPacket(
+  ConnectedTo@0(uint64 related_koid);
+  Resetting@1();
+  RequestingFlush@2();
+  FlushCompleted@3();
+  PayloadBufferAllocationFailure@4(uint32 index, uint64 size);
+  DemandUpdated@5(MediaPacketDemand demand);
+  ProducingPacket@6(
       uint64 label,
       MediaPacket packet,
       uint64 payload_address,
       uint32 packets_outstanding);
-  RetiringPacket(uint64 label, uint32 packets_outstanding);
+  RetiringPacket@7(uint64 label, uint32 packets_outstanding);
 };

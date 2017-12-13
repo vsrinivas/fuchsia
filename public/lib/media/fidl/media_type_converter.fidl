@@ -10,11 +10,11 @@ import "lib/media/fidl/media_types.fidl";
 // Performs a type conversion on a media stream.
 interface MediaTypeConverter {
   // Gets the converter’s output type.
-  GetOutputType() => (MediaType output_type);
+  GetOutputType@0() => (MediaType output_type);
 
   // Gets the packet consumer.
-  GetPacketConsumer(MediaPacketConsumer& packet_consumer);
+  GetPacketConsumer@1(MediaPacketConsumer& packet_consumer);
 
   // Gets the packet producer.
-  GetPacketProducer(MediaPacketProducer& packet_producer);
+  GetPacketProducer@2(MediaPacketProducer& packet_producer);
 };

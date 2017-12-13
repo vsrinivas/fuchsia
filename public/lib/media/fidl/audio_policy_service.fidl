@@ -22,20 +22,20 @@ interface AudioPolicyService {
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus(uint64 version_last_seen)
+  GetStatus@0(uint64 version_last_seen)
       => (uint64 version, AudioPolicyStatus status);
 
   // Sets the system-wide gain in decibels. |db| values are clamped to the
   // range -160db to 0db inclusive. Setting gain to -160db implicitly mutes
   // system audio. Setting gain to a higher values when it's already -160db
   // implicitly unmutes system audio. Gain and mute are otherwise independent.
-  SetSystemAudioGain(float db);
+  SetSystemAudioGain@1(float db);
 
   // Sets the system-wide 'muted' value. Changing this value has no effect on
   // the system audio gain value. Calling this method with argument |false|
   // has no effect if system audio gain is set to -160db. Gain and mute are
   // otherwise independent.
-  SetSystemAudioMute(bool muted);
+  SetSystemAudioMute@2(bool muted);
 };
 
 // Describes the status of the audio policy service.

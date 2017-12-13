@@ -10,13 +10,13 @@ import "lib/media/fidl/net_media_player.fidl";
 [ServiceName="media::NetMediaService"]
 interface NetMediaService {
   // Creates a net media player that wraps the provided MediaPlayer.
-  CreateNetMediaPlayer(
+  CreateNetMediaPlayer@0(
     string service_name,
     MediaPlayer media_player,
     NetMediaPlayer& net_media_player);
 
   // Creates a proxy for a remote NetMediaPlayer.
-  CreateNetMediaPlayerProxy(
+  CreateNetMediaPlayerProxy@1(
     string device_name,
     string service_name,
     NetMediaPlayer& net_media_player_proxy);

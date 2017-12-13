@@ -8,11 +8,11 @@ import "lib/media/fidl/timelines.fidl";
 
 [ServiceName="media::logs::MediaTimelineControlPointChannel"]
 interface MediaTimelineControlPointChannel {
-  BoundAs(uint64 koid);
-  SetProgramRangeRequested(uint64 program, int64 min_pts, int64 max_pts);
-  PrimeRequested();
-  CompletingPrime();
-  ScheduleTimelineTransform(TimelineTransform timeline_transform);
-  ApplyTimelineTransform(TimelineTransform timeline_transform);
-  ReachedEndOfStream();
+  BoundAs@0(uint64 koid);
+  SetProgramRangeRequested@1(uint64 program, int64 min_pts, int64 max_pts);
+  PrimeRequested@2();
+  CompletingPrime@3();
+  ScheduleTimelineTransform@4(TimelineTransform timeline_transform);
+  ApplyTimelineTransform@5(TimelineTransform timeline_transform);
+  ReachedEndOfStream@6();
 };

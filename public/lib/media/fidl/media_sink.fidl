@@ -15,12 +15,12 @@ interface MediaSink {
   // TODO(dalesat): Support fanout to many destinations.
 
   // Request the timeline control point for this sink
-  GetTimelineControlPoint(MediaTimelineControlPoint& timeline_control_point);
+  GetTimelineControlPoint@0(MediaTimelineControlPoint& timeline_control_point);
 
   // Sets the input media type and produces a new packet consumer that consumes
   // that media type. Returns a null consumer if the media type could not be
   // supported. Calling ConsumeMediaType when a ConsumeMediaType call is already
   // pending will cause the sink to close the connection.
-  ConsumeMediaType(MediaType media_type)
+  ConsumeMediaType@1(MediaType media_type)
       => (MediaPacketConsumer? packet_consumer);
 };

@@ -8,9 +8,9 @@ import "lib/media/fidl/media_types.fidl";
 
 [ServiceName="media::logs::MediaSourceChannel"]
 interface MediaSourceChannel {
-  BoundAs(uint64 koid);
-  CreatedDemux(uint64 related_koid);
-  NewStream(uint32 index,
-            MediaType output_type,
-            array<uint64> converter_koids);
+  BoundAs@0(uint64 koid);
+  CreatedDemux@1(uint64 related_koid);
+  NewStream@2(uint32 index,
+              MediaType output_type,
+              array<uint64> converter_koids);
 };

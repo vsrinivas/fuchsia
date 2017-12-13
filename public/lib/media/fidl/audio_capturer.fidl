@@ -10,7 +10,7 @@ import "lib/media/fidl/media_types.fidl";
 interface AudioCapturerClient {
   // Called when an AudioCapturer operating in AsyncCapture mode has a packet's
   // worth of data to deliver to the client.
-  OnPacketCaptured(MediaPacket packet);
+  OnPacketCaptured@0(MediaPacket packet);
 };
 
 // AudioCapturer
@@ -276,46 +276,46 @@ interface AudioCapturer {
   // enumerate the configuration of these bind-able endpoints (and perhaps to
   // exercise control over them), but it will be the user of the capturer's job
   // to specify the format they want.
-  GetMediaType() => (MediaType media_type);
+  GetMediaType@0() => (MediaType media_type);
 
   // Sets the media type of the stream to be delivered.  Causes the source
   // material to be reformatted/resampled if needed in order to produce the
   // requested media type.  Note that the media type may not be changed after
   // the payload buffer has been established.
-  SetMediaType(MediaType media_type);
+  SetMediaType@1(MediaType media_type);
 
   // Set the gain (in dB) applied to the input.  Gain may be adjusted at any
   // time, but must be on the range...
   // [AudioRenderer::kMutedGain, AudioRenderer::kMaxGain]
-  SetGain(float gain);
+  SetGain@2(float gain);
 
   // Set the shared buffer used to transport captured data.
   //
   // TODO(johngro) : consider extending this so that multiple payload buffers
   // may be assigned if needed.
-  SetPayloadBuffer(handle<vmo> payload_buffer);
+  SetPayloadBuffer@3(handle<vmo> payload_buffer);
 
   // Explicitly specify a region of the shared payload buffer for the audio
   // capturer to capture into.  See the discussion of 'synchronous' vs.
   // 'asynchronous` capture mode (above) for details.
-  CaptureAt(uint32 offset_frames, uint32 num_frames)
+  CaptureAt@4(uint32 offset_frames, uint32 num_frames)
     => (MediaPacket captured_packet);
 
   // Flush all regions specified using CaptureAt from the internal queue of
   // regions to be captured into and (optionally) deliver a callback which may
   // be used by the client if explicit synchronization is needed.  It is illegal
   // to call Flush while operating in asynchronous capture mode.
-  Flush();
-  FlushWithCallback() => ();
+  Flush@5();
+  FlushWithCallback@6() => ();
 
   // Place the capturer into 'async' capture mode and begin to capture packets
   // of exactly 'frames_per_packet' number of frames each.  The client-supplied
   // AudioCapturerClient will be used to inform the client of captured packets.
-  StartAsyncCapture(AudioCapturerClient callback_target,
-                    uint32 frames_per_packet);
+  StartAsyncCapture@7(AudioCapturerClient callback_target,
+                      uint32 frames_per_packet);
 
   // Stop capturing in 'async' capture mode and (optionally) deliver a callback
   // which may be used by the client if explicit synchronization is needed.
-  StopAsyncCapture();
-  StopAsyncCaptureWithCallback() => ();
+  StopAsyncCapture@8();
+  StopAsyncCaptureWithCallback@9() => ();
 };

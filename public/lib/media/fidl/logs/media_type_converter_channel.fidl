@@ -8,8 +8,8 @@ import "lib/media/fidl/media_types.fidl";
 
 [ServiceName="media::logs::MediaTypeConverterChannel"]
 interface MediaTypeConverterChannel {
-  BoundAs(uint64 koid, string converter_type);
-  Config(
+  BoundAs@0(uint64 koid, string converter_type);
+  Config@1(
       MediaType input_type,
       MediaType output_type,
       uint64 consumer_address,

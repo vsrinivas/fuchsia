@@ -111,11 +111,11 @@ struct MediaPacketDemand {
 // calls PushPacket on the consumer to deliver packets.
 interface MediaPacketProducer {
   // Connects this MediaPacketProducer to a MediaPacketConsumer.
-  Connect(MediaPacketConsumer consumer) => ();
+  Connect@0(MediaPacketConsumer consumer) => ();
 
   // Disconnects this MediaPacketProducer from a previously-connected
   // MediaPacketConsumer.
-  Disconnect();
+  Disconnect@1();
 };
 
 // Models a stream consumer. A MediaPacketConsumer allows a client to send
@@ -136,19 +136,19 @@ interface MediaPacketConsumer {
   // sees fit to do so. Demand can be communicated in the response to
   // SupplyPacket, so this method is only used when the demand update can't wait
   // until the next SupplyPacket response is sent.
-  PullDemandUpdate() => (MediaPacketDemand? demand);
+  PullDemandUpdate@0() => (MediaPacketDemand? demand);
 
   // Adds a payload buffer that may subsequently be referenced by a MediaPacket.
-  AddPayloadBuffer(uint32 payload_buffer_id,
-                   handle<vmo> payload_buffer);
+  AddPayloadBuffer@1(uint32 payload_buffer_id,
+                     handle<vmo> payload_buffer);
 
   // Indicates that the identified payload buffer will no longer be used.
-  RemovePayloadBuffer(uint32 payload_buffer_id);
+  RemovePayloadBuffer@2(uint32 payload_buffer_id);
 
   // Supplies a packet to the consumer. The callback signals that the consumer
   // is done with the packet and its payload. Demand is only provided in the
   // response if it has changed.
-  SupplyPacket(MediaPacket packet) => (MediaPacketDemand? demand);
+  SupplyPacket@3(MediaPacket packet) => (MediaPacketDemand? demand);
 
   // Supplies a packet to the consumer without a completion callback. This
   // version is useful for clients that use a synchronous proxy. Without the
@@ -157,10 +157,10 @@ interface MediaPacketConsumer {
   // method is used for audio renderers, in which case the consumer is reliably
   // done with the payload when the last frame of the packet has been presented.
   // The presentation timeline transform can be used to determine this time.
-  SupplyPacketNoReply(MediaPacket packet);
+  SupplyPacketNoReply@4(MediaPacket packet);
 
   // Flushes the stream. The callback signals that the flush operation is
   // complete. |hold_frame| indicates whether a video renderer (if any) should
   // continue to display the last displayed frame.
-  Flush(bool hold_frame) => ();
+  Flush@5(bool hold_frame) => ();
 };

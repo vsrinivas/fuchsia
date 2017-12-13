@@ -9,10 +9,10 @@ import "lib/media/fidl/timelines.fidl";
 // Timing controller for a media graph.
 interface MediaTimelineController {
   // Associates a control point with the controller.
-  AddControlPoint(MediaTimelineControlPoint control_point);
+  AddControlPoint@0(MediaTimelineControlPoint control_point);
 
   // Gets a timeline control point interface for the controller.
-  GetControlPoint(MediaTimelineControlPoint& control_point);
+  GetControlPoint@1(MediaTimelineControlPoint& control_point);
 };
 
 // Media graph component controlled by a MediaTimelineController.
@@ -22,21 +22,21 @@ interface MediaTimelineControlPoint {
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version sent
   // in the previous callback.
-  GetStatus(uint64 version_last_seen) =>
+  GetStatus@0(uint64 version_last_seen) =>
       (uint64 version, MediaTimelineControlPointStatus status);
 
   // Gets a timeline consumer interface for the control point.
-  GetTimelineConsumer(TimelineConsumer& timeline_consumer);
+  GetTimelineConsumer@1(TimelineConsumer& timeline_consumer);
 
   // Specifies the range of PTS values to be accepted at this control point for
   // the given program.
-  SetProgramRange(uint64 program, int64 min_pts, int64 max_pts);
+  SetProgramRange@2(uint64 program, int64 min_pts, int64 max_pts);
 
   // Signals that the control point should prepare for a timeline transition
   // away from zero rate (stopped). The response indicates that the control
   // point is ready for the transition.
   // TODO(dalesat): Include a rate so the renderer won't starve on fast play.
-  Prime() => ();
+  Prime@3() => ();
 };
 
 // Status returned by MediaTimelineControlPoint's GetStatus method.

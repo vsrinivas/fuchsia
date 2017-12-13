@@ -8,19 +8,19 @@ import "lib/media/fidl/media_transport.fidl";
 
 [ServiceName="media::logs::MediaPacketConsumerChannel"]
 interface MediaPacketConsumerChannel {
-  BoundAs(uint64 koid);
-  DemandSet(MediaPacketDemand demand);
-  Reset();
-  Failed();
-  RespondingToGetDemandUpdate(MediaPacketDemand demand);
-  AddPayloadBufferRequested(uint32 id, uint64 size);
-  RemovePayloadBufferRequested(uint32 id);
-  FlushRequested();
-  CompletingFlush();
-  PacketSupplied(
+  BoundAs@0(uint64 koid);
+  DemandSet@1(MediaPacketDemand demand);
+  Reset@2();
+  Failed@3();
+  RespondingToGetDemandUpdate@4(MediaPacketDemand demand);
+  AddPayloadBufferRequested@5(uint32 id, uint64 size);
+  RemovePayloadBufferRequested@6(uint32 id);
+  FlushRequested@7();
+  CompletingFlush@8();
+  PacketSupplied@9(
       uint64 label,
       MediaPacket packet,
       uint64 payload_address,
       uint32 packets_outstanding);
-  ReturningPacket(uint64 label, uint32 packets_outstanding);
+  ReturningPacket@10(uint64 label, uint32 packets_outstanding);
 };

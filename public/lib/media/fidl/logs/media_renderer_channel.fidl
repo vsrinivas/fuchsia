@@ -9,16 +9,16 @@ import "lib/media/fidl/timelines.fidl";
 
 [ServiceName="media::logs::MediaRendererChannel"]
 interface MediaRendererChannel {
-  BoundAs(uint64 koid);
-  Config(
+  BoundAs@0(uint64 koid);
+  Config@1(
       array<MediaTypeSet> supported_types,
       uint64 consumer_address,
       uint64 timeline_control_point_address);
-  SetMediaType(MediaType media_type);
+  SetMediaType@2(MediaType media_type);
 
   // Establishes the PTS rate used for PTS values in |EngagePacket| and
   // |RenderRange|. The default PTS rate is |TimelineRate::NsPerSecond|.
-  PtsRate(uint32 ticks, uint32 seconds);
+  PtsRate@3(uint32 ticks, uint32 seconds);
 
   // Reports packet usage in a manner suitable for video renderers. This method
   // essentially states that the renderer looked for a packet to render at
@@ -27,12 +27,12 @@ interface MediaRendererChannel {
   // rendering, |packet_pts| is |MediaPacket::kNoTimestamp| and |packet_label|
   // is zero. Note that the units reflected by the PTS values is established
   // using the |PtsRate| method.
-  EngagePacket(int64 current_pts, int64 packet_pts, uint64 packet_label);
+  EngagePacket@4(int64 current_pts, int64 packet_pts, uint64 packet_label);
 
   // Reports packet usage in a manner suitable for audio renderers. This method
   // essentially states that the renderer needed content for the range starting
   // at |pts| and ending immediately before |pts + duration|. Note that the
   // units reflected by the PTS values is established using the |PtsRate|
   // method.
-  RenderRange(int64 pts, uint32 duration);
+  RenderRange@5(int64 pts, uint32 duration);
 };

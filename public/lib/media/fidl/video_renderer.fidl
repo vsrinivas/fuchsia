@@ -16,11 +16,11 @@ interface VideoRenderer {
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus(uint64 version_last_seen)
+  GetStatus@0(uint64 version_last_seen)
       => (uint64 version, VideoRendererStatus status);
 
   // Creates a video view.
-  CreateView(mozart.ViewOwner& view_owner);
+  CreateView@1(mozart.ViewOwner& view_owner);
 };
 
 // VideoRenderer status information.
