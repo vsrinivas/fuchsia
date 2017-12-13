@@ -28,5 +28,5 @@ struct ViewToken {
 // to obtain the desired ownership semantics.
 interface ViewOwner {
   // Gets the |ViewToken| associated with the view.
-  GetToken() => (ViewToken token);
+  GetToken@0() => (ViewToken token);
 };

@@ -11,12 +11,12 @@ import "lib/ui/scenic/fidl/renderer.fidl";
 interface Presentation {
   // Enable or disable clipping for the Scenic renderer associated with the
   // presentation.
-  EnableClipping(bool enabled);
+  EnableClipping@0(bool enabled);
 
-  UseOrthographicView();
-  UsePerspectiveView();
+  UseOrthographicView@1();
+  UsePerspectiveView@2();
 
   // Set parameters such as the shadow algorithm used to render the scene.
   // NOTE: a single param would be better than an array; see TO-529.
-  SetRendererParams(array<scenic.RendererParam> params);
+  SetRendererParams@3(array<scenic.RendererParam> params);
 };

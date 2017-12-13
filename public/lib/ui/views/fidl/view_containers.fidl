@@ -47,7 +47,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 // context to know what to draw).
 interface ViewContainer {
   // Sets the view container listener, or null to remove.
-  SetListener(ViewContainerListener? listener);
+  SetListener@0(ViewContainerListener? listener);
 
   // Adds the view referenced by |child_view_owner| as a child and assigns
   // it the provided |child_key| to identify it among its children.
@@ -96,7 +96,7 @@ interface ViewContainer {
   //
   // It is an error to add more than one child to a |ViewTree|'s container;
   // it can only have at most one child (its root).
-  AddChild(uint32 child_key, ViewOwner child_view_owner,
+  AddChild@1(uint32 child_key, ViewOwner child_view_owner,
       handle<eventpair> host_import_token);
 
   // Removes the view referenced by |child_key| from the view's
@@ -108,7 +108,7 @@ interface ViewContainer {
   //
   // It is an error to remove a view whose |child_key| does not appear
   // in the container's list of children; the connection will be closed.
-  RemoveChild(uint32 child_key, ViewOwner&? transferred_view_owner);
+  RemoveChild@2(uint32 child_key, ViewOwner&? transferred_view_owner);
 
   // Sets view properties for the child, such as layout constraints.
   //
@@ -135,10 +135,10 @@ interface ViewContainer {
   //
   // It is an error to specify malformed |child_view_properties| such
   // as invalid layout properties; the connection will be closed.
-  SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
+  SetChildProperties@3(uint32 child_key, ViewProperties? child_view_properties);
 
   // Request the child view to get input focus for key events.
-  RequestFocus(uint32 child_key);
+  RequestFocus@4(uint32 child_key);
 };
 
 // An interface clients may implement to receive events from a view container.
@@ -149,7 +149,7 @@ interface ViewContainerListener {
   //
   // The implementation should invoke the callback once the event has
   // been handled.
-  OnChildAttached(uint32 child_key, ViewInfo child_view_info) => ();
+  OnChildAttached@0(uint32 child_key, ViewInfo child_view_info) => ();
 
   // Called when a child view has become unavailable.
   //
@@ -162,7 +162,7 @@ interface ViewContainerListener {
   //
   // The implementation should invoke the callback once the event has
   // been handled.
-  OnChildUnavailable(uint32 child_key) => ();
+  OnChildUnavailable@1(uint32 child_key) => ();
 
   // TODO(jeffbrown): Once we figure out measurement, add a |OnChildResized|
   // event or similar to allow the container to get the size along with the

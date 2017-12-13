@@ -15,10 +15,10 @@ import "lib/ui/input/fidl/input_reports.fidl";
 [ServiceName="mozart::InputDeviceRegistry"]
 interface InputDeviceRegistry {
   // Register a device with the capabilities described by |DeviceDescriptor|
-  RegisterDevice(DeviceDescriptor descriptor, InputDevice& input_device);
+  RegisterDevice@0(DeviceDescriptor descriptor, InputDevice& input_device);
 };
 
 interface InputDevice {
   // Dispatch an |InputReport| from the device |token|
-  DispatchReport(InputReport report);
+  DispatchReport@0(InputReport report);
 };

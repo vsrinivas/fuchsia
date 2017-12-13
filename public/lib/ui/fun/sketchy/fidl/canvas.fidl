@@ -13,7 +13,7 @@ import "lib/ui/scenic/fidl/presentation_info.fidl";
 [ServiceName="sketchy::Canvas"]
 interface Canvas {
   // Init() must be called once, before invoking any other operations.
-  Init(CanvasListener? listener);
+  Init@0(CanvasListener? listener);
 
   // Enqueue a list of operations, which will not take effect until Present() is
   // called.  It is allowable to call Enqueue() several times before calling
@@ -21,20 +21,20 @@ interface Canvas {
   // concatenated into a single Enqueue() call.
   //
   // Akin to scenic::Session.Enqueue(); see scenic/session.fidl for details.
-  Enqueue(array<Op> ops);
+  Enqueue@1(array<Op> ops);
 
   // Present all previously enqueued operations.  In order to pipeline the
   // preparation of the resources required to render the scene, two lists of
   // fences (implemented as events) are passed.
   //
   // Akin to scenic::Session.Present(); see scenic/session.fidl for details.
-  Present(uint64 presentation_time) =>
+  Present@2(uint64 presentation_time) =>
       (scenic.PresentationInfo presentation_info);
 };
 
 // Allows clients to observe canvas events.
 interface CanvasListener {
-  OnError(string description);
-  OnStrokeFinished(uint32 stroke_id, StrokePath path);
-  OnPageViewerInvalidated(uint32 viewer_id);
+  OnError@0(string description);
+  OnStrokeFinished@1(uint32 stroke_id, StrokePath path);
+  OnPageViewerInvalidated@2(uint32 viewer_id);
 };

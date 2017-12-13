@@ -47,7 +47,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 // 3. Set listeners on the input connection to receive events.
 interface View {
   // Gets the view's token.
-  GetToken() => (ViewToken token);
+  GetToken@0() => (ViewToken token);
 
   // Gets a service provider to access services which are associated with
   // the view such as input, accessibility and editing capabilities.
@@ -55,7 +55,7 @@ interface View {
   // shared with anyone else.
   //
   // See |InputConnection|.
-  GetServiceProvider(app.ServiceProvider& service_provider);
+  GetServiceProvider@1(app.ServiceProvider& service_provider);
 
   // This is a way for an app to offer services that are associated with a
   // particular view. Used to expose services to the compositor
@@ -68,11 +68,11 @@ interface View {
   //
   // The list of services will be used by the compositor to filter service
   // providers when looking for a particular service.
-  OfferServiceProvider(app.ServiceProvider service_provider,
-                       array<string> service_names);
+  OfferServiceProvider@2(app.ServiceProvider service_provider,
+                         array<string> service_names);
 
   // Gets an interface for managing the view's children.
-  GetContainer(ViewContainer& container);
+  GetContainer@3(ViewContainer& container);
 };
 
 // An interface clients may implement to receive events from a view.
@@ -81,5 +81,5 @@ interface ViewListener {
   // Initially the view has no properties so this method will be called
   // as soon as properties first become available and whenever they change
   // thereafter.
-  OnPropertiesChanged(ViewProperties properties) => ();
+  OnPropertiesChanged@0(ViewProperties properties) => ();
 };

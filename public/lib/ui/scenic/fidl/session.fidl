@@ -13,7 +13,7 @@ interface Session {
   // called.  It is allowable to call Enqueue() several times before calling
   // Present(); the effect is the same as if all operations had been
   // concatenated into a single Enqueue() call.
-  Enqueue(array<Op> op);
+  Enqueue@0(array<Op> op);
 
   // Present all previously enqueued operations.  In order to pipeline the
   // preparation of the resources required to render the scene, two lists of
@@ -126,7 +126,7 @@ interface Session {
   // e.g. that all frames based on previous presentations are completely done,
   // and subsequent frames will be rendered based on the most recent presented
   // content?
-  Present(uint64 presentation_time,
+  Present@1(uint64 presentation_time,
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
       (PresentationInfo presentation_info);
 
@@ -158,7 +158,7 @@ interface Session {
   // to be normalized.
   //
   // Returns a null hit array if |node_id| is unknown or not a node.
-  HitTest(uint32 node_id, vec3 ray_origin, vec3 ray_direction) =>
+  HitTest@2(uint32 node_id, vec3 ray_origin, vec3 ray_direction) =>
       (array<Hit>? hits);
 };
 
@@ -188,9 +188,9 @@ struct Hit {
 // Listens for events which occur within the session.
 interface SessionListener {
   // Called when an error has occurred and the session will be torn down.
-  OnError(string error);
+  OnError@0(string error);
 
   // Called to deliver a batch of one or more events to the listener.
   // Use |SetEventMaskOp| to enable event delivery for a resource.
-  OnEvent(array<Event> events);
+  OnEvent@1(array<Event> events);
 };

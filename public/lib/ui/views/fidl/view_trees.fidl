@@ -48,7 +48,7 @@ import "lib/ui/views/fidl/view_tree_token.fidl";
 // 3. Send input events to the dispatcher for delivery to views.
 interface ViewTree {
   // Gets the view tree's token.
-  GetToken() => (ViewTreeToken token);
+  GetToken@0() => (ViewTreeToken token);
 
   // Gets a service provider to access services which are associated with
   // the view tree such as input, accessibility and editing capabilities.
@@ -56,10 +56,10 @@ interface ViewTree {
   // not be shared with anyone else.
   //
   // See |InputDispatcher|.
-  GetServiceProvider(app.ServiceProvider& service_provider);
+  GetServiceProvider@1(app.ServiceProvider& service_provider);
 
   // Gets an interface for managing the view tree's root.
-  GetContainer(ViewContainer& container);
+  GetContainer@2(ViewContainer& container);
 };
 
 // An interface clients may implement to receive events from a view tree.

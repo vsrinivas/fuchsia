@@ -21,14 +21,14 @@ interface InputConnection {
   // Sets the listener for receiving input events.
   //
   // If |listener| is null, then the previously set listener is removed.
-  SetEventListener(InputListener? listener);
+  SetEventListener@0(InputListener? listener);
 
   // Retrieves an |InputMethodEditor| to handle text editing.
-  GetInputMethodEditor(KeyboardType keyboard_type,
-                       InputMethodAction action,
-                       TextInputState initial_state,
-                       InputMethodEditorClient client,
-                       InputMethodEditor& editor);
+  GetInputMethodEditor@1(KeyboardType keyboard_type,
+                         InputMethodAction action,
+                         TextInputState initial_state,
+                         InputMethodEditorClient client,
+                         InputMethodEditor& editor);
 };
 
 // An interface applications may implement to receive events from an
@@ -40,5 +40,5 @@ interface InputListener {
   // The |consumed| result should indicate whether the input event was
   // consumed by the connection.  If |consumed| is false, the system may
   // apply default behavior of its own in response to the event.
-  OnEvent(InputEvent event) => (bool consumed);
+  OnEvent@0(InputEvent event) => (bool consumed);
 };

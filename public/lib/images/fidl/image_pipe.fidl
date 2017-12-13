@@ -77,8 +77,8 @@ interface ImagePipe {
   // - |memory| is not a handle for a readable VMO
   // - the image data expected at |memory_offset| according to the |image_info|
   //   exceeds the memory object's bounds
-  AddImage(uint32 image_id, ImageInfo image_info,
-           handle<vmo> memory, MemoryType memory_type, uint64 memory_offset);
+  AddImage@0(uint32 image_id, ImageInfo image_info,
+             handle<vmo> memory, MemoryType memory_type, uint64 memory_offset);
 
   // Removes an image resource from the pipe.
   //
@@ -94,7 +94,7 @@ interface ImagePipe {
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| does not reference a currently registered image resource
-  RemoveImage(uint32 image_id);
+  RemoveImage@1(uint32 image_id);
 
   // Enqueues the specified image for presentation by the consumer.
   //
@@ -113,7 +113,7 @@ interface ImagePipe {
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| does not reference a currently registered image resource
-  PresentImage(uint32 image_id, uint64 presentation_time,
+  PresentImage@2(uint32 image_id, uint64 presentation_time,
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
           (PresentationInfo presentation_info);
 };

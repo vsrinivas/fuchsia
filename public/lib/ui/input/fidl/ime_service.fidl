@@ -11,11 +11,11 @@ import "lib/ui/input/fidl/input_events.fidl";
 // The service provided by an IME
 [ServiceName="mozart::ImeService"]
 interface ImeService {
-  GetInputMethodEditor(KeyboardType keyboard_type,
-                       InputMethodAction action,
-                       TextInputState initial_state,
-                       InputMethodEditorClient client,
-                       InputMethodEditor& editor);
+  GetInputMethodEditor@0(KeyboardType keyboard_type,
+                         InputMethodAction action,
+                         TextInputState initial_state,
+                         InputMethodEditorClient client,
+                         InputMethodEditor& editor);
 };
 
 // This is the service a view should expose when it can show and hide a
@@ -24,6 +24,6 @@ interface ImeService {
 // View can use the |OfferServiceProvider| API to expose that service.
 [ServiceName="mozart::SoftKeyboardContainer"]
 interface SoftKeyboardContainer {
-  Show() => (bool shown);
-  Hide();
+  Show@0() => (bool shown);
+  Hide@1();
 };

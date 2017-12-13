@@ -12,5 +12,5 @@ import "lib/ui/views/fidl/view_token.fidl";
 // concerns up to the discretion of the presenter implementation.
 [ServiceName="mozart::Presenter"]
 interface Presenter {
-  Present(mozart.ViewOwner view_owner, mozart.Presentation&? presentation_request);
+  Present@0(mozart.ViewOwner view_owner, mozart.Presentation&? presentation_request);
 };

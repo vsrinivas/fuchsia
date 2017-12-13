@@ -23,6 +23,6 @@ interface ViewProvider {
   //
   // The caller may request services from the created view via the |services|
   // service provider.
-  CreateView(ViewOwner& view_owner,
-             app.ServiceProvider&? services);
+  CreateView@0(ViewOwner& view_owner,
+               app.ServiceProvider&? services);
 };

@@ -26,7 +26,7 @@ interface ViewManager {
   // Gets the scene manager associated with this view manager.
   // All graphical content for this view manager's views and view trees
   // must come from sessions created by this |scene_manager|.
-  GetSceneManager(scenic.SceneManager& scene_manager);
+  GetSceneManager@0(scenic.SceneManager& scene_manager);
 
   // Creates a view.
   //
@@ -58,11 +58,11 @@ interface ViewManager {
   //
   // To destroy the view and cause it to be removed from the view tree,
   // simply close the |view|, |view_listener|, or |view_owner| channels.
-  CreateView(View& view,
-             ViewOwner& view_owner,
-             ViewListener view_listener,
-             handle<eventpair> parent_export_token,
-             string? label);
+  CreateView@1(View& view,
+               ViewOwner& view_owner,
+               ViewListener view_listener,
+               handle<eventpair> parent_export_token,
+               string? label);
 
   // Creates a view tree.
   //
@@ -77,7 +77,7 @@ interface ViewManager {
   //
   // To destroy the view tree simply close the |view_tree| or
   // |view_tree_listener| channels.
-  CreateViewTree(ViewTree& view_tree,
-                 ViewTreeListener view_tree_listener,
-                 string? label);
+  CreateViewTree@2(ViewTree& view_tree,
+                   ViewTreeListener view_tree_listener,
+                   string? label);
 };
