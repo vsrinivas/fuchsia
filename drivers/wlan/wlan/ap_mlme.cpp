@@ -32,7 +32,17 @@ zx_status_t ApMlme::Init() {
 
 zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
     debugfn();
-    // TODO(hahnr): Implement.
+
+    switch (id.target()) {
+    case to_enum_type(ObjectTarget::kBss):{
+        common::MacAddr client_addr(id.mac());
+        return bss_->HandleTimeout(client_addr);
+    }
+    default:
+        ZX_DEBUG_ASSERT(false);
+        break;
+    }
+
     return ZX_OK;
 }
 

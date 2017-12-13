@@ -2,11 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dispatcher.h"
 #include "infra_bss.h"
 #include "packet.h"
 #include "serialize.h"
 
 namespace wlan {
+
+zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
+    if (clients_.Has(client_addr)) {
+        // TODO(hahnr): Notify remote client about timeout.
+    }
+    return ZX_OK;
+}
 
 bool InfraBss::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
     // Drop management frames which are not targeted towards this BSS.
@@ -81,6 +89,7 @@ zx_status_t InfraBss::HandleAssociationRequest(const MgmtFrame<AssociationReques
     // TODO(hahnr): Verify capabilities, ssid, rates, rsn, etc.
     // For now simply send association response.
     SendAssociationResponse(client_addr, status_code::kSuccess);
+    // TODO(hahnr): Create RemoteClient and pass timer created via CreateClientTimer(client_addr).
     return ZX_ERR_STOP;
 }
 
@@ -110,6 +119,21 @@ zx_status_t InfraBss::SendAssociationResponse(const common::MacAddr& dst,
     status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("[infra-bss] could not send auth response packet: %d\n", status);
+        return status;
+    }
+    return ZX_OK;
+}
+
+zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
+                                        fbl::unique_ptr<Timer>* out_timer) {
+    ObjectId timer_id;
+    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    timer_id.set_target(to_enum_type(ObjectTarget::kBss));
+    timer_id.set_mac(client_addr.ToU64());
+    zx_status_t status =
+        device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), out_timer);
+    if (status != ZX_OK) {
+        errorf("could not create scan timer: %d\n", status);
         return status;
     }
     return ZX_OK;

@@ -20,6 +20,8 @@ namespace bss {
 using timestamp_t = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
 }
 
+class ObjectId;
+
 // An infrastructure BSS which keeps track of its client and owned by the AP MLME.
 class InfraBss : public FrameHandler {
    public:
@@ -28,6 +30,8 @@ class InfraBss : public FrameHandler {
         started_at_ = std::chrono::steady_clock::now();
     }
     virtual ~InfraBss() = default;
+
+    zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
     const common::MacAddr& bssid();
     uint16_t next_seq_no();
@@ -43,6 +47,9 @@ class InfraBss : public FrameHandler {
     zx_status_t SendAssociationResponse(const common::MacAddr& dst, status_code::StatusCode);
     // TODO(hahnr): Handle Disassocation/Deauthentication.
     // TODO(hahnr): Handle DataFrames.
+
+    zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
+                                  fbl::unique_ptr<Timer>* out_timer);
 
     // Allocates a new Packet and fills in management header information.
     template <typename Body>
