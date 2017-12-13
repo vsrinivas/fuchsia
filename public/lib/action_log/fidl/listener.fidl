@@ -13,6 +13,6 @@ struct UserAction {
 
 interface ActionLogListener {
   // Receives an action that was just logged.
-  OnAction(UserAction action);
+  OnAction@0(UserAction action);
 };
 

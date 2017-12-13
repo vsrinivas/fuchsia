@@ -50,6 +50,6 @@ interface Module {
   // ModuleContext.Done() signals this module requests to be stopped.
   //
   // TODO(vardhan): Move outgoing_services as getter into ModuleContext.
-  Initialize(ModuleContext module_context,
-             app.ServiceProvider&? outgoing_services);
+  Initialize@0(ModuleContext module_context,
+               app.ServiceProvider&? outgoing_services);
 };

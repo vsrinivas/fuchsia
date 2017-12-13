@@ -25,7 +25,7 @@ interface Agent {
   // |requestor_url| is the identifier for the component which called
   // ComponentContext::ConnectToAgent().
   // |services| are the services that are provided to that component.
-  Connect(string requestor_url, app.ServiceProvider& services);
+  Connect@0(string requestor_url, app.ServiceProvider& services);
 
   // Called when some task identified by |task_id| is scheduled to run. The task
   // was first posted by this Agent using AgentContext::ScheduleTask(). The
@@ -35,5 +35,5 @@ interface Agent {
   // TODO(alhaad): The current implementation allows the Agent to run a task
   // until its callback returns. Instead, we should cap task length with
   // strategies like budgets.
-  RunTask(string task_id) => ();
+  RunTask@1(string task_id) => ();
 };

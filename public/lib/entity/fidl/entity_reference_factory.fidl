@@ -21,5 +21,5 @@ interface EntityReferenceFactory {
   // |cookie| should uniquely identify the |Entity| within the scope of the
   // calling entity provider. For example, it may be used as the primary key
   // value for a database.
-   CreateReference(string cookie) => (string entity_reference);
+   CreateReference@0(string cookie) => (string entity_reference);
 };

@@ -9,7 +9,7 @@ import "lib/suggestion/fidl/proposal_publisher.fidl";
 
 [ServiceName="maxwell.action_log.UserActionLogFactory"]
 interface UserActionLogFactory {
-  GetUserActionLog(
+  GetUserActionLog@0(
       maxwell.ProposalPublisher proposal_publisher,
       UserActionLog& request);
 };

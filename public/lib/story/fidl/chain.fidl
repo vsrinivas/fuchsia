@@ -17,11 +17,11 @@ import "lib/story/fidl/create_link.fidl";
 // No service name: returned from ModuleContext.GetChain().
 interface Chain {
   // Return the list of keys that were provided when the Chain was created.
-  GetKeys() => (array<string> keys);
+  GetKeys@0() => (array<string> keys);
 
   // Gets a Link instance for the given key. If |key| is not in GetKeys(),
   // closes |request| immediately.
-  GetLink(string key, Link& request);
+  GetLink@1(string key, Link& request);
 };
 
 struct ChainPath {

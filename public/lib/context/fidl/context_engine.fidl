@@ -13,9 +13,9 @@ import "lib/user_intelligence/fidl/scope.fidl";
 // context data.
 [ServiceName="maxwell.ContextEngine"]
 interface ContextEngine {
-  GetReader(ComponentScope client_info, ContextReader& request);
+  GetReader@0(ComponentScope client_info, ContextReader& request);
 
-  GetWriter(ComponentScope client_info, ContextWriter& request);
+  GetWriter@1(ComponentScope client_info, ContextWriter& request);
 
-  GetContextDebug(ContextDebug& request);
+  GetContextDebug@2(ContextDebug& request);
 };

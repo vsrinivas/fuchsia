@@ -12,5 +12,5 @@ interface Lifecycle {
   //
   // If the application does not terminate itself in a timely manner, the client
   // may forcibly terminate the application.
-  Terminate();
+  Terminate@0();
 };

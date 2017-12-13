@@ -14,7 +14,7 @@ interface ContextWriter {
   // allowing the client to set and update the contents at a later time.  The
   // value is removed from the Context service when |value_writer| is closed or
   // a connection error occurs.
-  CreateValue(ContextValueWriter& value_writer, ContextValueType type);
+  CreateValue@0(ContextValueWriter& value_writer, ContextValueType type);
 
   // This method is here to make transitioning from topic-based context
   // publishing to CreateValue() easier and will be removed eventually.
@@ -27,7 +27,7 @@ interface ContextWriter {
   //
   // TODO(thatguy): Remove this method and replace its behavior with
   // client-side library methods.
-  WriteEntityTopic(string topic, string? value);
+  WriteEntityTopic@1(string topic, string? value);
 };
 
 interface ContextValueWriter {
@@ -36,9 +36,9 @@ interface ContextValueWriter {
   //
   // TODO(thatguy): What is the lifetime relationship between these two values?
   // Ie, does removing the parent remove all its children?
-  CreateChildValue(ContextValueWriter& value_writer, ContextValueType type);
+  CreateChildValue@0(ContextValueWriter& value_writer, ContextValueType type);
 
   // Updates the content and/or metadata of this value. If either |content| or
   // |metadata| are left null, the existing values will remain.
-  Set(string? content, ContextMetadata? metadata);
+  Set@1(string? content, ContextMetadata? metadata);
 };

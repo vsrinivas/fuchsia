@@ -22,7 +22,7 @@ interface UserIntelligenceProviderFactory {
   //
   // NOTE: Any future dependencies needed are provided here, and are assumed to
   // be scoped to the user.
-  GetUserIntelligenceProvider(
+  GetUserIntelligenceProvider@0(
       modular.ComponentContext user_intelligence_context,
       maxwell.ContextEngine context_engine,
       modular.StoryProvider story_provider,
@@ -43,10 +43,10 @@ interface UserIntelligenceProvider {
   // to put any and all services that are to be exposed to Agents and Modules.
   // Once our understanding of the needs of Agents/Modules is clearer, we
   // should break the bucket apart.
-  GetComponentIntelligenceServices(ComponentScope scope,
-                                   IntelligenceServices& services);
+  GetComponentIntelligenceServices@0(ComponentScope scope,
+                                     IntelligenceServices& services);
 
-  GetSuggestionProvider(SuggestionProvider& suggestion_provider);
+  GetSuggestionProvider@1(SuggestionProvider& suggestion_provider);
 
-  GetResolver(resolver.Resolver& resolver);
+  GetResolver@2(resolver.Resolver& resolver);
 };

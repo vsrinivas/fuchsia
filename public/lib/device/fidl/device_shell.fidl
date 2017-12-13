@@ -21,8 +21,8 @@ import "lib/ui/views/fidl/view_token.fidl";
 // DeviceShellContext.Shutdown(), or by the system shutting down.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
-  Initialize(DeviceShellContext device_shell_context,
-             DeviceShellParams device_shell_params);
+  Initialize@0(DeviceShellContext device_shell_context,
+               DeviceShellParams device_shell_params);
 
   // This method may be invoked by the device runner to request an
   // AuthenticationContext associated with |username|. |request| will then be
@@ -31,18 +31,18 @@ interface DeviceShell {
   //
   // A |request| is tied to a |username| because the device runner allows
   // multiple users to be logged in at the same time.
-  GetAuthenticationContext(string username,
-                           AuthenticationContext& request);
+  GetAuthenticationContext@1(string username,
+                             AuthenticationContext& request);
 };
 
 // This interface allows the |DeviceShell| to request capabilities from the
 // |DeviceRunner| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 interface DeviceShellContext {
-  GetUserProvider(UserProvider& request);
+  GetUserProvider@0(UserProvider& request);
 
   // This requests the shutdown of the device runner.
-  Shutdown();
+  Shutdown@1();
 };
 
 // These params are passed to |DeviceShell.Initialize|.
@@ -59,8 +59,8 @@ interface AuthenticationContext {
   // Requests device shell to display |view_owner| for authentication. Note that
   // another call to StartOverlay() will not be made until StopOverlay() has
   // been called.
-  StartOverlay(mozart.ViewOwner view_owner);
+  StartOverlay@0(mozart.ViewOwner view_owner);
 
   // Requests device shell to stop displaying the auth view.
-  StopOverlay();
+  StopOverlay@1();
 };

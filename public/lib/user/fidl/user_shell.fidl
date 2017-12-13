@@ -30,7 +30,7 @@ import "lib/user/fidl/focus.fidl";
 // system shutting down.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
-  Initialize(UserShellContext user_shell_context);
+  Initialize@0(UserShellContext user_shell_context);
 };
 
 // This interface allows the |UserShell| to request capabilities from the
@@ -43,23 +43,23 @@ interface UserShell {
 interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
-  GetAccount() => (auth.Account? account);
-  GetAgentProvider(AgentProvider& request);
-  GetComponentContext(ComponentContext& request);
-  GetContextReader(maxwell.ContextReader& request);
-  GetContextWriter(maxwell.ContextWriter& request);
-  GetDeviceName() => (string device_name);
-  GetFocusController(FocusController& request);
-  GetFocusProvider(FocusProvider& request);
-  GetIntelligenceServices(maxwell.IntelligenceServices& request);
-  GetLink(Link& request);
-  GetPresentation(mozart.Presentation& presentation);
-  GetProposalPublisher(maxwell.ProposalPublisher& request);
-  GetStoryProvider(StoryProvider& request);
-  GetSuggestionProvider(maxwell.SuggestionProvider& request);
-  GetVisibleStoriesController(VisibleStoriesController& request);
+  GetAccount@0() => (auth.Account? account);
+  GetAgentProvider@1(AgentProvider& request);
+  GetComponentContext@2(ComponentContext& request);
+  GetContextReader@3(maxwell.ContextReader& request);
+  GetContextWriter@4(maxwell.ContextWriter& request);
+  GetDeviceName@5() => (string device_name);
+  GetFocusController@6(FocusController& request);
+  GetFocusProvider@7(FocusProvider& request);
+  GetIntelligenceServices@8(maxwell.IntelligenceServices& request);
+  GetLink@9(Link& request);
+  GetPresentation@10(mozart.Presentation& presentation);
+  GetProposalPublisher@11(maxwell.ProposalPublisher& request);
+  GetStoryProvider@12(StoryProvider& request);
+  GetSuggestionProvider@13(maxwell.SuggestionProvider& request);
+  GetVisibleStoriesController@14(VisibleStoriesController& request);
 
   // Requests logout of the user. This causes the device runner to tear down the
   // |UserRunner| instance of the user.
-  Logout();
+  Logout@15();
 };

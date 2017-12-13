@@ -18,20 +18,20 @@ import "lib/ui/views/fidl/view_token.fidl";
 interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
-  Initialize(auth.Account? account,
-             AppConfig user_shell,
-             AppConfig story_shell,
-             auth.TokenProviderFactory token_provider_factory,
-             UserContext user_context,
-             mozart.ViewOwner&? view_owner);
+  Initialize@0(auth.Account? account,
+               AppConfig user_shell,
+               AppConfig story_shell,
+               auth.TokenProviderFactory token_provider_factory,
+               UserContext user_context,
+               mozart.ViewOwner&? view_owner);
 };
 
 // This interface is provided by device runner to |UserRunner|.
 interface UserContext {
   // See detailed comments in UserShellContext.Logout().
-  Logout();
+  Logout@0();
 
-  GetPresentation(mozart.Presentation& presentation);
+  GetPresentation@1(mozart.Presentation& presentation);
 };
 
 // For development purposes only.
@@ -43,5 +43,5 @@ interface UserContext {
 [ServiceName="modular.UserRunnerDebug"]  // Created by user_runner application.
 interface UserRunnerDebug {
   // TODO(alhaad): We might be limited by FIDL message size. Consider using vmo.
-  DumpState() => (string debug_state);
+  DumpState@0() => (string debug_state);
 };

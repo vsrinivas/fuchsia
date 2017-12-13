@@ -9,20 +9,20 @@ module modular;
 interface DeviceMap {
   // HACK(mesch): Just exposes all Device/* entries in the ledger.
   // We'll need something better, possibly with access policy.
-  Query() => (array<DeviceMapEntry> devices);
+  Query@0() => (array<DeviceMapEntry> devices);
 
   // Returns the current device from the device map.
-  GetCurrentDevice() => (DeviceMapEntry device);
+  GetCurrentDevice@1() => (DeviceMapEntry device);
 
   // Sets the profile string for the current device.
   // HACK(jimbe) This is a quick-and-dirty solution for FW-316. It needs to be
   // completely redesigned once the Framework has a concept of profile (such
   // as landscape/portrait.)
-  SetCurrentDeviceProfile(string profile);
+  SetCurrentDeviceProfile@2(string profile);
 
   // Requests a notification for each change to the DeviceMap. The given
   // watcher will receive an initial notification for each existing device.
-  WatchDeviceMap(DeviceMapWatcher watcher);
+  WatchDeviceMap@3(DeviceMapWatcher watcher);
 };
 
 struct DeviceMapEntry {
@@ -54,5 +54,5 @@ struct DeviceMapEntry {
 interface DeviceMapWatcher {
   // Called with the current state right after registration, and subsequently
   // when the state changes.
-  OnDeviceMapChange(DeviceMapEntry entry);
+  OnDeviceMapChange@0(DeviceMapEntry entry);
 };

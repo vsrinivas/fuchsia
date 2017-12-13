@@ -15,16 +15,16 @@ import "lib/module/fidl/module_state.fidl";
 interface ModuleController {
   // Registers a watcher that is notified when the module is done or
   // otherwise stops.
-  Watch(ModuleWatcher watcher);
+  Watch@0(ModuleWatcher watcher);
 
   // Requests that this module become the focused module in the story.
-  Focus();
+  Focus@1();
 
   // Requests that this module be hidden in the story.
-  Defocus();
+  Defocus@2();
 
   // Requests the Module instance to stop (see Module.Stop() for how).
-  Stop() => ();
+  Stop@3() => ();
 };
 
 // This interface is implemented by the client calling
@@ -32,5 +32,5 @@ interface ModuleController {
 interface ModuleWatcher {
   // Called with the current state right after registration, and
   // subsequently when the state changes.
-  OnStateChange(ModuleState new_state);
+  OnStateChange@0(ModuleState new_state);
 };

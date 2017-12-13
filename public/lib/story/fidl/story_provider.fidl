@@ -20,43 +20,43 @@ interface StoryProvider {
   // module. The returned |story_id| can be used to obtain a StoryController
   // connection to perform actions on the newly created story, specifically
   // starting it.
-  CreateStory(string module_url) => (string story_id);
+  CreateStory@0(string module_url) => (string story_id);
 
   // Like CreateStory(), but with extra info and with values for the root link
   // atomically set. Otherwise, if SetInfoExtra() is called separately on the
   // story controller, separate StoryProviderWatcher notifications are
   // generated, which is inconvenient.
-  CreateStoryWithInfo(string module_url, map<string, string>? extra_info,
-                      string? root_json) => (string story_id);
+  CreateStoryWithInfo@1(string module_url, map<string, string>? extra_info,
+                        string? root_json) => (string story_id);
 
   // Deletes an existing story from the list of known stories. Returns when the
   // delete notification is received from the Ledger. If the story to be deleted
   // is running, it is first stopped and its story controller disconnected. If
   // the story ID doesn't exist, it silently does nothing and returns.
-  DeleteStory(string story_id) => ();
+  DeleteStory@2(string story_id) => ();
 
   // Requests detailed information about the given story. If the story doesn't
   // exist, returns null. GetStoryInfo() called immediately after DeleteStory()
   // (even before DeleteStory() returns) returns null.
-  GetStoryInfo(string story_id) => (StoryInfo? story_info);
+  GetStoryInfo@3(string story_id) => (StoryInfo? story_info);
 
   // Obtains a controller for a previously created story identified by its story
   // ID. Obtaining the controller doesn't run it yet. If the story doesn't
   // exist, the interface request is closed.
-  GetController(string story_id, StoryController& story_controller);
+  GetController@4(string story_id, StoryController& story_controller);
 
   // Returns IDs of known stories. More information about the stories can be
   // retrieved using GetStoryInfo(), or by GetController(), then
   // StoryController.GetInfo().
-  PreviousStories() => (array<string> story_ids);
+  PreviousStories@5() => (array<string> story_ids);
 
   // Returns IDs of stories on the current device that are not in the INITIAL or
   // STOPPED state. More information about the stories can be retrieved using
   // GetStoryInfo(), or by GetController(), then StoryController.GetInfo().
-  RunningStories() => (array<string> story_ids);
+  RunningStories@6() => (array<string> story_ids);
 
   // Registers a listener for changes in the story collection.
-  Watch(StoryProviderWatcher watcher);
+  Watch@7(StoryProviderWatcher watcher);
 
   // Gets the relative importance of stories in the current story collection in
   // the current context. The map is from story ID to importance. Stories not in
@@ -68,19 +68,19 @@ interface StoryProvider {
   // for which the user shell holds a story controller. This will change,
   // especially as it makes sense that the user shell uses importance to decide
   // which stories to get a controller for and start.
-  GetImportance() => (map<string, float> importance);
+  GetImportance@8() => (map<string, float> importance);
 
   // Registers a listener for changes in the story collection.
-  WatchImportance(StoryImportanceWatcher watcher);
+  WatchImportance@9(StoryImportanceWatcher watcher);
 
   // Creates a duplicate connection to this StoryProvider.
-  Duplicate(StoryProvider& request);
+  Duplicate@10(StoryProvider& request);
 
   // Obtains a connection to a Link that behaves for the purpose of sending
   // updates to it as if the updates come from another device. This is available
   // only in developer mode and is mainly useful for testing. Note right now
   // there is only developer mode, i.e. this is always available.
-  GetLinkPeer(string story_id, array<string>? module_path, string link_name,
+  GetLinkPeer@11(string story_id, array<string>? module_path, string link_name,
               Link& request);
 };
 
@@ -107,15 +107,15 @@ interface StoryProviderWatcher {
   //
   // TODO(jimbe): The "INITIAL" value has a race condition between devices and
   // should be removed.
-  OnChange(StoryInfo story_info, StoryState story_state);
+  OnChange@0(StoryInfo story_info, StoryState story_state);
 
   // A Story was deleted.
-  OnDelete(string story_id);
+  OnDelete@1(string story_id);
 };
 
 // The relative importance of stories in the story collection may have changed,
 // because the context has changed. In order to obtain the changed importance,
 // the client calls StoryProvider.GetImportance().
 interface StoryImportanceWatcher {
-  OnImportanceChange();
+  OnImportanceChange@0();
 };

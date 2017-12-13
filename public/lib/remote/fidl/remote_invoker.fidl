@@ -14,5 +14,5 @@ interface RemoteInvoker {
 
   // Returns the page_id of the Ledger page written to. If the page_id exists, the call was successful.
   // TODO(planders) Find a better way to determine whether call was successful.
-  StartOnDevice(string device_id, string story_id) => (string? page_id);
+  StartOnDevice@0(string device_id, string story_id) => (string? page_id);
 };

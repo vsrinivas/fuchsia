@@ -7,5 +7,5 @@ module maxwell;
 // ComponentActionLog allows a component to log actions it implements as they
 // performed by the user.
 interface ComponentActionLog {
-  LogAction(string method, string parameters);
+  LogAction@0(string method, string parameters);
 };

@@ -13,8 +13,8 @@ interface ProposalPublisher {
   // Includes the given |proposal| in the list from this Agent. Proposals are
   // identified by |proposal.id|, and are namespaced by the Agent's ID.
   // If a Proposal with the same id is already present, it is overwritten.
-  Propose(Proposal proposal);
+  Propose@0(Proposal proposal);
 
   // Removes the Proposal with the given ID from the Suggestion engine.
-  Remove(string proposal_id);
+  Remove@1(string proposal_id);
 };

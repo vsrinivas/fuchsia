@@ -11,27 +11,27 @@ import "user_input.fidl";
 // the internal state of the suggestion service.
 [ServiceName="maxwell.SuggestionDebug"]
 interface SuggestionDebug {
-  WatchAskProposals(AskProposalListener listener);
-  WatchInterruptionProposals(InterruptionProposalListener listener);
-  WatchNextProposals(NextProposalListener listener);
+  WatchAskProposals@0(AskProposalListener listener);
+  WatchInterruptionProposals@1(InterruptionProposalListener listener);
+  WatchNextProposals@2(NextProposalListener listener);
 };
 
 interface AskProposalListener {
   // Receives the current ask query and ranked proposals
-  OnAskStart(string query, array<ProposalSummary> proposals);
+  OnAskStart@0(string query, array<ProposalSummary> proposals);
   // Receives notification of query completion or dismissal.
   // |selected_proposal| is null if query was dismissed
-  OnProposalSelected(ProposalSummary? selected_proposal);
+  OnProposalSelected@1(ProposalSummary? selected_proposal);
 };
 
 interface InterruptionProposalListener {
   // Receives updates to the current proposal list and rankings
-  OnInterrupt(ProposalSummary interruption_proposal);
+  OnInterrupt@0(ProposalSummary interruption_proposal);
 };
 
 interface NextProposalListener {
   // Receives updates to the current proposal list and rankings
-  OnNextUpdate(array<ProposalSummary> proposals);
+  OnNextUpdate@0(array<ProposalSummary> proposals);
 };
 
 // This is necessary because a Proposal is not Clone-able, as CustomAction

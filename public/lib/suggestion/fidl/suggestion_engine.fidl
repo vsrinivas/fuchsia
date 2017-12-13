@@ -16,18 +16,18 @@ import "lib/user/fidl/focus.fidl";
 [ServiceName="maxwell.SuggestionEngine"]
 interface SuggestionEngine {
   // Initializes the SuggestionEngine and provides dependencies.
-  Initialize(modular.StoryProvider story_provider, modular.FocusProvider focus_provider,
+  Initialize@0(modular.StoryProvider story_provider, modular.FocusProvider focus_provider,
       ContextWriter context_writer);
 
   // Sets the SpeechToText service for the SuggestionEngine to use for spoken
   // input capture. If not called, Ask will only be available with typed input.
   //
   // TODO(rosswang): It's unclear whether this will live here in the future.
-  SetSpeechToText(SpeechToText service);
+  SetSpeechToText@1(SpeechToText service);
 
   // Registers a component that produces suggestions.
-  RegisterProposalPublisher(string url, ProposalPublisher& publisher);
+  RegisterProposalPublisher@2(string url, ProposalPublisher& publisher);
 
   // Registers a component that produces suggestions based on a query.
-  RegisterQueryHandler(string url, QueryHandler query_handler);
+  RegisterQueryHandler@3(string url, QueryHandler query_handler);
 };

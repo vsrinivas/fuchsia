@@ -114,5 +114,5 @@ struct AddModuleToStory {
 // This can be used to defer expensive RPCs until the suggestion has been
 // selected.
 interface CustomAction {
-  Execute() => (array<Action>? actions);
+  Execute@0() => (array<Action>? actions);
 };

@@ -16,11 +16,11 @@ import "lib/suggestion/fidl/query_handler.fidl";
 interface IntelligenceServices {
   // These are just here for illustrative purposes, and are not a complete
   // list.
-  GetContextReader(ContextReader& context_reader);
-  GetContextWriter(ContextWriter& context_writer);
+  GetContextReader@0(ContextReader& context_reader);
+  GetContextWriter@1(ContextWriter& context_writer);
 
-  GetProposalPublisher(ProposalPublisher& proposal_publisher);
-  GetActionLog(ComponentActionLog& action_log);
+  GetProposalPublisher@2(ProposalPublisher& proposal_publisher);
+  GetActionLog@3(ComponentActionLog& action_log);
 
-  RegisterQueryHandler(QueryHandler query_handler);
+  RegisterQueryHandler@4(QueryHandler query_handler);
 };

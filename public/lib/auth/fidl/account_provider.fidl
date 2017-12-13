@@ -17,11 +17,11 @@ import "lib/device/fidl/device_shell.fidl";
 interface AccountProvider {
   // Called by the Framework once, right after starting up a token manager
   // application.
-  Initialize(AccountProviderContext account_provider_context);
+  Initialize@0(AccountProviderContext account_provider_context);
 
   // Adds a new user account. This involves talking to the identity provider and
   // fetching profile attributes.
-  AddAccount(IdentityProvider identity_provider)
+  AddAccount@1(IdentityProvider identity_provider)
        => (Account? account, string? error_code);
 
   // Removes an existing user account. This involves talking to account's
@@ -37,27 +37,27 @@ interface AccountProvider {
   // firebase tokens and the locally persisted refresh token. By default,
   // |revoke_all| is set to false and deletes account only from that given
   // device.
-  RemoveAccount(Account account, bool revoke_all) => (AuthErr status);
+  RemoveAccount@2(Account account, bool revoke_all) => (AuthErr status);
 
   // Get a |TokenProviderFactory| associated with an |account_id|. It is used
   // by the Framework to provide a specialized instances of |TokenProvider| to
   // third party agents.
-  GetTokenProviderFactory(string account_id,
-                          TokenProviderFactory& request);
+  GetTokenProviderFactory@3(string account_id,
+                            TokenProviderFactory& request);
 
   // This signals |AccountProvider| to teardown itself. After the
   // AccountProvider responds by closing its handle, the caller may terminate
   // the |AccountProvider| application if it hasn't already exited.
-  Terminate();
+  Terminate@4();
 };
 
 // Implemented by device runner and provided to AccountProvider.Initialize().
 // It is used by the token mangager application to request the Framework to
 // display a view to the user.
 interface AccountProviderContext {
-  GetAuthenticationContext(string account_id, AuthenticationContext& request);
+  GetAuthenticationContext@0(string account_id, AuthenticationContext& request);
 };
 
 interface TokenProviderFactory {
-  GetTokenProvider(string application_url, TokenProvider& request);
+  GetTokenProvider@0(string application_url, TokenProvider& request);
 };

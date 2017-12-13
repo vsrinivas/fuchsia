@@ -10,7 +10,7 @@ module modular;
 // TODO(alhaad): Add interfaces for modifying Agents for the user.
 interface AgentProvider {
   // Registers a listener for changes in the list of agents.
-  Watch(AgentProviderWatcher watcher);
+  Watch@0(AgentProviderWatcher watcher);
 };
 
 // This interface is implemented by clients of AgentProvider and is updated
@@ -19,5 +19,5 @@ interface AgentProviderWatcher {
   // Gives a full list of all agents that are running or scheduled to run.
   // TODO(alhaad): This currently only contains the URL of the agents. It should
   // contain more state information.
-  OnUpdate(array<string> agent_urls);
+  OnUpdate@0(array<string> agent_urls);
 };

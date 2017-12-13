@@ -40,9 +40,9 @@ struct ComponentManifest {
 };
 
 interface ComponentResources {
-  GetResourceNames() => (array<string> resource_names);
-  GetResourceURLs() => (map<string, string> resource_urls);
-  GetResource(string resource_name)
+  GetResourceNames@0() => (array<string> resource_names);
+  GetResourceURLs@1() => (map<string, string> resource_urls);
+  GetResource@2(string resource_name)
       => (handle<vmo>? data, network.NetworkError? error);
 };
 
@@ -59,7 +59,7 @@ interface ComponentIndex {
   // always be supplied when |component_manifest->resources| is set.
   //
   // If an error occurs a |NetworkError| will be returned.
-  GetComponent(string component_id)
+  GetComponent@0(string component_id)
       => (ComponentManifest? component_manifest,
           ComponentResources? component_resources,
           network.NetworkError? error);
@@ -72,6 +72,6 @@ interface ComponentIndex {
   //
   // TODO(thatguy): |filter| should become a more descriptive query
   // representation when more than property equality is needed.
-  FindComponentManifests(map<string, string> filter)
+  FindComponentManifests@1(map<string, string> filter)
       => (array<ComponentManifest> results);
 };

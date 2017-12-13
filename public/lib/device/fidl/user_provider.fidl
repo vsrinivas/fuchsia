@@ -25,23 +25,23 @@ interface UserProvider {
   //
   // |account| is NULL if there was an error during identification and
   // |error_code| is set.
-  AddUser(auth.IdentityProvider identity_provider) =>
+  AddUser@0(auth.IdentityProvider identity_provider) =>
       (auth.Account? account, string? error_code);
 
   // Removes information of a user from the local user database.
   //
   // |account_id| is received from either AddUser() or PreviousUsers().
-  RemoveUser(string account_id) => (string? error_code);
+  RemoveUser@1(string account_id) => (string? error_code);
 
   // Uses the credentials provided in AddUser() to start a user session. This
   // would mean syncing with the user's ledger instance and displaying a user
   // shell with all of the user's stories.
   // TODO(alhaad): In the future, we want to protect Login() with a password,
   // Android lock pattern, etc.
-  Login(UserLoginParams user_login_params);
+  Login@2(UserLoginParams user_login_params);
 
   // List of all users who have authenticated to this device in the past.
-  PreviousUsers() => (array<auth.Account> accounts);
+  PreviousUsers@3() => (array<auth.Account> accounts);
 };
 
 // Used to specify arguments to log into a user session.
@@ -93,10 +93,10 @@ interface UserController {
   // Logs out a user by tearing down its user runner. Returns once the
   // UserRunner has been torn down. This also triggers OnLogout() for
   // |UserWatcher|s.
-  Logout() => ();
+  Logout@0() => ();
 
   // Registers a watcher for the user's life cycle events.
-  Watch(UserWatcher watcher);
+  Watch@1(UserWatcher watcher);
 };
 
 // Implemented by a |DeviceShell| implementation in order to receive
@@ -108,5 +108,5 @@ interface UserWatcher {
   //
   // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
   // possible to UserProvider.Login() the same user.
-  OnLogout();
+  OnLogout@0();
 };

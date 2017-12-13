@@ -9,7 +9,7 @@ interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from
   // most relevant to least relevant.
-  ResolveModules(string contract, string? json_data) => (array<ModuleInfo> modules);
+  ResolveModules@0(string contract, string? json_data) => (array<ModuleInfo> modules);
 };
 
 struct ModuleInfo {

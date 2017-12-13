@@ -15,13 +15,13 @@ interface SpeechToText {
   // relying on some kind of dynamic app permissions. Keep an eye on how
   // permissions end up being implemented to make sure this continues to make
   // sense, since I don't think this is an isolated problem.
-  BeginCapture(media.MediaCapturer media_capturer,
-               TranscriptionListener transcription_listener);
+  BeginCapture@0(media.MediaCapturer media_capturer,
+                 TranscriptionListener transcription_listener);
 
   // Begins hotword detection. Detected hotword utterances are reported on the
   // given listener.
-  ListenForHotword(media.MediaCapturer media_capturer,
-                   HotwordListener hotword_listener);
+  ListenForHotword@1(media.MediaCapturer media_capturer,
+                     HotwordListener hotword_listener);
 };
 
 // Represents an active transcription session. Either side may close this
@@ -32,16 +32,16 @@ interface TranscriptionListener {
   // Indicates that capture has begun. Prior to this, parts of the system may
   // not have been initialized and audio may have been dropped. No calls to
   // |OnTranscriptUpdate| will occur before |OnReady| is called.
-  OnReady();
+  OnReady@0();
   // Receives updated transcripts. Each call receives the most likely
   // transcription of the entire utterance at that time. Previously transcribed
   // text may mutate in response to later input.
-  OnTranscriptUpdate(string spoken_text);
+  OnTranscriptUpdate@1(string spoken_text);
   // An error occurred before or during transcription. Depending on the nature
   // of the error, this may occur before |OnReady| is called, and |OnReady| may
   // never be called. This binding will be closed immediately after sending this
   // message.
-  OnError();
+  OnError@2();
 };
 
 // Listens for hotwords. Each detected hotword utterance triggers |OnHotword|.
@@ -50,7 +50,7 @@ interface HotwordListener {
   // Indicates that capture has begun. Prior to this, parts of the system may
   // not have been initialized and audio may have been dropped. No calls to
   // |OnHotword| will occur before |OnReady| is called.
-  OnReady();
+  OnReady@0();
   // Called for each detected hotword utterance.
-  OnHotword();
+  OnHotword@1();
 };

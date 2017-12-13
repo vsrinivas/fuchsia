@@ -22,14 +22,14 @@ interface SuggestionProvider {
   //
   // Any user interactions received by the client should be forwarded to the
   // SuggestionService by calling NotifyInteraction().
-  SubscribeToInterruptions(SuggestionListener listener);
+  SubscribeToInterruptions@0(SuggestionListener listener);
 
   // Creates a subscription to "Next" Suggestions, with changes sent to
   // |listener|. A maximum of |count| suggestions will be returned. To
   // change the count, call this method again with a new count.
   //
   // Closing the the |listener| pipe terminates the subscription.
-  SubscribeToNext(SuggestionListener listener, int32 count);
+  SubscribeToNext@1(SuggestionListener listener, int32 count);
 
   // Should be called when the user initiates a query for suggestions, perhaps
   // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
@@ -38,11 +38,11 @@ interface SuggestionProvider {
   //
   // Closing the |listener| pipe signals to the SuggestionService that the query
   // has been completed or canceled.
-  Query(SuggestionListener listener, UserInput query, int32 count);
+  Query@2(SuggestionListener listener, UserInput query, int32 count);
 
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
-  NotifyInteraction(string suggestion_uuid, Interaction interaction);
+  NotifyInteraction@3(string suggestion_uuid, Interaction interaction);
 
   // *** Speech Section ***
   // TODO(jwnichols): Move these into a separate speech service.  It is
@@ -50,7 +50,7 @@ interface SuggestionProvider {
   // solution.
 
   // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
-  RegisterFeedbackListener(FeedbackListener speech_listener);
+  RegisterFeedbackListener@4(FeedbackListener speech_listener);
 
   // Starts capturing speech from the microphone. Transitions internal
   // |SpeechStatus| to |LISTENING|. This is a simplification of the
@@ -63,24 +63,24 @@ interface SuggestionProvider {
   // text (and any markup/alternative interpretations) to Suggestion Engine.
   // However, it's worth it to also consider the implications for any other
   // input modalities we might like to support.
-  BeginSpeechCapture(TranscriptionListener transcription_listener);
+  BeginSpeechCapture@5(TranscriptionListener transcription_listener);
 
   // Starts listening for hotwords from the microphone. This is a simplification
   // of the |SpeechToText| interface (for now) in that it does not require that
   // the caller supply a |MediaCapturer|.
-  ListenForHotword(HotwordListener hotword_listener);
+  ListenForHotword@6(HotwordListener hotword_listener);
 };
 
 interface SuggestionListener {
   // Changed suggestions will maintain the same UUID but will result in a
   // remove/add pair.
-  OnAdd(array<Suggestion> suggestions);
-  OnRemove(string uuid);
-  OnRemoveAll();
+  OnAdd@0(array<Suggestion> suggestions);
+  OnRemove@1(string uuid);
+  OnRemoveAll@2();
 
   // This method allows the listener to track the progress of the query and
   // show an indicator to the user, if desired.
-  OnProcessingChange(bool processing);
+  OnProcessingChange@3(bool processing);
 };
 
 enum InteractionType {
@@ -141,7 +141,7 @@ enum SpeechStatus {
 // be part of the callback on |Query|.
 interface FeedbackListener {
   // Called every time the internal |SpeechStatus| changes.
-  OnStatusChanged(SpeechStatus status);
+  OnStatusChanged@0(SpeechStatus status);
 
   // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
   // once it becomes trivial for SysUI to implement it. This would allow SysUI
@@ -151,5 +151,5 @@ interface FeedbackListener {
 
   // Receives a text representation of the spoken response. This method is
   // called at the beginning of the |RESPONDING| phase.
-  OnTextResponse(string response_text);
+  OnTextResponse@1(string response_text);
 };

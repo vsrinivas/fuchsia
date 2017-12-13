@@ -43,23 +43,23 @@ interface Ledger {
   // |id| the identifier of the page, or |null| to create a new page with a random identifier.
   //
   // Returns OK and binds |page_request| to the page on success.
-  GetPage(array<uint8, 16>? id, Page& page_request) => (Status status);
+  GetPage@0(array<uint8, 16>? id, Page& page_request) => (Status status);
 
   // Gets the page with identifier
   // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
   // This is a convenience method equivalent to:
   // GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
-  GetRootPage(Page& page_request) => (Status status);
+  GetRootPage@1(Page& page_request) => (Status status);
 
   // Deletes the page with the given id.
-  DeletePage(array<uint8, 16> id) => (Status status);
+  DeletePage@2(array<uint8, 16> id) => (Status status);
 
   // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
   // If |factory| is NULL or this method is not called, a global last one wins
   // policy will be used. If a factory is set and later on disconnected, pages
   // for which no conflict resolution is set up will not get their conflict
   // resolved until this method is called again.
-  SetConflictResolverFactory(ConflictResolverFactory? factory)
+  SetConflictResolverFactory@3(ConflictResolverFactory? factory)
       => (Status status);
 };
 
@@ -71,7 +71,7 @@ struct Reference {
 // A page is the smallest unit of syncable data.
 interface Page {
   // Returns the identifier for the page.
-  GetId() => (array<uint8, 16> id);
+  GetId@0() => (array<uint8, 16> id);
 
   // Creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page. If |key_prefix| is provided,
@@ -81,7 +81,7 @@ interface Page {
   // page state on this page connection newer than the resulting snapshot. If
   // |key_prefix| is provided too, the change notifications will only contain
   // the entries with matching keys.
-  GetSnapshot(PageSnapshot& snapshot_request, array<uint8>? key_prefix,
+  GetSnapshot@1(PageSnapshot& snapshot_request, array<uint8>? key_prefix,
       PageWatcher? watcher) => (Status status);
 
   // Mutation operations.
@@ -105,24 +105,24 @@ interface Page {
   // parameter managing the synchronization policy for this value. |Put()| uses
   // a default priority of |Priority.EAGER|. For the list of available
   // priorities and their definition, see |Priority|.
-  Put(array<uint8> key, array<uint8> value) => (Status status);
-  PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
+  Put@2(array<uint8> key, array<uint8> value) => (Status status);
+  PutWithPriority@3(array<uint8> key, array<uint8> value, Priority priority)
       => (Status status);
-  PutReference(array<uint8> key, Reference reference, Priority priority)
+  PutReference@4(array<uint8> key, Reference reference, Priority priority)
       => (Status status);
-  Delete(array<uint8> key) => (Status status);
+  Delete@5(array<uint8> key) => (Status status);
 
   // References.
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the socket. The content size must be equal to
   // |size|, otherwise the call will fail.
-  CreateReferenceFromSocket(uint64 size, handle<socket> data)
+  CreateReferenceFromSocket@6(uint64 size, handle<socket> data)
       => (Status status, Reference? reference);
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the vmo.
-  CreateReferenceFromVmo(fsl.SizedVmoTransport data)
+  CreateReferenceFromVmo@7(fsl.SizedVmoTransport data)
       => (Status status, Reference? reference);
 
   // Transactions.
@@ -154,14 +154,14 @@ interface Page {
   // will be used as the base of the transaction. Put (with all its variants)
   // and Delete calls may be pipelined while StartTransaction() is pending and
   // will be taken into account in the transaction while it is pending.
-  StartTransaction() => (Status status);
-  Commit() => (Status status);
-  Rollback() => (Status status);
+  StartTransaction@8() => (Status status);
+  Commit@9() => (Status status);
+  Rollback@10() => (Status status);
 
   // Sets a watcher to track the synchronisation state of this page. The
   // current state is immediately sent to the watcher when this method is
   // called.
-  SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
+  SetSyncStateWatcher@11(SyncWatcher watcher) => (Status status);
 
   // Conflict resolution.
   //
@@ -171,7 +171,7 @@ interface Page {
   // added.
   // If there are no pending conflicts at the time this is called, the callback
   // gets executed right away.
-  WaitForConflictResolution() => ();
+  WaitForConflictResolution@12() => ();
 };
 
 // The synchronization priority of a reference.
@@ -222,12 +222,12 @@ interface PageSnapshot {
   // Only |EAGER| values are guaranteed to be returned inside |entries|.
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
-  GetEntries(array<uint8>? key_start, array<uint8>? token)
+  GetEntries@0(array<uint8>? key_start, array<uint8>? token)
       => (Status status, array<Entry>? entries, array<uint8>? next_token);
 
   // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
   // fit in a FIDL message.
-  GetEntriesInline(array<uint8>? key_start, array<uint8>? token)
+  GetEntriesInline@1(array<uint8>? key_start, array<uint8>? token)
       => (Status status, array<InlinedEntry>? entries,
           array<uint8>? next_token);
 
@@ -240,24 +240,24 @@ interface PageSnapshot {
   // the value of |next_token| returned in the previous call.
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
-  GetKeys(array<uint8>? key_start, array<uint8>? token)
+  GetKeys@2(array<uint8>? key_start, array<uint8>? token)
       => (Status status, array<array<uint8>>? keys, array<uint8>? next_token);
 
   // Returns the value of a given key.
   // Only |EAGER| values are guaranteed to be returned. Calls when the value is
   // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
   // be retrieved over the network using a Fetch() call.
-  Get(array<uint8> key) => (Status status, fsl.SizedVmoTransport? data);
+  Get@3(array<uint8> key) => (Status status, fsl.SizedVmoTransport? data);
 
   // Returns the value of a given key if it fits in a FIDL message.
   // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
   // See |Get()| for additional information.
-  GetInline(array<uint8> key) => (Status status, array<uint8>? value);
+  GetInline@4(array<uint8> key) => (Status status, array<uint8>? value);
 
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
   // is not available).
-  Fetch(array<uint8> key) => (Status status, fsl.SizedVmoTransport? data);
+  Fetch@5(array<uint8> key) => (Status status, fsl.SizedVmoTransport? data);
 
   // Fetches the value of a given key, over the network if not already present
   // locally, and returns a shared handle of a part of the value of a given
@@ -265,7 +265,7 @@ interface PageSnapshot {
   // is less than 0, starts at |-offset| from the end of the value.
   // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
-  FetchPartial(array<uint8> key, int64 offset, int64 max_size)
+  FetchPartial@6(array<uint8> key, int64 offset, int64 max_size)
       => (Status status, fsl.SizedVmoTransport? data);
 };
 
@@ -310,7 +310,7 @@ interface PageWatcher {
   // Note that calls to Page.StartTransaction() on the page connection on which
   // the watcher was registered will block until all OnChange() calls have
   // finished.
-  OnChange(PageChange page_change, ResultState result_state)
+  OnChange@0(PageChange page_change, ResultState result_state)
       => (PageSnapshot&? snapshot);
 };
 
@@ -319,11 +319,11 @@ interface PageWatcher {
 // own implementation. This can be decided on a page-by-page basis.
 interface ConflictResolverFactory {
   // Returns the conflict resolution policy for the given page.
-  GetPolicy(array<uint8> page_id) => (MergePolicy policy);
+  GetPolicy@0(array<uint8> page_id) => (MergePolicy policy);
   // Returns a |ConflictResolver| to use for the given page. This will only be
   // called if |GetPolicy| for the same page returned |AUTOMATIC_WITH_FALLBACK|
   // or |CUSTOM|.
-  NewConflictResolver(array<uint8> page_id, ConflictResolver& resolver);
+  NewConflictResolver@1(array<uint8> page_id, ConflictResolver& resolver);
 };
 
 // Strategy to be used when resolving conflicts.
@@ -417,7 +417,7 @@ interface MergeResultProvider {
   // be |PARTIAL_RESULT| and |next_token| will have a non-NULL value, which can
   // be used to retrieve the rest of the results by calling |GetFullDiff()|
   // with that token.
-  GetFullDiff(array<uint8>? token)
+  GetFullDiff@0(array<uint8>? token)
       => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 
   // |GetConflictingDiff| returns the set of all key/value pairs that were
@@ -425,7 +425,7 @@ interface MergeResultProvider {
   // modified on the other.
   //
   // It behaves like |GetFullDiff| otherwise.
-  GetConflictingDiff(array<uint8>? token)
+  GetConflictingDiff@1(array<uint8>? token)
       => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 
   // Once the result of the merge has been computed |Merge()| can be called with
@@ -438,18 +438,18 @@ interface MergeResultProvider {
   // through |MergeNonConflictingEntries()| below), the left value will be
   // used. It is thus not necessary to send a MergedValue with a |LEFT| value
   // source, unless to overwrite a previous MergedValue.
-  Merge(array<MergedValue> merge_changes) => (Status status);
+  Merge@2(array<MergedValue> merge_changes) => (Status status);
 
   // Automatically merges all non conflicting entries (entries that are
   // modified on one side only or identical on both sides). This is equivalent
   // to sending, through |Merge()|, a MergedValue with a |RIGHT| ValueSource
   // for all non-conflicting keys modified on the right side. Conflicting
   // entries can still be merged using the |Merge()| method.
-  MergeNonConflictingEntries() => (Status status);
+  MergeNonConflictingEntries@3() => (Status status);
 
   // Marks the end of merge changes to resolve this conflict. After |Done()| is
   // called |MergeResultProvider| interface cannot be used any more.
-  Done() => (Status status);
+  Done@4() => (Status status);
 };
 
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
@@ -469,7 +469,7 @@ interface ConflictResolver {
   // i.e. only key/value pairs that are different from the left version of the
   // page should be sent. |result_provider| can also be used to retrieve the set
   // of differences, i.e. conflicting keys, between the two versions.
-  Resolve(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
+  Resolve@0(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
           MergeResultProvider new_result_provider);
 };
 
@@ -492,5 +492,5 @@ enum SyncState {
 // synchronization status of their ledger. SyncStateChanged callback must be
 // called for new state change calls to be sent.
 interface SyncWatcher {
-  SyncStateChanged(SyncState download_status, SyncState upload_status) => ();
+  SyncStateChanged@0(SyncState download_status, SyncState upload_status) => ();
 };
