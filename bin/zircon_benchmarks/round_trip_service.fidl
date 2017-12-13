@@ -4,5 +4,5 @@
 
 // Example interface for testing performance of round trips.
 interface RoundTripService {
-  RoundTripTest(uint32 arg) => (uint32 result);
+  RoundTripTest@0(uint32 arg) => (uint32 result);
 };
