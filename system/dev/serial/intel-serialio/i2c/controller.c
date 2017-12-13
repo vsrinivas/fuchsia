@@ -102,27 +102,20 @@ static zx_status_t intel_serialio_i2c_add_slave(
     // Temporarily add binding support for the i2c slave. The real way to do
     // this will involve ACPI/devicetree enumeration, but for now we publish PCI
     // VID/DID and i2c ADDR as binding properties.
-
-    // Retrieve pci_config (again)
     pci_protocol_t pci;
     status = device_get_protocol(device->pcidev, ZX_PROTOCOL_PCI, &pci);
     if (status != ZX_OK) {
-        goto fail2;
+        goto fail;
     }
 
-    const pci_config_t* pci_config;
-    size_t config_size;
-    zx_handle_t config_handle;
-    status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              (void**)&pci_config, &config_size, &config_handle);
-    if (status != ZX_OK) {
-        xprintf("i2c: failed to map pci config: %d\n", status);
-        goto fail2;
-    }
-
+    uint16_t vendor_id;
+    uint16_t device_id;
     int count = 0;
-    slave->props[count++] = (zx_device_prop_t){BIND_PCI_VID, 0, pci_config->vendor_id};
-    slave->props[count++] = (zx_device_prop_t){BIND_PCI_DID, 0, pci_config->device_id};
+
+    pci_config_read16(&pci, PCI_CONFIG_VENDOR_ID, &vendor_id);
+    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
+    slave->props[count++] = (zx_device_prop_t){BIND_PCI_VID, 0, vendor_id};
+    slave->props[count++] = (zx_device_prop_t){BIND_PCI_DID, 0, device_id};
     slave->props[count++] = (zx_device_prop_t){BIND_I2C_ADDR, 0, address};
 
     char name[sizeof(address) * 2 + 2] = {
@@ -141,14 +134,12 @@ static zx_status_t intel_serialio_i2c_add_slave(
 
     status = device_add(device->zxdev, &args, &slave->zxdev);
     if (status != ZX_OK) {
-        goto fail1;
+        goto fail;
     }
 
     return ZX_OK;
 
-fail1:
-    zx_handle_close(config_handle);
-fail2:
+fail:
     mtx_lock(&device->mutex);
     list_delete(&slave->slave_list_node);
     mtx_unlock(&device->mutex);
@@ -668,7 +659,7 @@ cleanup:
 
 static zx_status_t intel_serialio_i2c_device_specific_init(
     intel_serialio_i2c_device_t* device,
-    const pci_config_t* pci_config) {
+    uint16_t device_id) {
 
     static const struct {
         uint16_t device_ids[16];
@@ -695,8 +686,6 @@ static zx_status_t intel_serialio_i2c_device_specific_init(
             .controller_clock_frequency = 100 * 1000 * 1000,
         },
     };
-
-    uint16_t device_id = pci_config->device_id;
 
     for (unsigned int i = 0; i < countof(dev_props); ++i) {
         const unsigned int num_dev_ids = countof(dev_props[0].device_ids);
@@ -770,20 +759,13 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
     mtx_init(&device->irq_mask_mutex, mtx_plain);
     device->pcidev = dev;
 
-    const pci_config_t* pci_config;
-    size_t config_size;
-    zx_handle_t config_handle;
-    zx_status_t status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                          (void**)&pci_config, &config_size,
-                                          &config_handle);
-    if (status != ZX_OK) {
-        xprintf("i2c: failed to map pci config: %d\n", status);
-        goto fail;
-    }
+    uint16_t vendor_id;
+    uint16_t device_id;
+    pci_config_read16(&pci, PCI_CONFIG_VENDOR_ID, &vendor_id);
+    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
 
-    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              (void**)&device->regs, &device->regs_size, &device->regs_handle);
+    zx_status_t status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != ZX_OK) {
         xprintf("i2c: failed to mape pci bar 0: %d\n", status);
         goto fail;
@@ -819,8 +801,8 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
     // Run the bus at standard speed by default.
     device->bus_freq = I2C_MAX_STANDARD_SPEED_HZ;
 
-    status = intel_serialio_i2c_device_specific_init(device, pci_config);
-    if (status < 0)
+    status = intel_serialio_i2c_device_specific_init(device, device_id);
+    if (status != ZX_OK)
         goto fail;
 
     status = intel_serialio_compute_bus_timing(device);
@@ -828,20 +810,20 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         goto fail;
 
     // Temporary hack until we have routed through the FMCN ACPI tables.
-    if (pci_config->vendor_id == INTEL_VID &&
-        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID) {
+    if (vendor_id == INTEL_VID &&
+        device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID) {
         // TODO: These should all be extracted from FPCN in the ACPI tables.
         device->fmp_scl_lcnt = 0x0042;
         device->fmp_scl_hcnt = 0x001b;
         device->sda_hold = 0x24;
-    } else if (pci_config->vendor_id == INTEL_VID &&
-        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID) {
+    } else if (vendor_id == INTEL_VID &&
+        device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID) {
         // TODO(yky): These should all be extracted from FMCN in the ACPI tables.
         device->fs_scl_lcnt = 0x00b6;
         device->fs_scl_hcnt = 0x0059;
         device->sda_hold = 0x24;
-    } else if (pci_config->vendor_id == INTEL_VID &&
-               pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
+    } else if (vendor_id == INTEL_VID &&
+               device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
         // TODO: These should all be extracted from FMCN in the ACPI tables.
         device->fs_scl_lcnt = 0x00ba;
         device->fs_scl_hcnt = 0x005d;
@@ -855,7 +837,7 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         goto fail;
 
     char name[ZX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "i2c-bus-%04x", pci_config->device_id);
+    snprintf(name, sizeof(name), "i2c-bus-%04x", device_id);
 
    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -875,8 +857,6 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         device->regs, device->regs_size);
 
     intel_serialio_add_devices(device, &pci);
-
-    zx_handle_close(config_handle);
     return ZX_OK;
 
 fail:
@@ -887,8 +867,6 @@ fail:
         zx_handle_close(device->irq_handle);
     if (device->event_handle != ZX_HANDLE_INVALID)
         zx_handle_close(device->event_handle);
-    if (config_handle)
-        zx_handle_close(config_handle);
     free(device);
 
     return status;
