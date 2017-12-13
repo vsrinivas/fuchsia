@@ -20,24 +20,11 @@
 
 static const char kResourcePath[] = "/dev/misc/sysinfo";
 
-static const uint32_t kE820Ram = 1;
-static const uint32_t kE820Reserved = 2;
-
 // Number of threads reading from the async device port.
 static const size_t kNumAsyncWorkers = 1;
 
 static const size_t kMaxSize = 512ull << 30;
 static const size_t kMinSize = 4 * (4 << 10);
-
-// clang-format off
-
-static const uint64_t kAddr32kb     = 0x0000000000008000;
-static const uint64_t kAddr64kb     = 0x0000000000010000;
-static const uint64_t kAddr1mb      = 0x0000000000100000;
-static const uint64_t kAddr3500mb   = 0x00000000e0000000;
-static const uint64_t kAddr4000mb   = 0x0000000100000000;
-
-// clang-format on
 
 static zx_status_t guest_get_resource(zx_handle_t* resource) {
     int fd = open(kResourcePath, O_RDWR);
@@ -252,43 +239,4 @@ zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
 #else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
-}
-
-size_t guest_e820_size(size_t size) {
-    return (size > kAddr4000mb ? 6 : 5) * sizeof(e820entry_t);
-}
-
-zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
-    if (e820_off + guest_e820_size(size) > size)
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
-    e820entry_t* entry = (e820entry_t*)(addr + e820_off);
-    // 0 to 32kb is reserved.
-    entry[0].addr = 0;
-    entry[0].size = kAddr32kb;
-    entry[0].type = kE820Reserved;
-    // 32kb to to 64kb is available (for linux's real mode trampoline).
-    entry[1].addr = kAddr32kb;
-    entry[1].size = kAddr32kb;
-    entry[1].type = kE820Ram;
-    // 64kb to 1mb is reserved.
-    entry[2].addr = kAddr64kb;
-    entry[2].size = kAddr1mb - kAddr64kb;
-    entry[2].type = kE820Reserved;
-    // 1mb to min(size, 3500mb) is available.
-    entry[3].addr = kAddr1mb;
-    entry[3].size = (size < kAddr3500mb ? size : kAddr3500mb) - kAddr1mb;
-    entry[3].type = kE820Ram;
-    // 3500mb to 4000mb is reserved.
-    entry[4].addr = kAddr3500mb;
-    entry[4].size = kAddr4000mb - kAddr3500mb;
-    entry[4].type = kE820Reserved;
-    if (size > kAddr4000mb) {
-        // If size > 4000mb, then make that region available.
-        entry[5].addr = kAddr4000mb;
-        entry[5].size = size - kAddr4000mb;
-        entry[5].type = kE820Ram;
-    }
-
-    return ZX_OK;
 }

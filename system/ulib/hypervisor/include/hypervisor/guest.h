@@ -58,25 +58,3 @@ private:
     zx::port port_;
     fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>> mappings_;
 };
-
-typedef struct e820entry {
-    uint64_t addr;
-    uint64_t size;
-    uint32_t type;
-} __PACKED e820entry_t;
-
-/**
- * Return the size in bytes of e820 memory map.
- *
- * @param size The size of guest physical memory.
- */
-size_t guest_e820_size(size_t size);
-
-/**
- * Create an e820 memory map.
- *
- * @param addr The mapped address of guest physical memory.
- * @param size The size of guest physical memory.
- * @param e820_off The offset to the e820 memory map.
- */
-zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off);
