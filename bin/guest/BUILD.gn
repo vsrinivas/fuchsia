@@ -46,11 +46,11 @@ package("guest") {
   } else if (current_cpu == "x64") {
     resources = [
       {
-        path = rebase_path("//garnet/lib/machina/arch/x86/acpi/dsdt.aml")
+        path = rebase_path("//garnet/lib/machina/arch/x86/asl/dsdt.aml")
         dest = "dsdt.aml"
       },
       {
-        path = rebase_path("//garnet/lib/machina/arch/x86/acpi/mcfg.aml")
+        path = rebase_path("//garnet/lib/machina/arch/x86/asl/mcfg.aml")
         dest = "mcfg.aml"
       },
     ]
