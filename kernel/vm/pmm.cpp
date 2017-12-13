@@ -207,6 +207,16 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
     if (alignment_log2 < PAGE_SIZE_SHIFT)
         alignment_log2 = PAGE_SIZE_SHIFT;
 
+    /* if we're called with a single page, just fall through to the regular allocation routine */
+    if (unlikely(count == 1 && alignment_log2 == PAGE_SIZE_SHIFT)) {
+        auto page = pmm_alloc_page(alloc_flags, pa);
+        if (!page)
+            return 0;
+        if (list)
+            list_add_tail(list, &page->free.node);
+        return 1;
+    }
+
     AutoLock al(&arena_lock);
 
     for (auto& a : arena_list) {
