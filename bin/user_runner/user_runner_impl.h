@@ -14,8 +14,6 @@
 #include "lib/auth/fidl/account/account.fidl.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/macros.h"
@@ -23,6 +21,7 @@
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
+#include "lib/speech/fidl/speech_to_text.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/ui/presentation/fidl/presentation.fidl.h"
@@ -97,10 +96,6 @@ class UserRunnerImpl : UserRunner,
   void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> request) override;
-  void GetContextReader(
-      fidl::InterfaceRequest<maxwell::ContextReader> request) override;
-  void GetContextWriter(
-      fidl::InterfaceRequest<maxwell::ContextWriter> request) override;
   void GetDeviceName(const GetDeviceNameCallback& callback) override;
   void GetFocusController(
       fidl::InterfaceRequest<FocusController> request) override;
@@ -110,8 +105,8 @@ class UserRunnerImpl : UserRunner,
   void GetLink(fidl::InterfaceRequest<Link> request) override;
   void GetPresentation(
       fidl::InterfaceRequest<mozart::Presentation> request) override;
-  void GetProposalPublisher(
-      fidl::InterfaceRequest<maxwell::ProposalPublisher> request) override;
+  void GetSpeechToText(
+      fidl::InterfaceRequest<speech::SpeechToText> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;

@@ -4,18 +4,16 @@
 
 module modular;
 
-import "lib/component/fidl/component_context.fidl";
-import "lib/context/fidl/context_writer.fidl";
-import "lib/context/fidl/context_reader.fidl";
-import "lib/suggestion/fidl/proposal_publisher.fidl";
-import "lib/suggestion/fidl/suggestion_provider.fidl";
-import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/agent/fidl/agent_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
+import "lib/component/fidl/component_context.fidl";
+import "lib/speech/fidl/speech_to_text.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/story/fidl/story_provider.fidl";
+import "lib/suggestion/fidl/suggestion_provider.fidl";
 import "lib/ui/presentation/fidl/presentation.fidl";
 import "lib/user/fidl/focus.fidl";
+import "lib/user_intelligence/fidl/intelligence_services.fidl";
 
 // This interface is implemented by a user shell. Dependencies are passed to it
 // in Initialize() on startup. The user shell is also expected to implement
@@ -36,28 +34,22 @@ interface UserShell {
 // This interface allows the |UserShell| to request capabilities from the
 // |UserRunner| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
-//
-// TODO(jwnichols): This includes both |maxwell.IntelligenceServices| and
-// access to the services that it provides. Consider removing the direct
-// access to the contained services.
 interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
   GetAccount@0() => (auth.Account? account);
   GetAgentProvider@1(AgentProvider& request);
   GetComponentContext@2(ComponentContext& request);
-  GetContextReader@3(maxwell.ContextReader& request);
-  GetContextWriter@4(maxwell.ContextWriter& request);
-  GetDeviceName@5() => (string device_name);
-  GetFocusController@6(FocusController& request);
-  GetFocusProvider@7(FocusProvider& request);
-  GetIntelligenceServices@8(maxwell.IntelligenceServices& request);
-  GetLink@9(Link& request);
-  GetPresentation@10(mozart.Presentation& presentation);
-  GetProposalPublisher@11(maxwell.ProposalPublisher& request);
-  GetStoryProvider@12(StoryProvider& request);
-  GetSuggestionProvider@13(maxwell.SuggestionProvider& request);
-  GetVisibleStoriesController@14(VisibleStoriesController& request);
+  GetDeviceName@3() => (string device_name);
+  GetFocusController@4(FocusController& request);
+  GetFocusProvider@5(FocusProvider& request);
+  GetIntelligenceServices@6(maxwell.IntelligenceServices& request);
+  GetLink@7(Link& request);
+  GetPresentation@8(mozart.Presentation& request);
+  GetSpeechToText@9(speech.SpeechToText& request);
+  GetStoryProvider@10(StoryProvider& request);
+  GetSuggestionProvider@11(maxwell.SuggestionProvider& request);
+  GetVisibleStoriesController@12(VisibleStoriesController& request);
 
   // Requests logout of the user. This causes the device runner to tear down the
   // |UserRunner| instance of the user.

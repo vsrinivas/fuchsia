@@ -179,8 +179,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetFocusProvider(focus_provider_.NewRequest());
     focus_watcher_.Watch(focus_provider_.get());
 
-    user_shell_context_->GetContextWriter(context_writer_.NewRequest());
-    user_shell_context_->GetContextReader(context_reader_.NewRequest());
+    maxwell::IntelligenceServicesPtr intelligence_services;
+    user_shell_context_->GetIntelligenceServices(
+        intelligence_services.NewRequest());
+    intelligence_services->GetContextWriter(context_writer_.NewRequest());
+    intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
 
     SetContextHome();

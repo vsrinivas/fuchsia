@@ -101,7 +101,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    user_shell_context_->GetContextReader(context_reader_.NewRequest());
+    maxwell::IntelligenceServicesPtr intelligence_services;
+    user_shell_context_->GetIntelligenceServices(
+        intelligence_services.NewRequest());
+    intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
     context_reader_.set_connection_error_handler(
         [] { FXL_LOG(ERROR) << "Lost ContextReader connection."; });

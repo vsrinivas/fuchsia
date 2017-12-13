@@ -604,16 +604,6 @@ void UserRunnerImpl::GetComponentContext(
   user_shell_component_context_impl_->Connect(std::move(request));
 }
 
-void UserRunnerImpl::GetContextReader(
-    fidl::InterfaceRequest<maxwell::ContextReader> request) {
-  intelligence_services_->GetContextReader(std::move(request));
-}
-
-void UserRunnerImpl::GetContextWriter(
-    fidl::InterfaceRequest<maxwell::ContextWriter> request) {
-  intelligence_services_->GetContextWriter(std::move(request));
-}
-
 void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
   callback(device_name_);
 }
@@ -656,9 +646,9 @@ void UserRunnerImpl::GetPresentation(
   user_context_->GetPresentation(std::move(request));
 }
 
-void UserRunnerImpl::GetProposalPublisher(
-    fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-  intelligence_services_->GetProposalPublisher(std::move(request));
+void UserRunnerImpl::GetSpeechToText(
+    fidl::InterfaceRequest<speech::SpeechToText> request) {
+  user_intelligence_provider_->GetSpeechToText(std::move(request));
 }
 
 void UserRunnerImpl::GetStoryProvider(
