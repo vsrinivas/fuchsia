@@ -188,7 +188,7 @@ static zx_status_t eth_resume(void* ctx, uint32_t flags) {
 static void eth_release(void* ctx) {
     ethernet_device_t* edev = ctx;
     eth_reset_hw(&edev->eth);
-    pci_enable_bus_master(&edev->pci, true);
+    pci_enable_bus_master(&edev->pci, false);
     zx_handle_close(edev->irqh);
     zx_handle_close(edev->ioh);
     free(edev);
@@ -292,7 +292,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
 fail:
     io_buffer_release(&edev->buffer);
     if (edev->ioh) {
-        pci_enable_bus_master(&edev->pci, true);
+        pci_enable_bus_master(&edev->pci, false);
         zx_handle_close(edev->irqh);
         zx_handle_close(edev->ioh);
     }
