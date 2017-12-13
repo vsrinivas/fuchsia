@@ -8,10 +8,10 @@ module modular.examples;
 
 [ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Adder"]
 interface Adder {
-  Add(int32 a, int32 b) => (int32 c);
+  Add@0(int32 a, int32 b) => (int32 c);
 };
 
 [ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Multiplier"]
 interface Multiplier {
-  Multiply(int32 a, int32 b) => (int32 c);
+  Multiply@0(int32 a, int32 b) => (int32 c);
 };
