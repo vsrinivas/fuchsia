@@ -2,26 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+module speech;
 
 import "lib/media/fidl/media_capturer.fidl";
 
-[ServiceName="maxwell.SpeechToText"]
+[ServiceName="speech.SpeechToText"]
 interface SpeechToText {
   // Starts capturing speech from the microphone.
-  //
-  // TODO(rosswang): The point of passing a |MediaCapturer| as a parameter here
-  // is to allow the system to revoke capture access if warranted without
-  // relying on some kind of dynamic app permissions. Keep an eye on how
-  // permissions end up being implemented to make sure this continues to make
-  // sense, since I don't think this is an isolated problem.
-  BeginCapture@0(media.MediaCapturer media_capturer,
-                 TranscriptionListener transcription_listener);
+  BeginCapture@0(TranscriptionListener transcription_listener);
 
   // Begins hotword detection. Detected hotword utterances are reported on the
   // given listener.
-  ListenForHotword@1(media.MediaCapturer media_capturer,
-                     HotwordListener hotword_listener);
+  ListenForHotword@1(HotwordListener hotword_listener);
 };
 
 // Represents an active transcription session. Either side may close this

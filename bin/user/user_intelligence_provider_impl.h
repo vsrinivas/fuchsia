@@ -40,6 +40,9 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   void GetSuggestionProvider(
       fidl::InterfaceRequest<SuggestionProvider> request) override;
 
+  void GetSpeechToText(
+      fidl::InterfaceRequest<speech::SpeechToText> request) override;
+
   void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
 
  private:

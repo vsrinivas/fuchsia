@@ -181,38 +181,6 @@ void SuggestionEngineImpl::Validate() {
   }
 }
 
-fidl::InterfaceHandle<media::MediaCapturer>
-SuggestionEngineImpl::GetMediaCapturer() {
-  // HACK(rosswang): This song and dance makes the handle look valid (invalid
-  // handles fail FIDL validation).
-  media::MediaCapturerPtr dummy;
-  dummy.NewRequest();
-  return dummy.PassInterfaceHandle();
-}
-
-// |SuggestionProvider|
-void SuggestionEngineImpl::BeginSpeechCapture(
-    fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
-  if (speech_to_text_) {
-    speech_to_text_->BeginCapture(GetMediaCapturer(),
-                                  std::move(transcription_listener));
-  } else {
-    // Requesting speech capture without the requisite services is an immediate
-    // error.
-    TranscriptionListenerPtr::Create(std::move(transcription_listener))
-        ->OnError();
-  }
-}
-
-// |SuggestionProvider|
-void SuggestionEngineImpl::ListenForHotword(
-    fidl::InterfaceHandle<HotwordListener> hotword_listener) {
-  if (speech_to_text_) {
-    speech_to_text_->ListenForHotword(GetMediaCapturer(),
-                                      std::move(hotword_listener));
-  }
-}
-
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<SuggestionListener> listener) {
@@ -313,11 +281,6 @@ void SuggestionEngineImpl::Initialize(
   context_writer_.Bind(std::move(context_writer));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
-}
-
-void SuggestionEngineImpl::SetSpeechToText(
-    fidl::InterfaceHandle<SpeechToText> service) {
-  speech_to_text_ = SpeechToTextPtr::Create(std::move(service));
 }
 
 // end SuggestionEngine

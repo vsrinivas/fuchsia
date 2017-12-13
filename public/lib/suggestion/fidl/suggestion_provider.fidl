@@ -4,7 +4,6 @@
 
 module maxwell;
 
-import "lib/suggestion/fidl/speech_to_text.fidl";
 import "lib/suggestion/fidl/suggestion_display.fidl";
 import "lib/suggestion/fidl/user_input.fidl";
 
@@ -51,24 +50,6 @@ interface SuggestionProvider {
 
   // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
   RegisterFeedbackListener@4(FeedbackListener speech_listener);
-
-  // Starts capturing speech from the microphone. Transitions internal
-  // |SpeechStatus| to |LISTENING|. This is a simplification of the
-  // |SpeechToText| interface (for now) in that it does not require that the
-  // caller supply a |MediaCapturer|.
-  //
-  // TODO(rosswang): consider whether this should be folded into |SetUserInput|
-  // (see comments in |user_input.fidl|) or moved to SysUI. It is conceivable
-  // that SysUI should use |SpeechToText| itself and send only the recognized
-  // text (and any markup/alternative interpretations) to Suggestion Engine.
-  // However, it's worth it to also consider the implications for any other
-  // input modalities we might like to support.
-  BeginSpeechCapture@5(TranscriptionListener transcription_listener);
-
-  // Starts listening for hotwords from the microphone. This is a simplification
-  // of the |SpeechToText| interface (for now) in that it does not require that
-  // the caller supply a |MediaCapturer|.
-  ListenForHotword@6(HotwordListener hotword_listener);
 };
 
 interface SuggestionListener {

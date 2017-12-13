@@ -7,7 +7,6 @@ module maxwell;
 import "lib/suggestion/fidl/proposal_publisher.fidl";
 import "lib/suggestion/fidl/query_handler.fidl";
 import "lib/context/fidl/context_writer.fidl";
-import "lib/suggestion/fidl/speech_to_text.fidl";
 import "lib/suggestion/fidl/suggestion_provider.fidl"; // convenience import
 import "lib/story/fidl/story_provider.fidl";
 import "lib/user/fidl/focus.fidl";
@@ -19,15 +18,9 @@ interface SuggestionEngine {
   Initialize@0(modular.StoryProvider story_provider, modular.FocusProvider focus_provider,
       ContextWriter context_writer);
 
-  // Sets the SpeechToText service for the SuggestionEngine to use for spoken
-  // input capture. If not called, Ask will only be available with typed input.
-  //
-  // TODO(rosswang): It's unclear whether this will live here in the future.
-  SetSpeechToText@1(SpeechToText service);
-
   // Registers a component that produces suggestions.
-  RegisterProposalPublisher@2(string url, ProposalPublisher& publisher);
+  RegisterProposalPublisher@1(string url, ProposalPublisher& publisher);
 
   // Registers a component that produces suggestions based on a query.
-  RegisterQueryHandler@3(string url, QueryHandler query_handler);
+  RegisterQueryHandler@2(string url, QueryHandler query_handler);
 };

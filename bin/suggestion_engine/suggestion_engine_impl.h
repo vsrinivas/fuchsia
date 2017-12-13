@@ -111,14 +111,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void RegisterFeedbackListener(
       fidl::InterfaceHandle<FeedbackListener> speech_listener) override;
 
-  // |SuggestionProvider|
-  void BeginSpeechCapture(fidl::InterfaceHandle<TranscriptionListener>
-                              transcription_listener) override;
-
-  // |SuggestionProvider|
-  void ListenForHotword(
-      fidl::InterfaceHandle<HotwordListener> hotword_listener) override;
-
   // When a user interacts with a Suggestion, the suggestion engine will be
   // notified of consumed suggestion's ID. With this, we will do two things:
   //
@@ -152,18 +144,11 @@ class SuggestionEngineImpl : public SuggestionEngine,
                   fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
                   fidl::InterfaceHandle<ContextWriter> context_writer) override;
 
-  // |SuggestionEngine|
-  void SetSpeechToText(fidl::InterfaceHandle<SpeechToText> service) override;
-
   // re-ranks dirty channels and dispatches updates
   void Validate();
 
  private:
   friend class QueryProcessor;
-
-  // HACK(rosswang): dummy media capturer; to be removed after interface updates
-  // in f-cl/102168
-  fidl::InterfaceHandle<media::MediaCapturer> GetMediaCapturer();
 
   // Cleans up all resources associated with a query, including clearing
   // the previous ask suggestions, closing any still open SuggestionListeners,
@@ -260,7 +245,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
   media::MediaTimelineControlPointPtr time_lord_;
   media::TimelineConsumerPtr media_timeline_consumer_;
 
-  SpeechToTextPtr speech_to_text_;
   fidl::InterfacePtrSet<FeedbackListener> speech_listeners_;
 
   // The debugging interface for all Suggestions.

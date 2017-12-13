@@ -5,6 +5,7 @@
 module maxwell;
 
 import "lib/resolver/fidl/resolver.fidl";
+import "lib/speech/fidl/speech_to_text.fidl";
 import "lib/suggestion/fidl/suggestion_provider.fidl";
 import "lib/component/fidl/component_context.fidl";
 import "lib/context/fidl/context_engine.fidl";
@@ -48,5 +49,7 @@ interface UserIntelligenceProvider {
 
   GetSuggestionProvider@1(SuggestionProvider& suggestion_provider);
 
-  GetResolver@2(resolver.Resolver& resolver);
+  GetSpeechToText@2(speech.SpeechToText& speech_to_text);
+
+  GetResolver@3(resolver.Resolver& resolver);
 };

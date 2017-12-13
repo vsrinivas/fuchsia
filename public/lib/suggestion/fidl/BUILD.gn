@@ -13,7 +13,6 @@ fidl("fidl") {
   ]
 
   public_deps = [
-    ":speech_to_text",
     ":suggestion_provider",
   ]
 
@@ -32,10 +31,6 @@ fidl("suggestion_provider") {
     "suggestion_provider.fidl",
     "user_input.fidl",
   ]
-
-  public_deps = [
-    ":speech_to_text",
-  ]
 }
 
 fidl("debug") {
@@ -45,15 +40,5 @@ fidl("debug") {
 
   deps = [
     ":fidl",
-  ]
-}
-
-fidl("speech_to_text") {
-  sources = [
-    "speech_to_text.fidl",
-  ]
-
-  deps = [
-    "//garnet/public/lib/media/fidl",
   ]
 }

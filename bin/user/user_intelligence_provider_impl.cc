@@ -147,6 +147,15 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
   suggestion_services_.ConnectToService(std::move(request));
 }
 
+void UserIntelligenceProviderImpl::GetSpeechToText(
+    fidl::InterfaceRequest<speech::SpeechToText> request) {
+  if (kronk_services_) {
+    app::ConnectToService(kronk_services_.get(), std::move(request));
+  } else {
+    FXL_LOG(WARNING) << "No speech-to-text agent loaded";
+  }
+}
+
 void UserIntelligenceProviderImpl::GetResolver(
     fidl::InterfaceRequest<resolver::Resolver> request) {
   // TODO(thatguy): Remove this once the last instances of this are gone from
@@ -179,8 +188,6 @@ void UserIntelligenceProviderImpl::StartActionLog(
 void UserIntelligenceProviderImpl::StartKronk() {
   component_context_->ConnectToAgent(kronk_url_, kronk_services_.NewRequest(),
                                      kronk_controller_.NewRequest());
-  auto kronk_stt = app::ConnectToService<SpeechToText>(kronk_services_.get());
-  suggestion_engine_->SetSpeechToText(kronk_stt.PassInterfaceHandle());
   kronk_services_.set_connection_error_handler([this] {
     kronk_services_.reset();
     kronk_controller_.reset();
