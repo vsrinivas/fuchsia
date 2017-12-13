@@ -30,8 +30,13 @@ There are three ways to run zircon_benchmarks:
   format described in the [Fuchsia Tracing Usage
   Guide](../../docs/tracing_usage_guide.md#benchmark-result-export).
 
-  Pass `--fbenchmark_runs=N` to change the number of times each benchmark
-  is run.
+  Options:
+
+  * `--fbenchmark_runs=N`: The number of times to run each benchmark.  The
+    default is 1000.
+
+  * `--fbenchmark_filter=REGEX`: A regular expression that specifies a
+    subset of benchmarks to run.  By default, all the benchmarks are run.
 
   Note: Not all of the benchmarks have been converted so that they will run
   in this mode.  (TODO(TO-651): Convert the remaining tests.)  Those that
