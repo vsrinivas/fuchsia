@@ -10,5 +10,5 @@ module modular.testing;
 interface Agent1Interface {
   // Send |message_to_send| to the message queue backed by
   // |message_queue_token|.
-  SendToMessageQueue(string message_queue_token, string message_to_send);
+  SendToMessageQueue@0(string message_queue_token, string message_to_send);
 };

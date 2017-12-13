@@ -7,5 +7,5 @@ module modular.testing;
 // An interface implemented by test_agent.cc which the root module uses.
 [ServiceName="modular.testing.TriggerAgentInterface"]
 interface TriggerAgentInterface {
-  GetMessageQueueToken() => (string message_queue_token);
+  GetMessageQueueToken@0() => (string message_queue_token);
 };
