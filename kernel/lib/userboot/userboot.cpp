@@ -19,6 +19,7 @@
 #include <lib/console.h>
 #include <lib/vdso.h>
 #include <lk/init.h>
+#include <mexec.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
@@ -268,6 +269,21 @@ static void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) 
     vmo->Write(data, off, len, &actual);
 }
 
+// Converts platform crashlog into a VMO
+static zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
+    size_t size = platform_recover_crashlog(0, NULL, NULL);
+    fbl::RefPtr<VmObject> crashlog_vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &crashlog_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
+    crashlog_vmo->set_name(CRASHLOG_VMO_NAME, sizeof(CRASHLOG_VMO_NAME) - 1);
+    mexec_stash_crashlog(crashlog_vmo);
+    *out = fbl::move(crashlog_vmo);
+    return ZX_OK;
+}
+
 static zx_status_t attempt_userboot() {
     size_t rsize;
     void* rbase = platform_get_ramdisk(&rsize);
@@ -286,13 +302,10 @@ static zx_status_t attempt_userboot() {
         return status;
     rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
 
-    size_t size = platform_recover_crashlog(0, NULL, NULL);
     fbl::RefPtr<VmObject> crashlog_vmo;
-    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &crashlog_vmo);
+    status = crashlog_to_vmo(&crashlog_vmo);
     if (status != ZX_OK)
         return status;
-    platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
-    crashlog_vmo->set_name(CRASHLOG_VMO_NAME, sizeof(CRASHLOG_VMO_NAME) - 1);
 
     // Prepare the bootstrap message packet.  This puts its data (the
     // kernel command line) in place, and allocates space for its handles.

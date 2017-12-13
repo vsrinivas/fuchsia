@@ -13,11 +13,11 @@
 #ifndef __ASSEMBLER__
 
 #include <zircon/compiler.h>
+#include <fbl/ref_ptr.h>
+#include <vm/vm_object.h>
 #include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
-
-__BEGIN_CDECLS
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
 //          function. Do not modify without also updating mexec.S.
@@ -38,6 +38,9 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
                                     const uint32_t type, const uint32_t extra,
                                     const uint32_t flags);
 
+// Save the crashlog for propagation to the next kernel.
+void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo);
+
 /* Allow the platform to patch the bootdata structure with any platform specific
  * data that might be necessary for the kernel that mexec is chain-loading.
  */
@@ -52,7 +55,5 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 static_assert(__offsetof(memmov_ops_t, dst) == MEMMOV_OPS_DST_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, src) == MEMMOV_OPS_SRC_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, len) == MEMMOV_OPS_LEN_OFFSET, "");
-
-__END_CDECLS
 
 #endif // __ASSEMBLER__

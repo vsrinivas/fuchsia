@@ -207,6 +207,10 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
     return ZX_OK;
 }
 
+static fbl::RefPtr<VmObject> stashed_crashlog;
+void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) {
+    stashed_crashlog = fbl::move(vmo);
+}
 
 zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) {
     zx_status_t result;
