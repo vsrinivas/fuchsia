@@ -86,7 +86,6 @@ static zx_status_t usage(const char* cmd) {
   fprintf(stderr, "\t-p [pages]         Number of unused pages to allow the guest to\n"
                   "\t                   retain. Has no effect unless -m is also used\n");
   fprintf(stderr, "\t-d                 Demand-page balloon deflate requests\n");
-  fprintf(stderr, "\t-g                 Enable graphics output to the framebuffer.\n");
   fprintf(stderr, "\n");
   // clang-format on
   return ZX_ERR_INVALID_ARGS;
