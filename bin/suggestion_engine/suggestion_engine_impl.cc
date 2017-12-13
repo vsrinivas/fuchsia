@@ -23,21 +23,12 @@
 
 namespace maxwell {
 
-namespace {
-
-// If media fails more than 5x over one second, stop trying to restart it.
-constexpr modular::RateLimitedRetry::Threshold kMediaRetryLimit = {
-    5, fxl::TimeDelta::FromSeconds(1)};
-
-}  // namespace
-
 SuggestionEngineImpl::SuggestionEngineImpl()
     : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
       ask_suggestions_(new RankedSuggestions(&ask_channel_)),
       ask_dirty_(false),
       next_suggestions_(new RankedSuggestions(&next_channel_)),
-      next_dirty_(false),
-      media_service_retry_(kMediaRetryLimit) {
+      next_dirty_(false) {
   app_context_->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -55,7 +46,6 @@ SuggestionEngineImpl::SuggestionEngineImpl()
       app_context_->ConnectToEnvironmentService<media::MediaService>();
   media_service_.set_connection_error_handler([this] {
     FXL_LOG(INFO) << "Media service connection error";
-    media_capturer_ = nullptr;
     media_service_ = nullptr;
     media_packet_producer_ = nullptr;
   });
@@ -191,61 +181,19 @@ void SuggestionEngineImpl::Validate() {
   }
 }
 
-void SuggestionEngineImpl::PrimeSpeechCapture() {
-  if (media_service_) {
-    media_service_->CreateAudioCapturer(media_capturer_.NewRequest());
-    media_capturer_->GetSupportedMediaTypes([](auto) {});
-    media_capturer_.set_connection_error_handler([this] {
-      media_capturer_.reset();
-
-      if (media_service_retry_.ShouldRetry()) {
-        FXL_LOG(INFO) << "Restarting closed media capturer";
-        PrimeSpeechCapture();
-      } else {
-        FXL_LOG(WARNING) << "Media input failed more than "
-                         << kMediaRetryLimit.count << " times in "
-                         << kMediaRetryLimit.period.ToSecondsF()
-                         << " seconds; disabling speech capture.";
-      }
-    });
-  }
-}
-
 fidl::InterfaceHandle<media::MediaCapturer>
 SuggestionEngineImpl::GetMediaCapturer() {
-  // HACK(rosswang): Maintain a singleton media capturer. The media subsystem
-  // behaves unpredictably when the pipeline is mutated due to race conditions.
-  // Fix once media API redesign is complete; fix TBD pending redesign.
-  if (!media_capturer_binding_) {
-    media_capturer_binding_ =
-        std::make_unique<fidl::Binding<media::MediaCapturer>>(
-            media_capturer_.get());
-    media_capturer_binding_->set_connection_error_handler([this] {
-      if (media_capturer_)
-        media_capturer_->Stop();
-      media_capturer_binding_ = nullptr;
-
-      // With the hacks in place right now, this tends to mean that Kronk
-      // hasn't received any new packets from the media capturer. That or
-      // Kronk crashed.
-      media_capturer_.reset();
-      FXL_LOG(INFO) << "Restarting possible dead media capturer";
-      PrimeSpeechCapture();
-    });
-    return media_capturer_binding_->NewBinding();
-  } else {
-    // This song and dance makes the handle look valid (invalid handles fail
-    // FIDL validation).
-    media::MediaCapturerPtr dummy;
-    dummy.NewRequest();
-    return dummy.PassInterfaceHandle();
-  }
+  // HACK(rosswang): This song and dance makes the handle look valid (invalid
+  // handles fail FIDL validation).
+  media::MediaCapturerPtr dummy;
+  dummy.NewRequest();
+  return dummy.PassInterfaceHandle();
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::BeginSpeechCapture(
     fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
-  if (speech_to_text_ && media_capturer_) {
+  if (speech_to_text_) {
     speech_to_text_->BeginCapture(GetMediaCapturer(),
                                   std::move(transcription_listener));
   } else {
@@ -259,7 +207,7 @@ void SuggestionEngineImpl::BeginSpeechCapture(
 // |SuggestionProvider|
 void SuggestionEngineImpl::ListenForHotword(
     fidl::InterfaceHandle<HotwordListener> hotword_listener) {
-  if (speech_to_text_ && media_capturer_) {
+  if (speech_to_text_) {
     speech_to_text_->ListenForHotword(GetMediaCapturer(),
                                       std::move(hotword_listener));
   }
@@ -365,8 +313,6 @@ void SuggestionEngineImpl::Initialize(
   context_writer_.Bind(std::move(context_writer));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
-
-  PrimeSpeechCapture();
 }
 
 void SuggestionEngineImpl::SetSpeechToText(

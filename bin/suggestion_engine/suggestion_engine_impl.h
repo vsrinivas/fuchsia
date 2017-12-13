@@ -22,7 +22,6 @@
 #include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
-#include "peridot/lib/util/rate_limited_retry.h"
 
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
@@ -162,11 +161,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
  private:
   friend class QueryProcessor;
 
-  // TODO(rosswang): move elsewhere, though this should ideally be unnecessary
-  void PrimeSpeechCapture();
-
-  // HACK(rosswang): Maintains a singleton media capturer (and returns it or a
-  // dummy open handle). See definition for details.
+  // HACK(rosswang): dummy media capturer; to be removed after interface updates
+  // in f-cl/102168
   fidl::InterfaceHandle<media::MediaCapturer> GetMediaCapturer();
 
   // Cleans up all resources associated with a query, including clearing
@@ -258,7 +254,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   std::unique_ptr<QueryProcessor> active_query_;
 
-  modular::RateLimitedRetry media_service_retry_;
   media::MediaServicePtr media_service_;
   media::MediaSinkPtr media_sink_;
   media::MediaPacketProducerPtr media_packet_producer_;
@@ -270,12 +265,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;
-
-  // Media input pipeline updates don't work quite right and creating new media
-  // capturers is nontrivial, so for now pass a proxy to the speech capture
-  // service to let us know when we need to give it a new one.
-  media::MediaCapturerPtr media_capturer_;
-  std::unique_ptr<fidl::Binding<media::MediaCapturer>> media_capturer_binding_;
 };
 
 }  // namespace maxwell
