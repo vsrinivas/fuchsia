@@ -13,6 +13,6 @@ struct DisplayInfo {
 
 [ServiceName="display_pipe::DisplayProvider"]
 interface DisplayProvider {
-  GetInfo() => (DisplayInfo info);
-  BindPipe(scenic.ImagePipe &pipe);
+  GetInfo@0() => (DisplayInfo info);
+  BindPipe@1(scenic.ImagePipe &pipe);
 };
