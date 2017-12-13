@@ -161,7 +161,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
 static void xhci_shutdown(xhci_t* xhci) {
     // stop the controller and our device thread
     xhci_stop(xhci);
-
+    atomic_store(&xhci->suspended, true);
     // stop our interrupt threads
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         zx_interrupt_signal(xhci->irq_handles[i]);
@@ -217,7 +217,7 @@ static int completer_thread(void *arg) {
     completer_t* completer = (completer_t*)arg;
     zx_handle_t irq_handle = completer->xhci->irq_handles[completer->interrupter];
 
-    // TODO(johngro) : See ZX-940.  Get rid of this.  For now we need thread
+    // TODO(johngro): See ZX-940.  Get rid of this.  For now we need thread
     // priorities so that realtime transactions use the completer which ends
     // up getting realtime latency guarantees.
     zx_thread_set_priority(completer->priority);
@@ -225,14 +225,20 @@ static int completer_thread(void *arg) {
     while (1) {
         zx_status_t wait_res;
         wait_res = zx_interrupt_wait(irq_handle);
-        if (wait_res != ZX_OK) {
-            if (wait_res != ZX_ERR_CANCELED) {
-                zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
-            }
-            zx_interrupt_complete(irq_handle);
-            break;
-        }
         zx_interrupt_complete(irq_handle);
+
+        if (wait_res != ZX_OK) {
+          if (wait_res != ZX_ERR_CANCELED) {
+            zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+          }
+          break;
+        }
+        if (atomic_load(&completer->xhci->suspended)) {
+          // TODO(ravoorir): Remove this hack once the interrupt signalling bug
+          // is resolved.
+          zxlogf(ERROR, "race in interrupt_signal triggered. Kick off workaround for now\n");
+          break;
+        }
         xhci_handle_interrupt(completer->xhci, completer->interrupter);
     }
     zxlogf(TRACE, "xhci completer %u thread done\n", completer->interrupter);
@@ -271,7 +277,7 @@ static int xhci_start_thread(void* arg) {
     }
 
     device_make_visible(xhci->zxdev);
-
+    atomic_store(&xhci->suspended, false);
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         thrd_create_with_name(&xhci->completer_threads[i], completer_thread, completers[i],
                               "completer_thread");

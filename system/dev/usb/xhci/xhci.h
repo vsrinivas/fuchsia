@@ -102,6 +102,7 @@ struct xhci {
     usb_bus_interface_t bus;
 
     xhci_mode_t mode;
+    atomic_bool suspended;
 
     // Desired number of interrupters. This may be greater than what is
     // supported by hardware. The actual number of interrupts configured
