@@ -6,5 +6,5 @@ module echo;
 
 [ServiceName="echo::Echo"]
 interface Echo {
-  EchoString(string? value) => (string? value);
+  EchoString@0(string? value) => (string? value);
 };

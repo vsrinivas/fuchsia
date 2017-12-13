@@ -5,5 +5,5 @@
 module examples;
 
 interface Telephone {
-  Say(string request) => (string response);
+  Say@0(string request) => (string response);
 };

@@ -6,5 +6,5 @@ module examples;
 
 [ServiceName="examples.Hello"]
 interface Hello {
-  Say(string request) => (string response);
+  Say@0(string request) => (string response);
 };

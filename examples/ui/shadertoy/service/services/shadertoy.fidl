@@ -23,15 +23,15 @@ import "lib/images/fidl/image_pipe.fidl";
 // which is used to create Shadertoy instances.
 interface Shadertoy {
   // Set whether rendering is paused or not.
-  SetPaused(bool paused);
+  SetPaused@0(bool paused);
 
   // Set the GLSL shader code for the Shadertoy.  Return true if compilation was
   // successful and false otherwise.
   // TODO: provide better error reporting when compilation fails.
-  SetShaderCode(string glsl) => (bool successful);
+  SetShaderCode@1(string glsl) => (bool successful);
 
   // Corresponds to Shadertoy's 'iResolution' shader parameter.
-  SetResolution(uint32 width, uint32 height);
+  SetResolution@2(uint32 width, uint32 height);
 
   // Corresponds to Shadertoy's 'iMouse' shader parameter.  The value is
   // interpreted as follows:
@@ -40,10 +40,10 @@ interface Shadertoy {
   // i_mouse.zw
   //   - (when mouse is down) the current position of the mouse
   //   - (when mouse is up) the position of the last mouse-up event
-  SetMouse(scenic.vec4 i_mouse);
+  SetMouse@3(scenic.vec4 i_mouse);
 
   // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
   // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
   // TODO: implement cubemap support.
-  SetImage(uint32 channel, scenic.ImagePipe& image_pipe);
+  SetImage@4(uint32 channel, scenic.ImagePipe& image_pipe);
 };

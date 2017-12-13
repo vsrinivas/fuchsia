@@ -9,8 +9,8 @@ import "lib/app/fidl/service_provider.fidl";
 [ServiceName="escher_demo::EscherDemo"]
 interface EscherDemo {
   // GetCurrentFrameNumber() => (uint64 frame_number);
-  HandleKeyPress(uint8 key);
-  HandleTouchBegin(uint64 touch_id, double xpos, double ypos);
-  HandleTouchContinue(uint64 touch_id, double xpos, double ypos);
-  HandleTouchEnd(uint64 touch_id, double xpos, double ypos);
+  HandleKeyPress@0(uint8 key);
+  HandleTouchBegin@1(uint64 touch_id, double xpos, double ypos);
+  HandleTouchContinue@2(uint64 touch_id, double xpos, double ypos);
+  HandleTouchEnd@3(uint64 touch_id, double xpos, double ypos);
 };
