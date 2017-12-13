@@ -40,18 +40,18 @@ void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint32_t val) TA_REQ(lock_
 
 zx_status_t PciLegacyBackend::Init() {
     fbl::AutoLock lock(&lock_);
-    zx_pci_resource_t bar0;
-    zx_status_t status = pci_get_resource(&pci_, PCI_RESOURCE_BAR_0, &bar0);
+    zx_pci_bar_t bar0;
+    zx_status_t status = pci_get_bar(&pci_, 0u, &bar0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Couldn't get IO bar for device: %d\n", tag(), status);
         return status;
     }
 
-    if (bar0.type != PCI_RESOURCE_TYPE_PIO) {
+    if (bar0.type != PCI_BAR_TYPE_PIO) {
         return ZX_ERR_WRONG_TYPE;
     }
 
-    bar0_base_ = static_cast<uint16_t>(bar0.pio_addr & 0xffff);
+    bar0_base_ = static_cast<uint16_t>(bar0.addr & 0xffff);
     status = zx_mmap_device_io(get_root_resource(), bar0_base_, static_cast<uint32_t>(bar0.size));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to map IO window for device: %d\n", tag(), status);

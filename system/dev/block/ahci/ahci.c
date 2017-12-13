@@ -717,8 +717,8 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     }
 
     // map register window
-    zx_status_t status = pci_map_resource(&device->pci,
-                                          PCI_RESOURCE_BAR_5,
+    zx_status_t status = pci_map_bar(&device->pci,
+                                          5u,
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                           (void**)&device->regs,
                                           &device->regs_size,
@@ -753,9 +753,9 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     // legacy if necessary.
     uint32_t irq_cnt;
     zx_pci_irq_mode_t irq_mode = ZX_PCIE_IRQ_MODE_MSI;
-    status = pci_query_irq_mode_caps(&device->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
+    status = pci_query_irq_mode(&device->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
     if (status == ZX_ERR_NOT_SUPPORTED) {
-        status = pci_query_irq_mode_caps(&device->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
+        status = pci_query_irq_mode(&device->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
         if (status != ZX_OK) {
             zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported\n");
             goto fail;

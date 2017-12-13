@@ -23,31 +23,36 @@ zx_status_t PciBackend::Bind() {
     zx_handle_t tmp_handle;
 
     // enable bus mastering
-    zx_status_t r;
-    if ((r = pci_enable_bus_master(&pci_, true)) != ZX_OK) {
-        zxlogf(ERROR, "%s: cannot enable bus master %d\n", tag(), r);
-        return r;
+    zx_status_t st;
+    if ((st = pci_enable_bus_master(&pci_, true)) != ZX_OK) {
+        zxlogf(ERROR, "%s: cannot enable bus master %d\n", tag(), st);
+        return st;
     }
 
     // try to set up our IRQ mode
-    if (pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_MSI, 1)) {
-        if (pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1)) {
-            zxlogf(ERROR, "%s: failed to set irq mode\n", tag());
-            return -1;
-        } else {
-            zxlogf(SPEW, "%s: using legacy irq mode\n", tag());
+    uint32_t avail_irqs = 0;
+    zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
+    if ((st = pci_query_irq_mode(&pci_, mode, &avail_irqs)) != ZX_OK ||
+        avail_irqs == 0) {
+        mode = ZX_PCIE_IRQ_MODE_LEGACY;
+        if ((st = pci_query_irq_mode(&pci_, mode, &avail_irqs)) != ZX_OK ||
+            avail_irqs == 0) {
+            zxlogf(ERROR, "%s: no available IRQs found\n", tag());
+            return st;
         }
     }
 
-    r = pci_map_interrupt(&pci_, 0, &tmp_handle);
-    if (r != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to map irq %d\n", tag(), r);
-        return r;
+    if ((st = pci_set_irq_mode(&pci_, mode, 1)) != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to set irq mode %u\n", tag(), mode);
+        return st;
+    }
+
+    if ((st = pci_map_interrupt(&pci_, 0, &tmp_handle)) != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to map irq %d\n", tag(), st);
+        return st;
     }
     irq_handle_.reset(tmp_handle);
-
     zxlogf(SPEW, "%s: irq handle %u\n", tag(), irq_handle_.get());
-
     return Init();
 }
 

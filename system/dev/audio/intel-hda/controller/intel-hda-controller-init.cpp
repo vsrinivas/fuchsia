@@ -167,7 +167,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     // Fetch our device info and use it to re-generate our debug tag once we
     // know our BDF address.
     ZX_DEBUG_ASSERT(pci_.ops != nullptr);
-    res = pci_.ops->get_device_info(pci_.ctx, &pci_dev_info_);
+    res = pci_get_device_info(&pci_, &pci_dev_info_);
     if (res != ZX_OK) {
         LOG("Failed to fetch basic PCI device info! (res %d)\n", res);
         return res;
@@ -184,12 +184,10 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     ZX_DEBUG_ASSERT(regs_handle_ == ZX_HANDLE_INVALID);
     uint64_t reg_window_size;
     hda_all_registers_t* all_regs;
-    res = pci_.ops->map_resource(pci_.ctx,
-                               PCI_RESOURCE_BAR_0,
-                               ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                               reinterpret_cast<void**>(&all_regs),
-                               &reg_window_size,
-                               &regs_handle_);
+    res = pci_map_bar(&pci_, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                      reinterpret_cast<void**>(&all_regs),
+                      &reg_window_size,
+                      &regs_handle_);
     if (res != ZX_OK) {
         LOG("Error attempting to map registers (res %d)\n", res);
         return res;
@@ -211,9 +209,9 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
 
     // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
     // that fails, fall back on legacy IRQs.
-    zx_status_t res = pci_.ops->set_irq_mode(pci_.ctx, ZX_PCIE_IRQ_MODE_MSI, 1);
+    zx_status_t res = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_MSI, 1);
     if (res != ZX_OK) {
-        res = pci_.ops->set_irq_mode(pci_.ctx, ZX_PCIE_IRQ_MODE_LEGACY, 1);
+        res = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1);
         if (res != ZX_OK) {
             LOG("Failed to set IRQ mode (%d)!\n", res);
             return res;
@@ -223,14 +221,14 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
     }
 
     ZX_DEBUG_ASSERT(irq_handle_ == ZX_HANDLE_INVALID);
-    res = pci_.ops->map_interrupt(pci_.ctx, 0, &irq_handle_);
+    res = pci_map_interrupt(&pci_, 0, &irq_handle_);
     if (res != ZX_OK) {
         LOG("Failed to map IRQ! (res %d)\n", res);
         return res;
     }
 
     // Enable Bus Mastering so we can DMA data and receive MSIs
-    res = pci_.ops->enable_bus_master(pci_.ctx, true);
+    res = pci_enable_bus_master(&pci_, true);
     if (res != ZX_OK) {
         LOG("Failed to enable PCI bus mastering!\n");
         return res;

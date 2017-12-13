@@ -30,9 +30,9 @@ typedef struct pci_sdhci_device {
 static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
     pci_sdhci_device_t* dev = ctx;
     // select irq mode
-    zx_status_t status = dev->pci.ops->set_irq_mode(dev->pci.ctx, ZX_PCIE_IRQ_MODE_MSI, 1);
+    zx_status_t status = pci_set_irq_mode(&dev->pci, ZX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
-        status = dev->pci.ops->set_irq_mode(dev->pci.ctx, ZX_PCIE_IRQ_MODE_LEGACY, 1);
+        status = pci_set_irq_mode(&dev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
         if (status < 0) {
             printf("pci-sdhci: error %d setting irq mode\n", status);
             return status;
@@ -40,7 +40,7 @@ static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
         printf("pci-sdhci: selected legacy irq mode\n");
     }
     // get irq handle
-    status = dev->pci.ops->map_interrupt(dev->pci.ctx, 0, handle_out);
+    status = pci_map_interrupt(&dev->pci, 0, handle_out);
     if (status != ZX_OK) {
         printf("pci-sdhci: error %d getting irq handle\n", status);
         return status;
@@ -52,9 +52,8 @@ static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
 static zx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
     pci_sdhci_device_t* dev = ctx;
     if (dev->regs == NULL) {
-        zx_status_t status = dev->pci.ops->map_resource(dev->pci.ctx, PCI_RESOURCE_BAR_0,
-                ZX_CACHE_POLICY_UNCACHED_DEVICE, (void**)&dev->regs,
-                &dev->regs_size, &dev->regs_handle);
+        zx_status_t status = pci_map_bar(&dev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                (void**)&dev->regs, &dev->regs_size, &dev->regs_handle);
         if (status != ZX_OK) {
             printf("pci-sdhci: error %d mapping register window\n", status);
             return status;

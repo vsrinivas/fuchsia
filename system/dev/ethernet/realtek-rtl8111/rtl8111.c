@@ -354,10 +354,10 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     }
 
     uint32_t irq_cnt = 0;
-    if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
+    if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
         (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
         zxlogf(TRACE, "rtl8111: using MSI mode\n");
-    } else if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
+    } else if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
                (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
         zxlogf(TRACE, "rtl8111: using legacy irq mode\n");
     } else {
@@ -374,8 +374,8 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
 
     uint64_t sz;
     void* io;
-    r = pci_map_resource(
-        &edev->pci, PCI_RESOURCE_BAR_2, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &edev->ioh);
+    r = pci_map_bar(
+        &edev->pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &edev->ioh);
     if (r != ZX_OK) {
         zxlogf(ERROR, "rtl8111: cannot map io %d\n", r);
         goto fail;

@@ -8,7 +8,7 @@ __BEGIN_CDECLS
 
 // forward declarations needed by syscalls.h
 typedef struct zx_port_packet zx_port_packet_t;
-typedef struct zx_pci_bar zx_pci_resource_t;
+typedef struct zx_pci_bar zx_pci_bar_t;
 typedef struct zx_pcie_device_info zx_pcie_device_info_t;
 typedef struct zx_pci_init_arg zx_pci_init_arg_t;
 typedef union zx_rrec zx_rrec_t;

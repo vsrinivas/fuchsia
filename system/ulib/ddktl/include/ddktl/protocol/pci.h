@@ -63,7 +63,7 @@ class PciProtocolProxy {
     PciProtocolProxy(pci_protocol_t* proto)
       : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t GetResource(uint32_t res_id, zx_pci_resource_t* out_res) {
+    zx_status_t GetResource(uint32_t res_id, zx_pci_bar_t* out_res) {
         return ops_->get_resource(ctx_, res_id, out_res);
     }
 
@@ -85,7 +85,7 @@ class PciProtocolProxy {
     }
 
     zx_status_t QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-        return ops_->query_irq_mode_caps(ctx_, mode, out_max_irqs);
+        return ops_->query_irq_mode(ctx_, mode, out_max_irqs);
     }
 
     zx_status_t SetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {

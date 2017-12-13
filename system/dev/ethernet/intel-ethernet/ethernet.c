@@ -233,10 +233,10 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
 
     // Query whether we have MSI or Legacy interrupts.
     uint32_t irq_cnt = 0;
-    if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
+    if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
         (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
         printf("eth: using MSI mode\n");
-    } else if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
+    } else if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
                (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
         printf("eth: using legacy irq mode\n");
     } else {
@@ -254,7 +254,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     uint64_t sz;
     zx_handle_t h;
     void* io;
-    r = pci_map_resource(&edev->pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    r = pci_map_bar(&edev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
     if (r != ZX_OK) {
         printf("eth: cannot map io %d\n", h);
         goto fail;

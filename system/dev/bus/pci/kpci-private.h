@@ -27,13 +27,12 @@ typedef struct kpci_device {
 } kpci_device_t;
 
 typedef enum {
-    PCI_OP_RESET_DEVICE = 1,
+    PCI_OP_INVALID = 0,
+    PCI_OP_RESET_DEVICE,
     PCI_OP_ENABLE_BUS_MASTER,
     PCI_OP_CONFIG_READ,
-    PCI_OP_GET_NEXT_CAPABILITY,
-    PCI_OP_GET_RESOURCE,
-    PCI_OP_MAP_RESOURCE,
-    PCI_OP_QUERY_IRQ_MODE_CAPS,
+    PCI_OP_GET_BAR,
+    PCI_OP_QUERY_IRQ_MODE,
     PCI_OP_SET_IRQ_MODE,
     PCI_OP_MAP_INTERRUPT,
     PCI_OP_GET_DEVICE_INFO,
@@ -46,23 +45,39 @@ static inline uint32_t pci_next_txid(void) {
     return atomic_fetch_add(&pci_global_txid, 1);
 }
 
-#define PCI_MAX_DATA 4096
-
 typedef struct {
-    zx_txid_t txid;     // FIDL2 message header
+    uint16_t offset;
+    uint16_t width;
+    uint32_t value;
+} pci_msg_cfg_t;
+
+// For use with QUERY_IRQ_MODE, SET_IRQ_MODE, and MAP_INTERRUPT
+typedef struct {
+    zx_pci_irq_mode_t mode;
+    union {
+        int32_t which_irq;
+        uint32_t max_irqs;
+        uint32_t requested_irqs;
+    };
+} pci_msg_irq_t;
+
+#define PCI_MAX_DATA 4096
+typedef struct {
+    zx_txid_t txid; // FIDL2 message header
     uint32_t reserved0;
     uint32_t flags;
     uint32_t ordinal;
 
     uint32_t outlen;
     uint32_t datalen;
-    uint8_t data[PCI_MAX_DATA];
+    // Subtract the size of the preceeding 6 uint32_ts to keep
+    // the structure inside a page.
+    union {
+        bool enable;
+        pci_msg_cfg_t cfg;
+        pci_msg_irq_t irq;
+        zx_pci_bar_t bar;
+        zx_pcie_device_info_t info;
+        uint8_t data[PCI_MAX_DATA - 24u];
+    };
 } pci_msg_t;
-
-typedef struct {
-    uint16_t offset;
-    uint16_t width;
-    uint32_t value;
-} pci_msg_cfg_read_t;
-
-typedef pci_msg_cfg_read_t pci_msg_cfg_write_t;

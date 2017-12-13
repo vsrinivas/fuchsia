@@ -18,17 +18,6 @@ __BEGIN_CDECLS;
  * The PCI host driver publishes zx_device_t's with its config set to a pci_device_config_t.
  */
 
-enum pci_resource_ids {
-    PCI_RESOURCE_BAR_0 = 0,
-    PCI_RESOURCE_BAR_1,
-    PCI_RESOURCE_BAR_2,
-    PCI_RESOURCE_BAR_3,
-    PCI_RESOURCE_BAR_4,
-    PCI_RESOURCE_BAR_5,
-    PCI_RESOURCE_CONFIG,
-    PCI_RESOURCE_COUNT,
-};
-
 enum pci_header_fields {
     kPciCfgVendorId = 0x00,
     kPciCfgDeviceId = 0x02,
@@ -63,18 +52,18 @@ enum pci_cap_types {
 
 
 typedef struct pci_protocol_ops {
-    zx_status_t (*get_resource)(void* ctx, uint32_t res_id,  zx_pci_resource_t* out_res);
-    zx_status_t (*map_resource)(void* ctx, uint32_t res_id, uint32_t cache_policy,
+    zx_status_t (*get_bar)(void* ctx, uint32_t bar_id,  zx_pci_bar_t* out_res);
+    zx_status_t (*map_bar)(void* ctx, uint32_t bar_id, uint32_t cache_policy,
                                 void** vaddr, size_t* size, zx_handle_t* out_handle);
     zx_status_t (*enable_bus_master)(void* ctx, bool enable);
     zx_status_t (*reset_device)(void* ctx);
     zx_status_t (*map_interrupt)(void* ctx, int which_irq, zx_handle_t* out_handle);
-    zx_status_t (*query_irq_mode_caps)(void* ctx, zx_pci_irq_mode_t mode,
+    zx_status_t (*query_irq_mode)(void* ctx, zx_pci_irq_mode_t mode,
                                        uint32_t* out_max_irqs);
     zx_status_t (*set_irq_mode)(void* ctx, zx_pci_irq_mode_t mode,
                                 uint32_t requested_irq_count);
     zx_status_t (*get_device_info)(void* ctx, zx_pcie_device_info_t* out_info);
-    zx_status_t    (*config_read)(void* ctx, uint16_t offset, size_t width, uint32_t* value);
+    zx_status_t (*config_read)(void* ctx, uint16_t offset, size_t width, uint32_t* value);
     uint8_t     (*get_next_capability)(void* ctx, uint8_t type, uint8_t offset);
     zx_status_t (*get_auxdata)(void* ctx, const char* args,
                                void* data, uint32_t bytes, uint32_t* actual);
@@ -84,15 +73,15 @@ typedef struct pci_protocol {
     void* ctx;
 } pci_protocol_t;
 
-static inline zx_status_t pci_get_resource(pci_protocol_t* pci, uint32_t res_id,
-                                           zx_pci_resource_t* out_info) {
-    return pci->ops->get_resource(pci->ctx, res_id, out_info);
+static inline zx_status_t pci_get_bar(pci_protocol_t* pci, uint32_t res_id,
+                                           zx_pci_bar_t* out_info) {
+    return pci->ops->get_bar(pci->ctx, res_id, out_info);
 }
 
-static inline zx_status_t pci_map_resource(pci_protocol_t* pci, uint32_t res_id,
+static inline zx_status_t pci_map_bar(pci_protocol_t* pci, uint32_t bar_id,
                                            uint32_t cache_policy, void** vaddr, size_t* size,
                                            zx_handle_t* out_handle) {
-    return pci->ops->map_resource(pci->ctx, res_id, cache_policy, vaddr, size, out_handle);
+    return pci->ops->map_bar(pci->ctx, bar_id, cache_policy, vaddr, size, out_handle);
 }
 
 static inline zx_status_t pci_enable_bus_master(pci_protocol_t* pci, bool enable) {
@@ -108,9 +97,9 @@ static inline zx_status_t pci_map_interrupt(pci_protocol_t* pci, int which_irq,
     return pci->ops->map_interrupt(pci->ctx, which_irq, out_handle);
 }
 
-static inline zx_status_t pci_query_irq_mode_caps(pci_protocol_t* pci, zx_pci_irq_mode_t mode,
+static inline zx_status_t pci_query_irq_mode(pci_protocol_t* pci, zx_pci_irq_mode_t mode,
                                                   uint32_t* out_max_irqs) {
-    return pci->ops->query_irq_mode_caps(pci->ctx, mode, out_max_irqs);
+    return pci->ops->query_irq_mode(pci->ctx, mode, out_max_irqs);
 }
 
 static inline zx_status_t pci_set_irq_mode(pci_protocol_t* pci, zx_pci_irq_mode_t mode,

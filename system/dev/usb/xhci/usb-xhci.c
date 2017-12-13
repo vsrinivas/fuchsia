@@ -335,7 +335,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
-    status = pci_map_resource(pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci_map_bar(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_xhci_bind could not find bar\n");
@@ -344,9 +344,9 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     }
 
     uint32_t irq_cnt = 0;
-    status = pci_query_irq_mode_caps(pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
+    status = pci_query_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "pci_query_irq_mode_caps failed %d\n", status);
+        zxlogf(ERROR, "pci_query_irq_mode failed %d\n", status);
         goto error_return;
     }
 

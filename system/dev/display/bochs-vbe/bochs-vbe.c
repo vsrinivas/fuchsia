@@ -172,7 +172,7 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
         return ZX_ERR_NO_MEMORY;
 
     // map register window
-    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_2, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci_map_bar(&pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &device->regs, &device->regs_size,
                               &device->regs_handle);
     if (status != ZX_OK) {
@@ -181,7 +181,7 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
     }
 
     // map framebuffer window
-    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0,  ZX_CACHE_POLICY_WRITE_COMBINING,
+    status = pci_map_bar(&pci, 0u,  ZX_CACHE_POLICY_WRITE_COMBINING,
                               &device->framebuffer,
                               &device->framebuffer_size,
                               &device->framebuffer_handle);

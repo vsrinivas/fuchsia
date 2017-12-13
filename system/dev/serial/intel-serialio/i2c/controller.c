@@ -763,7 +763,7 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
     pci_config_read16(&pci, PCI_CONFIG_VENDOR_ID, &vendor_id);
     pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
 
-    zx_status_t status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    zx_status_t status = pci_map_bar(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != ZX_OK) {
         xprintf("i2c: failed to mape pci bar 0: %d\n", status);

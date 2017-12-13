@@ -13,20 +13,20 @@
 #include <trace.h>
 
 #include <dev/interrupt.h>
-#include <vm/vm_object_physical.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
 #include <object/vm_object_dispatcher.h>
+#include <vm/vm_object_physical.h>
 
-#include <zircon/syscalls/pci.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_free_ptr.h>
+#include <zircon/syscalls/pci.h>
 
 #include "priv.h"
 
@@ -56,12 +56,12 @@ static inline void shutdown_early_init_console() {}
 class PcieRootLUTSwizzle : public PcieRoot {
 public:
     static fbl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv,
-                                         uint managed_bus_id,
-                                         const zx_pci_irq_swizzle_lut_t& lut) {
+                                        uint managed_bus_id,
+                                        const zx_pci_irq_swizzle_lut_t& lut) {
         fbl::AllocChecker ac;
         auto root = fbl::AdoptRef(new (&ac) PcieRootLUTSwizzle(bus_drv,
-                                                                managed_bus_id,
-                                                                lut));
+                                                               managed_bus_id,
+                                                               lut));
         if (!ac.check()) {
             TRACEF("Out of memory attemping to create PCIe root to manage bus ID 0x%02x\n",
                    managed_bus_id);
@@ -154,10 +154,11 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
                (arg->addr_window_count == 1) ? "" : "s");
         for (uint32_t i = 0; i < arg->addr_window_count; i++) {
             printf("[%u]\n\tis_mmio: %d\n\thas_ecam: %d\n\tbase: %#" PRIxPTR "\n"
-                    "\tsize: %zu\n\tbus_start: %u\n\tbus_end: %u\n", i,
-                    arg->addr_windows[i].is_mmio, arg->addr_windows[i].has_ecam,
-                    arg->addr_windows[i].base, arg->addr_windows[i].size,
-                    arg->addr_windows[i].bus_start, arg->addr_windows[i].bus_end);
+                   "\tsize: %zu\n\tbus_start: %u\n\tbus_end: %u\n",
+                   i,
+                   arg->addr_windows[i].is_mmio, arg->addr_windows[i].has_ecam,
+                   arg->addr_windows[i].base, arg->addr_windows[i].size,
+                   arg->addr_windows[i].bus_start, arg->addr_windows[i].bus_end);
         }
     }
 
@@ -230,7 +231,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
             return ZX_ERR_INVALID_ARGS;
         }
         if (arg->addr_windows[0].size / PCIE_ECAM_BYTE_PER_BUS >
-                PCIE_MAX_BUSSES - arg->addr_windows[0].bus_start) {
+            PCIE_MAX_BUSSES - arg->addr_windows[0].bus_start) {
 
             return ZX_ERR_INVALID_ARGS;
         }
@@ -305,9 +306,9 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
     zx_pcie_device_info_t info;
-    zx_status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
-    if (result != ZX_OK) {
-        return result;
+    status = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
+    if (status != ZX_OK) {
+        return status;
     }
 
     // If everything is successful add the handle to the process
@@ -326,14 +327,14 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
     // Get the PciDeviceDispatcher from the handle passed in via the pci protocol
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE,
-                                                    &pci_device);
+                                                     &pci_device);
     if (status != ZX_OK) {
         return status;
     }
 
     auto device = pci_device->device();
     auto cfg_size = device->is_pcie() ? PCIE_EXTENDED_CONFIG_SIZE : PCIE_BASE_CONFIG_SIZE;
-    if (out_val.get() == nullptr || offset + (width / 8) > cfg_size) {
+    if (out_val.get() == nullptr || offset + width > cfg_size) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -341,11 +342,15 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
     // to ensure we're getting correctly sized data back and return errors in the PIO
     // cases.
     auto config = device->config();
-    switch(width) {
-    case 1u:  return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg8(offset))));
-    case 2u: return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg16(offset))));
-    case 4u: return out_val.copy_to_user(config->Read(PciReg32(offset)));
-    default: return ZX_ERR_INVALID_ARGS;
+    switch (width) {
+    case 1u:
+        return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg8(offset))));
+    case 2u:
+        return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg16(offset))));
+    case 4u:
+        return out_val.copy_to_user(config->Read(PciReg32(offset)));
+    default:
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // If we reached this point then the width was invalid.
@@ -415,48 +420,47 @@ zx_status_t sys_pci_reset_device(zx_handle_t dev_handle) {
     return pci_device->ResetDevice();
 }
 
-zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_out_ptr<zx_pci_resource_t> out_bar) {
-    fbl::RefPtr<PciDeviceDispatcher> pci_device;
-    fbl::RefPtr<Dispatcher> dispatcher;
-    HandleOwner mmio_handle;
-    zx_pci_resource_t bar;
-    zx_status_t status;
-
-    LTRACEF("handle %x\n", dev_handle);
+zx_status_t sys_pci_get_bar(zx_handle_t dev_handle,
+                            uint32_t bar_num,
+                            user_out_ptr<zx_pci_bar_t> out_bar,
+                            user_out_handle* out_handle) {
     if (dev_handle == ZX_HANDLE_INVALID ||
-        !out_bar || bar_num >= PCIE_MAX_BAR_REGS) {
+        !out_bar ||
+        bar_num >= PCIE_MAX_BAR_REGS) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    auto up = ProcessDispatcher::GetCurrent();
-
     // Grab the PCI device object
-    status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
+    zx_status_t status = up->GetDispatcherWithRights(dev_handle,
+                                                     ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
     if (status != ZX_OK) {
         return status;
     }
 
     // Get bar info from the device via the dispatcher and make sure it makes sense
     const pcie_bar_info_t* info = pci_device->GetBar(bar_num);
-    if (info == nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (info->size == 0) {
+    if (info == nullptr || info->size == 0) {
         return ZX_ERR_NOT_FOUND;
     }
 
     // A bar can be MMIO, PIO, or unused. In the MMIO case it can be passed
     // back to the caller as a VMO.
-    memset(&bar, 0, sizeof(bar));
+    zx_pci_bar_t bar = {};
     bar.size = info->size;
-    bar.type = (info->is_mmio) ? PCI_RESOURCE_TYPE_MMIO : PCI_RESOURCE_TYPE_PIO;
+    bar.type = (info->is_mmio) ? PCI_BAR_TYPE_MMIO : PCI_BAR_TYPE_PIO;
+
+    // MMIO based bars are passed back using a VMO. If we end up creating one here
+    // without errors then later a handle will be passed back to the caller.
+    fbl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<VmObject> vmo;
+    zx_rights_t rights;
     if (info->is_mmio) {
         // Create a VMO mapping to the address / size of the mmio region this bar
         // was allocated at
-        fbl::RefPtr<VmObject> vmo;
         status = VmObjectPhysical::Create(info->bus_addr,
-                                            fbl::max<uint64_t>(info->size, PAGE_SIZE), &vmo);
+                                          fbl::max<uint64_t>(info->size, PAGE_SIZE), &vmo);
         if (status != ZX_OK) {
             return status;
         }
@@ -465,127 +469,32 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_out_p
         char name[32];
         auto dev = pci_device->device();
         snprintf(name, sizeof(name), "pci-%02x:%02x.%1x-bar%u",
-                dev->bus_id(), dev->dev_id(), dev->func_id(), bar_num);
+                 dev->bus_id(), dev->dev_id(), dev->func_id(), bar_num);
         vmo->set_name(name, sizeof(name));
 
-        // We have a VMO, time to prep a handle to it for the caller
-        zx_rights_t rights;
+        // Now that the vmo has been created for the bar, create a handle to
+        // the appropriate dispatcher for the caller
         status = VmObjectDispatcher::Create(vmo, &dispatcher, &rights);
         if (status != ZX_OK) {
             return status;
         }
 
-        mmio_handle = HandleOwner(Handle::Make(fbl::move(dispatcher), rights));
-        if (!mmio_handle) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        bar.mmio_handle = up->MapHandleToValue(mmio_handle);
+        pci_device->EnableMmio(true);
     } else {
         DEBUG_ASSERT(info->bus_addr != 0);
-        bar.pio_addr = info->bus_addr;
-    }
-
-    /* Success so far, copy everything back to usersapce */
-    status = out_bar.copy_to_user(bar);
-    if (status != ZX_OK)
-        return status;
-
-    /* If the bar is an mmio the VMO handle still needs to be accounted for */
-    if (info->is_mmio) {
-        pci_device->EnableMmio(true);
-        up->AddHandle(fbl::move(mmio_handle));
-    } else {
+        bar.addr = info->bus_addr;
         pci_device->EnablePio(true);
     }
 
-    return ZX_OK;
-}
-
-zx_status_t sys_pci_get_config(zx_handle_t dev_handle, user_out_ptr<zx_pci_resource_t> out_config) {
-    fbl::RefPtr<PciDeviceDispatcher> pci_device;
-    fbl::RefPtr<Dispatcher> dispatcher;
-    pci_config_info_t pci_config;
-    zx_pci_resource_t config;
-    HandleOwner mmio_handle;
-    zx_status_t status;
-
-    if (!out_config) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Get the process context and device dispatcher from the caller device handle
-    auto up = ProcessDispatcher::GetCurrent();
-    status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
+    // Metadata has been sorted out, so copy back the structure to userspace
+    // and then account for the vmo handle if one was created.
+    status = out_bar.copy_to_user(bar);
     if (status != ZX_OK) {
         return status;
     }
 
-    // Get the config metadata from the device dispatcher. This contains either
-    // a size/addr tuple for pio, or a size and vmo for mmio.
-    status = pci_device->GetConfig(&pci_config);
-    if (status != ZX_OK) {
-        printf("failed to get config: %d\n", status);
-        return status;
-    }
-
-    memset(&config, 0, sizeof(config));
-    config.type = (pci_config.is_mmio) ? PCI_RESOURCE_TYPE_MMIO : PCI_RESOURCE_TYPE_PIO;
-    config.size = pci_config.size;
-
-    // VMO vs PIO
-    if (pci_config.is_mmio) {
-        auto dev = pci_device->device();
-        fbl::RefPtr<VmObject> vmo;
-        status = VmObjectPhysical::Create(dev->config_phys(), PAGE_SIZE, &vmo);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        // Config is always uncached
-        vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED_DEVICE);
-
-        // Set the name of the vmo for tracking
-        char name[32];
-        snprintf(name, sizeof(name), "pci-%02x:%02x.%1x-cfg",
-                 dev->bus_id(), dev->dev_id(), dev->func_id());
-        vmo->set_name(name, sizeof(name));
-
-        vmo->Dump(0, true);
-        // Create a handle to the VMO to give back to the caller, but strip off the write
-        // permission. PCI config space is only writable by the bus driver.
-        // TODO(cja): Rethink this for dealing with gap registers in capability space
-        // later. It might make sense to keep a mapping of gaps in the space to allow
-        // writes and provide a syscall to do so.
-        zx_rights_t rights;
-        status = VmObjectDispatcher::Create(vmo, &dispatcher, &rights);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        // Drivers are not granted access to write to their own config space. It is
-        // restricted to the bus driver.
-        rights &= ~ZX_RIGHT_WRITE;
-        mmio_handle = HandleOwner(Handle::Make(fbl::move(dispatcher), rights));
-        if (!mmio_handle) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        config.mmio_handle = up->MapHandleToValue(mmio_handle);
-    } else {
-        DEBUG_ASSERT(pci_config.base_addr != 0);
-        config.pio_addr = pci_config.base_addr;
-    }
-
-    // Success so far, copy everything back to the usersapce out_config pointer.
-    status = out_config.copy_to_user(config);
-    if (status != ZX_OK)
-        return status;
-
-    // If we created an MMIO handle it needs to be held by the process
-    if (pci_config.is_mmio) {
-        pci_device->EnableMmio(true);
-        up->AddHandle(fbl::move(mmio_handle));
+    if (vmo) {
+        return out_handle->make(fbl::move(dispatcher), rights);
     }
 
     return ZX_OK;
@@ -652,9 +561,9 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
  * @param mode The IRQ mode whose capabilities are to be queried.
  * @param out_len Out param which will hold the maximum number of IRQs supported by the mode.
  */
-zx_status_t sys_pci_query_irq_mode_caps(zx_handle_t dev_handle,
-                                        uint32_t mode,
-                                        user_out_ptr<uint32_t> out_max_irqs) {
+zx_status_t sys_pci_query_irq_mode(zx_handle_t dev_handle,
+                                   uint32_t mode,
+                                   user_out_ptr<uint32_t> out_max_irqs) {
     LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -729,11 +638,7 @@ zx_status_t sys_pci_reset_device(zx_handle_t) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_get_bar(zx_handle_t, uint32_t, pci_resource_t**) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_pci_get_config(zx_handle_t dev_handle, zx_pci_resource_t* out_config) {
+zx_status_t sys_pci_get_bar(zx_handle_t, uint32_t, pci_resource_t**, user_out_handle*) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -749,7 +654,7 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t, int32_t, user_out_handle*) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_query_irq_mode_caps(zx_handle_t, uint32_t, user_out_ptr<uint32_t>) {
+zx_status_t sys_pci_query_irq_mode(zx_handle_t, uint32_t, user_out_ptr<uint32_t>) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

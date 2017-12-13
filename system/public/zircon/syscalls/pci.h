@@ -13,28 +13,29 @@ __BEGIN_CDECLS
 
 
 // Base Address Registers are accessed in userspace via the get_bar protocol method. The
-// Bar is represented via a pci_resource_t struct which contains a handle pointer to a VMO
+// Bar is represented via a pci_bar_t struct which contains a handle pointer to a VMO
 // in the case of an MMIO bar, as well as a PIO addr/size pair for the memory region
 // to access if a PIO bar. In the latter case, the protocol will acquire the appropriate
 // permissions for the process to write to that PIO region on that architecture.
 typedef enum {
-    PCI_RESOURCE_TYPE_UNUSED = 0,
-    PCI_RESOURCE_TYPE_MMIO,
-    PCI_RESOURCE_TYPE_PIO,
-} zx_pci_resource_types_t;
+    PCI_BAR_TYPE_UNUSED = 0,
+    PCI_BAR_TYPE_MMIO,
+    PCI_BAR_TYPE_PIO,
+} zx_pci_bar_types_t;
 
 // TODO(cja): This makes some assumptions that anything in an arch's PIO region
 // is going to be defined as a base address and size. This will need to be
 // updated to a per-platform structure in the event that doesn't pan out
 // in the future.
 typedef struct zx_pci_bar {
+    uint32_t id;
     uint32_t type;
     size_t size;
     union {
-        zx_handle_t mmio_handle;
-        uintptr_t pio_addr;
+        uintptr_t addr;
+        zx_handle_t handle;
     };
-} zx_pci_resource_t;
+} zx_pci_bar_t;
 
 // Defines and structures related to zx_pci_*()
 // Info returned to dev manager for PCIe devices when probing.

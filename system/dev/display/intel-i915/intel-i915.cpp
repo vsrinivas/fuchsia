@@ -126,7 +126,7 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
     interrupt_ctrl.WriteTo(mmio_space_.get());
 
     uint32_t irq_cnt = 0;
-    zx_status_t status = pci_query_irq_mode_caps(pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
+    zx_status_t status = pci_query_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
     if (status != ZX_OK || !irq_cnt) {
         zxlogf(ERROR, "i915: Failed to find interrupts %d %d\n", status, irq_cnt);
         return ZX_ERR_INTERNAL;
@@ -593,7 +593,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     // map register window
     uintptr_t regs;
     uint64_t regs_size;
-    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci_map_bar(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               reinterpret_cast<void**>(&regs), &regs_size, &regs_handle_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to map bar 0: %d\n", status);

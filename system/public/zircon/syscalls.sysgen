@@ -603,12 +603,8 @@ syscall pci_cfg_pio_rw
     returns (zx_status_t);
 
 syscall pci_get_bar
-    (handle: zx_handle_t, bar_num: uint32_t, out_bar: zx_pci_resource_t[1] OUT)
-    returns (zx_status_t);
-
-syscall pci_get_config
-    (handle: zx_handle_t, out_config: zx_pci_resource_t[1] OUT)
-    returns (zx_status_t);
+    (handle: zx_handle_t, bar_num: uint32_t, out_bar: zx_pci_bar_t[1] OUT)
+    returns (zx_status_t, out_handle: zx_handle_t);
 
 syscall pci_io_write
     (handle: zx_handle_t, bar_num: uint32_t, offset: uint32_t, len: uint32_t, value: uint32_t)
@@ -623,7 +619,7 @@ syscall pci_map_interrupt
     (handle: zx_handle_t, which_irq: int32_t)
     returns (zx_status_t, out_handle: zx_handle_t);
 
-syscall pci_query_irq_mode_caps
+syscall pci_query_irq_mode
     (handle: zx_handle_t, mode: uint32_t)
     returns (zx_status_t, out_max_irqs: uint32_t);
 

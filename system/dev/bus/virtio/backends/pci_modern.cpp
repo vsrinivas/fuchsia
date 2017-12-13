@@ -157,8 +157,7 @@ zx_status_t PciModernBackend::MapBar(uint8_t bar) {
     size_t size;
     zx_handle_t handle;
     void* base;
-    zx_status_t s = pci_map_resource(&pci_, PCI_RESOURCE_BAR_0 + bar,
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE, &base, &size, &handle);
+    zx_status_t s = pci_map_bar(&pci_, bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &base, &size, &handle);
     if (s != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to map bar %u: %d\n", tag(), bar, s);
         return s;

@@ -1049,8 +1049,8 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    if (pci_map_resource(&nvme->pci, PCI_RESOURCE_BAR_0,
-                         ZX_CACHE_POLICY_UNCACHED_DEVICE, &nvme->io, &nvme->iosz, &nvme->ioh)) {
+    if (pci_map_bar(&nvme->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                    &nvme->io, &nvme->iosz, &nvme->ioh)) {
         zxlogf(ERROR, "nvme: cannot map registers\n");
         goto fail;
     }
@@ -1060,7 +1060,7 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     };
     uint32_t nirq = 0;
     for (unsigned n = 0; n < countof(modes); n++) {
-        if ((pci_query_irq_mode_caps(&nvme->pci, modes[n], &nirq) == ZX_OK) &&
+        if ((pci_query_irq_mode(&nvme->pci, modes[n], &nirq) == ZX_OK) &&
             (pci_set_irq_mode(&nvme->pci, modes[n], 1) == ZX_OK)) {
             zxlogf(INFO, "nvme: irq mode %u, irq count %u (#%u)\n", modes[n], nirq, n);
             goto irq_configured;
