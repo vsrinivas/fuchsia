@@ -17,6 +17,10 @@
 #include "garnet/bin/guest/kernel.h"
 #include "garnet/bin/guest/zircon.h"
 
+#if __x86_64__
+#include "garnet/lib/machina/arch/x86/e820.h"
+#endif
+
 static const uint64_t kBuildSigStartMagic = 0x5452545347495342;  // BSIGSTRT
 
 static bool is_bootdata(const bootdata_t* header) {
@@ -138,7 +142,7 @@ static zx_status_t create_bootdata(const uintptr_t addr,
 #if __aarch64__
   const size_t bootdata_len = 0;
 #elif __x86_64__
-  const size_t e820_size = guest_e820_size(size);
+  const size_t e820_size = machina::e820_size(size);
   const size_t bootdata_len = sizeof(bootdata_t) +
                               BOOTDATA_ALIGN(sizeof(uint64_t)) +
                               sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
@@ -171,7 +175,7 @@ static zx_status_t create_bootdata(const uintptr_t addr,
   set_bootdata(e820_table_hdr, BOOTDATA_E820_TABLE,
                static_cast<uint32_t>(e820_size));
   bootdata_off += sizeof(bootdata_t);
-  return guest_create_e820(addr, size, bootdata_off);
+  return machina::create_e820(addr, size, bootdata_off);
 #endif
 }
 

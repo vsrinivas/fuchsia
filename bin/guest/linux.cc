@@ -19,13 +19,17 @@
 #include "garnet/bin/guest/kernel.h"
 #include "garnet/bin/guest/linux.h"
 
+#if __x86_64__
+#include "garnet/lib/machina/arch/x86/e820.h"
+#endif
+
 static const uint8_t kLoaderTypeUnspecified = 0xff;  // Unknown bootloader
 static const uint16_t kMinBootProtocol = 0x200;      // bzImage boot protocol
 static const uint16_t kBootFlagMagic = 0xaa55;
 static const uint32_t kHeaderMagic = 0x53726448;
 static const uintptr_t kEntryOffset = 0x200;
-static const uintptr_t kE820MapOffset = 0x02d0;
-static const size_t kMaxE820Entries = 128;
+__UNUSED static const uintptr_t kE820MapOffset = 0x02d0;
+__UNUSED static const size_t kMaxE820Entries = 128;
 __UNUSED static const size_t kSectorSize = 512;
 
 static const char kDtbPath[] = "/pkg/data/board.dtb";
@@ -199,15 +203,19 @@ static zx_status_t write_boot_params(const uintptr_t addr,
   memcpy(reinterpret_cast<void*>(addr + cmdline_off), cmdline, cmdline_len);
   bp(first_page, COMMAND_LINE) = static_cast<uint32_t>(cmdline_off);
 
+#if __aarch64__
+  return ZX_OK;
+#elif __x86_64__
   // Setup e820 memory map.
-  size_t e820_entries = guest_e820_size(size) / sizeof(e820entry_t);
+  size_t e820_entries = machina::e820_entries(size);
   if (e820_entries > kMaxE820Entries) {
     fprintf(stderr, "Not enough space for e820 memory map\n");
     return ZX_ERR_BAD_STATE;
   }
   bp(first_page, E820_COUNT) = static_cast<uint8_t>(e820_entries);
 
-  return guest_create_e820(addr, size, first_page - addr + kE820MapOffset);
+  return machina::create_e820(addr, size, first_page - addr + kE820MapOffset);
+#endif
 }
 
 static zx_status_t load_device_tree(const uintptr_t addr,
