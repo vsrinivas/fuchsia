@@ -63,6 +63,9 @@ class TestWithMessageLoop : public ::testing::Test {
                     fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1),
                     fxl::TimeDelta step = fxl::TimeDelta::FromMilliseconds(10));
 
+  // Runs the message loop until idle.
+  void RunLoopUntilIdle();
+
   // Creates a closure that quits the test message loop when executed.
   fxl::Closure MakeQuitTask();
 

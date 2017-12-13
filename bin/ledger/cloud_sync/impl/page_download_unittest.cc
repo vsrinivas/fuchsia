@@ -22,6 +22,7 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
@@ -49,19 +50,39 @@ class PageDownloadTest : public gtest::TestWithMessageLoop,
     new_state_callback_ = std::move(callback);
   }
 
+  // Starts download and runs the loop until the download state is idle. Returns
+  // true iff the download state went to idle as expected.
+  ::testing::AssertionResult StartDownloadAndWaitForIdle() {
+    bool on_idle_called = false;
+    SetOnNewStateCallback([this, &on_idle_called] {
+      if (states_.back() == DOWNLOAD_IDLE) {
+        on_idle_called = true;
+        message_loop_.PostQuitTask();
+      }
+    });
+    page_download_->StartDownload();
+    RunLoopUntilIdle();
+    SetOnNewStateCallback([] {});
+
+    if (on_idle_called) {
+      return ::testing::AssertionSuccess();
+    } else {
+      return ::testing::AssertionFailure() <<
+          "The download state never reached idle.";
+    }
+  }
+
   std::string GetData(storage::DataSource* data_source) {
     std::stringstream data;
     data_source->Get(
-        [this, &data](std::unique_ptr<storage::DataSource::DataChunk> chunk,
+        [&data](std::unique_ptr<storage::DataSource::DataChunk> chunk,
                       storage::DataSource::Status status) {
           EXPECT_NE(storage::DataSource::Status::ERROR, status);
           if (status == storage::DataSource::Status::TO_BE_CONTINUED) {
             data << chunk->Get();
-          } else {
-            message_loop_.PostQuitTask();
           }
         });
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoopUntilIdle();
     return data.str();
   }
 
@@ -103,14 +124,7 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
       MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = convert::ToArray("43");
 
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -119,19 +133,8 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(DOWNLOAD_IDLE, states_.back());
 }
 
-// Verifies that callbacks are correctly run after downloading an empty backlog
-// of remote commits.
 TEST_F(PageDownloadTest, DownloadEmptyBacklog) {
-  int on_idle_calls = 0;
-  SetOnNewStateCallback([this, &on_idle_calls] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      on_idle_calls++;
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1, on_idle_calls);
+  ASSERT_TRUE(StartDownloadAndWaitForIdle());
 }
 
 // Verifies that the cloud watcher is registered for the timestamp of the most
@@ -143,13 +146,8 @@ TEST_F(PageDownloadTest, RegisterWatcher) {
       MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = convert::ToArray("43");
 
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(StartDownloadAndWaitForIdle());
+
   ASSERT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
   EXPECT_EQ("43", page_cloud_.set_watcher_position_tokens.front());
 }
@@ -157,14 +155,7 @@ TEST_F(PageDownloadTest, RegisterWatcher) {
 // Verifies that commit notifications about new commits in cloud provider are
 // received and passed to storage.
 TEST_F(PageDownloadTest, ReceiveNotifications) {
-  // Start download and wait until idle.
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   // Deliver a remote notification.
   EXPECT_EQ(0u, storage_.received_commits.size());
@@ -174,8 +165,7 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("43"), [] {});
-  EXPECT_TRUE(
-      RunLoopUntil([this] { return storage_.received_commits.size() == 2u; }));
+  RunLoopUntilIdle();
 
   // Verify that the remote commits were added to storage.
   EXPECT_EQ(2u, storage_.received_commits.size());
@@ -190,30 +180,23 @@ TEST_F(PageDownloadTest, RetryRemoteWatcher) {
   page_download_->StartDownload();
   EXPECT_EQ(0u, storage_.received_commits.size());
 
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return page_cloud_.set_watcher_position_tokens.size() == 1u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
 
   page_cloud_.set_watcher->OnError(cloud_provider::Status::NETWORK_ERROR);
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return page_cloud_.set_watcher_position_tokens.size() == 2u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(2u, page_cloud_.set_watcher_position_tokens.size());
 
   page_cloud_.set_watcher->OnError(cloud_provider::Status::AUTH_ERROR);
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return page_cloud_.set_watcher_position_tokens.size() == 3u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(3u, page_cloud_.set_watcher_position_tokens.size());
 }
 
 // Verifies that if multiple remote commits are received while one batch is
 // already being downloaded, the new remote commits are added to storage in one
 // request.
 TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
-  // Start download and wait until idle.
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   // Make the storage delay requests to add remote commits.
   storage_.should_delay_add_commit_confirmation = true;
@@ -225,9 +208,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("42"), [] {});
-  EXPECT_TRUE(RunLoopUntil([this] {
-    return storage_.delayed_add_commit_confirmations.size() == 1u;
-  }));
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
 
   // Add two more remote commits, before storage confirms adding the first one.
@@ -242,8 +223,8 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   // Make storage confirm adding the first commit.
   storage_.should_delay_add_commit_confirmation = false;
   storage_.delayed_add_commit_confirmations.front()();
-  EXPECT_TRUE(
-      RunLoopUntil([this] { return storage_.received_commits.size() == 3u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(3u, storage_.received_commits.size());
 
   // Verify that all three commits were delivered in total of two calls to
   // storage.
@@ -258,21 +239,26 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
 // Verifies that failing attempts to download the backlog of unsynced commits
 // are retried.
 TEST_F(PageDownloadTest, RetryDownloadBacklog) {
-  // Forces RunLoopUntil to check its condition each time the state changes.
-  SetOnNewStateCallback([this] { message_loop_.QuitNow(); });
   page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   page_download_->StartDownload();
 
   // Loop through five attempts to download the backlog.
-  EXPECT_TRUE(
-      RunLoopUntil([this] { return page_cloud_.get_commits_calls >= 5u; }));
+  SetOnNewStateCallback([this] {
+    if (page_cloud_.get_commits_calls >= 5u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  RunLoopUntilIdle();
+  EXPECT_GE(5u, page_cloud_.get_commits_calls);
   EXPECT_EQ(0u, storage_.received_commits.size());
 
+  SetOnNewStateCallback([] {});
   page_cloud_.status_to_return = cloud_provider::Status::OK;
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.position_token_to_return = convert::ToArray("42");
-  EXPECT_TRUE(RunLoopUntil([this] { return page_download_->IsIdle(); }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(page_download_->IsIdle());
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -282,14 +268,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
 // Verifies that a failure to persist the remote commit stops syncing remote
 // commits and the error status is returned.
 TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
-  // Start download and wait until idle.
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(StartDownloadAndWaitForIdle());
   EXPECT_TRUE(page_cloud_.set_watcher.is_bound());
 
   storage_.should_fail_add_commit_from_sync = true;
@@ -298,14 +277,10 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("42"), [] {});
 
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return page_cloud_.set_watcher.encountered_error(); }));
+  RunLoopUntilIdle();
+  ASSERT_FALSE(states_.empty());
+  EXPECT_EQ(DOWNLOAD_PERMANENT_ERROR, states_.back());
+  EXPECT_TRUE(page_cloud_.set_watcher.encountered_error());
 }
 
 // Verifies that the idle status is returned when there is no download in
@@ -330,7 +305,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
   // Run the message loop and verify that the sync is idle after all remote
   // commits are added to storage.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_TRUE(page_download_->IsIdle());
 
@@ -340,7 +315,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id3", "content3"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("44"), [] {});
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_download_->IsIdle());
@@ -351,13 +326,15 @@ TEST_F(PageDownloadTest, GetObject) {
   page_cloud_.objects_to_return["object_digest"] = "content";
   page_download_->StartDownload();
 
+  bool called;
   storage::Status status;
   std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
       storage::ObjectDigestView("object_digest"),
-      callback::Capture(MakeQuitTask(), &status, &data_source));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(ledger::SetWhenCalled(&called), &status, &data_source));
+  RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(7u, data_source->GetSize());
   EXPECT_EQ("content", GetData(data_source.get()));
@@ -381,13 +358,15 @@ TEST_F(PageDownloadTest, RetryGetObject) {
       page_cloud_.objects_to_return["object_digest"] = "content";
     }
   });
+  bool called;
   storage::Status status;
   std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
       storage::ObjectDigestView("object_digest"),
-      callback::Capture(MakeQuitTask(), &status, &data_source));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(ledger::SetWhenCalled(&called), &status, &data_source));
+  RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(6u, page_cloud_.get_object_calls);
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(7u, data_source->GetSize());

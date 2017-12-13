@@ -70,6 +70,10 @@ bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
   return RunGivenLoopUntil(&message_loop_, std::move(condition), timeout, step);
 }
 
+void TestWithMessageLoop::RunLoopUntilIdle() {
+    message_loop_.RunUntilIdle();
+}
+
 fxl::Closure TestWithMessageLoop::MakeQuitTask() {
   return [this] { message_loop_.PostQuitTask(); };
 }
