@@ -30,12 +30,12 @@ struct TextRange {
   // The index of the first UTF-16 character in the range.
   //
   // If |start| and |end| are both -1, the text range is empty.
-  int64 start;
+  int64 start = -1;
 
   // The next index after the UTF-16 characters in this range.
   //
   // If |start| and |end| are both -1, the text range is empty.
-  int64 end;
+  int64 end = -1;
 };
 
 // A range of text that represents a selection.
