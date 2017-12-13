@@ -33,7 +33,7 @@ class ApMlme : public Mlme {
    private:
     DeviceInterface* const device_;
     fbl::unique_ptr<BeaconSender> bcn_sender_;
-    InfraBssMap bss_map_;
+    fbl::RefPtr<InfraBss> bss_;
 };
 
 }  // namespace wlan

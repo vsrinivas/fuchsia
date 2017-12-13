@@ -23,12 +23,9 @@ zx_status_t ApMlme::Init() {
         return status;
     }
 
-    // Register all available BSS. BSS become active by adding them as frame targets.
-    // So far, only one BSS is supported by the device.
+    // Create a BSS. It'll become active once MLME issues a Start request.
     auto& bssid = device_->GetState()->address();
-    auto bss = fbl::AdoptRef(new InfraBss(device_, bssid));
-    status = bss_map_.Insert(bssid, bss);
-    if (status != ZX_OK) { errorf("[ap-mlme] BSS could not be registered: %s\n", MACSTR(bssid)); }
+    bss_ = fbl::AdoptRef(new InfraBss(device_, bssid));
 
     return ZX_OK;
 }
@@ -48,11 +45,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     }
 
     bcn_sender_->Start(req);
-
-    // TODO(hahnr): Evolve to support multiple BSS at some point.
-    auto& bssid = device_->GetState()->address();
-    auto bss = bss_map_.Lookup(bssid);
-    if (bss != nullptr) { AddChildHandler(bss); }
+    AddChildHandler(bss_);
 
     return ZX_OK;
 }
@@ -66,11 +59,7 @@ zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     }
 
     bcn_sender_->Stop();
-
-    // TODO(hahnr): Evolve to support multiple BSS at some point.
-    auto& bssid = device_->GetState()->address();
-    auto bss = bss_map_.Lookup(bssid);
-    if (bss != nullptr) { RemoveChildHandler(bss); }
+    RemoveChildHandler(bss_);
 
     return ZX_OK;
 }
