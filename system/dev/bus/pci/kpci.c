@@ -106,7 +106,6 @@ typedef zx_status_t (*rxrpc_cbk_t)(pci_msg_t*, kpci_device_t*, zx_handle_t);
 rxrpc_cbk_t rxrpc_cbk_tbl[] = {
         [PCI_OP_RESET_DEVICE] = kpci_reset_device,
         [PCI_OP_ENABLE_BUS_MASTER] = kpci_enable_bus_master,
-        [PCI_OP_ENABLE_PIO] = NULL,
         [PCI_OP_CONFIG_READ] = kpci_config_read,
         [PCI_OP_GET_NEXT_CAPABILITY] = NULL,
         [PCI_OP_GET_RESOURCE] = NULL,

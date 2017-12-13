@@ -29,7 +29,6 @@ typedef struct kpci_device {
 typedef enum {
     PCI_OP_RESET_DEVICE = 1,
     PCI_OP_ENABLE_BUS_MASTER,
-    PCI_OP_ENABLE_PIO,
     PCI_OP_CONFIG_READ,
     PCI_OP_GET_NEXT_CAPABILITY,
     PCI_OP_GET_RESOURCE,
