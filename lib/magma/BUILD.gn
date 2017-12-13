@@ -180,6 +180,9 @@ if (build_intel_gen) {
     outputs = [
       "$libvulkan_gen_path/libvulkan_arm.so",
     ]
+    deps = [
+      "//third_party/zlib",
+    ]
   }
 }
 
