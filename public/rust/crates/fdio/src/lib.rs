@@ -15,9 +15,10 @@ pub mod fdio_sys;
 
 pub mod rio;
 
+use zircon::prelude::*;
 use zircon::sys as sys;
 
-use std::ffi::CStr;
+use std::ffi::{CString, CStr};
 use std::fs::File;
 use std::os::raw;
 use std::ffi;
@@ -26,6 +27,50 @@ use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
 pub use fdio_sys::fdio_ioctl as ioctl;
+
+/// Connects a channel to a named service.
+pub fn service_connect(service_path: &str, channel: zircon::Channel) -> Result<(), zircon::Status> {
+    let c_service_path = CString::new(service_path).map_err(|_| zircon::Status::INVALID_ARGS)?;
+
+    // TODO(raggi): this should be convered to an asynchronous FDIO
+    // client protocol as soon as that is available (post fidl2) as this
+    // call can block indefinitely.
+    //
+    // fdio_service connect takes a *const c_char service path and a channel.
+    // On success, the channel is connected, and on failure, it is closed.
+    // In either case, we do not need to clean up the channel so we use
+    // `into_raw` so that Rust forgets about it.
+    zircon::ok(unsafe {
+        fdio_sys::fdio_service_connect(
+            c_service_path.as_ptr(),
+            channel.into_raw())
+    })
+}
+
+/// Connects a channel to a named service relative to a directory `dir`.
+/// `dir` must be a directory protocol channel.
+pub fn service_connect_at(dir: &zircon::Channel, service_path: &str, channel: zircon::Channel)
+    -> Result<(), zircon::Status>
+{
+    let c_service_path = CString::new(service_path).map_err(|_| zircon::Status::INVALID_ARGS)?;
+
+    // TODO(raggi): this should be convered to an asynchronous FDIO
+    // client protocol as soon as that is available (post fidl2) as this
+    // call can block indefinitely.
+    //
+    // fdio_service_connect_at takes a directory handle,
+    // a *const c_char service path, and a channel to connect.
+    // The directory handle is never consumed, so we borrow the raw handle.
+    // On success, the channel is connected, and on failure, it is closed.
+    // In either case, we do not need to clean up the channel so we use
+    // `into_raw` so that Rust forgets about it.
+    zircon::ok(unsafe {
+        fdio_sys::fdio_service_connect_at(
+            dir.raw_handle(),
+            c_service_path.as_ptr(),
+            channel.into_raw())
+    })
+}
 
 /// Events that can occur while watching a directory, including files that already exist prior to
 /// running a Watcher.

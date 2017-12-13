@@ -16,7 +16,7 @@ extern crate tokio_fuchsia;
 extern crate fdio;
 
 use failure::{Error, ResultExt};
-use fuchsia_app::server::bootstrap_server;
+use fuchsia_app::server::ServicesServer;
 use fidl::{InterfacePtr, ClientEnd};
 use futures::future::ok as fok;
 use std::cell::RefCell;
@@ -205,7 +205,8 @@ fn main_ds() -> Result<(), Error> {
     let watchers = Rc::new(RefCell::new(HashMap::new()));
     // Attempt to create data directory
     fs::create_dir_all(DATA_DIR).context("creating directory")?;
-    let server = bootstrap_server(handle.clone(), move || {
+
+    let server = ServicesServer::new().add_service(move || {
         let mut d = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
             watchers: watchers.clone(),
@@ -215,7 +216,9 @@ fn main_ds() -> Result<(), Error> {
         d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
 
         DeviceSettingsManager::Dispatcher(d)
-    }).context("running server")?;
+    })
+    .start(&core.handle())
+    .map_err(|e| e.context("error starting service server"))?;
 
     Ok(core.run(server).context("running server")?)
 }

@@ -17,16 +17,13 @@ extern crate tokio_core;
 extern crate tokio_fuchsia;
 
 // Generated FIDL bindings
-extern crate garnet_public_lib_app_fidl_service_provider;
 extern crate garnet_public_lib_app_fidl;
 
 use garnet_public_lib_app_fidl::{
     ApplicationController,
-    ApplicationEnvironment,
     ApplicationLauncher,
     ApplicationLaunchInfo,
 };
-use garnet_public_lib_app_fidl_service_provider::ServiceProvider;
 use fidl::FidlService;
 use zx::Channel;
 use tokio_core::reactor::Handle as TokioHandle;
@@ -42,58 +39,17 @@ pub mod client {
     use super::*;
 
     #[inline]
-    /// Connect to a FIDL service on the given `service_provider`.
+    /// Connect to a FIDL service using the application root namespace.
     pub fn connect_to_service<Service: FidlService>(
-        service_provider: &ServiceProvider::Proxy,
         handle: &TokioHandle
     ) -> Result<Service::Proxy, Error>
     {
-        let (proxy, server_end) = Service::new_pair(handle)?;
-        service_provider.connect_to_service(String::from(Service::NAME), server_end.into_channel())?;
+        let (proxy, server)  = Service::new_pair(handle)?;
+
+        let service_path = format!("/svc/{}", Service::NAME);
+        fdio::service_connect(&service_path, server.into_channel())?;
+
         Ok(proxy)
-    }
-
-    /// ApplicationContext provides access to the environment of the currently-running application.
-    pub struct ApplicationContext {
-        // TODO: use somehow?
-        #[allow(dead_code)]
-        app_env: ApplicationEnvironment::Proxy,
-
-        service_provider: ServiceProvider::Proxy,
-    }
-
-    impl ApplicationContext {
-        /// Initialize the context for the currently-running application.
-        pub fn new(handle: &TokioHandle) -> Result<Self, Error> {
-            let service_root = mxruntime::get_service_root()
-                                .context("Failed to connect to Fuchsia service root.")?;
-            let app_env_channel =
-                mxruntime::connect_to_environment_service(
-                    service_root,
-                    ApplicationEnvironment::Service::NAME
-                ).context("Failed to connect to application environment service.")?;
-
-            let app_env_client = fidl::ClientEnd::new(app_env_channel);
-            let app_env = ApplicationEnvironment::new_proxy(app_env_client, handle)?;
-            let (service_provider, service_provider_server_end) = ServiceProvider::new_pair(handle)?;
-
-            app_env.get_services(service_provider_server_end)?;
-
-            Ok(ApplicationContext {
-                app_env,
-                service_provider,
-            })
-        }
-
-        #[inline]
-        /// Connect to a service provided through the current application's environment.
-        ///
-        /// This connection is made using the application environment's service provider.
-        pub fn connect_to_service<Service: FidlService>(&self, handle: &TokioHandle)
-            -> Result<Service::Proxy, Error>
-        {
-            connect_to_service::<Service>(&self.service_provider, handle)
-        }
     }
 
     /// Launcher launches Fuchsia applications.
@@ -104,11 +60,8 @@ pub mod client {
     impl Launcher {
         #[inline]
         /// Create a new application launcher.
-        pub fn new(
-            context: &ApplicationContext,
-            handle: &TokioHandle) -> Result<Self, Error>
-        {
-            let app_launcher = context.connect_to_service::<ApplicationLauncher::Service>(handle)?;
+        pub fn new(handle: &TokioHandle) -> Result<Self, Error> {
+            let app_launcher = connect_to_service::<ApplicationLauncher::Service>(handle)?;
             Ok(Launcher { app_launcher })
         }
 
@@ -120,33 +73,34 @@ pub mod client {
             handle: &TokioHandle
         ) -> Result<App, Error>
         {
-            let (service_provider, service_provider_server_end) =
-                ServiceProvider::Service::new_pair(handle)?;
 
-            let (app_controller, controller_server_end) =
-                ApplicationController::Service::new_pair(handle)?;
+            let (app_controller, controller_server_end) = ApplicationController::Service::new_pair(handle)?;
+            let (service_request, directory_server_chan) = zx::Channel::create()?;
 
             let launch_info = ApplicationLaunchInfo {
                 url,
                 arguments,
                 out: None,
                 err: None,
-                service_request: None,
+                service_request: Some(directory_server_chan),
                 flat_namespace: None,
-                services: Some(service_provider_server_end),
+                services: None,
                 additional_services: None,
             };
+
 
             self.app_launcher
                 .create_application(launch_info, Some(controller_server_end))
                 .context("Failed to start a new Fuchsia application.")?;
-            Ok(App { service_provider, app_controller })
+
+            Ok(App { service_request, app_controller })
         }
     }
 
     /// `App` represents a launched application.
     pub struct App {
-        service_provider: ServiceProvider::Proxy,
+        // service_request is a directory protocol channel
+        service_request: zx::Channel,
 
         // TODO: use somehow?
         #[allow(dead_code)]
@@ -159,7 +113,9 @@ pub mod client {
         pub fn connect_to_service<Service: FidlService>(&self, handle: &TokioHandle)
             -> Result<Service::Proxy, Error>
         {
-            connect_to_service::<Service>(&self.service_provider, handle)
+            let (client_channel, server_channel) = zx::Channel::create()?;
+            fdio::service_connect_at(&self.service_request, Service::NAME, server_channel)?;
+            Ok(Service::new_proxy(fidl::ClientEnd::new(client_channel), handle)?)
         }
     }
 }
@@ -167,65 +123,17 @@ pub mod client {
 /// Tools for providing Fuchsia services.
 pub mod server {
     use super::*;
-    use futures::{future, Future, Poll};
+    use futures::{Future, Poll};
 
     use self::errors::*;
     /// New root-level errors that may occur when using the `fuchsia_app::server` module.
     /// Note that these are not the only kinds of errors that may occur: errors the module
     /// may also be caused by `fidl::Error` or `zircon::Status`.
     pub mod errors {
-        /// The outgoing services handle on which the FIDL server attempted to start was missing.
-        #[derive(Debug, Fail)]
-        #[fail(display =
-               "The outgoing services handle on which the FIDL server attempted to start was missing.")]
-        pub struct MissingOutgoingServicesHandle;
-
         /// The startup handle on which the FIDL server attempted to start was missing.
         #[derive(Debug, Fail)]
         #[fail(display = "The startup handle on which the FIDL server attempted to start was missing.")]
         pub struct MissingStartupHandle;
-    }
-
-    type ServerInner<Services> =
-        fidl::Server<ServiceProvider::Dispatcher<ServiceProviderServer<Services>>>;
-
-    #[must_use = "futures do nothing unless polled"]
-    /// `Server` is a future which, when polled, launches Fuchsia services upon request.
-    pub struct Server<Services: ServiceFactories>(ServerInner<Services>);
-
-    impl<Services: ServiceFactories> Server<Services> {
-        /// Create a new `Server` to serve service connection requests on the specified channel.
-        pub fn new(services: ServiceProviderServer<Services>,
-                   channel: zx::Channel,
-                   handle: &TokioHandle) -> Result<Self, Error>
-        {
-            Ok(Server(fidl::Server::new(
-                ServiceProvider::Dispatcher(services),
-                channel,
-                handle
-            )?))
-        }
-
-        /// Create a `Server` which serves serves connection requests on the outgoing service channel.
-        pub fn new_outgoing(
-            services: ServiceProviderServer<Services>,
-            handle: &TokioHandle) -> Result<Self, Error>
-        {
-            let channel = zx::Channel::from(
-                mxruntime::get_startup_handle(mxruntime::HandleType::OutgoingServices)
-                    .ok_or(MissingOutgoingServicesHandle)?);
-
-            Self::new(services, channel, handle)
-        }
-    }
-
-    impl<Services: ServiceFactories> Future for Server<Services> {
-        type Item = <ServerInner<Services> as Future>::Item;
-        type Error = <ServerInner<Services> as Future>::Error;
-
-        fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-            self.0.poll()
-        }
     }
 
     /// A heterogeneous list.
@@ -301,43 +209,53 @@ pub mod server {
         }
     }
 
-    /// `ServiceProviderServer` is a server which manufactures service instances of varying types on demand.
-    /// To run a `ServiceProviderServer`, use `Server::new` or `Server::new_outgoing`.
-    pub struct ServiceProviderServer<Services: ServiceFactories> {
-        handle: TokioHandle,
+    /// `ServicesServer` is a server which manufactures service instances of varying types on demand.
+    /// To run a `ServicesServer`, use `Server::new`.
+    pub struct ServicesServer<Services: ServiceFactories> {
         services: Services,
     }
 
-    impl ServiceProviderServer<HNil> {
-        /// Create a new `ServiceProviderServer` which doesn't provide any services.
-        pub fn new(handle: &TokioHandle) -> Self {
-            ServiceProviderServer {
-                handle: handle.clone(),
+    impl ServicesServer<HNil> {
+        /// Create a new `ServicesServer` which doesn't provide any services.
+        pub fn new() -> Self {
+            ServicesServer {
                 services: HNil,
             }
         }
+
+        /// Spawn a service instance
+        pub fn spawn_service(&mut self, service_name: String, channel: Channel, handle: &TokioHandle) {
+            self.services.spawn_service(service_name, channel, handle)
+        }
     }
 
-    impl<Services: ServiceFactories> ServiceProviderServer<Services> {
-        /// Add a service to the `ServiceProviderServer`.
-        pub fn add_service<S: ServiceFactory>(self, service_factory: S) -> ServiceProviderServer<HCons<S, Services>> {
-            ServiceProviderServer {
-                handle: self.handle,
+    impl<Services: ServiceFactories> ServicesServer<Services> {
+        /// Add a service to the `ServicesServer`.
+        pub fn add_service<S: ServiceFactory>(self, service_factory: S) -> ServicesServer<HCons<S, Services>> {
+            ServicesServer {
                 services: HCons {
                     head: service_factory,
                     tail: self.services,
                 }
             }
         }
-    }
 
-    impl<Services: ServiceFactories> ServiceProvider::Server for ServiceProviderServer<Services> {
-        type ConnectToService = future::FutureResult<(), fidl::CloseChannel>;
-        fn connect_to_service(&mut self, service_name: String, channel: Channel)
-            -> Self::ConnectToService
-        {
-            self.services.spawn_service(service_name, channel, &self.handle);
-            future::ok(())
+        /// Start serving directory protocol service requests on the process PA_SERVICE_REQUEST handle
+        pub fn start(self, handle: &TokioHandle) -> Result<FdioServer<Services>, Error> {
+            let fdio_handle = mxruntime::get_startup_handle(mxruntime::HandleType::ServiceRequest)
+                .ok_or(MissingStartupHandle)?;
+
+            let fdio_channel = TokioChannel::from_channel(fdio_handle.into(), &handle)?;
+
+            let mut server = FdioServer{
+                readers: FuturesUnordered::new(),
+                factories: self.services,
+                handle: handle.clone(),
+            };
+
+            server.serve_channel(fdio_channel);
+
+            Ok(server)
         }
     }
 
@@ -345,13 +263,13 @@ pub mod server {
     /// OPEN and CLONE messages. OPEN always connects the client channel to a
     /// newly spawned fidl service produced by the factory F.
     #[must_use = "futures must be polled"]
-    pub struct FdioServer<F: ServiceFactory + 'static> {
+    pub struct FdioServer<F: ServiceFactories + 'static> {
         readers: FuturesUnordered<RecvMsg<zx::MessageBuf>>,
-        factory: F,
+        factories: F,
         handle: TokioHandle,
     }
 
-    impl<F: ServiceFactory + 'static> FdioServer<F> {
+    impl<F: ServiceFactories + 'static> FdioServer<F> {
 
         fn dispatch(&mut self, chan: &TokioChannel, buf: zx::MessageBuf) -> zx::MessageBuf {
             // TODO(raggi): provide an alternative to the into() here so that we
@@ -406,26 +324,16 @@ pub mod server {
             }
 
             let service_channel = reply_channel.unwrap();
-            let path = msg.data().to_owned();
+
+            // TODO(raggi): re-arrange things to avoid the copy here
+            let path = std::str::from_utf8(msg.data()).unwrap().to_owned();
 
             println!(
                 "service request channel received open request for path: {:?}",
                 &path
             );
 
-            match fidl::Server::new(
-                self.factory.create(),
-                service_channel,
-                &self.handle,
-            ) {
-                Ok(server) => {
-                    self.handle.spawn(server.map_err(move |e|
-                        eprintln!("runtime fidl server error for {:?}: {:?}", path, e)
-                    ))
-                }
-                Err(e) => eprintln!("service spawn for {:?} failed: {:?}", path, e),
-            }
-
+            self.factories.spawn_service(path, service_channel, &self.handle);
             msg.into()
         }
 
@@ -436,7 +344,7 @@ pub mod server {
 
     }
 
-    impl<F: ServiceFactory + 'static> Future for FdioServer<F> {
+    impl<F: ServiceFactories + 'static> Future for FdioServer<F> {
         type Item = ();
         type Error = Error;
 
@@ -454,26 +362,5 @@ pub mod server {
                 }
             }
         }
-    }
-
-    /// Creates a new server which runs on the `ServiceRequest` startup handle.
-    pub fn bootstrap_server<F>(handle: TokioHandle, f: F) -> Result<FdioServer<F>, Error>
-        where
-        F: ServiceFactory + 'static,
-    {
-        let fdio_handle = mxruntime::get_startup_handle(mxruntime::HandleType::ServiceRequest)
-            .ok_or(MissingStartupHandle)?;
-
-        let fdio_channel = TokioChannel::from_channel(fdio_handle.into(), &handle)?;
-
-        let mut server = FdioServer{
-            readers: FuturesUnordered::new(),
-            factory: f,
-            handle: handle.clone(),
-        };
-
-        server.serve_channel(fdio_channel);
-
-        Ok(server)
     }
 }

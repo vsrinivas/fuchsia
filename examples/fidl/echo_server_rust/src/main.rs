@@ -18,7 +18,7 @@ use failure::{Error, ResultExt};
 extern crate garnet_examples_fidl_services;
 use garnet_examples_fidl_services::Echo;
 
-use fuchsia_app::server::{Server, ServiceProviderServer};
+use fuchsia_app::server::ServicesServer;
 use futures::future;
 use tokio_core::reactor;
 
@@ -26,7 +26,8 @@ use tokio_core::reactor;
 struct EchoServer;
 
 impl Echo::Server for EchoServer {
-
+    // The concrete type returned by the `echo_string` function.
+    // This type must implement `Future<Item = Option<String>, Error = fidl::CloseChannel>`.
     type EchoString = future::FutureResult<Option<String>, fidl::CloseChannel>;
 
     fn echo_string(&mut self, value: Option<String>) -> Self::EchoString
@@ -48,14 +49,13 @@ fn main_res() -> Result<(), Error> {
 
     // Create a service provider which will provide a new EchoServer
     // instance upon receiving a `connect_to_service` request.
-    let service_provider =
-        ServiceProviderServer::new(&handle)
-            .add_service(|| Echo::Dispatcher(EchoServer));
-
-    let server = Server::new_outgoing(service_provider, &handle)
-                    .context("Unable to create FIDL service")?;
+    let services_server =
+        ServicesServer::new()
+            .add_service(|| Echo::Dispatcher(EchoServer))
+            .start(&handle)
+            .context("Error configuring services server")?;
 
     // Run the server on the reactor core.
     // The server is an empty `Future` that can return `fidl::Error`.
-    Ok(core.run(server).context("Error running server")?)
+    Ok(core.run(services_server).context("Error running server")?)
 }

@@ -15,7 +15,6 @@ extern crate tokio_io;
 
 use failure::Error;
 use fidl::FidlService;
-use fuchsia_app::client::ApplicationContext;
 use futures::{Future, IntoFuture};
 use garnet_public_lib_network_fidl as netsvc;
 use std::io;
@@ -61,9 +60,7 @@ fn main_res() -> Result<(), Error> {
     let handle = core.handle();
 
     // Connect to the network service
-    let app_context = ApplicationContext::new(&handle)?;
-    let net = app_context
-        .connect_to_service::<netsvc::NetworkService::Service>(&handle)?;
+    let net = fuchsia_app::client::connect_to_service::<netsvc::NetworkService::Service>(&handle)?;
 
     // Create a URLLoader instance
     let (loader_proxy, loader_server) = netsvc::URLLoader::Service::new_pair(&handle)?;

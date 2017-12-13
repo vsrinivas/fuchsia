@@ -22,7 +22,7 @@ use garnet_public_lib_bluetooth_fidl as bt;
 use cancelable_future::{Cancelable, CancelHandle};
 use failure::{Error, Fail};
 use fidl::{ClientEnd, FidlService, InterfacePtr};
-use fuchsia_app::client::ApplicationContext;
+use fuchsia_app::client::connect_to_service;
 use futures::Future;
 use futures::future::ok as fok;
 use garnet_public_lib_power_fidl::{BatteryStatus, PowerManager, PowerManagerWatcher};
@@ -281,13 +281,8 @@ fn main_res() -> Result<(), Error> {
     let mut core = reactor::Core::new()?;
     let handle = core.handle();
 
-    let app_context = ApplicationContext::new(&handle)?;
-    let server = app_context.connect_to_service::<gatt::Server_::Service>(
-        &handle,
-    )?;
-    let power = app_context.connect_to_service::<PowerManager::Service>(
-        &handle,
-    )?;
+    let server = connect_to_service::<gatt::Server_::Service>(&handle)?;
+    let power = connect_to_service::<PowerManager::Service>(&handle)?;
 
     // No security is required.
     let read_sec = Box::new(gatt::SecurityRequirements {
@@ -380,9 +375,7 @@ fn main_res() -> Result<(), Error> {
     // Listen for incoming connections if the user requested it. Otherwise, this
     // will simply publish the GATT service without advertising.
     if listen {
-        let peripheral = app_context.connect_to_service::<le::Peripheral::Service>(
-            &handle,
-        )?;
+        let peripheral = connect_to_service::<le::Peripheral::Service>(&handle)?;
         let peripheral_state = Rc::new(RefCell::new(BatteryPeripheralState {
             peripheral: peripheral,
             delegate_handle: CancelHandle::new(),

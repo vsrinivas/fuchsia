@@ -20,7 +20,7 @@ use garnet_examples_fidl_services::Echo;
 use failure::{Error, ResultExt};
 
 // The fuchsia_app crate allows us to start up applications.
-use fuchsia_app::client::{ApplicationContext, Launcher};
+use fuchsia_app::client::Launcher;
 
 // The Tokio Reactor is used to handle and distribute IO events.
 use tokio_core::reactor;
@@ -36,18 +36,13 @@ fn main_res() -> Result<(), Error> {
     let mut core = reactor::Core::new().context("Error creating core")?;
     let handle = core.handle();
 
-    let app_context = ApplicationContext::new(&handle)
-                        .context("Error creating application context")?;
-    let launcher = Launcher::new(&app_context, &handle)
-                        .context("Error creating application launcher")?;
+    let launcher = Launcher::new(&handle).context("Failed to open launcher service")?;
 
     // Launch the server and connect to the echo service.
-    let echo_url = String::from("echo_server_rust");
-    let app = launcher.launch(echo_url, None, &handle)
-                .context("Error launching echo server application")?;
+    let echo_url = std::env::args().nth(1).unwrap_or_else(|| "echo_server_rust".into());
 
-    let echo = app.connect_to_service::<Echo::Service>(&handle)
-                .context("Error connecting to echo server application")?;
+    let app = launcher.launch(echo_url, None, &handle).context("Failed to launch echo service")?;
+    let echo = app.connect_to_service::<Echo::Service>(&handle).context("Failed to connect to echo service")?;
 
     // Send "echo msg" to the server.
     // `response_fut` is a `Future` which returns `Option<String>`.
