@@ -8,5 +8,5 @@ module modular.test;
 
 [ServiceName="https://fuchsia.googlesource.com/modular/+/master/lib/fidl/app_client_unittest.fidl#TerminateService"]
 interface TerminateService {
-  Terminate();
+  Terminate@0();
 };
