@@ -359,8 +359,8 @@ volatile pte_t* ArmArchVmAspace::GetPageTable(vaddr_t index, uint page_size_shif
         LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", vaddr, paddr);
         memset(vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
 
-        __asm__ volatile("dmb ishst" ::
-                             : "memory");
+        // ensure that the zeroing is observable from hardware page table walkers
+        DMB_ISHST;
 
         pte = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
         page_table[index] = pte;
@@ -399,6 +399,8 @@ static bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift
     return true;
 }
 
+
+// NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
                                         size_t size, uint index_shift,
                                         uint page_size_shift,
@@ -437,7 +439,10 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
                 page_table_is_clear(next_page_table, page_size_shift)) {
                 LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
                 page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
-                __asm__ volatile("dmb ishst" ::: "memory");
+
+                // ensure that the update is observable from hardware page table walkers
+                DMB_ISHST;
+
                 FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr,
                               page_size_shift);
             }
@@ -466,6 +471,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
     return unmap_size;
 }
 
+// NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                       paddr_t paddr_in, size_t size_in,
                                       pte_t attrs, uint index_shift,
@@ -547,10 +553,10 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 err:
     UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift,
                    page_size_shift, page_table, asid);
-    DSB;
     return ZX_ERR_INTERNAL;
 }
 
+// NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                       size_t size_in, pte_t attrs,
                                       uint index_shift, uint page_size_shift,
@@ -623,17 +629,16 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         size -= chunk_size;
     }
 
-    DSB;
     return 0;
 
 err:
     // TODO: Unroll any changes we've made, though in practice if we've reached
     // here there's a programming bug since the higher level region abstraction
     // should guard against us trying to change permissions on an umapped page
-    DSB;
     return ZX_ERR_INTERNAL;
 }
 
+// internal routine to map a run of pages
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size,
                                   pte_t attrs, vaddr_t vaddr_base, uint top_size_shift,
                                   uint top_index_shift, uint page_size_shift,
@@ -854,6 +859,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
         for (; idx < count; ++idx) {
             paddr_t paddr = phys[idx];
             DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
+            // TODO: optimize by not DSBing inside each of these calls
             ret = MapPages(v, paddr, PAGE_SIZE,
                            attrs, vaddr_base, top_size_shift,
                            top_index_shift, page_size_shift,

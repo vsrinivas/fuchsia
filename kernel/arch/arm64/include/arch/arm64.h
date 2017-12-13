@@ -20,6 +20,9 @@
 __BEGIN_CDECLS
 
 #define DSB __asm__ volatile("dsb sy" ::: "memory")
+#define DSB_ISHST __asm__ volatile("dsb ishst" ::: "memory")
+#define DMB __asm__ volatile("dmb sy" ::: "memory")
+#define DMB_ISHST __asm__ volatile("dmb ishst" ::: "memory")
 #define ISB __asm__ volatile("isb" ::: "memory")
 
 #define STRINGIFY(x) #x
