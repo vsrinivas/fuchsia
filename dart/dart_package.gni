@@ -88,14 +88,13 @@ template("dart_package") {
     source_dir = invoker.source_dir
   }
 
-  with_analysis =
-      !defined(invoker.disable_analysis) || !invoker.disable_analysis
-  if (with_analysis) {
-    dot_packages_target_name = "${target_name}_dot_packages"
-    options_file = "analysis_options.yaml"
-  } else {
-    dot_packages_target_name = target_name
-  }
+  # Dependencies of the umbrella group for the targets in this file.
+  group_deps = []
+
+  dot_packages_target_name = "${target_name}_dot_packages"
+  group_deps += [
+    ":$dot_packages_target_name",
+  ]
 
   action(dot_packages_target_name) {
     script = "//build/dart/gen_dot_packages.py"
@@ -113,11 +112,6 @@ template("dart_package") {
       # Require a manifest file, allowing the analysis service to identify the
       # package.
       inputs += [ "pubspec.yaml" ]
-    }
-    if (with_analysis) {
-      # Require an options file. This allows the analysis service to pick the
-      # correct set of options for this target.
-      inputs += [ options_file ]
     }
 
     outputs = [
@@ -153,9 +147,15 @@ template("dart_package") {
     args += [ "--deps" ] + dart_deps
   }
 
+  with_analysis =
+      !defined(invoker.disable_analysis) || !invoker.disable_analysis
   if (with_analysis) {
+    options_file = "analysis_options.yaml"
     invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
-    invocation_target_name = "${target_name}_invocation"
+    invocation_target_name = "${target_name}_analysis_runner"
+    group_deps += [
+      ":$invocation_target_name",
+    ]
 
     dart_sdk_label = "//third_party/dart:create_host_sdk"
     dart_sdk_dir = "$dart_sdk_root_out_dir/dart-sdk"
@@ -165,12 +165,13 @@ template("dart_package") {
     action(invocation_target_name) {
       script = "//build/dart/gen_analyzer_invocation.py"
 
-      deps = dart_deps + [
+      deps = [
         ":$dot_packages_target_name",
         dart_sdk_label,
       ]
 
       inputs = [
+        dot_packages_file,
         options_file,
       ]
 
@@ -210,8 +211,13 @@ template("dart_package") {
       }
     }
 
+    analysis_target_name = "${target_name}_analysis"
+    group_deps += [
+      ":$analysis_target_name",
+    ]
+
     if (use_analysis_server) {
-      action(target_name) {
+      action(analysis_target_name) {
         runner_label = "//build/dart/analyzer($host_toolchain)"
         runner_out_dir = get_label_info(runner_label, "root_out_dir")
         script = "$runner_out_dir/dart-tools/analyzer"
@@ -255,13 +261,13 @@ template("dart_package") {
         ]
 
         deps = [
-          ":$invocation_target_name",
+          ":$dot_packages_target_name",
           dart_sdk_label,
           runner_label,
         ]
       }
     } else {  # Use the analyzer CLI.
-      action(target_name) {
+      action(analysis_target_name) {
         script = "//build/dart/run_analysis.py"
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
@@ -296,11 +302,15 @@ template("dart_package") {
         ]
 
         deps = [
-          ":$invocation_target_name",
+          ":$dot_packages_target_name",
           dart_sdk_label,
         ]
       }
     }
+  }
+
+  group(target_name) {
+    deps = group_deps
   }
 }
 
