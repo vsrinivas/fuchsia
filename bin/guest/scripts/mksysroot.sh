@@ -5,11 +5,6 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
-#
-# Download and build toybox to be an initrd for linux
-# and download and build dash as the system shell.
-#
-# More additions to come as and when desired / needed.
 
 set -eo pipefail
 
