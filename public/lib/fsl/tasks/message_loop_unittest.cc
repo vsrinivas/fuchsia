@@ -59,9 +59,8 @@ TEST(MessageLoop, CanRunTasks) {
   loop.task_runner()->PostTask([&did_run, &loop]() {
     EXPECT_FALSE(did_run);
     did_run = true;
-    loop.QuitNow();
   });
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_TRUE(did_run);
 }
 
@@ -71,11 +70,10 @@ TEST(MessageLoop, CanPostTasksFromTasks) {
   fxl::Closure nested_task = [&did_run, &loop]() {
     EXPECT_FALSE(did_run);
     did_run = true;
-    loop.QuitNow();
   };
   loop.task_runner()->PostTask(
       [&nested_task, &loop]() { loop.task_runner()->PostTask(nested_task); });
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_TRUE(did_run);
 }
 
@@ -88,11 +86,10 @@ TEST(MessageLoop, TriplyNestedTasks) {
       tasks.push_back("two");
       loop.task_runner()->PostTask([&tasks, &loop]() {
         tasks.push_back("three");
-        loop.QuitNow();
       });
     });
   });
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_EQ(3u, tasks.size());
   EXPECT_EQ("one", tasks[0]);
   EXPECT_EQ("two", tasks[1]);
@@ -106,7 +103,7 @@ TEST(MessageLoop, CanRunTasksInOrder) {
   loop.task_runner()->PostTask([&tasks]() { tasks.push_back("1"); });
   loop.PostQuitTask();
   loop.task_runner()->PostTask([&tasks]() { tasks.push_back("2"); });
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_EQ(2u, tasks.size());
   EXPECT_EQ("0", tasks[0]);
   EXPECT_EQ("1", tasks[1]);
@@ -120,12 +117,11 @@ TEST(MessageLoop, CanPreloadTasks) {
   incoming_queue->PostTask([&did_run, &loop_ptr]() {
     EXPECT_FALSE(did_run);
     did_run = true;
-    loop_ptr->QuitNow();
   });
 
   MessageLoop loop(std::move(incoming_queue));
   loop_ptr = &loop;
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_TRUE(did_run);
 }
 
@@ -137,7 +133,7 @@ TEST(MessageLoop, AfterTaskCallbacks) {
   loop.task_runner()->PostTask([&tasks] { tasks.push_back("1"); });
   loop.PostQuitTask();
   loop.task_runner()->PostTask([&tasks] { tasks.push_back("2"); });
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_EQ(5u, tasks.size());
   EXPECT_EQ("0", tasks[0]);
   EXPECT_EQ("callback", tasks[1]);
@@ -155,8 +151,7 @@ TEST(MessageLoop, RemoveAfterTaskCallbacksDuringCallback) {
   });
   loop.task_runner()->PostTask([&tasks] { tasks.push_back("0"); });
   loop.task_runner()->PostTask([&tasks] { tasks.push_back("1"); });
-  loop.PostQuitTask();
-  loop.Run();
+  loop.RunUntilIdle();
   EXPECT_EQ(3u, tasks.size());
   EXPECT_EQ("0", tasks[0]);
   EXPECT_EQ("callback", tasks[1]);
@@ -179,8 +174,7 @@ TEST(MessageLoop, TaskDestructionTime) {
   {
     MessageLoop loop;
     task_runner = fxl::RefPtr<fxl::TaskRunner>(loop.task_runner());
-    loop.PostQuitTask();
-    loop.Run();
+    loop.RunUntilIdle();
     auto observer1 = std::make_unique<DestructorObserver>(
         [&destructed] { destructed = true; });
     task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer1)](){}));
@@ -196,14 +190,17 @@ TEST(MessageLoop, TaskDestructionTime) {
 }
 
 TEST(MessageLoop, CanQuitCurrent) {
-  bool did_run = false;
+  int count = 0;
   MessageLoop loop;
-  loop.task_runner()->PostTask([&did_run]() {
-    did_run = true;
+  loop.task_runner()->PostTask([&count]() {
+    count++;
     MessageLoop::GetCurrent()->QuitNow();
   });
-  loop.Run();
-  EXPECT_TRUE(did_run);
+  loop.task_runner()->PostTask([&count]() {
+    count++;
+  });
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, count);
 }
 
 TEST(MessageLoop, CanQuitManyTimes) {
@@ -211,7 +208,7 @@ TEST(MessageLoop, CanQuitManyTimes) {
   loop.QuitNow();
   loop.QuitNow();
   loop.PostQuitTask();
-  loop.Run();
+  loop.RunUntilIdle();
   loop.QuitNow();
   loop.QuitNow();
 }
@@ -283,7 +280,7 @@ TEST(MessageLoop, QuitFromReady) {
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
       &handler, endpoint0.get(), ZX_CHANNEL_READABLE, fxl::TimeDelta::Max());
-  message_loop.Run();
+  message_loop.RunUntilIdle();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
   EXPECT_TRUE(message_loop.HasHandler(key));
@@ -329,7 +326,7 @@ TEST(MessageLoop, HandleReady) {
   MessageLoop::HandlerKey key = message_loop.AddHandler(
       &handler, endpoint0.get(), ZX_CHANNEL_READABLE, fxl::TimeDelta::Max());
   handler.set_handler_key(key);
-  message_loop.Run();
+  message_loop.RunUntilIdle();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
   EXPECT_FALSE(message_loop.HasHandler(key));

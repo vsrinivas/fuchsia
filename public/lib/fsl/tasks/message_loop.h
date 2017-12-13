@@ -81,6 +81,10 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // via the |task_runner|.
   void Run();
 
+  // Runs until there are no tasks to run and no runnable handlers. This is
+  // useful for unit testing, because the behavior doesn't depend on time.
+  void RunUntilIdle();
+
   // Prevents further tasks from running and returns from |Run|. Must be called
   // while |Run| is on the stack.
   void QuitNow();
@@ -94,6 +98,8 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // |internal::TaskQueueDelegate| implementation:
   void PostTask(fxl::Closure task, fxl::TimePoint target_time) override;
   bool RunsTasksOnCurrentThread() override;
+
+  void Run(bool until_idle);
 
   static void Epilogue(async_t* async, void* data);
 

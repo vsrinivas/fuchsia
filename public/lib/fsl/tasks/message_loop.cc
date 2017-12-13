@@ -155,13 +155,13 @@ bool MessageLoop::HasHandler(HandlerKey key) const {
   return handlers_.find(key) != handlers_.end();
 }
 
-void MessageLoop::Run() {
+void MessageLoop::Run(bool until_idle) {
   FXL_DCHECK(g_current == this);
 
   FXL_CHECK(!is_running_) << "Cannot run a nested message loop.";
   is_running_ = true;
 
-  zx_status_t status = loop_.Run();
+  zx_status_t status = until_idle ? loop_.RunUntilIdle() : loop_.Run();
   FXL_CHECK(status == ZX_OK || status == ZX_ERR_CANCELED)
       << "Loop stopped abnormally: status=" << status;
 
@@ -171,6 +171,14 @@ void MessageLoop::Run() {
 
   FXL_DCHECK(is_running_);
   is_running_ = false;
+}
+
+void MessageLoop::Run() {
+  Run(false);
+}
+
+void MessageLoop::RunUntilIdle() {
+  Run(true);
 }
 
 void MessageLoop::QuitNow() {
