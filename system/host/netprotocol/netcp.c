@@ -102,10 +102,9 @@ static void file_close(void* file_cookie) {
 static tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
     ssize_t send_result;
+    struct pollfd poll_fds = {.fd = transport_info->socket,
+                              .events = POLLOUT};
     do {
-        struct pollfd poll_fds = {.fd = transport_info->socket,
-                                  .events = POLLOUT,
-                                  .revents = 0};
         int poll_result = poll(&poll_fds, 1, MAX_SEND_TIME_MS);
         if (poll_result <= 0) {
             // We'll treat a timeout as an IO error and not a TFTP_ERR_TIMED_OUT,
@@ -120,7 +119,8 @@ static tftp_status transport_send(void* data, size_t len, void* transport_cookie
         } else {
             send_result = send(transport_info->socket, data, len, 0);
         }
-    } while ((send_result < 0) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
+    } while ((send_result < 0) &&
+             ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == ENOBUFS)));
 
     if (send_result < 0) {
         return TFTP_ERR_IO;
