@@ -8,11 +8,11 @@ import "lib/network/fidl/url_loader.fidl";
 
 [ServiceName="network::NetworkService"]
 interface NetworkService {
-  CreateURLLoader(URLLoader& loader);
+  CreateURLLoader@0(URLLoader& loader);
 
   // This is not implemented
-  GetCookieStore(handle<channel> cookie_store);
+  GetCookieStore@1(handle<channel> cookie_store);
 
   // This is not implemented
-  CreateWebSocket(handle<channel> socket);
+  CreateWebSocket@2(handle<channel> socket);
 };

@@ -26,13 +26,13 @@ interface URLLoader {
   // Loads the given |request|, asynchronously producing |response|. Consult
   // |response| to determine if the request resulted in an error, was
   // redirected, or has a response body to be consumed.
-  Start(URLRequest request) => (URLResponse response);
+  Start@0(URLRequest request) => (URLResponse response);
 
   // If the request passed to |Start| had |auto_follow_redirects| set to false,
   // then upon receiving an URLResponse with a non-NULL |redirect_url| field,
   // |FollowRedirect| may be called to load the URL indicated by the redirect.
-  FollowRedirect() => (URLResponse response);
+  FollowRedirect@1() => (URLResponse response);
 
   // Query status about the URLLoader.
-  QueryStatus() => (URLLoaderStatus status);
+  QueryStatus@2() => (URLLoaderStatus status);
 };
