@@ -30,11 +30,11 @@
 #include "hdmi-display.h"
 #include "intel-i915.h"
 #include "macros.h"
-#include "registers.h"
 #include "registers-ddi.h"
 #include "registers-dpll.h"
 #include "registers-pipe.h"
 #include "registers-transcoder.h"
+#include "registers.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 
@@ -49,17 +49,17 @@
 #define ENABLE_MODESETTING 0
 
 namespace {
-    static bool is_gen9(uint16_t device_id) {
-        // Skylake graphics all match 0x19XX and kaby lake graphics all match
-        // 0x59XX. There are a few other devices which have matching device_ids,
-        // but none of them are display-class devices.
-        device_id &= 0xff00;
-        return device_id == 0x1900 || device_id == 0x5900;
-    }
+static bool is_gen9(uint16_t device_id) {
+    // Skylake graphics all match 0x19XX and kaby lake graphics all match
+    // 0x59XX. There are a few other devices which have matching device_ids,
+    // but none of them are display-class devices.
+    device_id &= 0xff00;
+    return device_id == 0x1900 || device_id == 0x5900;
+}
 
-    static int irq_handler(void* arg) {
-        return static_cast<i915::Controller*>(arg)->IrqLoop();
-    }
+static int irq_handler(void* arg) {
+    return static_cast<i915::Controller*>(arg)->IrqLoop();
+}
 }
 
 namespace i915 {
@@ -78,13 +78,11 @@ int Controller::IrqLoop() {
         zx_interrupt_complete(irq_);
 
         if (interrupt_ctrl.sde_int_pending().get()) {
-            auto sde_int_identity = registers::SdeInterruptBase
-                    ::Get(registers::SdeInterruptBase::kSdeIntIdentity).ReadFrom(mmio_space_.get());
+            auto sde_int_identity = registers::SdeInterruptBase::Get(registers::SdeInterruptBase::kSdeIntIdentity).ReadFrom(mmio_space_.get());
             for (uint32_t i = 0; i < registers::kDdiCount; i++) {
                 registers::Ddi ddi = registers::kDdis[i];
                 bool hp_detected = sde_int_identity.ddi_bit(ddi).get();
-                bool long_pulse_detected = registers::HotplugCtrl
-                        ::Get(ddi).ReadFrom(mmio_space_.get()).long_pulse_detected(ddi).get();
+                bool long_pulse_detected = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get()).long_pulse_detected(ddi).get();
                 if (hp_detected && long_pulse_detected) {
                     // TODO(ZX-1414): Actually handle these events
                     zxlogf(TRACE, "i915: hotplug detected %d\n", ddi);
@@ -148,22 +146,21 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
         registers::Ddi ddi = registers::kDdis[i];
         // TODO(stevensd): gen9 doesn't have any registers to detect if ddi A or E are present.
         // For now just assume that they are, but we should eventually read from the VBT.
-        bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E)
-                || (ddi == registers::DDI_B && sfuse_strap.port_b_present().get())
-                || (ddi == registers::DDI_C && sfuse_strap.port_c_present().get())
-                || (ddi == registers::DDI_D && sfuse_strap.port_d_present().get());
+        bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) || (ddi == registers::DDI_B && sfuse_strap.port_b_present().get()) || (ddi == registers::DDI_C && sfuse_strap.port_c_present().get()) || (ddi == registers::DDI_D && sfuse_strap.port_d_present().get());
 
         auto hp_ctrl = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get());
         hp_ctrl.hpd_enable(ddi).set(enabled);
         hp_ctrl.WriteTo(mmio_space_.get());
 
         auto mask = registers::SdeInterruptBase::Get(
-                registers::SdeInterruptBase::kSdeIntMask).ReadFrom(mmio_space_.get());
+                        registers::SdeInterruptBase::kSdeIntMask)
+                        .ReadFrom(mmio_space_.get());
         mask.ddi_bit(ddi).set(!enabled);
         mask.WriteTo(mmio_space_.get());
 
         auto enable = registers::SdeInterruptBase::Get(
-                registers::SdeInterruptBase::kSdeIntEnable).ReadFrom(mmio_space_.get());
+                          registers::SdeInterruptBase::kSdeIntEnable)
+                          .ReadFrom(mmio_space_.get());
         enable.ddi_bit(ddi).set(enabled);
         enable.WriteTo(mmio_space_.get());
     }
@@ -178,8 +175,7 @@ bool Controller::BringUpDisplayEngine() {
     nde_rstwrn_opt.WriteTo(mmio_space_.get());
 
     // Wait for Power Well 0 distribution
-    if (!WAIT_ON_US(registers::FuseStatus
-            ::Get().ReadFrom(mmio_space_.get()).pg0_dist_status().get(), 5)) {
+    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg0_dist_status().get(), 5)) {
         zxlogf(ERROR, "Power Well 0 distribution failed\n");
         return false;
     }
@@ -189,18 +185,15 @@ bool Controller::BringUpDisplayEngine() {
     power_well.power_well_1_request().set(1);
     power_well.misc_io_power_state().set(1);
     power_well.WriteTo(mmio_space_.get());
-    if (!WAIT_ON_US(registers::PowerWellControl2
-            ::Get().ReadFrom(mmio_space_.get()).power_well_1_state().get(), 10)) {
+    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).power_well_1_state().get(), 10)) {
         zxlogf(ERROR, "Power Well 1 failed to enable\n");
         return false;
     }
-    if (!WAIT_ON_US(registers::PowerWellControl2
-            ::Get().ReadFrom(mmio_space_.get()).misc_io_power_state().get(), 10)) {
+    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).misc_io_power_state().get(), 10)) {
         zxlogf(ERROR, "Misc IO power failed to enable\n");
         return false;
     }
-    if (!WAIT_ON_US(registers::FuseStatus
-            ::Get().ReadFrom(mmio_space_.get()).pg1_dist_status().get(), 5)) {
+    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg1_dist_status().get(), 5)) {
         zxlogf(ERROR, "Power Well 1 distribution failed\n");
         return false;
     }
@@ -226,8 +219,7 @@ bool Controller::BringUpDisplayEngine() {
         // Enable DPLL0 and wait for it
         dpll_enable.enable_dpll().set(1);
         dpll_enable.WriteTo(mmio_space_.get());
-        if (!WAIT_ON_MS(registers::Lcpll1Control
-                ::Get().ReadFrom(mmio_space_.get()).pll_lock().get(), 5)) {
+        if (!WAIT_ON_MS(registers::Lcpll1Control::Get().ReadFrom(mmio_space_.get()).pll_lock().get(), 5)) {
             zxlogf(ERROR, "Failed to configure dpll0\n");
             return false;
         }
@@ -244,7 +236,9 @@ bool Controller::BringUpDisplayEngine() {
         int count = 0;
         for (;;) {
             if (!WAIT_ON_US(mmio_space_.get()
-                    ->Read32(kGtDriverMailboxInterface) & 0x80000000, 150)) {
+                                    ->Read32(kGtDriverMailboxInterface) &
+                                0x80000000,
+                            150)) {
                 zxlogf(ERROR, "GT Driver Mailbox driver busy\n");
                 return false;
             }
@@ -270,8 +264,7 @@ bool Controller::BringUpDisplayEngine() {
     dbuf_ctl.power_request().set(1);
     dbuf_ctl.WriteTo(mmio_space_.get());
 
-    if (!WAIT_ON_US(registers::DbufCtl
-            ::Get().ReadFrom(mmio_space_.get()).power_state().get(), 10)) {
+    if (!WAIT_ON_US(registers::DbufCtl::Get().ReadFrom(mmio_space_.get()).power_state().get(), 10)) {
         zxlogf(ERROR, "Failed to enable DBUF\n");
         return false;
     }
@@ -344,8 +337,7 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
     ddi_dp_tp_ctl.dp_link_training_pattern().set(ddi_dp_tp_ctl.kTrainingPattern1);
     ddi_dp_tp_ctl.WriteTo(mmio_space());
 
-    if (was_enabled && !WAIT_ON_MS(
-            ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status().get(), 8)) {
+    if (was_enabled && !WAIT_ON_MS(ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status().get(), 8)) {
         zxlogf(ERROR, "Port failed to go idle\n");
         return false;
     }
@@ -427,7 +419,7 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
             zxlogf(TRACE, "Trying to init display %d\n", registers::kDdis[i]);
             zxlogf(SPEW, "Trying hdmi\n");
             fbl::unique_ptr<DisplayDevice> hdmi_disp(
-                    new (&ac) HdmiDisplay(this, registers::kDdis[i], registers::PIPE_A));
+                new (&ac) HdmiDisplay(this, registers::kDdis[i], registers::PIPE_A));
             if (ac.check() && hdmi_disp->Init()) {
                 disp_device = fbl::move(hdmi_disp);
             }
@@ -435,7 +427,7 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
             if (!disp_device) {
                 zxlogf(SPEW, "Trying dp\n");
                 fbl::unique_ptr<DisplayDevice> dp_disp(
-                        new (&ac) DpDisplay(this, registers::kDdis[i], registers::PIPE_A));
+                    new (&ac) DpDisplay(this, registers::kDdis[i], registers::PIPE_A));
                 if (ac.check() && dp_disp->Init()) {
                     disp_device = fbl::move(dp_disp);
                 }
@@ -490,28 +482,20 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    void* cfg_space;
-    size_t config_size;
-    zx_handle_t cfg_handle = ZX_HANDLE_INVALID;
-    zx_status_t status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                          &cfg_space, &config_size, &cfg_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to map PCI resource config\n");
-        return status;
-    }
-    const pci_config_t* pci_config = reinterpret_cast<const pci_config_t*>(cfg_space);
-    if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
+    uint16_t device_id;
+    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
+    if (device_id == INTEL_I915_BROADWELL_DID) {
         // TODO: this should be based on the specific target
         flags_ |= FLAGS_BACKLIGHT;
     }
 
-    uintptr_t gmchGfxControl =
-            reinterpret_cast<uintptr_t>(cfg_space) + registers::GmchGfxControl::kAddr;
-    uint16_t gmch_ctrl = *reinterpret_cast<volatile uint16_t*>(gmchGfxControl);
+    uint16_t gmch_ctrl;
+    zx_status_t status = pci_config_read16(&pci, registers::GmchGfxControl::kAddr, &gmch_ctrl);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: failed to read GfxControl\n");
+        return status;
+    }
     uint32_t gtt_size = registers::GmchGfxControl::mem_size_to_mb(gmch_ctrl);
-
-    zx_handle_close(cfg_handle);
 
     zxlogf(TRACE, "i915: mapping registers\n");
     // map register window
@@ -532,7 +516,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
     mmio_space_ = fbl::move(mmio_space);
 
-    if (is_gen9(pci_config->device_id)) {
+    if (is_gen9(device_id)) {
         zxlogf(TRACE, "i915: initialzing hotplug\n");
         status = InitHotplug(&pci);
         if (status != ZX_OK) {
@@ -552,13 +536,13 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     controller_ptr->release();
 
     zxlogf(TRACE, "i915: initializing displays\n");
-    status = InitDisplays(pci_config->device_id);
+    status = InitDisplays(device_id);
     if (status != ZX_OK) {
         device_remove(zxdev());
         return status;
     }
 
-    if (is_gen9(pci_config->device_id)) {
+    if (is_gen9(device_id)) {
         auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
         interrupt_ctrl.enable_mask().set(1);
         interrupt_ctrl.WriteTo(mmio_space_.get());
@@ -578,7 +562,8 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     return ZX_OK;
 }
 
-Controller::Controller(zx_device_t* parent) : DeviceType(parent), irq_(ZX_HANDLE_INVALID) { }
+Controller::Controller(zx_device_t* parent)
+    : DeviceType(parent), irq_(ZX_HANDLE_INVALID) {}
 
 Controller::~Controller() {
     if (irq_ != ZX_HANDLE_INVALID) {
