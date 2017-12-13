@@ -171,7 +171,7 @@ static const char* linux_cmdline(const char* cmdline,
   snprintf(buf, sizeof(buf), fmt, uart_addr, cmdline);
 #elif __x86_64__
   auto fmt =
-      "earlycon=uart,io,%#lx console=ttyS0 io_delay=none clocksource=tsc "
+      "earlycon=uart,io,%#lx console=tty0 io_delay=none clocksource=tsc "
       "acpi_rsdp=%#lx %s";
   snprintf(buf, sizeof(buf), fmt, uart_addr, acpi_addr, cmdline);
 #endif
@@ -199,9 +199,8 @@ int main(int argc, char** argv) {
   const char* cmdline = "";
   zx_duration_t balloon_poll_interval = 0;
   bool balloon_deflate_on_demand = false;
-  bool use_gpu = false;
   int opt;
-  while ((opt = getopt(argc, argv, "b:r:c:m:dp:g")) != -1) {
+  while ((opt = getopt(argc, argv, "b:r:c:m:dp:")) != -1) {
     switch (opt) {
       case 'b':
         block_path = optarg;
@@ -236,9 +235,6 @@ int main(int argc, char** argv) {
           return ZX_ERR_INVALID_ARGS;
         }
         break;
-      case 'g':
-        use_gpu = true;
-        break;
       default:
         return usage(cmd);
     }
@@ -249,7 +245,6 @@ int main(int argc, char** argv) {
   } else {
     // Default configuration.
     // TODO(ZX-1487): Avoid hard-coding these.
-    use_gpu = true;
     ramdisk_path = "/system/data/bootdata.bin";
     kernel_path = "/system/data/zircon.bin";
   }
@@ -435,30 +430,28 @@ int main(int argc, char** argv) {
   machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
                              "serial-number");
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
-  if (use_gpu) {
-    status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
-    if (status != ZX_OK) {
-      status = setup_scenic_framebuffer(&gpu);
-      if (status != ZX_OK)
-        return status;
-    }
-
-    status = gpu.Init();
-    if (status != ZX_OK)
-      return status;
-
-    status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
-    if (status != ZX_OK)
-      return status;
-
-    // Setup input device.
-    status = input.Start();
-    if (status != ZX_OK)
-      return status;
-    status = bus.Connect(&input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
+  status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
+  if (status != ZX_OK) {
+    status = setup_scenic_framebuffer(&gpu);
     if (status != ZX_OK)
       return status;
   }
+
+  status = gpu.Init();
+  if (status != ZX_OK)
+    return status;
+
+  status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
+  if (status != ZX_OK)
+    return status;
+
+  // Setup input device.
+  status = input.Start();
+  if (status != ZX_OK)
+    return status;
+  status = bus.Connect(&input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
+  if (status != ZX_OK)
+    return status;
 
   // Setup initial VCPU state.
   zx_vcpu_state_t vcpu_state = {};

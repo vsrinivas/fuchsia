@@ -71,18 +71,3 @@ run guest \
     -c 'root=/dev/vda rw init=/init' \
     /system/data/image
 ```
-
-Linux also supports an interactive graphical framebuffer:
-
-```
-run guest \
-    -g \
-    -r /system/data/initrd \
-    -c 'console=tty0' \
-    /system/data/image
-```
-
-This will cause the guest to gain control of the framebuffer. Keyboard HID
-events will be passed through to the guest using a virito-input device
-(automatically enabled when the GPU is enaled with `-g`). You can
-toggle back to the host virtcon by pressing Alt+Esc.
