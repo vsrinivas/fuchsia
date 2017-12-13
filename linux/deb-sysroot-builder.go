@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -76,6 +77,12 @@ type Lock struct {
 	Hash     string `yaml:"hash"`
 }
 
+type Arch struct {
+	Name     string `yaml:"name"`
+	Filename string `yaml:"filename"`
+	Hash     string `yaml:"hash"`
+}
+
 type Locks []Lock
 
 func (l Locks) Len() int {
@@ -90,8 +97,40 @@ func (l Locks) Less(i, j int) bool {
 	return l[i].Name < l[j].Name
 }
 
+// Descriptor represents a Debian package description.
+type Descriptor map[string]string
+
+// parsePackages parses Debian's control file which described packages.
+//
+// See chapter 5.1 (Syntax of control files) of the Debian Policy Manual:
+// http://www.debian.org/doc/debian-policy/ch-controlfields.html
+func parsePackages(r io.Reader) ([]Descriptor, error) {
+	// Packages are separated by double newline, use scanner to split them.
+	scanner := bufio.NewScanner(r)
+	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
+		const separator = "\n\n"
+		if i := bytes.Index(data, []byte(separator)); i != -1 {
+			return i + len(separator), data[:i], nil
+		}
+		return 0, nil, nil
+	})
+	exp := regexp.MustCompile(`(?m)^(?P<key>\S+): (?P<value>(.*)(?:$\s^ .*)*)$`)
+	var descriptors []Descriptor
+	for scanner.Scan() {
+		descriptor := make(Descriptor)
+		for _, m := range exp.FindAllStringSubmatch(scanner.Text(), -1) {
+			descriptor[m[1]] = m[2]
+		}
+		descriptors = append(descriptors, descriptor)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return descriptors, nil
+}
+
 func downloadPackageList(config *Config, arch string) ([]Lock, error) {
-	pkgs := map[string]Lock{}
+	pkgs := map[string]Descriptor{}
 
 	file, err := os.Open(config.Keyring)
 	if err != nil {
@@ -157,31 +196,41 @@ func downloadPackageList(config *Config, arch string) ([]Lock, error) {
 			if err != nil {
 				return nil, err
 			}
-			d, err := ioutil.ReadAll(g)
+
+			ps, err := parsePackages(g)
 			if err != nil {
 				return nil, err
 			}
 
-			for _, p := range strings.Split(string(d), "\n\n") {
-				rec := regexp.MustCompile(`(?m)^(?:Package:|Version:|Filename:|SHA256:) (.*)$`)
-				m := rec.FindAllStringSubmatch(p, 4)
-				if m == nil {
-					continue
+			// We only want development libraries, filter out everything else.
+			for _, p := range ps {
+				// Use sections as a coarse grained filter.
+				var section bool
+				switch p["Section"] {
+				case "libs", "libdevel", "devel", "x11":
+					section = true
 				}
-				pkgs[m[0][1]] = Lock{
-					Name:     m[0][1],
-					Version:  m[1][1],
-					Filename: m[2][1],
-					Hash:     m[3][1],
+				// Use tags as a more fine-grained filter.
+				var tag bool
+				for _, n := range strings.Split(p["Tag"], ", ") {
+					t := strings.Split(strings.TrimSpace(n), " ")[0]
+					switch t {
+					case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
+						tag = true
+					}
+				}
+				// Skip everything that doesn't match.
+				if section && tag {
+					pkgs[p["Package"]] = p
 				}
 			}
 		}
 	}
 
-	list := []Lock{}
+	var queue []string
 	for _, p := range config.Packages {
 		if pkg, ok := pkgs[p.Name]; ok {
-			list = append(list, pkg)
+			queue = append(queue, pkg["Package"])
 		} else {
 			for _, a := range p.Arch {
 				if a == arch {
@@ -189,6 +238,32 @@ func downloadPackageList(config *Config, arch string) ([]Lock, error) {
 				}
 			}
 		}
+	}
+
+	locks := map[string]Lock{}
+	for len(queue) > 0 {
+		p := queue[0]
+		queue = queue[1:]
+		if _, ok := locks[p]; ok {
+			continue
+		}
+		if pkg, ok := pkgs[p]; ok {
+			locks[p] = Lock{
+				Name:     pkg["Package"],
+				Version:  pkg["Version"],
+				Filename: pkg["Filename"],
+				Hash:     pkg["SHA256"],
+			}
+			for _, n := range strings.Split(pkg["Depends"], ", ") {
+				d := strings.Split(strings.TrimSpace(n), " ")[0]
+				queue = append(queue, d)
+			}
+		}
+	}
+
+	var list []Lock
+	for _, p := range locks {
+		list = append(list, p)
 	}
 
 	return list, nil
