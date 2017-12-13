@@ -82,8 +82,10 @@ int run_in_namespace(int argc, const char* const* argv,
         return -1;
     }
     zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+    zx_info_process_t info;
+    zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL);
     fprintf(stderr, "[done]\n");
-    return 0;
+    return info.return_code;
 }
 
 int dump_current_namespace(void) {
