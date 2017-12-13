@@ -44,7 +44,7 @@ struct ConnectConfig {
 // SME / MSGCF.
 [ServiceName="wlan::WlanService"]
 interface Wlan {
-  Scan(ScanRequest request) => (ScanResult result);
-  Connect(ConnectConfig request) => (Error error);
-  Disconnect() => (Error error);
+  Scan@0(ScanRequest request) => (ScanResult result);
+  Connect@1(ConnectConfig request) => (Error error);
+  Disconnect@2() => (Error error);
 };
