@@ -463,5 +463,96 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_EQ(value2, ToString(expected_entries2[1]->value));
 }
 
+TEST_F(PageManagerTest, GetCommit) {
+  auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
+  auto merger = GetDummyResolver(&environment_, storage.get());
+  PageManager page_manager(&environment_, std::move(storage), nullptr,
+                           std::move(merger),
+                           PageManager::PageStorageState::NEW);
+  Status status;
+  PagePtr page;
+  page_manager.BindPage(page.NewRequest(),
+                        callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  PageDebugPtr page_debug;
+  page_manager.BindPageDebug(page_debug.NewRequest(),
+                             callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  std::string key1("001-some_key");
+  std::string value1("a small value");
+
+  page->Put(convert::ToArray(key1), convert::ToArray(value1),
+            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  fidl::Array<fidl::Array<uint8_t>> heads1;
+  page_debug->GetHeadCommitsIds(
+      callback::Capture(MakeQuitTask(), &status, &heads1));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, heads1.size());
+
+  std::string key2("002-some_key2");
+  std::string value2("another value");
+
+  page->Put(convert::ToArray(key2), convert::ToArray(value2),
+            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  fidl::Array<fidl::Array<uint8_t>> heads2;
+  page_debug->GetHeadCommitsIds(
+      callback::Capture(MakeQuitTask(), &status, &heads2));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, heads2.size());
+
+  ledger::CommitPtr commit_struct = ledger::Commit::New();
+  fidl::Array<uint8_t> currHeadCommit = heads2[0].Clone();
+  page_debug->GetCommit(
+      std::move(currHeadCommit),
+      callback::Capture(MakeQuitTask(), &status, &commit_struct));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(convert::ToString(heads2[0]),
+            convert::ToString(commit_struct->commit_id));
+  EXPECT_EQ(1u, commit_struct->parents_ids.size());
+  EXPECT_EQ(1u, commit_struct->generation);
+  EXPECT_EQ(convert::ToString(heads1[0]),
+            convert::ToString(commit_struct->parents_ids[0]));
+}
+
+TEST_F(PageManagerTest, GetCommitError) {
+  auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
+  auto merger = GetDummyResolver(&environment_, storage.get());
+  PageManager page_manager(&environment_, std::move(storage), nullptr,
+                           std::move(merger),
+                           PageManager::PageStorageState::NEW);
+  Status status;
+  PagePtr page;
+  page_manager.BindPage(page.NewRequest(),
+                        callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  PageDebugPtr page_debug;
+  page_manager.BindPageDebug(page_debug.NewRequest(),
+                             callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  ledger::CommitPtr commit_struct = ledger::Commit::New();
+  page_debug->GetCommit(
+      convert::ToArray("fake_commit_id"),
+      callback::Capture(MakeQuitTask(), &status, &commit_struct));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::INVALID_ARGUMENT, status);
+}
+
 }  // namespace
 }  // namespace ledger
