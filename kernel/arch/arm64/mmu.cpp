@@ -269,7 +269,7 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
 
     LTRACEF("page_size_shift %u\n", page_size_shift);
 
-    if (size >= PAGE_SIZE) {
+    if (size > PAGE_SIZE) {
         size_t count = size / PAGE_SIZE;
         size_t ret = pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP,
                                           static_cast<uint8_t>(page_size_shift), paddrp, NULL);
@@ -307,13 +307,15 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
     size_t size = 1U << page_size_shift;
     vm_page_t* page;
 
-    if (size >= PAGE_SIZE) {
+    if (size == PAGE_SIZE) {
         page = paddr_to_vm_page(paddr);
         if (!page)
             panic("bad page table paddr 0x%lx\n", paddr);
         pmm_free_page(page);
-    } else {
+    } else if (size < PAGE_SIZE) {
         free(vaddr);
+    } else {
+        PANIC_UNIMPLEMENTED;
     }
     pt_pages_--;
 }
