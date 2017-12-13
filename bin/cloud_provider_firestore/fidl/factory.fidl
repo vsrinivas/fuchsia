@@ -26,7 +26,7 @@ interface Factory {
   // |config| configuration
   // |token_provider| is used to get the appropriate auth tokens
   //     associated with user for whom the cloud provider is running.
-  GetCloudProvider(
+  GetCloudProvider@0(
                 Config config,
                 modular.auth.TokenProvider token_provider,
                 cloud_provider.CloudProvider& cloud_provider)

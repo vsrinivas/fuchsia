@@ -12,7 +12,7 @@ import "lib/user/fidl/focus.fidl";
 // its runtime dependencies from its parent process.
 [ServiceName="maxwell.StoryInfoInitializer"]
 interface StoryInfoInitializer {
-  Initialize(
+  Initialize@0(
       modular.StoryProvider story_provider,
       modular.FocusProvider focus_provider,
       modular.VisibleStoriesProvider visible_stories_provider);

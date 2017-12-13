@@ -10,26 +10,26 @@ import "lib/ledger/fidl/ledger.fidl";
 [ServiceName="ledger::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
   // Returns the instances list in LedgerRepository.
-  GetInstancesList() => (array<array<uint8>> result);
+  GetInstancesList@0() => (array<array<uint8>> result);
 
   // Returns the debugging interface for the given |ledger_name|.
-  GetLedgerDebug(array<uint8> ledger_name, LedgerDebug& ledger_debug) => (Status status);
+  GetLedgerDebug@1(array<uint8> ledger_name, LedgerDebug& ledger_debug) => (Status status);
 };
 
 interface LedgerDebug {
   // Returns the pages list in Ledger.
-  GetPagesList() => (array<array<uint8>> result);
+  GetPagesList@0() => (array<array<uint8>> result);
 
   // Returns OK and binds the |page_debug| for the given |page_id|.
   // Returns PAGE_NOT_FOUND if |page_id| isn't found.
-  GetPageDebug(array<uint8, 16> page_id, PageDebug& page_debug) => (Status status);
+  GetPageDebug@1(array<uint8, 16> page_id, PageDebug& page_debug) => (Status status);
 };
 
 interface PageDebug {
   // Returns OK and a list of the head commits IDs.
-  GetHeadCommitsIds() => (Status status, array<array<uint8>> result);
+  GetHeadCommitsIds@0() => (Status status, array<array<uint8>> result);
 
   // Returns OK and creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page.
-  GetSnapshot(array<uint8> commit_id, PageSnapshot& snapshot_request) => (Status status);
+  GetSnapshot@1(array<uint8> commit_id, PageSnapshot& snapshot_request) => (Status status);
 };
