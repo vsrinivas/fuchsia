@@ -21,8 +21,9 @@
 #define PCI_DEVICE_VIRTIO_BLOCK     2u
 #define PCI_DEVICE_VIRTIO_GPU       3u
 #define PCI_DEVICE_VIRTIO_INPUT     4u
+#define PCI_DEVICE_VIRTIO_NET       5u
 #define PCI_DEVICE_INVALID          UINT16_MAX
-#define PCI_MAX_DEVICES             5u
+#define PCI_MAX_DEVICES             6u
 #define PCI_MAX_BARS                2u
 
 // PCI configuration constants.

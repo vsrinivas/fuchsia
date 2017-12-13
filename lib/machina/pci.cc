@@ -39,12 +39,13 @@ constexpr uint8_t kPciCapNextOffset = 1;
 
 // Per-device IRQ assignments.
 //
-// These are provided to the guest via the _SB section in the DSDT ACPI table.
+// These are provided to the guest via the /pci@10000000 node within the device
+// tree, and via the _SB section in the DSDT ACPI table.
 //
-// The DSDT defines interrupts for 5 devices (IRQ 32-36). Adding
-// additional devices beyond that will require updates to the DSDT.
+// The device tree and DSDT define interrupts for 6 devices (IRQ 32-37). Adding
+// additional devices beyond that will require updates to both.
 constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35,
-                                                               36};
+                                                               36, 37};
 
 uint32_t PciBar::aspace() const {
   switch (trap_type) {
