@@ -9,6 +9,7 @@
 #include "packet.h"
 #include "serialize.h"
 
+#include "garnet/drivers/wlan/common/channel.h"
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
@@ -41,10 +42,10 @@ void DumpPacket(const Packet& packet) {
 void DumpRxInfo(const wlan_rx_info_t& rxinfo) {
     std::printf(
         "WLAN RxInfo: "
-        "flags %08x valid_fields %08x phy %u cbw %u data_rate %u chan %u "
+        "flags %08x valid_fields %08x phy %u data_rate %u chan %s "
         "mcs %u rssi %u rcpi %u snr %u \n",
-        rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.chan.cbw, rxinfo.data_rate,
-        rxinfo.chan.primary, rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
+        rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.data_rate,
+        ChanStr(rxinfo.chan).c_str(), rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
 }
 
 void DumpFrameHeader(const FrameHeader& hdr, size_t len) {

@@ -4,9 +4,15 @@
 
 #pragma once
 
+#include <cstdint>
+#include <string>
+
 #include <ddk/protocol/wlan.h>
 
 namespace wlan {
+
+std::string ChanStr(const wlan_channel_t& chan);
+std::string ChanStrLong(const wlan_channel_t& chan);
 
 struct Channel {
     wlan_channel_t chan;

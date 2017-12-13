@@ -5,6 +5,7 @@
 source_set("common") {
   sources = [
     "bitfield.h",
+    "channel.cpp",
     "channel.h",
     "macaddr.cpp",
     "macaddr.h",
