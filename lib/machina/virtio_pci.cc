@@ -388,7 +388,7 @@ void VirtioPci::SetupCaps() {
            sizeof(device_cfg_cap_), device_->device_config_size_, kVirtioPciBar,
            kVirtioPciDeviceCfgBase);
 
-  // Note VIRTIO_PCI_CAP_PCI_CFG is not implmeneted.
+  // Note VIRTIO_PCI_CAP_PCI_CFG is not implemented.
   // This one is more complex since it is writable and doesn't seem to be
   // used by Linux or Zircon.
 
@@ -396,8 +396,9 @@ void VirtioPci::SetupCaps() {
                 "Incorrect number of capabilities.");
   set_capabilities(capabilities_, kVirtioPciNumCapabilities);
 
-  static_assert(kVirtioPciBar < PCI_MAX_BARS,
-                "Not enough BAR registers available.");
+  static_assert(
+      kVirtioPciBar < PCI_MAX_BARS && kVirtioPciNotifyBar < PCI_MAX_BARS,
+      "Not enough BAR registers available.");
   bar_[kVirtioPciBar].size = static_cast<uint32_t>(
       kVirtioPciDeviceCfgBase + device_->device_config_size_);
   bar_[kVirtioPciBar].trap_type = TrapType::MMIO_SYNC;
@@ -410,6 +411,8 @@ static constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
 static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
   // See PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section D.
   switch (virtio_id) {
+    case VIRTIO_ID_BALLOON:
+      return 0x05000000;
     case VIRTIO_ID_BLOCK:
       return 0x01800000;
     case VIRTIO_ID_GPU:
