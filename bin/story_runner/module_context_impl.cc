@@ -101,7 +101,8 @@ void ModuleContextImpl::StartDaisy(
                             FindModulesResultPtr result) mutable {
         // We assume that we get atleast one result back and run the first
         // module in story shell.
-        // TODO(alhaad/thatguy): Revisit the assumption.
+        // TODO(alhaad/thatguy): Revisit the assumption. Simply choosing the
+        // first Module is not the correct behavior.
         FXL_CHECK(result->modules.size() > 0);
         const auto& module_result = result->modules[0];
         const auto& module_url = module_result->module_id;
