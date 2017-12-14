@@ -228,16 +228,16 @@ static int completer_thread(void *arg) {
         zx_interrupt_complete(irq_handle);
 
         if (wait_res != ZX_OK) {
-          if (wait_res != ZX_ERR_CANCELED) {
-            zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
-          }
-          break;
+            if (wait_res != ZX_ERR_CANCELED) {
+                zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            }
+            break;
         }
         if (atomic_load(&completer->xhci->suspended)) {
-          // TODO(ravoorir): Remove this hack once the interrupt signalling bug
-          // is resolved.
-          zxlogf(ERROR, "race in interrupt_signal triggered. Kick off workaround for now\n");
-          break;
+            // TODO(ravoorir): Remove this hack once the interrupt signalling bug
+            // is resolved.
+            zxlogf(ERROR, "race in interrupt_signal triggered. Kick off workaround for now\n");
+            break;
         }
         xhci_handle_interrupt(completer->xhci, completer->interrupter);
     }
