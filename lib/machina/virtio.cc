@@ -11,6 +11,8 @@
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio_ring.h>
 
+#include "lib/fxl/logging.h"
+
 #define QUEUE_SIZE 128u
 
 // Convert guest-physical addresses to usable virtual addresses.
@@ -125,7 +127,7 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
 
   zx_status_t status = HandleQueueNotify(kicked_queue);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to handle queue notify event.\n");
+    FXL_LOG(ERROR) << "Failed to handle queue notify event.";
     return status;
   }
 
@@ -191,7 +193,7 @@ static int virtio_queue_poll_task(void* ctx) {
     if (status == ZX_ERR_STOP)
       break;
     if (status != ZX_OK) {
-      fprintf(stderr, "Error %d while handling queue buffer.\n", status);
+      FXL_LOG(ERROR) << "Error " << status << " while handling queue buffer.";
       result = status;
       break;
     }
@@ -212,13 +214,13 @@ zx_status_t virtio_queue_poll(virtio_queue_t* queue,
   thrd_t thread;
   int ret = thrd_create(&thread, virtio_queue_poll_task, args.release());
   if (ret != thrd_success) {
-    fprintf(stderr, "Failed to create queue thread %d\n", ret);
+    FXL_LOG(ERROR) << "Failed to create queue thread " << ret;
     return ZX_ERR_INTERNAL;
   }
 
   ret = thrd_detach(thread);
   if (ret != thrd_success) {
-    fprintf(stderr, "Failed to detach queue thread %d\n", ret);
+    FXL_LOG(ERROR) << "Failed to detach queue thread " << ret;
     return ZX_ERR_INTERNAL;
   }
 

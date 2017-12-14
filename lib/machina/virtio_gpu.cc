@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/virtio_gpu.h"
 
-#include <stdio.h>
 #include <string.h>
 
 #include <fbl/intrusive_hash_table.h>
@@ -14,6 +13,7 @@
 #include "garnet/lib/machina/gpu_bitmap.h"
 #include "garnet/lib/machina/gpu_resource.h"
 #include "garnet/lib/machina/gpu_scanout.h"
+#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -175,7 +175,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(virtio_queue_t* queue,
     case VIRTIO_GPU_CMD_UPDATE_CURSOR:
     case VIRTIO_GPU_CMD_MOVE_CURSOR:
     default: {
-      fprintf(stderr, "Unsupported GPU command %d\n", header->type);
+      FXL_LOG(ERROR) << "Unsupported GPU command " << header->type;
       // ACK.
       virtio_desc_t response_desc;
       virtio_queue_read_desc(queue, request_desc.next, &response_desc);

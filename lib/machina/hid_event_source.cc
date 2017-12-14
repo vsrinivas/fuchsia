@@ -16,6 +16,8 @@
 #include <zircon/device/input.h>
 #include <zircon/types.h>
 
+#include "lib/fxl/logging.h"
+
 namespace machina {
 
 static const char* kInputDirPath = "/dev/class/input";
@@ -69,7 +71,7 @@ zx_status_t HidInputDevice::HidEventLoop() {
   while (true) {
     ssize_t r = read(fd_.get(), report, sizeof(report));
     if (r != sizeof(report)) {
-      fprintf(stderr, "failed to read from input device\n");
+      FXL_LOG(ERROR) << "Failed to read from input device";
       return ZX_ERR_IO;
     }
 
@@ -78,7 +80,7 @@ zx_status_t HidInputDevice::HidEventLoop() {
 
     zx_status_t status = HandleHidKeys(curr_keys);
     if (status != ZX_OK) {
-      fprintf(stderr, "Failed to handle HID keys.\n");
+      FXL_LOG(ERROR) << "Failed to handle HID keys.";
       return status;
     }
   }
@@ -144,14 +146,14 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd,
   fbl::unique_fd fd;
   int raw_fd = openat(dirfd, fn, O_RDONLY);
   if (raw_fd < 0) {
-    fprintf(stderr, "Failed to open device %s/%s\n", kInputDirPath, fn);
+    FXL_LOG(ERROR) << "Failed to open device " << kInputDirPath << "/" << fn;
     return ZX_OK;
   }
   fd.reset(raw_fd);
 
   int proto = INPUT_PROTO_NONE;
   if (ioctl_input_get_protocol(fd.get(), &proto) < 0) {
-    fprintf(stderr, "Failed to get input device protocol.\n");
+    FXL_LOG(ERROR) << "Failed to get input device protocol.";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -169,11 +171,11 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd,
 
   zx_status_t status = keyboard->Start();
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to start device %s/%s\n", kInputDirPath, fn);
+    FXL_LOG(ERROR) << "Failed to start device " << kInputDirPath << "/" << fn;
     return status;
   }
-  fprintf(stderr, "hid-device: Polling device %s/%s for key events.\n",
-          kInputDirPath, fn);
+  FXL_LOG(INFO) << "Polling device " << kInputDirPath << "/" << fn
+                << " for key events.";
 
   fbl::AutoLock lock(&mutex_);
   devices_.push_front(fbl::move(keyboard));

@@ -16,6 +16,7 @@
 #include <zircon/syscalls/hypervisor.h>
 
 #include "garnet/lib/machina/address.h"
+#include "lib/fxl/logging.h"
 
 // clang-format off
 
@@ -118,7 +119,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
     // There also exists a 'cluster' model that is not implemented.
     uint32_t model = bits_shift(local_apic->dfr(), 31, 28);
     if (model != LOCAL_APIC_DFR_FLAT_MODEL) {
-      fprintf(stderr, "APIC only supports the flat model.\n");
+      FXL_LOG(ERROR) << "APIC only supports the flat model.";
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -146,7 +147,7 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
       return ReadRegister(select_register, value);
     }
     default:
-      fprintf(stderr, "Unhandled IO APIC address %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled IO APIC read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -169,7 +170,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       return WriteRegister(select_register, value);
     }
     default:
-      fprintf(stderr, "Unhandled IO APIC address %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled IO APIC write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -204,7 +205,7 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register,
       return ZX_OK;
     }
     default:
-      fprintf(stderr, "Unhandled IO APIC register %#x\n", select_register);
+      FXL_LOG(ERROR) << "Unhandled IO APIC register read 0x" << std::hex << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -231,7 +232,8 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register,
       // Read-only, ignore writes.
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled IO APIC register %#x\n", select_register);
+      FXL_LOG(ERROR) <<
+          "Unhandled IO APIC register write 0x" << std::hex << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

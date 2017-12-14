@@ -10,6 +10,7 @@
 #include <hypervisor/guest.h>
 
 #include "garnet/lib/machina/address.h"
+#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -80,7 +81,7 @@ zx_status_t I8250::Read(uint64_t addr, IoValue* io) const {
       io->u8 = 0;
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled I8250 address %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled I8250 read 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
@@ -112,7 +113,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
     case I8250Register::MODEM_CONTROL... I8250Register::SCRATCH:
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled I8250 address %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled I8250 write 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }

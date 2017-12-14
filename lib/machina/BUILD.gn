@@ -64,6 +64,7 @@ shared_library("machina") {
   ]
 
   deps = [
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/async:loop",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",

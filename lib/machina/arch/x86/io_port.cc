@@ -12,6 +12,7 @@
 
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/rtc.h"
+#include "lib/fxl/logging.h"
 
 // clang-format off
 
@@ -243,7 +244,7 @@ zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index,
       *value = 0;
       break;
     default:
-      fprintf(stderr, "Unsupported RTC register read %x\n", rtc_index);
+      FXL_LOG(ERROR) << "Unsupported RTC register read 0x" << std::hex << rtc_index;
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -259,7 +260,7 @@ zx_status_t RtcHandler::WriteRtcRegister(uint8_t rtc_index, uint8_t value) {
         return ZX_ERR_NOT_SUPPORTED;
       return ZX_OK;
     default:
-      fprintf(stderr, "Unsupported RTC register write %x\n", rtc_index);
+      FXL_LOG(ERROR) << "Unsupported RTC register write 0x" << std::hex << rtc_index;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

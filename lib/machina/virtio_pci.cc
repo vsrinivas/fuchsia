@@ -11,6 +11,7 @@
 #include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/virtio.h"
+#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -228,7 +229,7 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
     uint64_t device_offset = addr - kVirtioPciDeviceCfgBase;
     return device_->ReadConfig(device_offset, value);
   }
-  fprintf(stderr, "Unhandled read %#lx\n", addr);
+  FXL_LOG(ERROR) << "Unhandled read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -322,7 +323,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES:
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES:
-      fprintf(stderr, "Unsupported write to %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unsupported write to 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -342,7 +343,7 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
     uint64_t device_offset = addr - kVirtioPciDeviceCfgBase;
     return device_->WriteConfig(device_offset, value);
   }
-  fprintf(stderr, "Unhandled write %#lx\n", addr);
+  FXL_LOG(ERROR) << "Unhandled write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 

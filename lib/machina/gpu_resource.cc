@@ -7,6 +7,7 @@
 #include "garnet/lib/machina/gpu_resource.h"
 
 #include "garnet/lib/machina/gpu_scanout.h"
+#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -33,9 +34,7 @@ virtio_gpu_ctrl_type GpuResource::AttachBacking(
     backing_size += entry->length;
   }
   if (backing_size < required_bytes) {
-    fprintf(
-        stderr,
-        "virtio-gpu: attach backing command provided buffer is too small.\n");
+    FXL_LOG(ERROR) << "attach backing command provided buffer is too small.";
     backing_.clear();
     return VIRTIO_GPU_RESP_ERR_UNSPEC;
   }

@@ -10,6 +10,7 @@
 #include <hypervisor/guest.h>
 
 #include "garnet/lib/machina/address.h"
+#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -42,7 +43,7 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
       value->u16 = 0;
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled PL011 address read %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled PL011 address read 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
@@ -62,7 +63,7 @@ zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
     case Pl011Register::IMSC:
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled PL011 address write %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled PL011 address write 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }

@@ -16,6 +16,8 @@
 #include <hypervisor/bits.h>
 #include <virtio/virtio_ids.h>
 
+#include "lib/fxl/logging.h"
+
 namespace machina {
 
 // HID usage -> evdev keycode.
@@ -230,7 +232,7 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
       config_.size = 0;
       return ZX_OK;
     default:
-      fprintf(stderr, "unsupported select value %u\n", config_.select);
+      FXL_LOG(ERROR) << "Unsupported select value " << config_.select;
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;

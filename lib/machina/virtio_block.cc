@@ -17,6 +17,8 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 
+#include "lib/fxl/logging.h"
+
 namespace machina {
 
 // Dispatcher that fulfills block requests using file-descriptor IO
@@ -230,7 +232,7 @@ VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr,
 
 zx_status_t VirtioBlock::Init(const char* path, const PhysMem& phys_mem) {
   if (dispatcher_ != nullptr) {
-    fprintf(stderr, "Block device has already been initialized.\n");
+    FXL_LOG(ERROR) << "Block device has already been initialized.";
     return ZX_ERR_BAD_STATE;
   }
 
@@ -240,19 +242,17 @@ zx_status_t VirtioBlock::Init(const char* path, const PhysMem& phys_mem) {
   if (fd < 0) {
     fd = open(path, O_RDONLY);
     if (fd < 0) {
-      fprintf(stderr, "Failed to open block file \"%s\"\n", path);
+      FXL_LOG(ERROR) << "Failed to open block file \"" << path << "\"";
       return ZX_ERR_IO;
     }
-    fprintf(stderr,
-            "Unable to open block file \"%s\" read-write. "
-            "Block device will be read-only.\n",
-            path);
+    FXL_LOG(WARNING) << "Unable to open block file \"" << path
+                     << "\" read-write. Block device will be read-only.";
     set_read_only();
   }
   // Read file size.
   off_t ret = lseek(fd, 0, SEEK_END);
   if (ret < 0) {
-    fprintf(stderr, "Failed to read size of block file \"%s\"\n", path);
+    FXL_LOG(ERROR) << "Failed to read size of block file \"" << path << "\"";
     return ZX_ERR_IO;
   }
   size_ = ret;
@@ -263,12 +263,13 @@ zx_status_t VirtioBlock::Init(const char* path, const PhysMem& phys_mem) {
   fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher;
   zx_status_t status = FifoBlockDispatcher::Create(fd, phys_mem, &dispatcher);
   if (status == ZX_OK) {
-    printf("virtio-block: Using FIFO IO for block device '%s'.\n", path);
+    FXL_LOG(INFO) << "Using FIFO IO for block device \"" << path << "\"";
   } else {
     status = FdioBlockDispatcher::Create(fd, &dispatcher);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
-    printf("virtio-block: Using posix IO for block device '%s'.\n", path);
+    }
+    FXL_LOG(INFO) << "Using posix IO for block device \"" << path << "\"";
   }
   dispatcher_ = fbl::move(dispatcher);
 

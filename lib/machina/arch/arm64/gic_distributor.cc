@@ -8,6 +8,8 @@
 #include <hypervisor/guest.h>
 
 #include "garnet/lib/machina/address.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace machina {
 
@@ -79,7 +81,8 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = pidr2_arch_rev(kGicRevision);
       return ZX_OK;
     default:
-      fprintf(stderr, "Unhandled GIC distributor address read %#lx\n", addr);
+      FXL_LOG(ERROR) <<
+          "Unhandled GIC distributor address read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -100,15 +103,14 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     case GicdRegister::SGI: {
       SoftwareGeneratedInterrupt sgi(value.u32);
-      fprintf(
-          stderr,
-          "Ignoring GIC SGI, target %u CPU mask %#x non-secure %u vector %u\n",
+      FXL_LOG(ERROR) << fxl::StringPrintf(
+          "Ignoring GIC SGI, target %u CPU mask %#x non-secure %u vector %u.",
           static_cast<uint8_t>(sgi.target), sgi.cpu_mask, sgi.non_secure,
           sgi.vector);
       return ZX_OK;
     }
     default:
-      fprintf(stderr, "Unhandled GIC distributor address write %#lx\n", addr);
+      FXL_LOG(ERROR) << "Unhandled GIC distributor address write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
