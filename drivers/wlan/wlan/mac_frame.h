@@ -425,6 +425,7 @@ struct ProbeRequest {
 
     bool Validate(size_t len);
 
+    size_t hdr_len() { return 0; }
     uint8_t elements[];
 } __PACKED;
 

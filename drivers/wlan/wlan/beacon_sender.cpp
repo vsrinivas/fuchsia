@@ -165,36 +165,31 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
 
     // TODO(hahnr): Length of elements is not known at this time. Allocate enough bytes.
     // This should be updated once there is a better size management.
-    size_t elem_len = 128;
-    size_t len = sizeof(MgmtFrameHeader) + sizeof(Beacon) + elem_len;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    size_t body_payload_len = 128;
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<Beacon>(&packet, body_payload_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-
-    // Write header.
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(ManagementSubtype::kBeacon);
-    // TODO(hahnr): Once ManagedBSS is submitted retrieve the bssid from the BSS.
+    // TODO(porce): Use mutable frame when ready
+    // audo hdr = frame.hdr;
+    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
     const common::MacAddr& bssid = device_->GetState()->address();
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
     hdr->sc.set_seq(next_seq());
+    FillTxInfo(&packet, *hdr);
 
-    // Write body.
-    auto bcn = packet->mut_field<Beacon>(hdr->len());
+    // auto bcn = frame.body;
+    Beacon* bcn = (Beacon*)frame.body;
     bcn->beacon_interval = start_req_->beacon_period;
     bcn->timestamp = beacon_timestamp();
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
 
     // Write elements.
-    //TODO(hahnr): All of this is hardcoded for now. Replace with actual capabilities.
-    ElementWriter w(bcn->elements, packet->len() - hdr->len() - sizeof(Beacon));
+    // TODO(hahnr): All of this is hardcoded for now. Replace with actual capabilities.
+    ElementWriter w(bcn->elements, body_payload_len);
     if (!w.write<SsidElement>(start_req_->ssid.data())) {
         errorf("could not write ssid \"%s\" to Beacon\n", start_req_->ssid.data());
         return ZX_ERR_IO;
@@ -223,7 +218,9 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
     // Validate the request in debug mode.
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
 
-    size_t actual_len = hdr->len() + sizeof(Beacon) + w.size();
+    // Update the length with final values
+    body_payload_len = w.size();
+    size_t actual_len = hdr->len() + sizeof(Beacon) + body_payload_len;
     auto status = packet->set_len(actual_len);
     if (status != ZX_OK) {
         errorf("[bcn-sender] could not set packet length to %zu: %d\n", actual_len, status);

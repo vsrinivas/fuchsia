@@ -82,6 +82,12 @@ enum BaAction : uint8_t {
 
 // IEEE Std 802.11-2016, 9.6.5.2
 struct AddBaRequestFrame {
+    static constexpr uint8_t Subtype() {
+        // TODO(porce): Separate out enum values from mac_frame.h,
+        // and replace 0x0d with ManagementSubtype::kAction
+        return 0x0d;
+    }
+
     action::Category category;
     action::BaAction action;
     uint8_t dialog_token;  // IEEE Std 802.11-2016, 9.4.1.12
@@ -98,6 +104,12 @@ struct AddBaRequestFrame {
 
 // IEEE Std 802.11-2016, 9.6.5.3
 struct AddBaResponseFrame {
+    static constexpr uint8_t Subtype() {
+        // TODO(porce): Separate out enum values from mac_frame.h,
+        // and replace 0x0d with ManagementSubtype::kAction
+        return 0x0d;
+    }
+
     action::Category category;
     action::BaAction action;
     uint8_t dialog_token;       // IEEE Std 802.11-2016, 9.4.1.12
@@ -122,6 +134,11 @@ class BlockAckDelBaParameters : public common::BitField<uint16_t> {
 
 // IEEE Std 802.11-2016, 9.6.5.4
 struct DelBaFrame {
+    static constexpr uint8_t Subtype() {
+        // TODO(porce): Separate out enum values from mac_frame.h,
+        // and replace 0x0d with ManagementSubtype::kAction
+        return 0x0d;
+    }
     action::Category category;
     action::BaAction action;
     BlockAckDelBaParameters params;

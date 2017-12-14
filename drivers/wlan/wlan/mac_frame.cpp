@@ -197,11 +197,17 @@ MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payl
                                                 size_t body_payload_len, bool has_ht_ctrl)
 
 DECLARE_BUILD_MGMTFRAME(ProbeRequest);
+DECLARE_BUILD_MGMTFRAME(Beacon);
+DECLARE_BUILD_MGMTFRAME(Authentication);
+DECLARE_BUILD_MGMTFRAME(Deauthentication);
+DECLARE_BUILD_MGMTFRAME(AssociationRequest);
+DECLARE_BUILD_MGMTFRAME(AddBaResponseFrame);
 
 zx_status_t FillTxInfo(fbl::unique_ptr<Packet>* packet, const MgmtFrameHeader& hdr) {
     // TODO(porce): Evolve the API to use FrameHeader
     // and support all types of frames.
     ZX_DEBUG_ASSERT(packet != nullptr && *packet);
+
     wlan_tx_info_t txinfo = {
         // Outgoing management frame
         .tx_flags = 0x0,

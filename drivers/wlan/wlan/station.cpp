@@ -129,28 +129,26 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
 
     debugjoin("authenticating to %s\n", MACSTR(bssid_));
 
-    // TODO(tkilbourn): better size management
-    size_t auth_len = sizeof(MgmtFrameHeader) + sizeof(Authentication);
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<Authentication>(&packet, 0);
+    if (packet == nullptr) {
+        errorf("authing: failed to build a frame\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
 
+    // TODO(porce): Use mutable frame when ready
+    // auto hdr = frame.hdr;
+    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
-
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), auth_len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(kAuthentication);
-
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
-
     hdr->sc.set_seq(next_seq());
+    FillTxInfo(&packet, *hdr);
 
-    auto auth = packet->mut_field<Authentication>(sizeof(MgmtFrameHeader));
     // TODO(tkilbourn): this assumes Open System authentication
+    // auto auth = frame.body;
+    Authentication* auth = (Authentication*)frame.body;
     auth->auth_algorithm_number = auth_alg_;
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved, so set to 0
@@ -188,24 +186,22 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     common::MacAddr peer_sta_addr(req.peer_sta_address.data());
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
-    size_t deauth_len = sizeof(MgmtFrameHeader) + sizeof(Deauthentication);
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(deauth_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<Deauthentication>(&packet, 0);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), deauth_len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(kDeauthentication);
-
+    // TODO(porce): Use mutable frame when ready
+    // auto hdr = frame.hdr;
+    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     hdr->sc.set_seq(next_seq());
+    FillTxInfo(&packet, *hdr);
 
-    auto deauth = packet->mut_field<Deauthentication>(sizeof(MgmtFrameHeader));
+    // auto deauth = frame.body;
+    Deauthentication* deauth = (Deauthentication*)frame.body;
     deauth->reason_code = req.reason_code;
 
     zx_status_t status = device_->SendWlan(std::move(packet));
@@ -245,32 +241,29 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
 
     debugjoin("associating to %s\n", MACSTR(bssid_));
 
-    // TODO(tkilbourn): better size management; for now reserve 128 bytes for Association elements
-    size_t assoc_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + 128;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    const common::MacAddr& mymac = device_->GetState()->address();
-
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), assoc_len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(kAssociationRequest);
-
-    hdr->addr1 = bssid_;
-    hdr->addr2 = mymac;
-    hdr->addr3 = bssid_;
-
-    hdr->sc.set_seq(next_seq());
+    size_t body_payload_len = 128;
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<AssociationRequest>(&packet, body_payload_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
     // request.
-    auto assoc = packet->mut_field<AssociationRequest>(sizeof(MgmtFrameHeader));
+    // TODO(porce): Use mutable frame when ready
+    // auto hdr = frame.hdr;
+    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    const common::MacAddr& mymac = device_->GetState()->address();
+    hdr->addr1 = bssid_;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid_;
+    hdr->sc.set_seq(next_seq());
+    FillTxInfo(&packet, *hdr);
+
+    // auto assoc = frame.body;
+    AssociationRequest* assoc = (AssociationRequest*)frame.body;
     assoc->cap.set_ess(1);
     assoc->cap.set_short_preamble(1);
     assoc->listen_interval = 0;
+
     ElementWriter w(assoc->elements,
                     packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
     if (!w.write<SsidElement>(bss_->ssid.data())) {
@@ -313,10 +306,12 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     // Validate the request in debug mode
     ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
 
-    size_t actual_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + w.size();
-    zx_status_t status = packet->set_len(actual_len);
+    body_payload_len = w.size();
+    size_t frame_len = hdr->len() + sizeof(AssociationRequest) + body_payload_len;
+
+    zx_status_t status = packet->set_len(frame_len);
     if (status != ZX_OK) {
-        errorf("could not set packet length to %zu: %d\n", actual_len, status);
+        errorf("could not set packet length to %zu: %d\n", frame_len, status);
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
@@ -343,9 +338,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
 zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     // Drop management frames if either, there is no BSSID set yet,
     // or the frame is not from the BSS.
-    if (bssid() == nullptr || *bssid() != hdr.addr3) {
-        return ZX_ERR_STOP;
-    }
+    if (bssid() == nullptr || *bssid() != hdr.addr3) { return ZX_ERR_STOP; }
     return ZX_OK;
 }
 
@@ -532,15 +525,15 @@ zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame
     return SendDisassociateIndication(disassoc->reason_code);
 }
 
-zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame,
+zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame,
                                              const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
-    ZX_DEBUG_ASSERT(frame.body->category == action::Category::kBlockAck);
-    ZX_DEBUG_ASSERT(frame.body->action == action::BaAction::kAddBaRequest);
+    ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
+    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(rx_frame.body->category == action::Category::kBlockAck);
+    ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaRequest);
 
-    auto addbar = frame.body;
+    auto addbar = rx_frame.body;
     debugf(
         "Rxed ADDBAR: token %3u, amsdu %u policy %u tid %u buffer_size %u, timeout %u, "
         "fragment "
@@ -550,24 +543,22 @@ zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>&
         addbar->seq_ctrl.starting_seq());
 
     // Construct AddBaResponse frame
-    // Here MgmtFrameHeader construction does not use an optional header field.
-    // TODO(porce): Build a robust frame header constructor.
-    size_t frame_len = sizeof(MgmtFrameHeader) + sizeof(AddBaResponseFrame);
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(frame_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<AddBaResponseFrame>(&packet, 0);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
+    // TODO(porce): Use mutable frame when ready
+    // auto hdr = frame.hdr;
+    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), frame_len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(kAction);
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     hdr->sc.set_seq(next_seq());
-    auto resp = packet->mut_field<AddBaResponseFrame>(sizeof(MgmtFrameHeader));
+    FillTxInfo(&packet, *hdr);
+
+    // auto resp = frme.body;
+    AddBaResponseFrame* resp = (AddBaResponseFrame*)frame.body;
     resp->category = action::Category::kBlockAck;
     resp->action = action::BaAction::kAddBaResponse;
     resp->dialog_token = addbar->dialog_token;
@@ -607,9 +598,7 @@ zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
     auto from_bss = (bssid() != nullptr && *bssid() == hdr.addr2);
     auto associated = (state_ == WlanState::kAssociated);
     if (!associated) { debugf("dropping data packet while not associated\n"); }
-    if (!from_bss || !associated) {
-        return ZX_ERR_STOP;
-    }
+    if (!from_bss || !associated) { return ZX_ERR_STOP; }
     return ZX_OK;
 }
 
@@ -702,9 +691,7 @@ zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>& frame) {
     auto bss_setup = (bssid() != nullptr);
     auto associated = (state_ == WlanState::kAssociated);
     if (!associated) { debugf("dropping eth packet while not associated\n"); }
-    if (!bss_setup || !associated) {
-        return ZX_OK;
-    }
+    if (!bss_setup || !associated) { return ZX_OK; }
 
     auto eth = frame.hdr;
     const size_t wlan_len = kDataPayloadHeader + frame.body_len;
