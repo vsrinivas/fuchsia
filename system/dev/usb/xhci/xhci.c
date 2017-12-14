@@ -339,6 +339,12 @@ fail:
     return result;
 }
 
+int xhci_get_slot_ctx_state(xhci_slot_t* slot) {
+    xhci_cache_flush_invalidate(&slot->sc->sc3, sizeof(slot->sc->sc3));
+    return XHCI_GET_BITS32(&slot->sc->sc3, SLOT_CTX_SLOT_STATE_START,
+                           SLOT_CTX_CONTEXT_ENTRIES_BITS);
+}
+
 int xhci_get_ep_ctx_state(xhci_slot_t* slot, xhci_endpoint_t* ep) {
     if (!ep->epc) {
         return EP_CTX_STATE_DISABLED;

@@ -73,13 +73,16 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     slot->speed = speed;
 
     // allocate a read-only DMA buffer for device context
-    zx_status_t status = io_buffer_init(&slot->buffer, xhci->context_size * XHCI_NUM_EPS,
-                                        IO_BUFFER_RO | IO_BUFFER_CONTIG);
+    size_t dc_length = xhci->context_size * XHCI_NUM_EPS;
+    zx_status_t status = io_buffer_init(&slot->buffer, dc_length, IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
         return status;
     }
     uint8_t* device_context = (uint8_t *)io_buffer_virt(&slot->buffer);
+    // We need to ensure that the VM system's zeroing of the device_context buffer is flushed out
+    // before we use it.
+    xhci_cache_flush_invalidate(device_context, dc_length);
 
     xhci_endpoint_t* ep = &slot->eps[0];
     status = xhci_transfer_ring_init(&ep->transfer_ring, TRANSFER_RING_SIZE);
@@ -318,6 +321,9 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
 
     XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_EP_FLAG(0));
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, mps);
+
+    xhci_cache_flush(icc, sizeof(*icc));
+    xhci_cache_flush(ep0c, sizeof(*ep0c));
 
     result = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
                                (slot_id << TRB_SLOT_ID_START));
