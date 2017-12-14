@@ -62,16 +62,16 @@ typedef enum {
 #define ZX_EXCP_IS_ARCH(excp) \
   (((excp) & (ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH) & ~ZX_PKT_TYPE_MASK)) == 0)
 
-typedef struct x86_64_exc_data {
+typedef struct zx_x86_64_exc_data {
     uint64_t vector;
     uint64_t err_code;
     uint64_t cr2;
-} x86_64_exc_data_t;
+} zx_x86_64_exc_data_t;
 
-typedef struct arm64_exc_data {
+typedef struct zx_arm64_exc_data {
     uint32_t esr;
     uint64_t far;
-} arm64_exc_data_t;
+} zx_arm64_exc_data_t;
 
 // data associated with an exception (siginfo in linux parlance)
 // Things available from regsets (e.g., pc) are not included here.
@@ -79,8 +79,8 @@ typedef struct arm64_exc_data {
 typedef struct zx_exception_context {
     struct {
         union {
-            x86_64_exc_data_t x86_64;
-            arm64_exc_data_t  arm_64;
+            zx_x86_64_exc_data_t x86_64;
+            zx_arm64_exc_data_t  arm_64;
         } u;
     } arch;
 } zx_exception_context_t;
