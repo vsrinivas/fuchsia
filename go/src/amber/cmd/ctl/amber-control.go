@@ -21,6 +21,9 @@ Commands
         -n: name of the package
         -v: version of the package, if not supplied the latest is retrieved
 
+    get_blob  - get the specified content blob
+        -i: content ID of the blob
+
     add_src   - add a source to the list we can use
         -s: location of the package source
         -k: root key for the source, either a file or http[s] URL or the key
@@ -45,6 +48,7 @@ var (
 	rateLimit  = fs.Int("l", 0, "Minimum time between requests to a source, in seconds")
 	srcKey     = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
 	srcKeyHash = fs.String("h", "", "SHA256 of the key. This is required whether the key is provided directly or by URL")
+	blob_id    = fs.String("i", "", "Content ID of the blob")
 )
 
 func doTest(pxy *amber.Control_Proxy) {
@@ -85,7 +89,11 @@ func main() {
 		if err == nil {
 			fmt.Printf("Wrote update to blob %s\n", *blobId)
 		} else {
-			fmt.Printf("Error getting update %v\n", err)
+			fmt.Printf("Error getting update %s\n", err)
+		}
+	case "get_blob":
+		if err := proxy.GetBlob(*blob_id); err != nil {
+			fmt.Printf("Error getting content blob %s\n", err)
 		}
 	case "add_src":
 		fmt.Printf("%q not yet supported\n", os.Args[1])

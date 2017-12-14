@@ -33,4 +33,8 @@ interface Control {
   // BlobFS. If null is returned, no update was found.
   GetUpdate(string name, string? version) => (string? merkle);
   // TODO(jmatt) add a GetUpdate that takes a handle to write to
+
+  // Get a content blob identified by the given hashed Merkle root. This returns
+  // an error if the string is empty or the fetch fails for some reason.
+  GetBlob(string merkle);
 };

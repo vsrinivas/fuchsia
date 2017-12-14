@@ -7,6 +7,7 @@ package ipcserver
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"fidl/bindings"
 
@@ -73,6 +74,14 @@ func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
 	}
 
 	return &res.Update.Merkle, nil
+}
+
+func (c *ControlSrvr) GetBlob(merkle string) error {
+	if len(strings.TrimSpace(merkle)) == 0 {
+		return fmt.Errorf("Supplied merkle root is empty")
+	}
+
+	return c.daemon.GetBlob(merkle)
 }
 
 func (c *ControlSrvr) Quit() {
