@@ -4,6 +4,8 @@
 
 #include "station.h"
 
+#include "garnet/drivers/wlan/common/channel.h"
+
 #include "device_interface.h"
 #include "logging.h"
 #include "mac_frame.h"
@@ -64,10 +66,25 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     auto req_clone = req.Clone();
     bss_ = std::move(req_clone->selected_bss);
     bssid_.Set(bss_->bssid.data());
-    debugjoin("setting channel to %u\n", bss_->chan->primary);
-    zx_status_t status = device_->SetChannel(wlan_channel_t{.primary = bss_->chan->primary});
+
+    if (bss_->chan.is_null()) {
+        errorf("Requested BSS to join has missing channel\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // TODO(porce): Validate the channel before applying what the BSS announced
+    wlan_channel_t chan = wlan_channel_t{
+        .primary = bss_->chan->primary,
+        .cbw = static_cast<uint8_t>(bss_->chan->cbw),
+    };
+
+    printf("setting channel to %s\n", common::ChanStr(chan).c_str());
+    debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
+    zx_status_t status = device_->SetChannel(chan);
+
     if (status != ZX_OK) {
-        errorf("could not set wlan channel: %d\n", status);
+        errorf("could not set wlan channel to %s (status %d)\n", common::ChanStr(chan).c_str(),
+               status);
         Reset();
         SendJoinResponse();
         return status;
@@ -84,7 +101,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     // TODO(hahnr): Update when other BSS types are supported.
     device_->SetBss(bssid_, WLAN_BSS_TYPE_INFRASTRUCTURE);
     return status;
-}
+}  // namespace wlan
 
 zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
     debugfn();

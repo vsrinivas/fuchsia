@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "bss.h"
+
+#include "garnet/drivers/wlan/common/channel.h"
+
 #include <string>
 
 namespace wlan {
@@ -39,9 +42,10 @@ zx_status_t Bss::ProcessBeacon(const Beacon* beacon, size_t len, const wlan_rx_i
 std::string Bss::ToString() const {
     char buf[1024];
     snprintf(buf, sizeof(buf),
-             "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %3u Cap %04x SSID [%s]",
+             "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
              bssid_.ToString().c_str(), GetBssType() == BSSTypes::INFRASTRUCTURE ? "Y" : "N", rssi_,
-             country_.c_str(), current_chan_.primary, cap_.val(), SsidToString().c_str());
+             country_.c_str(), common::ChanStr(current_chan_).c_str(), cap_.val(),
+             SsidToString().c_str());
     return std::string(buf);
 }
 
@@ -54,7 +58,7 @@ bool Bss::IsBeaconValid(const Beacon* beacon, size_t len) const {
     }
 
     // TODO(porce): Size check.
-    // TODO(porce): Drop if bcn_chan_ != current_chan_.primary.
+    // TODO(porce): Drop if bcn_chan_ != current_chan_
     return true;
 }
 
@@ -67,7 +71,7 @@ void Bss::Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info) {
     // Radio statistics.
     if (rx_info == nullptr) return;
 
-    bcn_chan_.primary = rx_info->chan.primary;
+    bcn_chan_ = rx_info->chan;
 
     // If the latest beacons lack measurements, keep the last report.
     if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) { rssi_ = rx_info->rssi; }
@@ -119,6 +123,10 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
 
         const ElementHeader* hdr = reader.peek();
         if (hdr == nullptr) break;
+
+        // TODO(porce): BSS object shall have CBW20 as default value. Update from IEs
+        current_chan_.cbw = CBW20;  // Default
+        // TODO(porce): Process HT Capabilities IE's HT Capabilites Info to get CBW announcement.
 
         snprintf(dbgmsghdr, sizeof(dbgmsghdr), "  IE %3u (Len %3u): ", hdr->id, hdr->len);
         switch (hdr->id) {
@@ -238,7 +246,8 @@ BSSDescriptionPtr Bss::ToFidl() {
     fidl->timestamp = timestamp_;
 
     fidl->chan = WlanChan::New();
-    fidl->chan.get()->primary = current_chan_.primary;
+    fidl->chan->primary = current_chan_.primary;
+    fidl->chan->cbw = static_cast<wlan::CBW>(current_chan_.cbw);
 
     // Stats
     fidl->rssi_measurement = rssi_;

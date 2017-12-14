@@ -10,13 +10,14 @@ import (
 	. "wlan/wlan"
 )
 
-func addBss(index int, ssid string, channel uint8, rssi uint8, resp *mlme.ScanResponse) {
+func addBss(index int, ssid string, channel uint8, cbw mlme.Cbw, rssi uint8, resp *mlme.ScanResponse) {
 	bssDesc := mlme.BssDescription{
 		Bssid:   [6]uint8{uint8(index), 1, 2, 3, 4, 5},
 		Ssid:    ssid,
 		BssType: mlme.BssTypes_Infrastructure,
 		Chan: mlme.WlanChan{
 			Primary: channel,
+			Cbw:     cbw,
 		},
 		RssiMeasurement: rssi,
 	}
@@ -25,9 +26,9 @@ func addBss(index int, ssid string, channel uint8, rssi uint8, resp *mlme.ScanRe
 
 func TestCollectResults(t *testing.T) {
 	resp := &mlme.ScanResponse{}
-	addBss(0, "abc", 1, 0x80, resp)
-	addBss(1, "def", 1, 0x80, resp)
-	addBss(2, "abc", 6, 0x85, resp)
+	addBss(0, "abc", 1, mlme.Cbw_Cbw20, 0x80, resp)
+	addBss(1, "def", 1, mlme.Cbw_Cbw20, 0x80, resp)
+	addBss(2, "abc", 6, mlme.Cbw_Cbw20, 0x85, resp)
 
 	aps := CollectScanResults(resp, "abc", "")
 	if len(aps) != 2 {

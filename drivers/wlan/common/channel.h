@@ -10,6 +10,7 @@
 #include <ddk/protocol/wlan.h>
 
 namespace wlan {
+namespace common {
 
 std::string ChanStr(const wlan_channel_t& chan);
 std::string ChanStrLong(const wlan_channel_t& chan);
@@ -23,4 +24,5 @@ struct Channel {
     // See IEEE Std 802.11-2016 19.3.15
 };
 
+}  // namespace common
 }  // namespace wlan

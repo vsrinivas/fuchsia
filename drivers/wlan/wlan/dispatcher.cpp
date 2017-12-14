@@ -45,7 +45,7 @@ void DumpRxInfo(const wlan_rx_info_t& rxinfo) {
         "flags %08x valid_fields %08x phy %u data_rate %u chan %s "
         "mcs %u rssi %u rcpi %u snr %u \n",
         rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.data_rate,
-        ChanStr(rxinfo.chan).c_str(), rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
+        common::ChanStr(rxinfo.chan).c_str(), rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
 }
 
 void DumpFrameHeader(const FrameHeader& hdr, size_t len) {

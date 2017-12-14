@@ -74,7 +74,8 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 	log.Print("    DTIM period: ", bss.DtimPeriod)
 	log.Print("    Timestamp: ", bss.Timestamp)
 	log.Print("    Local time: ", bss.LocalTime)
-	log.Print("    Channel: ", bss.Chan.Primary)
+	// TODO(porce): Stringfy CBW
+	log.Printf("    Channel: %u CBW: %u", bss.Chan.Primary, bss.Chan.Cbw)
 	if bss.RssiMeasurement != 0xff {
 		log.Printf("    RSSI: %d dBm", int8(bss.RssiMeasurement))
 	}

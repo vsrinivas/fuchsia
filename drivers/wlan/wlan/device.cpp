@@ -8,6 +8,8 @@
 #include "timer.h"
 #include "wlan.h"
 
+#include "garnet/drivers/wlan/common/channel.h"
+
 #include <fbl/limits.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -263,12 +265,19 @@ zx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_S
 
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing dispatcher_.
 zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    debugf("%s chan=%u\n", __PRETTY_FUNCTION__, chan.primary);
-    if (chan.primary == state_->channel().primary) { return ZX_OK; }
+    debugf("%s chan=%s\n", __PRETTY_FUNCTION__, common::ChanStr(chan).c_str());
+
+    // TODO(porce): Implement == operator for wlan_channel_t, or an equality test function.
+    if (chan.primary == state_->channel().primary && chan.cbw == state_->channel().cbw) {
+        return ZX_OK;
+    }
 
     zx_status_t status = dispatcher_.PreChannelChange(chan);
     if (status != ZX_OK) { return status; }
     status = wlanmac_proxy_.SetChannel(0u, &chan);
+
+    // TODO(porce): Make it explicit when status != ZX_OK, how to recover from
+    // the actions of PreChannelChange().
     if (status == ZX_OK) { state_->set_channel(chan); }
     zx_status_t post_status = dispatcher_.PostChannelChange();
     if (status != ZX_OK) { return status; }
