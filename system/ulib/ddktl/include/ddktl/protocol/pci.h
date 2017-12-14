@@ -96,16 +96,22 @@ class PciProtocolProxy {
         return ops_->get_device_info(ctx_, out_info);
     }
 
-    uint32_t ConfigRead(uint8_t offset, size_t width) {
-        return ops_->config_read(ctx_, offset, width);
+    zx_status_t ConfigRead(uint8_t offset, size_t width, uint32_t *value) {
+        return ops_->config_read(ctx_, offset, width, value);
     }
 
-    uint8_t ConfigRead8(uint8_t offset) {
-        return ConfigRead(offset, 8) & 0xff;
+    zx_status_t ConfigRead8(uint8_t offset, uint8_t *value) {
+        uint32_t val;
+        zx_status_t status = ConfigRead(offset, 8, &val);
+        *value = val & 0xff;
+        return status;
     }
 
-    uint16_t ConfigRead16(uint8_t offset) {
-        return ConfigRead(offset, 16) & 0xffff;
+    zx_status_t ConfigRead16(uint8_t offset, uint16_t *value) {
+        uint32_t val;
+        zx_status_t status = ConfigRead(offset, 16, &val);
+        *value = val & 0xffff;
+        return status;
     }
 
     uint8_t GetNextCapability(uint8_t type, uint8_t offset) {
