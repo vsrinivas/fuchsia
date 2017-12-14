@@ -11,12 +11,14 @@
 #include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
 #include <cstdint>
 
 namespace wlan {
+
+class Packet;
 
 static constexpr zx_duration_t TimeUnit = ZX_USEC(1024);
 template <typename T> static inline constexpr zx_duration_t WLAN_TU(T n) {
@@ -403,7 +405,7 @@ struct MgmtFrameHeader {
 
 // IEEE Std 802.11-2016, 9.3.3.3
 struct Beacon {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kBeacon; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kBeacon; }
 
     bool Validate(size_t len);
 
@@ -419,7 +421,7 @@ struct Beacon {
 
 // IEEE Std 802.11-2016, 9.3.3.10
 struct ProbeRequest {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kProbeRequest; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
 
     bool Validate(size_t len);
 
@@ -428,7 +430,7 @@ struct ProbeRequest {
 
 // IEEE Std 802.11-2016, 9.3.3.11
 struct ProbeResponse {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kProbeResponse; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
 
     // 9.4.1.10
     uint64_t timestamp;
@@ -452,7 +454,7 @@ enum AuthAlgorithm : uint16_t {
 
 // IEEE Std 802.11-2016, 9.3.3.12
 struct Authentication {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kAuthentication; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAuthentication; }
 
     // TODO(tkilbourn): bool Validate(size_t len)
     // Authentication frames are complicated, so when we need more than Open
@@ -470,7 +472,7 @@ struct Authentication {
 
 // IEEE Std 802.11-2016, 9.3.3.13
 struct Deauthentication {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kDeauthentication; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kDeauthentication; }
 
     // 9.4.1.7
     uint16_t reason_code;
@@ -482,7 +484,7 @@ struct Deauthentication {
 
 // IEEE Std 802.11-2016, 9.3.3.6
 struct AssociationRequest {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kAssociationRequest; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationRequest; }
 
     bool Validate(size_t len);
 
@@ -498,7 +500,7 @@ constexpr uint16_t kAidMask = (1 << 11) - 1;
 
 // IEEE Std 802.11-2016, 9.3.3.7
 struct AssociationResponse {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kAssociationResponse; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
 
     // 9.4.1.4
     CapabilityInfo cap;
@@ -512,7 +514,7 @@ struct AssociationResponse {
 
 // IEEE Std 802.11-2016, 9.3.3.5
 struct Disassociation {
-    static constexpr ManagementSubtype Subtype() {return ManagementSubtype::kDisassociation; }
+    static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kDisassociation; }
 
     // 9.4.1.7
     uint16_t reason_code;
@@ -642,4 +644,10 @@ template <typename T> using MgmtFrame = Frame<MgmtFrameHeader, T>;
 
 template <typename T> using DataFrame = Frame<DataFrameHeader, T>;
 
+// TODO(porce): Replace InfraBss::CreateMgmtFrame()
+template <typename Body>
+MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payload_len,
+                               bool has_ht_ctrl = false);
+
+zx_status_t FillTxInfo(fbl::unique_ptr<Packet>* packet, const MgmtFrameHeader& hdr);
 }  // namespace wlan

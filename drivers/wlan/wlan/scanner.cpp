@@ -265,31 +265,32 @@ zx_time_t Scanner::InitialTimeout() const {
 zx_status_t Scanner::SendProbeRequest() {
     debugfn();
 
-    // TODO(hahnr): better size management; for now reserve 128 bytes for Probe elements
-    size_t probe_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + 128;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    size_t body_payload_len = 128;  // TODO(porce): Revisit this value choice.
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<ProbeRequest>(&packet, body_payload_len);
 
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    FillTxInfo(&packet, *frame.hdr);
+
+    // TODO(porce): Use frame mutability
+    // audo hdr = frame.hdr;
+    // auto body = frame.body;
+    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    ProbeRequest* body = (ProbeRequest*)frame.body;
+
+    // Fill-up header
     const common::MacAddr& mymac = device_->GetState()->address();
-
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), probe_len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(kProbeRequest);
+    const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
+    uint16_t seq = device_->GetState()->next_seq();
 
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = mymac;
-    hdr->addr3 = common::MacAddr(req_->bssid.data());
-
-    // TODO(hahnr): keep reference to last sequence #?
-    uint16_t seq = device_->GetState()->next_seq();
+    hdr->addr3 = bssid;
     hdr->sc.set_seq(seq);
 
-    auto probe = packet->mut_field<ProbeRequest>(sizeof(MgmtFrameHeader));
-    auto ele_len = packet->len() - sizeof(MgmtFrameHeader) - sizeof(ProbeRequest);
-    ElementWriter w(probe->elements, ele_len);
+    ElementWriter w(body->elements, body_payload_len);
+
     if (!w.write<SsidElement>(req_->ssid.data())) {
         errorf("could not write ssid \"%s\" to probe request\n", req_->ssid.data());
         return ZX_ERR_IO;
@@ -311,20 +312,22 @@ zx_status_t Scanner::SendProbeRequest() {
     }
 
     // Validate the request in debug mode
-    ZX_DEBUG_ASSERT(probe->Validate(w.size()));
+    ZX_DEBUG_ASSERT(body->Validate(w.size()));
 
-    size_t actual_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + w.size();
-    zx_status_t status = packet->set_len(actual_len);
+    // Update the length with final values
+    body_payload_len = w.size();
+    // TODO(porce): implement methods to replace sizeof(ProbeRequest) with body.some_len()
+    frame.body_len = sizeof(ProbeRequest) + body_payload_len;
+    size_t frame_len = hdr->len() + frame.body_len;
+    zx_status_t status = packet->set_len(frame_len);
     if (status != ZX_OK) {
-        errorf("could not set packet length to %zu: %d\n", actual_len, status);
+        errorf("could not set packet length to %zu: %d\n", frame_len, status);
         return status;
     }
 
     status = device_->SendWlan(std::move(packet));
-    if (status != ZX_OK) {
-        errorf("could not send probe request packet: %d\n", status);
-        return status;
-    }
+    if (status != ZX_OK) { errorf("could not send probe request packet: %d\n", status); }
+
     return status;
 }
 

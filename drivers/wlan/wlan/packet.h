@@ -102,6 +102,8 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
         kService,
     };
 
+    static fbl::unique_ptr<Packet> CreateWlanPacket(size_t frame_len);
+
     Packet(fbl::unique_ptr<Buffer> buffer, size_t len);
     size_t Capacity() const { return buffer_->capacity(); }
     void clear() {

@@ -11,6 +11,15 @@
 
 namespace wlan {
 
+fbl::unique_ptr<Packet> Packet::CreateWlanPacket(size_t frame_len) {
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(frame_len);
+    if (buffer == nullptr) { return nullptr; }
+
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), frame_len);
+    packet->set_peer(Packet::Peer::kWlan);
+    return packet;
+}
+
 Packet::Packet(fbl::unique_ptr<Buffer> buffer, size_t len) : buffer_(std::move(buffer)), len_(len) {
     ZX_ASSERT(buffer_.get());
     ZX_DEBUG_ASSERT(len <= buffer_->capacity());
@@ -39,9 +48,7 @@ fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
         if (buffer == nullptr) {
             // Fall back to the large buffers if we're out of small buffers.
             buffer = LargeBufferAllocator::New();
-            if (buffer == nullptr) {
-                buffer = HugeBufferAllocator::New();
-            }
+            if (buffer == nullptr) { buffer = HugeBufferAllocator::New(); }
         }
     }
     return buffer;
