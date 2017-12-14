@@ -50,7 +50,7 @@ private:
 };
 
 CacheLineFlusher::CacheLineFlusher(bool perform_invalidations)
-    : dirty_line_(0), cl_mask_(~(x86_get_clflush_line_size() - 1)),
+    : dirty_line_(0), cl_mask_(~(x86_get_clflush_line_size() - 1ull)),
       perform_invalidations_(perform_invalidations) {
 }
 
