@@ -33,5 +33,6 @@ group("tests") {
     ":cloud_provider_firebase_unittests",
     "//peridot/bin/cloud_provider_firebase/testing/server",
     "//peridot/bin/cloud_provider_firebase/testing/token_provider",
+    "//peridot/bin/cloud_provider_firebase/validation",
   ]
 }

@@ -42,6 +42,7 @@ package("ledger_tests") {
     "test/integration",
     "//peridot/bin/cloud_provider_firebase:tests",
     "//peridot/bin/cloud_provider_firestore:tests",
+    "//peridot/public/lib/cloud_provider/validation",
   ]
 
   binaries = [
@@ -81,6 +82,20 @@ package("ledger_tests") {
       name = "cloud_provider_firestore_unittests"
     },
     {
+      name = "cloud_provider_validation_tests"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in /system/test/disabled/.
+      disabled = true
+    },
+    {
+      name = "launch_validation_tests_firebase"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in /system/test/disabled/.
+      disabled = true
+    },
+    {
       name = "ledger_integration_tests"
     },
 
@@ -95,7 +110,8 @@ package("ledger_tests") {
     {
       name = "ledger_e2e_sync"
 
-      # This puts ledger_e2e_sync in /system/test/disabled/.
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in /system/test/disabled/.
       disabled = true
     },
     {

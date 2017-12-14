@@ -1,0 +1,21 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("validation") {
+  testonly = true
+
+  output_name = "cloud_provider_validation_tests"
+
+  sources = [
+    "app.cc",
+    "device_set_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/cloud_provider/fidl",
+    "//third_party/gtest",
+  ]
+}
