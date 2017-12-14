@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/gpu.h"
+#include "garnet/lib/machina/virtio_gpu.h"
 
 #include <fbl/unique_ptr.h>
 

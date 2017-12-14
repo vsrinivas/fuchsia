@@ -10,8 +10,8 @@
 #include <virtio/gpu.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/gpu.h"
 #include "garnet/lib/machina/gpu_bitmap.h"
+#include "garnet/lib/machina/virtio_gpu.h"
 
 namespace machina {
 

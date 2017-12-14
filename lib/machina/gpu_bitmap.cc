@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "garnet/lib/machina/gpu.h"
+#include "garnet/lib/machina/virtio_gpu.h"
 
 namespace machina {
 

@@ -7,9 +7,9 @@
 
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/gpu.h"
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/input_dispatcher.h"
+#include "garnet/lib/machina/virtio_gpu.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ui/scenic/client/host_memory.h"

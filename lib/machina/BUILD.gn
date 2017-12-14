@@ -6,14 +6,8 @@ import("//build/package.gni")
 
 shared_library("machina") {
   sources = [
-    "balloon.cc",
-    "balloon.h",
-    "block.cc",
-    "block.h",
     "framebuffer_scanout.cc",
     "framebuffer_scanout.h",
-    "gpu.cc",
-    "gpu.h",
     "gpu_bitmap.cc",
     "gpu_bitmap.h",
     "gpu_resource.cc",
@@ -22,14 +16,20 @@ shared_library("machina") {
     "gpu_scanout.h",
     "hid_event_source.cc",
     "hid_event_source.h",
-    "input.cc",
-    "input.h",
     "input_dispatcher.cc",
     "input_dispatcher.h",
     "pci.cc",
     "pci.h",
     "virtio.cc",
     "virtio.h",
+    "virtio_balloon.cc",
+    "virtio_balloon.h",
+    "virtio_block.cc",
+    "virtio_block.h",
+    "virtio_gpu.cc",
+    "virtio_gpu.h",
+    "virtio_input.cc",
+    "virtio_input.h",
     "virtio_pci.cc",
     "virtio_pci.h",
   ]
@@ -86,13 +86,13 @@ executable("machina-unittests") {
   testonly = true
 
   sources = [
-    "block-unittest.cc",
-    "gpu-unittest.cc",
     "hid_event_source-unittest.cc",
     "input_dispatcher-unittest.cc",
     "pci-unittest.cc",
     "run_all_unittests.cc",
     "virtio-unittest.cc",
+    "virtio_block-unittest.cc",
+    "virtio_gpu-unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
   ]
