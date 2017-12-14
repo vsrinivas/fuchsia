@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <sched.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -120,7 +121,8 @@ static tftp_status transport_send(void* data, size_t len, void* transport_cookie
             send_result = send(transport_info->socket, data, len, 0);
         }
     } while ((send_result < 0) &&
-             ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == ENOBUFS)));
+             ((errno == EAGAIN) || (errno == EWOULDBLOCK) ||
+              (errno == ENOBUFS && sched_yield() == 0)));
 
     if (send_result < 0) {
         return TFTP_ERR_IO;
