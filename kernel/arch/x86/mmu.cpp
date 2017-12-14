@@ -282,7 +282,8 @@ X86PageTableBase::PtFlags X86PageTableMmu::split_flags(PageTableLevel level,
     return flags;
 }
 
-void X86PageTableMmu::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) {
+void X86PageTableMmu::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page,
+                                        bool was_terminal) {
     x86_tlb_invalidate_page(this, vaddr, level, global_page);
 }
 
@@ -391,7 +392,8 @@ X86PageTableBase::PtFlags X86PageTableEpt::split_flags(PageTableLevel level,
     return flags;
 }
 
-void X86PageTableEpt::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) {
+void X86PageTableEpt::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page,
+                                        bool was_terminal) {
     // TODO(ZX-981): Implement this.
 }
 

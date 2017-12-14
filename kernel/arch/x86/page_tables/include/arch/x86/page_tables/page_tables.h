@@ -77,7 +77,8 @@ protected:
     // large page with flags |flags|.
     virtual PtFlags split_flags(PageTableLevel level, PtFlags flags) = 0;
     // Invalidate a single page at the given level
-    virtual void TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page) = 0;
+    virtual void TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page,
+                                   bool was_terminal) = 0;
     // Convert PtFlags to ARCH_MMU_* flags.
     virtual uint pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) = 0;
     // Returns true if a cache flush is necessary for pagetable changes to be
@@ -128,12 +129,13 @@ private:
                              volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     void UpdateEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
-                     paddr_t paddr, PtFlags flags) TA_REQ(lock_);
+                     paddr_t paddr, PtFlags flags, bool was_terminal) TA_REQ(lock_);
 
     zx_status_t SplitLargePage(PageTableLevel level, vaddr_t vaddr,
                                volatile pt_entry_t* pte) TA_REQ(lock_);
 
-    void UnmapEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte) TA_REQ(lock_);
+    void UnmapEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
+                    bool was_terminal) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("X86P")> canary_;
 
