@@ -31,6 +31,7 @@ std::ostream& operator<<(std::ostream& os, const LinkMetadata& meta) {
 std::ostream& operator<<(std::ostream& os, const ContextMetadata& meta) {
   os << "{" << std::endl;
   os << "  story: " << meta.story << std::endl;
+  os << "  link: " << meta.link << std::endl;
   os << "  mod: " << meta.mod << std::endl;
   os << "  entity: " << meta.entity << std::endl;
   return os << "}";

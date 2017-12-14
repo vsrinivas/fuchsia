@@ -108,6 +108,10 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
   doc.Parse(value);
   FXL_CHECK(!doc.HasParseError());
 
+  if (!doc.IsObject()) {
+    return;
+  }
+
   // (1) & (2)
   std::vector<std::string> types;
   std::string ref;
@@ -116,8 +120,8 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
     // There is only *one* Entity in this Link.
     entity_node_writers_.clear();
     if (!single_entity_node_writer_.is_bound()) {
-    link_node_writer_->CreateChildValue(single_entity_node_writer_.NewRequest(),
-                                        ContextValueType::ENTITY);
+      link_node_writer_->CreateChildValue(
+          single_entity_node_writer_.NewRequest(), ContextValueType::ENTITY);
     }
     single_entity_node_writer_->Set(value, nullptr);
     return;
@@ -125,10 +129,6 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
     // There is not simply a *single* Entity in this Link. There may be
     // multiple Entities (see below).
     single_entity_node_writer_.reset();
-  }
-
-  if (!doc.IsObject()) {
-    return;
   }
 
   // (3)

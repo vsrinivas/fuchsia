@@ -27,7 +27,6 @@ namespace {
 
 constexpr char kModuleUrl[] =
     "file:///system/test/modular_tests/link_context_entities_module";
-constexpr char kLink[] = "link";
 
 // A context reader watcher implementation.
 class ContextListenerImpl : maxwell::ContextListener {
@@ -64,10 +63,10 @@ class ContextListenerImpl : maxwell::ContextListener {
  private:
   // |ContextListener|
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
-    FXL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
+    FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values["all"];
     for (const auto& value : values) {
-      FXL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
+      FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
       handler_(value);
     }
   }
@@ -155,7 +154,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     }
 
     if (value->meta->story->id != story_id_ ||
-        value->meta->link->name != kLink ||
         value->meta->entity->type.is_null() ||
         value->meta->entity->type.size() != 1) {
       FXL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
@@ -192,19 +190,22 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       return;
     }
 
-    if (value_property == "value1" && type == "type1") {
+    if (value_property == "value1" && type == "type1" &&
+        value->meta->link->name == "link1") {
       if (++get_context_topic_1_called_ == 1) {
         get_context_topic_1_.Pass();
       }
-    } else if (value_property == "value2" && type == "type2") {
+    } else if (value_property == "value2" && type == "type2" &&
+        value->meta->link->name == "link2") {
       if (++get_context_topic_2_called_ == 1) {
         get_context_topic_2_.Pass();
-
-        context_listener_.Reset();
-        context_listener_.Handle([this](const maxwell::ContextValuePtr&) {});
-
-        Logout();
       }
+    }
+
+    if (get_context_topic_1_called_ > 0 && get_context_topic_2_called_ > 0) {
+      context_listener_.Reset();
+      context_listener_.Handle([this](const maxwell::ContextValuePtr&) {});
+      Logout();
     }
   }
 

@@ -16,8 +16,6 @@ using modular::testing::TestPoint;
 
 namespace {
 
-constexpr char kLink[] = "link";
-
 class TestApp {
  public:
   TestApp(
@@ -26,7 +24,8 @@ class TestApp {
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
-    module_host->module_context()->GetLink(kLink, link_.NewRequest());
+    module_host->module_context()->GetLink("link1", link1_.NewRequest());
+    module_host->module_context()->GetLink("link2", link2_.NewRequest());
     Set1();
   }
 
@@ -38,21 +37,17 @@ class TestApp {
 
  private:
   void Set1() {
-    link_->Set(nullptr, R"({"@type": "type1", "value": "value1"})");
-    link_->Sync([this] { Set2(); });
-  }
-
-  void Set2() {
-    link_->Set(nullptr,
+    link1_->Set(nullptr, R"({"@type": "type1", "value": "value1"})");
+    link2_->Set(nullptr,
                R"({"a_property": {"@type": "type2", "value": "value2"}})");
-
     // TODO(thatguy): When we have Entity support in ContextWriter, create a
     // simple Entity reference and slap it into the Link.
   }
 
   TestPoint initialized_{"Child module initialized"};
   TestPoint stopped_{"Child module stopped"};
-  modular::LinkPtr link_;
+  modular::LinkPtr link1_;
+  modular::LinkPtr link2_;
 };
 
 }  // namespace
