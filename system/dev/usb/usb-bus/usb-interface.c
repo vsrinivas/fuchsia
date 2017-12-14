@@ -328,6 +328,12 @@ static uint32_t _usb_interface_get_device_id(void* ctx) {
     return intf->device_id;
 }
 
+static void usb_interface_get_device_descriptor(void* ctx,
+                                                usb_device_descriptor_t* out_desc) {
+    usb_interface_t* intf = ctx;
+    memcpy(out_desc, &intf->device->device_desc, sizeof(usb_device_descriptor_t));
+}
+
 static zx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
                                                      size_t* out_length) {
     usb_interface_t* intf = ctx;
@@ -424,6 +430,7 @@ static usb_protocol_ops_t _usb_protocol = {
     .reset_endpoint = usb_interface_reset_endpoint,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = _usb_interface_get_device_id,
+    .get_device_descriptor = usb_interface_get_device_descriptor,
     .get_descriptor_list = usb_interface_get_descriptor_list,
     .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
     .claim_interface = usb_interface_claim_device_interface,

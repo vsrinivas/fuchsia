@@ -24,6 +24,7 @@ typedef struct usb_protocol_ops {
     zx_status_t (*reset_endpoint)(void* ctx, uint8_t ep_address);
     size_t (*get_max_transfer_size)(void* ctx, uint8_t ep_address);
     uint32_t (*get_device_id)(void* ctx);
+    void (*get_device_descriptor)(void* ctx, usb_device_descriptor_t* out_desc);
     zx_status_t (*get_descriptor_list)(void* ctx, void** out_descriptors, size_t* out_length);
     zx_status_t (*get_additional_descriptor_list)(void* ctx, void** out_descriptors,
                                                   size_t* out_length);
@@ -102,6 +103,11 @@ static inline size_t usb_get_max_transfer_size(usb_protocol_t* usb, uint8_t ep_a
 
 static inline zx_status_t usb_get_device_id(usb_protocol_t* usb) {
     return usb->ops->get_device_id(usb->ctx);
+}
+
+static inline void usb_get_device_descriptor(usb_protocol_t* usb,
+                                             usb_device_descriptor_t* out_desc) {
+    usb->ops->get_device_descriptor(usb->ctx, out_desc);
 }
 
 // returns the USB descriptors for the USB device or interface
