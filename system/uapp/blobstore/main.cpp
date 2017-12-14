@@ -193,11 +193,12 @@ zx_status_t process_manifest_line(FILE* manifest, const char* dir_path, blob_opt
     size_t size = 0;
     char* line = nullptr;
 
+    auto cleanup = fbl::MakeAutoCall([&line]() { if (line) free(line); });
+
     int r = getline(&line, &size, manifest);
     if (r < 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    auto cleanup = fbl::MakeAutoCall([line]() { free(line); });
 
     // Exit early if line is commented out
     if (line[0] == '#') {
