@@ -89,6 +89,11 @@ def main():
     env['GOPATH'] = gopath
     env['ZIRCON_SYSROOT'] = args.zircon_sysroot
 
+    if goos == 'fuchsia':
+        gengoroot = os.path.abspath(os.path.join(args.root_out_dir, 'goroot'))
+        if os.path.exists(gengoroot):
+            env['GOROOT'] = gengoroot
+
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from
     # /usr/bin.
