@@ -24,17 +24,15 @@ import 'package:test/src/runner/reporter/expanded.dart';
 Future<bool> runFuchsiaTests(List<Function> mainFunctions) async {
   final Declarer declarer = new Declarer();
 
-  for (final Function main in mainFunctions) {
-    // TODO: use a nested declarer for each main?
-    declarer.declare(main);
-  }
+  // TODO: use a nested declarer for each main?
+  mainFunctions.forEach(declarer.declare);
 
   final Group group = declarer.build();
 
-  final suite = new RunnerSuite(
+  final RunnerSuite suite = new RunnerSuite(
       const PluginEnvironment(), SuiteConfiguration.empty, group);
 
-  final engine = new Engine();
+  final Engine engine = new Engine();
   engine.suiteSink.add(suite);
   engine.suiteSink.close();
   ExpandedReporter.watch(engine,

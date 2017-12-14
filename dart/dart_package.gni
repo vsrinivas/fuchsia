@@ -162,6 +162,15 @@ template("dart_package") {
     dart_bin = "$dart_sdk_dir/bin"
     dart_analyzer_binary = "$dart_bin/dartanalyzer"
 
+    extra_sources = []
+    if (defined(invoker.extra_analyzer_sources)) {
+      foreach(source, invoker.extra_analyzer_sources) {
+        extra_sources += [
+          rebase_path(source),
+        ]
+      }
+    }
+
     action(invocation_target_name) {
       script = "//build/dart/gen_analyzer_invocation.py"
 
@@ -206,9 +215,7 @@ template("dart_package") {
         ]
       }
 
-      if (defined(invoker.extra_analyzer_sources)) {
-        args += invoker.extra_analyzer_sources
-      }
+      args += extra_sources
     }
 
     analysis_target_name = "${target_name}_analysis"
@@ -258,7 +265,7 @@ template("dart_package") {
           rebase_path("$root_out_dir/analysis-cache"),
           "--log-file",
           rebase_path(log_file),
-        ]
+        ] + extra_sources
 
         deps = [
           ":$dot_packages_target_name",
@@ -299,7 +306,8 @@ template("dart_package") {
           rebase_path(output_file, root_build_dir),
           "--depfile",
           rebase_path(depfile),
-        ]
+          "--extra-sources",
+        ] + extra_sources
 
         deps = [
           ":$dot_packages_target_name",
@@ -307,6 +315,10 @@ template("dart_package") {
         ]
       }
     }
+  } else {  # !with_analysis
+    not_needed(invoker, [
+      "extra_analyzer_sources",
+    ])
   }
 
   group(target_name) {

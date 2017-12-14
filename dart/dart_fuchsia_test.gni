@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/toolchain.gni")
 import("//topaz/runtime/dart_runner/dart_app.gni")
 
 # Defines a device-side test binary
@@ -40,7 +41,10 @@ template("dart_fuchsia_test") {
   }
 
   generated_test_main_target = target_name + "__test_main"
-  generated_test_main = "$target_gen_dir/${target_name}__test_main.dart"
+  # The generated code needs to be installed under the Dart toolchain directory
+  # so that it can be found by the dart_package target powering the JIT app.
+  dart_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+  generated_test_main = "$dart_gen_dir/${target_name}__test_main.dart"
 
   test_helper = "//build/dart/fuchsia_test_helper.dart"
 
@@ -80,6 +84,9 @@ template("dart_fuchsia_test") {
 
     main_dart = generated_test_main
 
-    extra_analyzer_sources = rebase_path([generated_test_main, test_helper])
+    extra_analyzer_sources = [
+      generated_test_main,
+      test_helper,
+    ]
   }
 }

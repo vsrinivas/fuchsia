@@ -20,6 +20,9 @@ def main():
     parser = argparse.ArgumentParser('Runs analysis on a given package')
     parser.add_argument('--source-dir', help='Path to package source',
                         required=True)
+    parser.add_argument('--extra-sources', help='Path to extra source files',
+                        nargs="*",
+                        default=[])
     parser.add_argument('--dot-packages', help='Path to the .packages file',
                         required=True)
     parser.add_argument('--dartanalyzer',
@@ -46,6 +49,8 @@ def main():
                 _, extension = os.path.splitext(filename)
                 if extension == '.dart':
                     add_dep(os.path.join(dirpath, filename))
+        for source in args.extra_sources:
+            add_dep(source)
         options = args.options
         while True:
             if not os.path.isabs(options):
@@ -69,11 +74,11 @@ def main():
         '--packages=%s' % args.dot_packages,
         '--dart-sdk=%s' % args.dart_sdk,
         '--options=%s' % args.options,
-        args.source_dir,
         '--fatal-warnings',
         '--fatal-hints',
         '--fatal-lints',
-    ]
+        args.source_dir,
+    ] + args.extra_sources
 
     call = subprocess.Popen(call_args, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)

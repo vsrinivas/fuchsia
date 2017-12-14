@@ -45,6 +45,10 @@ template("dart_tool") {
     } else {
       infer_package_name = true
     }
+
+    extra_analyzer_sources = [
+      invoker.main_dart,
+    ]
   }
 
   dart_sdk_label = "//third_party/dart:create_host_sdk"

@@ -59,6 +59,10 @@ Future<Null> main(List<String> args) async {
     exit(1);
   }
 
+  if (argResults.rest.isNotEmpty) {
+    print('Warning: extra sources currently not supported by analysis server.');
+  }
+
   final stopwatch = new Stopwatch()..start();
 
   final logFile = new Uri.file(path.canonicalize(argResults[_optionLogFile]));
