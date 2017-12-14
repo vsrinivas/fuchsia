@@ -117,23 +117,14 @@ zx_status_t HidEventSource::Start() {
 }
 
 zx_status_t HidEventSource::WatchInputDirectory(void* arg) {
-  fbl::unique_fd dirfd;
-  {
-    int fd = open(kInputDirPath, O_DIRECTORY | O_RDONLY);
-    if (fd < 0) {
-      return ZX_ERR_IO;
-    }
-    dirfd.reset(fd);
+  fbl::unique_fd dir_fd(open(kInputDirPath, O_DIRECTORY | O_RDONLY));
+  if (!dir_fd) {
+    return ZX_ERR_IO;
   }
-
-  auto callback = [](int dirfd, int event, const char* fn, void* cookie) {
-    return reinterpret_cast<HidEventSource*>(cookie)->AddInputDevice(dirfd,
-                                                                     event, fn);
+  auto callback = [](int fd, int event, const char* fn, void* cookie) {
+    return static_cast<HidEventSource*>(cookie)->AddInputDevice(fd, event, fn);
   };
-  zx_status_t status =
-      fdio_watch_directory(dirfd.get(), callback, ZX_TIME_INFINITE, arg);
-
-  return status;
+  return fdio_watch_directory(dir_fd.get(), callback, ZX_TIME_INFINITE, arg);
 }
 
 zx_status_t HidEventSource::AddInputDevice(int dirfd,

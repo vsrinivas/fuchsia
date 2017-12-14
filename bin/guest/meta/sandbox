@@ -1,6 +1,7 @@
 {
   "dev": [
     "class/block",
+    "class/ethernet",
     "class/framebuffer",
     "class/input",
     "misc"

@@ -30,6 +30,8 @@ shared_library("machina") {
     "virtio_gpu.h",
     "virtio_input.cc",
     "virtio_input.h",
+    "virtio_net.cc",
+    "virtio_net.h",
     "virtio_pci.cc",
     "virtio_pci.h",
   ]
@@ -47,16 +49,16 @@ shared_library("machina") {
 
   if (current_cpu == "x64") {
     sources += [
+      "arch/x86/e820.cc",
+      "arch/x86/e820.h",
       "arch/x86/i8250.cc",
       "arch/x86/i8250.h",
       "arch/x86/io_apic.cc",
       "arch/x86/io_apic.h",
       "arch/x86/io_port.cc",
       "arch/x86/io_port.h",
-      "arch/x86/e820.h",
-      "arch/x86/e820.cc",
-      "arch/x86/page_table.h",
       "arch/x86/page_table.cc",
+      "arch/x86/page_table.h",
       "arch/x86/tpm.h",
     ]
   }
@@ -96,14 +98,13 @@ executable("machina_unittests") {
     "virtio-unittest.cc",
     "virtio_block-unittest.cc",
     "virtio_gpu-unittest.cc",
+    "virtio_net-unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
   ]
 
   if (current_cpu == "x64") {
-    sources += [
-      "arch/x86/page_table-unittest.cc",
-    ]
+    sources += [ "arch/x86/page_table-unittest.cc" ]
   }
 
   deps = [
@@ -121,7 +122,7 @@ package("machina_tests") {
     ":machina_unittests",
   ]
 
-  tests = [{
-    name = "machina_unittests"
-  }]
+  tests = [ {
+        name = "machina_unittests"
+      } ]
 }

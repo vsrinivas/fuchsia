@@ -34,6 +34,7 @@
 #include "garnet/lib/machina/virtio_block.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
+#include "garnet/lib/machina/virtio_net.h"
 #include "lib/fxl/files/file.h"
 
 #if __aarch64__
@@ -390,6 +391,17 @@ int main(int argc, char** argv) {
     return status;
   }
   status = bus.Connect(gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Setup net device.
+  machina::VirtioNet net(guest.phys_mem());
+  status = net.Start();
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = bus.Connect(net.pci_device(), PCI_DEVICE_VIRTIO_NET);
   if (status != ZX_OK) {
     return status;
   }
