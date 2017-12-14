@@ -406,8 +406,11 @@ void ViewRegistry::RequestFocus(ViewContainerState* container_state,
 
   // Immediately discard requests on unavailable views.
   ViewStub* child_stub = child_it->second.get();
-  if (child_stub->is_unavailable())
+  if (child_stub->is_unavailable() || child_stub->is_pending()) {
+    FXL_VLOG(1) << "RequestFocus called for view that is currently "
+                << (child_stub->is_unavailable() ? "unavailable" : "pending");
     return;
+  }
 
   // Set active focus chain for this view tree
   ViewTreeState* tree_state = child_stub->tree();

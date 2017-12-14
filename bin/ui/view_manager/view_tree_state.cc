@@ -49,6 +49,7 @@ ViewTreeState* ViewTreeState::AsViewTreeState() {
 }
 
 void ViewTreeState::RequestFocus(ViewStub* child_stub) {
+  FXL_DCHECK(child_stub != nullptr);
   if (child_stub->is_unavailable())
     return;
   focused_view_ = child_stub->GetWeakPtr();
