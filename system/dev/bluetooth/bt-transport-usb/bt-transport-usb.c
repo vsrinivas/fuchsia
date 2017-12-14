@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/bt-hci.h>
@@ -629,12 +630,24 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 
+    // Copy the PID and VID from the underlying BT so that it can be filtered on
+    // for HCI drivers
+    usb_device_descriptor_t dev_desc;
+    usb_get_device_descriptor(&usb, &dev_desc);
+    zx_device_prop_t props[] = {
+      { BIND_PROTOCOL, 0, ZX_PROTOCOL_BT_HCI_TRANSPORT },
+      { BIND_USB_VID, 0, dev_desc.idVendor },
+      { BIND_USB_PID, 0, dev_desc.idProduct },
+    };
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bt_transport_usb",
         .ctx = hci,
         .ops = &hci_device_proto,
         .proto_id = ZX_PROTOCOL_BT_HCI_TRANSPORT,
+        .props = props,
+        .prop_count = countof(props),
     };
 
     status = device_add(device, &args, &hci->zxdev);
