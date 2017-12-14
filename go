@@ -22,9 +22,11 @@ case "$(uname -s)" in
     ;;
 esac
 
-# Setting GOROOT is a workaround for https://golang.org/issue/18678.
-# Remove this (and switch to exec_tool.sh) when Go 1.9 is released.
-export GOROOT="$SCRIPT_ROOT/$HOST_PLATFORM/go"
+if [[ "$GOOS" != "fuchsia" || "$GOROOT" == "" ]]; then
+	# Setting GOROOT is a workaround for https://golang.org/issue/18678.
+	# Remove this (and switch to exec_tool.sh) when Go 1.9 is released.
+	export GOROOT="$SCRIPT_ROOT/$HOST_PLATFORM/go"
+fi
 
 if [[ "$GOOS" == "fuchsia" ]]; then
 	export ZIRCON="$(cd $(dirname ${BASH_SOURCE[0]} )/.. && pwd)/zircon"
