@@ -190,8 +190,10 @@ zx_status_t setup_zircon_framebuffer(
   return gpu->AddScanout(scanout->get());
 }
 
-zx_status_t setup_scenic_framebuffer(machina::VirtioGpu* gpu) {
-  return GuestView::Start(gpu);
+zx_status_t setup_scenic_framebuffer(
+    machina::VirtioGpu* gpu,
+    machina::InputDispatcher* input_dispatcher) {
+  return GuestView::Start(gpu, input_dispatcher);
 }
 
 int main(int argc, char** argv) {
@@ -427,25 +429,31 @@ int main(int argc, char** argv) {
   }
 
   // Setup GPU device.
+  machina::InputDispatcher input_dispatcher(kInputQueueDepth);
+  machina::HidEventSource hid_event_source(&input_dispatcher);
   machina::VirtioGpu gpu(physmem_addr, physmem_size);
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
   status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
-  if (status != ZX_OK) {
-    status = setup_scenic_framebuffer(&gpu);
-    if (status != ZX_OK)
+  if (status == ZX_OK) {
+    // If we were able to acquire the zircon framebuffer then no compositor
+    // is present. In this case we should read input events directly from the
+    // input devics.
+    status = hid_event_source.Start();
+    if (status != ZX_OK) {
       return status;
+    }
+  } else {
+    // Expose a view that can be composited by mozart. Input events will be
+    // injected by the view events.
+    status = setup_scenic_framebuffer(&gpu, &input_dispatcher);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
   status = gpu.Init();
   if (status != ZX_OK)
     return status;
   status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
-  if (status != ZX_OK)
-    return status;
-
-  // Setup input device.
-  machina::InputDispatcher input_dispatcher(kInputQueueDepth);
-  machina::HidEventSource event_source(&input_dispatcher);
-  status = event_source.Start();
   if (status != ZX_OK)
     return status;
 

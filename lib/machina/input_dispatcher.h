@@ -43,7 +43,7 @@ class InputDispatcher {
 
   // Adds an input event the the queue. If the queue is full the oldest element
   // will be overwritten.
-  void PostEvent(const InputEvent event);
+  void PostEvent(const InputEvent& event, bool flush = false);
 
   // Blocks until an InputEvent is available.
   InputEvent Wait();
@@ -51,6 +51,7 @@ class InputDispatcher {
   size_t size() const;
 
  private:
+  void WriteEventToRingLocked(const InputEvent&) __TA_REQUIRES(mutex_);
   void DropOldestLocked() __TA_REQUIRES(mutex_);
 
   mutable fbl::Mutex mutex_;

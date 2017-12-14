@@ -9,6 +9,7 @@
 
 #include "garnet/lib/machina/gpu.h"
 #include "garnet/lib/machina/gpu_scanout.h"
+#include "garnet/lib/machina/input_dispatcher.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ui/scenic/client/host_memory.h"
@@ -25,9 +26,10 @@ class ScenicScanout : public machina::GpuScanout {
 
 class GuestView : public mozart::BaseView {
  public:
-  static zx_status_t Start(machina::VirtioGpu* gpu);
+  static zx_status_t Start(machina::VirtioGpu*, machina::InputDispatcher*);
 
   GuestView(machina::VirtioGpu* gpu,
+            machina::InputDispatcher* input_dispatcher,
             mozart::ViewManagerPtr view_manager,
             fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
@@ -37,6 +39,7 @@ class GuestView : public mozart::BaseView {
   // |BaseView|:
   void OnSceneInvalidated(
       scenic::PresentationInfoPtr presentation_info) override;
+  bool OnInputEvent(mozart::InputEventPtr event) override;
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::Material material_;
@@ -44,6 +47,7 @@ class GuestView : public mozart::BaseView {
   fbl::unique_ptr<scenic_lib::HostMemory> memory_;
 
   ScenicScanout scanout_;
+  machina::InputDispatcher* input_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestView);
 };

@@ -8,6 +8,10 @@
 
 namespace machina {
 
+static constexpr InputEvent kBarrierEvent = {
+    .type = InputEventType::BARRIER,
+};
+
 InputDispatcher::InputDispatcher(size_t queue_depth)
     : pending_(new InputEvent[queue_depth], queue_depth) {
   cnd_init(&signal_);
@@ -18,16 +22,12 @@ size_t InputDispatcher::size() const {
   return size_;
 }
 
-void InputDispatcher::PostEvent(const InputEvent event) {
+void InputDispatcher::PostEvent(const InputEvent& event, bool flush) {
   fbl::AutoLock lock(&mutex_);
-  pending_[(index_ + size_) % pending_.size()] = event;
-  if (size_ < pending_.size()) {
-    size_++;
-  } else {
-    // Ring is full.
-    DropOldestLocked();
+  WriteEventToRingLocked(event);
+  if (flush) {
+    WriteEventToRingLocked(kBarrierEvent);
   }
-
   cnd_signal(&signal_);
 }
 
@@ -40,6 +40,16 @@ InputEvent InputDispatcher::Wait() {
   DropOldestLocked();
   size_--;
   return result;
+}
+
+void InputDispatcher::WriteEventToRingLocked(const InputEvent& event) {
+  pending_[(index_ + size_) % pending_.size()] = event;
+  if (size_ < pending_.size()) {
+    size_++;
+  } else {
+    // Ring is full.
+    DropOldestLocked();
+  }
 }
 
 void InputDispatcher::DropOldestLocked() {
