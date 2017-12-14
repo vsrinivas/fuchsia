@@ -5,6 +5,7 @@
 #pragma once
 
 // Interesting GPIOs
+#define GPIO_HDMI_PD        41
 #define GPIO_HUB_VDD33_EN   46
 #define GPIO_USER_LED1      150
 #define GPIO_USER_LED2      151

@@ -25,7 +25,9 @@ __BEGIN_CDECLS;
 // 96Boards
 #define PDEV_VID_96BOARDS           2
 #define PDEV_PID_HIKEY960           1
+
 #define PDEV_DID_HIKEY960_GPIO_TEST 1
+#define PDEV_DID_HIKEY960_I2C_TEST  2
 
 // Google
 #define PDEV_VID_GOOGLE             3

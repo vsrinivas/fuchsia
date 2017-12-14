@@ -12,10 +12,13 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hi3660.c \
     $(LOCAL_DIR)/hi3660-gpios.c \
     $(LOCAL_DIR)/hi3660-usb.c \
+    $(LOCAL_DIR)/hi3660-i2c.c \
+    $(LOCAL_DIR)/i2c-dw.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/dev/gpio/pl061 \
+    system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/driver \

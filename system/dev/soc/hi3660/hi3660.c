@@ -23,6 +23,14 @@
 
 #include <soc/hi3660/hi3660.h>
 #include <soc/hi3660/hi3660-hw.h>
+#include <soc/hi3660/hi3660-regs.h>
+#include <hw/reg.h>
+
+zx_status_t hi3660_enable_ldo3(hi3660_t* hi3660) {
+    volatile void* iopmu = io_buffer_virt(&hi3660->pmu_ssio);
+    writel(LDO3_ENABLE_BIT, iopmu + LDO3_ENABLE_REG);
+    return ZX_OK;
+}
 
 zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
     hi3660_t* hi3660 = calloc(1, sizeof(hi3660_t));
@@ -39,7 +47,16 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
                                            MMIO_PERI_CRG_LENGTH, resource,
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
          (status = io_buffer_init_physical(&hi3660->pctrl, MMIO_PCTRL_BASE, MMIO_PCTRL_LENGTH,
-                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
+                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE) != ZX_OK) ||
+         (status = io_buffer_init_physical(&hi3660->iomg_pmx4, MMIO_IOMG_PMX4_BASE,
+                                           MMIO_IOMG_PMX4_LENGTH, resource,
+                                           ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
+         (status = io_buffer_init_physical(&hi3660->pmu_ssio, MMIO_PMU_SSI0_BASE,
+                                           MMIO_PMU_SSI0_LENGTH, resource,
+                                           ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
+         (status = io_buffer_init_physical(&hi3660->iomcu, MMIO_IOMCU_CONFIG_BASE,
+                                           MMIO_IOMCU_CONFIG_LENGTH, resource,
+                                           ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
         goto fail;
     }
 
@@ -50,6 +67,26 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
     status = hi3660_usb_init(hi3660);
     if (status != ZX_OK) {
         goto fail;
+    }
+
+    status = hi3660_i2c1_init(hi3660);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    status = hi3660_enable_ldo3(hi3660);
+    if (status != ZX_OK) {
+      goto fail;
+    }
+
+    status = hi3660_i2c_pinmux(hi3660);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    if ((status = i2c_dw_bus_init(&hi3660->i2c)) != ZX_OK) {
+        zxlogf(ERROR, "hi3660_init could not add i2c: %d\n", status);
+        return status;
     }
 
     *out = hi3660;
@@ -65,6 +102,10 @@ zx_status_t hi3660_get_protocol(hi3660_t* hi3660, uint32_t proto_id, void* out) 
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO: {
         memcpy(out, &hi3660->gpio, sizeof(hi3660->gpio));
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_I2C: {
+        memcpy(out, &hi3660->i2c.proto, sizeof(hi3660->i2c.proto));
         return ZX_OK;
     }
     default:

@@ -161,6 +161,14 @@
 #define MMIO_SDIO0_LENGTH                       0x1000
 #define MMIO_IOMCU_BASE                         0xFFD00000
 #define MMIO_IOMCU_LENGTH                       0x80000
+#define MMIO_I2C0_BASE                          0xFFD71000
+#define MMIO_I2C0_LENGTH                        0x1000
+#define MMIO_I2C1_BASE                          0xFFD72000
+#define MMIO_I2C1_LENGTH                        0x1000
+#define MMIO_I2C2_BASE                          0xFFD73000
+#define MMIO_I2C2_LENGTH                        0x1000
+#define MMIO_IOMCU_CONFIG_BASE                  0xFFD7E000
+#define MMIO_IOMCU_CONFIG_LENGTH                0x1000
 #define MMIO_RTC0_BASE                          0xFFF04000
 #define MMIO_RTC0_LENGTH                        0x1000
 #define MMIO_RTC1_BASE                          0xFFF05000
@@ -183,6 +191,8 @@
 #define MMIO_GPIO27_LENGTH                      0x1000
 #define MMIO_AO_IOC_BASE                        0xFFF11000
 #define MMIO_AO_IOC_LENGTH                      0x1000
+#define MMIO_IOMG_PMX4_BASE                     0xFFF11000
+#define MMIO_IOMG_PMX4_LENGTH                   0x1000
 #define MMIO_TIMER0_BASE                        0xFFF14000
 #define MMIO_TIMER0_LENGTH                      0x1000
 #define MMIO_TIMER1_BASE                        0xFFF15000

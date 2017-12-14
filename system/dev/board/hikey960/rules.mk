@@ -16,6 +16,7 @@ MODULE_STATIC_LIBS := \
     system/dev/soc/hi3660 \
     system/dev/gpio/pl061 \
     system/ulib/ddk \
+    system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
@@ -29,6 +30,21 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/hikey960-gpio-test.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+include make/module.mk
+
+MODULE := $(LOCAL_DIR).i2c-test.c
+
+MODULE_NAME := hi3660-i2c-test
+
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/hikey960-i2c-test.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 
