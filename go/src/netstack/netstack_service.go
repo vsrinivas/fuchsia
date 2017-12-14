@@ -179,6 +179,25 @@ func (ni *netstackImpl) GetRouteTable() (out []nsfidl.RouteTableEntry, err error
 	return out, nil
 }
 
+func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {
+	s := ns.stack.Stats()
+	return nsfidl.AggregateStats{
+		UnknownProtocolReceivedPackets:        s.UnknownProtocolRcvdPackets,
+		UnknownNetworkEndpointReceivedPackets: s.UnknownNetworkEndpointRcvdPackets,
+		MalformedReceivedPackets:              s.MalformedRcvdPackets,
+		DroppedPackets:                        s.DroppedPackets,
+		TcpStats: nsfidl.TcpStats{
+			ActiveConnectionOpenings:  s.TCP.ActiveConnectionOpenings,
+			PassiveConnectionOpenings: s.TCP.PassiveConnectionOpenings,
+			FailedConnectionAttempts:  s.TCP.FailedConnectionAttempts,
+			ValidSegmentsReceived:     s.TCP.ValidSegmentsReceived,
+			InvalidSegmentsReceived:   s.TCP.InvalidSegmentsReceived,
+			SegmentsSent:              s.TCP.SegmentsSent,
+			ResetsSent:                s.TCP.ResetsSent,
+		},
+	}, nil
+}
+
 func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, err error) {
 	// Pure reading of statistics. No critical section. No lock is needed.
 	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]

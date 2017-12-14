@@ -46,6 +46,25 @@ struct NetInterfaceStats {
   NetTrafficStats tx;
 };
 
+struct TcpStats {
+  uint64 active_connection_openings;
+  uint64 passive_connection_openings;
+  uint64 failed_connection_attempts;
+  uint64 valid_segments_received;
+  uint64 invalid_segments_received;
+  uint64 segments_sent;
+  uint64 resets_sent;
+};
+
+// Mirrors tcpip.Stats in third_party/netstack/tcpip/tcpip.go.
+struct AggregateStats {
+  uint64 unknown_protocol_received_packets;
+  uint64 unknown_network_endpoint_received_packets;
+  uint64 malformed_received_packets;
+  uint64 dropped_packets;
+  TcpStats tcp_stats;
+};
+
 // https://linux.die.net/man/7/netdevice
 struct NetInterface {
   uint32 id;
@@ -100,6 +119,9 @@ interface Netstack {
 
   // TODO (porce): Separate interfaces.
   GetStats(uint32 nicid) => (NetInterfaceStats stats);
+
+  // Get stats for all NICs on the stack.
+  GetAggregateStats() => (AggregateStats stats);
 
   // Sets the status (up or down) for the interface with the given nicid.
   SetInterfaceStatus(uint32 nicid, bool enabled);
