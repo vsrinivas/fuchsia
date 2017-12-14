@@ -90,13 +90,13 @@ void VulkanDisplaySwapchain::InitializeVulkanSwapchain(
   vk::Extent2D swapchain_extent = surface_caps.currentExtent;
   constexpr uint32_t VK_UNDEFINED_WIDTH_OR_HEIGHT = 0xFFFFFFFF;
   if (swapchain_extent.width == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
-    swapchain_extent.width = display->metrics().width_in_px();
+    swapchain_extent.width = display->width_in_px();
   }
   if (swapchain_extent.height == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
-    swapchain_extent.height = display->metrics().height_in_px();
+    swapchain_extent.height = display->height_in_px();
   }
-  FXL_CHECK(swapchain_extent.width == display->metrics().width_in_px());
-  FXL_CHECK(swapchain_extent.height == display->metrics().height_in_px());
+  FXL_CHECK(swapchain_extent.width == display->width_in_px());
+  FXL_CHECK(swapchain_extent.height == display->height_in_px());
 
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.

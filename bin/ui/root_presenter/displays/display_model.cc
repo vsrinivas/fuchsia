@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/displays/display_model.h"
+#include "garnet/bin/ui/root_presenter/displays/display_model.h"
 
 #include <math.h>
 
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace root_presenter {
 namespace {
 
 // Returns true if two non-zero values are within 1% of each other.
@@ -39,20 +39,20 @@ constexpr float kDefaultPixelVisualAngleDegrees = 0.0213;
 // settings. Empirically determined to be around 0.255.
 constexpr float kIdealPipVisualAngleDegrees = 0.0255;
 
-constexpr float GetDefaultViewingDistanceInMm(DisplayModel::Usage usage) {
+constexpr float GetDefaultViewingDistanceInMm(mozart::DisplayUsage usage) {
   switch (usage) {
-    case DisplayModel::Usage::kHandheld:
+    case mozart::DisplayUsage::HANDHELD:
       return 360.f;
-    case DisplayModel::Usage::kClose:
+    case mozart::DisplayUsage::CLOSE:
       return 500.f;
-    case DisplayModel::Usage::kNear:
+    case mozart::DisplayUsage::NEAR:
       return 720.f;
-    case DisplayModel::Usage::kMidrange:
+    case mozart::DisplayUsage::MIDRANGE:
       return 1200.f;
-    case DisplayModel::Usage::kFar:
+    case mozart::DisplayUsage::FAR:
       return 3000.f;
     default:
-    case DisplayModel::Usage::kUnknown:
+    case mozart::DisplayUsage::UNKNOWN:
       return 0.f;
   }
 }
@@ -63,7 +63,7 @@ DisplayModel::DisplayModel() = default;
 
 DisplayModel::~DisplayModel() = default;
 
-DisplayMetrics DisplayModel::GetMetrics() {
+DisplayMetrics DisplayModel::GetMetrics() const {
   FXL_DCHECK(display_info_.width_in_px > 0u);
   FXL_DCHECK(display_info_.height_in_px > 0u);
 
@@ -127,4 +127,4 @@ DisplayMetrics DisplayModel::GetMetrics() {
                         density_in_pp_per_mm);
 }
 
-}  // namespace scene_manager
+}  // namespace root_presenter

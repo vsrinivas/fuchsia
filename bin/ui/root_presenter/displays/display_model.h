@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_MODEL_H_
-#define GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_MODEL_H_
+#ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_MODEL_H_
+#define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_MODEL_H_
 
 #include <cstdint>
 
-#include "garnet/bin/ui/scene_manager/displays/display_metrics.h"
-#include "lib/fxl/macros.h"
+#include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 
-namespace scene_manager {
+#include "lib/fxl/macros.h"
+#include "lib/ui/presentation/fidl/display_usage.fidl.h"
+
+namespace root_presenter {
 
 // Calculates appropriate display metrics based on an empirical model
 // using information about the display, the environment, and the user.
@@ -44,27 +46,11 @@ class DisplayModel {
     float density_in_px_per_mm = 0.f;
   };
 
-  // Describes the intended usage of the display.
-  enum class Usage {
-    // Unknown.
-    kUnknown = 0,
-    // Display is held in one or both hands.
-    kHandheld = 1,
-    // Display is used well within arm's reach.
-    kClose = 2,
-    // Display is used at arm's reach.
-    kNear = 3,
-    // Display is used beyond arm's reach.
-    kMidrange = 4,
-    // Display is used well beyond arm's reach.
-    kFar = 5,
-  };
-
   // Provides information about the viewing environment.
   struct EnvironmentInfo {
     // The intended usage of the display.
     // Value is |kUnknown| if unknown.
-    Usage usage = Usage::kUnknown;
+    mozart::DisplayUsage usage = mozart::DisplayUsage::UNKNOWN;
 
     // The nominal apparent viewing distance in millimeters.
     // Value is 0.0 if unknown.
@@ -87,7 +73,7 @@ class DisplayModel {
   UserInfo& user_info() { return user_info_; }
 
   // Calculates the display metrics.
-  DisplayMetrics GetMetrics();
+  DisplayMetrics GetMetrics() const;
 
  private:
   DisplayInfo display_info_;
@@ -97,6 +83,6 @@ class DisplayModel {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayModel);
 };
 
-}  // namespace scene_manager
+}  // namespace root_presenter
 
-#endif  // GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_MODEL_H_
+#endif  // GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_MODEL_H_

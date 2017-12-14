@@ -19,19 +19,16 @@ void DisplayManager::WaitForDefaultDisplay(fxl::Closure callback) {
   FXL_DCHECK(!default_display_);
 
   display_watcher_.WaitForDisplay(
-      [ this, callback = std::move(callback) ](const DisplayMetrics* metrics) {
-        if (metrics) {
-          CreateDefaultDisplay(metrics);
-        }
+      [this, callback = std::move(callback)](uint32_t width_in_px,
+                                             uint32_t height_in_px) {
+        CreateDefaultDisplay(width_in_px, height_in_px);
         callback();
       });
 }
 
-void DisplayManager::CreateDefaultDisplay(const DisplayMetrics* metrics) {
-  default_display_ = std::make_unique<Display>(DisplayMetrics(
-      metrics->width_in_px(), metrics->height_in_px(),
-      metrics->x_scale_in_px_per_pp(), metrics->y_scale_in_px_per_pp(),
-      metrics->density_in_pp_per_mm()));
+void DisplayManager::CreateDefaultDisplay(uint32_t width_in_px,
+                                          uint32_t height_in_px) {
+  default_display_ = std::make_unique<Display>(width_in_px, height_in_px);
 }
 
 }  // namespace scene_manager

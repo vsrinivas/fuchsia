@@ -9,6 +9,8 @@
 #include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 
+#include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
+
 namespace root_presenter {
 
 // This class plugs in "Display flip" behavior to the Presenter; i.e. the
@@ -22,7 +24,7 @@ class DisplayFlipper {
   // If display is flipped and |event| is a touch, modifies |event|'s x and y to
   // account for display rotation.
   //
-  // |display_info| is the current DisplayInfo.
+  // |display_metrics| is the metrics for the display.
   // |scene| is the root Scene node.
   // |continue_dispatch_out| is set to false if the event should no longer be
   // dispatched.
@@ -30,16 +32,16 @@ class DisplayFlipper {
   // Returns true if the scene should be invalidated.
   bool OnEvent(const mozart::InputEventPtr& event,
                scenic_lib::Scene* scene,
-               const scenic::DisplayInfoPtr& display_info,
+               const DisplayMetrics& display_metrics,
                bool* continue_dispatch_out);
 
  private:
   void FlipDisplay(scenic_lib::Scene* scene,
-                   const scenic::DisplayInfoPtr& display_info);
+                   const DisplayMetrics& display_metrics);
   static std::pair<float, float> FlipPointerCoordinates(
       float x,
       float y,
-      const scenic::DisplayInfoPtr& display_info);
+      const DisplayMetrics& display_metrics);
 
   bool display_flipped_ = false;
 

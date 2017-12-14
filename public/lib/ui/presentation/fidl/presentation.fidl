@@ -4,6 +4,7 @@
 
 module mozart;
 
+import "lib/ui/presentation/fidl/display_usage.fidl";
 import "lib/ui/scenic/fidl/renderer.fidl";
 
 // Allows clients of Presenter.Present() to control a presentation.
@@ -19,4 +20,6 @@ interface Presentation {
   // Set parameters such as the shadow algorithm used to render the scene.
   // NOTE: a single param would be better than an array; see TO-529.
   SetRendererParams@3(array<scenic.RendererParam> params);
+
+  SetDisplayUsage(DisplayUsage usage);
 };

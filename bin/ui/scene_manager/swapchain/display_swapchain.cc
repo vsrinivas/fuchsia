@@ -93,8 +93,8 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
     // Allocate a framebuffer.
-    uint32_t width = display_->metrics().width_in_px();
-    uint32_t height = display_->metrics().height_in_px();
+    uint32_t width = display_->width_in_px();
+    uint32_t height = display_->height_in_px();
 
     // Start by creating a VkImage.
     // TODO(ES-42): Create this using Escher APIs.
@@ -141,8 +141,8 @@ bool DisplaySwapchain::InitializeFramebuffers(
     // Wrap the image and device memory in a escher::Image.
     escher::ImageInfo image_info;
     image_info.format = format_;
-    image_info.width = display_->metrics().width_in_px();
-    image_info.height = display_->metrics().height_in_px();
+    image_info.width = display_->width_in_px();
+    image_info.height = display_->height_in_px();
     image_info.usage = image_usage;
 
     // escher::Image::New() binds the memory to the image.
@@ -231,12 +231,12 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
       std::move(frame_presented_magma_semaphore);
   record->render_finished_watch = EventTimestamper::Watch(
       timestamper_, std::move(render_finished_event), escher::kFenceSignalled,
-      [ this, index = next_frame_index_ ](zx_time_t timestamp) {
+      [this, index = next_frame_index_](zx_time_t timestamp) {
         OnFrameRendered(index, timestamp);
       });
   record->frame_presented_watch = EventTimestamper::Watch(
       timestamper_, std::move(frame_presented_event), escher::kFenceSignalled,
-      [ this, index = next_frame_index_ ](zx_time_t timestamp) {
+      [this, index = next_frame_index_](zx_time_t timestamp) {
         OnFramePresented(index, timestamp);
       });
 

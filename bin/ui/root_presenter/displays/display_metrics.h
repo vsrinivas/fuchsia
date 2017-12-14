@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_METRICS_H_
-#define GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_METRICS_H_
+#ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_METRICS_H_
+#define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_METRICS_H_
 
 #include <cstdint>
 
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace root_presenter {
 
 // Describes the measurements and scale factors used to layout and render
 // user interfaces and other graphical content on a particular a display.
 class DisplayMetrics {
  public:
+  constexpr DisplayMetrics() {}
+
   constexpr DisplayMetrics(uint32_t width_in_px,
                            uint32_t height_in_px,
                            float x_scale_in_px_per_pp,
@@ -30,6 +32,14 @@ class DisplayMetrics {
     FXL_DCHECK(x_scale_in_px_per_pp_ > 0.f);
     FXL_DCHECK(y_scale_in_px_per_pp_ > 0.f);
     FXL_DCHECK(density_in_pp_per_mm_ >= 0.f);
+  }
+
+  bool operator==(const DisplayMetrics& other) const {
+    return this->width_in_px_ == other.width_in_px_ &&
+           this->height_in_px_ == other.height_in_px_ &&
+           this->x_scale_in_px_per_pp_ == other.x_scale_in_px_per_pp_ &&
+           this->y_scale_in_px_per_pp_ == other.y_scale_in_px_per_pp_ &&
+           this->density_in_pp_per_mm_ == other.density_in_pp_per_mm_;
   }
 
   // PIXEL METRICS
@@ -81,13 +91,13 @@ class DisplayMetrics {
   }
 
  private:
-  const uint32_t width_in_px_;
-  const uint32_t height_in_px_;
-  const float x_scale_in_px_per_pp_;
-  const float y_scale_in_px_per_pp_;
-  const float density_in_pp_per_mm_;
+  uint32_t width_in_px_ = 0;
+  uint32_t height_in_px_ = 0;
+  float x_scale_in_px_per_pp_ = 0.f;
+  float y_scale_in_px_per_pp_ = 0.f;
+  float density_in_pp_per_mm_ = 0.f;
 };
 
-}  // namespace scene_manager
+}  // namespace root_presenter
 
-#endif  // GARNET_BIN_UI_SCENE_MANAGER_DISPLAYS_DISPLAY_METRICS_H_
+#endif  // GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_METRICS_H_

@@ -9,6 +9,9 @@
 #include <memory>
 
 #include "garnet/bin/ui/root_presenter/display_flipper.h"
+#include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
+#include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
+#include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -68,6 +71,13 @@ class Presentation : private mozart::ViewTreeListener,
   void OnDeviceRemoved(uint32_t device_id);
 
  private:
+  // Gets the DisplayMetrics for the given |model|. If |display_usage_override|
+  // is not UNKNOWN, uses that value for purpose of calculating metrics.
+  static DisplayMetrics CalculateDisplayMetrics(
+      DisplayModel* display_model,
+      mozart::DisplayUsage display_usage_override);
+  void SetDisplayMetrics(const DisplayMetrics& metrics);
+
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info,
@@ -92,6 +102,10 @@ class Presentation : private mozart::ViewTreeListener,
   // |Presentation|
   void SetRendererParams(
       ::fidl::Array<scenic::RendererParamPtr> params) override;
+
+  // |Presentation|
+  friend class DisplayUsageSwitcher;
+  void SetDisplayUsage(mozart::DisplayUsage usage) override;
 
   void CreateViewTree(
       mozart::ViewOwnerPtr view_owner,
@@ -135,10 +149,15 @@ class Presentation : private mozart::ViewTreeListener,
   zx::eventpair content_view_host_import_token_;
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
-  scenic::DisplayInfoPtr display_info_;
-  float logical_width_ = 0.f;
-  float logical_height_ = 0.f;
-  float device_pixel_ratio_ = 1.f;
+
+  bool display_model_initialized_;
+  DisplayModel display_model_;
+  // |display_metrics_| must be recalculated anytime |display_model_| changes
+  // using CalculateDisplayMetrics().
+  DisplayMetrics display_metrics_;
+  // If not set to UNKNOWN, overrides the DisplayUsage value of |display_model_|
+  // for the purpose of calculating |display_metrics_|.
+  mozart::DisplayUsage display_usage_override_ = mozart::DisplayUsage::UNKNOWN;
 
   mozart::ViewPtr root_view_;
 
@@ -166,8 +185,11 @@ class Presentation : private mozart::ViewTreeListener,
   };
   AnimationState animation_state_ = kDefault;
 
-  // State related to flipping the display
+  // Rotates the display 180 degrees in response to events.
   DisplayFlipper display_flipper_;
+
+  // Toggles through different display usage values.
+  DisplayUsageSwitcher display_usage_switcher_;
 
   // Presentation time at which this presentation last entered either
   // kCameraMovingAway or kCameraReturning state.

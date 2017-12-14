@@ -214,9 +214,8 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
       fxl::TimeDelta::FromSeconds(kSessionDuration));
 
   // Set up initial scene.
-  const float display_width = static_cast<float>(display_info->physical_width);
-  const float display_height =
-      static_cast<float>(display_info->physical_height);
+  const float display_width = static_cast<float>(display_info->width_in_px);
+  const float display_height = static_cast<float>(display_info->height_in_px);
   CreateExampleScene(display_width, display_height);
 
   start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);

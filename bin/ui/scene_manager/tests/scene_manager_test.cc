@@ -12,7 +12,7 @@ namespace test {
 
 void SceneManagerTest::SetUp() {
   display_manager_.SetDefaultDisplayForTests(
-      std::make_unique<Display>(DisplayMetrics(1280, 800, 1.f, 1.f, 0.f)));
+      std::make_unique<Display>(1280, 800));
 
   auto r = std::make_unique<ReleaseFenceSignallerForTest>(
       &command_buffer_sequencer_);

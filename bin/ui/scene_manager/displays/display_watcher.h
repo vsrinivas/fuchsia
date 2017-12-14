@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "garnet/bin/ui/scene_manager/displays/display_metrics.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
 
@@ -20,7 +19,7 @@ class DisplayWatcher {
   // Callback that accepts display metrics.
   // |metrics| may be null if the display was not successfully acquired.
   using DisplayReadyCallback =
-      std::function<void(const DisplayMetrics* metrics)>;
+      std::function<void(uint32_t width_in_px, uint32_t height_in_px)>;
 
   DisplayWatcher();
   ~DisplayWatcher();

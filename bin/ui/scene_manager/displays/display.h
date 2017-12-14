@@ -8,7 +8,6 @@
 #include <zircon/types.h>
 #include <cstdint>
 
-#include "garnet/bin/ui/scene_manager/displays/display_metrics.h"
 #include "lib/fxl/macros.h"
 
 namespace scene_manager {
@@ -17,7 +16,7 @@ namespace scene_manager {
 // resolution, vsync interval, last vsync time, etc.
 class Display {
  public:
-  Display(DisplayMetrics metrics);
+  Display(uint32_t width_in_px, uint32_t height_in_px);
 
   // Obtain the time of the last Vsync, in nanoseconds.
   zx_time_t GetLastVsyncTime();
@@ -30,7 +29,8 @@ class Display {
   void Claim();
   void Unclaim();
 
-  const DisplayMetrics& metrics() const { return metrics_; }
+  uint32_t width_in_px() { return width_in_px_; };
+  uint32_t height_in_px() { return height_in_px_; };
 
  private:
   // Temporary friendship to allow FrameScheduler to feed back the Vsync timings
@@ -40,7 +40,8 @@ class Display {
   void set_last_vsync_time(zx_time_t vsync_time);
 
   zx_time_t last_vsync_time_;
-  DisplayMetrics const metrics_;
+  const uint32_t width_in_px_;
+  const uint32_t height_in_px_;
 
   bool claimed_ = false;
 

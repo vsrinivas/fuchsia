@@ -8,8 +8,6 @@
 
 #include <zircon/device/display.h>
 
-#include "garnet/bin/ui/scene_manager/displays/display_configuration.h"
-#include "garnet/bin/ui/scene_manager/displays/display_model.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
@@ -42,7 +40,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
-    callback(nullptr);
+    callback(0, 0);
     return;
   }
 
@@ -52,44 +50,12 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   ssize_t result = ioctl_display_get_fb(fd.get(), &description);
   if (result < 0) {
     FXL_DLOG(ERROR) << "IOCTL_DISPLAY_GET_FB failed: result=" << result;
-    callback(nullptr);
+    callback(0, 0);
     return;
   }
   zx_handle_close(description.vmo);  // we don't need the vmo
 
-  // Calculate the display metrics.
-  DisplayModel model;
-  ConfigureDisplay(description.info.width, description.info.height, &model);
-  DisplayMetrics metrics = model.GetMetrics();
-  FXL_DLOG(INFO) << "SceneManager: Display metrics: "
-                 << "width_in_px=" << metrics.width_in_px()
-                 << ", height_in_px=" << metrics.height_in_px()
-                 << ", width_in_pp=" << metrics.width_in_pp()
-                 << ", height_in_pp=" << metrics.height_in_pp()
-                 << ", width_in_mm=" << metrics.width_in_mm()
-                 << ", height_in_mm=" << metrics.height_in_mm()
-                 << ", x_scale_in_px_per_pp=" << metrics.x_scale_in_px_per_pp()
-                 << ", y_scale_in_px_per_pp=" << metrics.y_scale_in_px_per_pp()
-                 << ", x_scale_in_pp_per_px=" << metrics.x_scale_in_pp_per_px()
-                 << ", y_scale_in_pp_per_px=" << metrics.y_scale_in_pp_per_px()
-                 << ", density_in_pp_per_mm=" << metrics.density_in_pp_per_mm()
-                 << ", density_in_mm_per_pp=" << metrics.density_in_mm_per_pp();
-
-  // TODO(MZ-16): We've been asked to temporarily revert the DP-ratio to 2.0.
-  const bool kOverrideDpRatio = true;
-  if (kOverrideDpRatio) {
-    FXL_DLOG(INFO)
-        << "SceneManager: Ignoring display metrics, using DP-ratio of 2.0.";
-    DisplayMetrics fake_metrics = DisplayMetrics(
-        metrics.width_in_px(), metrics.height_in_px(), 2.f, 2.f, 0.f);
-
-    // Invoke the callback, passing the display metrics.
-    callback(&fake_metrics);
-    return;
-  }
-
-  // Invoke the callback, passing the display metrics.
-  callback(&metrics);
+  callback(description.info.width, description.info.height);
 }
 
 }  // namespace scene_manager
