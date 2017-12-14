@@ -1683,14 +1683,20 @@ static work_t new_driver_work;
 // to the list of new drivers and work is queued to process it.  If
 // before it's added to the list of all drivers or fallback list.
 void dc_driver_added(driver_t* drv, const char* version) {
+    //TODO: real priority scheme
     if (dc_running) {
-        list_add_head(&list_drivers_new, &drv->node);
+        if (version[0] == '*') {
+            // de-prioritize drivers that are "fallback"
+            list_add_tail(&list_drivers_new, &drv->node);
+        } else {
+            list_add_head(&list_drivers_new, &drv->node);
+        }
+
         if (new_driver_work.op == WORK_IDLE) {
             queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
         }
         return;
     }
-    //TODO: real priority scheme
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
         list_add_tail(&list_drivers_fallback, &drv->node);
