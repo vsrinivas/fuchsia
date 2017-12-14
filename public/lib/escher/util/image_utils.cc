@@ -101,18 +101,13 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory,
 
 ImagePtr NewImageFromPixels(ImageFactory* image_factory,
                             impl::GpuUploader* gpu_uploader,
+                            uint8_t* pixels,
                             vk::Format format,
                             uint32_t width,
                             uint32_t height,
-                            uint8_t* pixels,
                             vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
-
-  size_t bytes_per_pixel = BytesPerPixel(format);
-
-  auto writer = gpu_uploader->GetWriter(width * height * bytes_per_pixel);
-  memcpy(writer.ptr(), pixels, width * height * bytes_per_pixel);
 
   ImageInfo info;
   info.format = format;
@@ -124,6 +119,25 @@ ImagePtr NewImageFromPixels(ImageFactory* image_factory,
 
   // Create the new image.
   auto image = image_factory->NewImage(info);
+
+  WritePixelsToImage(gpu_uploader, pixels, image);
+
+  return image;
+}
+
+void WritePixelsToImage(impl::GpuUploader* gpu_uploader,
+                        uint8_t* pixels,
+                        ImagePtr image) {
+  FXL_DCHECK(gpu_uploader);
+  FXL_DCHECK(image);
+  FXL_DCHECK(pixels);
+
+  size_t bytes_per_pixel = BytesPerPixel(image->info().format);
+  size_t width = image->info().width;
+  size_t height = image->info().height;
+
+  auto writer = gpu_uploader->GetWriter(width * height * bytes_per_pixel);
+  memcpy(writer.ptr(), pixels, width * height * bytes_per_pixel);
 
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -137,8 +151,6 @@ ImagePtr NewImageFromPixels(ImageFactory* image_factory,
 
   writer.WriteImage(image, region, Semaphore::New(gpu_uploader->device()));
   writer.Submit();
-
-  return image;
 }
 
 ImagePtr NewRgbaImage(ImageFactory* image_factory,
@@ -149,8 +161,8 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory,
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
-  return NewImageFromPixels(image_factory, gpu_uploader,
-                            vk::Format::eR8G8B8A8Unorm, width, height, pixels);
+  return NewImageFromPixels(image_factory, gpu_uploader, pixels,
+                            vk::Format::eR8G8B8A8Unorm, width, height);
 }
 
 ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
@@ -161,9 +173,8 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
   FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewCheckerboardPixels(width, height);
-  return NewImageFromPixels(image_factory, gpu_uploader,
-                            vk::Format::eR8G8B8A8Unorm, width, height,
-                            pixels.get());
+  return NewImageFromPixels(image_factory, gpu_uploader, pixels.get(),
+                            vk::Format::eR8G8B8A8Unorm, width, height);
 }
 
 ImagePtr NewGradientImage(ImageFactory* image_factory,
@@ -174,9 +185,8 @@ ImagePtr NewGradientImage(ImageFactory* image_factory,
   FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewGradientPixels(width, height);
-  return NewImageFromPixels(image_factory, gpu_uploader,
-                            vk::Format::eR8G8B8A8Unorm, width, height,
-                            pixels.get());
+  return NewImageFromPixels(image_factory, gpu_uploader, pixels.get(),
+                            vk::Format::eR8G8B8A8Unorm, width, height);
 }
 
 ImagePtr NewNoiseImage(ImageFactory* image_factory,
@@ -188,8 +198,9 @@ ImagePtr NewNoiseImage(ImageFactory* image_factory,
   FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewNoisePixels(width, height);
-  return NewImageFromPixels(image_factory, gpu_uploader, vk::Format::eR8Unorm,
-                            width, height, pixels.get(), additional_flags);
+  return NewImageFromPixels(image_factory, gpu_uploader, pixels.get(),
+                            vk::Format::eR8Unorm, width, height,
+                            additional_flags);
 }
 
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,

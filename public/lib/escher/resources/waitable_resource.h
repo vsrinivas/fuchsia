@@ -19,6 +19,11 @@ class WaitableResource : public Resource {
 
   // TODO: eventually make these private, callable only by friends.
   void SetWaitSemaphore(SemaphorePtr semaphore);
+
+  // Clients should be careful with this, since it could cause missed
+  // dependencies. Should be safe to call for a repeated operation.
+  void ReplaceWaitSemaphore(SemaphorePtr semaphore);
+
   SemaphorePtr TakeWaitSemaphore() { return std::move(wait_semaphore_); }
   bool HasWaitSemaphore() const { return !!wait_semaphore_; }
 
@@ -38,6 +43,10 @@ inline void WaitableResource::SetWaitSemaphore(SemaphorePtr semaphore) {
   // specific usage-pattern that first triggers it; we'll deal with this
   // situation when it first arises.
   FXL_CHECK(!wait_semaphore_);
+  wait_semaphore_ = std::move(semaphore);
+}
+
+inline void WaitableResource::ReplaceWaitSemaphore(SemaphorePtr semaphore) {
   wait_semaphore_ = std::move(semaphore);
 }
 

@@ -50,11 +50,18 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory,
 ImagePtr NewImageFromPixels(
     ImageFactory* image_factory,
     impl::GpuUploader* gpu_uploader,
+    uint8_t* pixels,
     vk::Format format,
     uint32_t width,
     uint32_t height,
-    uint8_t* pixels,
     vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
+
+// Write the contents of |pixels| into an existing |image|.
+// The VkFormat, width, and height of |pixels| is assumed to match that of
+// |image|.
+void WritePixelsToImage(impl::GpuUploader* gpu_uploader,
+                        uint8_t* pixels,
+                        ImagePtr image);
 
 // Return new Image containing the provided pixels.  Uses transfer queue to
 // efficiently transfer image data to GPU.  If bytes is null, don't bother

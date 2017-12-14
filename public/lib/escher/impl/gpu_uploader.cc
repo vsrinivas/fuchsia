@@ -102,7 +102,11 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
       vk::ImageLayout::eShaderReadOnlyOptimal);
 
   if (semaphore) {
-    target->SetWaitSemaphore(semaphore);
+    if (target->HasWaitSemaphore()) {
+      target->ReplaceWaitSemaphore(semaphore);
+    } else {
+      target->SetWaitSemaphore(semaphore);
+    }
     command_buffer_->AddSignalSemaphore(std::move(semaphore));
   }
   command_buffer_->KeepAlive(target);

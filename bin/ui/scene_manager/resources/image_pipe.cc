@@ -151,6 +151,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
                  "id", id(), "time", presentation_time, "interval",
                  presentation_interval);
 
+  bool present_next_image = false;
   scenic::ResourceId next_image_id = current_image_id_;
   ::fidl::Array<zx::event> next_release_fences;
 
@@ -174,27 +175,15 @@ bool ImagePipe::Update(uint64_t presentation_time,
       frames_.front().present_image_callback(std::move(info));
     }
     frames_.pop();
+    present_next_image = true;
   }
 
-  if (next_image_id == current_image_id_) {
-    // This ImagePipe did not change since the last frame was rendered.
+  if (!present_next_image)
     return false;
-  }
 
-  if (auto next_image = images_.FindResource<Image>(next_image_id)) {
-    // We're replacing a frame with a new one, so we hand off its release fence
-    // to the |ReleaseFenceSignaller|, which will signal it as soon as all work
-    // previously submitted to the GPU is finished.
-    if (current_release_fences_) {
-      session()->engine()->release_fence_signaller()->AddCPUReleaseFences(
-          std::move(current_release_fences_));
-    }
-    current_release_fences_ = std::move(next_release_fences);
-    current_image_id_ = next_image_id;
-    current_image_ = std::move(next_image);
+  auto next_image = images_.FindResource<Image>(next_image_id);
 
-    return true;
-  } else {
+  if (!next_image) {
     session()->error_reporter()->ERROR()
         << "ImagePipe::Update() could not find Image with ID: "
         << next_image_id;
@@ -204,6 +193,26 @@ bool ImagePipe::Update(uint64_t presentation_time,
     // the global scene-graph.
     return true;
   }
+
+  bool image_updated = next_image->UpdatePixels();
+
+  if (!image_updated && next_image_id == current_image_id_) {
+    // This ImagePipe did not change since the last frame was rendered.
+    return false;
+  }
+
+  // We're replacing a frame with a new one, so we hand off its release
+  // fence to the |ReleaseFenceSignaller|, which will signal it as soon as
+  // all work previously submitted to the GPU is finished.
+  if (current_release_fences_) {
+    session()->engine()->release_fence_signaller()->AddCPUReleaseFences(
+        std::move(current_release_fences_));
+  }
+  current_release_fences_ = std::move(next_release_fences);
+  current_image_id_ = next_image_id;
+  current_image_ = std::move(next_image);
+
+  return true;
 }
 
 const escher::ImagePtr& ImagePipe::GetEscherImage() {

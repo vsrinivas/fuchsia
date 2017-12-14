@@ -17,10 +17,12 @@ const ResourceTypeInfo Image::kTypeInfo = {
 Image::Image(Session* session,
              scenic::ResourceId id,
              MemoryPtr memory,
-             escher::ImagePtr image)
+             escher::ImagePtr image,
+             uint64_t host_memory_offset)
     : ImageBase(session, id, Image::kTypeInfo),
       memory_(std::move(memory)),
-      image_(std::move(image)) {}
+      image_(std::move(image)),
+      host_memory_offset_(host_memory_offset) {}
 
 Image::Image(Session* session,
              scenic::ResourceId id,
@@ -121,12 +123,12 @@ ImagePtr Image::New(Session* session,
 
     auto escher_image = escher::image_utils::NewImageFromPixels(
         session->engine()->escher_image_factory(),
-        session->engine()->escher_gpu_uploader(), pixel_format,
-        image_info->width, image_info->height,
-        static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset);
+        session->engine()->escher_gpu_uploader(),
+        static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset,
+        pixel_format, image_info->width, image_info->height);
 
     return fxl::AdoptRef(new Image(session, id, std::move(host_memory),
-                                   std::move(escher_image)));
+                                   std::move(escher_image), memory_offset));
 
     // Create from GPU memory.
   } else if (memory->IsKindOf<GpuMemory>()) {
@@ -171,6 +173,19 @@ ImagePtr Image::New(Session* session,
   }
 }
 
+bool Image::UpdatePixels() {
+  if (memory_->IsKindOf<HostMemory>() &&
+      session()->engine()->escher_gpu_uploader()) {
+    auto host_memory = memory_->As<HostMemory>();
+    escher::image_utils::WritePixelsToImage(
+        session()->engine()->escher_gpu_uploader(),
+        static_cast<uint8_t*>(host_memory->memory_base()) + host_memory_offset_,
+        image_);
+    return true;
+  }
+  return false;
+}
+
 ImagePtr Image::NewForTesting(Session* session,
                               scenic::ResourceId id,
                               escher::ResourceManager* image_owner,
@@ -178,7 +193,7 @@ ImagePtr Image::NewForTesting(Session* session,
   escher::ImagePtr escher_image = escher::Image::New(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
   FXL_CHECK(escher_image);
-  return fxl::AdoptRef(new Image(session, id, host_memory, escher_image));
+  return fxl::AdoptRef(new Image(session, id, host_memory, escher_image, 0));
 }
 
 }  // namespace scene_manager

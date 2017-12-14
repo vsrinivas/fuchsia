@@ -44,6 +44,11 @@ class Image : public ImageBase {
 
   void Accept(class ResourceVisitor* visitor) override;
 
+  // For images backed by host memory, re-upload to GPU memory. No-op for images
+  // backed by GPU memory.
+  // Returns true if contents were updated.
+  bool UpdatePixels();
+
   const escher::ImagePtr& GetEscherImage() override { return image_; }
 
  private:
@@ -68,10 +73,16 @@ class Image : public ImageBase {
   Image(Session* session,
         scenic::ResourceId id,
         MemoryPtr memory,
-        escher::ImagePtr image);
+        escher::ImagePtr image,
+        uint64_t host_memory_offset);
 
   MemoryPtr memory_;
+  // GPU memory-backed image. If |memory_| is of type HOST_MEMORY, this image's
+  // memory is separate.
   escher::ImagePtr image_;
+  // If |memory_| is of type HOST_MEMORY, the offset into |memory_| where the
+  // image is stored.
+  uint64_t host_memory_offset_;
 };
 
 }  // namespace scene_manager
