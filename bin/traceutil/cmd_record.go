@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -16,6 +17,7 @@ type cmdRecord struct {
 	targetHostname string
 	filePrefix     string
 	reportType     string
+	stdout         bool
 	captureConfig  *captureTraceConfig
 }
 
@@ -38,6 +40,8 @@ func NewCmdRecord() *cmdRecord {
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
 	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname.")
 	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
+	cmd.flags.BoolVar(&cmd.stdout, "stdout", false,
+		"Send the report to stdout, in addition to writing to file.")
 
 	cmd.captureConfig = newCaptureTraceConfig(cmd.flags)
 	return cmd
@@ -130,6 +134,19 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
+	}
+
+	if cmd.stdout {
+		report, openErr := os.Open(outputFilename)
+		if openErr != nil {
+			fmt.Println(openErr.Error())
+			return subcommands.ExitFailure
+		}
+		_, reportErr := io.Copy(os.Stdout, report)
+		if reportErr != nil {
+			fmt.Println(reportErr.Error())
+			return subcommands.ExitFailure
+		}
 	}
 
 	return subcommands.ExitSuccess
