@@ -18,10 +18,8 @@
 
 namespace machina {
 
-static const char* kInputDirPath = "/dev/class/input";
-
-// HID keycode -> evdev keycode.
-const uint8_t KeyboardEventSource::kKeyMap[] = {
+// HID usage -> evdev keycode.
+const uint8_t kKeyMap[] = {
     0,    // Reserved
     0,    // Keyboard ErrorRollOver
     0,    // Keyboard POSTFail
@@ -169,7 +167,8 @@ const uint8_t KeyboardEventSource::kKeyMap[] = {
     126,  // Right Meta
 };
 
-VirtioInput::VirtioInput(uintptr_t guest_physmem_addr,
+VirtioInput::VirtioInput(InputDispatcher* input_dispatcher,
+                         uintptr_t guest_physmem_addr,
                          size_t guest_physmem_size,
                          const char* device_name,
                          const char* device_serial)
@@ -180,6 +179,7 @@ VirtioInput::VirtioInput(uintptr_t guest_physmem_addr,
                    VIRTIO_INPUT_Q_COUNT,
                    guest_physmem_addr,
                    guest_physmem_size),
+      input_dispatcher_(input_dispatcher),
       device_name_(device_name),
       device_serial_(device_serial) {}
 
@@ -236,21 +236,12 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
-static int watch_input_directory_thread(void* input) {
-  int dirfd = open(kInputDirPath, O_DIRECTORY | O_RDONLY);
-  if (dirfd < 0)
-    return ZX_ERR_IO;
-
-  zx_status_t status = fdio_watch_directory(dirfd, &VirtioInput::AddInputDevice,
-                                            ZX_TIME_INFINITE, input);
-
-  close(dirfd);
-  return status;
-}
-
 zx_status_t VirtioInput::Start() {
   thrd_t thread;
-  int ret = thrd_create(&thread, &watch_input_directory_thread, this);
+  auto poll_thread = [](void* arg) {
+    return reinterpret_cast<VirtioInput*>(arg)->PollInputDispatcher();
+  };
+  int ret = thrd_create(&thread, poll_thread, this);
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -261,158 +252,66 @@ zx_status_t VirtioInput::Start() {
   return ZX_OK;
 }
 
-zx_status_t VirtioInput::QueueInputEvent(const virtio_input_event_t& event) {
+zx_status_t VirtioInput::PollInputDispatcher() {
+  while (true) {
+    InputEvent event = input_dispatcher_->Wait();
+    zx_status_t status = OnInputEvent(event);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+}
+
+zx_status_t VirtioInput::OnInputEvent(const InputEvent& event) {
+  switch (event.type) {
+    case InputEventType::BARRIER:
+      return OnBarrierEvent();
+    case InputEventType::KEYBOARD:
+      return OnKeyEvent(event.key);
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+zx_status_t VirtioInput::OnKeyEvent(const KeyEvent& key_event) {
+  if (key_event.hid_usage >= (sizeof(kKeyMap) / sizeof(kKeyMap[0]))) {
+    return ZX_OK;
+  }
+
+  virtio_input_event_t virtio_event;
+  virtio_event.type = VIRTIO_INPUT_EV_KEY;
+  virtio_event.code = kKeyMap[key_event.hid_usage];
+  virtio_event.value = key_event.state == KeyState::PRESSED
+                           ? VIRTIO_INPUT_EV_KEY_PRESSED
+                           : VIRTIO_INPUT_EV_KEY_RELEASED;
+  return SendVirtioEvent(virtio_event);
+}
+
+zx_status_t VirtioInput::OnBarrierEvent() {
+  virtio_input_event_t virtio_event = {};
+  virtio_event.type = VIRTIO_INPUT_EV_SYN;
+  zx_status_t status = SendVirtioEvent(virtio_event);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return NotifyGuest();
+}
+
+zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   uint16_t head;
   virtio_queue_wait(&event_queue(), &head);
 
   virtio_desc_t desc;
   zx_status_t status = virtio_queue_read_desc(&event_queue(), head, &desc);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   auto event_out = static_cast<virtio_input_event_t*>(desc.addr);
   memcpy(event_out, &event, sizeof(event));
+
   virtio_queue_return(&event_queue(), head, sizeof(event));
   return ZX_OK;
-}
-
-// static
-zx_status_t VirtioInput::AddInputDevice(int dirfd,
-                                        int event,
-                                        const char* fn,
-                                        void* cookie) {
-  auto input = static_cast<VirtioInput*>(cookie);
-  if (event != WATCH_EVENT_ADD_FILE) {
-    return ZX_OK;
-  }
-
-  int fd = openat(dirfd, fn, O_RDONLY);
-  if (fd < 0) {
-    fprintf(stderr, "Failed to open device %s/%s\n", kInputDirPath, fn);
-    return ZX_OK;
-  }
-
-  auto closer = fbl::MakeAutoCall([fd]() { close(fd); });
-
-  int proto = INPUT_PROTO_NONE;
-  if (ioctl_input_get_protocol(fd, &proto) < 0) {
-    fprintf(stderr, "Failed to get input device protocol.\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // If the device isn't a keyboard, just continue.
-  if (proto != INPUT_PROTO_KBD)
-    return ZX_OK;
-
-  fbl::AllocChecker ac;
-  auto keyboard = fbl::make_unique_checked<KeyboardEventSource>(&ac, input, fd);
-  if (!ac.check())
-    return ZX_ERR_NO_MEMORY;
-
-  zx_status_t status = keyboard->Start();
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to start device %s/%s\n", kInputDirPath, fn);
-    return status;
-  }
-  fprintf(stderr, "virtio-input: Polling device %s/%s for key events.\n",
-          kInputDirPath, fn);
-
-  closer.cancel();
-  fbl::AutoLock lock(&input->mutex_);
-  input->keyboards_.push_front(fbl::move(keyboard));
-  return ZX_OK;
-}
-
-KeyboardEventSource::~KeyboardEventSource() {
-  if (fd_ >= 0)
-    close(fd_);
-}
-
-static int hid_event_thread(void* cookie) {
-  return reinterpret_cast<KeyboardEventSource*>(cookie)->HidEventLoop();
-}
-
-zx_status_t KeyboardEventSource::Start() {
-  thrd_t thread;
-  int ret = thrd_create(&thread, &hid_event_thread, this);
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-  ret = thrd_detach(thread);
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-  return ZX_OK;
-}
-
-zx_status_t KeyboardEventSource::HidEventLoop() {
-  uint8_t report[8];
-  while (true) {
-    ssize_t r = read(fd_, report, sizeof(report));
-    if (r != sizeof(report)) {
-      fprintf(stderr, "failed to read from input device\n");
-      return ZX_ERR_IO;
-    }
-
-    hid_keys_t curr_keys;
-    hid_kbd_parse_report(report, &curr_keys);
-
-    zx_status_t status = HandleHidKeys(curr_keys);
-    if (status != ZX_OK) {
-      fprintf(stderr, "Failed to handle HID keys.\n");
-      return status;
-    }
-  }
-  return ZX_OK;
-}
-
-zx_status_t KeyboardEventSource::HandleHidKeys(const hid_keys_t& curr_keys) {
-  // Send key-down events.
-  uint8_t keycode;
-  hid_keys_t pressed;
-  hid_kbd_pressed_keys(&prev_keys_, &curr_keys, &pressed);
-  hid_for_every_key(&pressed, keycode) {
-    zx_status_t status = SendKeyEvent(keycode, true);
-    if (status != ZX_OK)
-      return status;
-  }
-
-  // Send key-up events.
-  hid_keys_t released;
-  hid_kbd_released_keys(&prev_keys_, &curr_keys, &released);
-  hid_for_every_key(&released, keycode) {
-    zx_status_t status = SendKeyEvent(keycode, false);
-    if (status != ZX_OK)
-      return status;
-  }
-
-  prev_keys_ = curr_keys;
-  return SendBarrierEvent();
-}
-
-zx_status_t KeyboardEventSource::SendKeyEvent(uint32_t scancode, bool pressed) {
-  if (scancode >= sizeof(kKeyMap) / sizeof(kKeyMap[0])) {
-    // Unknown key.
-    return ZX_OK;
-  }
-
-  virtio_input_event_t event;
-  event.type = VIRTIO_INPUT_EV_KEY;
-  event.code = kKeyMap[scancode];
-  event.value =
-      pressed ? VIRTIO_INPUT_EV_KEY_PRESSED : VIRTIO_INPUT_EV_KEY_RELEASED;
-  return emitter_->QueueInputEvent(event);
-}
-
-zx_status_t KeyboardEventSource::SendBarrierEvent() {
-  virtio_input_event_t event;
-  event.type = VIRTIO_INPUT_EV_SYN;
-  event.code = 0;
-  event.value = 0;
-  zx_status_t status = emitter_->QueueInputEvent(event);
-  if (status != ZX_OK)
-    return status;
-  return emitter_->FlushInputEvents();
 }
 
 }  // namespace machina

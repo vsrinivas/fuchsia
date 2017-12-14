@@ -20,6 +20,8 @@ shared_library("machina") {
     "gpu_resource.h",
     "gpu_scanout.cc",
     "gpu_scanout.h",
+    "hid_event_source.cc",
+    "hid_event_source.h",
     "input.cc",
     "input.h",
     "input_dispatcher.cc",
@@ -86,7 +88,7 @@ executable("machina-unittests") {
   sources = [
     "block-unittest.cc",
     "gpu-unittest.cc",
-    "input-unittest.cc",
+    "hid_event_source-unittest.cc",
     "input_dispatcher-unittest.cc",
     "pci-unittest.cc",
     "run_all_unittests.cc",

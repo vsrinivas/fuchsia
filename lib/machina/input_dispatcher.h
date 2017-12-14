@@ -14,6 +14,7 @@ namespace machina {
 
 enum class InputEventType {
   KEYBOARD,
+  BARRIER,
 };
 
 enum class KeyState {

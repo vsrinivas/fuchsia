@@ -27,7 +27,9 @@
 #include "garnet/lib/machina/block.h"
 #include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/gpu.h"
+#include "garnet/lib/machina/hid_event_source.h"
 #include "garnet/lib/machina/input.h"
+#include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
 #include "garnet/lib/machina/uart.h"
@@ -68,6 +70,7 @@ static zx_status_t create_vmo(uint64_t size,
 #endif
 
 static const uint64_t kVmoSize = 1u << 30;
+static const size_t kInputQueueDepth = 64;
 
 // Unused memory above this threshold may be reclaimed by the balloon.
 static uint32_t balloon_threshold_pages = 1024;
@@ -440,8 +443,14 @@ int main(int argc, char** argv) {
     return status;
 
   // Setup input device.
-  machina::VirtioInput input(physmem_addr, physmem_size, "zircon-input",
-                             "serial-number");
+  machina::InputDispatcher input_dispatcher(kInputQueueDepth);
+  machina::HidEventSource event_source(&input_dispatcher);
+  status = event_source.Start();
+  if (status != ZX_OK)
+    return status;
+
+  machina::VirtioInput input(&input_dispatcher, physmem_addr, physmem_size,
+                             "machina-input", "serial-number");
   status = input.Start();
   if (status != ZX_OK)
     return status;
