@@ -118,13 +118,14 @@ private:
                           const cpuperf_config_t& config,
                           const cpuperf::Reader::SampleRecord& record,
                           trace_ticks_t previous_time,
+                          trace_ticks_t current_time,
                           uint64_t ticks_per_second,
                           uint64_t event_value);
 
   void EmitSampleRecord(trace_cpu_number_t cpu,
                         const cpuperf::EventDetails* details,
                         const cpuperf::Reader::SampleRecord& record,
-                        trace_ticks_t start_time,
+                        trace_ticks_t start_time, trace_ticks_t end_time,
                         uint64_t ticks_per_second, uint64_t value);
 
   void EmitTallyCounts(const cpuperf_config_t& config,
@@ -135,6 +136,8 @@ private:
                        trace_ticks_t time,
                        bool is_value,
                        uint64_t value);
+
+  trace_string_ref_t GetCpuNameRef(trace_cpu_number_t cpu);
 
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu,
                                      cpuperf_event_id_t id);
@@ -161,6 +164,9 @@ private:
 
   // Add one for events that are system-wide (e.g., memory controller events).
   trace_thread_ref_t cpu_thread_refs_[kMaxNumCpus + 1];
+
+  // Add one for events that are system-wide (e.g., memory controller events).
+  trace_string_ref_t cpu_name_refs_[kMaxNumCpus + 1];
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Importer);
 };

@@ -44,6 +44,14 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
     // Note: Thread ids of zero are invalid. We use "thread 0" (aka cpu 0)
     // for system-wide events.
     trace_context_write_thread_record(context, index, kCpuProcess, cpu);
+    if (cpu == 0) {
+      cpu_name_refs_[0] =
+        trace_context_make_registered_string_literal(context, "system");
+    } else {
+      const char *name = fxl::StringPrintf("cpu%u", cpu - 1).c_str();
+      cpu_name_refs_[cpu] =
+        trace_context_make_registered_string_copy(context, name, strlen(name));
+    }
     // TODO(dje): In time emit "cpuN" for thread names, but it won't do any
     // good at the moment as we use "Count" records which ignore the thread.
   }
@@ -92,74 +100,90 @@ uint64_t Importer::ImportRecords(
   uint32_t printed_late_record_warning_count = 0;
 
   uint32_t cpu;
-  uint64_t ticks_per_second;
   cpuperf::Reader::SampleRecord record;
 
   uint64_t sample_rate = trace_config_->sample_rate();
   bool is_tally_mode = sample_rate == 0;
+  trace_ticks_t current_time = reader.time();
 
-  while (reader.ReadNextRecord(&cpu, &ticks_per_second, &record)) {
+  while (reader.ReadNextRecord(&cpu, &record)) {
     FXL_DCHECK(cpu < kMaxNumCpus);
     cpuperf_event_id_t event_id = record.event();
-    trace_ticks_t prev_time;
-    prev_time = event_data.GetTime(cpu, event_id);
+    uint64_t ticks_per_second = reader.ticks_per_second();
 
     // There can be millions of records. This log message is useful for small
     // test runs, but otherwise is too painful. The verbosity level is chosen
     // to recognize that.
     FXL_VLOG(10) << fxl::StringPrintf(
       "Import: cpu=%u, event=0x%x, time=%" PRIu64,
-      cpu, event_id, record.time());
+      cpu, event_id, current_time);
 
-    if (record.time() < prev_time) {
+    if (record.type() == CPUPERF_RECORD_TIME) {
+      current_time = reader.time();
+      if (event_id == CPUPERF_EVENT_ID_NONE) {
+        // This is just a time update, not a combined time+tick record.
+        ++record_count;
+        continue;
+      }
+    }
+
+    // Get the time we last saw this event.
+    trace_ticks_t prev_time = event_data.GetTime(cpu, event_id);
+
+    if (current_time < prev_time) {
       if (printed_old_time_warning_count == 0) {
-        FXL_LOG(WARNING) << "cpu " << cpu << ": record time " << record.time()
+        FXL_LOG(WARNING) << "cpu " << cpu << ": record time " << current_time
                          << " < previous time " << prev_time
                          << " (further such warnings are omitted)";
       }
       ++printed_old_time_warning_count;
-    } else if (record.time() == prev_time) {
+    } else if (current_time == prev_time) {
       if (printed_zero_period_warning_count == 0) {
         FXL_LOG(WARNING) << "cpu " << cpu
-                         << ": empty interval at time " << record.time()
+                         << ": empty interval at time " << current_time
                          << " (further such warnings are omitted)";
       }
       ++printed_zero_period_warning_count;
-    } else if (record.time() > stop_time_) {
+    } else if (current_time > stop_time_) {
       if (printed_late_record_warning_count == 0) {
-        FXL_LOG(WARNING) << "Record has time > stop_time: " << record.time()
+        FXL_LOG(WARNING) << "Record has time > stop_time: " << current_time
                          << " (further such warnings are omitted)";
       }
       ++printed_late_record_warning_count;
     } else {
       switch (record.type()) {
+        case CPUPERF_RECORD_TIME:
+          FXL_DCHECK(event_id != CPUPERF_EVENT_ID_NONE);
+          // fall through
         case CPUPERF_RECORD_TICK:
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, sample_rate);
           } else {
-            ImportSampleRecord(cpu, config, record, prev_time,
+            ImportSampleRecord(cpu, config, record, prev_time, current_time,
                                ticks_per_second, sample_rate);
           }
           break;
         case CPUPERF_RECORD_COUNT:
           if (is_tally_mode) {
-            event_data.AccumulateCount(cpu, event_id, record.count.count);
+            event_data.AccumulateCount(cpu, event_id, record.count->count);
           } else {
-            ImportSampleRecord(cpu, config, record, prev_time,
-                               ticks_per_second, record.count.count);
+            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+                               ticks_per_second, record.count->count);
           }
           break;
         case CPUPERF_RECORD_VALUE:
           if (is_tally_mode) {
-            event_data.UpdateValue(cpu, event_id, record.value.value);
+            event_data.UpdateValue(cpu, event_id, record.value->value);
           } else {
-            ImportSampleRecord(cpu, config, record, prev_time,
-                               ticks_per_second, record.value.value);
+            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+                               ticks_per_second, record.value->value);
           }
           break;
         case CPUPERF_RECORD_PC:
-          ImportSampleRecord(cpu, config, record, prev_time,
-                             ticks_per_second, sample_rate);
+          if (!is_tally_mode) {
+            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+                               ticks_per_second, sample_rate);
+          }
           break;
         default:
           // The reader shouldn't be returning unknown records.
@@ -168,7 +192,7 @@ uint64_t Importer::ImportRecords(
       }
     }
 
-    event_data.UpdateTime(cpu, event_id, record.time());
+    event_data.UpdateTime(cpu, event_id, current_time);
     ++record_count;
   }
 
@@ -197,6 +221,7 @@ void Importer::ImportSampleRecord(
     const cpuperf_config_t& config,
     const cpuperf::Reader::SampleRecord& record,
     trace_ticks_t previous_time,
+    trace_ticks_t current_time,
     uint64_t ticks_per_second,
     uint64_t event_value) {
   cpuperf_event_id_t event_id = record.event();
@@ -204,8 +229,8 @@ void Importer::ImportSampleRecord(
   // Note: Errors here are generally rare, so at present we don't get clever
   // with minimizing the noise.
   if (cpuperf::EventIdToEventDetails(event_id, &details)) {
-    EmitSampleRecord(cpu, details, record, previous_time, ticks_per_second,
-                     event_value);
+    EmitSampleRecord(cpu, details, record, previous_time, current_time,
+                     ticks_per_second, event_value);
   } else {
     FXL_LOG(ERROR) << "Invalid event id: " << event_id;
   }
@@ -215,9 +240,9 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
                                 const cpuperf::EventDetails* details,
                                 const cpuperf::Reader::SampleRecord& record,
                                 trace_ticks_t start_time,
+                                trace_ticks_t end_time,
                                 uint64_t ticks_per_second,
                                 uint64_t value) {
-  trace_ticks_t end_time = record.time();
   FXL_DCHECK(start_time < end_time);
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, details->id)};
   trace_string_ref_t name_ref{trace_context_make_registered_string_literal(
@@ -262,7 +287,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
       n_args = 1;
       break;
     case CPUPERF_RECORD_VALUE:
-      // We somehow need to make the value as not being a count. This is
+      // We somehow need to mark the value as not being a count. This is
       // important for some consumers to guide how to print the value.
       // Do this by using a different name for the value.
       args[0] = {trace_make_arg(value_name_ref_,
@@ -270,8 +295,8 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
       n_args = 1;
       break;
     case CPUPERF_RECORD_PC:
-      args[1] = {trace_make_arg(aspace_name_ref_, trace_make_uint64_arg_value(record.pc.aspace))};
-      args[2] = {trace_make_arg(pc_name_ref_, trace_make_uint64_arg_value(record.pc.pc))};
+      args[1] = {trace_make_arg(aspace_name_ref_, trace_make_uint64_arg_value(record.pc->aspace))};
+      args[2] = {trace_make_arg(pc_name_ref_, trace_make_uint64_arg_value(record.pc->pc))};
       n_args = 3;
       break;
     default:
@@ -357,6 +382,11 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
   } else {
     FXL_LOG(WARNING) << "Invalid event id: " << event_id;
   }
+}
+
+trace_string_ref_t Importer::GetCpuNameRef(trace_cpu_number_t cpu) {
+  FXL_DCHECK(cpu < countof(cpu_name_refs_));
+  return cpu_name_refs_[cpu + 1];
 }
 
 trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu,

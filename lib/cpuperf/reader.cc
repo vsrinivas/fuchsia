@@ -68,19 +68,9 @@ bool Reader::MapBufferVmo(zx_handle_t vmo) {
   return true;
 }
 
-static bool ReadBufferHeader(zx::vmo& vmo, uint32_t cpu, bool sampling_mode,
+static bool ReadBufferHeader(const void* buffer, uint32_t cpu,
                              cpuperf_buffer_header_t* hdr) {
-  size_t actual;
-  auto status = vmo.read(hdr, 0, sizeof(*hdr), &actual);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_vmo_read failed: " << status;
-    return false;
-  }
-  if (actual != sizeof(*hdr)) {
-    FXL_LOG(ERROR) << "zx_vmo_read short read, got " << actual
-                   << " instead of " << sizeof(hdr);
-    return false;
-  }
+  memcpy(hdr, buffer, sizeof(*hdr));
 
   FXL_LOG(INFO) << "cpu " << cpu
                 << ": buffer version " << hdr->version
@@ -105,8 +95,7 @@ static bool ReadBufferHeader(zx::vmo& vmo, uint32_t cpu, bool sampling_mode,
   return true;
 }
 
-bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
-                            SampleRecord* record) {
+bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
   while (current_cpu_ < num_cpus_) {
     // If this is the first cpu, or if we're done with this cpu's records,
     // move to the next cpu.
@@ -130,7 +119,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
         return false;
 
       cpuperf_buffer_header_t header;
-      if (!ReadBufferHeader(current_vmo_, current_cpu_, true, &header))
+      if (!ReadBufferHeader(buffer_start_, current_cpu_, &header))
         return false;
       next_record_ = buffer_start_ + sizeof(header);
       capture_end_ = buffer_start_ + header.capture_end;
@@ -179,25 +168,35 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
                                       next_record_ - buffer_start_);
 
     switch (record_type) {
+      case CPUPERF_RECORD_TIME:
+        record->time =
+          reinterpret_cast<const cpuperf_time_record_t*>(next_record_);
+        time_ = record->time->time;
+        break;
       case CPUPERF_RECORD_TICK:
-        memcpy(&record->tick, next_record_, sizeof(record->tick));
+        record->tick =
+          reinterpret_cast<const cpuperf_tick_record_t*>(next_record_);
         break;
       case CPUPERF_RECORD_COUNT:
-        memcpy(&record->count, next_record_, sizeof(record->count));
+        record->count =
+          reinterpret_cast<const cpuperf_count_record_t*>(next_record_);
         break;
       case CPUPERF_RECORD_VALUE:
-        memcpy(&record->value, next_record_, sizeof(record->value));
+        record->value =
+          reinterpret_cast<const cpuperf_value_record_t*>(next_record_);
         break;
       case CPUPERF_RECORD_PC:
-        memcpy(&record->pc, next_record_, sizeof(record->pc));
+        record->pc =
+          reinterpret_cast<const cpuperf_pc_record_t*>(next_record_);
         break;
       default:
+        // We shouldn't get here because RecordSize() should have returned
+        // zero and we would have skipped to the next cpu.
         FXL_NOTREACHED();
     }
 
     next_record_ += record_size;
     *cpu = current_cpu_;
-    *ticks_per_second = ticks_per_second_;
     return true;
   }
 
@@ -206,6 +205,7 @@ bool Reader::ReadNextRecord(uint32_t* cpu, uint64_t* ticks_per_second,
 
 cpuperf_record_type_t Reader::RecordType(const cpuperf_record_header_t* hdr) {
   switch (hdr->type) {
+    case CPUPERF_RECORD_TIME:
     case CPUPERF_RECORD_TICK:
     case CPUPERF_RECORD_COUNT:
     case CPUPERF_RECORD_VALUE:
@@ -218,6 +218,8 @@ cpuperf_record_type_t Reader::RecordType(const cpuperf_record_header_t* hdr) {
 
 size_t Reader::RecordSize(const cpuperf_record_header_t* hdr) {
   switch (hdr->type) {
+    case CPUPERF_RECORD_TIME:
+      return sizeof(cpuperf_time_record_t);
     case CPUPERF_RECORD_TICK:
       return sizeof(cpuperf_tick_record_t);
     case CPUPERF_RECORD_COUNT:

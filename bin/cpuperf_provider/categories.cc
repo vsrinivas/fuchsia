@@ -292,14 +292,22 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
     flags |= CPUPERF_CONFIG_FLAG_OS;
   if (trace_user_)
     flags |= CPUPERF_CONFIG_FLAG_USER;
-  if (trace_pc_)
-    flags |= CPUPERF_CONFIG_FLAG_PC;
+  if (timebase_event_ == CPUPERF_EVENT_ID_NONE) {
+    // These can only be set for events that are their own timebase.
+    if (trace_pc_)
+      flags |= CPUPERF_CONFIG_FLAG_PC;
+  }
   if (timebase_event_ != CPUPERF_EVENT_ID_NONE)
     flags |= CPUPERF_CONFIG_FLAG_TIMEBASE0;
 
   for (unsigned i = 0; i < num_used_events; ++i) {
     cfg->rate[i] = sample_rate_;
     cfg->flags[i] = flags;
+  }
+
+  if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
+    if (trace_pc_)
+      cfg->flags[0] |= CPUPERF_CONFIG_FLAG_PC;
   }
 
   return true;

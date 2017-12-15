@@ -23,7 +23,7 @@ enum class TraceOption {
   kOs,
   // Collect data from userspace.
   kUser,
-  // Collect the PC value for each event.
+  // Collect the PC value for each event that is its own timebase.
   kPc,
 };
 
