@@ -183,6 +183,12 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
   // share the same index instance here and there.
 
   fidl::Array<ProposalPtr> proposals = fidl::Array<ProposalPtr>::New(0);
+  if (query->text.empty()) {
+    auto response = QueryResponse::New();
+    response->proposals = std::move(proposals);
+    done(std::move(response));
+  }
+
   for (const auto& id_entry : entries_) {
     const auto& entry = id_entry.second;
     // Simply prefix match on the last element of the verb.
