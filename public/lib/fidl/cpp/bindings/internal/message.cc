@@ -13,7 +13,6 @@
 namespace fidl {
 
 Message::Message() {
-  Initialize();
 }
 
 Message::~Message() {
@@ -61,10 +60,9 @@ void Message::Initialize() {
 void Message::FreeDataAndCloseHandles() {
   free(data_);
 
-  for (std::vector<zx_handle_t>::iterator it = handles_.begin();
-       it != handles_.end(); ++it) {
-    if (*it)
-      zx_handle_close(*it);
+  for (zx_handle_t handle : handles_) {
+    if (handle != ZX_HANDLE_INVALID)
+      zx_handle_close(handle);
   }
 }
 

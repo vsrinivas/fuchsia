@@ -78,8 +78,8 @@ class Message {
   void Initialize();
   void FreeDataAndCloseHandles();
 
-  uint32_t data_num_bytes_;
-  internal::MessageData* data_;
+  uint32_t data_num_bytes_ = 0;
+  internal::MessageData* data_ = nullptr;
   std::vector<zx_handle_t> handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Message);
