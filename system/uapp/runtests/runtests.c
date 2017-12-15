@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <launchpad/launchpad.h>
 #include <limits.h>
@@ -13,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <unittest/unittest.h>
 
@@ -99,7 +101,8 @@ static bool match_test_names(const char* dirent_name, const char** test_names,
     return false;
 }
 
-static bool run_tests(const char* dirn, const char** test_names, const int num_test_names) {
+static bool run_tests(const char* dirn, const char** test_names, const int num_test_names,
+                      const char* output_dir) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
         return false;
@@ -134,6 +137,28 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
         launchpad_create(0, name, &lp);
         launchpad_load_from_file(lp, argv[0]);
         launchpad_clone(lp, LP_CLONE_ALL);
+        if (output_dir != NULL) {
+            // Copy name and replace '/' with '_' to get a unique test output
+            // name.
+            char output_name[64 + NAME_MAX];
+            char output_path[64 + NAME_MAX];
+            strncpy(output_name, name, 64 + NAME_MAX);
+            char* p = strchr(output_name, '/');
+            while (p) {
+                *p = '_';
+                p = strchr(p+1, '/');
+            }
+            // Generate output path and open file.
+            snprintf(output_path, sizeof(output_path), "%s/%s.out", output_dir, output_name);
+            int outfd = open(output_path, O_CREAT | O_WRONLY | O_APPEND, 0664);
+            if (outfd < 0) {
+                printf("FAILURE: Failed to open output file %s", output_path);
+                continue;
+            }
+            // Set the file as the subprocess's stdout and stderr.
+            launchpad_clone_fd(lp, outfd, STDOUT_FILENO);
+            launchpad_transfer_fd(lp, outfd, STDERR_FILENO);
+        }
         launchpad_set_args(lp, argc, argv);
         const char* errmsg;
         zx_handle_t handle;
@@ -181,7 +206,8 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
 
 int usage(char* name) {
     fprintf(stderr,
-            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a] [-t test names] [directories ...]\n"
+            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a]"
+            " [-t test names] [-o directory] [directories ...]\n"
             "\n"
             "The optional [directories ...] is a list of           \n"
             "directories containing tests to run, non-recursively. \n"
@@ -203,7 +229,8 @@ int usage(char* name) {
             "   -p: Turn OFF Performance tests                     \n"
             "   -a: Turn on All tests                              \n"
             "   -t: Filter tests by name                           \n"
-            "       (accepts a comma-separated list)               \n", name);
+            "       (accepts a comma-separated list)               \n"
+            "   -o: Write test output to a directory               \n", name);
     return -1;
 }
 
@@ -213,6 +240,7 @@ int main(int argc, char** argv) {
     const char** test_names = NULL;
     int num_test_dirs = 0;
     const char** test_dirs = NULL;
+    const char* output_dir = NULL;
 
     int i = 1;
     while (i < argc) {
@@ -250,6 +278,12 @@ int main(int argc, char** argv) {
                 return -1;
             }
             i++;
+        } else if (strcmp(argv[i], "-o") == 0) {
+            if (i + 1 >= argc) {
+                return usage(argv[0]);
+            }
+            output_dir = (const char*)argv[i + 1];
+            i++;
         } else if (argv[i][0] != '-') {
             num_test_dirs = argc - i;
             test_dirs = (const char**)&argv[i];
@@ -275,8 +309,13 @@ int main(int argc, char** argv) {
         num_test_dirs = DEFAULT_NUM_TEST_DIRS;
     }
 
-    bool success = true;
     struct stat st;
+    if (output_dir != NULL && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
+        printf("Failed: Could not open %s\n", output_dir);
+        return -1;
+    }
+
+    bool success = true;
     for (i = 0; i < num_test_dirs; i++) {
         if (stat(test_dirs[i], &st) < 0) {
             printf("Failed: Could not open %s\n", test_dirs[i]);
@@ -288,12 +327,24 @@ int main(int argc, char** argv) {
         }
 
         // Don't continue running tests if one directory failed.
-        success = run_tests(test_dirs[i], test_names, num_test_names);
+        success = run_tests(test_dirs[i], test_names, num_test_names, output_dir);
         if (!success) {
             break;
         }
     }
     free(test_names);
+
+    // Sync output filesystem.
+    if (output_dir != NULL) {
+        int fd = open(output_dir, O_RDONLY);
+        if (fd < 0) {
+            printf("Failed: Could not open %s", output_dir);
+        } else if (syncfs(fd)) {
+            printf("Warning: Could not sync parent filesystem of %s", output_dir);
+        } else {
+            close(fd);
+        }
+    }
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
