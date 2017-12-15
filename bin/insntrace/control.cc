@@ -85,8 +85,8 @@ static bool OpenDevices(fxl::UniqueFD* out_ipt_fd,
   if (out_ipt_fd) {
     ipt_fd = open(ipt_device_path, O_RDONLY);
     if (ipt_fd < 0) {
-      FXL_LOG(ERROR) << "open intel-pt"
-                     << ", " << util::ErrnoString(errno);
+      FXL_LOG(ERROR) << "unable to open " << ipt_device_path
+                     << ": " << util::ErrnoString(errno);
       return false;
     }
   }
