@@ -6,10 +6,14 @@
 #include <fstream>
 #include <functional>
 #include <string>
+#include <thread>
 #include <vector>
 
+#include <async/loop.h>
 #include <benchmark/benchmark.h>
 #include <gflags/gflags.h>
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 #include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
@@ -29,6 +33,16 @@ DEFINE_string(fbenchmark_filter,
               "Regular expression that specifies a subset of tests to run.  "
               "By default, all the tests are run");
 
+// Tracing-related options.  See README.md for background.
+DEFINE_bool(fbenchmark_enable_tracing,
+            false,
+            "Enable use of Fuchsia tracing: "
+            "Enable registering as a TraceProvider");
+DEFINE_double(fbenchmark_startup_delay,
+              0,
+              "Delay in seconds to wait on startup, after registering a "
+              "TraceProvider");
+
 // Command line arguments used internally for launching subprocesses.
 DEFINE_uint32(channel_read, 0, "Launch a process to read from a channel");
 DEFINE_uint32(channel_write, 0, "Launch a process to write to a channel");
@@ -43,6 +57,25 @@ typedef std::vector<std::pair<std::string, std::function<TestCaseInterface*()>>>
 // We don't want g_tests to have a constructor that might get run after
 // items have been added to the list, because that would clobber the list.
 TestList* g_tests;
+
+// We generate two versions of this loop (with and without tracing) because
+// the overhead of TRACE_DURATION() is high enough that we want to avoid it
+// when tracing is not enabled.
+template <bool tracing_enabled>
+void RunSingleTest(TestCaseInterface* test_instance,
+                   uint64_t* time_points,
+                   uint32_t run_count) {
+  time_points[0] = zx_ticks_get();
+  for (uint32_t idx = 0; idx < run_count; ++idx) {
+    if (tracing_enabled) {
+      TRACE_DURATION("benchmark", "test_run");
+      test_instance->Run();
+    } else {
+      test_instance->Run();
+    }
+    time_points[idx + 1] = zx_ticks_get();
+  }
+}
 
 bool RunTests(uint32_t run_count,
               std::ostream* stream,
@@ -80,10 +113,10 @@ bool RunTests(uint32_t run_count,
 
     TestCaseInterface* test_instance = pair.second();
 
-    time_points[0] = zx_ticks_get();
-    for (uint32_t idx = 0; idx < run_count; ++idx) {
-      test_instance->Run();
-      time_points[idx + 1] = zx_ticks_get();
+    if (TRACE_CATEGORY_ENABLED("benchmark")) {
+      RunSingleTest<true>(test_instance, time_points, run_count);
+    } else {
+      RunSingleTest<false>(test_instance, time_points, run_count);
     }
 
     delete test_instance;
@@ -145,6 +178,16 @@ void RegisterTestFactory(const char* name,
   g_tests->push_back(std::make_pair(name, factory_func));
 }
 
+// Start running a TraceProvider in a background thread.
+void StartTraceProvider() {
+  std::thread thread([] {
+    async::Loop loop;
+    trace::TraceProvider provider(loop.async());
+    loop.Run();
+  });
+  thread.detach();
+}
+
 int BenchmarksMain(int argc, char** argv, bool run_gbenchmark) {
   benchmark::Initialize(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -157,6 +200,10 @@ int BenchmarksMain(int argc, char** argv, bool run_gbenchmark) {
     RunSubprocess(FLAGS_subprocess.c_str());
     return 0;
   }
+
+  if (FLAGS_fbenchmark_enable_tracing)
+    StartTraceProvider();
+  zx_nanosleep(zx_deadline_after(ZX_SEC(1) * FLAGS_fbenchmark_startup_delay));
 
   if (FLAGS_fbenchmark_out != "") {
     std::ofstream stream(FLAGS_fbenchmark_out);

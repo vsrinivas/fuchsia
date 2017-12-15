@@ -38,6 +38,16 @@ There are three ways to run zircon_benchmarks:
   * `--fbenchmark_filter=REGEX`: A regular expression that specifies a
     subset of benchmarks to run.  By default, all the benchmarks are run.
 
+  * `--fbenchmark_enable_tracing`: Enable Fuchsia tracing, i.e. enable
+    registering as a TraceProvider.  This is off by default because the
+    TraceProvider gets registered asynchronously on a background thread,
+    and that activity could introduce noise to the benchmarks.
+
+  * `--fbenchmark_startup_delay=N`: Wait for N seconds on startup, after
+    registering a TraceProvider.  This allows working around a race
+    condition where tracing misses initial events from newly-registered
+    TraceProviders (see TO-650).
+
   Note: Not all of the benchmarks have been converted so that they will run
   in this mode.  (TODO(TO-651): Convert the remaining tests.)  Those that
   have been converted will run in both fbenchmark mode and gbenchmark mode.
