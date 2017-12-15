@@ -132,11 +132,10 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
     return nullptr;
   }
 
-  std::unique_ptr<fidl::Message> message =
-      std::unique_ptr<fidl::Message>(new fidl::Message());
-  message->AllocUninitializedData(message_size);
+  fidl::Message message;
+  message.AllocUninitializedData(message_size);
 
-  bytes_read = ReadData(message_size, message->mutable_data());
+  bytes_read = ReadData(message_size, message.mutable_data());
   if (bytes_read < message_size) {
     FXL_DLOG(WARNING)
         << "FlogReaderImpl::GetEntry: FAULT: bytes_read < message_size";
@@ -147,7 +146,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
   ++current_entry_index_;
 
   // Use the stub to deserialize into entry_.
-  stub_.Accept(message.get());
+  stub_.Accept(&message);
   FXL_DCHECK(entry_);
   return std::move(entry_);
 }
