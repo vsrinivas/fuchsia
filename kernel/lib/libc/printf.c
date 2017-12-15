@@ -21,18 +21,6 @@
 #define FLOAT_PRINTF 1
 #endif
 
-int snprintf(char *str, size_t len, const char *fmt, ...)
-{
-    int err;
-
-    va_list ap;
-    va_start(ap, fmt);
-    err = vsnprintf(str, len, fmt, ap);
-    va_end(ap);
-
-    return err;
-}
-
 struct _output_args {
     char *outstr;
     size_t len;
@@ -41,7 +29,7 @@ struct _output_args {
 
 static int _vsnprintf_output(const char *str, size_t len, void *state)
 {
-    struct _output_args *args = state;
+    struct _output_args *args = (struct _output_args*)state;
 
     size_t count = 0;
     while (count < len) {
@@ -53,10 +41,10 @@ static int _vsnprintf_output(const char *str, size_t len, void *state)
         count++;
     }
 
-    return count;
+    return (int)count;
 }
 
-int vsnprintf(char *str, size_t len, const char *fmt, va_list ap)
+PRINTF_DECL(vsnprintf)(char *str, size_t len, const char *fmt, va_list ap)
 {
     struct _output_args args;
     int wlen;
@@ -65,12 +53,25 @@ int vsnprintf(char *str, size_t len, const char *fmt, va_list ap)
     args.len = len;
     args.pos = 0;
 
-    wlen = _printf_engine(&_vsnprintf_output, (void *)&args, fmt, ap);
+    wlen = PRINTF_CALL(_printf_engine)(&_vsnprintf_output, (void *)&args,
+                                       fmt, ap);
     if (args.pos >= len)
         str[len-1] = '\0';
     else
         str[wlen] = '\0';
     return wlen;
+}
+
+PRINTF_DECL(snprintf)(char *str, size_t len, const char *fmt, ...)
+{
+    int err;
+
+    va_list ap;
+    va_start(ap, fmt);
+    err = PRINTF_CALL(vsnprintf)(str, len, fmt, ap);
+    va_end(ap);
+
+    return err;
 }
 
 #define LONGFLAG       0x00000001
@@ -102,13 +103,13 @@ __NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, siz
 
     /* only do the math if the number is >= 10 */
     while (n >= 10) {
-        int digit = n % 10;
+        int digit = (int)n % 10;
 
         n /= 10;
 
-        buf[--pos] = digit + '0';
+        buf[--pos] = (char)(digit + '0');
     }
-    buf[--pos] = n + '0';
+    buf[--pos] = (char)(n + '0');
 
     if (negative)
         *signchar = '-';
@@ -381,7 +382,7 @@ __NO_INLINE static char *double_to_hexstring(char *buf, size_t len, double d, ui
 
 #endif // FLOAT_PRINTF
 
-int _printf_engine(_printf_engine_output_func out, void *state, const char *fmt, va_list ap)
+PRINTF_DECL(_printf_engine)(_printf_engine_output_func out, void *state, const char *fmt, va_list ap)
 {
     int err = 0;
     char c;
@@ -441,7 +442,7 @@ next_format:
                 OUTPUT_CHAR('%');
                 break;
             case 'c':
-                uc = va_arg(ap, unsigned int);
+                uc = (unsigned char)va_arg(ap, unsigned int);
                 OUTPUT_CHAR(uc);
                 break;
             case 's':
@@ -530,13 +531,13 @@ hex:
                 else if (flags & LONGFLAG)
                     *(long *)ptr = chars_written;
                 else if (flags & HALFHALFFLAG)
-                    *(signed char *)ptr = chars_written;
+                    *(signed char *)ptr = (signed char)chars_written;
                 else if (flags & HALFFLAG)
-                    *(short *)ptr = chars_written;
+                    *(short *)ptr = (short)chars_written;
                 else if (flags & SIZETFLAG)
                     *(size_t *)ptr = chars_written;
                 else
-                    *(int *)ptr = chars_written;
+                    *(int *)ptr = (int)chars_written;
                 break;
 #if FLOAT_PRINTF
             case 'F':

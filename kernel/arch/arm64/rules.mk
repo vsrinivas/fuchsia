@@ -15,7 +15,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/boot-mmu.cpp \
 	$(LOCAL_DIR)/cache-ops.S \
 	$(LOCAL_DIR)/debugger.cpp \
-	$(LOCAL_DIR)/efi.cpp \
 	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/exceptions_c.cpp \
 	$(LOCAL_DIR)/feature.cpp \
@@ -114,5 +113,16 @@ endif
 # tell the compiler to leave x18 alone so we can use it to point
 # at the current cpu structure
 KERNEL_COMPILEFLAGS += -ffixed-x18
+
+include make/module.mk
+
+
+# The EFI code is its own module because it needs special compilation flags.
+
+MODULE := $(LOCAL_DIR).efi
+
+MODULE_SRCS := $(LOCAL_DIR)/efi.cpp
+
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
 
 include make/module.mk

@@ -5,6 +5,12 @@
 
 #include <arch/efi.h>
 
+// Roll in our own copy of the printf engine because the common one is
+// not compiled to be compatible with the early-boot EFI environment.
+#define PRINTF_DECL(name) static int efi_##name
+#define PRINTF_CALL(name) efi_##name
+#include "../../lib/libc/printf.c"
+
 #include <arch/ops.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -78,7 +84,7 @@ static int efi_printf(const char* fmt, ...) {
     char buf[256];
 
     va_start(ap, fmt);
-    int err = vsnprintf(buf, sizeof(buf), fmt, ap);
+    int err = efi_vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
 
     efi_print(buf);

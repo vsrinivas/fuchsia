@@ -21,6 +21,13 @@ __BEGIN_CDECLS
  */
 typedef int (*_printf_engine_output_func)(const char *str, size_t len, void *state);
 
-int _printf_engine(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
+#ifndef PRINTF_DECL
+#define PRINTF_DECL(name) int name
+#endif
+#ifndef PRINTF_CALL
+#define PRINTF_CALL(name) name
+#endif
+
+PRINTF_DECL(_printf_engine)(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
 
 __END_CDECLS
