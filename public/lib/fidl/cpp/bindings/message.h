@@ -75,8 +75,7 @@ class Message {
   std::vector<zx_handle_t>* mutable_handles() { return &handles_; }
 
  private:
-  void Initialize();
-  void FreeDataAndCloseHandles();
+  void CloseHandles();
 
   uint32_t data_num_bytes_ = 0;
   internal::MessageData* data_ = nullptr;

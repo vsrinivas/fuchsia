@@ -16,14 +16,19 @@ Message::Message() {
 }
 
 Message::~Message() {
-  FreeDataAndCloseHandles();
+  free(data_);
+  CloseHandles();
 }
 
 void Message::Reset() {
-  FreeDataAndCloseHandles();
+  // Reset the data.
+  free(data_);
+  data_num_bytes_ = 0;
+  data_ = nullptr;
 
+  // Reset the handles.
+  CloseHandles();
   handles_.clear();
-  Initialize();
 }
 
 void Message::AllocData(uint32_t num_bytes) {
@@ -41,25 +46,22 @@ void Message::AllocUninitializedData(uint32_t num_bytes) {
 void Message::MoveTo(Message* destination) {
   FXL_DCHECK(this != destination);
 
-  destination->FreeDataAndCloseHandles();
-
-  // No copy needed.
+  // Move the data.  No copying is needed.
+  free(destination->data_);
   destination->data_num_bytes_ = data_num_bytes_;
   destination->data_ = data_;
-  std::swap(destination->handles_, handles_);
-
-  handles_.clear();
-  Initialize();
-}
-
-void Message::Initialize() {
   data_num_bytes_ = 0;
   data_ = nullptr;
+
+  // Move the handles.
+  destination->CloseHandles();
+  destination->handles_.clear();
+  std::swap(destination->handles_, handles_);
 }
 
-void Message::FreeDataAndCloseHandles() {
-  free(data_);
-
+// Closes the handles in the handles_ vector but does not remove them from
+// the vector.
+void Message::CloseHandles() {
   for (zx_handle_t handle : handles_) {
     if (handle != ZX_HANDLE_INVALID)
       zx_handle_close(handle);
