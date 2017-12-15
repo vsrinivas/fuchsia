@@ -4,6 +4,11 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+declare_args() {
+  # Enable all 8 cores, which is faster but emits more heat.
+  msd_arm_enable_all_cores = false
+}
+
 source_set("src") {
   public_configs = [ "..:msd_src_include_config" ]
   sources = [
@@ -35,6 +40,11 @@ source_set("src") {
     "power_manager.h",
     "registers.h",
   ]
+
+  defines = []
+  if (msd_arm_enable_all_cores) {
+    defines += [ "MSD_ARM_ENABLE_ALL_CORES" ]
+  }
 
   deps = [
     "../include",

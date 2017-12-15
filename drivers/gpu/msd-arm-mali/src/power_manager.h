@@ -9,13 +9,17 @@
 
 class PowerManager {
 public:
-    PowerManager() {}
+    PowerManager(RegisterIo* io);
 
-    void EnableCores(RegisterIo* io);
+    void EnableCores(RegisterIo* io, uint64_t shader_bitmask);
 
     void ReceivedPowerInterrupt(RegisterIo* io);
 
+    uint64_t shader_ready_status() const { return shader_ready_status_; }
+
 private:
+    friend class TestMsdArmDevice;
+
     uint64_t tiler_ready_status_ = 0;
     uint64_t l2_ready_status_ = 0;
     uint64_t shader_ready_status_ = 0;

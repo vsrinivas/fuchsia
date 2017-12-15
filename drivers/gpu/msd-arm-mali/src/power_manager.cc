@@ -6,11 +6,17 @@
 
 #include "registers.h"
 
-void PowerManager::EnableCores(RegisterIo* io)
+PowerManager::PowerManager(RegisterIo* io)
 {
-    // Power on only one shader core, to ensure we don't have thermal issues.
+    // Initialize current set of running cores.
+    ReceivedPowerInterrupt(io);
+}
+
+void PowerManager::EnableCores(RegisterIo* io, uint64_t shader_bitmask)
+{
     registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kShader,
-                                          registers::CoreReadyState::ActionType::kActionPowerOn, 1);
+                                          registers::CoreReadyState::ActionType::kActionPowerOn,
+                                          shader_bitmask);
     registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kL2,
                                           registers::CoreReadyState::ActionType::kActionPowerOn, 1);
     registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kTiler,

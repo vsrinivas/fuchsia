@@ -149,7 +149,7 @@ bool MsdArmDevice::Init(void* device_handle)
 
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
-    power_manager_ = std::make_unique<PowerManager>();
+    power_manager_ = std::make_unique<PowerManager>(register_io_.get());
 
     scheduler_ = std::make_unique<JobScheduler>(this, 3);
     address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
@@ -159,7 +159,11 @@ bool MsdArmDevice::Init(void* device_handle)
 
     EnableInterrupts();
 
-    power_manager_->EnableCores(register_io_.get());
+    uint64_t enabled_cores = 1;
+#if defined(MSD_ARM_ENABLE_ALL_CORES)
+    enabled_cores = gpu_features_.shader_present;
+#endif
+    power_manager_->EnableCores(register_io_.get(), enabled_cores);
     return true;
 }
 
@@ -582,8 +586,8 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io
     config.end_flush_invalidate().set(true);
     config.WriteTo(register_io);
 
-    // Execute on core 0, the only one powered on.
-    slot.AffinityNext().FromValue(1).WriteTo(register_io);
+    // Execute on every powered-on core.
+    slot.AffinityNext().FromValue(power_manager_->shader_ready_status()).WriteTo(register_io);
     slot.CommandNext().FromValue(registers::JobSlotCommand::kCommandStart).WriteTo(register_io);
 }
 

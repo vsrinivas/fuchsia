@@ -13,7 +13,7 @@ public:
     void MockEnable()
     {
         std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
-        auto power_manager = std::make_unique<PowerManager>();
+        auto power_manager = std::make_unique<PowerManager>(reg_io.get());
 
         constexpr uint32_t kShaderOnOffset =
             static_cast<uint32_t>(registers::CoreReadyState::CoreType::kShader) +
@@ -21,7 +21,7 @@ public:
         constexpr uint32_t kShaderOnHighOffset = kShaderOnOffset + 4;
         constexpr uint32_t kDummyHighValue = 1500;
         reg_io->Write32(kShaderOnHighOffset, kDummyHighValue);
-        power_manager->EnableCores(reg_io.get());
+        power_manager->EnableCores(reg_io.get(), 0xf);
         // Higher word shouldn't be written to because none of them are being
         // enabled.
         EXPECT_EQ(kDummyHighValue, reg_io->Read32(kShaderOnHighOffset));
@@ -34,7 +34,11 @@ public:
             uint32_t offset =
                 static_cast<uint32_t>(actions[i]) +
                 static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOn);
-            EXPECT_EQ(1u, reg_io->Read32(offset));
+
+            if (actions[i] == registers::CoreReadyState::CoreType::kShader)
+                EXPECT_EQ(0xfu, reg_io->Read32(offset));
+            else
+                EXPECT_EQ(1u, reg_io->Read32(offset));
         }
     }
 };
