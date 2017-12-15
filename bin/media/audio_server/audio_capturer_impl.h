@@ -212,9 +212,9 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
   uint32_t payload_buf_frames_ = 0;
 
   // Execution domain/dispatcher stuff for mixing.
-  fbl::RefPtr<::audio::dispatcher::ExecutionDomain> mix_domain_;
-  fbl::RefPtr<::audio::dispatcher::WakeupEvent> mix_wakeup_;
-  fbl::RefPtr<::audio::dispatcher::Timer> mix_timer_;
+  fbl::RefPtr<::dispatcher::ExecutionDomain> mix_domain_;
+  fbl::RefPtr<::dispatcher::WakeupEvent> mix_wakeup_;
+  fbl::RefPtr<::dispatcher::Timer> mix_timer_;
 
   // Queues of capture buffers supplied by the client and waiting to be filled,
   // or waiting to be returned.

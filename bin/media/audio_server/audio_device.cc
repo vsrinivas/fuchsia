@@ -32,17 +32,17 @@ void AudioDevice::Wakeup() {
 MediaResult AudioDevice::Init() {
   // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
-  mix_domain_ = ::audio::dispatcher::ExecutionDomain::Create(24);
-  mix_wakeup_ = ::audio::dispatcher::WakeupEvent::Create();
+  mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
+  mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
 
   if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
   // clang-format off
-  ::audio::dispatcher::WakeupEvent::ProcessHandler process_handler(
+  ::dispatcher::WakeupEvent::ProcessHandler process_handler(
       [ output = fbl::WrapRefPtr(this) ]
-      (::audio::dispatcher::WakeupEvent * event) -> zx_status_t {
+      (::dispatcher::WakeupEvent * event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->OnWakeup();
         return ZX_OK;

@@ -188,8 +188,8 @@ class AudioDevice : public AudioObject {
 
   // State used to manage asynchronous processing using the dispatcher
   // framework.
-  fbl::RefPtr<::audio::dispatcher::ExecutionDomain> mix_domain_;
-  fbl::RefPtr<::audio::dispatcher::WakeupEvent> mix_wakeup_;
+  fbl::RefPtr<::dispatcher::ExecutionDomain> mix_domain_;
+  fbl::RefPtr<::dispatcher::WakeupEvent> mix_wakeup_;
 
   // Driver object which will manage most interactions with the low level driver
   // for us.

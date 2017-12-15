@@ -48,9 +48,9 @@ AudioCapturerImpl::AudioCapturerImpl(
       db_gain_(kInitialCaptureGain) {
   // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
-  mix_domain_ = ::audio::dispatcher::ExecutionDomain::Create(24);
-  mix_wakeup_ = ::audio::dispatcher::WakeupEvent::Create();
-  mix_timer_ = ::audio::dispatcher::Timer::Create();
+  mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
+  mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
+  mix_timer_ = ::dispatcher::Timer::Create();
 
   binding_.set_connection_error_handler([this]() { Shutdown(); });
   source_link_refs_.reserve(16u);
@@ -296,7 +296,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
   // clang-format off
   res = mix_wakeup_->Activate(
       mix_domain_,
-      [ this ](::audio::dispatcher::WakeupEvent* event) -> zx_status_t {
+      [ this ](::dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
         FXL_DCHECK(event == mix_wakeup_.get());
         return Process();
@@ -311,7 +311,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
   // clang-format off
   res = mix_timer_->Activate(
       mix_domain_,
-      [ this ](::audio::dispatcher::Timer* timer) -> zx_status_t {
+      [ this ](::dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
         FXL_DCHECK(timer == mix_timer_.get());
         return Process();

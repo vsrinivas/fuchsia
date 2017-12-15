@@ -40,15 +40,15 @@ MediaResult StandardOutputBase::Init() {
     return res;
   }
 
-  mix_timer_ = ::audio::dispatcher::Timer::Create();
+  mix_timer_ = ::dispatcher::Timer::Create();
   if (mix_timer_ == nullptr) {
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
   // clang-format off
-  ::audio::dispatcher::Timer::ProcessHandler process_handler(
+  ::dispatcher::Timer::ProcessHandler process_handler(
     [ output = fbl::WrapRefPtr(this) ]
-    (::audio::dispatcher::Timer * timer) -> zx_status_t {
+    (::dispatcher::Timer * timer) -> zx_status_t {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
       output->Process();
       return ZX_OK;

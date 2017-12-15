@@ -19,9 +19,9 @@ static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(3);
 
 AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) {
   FXL_DCHECK(owner_ != nullptr);
-  stream_channel_ = ::audio::dispatcher::Channel::Create();
-  rb_channel_ = ::audio::dispatcher::Channel::Create();
-  cmd_timeout_ = ::audio::dispatcher::Timer::Create();
+  stream_channel_ = ::dispatcher::Channel::Create();
+  rb_channel_ = ::dispatcher::Channel::Create();
+  cmd_timeout_ = ::dispatcher::Timer::Create();
 }
 
 zx_status_t AudioDriver::Init(zx::channel stream_channel) {
@@ -34,15 +34,15 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
 
   // Activate the stream channel.
   // clang-format off
-  ::audio::dispatcher::Channel::ProcessHandler process_handler(
-    [ this ](::audio::dispatcher::Channel* channel) -> zx_status_t {
+  ::dispatcher::Channel::ProcessHandler process_handler(
+    [ this ](::dispatcher::Channel* channel) -> zx_status_t {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
       FXL_DCHECK(stream_channel_.get() == channel);
       return ProcessStreamChannelMessage();
     });
 
-  ::audio::dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
-    [ this ](const ::audio::dispatcher::Channel* channel) {
+  ::dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
+    [ this ](const ::dispatcher::Channel* channel) {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
       FXL_DCHECK(stream_channel_.get() == channel);
       ShutdownSelf("Stream channel closed unexpectedly");
@@ -61,8 +61,8 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
 
   // Activate the command timeout timer.
   // clang-format off
-  ::audio::dispatcher::Timer::ProcessHandler cmd_timeout_handler(
-    [ this ](::audio::dispatcher::Timer* timer) -> zx_status_t {
+  ::dispatcher::Timer::ProcessHandler cmd_timeout_handler(
+    [ this ](::dispatcher::Timer* timer) -> zx_status_t {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
       FXL_DCHECK(cmd_timeout_.get() == timer);
       ShutdownSelf("Unexpected command timeout");
@@ -364,7 +364,7 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
 }
 
 zx_status_t AudioDriver::ReadMessage(
-    const fbl::RefPtr<::audio::dispatcher::Channel>& channel,
+    const fbl::RefPtr<::dispatcher::Channel>& channel,
     void* buf,
     uint32_t buf_size,
     uint32_t* bytes_read_out,
@@ -617,15 +617,15 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
 
   // Activate out ring buffer channel in our execution domain.
   // clang-format off
-  ::audio::dispatcher::Channel::ProcessHandler process_handler(
-    [ this ](::audio::dispatcher::Channel * channel) -> zx_status_t {
+  ::dispatcher::Channel::ProcessHandler process_handler(
+    [ this ](::dispatcher::Channel * channel) -> zx_status_t {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
       FXL_DCHECK(rb_channel_.get() == channel);
       return ProcessRingBufferChannelMessage();
     });
 
-  ::audio::dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
-    [ this ](const ::audio::dispatcher::Channel* channel) {
+  ::dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
+    [ this ](const ::dispatcher::Channel* channel) {
       OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
       FXL_DCHECK(rb_channel_.get() == channel);
       ShutdownSelf("Ring buffer channel closed unexpectedly");

@@ -91,7 +91,7 @@ class StandardOutputBase : public AudioOutput {
   OutputFormatterPtr output_formatter_;
 
   // Timer used to schedule periodic mixing.
-  fbl::RefPtr<::audio::dispatcher::Timer> mix_timer_;
+  fbl::RefPtr<::dispatcher::Timer> mix_timer_;
 
  private:
   enum class TaskType { Mix, Trim };
