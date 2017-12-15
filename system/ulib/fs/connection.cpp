@@ -224,13 +224,19 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_CLONE: {
         TRACE_DURATION("vfs", "ZXRIO_CLONE");
         zx::channel channel(msg->handle[0]); // take ownership
-        if (!(arg & ZX_FS_FLAG_PIPELINE)) {
+        fbl::RefPtr<Vnode> vn(vnode_);
+        zx_status_t status = OpenVnode(flags_, &vn);
+        bool describe = !(arg & ZX_FS_FLAG_PIPELINE);
+        if (describe) {
             zxrio_object_t obj;
             memset(&obj, 0, ZXRIO_OBJECT_MINSIZE);
             obj.type = FDIO_PROTOCOL_REMOTE;
+            obj.status = status;
             channel.write(0, &obj, ZXRIO_OBJECT_MINSIZE, 0, 0);
         }
-        vnode_->Serve(vfs_, fbl::move(channel), flags_);
+        if (status == ZX_OK) {
+            vn->Serve(vfs_, fbl::move(channel), flags_);
+        }
         return ERR_DISPATCHER_INDIRECT;
     }
     case ZXRIO_READ: {

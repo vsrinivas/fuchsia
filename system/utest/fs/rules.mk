@@ -21,6 +21,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-append.cpp \
     $(LOCAL_DIR)/test-basic.c \
+    $(LOCAL_DIR)/test-clone.cpp \
     $(LOCAL_DIR)/test-directory.cpp \
     $(LOCAL_DIR)/test-dot-dot.c \
     $(LOCAL_DIR)/test-link.c \
