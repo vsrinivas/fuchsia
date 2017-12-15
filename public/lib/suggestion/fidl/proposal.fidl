@@ -27,10 +27,10 @@ struct Proposal {
   array<Action> on_selected;
 
   // An optional hint about the probability that this proposal would be chosen
-  // if it were the only proposal presented to the user. A confidence of 0
+  // if it were the only proposal presented to the user. A confidence of 0.0
   // indicates no hint. The confidence assigned by the system may be subject to
   // other considerations such as performance metrics.
-  float confidence = 0;
+  float confidence = 0.0;
 
   SuggestionDisplay display;
 };
