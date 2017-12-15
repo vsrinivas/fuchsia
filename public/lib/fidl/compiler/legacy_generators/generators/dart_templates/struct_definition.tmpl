@@ -46,7 +46,6 @@ class {{struct|name}} extends bindings.Struct {
     if (decoder0 == null) {
       return null;
     }
-    {{struct|name}} result = new {{struct|name}}();
 
 {%- if struct.bytes %}
     var mainDataHeader = bindings.Struct.checkVersion(decoder0, kVersions);
@@ -55,12 +54,20 @@ class {{struct|name}} extends bindings.Struct {
 {%- endif %}
 {%- for byte in struct.bytes %}
 {%-   for packed_field in byte.packed_fields %}
+    {{packed_field.field.kind|dart_type}} field{{packed_field.field|name|upper_camel}};
     if (mainDataHeader.version >= {{packed_field.min_version}}) {
-      {{encoding_macros.decode('result.' ~ packed_field.field|name, packed_field.field.kind, 8+packed_field.offset, packed_field.bit)|indent(6)}}
+      {{encoding_macros.decode('field' ~ packed_field.field|name|upper_camel, packed_field.field.kind, 8+packed_field.offset, packed_field.bit)|indent(6)}}
     }
 {%-   endfor %}
 {%- endfor %}
-    return result;
+
+    return new {{struct|name}}(
+{%- for byte in struct.bytes %}
+{%-   for packed_field in byte.packed_fields %}
+    {{packed_field.field|name}}: field{{packed_field.field|name|upper_camel}},
+{%-   endfor %}
+{%- endfor %}
+    );
   }
 
   void encode(bindings.Encoder encoder_) {
