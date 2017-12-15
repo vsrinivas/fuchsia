@@ -21,18 +21,6 @@
 #define FLOAT_PRINTF 1
 #endif
 
-int sprintf(char *str, const char *fmt, ...)
-{
-    int err;
-
-    va_list ap;
-    va_start(ap, fmt);
-    err = vsprintf(str, fmt, ap);
-    va_end(ap);
-
-    return err;
-}
-
 int snprintf(char *str, size_t len, const char *fmt, ...)
 {
     int err;
@@ -43,11 +31,6 @@ int snprintf(char *str, size_t len, const char *fmt, ...)
     va_end(ap);
 
     return err;
-}
-
-int vsprintf(char *str, const char *fmt, va_list ap)
-{
-    return vsnprintf(str, INT_MAX, fmt, ap);
 }
 
 struct _output_args {

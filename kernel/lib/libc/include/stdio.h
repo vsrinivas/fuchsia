@@ -31,9 +31,7 @@ static inline int vprintf(const char *fmt, va_list ap) { return 0; }
 int _printf(const char *fmt, ...) __PRINTFLIKE(1, 2);
 int _vprintf(const char *fmt, va_list ap);
 
-int sprintf(char *str, const char *fmt, ...) __PRINTFLIKE(2, 3);
 int snprintf(char *str, size_t len, const char *fmt, ...) __PRINTFLIKE(3, 4);
-int vsprintf(char *str, const char *fmt, va_list ap);
 int vsnprintf(char *str, size_t len, const char *fmt, va_list ap);
 
 

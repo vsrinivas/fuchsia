@@ -105,11 +105,6 @@ void printf_tests(void) {
     char buf[32];
 
     memset(buf, 0, sizeof(buf));
-    err = sprintf(buf, "0123456789abcdef012345678");
-    printf("sprintf returns %d\n", err);
-    hexdump8(buf, sizeof(buf));
-
-    memset(buf, 0, sizeof(buf));
     err = snprintf(buf, 15, "0123456789abcdef012345678");
     printf("snprintf returns %d\n", err);
     hexdump8(buf, sizeof(buf));

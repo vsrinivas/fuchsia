@@ -292,7 +292,7 @@ int printf_xy(int x, int y, char attr, char *fmt, ...)
     int result;
 
     va_start(parms, fmt);
-    result = vsprintf(cbuf, fmt, parms);
+    result = vsnprintf(cbuf, sizeof(cbuf), fmt, parms);
     va_end(parms);
 
     puts_xy(x, y, attr, cbuf);
