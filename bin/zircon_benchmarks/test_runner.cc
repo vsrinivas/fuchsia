@@ -51,8 +51,12 @@ DEFINE_string(subprocess, "", "Launch a process to run the named function");
 namespace fbenchmark {
 namespace {
 
-typedef std::vector<std::pair<std::string, std::function<TestCaseInterface*()>>>
-    TestList;
+struct NamedTest {
+  std::string name;
+  std::function<TestCaseInterface*()> factory_func;
+};
+
+typedef std::vector<NamedTest> TestList;
 // g_tests needs to be POD because this list is populated by constructors.
 // We don't want g_tests to have a constructor that might get run after
 // items have been added to the list, because that would clobber the list.
@@ -101,8 +105,8 @@ bool RunTests(uint32_t run_count,
   writer.StartArray();
 
   bool found_match = false;
-  for (auto& pair : *g_tests) {
-    const char* test_name = pair.first.c_str();
+  for (const NamedTest& test_case : *g_tests) {
+    const char* test_name = test_case.name.c_str();
     bool matched_regex = regexec(&regex, test_name, 0, nullptr, 0) == 0;
     if (!matched_regex)
       continue;
@@ -111,7 +115,7 @@ bool RunTests(uint32_t run_count,
     // Log in a format similar to gtest's output.
     printf("[ RUN      ] %s\n", test_name);
 
-    TestCaseInterface* test_instance = pair.second();
+    TestCaseInterface* test_instance = test_case.factory_func();
 
     if (TRACE_CATEGORY_ENABLED("benchmark")) {
       RunSingleTest<true>(test_instance, time_points, run_count);
@@ -125,7 +129,7 @@ bool RunTests(uint32_t run_count,
 
     writer.StartObject();
     writer.Key("label");
-    writer.String(pair.first.c_str());
+    writer.String(test_name);
     writer.Key("unit");
     writer.String("ns");
     writer.Key("samples");
@@ -175,7 +179,7 @@ void RegisterTestFactory(const char* name,
                          std::function<TestCaseInterface*()> factory_func) {
   if (!g_tests)
     g_tests = new TestList;
-  g_tests->push_back(std::make_pair(name, factory_func));
+  g_tests->push_back({name, factory_func});
 }
 
 // Start running a TraceProvider in a background thread.
