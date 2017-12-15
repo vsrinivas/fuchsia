@@ -18,7 +18,7 @@ namespace cpuperf {
 
 class Controller {
 public:
-  Controller(uint32_t buffer_size, const cpuperf_config_t& config);
+  Controller(uint32_t buffer_size_in_mb, const cpuperf_config_t& config);
   ~Controller();
 
   bool Start();
@@ -38,7 +38,7 @@ private:
   // If |!sample_mode_| then we ignore the provided buffer size, we don't
   // need it.
   const bool sample_mode_;
-  // This is the actual buffer size we use.
+  // This is the actual buffer size we use, in bytes.
   const uint32_t buffer_size_;
   const cpuperf_config_t config_;
   fxl::UniqueFD fd_;

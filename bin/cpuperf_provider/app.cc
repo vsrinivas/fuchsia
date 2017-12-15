@@ -56,12 +56,15 @@ App::App(const fxl::CommandLine& command_line)
     uint64_t buffer_size;
     if (!ParseNumber("buffer-size", buffer_size_as_string, &buffer_size))
       exit(EXIT_FAILURE);
-    uint64_t max_buffer_size = std::numeric_limits<uint32_t>::max();
-    if (buffer_size > max_buffer_size) {
-      FXL_LOG(ERROR) << "Buffer size too large, max " << max_buffer_size;
+    if (buffer_size == 0) {
+      FXL_LOG(ERROR) << "Buffer size cannot be zero";
       exit(EXIT_FAILURE);
     }
-    buffer_size_ = static_cast<uint32_t>(buffer_size);
+    if (buffer_size > kMaxBufferSizeInMb) {
+      FXL_LOG(ERROR) << "Buffer size too large, max " << kMaxBufferSizeInMb;
+      exit(EXIT_FAILURE);
+    }
+    buffer_size_in_mb_ = static_cast<uint32_t>(buffer_size);
   }
 
   trace_observer_.Start(fsl::MessageLoop::GetCurrent()->async(),
@@ -74,8 +77,8 @@ void App::PrintHelp() {
   std::cout << "cpuperf_provider [options]" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  --help: Produce this help message" << std::endl;
-  std::cout << "  --buffer-size=<size>: Trace data buffer size [default="
-        << kDefaultBufferSize << "]" << std::endl;
+  std::cout << "  --buffer-size=<size>: Trace data buffer size (MB) [default="
+        << kDefaultBufferSizeInMb << "]" << std::endl;
 }
 
 void App::UpdateState() {
@@ -104,7 +107,7 @@ void App::StartTracing(const TraceConfig& trace_config) {
   }
 
   auto controller = std::unique_ptr<cpuperf::Controller>(
-      new cpuperf::Controller(buffer_size_, device_config));
+      new cpuperf::Controller(buffer_size_in_mb_, device_config));
   if (!controller->is_valid()) {
     FXL_LOG(ERROR) << "Cpuperf controller failed to initialize";
     return;

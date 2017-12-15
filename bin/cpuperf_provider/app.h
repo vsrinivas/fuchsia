@@ -30,8 +30,10 @@ private:
 
   void PrintHelp();
 
-  // This is per-cpu.
-  static constexpr uint32_t kDefaultBufferSize = 16 * 1024 * 1024;
+  // This is per-cpu, in megabytes.
+  static constexpr uint32_t kDefaultBufferSizeInMb = 16;
+  // This is the max value cpu-trace will accept
+  static constexpr uint32_t kMaxBufferSizeInMb = 256;
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   trace::TraceObserver trace_observer_;
@@ -42,7 +44,7 @@ private:
   trace_ticks_t start_time_ = 0;
   trace_ticks_t stop_time_ = 0;
 
-  uint32_t buffer_size_ = kDefaultBufferSize;
+  uint32_t buffer_size_in_mb_ = kDefaultBufferSizeInMb;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
