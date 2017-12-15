@@ -33,6 +33,11 @@ class {{struct|name}} extends bindings.Struct {
 {%- endfor %}
   }{%- endif %}) : super(kVersions.last.size) {
 {%- for packed_field in struct.packed.packed_fields %}
+{%- if packed_field.field.default %}
+    if (this.{{packed_field.field|name}} == null) {
+      this.{{packed_field.field|name}} = {{packed_field.field|default_value}};
+    }
+{%- endif %}
 {%- if not packed_field.field.kind|is_nullable_kind %}
     assert(this.{{packed_field.field|name}} != null);
 {%- endif %}

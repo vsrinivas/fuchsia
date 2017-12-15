@@ -111,10 +111,11 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
     )) {
-    var params = new {{request_struct|name}}();
+    var params = new {{request_struct|name}}(
 {%- for parameter in method.parameters %}
-    params.{{parameter|name}} = {{parameter|name}};
+        {{parameter|name}}: {{parameter|name}}{% if not loop.last %}, {% endif %}
 {%- endfor %}
+    );
     Function zonedCallback;
     if ((callback == null) || identical(Zone.current, Zone.ROOT)) {
       zonedCallback = callback;
@@ -158,10 +159,11 @@ class {{interface|name}}Binding
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
     ) {
-      var result = new {{response_struct|name}}();
-      {%- for param in method.response_parameters %}
-      result.{{param|name}} = {{param|name}};
-      {%- endfor %}
+      var result = new {{response_struct|name}}(
+        {%- for param in method.response_parameters %}
+        {{param|name}}: {{param|name}}{% if not loop.last %}, {% endif %}
+        {%- endfor %}
+      );
       respond(result.serializeWithHeader(new bindings.MessageHeader.withRequestId(
           _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name,
           bindings.MessageHeader.kMessageIsResponse,

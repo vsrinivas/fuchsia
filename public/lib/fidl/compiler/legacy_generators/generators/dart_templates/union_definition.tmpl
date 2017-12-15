@@ -51,8 +51,6 @@ class {{union|name}} extends bindings.Union {
     if (size == 0) {
       return null;
     }
-    {{union|name}} result = new {{union|name}}();
-
     {# Unknown union members not handled. #}
     {{union|name}}Tag tag = _intToTag[decoder0.decodeUint32(offset + 4)];
     switch (tag) {
@@ -60,17 +58,17 @@ class {{union|name}} extends bindings.Union {
       case {{union|name}}Tag.{{field|name}}:
 {%-     if field.kind|is_union_kind %}
         var decoder1 = decoder0.decodePointer(offset + 8, {{field.kind|is_nullable_kind|dart_true_false}});
-        result.{{field|name}} = {{field.kind|dart_type}}.decode(decoder1, 0);
+        return new {{union|name}}.with{{field|name|upper_camel}}({{field.kind|dart_type}}.decode(decoder1, 0));
 {%-     else %}
-        {{encoding_macros.decode('result.' ~ field|name, field.kind, "offset + 8", 0)|indent(8)}}
+        {{field.kind|dart_type}} {{field|name}};
+        {{encoding_macros.decode(field|name, field.kind, "offset + 8", 0)|indent(8)}}
+        return new {{union|name}}.with{{field|name|upper_camel}}({{field|name}});
 {%-     endif %}
         break;
 {%-   endfor %}
       default:
         throw new bindings.FidlCodecError("Bad union tag: $tag");
     }
-
-    return result;
   }
 
   void encode(bindings.Encoder encoder_0, int offset) {
