@@ -4,12 +4,11 @@
 
 #include <iostream>
 
-#include <trace-provider/provider.h>
-
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/bin/ledger/test/benchmark/lib/run_with_tracing.h"
 #include "peridot/bin/ledger/test/benchmark/put/put.h"
 
 namespace {
@@ -102,12 +101,8 @@ int main(int argc, const char** argv) {
   }
 
   fsl::MessageLoop loop;
-  trace::TraceProvider trace_provider(loop.async());
   test::benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
                                     value_size, update, ref_strategy, seed);
-  // TODO(nellyv): A delayed task is necessary because of US-257.
-  loop.task_runner()->PostDelayedTask([&app] { app.Run(); },
-                                      fxl::TimeDelta::FromSeconds(1));
-  loop.Run();
-  return 0;
+
+  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

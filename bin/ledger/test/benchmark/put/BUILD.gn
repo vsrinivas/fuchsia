@@ -44,6 +44,7 @@ executable("ledger_benchmark_put") {
     ":lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/test/benchmark/lib",
   ]
 
   sources = [

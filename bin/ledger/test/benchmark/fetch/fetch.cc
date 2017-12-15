@@ -6,7 +6,6 @@
 
 #include <iostream>
 
-#include <trace-provider/provider.h>
 #include <trace/event.h>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
@@ -18,6 +17,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/test/benchmark/lib/logging.h"
+#include "peridot/bin/ledger/test/benchmark/lib/run_with_tracing.h"
 #include "peridot/bin/ledger/test/get_ledger.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
@@ -299,10 +299,7 @@ int main(int argc, const char** argv) {
   }
 
   fsl::MessageLoop loop;
-  trace::TraceProvider trace_provider(loop.async());
   test::benchmark::FetchBenchmark app(entry_count, value_size, part_size,
                                       server_id);
-  loop.task_runner()->PostTask([&app] { app.Run(); });
-  loop.Run();
-  return 0;
+  return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

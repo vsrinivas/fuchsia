@@ -10,10 +10,13 @@ source_set("lib") {
   sources = [
     "logging.cc",
     "logging.h",
+    "run_with_tracing.cc",
+    "run_with_tracing.h",
   ]
 
   public_deps = [
     "//peridot/public/lib/ledger/fidl",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   deps = [
