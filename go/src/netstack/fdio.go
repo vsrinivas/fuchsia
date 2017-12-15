@@ -490,14 +490,18 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 				return
 			}
 		default:
-			log.Printf("loopControl failed: %v", err) // TODO: communicate this
+			// ErrDisconnectNoCallback is given when we receive a close operation.
+			if err != fdio.ErrDisconnectNoCallback {
+				log.Printf("loopControl failed: %v", err) // TODO: communicate this
+			}
 			continue
 		}
 	}
 }
 
-func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, withNewSocket bool) (ios *iostate, reterr error) {
+func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, withNewSocket bool) (reterr error) {
 	var peerS zx.Handle
+	var ios *iostate
 	if iosOrig == nil {
 		ios = &iostate{
 			netProto:      netProto,
@@ -521,7 +525,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 				}
 				s0, s1, err := zx.NewSocket(t)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				// TODO: Why cast these to Handle? Why not store as Socket?
 				ios.dataHandle = zx.Handle(s0)
@@ -530,7 +534,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 				if err != nil {
 					ios.dataHandle.Close()
 					ios.peerDataHandle.Close()
-					return nil, err
+					return err
 				}
 			default:
 				panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
@@ -543,24 +547,14 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 			var err error
 			peerS, err = ios.peerDataHandle.Duplicate(zx.RightSameRights)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		case udp.ProtocolNumber:
-			return nil, mxerror.Errorf(zx.ErrNotSupported, "cannot clone an udp socket")
+			return mxerror.Errorf(zx.ErrNotSupported, "cannot clone an udp socket")
 		default:
 			panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 		}
 	}
-	// TODO: is this defer doing anything? there are no 'return err' statements after this.
-	defer func() {
-		if reterr != nil {
-			ios.dataHandle.Close()
-			if ios.peerDataHandle != 0 {
-				ios.peerDataHandle.Close()
-			}
-			peerS.Close()
-		}
-	}()
 
 	s.mu.Lock()
 	newCookie := s.next
@@ -603,7 +597,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 		go ios.loopDgramWrite(s.stack)
 	}
 
-	return ios, nil
+	return nil
 }
 
 type socketServer struct {
@@ -619,7 +613,10 @@ type socketServer struct {
 
 func (s *socketServer) opSocket(h zx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
 	var domain, typ, protocol int
-	if n, _ := fmt.Sscanf(path, "socket/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
+	withNewSocket := false
+	if n, _ := fmt.Sscanf(path, "socket-v2/%d/%d/%d\x00", &domain, &typ, &protocol); n == 3 {
+		withNewSocket = true
+	} else if n, _ := fmt.Sscanf(path, "socket/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
 		return mxerror.Errorf(zx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
 	}
 
@@ -651,7 +648,7 @@ func (s *socketServer) opSocket(h zx.Handle, ios *iostate, msg *fdio.Msg, path s
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	_, err = s.newIostate(h, nil, n, transProto, wq, ep, false)
+	err = s.newIostate(h, nil, n, transProto, wq, ep, withNewSocket)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -717,7 +714,7 @@ func (s *socketServer) opAccept(h zx.Handle, ios *iostate, msg *fdio.Msg, path s
 		return mxerror.Errorf(zx.ErrInternal, "accept: %v", err)
 	}
 
-	_, err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep, false)
+	err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep, false)
 	return err
 }
 
@@ -1331,13 +1328,14 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		var err error
 		switch {
 		case strings.HasPrefix(path, "none-v2"): // ZXRIO_SOCKET_DIR_NONE
-			_, err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, true)
+			err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, true)
 		case strings.HasPrefix(path, "socket-v2/"): // ZXRIO_SOCKET_DIR_SOCKET
+			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept-v2"): // ZXRIO_SOCKET_DIR_ACCEPT
 			log.Printf("open: unimplemented")
 			err = mxerror.Errorf(zx.ErrNotSupported, "open: unimplemented path=%q", path)
 		case strings.HasPrefix(path, "none"): // ZXRIO_SOCKET_DIR_NONE
-			_, err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false)
+			err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false)
 		case strings.HasPrefix(path, "socket/"): // ZXRIO_SOCKET_DIR_SOCKET
 			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept"): // ZXRIO_SOCKET_DIR_ACCEPT
@@ -1364,7 +1362,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		return fdio.ErrIndirect.Status
 	case fdio.OpClone:
 		ios.acquire()
-		_, err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil, false)
+		err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil, false)
 		if err != nil {
 			ios.release(func() { s.iosCloseHandler(ios, cookie) })
 			ro := fdio.RioObject{
