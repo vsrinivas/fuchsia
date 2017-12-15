@@ -9,6 +9,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
+#include "platform_trace.h"
 #include <bitset>
 #include <cstdio>
 #include <ddk/debug.h>
@@ -321,6 +322,7 @@ static bool IsHardwareResultCode(uint32_t result)
 
 magma::Status MsdArmDevice::ProcessJobInterrupt()
 {
+    TRACE_DURATION("magma", "MsdArmDevice::ProcessJobInterrupt");
     auto irq_status = registers::JobIrqFlags::GetStatus().ReadFrom(register_io_.get());
     auto clear_flags = registers::JobIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
     clear_flags.WriteTo(register_io_.get());
@@ -545,6 +547,7 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog()
 
 magma::Status MsdArmDevice::ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom)
 {
+    TRACE_DURATION("magma", "MsdArmDevice::ProcessScheduleAtom");
     scheduler_->EnqueueAtom(std::move(atom));
     scheduler_->TryToSchedule();
     return MAGMA_STATUS_OK;
