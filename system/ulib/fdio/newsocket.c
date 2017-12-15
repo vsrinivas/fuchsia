@@ -506,14 +506,6 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
     *_events = events;
 }
 
-zx_status_t zxsio_close(fdio_t* io) {
-    zxsio_t* sio = (zxsio_t*)io;
-    zx_handle_t h = sio->s;
-    sio->s = 0;
-    zx_handle_close(h);
-    return ZX_OK;
-}
-
 static zx_status_t zxsio_write_control(zxsio_t* sio, zxsio_msg_t* msg) {
     for (;;) {
         ssize_t r;
@@ -618,6 +610,9 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     case ZXRIO_GETPEERNAME:
     case ZXRIO_GETSOCKOPT:
     case ZXRIO_SETSOCKOPT:
+    case ZXRIO_CONNECT:
+    case ZXRIO_BIND:
+    case ZXRIO_LISTEN:
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -641,6 +636,22 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     if (ptr && msg.datalen > 0) {
         memcpy(ptr, msg.data, msg.datalen);
     }
+    return r;
+}
+
+static zx_status_t zxsio_close(fdio_t* io) {
+    zxsio_t* sio = (zxsio_t*)io;
+    zxsio_msg_t msg;
+    zx_status_t r;
+
+    memset(&msg, 0, ZXSIO_HDR_SZ);
+    msg.op = ZXRIO_CLOSE;
+    r = zxsio_txn(sio, &msg);
+
+    zx_handle_t h = sio->s;
+    sio->s = 0;
+    zx_handle_close(h);
+
     return r;
 }
 
