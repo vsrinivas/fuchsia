@@ -2916,9 +2916,21 @@ static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
     case WLAN_PHY_HT_GREENFIELD:
         return PhyMode::kHtGreenfield;
     default:
-        warnf("invalid DDK phy: %u\n", ddk_phy);
-        return PhyMode::kUnknown;
+        warnf("invalid DDK phy: %u. Fallback to PHY_OFDM\n", ddk_phy);
+        return PhyMode::kLegacyOfdm;
     }
+}
+
+static uint8_t mcs_to_ralink_mcs(uint8_t vendor_phy_mode, uint8_t mcs) {
+    // TODO(porce): Translate Rate index in each phy to ralink MCS values
+    // For LegacyOFDM:
+    // Standard MCS index: 13, 16, 5, 7, 9, 11, 1, 3 map to 6, 9, 12, 18, 24, 36, 48, 54 Mbps
+    // which in turns maps to Ralink MCS index: 0, 1, 2, 3, 4, 5, 6, 7.
+
+    // For CCK,
+    // Ralink supports 0 to 3, mapping to 1, 2, 5.5, 11 Mbps, for long preamble.
+    // Add value 8 to mcs index for short preamble.
+    return mcs;
 }
 
 static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi2 rxwi2,
@@ -3366,34 +3378,28 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     // txwi0.set_mpdu_density(Txwi0::kEightUsec);  // TP-Link
     txwi0.set_txop(Txwi0::kHtTxop);
 
-    uint8_t mcs = kMaxOfdmMcs;  // this is the same as the max HT mcs
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_MCS) {
-        // TODO(tkilbourn): define an 802.11-to-Ralink mcs translator
-    }
-    txwi0.set_mcs(mcs);
-
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH && pkt->info.cbw == CBW40) {
-        // TODO(porce): Investigate how to configure txwi differently
-        // for CBW40ABOVE and CBW40BELOW
-        txwi0.set_bw(1);  // for 40 MHz
-    } else {
-        txwi0.set_bw(0);  // for 20 MHz
-    }
-    txwi0.set_sgi(1);
-    txwi0.set_stbc(0);  // TODO(porce): Define the value.
-
-    uint8_t phy_mode = PhyMode::kUnknown;
+    uint8_t phy_mode = ddk_phy_to_ralink_phy(WLAN_PHY_OFDM);  // Default
     if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_PHY) {
         phy_mode = ddk_phy_to_ralink_phy(pkt->info.phy);
     }
-    if (phy_mode != PhyMode::kUnknown) {
-        txwi0.set_phy_mode(phy_mode);
-    } else {
-        txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
-    }
+    txwi0.set_phy_mode(phy_mode);
 
-    // TODO(porce): Incorporate this into pkt->info
-    txwi0.set_phy_mode(PhyMode::kHtMixMode);
+    uint8_t mcs = kMaxOfdmMcs;  // this is the same as the max HT mcs
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_MCS) {
+        mcs = mcs_to_ralink_mcs(phy_mode, pkt->info.mcs);
+    }
+    txwi0.set_mcs(mcs);
+
+    uint8_t cbw = CBW20;
+    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH) {
+        cbw = pkt->info.cbw;
+        // TODO(porce): Investigate how to configure txwi differently
+        // for CBW40ABOVE and CBW40BELOW
+    }
+    txwi0.set_bw(cbw == CBW20 ? 0 : 1);
+
+    txwi0.set_sgi(1);
+    txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
     auto frame = static_cast<const uint8_t*>(pkt->packet_head->data);
@@ -3433,11 +3439,12 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
 }
 
 // Looks up the WCID for addr1 in the frame. If no WCID was found, 255 is returned.
-// Note: This method must be evolved once multiple BSS are supported or the STA runs in AP mode and
-// uses hardware encryption.
+// Note: This method must be evolved once multiple BSS are supported or the STA runs in AP mode
+// and uses hardware encryption.
 uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
     if (protected_frame) {
-        // TODO(hahnr): Replace addresses and constants with MacAddr once it was moved to common/.
+        // TODO(hahnr): Replace addresses and constants with MacAddr once it was moved to
+        // common/.
         if (memcmp(addr1, kBcastAddr, 6) == 0) {
             return kWcidBcastAddr;
         } else if (memcmp(addr1, bssid_, 6) == 0) {
