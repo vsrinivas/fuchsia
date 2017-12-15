@@ -682,14 +682,19 @@ func newPackageDirFromReader(r io.Reader, filesystem *Filesystem) (*packageDir, 
 	for {
 		line, err := b.ReadString('\n')
 		if err == io.EOF {
-			break
+			if len(line) == 0 {
+				break
+			}
+			err = nil
 		}
+
 		if err != nil {
 			log.Printf("pkgfs: failed to read package contents from %v: %s", r, err)
 			// TODO(raggi): better error?
 			return nil, fs.ErrFailedPrecondition
 		}
-		parts := strings.SplitN(line[:len(line)-1], "=", 2)
+		line = strings.TrimSpace(line)
+		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
 			log.Printf("pkgfs: bad contents line: %v", line)
 			continue

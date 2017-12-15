@@ -149,7 +149,10 @@ func parseManifest(path string) (map[string]string, error) {
 	for {
 		line, err := b.ReadString('\n')
 		if err == io.EOF {
-			return r, nil
+			if len(strings.TrimSpace(line)) == 0 {
+				return r, nil
+			}
+			err = nil
 		}
 		if err != nil {
 			return r, err
