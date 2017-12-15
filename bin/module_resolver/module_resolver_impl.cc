@@ -187,6 +187,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
     auto response = QueryResponse::New();
     response->proposals = std::move(proposals);
     done(std::move(response));
+    return;
   }
 
   for (const auto& id_entry : entries_) {
