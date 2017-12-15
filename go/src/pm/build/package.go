@@ -77,16 +77,17 @@ func Update(cfg *Config) error {
 	}
 
 	contentsPath := filepath.Join(metadir, "contents")
+	pkgContents := manifest.Content()
 
 	// manifestLines is a channel containing unpacked manifest paths
-	var manifestLines = make(chan struct{ src, dest string }, len(manifest.Paths))
-	for dest, src := range manifest.Paths {
+	var manifestLines = make(chan struct{ src, dest string }, len(pkgContents))
+	for dest, src := range pkgContents {
 		manifestLines <- struct{ src, dest string }{src, dest}
 	}
 	close(manifestLines)
 
 	// contentCollector receives "contents" lines to added to contentsPath
-	var contentCollector = make(chan string, len(manifest.Paths))
+	var contentCollector = make(chan string, len(pkgContents))
 	var errors = make(chan error)
 
 	// w is a group that is done when contentCollector is fully populated
