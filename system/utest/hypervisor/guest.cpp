@@ -16,6 +16,12 @@
 
 static const uint64_t kTrapKey = 0x1234;
 
+enum {
+    X86_PTE_P = 0x01,  /* P    Valid           */
+    X86_PTE_RW = 0x02, /* R/W  Read/Write      */
+    X86_PTE_PS = 0x80, /* PS   Page size       */
+};
+
 extern const char vcpu_resume_start[];
 extern const char vcpu_resume_end[];
 extern const char vcpu_interrupt_start[];
@@ -66,12 +72,18 @@ static bool setup(test_t* test, const char* start, const char* end) {
 
     // Setup the guest.
     uintptr_t guest_ip = 0;
+    uintptr_t phys_addr = test->guest.phys_mem().addr();
 #if __x86_64__
-    ASSERT_EQ(test->guest.CreatePageTable(&guest_ip), ZX_OK);
-    ASSERT_EQ(guest_ip, GUEST_IP);
+    // PML4 entry pointing to (phys_addr + 0x1000)
+    uint64_t* pte_off = reinterpret_cast<uint64_t*>(phys_addr);
+    *pte_off = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
+    // PDP entry with 1GB page.
+    pte_off = reinterpret_cast<uint64_t*>(phys_addr + PAGE_SIZE);
+    *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_RW;
+    guest_ip = GUEST_IP;
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__
-    memcpy((void*)(test->guest.phys_mem().addr() + guest_ip), start, end - start);
+    memcpy((void*)(phys_addr + guest_ip), start, end - start);
 
     zx_vcpu_create_args_t args = {
         guest_ip,
