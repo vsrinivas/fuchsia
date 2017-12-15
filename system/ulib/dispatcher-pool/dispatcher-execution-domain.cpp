@@ -7,7 +7,6 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
-namespace audio {
 namespace dispatcher {
 
 // static
@@ -250,4 +249,3 @@ void ExecutionDomain::DispatchPendingWork() {
 }
 
 }  // namespace dispatcher
-}  // namespace audio

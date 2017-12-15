@@ -11,7 +11,6 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
-namespace audio {
 namespace dispatcher {
 
 // static
@@ -253,4 +252,3 @@ zx_status_t Channel::Write(const void*  buf,
 }
 
 }  // namespace dispatcher
-}  // namespace audio

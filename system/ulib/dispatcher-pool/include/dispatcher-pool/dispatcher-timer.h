@@ -11,7 +11,6 @@
 
 #include <dispatcher-pool/dispatcher-event-source.h>
 
-namespace audio {
 namespace dispatcher {
 
 // class Timer
@@ -84,4 +83,3 @@ private:
 };
 
 }  // namespace dispatcher
-}  // namespace audio

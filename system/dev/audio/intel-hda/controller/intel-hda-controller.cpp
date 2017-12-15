@@ -358,7 +358,7 @@ zx_status_t IntelHDAController::DriverBind(void* ctx,
 
 void IntelHDAController::DriverRelease(void* ctx) {
     // If we are the last one out the door, turn off the lights in the thread pool.
-    audio::dispatcher::ThreadPool::ShutdownAll();
+    dispatcher::ThreadPool::ShutdownAll();
 }
 
 }  // namespace intel_hda

@@ -19,7 +19,6 @@
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 
-namespace audio {
 namespace dispatcher {
 
 class ThreadPool : public fbl::RefCounted<ThreadPool>,
@@ -97,4 +96,3 @@ private:
 };
 
 }  // namespace dispatcher
-}  // namespace audio

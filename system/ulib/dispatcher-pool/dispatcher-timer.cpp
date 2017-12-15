@@ -9,7 +9,6 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 
-namespace audio {
 namespace dispatcher {
 
 // static
@@ -223,4 +222,3 @@ zx_status_t Timer::SetTimerAndWaitLocked() {
 }
 
 }  // namespace dispatcher
-}  // namespace audio

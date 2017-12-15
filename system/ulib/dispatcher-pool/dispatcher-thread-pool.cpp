@@ -12,7 +12,6 @@
 
 #include "debug-logging.h"
 
-namespace audio {
 namespace dispatcher {
 
 fbl::Mutex ThreadPool::active_pools_lock_;
@@ -332,4 +331,3 @@ int ThreadPool::Thread::Main() {
 }
 
 }  // namespace dispatcher
-}  // namespace audio

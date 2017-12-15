@@ -19,7 +19,6 @@
 #include <fbl/ref_ptr.h>
 #include <unistd.h>
 
-namespace audio {
 namespace dispatcher {
 
 class Channel;
@@ -118,4 +117,3 @@ private:
 };
 
 }  // namespace dispatcher
-}  // namespace audio

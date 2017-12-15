@@ -9,7 +9,6 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
 
-namespace audio {
 namespace dispatcher {
 
 // static
@@ -155,4 +154,3 @@ void WakeupEvent::Dispatch(ExecutionDomain* domain) {
 }
 
 }  // namespace dispatcher
-}  // namespace audio

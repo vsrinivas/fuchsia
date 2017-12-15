@@ -10,7 +10,6 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
-namespace audio {
 namespace dispatcher {
 
 EventSource::EventSource(zx_signals_t process_signal_mask)
@@ -199,4 +198,3 @@ fbl::RefPtr<ExecutionDomain> EventSource::ScheduleDispatch(
 }
 
 }  // namespace dispatcher
-}  // namespace audio

@@ -739,5 +739,5 @@ extern "C" zx_status_t gauss_tdm_bind(void* ctx, zx_device_t* device, void** coo
 }
 
 extern "C" void gauss_tdm_release(void*) {
-    audio::dispatcher::ThreadPool::ShutdownAll();
+    dispatcher::ThreadPool::ShutdownAll();
 }

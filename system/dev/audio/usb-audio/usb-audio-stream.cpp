@@ -1179,5 +1179,5 @@ zx_status_t usb_audio_source_create(zx_device_t* device, usb_protocol_t* usb, in
 
 extern "C"
 void usb_audio_driver_release(void*) {
-    audio::dispatcher::ThreadPool::ShutdownAll();
+    dispatcher::ThreadPool::ShutdownAll();
 }

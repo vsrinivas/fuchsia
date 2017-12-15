@@ -11,7 +11,6 @@
 
 #include <dispatcher-pool/dispatcher-event-source.h>
 
-namespace audio {
 namespace dispatcher {
 
 // class WakeupEvent
@@ -65,4 +64,3 @@ private:
 };
 
 }  // namespace dispatcher
-}  // namespace audio

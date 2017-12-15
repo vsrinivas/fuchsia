@@ -713,5 +713,5 @@ extern "C" zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* device,
 
 extern "C" void gauss_pdm_input_release(void*) {
     zxlogf(DEBUG1, "gauss_pdm_input_release\n");
-    audio::dispatcher::ThreadPool::ShutdownAll();
+    dispatcher::ThreadPool::ShutdownAll();
 }

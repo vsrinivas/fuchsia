@@ -15,7 +15,6 @@
 
 #include <dispatcher-pool/dispatcher-event-source.h>
 
-namespace audio {
 namespace dispatcher {
 
 class ThreadPool;
@@ -177,15 +176,13 @@ private:
 // fact that you are running in a particular execution domain.  Instead of
 // saying something like this...
 //
-// ::audio::dispatcher::ExecutionDomain::ScopedToken token(my_domain_->token());
+// ::dispatcher::ExecutionDomain::ScopedToken token(my_domain_->token());
 //
 // One can also say...
 //
 // OBTAIN_EXECUTION_DOMAIN_TOKEN(token, my_domain_);
 //
 #define OBTAIN_EXECUTION_DOMAIN_TOKEN(_sym_name, _exe_domain) \
-    ::audio::dispatcher::ExecutionDomain::ScopedToken _sym_name((_exe_domain)->token())
+    ::dispatcher::ExecutionDomain::ScopedToken _sym_name((_exe_domain)->token())
 
 }  // namespace dispatcher
-}  // namespace audio
-
