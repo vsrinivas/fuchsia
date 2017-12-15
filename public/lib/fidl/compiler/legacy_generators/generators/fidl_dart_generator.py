@@ -255,8 +255,8 @@ def DartDefaultValue(field):
       assert field.default == "default"
       return "new %s()" % GetDartType(field.kind)
     if mojom.IsEnumKind(field.kind):
-      return ("new %s(%s)" %
-          (GetDartType(field.kind), ExpressionToText(field.default)))
+      return ("%s.%s" % (GetDartType(field.kind),
+                         GetNameForElement(field.default)))
     return ExpressionToText(field.default)
   if field.kind in mojom.PRIMITIVES:
     return _kind_to_dart_default_value[field.kind]
