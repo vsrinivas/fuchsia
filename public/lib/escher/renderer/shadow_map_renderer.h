@@ -27,7 +27,8 @@ class ShadowMapRenderer : public Renderer {
   // projection.  This is used to model very distance light sources (such as the
   // sun), where the light intensity and direction to the light don't change
   // appreciably as an object is moved around the stage.
-  ShadowMapPtr GenerateDirectionalShadowMap(const Stage& stage,
+  ShadowMapPtr GenerateDirectionalShadowMap(const FramePtr& frame,
+                                            const Stage& stage,
                                             const Model& model,
                                             const glm::vec3 direction,
                                             const glm::vec3 light_color);

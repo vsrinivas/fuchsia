@@ -6,7 +6,7 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/renderer/timestamper.h"
+#include "lib/escher/renderer/frame.h"
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/image_factory.h"
 #include "lib/escher/vk/texture.h"
@@ -38,10 +38,10 @@ namespace escher {
 DepthToColor::DepthToColor(Escher* escher, ImageFactory* image_factory)
     : escher_(escher), image_factory_(image_factory) {}
 
-TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
+TexturePtr DepthToColor::Convert(const FramePtr& frame,
                                  const TexturePtr& depth_texture,
-                                 vk::ImageUsageFlags image_flags,
-                                 Timestamper* timestamper) {
+                                 vk::ImageUsageFlags image_flags) {
+  auto command_buffer = frame->command_buffer();
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
 
@@ -74,7 +74,7 @@ TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
   kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
                     work_groups_x, work_groups_y, 1, nullptr);
 
-  timestamper->AddTimestamp("converted depth image to color image");
+  frame->AddTimestamp("converted depth image to color image");
   return tmp_texture;
 }
 

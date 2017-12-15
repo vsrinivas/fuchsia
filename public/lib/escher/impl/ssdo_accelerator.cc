@@ -7,7 +7,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/compute_shader.h"
-#include "lib/escher/renderer/timestamper.h"
+#include "lib/escher/renderer/frame.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/buffer.h"
@@ -374,18 +374,18 @@ const VulkanContext& SsdoAccelerator::vulkan_context() const {
   return escher_->vulkan_context();
 }
 
-TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
-                                                const TexturePtr& depth_texture,
-                                                vk::ImageUsageFlags image_flags,
-                                                Timestamper* timestamper) {
+TexturePtr SsdoAccelerator::GenerateLookupTable(
+    const FramePtr& frame,
+    const TexturePtr& depth_texture,
+    vk::ImageUsageFlags image_flags) {
   if (!enabled_) {
-    return GenerateNullLookupTable(command_buffer, depth_texture, image_flags,
-                                   timestamper);
+    return GenerateNullLookupTable(frame, depth_texture, image_flags);
   }
   TRACE_DURATION("gfx", "escher::SsdoAccelerator::GenerateLookupTable");
 
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
+  auto command_buffer = frame->command_buffer();
 
   // Size of neighborhood of pixels to work on for each invocation of the
   // compute kernel.  Must match the value in the compute shader source code,
@@ -419,17 +419,17 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
   kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
                     work_groups_x, work_groups_y, 1, nullptr);
 
-  timestamper->AddTimestamp("generated SSDO acceleration lookup table");
+  frame->AddTimestamp("generated SSDO acceleration lookup table");
   return tmp_texture;
 }
 
 TexturePtr SsdoAccelerator::GenerateNullLookupTable(
-    CommandBuffer* command_buffer,
+    const FramePtr& frame,
     const TexturePtr& depth_texture,
-    vk::ImageUsageFlags image_flags,
-    Timestamper* timestamper) {
+    vk::ImageUsageFlags image_flags) {
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
+  auto command_buffer = frame->command_buffer();
 
   // Size of neighborhood of pixels to work on for each invocation of the
   // compute kernel.  Must match the value in the compute shader source code,
@@ -463,21 +463,22 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
   null_kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
                          work_groups_x, work_groups_y, 1, nullptr);
 
-  timestamper->AddTimestamp("generated null SSDO acceleration lookup table");
+  frame->AddTimestamp("generated null SSDO acceleration lookup table");
   return tmp_texture;
 }
 
 TexturePtr SsdoAccelerator::UnpackLookupTable(
-    CommandBuffer* command_buffer,
+    const FramePtr& frame,
     const TexturePtr& packed_lookup_table,
     uint32_t width,
-    uint32_t height,
-    Timestamper* timestamper) {
+    uint32_t height) {
   constexpr uint32_t kSize = 8;
   FXL_DCHECK(width <= packed_lookup_table->width() * 4);
   FXL_DCHECK(height <= packed_lookup_table->height() * 4);
   FXL_DCHECK(width + kSize > packed_lookup_table->width() * 4);
   FXL_DCHECK(height + kSize > packed_lookup_table->height() * 4);
+
+  auto command_buffer = frame->command_buffer();
 
   ImagePtr result_image =
       image_factory_->NewImage({vk::Format::eR8G8B8A8Unorm, width, height, 1,
@@ -495,16 +496,15 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   if (!unpack_kernel_) {
     FXL_DLOG(INFO) << "Lazily instantiating unpack_kernel_";
     unpack_kernel_ = std::make_unique<ComputeShader>(
-        escher_,
-        std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
-                                     vk::ImageLayout::eGeneral},
+        escher_, std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
+                                              vk::ImageLayout::eGeneral},
         std::vector<vk::DescriptorType>{}, 0, g_unpack_kernel_src);
   }
   unpack_kernel_->Dispatch({packed_lookup_table, result_texture}, {},
                            command_buffer, work_groups_x, work_groups_y, 1,
                            nullptr);
 
-  timestamper->AddTimestamp(
+  frame->AddTimestamp(
       "finished unpacking SSDO acceleration table for debug visualization");
 
   return result_texture;

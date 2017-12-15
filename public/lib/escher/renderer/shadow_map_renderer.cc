@@ -56,6 +56,7 @@ ShadowMapRenderer::~ShadowMapRenderer() {
 }
 
 ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
+    const FramePtr& frame,
     const Stage& stage,
     const Model& model,
     const glm::vec3 direction,
@@ -80,8 +81,7 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
   auto fb = fxl::MakeRefCounted<Framebuffer>(escher(), color_image, depth_image,
                                              shadow_map_pass_->vk());
 
-  BeginFrame();
-  auto command_buffer = current_frame();
+  auto command_buffer = frame->command_buffer();
 
   command_buffer->TransitionImageLayout(
       color_image, vk::ImageLayout::eUndefined,
@@ -101,7 +101,9 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
   model_renderer_->Draw(stage, display_list, command_buffer);
   command_buffer->EndRenderPass();
 
-  EndFrame(nullptr, nullptr);
+  auto semaphore = escher::Semaphore::New(escher()->vk_device());
+  frame->SubmitPartialFrame(semaphore);
+  color_image->SetWaitSemaphore(std::move(semaphore));
 
   // NOTE: the bias matrix used for shadowmapping in Vulkan is different than
   // OpenGL, so we can't use glm::scaleBias().

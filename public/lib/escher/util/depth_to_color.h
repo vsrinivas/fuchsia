@@ -6,7 +6,6 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/compute_shader.h"
-#include "lib/escher/renderer/timestamper.h"
 
 namespace escher {
 
@@ -17,10 +16,9 @@ class DepthToColor {
  public:
   DepthToColor(Escher* escher, ImageFactory* image_factory);
 
-  TexturePtr Convert(impl::CommandBuffer* command_buffer,
+  TexturePtr Convert(const FramePtr& frame,
                      const TexturePtr& depth_texture,
-                     vk::ImageUsageFlags image_flags,
-                     Timestamper* timestamper);
+                     vk::ImageUsageFlags image_flags);
 
  private:
   Escher* const escher_;

@@ -53,14 +53,16 @@ class Renderer : public escher::Renderer {
 
  private:
   // Update descriptor set with current channel textures.
-  vk::DescriptorSet GetUpdatedDescriptorSet(escher::Texture* channel0,
+  vk::DescriptorSet GetUpdatedDescriptorSet(const escher::FramePtr& frame,
+                                            escher::Texture* channel0,
                                             escher::Texture* channel1,
                                             escher::Texture* channel2,
                                             escher::Texture* channel3);
 
   // Obtain a texture to bind to a descriptor set, either |texture_or_null| or
   // (if it is null) the default white texture.
-  escher::Texture* GetChannelTexture(escher::Texture* texture_or_null);
+  escher::Texture* GetChannelTexture(const escher::FramePtr& frame,
+                                     escher::Texture* texture_or_null);
 
   escher::TexturePtr CreateWhiteTexture();
 

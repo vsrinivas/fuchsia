@@ -37,7 +37,8 @@ void SketchyDemo::InitializeEscherStage() {
 void SketchyDemo::DrawFrame() {
   escher::Model* model = page_.GetModel(stopwatch_, &stage_);
   escher::Camera camera = escher::Camera::NewOrtho(stage_.viewing_volume());
-  swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera,
+  swapchain_helper_.DrawFrame(escher()->NewFrame("Sketchy Demo"),
+                              renderer_.get(), stage_, *model, camera,
                               escher::ShadowMapPtr());
 }
 

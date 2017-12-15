@@ -24,7 +24,7 @@ void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf,
                                      std::string name) {
   QueryRange* range = ObtainRange(cmd_buf);
   cmd_buf->get().writeTimestamp(flags, range->pool, current_pool_index_);
-  results_.push_back(Result{0, 0, std::move(name)});
+  results_.push_back(Result{0, 0, 0, std::move(name)});
   ++range->count;
   ++current_pool_index_;
   ++query_count_;
@@ -53,15 +53,24 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
   query_count_ = 0;
   current_pool_index_ = 0;
 
-  const uint64_t first_time = results_[0].time;
-  const float microsecond_multiplier = timestamp_period_ * 0.001f;
+  // |timestamp_period_| is the number of nanoseconds per time unit reported by
+  // the timer query, so this is the number of microseconds in the same time
+  // per the same time unit.  We need to use this below because an IEEE double
+  // doesn't have enough precision to hold nanoseconds since the epoch.
+  const double microsecond_multiplier = timestamp_period_ * 0.001;
   for (size_t i = 0; i < results_.size(); ++i) {
-    results_[i].time = static_cast<uint64_t>((results_[i].time - first_time) *
-                                             microsecond_multiplier);
-  }
-  results_[0].elapsed = 0;
-  for (size_t i = 1; i < results_.size(); ++i) {
-    results_[i].elapsed = results_[i].time - results_[i - 1].time;
+    // Avoid precision issues that we would have if we simply multiplied by
+    // timestamp_period_.
+    results_[i].raw_nanoseconds =
+        1000 * static_cast<uint64_t>(results_[i].raw_nanoseconds *
+                                     microsecond_multiplier);
+
+    // Microseconds since the beginning of this timing query.
+    results_[i].time =
+        (results_[i].raw_nanoseconds - results_[0].raw_nanoseconds) / 1000;
+
+    // Microseconds since the previous event.
+    results_[i].elapsed = i == 0 ? 0 : results_[i].time - results_[i - 1].time;
   }
 
   return std::move(results_);

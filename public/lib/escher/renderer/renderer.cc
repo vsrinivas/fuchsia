@@ -20,86 +20,12 @@
 namespace escher {
 
 Renderer::Renderer(Escher* escher)
-    : context_(escher->vulkan_context()),
-      escher_(escher),
-      pool_(escher->command_buffer_pool()) {
+    : context_(escher->vulkan_context()), escher_(escher) {
   escher->IncrementRendererCount();
 }
 
 Renderer::~Renderer() {
-  FXL_DCHECK(!current_frame_);
   escher()->DecrementRendererCount();
-}
-
-void Renderer::BeginFrame() {
-  TRACE_DURATION("gfx", "escher::Renderer::BeginFrame");
-
-  FXL_DCHECK(!current_frame_);
-  ++frame_number_;
-  current_frame_ = pool_->GetCommandBuffer();
-
-  FXL_DCHECK(!profiler_);
-  if (enable_profiling_ && escher()->supports_timer_queries()) {
-    profiler_ = fxl::MakeRefCounted<TimestampProfiler>(
-        context_.device, escher()->timestamp_period());
-    AddTimestamp("throwaway");  // Intel/Mesa workaround; see EndFrame().
-    AddTimestamp("start of frame");
-  }
-}
-
-void Renderer::SubmitPartialFrame() {
-  TRACE_DURATION("gfx", "escher::Renderer::SubmitPartialFrame");
-  FXL_DCHECK(current_frame_);
-  current_frame_->Submit(context_.queue, nullptr);
-  current_frame_ = pool_->GetCommandBuffer();
-}
-
-void Renderer::EndFrame(const SemaphorePtr& frame_done,
-                        FrameRetiredCallback frame_retired_callback) {
-  TRACE_DURATION("gfx", "escher::Renderer::EndFrame");
-
-  FXL_DCHECK(current_frame_);
-  current_frame_->AddSignalSemaphore(frame_done);
-  if (profiler_) {
-    // Avoid implicit reference to this in closure.
-    TimestampProfilerPtr profiler = std::move(profiler_);
-    auto frame_number = frame_number_;
-    current_frame_->Submit(context_.queue, [frame_retired_callback, profiler,
-                                            frame_number]() {
-      if (frame_retired_callback) {
-        frame_retired_callback();
-      }
-      FXL_LOG(INFO) << "------------------------------------------------------";
-      FXL_LOG(INFO) << "Timestamps for frame #" << frame_number;
-      FXL_LOG(INFO) << "total\t | \tsince previous (all times in microseconds)";
-      FXL_LOG(INFO) << "------------------------------------------------------";
-      auto timestamps = profiler->GetQueryResults();
-      // Workaround: Intel/Mesa gives a screwed-up value for the second time.
-      // So, we add a throwaway value first (see BeginFrame()), and then fix up
-      // the first value that we actually print.
-      timestamps[1].time = 0;
-      timestamps[1].elapsed = 0;
-      timestamps[2].elapsed = timestamps[2].time;
-      for (size_t i = 1; i < timestamps.size(); ++i) {
-        FXL_LOG(INFO) << timestamps[i].time << " \t | \t"
-                      << timestamps[i].elapsed << "   \t" << timestamps[i].name;
-      }
-      FXL_LOG(INFO) << "------------------------------------------------------";
-    });
-  } else {
-    current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
-  }
-  current_frame_ = nullptr;
-
-  escher()->Cleanup();
-}
-
-void Renderer::AddTimestamp(const char* name) {
-  FXL_DCHECK(current_frame_);
-  if (profiler_) {
-    profiler_->AddTimestamp(current_frame_,
-                            vk::PipelineStageFlagBits::eBottomOfPipe, name);
-  }
 }
 
 void Renderer::RunOffscreenBenchmark(
@@ -107,8 +33,9 @@ void Renderer::RunOffscreenBenchmark(
     uint32_t framebuffer_height,
     vk::Format framebuffer_format,
     size_t frame_count,
-    std::function<void(const ImagePtr&, const SemaphorePtr&)> draw_func) {
+    std::function<void(const FramePtr& frame, const ImagePtr&)> draw_func) {
   constexpr uint64_t kSecondsToNanoseconds = 1000000000;
+  const char* kTraceLiteral = "RunOffscreenBenchmark";
 
   // Create the images that we will render into, and the semaphores that will
   // prevent us from rendering into the same image concurrently.  At the same
@@ -128,12 +55,14 @@ void Renderer::RunOffscreenBenchmark(
       images[i] = std::move(im);
       semaphores[i] = Semaphore::New(context_.device);
 
-      draw_func(images[i], semaphores[i]);
+      auto frame = escher()->NewFrame(kTraceLiteral);
+      draw_func(frame, images[i]);
+      frame->EndFrame(semaphores[i], nullptr);
     }
 
     // Prepare all semaphores to be waited-upon, and wait for the throwaway
     // frames to finish.
-    auto command_buffer = pool_->GetCommandBuffer();
+    auto command_buffer = escher()->command_buffer_pool()->GetCommandBuffer();
     command_buffer->Submit(context_.queue, nullptr);
     FXL_CHECK(vk::Result::eSuccess ==
               command_buffer->Wait(kSwapchainSize * kSecondsToNanoseconds));
@@ -144,12 +73,10 @@ void Renderer::RunOffscreenBenchmark(
   stopwatch.Start();
 
   impl::CommandBuffer* throttle = nullptr;
-  bool was_profiling = enable_profiling_;
-  set_enable_profiling(false);
   for (size_t current_frame = 0; current_frame < frame_count; ++current_frame) {
     size_t image_index = current_frame % kSwapchainSize;
 
-    auto command_buffer = pool_->GetCommandBuffer();
+    auto command_buffer = escher()->command_buffer_pool()->GetCommandBuffer();
     command_buffer->AddWaitSemaphore(semaphores[image_index],
                                      vk::PipelineStageFlagBits::eBottomOfPipe);
     command_buffer->Submit(context_.queue, nullptr);
@@ -165,13 +92,14 @@ void Renderer::RunOffscreenBenchmark(
       throttle = command_buffer;
     }
 
-    set_enable_profiling(current_frame == frame_count - 1);
-    draw_func(images[image_index], semaphores[image_index]);
+    auto frame =
+        escher()->NewFrame(kTraceLiteral, current_frame == frame_count - 1);
+    draw_func(frame, images[image_index]);
+    frame->EndFrame(semaphores[image_index], nullptr);
   }
-  set_enable_profiling(was_profiling);
 
   // Wait for the last frame to finish.
-  auto command_buffer = pool_->GetCommandBuffer();
+  auto command_buffer = escher()->command_buffer_pool()->GetCommandBuffer();
   command_buffer->AddWaitSemaphore(
       semaphores[(frame_count - 1) % kSwapchainSize],
       vk::PipelineStageFlagBits::eBottomOfPipe);

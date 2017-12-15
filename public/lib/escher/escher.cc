@@ -8,6 +8,8 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/impl/vk/pipeline_cache.h"
+#include "lib/escher/profiling/timestamp_profiler.h"
+#include "lib/escher/renderer/frame.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_allocator.h"
@@ -152,6 +154,13 @@ TexturePtr Escher::NewTexture(ImagePtr image,
   return fxl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
                                       filter, aspect_mask,
                                       use_unnormalized_coordinates);
+}
+
+FramePtr Escher::NewFrame(const char* trace_literal, bool enable_gpu_logging) {
+  auto frame = fxl::AdoptRef<Frame>(
+      new Frame(this, next_frame_number_++, trace_literal, enable_gpu_logging));
+  frame->BeginFrame();
+  return frame;
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {

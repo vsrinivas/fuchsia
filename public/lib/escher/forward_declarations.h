@@ -14,6 +14,7 @@ namespace escher {
 class Buffer;
 class Camera;
 class Escher;
+class Frame;
 class Framebuffer;
 class GpuAllocator;
 class GpuMem;
@@ -45,6 +46,7 @@ struct VulkanSwapchain;
 
 typedef fxl::RefPtr<Buffer> BufferPtr;
 typedef fxl::RefPtr<Escher> EscherPtr;
+typedef fxl::RefPtr<Frame> FramePtr;
 typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
 typedef fxl::RefPtr<GpuMem> GpuMemPtr;
 typedef fxl::RefPtr<Image> ImagePtr;

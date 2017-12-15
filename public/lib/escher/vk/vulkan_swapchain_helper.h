@@ -20,7 +20,9 @@ class VulkanSwapchainHelper {
                         vk::Queue queue);
   ~VulkanSwapchainHelper();
 
-  void DrawFrame(PaperRenderer* renderer,
+  // Calls EndFrame() after drawing.
+  void DrawFrame(const FramePtr& frame,
+                 PaperRenderer* renderer,
                  const Stage& stage,
                  const Model& model,
                  const Camera& camera,

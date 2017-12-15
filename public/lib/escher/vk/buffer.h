@@ -47,7 +47,9 @@ class Buffer : public WaitableResource {
   ~Buffer() override;
 
   // Return the underlying Vulkan buffer object.
+  // TODO(ES-44): Deprecated.  Use vk() instead.
   vk::Buffer get() { return buffer_; }
+  vk::Buffer vk() { return buffer_; }
 
   // Return the size of the buffer.
   vk::DeviceSize size() const { return size_; }

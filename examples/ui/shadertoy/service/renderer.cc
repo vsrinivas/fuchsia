@@ -4,6 +4,8 @@
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 
+#include <trace/event.h>
+
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/command_buffer.h"
@@ -99,28 +101,33 @@ Renderer::Renderer(Escher* escher, vk::Format framebuffer_format)
       descriptor_set_pool_(escher,
                            Compiler::GetDescriptorSetLayoutCreateInfo()) {}
 
-escher::Texture* Renderer::GetChannelTexture(escher::Texture* texture_or_null) {
+escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,
+                                             escher::Texture* texture_or_null) {
   if (!texture_or_null) {
     return white_texture_.get();
   }
-  current_frame()->KeepAlive(texture_or_null);
+  frame->command_buffer()->KeepAlive(texture_or_null);
   return texture_or_null;
 }
 
-vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(escher::Texture* channel0,
-                                                    escher::Texture* channel1,
-                                                    escher::Texture* channel2,
-                                                    escher::Texture* channel3) {
+vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
+    const escher::FramePtr& frame,
+    escher::Texture* channel0,
+    escher::Texture* channel1,
+    escher::Texture* channel2,
+    escher::Texture* channel3) {
+  TRACE_DURATION("gfx", "shadertoy::Renderer::GetUpdatedDescriptorSet");
+
   constexpr uint32_t kChannelCount = 4;
   vk::DescriptorImageInfo channel_image_info[kChannelCount];
   vk::WriteDescriptorSet writes[kChannelCount];
   escher::Texture* textures[kChannelCount] = {channel0, channel1, channel2,
                                               channel3};
   auto descriptor_set =
-      descriptor_set_pool_.Allocate(1, current_frame())->get(0);
+      descriptor_set_pool_.Allocate(1, frame->command_buffer())->get(0);
 
   for (uint32_t i = 0; i < kChannelCount; ++i) {
-    auto channel_texture = GetChannelTexture(textures[i]);
+    auto channel_texture = GetChannelTexture(frame, textures[i]);
 
     channel_image_info[i].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
     channel_image_info[i].imageView = channel_texture->image_view();
@@ -148,14 +155,16 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
                          escher::Texture* channel3,
                          escher::SemaphorePtr framebuffer_ready,
                          escher::SemaphorePtr frame_done) {
-  BeginFrame();
+  TRACE_DURATION("gfx", "shadertoy::Renderer::DrawFrame");
 
-  current_frame()->KeepAlive(framebuffer);
-  current_frame()->AddWaitSemaphore(
+  auto frame = escher()->NewFrame("Shadertoy Renderer");
+  auto command_buffer = frame->command_buffer();
+  auto vk_command_buffer = frame->vk_command_buffer();
+
+  command_buffer->KeepAlive(framebuffer);
+  command_buffer->AddWaitSemaphore(
       std::move(framebuffer_ready),
       vk::PipelineStageFlagBits::eColorAttachmentOutput);
-
-  auto vk_command_buffer = current_frame()->get();
 
   vk::Viewport viewport;
   viewport.width = framebuffer->width();
@@ -163,9 +172,9 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
   vk_command_buffer.setViewport(0, 1, &viewport);
 
   auto descriptor_set =
-      GetUpdatedDescriptorSet(channel0, channel1, channel2, channel3);
+      GetUpdatedDescriptorSet(frame, channel0, channel1, channel2, channel3);
 
-  current_frame()->BeginRenderPass(render_pass_, framebuffer, {});
+  command_buffer->BeginRenderPass(render_pass_, framebuffer, {});
   vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                  pipeline->vk_pipeline());
   vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
@@ -174,15 +183,15 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
   vk_command_buffer.pushConstants(pipeline->vk_pipeline_layout(),
                                   vk::ShaderStageFlagBits::eFragment, 0,
                                   sizeof(Params), &params);
-  current_frame()->DrawMesh(full_screen_);
+  command_buffer->DrawMesh(full_screen_);
 
-  current_frame()->EndRenderPass();
+  command_buffer->EndRenderPass();
 
-  current_frame()->TransitionImageLayout(
+  command_buffer->TransitionImageLayout(
       framebuffer->get_image(0), vk::ImageLayout::eColorAttachmentOptimal,
       vk::ImageLayout::ePresentSrcKHR);
 
-  EndFrame(frame_done, nullptr);
+  frame->EndFrame(frame_done, nullptr);
 }
 
 escher::TexturePtr Renderer::CreateWhiteTexture() {

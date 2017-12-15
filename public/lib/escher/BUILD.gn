@@ -164,6 +164,8 @@ source_set("escher") {
     "math/rotations.h",
     "profiling/timestamp_profiler.cc",
     "profiling/timestamp_profiler.h",
+    "renderer/frame.cc",
+    "renderer/frame.h",
     "renderer/paper_renderer.cc",
     "renderer/paper_renderer.h",
     "renderer/renderer.cc",

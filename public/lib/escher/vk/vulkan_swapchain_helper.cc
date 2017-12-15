@@ -25,7 +25,8 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
 
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 
-void VulkanSwapchainHelper::DrawFrame(PaperRenderer* renderer,
+void VulkanSwapchainHelper::DrawFrame(const FramePtr& frame,
+                                      PaperRenderer* renderer,
                                       const Stage& stage,
                                       const Model& model,
                                       const Camera& camera,
@@ -63,8 +64,9 @@ void VulkanSwapchainHelper::DrawFrame(PaperRenderer* renderer,
   // signal the semaphore.
   auto& color_image_out = swapchain_.images[swapchain_index];
   color_image_out->SetWaitSemaphore(image_available_semaphore);
-  renderer->DrawFrame(stage, model, camera, color_image_out, shadow_map,
-                      overlay_model, render_finished_semaphore, nullptr);
+  renderer->DrawFrame(frame, stage, model, camera, color_image_out, shadow_map,
+                      overlay_model);
+  frame->EndFrame(render_finished_semaphore, nullptr);
 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "escher::VulkanSwapchain::Present");

@@ -29,8 +29,9 @@ class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
                     std::string name);
 
   struct Result {
-    uint64_t time;     // microseconds elapsed since the first timestamp
-    uint64_t elapsed;  // microseconds elapsed since the previous timestamp
+    uint64_t raw_nanoseconds;  // nanoseconds according to some timebase.
+    uint64_t time;     // microseconds elapsed since the first timestamp.
+    uint64_t elapsed;  // microseconds elapsed since the previous timestamp.
     std::string name;
   };
 

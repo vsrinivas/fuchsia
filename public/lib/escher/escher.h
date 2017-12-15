@@ -40,6 +40,11 @@ class Escher : public MeshBuilderFactory {
   ImagePtr NewGradientImage(uint32_t width, uint32_t height);
   // Returns single-channel luminance image.
   ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
+  // Return a new Frame, which is passed to Renderers to obtain and submit
+  // command buffers, to add timestamps for GPU profiling, etc.  If
+  // |enable_gpu_logging| is true, GPU profiling timestamps will be logged via
+  // FXL_LOG().
+  FramePtr NewFrame(const char* trace_literal, bool enable_gpu_logging = false);
 
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
@@ -89,9 +94,8 @@ class Escher : public MeshBuilderFactory {
   float timestamp_period() const { return timestamp_period_; }
 
  private:
-  friend class Renderer;
-
   // Called by Renderer constructor and destructor, respectively.
+  friend class Renderer;
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }
 
@@ -115,6 +119,8 @@ class Escher : public MeshBuilderFactory {
 
   bool supports_timer_queries_ = false;
   float timestamp_period_ = 0.f;
+
+  uint64_t next_frame_number_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Escher);
 };

@@ -10,12 +10,14 @@
 
 namespace escher {
 class Escher;
+class Frame;
 class Image;
 class Model;
 class PaperRenderer;
 class Semaphore;
 class ShadowMapRenderer;
 class Stage;
+using FramePtr = fxl::RefPtr<Frame>;
 using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
 }  // namespace escher
@@ -63,11 +65,11 @@ class Compositor : public Resource {
  private:
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
 
-  void DrawLayer(escher::PaperRenderer* escher_renderer,
+  void DrawLayer(const escher::FramePtr& frame,
+                 escher::PaperRenderer* escher_renderer,
                  escher::ShadowMapRenderer* shadow_renderer,
                  Layer* layer,
                  const escher::ImagePtr& output_image,
-                 const escher::SemaphorePtr& frame_done_semaphore,
                  const escher::Model* overlay_model);
 
   escher::Escher* const escher_;
