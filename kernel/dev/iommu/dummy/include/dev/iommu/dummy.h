@@ -18,11 +18,15 @@ public:
 
     bool IsValidBusTxnId(uint64_t bus_txn_id) const final;
 
-    zx_status_t Map(uint64_t bus_txn_id, paddr_t paddr, size_t size, uint32_t perms,
-                    dev_vaddr_t* vaddr) final;
+    zx_status_t Map(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo,
+                    uint64_t offset, size_t size, uint32_t perms,
+                    dev_vaddr_t* vaddr, size_t* mapped_len) final;
     zx_status_t Unmap(uint64_t bus_txn_id, dev_vaddr_t vaddr, size_t size) final;
 
     zx_status_t ClearMappingsForBusTxnId(uint64_t bus_txn_id) final;
+
+    uint64_t minimum_contiguity(uint64_t bus_txn_id) const final;
+    uint64_t aspace_size(uint64_t bus_txn_id) const final;
 
     ~DummyIommu() final;
 
