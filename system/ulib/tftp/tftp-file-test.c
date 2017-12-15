@@ -413,7 +413,7 @@ bool test_tftp_send_file(void) {
 
 bool test_tftp_send_file_wrapping_block_count(void) {
     // Wraps block count 4 times
-    struct test_params tp = {.direction = DIR_SEND, .filesz = 2100000, .winsz = 64, .blksz = 8};
+    struct test_params tp = {.direction = DIR_SEND, .filesz = 2100000, .winsz = 9999, .blksz = 8};
     return run_one_test(&tp);
 }
 
@@ -432,7 +432,8 @@ bool test_tftp_receive_file(void) {
 
 bool test_tftp_receive_file_wrapping_block_count(void) {
     // Wraps block count 4 times
-    struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 2100000, .winsz = 64, .blksz = 8};
+    struct test_params tp = {.direction = DIR_RECEIVE, .filesz = 2100000, .winsz = 8192,
+                             .blksz = 8};
     return run_one_test(&tp);
 }
 
