@@ -4,11 +4,11 @@
 
 #include <memory>
 
-#include "peridot/bin/context_engine/context_writer_impl.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/context_engine/context_writer_impl.h"
 #include "rapidjson/document.h"
 
 namespace maxwell {
@@ -116,10 +116,12 @@ void ContextWriterImpl::AddContextValueWriter(ContextValueWriterImpl* ptr) {
 }
 
 void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
-  std::remove_if(value_writer_storage_.begin(), value_writer_storage_.end(),
-                 [ptr](const std::unique_ptr<ContextValueWriterImpl>& u_ptr) {
-                   return u_ptr.get() == ptr;
-                 });
+  auto it = std::remove_if(
+      value_writer_storage_.begin(), value_writer_storage_.end(),
+      [ptr](const std::unique_ptr<ContextValueWriterImpl>& u_ptr) {
+        return u_ptr.get() == ptr;
+      });
+  value_writer_storage_.erase(it, value_writer_storage_.end());
 }
 
 void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
@@ -177,7 +179,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
       });
 
   (*entity)->GetTypes([weak_this = weak_factory_.GetWeakPtr(), entity,
-                    done](const fidl::Array<fidl::String>& types) {
+                       done](const fidl::Array<fidl::String>& types) {
     if (!weak_this)
       return;
     done(types);

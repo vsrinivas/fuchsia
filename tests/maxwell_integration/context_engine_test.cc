@@ -123,7 +123,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   // Update value1 and value3 so they no longer matches for the 'someType' query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
-  value3->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
+  value3.reset();
   ASSERT_TRUE(RunLoopUntil([&listener] {
     return !!listener.last_update &&
            listener.last_update->values["a"].size() == 1;
@@ -152,14 +152,10 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
   value4.reset();
-  // TODO(thatguy): For some reason, |value4.reset()| doesn't cause the
-  // receiving side's error handler to be called immediately, and this
-  // condition times out.  However, I can see in the logs that once this times
-  // out, the value(s) are correctly deleted.
-  // RunLoopUntil([&listener] { return !!listener.last_update; });
-  // EXPECT_EQ(1lu, listener.last_update->values["a"].size());
-  // EXPECT_EQ("frob",
-  // listener.last_update->values["a"][0]->meta->entity->topic);
+  RunLoopUntil([&listener] { return !!listener.last_update; });
+  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
+  EXPECT_EQ("frob",
+  listener.last_update->values["a"][0]->meta->entity->topic);
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {
