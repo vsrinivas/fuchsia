@@ -564,16 +564,13 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 
 	// Before we add a dispatcher for this iostate, respond to the client describing what
 	// kind of object this is.
-	ro := fdio.RioObject{
-		RioObjectHeader: fdio.RioObjectHeader{
-			Status: errStatus(nil),
-			Type:   uint32(fdio.ProtocolSocket),
-		},
-		Esize: 0,
+	ro := fdio.RioDescription{
+		Status: errStatus(nil),
+		Type:   uint32(fdio.ProtocolSocket),
 	}
+	ro.SetOp(fdio.OpOnOpen)
 	if peerS != 0 {
-		ro.Handle[0] = peerS
-		ro.Hcount = 1
+		ro.Handle = peerS
 	}
 	ro.Write(h, 0)
 
@@ -1349,13 +1346,11 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		}
 
 		if err != nil {
-			ro := fdio.RioObject{
-				RioObjectHeader: fdio.RioObjectHeader{
-					Status: errStatus(err),
-					Type:   uint32(fdio.ProtocolSocket),
-				},
-				Esize: 0,
+			ro := fdio.RioDescription{
+				Status: errStatus(err),
+				Type:   uint32(fdio.ProtocolSocket),
 			}
+			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
 			msg.Handle[0].Close()
 		}
@@ -1365,13 +1360,11 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil, false)
 		if err != nil {
 			ios.release(func() { s.iosCloseHandler(ios, cookie) })
-			ro := fdio.RioObject{
-				RioObjectHeader: fdio.RioObjectHeader{
-					Status: errStatus(err),
-					Type:   uint32(fdio.ProtocolSocket),
-				},
-				Esize: 0,
+			ro := fdio.RioDescription{
+				Status: errStatus(err),
+				Type:   uint32(fdio.ProtocolSocket),
 			}
+			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
 			msg.Handle[0].Close()
 		}

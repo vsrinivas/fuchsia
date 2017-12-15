@@ -106,8 +106,8 @@ const (
 	OpenFlagPath
 	// OpenFlagFile indicates the operation must act on a file
 	OpenFlagFile
-	// OpenFlagPipeline indicates the open request should open immediately with no response
-	OpenFlagPipeline OpenFlags = (1 << 31)
+	// OpenFlagDescribe indicates the open request should return a response
+	OpenFlagDescribe OpenFlags = (1 << 23)
 )
 
 // Read returns if the Read permission is active
@@ -154,8 +154,8 @@ func (f OpenFlags) Path() bool {
 	return f&OpenFlagPath != 0
 }
 
-func (f OpenFlags) Pipeline() bool {
-	return f&OpenFlagPipeline != 0
+func (f OpenFlags) Describe() bool {
+	return f&OpenFlagDescribe != 0
 }
 
 // Whence is used to explain the meaning of an offset in a file

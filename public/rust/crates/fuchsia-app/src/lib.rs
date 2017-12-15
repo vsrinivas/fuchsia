@@ -343,7 +343,7 @@ pub mod server {
                     msg.op() != fdio::fdio_sys::ZXRIO_OPEN &&
                     msg.op() != fdio::fdio_sys::ZXRIO_CLONE
                 ) ||
-                !msg.is_pipelined() ||
+                msg.is_describe() ||
                 !reply_channel.is_some()
             {
                 eprintln!(
@@ -351,7 +351,7 @@ pub mod server {
                     &msg
                 );
 
-                if !msg.is_pipelined() {
+                if msg.is_describe() {
                     let reply_channel = reply_channel.as_ref().unwrap_or(chan.as_ref());
                     let reply_err = validation.err().unwrap_or(zx::Status::NOT_SUPPORTED);
                     fdio::rio::write_object(reply_channel, reply_err, 0, &[], &mut vec![])

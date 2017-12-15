@@ -130,8 +130,8 @@ impl Connection {
         flags: i32,
         mode: u32,
     ) -> Result<(), std::io::Error> {
-        let pipeline = (flags as u32) & fdio::fdio_sys::O_PIPELINE != 0;
-        let open_flags = flags & !(fdio::fdio_sys::O_PIPELINE as i32);
+        let describe = (flags as u32) & fdio::fdio_sys::ZX_FS_FLAG_DESCRIBE != 0;
+        let open_flags = flags & (!fdio::fdio_sys::ZX_FS_FLAG_DESCRIBE as i32);
 
         let mut status = zircon::Status::OK;
         let mut proto = fdio::fdio_sys::FDIO_PROTOCOL_REMOTE;
@@ -142,7 +142,7 @@ impl Connection {
                 // TODO(raggi): get_handles (maybe call it get_extra?)
 
                 // protocols that return handles on open can't be pipelined.
-                if pipeline && handles.len() > 0 {
+                if !describe && handles.len() > 0 {
                     vn.close();
                     return Err(std::io::ErrorKind::InvalidInput.into());
                 }
@@ -151,7 +151,7 @@ impl Connection {
                     return Err(std::io::ErrorKind::InvalidInput.into());
                 }
 
-                if !pipeline {
+                if describe {
                     fdio::rio::write_object(&chan, status, proto, &[], &mut handles).ok();
                 }
 
@@ -167,7 +167,7 @@ impl Connection {
             }
         }
 
-        if !pipeline {
+        if describe {
             return fdio::rio::write_object(&chan, status, proto, &[], &mut handles)
                 .map_err(Into::into);
         }

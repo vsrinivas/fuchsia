@@ -50,7 +50,7 @@ impl<T> ::std::marker::Copy for __IncompleteArrayField<T> {}
 pub const O_DIRECTORY: raw::c_int = 0x00080000;
 pub const O_NOREMOTE: raw::c_int = 0x00200000;
 pub const O_ADMIN: raw::c_int = 0x00000004;
-pub const O_PIPELINE: raw::c_uint = 0x80000000;
+pub const ZX_FS_FLAG_DESCRIBE: raw::c_uint = 0x00800000;
 
 pub const ZXRIO_HDR_SZ: usize = 56;
 pub const ZXRIO_MSG_SZ: usize = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE as usize;

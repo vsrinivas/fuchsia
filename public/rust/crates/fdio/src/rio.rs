@@ -148,8 +148,8 @@ impl Message {
         self.buf.take_handle(i)
     }
 
-    pub fn is_pipelined(&self) -> bool {
-        (self.arg() as u32) & O_PIPELINE != 0
+    pub fn is_describe(&self) -> bool {
+        (self.arg() as u32) & ZX_FS_FLAG_DESCRIBE != 0
     }
 }
 
@@ -227,7 +227,7 @@ mod test {
             flags: 5,
             datalen: 1,
             arg: 3,
-            arg2: zxrio_msg__bindgen_ty_1 { mode: fdio_sys::O_PIPELINE as u32 },
+            arg2: zxrio_msg__bindgen_ty_1 { mode: fdio_sys::ZX_FS_FLAG_DESCRIBE },
             reserved1: 4,
             hcount: 1,
             handle: [5, 0, 0, 0],
@@ -270,7 +270,7 @@ mod test {
 
         let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
         let m: Message = buf.into();
-        assert_eq!(m.mode(), fdio_sys::O_PIPELINE as u32);
+        assert_eq!(m.mode(), fdio_sys::ZX_FS_FLAG_DESCRIBE);
 
         msg.arg2.off = 10;
         let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
@@ -404,7 +404,7 @@ mod test {
 
             assert_eq!(msg.op(), ZXRIO_OPEN);
             assert_eq!(msg.hcount(), 1);
-            assert!(msg.is_pipelined());
+            assert!(!msg.is_describe());
 
             let svc_chan = zircon::Channel::from(msg.take_handle(0).expect("server take handle"));
             svc_chan.write(b"hello", &mut vec![]).expect("server channel write");

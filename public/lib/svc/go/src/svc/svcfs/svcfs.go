@@ -38,21 +38,19 @@ func errStatus(err error) zx.Status {
 	return zx.ErrInternal
 }
 
-// TODO(abarth): Switch to msg.Pipelined() once that exists.
-func pipelined(msg *fdio.Msg) bool {
-	return uint32(msg.Arg)&syscall.FsFlagPipeline != 0
+func describe(msg *fdio.Msg) bool {
+	return uint32(msg.Arg)&syscall.FsFlagDescribe != 0
 }
 
 func (n *Namespace) opClone(msg *fdio.Msg, h zx.Handle) zx.Status {
 	err := n.Serve(h)
 
-	if !pipelined(msg) {
-		ro := fdio.RioObject{
-			RioObjectHeader: fdio.RioObjectHeader{
-				Status: errStatus(err),
-				Type:   uint32(fdio.ProtocolRemote),
-			},
+	if describe(msg) {
+		ro := fdio.RioDescription{
+			Status: errStatus(err),
+			Type:   uint32(fdio.ProtocolRemote),
 		}
+		ro.SetOp(fdio.OpOnOpen)
 		ro.Write(h, 0)
 	}
 
@@ -84,13 +82,12 @@ func (n *Namespace) handler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Sta
 			return n.opClone(msg, h)
 		}
 
-		if !pipelined(msg) {
-			ro := fdio.RioObject{
-				RioObjectHeader: fdio.RioObjectHeader{
-					Status: zx.ErrOk,
-					Type:   uint32(fdio.ProtocolService),
-				},
+		if describe(msg) {
+			ro := fdio.RioDescription{
+				Status: zx.ErrOk,
+				Type:   uint32(fdio.ProtocolService),
 			}
+			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(h, 0)
 		}
 

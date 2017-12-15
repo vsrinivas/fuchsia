@@ -213,6 +213,19 @@ func openFlagsToRIO(f fs.OpenFlags) (arg uint32, mode uint32) {
 	return
 }
 
+func describe(msg *fdio.Msg) bool {
+	return msg.Arg & syscall.FsFlagDescribe != 0
+}
+
+func indirectError(h zx.Handle, status zx.Status) {
+	ro := &fdio.RioDescription{
+		Status: status,
+		Type:   uint32(fdio.ProtocolRemote),
+	}
+	ro.SetOp(fdio.OpOnOpen)
+	ro.Write(h, 0)
+}
+
 func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
@@ -220,17 +233,19 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 	case fdio.OpClone:
 		f2, err := f.Dup()
 		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return fdio.IndirectError(msg.Handle[0], mxErr)
+			if describe(msg) {
+				indirectError(msg.Handle[0], mxErr)
+			}
+			return fdio.ErrIndirect.Status
 		}
-		ro := &fdio.RioObject{
-			RioObjectHeader: fdio.RioObjectHeader{
+		if describe(msg) {
+			ro := &fdio.RioDescription{
 				Status: zx.ErrOk,
 				Type:   uint32(fdio.ProtocolRemote),
-			},
-			Esize:  0,
-			Hcount: 0,
+			}
+			ro.SetOp(fdio.OpOnOpen)
+			ro.Write(msg.Handle[0], 0)
 		}
-		ro.Write(msg.Handle[0], 0)
 		if err := vfs.AddHandler(msg.Handle[0], f2); err != nil {
 			f2.Close()
 		}
@@ -359,17 +374,23 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 	switch msg.Op() {
 	case fdio.OpOpen:
 		if len(inputData) < 1 {
-			return fdio.IndirectError(msg.Handle[0], zx.ErrInvalidArgs)
+			if describe(msg) {
+				indirectError(msg.Handle[0], zx.ErrInvalidArgs)
+			}
+			return fdio.ErrIndirect.Status
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
 		flags := openFlagsFromRIO(uint32(msg.Arg), msg.Mode())
 		if flags.Path() {
-			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagPipeline
+			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagDescribe
 		}
 
 		f, d, r, err := dir.Open(path, flags)
 		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return fdio.IndirectError(msg.Handle[0], mxErr)
+			if describe(msg) {
+				indirectError(msg.Handle[0], mxErr)
+			}
+			return fdio.ErrIndirect.Status
 		}
 
 		if r != nil {
@@ -377,7 +398,10 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			msg.Datalen = uint32(len(r.Path))
 			msg.Data[msg.Datalen] = 0
 			arg, mode := openFlagsToRIO(r.Flags)
-			msg.Arg = int32(arg)
+			if describe(msg) {
+				msg.Arg = syscall.FsFlagDescribe
+			}
+			msg.Arg |= int32(arg)
 			msg.SetMode(mode)
 			msg.WriteMsg(r.Channel)
 			return fdio.ErrIndirect.Status
@@ -390,15 +414,12 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			obj = &directoryWrapper{d: d}
 		}
 
-		if !flags.Pipeline() {
-			ro := &fdio.RioObject{
-				RioObjectHeader: fdio.RioObjectHeader{
-					Status: zx.ErrOk,
-					Type:   uint32(fdio.ProtocolRemote),
-				},
-				Esize:  0,
-				Hcount: 0,
+		if describe(msg) {
+			ro := &fdio.RioDescription{
+				Status: zx.ErrOk,
+				Type:   uint32(fdio.ProtocolRemote),
 			}
+			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
 		}
 		if err := vfs.AddHandler(msg.Handle[0], obj); err != nil {
@@ -413,18 +434,17 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 	case fdio.OpClone:
 		d2, err := dir.Dup()
 		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return fdio.IndirectError(msg.Handle[0], mxErr)
-		}
-		flags := openFlagsFromRIO(uint32(msg.Arg), msg.Mode())
-		if !flags.Pipeline() {
-			ro := &fdio.RioObject{
-				RioObjectHeader: fdio.RioObjectHeader{
-					Status: zx.ErrOk,
-					Type:   uint32(fdio.ProtocolRemote),
-				},
-				Esize:  0,
-				Hcount: 0,
+			if describe(msg) {
+				indirectError(msg.Handle[0], mxErr)
 			}
+			return fdio.ErrIndirect.Status
+		}
+		if describe(msg) {
+			ro := &fdio.RioDescription{
+				Status: zx.ErrOk,
+				Type:   uint32(fdio.ProtocolRemote),
+			}
+			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
 		}
 		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
