@@ -131,6 +131,30 @@ zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ino
     return ZX_OK;
 }
 
+zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+                                     vmo_lookup_fn_t lookup_fn, void* context) {
+    canary_.Assert();
+
+    if (unlikely(len == 0))
+        return ZX_ERR_INVALID_ARGS;
+
+    AutoLock a(&lock_);
+    if (unlikely(!InRange(offset, len, size_)))
+        return ZX_ERR_OUT_OF_RANGE;
+
+    uint64_t cur_offset = ROUNDDOWN(offset, PAGE_SIZE);
+    uint64_t end = offset + len;
+    uint64_t end_page_offset = ROUNDUP(end, PAGE_SIZE);
+
+    for (size_t idx = 0; cur_offset < end_page_offset; cur_offset += PAGE_SIZE, ++idx) {
+        zx_status_t status = lookup_fn(context, cur_offset, idx, base_ + cur_offset);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    return ZX_OK;
+}
+
 zx_status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
     AutoLock l(&lock_);
 
