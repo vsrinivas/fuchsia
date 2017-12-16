@@ -236,3 +236,32 @@ template <>
 inline fbl::RefPtr<const Dispatcher> DownCastDispatcher(fbl::RefPtr<const Dispatcher>* disp) {
     return fbl::move(*disp);
 }
+
+// The same, but for Dispatcher* and FooDispatcher* instead of RefPtr.
+
+// Dispatcher -> FooDispatcher
+template <typename T>
+T* DownCastDispatcher(Dispatcher* disp) {
+    return (likely(DispatchTag<T>::ID == disp->get_type())) ?
+        reinterpret_cast<T*>(disp) : nullptr;
+}
+
+// Dispatcher -> Dispatcher
+template <>
+inline Dispatcher* DownCastDispatcher(Dispatcher* disp) {
+    return disp;
+}
+
+// const Dispatcher -> const FooDispatcher
+template <typename T>
+const T* DownCastDispatcher(const Dispatcher* disp) {
+    static_assert(fbl::is_const<T>::value, "");
+    return (likely(DispatchTag<typename fbl::remove_const<T>::type>::ID == disp->get_type())) ?
+        reinterpret_cast<const T*>(disp) : nullptr;
+}
+
+// const Dispatcher -> const Dispatcher
+template <>
+inline const Dispatcher* DownCastDispatcher(const Dispatcher* disp) {
+    return disp;
+}
