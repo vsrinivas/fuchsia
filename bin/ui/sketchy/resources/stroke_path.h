@@ -13,14 +13,14 @@
 
 namespace sketchy_service {
 
-class StrokePath;
-
 class StrokePath final {
  public:
-  StrokePath(sketchy::StrokePathPtr path);
+  StrokePath() = default;
+  explicit StrokePath(sketchy::StrokePathPtr path);
 
-  void AddCurve(sketchy::CubicBezier2f curve);
-  void Reset(size_t size = 0);
+  void ExtendWithCurve(sketchy::CubicBezier2f curve);
+  void ExtendWithPath(const StrokePath* path);
+  void Reset(size_t segment_count = 0);
 
   const std::vector<sketchy::CubicBezier2f>& control_points() const {
     return control_points_;
@@ -37,15 +37,6 @@ class StrokePath final {
   const std::vector<float>& segment_lengths() const {
     return segment_lengths_;
   }
-  size_t segment_lengths_size() const {
-    return segment_lengths_.size() * sizeof(float);
-  }
-  const std::vector<float>& cumulative_lengths() const {
-    return cumulative_lengths_;
-  }
-  size_t cumulative_lengths_size() const {
-    return cumulative_lengths_.size() * sizeof(float);
-  }
   float length() const { return length_; }
   bool empty() const { return control_points_.empty(); }
   size_t segment_count() const { return control_points_.size(); }
@@ -54,7 +45,6 @@ class StrokePath final {
   std::vector<sketchy::CubicBezier2f> control_points_;
   std::vector<sketchy::CubicBezier1f> re_params_;
   std::vector<float> segment_lengths_;
-  std::vector<float> cumulative_lengths_;
   float length_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokePath);

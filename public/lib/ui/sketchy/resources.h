@@ -66,6 +66,10 @@ class Stroke final : public Resource {
  public:
   Stroke(Canvas* canvas);
   void SetPath(StrokePath& path);
+  void Begin(glm::vec2 pt);
+  // TODO(MZ-269): Also pass in predicted points.
+  void Extend(std::vector<glm::vec2> pts);
+  void Finish();
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Stroke);

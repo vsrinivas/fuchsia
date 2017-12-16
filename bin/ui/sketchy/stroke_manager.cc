@@ -33,6 +33,37 @@ bool StrokeManager::SetStrokePath(StrokePtr stroke,
   return true;
 }
 
+bool StrokeManager::BeginStroke(StrokePtr stroke, glm::vec2 pt) {
+  auto group_it = stroke_to_group_map_.find(stroke);
+  if (group_it != stroke_to_group_map_.end()) {
+    auto group = group_it->second;
+    group->SetNeedsReTessellation();
+    dirty_stroke_groups_.insert(group);
+  }
+  return stroke->Begin(pt);
+}
+
+bool StrokeManager::ExtendStroke(StrokePtr stroke,
+                                 std::vector<glm::vec2> sampled_pts) {
+  auto group_it = stroke_to_group_map_.find(stroke);
+  if (group_it != stroke_to_group_map_.end()) {
+    auto group = group_it->second;
+    group->SetNeedsReTessellation();
+    dirty_stroke_groups_.insert(group);
+  }
+  return stroke->Extend(sampled_pts);
+}
+
+bool StrokeManager::FinishStroke(StrokePtr stroke) {
+  auto group_it = stroke_to_group_map_.find(stroke);
+  if (group_it != stroke_to_group_map_.end()) {
+    auto group = group_it->second;
+    group->SetNeedsReTessellation();
+    dirty_stroke_groups_.insert(group);
+  }
+  return stroke->Finish();
+}
+
 void StrokeManager::Update(Frame* frame) {
   while (!dirty_stroke_groups_.empty()) {
     const auto& stroke_group = *dirty_stroke_groups_.begin();

@@ -74,7 +74,7 @@ void SharedBufferPool::RecycleBuffer(SharedBufferPtr buffer) {
 }
 
 vk::DeviceSize SharedBufferPool::GetBufferKey(vk::DeviceSize capacity_req) {
-  FXL_CHECK(capacity_req >= 1);  // log2(x) >= 0 if x >= 1.
+  capacity_req = std::max(1UL, capacity_req);
   uint32_t power = static_cast<uint32_t>(std::ceil(std::log2(capacity_req)));
   return 1U << std::max(kBaseBufferPower, power);
 }

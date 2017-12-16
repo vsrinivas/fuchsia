@@ -12,6 +12,14 @@ Scene::Scene(scenic_lib::Session* session, float width, float height)
   scenic_lib::Renderer renderer(session);
   renderer.SetCamera(scenic_lib::Camera(scene));
 
+  scenic_lib::AmbientLight ambient_light(session);
+  ambient_light.SetColor(.3f, .3f, .3f);
+  scene.AddLight(ambient_light);
+  scenic_lib::DirectionalLight directional_light(session);
+  directional_light.SetDirection(1.5f * M_PI, 1.5f * M_PI, 1);
+  directional_light.SetColor(.3f, .3f, .3f);
+  scene.AddLight(directional_light);
+
   scenic_lib::Layer layer(session);
   layer.SetRenderer(renderer);
   layer.SetSize(width, height);

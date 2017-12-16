@@ -21,6 +21,14 @@ class StrokeManager {
   bool AddStrokeToGroup(StrokePtr stroke, StrokeGroupPtr group);
   bool SetStrokePath(StrokePtr stroke, std::unique_ptr<StrokePath> path);
 
+  // The group will be marked as need re-tessellation per following call. For
+  // efficient rendering, client should keep the growing stroke in a temporary
+  // group, and move them to a stable group once done.
+  bool BeginStroke(StrokePtr stroke, glm::vec2 pt);
+  // TODO(MZ-269): Also pass in predicted points.
+  bool ExtendStroke(StrokePtr stroke, std::vector<glm::vec2> sampled_pts);
+  bool FinishStroke(StrokePtr stroke);
+
   void Update(Frame* frame);
 
   StrokeTessellator* stroke_tessellator() { return &stroke_tessellator_; }

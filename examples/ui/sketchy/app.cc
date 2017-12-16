@@ -75,17 +75,26 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   Stroke stroke2(canvas_.get());
   stroke2.SetPath(path2);
 
-  StrokeGroup group(canvas_.get());
-  group.AddStroke(stroke1);
-  group.AddStroke(stroke2);
+  StrokeGroup stable_group(canvas_.get());
+  stable_group.AddStroke(stroke1);
+  stable_group.AddStroke(stroke2);
 
   animated_stroke_ = std::make_unique<Stroke>(canvas_.get());
   animated_stroke_->SetPath(animated_path_at_top_);
-  group.AddStroke(*animated_stroke_.get());
+  stable_group.AddStroke(*animated_stroke_.get());
+
+  StrokeGroup scratch_group(canvas_.get());
+  Stroke tmp_stroke(canvas_.get());
+  scratch_group.AddStroke(tmp_stroke);
+  tmp_stroke.Begin({600, 1200});
+  tmp_stroke.Extend({{680, 1250}, {720, 1200}, {760, 1250}});
+  tmp_stroke.Extend({{800, 1200}, {840, 1250}, {880, 1200}});
+  tmp_stroke.Finish();
 
   import_node_ = std::make_unique<ImportNode>(
       canvas_.get(), scene_->stroke_group_holder());
-  import_node_->AddChild(group);
+  import_node_->AddChild(stable_group);
+  import_node_->AddChild(scratch_group);
 
   uint64_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
   canvas_->Present(

@@ -42,6 +42,10 @@ class CanvasImpl final : public sketchy::Canvas {
   bool ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op);
   bool ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op);
 
+  bool ApplyBeginStrokeOp(const sketchy::BeginStrokeOpPtr& op);
+  bool ApplyExtendStrokeOp(const sketchy::ExtendStrokeOpPtr& op);
+  bool ApplyFinishStrokeOp(const sketchy::FinishStrokeOpPtr& op);
+
   bool ApplyScenicImportResourceOp(
       const scenic::ImportResourceOpPtr& import_resource);
 

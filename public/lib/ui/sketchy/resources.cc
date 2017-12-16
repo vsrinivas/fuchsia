@@ -59,6 +59,45 @@ void Stroke::SetPath(StrokePath& path) {
   EnqueueOp(std::move(op));
 }
 
+void Stroke::Begin(glm::vec2 pt) {
+  auto begin_stroke = sketchy::BeginStrokeOp::New();
+  begin_stroke->stroke_id = id();
+  auto touch = sketchy::Touch::New();
+  touch->position = scenic::vec2::New();
+  touch->position->x = pt.x;
+  touch->position->y = pt.y;
+  begin_stroke->touch = std::move(touch);
+  auto op = sketchy::Op::New();
+  op->set_begin_stroke(std::move(begin_stroke));
+  EnqueueOp(std::move(op));
+}
+
+void Stroke::Extend(std::vector<glm::vec2> pts) {
+  auto extend_stroke = sketchy::ExtendStrokeOp::New();
+  extend_stroke->stroke_id = id();
+  auto touches = ::fidl::Array<sketchy::TouchPtr>::New(pts.size());
+  for (size_t i = 0; i < pts.size(); i++) {
+    touches[i] = sketchy::Touch::New();
+    touches[i]->position = scenic::vec2::New();
+    touches[i]->position->x = pts[i].x;
+    touches[i]->position->y = pts[i].y;
+  }
+  extend_stroke->touches = std::move(touches);
+  // TODO(MZ-269): Populate predicted touches.
+  extend_stroke->predicted_touches = ::fidl::Array<sketchy::TouchPtr>::New(0);
+  auto op = sketchy::Op::New();
+  op->set_extend_stroke(std::move(extend_stroke));
+  EnqueueOp(std::move(op));
+}
+
+void Stroke::Finish() {
+  auto finish_stroke = sketchy::FinishStrokeOp::New();
+  finish_stroke->stroke_id = id();
+  auto op = sketchy::Op::New();
+  op->set_finish_stroke(std::move(finish_stroke));
+  EnqueueOp(std::move(op));
+}
+
 StrokeGroup::StrokeGroup(Canvas* canvas) : Resource(canvas) {
   sketchy::StrokeGroupPtr stroke_group = sketchy::StrokeGroup::New();
   auto resource_args = sketchy::ResourceArgs::New();

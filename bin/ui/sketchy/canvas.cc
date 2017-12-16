@@ -89,6 +89,12 @@ bool CanvasImpl::ApplyOp(const sketchy::OpPtr& op) {
       return ApplyAddStrokeOp(op->get_add_stroke());
     case sketchy::Op::Tag::REMOVE_STROKE:
       return ApplyRemoveStrokeOp(op->get_remove_stroke());
+    case sketchy::Op::Tag::BEGIN_STROKE:
+      return ApplyBeginStrokeOp(op->get_begin_stroke());
+    case sketchy::Op::Tag::EXTEND_STROKE:
+      return ApplyExtendStrokeOp(op->get_extend_stroke());
+    case sketchy::Op::Tag::FINISH_STROKE:
+      return ApplyFinishStrokeOp(op->get_finish_stroke());
     case sketchy::Op::Tag::SCENIC_IMPORT_RESOURCE:
       return ApplyScenicImportResourceOp(op->get_scenic_import_resource());
     case sketchy::Op::Tag::SCENIC_ADD_CHILD:
@@ -120,7 +126,8 @@ bool CanvasImpl::ApplyCreateResourceOp(
 bool CanvasImpl::CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke) {
   return resource_map_.AddResource(
       id,
-      fxl::MakeRefCounted<Stroke>(stroke_manager_.stroke_tessellator()));
+      fxl::MakeRefCounted<Stroke>(stroke_manager_.stroke_tessellator(),
+                                  shared_buffer_pool_.factory()));
 }
 
 bool CanvasImpl::CreateStrokeGroup(
@@ -163,6 +170,39 @@ bool CanvasImpl::ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op) {
   // TODO(MZ-269): unimplemented.
   FXL_LOG(ERROR) << "ApplyRemoveStrokeOp: unimplemented.";
   return false;
+}
+
+bool CanvasImpl::ApplyBeginStrokeOp(const sketchy::BeginStrokeOpPtr& op) {
+  auto stroke = resource_map_.FindResource<Stroke>(op->stroke_id);
+  if (!stroke) {
+    FXL_LOG(ERROR) << "No Stroke of id " << op->stroke_id << " was found!";
+    return false;
+  }
+  const auto& pos = op->touch->position;
+  return stroke_manager_.BeginStroke(stroke, {pos->x, pos->y});
+}
+
+bool CanvasImpl::ApplyExtendStrokeOp(const sketchy::ExtendStrokeOpPtr& op) {
+  auto stroke = resource_map_.FindResource<Stroke>(op->stroke_id);
+  if (!stroke) {
+    FXL_LOG(ERROR) << "No Stroke of id " << op->stroke_id << " was found!";
+    return false;
+  }
+  std::vector<glm::vec2> pts;
+  pts.reserve(op->touches.size());
+  for (const auto& touch : op->touches) {
+    pts.push_back({touch->position->x, touch->position->y});
+  }
+  return stroke_manager_.ExtendStroke(stroke, pts);
+}
+
+bool CanvasImpl::ApplyFinishStrokeOp(const sketchy::FinishStrokeOpPtr& op) {
+  auto stroke = resource_map_.FindResource<Stroke>(op->stroke_id);
+  if (!stroke) {
+    FXL_LOG(ERROR) << "No Stroke of id " << op->stroke_id << " was found!";
+    return false;
+  }
+  return stroke_manager_.FinishStroke(stroke);
 }
 
 bool CanvasImpl::ApplyScenicImportResourceOp(

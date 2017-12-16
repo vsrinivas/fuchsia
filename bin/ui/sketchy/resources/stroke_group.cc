@@ -79,7 +79,7 @@ void StrokeGroup::ReTessellateStrokes(Frame* frame) {
   mesh_buffer_.Prepare(
       frame, /* from_scratch= */ true, pair.first, pair.second);
   for (auto it = strokes_.begin(); it != strokes_.end(); it++) {
-    (*it)->ReTessellateAndMerge(frame, &mesh_buffer_);
+    (*it)->TessellateAndMerge(frame, &mesh_buffer_);
   }
   mesh_buffer_.ProvideBuffersToScenicMesh(&mesh_);
   needs_re_tessellation_ = false;
