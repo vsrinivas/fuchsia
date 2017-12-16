@@ -67,8 +67,14 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     // From then on, we get notifications of individual values changing with
     // paths like "/module-id".
     if (path == "/") {
+      if (value.IsNull()) {
+        idle_fn_();
+        return;
+      }
+
       if (!value.IsObject()) {
         FXL_LOG(ERROR) << "Got update at /, but it's not a JSON object??";
+        idle_fn_();
         return;
       }
 
