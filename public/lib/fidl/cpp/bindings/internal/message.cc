@@ -12,12 +12,27 @@
 
 namespace fidl {
 
+MessageBase::MessageBase() {
+}
+
+MessageBase::~MessageBase() {
+  CloseHandles();
+}
+
+// Closes the handles in the handles_ vector but does not remove them from
+// the vector.
+void MessageBase::CloseHandles() {
+  for (zx_handle_t handle : handles_) {
+    if (handle != ZX_HANDLE_INVALID)
+      zx_handle_close(handle);
+  }
+}
+
 Message::Message() {
 }
 
 Message::~Message() {
   free(data_);
-  CloseHandles();
 }
 
 void Message::Reset() {
@@ -57,15 +72,6 @@ void Message::MoveTo(Message* destination) {
   destination->CloseHandles();
   destination->handles_.clear();
   std::swap(destination->handles_, handles_);
-}
-
-// Closes the handles in the handles_ vector but does not remove them from
-// the vector.
-void Message::CloseHandles() {
-  for (zx_handle_t handle : handles_) {
-    if (handle != ZX_HANDLE_INVALID)
-      zx_handle_close(handle);
-  }
 }
 
 zx_status_t ReadMessage(const zx::channel& channel, Message* message) {
