@@ -57,6 +57,18 @@ static void set_utc_offset(rtc_t* rtc) {
         31, // 2017 October
         30, // 2017 November
         31, // 2017 December
+        31, // 2018 January
+        28, // 2018 February
+        31, // 2018 March
+        30, // 2018 April
+        31, // 2018 May
+        30, // 2018 June
+        31, // 2018 July
+        31, // 2018 August
+        30, // 2018 September
+        31, // 2018 October
+        30, // 2018 November
+        31, // 2018 December
     };
 
     // First add all the prior complete months.
