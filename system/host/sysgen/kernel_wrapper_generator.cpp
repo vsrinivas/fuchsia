@@ -4,25 +4,15 @@
 
 #import "generator.h"
 
+#import <algorithm>
+#import <iterator>
+
 using std::ofstream;
 using std::string;
 using std::vector;
 
 static const string in = "    ";
 static const string inin = in + in;
-
-static string invocation(ofstream& os, const string& out_type,
-                         const string& syscall_name, const Syscall& sc) {
-    if (sc.is_noreturn()) {
-        // no return - no need to set anything. the compiler
-        // should know that we're never going anywhere from here
-        os << syscall_name << "(";
-        return ")";
-    }
-
-    os << "return static_cast<" << out_type << ">(" << syscall_name << "(";
-    return "))";
-}
 
 static void write_syscall_signature_line(ofstream& os, const Syscall& sc, string name_prefix) {
     auto syscall_name = name_prefix + sc.name;
@@ -55,34 +45,70 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
        << define_prefix_ << sc.name << ", "
        << "pc, "
        << "&VDso::ValidSyscallPC::" << sc.name << ", "
-       << "[&]() {\n"
-       << inin;
+       << "[&](ProcessDispatcher* current_process) -> uint64_t {\n";
 
-    string close_invocation = invocation(os, "uint64_t", syscall_name, sc);
-    sc.for_each_kernel_arg([&](const TypeSpec& arg) {
+    string args;
+    for (const TypeSpec& arg : sc.arg_spec) {
+        if (!args.empty())
+            args += ", ";
         if (arg.arr_spec) {
-            string policy = arg.arr_spec->kind_lowercase_str();
-            os << "make_user_" << policy <<"_ptr(" << arg.name << "), ";
+            args += "make_user_";
+            args += arg.arr_spec->kind_lowercase_str();
+            args += "_ptr(";
+            args += arg.name;
+            args += ")";
         } else {
-            os << arg.name << ", ";
+            args += arg.name;
+        }
+    }
+
+    vector<string> out_handles;
+
+    sc.for_each_return([&](const TypeSpec& arg) {
+        if (!args.empty())
+            args += ", ";
+        if (arg.arr_spec) {
+            assert(arg.arr_spec->kind == ArraySpec::OUT);
+            assert(arg.arr_spec->count == 1);
+            if (arg.type == "zx_handle_t") {
+                out_handles.push_back(arg.name);
+                os << inin
+                   << "user_out_handle out_handle_" << arg.name << ";\n";
+                args += "&out_handle_";
+                args += arg.name;
+            } else {
+                args += "make_user_out_ptr(";
+                args += arg.name;
+                args += ")";
+            }
+        } else {
+            args += arg.name;
         }
     });
 
-    if (sc.num_kernel_args() > 0) {
-        // remove the comma space.
-        os.seekp(-2, std::ios_base::end);
-    }
-    os << close_invocation;
+    os << inin
+       << (sc.is_noreturn() ? "/*noreturn*/ " : "auto result = ")
+       << syscall_name << "(" << args << ");\n";
 
     if (sc.is_noreturn()) {
-        os << "; // __noreturn__\n";
         os << inin << "/* NOTREACHED */\n";
         os << inin << "return ZX_ERR_BAD_STATE;\n";
     } else {
-        os << ";\n";
+        for (const auto& arg : out_handles) {
+            os << inin << "if (out_handle_" << arg
+               << ".begin_copyout(current_process, make_user_out_ptr("
+               << arg << ")))\n"
+               << inin << in << "return ZX_ERR_INVALID_ARGS;\n";
+        }
+        for (const auto& arg : out_handles) {
+            os << inin << "out_handle_" << arg
+               << ".finish_copyout(current_process);\n";
+        }
+        os << inin << "return result;\n";
     }
-    os << in << "});\n";
-    os << "}\n";
+
+    os << in << "});\n"
+       << "}\n";
     return os.good();
 }
 

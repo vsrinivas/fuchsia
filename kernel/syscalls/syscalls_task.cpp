@@ -100,7 +100,7 @@ static zx_status_t get_process(ProcessDispatcher* up,
 
 zx_status_t sys_thread_create(zx_handle_t process_handle,
                               user_in_ptr<const char> _name, uint32_t name_len,
-                              uint32_t options, user_out_ptr<zx_handle_t> _out) {
+                              uint32_t options, user_out_handle* out) {
     LTRACEF("process handle %x, options %#x\n", process_handle, options);
 
     // currently, the only valid option value is 0
@@ -141,16 +141,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
-    HandleOwner handle(Handle::Make(fbl::move(thread_dispatcher), thread_rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = _out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-    up->AddHandle(fbl::move(handle));
-
-    return ZX_OK;
+    return out->make(fbl::move(thread_dispatcher), thread_rights);
 }
 
 zx_status_t sys_thread_start(zx_handle_t thread_handle, uintptr_t entry,
@@ -282,8 +273,9 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle) {
 
 zx_status_t sys_process_create(zx_handle_t job_handle,
                                user_in_ptr<const char> _name, uint32_t name_len,
-                               uint32_t options, user_out_ptr<zx_handle_t> _proc_handle,
-                               user_out_ptr<zx_handle_t> _vmar_handle) {
+                               uint32_t options,
+                               user_out_handle* proc_handle,
+                               user_out_handle* vmar_handle) {
     LTRACEF("job handle %x, options %#x\n", job_handle, options);
 
     // currently, the only valid option value is 0
@@ -328,28 +320,10 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     // Give arch-specific tracing a chance to record process creation.
     arch_trace_process_create(koid, vmar_dispatcher->vmar()->aspace()->arch_aspace().arch_table_phys());
 
-    // Create a handle and attach the dispatcher to it
-    HandleOwner proc_h(Handle::Make(fbl::move(proc_dispatcher), proc_rights));
-    if (!proc_h)
-        return ZX_ERR_NO_MEMORY;
-
-    // Create a handle and attach the dispatcher to it
-    HandleOwner vmar_h(Handle::Make(fbl::move(vmar_dispatcher), vmar_rights));
-    if (!vmar_h)
-        return ZX_ERR_NO_MEMORY;
-
-    status = _proc_handle.copy_to_user(up->MapHandleToValue(proc_h));
-    if (status != ZX_OK)
-        return status;
-
-    status = _vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(vmar_h));
-    up->AddHandle(fbl::move(proc_h));
-
-    return ZX_OK;
+    result = proc_handle->make(fbl::move(proc_dispatcher), proc_rights);
+    if (result == ZX_OK)
+        result = vmar_handle->make(fbl::move(vmar_dispatcher), vmar_rights);
+    return result;
 }
 
 // Note: This is used to start the main thread (as opposed to using
@@ -588,7 +562,8 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
     }
 }
 
-zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_ptr<zx_handle_t> _out) {
+zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
+                           user_out_handle* out) {
     LTRACEF("parent: %x\n", parent_job);
 
     if (options != 0u)
@@ -604,16 +579,9 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_pt
     fbl::RefPtr<Dispatcher> job;
     zx_rights_t rights;
     status = JobDispatcher::Create(options, fbl::move(parent), &job, &rights);
-    if (status != ZX_OK)
-        return status;
-
-    HandleOwner job_handle(Handle::Make(fbl::move(job), rights));
-    status = _out.copy_to_user(up->MapHandleToValue(job_handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(job_handle));
-    return ZX_OK;
+    if (status == ZX_OK)
+        status = out->make(fbl::move(job), rights);
+    return status;
 }
 
 zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,

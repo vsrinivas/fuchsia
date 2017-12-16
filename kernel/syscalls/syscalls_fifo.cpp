@@ -24,7 +24,7 @@
 #define LOCAL_TRACE 0
 
 zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
-                            user_out_ptr<zx_handle_t> out0, user_out_ptr<zx_handle_t> out1) {
+                            user_out_handle* out0, user_out_handle* out1) {
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_FIFO);
     if (res != ZX_OK)
@@ -35,27 +35,12 @@ zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     zx_rights_t rights;
     zx_status_t result = FifoDispatcher::Create(count, elemsize, options,
                                                 &dispatcher0, &dispatcher1, &rights);
-    if (result != ZX_OK)
-        return result;
 
-    HandleOwner handle0(Handle::Make(fbl::move(dispatcher0), rights));
-    if (!handle0)
-        return ZX_ERR_NO_MEMORY;
-    HandleOwner handle1(Handle::Make(fbl::move(dispatcher1), rights));
-    if (!handle1)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(handle0));
-    if (status != ZX_OK)
-        return status;
-    status = out1.copy_to_user(up->MapHandleToValue(handle1));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle0));
-    up->AddHandle(fbl::move(handle1));
-
-    return ZX_OK;
+    if (result == ZX_OK)
+        result = out0->make(fbl::move(dispatcher0), rights);
+    if (result == ZX_OK)
+        result = out1->make(fbl::move(dispatcher1), rights);
+    return result;
 }
 
 zx_status_t sys_fifo_write(zx_handle_t handle, user_in_ptr<const void> entries,

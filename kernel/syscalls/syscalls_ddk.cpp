@@ -48,7 +48,7 @@ static_assert(ZX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
 zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t vector, uint32_t options,
-                                 user_out_ptr<zx_handle_t> out_handle) {
+                                 user_out_handle* out_handle) {
     LTRACEF("vector %u options 0x%x\n", vector, options);
 
     zx_status_t status;
@@ -62,17 +62,7 @@ zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t vector, uint32_t op
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-
-    auto up = ProcessDispatcher::GetCurrent();
-    zx_handle_t hv = up->MapHandleToValue(handle);
-
-    status = out_handle.copy_to_user(hv);
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out_handle->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_interrupt_complete(zx_handle_t handle_value) {
@@ -113,7 +103,7 @@ zx_status_t sys_interrupt_signal(zx_handle_t handle_value) {
 
 zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
                                       uint32_t alignment_log2,
-                                      user_out_ptr<zx_handle_t> _out) {
+                                      user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
 
     if (size == 0) return ZX_ERR_INVALID_ARGS;
@@ -156,22 +146,11 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    status = _out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t size,
-                                    user_out_ptr<zx_handle_t> _out) {
+                                    user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
 
     // TODO: attempting to create a physical VMO that points to memory should be an error
@@ -198,18 +177,7 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    status = _out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_bootloader_fb_get_info(user_out_ptr<uint32_t> format, user_out_ptr<uint32_t> width,
@@ -286,8 +254,9 @@ zx_status_t sys_set_framebuffer_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle, u
     return ZX_OK;
 }
 
-zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type, user_in_ptr<const void> desc,
-                             uint32_t desc_len, user_out_ptr<zx_handle_t> out) {
+zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
+                             user_in_ptr<const void> desc, uint32_t desc_len,
+                             user_out_handle* out) {
     // TODO: finer grained validation
     zx_status_t status;
     if ((status = validate_resource(rsrc_handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -320,14 +289,7 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type, user_in_ptr
         }
     }
 
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-
-    auto up = ProcessDispatcher::GetCurrent();
-    if (out.copy_to_user(up->MapHandleToValue(handle)) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 #if ARCH_X86

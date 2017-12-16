@@ -21,7 +21,8 @@
 
 #include "syscalls_priv.h"
 
-zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_out_ptr<zx_handle_t> out) {
+zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id,
+                             user_out_handle* out) {
     if (clock_id != ZX_CLOCK_MONOTONIC)
         return ZX_ERR_INVALID_ARGS;
 
@@ -35,21 +36,9 @@ zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_out_ptr<z
 
     result = TimerDispatcher::Create(options, &dispatcher, &rights);
 
-    if (result != ZX_OK)
-        return result;
-
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_handle_t hv = up->MapHandleToValue(handle);
-
-    zx_status_t status = out.copy_to_user(hv);
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    if (result == ZX_OK)
+        result = out->make(fbl::move(dispatcher), rights);
+    return result;
 }
 
 zx_status_t sys_timer_set(

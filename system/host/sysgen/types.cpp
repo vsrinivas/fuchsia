@@ -99,6 +99,12 @@ string TypeSpec::as_cpp_declaration(bool is_wrapped) const {
         return type + " " + name;
     }
 
+    if (is_wrapped &&
+        arr_spec->kind == ArraySpec::OUT && arr_spec->count == 1 &&
+        type == "zx_handle_t") {
+        return "user_out_handle* " + name;
+    }
+
     string modifier = arr_spec->kind == ArraySpec::IN ? "const " : "";
     string ptr_type = type == "any" ? "void" : type;
 

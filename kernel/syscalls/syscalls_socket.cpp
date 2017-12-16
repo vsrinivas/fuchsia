@@ -28,9 +28,9 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_socket_create(uint32_t options, user_out_ptr<zx_handle_t> out0, user_out_ptr<zx_handle_t> out1) {
-    LTRACEF("entry out_handles %p, %p\n", out0.get(), out1.get());
-
+zx_status_t sys_socket_create(uint32_t options,
+                              user_out_handle* out0,
+                              user_out_handle* out1) {
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_SOCKET);
     if (res != ZX_OK)
@@ -39,29 +39,12 @@ zx_status_t sys_socket_create(uint32_t options, user_out_ptr<zx_handle_t> out0, 
     fbl::RefPtr<Dispatcher> socket0, socket1;
     zx_rights_t rights;
     zx_status_t result = SocketDispatcher::Create(options, &socket0, &socket1, &rights);
-    if (result != ZX_OK)
-        return result;
 
-    HandleOwner h0(Handle::Make(fbl::move(socket0), rights));
-    if (!h0)
-        return ZX_ERR_NO_MEMORY;
-
-    HandleOwner h1(Handle::Make(fbl::move(socket1), rights));
-    if (!h1)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(h0));
-    if (status != ZX_OK)
-        return status;
-
-    status = out1.copy_to_user(up->MapHandleToValue(h1));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(h0));
-    up->AddHandle(fbl::move(h1));
-
-    return ZX_OK;
+    if (result == ZX_OK)
+        result = out0->make(fbl::move(socket0), rights);
+    if (result == ZX_OK)
+        result = out1->make(fbl::move(socket1), rights);
+    return result;
 }
 
 zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
@@ -171,7 +154,7 @@ zx_status_t sys_socket_share(zx_handle_t handle, zx_handle_t other) {
     return ZX_OK;
 }
 
-zx_status_t sys_socket_accept(zx_handle_t handle, user_out_ptr<zx_handle_t> out) {
+zx_status_t sys_socket_accept(zx_handle_t handle, user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<SocketDispatcher> socket;
@@ -184,11 +167,5 @@ zx_status_t sys_socket_accept(zx_handle_t handle, user_out_ptr<zx_handle_t> out)
     if (status != ZX_OK)
         return status;
 
-    status = out.copy_to_user(up->MapHandleToValue(outhandle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(outhandle));
-
-    return ZX_OK;
+    return out->transfer(fbl::move(outhandle));
 }

@@ -27,10 +27,8 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_channel_create(
-    uint32_t options, user_out_ptr<zx_handle_t> out0, user_out_ptr<zx_handle_t> out1) {
-    LTRACEF("out_handles %p,%p\n", out0.get(), out1.get());
-
+zx_status_t sys_channel_create(uint32_t options,
+                               user_out_handle* out0, user_out_handle* out1) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -48,26 +46,12 @@ zx_status_t sys_channel_create(
     uint64_t id0 = mpd0->get_koid();
     uint64_t id1 = mpd1->get_koid();
 
-    HandleOwner h0(Handle::Make(fbl::move(mpd0), rights));
-    if (!h0)
-        return ZX_ERR_NO_MEMORY;
-
-    HandleOwner h1(Handle::Make(fbl::move(mpd1), rights));
-    if (!h1)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(h0));
-    if (status != ZX_OK)
-        return status;
-    status = out1.copy_to_user(up->MapHandleToValue(h1));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(h0));
-    up->AddHandle(fbl::move(h1));
-
-    ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
-    return ZX_OK;
+    result = out0->make(fbl::move(mpd0), rights);
+    if (result == ZX_OK)
+        result = out1->make(fbl::move(mpd1), rights);
+    if (result == ZX_OK)
+        ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
+    return result;
 }
 
 static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,

@@ -735,8 +735,8 @@ zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask
 //
 // ZX_HANDLE_INVALID is currently treated as a "magic" handle used to
 // obtain a process from "the system".
-zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t rights,
-                                 user_out_ptr<zx_handle_t> _out) {
+zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid,
+                                 zx_rights_t rights, user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (handle == ZX_HANDLE_INVALID) {
@@ -756,16 +756,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
         if (!process)
             return ZX_ERR_NOT_FOUND;
 
-        HandleOwner process_h(
-            Handle::Make(fbl::RefPtr<Dispatcher>(process.get()), rights));
-        if (!process_h)
-            return ZX_ERR_NO_MEMORY;
-
-        zx_status_t status = _out.copy_to_user(up->MapHandleToValue(process_h));
-        if (status != ZX_OK)
-            return status;
-        up->AddHandle(fbl::move(process_h));
-        return ZX_OK;
+        return out->make(fbl::move(process), rights);
     }
 
     fbl::RefPtr<Dispatcher> dispatcher;
@@ -788,43 +779,17 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
         auto thread = process->LookupThreadById(koid);
         if (!thread)
             return ZX_ERR_NOT_FOUND;
-        HandleOwner thread_h(Handle::Make(thread, rights));
-        if (!thread_h)
-            return ZX_ERR_NO_MEMORY;
-
-        zx_status_t status = _out.copy_to_user(up->MapHandleToValue(thread_h));
-        if (status != ZX_OK)
-            return status;
-        up->AddHandle(fbl::move(thread_h));
-        return ZX_OK;
+        return out->make(fbl::move(thread), rights);
     }
 
     auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
     if (job) {
         auto child = job->LookupJobById(koid);
-        if (child) {
-            HandleOwner child_h(Handle::Make(child, rights));
-            if (!child_h)
-                return ZX_ERR_NO_MEMORY;
-
-            zx_status_t status = _out.copy_to_user(up->MapHandleToValue(child_h));
-            if (status != ZX_OK)
-                return status;
-            up->AddHandle(fbl::move(child_h));
-            return ZX_OK;
-        }
+        if (child)
+            return out->make(fbl::move(child), rights);
         auto proc = job->LookupProcessById(koid);
-        if (proc) {
-            HandleOwner child_h(Handle::Make(proc, rights));
-            if (!child_h)
-                return ZX_ERR_NO_MEMORY;
-
-            zx_status_t status = _out.copy_to_user(up->MapHandleToValue(child_h));
-            if (status != ZX_OK)
-                return status;
-            up->AddHandle(fbl::move(child_h));
-            return ZX_OK;
-        }
+        if (proc)
+            return out->make(fbl::move(proc), rights);
         return ZX_ERR_NOT_FOUND;
     }
 

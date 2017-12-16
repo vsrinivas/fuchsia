@@ -89,7 +89,7 @@ zx_status_t sys_clock_adjust(zx_handle_t hrsrc, uint32_t clock_id, int64_t offse
     }
 }
 
-zx_status_t sys_event_create(uint32_t options, user_out_ptr<zx_handle_t> event_out) {
+zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
     LTRACEF("options 0x%x\n", options);
 
     if (options != 0u)
@@ -104,26 +104,14 @@ zx_status_t sys_event_create(uint32_t options, user_out_ptr<zx_handle_t> event_o
     zx_rights_t rights;
 
     zx_status_t result = EventDispatcher::Create(options, &dispatcher, &rights);
-    if (result != ZX_OK)
-        return result;
-
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = event_out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    if (result == ZX_OK)
+        result = event_out->make(fbl::move(dispatcher), rights);
+    return result;
 }
 
 zx_status_t sys_eventpair_create(uint32_t options,
-                                 user_out_ptr<zx_handle_t> out0,
-                                 user_out_ptr<zx_handle_t> out1) {
-    LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
-
+                                 user_out_handle* out0,
+                                 user_out_handle* out1) {
     if (options != 0u)  // No options defined/supported yet.
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -135,32 +123,16 @@ zx_status_t sys_eventpair_create(uint32_t options,
     fbl::RefPtr<Dispatcher> epd0, epd1;
     zx_rights_t rights;
     zx_status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
-    if (result != ZX_OK)
-        return result;
 
-    HandleOwner h0(Handle::Make(fbl::move(epd0), rights));
-    if (!h0)
-        return ZX_ERR_NO_MEMORY;
+    if (result == ZX_OK)
+        result = out0->make(fbl::move(epd0), rights);
+    if (result == ZX_OK)
+        result = out1->make(fbl::move(epd1), rights);
 
-    HandleOwner h1(Handle::Make(fbl::move(epd1), rights));
-    if (!h1)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = out0.copy_to_user(up->MapHandleToValue(h0));
-    if (status != ZX_OK)
-        return status;
-
-    status = out1.copy_to_user(up->MapHandleToValue(h1));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(h0));
-    up->AddHandle(fbl::move(h1));
-
-    return ZX_OK;
+    return result;
 }
 
-zx_status_t sys_log_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
+zx_status_t sys_log_create(uint32_t options, user_out_handle* out) {
     LTRACEF("options 0x%x\n", options);
 
     // create a Log dispatcher
@@ -177,23 +149,11 @@ zx_status_t sys_log_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
     }
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    zx_status_t status = out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
-                                user_out_ptr<zx_handle_t> out) {
+                                user_out_handle* out) {
     zx_status_t status = validate_resource(rsrc, ZX_RSRC_KIND_ROOT);
     if (status != ZX_OK)
         return status;

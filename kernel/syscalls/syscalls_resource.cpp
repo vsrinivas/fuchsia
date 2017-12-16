@@ -29,7 +29,7 @@
 // the range of the parent.
 zx_status_t sys_resource_create(zx_handle_t handle, uint32_t kind,
                                 uint64_t low, uint64_t high,
-                                user_out_ptr<zx_handle_t> resource_out) {
+                                user_out_handle* resource_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (high < low)
@@ -63,15 +63,5 @@ zx_status_t sys_resource_create(zx_handle_t handle, uint32_t kind,
         return result;
 
     // Create a handle for the child
-    HandleOwner child_h(Handle::Make(fbl::RefPtr<Dispatcher>(child.get()), rights));
-    if (!child_h)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = resource_out.copy_to_user(up->MapHandleToValue(child_h));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(child_h));
-
-    return ZX_OK;
+    return resource_out->make(fbl::move(child), rights);
 }

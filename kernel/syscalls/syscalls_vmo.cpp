@@ -23,7 +23,8 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_ptr<zx_handle_t> _out) {
+zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
+                           user_out_handle* out) {
     LTRACEF("size %#" PRIx64 "\n", size);
 
     if (options != 0u)
@@ -48,17 +49,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_ptr<zx_hand
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = _out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
@@ -222,8 +213,9 @@ zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) 
     return vmo->SetMappingCachePolicy(cache_policy);
 }
 
-zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t offset, uint64_t size,
-                          user_out_ptr<zx_handle_t>(_out_handle)) {
+zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
+                          uint64_t offset, uint64_t size,
+                          user_out_handle* out_handle) {
     LTRACEF("handle %x options %#x offset %#" PRIx64 " size %#" PRIx64 "\n",
             handle, options, offset, size);
 
@@ -267,15 +259,5 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t offset,
     DEBUG_ASSERT((default_rights & rights) == rights);
 
     // create a handle and attach the dispatcher to it
-    HandleOwner clone_handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!clone_handle)
-        return ZX_ERR_NO_MEMORY;
-
-    status = _out_handle.copy_to_user(up->MapHandleToValue(clone_handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(clone_handle));
-
-    return ZX_OK;
+    return out_handle->make(fbl::move(dispatcher), rights);
 }

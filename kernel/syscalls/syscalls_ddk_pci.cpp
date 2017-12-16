@@ -284,7 +284,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
 zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
                                    uint32_t index,
                                    user_out_ptr<zx_pcie_device_info_t> out_info,
-                                   user_out_ptr<zx_handle_t> out_handle) {
+                                   user_out_handle* out_handle) {
     /**
      * Returns the pci config of a device.
      * @param index Device index
@@ -298,7 +298,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
         return status;
     }
 
-    if (!out_info || !out_handle) {
+    if (!out_info) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -310,24 +310,12 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
         return result;
     }
 
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    auto up = ProcessDispatcher::GetCurrent();
-    zx_handle_t handle_value = up->MapHandleToValue(handle);
-
     // If everything is successful add the handle to the process
     status = out_info.copy_to_user(info);
     if (status != ZX_OK)
         return status;
-    status = out_handle.copy_to_user(handle_value);
-    if (status != ZX_OK)
-        return status;
 
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out_handle->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t width,
@@ -631,7 +619,7 @@ zx_status_t sys_pci_io_read(zx_handle_t handle, uint32_t bar_num, uint32_t offse
 
 zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
                                   int32_t which_irq,
-                                  user_out_ptr<zx_handle_t> out_handle) {
+                                  user_out_handle* out_handle) {
     /**
      * Returns a handle that can be waited on.
      * @param handle Handle associated with a PCI device
@@ -640,9 +628,6 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
      * @param out_handle pointer to a handle to associate with the interrupt mapping
      */
     LTRACEF("handle %x\n", dev_handle);
-    if (!out_handle) {
-        return ZX_ERR_INVALID_ARGS;
-    }
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -658,17 +643,7 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
     if (result != ZX_OK)
         return result;
 
-    HandleOwner handle(Handle::Make(fbl::move(interrupt_dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    status = out_handle.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK) {
-        return status;
-    }
-    up->AddHandle(fbl::move(handle));
-
-    return ZX_OK;
+    return out_handle->make(fbl::move(interrupt_dispatcher), rights);
 }
 
 /**
@@ -742,7 +717,7 @@ zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uin
 }
 
 zx_status_t sys_pci_get_nth_device(zx_handle_t, uint32_t, user_inout_ptr<zx_pcie_device_info_t>,
-                                   user_inout_ptr<zx_handle_t>) {
+                                   user_out_handle*) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -770,7 +745,7 @@ zx_status_t sys_pci_io_read(zx_handle_t, uint32_t, uint32_t, uint32_t, user_out_
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_map_interrupt(zx_handle_t, int32_t, user_out_ptr<zx_handle_t>) {
+zx_status_t sys_pci_map_interrupt(zx_handle_t, int32_t, user_out_handle*) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -19,7 +19,7 @@
 #include "syscalls_priv.h"
 
 zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t physmem_vmo,
-                             user_out_ptr<zx_handle_t> out) {
+                             user_out_handle* out) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -39,15 +39,7 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t
     if (status != ZX_OK)
         return status;
 
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-    status = out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr_t addr, size_t len,
@@ -71,7 +63,7 @@ zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr
 
 zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
                             user_in_ptr<const zx_vcpu_create_args_t> user_args,
-                            user_out_ptr<zx_handle_t> out) {
+                            user_out_handle* out) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -107,15 +99,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     return ZX_ERR_NOT_SUPPORTED;
 #endif
 
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-    status = out.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    return ZX_OK;
+    return out->make(fbl::move(dispatcher), rights);
 }
 
 zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_out_ptr<zx_port_packet_t> user_packet) {

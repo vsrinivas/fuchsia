@@ -24,7 +24,7 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_port_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
+zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     LTRACEF("options %u\n", options);
 
     // No options are supported.
@@ -32,33 +32,23 @@ zx_status_t sys_port_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t res = up->QueryPolicy(ZX_POL_NEW_PORT);
-    if (res != ZX_OK)
-        return res;
+    zx_status_t result = up->QueryPolicy(ZX_POL_NEW_PORT);
+    if (result != ZX_OK)
+        return result;
 
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
 
-    zx_status_t result = PortDispatcher::Create(options, &dispatcher, &rights);
-
+    result = PortDispatcher::Create(options, &dispatcher, &rights);
     if (result != ZX_OK)
         return result;
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
 
-    HandleOwner handle(Handle::Make(fbl::move(dispatcher), rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_handle_t hv = up->MapHandleToValue(handle);
-
-    zx_status_t status = out.copy_to_user(hv);
-    if (status != ZX_OK)
-        return status;
-    up->AddHandle(fbl::move(handle));
+    result = out->make(fbl::move(dispatcher), rights);
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
-    return ZX_OK;
+    return result;
 }
 
 zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_t> packet_in, size_t count) {

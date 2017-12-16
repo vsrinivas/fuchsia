@@ -50,14 +50,14 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc,
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip/pc %#" PRIx64 "\n",
                   get_current_thread(), syscall_num, pc);
 
-    const uintptr_t vdso_code_address =
-        ProcessDispatcher::GetCurrent()->vdso_code_address();
+    ProcessDispatcher* current_process = ProcessDispatcher::GetCurrent();
+    const uintptr_t vdso_code_address = current_process->vdso_code_address();
 
     uint64_t ret;
     if (unlikely(!valid_pc(pc - vdso_code_address))) {
         ret = sys_invalid_syscall(syscall_num, pc, vdso_code_address);
     } else {
-        ret = make_call();
+        ret = make_call(current_process);
     }
 
     LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", get_current_thread(), ret);
@@ -75,7 +75,7 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc,
 syscall_result unknown_syscall(uint64_t syscall_num, uint64_t pc) {
     return do_syscall(syscall_num, pc,
                       [](uintptr_t) { return false; },
-                      [&]() {
+                      [&](ProcessDispatcher*) {
                           __builtin_unreachable();
                           return ZX_ERR_INTERNAL;
                       });

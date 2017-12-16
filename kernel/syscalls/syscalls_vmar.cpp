@@ -27,7 +27,7 @@
 
 zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
                               size_t offset, size_t size, uint32_t map_flags,
-                              user_out_ptr<zx_handle_t> child_vmar,
+                              user_out_handle* child_vmar,
                               user_out_ptr<uintptr_t> child_addr) {
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -65,21 +65,14 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
     uintptr_t base = new_vmar->vmar()->base();
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner handle(Handle::Make(fbl::move(new_vmar), new_rights));
-    if (!handle)
-        return ZX_ERR_NO_MEMORY;
+    status = child_vmar->make(fbl::move(new_vmar), new_rights);
 
-    status = child_addr.copy_to_user(base);
-    if (status != ZX_OK)
-        return status;
+    if (status == ZX_OK)
+        status = child_addr.copy_to_user(base);
 
-    status = child_vmar.copy_to_user(up->MapHandleToValue(handle));
-    if (status != ZX_OK)
-        return status;
-
-    up->AddHandle(fbl::move(handle));
-    cleanup_handler.cancel();
-    return ZX_OK;
+    if (status == ZX_OK)
+        cleanup_handler.cancel();
+    return status;
 }
 
 zx_status_t sys_vmar_destroy(zx_handle_t vmar_handle) {
