@@ -93,7 +93,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
                                  uint32_t* handle_type, size_t size) {
     uint32_t total = 0;
     pd.ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
-                         fbl::RefPtr<const Dispatcher> disp) {
+                         const Dispatcher* disp) {
         if (handle_type) {
             uint32_t type = static_cast<uint32_t>(disp->get_type());
             if (size > type) {
@@ -169,7 +169,7 @@ void DumpProcessHandles(zx_koid_t id) {
 
     uint32_t total = 0;
     pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
-                          fbl::RefPtr<const Dispatcher> disp) {
+                          const Dispatcher* disp) {
         printf("%9x %7" PRIu64 " : %s\n",
             handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
         ++total;
@@ -345,8 +345,8 @@ static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
     uint64_t total_size = 0;
     uint64_t total_alloc = 0;
     pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
-                          fbl::RefPtr<const Dispatcher> disp) {
-        auto vmod = DownCastDispatcher<const VmObjectDispatcher>(&disp);
+                          const Dispatcher* disp) {
+        auto vmod = DownCastDispatcher<const VmObjectDispatcher>(disp);
         if (vmod == nullptr) {
             return ZX_OK;
         }
@@ -641,8 +641,8 @@ zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
     // do deduping.
     zx_status_t s = process->ForEachHandle([&](zx_handle_t handle,
                                                zx_rights_t rights,
-                                               fbl::RefPtr<Dispatcher> disp) {
-        auto vmod = DownCastDispatcher<VmObjectDispatcher>(&disp);
+                                               const Dispatcher* disp) {
+        auto vmod = DownCastDispatcher<const VmObjectDispatcher>(disp);
         if (vmod == nullptr) {
             // This handle isn't a VMO; skip it.
             return ZX_OK;

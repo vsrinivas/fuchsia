@@ -164,11 +164,9 @@ public:
     zx_status_t ForEachHandle(T func) const {
         fbl::AutoLock lock(&handle_table_lock_);
         for (const auto& handle : handles_) {
-            // It would be nice to only pass a const Dispatcher* to the
-            // callback, but many callers will use DownCastDispatcher()
-            // which requires a (necessarily non-const) RefPtr<Dispatcher>.
+            const Dispatcher* dispatcher = handle.dispatcher().get();
             zx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
-                                 handle.dispatcher());
+                                 dispatcher);
             if (s != ZX_OK) {
                 return s;
             }
