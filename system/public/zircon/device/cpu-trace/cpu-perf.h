@@ -51,20 +51,24 @@ typedef struct {
     uint64_t capture_end;
 } __PACKED cpuperf_buffer_header_t;
 
-// The type of "sampling mode" record.
+// The various types of emitted records.
 typedef enum {
   // Reserved, unused.
   CPUPERF_RECORD_RESERVED = 0,
+  // The current time, in a |cpuperf_time_record_t|, to be applied to all
+  // subsequent records until the next TIME record.
+  CPUPERF_RECORD_TIME = 1,
   // The record is a |cpuperf_tick_record_t|.
-  CPUPERF_RECORD_TICK = 1,
+  // TODO(dje): Rename, the name is confusing with TIME records.
+  CPUPERF_RECORD_TICK = 2,
   // The record is a |cpuperf_count_record_t|.
-  CPUPERF_RECORD_COUNT = 2,
+  CPUPERF_RECORD_COUNT = 3,
   // The record is a |cpuperf_value_record_t|.
-  CPUPERF_RECORD_VALUE = 3,
+  CPUPERF_RECORD_VALUE = 4,
   // The record is a |cpuperf_pc_record_t|.
-  CPUPERF_RECORD_PC = 4,
+  CPUPERF_RECORD_PC = 5,
   // non-ABI
-  CPUPERF_NUM_RECORD_TYPES = 5,
+  CPUPERF_NUM_RECORD_TYPES = 6,
 } cpuperf_record_type_t;
 
 // Trace buffer space is expensive, we want to keep records small.
@@ -83,6 +87,9 @@ typedef uint16_t cpuperf_event_id_t;
 #define CPUPERF_EVENT_ID_NONE 0
 
 // Possible values for the |unit| field of |cpuperf_event_id_t|.
+// TODO(dje): Reorganize these into something like
+// {arch,model} -x- {fixed,programmable}, which these currently are,
+// it's just not immediately apparent.
 typedef enum {
     CPUPERF_UNIT_RESERVED = 0,
     CPUPERF_UNIT_ARCH = 1,
@@ -91,8 +98,8 @@ typedef enum {
     CPUPERF_UNIT_MISC = 4,
 } cpuperf_unit_type_t;
 
-// Sampling mode data header.
-// Note: Avoid holes in trace records.
+// Trace record header.
+// Note: Avoid holes in all trace records.
 typedef struct {
     // One of CPUPERF_RECORD_*.
     uint8_t type;
@@ -101,31 +108,38 @@ typedef struct {
     uint8_t reserved_flags;
 
     // The event the record is for.
+    // If there is none then use CPUPERF_EVENT_ID_NONE.
     cpuperf_event_id_t event;
-
-    // TODO(dje): Remove when |time| becomes 32 bits.
-    uint32_t reserved;
-
-    // TODO(dje): Reduce this to 32 bits (e.g., by adding clock records to
-    // the buffer).
-    zx_time_t time;
 } __PACKED cpuperf_record_header_t;
 
-static_assert(sizeof(cpuperf_record_header_t) % 8 == 0,
-              "record header not multiple of 64 bits");
+static_assert(sizeof(cpuperf_record_header_t) % 4 == 0,
+              "record header not multiple of 32 bits");
 
-// Record the time an event was sampled.
-// This does not include the event value in order to keep the size small.
-// This can only be used for values that count something.
-// This is for use when the event is its own trigger so the user should know
-// what value was: it's the sample rate.
+// Record the current time of the trace.
+// If the event id is non-zero (!NONE) then it must be for a counting event
+// and then this record is also a "tick" record indicating the counter has
+// reached its sample rate. The counter resets to zero after this record.
+typedef struct {
+    cpuperf_record_header_t header;
+    // The value is architecture and possibly platform specific.
+    // The |ticks_per_second| field in the buffer header provides the
+    // conversion factor from this value to ticks per second.
+    // For x86 this is the TSC value.
+    zx_time_t time;
+} __PACKED cpuperf_time_record_t;
+
+// Record that a counting event reached its sample rate.
+// It is expected that this record follows a TIME record.
+// The counter resets to zero after this record.
+// This does not include the event's value in order to keep the size small:
+// the value is the sample rate which is known from the configuration.
 typedef struct {
     cpuperf_record_header_t header;
 } __PACKED cpuperf_tick_record_t;
 
-// Record the value of a counter at a particular time, with the count starting
-// from the last occurrence of this record (the counter is effectively reset
-// to zero when the record is emitted).
+// Record the value of a counter at a particular time.
+// It is expected that this record follows a TIME record.
+// The counter resets to zero after this record.
 // This is used when another timebase is driving the sampling, e.g., another
 // counter. Otherwise the "tick" record is generally used as it takes less
 // space.
@@ -134,22 +148,27 @@ typedef struct {
     uint64_t count;
 } __PACKED cpuperf_count_record_t;
 
-// Record the value of an event at a particular time.
+// Record the value of an event.
+// It is expected that this record follows a TIME record.
 // This value is not a count and cannot be used to produce a "rate"
 // (e.g., some value per second).
-// This is used when another timebase is driving the sampling, e.g., another
-// counter.
 typedef struct {
     cpuperf_record_header_t header;
     uint64_t value;
 } __PACKED cpuperf_value_record_t;
 
 // Record the aspace+pc values.
+// If the event id is not NONE, then this record also indicates that the
+// event reached its tick point, and is used instead of a tick record. This
+// record is overloaded to save space in trace buffer output.
+// It is expected that this record follows a TIME record.
 // This is used when doing gprof-like profiling.
-// There is no point in recording the counter's value here as the counter
-// must be its own trigger.
+// The event's value is not included here as this is typically used when
+// the counter is its own trigger: the value is known from the sample rate.
 typedef struct {
     cpuperf_record_header_t header;
+    // The aspace id at the time data was collected.
+    // The meaning of the value is architecture-specific.
     // In the case of x86 this is the cr3 value.
     uint64_t aspace;
     uint64_t pc;
@@ -166,8 +185,12 @@ typedef struct {
     // The number of programmable events.
     uint32_t num_programmable_events;
     // For fixed events that are counters, the width in bits.
+    // If different counters have different widths, the choice is architecture
+    // specific.
     uint32_t fixed_counter_width;
     // For programmable events that are counters, the width in bits.
+    // If different counters have different widths, the choice is architecture
+    // specific.
     uint32_t programmable_counter_width;
 } cpuperf_properties_t;
 
