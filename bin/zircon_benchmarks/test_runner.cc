@@ -115,15 +115,23 @@ bool RunTests(uint32_t run_count,
     // Log in a format similar to gtest's output.
     printf("[ RUN      ] %s\n", test_name);
 
-    TestCaseInterface* test_instance = test_case.factory_func();
+    {
+      TRACE_DURATION("benchmark", "test_group", "test_name", test_name);
+      TestCaseInterface* test_instance;
+      {
+        TRACE_DURATION("benchmark", "test_setup");
+        test_instance = test_case.factory_func();
+      }
 
-    if (TRACE_CATEGORY_ENABLED("benchmark")) {
-      RunSingleTest<true>(test_instance, time_points, run_count);
-    } else {
-      RunSingleTest<false>(test_instance, time_points, run_count);
+      if (TRACE_CATEGORY_ENABLED("benchmark")) {
+        RunSingleTest<true>(test_instance, time_points, run_count);
+      } else {
+        RunSingleTest<false>(test_instance, time_points, run_count);
+      }
+
+      TRACE_DURATION("benchmark", "test_teardown");
+      delete test_instance;
     }
-
-    delete test_instance;
 
     printf("[       OK ] %s\n", test_name);
 
