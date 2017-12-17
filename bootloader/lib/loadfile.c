@@ -26,9 +26,9 @@ efi_file_protocol* xefi_open_file(char16_t* filename) {
     }
 
 #if 0
-	printf("Img DeviceHandle='%s'\n", HandleToString(loaded->DeviceHandle));
-	printf("Img FilePath='%s'\n", DevicePathToStr(loaded->FilePath));
-	printf("Img Base=%lx Size=%lx\n", loaded->ImageBase, loaded->ImageSize);
+    printf("Img DeviceHandle='%s'\n", HandleToString(loaded->DeviceHandle));
+    printf("Img FilePath='%s'\n", DevicePathToStr(loaded->FilePath));
+    printf("Img Base=%lx Size=%lx\n", loaded->ImageBase, loaded->ImageSize);
 #endif
 
     efi_simple_file_system_protocol* sfs;
