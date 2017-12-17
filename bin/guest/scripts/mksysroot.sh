@@ -10,18 +10,6 @@ set -eo pipefail
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Where the toybox sources are expected to be.
-TOYBOX_SRC_DIR="/tmp/toybox"
-
-# Toybox initrd file.
-TOYBOX_INITRD="$TOYBOX_SRC_DIR/initrd.gz"
-
-# Toybox root filesystem image.
-TOYBOX_ROOTFS="$TOYBOX_SRC_DIR/rootfs.ext2"
-
-# Where to prep the toybox directory structure.
-TOYBOX_SYSROOT="$TOYBOX_SRC_DIR/fs"
-
 # Where the dash sources are expected to be.
 DASH_SRC_DIR="/tmp/dash"
 
@@ -188,6 +176,18 @@ x86)
 *)
   usage;;
 esac
+
+# Where the toybox sources are expected to be.
+TOYBOX_SRC_DIR="${TOYBOX_SRC_DIR:-/tmp/toybox_${ARCH}}"
+
+# Toybox initrd file.
+TOYBOX_INITRD="$TOYBOX_SRC_DIR/initrd.gz"
+
+# Toybox root filesystem image.
+TOYBOX_ROOTFS="$TOYBOX_SRC_DIR/rootfs.ext2"
+
+# Where to prep the toybox directory structure.
+TOYBOX_SYSROOT="$TOYBOX_SRC_DIR/fs"
 
 # Do we have something to build?
 if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then
