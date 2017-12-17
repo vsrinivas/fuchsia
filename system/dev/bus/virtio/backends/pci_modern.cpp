@@ -230,18 +230,24 @@ void PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_des
     MmioWrite(&common_cfg_->queue_avail, pa_avail);
     MmioWrite(&common_cfg_->queue_used, pa_used);
     MmioWrite<uint16_t>(&common_cfg_->queue_enable, 1);
+
+    // Assert that queue_notify_off is equal to the ring index.
+    uint16_t queue_notify_off;
+    MmioRead(&common_cfg_->queue_notify_off, &queue_notify_off);
+    ZX_ASSERT(queue_notify_off == index);
 }
 
 void PciModernBackend::RingKick(uint16_t ring_index) {
     fbl::AutoLock lock(&lock_);
-    uint16_t queue_notify_off;
-    MmioRead(&common_cfg_->queue_notify_off, &queue_notify_off);
 
     // Virtio 1.0 Section 4.1.4.4
     // The address to notify for a queue is calculated using information from
     // the notify_off_multiplier, the capability's base + offset, and the
     // selected queue's offset.
-    auto addr = notify_base_ + queue_notify_off * notify_off_mul_;
+    //
+    // For performance reasons, we assume that the selected queue's offset is
+    // equal to the ring index.
+    auto addr = notify_base_ + ring_index * notify_off_mul_;
     auto ptr = reinterpret_cast<volatile uint16_t*>(addr);
     zxlogf(SPEW, "%s: kick %u addr %p\n", tag(), ring_index, ptr);
     *ptr = ring_index;
