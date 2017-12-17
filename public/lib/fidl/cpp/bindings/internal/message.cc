@@ -19,6 +19,12 @@ MessageBase::~MessageBase() {
   CloseHandles();
 }
 
+void MessageBase::MoveHandlesFrom(MessageBase* source) {
+  CloseHandles();
+  handles_.clear();
+  std::swap(source->handles_, handles_);
+}
+
 // Closes the handles in the handles_ vector but does not remove them from
 // the vector.
 void MessageBase::CloseHandles() {
@@ -58,6 +64,11 @@ void Message::AllocUninitializedData(uint32_t num_bytes) {
   data_ = static_cast<internal::MessageData*>(malloc(num_bytes));
 }
 
+void Message::CopyDataFrom(MessageBase* source) {
+  AllocUninitializedData(source->data_num_bytes());
+  memcpy(mutable_data(), source->data(), source->data_num_bytes());
+}
+
 void Message::MoveTo(Message* destination) {
   FXL_DCHECK(this != destination);
 
@@ -69,9 +80,7 @@ void Message::MoveTo(Message* destination) {
   data_ = nullptr;
 
   // Move the handles.
-  destination->CloseHandles();
-  destination->handles_.clear();
-  std::swap(destination->handles_, handles_);
+  destination->MoveHandlesFrom(this);
 }
 
 zx_status_t ReadMessage(const zx::channel& channel, AllocMessage* message) {

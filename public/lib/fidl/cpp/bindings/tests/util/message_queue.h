@@ -7,6 +7,7 @@
 
 #include <queue>
 
+#include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fxl/macros.h"
 
 namespace fidl {
@@ -27,12 +28,12 @@ class MessageQueue {
 
   // Removes the next message from the queue, copying its data and transferring
   // ownership of its handles to the given |message|.
-  void Pop(Message* message);
+  void Pop(AllocMessage* message);
 
  private:
   void Pop();
 
-  std::queue<Message*> queue_;
+  std::queue<AllocMessage*> queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageQueue);
 };

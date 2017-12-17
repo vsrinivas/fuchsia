@@ -17,7 +17,8 @@ namespace fidl {
 namespace test {
 namespace {
 
-void AllocRequestMessage(uint32_t name, const char* text, Message* message) {
+void AllocRequestMessage(uint32_t name, const char* text,
+                         AllocMessage* message) {
   size_t payload_size = strlen(text) + 1;  // Plus null terminator.
   RequestMessageBuilder builder(name, payload_size);
   memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
@@ -28,7 +29,7 @@ void AllocRequestMessage(uint32_t name, const char* text, Message* message) {
 void AllocResponseMessage(uint32_t name,
                           const char* text,
                           uint64_t request_id,
-                          Message* message) {
+                          AllocMessage* message) {
   size_t payload_size = strlen(text) + 1;  // Plus null terminator.
   ResponseMessageBuilder builder(name, payload_size, request_id);
   memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
@@ -71,7 +72,7 @@ class ResponseGenerator : public MessageReceiverWithResponderStatus {
                     uint64_t request_id,
                     const char* request_string,
                     MessageReceiver* responder) {
-    Message response;
+    AllocMessage response;
     std::string response_string(request_string);
     response_string += " world!";
     AllocResponseMessage(name, response_string.c_str(), request_id, &response);
@@ -147,7 +148,7 @@ TEST_F(RouterTest, BasicRequestResponse) {
   ResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   MessageQueue message_queue;
@@ -157,14 +158,14 @@ TEST_F(RouterTest, BasicRequestResponse) {
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
-  Message response;
+  AllocMessage response;
   message_queue.Pop(&response);
 
   EXPECT_EQ(std::string("hello world!"),
             std::string(reinterpret_cast<const char*>(response.payload())));
 
   // Send a second message on the pipe.
-  Message request2;
+  AllocMessage request2;
   AllocRequestMessage(1, "hello again", &request2);
 
   router0.AcceptWithResponder(&request2,
@@ -187,7 +188,7 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   ResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   MessageQueue message_queue;
@@ -198,14 +199,14 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
-  Message response;
+  AllocMessage response;
   message_queue.Pop(&response);
 
   EXPECT_EQ(std::string("hello world!"),
             std::string(reinterpret_cast<const char*>(response.payload())));
 
   // Send a second message on the pipe.
-  Message request2;
+  AllocMessage request2;
   AllocRequestMessage(1, "hello again", &request2);
 
   router0.AcceptWithResponder(&request2,
@@ -229,7 +230,7 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   ResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   EXPECT_FALSE(router1.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
@@ -250,14 +251,14 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
-  Message response;
+  AllocMessage response;
   message_queue.Pop(&response);
 
   EXPECT_EQ(std::string("hello world!"),
             std::string(reinterpret_cast<const char*>(response.payload())));
 
   // Send a second message on the pipe.
-  Message request2;
+  AllocMessage request2;
   AllocRequestMessage(1, "hello again", &request2);
 
   router0.AcceptWithResponder(&request2,
@@ -281,7 +282,7 @@ TEST_F(RouterTest, RequestWithNoReceiver) {
   // Without an incoming receiver set on router1, we expect router0 to observe
   // an error as a result of sending a message.
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   MessageQueue message_queue;
@@ -303,7 +304,7 @@ TEST_F(RouterTest, LazyResponses) {
   LazyResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   MessageQueue message_queue;
@@ -320,13 +321,13 @@ TEST_F(RouterTest, LazyResponses) {
 
   // Check the response.
   EXPECT_FALSE(message_queue.IsEmpty());
-  Message response;
+  AllocMessage response;
   message_queue.Pop(&response);
   EXPECT_EQ(std::string("hello world!"),
             std::string(reinterpret_cast<const char*>(response.payload())));
 
   // Send a second message on the pipe.
-  Message request2;
+  AllocMessage request2;
   AllocRequestMessage(1, "hello again", &request2);
 
   router0.AcceptWithResponder(&request2,
@@ -358,7 +359,7 @@ TEST_F(RouterTest, MissingResponses) {
   LazyResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   MessageQueue message_queue;
@@ -379,7 +380,7 @@ TEST_F(RouterTest, MissingResponses) {
   // There is no direct way to test whether or not the pipe has been closed.
   // The only thing we can do is try to send a second message on the pipe
   // and observe that an error occurs.
-  Message request2;
+  AllocMessage request2;
   AllocRequestMessage(1, "hello again", &request2);
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
@@ -400,7 +401,7 @@ TEST_F(RouterTest, MissingResponses_Timeout) {
   LazyResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
 
-  Message request;
+  AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
   MessageQueue message_queue;
@@ -439,7 +440,7 @@ TEST_F(RouterTest, LateResponse) {
 
     router1.set_incoming_receiver(&generator);
 
-    Message request;
+    AllocMessage request;
     AllocRequestMessage(1, "hello", &request);
 
     MessageQueue message_queue;

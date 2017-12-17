@@ -22,11 +22,13 @@ bool MessageQueue::IsEmpty() const {
 }
 
 void MessageQueue::Push(Message* message) {
-  queue_.push(new Message());
-  message->MoveTo(queue_.back());
+  auto* new_message = new AllocMessage();
+  new_message->MoveHandlesFrom(message);
+  new_message->CopyDataFrom(message);
+  queue_.push(new_message);
 }
 
-void MessageQueue::Pop(Message* message) {
+void MessageQueue::Pop(AllocMessage* message) {
   FXL_DCHECK(!queue_.empty());
   queue_.front()->MoveTo(message);
   Pop();

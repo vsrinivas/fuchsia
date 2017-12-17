@@ -71,6 +71,8 @@ class MessageBase {
   const std::vector<zx_handle_t>* handles() const { return &handles_; }
   std::vector<zx_handle_t>* mutable_handles() { return &handles_; }
 
+  void MoveHandlesFrom(MessageBase* source);
+
  protected:
   void CloseHandles();
 
@@ -92,6 +94,7 @@ class Message : public MessageBase {
 
   void AllocData(uint32_t num_bytes);
   void AllocUninitializedData(uint32_t num_bytes);
+  void CopyDataFrom(MessageBase* source);
 
   // Transfers data and handles to |destination|.
   void MoveTo(Message* destination);
