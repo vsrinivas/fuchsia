@@ -46,6 +46,7 @@ static const uint64_t kUartBases[kNumUarts] = {
 #include <hypervisor/x86/acpi.h>
 #include <hypervisor/x86/local_apic.h>
 #include "garnet/lib/machina/arch/x86/io_port.h"
+#include "garnet/lib/machina/arch/x86/page_table.h"
 #include "garnet/lib/machina/arch/x86/tpm.h"
 
 static const char kDsdtPath[] = "/pkg/data/dsdt.aml";
@@ -263,7 +264,7 @@ int main(int argc, char** argv) {
   uintptr_t pt_end_off = 0;
 
 #if __x86_64__
-  status = guest.CreatePageTable(&pt_end_off);
+  status = machina::create_page_table(physmem_addr, physmem_size, &pt_end_off);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create page table\n");
     return status;

@@ -55,6 +55,8 @@ shared_library("machina") {
       "arch/x86/io_port.h",
       "arch/x86/e820.h",
       "arch/x86/e820.cc",
+      "arch/x86/page_table.h",
+      "arch/x86/page_table.cc",
       "arch/x86/tpm.h",
     ]
   }
@@ -97,6 +99,12 @@ executable("machina-unittests") {
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
   ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "arch/x86/page_table-unittest.cc",
+    ]
+  }
 
   deps = [
     ":machina",
