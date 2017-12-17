@@ -18,8 +18,8 @@ zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr, uint32_t wake_count,
 ## DESCRIPTION
 
 Requeuing is a generalization of waking. First, the kernel verifies
-that the value in wake_count matches the value of the futex at
-`value_ptr`, and if not reports *ZX_ERR_ALREADY_BOUND*. After waking `wake_count`
+that the value in `current_value` matches the value of the futex at
+`value_ptr`, and if not reports *ZX_ERR_BAD_STATE*. After waking `wake_count`
 threads, `requeue_count` threads are moved from the original futex's
 wait queue to the wait queue corresponding to `requeue_ptr`, another
 futex.
