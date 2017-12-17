@@ -132,7 +132,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
     return nullptr;
   }
 
-  fidl::Message message;
+  fidl::AllocMessage message;
   message.AllocUninitializedData(message_size);
 
   bytes_read = ReadData(message_size, message.mutable_data());

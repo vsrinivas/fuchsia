@@ -74,7 +74,7 @@ void Message::MoveTo(Message* destination) {
   std::swap(destination->handles_, handles_);
 }
 
-zx_status_t ReadMessage(const zx::channel& channel, Message* message) {
+zx_status_t ReadMessage(const zx::channel& channel, AllocMessage* message) {
   FXL_DCHECK(channel);
   FXL_DCHECK(message);
   FXL_DCHECK(message->handles()->empty());
@@ -108,7 +108,7 @@ zx_status_t ReadMessage(const zx::channel& channel, Message* message) {
 zx_status_t ReadAndDispatchMessage(const zx::channel& channel,
                                    MessageReceiver* receiver,
                                    bool* receiver_result) {
-  Message message;
+  AllocMessage message;
   zx_status_t rv = ReadMessage(channel, &message);
   if (receiver && rv == ZX_OK)
     *receiver_result = receiver->Accept(&message);
@@ -138,7 +138,7 @@ zx_status_t WriteMessage(const zx::channel& channel, Message* message) {
 }
 
 zx_status_t CallMessage(const zx::channel& channel, Message* message,
-                        Message* response) {
+                        AllocMessage* response) {
   // TODO(abarth): Once we convert to the FIDL2 wire format, switch this code
   // to use zx_channel_call.
 

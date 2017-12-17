@@ -266,7 +266,7 @@ void FlogViewer::OnChannelMessage(
     uint32_t entry_index,
     const FlogEntryPtr& entry,
     const FlogChannelMessageEntryDetailsPtr& details) {
-  fidl::Message message;
+  fidl::AllocMessage message;
   message.AllocUninitializedData(details->data.size());
   memcpy(message.mutable_data(), details->data.data(), details->data.size());
 

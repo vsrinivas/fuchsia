@@ -22,15 +22,16 @@ class Message;
 // expect a response message, and therefore does not tag the message with a
 // request id (which may save some bytes).
 //
-// The underlying |Message| is owned by MessageBuilder, but can be permanently
-// moved by accessing |message()| and calling its |MoveTo()|.
+// The underlying |AllocMessage| is owned by MessageBuilder, but its
+// contents can be permanently moved by accessing |message()| and calling
+// its |MoveTo()|.
 class MessageBuilder {
  public:
   // This frames and configures a |fidl::Message| with the given message name.
   MessageBuilder(uint32_t name, size_t payload_size);
   ~MessageBuilder();
 
-  Message* message() { return &message_; }
+  AllocMessage* message() { return &message_; }
 
   // TODO(vardhan): |buffer()| is internal and only consumed by internal classes
   // and unittests.  Consider making it private + friend class its consumers?
@@ -40,7 +41,7 @@ class MessageBuilder {
   MessageBuilder();
   void Initialize(size_t size);
 
-  Message message_;
+  AllocMessage message_;
   internal::FixedBuffer buf_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageBuilder);

@@ -100,6 +100,9 @@ class Message : public MessageBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(Message);
 };
 
+// TODO(US-401): Rename Message -> AllocMessage and MessageBase -> Message.
+using AllocMessage = Message;
+
 class MessageReceiver {
  public:
   virtual ~MessageReceiver() {}
@@ -166,7 +169,7 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
 // and handles).
 //
 // NOTE: The message isn't validated and may be malformed!
-zx_status_t ReadMessage(const zx::channel& channel, Message* message);
+zx_status_t ReadMessage(const zx::channel& channel, AllocMessage* message);
 
 // Read a single message from the channel and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read
@@ -182,7 +185,7 @@ zx_status_t WriteMessage(const zx::channel& channel,
 
 zx_status_t CallMessage(const zx::channel& channel,
                         Message* message,
-                        Message* response);
+                        AllocMessage* response);
 
 }  // namespace fidl
 
