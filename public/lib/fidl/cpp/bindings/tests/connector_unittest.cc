@@ -28,7 +28,7 @@ class ConnectorTest : public testing::Test {
 
   void TearDown() override { ClearAsyncWaiter(); }
 
-  void AllocMessage(const char* text, Message* message) {
+  void AllocateMessage(const char* text, AllocMessage* message) {
     size_t payload_size = strlen(text) + 1;  // Plus null terminator.
     MessageBuilder builder(1, payload_size);
     memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
@@ -57,7 +57,7 @@ class MessageAccumulator : public MessageReceiver {
 
   bool IsEmpty() const { return queue_.IsEmpty(); }
 
-  void Pop(Message* message) { queue_.Pop(message); }
+  void Pop(AllocMessage* message) { queue_.Pop(message); }
 
  private:
   MessageQueue queue_;
@@ -71,8 +71,8 @@ TEST_F(ConnectorTest, Basic) {
 
   const char kText[] = "hello world";
 
-  Message message;
-  AllocMessage(kText, &message);
+  AllocMessage message;
+  AllocateMessage(kText, &message);
 
   connector0.Accept(&message);
 
@@ -83,7 +83,7 @@ TEST_F(ConnectorTest, Basic) {
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
-  Message message_received;
+  AllocMessage message_received;
   accumulator.Pop(&message_received);
 
   EXPECT_EQ(
@@ -97,8 +97,8 @@ TEST_F(ConnectorTest, Basic_Synchronous) {
 
   const char kText[] = "hello world";
 
-  Message message;
-  AllocMessage(kText, &message);
+  AllocMessage message;
+  AllocateMessage(kText, &message);
 
   connector0.Accept(&message);
 
@@ -109,7 +109,7 @@ TEST_F(ConnectorTest, Basic_Synchronous) {
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
-  Message message_received;
+  AllocMessage message_received;
   accumulator.Pop(&message_received);
 
   EXPECT_EQ(
@@ -126,8 +126,8 @@ TEST_F(ConnectorTest, Basic_EarlyIncomingReceiver) {
 
   const char kText[] = "hello world";
 
-  Message message;
-  AllocMessage(kText, &message);
+  AllocMessage message;
+  AllocateMessage(kText, &message);
 
   connector0.Accept(&message);
 
@@ -135,7 +135,7 @@ TEST_F(ConnectorTest, Basic_EarlyIncomingReceiver) {
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
-  Message message_received;
+  AllocMessage message_received;
   accumulator.Pop(&message_received);
 
   EXPECT_EQ(
@@ -150,8 +150,8 @@ TEST_F(ConnectorTest, Basic_TwoMessages) {
   const char* kText[] = {"hello", "world"};
 
   for (size_t i = 0; i < arraysize(kText); ++i) {
-    Message message;
-    AllocMessage(kText[i], &message);
+    AllocMessage message;
+    AllocateMessage(kText[i], &message);
 
     connector0.Accept(&message);
   }
@@ -164,7 +164,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages) {
   for (size_t i = 0; i < arraysize(kText); ++i) {
     ASSERT_FALSE(accumulator.IsEmpty());
 
-    Message message_received;
+    AllocMessage message_received;
     accumulator.Pop(&message_received);
 
     EXPECT_EQ(
@@ -180,8 +180,8 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
   const char* kText[] = {"hello", "world"};
 
   for (size_t i = 0; i < arraysize(kText); ++i) {
-    Message message;
-    AllocMessage(kText[i], &message);
+    AllocMessage message;
+    AllocateMessage(kText[i], &message);
 
     connector0.Accept(&message);
   }
@@ -193,7 +193,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
-  Message message_received;
+  AllocMessage message_received;
   accumulator.Pop(&message_received);
 
   EXPECT_EQ(
@@ -209,8 +209,8 @@ TEST_F(ConnectorTest, MessageWithHandles) {
 
   const char kText[] = "hello world";
 
-  Message message1;
-  AllocMessage(kText, &message1);
+  AllocMessage message1;
+  AllocateMessage(kText, &message1);
 
   zx::channel handle0, handle1;
   zx::channel::create(0, &handle0, &handle1);
@@ -228,7 +228,7 @@ TEST_F(ConnectorTest, MessageWithHandles) {
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
-  Message message_received;
+  AllocMessage message_received;
   accumulator.Pop(&message_received);
 
   EXPECT_EQ(
@@ -246,8 +246,8 @@ TEST_F(ConnectorTest, MessageWithHandles) {
   internal::Connector connector_received(std::move(smph));
   internal::Connector connector_original(std::move(handle1));
 
-  Message message2;
-  AllocMessage(kText, &message2);
+  AllocMessage message2;
+  AllocateMessage(kText, &message2);
 
   connector_received.Accept(&message2);
   connector_original.set_incoming_receiver(&accumulator);
@@ -292,8 +292,8 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
 
   const char kText[] = "hello world";
 
-  Message message;
-  AllocMessage(kText, &message);
+  AllocMessage message;
+  AllocateMessage(kText, &message);
 
   connector0.Accept(&message);
 
@@ -305,7 +305,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
   ASSERT_FALSE(connector1);
   ASSERT_FALSE(accumulator.IsEmpty());
 
-  Message message_received;
+  AllocMessage message_received;
   accumulator.Pop(&message_received);
 
   EXPECT_EQ(
@@ -344,8 +344,8 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
   const char* kText[] = {"hello", "world"};
 
   for (size_t i = 0; i < arraysize(kText); ++i) {
-    Message message;
-    AllocMessage(kText[i], &message);
+    AllocMessage message;
+    AllocateMessage(kText[i], &message);
 
     connector0.Accept(&message);
   }
@@ -358,7 +358,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
   for (size_t i = 0; i < arraysize(kText); ++i) {
     ASSERT_FALSE(accumulator.IsEmpty());
 
-    Message message_received;
+    AllocMessage message_received;
     accumulator.Pop(&message_received);
 
     EXPECT_EQ(
