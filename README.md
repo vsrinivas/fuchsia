@@ -22,5 +22,6 @@ using a distributed offline-first storage system.
  - developer workflow:
    - [Conventions](docs/conventions.md)
    - [Lint](docs/lint.md)
+   - [Repository structure](docs/repository_structure.md)
  - [examples](examples) - examples of applications that use Peridot components
  - [public](public) - public FIDL APIs of Peridot components
