@@ -13,19 +13,19 @@
 
 namespace fidl {
 
-// MessageBase represents a Zircon channel message.  It contains the
-// message's data and handles.
+// Message represents a Zircon channel message.  It contains the message's
+// data and handles.
 //
-// MessageBase owns the handles and the handle buffer, but it does not own
-// the data buffer.  A consumer of a MessageBase instance is free to mutate
-// the data and handles, but it cannot deallocate or transfer ownership of
-// the data buffer, which is borrowed.
+// Message owns the handles and the handle buffer, but it does not own the
+// data buffer.  A consumer of a Message instance is free to mutate the
+// data and handles, but it cannot deallocate or transfer ownership of the
+// data buffer, which is borrowed.
 //
 // The message data consists of a header followed by payload data.
-class MessageBase {
+class Message {
  public:
-  MessageBase();
-  ~MessageBase();
+  Message();
+  ~Message();
 
   uint32_t data_num_bytes() const { return data_num_bytes_; }
 
@@ -71,7 +71,7 @@ class MessageBase {
   const std::vector<zx_handle_t>* handles() const { return &handles_; }
   std::vector<zx_handle_t>* mutable_handles() { return &handles_; }
 
-  void MoveHandlesFrom(MessageBase* source);
+  void MoveHandlesFrom(Message* source);
 
  protected:
   void CloseHandles();
@@ -81,30 +81,27 @@ class MessageBase {
   std::vector<zx_handle_t> handles_;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(MessageBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Message);
 };
 
-// Message is like MessageBase, except that it owns the data buffer.
-class Message : public MessageBase {
+// AllocMessage is like Message, except that it owns the data buffer.
+class AllocMessage : public Message {
  public:
-  Message();
-  ~Message();
+  AllocMessage();
+  ~AllocMessage();
 
   void Reset();
 
   void AllocData(uint32_t num_bytes);
   void AllocUninitializedData(uint32_t num_bytes);
-  void CopyDataFrom(MessageBase* source);
+  void CopyDataFrom(Message* source);
 
   // Transfers data and handles to |destination|.
-  void MoveTo(Message* destination);
+  void MoveTo(AllocMessage* destination);
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Message);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AllocMessage);
 };
-
-// TODO(US-401): Rename Message -> AllocMessage and MessageBase -> Message.
-using AllocMessage = Message;
 
 class MessageReceiver {
  public:

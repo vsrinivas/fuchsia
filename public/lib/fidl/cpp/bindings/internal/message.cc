@@ -12,14 +12,14 @@
 
 namespace fidl {
 
-MessageBase::MessageBase() {
+Message::Message() {
 }
 
-MessageBase::~MessageBase() {
+Message::~Message() {
   CloseHandles();
 }
 
-void MessageBase::MoveHandlesFrom(MessageBase* source) {
+void Message::MoveHandlesFrom(Message* source) {
   CloseHandles();
   handles_.clear();
   std::swap(source->handles_, handles_);
@@ -27,21 +27,21 @@ void MessageBase::MoveHandlesFrom(MessageBase* source) {
 
 // Closes the handles in the handles_ vector but does not remove them from
 // the vector.
-void MessageBase::CloseHandles() {
+void Message::CloseHandles() {
   for (zx_handle_t handle : handles_) {
     if (handle != ZX_HANDLE_INVALID)
       zx_handle_close(handle);
   }
 }
 
-Message::Message() {
+AllocMessage::AllocMessage() {
 }
 
-Message::~Message() {
+AllocMessage::~AllocMessage() {
   free(data_);
 }
 
-void Message::Reset() {
+void AllocMessage::Reset() {
   // Reset the data.
   free(data_);
   data_num_bytes_ = 0;
@@ -52,24 +52,24 @@ void Message::Reset() {
   handles_.clear();
 }
 
-void Message::AllocData(uint32_t num_bytes) {
+void AllocMessage::AllocData(uint32_t num_bytes) {
   FXL_DCHECK(!data_);
   data_num_bytes_ = num_bytes;
   data_ = static_cast<internal::MessageData*>(calloc(num_bytes, 1));
 }
 
-void Message::AllocUninitializedData(uint32_t num_bytes) {
+void AllocMessage::AllocUninitializedData(uint32_t num_bytes) {
   FXL_DCHECK(!data_);
   data_num_bytes_ = num_bytes;
   data_ = static_cast<internal::MessageData*>(malloc(num_bytes));
 }
 
-void Message::CopyDataFrom(MessageBase* source) {
+void AllocMessage::CopyDataFrom(Message* source) {
   AllocUninitializedData(source->data_num_bytes());
   memcpy(mutable_data(), source->data(), source->data_num_bytes());
 }
 
-void Message::MoveTo(Message* destination) {
+void AllocMessage::MoveTo(AllocMessage* destination) {
   FXL_DCHECK(this != destination);
 
   // Move the data.  No copying is needed.
