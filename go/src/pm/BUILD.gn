@@ -28,6 +28,7 @@ go_binary("pm_bin") {
     },
   ]
 }
+
 package("pm") {
   system_image = true
 

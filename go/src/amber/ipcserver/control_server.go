@@ -55,6 +55,14 @@ func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
 	if version == nil {
 		version = &d
 	}
+	if len(name) == 0 {
+		return nil, fmt.Errorf("No name provided")
+	}
+
+	if name[0] != '/' {
+		name = fmt.Sprintf("/%s", name)
+	}
+
 	ps := pkg.NewPackageSet()
 	pkg := pkg.Package{Name: name, Version: *version}
 	ps.Add(&pkg)

@@ -21,6 +21,9 @@ import (
 	"sync"
 	"time"
 
+	"application/lib/app/context"
+	"fidl/bindings"
+	"garnet/amber/api/amber"
 	"thinfs/fs"
 
 	"fuchsia.googlesource.com/far"
@@ -36,6 +39,7 @@ type Filesystem struct {
 	blobstore *blobstore.Manager
 	mountInfo mountInfo
 	mountTime time.Time
+	amberPxy  *amber.Control_Proxy
 }
 
 // New initializes a new pkgfs filesystem server
@@ -75,6 +79,11 @@ func New(indexDir, blobstoreDir string) (*Filesystem, error) {
 			"metadata": unsupportedDirectory("/metadata"),
 		},
 	}
+
+	var pxy *amber.Control_Proxy
+	req, pxy := pxy.NewRequest(bindings.GetAsyncWaiter())
+	context.CreateFromStartupInfo().ConnectToEnvService(req)
+	f.amberPxy = pxy
 
 	return f, nil
 }
@@ -421,6 +430,9 @@ func importPackage(fs *Filesystem, root string) {
 		if err != nil {
 			log.Printf("pkgfs: import error, can't create needs index: %s", err)
 		}
+
+		// TODO(jmatt) limit concurrency, send this to a worker routine?
+		go fs.amberPxy.GetBlob(root)
 	}
 
 	// TODO(raggi): validate the package names, ensure they do not contain '/', '=', and are neither '.' or '..'
@@ -842,6 +854,7 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 		var err error
 		if flags.Create() {
 			f, err = os.Create(idxPath)
+			go d.fs.amberPxy.GetUpdate(parts[0], nil)
 		} else {
 			f, err = os.Open(idxPath)
 		}

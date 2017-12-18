@@ -115,12 +115,7 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	} else {
 		log.Printf("amber: bad blob repo address %s\n", err)
 	}
-	pmMonitor(checker)
 	return checker
-}
-
-func pmMonitor(d *daemon.Daemon) {
-	go daemon.NewWatcher(d).Watch(needsPath)
 }
 
 func digest(name string, hash hash.Hash) ([]byte, error) {

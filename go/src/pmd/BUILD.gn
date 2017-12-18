@@ -10,6 +10,10 @@ import("//build/package.gni")
 go_binary("pkgsvr_bin") {
   output_name = "pkgsvr"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
+  deps = [
+    "//garnet/public/lib/amber/fidl",
+    "//garnet/public/lib/app/fidl",
+  ]
   go_dependencies = [
     {
       package = "fuchsia.googlesource.com/pmd"
@@ -33,6 +37,26 @@ go_binary("pkgsvr_bin") {
     {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
+    },
+    {
+      package = "garnet/amber/api"
+      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
     },
   ]
 }
@@ -70,6 +94,10 @@ go_binary("installblob_bin") {
 go_test("pkgfs_test_bin") {
   output_name = "pkgfs_test"
   gopackage = "fuchsia.googlesource.com/pmd/pkgfs"
+  deps = [
+    "//garnet/public/lib/amber/fidl",
+    "//garnet/public/lib/app/fidl",
+  ]
   go_dependencies = [
     {
       package = "fuchsia.googlesource.com/pmd"
@@ -93,6 +121,26 @@ go_test("pkgfs_test_bin") {
     {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
+    },
+    {
+      package = "garnet/amber/api"
+      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
     },
   ]
 }
