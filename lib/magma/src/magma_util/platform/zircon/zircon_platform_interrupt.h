@@ -22,18 +22,18 @@ public:
         DASSERT(handle_.get() != ZX_HANDLE_INVALID);
     }
 
-    void Signal() override { zx_interrupt_signal(handle_.get()); }
+    void Signal() override { zx_interrupt_signal(handle_.get(), ZX_INTERRUPT_SLOT_USER, 0); }
 
     bool Wait() override
     {
-        zx_status_t status = zx_interrupt_wait(handle_.get());
-        // ZX_ERR_CANCELED can be returned after Signal().
-        if (status != ZX_OK && status != ZX_ERR_CANCELED)
+        uint64_t slots;
+        zx_status_t status = zx_interrupt_wait(handle_.get(), &slots);
+        if (status != ZX_OK)
             return DRETF(false, "zx_interrupt_wait failed (%d)", status);
         return true;
     }
 
-    void Complete() override { zx_interrupt_complete(handle_.get()); }
+    void Complete() override {}
 
 private:
     zx::handle handle_;
