@@ -66,6 +66,6 @@ interface ApplicationLauncher {
   // The |controller| can be used to control the lifecycle of the created
   // application instance. If an |ApplicationController|'s interface is
   // requested, the application instance is killed when the interface is closed.
-  CreateApplication(ApplicationLaunchInfo launch_info,
-                    ApplicationController&? controller);
+  CreateApplication@0(ApplicationLaunchInfo launch_info,
+                      ApplicationController&? controller);
 };

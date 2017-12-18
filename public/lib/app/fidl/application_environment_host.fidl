@@ -15,5 +15,5 @@ interface ApplicationEnvironmentHost {
   //
   // Applications created in this environment will be given the
   // |environment_services| returned here.
-  GetApplicationEnvironmentServices(ServiceProvider& environment_services);
+  GetApplicationEnvironmentServices@0(ServiceProvider& environment_services);
 };

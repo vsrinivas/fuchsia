@@ -10,5 +10,5 @@ import "lib/app/fidl/application_runner.fidl";
 [ServiceName="app.ApplicationLoader"]
 interface ApplicationLoader {
   // Load an application's package.
-  LoadApplication(string url) => (ApplicationPackage? package);
+  LoadApplication@0(string url) => (ApplicationPackage? package);
 };

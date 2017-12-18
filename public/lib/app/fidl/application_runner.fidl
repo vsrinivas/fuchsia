@@ -55,7 +55,7 @@ interface ApplicationRunner {
   // The |controller| interface request typically originates from the
   // |ApplicationLauncher.CreateApplication| message that caused this
   // application to be started.
-  StartApplication(ApplicationPackage application,
-                   ApplicationStartupInfo startup_info,
-                   ApplicationController&? controller);
+  StartApplication@0(ApplicationPackage application,
+                     ApplicationStartupInfo startup_info,
+                     ApplicationController&? controller);
 };

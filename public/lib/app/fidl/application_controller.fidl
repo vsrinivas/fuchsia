@@ -17,18 +17,18 @@ interface ApplicationController {
   //
   // This ApplicationController connection is closed when the application has
   // terminated.
-  Kill();
+  Kill@0();
 
   // Decouples the lifetime of the application from this controller.
   //
   // After calling |Detach|, the application will not be implicitly killed when
   // this interface is closed.
-  Detach();
+  Detach@1();
 
   // Waits for a return code from the application.
   //
   // This call will return just before the application terminates and the
   // interface is closed. If the interface closes without this call returning
   // the caller may assume that the application terminated unexpectedly.
-  Wait() => (int32 return_code);
+  Wait@2() => (int32 return_code);
 };

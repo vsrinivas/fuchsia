@@ -40,19 +40,19 @@ interface ApplicationEnvironment {
   // The |label| is an optional name to associate with the environment for
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
-  CreateNestedEnvironment(ApplicationEnvironmentHost host,
-                          ApplicationEnvironment& environment,
-                          ApplicationEnvironmentController&? controller,
-                          string? label);
+  CreateNestedEnvironment@0(ApplicationEnvironmentHost host,
+                            ApplicationEnvironment& environment,
+                            ApplicationEnvironmentController&? controller,
+                            string? label);
 
   // Gets the ApplicationLauncher associated with this environment.
   //
   // Applications created using this application launcher will be given the
   // environment services provided by this environment's
   // |ApplicationEnvironmentHost|.
-  GetApplicationLauncher(ApplicationLauncher& launcher);
+  GetApplicationLauncher@1(ApplicationLauncher& launcher);
 
   // Gets the services provided by this environment's
   // |ApplicationEnvironmentHost|.
-  GetServices(ServiceProvider& services);
+  GetServices@2(ServiceProvider& services);
 };

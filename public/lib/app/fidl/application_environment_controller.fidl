@@ -18,11 +18,11 @@ interface ApplicationEnvironmentController {
   // When an |ApplicationEnvironment| is terminated, all applications launched
   // in the environment (and in all transitively nested environments) are also
   // killed.
-  Kill() => ();
+  Kill@0() => ();
 
   // Decouples the lifetime of the environment from this controller.
   //
   // After calling |Detach|, the environment will not be implicitly killed when
   // this interface is closed.
-  Detach();
+  Detach@1();
 };
