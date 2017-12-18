@@ -82,7 +82,7 @@
     compatible = "pci-host-ecam-generic";
     reg = <0x3f000000 0x1000000>;
     bus-range = <0 0>;
-    ranges = <0x2000000 0 0x10000000 0x10000000 0 0x1000000>;
+    ranges = <0x2000000 0 0x10001000 0x10001000 0 0xfff000>;
     interrupt-map-mask = <0xf800 0 0 1>;
     interrupt-map = <0x0000 0 0 1 1 0 0 4>,
                     <0x0800 0 0 1 1 0 1 4>,
