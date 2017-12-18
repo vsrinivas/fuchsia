@@ -21,8 +21,7 @@ SharedBufferPool::SharedBufferPool(scenic_lib::Session* session,
       factory_(std::make_unique<escher::BufferFactory>(escher)),
       weak_factory_(this) {}
 
-SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req,
-                                            zx::event release_fence) {
+SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req) {
   SharedBufferPtr buffer;
   auto capacity = GetBufferKey(capacity_req);
   if (!free_buffers_[capacity].empty()) {
@@ -32,10 +31,20 @@ SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req,
     buffer = SharedBuffer::New(session_, factory_.get(), capacity);
   }
   used_buffers_.insert(buffer);
+  return buffer;
+}
 
+void SharedBufferPool::ReturnBuffer(SharedBufferPtr buffer,
+                                    zx::event release_fence) {
+  if (used_buffers_.find(buffer) == used_buffers_.end()) {
+    FXL_DLOG(WARNING) << "buffer(" << buffer.get()
+                      << ") does not come from pool(" << this << ")";
+    return;
+  }
   // Listen to the fence release event from scenic, when the first subsequent
-  // frame takes effect in Scenic. Once it's released, change the buffer state,
-  // and recycle it if it's also released by canvas.
+  // frame takes effect in Scenic. Once it's released, recycle it. This should
+  // be done in ReturnBuffer() instead of GetBuffer(), because otherwise, we
+  // will miss the release signals for the frames that come after.
   auto pair = fence_listeners_.insert(
       std::make_unique<escher::FenceListener>(std::move(release_fence)));
   auto fence_listener = pair.first;
@@ -43,30 +52,12 @@ SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req,
       [weak = weak_factory_.GetWeakPtr(), fence_listener, buffer] {
         if (weak) {
           weak->fence_listeners_.erase(fence_listener);
-          buffer->released_by_scenic_ = true;
-          if (buffer->released_by_canvas()) {
-            weak->RecycleBuffer(buffer);
-          }
+          weak->RecycleBuffer(buffer);
         }
       });
-  return buffer;
-}
-
-void SharedBufferPool::ReturnBuffer(SharedBufferPtr buffer) {
-  if (used_buffers_.find(buffer) == used_buffers_.end()) {
-    FXL_DLOG(WARNING) << "buffer(" << buffer.get()
-                      << ") does not come from pool(" << this << ")";
-    return;
-  }
-  buffer->released_by_canvas_ = true;
-  if (buffer->released_by_scenic()) {
-    RecycleBuffer(buffer);
-  }
 }
 
 void SharedBufferPool::RecycleBuffer(SharedBufferPtr buffer) {
-  FXL_DCHECK(
-      buffer && buffer->released_by_scenic() && buffer->released_by_canvas());
   buffer->Reset();
   auto capacity = buffer->capacity();
   FXL_DCHECK(capacity == GetBufferKey(capacity));

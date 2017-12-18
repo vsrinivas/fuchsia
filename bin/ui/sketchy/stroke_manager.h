@@ -18,7 +18,9 @@ class StrokeManager {
  public:
   explicit StrokeManager(escher::Escher* escher);
 
+  bool AddNewGroup(StrokeGroupPtr group);
   bool AddStrokeToGroup(StrokePtr stroke, StrokeGroupPtr group);
+  bool RemoveStrokeFromGroup(StrokePtr stroke, StrokeGroupPtr group);
   bool SetStrokePath(StrokePtr stroke, std::unique_ptr<StrokePath> path);
 
   // The group will be marked as need re-tessellation per following call. For

@@ -74,8 +74,6 @@ void SharedBuffer::Copy(Frame* frame, const SharedBufferPtr& from) {
 
 void SharedBuffer::Reset() {
   size_ = 0;
-  released_by_canvas_ = false;
-  released_by_scenic_ = false;
 }
 
 }  // namespace sketchy_service

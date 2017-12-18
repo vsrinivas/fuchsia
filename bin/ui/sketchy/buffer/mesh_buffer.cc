@@ -96,18 +96,17 @@ void MeshBuffer::ReplaceBuffer(Frame* frame,
                                bool keep_content) {
   auto shared_buffer_pool = frame->shared_buffer_pool();
   if (!shared_buffer) {
-    shared_buffer = shared_buffer_pool->GetBuffer(
-        capacity_req, frame->DuplicateReleaseFence());
+    shared_buffer = shared_buffer_pool->GetBuffer(capacity_req);
     return;
   }
 
   auto new_buffer =
-      shared_buffer_pool->GetBuffer(
-          capacity_req, frame->DuplicateReleaseFence());
+      shared_buffer_pool->GetBuffer(capacity_req);
   if (keep_content && shared_buffer->size() > 0) {
     new_buffer->Copy(frame, shared_buffer);
   }
-  shared_buffer_pool->ReturnBuffer(std::move(shared_buffer));
+  shared_buffer_pool->ReturnBuffer(
+      std::move(shared_buffer), frame->DuplicateReleaseFence());
   shared_buffer = std::move(new_buffer);
 }
 

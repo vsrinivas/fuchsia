@@ -49,6 +49,13 @@ bool StrokeGroup::AddStroke(StrokePtr stroke) {
   return true;
 }
 
+bool StrokeGroup::RemoveStroke(StrokePtr stroke) {
+  strokes_.erase(stroke);
+  strokes_to_add_.erase(stroke);
+  needs_re_tessellation_ = true;
+  return true;
+}
+
 void StrokeGroup::UpdateMesh(Frame* frame) {
   if (needs_re_tessellation_) {
     strokes_to_add_.clear();

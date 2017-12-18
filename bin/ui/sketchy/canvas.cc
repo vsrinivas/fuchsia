@@ -167,9 +167,17 @@ bool CanvasImpl::ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op) {
 }
 
 bool CanvasImpl::ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op) {
-  // TODO(MZ-269): unimplemented.
-  FXL_LOG(ERROR) << "ApplyRemoveStrokeOp: unimplemented.";
-  return false;
+  auto stroke = resource_map_.FindResource<Stroke>(op->stroke_id);
+  if (!stroke) {
+    FXL_LOG(ERROR) << "No Stroke of id " << op->stroke_id << " was found!";
+    return false;
+  }
+  auto group = resource_map_.FindResource<StrokeGroup>(op->group_id);
+  if (!group) {
+    FXL_LOG(ERROR) << "No StrokeGroup of id " << op->group_id << " was found!";
+    return false;
+  }
+  return stroke_manager_.RemoveStrokeFromGroup(stroke, group);
 }
 
 bool CanvasImpl::ApplyBeginStrokeOp(const sketchy::BeginStrokeOpPtr& op) {
@@ -228,9 +236,8 @@ bool CanvasImpl::ApplyScenicAddChildOp(const scenic::AddChildOpPtr& add_child) {
   if (!import_node || !stroke_group) {
     return false;
   }
-
   import_node->AddChild(stroke_group);
-  return true;
+  return stroke_manager_.AddNewGroup(stroke_group);
 }
 
 }  // namespace sketchy_service

@@ -42,8 +42,6 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
   }
   vk::DeviceSize capacity() const { return escher_buffer_->size(); }
   vk::DeviceSize size() const { return size_; }
-  bool released_by_canvas() const { return released_by_canvas_; }
-  bool released_by_scenic() const { return released_by_scenic_; }
 
  private:
   friend class SharedBufferPool;
@@ -56,9 +54,6 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
   escher::BufferPtr escher_buffer_;
   std::unique_ptr<scenic_lib::Buffer> scenic_buffer_;
   vk::DeviceSize size_ = 0;
-
-  bool released_by_canvas_ = false;
-  bool released_by_scenic_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SharedBuffer);
 };

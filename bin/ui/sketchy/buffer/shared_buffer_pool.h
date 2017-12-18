@@ -19,15 +19,13 @@ class SharedBufferPool final {
  public:
   SharedBufferPool(scenic_lib::Session* session, escher::Escher* escher);
 
-  // Gets a buffer with at least |capacity_req|. |release_fence| is taken
-  // to monitor if the buffer could be recycled to the free list.
-  SharedBufferPtr GetBuffer(vk::DeviceSize capacity_req,
-                            zx::event release_fence);
+  // Gets a buffer with at least |capacity_req|.
+  SharedBufferPtr GetBuffer(vk::DeviceSize capacity_req);
 
-  // Returns a buffer to pool because it is not used in the current canvas
-  // state. If scenic has signaled it, it will be put into |free_buffers_|;
-  // otherwise, it will still live in |used_buffers_|.
-  void ReturnBuffer(SharedBufferPtr buffer);
+  // Returns a buffer to the pool because it is not used in the current canvas
+  // state. |release_fence| is taken to monitor if the buffer could be recycled
+  // to |free_buffers_|.
+  void ReturnBuffer(SharedBufferPtr buffer, zx::event release_fence);
 
   // TODO(MZ-269): Implement CleanUp() to free up free_buffers_ a bit. It will
   // be useful when we support removing strokes.

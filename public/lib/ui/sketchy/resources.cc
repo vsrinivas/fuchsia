@@ -114,6 +114,15 @@ void StrokeGroup::AddStroke(Stroke& stroke) {
   EnqueueOp(std::move(op));
 }
 
+void StrokeGroup::RemoveStroke(Stroke& stroke) {
+  auto remove_stroke = sketchy::RemoveStrokeOp::New();
+  remove_stroke->stroke_id = stroke.id();
+  remove_stroke->group_id = id();
+  auto op = sketchy::Op::New();
+  op->set_remove_stroke(std::move(remove_stroke));
+  EnqueueOp(std::move(op));
+}
+
 ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
     : Resource(canvas) {
   zx::eventpair token;

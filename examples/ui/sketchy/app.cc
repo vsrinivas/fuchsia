@@ -75,26 +75,27 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   Stroke stroke2(canvas_.get());
   stroke2.SetPath(path2);
 
-  StrokeGroup stable_group(canvas_.get());
-  stable_group.AddStroke(stroke1);
-  stable_group.AddStroke(stroke2);
+  stable_group_ = std::make_unique<StrokeGroup>(canvas_.get());
+  stable_group_->AddStroke(stroke1);
+  stable_group_->AddStroke(stroke2);
 
   animated_stroke_ = std::make_unique<Stroke>(canvas_.get());
   animated_stroke_->SetPath(animated_path_at_top_);
-  stable_group.AddStroke(*animated_stroke_.get());
+  stable_group_->AddStroke(*animated_stroke_.get());
 
-  StrokeGroup scratch_group(canvas_.get());
+  scratch_group_ = std::make_unique<StrokeGroup>(canvas_.get());
+  fitting_stroke_ = std::make_unique<Stroke>(canvas_.get());
+
   Stroke tmp_stroke(canvas_.get());
-  scratch_group.AddStroke(tmp_stroke);
-  tmp_stroke.Begin({600, 1200});
-  tmp_stroke.Extend({{680, 1250}, {720, 1200}, {760, 1250}});
-  tmp_stroke.Extend({{800, 1200}, {840, 1250}, {880, 1200}});
+  scratch_group_->AddStroke(tmp_stroke);
+  tmp_stroke.Begin({600, 1300});
+  tmp_stroke.Extend({{680, 1350}, {720, 1300}, {760, 1350}});
   tmp_stroke.Finish();
 
   import_node_ = std::make_unique<ImportNode>(
       canvas_.get(), scene_->stroke_group_holder());
-  import_node_->AddChild(stable_group);
-  import_node_->AddChild(scratch_group);
+  import_node_->AddChild(*stable_group_.get());
+  import_node_->AddChild(*scratch_group_.get());
 
   uint64_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
   canvas_->Present(
@@ -105,12 +106,34 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
 void App::CanvasCallback(scenic::PresentationInfoPtr info) {
   zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
   uint64_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
+
+  // Demo of multi-buffering
   is_animated_stroke_at_top_ = !is_animated_stroke_at_top_;
   if (is_animated_stroke_at_top_) {
     animated_stroke_->SetPath(animated_path_at_top_);
   } else {
     animated_stroke_->SetPath(animated_path_at_bottom_);
   }
+
+  // Demo of stroke fitting
+  if (fitting_step_ == 0) {
+    scratch_group_->AddStroke(*fitting_stroke_.get());
+    fitting_stroke_->Begin({600, 1200});
+    fitting_stroke_->Extend({{680, 1250}, {720, 1200}, {760, 1250}});
+    fitting_step_ = 1;
+  } else if (fitting_step_ == 1) {
+    fitting_stroke_->Extend({{800, 1200}, {840, 1250}, {880, 1200}});
+    fitting_stroke_->Finish();
+    fitting_step_ = 2;
+  } else if (fitting_step_ == 2) {
+    scratch_group_->RemoveStroke(*fitting_stroke_.get());
+    stable_group_->AddStroke(*fitting_stroke_.get());
+    fitting_step_ = 3;
+  } else if (fitting_step_ == 3) {
+    stable_group_->RemoveStroke(*fitting_stroke_.get());
+    fitting_step_ = 0;
+  }
+
   canvas_->Present(
       time, std::bind(&App::CanvasCallback, this, std::placeholders::_1));
 }

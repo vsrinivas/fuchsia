@@ -29,7 +29,7 @@ class Resource {
   ResourceId id() const { return id_; }
 
  protected:
-  Resource(Canvas* canvas);
+  explicit Resource(Canvas* canvas);
 
   // Enqueue an op in canvas to destroy a resource. Called in destructor of
   // concrete resources. The remote resource may still live until no other
@@ -64,7 +64,7 @@ class Resource {
 // Represents a stroke in a canvas.
 class Stroke final : public Resource {
  public:
-  Stroke(Canvas* canvas);
+  explicit Stroke(Canvas* canvas);
   void SetPath(StrokePath& path);
   void Begin(glm::vec2 pt);
   // TODO(MZ-269): Also pass in predicted points.
@@ -78,8 +78,9 @@ class Stroke final : public Resource {
 // Represents a group of stroke(s) in a canvas.
 class StrokeGroup final : public Resource {
  public:
-  StrokeGroup(Canvas* canvas);
+  explicit StrokeGroup(Canvas* canvas);
   void AddStroke(Stroke& stroke);
+  void RemoveStroke(Stroke& stroke);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);

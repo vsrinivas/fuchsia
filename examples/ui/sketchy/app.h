@@ -33,13 +33,19 @@ class App {
   const std::unique_ptr<scenic_lib::Session> session_;
   const std::unique_ptr<Canvas> canvas_;
   std::unique_ptr<Scene> scene_;
-
-  // Animated stroke for demo
   std::unique_ptr<ImportNode> import_node_;
+
+  // Demo of multi-buffering
   bool is_animated_stroke_at_top_ = true;
   std::unique_ptr<Stroke> animated_stroke_;
   StrokePath animated_path_at_top_;
   StrokePath animated_path_at_bottom_;
+
+  // Demo of stroke fitting
+  uint32_t fitting_step_ = 0;
+  std::unique_ptr<Stroke> fitting_stroke_;
+  std::unique_ptr<StrokeGroup> stable_group_;
+  std::unique_ptr<StrokeGroup> scratch_group_;
 };
 
 }  // namespace sketchy_example

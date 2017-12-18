@@ -28,8 +28,8 @@ class StrokeGroup final : public Resource {
 
   // Record the stroke to add.
   bool AddStroke(StrokePtr stroke);
-  // TODO(MZ-269): Implement.
-  // bool RemoveStroke(StrokePtr stroke);
+  // Remove a stroke from record.
+  bool RemoveStroke(StrokePtr stroke);
 
   void SetNeedsReTessellation() { needs_re_tessellation_ = true; }
 

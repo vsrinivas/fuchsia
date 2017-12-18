@@ -29,6 +29,7 @@ void DividedStrokePath::Reset(size_t segment_count) {
   path_->Reset(segment_count);
   bbox_ = escher::BoundingBox();
   vertex_count_ = 0;
+  index_count_ = 0;
   division_count_ = 0;
   vertex_counts_.clear();
   division_counts_.clear();
