@@ -350,14 +350,18 @@ int usage() {
     fprintf(stderr,
             "usage: minfs [ <option>* ] <file-or-device>[@<size>] <command> [ <arg>* ]\n"
             "\n"
-            "options:  -v          some debug messages\n"
-            "          -vv         all debug messages\n"
-            "          --readonly  Mount filesystem read-only\n"
+            "options:  -v               some debug messages\n"
+            "          -vv              all debug messages\n"
+            "          --readonly       Mount filesystem read-only\n"
 #ifdef __Fuchsia__
             "\n"
             "On Fuchsia, MinFS takes the block device argument by handle.\n"
             "This can make 'minfs' commands hard to invoke from command line.\n"
             "Try using the [mkfs,fsck,mount,umount] commands instead\n"
+#else
+            "          --offset [bytes] Byte offset at which minfs partition starts (default 0)\n"
+            "          --length [bytes] Length in bytes of minfs partition (default to "
+                                        "remaining length)\n"
 #endif
             "\n");
     for (unsigned n = 0; n < fbl::count_of(CMDS); n++) {
@@ -394,11 +398,29 @@ off_t get_size(int fd) {
 int main(int argc, char** argv) {
     off_t size = 0;
     bool readonly = false;
+    __UNUSED off_t offset = 0;
+    off_t length = 0;
 
     // handle options
     while (argc > 1) {
         if (!strcmp(argv[1], "--readonly")) {
             readonly = true;
+#ifndef __Fuchsia__
+        } else if (!strcmp(argv[1], "--offset")) {
+            if (argc < 2) {
+                return usage();
+            }
+            offset = atoi(argv[2]);
+            argc--;
+            argv++;
+        } else if (!strcmp(argv[1], "--length")) {
+            if (argc < 2) {
+                return usage();
+            }
+            length = atoi(argv[2]);
+            argc--;
+            argv++;
+#endif
         } else {
             break;
         }
@@ -505,6 +527,14 @@ found:
             return usage();
         }
     }
+
+    if (length > size) {
+        fprintf(stderr, "Invalid length\n");
+        return usage();
+    } else if (length > 0) {
+        size = length;
+    }
+
     size /= minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
@@ -517,6 +547,8 @@ found:
     if (!strcmp(cmd, "mount")) {
         return do_minfs_mount(fbl::move(bc), readonly);
     }
+#else
+    bc->SetOffset(offset);
 #endif
 
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {

@@ -115,6 +115,8 @@ public:
 #else
     // Lengths of each extent (in bytes)
     fbl::Array<size_t> extent_lengths_;
+    // Tell Bcache to look for Minfs partition starting at |offset| bytes
+    zx_status_t SetOffset(off_t offset);
     // Tell the Bcache it is pointing at a sparse file
     // |offset| indicates where the minfs partition begins within the file
     // |extent_lengths| contains the length of each extent (in bytes)

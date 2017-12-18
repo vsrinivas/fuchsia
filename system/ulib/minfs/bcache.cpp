@@ -119,8 +119,16 @@ Bcache::~Bcache() {
 }
 
 #ifndef __Fuchsia__
+zx_status_t Bcache::SetOffset(off_t offset) {
+    if (offset_ || extent_lengths_.size() > 0) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+    offset_ = offset;
+    return ZX_OK;
+}
+
 zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths) {
-    if (offset_ > 0 || extent_lengths_.size() > 0) {
+    if (offset_ || extent_lengths_.size() > 0) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
