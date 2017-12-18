@@ -119,6 +119,13 @@ class PreallocMessage : public Message {
 
   void AllocUninitializedData(uint32_t num_bytes);
 
+  // Read a single message from the channel into this message object.  This
+  // message object must be empty (i.e., clear of any data and handles).
+  // |channel| must be valid.
+  //
+  // NOTE: The message isn't validated and may be malformed!
+  zx_status_t ReadMessage(const zx::channel& channel);
+
  private:
   uint8_t prealloc_buf_[128];
 
@@ -185,13 +192,6 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
                                    MessageReceiverWithStatus* responder)
       FXL_WARN_UNUSED_RESULT = 0;
 };
-
-// Read a single message from the channel into the supplied |message|. |channel|
-// must be valid. |message| must be non-null and empty (i.e., clear of any data
-// and handles).
-//
-// NOTE: The message isn't validated and may be malformed!
-zx_status_t ReadMessage(const zx::channel& channel, PreallocMessage* message);
 
 // Read a single message from the channel and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read

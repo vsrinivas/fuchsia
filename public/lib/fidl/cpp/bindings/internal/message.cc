@@ -98,29 +98,39 @@ void PreallocMessage::AllocUninitializedData(uint32_t num_bytes) {
   data_num_bytes_ = num_bytes;
 }
 
-zx_status_t ReadMessage(const zx::channel& channel, PreallocMessage* message) {
+zx_status_t PreallocMessage::ReadMessage(const zx::channel& channel) {
   FXL_DCHECK(channel);
-  FXL_DCHECK(message);
-  FXL_DCHECK(message->handles()->empty());
-  FXL_DCHECK(message->data_num_bytes() == 0);
+  FXL_DCHECK(handles()->empty());
+  FXL_DCHECK(!data());
+  FXL_DCHECK(data_num_bytes() == 0);
 
+  // If the message fits into prealloc_buf_ and contains no handles, we
+  // will only need one call to channel.read().  Otherwise, we will need
+  // the second call to channel.read().
   uint32_t num_bytes = 0;
   uint32_t num_handles = 0;
   zx_status_t rv =
-  channel.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
+      channel.read(0, prealloc_buf_, sizeof(prealloc_buf_), &num_bytes, nullptr,
+                   0, &num_handles);
+  if (rv == ZX_OK) {
+    data_ = reinterpret_cast<internal::MessageData*>(prealloc_buf_);
+    data_num_bytes_ = num_bytes;
+    FXL_DCHECK(num_handles == 0);
+    return ZX_OK;
+  }
   if (rv != ZX_ERR_BUFFER_TOO_SMALL)
     return rv;
 
-  message->AllocUninitializedData(num_bytes);
-  message->mutable_handles()->resize(num_handles);
+  AllocUninitializedData(num_bytes);
+  mutable_handles()->resize(num_handles);
 
   uint32_t num_bytes_actual = num_bytes;
   uint32_t num_handles_actual = num_handles;
-  rv = channel.read(0, message->mutable_data(), num_bytes, &num_bytes_actual,
-                   message->mutable_handles()->empty()
+  rv = channel.read(0, mutable_data(), num_bytes, &num_bytes_actual,
+                   mutable_handles()->empty()
                        ? nullptr
                        : reinterpret_cast<zx_handle_t*>(
-                             &message->mutable_handles()->front()),
+                             &mutable_handles()->front()),
                    num_handles, &num_handles_actual);
 
   FXL_DCHECK(num_bytes == num_bytes_actual);
@@ -133,7 +143,7 @@ zx_status_t ReadAndDispatchMessage(const zx::channel& channel,
                                    MessageReceiver* receiver,
                                    bool* receiver_result) {
   PreallocMessage message;
-  zx_status_t rv = ReadMessage(channel, &message);
+  zx_status_t rv = message.ReadMessage(channel);
   if (receiver && rv == ZX_OK)
     *receiver_result = receiver->Accept(&message);
 
@@ -179,7 +189,7 @@ zx_status_t CallMessage(const zx::channel& channel, Message* message,
     return status;
 
   if (observed & ZX_CHANNEL_READABLE)
-    return ReadMessage(channel, response);
+    return response->ReadMessage(channel);
 
   FXL_DCHECK(observed & ZX_CHANNEL_PEER_CLOSED);
   return ZX_ERR_PEER_CLOSED;
