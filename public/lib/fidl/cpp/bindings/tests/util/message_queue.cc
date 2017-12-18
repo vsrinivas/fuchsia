@@ -30,7 +30,7 @@ void MessageQueue::Push(Message* message) {
 
 void MessageQueue::Pop(AllocMessage* message) {
   FXL_DCHECK(!queue_.empty());
-  queue_.front()->MoveTo(message);
+  message->MoveFrom(queue_.front());
   Pop();
 }
 

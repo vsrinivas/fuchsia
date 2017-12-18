@@ -69,18 +69,18 @@ void AllocMessage::CopyDataFrom(Message* source) {
   memcpy(mutable_data(), source->data(), source->data_num_bytes());
 }
 
-void AllocMessage::MoveTo(AllocMessage* destination) {
-  FXL_DCHECK(this != destination);
+void AllocMessage::MoveFrom(AllocMessage* source) {
+  FXL_DCHECK(this != source);
 
   // Move the data.  No copying is needed.
-  free(destination->data_);
-  destination->data_num_bytes_ = data_num_bytes_;
-  destination->data_ = data_;
-  data_num_bytes_ = 0;
-  data_ = nullptr;
+  free(data_);
+  data_num_bytes_ = source->data_num_bytes_;
+  data_ = source->data_;
+  source->data_num_bytes_ = 0;
+  source->data_ = nullptr;
 
   // Move the handles.
-  destination->MoveHandlesFrom(this);
+  MoveHandlesFrom(source);
 }
 
 PreallocMessage::~PreallocMessage() {

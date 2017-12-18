@@ -87,7 +87,7 @@ class Message {
 // AllocMessage is like Message, except that it owns the data buffer.
 //
 // The data buffer will be heap-allocated.  This means that ownership of
-// the buffer can be transferred, using MoveTo().
+// the buffer can be transferred, using MoveFrom().
 class AllocMessage : public Message {
  public:
   AllocMessage();
@@ -99,8 +99,8 @@ class AllocMessage : public Message {
   void AllocUninitializedData(uint32_t num_bytes);
   void CopyDataFrom(Message* source);
 
-  // Transfers data and handles to |destination|.
-  void MoveTo(AllocMessage* destination);
+  // Transfers data and handles from |source|.
+  void MoveFrom(AllocMessage* source);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(AllocMessage);

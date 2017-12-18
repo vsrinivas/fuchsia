@@ -23,8 +23,8 @@ class Message;
 // request id (which may save some bytes).
 //
 // The underlying |AllocMessage| is owned by MessageBuilder, but its
-// contents can be permanently moved by accessing |message()| and calling
-// its |MoveTo()|.
+// contents can be permanently moved by accessing |message()| and
+// using |MoveFrom()|.
 class MessageBuilder {
  public:
   // This frames and configures a |fidl::Message| with the given message name.

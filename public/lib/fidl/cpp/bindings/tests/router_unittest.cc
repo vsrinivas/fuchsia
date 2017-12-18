@@ -23,7 +23,7 @@ void AllocRequestMessage(uint32_t name, const char* text,
   RequestMessageBuilder builder(name, payload_size);
   memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
 
-  builder.message()->MoveTo(message);
+  message->MoveFrom(builder.message());
 }
 
 void AllocResponseMessage(uint32_t name,
@@ -34,7 +34,7 @@ void AllocResponseMessage(uint32_t name,
   ResponseMessageBuilder builder(name, payload_size, request_id);
   memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
 
-  builder.message()->MoveTo(message);
+  message->MoveFrom(builder.message());
 }
 
 class MessageAccumulator : public MessageReceiver {
