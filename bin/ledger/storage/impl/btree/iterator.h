@@ -21,9 +21,9 @@ namespace storage {
 namespace btree {
 
 // An entry and the id of the tree node in which it is stored.
-struct EntryAndNodeDigest {
-  const Entry& entry;               // NOLINT
-  const ObjectDigest& node_digest;  // NOLINT
+struct EntryAndNodeIdentifier {
+  const Entry& entry;                       // NOLINT
+  const ObjectIdentifier& node_identifier;  // NOLINT
 };
 
 // Iterator over a B-Tree. This iterator exposes the internal of the iteration
@@ -36,7 +36,7 @@ class BTreeIterator {
   BTreeIterator& operator=(BTreeIterator&& other);
 
   // Initializes the iterator with the root node of the tree.
-  Status Init(ObjectDigestView node_digest);
+  Status Init(ObjectIdentifier identifier);
 
   // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
@@ -48,8 +48,9 @@ class BTreeIterator {
   // guaranteed not to be found in any of this nodes children; false otherwise.
   bool SkipToIndex(fxl::StringView key);
 
-  // Returns the identifier of the next child that will be explored.
-  fxl::StringView GetNextChild() const;
+  // Returns the identifier of the next child that will be explored, or
+  // |nullptr| if it doesn't exist.
+  const ObjectIdentifier* GetNextChild() const;
 
   // Returns whether the iterator is currently on a value. The method
   // |CurrentEntry| is only valid when |HasValue| is true.
@@ -62,8 +63,8 @@ class BTreeIterator {
   // |HasValue| is true.
   const Entry& CurrentEntry() const;
 
-  // Returns the digest of the node at the top of the stack.
-  const storage::ObjectDigest& GetDigest() const;
+  // Returns the identifier of the node at the top of the stack.
+  const storage::ObjectIdentifier& GetIdentifier() const;
 
   // Returns the level of the node at the top of the stack.
   uint8_t GetLevel() const;
@@ -81,7 +82,7 @@ class BTreeIterator {
   size_t& CurrentIndex();
   size_t CurrentIndex() const;
   const TreeNode& CurrentNode() const;
-  Status Descend(fxl::StringView node_digest);
+  Status Descend(const ObjectIdentifier& identifier);
 
   SynchronousStorage* storage_;
   // Stack representing the current iteration state. Each level represents the
@@ -97,18 +98,18 @@ class BTreeIterator {
 // Retrieves the ids of all objects in the B-Tree, i.e tree nodes and values of
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
-void GetObjectDigests(
+void GetObjectIdentifiers(
     coroutine::CoroutineService* coroutine_service,
     PageStorage* page_storage,
-    ObjectDigestView root_digest,
-    std::function<void(Status, std::set<ObjectDigest>)> callback);
+    ObjectIdentifier root_identifier,
+    std::function<void(Status, std::set<ObjectIdentifier>)> callback);
 
 // Tries to download all tree nodes and values with |EAGER| priority that are
 // not locally available from sync. To do this |PageStorage::GetObject| is
 // called for all corresponding objects.
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
-                        ObjectDigestView root_digest,
+                        ObjectIdentifier root_identifier,
                         std::function<void(Status)> callback);
 
 // Iterates through the nodes of the tree with the given root and calls
@@ -119,9 +120,9 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
 // are no more elements or iteration was interrupted, or if an error occurs.
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   PageStorage* page_storage,
-                  ObjectDigestView root_digest,
+                  ObjectIdentifier root_identifier,
                   std::string min_key,
-                  std::function<bool(EntryAndNodeDigest)> on_next,
+                  std::function<bool(EntryAndNodeIdentifier)> on_next,
                   std::function<void(Status)> on_done);
 
 }  // namespace btree

@@ -39,11 +39,12 @@ struct ObjectIdentifier {
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
+std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e);
 
 // An entry in a commit.
 struct Entry {
   std::string key;
-  ObjectDigest object_digest;
+  ObjectIdentifier object_identifier;
   KeyPriority priority;
 };
 

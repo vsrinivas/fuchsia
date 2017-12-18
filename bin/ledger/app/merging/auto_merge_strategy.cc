@@ -251,7 +251,8 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
     if (change.deleted) {
       journal->Delete(change.entry.key, waiter->NewCallback());
     } else {
-      journal->Put(change.entry.key, change.entry.object_digest,
+      journal->Put(change.entry.key,
+                   change.entry.object_identifier.object_digest,
                    change.entry.priority, waiter->NewCallback());
     }
   }

@@ -20,7 +20,6 @@
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_generated.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 
@@ -196,18 +195,16 @@ void CommitImpl::Empty(
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   btree::TreeNode::Empty(
       page_storage, [page_storage, callback = std::move(callback)](
-                        Status s, ObjectDigest root_node_digest) {
+                        Status s, ObjectIdentifier root_identifier) {
         if (s != Status::OK) {
           callback(s, nullptr);
           return;
         }
 
-        FXL_DCHECK(IsDigestValid(root_node_digest));
+        FXL_DCHECK(IsDigestValid(root_identifier.object_digest));
 
         fxl::RefPtr<SharedStorageBytes> storage_ptr =
             SharedStorageBytes::Create("");
-        ObjectIdentifier root_identifier =
-            MakeDefaultObjectIdentifier(root_node_digest);
 
         auto ptr = std::unique_ptr<Commit>(new CommitImpl(
             page_storage, kFirstPageCommitId.ToString(), 0, 0,

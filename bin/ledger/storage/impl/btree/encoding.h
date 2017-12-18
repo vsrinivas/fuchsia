@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_BTREE_ENCODING_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_BTREE_ENCODING_H_
 
+#include <map>
 #include <string>
 
 #include "lib/fxl/strings/string_view.h"
@@ -17,12 +18,12 @@ bool CheckValidTreeNodeSerialization(fxl::StringView data);
 
 std::string EncodeNode(uint8_t level,
                        const std::vector<Entry>& entries,
-                       const std::vector<ObjectDigest>& children);
+                       const std::map<size_t, ObjectIdentifier>& children);
 
 bool DecodeNode(fxl::StringView data,
                 uint8_t* level,
                 std::vector<Entry>* res_entries,
-                std::vector<ObjectDigest>* res_children);
+                std::map<size_t, ObjectIdentifier>* res_children);
 
 }  // namespace btree
 }  // namespace storage

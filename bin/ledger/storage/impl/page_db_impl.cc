@@ -95,8 +95,8 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
               ? KeyPriority::LAZY
               : KeyPriority::EAGER;
 
-      change_->entry.object_digest =
-          key_value.second.substr(JournalEntryRow::kAddPrefixSize).ToString();
+      change_->entry.object_identifier = MakeDefaultObjectIdentifier(
+          key_value.second.substr(JournalEntryRow::kAddPrefixSize).ToString());
     } else {
       change_->deleted = true;
     }

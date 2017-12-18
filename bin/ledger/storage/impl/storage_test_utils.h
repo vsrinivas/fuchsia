@@ -35,9 +35,15 @@ class ObjectData {
   const ObjectIdentifier object_identifier;
 };
 
-// Builder the object id for the given content. If |inline_behavior| is
+// Builder the object digest for the given content. If |inline_behavior| is
 // InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
 ObjectDigest MakeObjectDigest(
+    std::string content,
+    InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+
+// Builder the object identifier for the given content. If |inline_behavior| is
+// InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
+ObjectIdentifier MakeObjectIdentifier(
     std::string content,
     InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
@@ -113,28 +119,29 @@ class StorageTest : public ::test::TestWithCoroutines {
       std::vector<EntryChange>* changes,
       bool deletion = false);
 
-  // Creates an empty tree node and updates |empty_node_digest| with the result.
-  ::testing::AssertionResult GetEmptyNodeDigest(
-      ObjectDigest* empty_node_digest);
+  // Creates an empty tree node and updates |empty_node_identifier| with the
+  // result.
+  ::testing::AssertionResult GetEmptyNodeIdentifier(
+      ObjectIdentifier* empty_node_identifier);
 
   // Returns the tree node corresponding to the given id.
-  ::testing::AssertionResult CreateNodeFromDigest(
-      ObjectDigestView digest,
+  ::testing::AssertionResult CreateNodeFromIdentifier(
+      ObjectIdentifier identifier,
       std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a new tree node from the given entries and children and updates
   // |node| with the result.
   ::testing::AssertionResult CreateNodeFromEntries(
       const std::vector<Entry>& entries,
-      const std::vector<ObjectDigest>& children,
+      const std::map<size_t, ObjectIdentifier>& children,
       std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a BTree applying changes from the base node and gives back the
   // digest of its new root node.
   ::testing::AssertionResult CreateTreeFromChanges(
-      ObjectDigest base_node_digest,
+      const ObjectIdentifier& base_node_identifier,
       const std::vector<EntryChange>& entries,
-      ObjectDigest* new_root_digest);
+      ObjectIdentifier* new_root_identifier);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(StorageTest);

@@ -211,7 +211,7 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
                                    std::unique_ptr<const storage::Object>)>
                                    callback) {
                         storage_->GetObject(
-                            entry.object_digest,
+                            entry.object_identifier.object_digest,
                             storage::PageStorage::Location::LOCAL,
                             std::move(callback));
                       },

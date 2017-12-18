@@ -90,8 +90,14 @@ std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
 
 ObjectDigest MakeObjectDigest(std::string content,
                               InlineBehavior inline_behavior) {
+  return MakeObjectIdentifier(std::move(content), inline_behavior)
+      .object_digest;
+}
+
+ObjectIdentifier MakeObjectIdentifier(std::string content,
+                                      InlineBehavior inline_behavior) {
   ObjectData data(std::move(content), inline_behavior);
-  return data.object_identifier.object_digest;
+  return data.object_identifier;
 }
 
 std::string RandomString(size_t size) {
@@ -117,12 +123,16 @@ ObjectIdentifier RandomObjectIdentifier() {
 EntryChange NewEntryChange(std::string key,
                            std::string object_digest,
                            KeyPriority priority) {
-  return EntryChange{Entry{std::move(key), std::move(object_digest), priority},
-                     false};
+  return EntryChange{
+      Entry{std::move(key), MakeObjectIdentifier(std::move(object_digest)),
+            priority},
+      false};
 }
 
 EntryChange NewRemoveEntryChange(std::string key) {
-  return EntryChange{Entry{std::move(key), "", KeyPriority::EAGER}, true};
+  return EntryChange{
+      Entry{std::move(key), MakeObjectIdentifier(""), KeyPriority::EAGER},
+      true};
 }
 
 StorageTest::StorageTest(){};
@@ -183,7 +193,8 @@ StorageTest::~StorageTest(){};
       return assertion_result;
     }
     result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i),
-                           object->GetDigest(), KeyPriority::EAGER});
+                           MakeDefaultObjectIdentifier(object->GetDigest()),
+                           KeyPriority::EAGER});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();
@@ -215,12 +226,12 @@ StorageTest::~StorageTest(){};
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult StorageTest::GetEmptyNodeDigest(
-    ObjectDigest* empty_node_digest) {
+::testing::AssertionResult StorageTest::GetEmptyNodeIdentifier(
+    ObjectIdentifier* empty_node_identifier) {
   Status status;
-  ObjectDigest digest;
-  btree::TreeNode::Empty(GetStorage(),
-                         callback::Capture(MakeQuitTask(), &status, &digest));
+  btree::TreeNode::Empty(
+      GetStorage(),
+      callback::Capture(MakeQuitTask(), &status, empty_node_identifier));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty callback was not executed.";
@@ -229,17 +240,16 @@ StorageTest::~StorageTest(){};
     return ::testing::AssertionFailure()
            << "TreeNode::Empty failed with status " << status;
   }
-  empty_node_digest->swap(digest);
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult StorageTest::CreateNodeFromDigest(
-    ObjectDigestView digest,
+::testing::AssertionResult StorageTest::CreateNodeFromIdentifier(
+    ObjectIdentifier identifier,
     std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
   std::unique_ptr<const btree::TreeNode> result;
-  btree::TreeNode::FromDigest(
-      GetStorage(), digest,
+  btree::TreeNode::FromIdentifier(
+      GetStorage(), identifier,
       callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
@@ -255,13 +265,13 @@ StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::CreateNodeFromEntries(
     const std::vector<Entry>& entries,
-    const std::vector<ObjectDigest>& children,
+    const std::map<size_t, ObjectIdentifier>& children,
     std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
-  ObjectDigest digest;
+  ObjectIdentifier identifier;
   btree::TreeNode::FromEntries(
       GetStorage(), 0u, entries, children,
-      callback::Capture(MakeQuitTask(), &status, &digest));
+      callback::Capture(MakeQuitTask(), &status, &identifier));
 
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
@@ -271,21 +281,21 @@ StorageTest::~StorageTest(){};
     return ::testing::AssertionFailure()
            << "TreeNode::FromEntries failed with status " << status;
   }
-  return CreateNodeFromDigest(digest, node);
+  return CreateNodeFromIdentifier(std::move(identifier), node);
 }
 
 ::testing::AssertionResult StorageTest::CreateTreeFromChanges(
-    ObjectDigest base_node_digest,
+    const ObjectIdentifier& base_node_identifier,
     const std::vector<EntryChange>& entries,
-    ObjectDigest* new_root_digest) {
+    ObjectIdentifier* new_root_identifier) {
   Status status;
-  std::unordered_set<ObjectDigest> new_nodes;
-  btree::ApplyChanges(
-      &coroutine_service_, GetStorage(), base_node_digest,
-      std::make_unique<btree::EntryChangeIterator>(entries.begin(),
-                                                   entries.end()),
-      callback::Capture(MakeQuitTask(), &status, new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  std::set<ObjectIdentifier> new_nodes;
+  btree::ApplyChanges(&coroutine_service_, GetStorage(), base_node_identifier,
+                      std::make_unique<btree::EntryChangeIterator>(
+                          entries.begin(), entries.end()),
+                      callback::Capture(MakeQuitTask(), &status,
+                                        new_root_identifier, &new_nodes),
+                      &kTestNodeLevelCalculator);
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "btree::ApplyChanges callback was not executed.";

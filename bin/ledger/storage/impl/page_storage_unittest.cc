@@ -335,14 +335,13 @@ class PageStorageTest : public ::testing::Test {
   }
 
   std::unique_ptr<const Commit> TryCommitFromSync() {
-    ObjectDigest root_digest;
-    EXPECT_TRUE(GetEmptyNodeDigest(&root_digest));
+    ObjectIdentifier root_identifier;
+    EXPECT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        storage_.get(), MakeDefaultObjectIdentifier(root_digest),
-        std::move(parent));
+        storage_.get(), root_identifier, std::move(parent));
 
     bool called;
     Status status;
@@ -542,14 +541,14 @@ class PageStorageTest : public ::testing::Test {
     return ::testing::AssertionSuccess();
   }
 
-  ::testing::AssertionResult CreateNodeFromDigest(
-      ObjectDigestView digest,
+  ::testing::AssertionResult CreateNodeFromIdentifier(
+      ObjectIdentifier identifier,
       std::unique_ptr<const btree::TreeNode>* node) {
     bool called;
     Status status;
     std::unique_ptr<const btree::TreeNode> result;
-    btree::TreeNode::FromDigest(
-        GetStorage(), digest,
+    btree::TreeNode::FromIdentifier(
+        GetStorage(), std::move(identifier),
         callback::Capture(SetWhenCalled(&called), &status, &result));
     RunTasks();
 
@@ -567,14 +566,14 @@ class PageStorageTest : public ::testing::Test {
 
   ::testing::AssertionResult CreateNodeFromEntries(
       const std::vector<Entry>& entries,
-      const std::vector<ObjectDigest>& children,
+      const std::map<size_t, ObjectIdentifier>& children,
       std::unique_ptr<const btree::TreeNode>* node) {
     bool called;
     Status status;
-    ObjectDigest digest;
+    ObjectIdentifier identifier;
     btree::TreeNode::FromEntries(
         GetStorage(), 0u, entries, children,
-        callback::Capture(SetWhenCalled(&called), &status, &digest));
+        callback::Capture(SetWhenCalled(&called), &status, &identifier));
     RunTasks();
     if (!called) {
       return ::testing::AssertionFailure()
@@ -584,17 +583,16 @@ class PageStorageTest : public ::testing::Test {
       return ::testing::AssertionFailure()
              << "TreeNode::FromEntries failed with status " << status;
     }
-    return CreateNodeFromDigest(digest, node);
+    return CreateNodeFromIdentifier(identifier, node);
   }
 
-  ::testing::AssertionResult GetEmptyNodeDigest(
-      ObjectDigest* empty_node_digest) {
+  ::testing::AssertionResult GetEmptyNodeIdentifier(
+      ObjectIdentifier* empty_node_identifier) {
     bool called;
     Status status;
-    ObjectDigest digest;
-    btree::TreeNode::Empty(
-        GetStorage(),
-        callback::Capture(SetWhenCalled(&called), &status, &digest));
+    btree::TreeNode::Empty(GetStorage(),
+                           callback::Capture(SetWhenCalled(&called), &status,
+                                             empty_node_identifier));
     RunTasks();
     if (!called) {
       return ::testing::AssertionFailure()
@@ -604,7 +602,6 @@ class PageStorageTest : public ::testing::Test {
       return ::testing::AssertionFailure()
              << "TreeNode::Empty failed with status " << status;
     }
-    empty_node_digest->swap(digest);
     return ::testing::AssertionSuccess();
   }
 
@@ -707,19 +704,17 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
 
 TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
   std::unique_ptr<const btree::TreeNode> node;
-  ASSERT_TRUE(CreateNodeFromEntries({}, std::vector<ObjectDigest>(1), &node));
-  ObjectDigest root_digest = node->GetDigest();
+  ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
+  ObjectIdentifier root_identifier = node->GetIdentifier();
 
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   auto commit1 = CommitImpl::FromContentAndParents(
-      storage_.get(), MakeDefaultObjectIdentifier(root_digest),
-      std::move(parent));
+      storage_.get(), root_identifier, std::move(parent));
   parent.clear();
   parent.push_back(commit1->Clone());
   auto commit2 = CommitImpl::FromContentAndParents(
-      storage_.get(), MakeDefaultObjectIdentifier(root_digest),
-      std::move(parent));
+      storage_.get(), root_identifier, std::move(parent));
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit2->GetId(),
@@ -746,36 +741,32 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ObjectData lazy_value("Some data", InlineBehavior::PREVENT);
     ObjectData eager_value("More data", InlineBehavior::PREVENT);
     std::vector<Entry> entries = {
-        Entry{"key0", lazy_value.object_identifier.object_digest,
-              KeyPriority::LAZY},
-        Entry{"key1", eager_value.object_identifier.object_digest,
-              KeyPriority::EAGER},
+        Entry{"key0", lazy_value.object_identifier, KeyPriority::LAZY},
+        Entry{"key1", eager_value.object_identifier, KeyPriority::EAGER},
     };
     std::unique_ptr<const btree::TreeNode> node;
-    ASSERT_TRUE(CreateNodeFromEntries(
-        entries, std::vector<ObjectDigest>(entries.size() + 1), &node));
-    ObjectDigest root_digest = node->GetDigest();
+    ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
+    ObjectIdentifier root_identifier = node->GetIdentifier();
 
     // Add the three objects to FakeSyncDelegate.
     sync.AddObject(lazy_value.object_identifier.object_digest,
                    lazy_value.value);
     sync.AddObject(eager_value.object_identifier.object_digest,
                    eager_value.value);
-    std::unique_ptr<const Object> root_object =
-        TryGetObject(root_digest, PageStorage::Location::NETWORK);
+    std::unique_ptr<const Object> root_object = TryGetObject(
+        root_identifier.object_digest, PageStorage::Location::NETWORK);
 
     fxl::StringView root_data;
     ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-    sync.AddObject(root_digest, root_data.ToString());
+    sync.AddObject(root_identifier.object_digest, root_data.ToString());
 
     // Remove the root from the local storage. The two values were never added.
-    ASSERT_EQ(Status::OK, DeleteObject(handler, root_digest));
+    ASSERT_EQ(Status::OK, DeleteObject(handler, root_identifier.object_digest));
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        storage_.get(), MakeDefaultObjectIdentifier(root_digest),
-        std::move(parent));
+        storage_.get(), root_identifier, std::move(parent));
     CommitId id = commit->GetId();
 
     // Adding the commit should only request the tree node and the eager value.
@@ -789,7 +780,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(2u, sync.object_requests.size());
-    EXPECT_TRUE(sync.object_requests.find(root_digest) !=
+    EXPECT_TRUE(sync.object_requests.find(root_identifier.object_digest) !=
                 sync.object_requests.end());
     EXPECT_TRUE(sync.object_requests.find(
                     eager_value.object_identifier.object_digest) !=
@@ -821,21 +812,20 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   storage_->SetSyncDelegate(&sync);
 
   std::unique_ptr<const btree::TreeNode> node;
-  ASSERT_TRUE(CreateNodeFromEntries({}, std::vector<ObjectDigest>(1), &node));
-  ObjectDigest root_digest = node->GetDigest();
+  ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
+  ObjectIdentifier root_identifier = node->GetIdentifier();
 
-  std::unique_ptr<const Object> root_object =
-      TryGetObject(root_digest, PageStorage::Location::NETWORK);
+  std::unique_ptr<const Object> root_object = TryGetObject(
+      root_identifier.object_digest, PageStorage::Location::NETWORK);
 
   fxl::StringView root_data;
   ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-  sync.AddObject(root_digest, root_data.ToString());
+  sync.AddObject(root_identifier.object_digest, root_data.ToString());
 
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), MakeDefaultObjectIdentifier(root_digest),
-      std::move(parent));
+      storage_.get(), root_identifier, std::move(parent));
   CommitId id = commit->GetId();
 
   bool called;
@@ -1570,12 +1560,11 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     for (size_t i = 0; i < object_identifiers.size(); ++i) {
       ObjectData value("value" + std::to_string(i), InlineBehavior::PREVENT);
       std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
-                                          value.object_identifier.object_digest,
+                                          value.object_identifier,
                                           KeyPriority::EAGER}};
       std::unique_ptr<const btree::TreeNode> node;
-      ASSERT_TRUE(CreateNodeFromEntries(
-          entries, std::vector<ObjectDigest>(entries.size() + 1), &node));
-      object_identifiers[i] = MakeDefaultObjectIdentifier(node->GetDigest());
+      ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
+      object_identifiers[i] = node->GetIdentifier();
       sync.AddObject(value.object_identifier.object_digest, value.value);
       std::unique_ptr<const Object> root_object = TryGetObject(
           object_identifiers[i].object_digest, PageStorage::Location::NETWORK);
@@ -1780,14 +1769,14 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // We need to create new nodes for the storage to be asynchronous. The empty
   // node is already there, so we create two (child, which is empty, and root,
   // which contains child).
-  std::string child_data =
-      btree::EncodeNode(0u, std::vector<Entry>(), std::vector<ObjectDigest>(1));
+  std::string child_data = btree::EncodeNode(0u, std::vector<Entry>(), {});
   ObjectDigest child_digest =
       ComputeObjectDigest(ObjectType::VALUE, child_data);
   sync.AddObject(child_digest, child_data);
 
-  std::string root_data = btree::EncodeNode(
-      0u, std::vector<Entry>(), std::vector<ObjectDigest>{child_digest});
+  std::string root_data =
+      btree::EncodeNode(0u, std::vector<Entry>(),
+                        {{0u, MakeDefaultObjectIdentifier(child_digest)}});
   ObjectDigest root_digest = ComputeObjectDigest(ObjectType::VALUE, root_data);
   sync.AddObject(root_digest, root_data);
 

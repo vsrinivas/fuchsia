@@ -24,25 +24,27 @@ class TreeNode {
 
   // Creates a |TreeNode| object for an existing node and calls the given
   // |callback| with the returned status and node.
-  static void FromDigest(
+  static void FromIdentifier(
       PageStorage* page_storage,
-      ObjectDigestView digest,
+      ObjectIdentifier identifier,
       std::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
-  // Creates a |TreeNode| object with the given entries and children. An empty
-  // id in the children's vector indicates that there is no child in that
-  // index. The |callback| will be called with the success or error status and
-  // the id of the new node. It is expected that |children| = |entries| + 1.
-  static void FromEntries(PageStorage* page_storage,
-                          uint8_t level,
-                          const std::vector<Entry>& entries,
-                          const std::vector<ObjectDigest>& children,
-                          std::function<void(Status, ObjectDigest)> callback);
+  // Creates a |TreeNode| object with the given entries and children. |children|
+  // is a map from the index of the child to the identfiier of the child. It
+  // only contains non-empty children. It is expected that all child index are
+  // between |0| and |size(entries)| (included). The |callback| will be called
+  // with the success or error status and the id of the new node.
+  static void FromEntries(
+      PageStorage* page_storage,
+      uint8_t level,
+      const std::vector<Entry>& entries,
+      const std::map<size_t, ObjectIdentifier>& children,
+      std::function<void(Status, ObjectIdentifier)> callback);
 
   // Creates an empty node, i.e. a TreeNode with no entries and an empty child
   // at index 0 and calls the callback with the result.
   static void Empty(PageStorage* page_storage,
-                    std::function<void(Status, ObjectDigest)> callback);
+                    std::function<void(Status, ObjectIdentifier)> callback);
 
   // Returns the number of entries stored in this tree node.
   int GetKeyCount() const;
@@ -59,45 +61,41 @@ class TreeNode {
                 std::function<void(Status, std::unique_ptr<const TreeNode>)>
                     callback) const;
 
-  // Returns the id of the child node at position |index|. If the child at the
-  // given index is empty, an empty string is returned. |index| has to be in [0,
-  // GetKeyCount()].
-  ObjectDigestView GetChildDigest(int index) const;
-
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not, |NOT_FOUND|
   // is returned and index stores the index of the child node where the key
   // might be found.
   Status FindKeyOrChild(convert::ExtendedStringView key, int* index) const;
 
-  const ObjectDigest& GetDigest() const;
+  const ObjectIdentifier& GetIdentifier() const;
 
   uint8_t level() const { return level_; }
 
   const std::vector<Entry>& entries() const { return entries_; }
 
-  const std::vector<ObjectDigest>& children_digests() const {
+  const std::map<size_t, ObjectIdentifier>& children_identifiers() const {
     return children_;
   }
 
  private:
   TreeNode(PageStorage* page_storage,
-           std::string digest,
+           ObjectIdentifier identifier,
            uint8_t level,
            std::vector<Entry> entries,
-           std::vector<ObjectDigest> children);
+           std::map<size_t, ObjectIdentifier> children);
 
   // Creates a |TreeNode| object for an existing |object| and stores it in the
   // given |node|.
   static Status FromObject(PageStorage* page_storage,
+                           ObjectIdentifier identifier,
                            std::unique_ptr<const Object> object,
                            std::unique_ptr<const TreeNode>* node);
 
   PageStorage* page_storage_;
-  ObjectDigest digest_;
+  ObjectIdentifier identifier_;
   const uint8_t level_;
   const std::vector<Entry> entries_;
-  const std::vector<ObjectDigest> children_;
+  const std::map<size_t, ObjectIdentifier> children_;
 };
 
 }  // namespace btree

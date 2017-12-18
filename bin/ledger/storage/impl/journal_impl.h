@@ -84,7 +84,8 @@ class JournalImpl : public Journal {
 
   void GetObjectsToSync(
       std::function<void(Status status,
-                         std::vector<ObjectDigest> objects_to_sync)> callback);
+                         std::vector<ObjectIdentifier> objects_to_sync)>
+          callback);
 
   void RollbackInternal(std::function<void(Status)> callback);
 

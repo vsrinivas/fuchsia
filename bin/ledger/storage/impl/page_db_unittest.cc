@@ -35,8 +35,7 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   EXPECT_EQ(expected.entry.key, found.entry.key);
   if (!expected.deleted) {
     // If the entry is deleted, object_digest and priority are not valid.
-    EXPECT_EQ(expected.entry.object_digest, found.entry.object_digest);
-    EXPECT_EQ(expected.entry.priority, found.entry.priority);
+    EXPECT_EQ(expected.entry, found.entry);
   }
 }
 

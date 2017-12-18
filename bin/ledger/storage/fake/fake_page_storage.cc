@@ -18,6 +18,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 
 namespace storage {
 namespace fake {
@@ -219,8 +220,9 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
 
   for (const auto& entry : data) {
     if (!entry.second.deleted) {
-      if (!on_next(
-              Entry{entry.first, entry.second.value, entry.second.priority})) {
+      if (!on_next(Entry{entry.first,
+                         MakeDefaultObjectIdentifier(entry.second.value),
+                         entry.second.priority})) {
         break;
       }
     }
@@ -244,7 +246,8 @@ void FakePageStorage::GetEntryFromCommit(
     return;
   }
   const fake::FakeJournalDelegate::Entry& entry = data.at(key);
-  callback(Status::OK, Entry{key, entry.value, entry.priority});
+  callback(Status::OK, Entry{key, MakeDefaultObjectIdentifier(entry.value),
+                             entry.priority});
 }
 
 const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

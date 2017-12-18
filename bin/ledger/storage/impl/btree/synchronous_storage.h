@@ -27,17 +27,17 @@ class SynchronousStorage {
   PageStorage* page_storage() { return page_storage_; }
   coroutine::CoroutineHandler* handler() { return handler_; }
 
-  Status TreeNodeFromDigest(ObjectDigestView object_digest,
-                            std::unique_ptr<const TreeNode>* result);
+  Status TreeNodeFromIdentifier(ObjectIdentifier object_identifier,
+                                std::unique_ptr<const TreeNode>* result);
 
-  Status TreeNodesFromDigests(
-      std::vector<ObjectDigestView> object_digests,
+  Status TreeNodesFromIdentifiers(
+      std::vector<ObjectIdentifier> object_identifiers,
       std::vector<std::unique_ptr<const TreeNode>>* result);
 
   Status TreeNodeFromEntries(uint8_t level,
                              const std::vector<Entry>& entries,
-                             const std::vector<ObjectDigest>& children,
-                             ObjectDigest* result);
+                             const std::map<size_t, ObjectIdentifier>& children,
+                             ObjectIdentifier* result);
 
  private:
   PageStorage* page_storage_;

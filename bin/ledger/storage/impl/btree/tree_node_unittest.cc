@@ -34,10 +34,10 @@ class TreeNodeTest : public StorageTest {
   PageStorage* GetStorage() override { return &fake_storage_; }
 
   std::unique_ptr<const TreeNode> CreateEmptyNode() {
-    ObjectDigest root_digest;
-    EXPECT_TRUE(GetEmptyNodeDigest(&root_digest));
+    ObjectIdentifier root_digest;
+    EXPECT_TRUE(GetEmptyNodeIdentifier(&root_digest));
     std::unique_ptr<const TreeNode> node;
-    EXPECT_TRUE(CreateNodeFromDigest(root_digest, &node));
+    EXPECT_TRUE(CreateNodeFromIdentifier(root_digest, &node));
     return node;
   }
 
@@ -47,11 +47,10 @@ class TreeNodeTest : public StorageTest {
     return found_entry;
   }
 
-  std::vector<ObjectDigest> CreateChildren(int size) {
-    std::vector<ObjectDigest> children;
-    children.reserve(size);
+  std::map<size_t, ObjectIdentifier> CreateChildren(int size) {
+    std::map<size_t, ObjectIdentifier> children;
     for (int i = 0; i < size; ++i) {
-      children.push_back(CreateEmptyNode()->GetDigest());
+      children[i] = CreateEmptyNode()->GetIdentifier();
     }
     return children;
   }
@@ -67,14 +66,16 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
 
   Status status;
   std::unique_ptr<const TreeNode> found_node;
-  TreeNode::FromDigest(&fake_storage_, node->GetDigest(),
-                       callback::Capture(MakeQuitTask(), &status, &found_node));
+  TreeNode::FromIdentifier(
+      &fake_storage_, node->GetIdentifier(),
+      callback::Capture(MakeQuitTask(), &status, &found_node));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
-  TreeNode::FromDigest(&fake_storage_, RandomObjectDigest(),
-                       callback::Capture(MakeQuitTask(), &status, &found_node));
+  TreeNode::FromIdentifier(
+      &fake_storage_, RandomObjectIdentifier(),
+      callback::Capture(MakeQuitTask(), &status, &found_node));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::NOT_FOUND, status);
 }
@@ -84,8 +85,7 @@ TEST_F(TreeNodeTest, GetEntryChild) {
   std::vector<Entry> entries;
   ASSERT_TRUE(CreateEntries(size, &entries));
   std::unique_ptr<const TreeNode> node;
-  ASSERT_TRUE(CreateNodeFromEntries(
-      entries, std::vector<ObjectDigest>(size + 1), &node));
+  ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
   EXPECT_EQ(size, node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     EXPECT_EQ(entries[i], GetEntry(node.get(), i));
@@ -97,7 +97,8 @@ TEST_F(TreeNodeTest, GetEntryChild) {
     node->GetChild(i, callback::Capture(MakeQuitTask(), &status, &child));
     EXPECT_FALSE(RunLoopWithTimeout());
     ASSERT_EQ(Status::NO_SUCH_CHILD, status);
-    EXPECT_TRUE(node->GetChildDigest(i).empty());
+    EXPECT_EQ(node->children_identifiers().find(i),
+              node->children_identifiers().end());
   }
 }
 
@@ -106,8 +107,7 @@ TEST_F(TreeNodeTest, FindKeyOrChild) {
   std::vector<Entry> entries;
   ASSERT_TRUE(CreateEntries(size, &entries));
   std::unique_ptr<const TreeNode> node;
-  ASSERT_TRUE(CreateNodeFromEntries(
-      entries, std::vector<ObjectDigest>(size + 1), &node));
+  ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
 
   int index;
   EXPECT_EQ(Status::OK, node->FindKeyOrChild("key00", &index));
@@ -136,24 +136,26 @@ TEST_F(TreeNodeTest, Serialization) {
   int size = 3;
   std::vector<Entry> entries;
   ASSERT_TRUE(CreateEntries(size, &entries));
-  std::vector<ObjectDigest> children = CreateChildren(size + 1);
+  std::map<size_t, ObjectIdentifier> children = CreateChildren(size + 1);
   std::unique_ptr<const TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries(entries, children, &node));
 
   Status status;
   std::unique_ptr<const Object> object;
-  fake_storage_.GetObject(node->GetDigest(), PageStorage::Location::LOCAL,
+  fake_storage_.GetObject(node->GetIdentifier().object_digest,
+                          PageStorage::Location::LOCAL,
                           callback::Capture(MakeQuitTask(), &status, &object));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node;
-  ASSERT_TRUE(CreateNodeFromDigest(object->GetDigest(), &retrieved_node));
+  EXPECT_EQ(node->GetIdentifier().object_digest, object->GetDigest());
+  ASSERT_TRUE(CreateNodeFromIdentifier(node->GetIdentifier(), &retrieved_node));
 
   fxl::StringView data;
   EXPECT_EQ(Status::OK, object->GetData(&data));
   uint8_t level;
   std::vector<Entry> parsed_entries;
-  std::vector<ObjectDigest> parsed_children;
+  std::map<size_t, ObjectIdentifier> parsed_children;
   EXPECT_TRUE(DecodeNode(data, &level, &parsed_entries, &parsed_children));
   EXPECT_EQ(entries, parsed_entries);
   EXPECT_EQ(children, parsed_children);

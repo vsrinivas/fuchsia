@@ -15,6 +15,7 @@
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -22,58 +23,65 @@ namespace storage {
 namespace btree {
 
 TreeNode::TreeNode(PageStorage* page_storage,
-                   std::string digest,
+                   ObjectIdentifier identifier,
                    uint8_t level,
                    std::vector<Entry> entries,
-                   std::vector<ObjectDigest> children)
+                   std::map<size_t, ObjectIdentifier> children)
     : page_storage_(page_storage),
-      digest_(std::move(digest)),
+      identifier_(std::move(identifier)),
       level_(level),
       entries_(std::move(entries)),
       children_(std::move(children)) {
-  FXL_DCHECK(entries_.size() + 1 == children_.size());
+  FXL_DCHECK(children_.empty() || children_.cbegin()->first <= entries_.size());
 }
 
 TreeNode::~TreeNode() {}
 
-void TreeNode::FromDigest(
+void TreeNode::FromIdentifier(
     PageStorage* page_storage,
-    ObjectDigestView digest,
+    ObjectIdentifier identifier,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   page_storage->GetObject(
-      digest, PageStorage::Location::NETWORK,
-      [page_storage, callback = std::move(callback)](
-          Status status, std::unique_ptr<const Object> object) {
+      identifier.object_digest, PageStorage::Location::NETWORK,
+      [page_storage, identifier, callback = std::move(callback)](
+          Status status, std::unique_ptr<const Object> object) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
         }
         std::unique_ptr<const TreeNode> node;
-        status = FromObject(page_storage, std::move(object), &node);
+        status = FromObject(page_storage, std::move(identifier),
+                            std::move(object), &node);
         callback(status, std::move(node));
       });
 }
 
 void TreeNode::Empty(PageStorage* page_storage,
-                     std::function<void(Status, ObjectDigest)> callback) {
+                     std::function<void(Status, ObjectIdentifier)> callback) {
   FromEntries(page_storage, 0u, std::vector<Entry>(),
-              std::vector<ObjectDigest>(1), std::move(callback));
+              std::map<size_t, ObjectIdentifier>(), std::move(callback));
 }
 
-void TreeNode::FromEntries(PageStorage* page_storage,
-                           uint8_t level,
-                           const std::vector<Entry>& entries,
-                           const std::vector<ObjectDigest>& children,
-                           std::function<void(Status, ObjectDigest)> callback) {
-  FXL_DCHECK(entries.size() + 1 == children.size());
+void TreeNode::FromEntries(
+    PageStorage* page_storage,
+    uint8_t level,
+    const std::vector<Entry>& entries,
+    const std::map<size_t, ObjectIdentifier>& children,
+    std::function<void(Status, ObjectIdentifier)> callback) {
+  FXL_DCHECK(children.begin() == children.end() ||
+             children.cbegin()->first <= entries.size());
 #ifndef NDEBUG
-  for (const auto& digest : children) {
-    FXL_DCHECK(storage::IsDigestValid(digest));
+  for (const auto& identifier : children) {
+    FXL_DCHECK(storage::IsDigestValid(identifier.second.object_digest));
   }
 #endif
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
-      storage::DataSource::Create(std::move(encoding)), std::move(callback));
+      storage::DataSource::Create(std::move(encoding)),
+      [callback = std::move(callback)](Status status,
+                                       ObjectDigest object_digest) {
+        callback(status, MakeDefaultObjectIdentifier(std::move(object_digest)));
+      });
 }
 
 int TreeNode::GetKeyCount() const {
@@ -91,16 +99,12 @@ void TreeNode::GetChild(
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback)
     const {
   FXL_DCHECK(index >= 0 && index <= GetKeyCount());
-  if (children_[index].empty()) {
+  const auto it = children_.find(index);
+  if (it == children_.end()) {
     callback(Status::NO_SUCH_CHILD, nullptr);
     return;
   }
-  return FromDigest(page_storage_, children_[index], std::move(callback));
-}
-
-ObjectDigestView TreeNode::GetChildDigest(int index) const {
-  FXL_DCHECK(index >= 0 && index <= GetKeyCount());
-  return children_[index];
+  return FromIdentifier(page_storage_, it->second, std::move(callback));
 }
 
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
@@ -126,11 +130,12 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
   return Status::NOT_FOUND;
 }
 
-const ObjectDigest& TreeNode::GetDigest() const {
-  return digest_;
+const ObjectIdentifier& TreeNode::GetIdentifier() const {
+  return identifier_;
 }
 
 Status TreeNode::FromObject(PageStorage* page_storage,
+                            ObjectIdentifier identifier,
                             std::unique_ptr<const Object> object,
                             std::unique_ptr<const TreeNode>* node) {
   fxl::StringView data;
@@ -140,11 +145,11 @@ Status TreeNode::FromObject(PageStorage* page_storage,
   }
   uint8_t level;
   std::vector<Entry> entries;
-  std::vector<ObjectDigest> children;
+  std::map<size_t, ObjectIdentifier> children;
   if (!DecodeNode(data, &level, &entries, &children)) {
     return Status::FORMAT_ERROR;
   }
-  node->reset(new TreeNode(page_storage, object->GetDigest(), level,
+  node->reset(new TreeNode(page_storage, std::move(identifier), level,
                            std::move(entries), std::move(children)));
   return Status::OK;
 }

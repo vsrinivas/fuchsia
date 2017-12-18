@@ -116,7 +116,8 @@ void ConflictResolverClient::OnNextMergeResult(
               callback(status, storage::ObjectDigest());
               return;
             }
-            callback(storage::Status::OK, entry.object_digest);
+            callback(storage::Status::OK,
+                     entry.object_identifier.object_digest);
           });
       break;
     }
@@ -276,7 +277,8 @@ void ConflictResolverClient::MergeNonConflictingEntries(
     // left-only changes are already taken into account.
     if (util::EqualPtr(change.base, change.left)) {
       if (change.right) {
-        this->journal_->Put(change.right->key, change.right->object_digest,
+        this->journal_->Put(change.right->key,
+                            change.right->object_identifier.object_digest,
                             change.right->priority, waiter->NewCallback());
       } else {
         this->journal_->Delete(change.base->key, waiter->NewCallback());
@@ -284,7 +286,8 @@ void ConflictResolverClient::MergeNonConflictingEntries(
     } else if (util::EqualPtr(change.base, change.right) &&
                has_merged_values_) {
       if (change.left) {
-        this->journal_->Put(change.left->key, change.left->object_digest,
+        this->journal_->Put(change.left->key,
+                            change.left->object_identifier.object_digest,
                             change.left->priority, waiter->NewCallback());
       } else {
         this->journal_->Delete(change.base->key, waiter->NewCallback());

@@ -111,8 +111,8 @@ class PageStorage {
                                 std::function<void(Status)> callback) = 0;
 
   // Finds all objects in the storage that are not yet synced, and calls
-  // |callback| with the operation status and the corresponding |ObjectDigest|s
-  // vector.
+  // |callback| with the operation status and the corresponding
+  // |ObjectIdentifier|s vector.
   virtual void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectIdentifier>)> callback) = 0;
   // Marks the object with the given |object_digest| as synced.

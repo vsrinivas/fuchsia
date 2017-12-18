@@ -148,9 +148,10 @@ void PageStorageImpl::GetCommit(
   });
 }
 
-void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
-                                         std::vector<ObjectDigest> new_objects,
-                                         std::function<void(Status)> callback) {
+void PageStorageImpl::AddCommitFromLocal(
+    std::unique_ptr<const Commit> commit,
+    std::vector<ObjectIdentifier> new_objects,
+    std::function<void(Status)> callback) {
   FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest));
   commit_serializer_.Serialize<Status>(
       std::move(callback),
@@ -532,9 +533,8 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
                                         std::function<bool(Entry)> on_next,
                                         std::function<void(Status)> on_done) {
   btree::ForEachEntry(
-      coroutine_service_, this, commit.GetRootIdentifier().object_digest,
-      min_key,
-      [on_next = std::move(on_next)](btree::EntryAndNodeDigest next) {
+      coroutine_service_, this, commit.GetRootIdentifier(), min_key,
+      [on_next = std::move(on_next)](btree::EntryAndNodeIdentifier next) {
         return on_next(next.entry);
       },
       std::move(on_done));
@@ -546,7 +546,7 @@ void PageStorageImpl::GetEntryFromCommit(
     std::function<void(Status, Entry)> callback) {
   std::unique_ptr<bool> key_found = std::make_unique<bool>(false);
   auto on_next = [key, key_found = key_found.get(),
-                  callback](btree::EntryAndNodeDigest next) {
+                  callback](btree::EntryAndNodeIdentifier next) {
     if (next.entry.key == key) {
       *key_found = true;
       callback(Status::OK, next.entry);
@@ -566,9 +566,8 @@ void PageStorageImpl::GetEntryFromCommit(
         }
         callback(s, Entry());
       });
-  btree::ForEachEntry(coroutine_service_, this,
-                      commit.GetRootIdentifier().object_digest, std::move(key),
-                      std::move(on_next), std::move(on_done));
+  btree::ForEachEntry(coroutine_service_, this, commit.GetRootIdentifier(),
+                      std::move(key), std::move(on_next), std::move(on_done));
 }
 
 void PageStorageImpl::GetCommitContentsDiff(
@@ -577,10 +576,9 @@ void PageStorageImpl::GetCommitContentsDiff(
     std::string min_key,
     std::function<bool(EntryChange)> on_next_diff,
     std::function<void(Status)> on_done) {
-  btree::ForEachDiff(
-      coroutine_service_, this, base_commit.GetRootIdentifier().object_digest,
-      other_commit.GetRootIdentifier().object_digest, std::move(min_key),
-      std::move(on_next_diff), std::move(on_done));
+  btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootIdentifier(),
+                     other_commit.GetRootIdentifier(), std::move(min_key),
+                     std::move(on_next_diff), std::move(on_done));
 }
 
 void PageStorageImpl::GetThreeWayContentsDiff(
@@ -591,10 +589,9 @@ void PageStorageImpl::GetThreeWayContentsDiff(
     std::function<bool(ThreeWayChange)> on_next_diff,
     std::function<void(Status)> on_done) {
   btree::ForEachThreeWayDiff(
-      coroutine_service_, this, base_commit.GetRootIdentifier().object_digest,
-      left_commit.GetRootIdentifier().object_digest,
-      right_commit.GetRootIdentifier().object_digest, std::move(min_key),
-      std::move(on_next_diff), std::move(on_done));
+      coroutine_service_, this, base_commit.GetRootIdentifier(),
+      left_commit.GetRootIdentifier(), right_commit.GetRootIdentifier(),
+      std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
 
 void PageStorageImpl::GetJournalEntries(
@@ -1126,7 +1123,7 @@ Status PageStorageImpl::SynchronousGetCommit(
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
     CoroutineHandler* handler,
     std::unique_ptr<const Commit> commit,
-    std::vector<ObjectDigest> new_objects) {
+    std::vector<ObjectIdentifier> new_objects) {
   Status status = ContainsCommit(handler, commit->GetId());
 
   // If the commit is already present, do nothing.
@@ -1197,7 +1194,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(coroutine_service_, this,
-                              leaf.second->GetRootIdentifier().object_digest,
+                              leaf.second->GetRootIdentifier(),
                               waiter->NewCallback());
   }
 
@@ -1215,7 +1212,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   }
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
-                               std::vector<ObjectDigest>());
+                               std::vector<ObjectIdentifier>());
 }
 
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(
@@ -1259,7 +1256,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
-    std::vector<ObjectDigest> new_objects) {
+    std::vector<ObjectIdentifier> new_objects) {
 #ifndef NDEBUG
   // Make sure that only one AddCommits operation is executed at a time.
   // Otherwise, if db_ operations are asynchronous, ContainsCommit (below) may
@@ -1398,7 +1395,11 @@ Status PageStorageImpl::SynchronousAddCommits(
   }
 
   // If adding local commits, mark all new pieces as local.
-  Status s = MarkAllPiecesLocal(handler, batch.get(), std::move(new_objects));
+  std::vector<ObjectDigest> digests;
+  for (const auto& identifier : new_objects) {
+    digests.push_back(identifier.object_digest);
+  }
+  Status s = MarkAllPiecesLocal(handler, batch.get(), std::move(digests));
   if (s != Status::OK) {
     return s;
   }

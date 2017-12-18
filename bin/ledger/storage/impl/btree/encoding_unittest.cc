@@ -25,13 +25,13 @@ std::string operator"" _s(const char* str, size_t size) {
 TEST(EncodingTest, EmptyData) {
   uint8_t level = 0u;
   std::vector<Entry> entries;
-  std::vector<ObjectDigest> children{""};
+  std::map<size_t, ObjectIdentifier> children;
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectDigest> res_children;
+  std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);
@@ -41,15 +41,16 @@ TEST(EncodingTest, EmptyData) {
 TEST(EncodingTest, SingleEntry) {
   uint8_t level = 1u;
   std::vector<Entry> entries = {
-      {"key", MakeObjectDigest("object_digest"), KeyPriority::EAGER}};
-  std::vector<ObjectDigest> children = {MakeObjectDigest("child_1"),
-                                        MakeObjectDigest("child_2")};
+      {"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER}};
+  std::map<size_t, ObjectIdentifier> children = {
+      {0u, MakeObjectIdentifier("child_1")},
+      {1u, MakeObjectIdentifier("child_2")}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectDigest> res_children;
+  std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);
@@ -59,22 +60,68 @@ TEST(EncodingTest, SingleEntry) {
 TEST(EncodingTest, MoreEntries) {
   uint8_t level = 5;
   std::vector<Entry> entries = {
-      {"key1", MakeObjectDigest("abc"), KeyPriority::EAGER},
-      {"key2", MakeObjectDigest("def"), KeyPriority::LAZY},
-      {"key3", MakeObjectDigest("geh"), KeyPriority::EAGER},
-      {"key4", MakeObjectDigest("ijk"), KeyPriority::LAZY}};
-  std::vector<ObjectDigest> children = {
-      MakeObjectDigest("child_1"), MakeObjectDigest("child_2"),
-      MakeObjectDigest("child_3"), MakeObjectDigest("child_4"),
-      MakeObjectDigest("child_5")};
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::map<size_t, ObjectIdentifier> children = {
+      {0, MakeObjectIdentifier("child_1")},
+      {1, MakeObjectIdentifier("child_2")},
+      {2, MakeObjectIdentifier("child_3")},
+      {3, MakeObjectIdentifier("child_4")},
+      {4, MakeObjectIdentifier("child_5")}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectDigest> res_children;
+  std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
+  EXPECT_EQ(entries, res_entries);
+  EXPECT_EQ(children, res_children);
+}
+
+TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
+  uint8_t level = 5;
+  std::vector<Entry> entries = {
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::map<size_t, ObjectIdentifier> children = {
+      {0, MakeObjectIdentifier("child_1")},
+      {2, MakeObjectIdentifier("child_2")},
+      {4, MakeObjectIdentifier("child_3")}};
+
+  std::string bytes = EncodeNode(level, entries, children);
+
+  uint8_t res_level;
+  std::vector<Entry> res_entries;
+  std::map<size_t, ObjectIdentifier> res_children;
+  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_EQ(level, res_level);
+  EXPECT_EQ(entries, res_entries);
+  EXPECT_EQ(children, res_children);
+}
+
+TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
+  uint8_t level = 5;
+  std::vector<Entry> entries = {
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::map<size_t, ObjectIdentifier> children = {
+      {1, MakeObjectIdentifier("child_1")},
+      {3, MakeObjectIdentifier("child_2")}};
+
+  std::string bytes = EncodeNode(level, entries, children);
+
+  uint8_t res_level;
+  std::vector<Entry> res_entries;
+  std::map<size_t, ObjectIdentifier> res_children;
+  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);
   EXPECT_EQ(children, res_children);
@@ -83,15 +130,16 @@ TEST(EncodingTest, MoreEntries) {
 TEST(EncodingTest, ZeroByte) {
   uint8_t level = 13;
   std::vector<Entry> entries = {
-      {"k\0ey"_s, MakeObjectDigest("\0a\0\0"_s), KeyPriority::EAGER}};
-  std::vector<ObjectDigest> children = {MakeObjectDigest("ch\0ld_1"_s),
-                                        MakeObjectDigest("child_\0"_s)};
+      {"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER}};
+  std::map<size_t, ObjectIdentifier> children = {
+      {0u, MakeObjectIdentifier("ch\0ld_1"_s)},
+      {1u, MakeObjectIdentifier("child_\0"_s)}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectDigest> res_children;
+  std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);

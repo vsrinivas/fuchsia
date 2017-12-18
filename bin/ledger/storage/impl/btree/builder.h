@@ -25,16 +25,16 @@ struct NodeLevelCalculator {
 // Returns the default algorithm to compute the node level.
 const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 
-// Applies changes provided by |changes| to the B-Tree starting at |root_id|.
-// |changes| must provide |EntryChange| objects sorted by their key. The
-// callback will provide the status of the operation, the id of the new root
-// and the list of ids of all new nodes created after the changes.
+// Applies changes provided by |changes| to the B-Tree starting at
+// |root_identifier|. |changes| must provide |EntryChange| objects sorted by
+// their key. The callback will provide the status of the operation, the id of
+// the new root and the list of ids of all new nodes created after the changes.
 void ApplyChanges(
     coroutine::CoroutineService* coroutine_service,
     PageStorage* page_storage,
-    ObjectDigestView root_digest,
+    ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectDigest, std::unordered_set<ObjectDigest>)>
+    std::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator =
         GetDefaultNodeLevelCalculator());

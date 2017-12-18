@@ -9,7 +9,6 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
-#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace storage {
@@ -35,7 +34,7 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
 
 Entry ToEntry(const EntryStorage* entry_storage) {
   return Entry{convert::ToString(entry_storage->key()),
-               ToObjectIdentifier(entry_storage->object_id()).object_digest,
+               ToObjectIdentifier(entry_storage->object_id()),
                ToKeyPriority(entry_storage->priority())};
 }
 }  // namespace
@@ -84,7 +83,7 @@ bool CheckValidTreeNodeSerialization(fxl::StringView data) {
 
 std::string EncodeNode(uint8_t level,
                        const std::vector<Entry>& entries,
-                       const std::vector<ObjectDigest>& children) {
+                       const std::map<size_t, ObjectIdentifier>& children) {
   flatbuffers::FlatBufferBuilder builder;
 
   auto entries_offsets = builder.CreateVector(
@@ -94,31 +93,22 @@ std::string EncodeNode(uint8_t level,
             const auto& entry = entries[i];
             return CreateEntryStorage(
                 builder, convert::ToFlatBufferVector(&builder, entry.key),
-                ToObjectIdentifierStorage(
-                    &builder, MakeDefaultObjectIdentifier(entry.object_digest)),
+                ToObjectIdentifierStorage(&builder, entry.object_identifier),
                 ToKeyPriorityStorage(entry.priority));
           }));
 
-  size_t children_count = 0;
-  for (const auto& child : children) {
-    if (!child.empty()) {
-      ++children_count;
-    }
-  }
-  size_t current_index = 0;
+  size_t children_count = children.size();
+  auto current_children = children.begin();
   auto children_offsets = builder.CreateVector(
       children_count,
       static_cast<std::function<flatbuffers::Offset<ChildStorage>(size_t)>>(
-          [&builder, &children, &current_index](size_t i) {
-            while (children[current_index].empty()) {
-              ++current_index;
-            }
-            size_t index = current_index;
-            ++current_index;
-            return CreateChildStorage(
-                builder, index,
-                ToObjectIdentifierStorage(
-                    &builder, MakeDefaultObjectIdentifier(children[index])));
+          [&builder, &current_children](size_t i) {
+            size_t index = current_children->first;
+            auto object_identifier_storage =
+                ToObjectIdentifierStorage(&builder, current_children->second);
+            ++current_children;
+            return CreateChildStorage(builder, index,
+                                      object_identifier_storage);
           }));
 
   builder.Finish(
@@ -131,7 +121,7 @@ std::string EncodeNode(uint8_t level,
 bool DecodeNode(fxl::StringView data,
                 uint8_t* level,
                 std::vector<Entry>* res_entries,
-                std::vector<ObjectDigest>* res_children) {
+                std::map<size_t, ObjectIdentifier>* res_children) {
   FXL_DCHECK(CheckValidTreeNodeSerialization(data));
 
   const TreeNodeStorage* tree_node =
@@ -144,13 +134,10 @@ bool DecodeNode(fxl::StringView data,
     res_entries->push_back(ToEntry(entry_storage));
   }
   res_children->clear();
-  res_children->reserve(tree_node->entries()->size() + 1);
   for (const auto* child_storage : *(tree_node->children())) {
-    res_children->resize(child_storage->index());
-    res_children->push_back(
-        convert::ToString(child_storage->object_id()->object_digest()));
+    (*res_children)[child_storage->index()] =
+        ToObjectIdentifier(child_storage->object_id());
   }
-  res_children->resize(tree_node->entries()->size() + 1);
 
   return true;
 }

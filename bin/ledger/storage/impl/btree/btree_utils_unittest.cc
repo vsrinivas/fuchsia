@@ -22,6 +22,7 @@
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
@@ -77,19 +78,19 @@ class BTreeUtilsTest : public StorageTest {
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }
 
-  ObjectDigest CreateTree(const std::vector<EntryChange>& entries) {
-    ObjectDigest base_node_digest;
-    EXPECT_TRUE(GetEmptyNodeDigest(&base_node_digest));
+  ObjectIdentifier CreateTree(const std::vector<EntryChange>& entries) {
+    ObjectIdentifier base_node_identifier;
+    EXPECT_TRUE(GetEmptyNodeIdentifier(&base_node_identifier));
 
-    ObjectDigest new_root_digest;
-    EXPECT_TRUE(
-        CreateTreeFromChanges(base_node_digest, entries, &new_root_digest));
-    return new_root_digest;
+    ObjectIdentifier new_root_identifier;
+    EXPECT_TRUE(CreateTreeFromChanges(base_node_identifier, entries,
+                                      &new_root_identifier));
+    return new_root_identifier;
   }
 
-  std::vector<Entry> GetEntriesList(ObjectDigest root_digest) {
+  std::vector<Entry> GetEntriesList(ObjectIdentifier root_identifier) {
     std::vector<Entry> entries;
-    auto on_next = [&entries](EntryAndNodeDigest entry) {
+    auto on_next = [&entries](EntryAndNodeIdentifier entry) {
       entries.push_back(entry.entry);
       return true;
     };
@@ -97,7 +98,7 @@ class BTreeUtilsTest : public StorageTest {
       EXPECT_EQ(Status::OK, status);
       message_loop_.PostQuitTask();
     };
-    ForEachEntry(&coroutine_service_, &fake_storage_, root_digest, "",
+    ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, "",
                  std::move(on_next), std::move(on_done));
     EXPECT_FALSE(RunLoopWithTimeout());
     return entries;
@@ -130,27 +131,28 @@ TEST_F(BTreeUtilsTest, GetNodeLevel) {
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
-  ObjectDigest root_digest;
-  ASSERT_TRUE(GetEmptyNodeDigest(&root_digest));
+  ObjectIdentifier root_identifier;
+  ASSERT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
   std::vector<EntryChange> changes;
   ASSERT_TRUE(CreateEntryChanges(3, &changes));
 
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
   // Expected layout (X is key "keyX"):
   // [00, 01, 02]
   ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
+      &coroutine_service_, &fake_storage_, root_identifier,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
+      callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                        &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(changes.size(), entries.size());
   for (size_t i = 0; i < entries.size(); ++i) {
     EXPECT_EQ(changes[i].entry, entries[i]);
@@ -158,29 +160,29 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
-  ObjectDigest root_digest;
-  ASSERT_TRUE(GetEmptyNodeDigest(&root_digest));
+  ObjectIdentifier root_identifier;
+  ASSERT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({3}), &golden_entries));
 
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
   // Expected layout (XX is key "keyXX"):
   // [03]
 
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                            golden_entries.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                                     golden_entries.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size(), entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     EXPECT_EQ(golden_entries[i].entry, entries[i]);
@@ -188,61 +190,61 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
-  ObjectDigest root_digest;
-  ASSERT_TRUE(GetEmptyNodeDigest(&root_digest));
+  ObjectIdentifier root_identifier;
+  ASSERT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
 
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                            golden_entries.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                                     golden_entries.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(4u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size(), entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     EXPECT_EQ(golden_entries[i].entry, entries[i]);
   }
 
-  Entry new_entry = {"key071", MakeObjectDigest("object_digest_071"),
+  Entry new_entry = {"key071", MakeObjectIdentifier("object_digest_071"),
                      KeyPriority::EAGER};
   std::vector<EntryChange> new_change{EntryChange{new_entry, false}};
   // Insert key "071" between keys "07" and "08".
   golden_entries.insert(golden_entries.begin() + 8, new_change[0]);
 
   new_nodes.clear();
-  ObjectDigest new_root_digest2;
+  ObjectIdentifier new_root_identifier2;
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, new_root_digest,
-      std::make_unique<EntryChangeIterator>(new_change.begin(),
-                                            new_change.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest2, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_identifier,
+               std::make_unique<EntryChangeIterator>(new_change.begin(),
+                                                     new_change.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier2,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(new_root_digest, new_root_digest2);
+  EXPECT_NE(new_root_identifier, new_root_identifier2);
   // The root and the 3rd child have changed.
   EXPECT_EQ(2u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest2) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier2) != new_nodes.end());
 
-  entries = GetEntriesList(new_root_digest2);
+  entries = GetEntriesList(new_root_identifier2);
   ASSERT_EQ(golden_entries.size(), entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     EXPECT_EQ(golden_entries[i].entry, entries[i]);
@@ -256,7 +258,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Update entry.
   std::vector<Entry> entries_to_update{golden_entries[2].entry};
@@ -265,28 +267,29 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
     std::unique_ptr<const Object> object;
     ASSERT_TRUE(
         AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
-    entries_to_update[i].object_digest = object->GetDigest();
+    entries_to_update[i].object_identifier =
+        MakeDefaultObjectIdentifier(object->GetDigest());
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
 
   // Expected layout is unchanged.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                            update_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                                     update_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
   // The root and the first child have changed.
   EXPECT_EQ(2u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
@@ -308,7 +311,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Update entry.
   std::vector<Entry> entries_to_update{golden_entries[3].entry};
@@ -317,28 +320,29 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
     std::unique_ptr<const Object> object;
     ASSERT_TRUE(
         AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
-    entries_to_update[i].object_digest = object->GetDigest();
+    entries_to_update[i].object_identifier =
+        MakeDefaultObjectIdentifier(object->GetDigest());
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
 
   // Expected layout is unchanged.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                            update_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                                     update_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
   // Only the root has changed.
   EXPECT_EQ(1u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
@@ -362,7 +366,7 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
                                      4,
                                  }),
                                  &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Add level 1 entry.
   std::vector<EntryChange> update_changes;
@@ -374,22 +378,22 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
 
   // Apply update.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                            update_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                                     update_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
   // The tree nodes are new.
   EXPECT_EQ(3u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size() + update_changes.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
@@ -411,21 +415,21 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Apply all entries again.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                            golden_entries.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                                     golden_entries.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(root_digest, new_root_digest);
+  EXPECT_EQ(root_identifier, new_root_identifier);
   // The root and the first child have changed.
   EXPECT_EQ(0u, new_nodes.size());
 }
@@ -437,7 +441,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Delete entries.
   std::vector<EntryChange> delete_changes;
@@ -449,22 +453,22 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   //         /     |        \
   // [00, 01]  [05, 06]    [08, 09, 10, 11]
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                            delete_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                                     delete_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
   // The root and the first 2 children have changed.
   EXPECT_EQ(3u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size() - delete_changes.size(), entries.size());
   size_t deleted_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
@@ -487,7 +491,7 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Delete entry.
   std::vector<EntryChange> delete_changes;
@@ -499,22 +503,22 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   //                        /    \
   // [00, 01, 02, 04, 05, 06]    [08, 09, 10, 11]
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                            delete_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                                     delete_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
   // The root and one child have changed.
   EXPECT_EQ(2u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size() - delete_changes.size(), entries.size());
   size_t deleted_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
@@ -537,7 +541,7 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Delete entry.
   std::vector<EntryChange> delete_changes;
@@ -546,17 +550,17 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
 
   // Apply deletion.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                            delete_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                                     delete_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(root_digest, new_root_digest);
+  EXPECT_EQ(root_identifier, new_root_identifier);
   // The root and the first child have changed.
   EXPECT_EQ(0u, new_nodes.size());
 }
@@ -572,7 +576,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   ASSERT_TRUE(CreateEntryChanges(
       std::vector<size_t>({3, 50, 55, 60, 65, 74, 76, 89, 99}),
       &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Add level 2 entry.
   std::vector<EntryChange> update_changes;
@@ -586,22 +590,22 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
 
   // Apply update.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                            update_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                                     update_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
   // The tree nodes are new.
   EXPECT_EQ(5u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_digest);
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(golden_entries.size() + update_changes.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
@@ -620,16 +624,16 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   ASSERT_TRUE(
       CreateEntryChanges(std::vector<size_t>({75}), &delete_changes, true));
 
-  ObjectDigest final_node_digest;
-  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_digest,
+  ObjectIdentifier final_node_identifier;
+  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_identifier,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
-               callback::Capture(MakeQuitTask(), &status, &final_node_digest,
-                                 &new_nodes),
+               callback::Capture(MakeQuitTask(), &status,
+                                 &final_node_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(root_digest, final_node_digest);
+  EXPECT_EQ(root_identifier, final_node_identifier);
 }
 
 TEST_F(BTreeUtilsTest, DeleteAll) {
@@ -637,78 +641,84 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
-  ObjectDigest root_digest = CreateTree(golden_entries);
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
   // Delete everything.
   std::vector<EntryChange> delete_changes;
   ASSERT_TRUE(CreateEntryChanges(values, &delete_changes, true));
   // Apply update.
   Status status;
-  ObjectDigest new_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, root_digest,
-      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                            delete_changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &new_root_digest, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_identifier,
+               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                                     delete_changes.end()),
+               callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
+                                 &new_nodes),
+               &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_NE(root_digest, new_root_digest);
-  EXPECT_NE("", new_root_digest);
+  EXPECT_NE(root_identifier, new_root_identifier);
+  EXPECT_NE("", new_root_identifier.object_digest);
   // The empty node is new.
   EXPECT_EQ(1u, new_nodes.size());
-  EXPECT_TRUE(new_nodes.find(new_root_digest) != new_nodes.end());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 }
 
-TEST_F(BTreeUtilsTest, GetObjectDigestsFromEmpty) {
-  ObjectDigest root_digest;
-  ASSERT_TRUE(GetEmptyNodeDigest(&root_digest));
+TEST_F(BTreeUtilsTest, GetObjectIdentifiersFromEmpty) {
+  ObjectIdentifier root_identifier;
+  ASSERT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
   Status status;
-  std::set<ObjectDigest> object_digests;
-  GetObjectDigests(&coroutine_service_, &fake_storage_, root_digest,
-                   callback::Capture(MakeQuitTask(), &status, &object_digests));
+  std::set<ObjectIdentifier> object_identifiers;
+  GetObjectIdentifiers(
+      &coroutine_service_, &fake_storage_, root_identifier,
+      callback::Capture(MakeQuitTask(), &status, &object_identifiers));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, object_digests.size());
-  EXPECT_TRUE(object_digests.find(root_digest) != object_digests.end());
+  EXPECT_EQ(1u, object_identifiers.size());
+  EXPECT_TRUE(object_identifiers.find(root_identifier) !=
+              object_identifiers.end());
 }
 
 TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   std::vector<EntryChange> entries;
   ASSERT_TRUE(CreateEntryChanges(4, &entries));
-  ObjectDigest root_digest = CreateTree(entries);
+  ObjectIdentifier root_identifier = CreateTree(entries);
 
   Status status;
-  std::set<ObjectDigest> object_digests;
-  GetObjectDigests(&coroutine_service_, &fake_storage_, root_digest,
-                   callback::Capture(MakeQuitTask(), &status, &object_digests));
+  std::set<ObjectIdentifier> object_identifiers;
+  GetObjectIdentifiers(
+      &coroutine_service_, &fake_storage_, root_identifier,
+      callback::Capture(MakeQuitTask(), &status, &object_identifiers));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(6u, object_digests.size());
-  EXPECT_TRUE(object_digests.find(root_digest) != object_digests.end());
+  EXPECT_EQ(6u, object_identifiers.size());
+  EXPECT_TRUE(object_identifiers.find(root_identifier) !=
+              object_identifiers.end());
   for (EntryChange& e : entries) {
-    EXPECT_TRUE(object_digests.find(e.entry.object_digest) !=
-                object_digests.end());
+    EXPECT_TRUE(object_identifiers.find(e.entry.object_identifier) !=
+                object_identifiers.end());
   }
 }
 
-TEST_F(BTreeUtilsTest, GetObjectDigestsBigTree) {
+TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
   std::vector<EntryChange> entries;
   ASSERT_TRUE(CreateEntryChanges(99, &entries));
-  ObjectDigest root_digest = CreateTree(entries);
+  ObjectIdentifier root_identifier = CreateTree(entries);
 
   Status status;
-  std::set<ObjectDigest> object_digests;
-  GetObjectDigests(&coroutine_service_, &fake_storage_, root_digest,
-                   callback::Capture(MakeQuitTask(), &status, &object_digests));
+  std::set<ObjectIdentifier> object_identifiers;
+  GetObjectIdentifiers(
+      &coroutine_service_, &fake_storage_, root_identifier,
+      callback::Capture(MakeQuitTask(), &status, &object_identifiers));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(99u + 12, object_digests.size());
-  EXPECT_TRUE(object_digests.find(root_digest) != object_digests.end());
+  EXPECT_EQ(99u + 12, object_identifiers.size());
+  EXPECT_TRUE(object_identifiers.find(root_identifier) !=
+              object_identifiers.end());
   for (EntryChange& e : entries) {
-    EXPECT_TRUE(object_digests.find(e.entry.object_digest) !=
-                object_digests.end());
+    EXPECT_TRUE(object_identifiers.find(e.entry.object_identifier) !=
+                object_identifiers.end());
   }
 }
 
@@ -716,7 +726,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   std::vector<EntryChange> entries;
   ASSERT_TRUE(CreateEntryChanges(5, &entries));
   entries[3].entry.priority = KeyPriority::LAZY;
-  ObjectDigest root_digest = CreateTree(entries);
+  ObjectIdentifier root_identifier = CreateTree(entries);
 
   fake_storage_.object_requests.clear();
   Status status;
@@ -724,7 +734,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   //          [03]
   //       /        \
   // [00, 01, 02]  [04]
-  GetObjectsFromSync(&coroutine_service_, &fake_storage_, root_digest,
+  GetObjectsFromSync(&coroutine_service_, &fake_storage_, root_identifier,
                      callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -737,24 +747,26 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   // lazy object, all others should have been requested.
   EXPECT_EQ(3 + 4u, object_requests.size());
 
-  std::set<ObjectDigest> object_digests;
-  GetObjectDigests(&coroutine_service_, &fake_storage_, root_digest,
-                   callback::Capture(MakeQuitTask(), &status, &object_digests));
+  std::set<ObjectIdentifier> object_identifiers;
+  GetObjectIdentifiers(
+      &coroutine_service_, &fake_storage_, root_identifier,
+      callback::Capture(MakeQuitTask(), &status, &object_identifiers));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  ASSERT_EQ(3 + 5u, object_digests.size());
+  ASSERT_EQ(3 + 5u, object_identifiers.size());
   for (ObjectDigest& digest : object_requests) {
     // entries[3] contains the lazy value.
-    if (digest != entries[3].entry.object_digest) {
-      EXPECT_TRUE(object_digests.find(digest) != object_digests.end());
+    if (digest != entries[3].entry.object_identifier.object_digest) {
+      EXPECT_TRUE(object_identifiers.find(MakeDefaultObjectIdentifier(
+                      digest)) != object_identifiers.end());
     }
   }
 }
 
 TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
   std::vector<EntryChange> entries = {};
-  ObjectDigest root_digest = CreateTree(entries);
-  auto on_next = [](EntryAndNodeDigest e) {
+  ObjectIdentifier root_identifier = CreateTree(entries);
+  auto on_next = [](EntryAndNodeIdentifier e) {
     // Fail: There are no elements in the tree.
     EXPECT_TRUE(false);
     return false;
@@ -763,7 +775,7 @@ TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  ForEachEntry(&coroutine_service_, &fake_storage_, root_digest, "",
+  ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, "",
                std::move(on_next), std::move(on_done));
   ASSERT_FALSE(RunLoopWithTimeout());
 }
@@ -772,10 +784,10 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
   // Create a tree from entries with keys from 00-99.
   std::vector<EntryChange> entries;
   ASSERT_TRUE(CreateEntryChanges(100, &entries));
-  ObjectDigest root_digest = CreateTree(entries);
+  ObjectIdentifier root_identifier = CreateTree(entries);
 
   int current_key = 0;
-  auto on_next = [&current_key](EntryAndNodeDigest e) {
+  auto on_next = [&current_key](EntryAndNodeIdentifier e) {
     EXPECT_EQ(fxl::StringPrintf("key%02d", current_key), e.entry.key);
     current_key++;
     return true;
@@ -784,8 +796,8 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  ForEachEntry(&coroutine_service_, &fake_storage_, root_digest, "", on_next,
-               on_done);
+  ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, "",
+               on_next, on_done);
   ASSERT_FALSE(RunLoopWithTimeout());
 }
 
@@ -793,12 +805,12 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   // Create a tree from entries with keys from 00-99.
   std::vector<EntryChange> entries;
   ASSERT_TRUE(CreateEntryChanges(100, &entries));
-  ObjectDigest root_digest = CreateTree(entries);
+  ObjectIdentifier root_identifier = CreateTree(entries);
 
   // Find all entries with "key3" prefix in the key.
   std::string prefix = "key3";
   int current_key = 30;
-  auto on_next = [&current_key, &prefix](EntryAndNodeDigest e) {
+  auto on_next = [&current_key, &prefix](EntryAndNodeIdentifier e) {
     if (e.entry.key.substr(0, prefix.length()) != prefix) {
       return false;
     }
@@ -810,7 +822,7 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
     EXPECT_EQ(40, current_key);
     message_loop_.PostQuitTask();
   };
-  ForEachEntry(&coroutine_service_, &fake_storage_, root_digest, prefix,
+  ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, prefix,
                on_next, on_done);
   ASSERT_FALSE(RunLoopWithTimeout());
 }

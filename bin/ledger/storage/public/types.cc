@@ -30,9 +30,15 @@ bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
          std::tie(rhs.key_index, rhs.deletion_scope_id, rhs.object_digest);
 }
 
+std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e) {
+  return os << "ObjectIdentifier{key_index: " << e.key_index
+            << ", deletion_scope_id: " << e.deletion_scope_id
+            << ", object_digest: " << convert::ToHex(e.object_digest) << "}";
+}
+
 bool operator==(const Entry& lhs, const Entry& rhs) {
-  return std::tie(lhs.key, lhs.object_digest, lhs.priority) ==
-         std::tie(rhs.key, rhs.object_digest, rhs.priority);
+  return std::tie(lhs.key, lhs.object_identifier, lhs.priority) ==
+         std::tie(rhs.key, rhs.object_identifier, rhs.priority);
 }
 
 bool operator!=(const Entry& lhs, const Entry& rhs) {
@@ -40,7 +46,7 @@ bool operator!=(const Entry& lhs, const Entry& rhs) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Entry& e) {
-  return os << "Entry{key: " << e.key << ", value: " << e.object_digest
+  return os << "Entry{key: " << e.key << ", value: " << e.object_identifier
             << ", priority: "
             << (e.priority == KeyPriority::EAGER ? "EAGER" : "LAZY") << "}";
 }

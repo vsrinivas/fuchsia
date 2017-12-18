@@ -57,9 +57,9 @@ constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
 class NodeBuilder {
  public:
   // Creates a NodeBuilder from the id of a tree node.
-  static Status FromDigest(SynchronousStorage* page_storage,
-                           ObjectDigest object_digest,
-                           NodeBuilder* node_builder);
+  static Status FromIdentifier(SynchronousStorage* page_storage,
+                               ObjectIdentifier object_identifier,
+                               NodeBuilder* node_builder);
 
   // Creates a null builder.
   NodeBuilder() { FXL_DCHECK(Validate()); }
@@ -80,8 +80,8 @@ class NodeBuilder {
   // Build the tree node represented by the builder |node_builder| in the
   // storage.
   Status Build(SynchronousStorage* page_storage,
-               ObjectDigest* object_digest,
-               std::unordered_set<ObjectDigest>* new_digests);
+               ObjectIdentifier* object_identifier,
+               std::set<ObjectIdentifier>* new_identifiers);
 
  private:
   enum class BuilderType {
@@ -91,9 +91,9 @@ class NodeBuilder {
   };
 
   static NodeBuilder CreateExistingBuilder(uint8_t level,
-                                           ObjectDigest object_digest) {
+                                           ObjectIdentifier object_identifier) {
     return NodeBuilder(BuilderType::EXISTING_NODE, level,
-                       std::move(object_digest), {}, {});
+                       std::move(object_identifier), {}, {});
   }
 
   static NodeBuilder CreateNewBuilder(uint8_t level,
@@ -102,18 +102,18 @@ class NodeBuilder {
     if (entries.empty() && !children[0]) {
       return NodeBuilder();
     }
-    return NodeBuilder(BuilderType::NEW_NODE, level, "", std::move(entries),
+    return NodeBuilder(BuilderType::NEW_NODE, level, {}, std::move(entries),
                        std::move(children));
   }
 
   NodeBuilder(BuilderType type,
               uint8_t level,
-              ObjectDigest object_digest,
+              ObjectIdentifier object_identifier,
               std::vector<Entry> entries,
               std::vector<NodeBuilder> children)
       : type_(type),
         level_(level),
-        object_digest_(std::move(object_digest)),
+        object_identifier_(std::move(object_identifier)),
         entries_(std::move(entries)),
         children_(std::move(children)) {
     FXL_DCHECK(Validate());
@@ -155,10 +155,12 @@ class NodeBuilder {
 
   // Validate that the content of this builder follows the expected constraints.
   bool Validate() {
-    if (type_ == BuilderType::NULL_NODE && !object_digest_.empty()) {
+    if (type_ == BuilderType::NULL_NODE &&
+        !object_identifier_.object_digest.empty()) {
       return false;
     }
-    if (type_ == BuilderType::EXISTING_NODE && object_digest_.empty()) {
+    if (type_ == BuilderType::EXISTING_NODE &&
+        object_identifier_.object_digest.empty()) {
       return false;
     }
     if (type_ == BuilderType::NEW_NODE && children_.empty()) {
@@ -209,25 +211,26 @@ class NodeBuilder {
 
   BuilderType type_ = BuilderType::NULL_NODE;
   uint8_t level_;
-  ObjectDigest object_digest_;
+  ObjectIdentifier object_identifier_;
   std::vector<Entry> entries_;
   std::vector<NodeBuilder> children_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NodeBuilder);
 };
 
-Status NodeBuilder::FromDigest(SynchronousStorage* page_storage,
-                               ObjectDigest object_digest,
-                               NodeBuilder* node_builder) {
+Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
+                                   ObjectIdentifier object_identifier,
+                                   NodeBuilder* node_builder) {
   std::unique_ptr<const TreeNode> node;
-  RETURN_ON_ERROR(page_storage->TreeNodeFromDigest(object_digest, &node));
+  RETURN_ON_ERROR(
+      page_storage->TreeNodeFromIdentifier(object_identifier, &node));
   FXL_DCHECK(node);
 
   std::vector<Entry> entries;
   std::vector<NodeBuilder> children;
   ExtractContent(*node, &entries, &children);
   *node_builder = NodeBuilder(BuilderType::EXISTING_NODE, node->level(),
-                              std::move(object_digest), std::move(entries),
+                              std::move(object_identifier), std::move(entries),
                               std::move(children));
   return Status::OK;
 }
@@ -292,19 +295,19 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
 }
 
 Status NodeBuilder::Build(SynchronousStorage* page_storage,
-                          ObjectDigest* object_digest,
-                          std::unordered_set<ObjectDigest>* new_digests) {
+                          ObjectIdentifier* object_identifier,
+                          std::set<ObjectIdentifier>* new_identifiers) {
   if (!*this) {
     RETURN_ON_ERROR(
-        page_storage->TreeNodeFromEntries(0, {}, {""}, &object_digest_));
+        page_storage->TreeNodeFromEntries(0, {}, {}, &object_identifier_));
 
-    *object_digest = object_digest_;
-    new_digests->insert(object_digest_);
+    *object_identifier = object_identifier_;
+    new_identifiers->insert(object_identifier_);
     type_ = BuilderType::EXISTING_NODE;
     return Status::OK;
   }
   if (type_ == BuilderType::EXISTING_NODE) {
-    *object_digest = object_digest_;
+    *object_identifier = object_identifier_;
     return Status::OK;
   }
 
@@ -312,20 +315,23 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
   while (CollectNodesToBuild(&to_build)) {
     auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
     for (NodeBuilder* child : to_build) {
-      std::vector<ObjectDigest> children;
-      for (const auto& sub_child : child->children_) {
+      std::map<size_t, ObjectIdentifier> children;
+      for (size_t index = 0; index < child->children_.size(); ++index) {
+        const auto& sub_child = child->children_[index];
         FXL_DCHECK(sub_child.type_ != BuilderType::NEW_NODE);
-        children.push_back(sub_child.object_digest_);
+        if (sub_child) {
+          children[index] = sub_child.object_identifier_;
+        }
       }
       TreeNode::FromEntries(
           page_storage->page_storage(), child->level_, child->entries_,
           children,
-          [new_digests, child, callback = waiter->NewCallback()](
-              Status status, ObjectDigest object_digest) {
+          [new_identifiers, child, callback = waiter->NewCallback()](
+              Status status, ObjectIdentifier object_identifier) {
             if (status == Status::OK) {
               child->type_ = BuilderType::EXISTING_NODE;
-              child->object_digest_ = std::move(object_digest);
-              new_digests->insert(child->object_digest_);
+              child->object_identifier_ = object_identifier;
+              new_identifiers->insert(child->object_identifier_);
             }
             callback(status);
           });
@@ -345,7 +351,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
   }
 
   FXL_DCHECK(type_ == BuilderType::EXISTING_NODE);
-  *object_digest = object_digest_;
+  *object_identifier = object_identifier_;
 
   return Status::OK;
 }
@@ -360,7 +366,8 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
   FXL_DCHECK(type_ == BuilderType::EXISTING_NODE);
 
   std::unique_ptr<const TreeNode> node;
-  RETURN_ON_ERROR(page_storage->TreeNodeFromDigest(object_digest_, &node));
+  RETURN_ON_ERROR(
+      page_storage->TreeNodeFromIdentifier(object_identifier_, &node));
   FXL_DCHECK(node);
 
   ExtractContent(*node, &entries_, &children_);
@@ -443,7 +450,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
     // value must be replaced.
 
     // Entries are identical, the change is a no-op.
-    if (entries_[split_index].object_digest == entry.object_digest &&
+    if (entries_[split_index].object_identifier == entry.object_identifier &&
         entries_[split_index].priority == entry.priority) {
       *did_mutate = false;
       return Status::OK;
@@ -451,7 +458,8 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
 
     type_ = BuilderType::NEW_NODE;
     *did_mutate = true;
-    entries_[split_index].object_digest = std::move(entry.object_digest);
+    entries_[split_index].object_identifier =
+        std::move(entry.object_identifier);
     entries_[split_index].priority = entry.priority;
     return Status::OK;
   }
@@ -580,13 +588,17 @@ void NodeBuilder::ExtractContent(const TreeNode& node,
   FXL_DCHECK(children);
   *entries = std::vector<Entry>(node.entries().begin(), node.entries().end());
   children->clear();
-  for (const auto& child_id : node.children_digests()) {
-    if (child_id.empty()) {
+  size_t next_index = 0;
+  for (const auto& child : node.children_identifiers()) {
+    for (; next_index < child.first; ++next_index) {
       children->push_back(NodeBuilder());
-    } else {
-      children->push_back(
-          NodeBuilder::CreateExistingBuilder(node.level() - 1, child_id));
     }
+    children->push_back(
+        NodeBuilder::CreateExistingBuilder(node.level() - 1, child.second));
+    ++next_index;
+  }
+  for (; next_index <= entries->size(); ++next_index) {
+    children->push_back(NodeBuilder());
   }
 }
 
@@ -596,8 +608,8 @@ Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
                           SynchronousStorage* page_storage,
                           NodeBuilder root,
                           std::unique_ptr<Iterator<const EntryChange>> changes,
-                          ObjectDigest* object_digest,
-                          std::unordered_set<ObjectDigest>* new_digests) {
+                          ObjectIdentifier* object_identifier,
+                          std::set<ObjectIdentifier>* new_identifiers) {
   Status status;
   while (changes->Valid()) {
     EntryChange change = **changes;
@@ -614,7 +626,7 @@ Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
   if (changes->GetStatus() != Status::OK) {
     return changes->GetStatus();
   }
-  return root.Build(page_storage, object_digest, new_digests);
+  return root.Build(page_storage, object_identifier, new_identifiers);
 }
 
 }  // namespace
@@ -626,46 +638,47 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator() {
 void ApplyChanges(
     coroutine::CoroutineService* coroutine_service,
     PageStorage* page_storage,
-    ObjectDigestView root_digest,
+    ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectDigest, std::unordered_set<ObjectDigest>)>
+    std::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator) {
-  FXL_DCHECK(storage::IsDigestValid(root_digest));
+  FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest));
   coroutine_service->StartCoroutine(fxl::MakeCopyable(
-      [page_storage, root_digest = root_digest.ToString(),
+      [page_storage, root_identifier = std::move(root_identifier),
        changes = std::move(changes), callback = std::move(callback),
        node_level_calculator](coroutine::CoroutineHandler* handler) mutable {
         SynchronousStorage storage(page_storage, handler);
 
         NodeBuilder root;
-        Status status =
-            NodeBuilder::FromDigest(&storage, std::move(root_digest), &root);
+        Status status = NodeBuilder::FromIdentifier(
+            &storage, std::move(root_identifier), &root);
         if (status != Status::OK) {
-          callback(status, "", {});
+          callback(status, {}, {});
           return;
         }
-        ObjectDigest object_digest;
-        std::unordered_set<ObjectDigest> new_digests;
+        ObjectIdentifier object_identifier;
+        std::set<ObjectIdentifier> new_identifiers;
         status = ApplyChangesOnRoot(node_level_calculator, &storage,
                                     std::move(root), std::move(changes),
-                                    &object_digest, &new_digests);
+                                    &object_identifier, &new_identifiers);
         if (status != Status::OK) {
-          callback(status, "", {});
+          callback(status, {}, {});
           return;
         }
 
-        if (!object_digest.empty()) {
-          callback(Status::OK, std::move(object_digest),
-                   std::move(new_digests));
+        if (!object_identifier.object_digest.empty()) {
+          callback(Status::OK, std::move(object_identifier),
+                   std::move(new_identifiers));
           return;
         }
 
         TreeNode::Empty(page_storage, [callback = std::move(callback)](
                                           Status status,
-                                          ObjectDigest object_digest) {
-          std::unordered_set<ObjectDigest> new_digests({object_digest});
-          callback(status, std::move(object_digest), std::move(new_digests));
+                                          ObjectIdentifier object_identifier) {
+          std::set<ObjectIdentifier> new_identifiers({object_identifier});
+          callback(status, std::move(object_identifier),
+                   std::move(new_identifiers));
         });
       }));
 }

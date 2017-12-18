@@ -145,7 +145,8 @@ void FillEntries(
     }
     context->entries.push_back(CreateEntry<EntryType>(entry));
     page_storage->GetObject(
-        entry.object_digest, storage::PageStorage::Location::LOCAL,
+        entry.object_identifier.object_digest,
+        storage::PageStorage::Location::LOCAL,
         [priority = entry.priority, waiter_callback = waiter->NewCallback()](
             storage::Status status,
             std::unique_ptr<const storage::Object> object) {
@@ -329,7 +330,7 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
           return;
         }
         PageUtils::GetPartialReferenceAsBuffer(
-            page_storage_, entry.object_digest, 0u,
+            page_storage_, entry.object_identifier.object_digest, 0u,
             std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
             [callback = std::move(callback)](Status status,
@@ -354,7 +355,7 @@ void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
           return;
         }
         PageUtils::GetReferenceAsStringView(
-            page_storage_, entry.object_digest,
+            page_storage_, entry.object_identifier.object_digest,
             storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
             [callback = std::move(callback)](Status status,
                                              fxl::StringView data_view) {
@@ -384,7 +385,7 @@ void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
           return;
         }
         PageUtils::GetPartialReferenceAsBuffer(
-            page_storage_, entry.object_digest, 0u,
+            page_storage_, entry.object_identifier.object_digest, 0u,
             std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
             [callback = std::move(callback)](Status status,
@@ -412,8 +413,9 @@ void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
         }
 
         PageUtils::GetPartialReferenceAsBuffer(
-            page_storage_, entry.object_digest, offset, max_size,
-            storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
+            page_storage_, entry.object_identifier.object_digest, offset,
+            max_size, storage::PageStorage::Location::NETWORK,
+            Status::INTERNAL_ERROR,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
               callback(status, std::move(data).ToTransport());

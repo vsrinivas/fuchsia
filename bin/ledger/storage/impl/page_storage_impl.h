@@ -41,7 +41,7 @@ class PageStorageImpl : public PageStorage {
 
   // Adds the given locally created |commit| in this |PageStorage|.
   void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
-                          std::vector<ObjectDigest> new_objects,
+                          std::vector<ObjectIdentifier> new_objects,
                           std::function<void(Status)> callback);
 
   // Checks whether the given |object_digest| is untracked, i.e. has been
@@ -220,7 +220,7 @@ class PageStorageImpl : public PageStorage {
   FXL_WARN_UNUSED_RESULT Status
   SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
                                 std::unique_ptr<const Commit> commit,
-                                std::vector<ObjectDigest> new_objects);
+                                std::vector<ObjectIdentifier> new_objects);
 
   FXL_WARN_UNUSED_RESULT Status
   SynchronousAddCommitsFromSync(coroutine::CoroutineHandler* handler,
@@ -238,7 +238,7 @@ class PageStorageImpl : public PageStorage {
   SynchronousAddCommits(coroutine::CoroutineHandler* handler,
                         std::vector<std::unique_ptr<const Commit>> commits,
                         ChangeSource source,
-                        std::vector<ObjectDigest> new_objects);
+                        std::vector<ObjectIdentifier> new_objects);
 
   FXL_WARN_UNUSED_RESULT Status
   SynchronousAddPiece(coroutine::CoroutineHandler* handler,
