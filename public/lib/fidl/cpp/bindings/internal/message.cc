@@ -83,7 +83,22 @@ void AllocMessage::MoveTo(AllocMessage* destination) {
   destination->MoveHandlesFrom(this);
 }
 
-zx_status_t ReadMessage(const zx::channel& channel, AllocMessage* message) {
+PreallocMessage::~PreallocMessage() {
+  if (data_ != reinterpret_cast<internal::MessageData*>(prealloc_buf_))
+    free(data_);
+}
+
+void PreallocMessage::AllocUninitializedData(uint32_t num_bytes) {
+  FXL_DCHECK(!data_);
+  if (num_bytes <= sizeof(prealloc_buf_)) {
+    data_ = reinterpret_cast<internal::MessageData*>(prealloc_buf_);
+  } else {
+    data_ = reinterpret_cast<internal::MessageData*>(malloc(num_bytes));
+  }
+  data_num_bytes_ = num_bytes;
+}
+
+zx_status_t ReadMessage(const zx::channel& channel, PreallocMessage* message) {
   FXL_DCHECK(channel);
   FXL_DCHECK(message);
   FXL_DCHECK(message->handles()->empty());
@@ -117,7 +132,7 @@ zx_status_t ReadMessage(const zx::channel& channel, AllocMessage* message) {
 zx_status_t ReadAndDispatchMessage(const zx::channel& channel,
                                    MessageReceiver* receiver,
                                    bool* receiver_result) {
-  AllocMessage message;
+  PreallocMessage message;
   zx_status_t rv = ReadMessage(channel, &message);
   if (receiver && rv == ZX_OK)
     *receiver_result = receiver->Accept(&message);
@@ -147,7 +162,7 @@ zx_status_t WriteMessage(const zx::channel& channel, Message* message) {
 }
 
 zx_status_t CallMessage(const zx::channel& channel, Message* message,
-                        AllocMessage* response) {
+                        PreallocMessage* response) {
   // TODO(abarth): Once we convert to the FIDL2 wire format, switch this code
   // to use zx_channel_call.
 

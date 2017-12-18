@@ -85,6 +85,9 @@ class Message {
 };
 
 // AllocMessage is like Message, except that it owns the data buffer.
+//
+// The data buffer will be heap-allocated.  This means that ownership of
+// the buffer can be transferred, using MoveTo().
 class AllocMessage : public Message {
  public:
   AllocMessage();
@@ -101,6 +104,25 @@ class AllocMessage : public Message {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(AllocMessage);
+};
+
+// PreallocMessage is similar to AllocMessage, except that it uses a
+// preallocated data buffer for messages with small amounts of data.
+//
+// When PreallocMessage is allocated on the stack, the data for a small
+// message will be stack-allocated too.  Larger messages will still be
+// heap-allocated.
+class PreallocMessage : public Message {
+ public:
+  PreallocMessage() {}
+  ~PreallocMessage();
+
+  void AllocUninitializedData(uint32_t num_bytes);
+
+ private:
+  uint8_t prealloc_buf_[128];
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(PreallocMessage);
 };
 
 class MessageReceiver {
@@ -169,7 +191,7 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
 // and handles).
 //
 // NOTE: The message isn't validated and may be malformed!
-zx_status_t ReadMessage(const zx::channel& channel, AllocMessage* message);
+zx_status_t ReadMessage(const zx::channel& channel, PreallocMessage* message);
 
 // Read a single message from the channel and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read
@@ -185,7 +207,7 @@ zx_status_t WriteMessage(const zx::channel& channel,
 
 zx_status_t CallMessage(const zx::channel& channel,
                         Message* message,
-                        AllocMessage* response);
+                        PreallocMessage* response);
 
 }  // namespace fidl
 

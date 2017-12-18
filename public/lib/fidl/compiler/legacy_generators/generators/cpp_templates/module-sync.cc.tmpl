@@ -76,7 +76,7 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
     return false;
 
 {%-   else %}
-  ::fidl::AllocMessage response_msg;
+  ::fidl::PreallocMessage response_msg;
   if (::fidl::CallMessage(channel_, builder.message(), &response_msg)
       != ZX_OK) {
     return false;
