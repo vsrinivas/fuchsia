@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_BLOCK_H_
-#define GARNET_LIB_MACHINA_BLOCK_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_
+#define GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_
 
 #include <fbl/mutex.h>
 #include <virtio/block.h>
@@ -73,4 +73,4 @@ class VirtioBlock : public VirtioDevice {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_BLOCK_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_BLOCK_H_

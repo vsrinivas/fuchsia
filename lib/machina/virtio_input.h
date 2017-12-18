@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INPUT_H_
-#define GARNET_LIB_MACHINA_INPUT_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_INPUT_H_
+#define GARNET_LIB_MACHINA_VIRTIO_INPUT_H_
 
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
@@ -59,4 +59,4 @@ class VirtioInput : public VirtioDevice {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_INPUT_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_INPUT_H_
