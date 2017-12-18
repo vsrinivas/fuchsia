@@ -17,6 +17,7 @@
 
 #include <object/diagnostics.h>
 #include <object/handle.h>
+#include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
@@ -536,6 +537,20 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
 
             zx_info_handle_count_t info = {
                 .handle_count = Handle::Count(fbl::move(dispatcher))
+            };
+
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+        }
+        case ZX_INFO_BTI: {
+            fbl::RefPtr<BusTransactionInitiatorDispatcher> dispatcher;
+            auto status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &dispatcher);
+            if (status != ZX_OK)
+                return status;
+
+            zx_info_bti_t info = {
+                .minimum_contiguity = dispatcher->minimum_contiguity(),
+                .aspace_size = dispatcher->aspace_size(),
             };
 
             return single_record_result(

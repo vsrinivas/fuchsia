@@ -31,6 +31,7 @@ typedef enum {
     ZX_INFO_KMEM_STATS                 = 17, // zx_info_kmem_stats_t[1]
     ZX_INFO_RESOURCE                   = 18, // zx_info_resource_t[1]
     ZX_INFO_HANDLE_COUNT               = 19, // zx_info_handle_count_t[1]
+    ZX_INFO_BTI                        = 20, // zx_info_bti_t[1]
     ZX_INFO_LAST
 } zx_object_info_topic_t;
 
@@ -134,6 +135,17 @@ typedef struct zx_info_vmar {
     // Length of the region, in bytes.
     size_t len;
 } zx_info_vmar_t;
+
+typedef struct zx_info_bti {
+    // zx_bti_pin will always be able to return addreses that are contiguous for at
+    // least this many bytes.  E.g. if this returns 1MB, then a call to
+    // zx_bti_pin() with a size of 2MB will return at most two physically-contiguous runs.
+    // If the size were 2.5MB, it will return at most three physically-contiguous runs.
+    uint64_t minimum_contiguity;
+
+    // The number of bytes in the device's address space (UINT64_MAX if 2^64).
+    uint64_t aspace_size;
+} zx_info_bti_t;
 
 
 // Types and values used by ZX_INFO_PROCESS_MAPS.
