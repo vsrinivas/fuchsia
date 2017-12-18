@@ -77,34 +77,39 @@ function fx-set-prompt {
   fi
 }
 
-### fx-go: navigate to directory within Fuchsia
+### fd: navigate to directories with autocomplete
 
-function fx-go-usage {
-  cat <<END
-usage: fgo [dir]
-Navigates to directory within fuchsia root.
-END
-}
-
-function fx-go {
-  if [[ $# -gt 1 ]]; then
-    fx-go-usage
-    return 1
-  fi
-
-  cd "${FUCHSIA_DIR}/$1"
+# $ fd --help   # for usage.
+function fd {
+  local fd_python
+  local dest
+  fd_python="${FUCHSIA_DIR}/scripts/fd.py"
+  dest=$(eval ${fd_python} "$@")
+  cd -- "${dest}"
 }
 
 if [[ -z "${ZSH_VERSION}" ]]; then
-  function __fx_go {
+  function __fd {
     local cur
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/${cur}* 2>/dev/null | \
-      sed -n "s|^${FUCHSIA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
+    if [[ ${cur:0:2} == "//" ]]; then
+      COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/${cur}* 2>/dev/null | \
+        sed -n "s|^${FUCHSIA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
+    else
+      COMPREPLY=($(/bin/ls -dp1 ${cur}* 2>/dev/null | grep "/$" | xargs echo))
+    fi
   }
-  complete -o nospace -F __fx_go fx-go
+  complete -o nospace -F __fd fd
 fi
+
+### fx-go: alias of fd, for backward compatibility
+
+function fx-go {
+  echo "fx-go is to be deprecated in Q1 2018 in favor of 'fd'. For more help, fd --help"
+  fd "$@"
+}
+
 
 # Support command-line auto-completions for the fx command.
 if [[ -z "${ZSH_VERSION}" ]]; then
