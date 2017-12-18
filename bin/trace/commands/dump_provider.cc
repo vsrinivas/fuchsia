@@ -33,10 +33,12 @@ Command::Info DumpProvider::Describe() {
 DumpProvider::DumpProvider(app::ApplicationContext* context)
     : CommandWithTraceController(context) {}
 
-void DumpProvider::Run(const fxl::CommandLine& command_line) {
+void DumpProvider::Run(const fxl::CommandLine& command_line,
+                       OnDoneCallback on_done) {
   if (command_line.positional_args().size() != 1) {
     err() << "Need provider id, please check your command invocation"
           << std::endl;
+    on_done(-1);
     return;
   }
 
@@ -44,6 +46,7 @@ void DumpProvider::Run(const fxl::CommandLine& command_line) {
   if (!fxl::StringToNumberWithError(command_line.positional_args()[0],
                                     &provider_id)) {
     err() << "Failed to parse provider id" << std::endl;
+    on_done(-1);
     return;
   }
 
@@ -78,8 +81,7 @@ void DumpProvider::Run(const fxl::CommandLine& command_line) {
       break;  // can't write anymore
   }
   out() << std::endl;
-
-  fsl::MessageLoop::GetCurrent()->QuitNow();
+  on_done(0);
 }
 
 }  // namespace tracing

@@ -16,8 +16,13 @@ int main(int argc, const char** argv) {
   auto context = app::ApplicationContext::CreateFromStartupInfo();
 
   tracing::App app(context.get());
-  loop.task_runner()->PostTask(
-      [&app, &command_line] { app.Run(command_line); });
+  int32_t return_code = 0;
+  loop.task_runner()->PostTask([&app, &command_line, &return_code, &loop] {
+    app.Run(command_line, [&return_code, &loop](int32_t code) {
+      return_code = code;
+      loop.QuitNow();
+    });
+  });
   loop.Run();
-  return 0;
+  return return_code;
 }

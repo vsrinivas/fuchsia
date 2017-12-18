@@ -13,6 +13,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/tracing/fidl/trace_controller.fidl.h"
 
@@ -20,6 +21,9 @@ namespace tracing {
 
 class Command {
  public:
+  // OnDoneCallback is the callback type invoked when a command finished
+  // running. It takes as argument the return code to exit the process with.
+  using OnDoneCallback = std::function<void(int32_t)>;
   struct Info {
     using CommandFactory =
         std::function<std::unique_ptr<Command>(app::ApplicationContext*)>;
@@ -32,7 +36,8 @@ class Command {
 
   virtual ~Command();
 
-  virtual void Run(const fxl::CommandLine& command_line) = 0;
+  virtual void Run(const fxl::CommandLine& command_line,
+                   OnDoneCallback on_done) = 0;
 
  protected:
   static std::istream& in();

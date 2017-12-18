@@ -14,7 +14,7 @@ class ListProviders : public CommandWithTraceController {
   static Info Describe();
 
   explicit ListProviders(app::ApplicationContext* context);
-  void Run(const fxl::CommandLine&) override;
+  void Run(const fxl::CommandLine&, OnDoneCallback on_done) override;
 };
 
 }  // namespace tracing

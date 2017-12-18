@@ -43,10 +43,11 @@ class Record : public CommandWithTraceController {
   static Info Describe();
 
   explicit Record(app::ApplicationContext* context);
-  void Run(const fxl::CommandLine& command_line) override;
+  void Run(const fxl::CommandLine& command_line,
+           OnDoneCallback on_done) override;
 
  private:
-  void StopTrace();
+  void StopTrace(int32_t return_code);
   void ProcessMeasurements(fxl::Closure on_done);
   void DoneTrace();
   void LaunchApp();
@@ -65,7 +66,9 @@ class Record : public CommandWithTraceController {
   std::unique_ptr<measure::MeasureDuration> measure_duration_;
   std::unique_ptr<measure::MeasureTimeBetween> measure_time_between_;
   bool tracing_ = false;
+  int32_t return_code_ = 0;
   Options options_;
+  OnDoneCallback on_done_;
 
   fxl::WeakPtrFactory<Record> weak_ptr_factory_;
 };

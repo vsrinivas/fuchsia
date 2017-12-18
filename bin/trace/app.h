@@ -20,7 +20,8 @@ class App : public Command {
   App(app::ApplicationContext* context);
   ~App();
 
-  void Run(const fxl::CommandLine& command_line) override;
+  void Run(const fxl::CommandLine& command_line,
+           OnDoneCallback on_done) override;
 
  private:
   void RegisterCommand(Command::Info info);

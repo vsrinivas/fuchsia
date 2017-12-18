@@ -22,7 +22,8 @@ Command::Info ListProviders::Describe() {
 ListProviders::ListProviders(app::ApplicationContext* context)
     : CommandWithTraceController(context) {}
 
-void ListProviders::Run(const fxl::CommandLine& command_line) {
+void ListProviders::Run(const fxl::CommandLine& command_line,
+                        OnDoneCallback on_done) {
   if (!(command_line.options().empty() &&
         command_line.positional_args().empty())) {
     err() << "We encountered unknown options, please check your "
@@ -30,13 +31,14 @@ void ListProviders::Run(const fxl::CommandLine& command_line) {
   }
 
   trace_controller()->GetRegisteredProviders(
-      [](fidl::Array<TraceProviderInfoPtr> providers) {
+      [on_done =
+           std::move(on_done)](fidl::Array<TraceProviderInfoPtr> providers) {
         out() << "Registered providers" << std::endl;
         for (const auto& provider : providers) {
           out() << "  #" << provider->id << ": '" << provider->label << "'"
                 << std::endl;
         }
-        fsl::MessageLoop::GetCurrent()->QuitNow();
+        on_done(0);
       });
 }
 

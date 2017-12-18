@@ -177,10 +177,11 @@ Command::Info Record::Describe() {
 Record::Record(app::ApplicationContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
-void Record::Run(const fxl::CommandLine& command_line) {
+void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
   if (!options_.Setup(command_line)) {
     err() << "Error parsing options from command line - aborting" << std::endl;
-    exit(1);
+    on_done(1);
+    return;
   }
 
   std::ofstream out_file(options_.output_file_name,
@@ -188,9 +189,11 @@ void Record::Run(const fxl::CommandLine& command_line) {
   if (!out_file.is_open()) {
     err() << "Failed to open " << options_.output_file_name << " for writing"
           << std::endl;
-    exit(1);
+    on_done(1);
+    return;
   }
 
+  on_done_ = std::move(on_done);
   exporter_.reset(new ChromiumExporter(std::move(out_file)));
   tracer_.reset(new Tracer(trace_controller().get()));
   if (!options_.measurements.duration.empty()) {
@@ -230,10 +233,11 @@ void Record::Run(const fxl::CommandLine& command_line) {
       [this] { DoneTrace(); });
 }
 
-void Record::StopTrace() {
+void Record::StopTrace(int32_t return_code) {
   if (tracing_) {
     out() << "Stopping trace..." << std::endl;
     tracing_ = false;
+    return_code_ = return_code;
     tracer_->Stop();
   }
 }
@@ -284,14 +288,16 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
   if (errored) {
     err() << "One or more measurements had empty results. Quitting."
           << std::endl;
-    exit(1);
+    on_done_(1);
+    return;
   }
 
   if (!options_.benchmark_results_file.empty()) {
     if (!ExportResults(options_.benchmark_results_file, results)) {
       err() << "Failed to write benchmark results to "
             << options_.benchmark_results_file;
-      exit(1);
+      on_done_(1);
+      return;
     }
     out() << "Benchmark results written to " << options_.benchmark_results_file;
   }
@@ -306,9 +312,9 @@ void Record::DoneTrace() {
   out() << "Trace file written to " << options_.output_file_name << std::endl;
 
   if (measure_duration_ || measure_time_between_) {
-    ProcessMeasurements([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
+    ProcessMeasurements([this] { on_done_(return_code_); });
   } else {
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+    on_done_(return_code_);
   }
 }
 
@@ -323,17 +329,25 @@ void Record::LaunchApp() {
   application_controller_.set_connection_error_handler([this] {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)
-      StopTrace();
+      // The trace might have been already stopped by the |Wait()| callback. In
+      // that case, |StopTrace| below does nothing.
+      StopTrace(-1);
   });
-  if (options_.detach)
+  application_controller_->Wait([this](int32_t return_code) {
+    out() << "Application exited with return code " << return_code << std::endl;
+    if (!options_.decouple)
+      StopTrace(return_code);
+  });
+  if (options_.detach) {
     application_controller_->Detach();
+  }
 }
 
 void Record::StartTimer() {
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak)
-          weak->StopTrace();
+          weak->StopTrace(0);
       },
       options_.duration);
   out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()

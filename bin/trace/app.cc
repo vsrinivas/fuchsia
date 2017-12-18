@@ -23,10 +23,11 @@ App::App(app::ApplicationContext* context) : Command(context) {
 
 App::~App() {}
 
-void App::Run(const fxl::CommandLine& command_line) {
+void App::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
   if (command_line.HasOption("help")) {
     PrintHelp();
-    exit(0);
+    on_done(0);
+    return;
   }
 
   const auto& positional_args = command_line.positional_args();
@@ -34,7 +35,8 @@ void App::Run(const fxl::CommandLine& command_line) {
   if (positional_args.empty()) {
     err() << "Command missing - aborting" << std::endl;
     PrintHelp();
-    exit(1);
+    on_done(1);
+    return;
   }
 
   auto it = known_commands_.find(positional_args.front());
@@ -42,18 +44,23 @@ void App::Run(const fxl::CommandLine& command_line) {
     err() << "Unknown command '" << positional_args.front() << "' - aborting"
           << std::endl;
     PrintHelp();
-    exit(1);
+    on_done(1);
+    return;
   }
 
   if (!context()->has_environment_services()) {
     err() << "Cannot access application environment services" << std::endl;
-    exit(1);
+    on_done(1);
+    return;
   }
 
   command_ = it->second.factory(context());
   command_->Run(fxl::CommandLineFromIteratorsWithArgv0(
-      positional_args.front(), positional_args.begin() + 1,
-      positional_args.end()));
+                    positional_args.front(), positional_args.begin() + 1,
+                    positional_args.end()),
+                [on_done = std::move(on_done)](int32_t return_code) {
+                  on_done(return_code);
+                });
 }
 
 void App::RegisterCommand(Command::Info info) {
