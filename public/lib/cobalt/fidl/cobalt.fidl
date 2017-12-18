@@ -63,7 +63,7 @@ enum Status {
 interface CobaltEncoderFactory {
   // Creates a CobaltEncoder for the specified project.
   // |project_id| Should be a project ID registered with the Cobalt system.
-  GetEncoder(int32 project_id, CobaltEncoder& encoder);
+  GetEncoder@0(int32 project_id, CobaltEncoder& encoder);
 };
 
 // CobaltEncoder accumulates Observations in a local cache and periodically
@@ -81,7 +81,7 @@ interface CobaltEncoder {
   // |observation| The string value to be encoded. Must be consistent with
   //               the definition of the metric and encoding. Some encodings
   //               restrict the set of values to a pre-defined list.
-  AddStringObservation(uint32 metric_id, uint32 encoding_id, string observation)
+  AddStringObservation@0(uint32 metric_id, uint32 encoding_id, string observation)
       => (Status status);
 
   // Adds an observation specified by its index. This only makes sense if
@@ -107,10 +107,10 @@ interface CobaltEncoder {
   //          place of the indices when generating reports. However there is
   //          no requirement to register a label with an index in order to
   //          use the index here. Also the label may be added or changed later.
-  AddIndexObservation(uint32 metric_id, uint32 encoding_id, uint32 index)
+  AddIndexObservation@1(uint32 metric_id, uint32 encoding_id, uint32 index)
       => (Status status);
 
 
   // Obsolete. This does nothing and always returns OK.
-  SendObservations() => (Status status);
+  SendObservations@2() => (Status status);
 };
