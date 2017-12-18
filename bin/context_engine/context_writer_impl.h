@@ -5,10 +5,10 @@
 #include <map>
 #include <string>
 
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/async/cpp/future_value.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/value.fidl.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
 

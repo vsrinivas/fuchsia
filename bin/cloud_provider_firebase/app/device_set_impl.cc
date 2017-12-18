@@ -182,7 +182,6 @@ void DeviceSetImpl::Erase(const EraseCallback& callback) {
                   return;
               }
             });
-
       });
   auth_token_requests_.emplace(request);
 }

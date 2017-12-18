@@ -568,9 +568,8 @@ void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
   XdrWrite(&account_json, &account_, XdrAccount);
   output << account_json << std::endl;
 
-  story_provider_impl_->DumpState(
-      fxl::MakeCopyable([ output = std::move(output),
-                          callback ](const std::string& debug) mutable {
+  story_provider_impl_->DumpState(fxl::MakeCopyable(
+      [output = std::move(output), callback](const std::string& debug) mutable {
         output << debug;
         callback(output.str());
       }));

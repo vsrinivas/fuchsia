@@ -120,7 +120,8 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   EXPECT_EQ("frob", listener.last_update->values["a"][1]->meta->entity->topic);
   EXPECT_EQ("borf", listener.last_update->values["a"][2]->meta->entity->topic);
 
-  // Update value1 and value3 so they no longer matches for the 'someType' query.
+  // Update value1 and value3 so they no longer matches for the 'someType'
+  // query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
   value3.reset();
@@ -154,8 +155,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   value4.reset();
   RunLoopUntil([&listener] { return !!listener.last_update; });
   EXPECT_EQ(1lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("frob",
-  listener.last_update->values["a"][0]->meta->entity->topic);
+  EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {

@@ -208,7 +208,6 @@ void PageDelegate::Delete(fidl::Array<uint8_t> key,
   operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([this, key = std::move(key)](
                                       Page::DeleteCallback callback) mutable {
-
         RunInTransaction(
             fxl::MakeCopyable(
                 [key = std::move(key)](storage::Journal* journal,

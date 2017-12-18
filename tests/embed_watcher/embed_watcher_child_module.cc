@@ -14,8 +14,7 @@ using modular::testing::TestPoint;
 namespace {
 
 constexpr char kChildModuleName[] = "child";
-constexpr char kChildModule[] =
-    "file:///system/test/modular_tests/null_module";
+constexpr char kChildModule[] = "file:///system/test/modular_tests/null_module";
 
 class ChildApp : modular::ModuleWatcher {
  public:
@@ -36,12 +35,9 @@ class ChildApp : modular::ModuleWatcher {
  private:
   void StartChildModule() {
     module_host_->module_context()->StartModuleInShell(
-        kChildModuleName, kChildModule,
-        nullptr /* link_name */,
-        nullptr /* incoming_services */,
-        child_module_.NewRequest(),
-        nullptr /* surface_relation */,
-        false /* focused */);
+        kChildModuleName, kChildModule, nullptr /* link_name */,
+        nullptr /* incoming_services */, child_module_.NewRequest(),
+        nullptr /* surface_relation */, false /* focused */);
 
     child_module_->Watch(module_watcher_.AddBinding(this));
   }
@@ -49,7 +45,7 @@ class ChildApp : modular::ModuleWatcher {
   // |ModuleWatcher|
   void OnStateChange(modular::ModuleState state) override {
     if (state == modular::ModuleState::RUNNING) {
-      modular::testing::GetStore()->Put("child_module_done", "1", []{});
+      modular::testing::GetStore()->Put("child_module_done", "1", [] {});
     }
   }
 

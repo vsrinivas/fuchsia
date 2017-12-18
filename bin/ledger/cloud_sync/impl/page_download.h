@@ -75,7 +75,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void GetObject(
       storage::ObjectDigestView object_digest,
       std::function<void(storage::Status status,
-          std::unique_ptr<storage::DataSource> data_source)> callback) override;
+                         std::unique_ptr<storage::DataSource> data_source)>
+          callback) override;
 
   void HandleError(const char error_description[]);
 

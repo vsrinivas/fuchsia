@@ -247,8 +247,7 @@ void UserIntelligenceProviderImpl::AddStandardServices(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
 }
 
-app::Services UserIntelligenceProviderImpl::StartAgent(
-    const std::string& url) {
+app::Services UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
   return StartAgent(
       url, std::bind(&UserIntelligenceProviderImpl::AddStandardServices, this,
                      std::placeholders::_1, std::placeholders::_2));
@@ -286,9 +285,8 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
       app_context_, config_, std::move(component_context),
-      std::move(context_engine),
-      std::move(story_provider), std::move(focus_provider),
-      std::move(visible_stories_provider)));
+      std::move(context_engine), std::move(story_provider),
+      std::move(focus_provider), std::move(visible_stories_provider)));
   binding_.reset(new fidl::Binding<UserIntelligenceProvider>(impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));
 }

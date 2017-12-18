@@ -260,8 +260,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Holds the view of a non-embedded running module (identified by its
   // serialized module path) until its parent is connected to story shell. Story
   // shell cannot display views whose parents are not yet displayed.
-  std::map<fidl::String, std::pair<fidl::Array<fidl::String>,
-                                   mozart::ViewOwnerPtr>> pending_views_;
+  std::map<fidl::String,
+           std::pair<fidl::Array<fidl::String>, mozart::ViewOwnerPtr>>
+      pending_views_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.

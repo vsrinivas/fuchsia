@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream& os, const EntityMetadata& meta) {
 
 std::ostream& operator<<(std::ostream& os, const LinkMetadata& meta) {
   return os << "{ module_path: " << meta.module_path << ", name: " << meta.name
-    << " }";
+            << " }";
 }
 
 std::ostream& operator<<(std::ostream& os, const ContextMetadata& meta) {

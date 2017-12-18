@@ -47,7 +47,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
                    modular::SurfaceRelationPtr /*surface_relation*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       connect_view_.Pass();
-      modular::testing::GetStore()->Put("story_shell_connect", "1", []{});
+      modular::testing::GetStore()->Put("story_shell_connect", "1", [] {});
     } else {
       FXL_LOG(WARNING) << "ConnectView " << view_id << " anchor " << anchor_id;
     }
@@ -60,7 +60,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
                  const fidl::String& anchor_id) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       focus_view_.Pass();
-      modular::testing::GetStore()->Put("story_shell_focus", "1", []{});
+      modular::testing::GetStore()->Put("story_shell_focus", "1", [] {});
     } else {
       FXL_LOG(WARNING) << "FocusView " << view_id << " anchor " << anchor_id;
     }

@@ -50,8 +50,8 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
-      const fidl::Array<fidl::String>& module_path,
-      const fidl::String& name) {
+    const fidl::Array<fidl::String>& module_path,
+    const fidl::String& name) {
   LinkMetadata()->module_path = module_path.Clone();
   LinkMetadata()->name = name;
   return *this;
@@ -62,11 +62,11 @@ ContextMetadataPtr ContextMetadataBuilder::Build() {
 }
 
 #define ENSURE_MEMBER(field, class_name) \
-  if (!m_) \
-    m_ = ContextMetadata::New(); \
-  if (!m_->field) { \
-    m_->field = class_name::New(); \
-  } \
+  if (!m_)                               \
+    m_ = ContextMetadata::New();         \
+  if (!m_->field) {                      \
+    m_->field = class_name::New();       \
+  }                                      \
   return m_->field;
 
 StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {

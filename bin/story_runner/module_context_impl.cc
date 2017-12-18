@@ -178,8 +178,7 @@ void ModuleContextImpl::EmbedModule(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, query, link_name,
-      std::move(incoming_services),
-      std::move(module_controller),
+      std::move(incoming_services), std::move(module_controller),
       std::move(embed_module_watcher), std::move(view_owner));
 }
 

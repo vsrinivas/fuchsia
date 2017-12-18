@@ -241,7 +241,6 @@ class BranchTracker::PageWatcherContainer {
                                     SendChange(std::move(change), state,
                                                std::move(new_commit),
                                                std::move(on_done));
-
                                   }))) {
                         return;
                       }

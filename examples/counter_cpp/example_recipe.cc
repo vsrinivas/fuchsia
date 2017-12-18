@@ -209,10 +209,10 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module2_link_->SetSchema(kJsonSchema);
 
     app::ServiceProviderPtr services_from_module1;
-    module_context_->StartModuleInShell(
-        "module1", "example_module1", kModule1Link,
-        services_from_module1.NewRequest(),
-        module1_.NewRequest(), nullptr, true);
+    module_context_->StartModuleInShell("module1", "example_module1",
+                                        kModule1Link,
+                                        services_from_module1.NewRequest(),
+                                        module1_.NewRequest(), nullptr, true);
 
     // Consume services from Module 1.
     auto multiplier_service =

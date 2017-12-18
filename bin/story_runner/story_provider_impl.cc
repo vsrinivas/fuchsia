@@ -402,7 +402,7 @@ class StoryProviderImpl::TeardownCall : Operation<> {
 
     if (story_provider_impl_->preloaded_story_shell_) {
       story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
-          kBasicTimeout, [flow]{});
+          kBasicTimeout, [flow] {});
     }
   }
 
@@ -673,8 +673,7 @@ void StoryProviderImpl::LoadStoryShell() {
   // CreateView must be called in order to get the Flutter application to run
 
   mozart::ViewProviderPtr view_provider;
-  story_shell_app->services().ConnectToService(
-      view_provider.NewRequest());
+  story_shell_app->services().ConnectToService(view_provider.NewRequest());
 
   mozart::ViewOwnerPtr story_shell_view;
   view_provider->CreateView(story_shell_view.NewRequest(), nullptr);

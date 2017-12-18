@@ -283,7 +283,7 @@ void PageDownload::GetObject(
             }
 
             callback(storage::Status::OK,
-                storage::DataSource::Create(std::move(data), size));
+                     storage::DataSource::Create(std::move(data), size));
             current_get_object_calls_--;
           });
 }

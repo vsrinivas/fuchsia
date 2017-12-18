@@ -39,7 +39,7 @@ class TestApp {
   void Set1() {
     link1_->Set(nullptr, R"({"@type": "type1", "value": "value1"})");
     link2_->Set(nullptr,
-               R"({"a_property": {"@type": "type2", "value": "value2"}})");
+                R"({"a_property": {"@type": "type2", "value": "value2"}})");
     // TODO(thatguy): When we have Entity support in ContextWriter, create a
     // simple Entity reference and slap it into the Link.
   }

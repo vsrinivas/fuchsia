@@ -14,8 +14,8 @@
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/suggestion/fidl/query_handler.fidl.h"
-#include "peridot/lib/module_manifest_source/module_manifest_source.h"
 #include "peridot/bin/module_resolver/type_inference.h"
+#include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace maxwell {
 

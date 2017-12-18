@@ -193,8 +193,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         suggestion_services.ConnectToService<SuggestionEngine>();
     suggestion_provider_ =
         suggestion_services.ConnectToService<SuggestionProvider>();
-    suggestion_debug_ =
-        suggestion_services.ConnectToService<SuggestionDebug>();
+    suggestion_debug_ = suggestion_services.ConnectToService<SuggestionDebug>();
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;

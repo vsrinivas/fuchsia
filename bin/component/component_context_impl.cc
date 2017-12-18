@@ -31,7 +31,8 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
 
 ComponentContextImpl::~ComponentContextImpl() = default;
 
-void ComponentContextImpl::Connect(fidl::InterfaceRequest<ComponentContext> request) {
+void ComponentContextImpl::Connect(
+    fidl::InterfaceRequest<ComponentContext> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

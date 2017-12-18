@@ -20,4 +20,4 @@ class NounTypeInferenceHelper {
   FXL_DISALLOW_COPY_AND_ASSIGN(NounTypeInferenceHelper);
 };
 
-}
+}  // namespace maxwell

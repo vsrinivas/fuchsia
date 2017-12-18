@@ -44,7 +44,8 @@ fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
   return fxl::JoinStrings(module_path, ":");
 }
 
-fidl::Array<fidl::String> ParentModulePath(const fidl::Array<fidl::String>& module_path) {
+fidl::Array<fidl::String> ParentModulePath(
+    const fidl::Array<fidl::String>& module_path) {
   auto ret = module_path.Clone();
   if (ret.size() > 0) {
     // Root is its own parent.
@@ -190,8 +191,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    Connection* const i = story_controller_impl_->FindConnection(
-        module_data_->module_path);
+    Connection* const i =
+        story_controller_impl_->FindConnection(module_data_->module_path);
 
     // We launch the new module if it doesn't run yet.
     if (!i) {
@@ -208,8 +209,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // link value.
     if (i->module_data->module_url != module_data_->module_url ||
         !i->module_data->link_path->Equals(*module_data_->link_path) ||
-        embed_module_watcher_.is_valid() ||
-        incoming_services_.is_pending()) {
+        embed_module_watcher_.is_valid() || incoming_services_.is_pending()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
         Launch(flow);
@@ -334,7 +334,8 @@ class StoryControllerImpl::KillModuleCall : Operation<> {
     // this StopModuleCall Operation will cause the calls to be queued.
     // The first Stop() will cause the ModuleController to be closed, and
     // so subsequent Stop() attempts will not find a controller and will return.
-    auto* const i = story_controller_impl_->FindConnection(module_data_->module_path);
+    auto* const i =
+        story_controller_impl_->FindConnection(module_data_->module_path);
 
     if (!i) {
       FXL_LOG(INFO) << "No ModuleController for Module"
@@ -419,8 +420,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       // parent module. We need to retrieve which one it is from story storage.
       new ReadDataCall<ModuleData>(
           &operation_queue_, story_controller_impl_->page(),
-          MakeModuleKey(ParentModulePath(module_path_)), false /* not_found_is_ok */,
-          XdrModuleData, [this, flow](ModuleDataPtr module_data) {
+          MakeModuleKey(ParentModulePath(module_path_)),
+          false /* not_found_is_ok */, XdrModuleData,
+          [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
             Cont1(flow);
@@ -463,8 +465,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   void Launch(FlowToken flow) {
     new LaunchModuleCall(&operation_queue_, story_controller_impl_,
-                         std::move(module_data_),
-                         std::move(incoming_services_),
+                         std::move(module_data_), std::move(incoming_services_),
                          std::move(module_controller_request_),
                          std::move(embed_module_watcher_),
                          std::move(view_owner_request_), [flow] {});
@@ -531,12 +532,11 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // shell.
 
     new StartModuleCall(
-        &operation_queue_, story_controller_impl_,
-        module_path_, module_url_, link_name_, module_source_,
-        surface_relation_.Clone(), std::move(incoming_services_),
-        std::move(module_controller_request_),
-        nullptr /* embed_module_watcher */,
-        view_owner_.NewRequest(), [this, flow] { Cont(flow); });
+        &operation_queue_, story_controller_impl_, module_path_, module_url_,
+        link_name_, module_source_, surface_relation_.Clone(),
+        std::move(incoming_services_), std::move(module_controller_request_),
+        nullptr /* embed_module_watcher */, view_owner_.NewRequest(),
+        [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -554,10 +554,12 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       return;
     }
 
-    auto* const connection = story_controller_impl_->FindConnection(module_path_);
+    auto* const connection =
+        story_controller_impl_->FindConnection(module_path_);
     FXL_CHECK(connection);  // Was just created.
 
-    Connection* const embedder = story_controller_impl_->FindEmbedder(module_path_);
+    Connection* const embedder =
+        story_controller_impl_->FindEmbedder(module_path_);
     if (embedder) {
       embedder->embed_module_watcher->OnStartModuleInShell(
           connection->module_controller_impl->NewEmbedModuleController());
@@ -572,9 +574,9 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       }
     }
 
-    story_controller_impl_->pending_views_.emplace(
-        std::make_pair(PathString(module_path_),
-                       std::make_pair(module_path_.Clone(), std::move(view_owner_))));
+    story_controller_impl_->pending_views_.emplace(std::make_pair(
+        PathString(module_path_),
+        std::make_pair(module_path_.Clone(), std::move(view_owner_))));
   }
 
   void ConnectView(FlowToken flow, const fidl::String& anchor_view_id) {
@@ -659,9 +661,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
-                                 module_path_, module_url_,
-                                 link_name_, nullptr, nullptr,
-                                 std::move(surface_relation_), true,
+                                 module_path_, module_url_, link_name_, nullptr,
+                                 nullptr, std::move(surface_relation_), true,
                                  ModuleSource::EXTERNAL, [flow] {});
     }
   }
@@ -796,9 +797,8 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
     // This is a top level module, which therefore is not embedded. So the
     // SurfaceRelation is indeed default and not null.
     new AddModuleCall(&operation_queue_, story_controller_impl_,
-                      std::move(module_path),
-                      module_url_, link_name_, SurfaceRelation::New(),
-                      [flow] {});
+                      std::move(module_path), module_url_, link_name_,
+                      SurfaceRelation::New(), [flow] {});
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1088,10 +1088,8 @@ class StoryControllerImpl::StartCall : Operation<> {
                 !module_data->module_stopped) {
               new StartModuleInShellCall(
                   &operation_queue_, story_controller_impl_,
-                  module_data->module_path,
-                  module_data->module_url,
-                  module_data->link_path->link_name,
-                  nullptr, nullptr,
+                  module_data->module_path, module_data->module_url,
+                  module_data->link_path->link_name, nullptr, nullptr,
                   module_data->surface_relation.Clone(), true,
                   module_data->module_source, [flow] {});
             }
@@ -1208,7 +1206,8 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     }
 
     // Check for existing module at the given path.
-    auto* const i = story_controller_impl_->FindConnection(module_data_->module_path);
+    auto* const i =
+        story_controller_impl_->FindConnection(module_data_->module_path);
     if (i && module_data_->module_stopped) {
       new KillModuleCall(&operation_queue_, story_controller_impl_,
                          std::move(module_data_), [flow] {});
@@ -1221,8 +1220,7 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
 
     // We reach this point only if we want to start an external module.
     new StartModuleInShellCall(
-        &operation_queue_, story_controller_impl_,
-        module_data_->module_path,
+        &operation_queue_, story_controller_impl_, module_data_->module_path,
         module_data_->module_url, module_data_->link_path->link_name, nullptr,
         nullptr, std::move(module_data_->surface_relation), true,
         module_data_->module_source, [flow] {});
@@ -1240,9 +1238,7 @@ class StoryControllerImpl::FocusCall : Operation<> {
   FocusCall(OperationContainer* const container,
             StoryControllerImpl* const story_controller_impl,
             fidl::Array<fidl::String> module_path)
-      : Operation("StoryControllerImpl::FocusCall",
-                  container,
-                  [] {}),
+      : Operation("StoryControllerImpl::FocusCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {
     Ready();
@@ -1265,7 +1261,8 @@ class StoryControllerImpl::FocusCall : Operation<> {
           PathString(anchor->module_data->module_path));
     } else {
       // Focus root modules absolutely.
-      story_controller_impl_->story_shell_->FocusView(PathString(module_path_), nullptr);
+      story_controller_impl_->story_shell_->FocusView(PathString(module_path_),
+                                                      nullptr);
     }
   }
 
@@ -1281,9 +1278,7 @@ class StoryControllerImpl::DefocusCall : Operation<> {
   DefocusCall(OperationContainer* const container,
               StoryControllerImpl* const story_controller_impl,
               fidl::Array<fidl::String> module_path)
-      : Operation("StoryControllerImpl::DefocusCall",
-                  container,
-                  [] {}),
+      : Operation("StoryControllerImpl::DefocusCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {
     Ready();
@@ -1299,8 +1294,8 @@ class StoryControllerImpl::DefocusCall : Operation<> {
 
     // NOTE(mesch): We don't wait for defocus to return. TODO(mesch): What is
     // the return callback good for anyway?
-    story_controller_impl_->story_shell_->DefocusView(
-        PathString(module_path_), [] {});
+    story_controller_impl_->story_shell_->DefocusView(PathString(module_path_),
+                                                      [] {});
   }
 
   OperationQueue operation_queue_;
@@ -1459,13 +1454,11 @@ void StoryControllerImpl::StartModule(
     const ModuleSource module_source) {
   auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
-  new StartModuleCall(&operation_queue_, this, module_path,
-                      module_url, link_name, module_source,
-                      nullptr /* surface_relation */,
-                      std::move(incoming_services),
-                      std::move(module_controller_request),
-                      nullptr /* embed_module_watcher */,
-                      std::move(view_owner_request), [] {});
+  new StartModuleCall(
+      &operation_queue_, this, module_path, module_url, link_name,
+      module_source, nullptr /* surface_relation */,
+      std::move(incoming_services), std::move(module_controller_request),
+      nullptr /* embed_module_watcher */, std::move(view_owner_request), [] {});
 }
 
 void StoryControllerImpl::StartModuleInShell(
@@ -1481,10 +1474,9 @@ void StoryControllerImpl::StartModuleInShell(
   auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
   new StartModuleInShellCall(
-      &operation_queue_, this, module_path, module_url,
-      link_name, std::move(incoming_services),
-      std::move(module_controller_request), std::move(surface_relation), focus,
-      module_source, [] {});
+      &operation_queue_, this, module_path, module_url, link_name,
+      std::move(incoming_services), std::move(module_controller_request),
+      std::move(surface_relation), focus, module_source, [] {});
 }
 
 void StoryControllerImpl::EmbedModule(
@@ -1498,13 +1490,11 @@ void StoryControllerImpl::EmbedModule(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   fidl::Array<fidl::String> module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
-  new StartModuleCall(&operation_queue_, this, module_path,
-                      module_url, link_name, ModuleSource::INTERNAL,
-                      nullptr /* surface_relation */,
-                      std::move(incoming_services),
-                      std::move(module_controller_request),
-                      std::move(embed_module_watcher),
-                      std::move(view_owner_request), [] {});
+  new StartModuleCall(
+      &operation_queue_, this, module_path, module_url, link_name,
+      ModuleSource::INTERNAL, nullptr /* surface_relation */,
+      std::move(incoming_services), std::move(module_controller_request),
+      std::move(embed_module_watcher), std::move(view_owner_request), [] {});
 }
 
 void StoryControllerImpl::ProcessPendingViews() {
@@ -1537,9 +1527,9 @@ void StoryControllerImpl::ProcessPendingViews() {
     }
 
     const auto view_id = PathString(kv.second.first);
-    story_shell_->ConnectView(std::move(kv.second.second), view_id,
-                              anchor_view_id,
-                              connection->module_data->surface_relation.Clone());
+    story_shell_->ConnectView(
+        std::move(kv.second.second), view_id, anchor_view_id,
+        connection->module_data->surface_relation.Clone());
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
@@ -1644,9 +1634,8 @@ void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
 
   module_path.push_back(module_name);
 
-  new AddModuleCall(&operation_queue_, this, std::move(module_path),
-                    module_url, link_name,
-                    std::move(surface_relation), [] {});
+  new AddModuleCall(&operation_queue_, this, std::move(module_path), module_url,
+                    link_name, std::move(surface_relation), [] {});
 }
 
 // |StoryController|
@@ -1866,8 +1855,8 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
     return nullptr;
   }
 
-  auto* anchor = FindConnection(ParentModulePath(
-      connection->module_data->module_path));
+  auto* anchor =
+      FindConnection(ParentModulePath(connection->module_data->module_path));
 
   // Traverse up until there is a non-embedded module. We recognize non-embedded
   // modules by having a non-null SurfaceRelation. If the root module is there

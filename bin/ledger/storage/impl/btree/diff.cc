@@ -494,7 +494,6 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
       return on_next({std::move(*other), false});
     }
     return on_next({std::move(*base), true});
-
   };
 
   IteratorPair iterators(storage, wrapped_next);

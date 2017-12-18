@@ -9,9 +9,7 @@ namespace modular {
 class EntityResolverFake::EntityImpl : Entity {
  public:
   EntityImpl(std::map<std::string, std::string> types_and_data)
-    : types_and_data_(types_and_data)
-  {
-  }
+      : types_and_data_(types_and_data) {}
 
   void Connect(fidl::InterfaceRequest<Entity> request) {
     bindings_.AddBinding(this, std::move(request));
@@ -46,7 +44,8 @@ class EntityResolverFake::EntityImpl : Entity {
 EntityResolverFake::EntityResolverFake() = default;
 EntityResolverFake::~EntityResolverFake() = default;
 
-void EntityResolverFake::Connect(fidl::InterfaceRequest<EntityResolver> request) {
+void EntityResolverFake::Connect(
+    fidl::InterfaceRequest<EntityResolver> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

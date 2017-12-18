@@ -196,7 +196,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         get_context_topic_1_.Pass();
       }
     } else if (value_property == "value2" && type == "type2" &&
-        value->meta->link->name == "link2") {
+               value->meta->link->name == "link2") {
       if (++get_context_topic_2_called_ == 1) {
         get_context_topic_2_.Pass();
       }

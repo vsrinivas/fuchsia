@@ -45,7 +45,6 @@ void FactoryImpl::GetCloudProvider(
            cloud_provider_request = std::move(cloud_provider_request),
            callback](firebase_auth::AuthStatus status,
                      std::string user_id) mutable {
-
             if (status != firebase_auth::AuthStatus::OK) {
               FXL_LOG(ERROR)
                   << "Failed to retrieve the user ID from auth token provider";

@@ -99,11 +99,9 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
 // MessageLoop.
 class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
-  explicit TestCoroutineHandler(
-      coroutine::CoroutineHandler* delegate,
-      fxl::RefPtr<fxl::FakeTaskRunner> task_runner)
-      : delegate_(delegate),
-        task_runner_(task_runner) {}
+  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate,
+                                fxl::RefPtr<fxl::FakeTaskRunner> task_runner)
+      : delegate_(delegate), task_runner_(task_runner) {}
 
   bool Yield() override { return delegate_->Yield(); }
 
@@ -138,15 +136,12 @@ class FakeErrorDataSource : public DataSource {
   explicit FakeErrorDataSource(fxl::RefPtr<fxl::TaskRunner> task_runner)
       : task_runner_(task_runner) {}
 
-  uint64_t GetSize() override {
-    return 1;
-  }
+  uint64_t GetSize() override { return 1; }
 
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
-    task_runner_->PostTask([callback] {
-      callback(nullptr, DataSource::Status::ERROR);
-    });
+    task_runner_->PostTask(
+        [callback] { callback(nullptr, DataSource::Status::ERROR); });
   }
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
@@ -178,10 +173,10 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
     digest_to_value_[object_digest.ToString()] = value;
   }
 
-  void GetObject(
-      ObjectDigestView object_digest,
-      std::function<void(Status status,
-          std::unique_ptr<DataSource> data_source)> callback) override {
+  void GetObject(ObjectDigestView object_digest,
+                 std::function<void(Status status,
+                                    std::unique_ptr<DataSource> data_source)>
+                     callback) override {
     ObjectDigest digest = object_digest.ToString();
     std::string& value = digest_to_value_[digest];
     object_requests.insert(digest);
@@ -247,22 +242,20 @@ class PageStorageTest : public ::testing::Test {
     EXPECT_EQ(id, storage_->GetId());
   }
 
-  void RunTasks() {
-    task_runner_->Run();
-  }
+  void RunTasks() { task_runner_->Run(); }
 
   // Runs a function in a coroutine, using FakeTaskRunner.
   void RunInCoroutine(
       std::function<void(coroutine::CoroutineHandler*)> run_test) {
     std::unique_ptr<TestCoroutineHandler> test_handler;
     bool ended = false;
-    coroutine_service_.StartCoroutine([&](
-        coroutine::CoroutineHandler* handler) {
-      test_handler = std::make_unique<TestCoroutineHandler>(
-          handler, task_runner_);
-      run_test(test_handler.get());
-      ended = true;
-    });
+    coroutine_service_.StartCoroutine(
+        [&](coroutine::CoroutineHandler* handler) {
+          test_handler =
+              std::make_unique<TestCoroutineHandler>(handler, task_runner_);
+          run_test(test_handler.get());
+          ended = true;
+        });
     while (!ended) {
       RunTasks();
       test_handler->ContinueIfNeeded();
@@ -294,10 +287,8 @@ class PageStorageTest : public ::testing::Test {
     bool called;
     Status status;
     std::unique_ptr<const Commit> commit;
-    storage_->GetCommit(id,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &commit));
+    storage_->GetCommit(
+        id, callback::Capture(SetWhenCalled(&called), &status, &commit));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -355,9 +346,9 @@ class PageStorageTest : public ::testing::Test {
 
     bool called;
     Status status;
-    storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
-                                 callback::Capture(SetWhenCalled(&called),
-                                                   &status));
+    storage_->AddCommitsFromSync(
+        CommitAndBytesFromCommit(*commit),
+        callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -389,10 +380,9 @@ class PageStorageTest : public ::testing::Test {
     bool called;
     Status status;
     std::unique_ptr<Journal> journal;
-    storage_->StartCommit(GetFirstHead()->GetId(), type,
-                          callback::Capture(SetWhenCalled(&called),
-                                            &status,
-                                            &journal));
+    storage_->StartCommit(
+        GetFirstHead()->GetId(), type,
+        callback::Capture(SetWhenCalled(&called), &status, &journal));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -450,9 +440,9 @@ class PageStorageTest : public ::testing::Test {
     bool called;
     Status status;
     std::unique_ptr<const Object> object;
-    storage_->GetObject(object_digest, location,
-                        callback::Capture(SetWhenCalled(&called),
-                            &status, &object));
+    storage_->GetObject(
+        object_digest, location,
+        callback::Capture(SetWhenCalled(&called), &status, &object));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(expected_status, status);
@@ -465,10 +455,8 @@ class PageStorageTest : public ::testing::Test {
     bool called;
     Status status;
     std::unique_ptr<const Object> object;
-    storage_->GetPiece(object_digest,
-                       callback::Capture(SetWhenCalled(&called),
-                                         &status,
-                                         &object));
+    storage_->GetPiece(object_digest, callback::Capture(SetWhenCalled(&called),
+                                                        &status, &object));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(expected_status, status);
@@ -483,9 +471,9 @@ class PageStorageTest : public ::testing::Test {
       result.push_back(e);
       return true;
     };
-    storage_->GetCommitContents(commit, "", std::move(on_next),
-                                callback::Capture(SetWhenCalled(&called),
-                                    &status));
+    storage_->GetCommitContents(
+        commit, "", std::move(on_next),
+        callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -604,10 +592,9 @@ class PageStorageTest : public ::testing::Test {
     bool called;
     Status status;
     ObjectDigest digest;
-    btree::TreeNode::Empty(GetStorage(),
-                           callback::Capture(SetWhenCalled(&called),
-                                             &status,
-                                             &digest));
+    btree::TreeNode::Empty(
+        GetStorage(),
+        callback::Capture(SetWhenCalled(&called), &status, &digest));
     RunTasks();
     if (!called) {
       return ::testing::AssertionFailure()
@@ -652,9 +639,9 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
   // Search for a commit that exist and check the content.
-  storage_->AddCommitFromLocal(std::move(commit), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -673,9 +660,8 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(commit->Clone(), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      commit->Clone(), {}, callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -684,16 +670,15 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   EXPECT_EQ(1u, commits.size());
   EXPECT_EQ(id, commits[0]->GetId());
 
-  storage_->MarkCommitSynced(id, callback::Capture(SetWhenCalled(&called),
-                                                   &status));
+  storage_->MarkCommitSynced(
+      id, callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   // Add the commit again.
-  storage_->AddCommitFromLocal(commit->Clone(), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      commit->Clone(), {}, callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -712,9 +697,9 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(std::move(commit), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::ILLEGAL_STATE, status);
@@ -744,9 +729,9 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
 
   bool called;
   Status status;
-  storage_->AddCommitsFromSync(std::move(commits_and_bytes),
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes),
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -797,9 +782,9 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     sync.object_requests.clear();
     bool called;
     Status status;
-    storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
-                                 callback::Capture(SetWhenCalled(&called),
-                                                   &status));
+    storage_->AddCommitsFromSync(
+        CommitAndBytesFromCommit(*commit),
+        callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -812,9 +797,9 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
     // Adding the same commit twice should not request any objects from sync.
     sync.object_requests.clear();
-    storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
-                                 callback::Capture(SetWhenCalled(&called),
-                                                   &status));
+    storage_->AddCommitsFromSync(
+        CommitAndBytesFromCommit(*commit),
+        callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -855,17 +840,16 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(std::move(commit), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   EXPECT_EQ(1u, GetUnsyncedCommits().size());
-  storage_->GetCommit(id, callback::Capture(SetWhenCalled(&called),
-                                            &status,
-                                            &commit));
+  storage_->GetCommit(
+      id, callback::Capture(SetWhenCalled(&called), &status, &commit));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -873,9 +857,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
-  storage_->AddCommitsFromSync(std::move(commits_and_bytes),
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes),
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
 
@@ -898,9 +882,9 @@ TEST_F(PageStorageTest, SyncCommits) {
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(std::move(commit), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -910,8 +894,8 @@ TEST_F(PageStorageTest, SyncCommits) {
   EXPECT_EQ(storage_bytes, commits[0]->GetStorageBytes());
 
   // Mark it as synced.
-  storage_->MarkCommitSynced(id, callback::Capture(SetWhenCalled(&called),
-                                                   &status));
+  storage_->MarkCommitSynced(
+      id, callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -935,9 +919,9 @@ TEST_F(PageStorageTest, HeadCommits) {
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(std::move(commit), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -967,8 +951,7 @@ TEST_F(PageStorageTest, CreateJournals) {
   EXPECT_NE(nullptr, journal);
 
   storage_->RollbackJournal(std::move(journal),
-                            callback::Capture(SetWhenCalled(&called),
-                                              &status));
+                            callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1023,8 +1006,8 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
                   callback(status, data);
                 });
           },
-          [&iteration_status, &sub_identifiers](
-              IterationStatus status, ObjectIdentifier identifier) {
+          [&iteration_status, &sub_identifiers](IterationStatus status,
+                                                ObjectIdentifier identifier) {
             iteration_status = status;
             if (status == IterationStatus::IN_PROGRESS) {
               EXPECT_TRUE(sub_identifiers.insert(identifier).second);
@@ -1046,8 +1029,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
   std::unique_ptr<PageStorageImpl> test_storage =
       PageStorageImplAccessorForTest::CreateStorage(
-          task_runner_, &coroutine_service_,
-          std::make_unique<FakePageDbImpl>(), RandomString(10));
+          task_runner_, &coroutine_service_, std::make_unique<FakePageDbImpl>(),
+          RandomString(10));
 
   bool called;
   Status status;
@@ -1123,10 +1106,9 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal;
-  storage_->StartCommit(GetFirstHead()->GetId(), JournalType::EXPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal));
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::EXPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1140,7 +1122,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     ObjectData data("Some data", InlineBehavior::PREVENT);
 
     bool called;
-  Status status;
+    Status status;
     ObjectDigest object_digest;
     storage_->AddObjectFromLocal(
         data.ToDataSource(),
@@ -1217,8 +1199,8 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.object_identifier.object_digest, data.ToChunk(),
-        ChangeSource::LOCAL, callback::Capture(SetWhenCalled(&called),
-                                               &status));
+        ChangeSource::LOCAL,
+        callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1242,8 +1224,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.object_identifier.object_digest, data.ToChunk(),
-        ChangeSource::SYNC, callback::Capture(
-            SetWhenCalled(&called), &status));
+        ChangeSource::SYNC, callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1359,10 +1340,9 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     bool called;
     Status status;
     std::unique_ptr<Journal> journal;
-    storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT,
-                          callback::Capture(SetWhenCalled(&called),
-                                            &status,
-                                            &journal));
+    storage_->StartCommit(
+        GetFirstHead()->GetId(), JournalType::IMPLICIT,
+        callback::Capture(SetWhenCalled(&called), &status, &journal));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1435,10 +1415,9 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal;
-  storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal));
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1465,10 +1444,9 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal;
-  storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal));
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1489,10 +1467,9 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   // object_digests[1] is no longer part of this commit: it should remain
   // untracked after committing.
   journal.reset();
-  storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal));
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1558,25 +1535,20 @@ TEST_F(PageStorageTest, SyncMetadata) {
     bool called;
     Status status;
     std::string returned_value;
-    storage_->GetSyncMetadata(
-        key, callback::Capture(SetWhenCalled(&called),
-                               &status,
-                               &returned_value));
+    storage_->GetSyncMetadata(key, callback::Capture(SetWhenCalled(&called),
+                                                     &status, &returned_value));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::NOT_FOUND, status);
 
-    storage_->SetSyncMetadata(key, value,
-                              callback::Capture(SetWhenCalled(&called),
-                                                &status));
+    storage_->SetSyncMetadata(
+        key, value, callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    storage_->GetSyncMetadata(
-        key, callback::Capture(SetWhenCalled(&called),
-                               &status,
-                               &returned_value));
+    storage_->GetSyncMetadata(key, callback::Capture(SetWhenCalled(&called),
+                                                     &status, &returned_value));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1641,7 +1613,8 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
 
     bool called;
     Status status;
-    storage_->AddCommitsFromSync(std::move(commits_and_bytes),
+    storage_->AddCommitsFromSync(
+        std::move(commits_and_bytes),
         callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
@@ -1744,16 +1717,16 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(std::move(commit1), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit1), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  storage_->AddCommitFromLocal(std::move(commit2), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit2), {},
+      callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1769,10 +1742,9 @@ TEST_F(PageStorageTest, NoOpCommit) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal;
-  storage_->StartCommit(heads[0], JournalType::EXPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal));
+  storage_->StartCommit(
+      heads[0], JournalType::EXPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1784,10 +1756,9 @@ TEST_F(PageStorageTest, NoOpCommit) {
 
   // Commit the journal.
   std::unique_ptr<const Commit> commit;
-  storage_->CommitJournal(std::move(journal),
-                          callback::Capture(SetWhenCalled(&called),
-                                            &status,
-                                            &commit));
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(SetWhenCalled(&called), &status, &commit));
   RunTasks();
   ASSERT_TRUE(called);
 
@@ -1833,9 +1804,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
-  storage_->AddCommitsFromSync(std::move(commits_and_bytes),
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes),
+      callback::Capture(SetWhenCalled(&called), &status));
 
   // Make the loop run until GetObject is called in sync, and before
   // AddCommitsFromSync finishes.
@@ -1843,9 +1814,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   ASSERT_TRUE(called);
 
   // Add the local commit.
-  storage_->AddCommitFromLocal(std::move(commit), {},
-                               callback::Capture(SetWhenCalled(&called),
-                                                 &status));
+  storage_->AddCommitFromLocal(
+      std::move(commit), {},
+      callback::Capture(SetWhenCalled(&called), &status));
 
   EXPECT_TRUE(sync_delegate_call);
   sync_delegate_call();
@@ -1860,9 +1831,8 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   EXPECT_EQ(Status::OK, status);
 
   // Verify that the commit is added correctly.
-  storage_->GetCommit(id, callback::Capture(SetWhenCalled(&called),
-                                            &status,
-                                            &commit));
+  storage_->GetCommit(
+      id, callback::Capture(SetWhenCalled(&called), &status, &commit));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1889,10 +1859,9 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal_a;
-  storage_->StartCommit(root_id, JournalType::EXPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal_a));
+  storage_->StartCommit(
+      root_id, JournalType::EXPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal_a));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1904,10 +1873,9 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   EXPECT_EQ(1u, commit_a->GetGeneration());
 
   std::unique_ptr<Journal> journal_b;
-  storage_->StartCommit(root_id, JournalType::EXPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal_b));
+  storage_->StartCommit(
+      root_id, JournalType::EXPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal_b));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1932,10 +1900,9 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   EXPECT_EQ(2u, commit_merge->GetGeneration());
 
   std::unique_ptr<Journal> journal_c;
-  storage_->StartCommit(root_id, JournalType::EXPLICIT,
-                        callback::Capture(SetWhenCalled(&called),
-                                          &status,
-                                          &journal_c));
+  storage_->StartCommit(
+      root_id, JournalType::EXPLICIT,
+      callback::Capture(SetWhenCalled(&called), &status, &journal_c));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);

@@ -109,7 +109,6 @@ void CloudProviderImpl::EraseAllData(const EraseAllDataCallback& callback) {
             [callback = std::move(callback)](firebase::Status status) {
               callback(ConvertInternalStatus(ConvertFirebaseStatus(status)));
             });
-
       });
   auth_token_requests_.emplace(request);
 }

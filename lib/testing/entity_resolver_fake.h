@@ -5,9 +5,9 @@
 #ifndef PERIDOT_LIB_TESTING_ENTITY_RESOLVER_FAKE_H_
 #define PERIDOT_LIB_TESTING_ENTITY_RESOLVER_FAKE_H_
 
-#include <string>
 #include <map>
 #include <memory>
+#include <string>
 
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -39,6 +39,6 @@ class EntityResolverFake : public EntityResolver {
   fidl::BindingSet<EntityResolver> bindings_;
 };
 
-}
+}  // namespace modular
 
 #endif  // PERIDOT_LIB_TESTING_ENTITY_RESOLVER_FAKE_H_

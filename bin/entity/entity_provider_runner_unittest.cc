@@ -5,9 +5,9 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/agent/cpp/agent_impl.h"
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
