@@ -178,7 +178,7 @@ x86)
 esac
 
 # Where the toybox sources are expected to be.
-TOYBOX_SRC_DIR="${TOYBOX_SRC_DIR:-/tmp/toybox_${ARCH}}"
+TOYBOX_SRC_DIR="${TOYBOX_SRC_DIR:-/tmp/toybox-${ARCH}}"
 
 # Toybox initrd file.
 TOYBOX_INITRD="$TOYBOX_SRC_DIR/initrd.gz"
