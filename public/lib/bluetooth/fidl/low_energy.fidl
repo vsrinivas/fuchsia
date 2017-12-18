@@ -88,33 +88,33 @@ struct ScanFilter {
 interface CentralDelegate {
   // Called when the scan state changes, e.g. when a scan session terminates due to a call to
   // Central.StopScan() or another unexpected condition.
-  OnScanStateChanged(bool scanning);
+  OnScanStateChanged@0(bool scanning);
 
   // Called for each peripheral/broadcaster that is discovered during a scan session. |rssi|
   // contains the received signal strength of the advertising packet that generated this event, if
   // available.
-  OnDeviceDiscovered(RemoteDevice device);
+  OnDeviceDiscovered@1(RemoteDevice device);
 
   // Called when this Central's connection to a peripheral with the given identifier is terminated.
-  OnPeripheralDisconnected(string identifier);
+  OnPeripheralDisconnected@2(string identifier);
 };
 
 [ServiceName="bluetooth::low_energy::Central"]
 interface Central {
   // Sets the delegate that shoud be notified for LE Scanner and Central role events.
-  SetDelegate(CentralDelegate delegate);
+  SetDelegate@0(CentralDelegate delegate);
 
   // Returns the list of peripherals that are known to the system from previous scan, connection,
   // and/or bonding procedures. The results can be filtered based on service UUIDs that are known to
   // be present on the peripheral.
   //
   // This method only returns peripherals (i.e. connectable devices).
-  GetPeripherals(array<string>? service_uuids) => (array<RemoteDevice> peripherals);
+  GetPeripherals@1(array<string>? service_uuids) => (array<RemoteDevice> peripherals);
 
   // Returns information about a single peripheral that is known to the system from previous scan,
   // connection, and/or bonding procedures based on its unique identifier. Returns null if
   // |identifier| is not recognized.
-  GetPeripheral(string identifier) => (RemoteDevice? peripheral);
+  GetPeripheral@2(string identifier) => (RemoteDevice? peripheral);
 
   // Initiates a scan session for nearby peripherals and broadcasters. Discovered devices will be
   // reported via CentralDelegate.OnDeviceDiscovered(). If a scan session is already in progress,
@@ -124,17 +124,17 @@ interface Central {
   // will be notified for all discoverable devices that are found. This is not recommended; clients
   // should generally filter results by at least one of |filter.service_uuids|,
   // |filter.service_data|, and/or |filter.manufacturer_identifier|.
-  StartScan(ScanFilter? filter) => (Status status);
+  StartScan@3(ScanFilter? filter) => (Status status);
 
   // Terminate a previously started scan session.
-  StopScan();
+  StopScan@4();
 
   // Creates a connection to the peripheral device with the given identifier.
   // TODO(armansito): Return a gatt.Client handle here.
-  ConnectPeripheral(string identifier) => (Status status);
+  ConnectPeripheral@5(string identifier) => (Status status);
 
   // Disconnects this Central's connection to the peripheral with the given identifier.
-  DisconnectPeripheral(string identifier) => (Status status);
+  DisconnectPeripheral@6(string identifier) => (Status status);
 };
 
 interface PeripheralDelegate {
@@ -149,10 +149,10 @@ interface PeripheralDelegate {
   // Note: Centrals can connect to the local device and interact with the GATT server
   // from an application without Peripheral.StartAdvertising() being called.
   // TODO(jamuraa): send a gatt Client handle here
-  OnCentralConnected(string advertisement_id, RemoteDevice central);
+  OnCentralConnected@0(string advertisement_id, RemoteDevice central);
 
   // Called when a remote central previously connected to this application is disconnected.
-  OnCentralDisconnected(string device_id);
+  OnCentralDisconnected@1(string device_id);
 };
 
 [ServiceName="bluetooth::low_energy::Peripheral"]
@@ -182,10 +182,10 @@ interface Peripheral {
   //   - If the provided advertising data cannot fit within the advertising payload MTU that
   //     is supported on the current platform and parameters.
   //   - If |anonymous| advertising is requested but the controller cannot support it.
-  StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
-                   PeripheralDelegate? delegate, uint32 interval_ms, bool anonymous) =>
-                   (Status status, string? advertisement_id);
+  StartAdvertising@0(AdvertisingData advertising_data, AdvertisingData? scan_result,
+                     PeripheralDelegate? delegate, uint32 interval_ms, bool anonymous) =>
+                     (Status status, string? advertisement_id);
 
   // Stop a an advertising session that was previously started by this application.
-  StopAdvertising(string advertisement_id) => (Status status);
+  StopAdvertising@1(string advertisement_id) => (Status status);
 };

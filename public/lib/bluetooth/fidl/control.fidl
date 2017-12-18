@@ -159,25 +159,25 @@ struct AdapterInfo {
 interface AdapterDelegate {
   // Called when the adapter state changes. Only the changed fields of |state| will be populated;
   // unchanged fields will be null.
-  OnAdapterStateChanged(AdapterState state);
+  OnAdapterStateChanged@0(AdapterState state);
 
   // Called during device discovery to report a discovered device.
-  OnDeviceDiscovered(RemoteDevice device);
+  OnDeviceDiscovered@1(RemoteDevice device);
 };
 
 // Interface for interacting with a local Bluetooth adapter.
 interface Adapter {
   // Returns information about this adapter.
-  GetInfo() => (AdapterInfo info);
+  GetInfo@0() => (AdapterInfo info);
 
   // Registers a delegate to receive adapter state notifications.
-  SetDelegate(AdapterDelegate delegate);
+  SetDelegate@1(AdapterDelegate delegate);
 
   // Sets the complete and optionally the shortened local name for this adapter.
-  SetLocalName(string local_name, string? shortened_local_name) => (Status status);
+  SetLocalName@2(string local_name, string? shortened_local_name) => (Status status);
 
   // Powers this adapter on or off.
-  SetPowered(bool powered) => (Status status);
+  SetPowered@3(bool powered) => (Status status);
 
   // Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
   // devices will be reported via AdapterDelegate.OnDeviceDiscovered().
@@ -186,7 +186,7 @@ interface Adapter {
   //
   // Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
   // Adapter gets disconnected.
-  StartDiscovery() => (Status status);
+  StartDiscovery@4() => (Status status);
 
   // Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
   // receiving device discovery notifications.
@@ -194,41 +194,41 @@ interface Adapter {
   // NOTE: If another client is performing discovery (e.g. via its own Adapter interface handle),
   // then the system will continue performing device discovery even if this method results in
   // success.
-  StopDiscovery() => (Status status);
+  StopDiscovery@5() => (Status status);
 };
 
 // Delegate interface for receiving notifications from an AdapterManager.
 interface AdapterManagerDelegate {
   // Called when the active adapter has been updated. If |active_adapter| is null, then no adapter
   // is currently active.
-  OnActiveAdapterChanged(AdapterInfo? active_adapter);
+  OnActiveAdapterChanged@0(AdapterInfo? active_adapter);
 
   // Called when a new adapter is added to the system.
-  OnAdapterAdded(AdapterInfo adapter);
+  OnAdapterAdded@1(AdapterInfo adapter);
 
   // Called when an adapter with the given |identifier| has been removed from the system.
-  OnAdapterRemoved(string identifier);
+  OnAdapterRemoved@2(string identifier);
 };
 
 // Primary Bluetooth control service to access platform definitions.
 [ServiceName="bluetooth::control::AdapterManager"]
 interface AdapterManager {
   // Returns whether or not any Bluetooth hardware is available on the current platform.
-  IsBluetoothAvailable() => (bool available);
+  IsBluetoothAvailable@0() => (bool available);
 
   // Registers a delegate to receive notifications from this AdapterManager.
-  SetDelegate(AdapterManagerDelegate delegate);
+  SetDelegate@1(AdapterManagerDelegate delegate);
 
   // Returns information about all local adapters that are known to the system.
-  GetAdapters() => (array<AdapterInfo>? adapters);
+  GetAdapters@2() => (array<AdapterInfo>? adapters);
 
   // Returns a handle to the local adapter with the given |identifier|, if it exists.
-  GetAdapter(string identifier, Adapter& adapter);
+  GetAdapter@3(string identifier, Adapter& adapter);
 
   // Sets the local adapter with the given |identifier| to act as the backing adapter for all
   // Bluetooth interfaces.
-  SetActiveAdapter(string identifier) => (Status status);
+  SetActiveAdapter@4(string identifier) => (Status status);
 
   // Returns a handle to the current local adapter, if it exists.
-  GetActiveAdapter(Adapter& adapter);
+  GetActiveAdapter@5(Adapter& adapter);
 };
