@@ -8,5 +8,5 @@ module media;
 interface TtsService {
   // Speak the string of words provided.  Return the provided token to the
   // caller when the speaking has finished.
-  Say(string words, uint64 token) => (uint64 token);
+  Say@0(string words, uint64 token) => (uint64 token);
 };

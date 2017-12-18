@@ -5,13 +5,13 @@
 module fidl.test;
 
 interface A {
-  GetB(B& b);
+  GetB@0(B& b);
 };
 
 interface B {
-  GetC(C& c);
+  GetC@0(C& c);
 };
 
 interface C {
-  D();
+  D@0();
 };

@@ -48,14 +48,14 @@ interface TokenProvider {
   // is returned from cache if not expired, otherwise refreshed from the server.
   //
   // Empty response is returned if running in incognito mode.
-  GetAccessToken() => (string? access_token, AuthErr auth_err);
+  GetAccessToken@0() => (string? access_token, AuthErr auth_err);
 
   // Gets the Identity token (with pre-defined scopes) for this user. Identity
   // token is returned from cache if not expired, otherwise refreshed from the
   // server.
   //
   // Empty response is returned if running in incognito mode.
-  GetIdToken() => (string? id_token, AuthErr auth_err);
+  GetIdToken@1() => (string? id_token, AuthErr auth_err);
 
   // Gets the |FirebaseToken| for this user for the specified firebase api key.
   // This api invokes firebase auth's VerifyAssertion endpoint that takes an
@@ -63,9 +63,9 @@ interface TokenProvider {
   // not expired, otherwise refreshed from the server.
   //
   // Empty response is returned if running in incognito mode.
-  GetFirebaseAuthToken(string firebase_api_key) =>
+  GetFirebaseAuthToken@2(string firebase_api_key) =>
     (FirebaseToken? firebase_token, AuthErr auth_err);
 
   // Returns the client id used to fetch the above tokens.
-  GetClientId() => (string? client_id);
+  GetClientId@3() => (string? client_id);
 };

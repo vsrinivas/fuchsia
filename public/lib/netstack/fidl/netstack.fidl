@@ -90,39 +90,39 @@ struct RouteTableEntry {
 interface NotificationListener {
   // Called by the netstack when one or more interfaces or their properties change.
   // TODO: include only the interface(s) that have changed?
-  OnInterfacesChanged(array<NetInterface> interfaces);
+  OnInterfacesChanged@0(array<NetInterface> interfaces);
 };
 
 [ServiceName="netstack::Netstack"]
 interface Netstack {
   // Registers the given NotificationListener to be notified of changes. Only one
   // NotificationListener may be active for each client's Netstack instance.
-  RegisterListener(NotificationListener? listener);
+  RegisterListener@0(NotificationListener? listener);
 
   // Finds the port number from a given service name and protocol. [service] can be a
   // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
   // the service is checked for TCP first, then UDP.
-  GetPortForService(string service, Protocol protocol) => (uint16 port);
+  GetPortForService@1(string service, Protocol protocol) => (uint16 port);
 
   // Finds the IP address for a given host name and port. This may issue network
   // requests via DNS to look up domain names. E.g.
   // GetAddress("example.com", 80) => [{142.42.42.1}]
-  GetAddress(string address, uint16 port) => (array<SocketAddress> addresses, NetErr err);
+  GetAddress@2(string address, uint16 port) => (array<SocketAddress> addresses, NetErr err);
 
   // Returns the list of registered network interfaces.
-  GetInterfaces() => (array<NetInterface> interfaces);
+  GetInterfaces@3() => (array<NetInterface> interfaces);
 
   // Returns the netstack's node name.
-  GetNodeName() => (string node_name);
+  GetNodeName@4() => (string node_name);
 
-  GetRouteTable() => (array<RouteTableEntry> rt);
+  GetRouteTable@5() => (array<RouteTableEntry> rt);
 
   // TODO (porce): Separate interfaces.
-  GetStats(uint32 nicid) => (NetInterfaceStats stats);
+  GetStats@6(uint32 nicid) => (NetInterfaceStats stats);
 
   // Get stats for all NICs on the stack.
-  GetAggregateStats() => (AggregateStats stats);
+  GetAggregateStats@7() => (AggregateStats stats);
 
   // Sets the status (up or down) for the interface with the given nicid.
-  SetInterfaceStatus(uint32 nicid, bool enabled);
+  SetInterfaceStatus@8(uint32 nicid, bool enabled);
 };

@@ -7,23 +7,23 @@ module amber;
 [ServiceName="update::Control"]
 interface Control {
   // simple no-op that can be used to test the connection
-  DoTest(int32 value) => (string value);
+  DoTest@0(int32 value) => (string value);
 
   // Add a source at the provided URL. The rate limit indicates the minimum
   // interval between requests to the source expressed in seconds. A limit of
   // zero means there is no limit. The pub key is a hex-encoded ED25519 public key.
   // This key must match one of the trusted keys known to the system.
-  AddSrc(string url, int32 rateLimit, string pubKey) => (bool res);
+  AddSrc@1(string url, int32 rateLimit, string pubKey) => (bool res);
 
   // Remove a source previously provided to AddSrc. Sources that were bundled
   // when the system was built can not be removed.
-  RemoveSrc(string url) => (bool res);
+  RemoveSrc@2(string url) => (bool res);
 
   // Check for updates to any persistently registered packages
-  Check() => (bool res);
+  Check@3() => (bool res);
 
   // Get the list of URLs of the current set of sources
-  ListSrcs() => (array<string> srcs);
+  ListSrcs@4() => (array<string> srcs);
 
   // Get an update for the package identified by 'name' which has the provided
   // version. If no version is supplied, the latest available version of that
@@ -31,10 +31,10 @@ interface Control {
   // stores the package in BlobFS. This method returns the merkle root of the
   // package and therefore a way to access the package once it arrives in
   // BlobFS. If null is returned, no update was found.
-  GetUpdate(string name, string? version) => (string? merkle);
+  GetUpdate@5(string name, string? version) => (string? merkle);
   // TODO(jmatt) add a GetUpdate that takes a handle to write to
 
   // Get a content blob identified by the given hashed Merkle root. This returns
   // an error if the string is empty or the fetch fails for some reason.
-  GetBlob(string merkle);
+  GetBlob@6(string merkle);
 };

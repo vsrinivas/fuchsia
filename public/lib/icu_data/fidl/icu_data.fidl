@@ -12,5 +12,5 @@ struct ICUData {
 
 [ServiceName="icu_data::ICUDataProvider"]
 interface ICUDataProvider {
-  ICUDataWithSha1(string sha1hash) => (ICUData? response);
+  ICUDataWithSha1@0(string sha1hash) => (ICUData? response);
 };

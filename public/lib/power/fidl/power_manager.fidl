@@ -43,13 +43,13 @@ struct BatteryStatus {
 [ServiceName="power::PowerManager"]
 interface PowerManager {
   // Gets battery status
-  GetBatteryStatus() => (BatteryStatus status);
+  GetBatteryStatus@0() => (BatteryStatus status);
 
   // watcher called when battery status changes
-  Watch(PowerManagerWatcher watcher);
+  Watch@1(PowerManagerWatcher watcher);
 };
 
 // Watcher on battery status
 interface PowerManagerWatcher {
-  OnChangeBatteryStatus(BatteryStatus battery_status);
+  OnChangeBatteryStatus@0(BatteryStatus battery_status);
 };

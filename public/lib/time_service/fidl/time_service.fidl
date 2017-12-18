@@ -15,20 +15,20 @@ interface TimeService {
   // Returns local timezone offset (in minutes from UTC. Can be negative) for
   // the supplied number of milliseconds since the Unix epoch. Returns a
   // non-zero DST offset when appropriate.
-  GetTimezoneOffsetMinutes(int64 milliseconds_since_epoch)
+  GetTimezoneOffsetMinutes@0(int64 milliseconds_since_epoch)
       => (int32 local_offset_minutes, int32 dst_offset_minutes);
 
   // Sets the timezone for the machine based on an ICU ID.
-  SetTimezone(string timezone_id) => (bool status);
+  SetTimezone@1(string timezone_id) => (bool status);
 
   // Gets the timezone ID string.
-  GetTimezoneId() => (string timezone_id);
+  GetTimezoneId@2() => (string timezone_id);
 
   // Watches for updates to the timezone ID.
-  Watch(TimeServiceWatcher watcher);
+  Watch@3(TimeServiceWatcher watcher);
 };
 
 interface TimeServiceWatcher {
   // When the timezone changes, returns the new timezone ID.
-  OnTimezoneOffsetChange(string timezone_id);
+  OnTimezoneOffsetChange@0(string timezone_id);
 };

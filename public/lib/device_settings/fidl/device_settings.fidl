@@ -22,22 +22,22 @@ enum ValueType {
 // Manager Interface used to mange settings
 [ServiceName="device_settings::DeviceSettings"]
 interface DeviceSettingsManager {
-  GetInteger(string key) => (int64 val, Status s);
+  GetInteger@0(string key) => (int64 val, Status s);
 
-  GetString(string key) => (string val, Status s);
-
-  // Return false on database error and true on success.
-  SetInteger(string key, int64 val) => (bool result);
+  GetString@1(string key) => (string val, Status s);
 
   // Return false on database error and true on success.
-  SetString(string key, string val) => (bool result);
+  SetInteger@2(string key, int64 val) => (bool result);
+
+  // Return false on database error and true on success.
+  SetString@3(string key, string val) => (bool result);
 
   // watcher called when a settings changes
   // Return Status::OK, Status::ERR_INVALID_SETTING or Status::ERR_UNKNOWN
-  Watch(string key, DeviceSettingsWatcher watcher) => (Status status);
+  Watch@4(string key, DeviceSettingsWatcher watcher) => (Status status);
 };
 
 // Watcher on battery status
 interface DeviceSettingsWatcher {
-  OnChangeSettings(ValueType type);
+  OnChangeSettings@0(ValueType type);
 };
