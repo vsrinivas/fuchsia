@@ -9,9 +9,9 @@ module modular;
 [ServiceName="modular.Clipboard"]
 interface Clipboard {
     // Pushes |text| onto the clipboard.
-    Push(string text);
+    Push@0(string text);
 
     // Peeks at the current topmost item on the clipboard and returns
     // it, or null if no such item exists.
-    Peek() => (string? text);
+    Peek@1() => (string? text);
 };
