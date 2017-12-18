@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/vulkan"
+    ],
+    "packages": {
+        "screenshot_layer": "//garnet/lib/vulkan/third_party/layers:screenshot_layer"
+    }
+}
