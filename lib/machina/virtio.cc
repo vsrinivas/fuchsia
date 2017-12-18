@@ -323,6 +323,7 @@ zx_status_t VirtioDevice::ReadConfig(uint64_t addr, IoValue* value) {
       return ZX_OK;
     }
   }
+  FXL_LOG(ERROR) << "Unsupported config read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -345,6 +346,7 @@ zx_status_t VirtioDevice::WriteConfig(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
   }
+  FXL_LOG(ERROR) << "Unsupported config write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -83,16 +83,6 @@ zx_status_t PciBar::Write(uint64_t addr, const IoValue& value) {
   return device->WriteBar(n, addr, value);
 }
 
-static const PciDevice::Attributes kRootComplexAttributes = {
-    .device_id = PCI_DEVICE_ID_INTEL_Q35,
-    .vendor_id = PCI_VENDOR_ID_INTEL,
-    .subsystem_id = 0,
-    .subsystem_vendor_id = 0,
-    .device_class = (PCI_CLASS_BRIDGE_HOST << 16),
-};
-
-PciDevice::PciDevice(const Attributes attrs) : attrs_(attrs) {}
-
 PciPortHandler::PciPortHandler(PciBus* bus) : bus_(bus) {}
 
 zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) const {
@@ -112,6 +102,14 @@ zx_status_t PciEcamHandler::Read(uint64_t addr, IoValue* value) const {
 zx_status_t PciEcamHandler::Write(uint64_t addr, const IoValue& value) {
   return bus_->WriteEcam(addr, value);
 }
+
+static const PciDevice::Attributes kRootComplexAttributes = {
+    .device_id = PCI_DEVICE_ID_INTEL_Q35,
+    .vendor_id = PCI_VENDOR_ID_INTEL,
+    .subsystem_id = 0,
+    .subsystem_vendor_id = 0,
+    .device_class = (PCI_CLASS_BRIDGE_HOST << 16),
+};
 
 PciBus::PciBus(Guest* guest, const InterruptController* interrupt_controller)
     : guest_(guest),
@@ -324,6 +322,8 @@ zx_status_t PciBus::Interrupt(const PciDevice& device) const {
 static inline uint8_t pci_cap_len(const pci_cap_t* cap) {
   return align(cap->len, 4);
 }
+
+PciDevice::PciDevice(const Attributes attrs) : attrs_(attrs) {}
 
 const pci_cap_t* PciDevice::FindCapability(uint8_t addr,
                                            uint8_t* cap_index,

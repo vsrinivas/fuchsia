@@ -428,9 +428,19 @@ int main(int argc, char** argv) {
       return status;
   }
 
-  // Setup GPU device.
+  // Setup input device.
   machina::InputDispatcher input_dispatcher(kInputQueueDepth);
   machina::HidEventSource hid_event_source(&input_dispatcher);
+  machina::VirtioInput input(&input_dispatcher, physmem_addr, physmem_size,
+                             "machina-input", "serial-number");
+  status = input.Start();
+  if (status != ZX_OK)
+    return status;
+  status = bus.Connect(&input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
+  if (status != ZX_OK)
+    return status;
+
+  // Setup GPU device.
   machina::VirtioGpu gpu(physmem_addr, physmem_size);
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
   status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
@@ -454,15 +464,6 @@ int main(int argc, char** argv) {
   if (status != ZX_OK)
     return status;
   status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
-  if (status != ZX_OK)
-    return status;
-
-  machina::VirtioInput input(&input_dispatcher, physmem_addr, physmem_size,
-                             "machina-input", "serial-number");
-  status = input.Start();
-  if (status != ZX_OK)
-    return status;
-  status = bus.Connect(&input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
   if (status != ZX_OK)
     return status;
 

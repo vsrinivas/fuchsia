@@ -203,6 +203,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       value->u32 = 0;
       return ZX_OK;
   }
+  FXL_LOG(ERROR) << "Unhandled common config read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -229,7 +230,7 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
     uint64_t device_offset = addr - kVirtioPciDeviceCfgBase;
     return device_->ReadConfig(device_offset, value);
   }
-  FXL_LOG(ERROR) << "Unhandled read 0x" << std::hex << addr;
+  FXL_LOG(ERROR) << "Unhandled config BAR read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -281,7 +282,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       if (value.access_size != 2)
         return ZX_ERR_IO_DATA_INTEGRITY;
       if (value.u16 >= device_->num_queues_)
-        return ZX_ERR_NOT_SUPPORTED;
+        return ZX_ERR_OUT_OF_RANGE;
 
       fbl::AutoLock lock(&device_->mutex_);
       device_->queue_sel_ = value.u16;
@@ -323,9 +324,10 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES:
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES:
-      FXL_LOG(ERROR) << "Unsupported write to 0x" << std::hex << addr;
+      FXL_LOG(ERROR) << "Unsupported write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
+  FXL_LOG(ERROR) << "Unhandled common config write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -343,7 +345,7 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
     uint64_t device_offset = addr - kVirtioPciDeviceCfgBase;
     return device_->WriteConfig(device_offset, value);
   }
-  FXL_LOG(ERROR) << "Unhandled write 0x" << std::hex << addr;
+  FXL_LOG(ERROR) << "Unhandled config BAR write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -460,6 +462,7 @@ zx_status_t VirtioPci::ReadBar(uint8_t bar,
     case kVirtioPciBar:
       return ConfigBarRead(offset, value);
   }
+  FXL_LOG(ERROR) << "Unhandled read of BAR " << bar;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -472,6 +475,7 @@ zx_status_t VirtioPci::WriteBar(uint8_t bar,
     case kVirtioPciNotifyBar:
       return NotifyBarWrite(offset, value);
   }
+  FXL_LOG(ERROR) << "Unhandled write to BAR " << bar;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -480,9 +484,6 @@ zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
     return ZX_ERR_INVALID_ARGS;
 
   uint64_t notify_queue = offset / kVirtioPciNotifyCfgMultiplier;
-  if (notify_queue >= device_->num_queues())
-    return ZX_ERR_INVALID_ARGS;
-
   return device_->Kick(static_cast<uint16_t>(notify_queue));
 }
 

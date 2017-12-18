@@ -9,7 +9,6 @@
 
 #include "garnet/lib/machina/address.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace machina {
 
@@ -103,10 +102,10 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     case GicdRegister::SGI: {
       SoftwareGeneratedInterrupt sgi(value.u32);
-      FXL_LOG(ERROR) << fxl::StringPrintf(
-          "Ignoring GIC SGI, target %u CPU mask %#x non-secure %u vector %u.",
-          static_cast<uint8_t>(sgi.target), sgi.cpu_mask, sgi.non_secure,
-          sgi.vector);
+      FXL_LOG(ERROR) << "Ignoring GIC SGI, target "
+                     << static_cast<uint8_t>(sgi.target) << " CPU mask "
+                     << sgi.cpu_mask << " non-secure " << sgi.non_secure
+                     << " vector " << sgi.vector;
       return ZX_OK;
     }
     default:
@@ -116,6 +115,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
 }
 
 zx_status_t GicDistributor::Interrupt(uint32_t global_irq) const {
+  FXL_LOG(ERROR) << "Unhandled interrupt " << global_irq;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
