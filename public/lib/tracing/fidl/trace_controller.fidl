@@ -25,23 +25,23 @@ interface TraceController {
   // themselves.  For example, it should not try to check argument lengths in
   // events.  This ensures that the trace format can be extended without needing
   // to modify the trace controller.
-  StartTracing(TraceOptions options, handle<socket> output) => ();
+  StartTracing@0(TraceOptions options, handle<socket> output) => ();
 
   // Requests to stop tracing.
   //
   // The trace controller continues to transfer any remaining data to the
   // output until finished, then closes the output.
-  StopTracing();
+  StopTracing@1();
 
   // Dumps the internal state of the specified trace provider in a
   // human-readable form.
-  DumpProvider(uint32 provider_id, handle<socket> output);
+  DumpProvider@2(uint32 provider_id, handle<socket> output);
 
   // Gets the known categories, as a mapping of name -> description.
-  GetKnownCategories() => (map<string, string> categories);
+  GetKnownCategories@3() => (map<string, string> categories);
 
   // Gets the list of registered providers.
-  GetRegisteredProviders() => (array<TraceProviderInfo> providers);
+  GetRegisteredProviders@4() => (array<TraceProviderInfo> providers);
 };
 
 // Provides options for the trace.

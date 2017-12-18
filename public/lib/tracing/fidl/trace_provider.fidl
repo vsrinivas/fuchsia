@@ -36,16 +36,16 @@ interface TraceProvider {
   // TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW.
   //
   // TODO(jeffbrown): Implement half-full signal and streaming protocol.
-  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories);
+  Start@0(handle<vmo> buffer, handle<eventpair> fence, array<string> categories);
 
   // Stops tracing.
   //
   // Once the provider has finished writing any final events to the trace
   // buffer, it must close both |buffer| and |fence| to indicate to the trace
   // manager that tracing is finished.
-  Stop();
+  Stop@1();
 
   // Dumps the internal state of the trace provider to |output| in a
   // human-readable form.
-  Dump(handle<socket> output);
+  Dump@2(handle<socket> output);
 };

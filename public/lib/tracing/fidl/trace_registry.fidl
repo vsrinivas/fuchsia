@@ -17,5 +17,5 @@ interface TraceRegistry {
   //
   // |label| is a human-readable name to assign to the trace provider.
   // The label is truncated if longer than |kLabelMaxLength|.
-  RegisterTraceProvider(TraceProvider provider, string? label);
+  RegisterTraceProvider@0(TraceProvider provider, string? label);
 };
