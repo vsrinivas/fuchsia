@@ -196,10 +196,6 @@ JobDispatcher::~JobDispatcher() {
     }
 }
 
-void JobDispatcher::on_zero_handles() {
-    canary_.Assert();
-}
-
 zx_koid_t JobDispatcher::get_related_koid() const {
     return parent_ ? parent_->get_koid() : 0u;
 }
