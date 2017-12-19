@@ -207,11 +207,11 @@ def main():
     parser = argparse.ArgumentParser(description=("Publish one or more build "
                                                   "packages as package manager "
                                                   "packages."))
-    parser.add_argument('--build_dir', action='store', required=True)
-    parser.add_argument('--update_repo', action='store', required=False)
-    parser.add_argument('--update_keys', action='store', required=False)
-    parser.add_argument('--far_key', action='store', required=False)
-    parser.add_argument('--fars_dir', action='store', required=False,
+    parser.add_argument('--build-dir', action='store', required=True)
+    parser.add_argument('--update-repo', action='store', required=False)
+    parser.add_argument('--update-keys', action='store', required=False)
+    parser.add_argument('--far-key', action='store', required=False)
+    parser.add_argument('--fars-dir', action='store', required=False,
                         help="""Directory where intermediate files for the
                         package(s) will be stored""")
     parser.add_argument('--pkgs', action='store', required=False,
