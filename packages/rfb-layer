@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/vulkan"
+    ],
+    "packages": {
+        "rfb_layer": "//garnet/lib/vulkan/third_party/layers:rfb_layer"
+    }
+}
