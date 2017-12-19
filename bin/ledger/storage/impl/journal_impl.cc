@@ -110,19 +110,20 @@ void JournalImpl::Rollback(std::function<void(Status)> callback) {
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,
-                      ObjectDigestView object_digest,
+                      ObjectIdentifier object_identifier,
                       KeyPriority priority,
                       std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(
       std::move(callback),
-      [this, key = key.ToString(), object_digest = object_digest.ToString(),
-       priority](std::function<void(Status)> callback) {
+      [this, key = key.ToString(),
+       object_identifier = std::move(object_identifier),
+       priority](std::function<void(Status)> callback) mutable {
         if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
           callback(Status::ILLEGAL_STATE);
           return;
         }
         page_storage_->AddJournalEntry(
-            id_, key, object_digest, priority,
+            id_, key, std::move(object_identifier), priority,
             [this, callback = std::move(callback)](Status s) {
               if (s != Status::OK) {
                 failed_operation_ = true;

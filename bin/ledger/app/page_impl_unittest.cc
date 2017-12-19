@@ -191,7 +191,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key);
-    EXPECT_EQ(object_identifier.object_digest, entry.value);
+    EXPECT_EQ(object_identifier, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.PostQuitTask();
@@ -224,7 +224,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key);
-    EXPECT_EQ(object_digest, entry.value);
+    EXPECT_EQ(object_digest, entry.value.object_digest);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
     message_loop_.PostQuitTask();
@@ -384,7 +384,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key1);
-    EXPECT_EQ(object_digest1, entry.value);
+    EXPECT_EQ(object_digest1, entry.value.object_digest);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.PostQuitTask();
@@ -407,7 +407,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(2u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key2);
-    EXPECT_EQ(object_digest2, entry.value);
+    EXPECT_EQ(object_digest2, entry.value.object_digest);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
     message_loop_.PostQuitTask();

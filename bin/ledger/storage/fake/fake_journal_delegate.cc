@@ -44,12 +44,12 @@ FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id,
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
 Status FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
-                                     ObjectDigestView value,
+                                     ObjectIdentifier value,
                                      KeyPriority priority) {
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;
   }
-  Get(key).value = value.ToString();
+  Get(key).value = value;
   Get(key).priority = priority;
   return Status::OK;
 }

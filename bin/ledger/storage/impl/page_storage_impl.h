@@ -111,7 +111,7 @@ class PageStorageImpl : public PageStorage {
 
   void AddJournalEntry(const JournalId& journal_id,
                        fxl::StringView key,
-                       fxl::StringView value,
+                       ObjectIdentifier object_identifier,
                        KeyPriority priority,
                        std::function<void(Status)> callback);
 

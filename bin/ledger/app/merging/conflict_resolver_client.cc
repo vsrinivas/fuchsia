@@ -244,7 +244,7 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
                   continue;
                 }
                 weak_this->journal_->Put(
-                    merged_values[i]->key, object_identifiers[i].object_digest,
+                    merged_values[i]->key, object_identifiers[i],
                     merged_values[i]->priority == Priority::EAGER
                         ? storage::KeyPriority::EAGER
                         : storage::KeyPriority::LAZY,
@@ -271,8 +271,7 @@ void ConflictResolverClient::MergeNonConflictingEntries(
     // left-only changes are already taken into account.
     if (util::EqualPtr(change.base, change.left)) {
       if (change.right) {
-        this->journal_->Put(change.right->key,
-                            change.right->object_identifier.object_digest,
+        this->journal_->Put(change.right->key, change.right->object_identifier,
                             change.right->priority, waiter->NewCallback());
       } else {
         this->journal_->Delete(change.base->key, waiter->NewCallback());
@@ -280,8 +279,7 @@ void ConflictResolverClient::MergeNonConflictingEntries(
     } else if (util::EqualPtr(change.base, change.right) &&
                has_merged_values_) {
       if (change.left) {
-        this->journal_->Put(change.left->key,
-                            change.left->object_identifier.object_digest,
+        this->journal_->Put(change.left->key, change.left->object_identifier,
                             change.left->priority, waiter->NewCallback());
       } else {
         this->journal_->Delete(change.base->key, waiter->NewCallback());

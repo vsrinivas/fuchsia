@@ -43,8 +43,7 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
         EXPECT_FALSE(RunLoopWithTimeout());
         EXPECT_EQ(storage::Status::OK, status);
 
-        journal->Put(key, object_identifier.object_digest,
-                     storage::KeyPriority::EAGER,
+        journal->Put(key, object_identifier, storage::KeyPriority::EAGER,
                      callback::Capture(MakeQuitTask(), &status));
         EXPECT_FALSE(RunLoopWithTimeout());
         EXPECT_EQ(storage::Status::OK, status);

@@ -297,11 +297,11 @@ class PageStorageTest : public ::testing::Test {
 
   ::testing::AssertionResult PutInJournal(Journal* journal,
                                           const std::string& key,
-                                          const std::string& object_digest,
+                                          ObjectIdentifier object_identifier,
                                           KeyPriority priority) {
     bool called;
     Status status;
-    journal->Put(key, object_digest, priority,
+    journal->Put(key, std::move(object_identifier), priority,
                  callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
 
@@ -392,7 +392,7 @@ class PageStorageTest : public ::testing::Test {
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
-      EXPECT_TRUE(PutInJournal(journal.get(), key, RandomObjectDigest(),
+      EXPECT_TRUE(PutInJournal(journal.get(), key, RandomObjectIdentifier(),
                                KeyPriority::EAGER));
     }
 
@@ -1039,13 +1039,15 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  journal->Put("key", "value", KeyPriority::EAGER,
+  ObjectIdentifier random_identifier = RandomObjectIdentifier();
+
+  journal->Put("key", random_identifier, KeyPriority::EAGER,
                callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_NE(Status::OK, status);
 
-  journal->Put("key", "value", KeyPriority::EAGER,
+  journal->Put("key", random_identifier, KeyPriority::EAGER,
                callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
@@ -1068,13 +1070,13 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  journal->Put("key", "value", KeyPriority::EAGER,
+  journal->Put("key", random_identifier, KeyPriority::EAGER,
                callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_NE(Status::OK, status);
 
-  journal->Put("key", "value", KeyPriority::EAGER,
+  journal->Put("key", random_identifier, KeyPriority::EAGER,
                callback::Capture(SetWhenCalled(&called), &status));
   RunTasks();
   ASSERT_TRUE(called);
@@ -1106,7 +1108,7 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, journal);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key", RandomObjectDigest(),
+  EXPECT_TRUE(PutInJournal(journal.get(), "key", RandomObjectIdentifier(),
                            KeyPriority::EAGER));
 }
 
@@ -1341,7 +1343,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     EXPECT_EQ(Status::OK, status);
 
     EXPECT_TRUE(PutInJournal(journal.get(), fxl::StringPrintf("key%lu", i),
-                             data_array[i].object_identifier.object_digest,
+                             data_array[i].object_identifier,
                              KeyPriority::LAZY));
     EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
     commits.push_back(GetFirstHead()->GetId());
@@ -1414,8 +1416,7 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key",
-                           data.object_identifier.object_digest,
+  EXPECT_TRUE(PutInJournal(journal.get(), "key", data.object_identifier,
                            KeyPriority::EAGER));
   EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
@@ -1444,8 +1445,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(PutInJournal(journal.get(), "key0",
-                           data_array[0].object_identifier.object_digest,
-                           KeyPriority::LAZY));
+                           data_array[0].object_identifier, KeyPriority::LAZY));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
@@ -1463,17 +1463,13 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(PutInJournal(journal.get(), "key1",
-                           data_array[1].object_identifier.object_digest,
-                           KeyPriority::LAZY));
+                           data_array[1].object_identifier, KeyPriority::LAZY));
   EXPECT_TRUE(PutInJournal(journal.get(), "key2",
-                           data_array[2].object_identifier.object_digest,
-                           KeyPriority::LAZY));
+                           data_array[2].object_identifier, KeyPriority::LAZY));
   EXPECT_TRUE(PutInJournal(journal.get(), "key1",
-                           data_array[2].object_identifier.object_digest,
-                           KeyPriority::LAZY));
+                           data_array[2].object_identifier, KeyPriority::LAZY));
   EXPECT_TRUE(PutInJournal(journal.get(), "key3",
-                           data_array[0].object_identifier.object_digest,
-                           KeyPriority::LAZY));
+                           data_array[0].object_identifier, KeyPriority::LAZY));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
   EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_identifier, true));
@@ -1735,7 +1731,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
   EXPECT_EQ(Status::OK, status);
 
   // Create a key, and delete it.
-  EXPECT_TRUE(PutInJournal(journal.get(), "key", RandomObjectDigest(),
+  EXPECT_TRUE(PutInJournal(journal.get(), "key", RandomObjectIdentifier(),
                            KeyPriority::EAGER));
   EXPECT_TRUE(DeleteFromJournal(journal.get(), "key"));
 
@@ -1850,7 +1846,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_a.get(), "a", RandomObjectDigest(),
+  EXPECT_TRUE(PutInJournal(journal_a.get(), "a", RandomObjectIdentifier(),
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_a =
       TryCommitJournal(std::move(journal_a), Status::OK);
@@ -1864,7 +1860,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_b.get(), "b", RandomObjectDigest(),
+  EXPECT_TRUE(PutInJournal(journal_b.get(), "b", RandomObjectIdentifier(),
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_b =
       TryCommitJournal(std::move(journal_b), Status::OK);
@@ -1891,7 +1887,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_c.get(), "c", RandomObjectDigest(),
+  EXPECT_TRUE(PutInJournal(journal_c.get(), "c", RandomObjectIdentifier(),
                            KeyPriority::EAGER));
   std::unique_ptr<const Commit> commit_c =
       TryCommitJournal(std::move(journal_c), Status::OK);

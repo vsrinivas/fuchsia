@@ -135,26 +135,26 @@ void PageDelegate::PutWithPriority(
 
   operation_serializer_.Serialize<Status>(
       callback,
-      fxl::MakeCopyable([this, promise = std::move(promise),
-                         key = std::move(key), priority](
-                            Page::PutWithPriorityCallback callback) mutable {
-        promise->Finalize(fxl::MakeCopyable(
-            [this, key = std::move(key), priority,
-             callback = std::move(callback)](
-                storage::Status status,
-                storage::ObjectIdentifier object_identifier) mutable {
-              if (status != storage::Status::OK) {
-                callback(PageUtils::ConvertStatus(status));
-                return;
-              }
+      fxl::MakeCopyable(
+          [this, promise = std::move(promise), key = std::move(key),
+           priority](Page::PutWithPriorityCallback callback) mutable {
+            promise->Finalize(fxl::MakeCopyable(
+                [this, key = std::move(key), priority,
+                 callback = std::move(callback)](
+                    storage::Status status,
+                    storage::ObjectIdentifier object_identifier) mutable {
+                  if (status != storage::Status::OK) {
+                    callback(PageUtils::ConvertStatus(status));
+                    return;
+                  }
 
-              PutInCommit(
-                  std::move(key), std::move(object_identifier).object_digest,
-                  priority == Priority::EAGER ? storage::KeyPriority::EAGER
-                                              : storage::KeyPriority::LAZY,
-                  std::move(callback));
-            }));
-      }));
+                  PutInCommit(std::move(key), std::move(object_identifier),
+                              priority == Priority::EAGER
+                                  ? storage::KeyPriority::EAGER
+                                  : storage::KeyPriority::LAZY,
+                              std::move(callback));
+                }));
+          }));
 }
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
@@ -173,20 +173,22 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
   auto promise = callback::
       Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::ILLEGAL_STATE);
-  storage_->GetObject(storage::MakeDefaultObjectIdentifier(
-                          convert::ToString(reference->opaque_id)),
-                      storage::PageStorage::Location::LOCAL,
+  storage::ObjectIdentifier object_identifier =
+      storage::MakeDefaultObjectIdentifier(
+          convert::ToString(reference->opaque_id));
+
+  storage_->GetObject(object_identifier, storage::PageStorage::Location::LOCAL,
                       promise->NewCallback());
 
   operation_serializer_.Serialize<Status>(
       callback,
       fxl::MakeCopyable(
           [this, promise = std::move(promise), key = std::move(key),
-           object_digest = std::move(reference->opaque_id),
+           object_identifier = std::move(object_identifier),
            priority](Page::PutReferenceCallback callback) mutable {
             promise->Finalize(fxl::MakeCopyable(
                 [this, key = std::move(key),
-                 object_digest = std::move(object_digest), priority,
+                 object_identifier = std::move(object_identifier), priority,
                  callback = std::move(callback)](
                     storage::Status status,
                     std::unique_ptr<const storage::Object> object) mutable {
@@ -195,7 +197,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                         status, Status::REFERENCE_NOT_FOUND));
                     return;
                   }
-                  PutInCommit(std::move(key), convert::ToString(object_digest),
+                  PutInCommit(std::move(key), std::move(object_identifier),
                               priority == Priority::EAGER
                                   ? storage::KeyPriority::EAGER
                                   : storage::KeyPriority::LAZY,
@@ -334,19 +336,21 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
 }
 
 void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
-                               storage::ObjectDigest value,
+                               storage::ObjectIdentifier object_identifier,
                                storage::KeyPriority priority,
                                std::function<void(Status)> callback) {
   RunInTransaction(
-      fxl::MakeCopyable([key = std::move(key), value = std::move(value),
-                         priority](
-                            storage::Journal* journal,
-                            std::function<void(Status status)> callback) {
-        journal->Put(key, value, priority,
-                     [callback = std::move(callback)](storage::Status status) {
-                       callback(PageUtils::ConvertStatus(status));
-                     });
-      }),
+      fxl::MakeCopyable(
+          [key = std::move(key),
+           object_identifier = std::move(object_identifier),
+           priority](storage::Journal* journal,
+                     std::function<void(Status status)> callback) mutable {
+            journal->Put(
+                key, std::move(object_identifier), priority,
+                [callback = std::move(callback)](storage::Status status) {
+                  callback(PageUtils::ConvertStatus(status));
+                });
+          }),
       std::move(callback));
 }
 

@@ -21,10 +21,10 @@ class Journal {
   // Returns the ID of this journal.
   virtual const JournalId& GetId() const = 0;
 
-  // Adds an entry with the given |key| and |object_digest| to this |Journal|.
-  // Returns |OK| on success or the error code otherwise.
+  // Adds an entry with the given |key| and |object_identifier| to this
+  // |Journal|. Returns |OK| on success or the error code otherwise.
   virtual void Put(convert::ExtendedStringView key,
-                   ObjectDigestView object_digest,
+                   ObjectIdentifier object_identifier,
                    KeyPriority priority,
                    std::function<void(Status)> callback) = 0;
 

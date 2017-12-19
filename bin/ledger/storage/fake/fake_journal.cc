@@ -24,10 +24,10 @@ Status FakeJournal::Rollback() {
 }
 
 void FakeJournal::Put(convert::ExtendedStringView key,
-                      ObjectDigestView object_digest,
+                      ObjectIdentifier object_identifier,
                       KeyPriority priority,
                       std::function<void(Status)> callback) {
-  callback(delegate_->SetValue(key, object_digest, priority));
+  callback(delegate_->SetValue(key, std::move(object_identifier), priority));
 }
 
 void FakeJournal::Delete(convert::ExtendedStringView key,
