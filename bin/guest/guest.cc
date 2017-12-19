@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/guest.h>
@@ -160,25 +161,25 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 }
 
 static const char* zircon_cmdline(const char* cmdline) {
-  static char buf[128];
-  snprintf(buf, sizeof(buf), "TERM=uart %s", cmdline);
-  return buf;
+  static fbl::StringBuffer<LINE_MAX> buffer;
+  buffer.AppendPrintf("TERM=uart %s", cmdline);
+  return buffer.c_str();
 }
 
 static const char* linux_cmdline(const char* cmdline,
                                  uintptr_t uart_addr,
                                  uintptr_t acpi_addr) {
-  static char buf[128];
+  static fbl::StringBuffer<LINE_MAX> buffer;
 #if __aarch64__
-  auto fmt = "earlycon=pl011,%#lx console=ttyAMA0 console=tty0 %s";
-  snprintf(buf, sizeof(buf), fmt, uart_addr, cmdline);
+  buffer.AppendPrintf("earlycon=pl011,%#lx console=ttyAMA0 console=tty0 %s",
+                      uart_addr, cmdline);
 #elif __x86_64__
-  auto fmt =
+  buffer.AppendPrintf(
       "earlycon=uart,io,%#lx console=ttyS0 console=tty0 io_delay=none "
-      "clocksource=tsc acpi_rsdp=%#lx %s";
-  snprintf(buf, sizeof(buf), fmt, uart_addr, acpi_addr, cmdline);
+      "clocksource=tsc acpi_rsdp=%#lx %s",
+      uart_addr, acpi_addr, cmdline);
 #endif
-  return buf;
+  return buffer.c_str();
 }
 
 zx_status_t setup_zircon_framebuffer(
