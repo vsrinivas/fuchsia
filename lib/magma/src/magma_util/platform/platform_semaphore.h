@@ -55,11 +55,8 @@ public:
     // Called by the client (apps thread) and by the driver device thread.
     virtual void Reset() = 0;
 
-    // Returns true if the event is signaled before the timeout expires.
-    virtual bool WaitNoReset(uint64_t timeout_ms) = 0;
-
-    // Returns true if the event is signaled before the timeout expires. If
-    // then the state is reset to unsignalled.
+    // Returns true if the event is signaled before the timeout expires, in which case
+    // the state is reset to unsignalled.
     // Only one thread should ever wait on a given semaphore.
     virtual bool Wait(uint64_t timeout_ms) = 0;
 

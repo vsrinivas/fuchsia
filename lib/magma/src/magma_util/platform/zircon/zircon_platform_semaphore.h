@@ -38,7 +38,6 @@ public:
         DASSERT(status == ZX_OK);
     }
 
-    bool WaitNoReset(uint64_t timeout_ms) override;
     bool Wait(uint64_t timeout_ms) override;
 
     bool WaitAsync(PlatformPort* platform_port) override;

@@ -107,11 +107,6 @@ enum MAGMA_GPU_MAP_FLAGS {
     MAGMA_GPU_MAP_FLAG_VENDOR_MASK = (0xffff << MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT),
 };
 
-enum MagmaSemaphoreWaitFlags {
-    MAGMA_SEMAPHORE_WAIT_FLAG_NONE = 0,
-    MAGMA_SEMAPHORE_WAIT_FLAG_NORESET = 1,
-};
-
 #if defined(__cplusplus)
 }
 #endif
