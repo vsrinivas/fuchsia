@@ -129,13 +129,14 @@ private:
                              enum PageTableLevel* ret_level,
                              volatile pt_entry_t** mapping) TA_REQ(lock_);
 
-    void UpdateEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
-                     paddr_t paddr, PtFlags flags, bool was_terminal) TA_REQ(lock_);
-
     zx_status_t SplitLargePage(PageTableLevel level, vaddr_t vaddr,
                                volatile pt_entry_t* pte) TA_REQ(lock_);
 
-    void UnmapEntry(PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
+    void UpdateEntry(CacheLineFlusher* flusher,
+                     PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
+                     paddr_t paddr, PtFlags flags, bool was_terminal) TA_REQ(lock_);
+    void UnmapEntry(CacheLineFlusher* flusher,
+                    PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
                     bool was_terminal) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("X86P")> canary_;
