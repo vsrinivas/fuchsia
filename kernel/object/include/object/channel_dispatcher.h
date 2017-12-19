@@ -30,8 +30,8 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
     bool has_state_tracker() const final { return true; }
     zx_status_t add_observer(StateObserver* observer) final;
-    zx_koid_t get_related_koid() const final TA_REQ(lock_) { return other_koid_; }
-    zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
+    zx_koid_t get_related_koid() const final TA_REQ(get_lock()) { return other_koid_; }
+    zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final TA_NO_THREAD_SAFETY_ANALYSIS;
 
     void on_zero_handles() final;
 
@@ -46,10 +46,10 @@ public:
                      bool may_disard);
 
     // Write to the opposing endpoint's message queue.
-    zx_status_t Write(fbl::unique_ptr<MessagePacket> msg);
+    zx_status_t Write(fbl::unique_ptr<MessagePacket> msg) TA_NO_THREAD_SAFETY_ANALYSIS;
     zx_status_t Call(fbl::unique_ptr<MessagePacket> msg,
                      zx_time_t deadline, bool* return_handles,
-                     fbl::unique_ptr<MessagePacket>* reply);
+                     fbl::unique_ptr<MessagePacket>* reply) TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
     // after an interruption caused by suspending.
@@ -100,16 +100,15 @@ private:
 
     explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
     void Init(fbl::RefPtr<ChannelDispatcher> other);
-    int WriteSelf(fbl::unique_ptr<MessagePacket> msg);
-    zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
+    int WriteSelf(fbl::unique_ptr<MessagePacket> msg) TA_REQ(get_lock());
+    zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
     void OnPeerZeroHandles();
 
     fbl::Canary<fbl::magic("CHAN")> canary_;
 
-    fbl::Mutex lock_;
-    MessageList messages_ TA_GUARDED(lock_);
-    uint64_t message_count_ TA_GUARDED(lock_) = 0;
-    WaiterList waiters_ TA_GUARDED(lock_);
-    fbl::RefPtr<ChannelDispatcher> other_ TA_GUARDED(lock_);
-    zx_koid_t other_koid_ TA_GUARDED(lock_);
+    MessageList messages_ TA_GUARDED(get_lock());
+    uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
+    WaiterList waiters_ TA_GUARDED(get_lock());
+    fbl::RefPtr<ChannelDispatcher> other_ TA_GUARDED(get_lock());
+    zx_koid_t other_koid_ TA_GUARDED(get_lock());
 };
