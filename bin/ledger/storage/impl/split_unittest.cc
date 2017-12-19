@@ -287,7 +287,7 @@ TEST(SplitTest, CollectPieces) {
     }
   }
 
-  std::map<std::string, std::unique_ptr<DataSource::DataChunk>> objects;
+  std::map<ObjectIdentifier, std::unique_ptr<DataSource::DataChunk>> objects;
 
   for (size_t i = 0; i < parts.size(); ++i) {
     std::vector<FileIndexSerialization::ObjectIdentifierAndSize> children;
@@ -295,31 +295,30 @@ TEST(SplitTest, CollectPieces) {
       children.push_back({MakeIndexId(child), 1});
     }
     size_t total_size;
-    FileIndexSerialization::BuildFileIndex(
-        children, &objects[MakeIndexId(i).object_digest], &total_size);
+    FileIndexSerialization::BuildFileIndex(children, &objects[MakeIndexId(i)],
+                                           &total_size);
   }
   IterationStatus status;
-  std::unordered_set<ObjectDigest> digests;
+  std::set<ObjectIdentifier> identifiers;
   CollectPieces(
       MakeIndexId(0),
-      [&objects](ObjectDigestView digest,
+      [&objects](ObjectIdentifier object_identifier,
                  std::function<void(Status, fxl::StringView)> callback) {
-        callback(Status::OK, objects[digest.ToString()]->Get());
+        callback(Status::OK, objects[object_identifier]->Get());
       },
-      [&status, &digests](IterationStatus received_status,
-                          ObjectIdentifier identifier) {
+      [&status, &identifiers](IterationStatus received_status,
+                              ObjectIdentifier identifier) {
         status = received_status;
         if (status == IterationStatus::IN_PROGRESS) {
-          digests.insert(identifier.object_digest);
+          identifiers.insert(identifier);
         }
         return true;
       });
 
   ASSERT_EQ(IterationStatus::DONE, status);
-  ASSERT_EQ(objects.size(), digests.size());
-  for (const auto& digest : digests) {
-    EXPECT_EQ(1u, objects.count(digest))
-        << "Unknown id: " << convert::ToHex(digest);
+  ASSERT_EQ(objects.size(), identifiers.size());
+  for (const auto& identifier : identifiers) {
+    EXPECT_EQ(1u, objects.count(identifier)) << "Unknown id: " << identifier;
   }
 }
 
@@ -331,7 +330,7 @@ TEST(SplitTest, CollectPiecesError) {
   size_t called = 0;
   CollectPieces(
       MakeIndexId(0),
-      [&called](ObjectDigestView digest,
+      [&called](ObjectIdentifier identifier,
                 std::function<void(Status, fxl::StringView)> callback) {
         if (called >= nb_successfull_called) {
           callback(Status::INTERNAL_IO_ERROR, "");

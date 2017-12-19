@@ -44,11 +44,11 @@ class PageStorageImpl : public PageStorage {
                           std::vector<ObjectIdentifier> new_objects,
                           std::function<void(Status)> callback);
 
-  // Checks whether the given |object_digest| is untracked, i.e. has been
+  // Checks whether the given |object_identifier| is untracked, i.e. has been
   // created using |AddObjectFromLocal()|, but is not yet part of any commit.
   // Untracked objects are invalid after the PageStorageImpl object is
   // destroyed.
-  void ObjectIsUntracked(ObjectDigestView object_digest,
+  void ObjectIsUntracked(ObjectIdentifier object_identifier,
                          std::function<void(Status, bool)> callback);
 
   // PageStorage:
@@ -88,12 +88,12 @@ class PageStorageImpl : public PageStorage {
                        std::function<void(Status)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectDigest)> callback) override;
-  void GetObject(ObjectDigestView object_digest,
+      std::function<void(Status, ObjectIdentifier)> callback) override;
+  void GetObject(ObjectIdentifier object_identifier,
                  Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
-  void GetPiece(ObjectDigestView object_digest,
+  void GetPiece(ObjectIdentifier object_identifier,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
   void SetSyncMetadata(fxl::StringView key,
@@ -154,30 +154,30 @@ class PageStorageImpl : public PageStorage {
   FXL_WARN_UNUSED_RESULT Status
   MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
                      PageDb::Batch* batch,
-                     std::vector<ObjectDigest> object_digests);
+                     std::vector<ObjectIdentifier> object_identifiers);
 
   FXL_WARN_UNUSED_RESULT Status
   ContainsCommit(coroutine::CoroutineHandler* handler, CommitIdView id);
 
   bool IsFirstCommit(CommitIdView id);
 
-  // Adds the given synced object. |object_digest| will be validated against the
-  // expected one based on the |data| and an |OBJECT_DIGEST_MISSMATCH| error
+  // Adds the given synced object. |object_identifier| will be validated against
+  // the expected one based on the |data| and an |OBJECT_DIGEST_MISSMATCH| error
   // will be returned in case of missmatch.
-  void AddPiece(ObjectDigest object_digest,
+  void AddPiece(ObjectIdentifier object_identifier,
                 std::unique_ptr<DataSource::DataChunk> data,
                 ChangeSource source,
                 std::function<void(Status)> callback);
 
   // Download all the chunks of the object with the given id.
-  void DownloadFullObject(ObjectDigestView object_digest,
+  void DownloadFullObject(ObjectIdentifier object_identifier,
                           std::function<void(Status)> callback);
 
   void GetObjectFromSync(
-      ObjectDigestView object_digest,
+      ObjectIdentifier object_identifier,
       std::function<void(Status, std::unique_ptr<const Object>)> callback);
 
-  void FillBufferWithObjectContent(ObjectDigestView object_digest,
+  void FillBufferWithObjectContent(ObjectIdentifier object_identifier,
                                    fsl::SizedVmo vmo,
                                    size_t offset,
                                    size_t size,
@@ -242,7 +242,7 @@ class PageStorageImpl : public PageStorage {
 
   FXL_WARN_UNUSED_RESULT Status
   SynchronousAddPiece(coroutine::CoroutineHandler* handler,
-                      ObjectDigest object_digest,
+                      ObjectIdentifier object_identifier,
                       std::unique_ptr<DataSource::DataChunk> data,
                       ChangeSource source);
 

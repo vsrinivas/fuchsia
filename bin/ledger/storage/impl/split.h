@@ -43,7 +43,7 @@ Status ForEachPiece(fxl::StringView index_content,
 // |callback| returned true for the given id.
 void CollectPieces(
     ObjectIdentifier root,
-    std::function<void(ObjectDigestView,
+    std::function<void(ObjectIdentifier,
                        std::function<void(Status, fxl::StringView)>)>
         data_accessor,
     std::function<bool(IterationStatus, ObjectIdentifier)> callback);

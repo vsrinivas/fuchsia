@@ -326,12 +326,10 @@ TEST_F(MergeResolverTest, LastOneWins) {
   ASSERT_EQ(2u, content_vector.size());
   EXPECT_EQ("key2", content_vector[0].key);
   std::string value;
-  EXPECT_TRUE(
-      GetValue(content_vector[0].object_identifier.object_digest, &value));
+  EXPECT_TRUE(GetValue(content_vector[0].object_identifier, &value));
   EXPECT_EQ("val2.1", value);
   EXPECT_EQ("key3", content_vector[1].key);
-  EXPECT_TRUE(
-      GetValue(content_vector[1].object_identifier.object_digest, &value));
+  EXPECT_TRUE(GetValue(content_vector[1].object_identifier, &value));
   EXPECT_EQ("val3.0", value);
 }
 

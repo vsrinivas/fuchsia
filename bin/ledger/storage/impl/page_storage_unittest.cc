@@ -51,11 +51,11 @@ namespace storage {
 class PageStorageImplAccessorForTest {
  public:
   static void AddPiece(const std::unique_ptr<PageStorageImpl>& storage,
-                       ObjectDigest object_digest,
+                       ObjectIdentifier object_identifier,
                        std::unique_ptr<DataSource::DataChunk> chunk,
                        ChangeSource source,
                        std::function<void(Status)> callback) {
-    storage->AddPiece(std::move(object_digest), std::move(chunk), source,
+    storage->AddPiece(std::move(object_identifier), std::move(chunk), source,
                       std::move(callback));
   }
 
@@ -419,28 +419,28 @@ class PageStorageTest : public ::testing::Test {
   }
 
   void TryAddFromLocal(std::string content,
-                       const ObjectDigest& expected_digest) {
+                       const ObjectIdentifier& expected_identifier) {
     bool called;
     Status status;
-    ObjectDigest object_digest;
+    ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         DataSource::Create(std::move(content)),
-        callback::Capture(SetWhenCalled(&called), &status, &object_digest));
+        callback::Capture(SetWhenCalled(&called), &status, &object_identifier));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(expected_digest, object_digest);
+    EXPECT_EQ(expected_identifier, object_identifier);
   }
 
   std::unique_ptr<const Object> TryGetObject(
-      const ObjectDigest& object_digest,
+      const ObjectIdentifier& object_identifier,
       PageStorage::Location location,
       Status expected_status = Status::OK) {
     bool called;
     Status status;
     std::unique_ptr<const Object> object;
     storage_->GetObject(
-        object_digest, location,
+        object_identifier, location,
         callback::Capture(SetWhenCalled(&called), &status, &object));
     RunTasks();
     EXPECT_TRUE(called);
@@ -449,13 +449,14 @@ class PageStorageTest : public ::testing::Test {
   }
 
   std::unique_ptr<const Object> TryGetPiece(
-      const ObjectDigest& object_digest,
+      const ObjectIdentifier& object_identifier,
       Status expected_status = Status::OK) {
     bool called;
     Status status;
     std::unique_ptr<const Object> object;
-    storage_->GetPiece(object_digest, callback::Capture(SetWhenCalled(&called),
-                                                        &status, &object));
+    storage_->GetPiece(
+        object_identifier,
+        callback::Capture(SetWhenCalled(&called), &status, &object));
     RunTasks();
     EXPECT_TRUE(called);
     EXPECT_EQ(expected_status, status);
@@ -512,31 +513,33 @@ class PageStorageTest : public ::testing::Test {
         handler, object_digest);
   }
 
-  ::testing::AssertionResult ObjectIsUntracked(ObjectDigest object_digest,
-                                               bool expected_untracked) {
+  ::testing::AssertionResult ObjectIsUntracked(
+      ObjectIdentifier object_identifier,
+      bool expected_untracked) {
     bool called;
     Status status;
     bool is_untracked;
     storage_->ObjectIsUntracked(
-        object_digest,
+        object_identifier,
         callback::Capture(SetWhenCalled(&called), &status, &is_untracked));
     RunTasks();
 
     if (!called) {
       return ::testing::AssertionFailure()
-             << "ObjectIsUntracked for id " << object_digest
+             << "ObjectIsUntracked for id " << object_identifier
              << " didn't return.";
     }
     if (status != Status::OK) {
       return ::testing::AssertionFailure()
-             << "ObjectIsUntracked for id " << object_digest
+             << "ObjectIsUntracked for id " << object_identifier
              << " returned status " << status;
     }
     if (is_untracked != expected_untracked) {
       return ::testing::AssertionFailure()
-             << "For id " << object_digest << " expected to find the object "
-             << (is_untracked ? "un" : "") << "tracked, but was "
-             << (expected_untracked ? "un" : "") << "tracked, instead.";
+             << "For id " << object_identifier
+             << " expected to find the object " << (is_untracked ? "un" : "")
+             << "tracked, but was " << (expected_untracked ? "un" : "")
+             << "tracked, instead.";
     }
     return ::testing::AssertionSuccess();
   }
@@ -753,8 +756,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
                    lazy_value.value);
     sync.AddObject(eager_value.object_identifier.object_digest,
                    eager_value.value);
-    std::unique_ptr<const Object> root_object = TryGetObject(
-        root_identifier.object_digest, PageStorage::Location::NETWORK);
+    std::unique_ptr<const Object> root_object =
+        TryGetObject(root_identifier, PageStorage::Location::NETWORK);
 
     fxl::StringView root_data;
     ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
@@ -815,8 +818,8 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
   ObjectIdentifier root_identifier = node->GetIdentifier();
 
-  std::unique_ptr<const Object> root_object = TryGetObject(
-      root_identifier.object_digest, PageStorage::Location::NETWORK);
+  std::unique_ptr<const Object> root_object =
+      TryGetObject(root_identifier, PageStorage::Location::NETWORK);
 
   fxl::StringView root_data;
   ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
@@ -981,10 +984,10 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
       IterationStatus iteration_status = IterationStatus::ERROR;
       CollectPieces(
           identifier,
-          [this](ObjectDigestView digest,
+          [this](ObjectIdentifier identifier,
                  std::function<void(Status, fxl::StringView)> callback) {
             storage_->GetPiece(
-                digest,
+                std::move(identifier),
                 [callback = std::move(callback)](
                     Status status, std::unique_ptr<const Object> object) {
                   if (status != Status::OK) {
@@ -1113,21 +1116,22 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
     bool called;
     Status status;
-    ObjectDigest object_digest;
+    ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         data.ToDataSource(),
-        callback::Capture(SetWhenCalled(&called), &status, &object_digest));
+        callback::Capture(SetWhenCalled(&called), &status, &object_identifier));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(data.object_identifier.object_digest, object_digest);
+    EXPECT_EQ(data.object_identifier, object_identifier);
 
     std::unique_ptr<const Object> object;
-    ASSERT_EQ(Status::OK, ReadObject(handler, object_digest, &object));
+    ASSERT_EQ(Status::OK,
+              ReadObject(handler, object_identifier.object_digest, &object));
     fxl::StringView content;
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
-    EXPECT_TRUE(ObjectIsUntracked(object_digest, true));
+    EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
   });
 }
 
@@ -1137,30 +1141,30 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
 
     bool called;
     Status status;
-    ObjectDigest object_digest;
+    ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         data.ToDataSource(),
-        callback::Capture(SetWhenCalled(&called), &status, &object_digest));
+        callback::Capture(SetWhenCalled(&called), &status, &object_identifier));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(data.object_identifier.object_digest, object_digest);
-    EXPECT_EQ(data.value, object_digest);
+    EXPECT_EQ(data.object_identifier, object_identifier);
+    EXPECT_EQ(data.value, object_identifier.object_digest);
 
     std::unique_ptr<const Object> object;
-    EXPECT_EQ(Status::NOT_FOUND, ReadObject(handler, object_digest, &object));
+    EXPECT_EQ(Status::NOT_FOUND,
+              ReadObject(handler, object_identifier.object_digest, &object));
     // Inline objects do not need to ever be tracked.
-    EXPECT_TRUE(ObjectIsUntracked(object_digest, false));
+    EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
   });
 }
 
 TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
   ObjectData data("Some data");
 
-  ObjectDigest object_digest;
   storage_->AddObjectFromLocal(
       data.ToDataSource(),
-      [](Status returned_status, ObjectDigest returned_object_digest) {});
+      [](Status returned_status, ObjectIdentifier returned_object_digest) {});
 
   // Checking that we do not crash when deleting the storage while an AddObject
   // call is in progress.
@@ -1171,14 +1175,14 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   auto data_source = std::make_unique<FakeErrorDataSource>(task_runner_);
   bool called;
   Status status;
-  ObjectDigest object_digest;
+  ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
       std::move(data_source),
-      callback::Capture(SetWhenCalled(&called), &status, &object_digest));
+      callback::Capture(SetWhenCalled(&called), &status, &object_identifier));
   RunTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::IO_ERROR, status);
-  EXPECT_TRUE(ObjectIsUntracked(object_digest, false));
+  EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
 }
 
 TEST_F(PageStorageTest, AddLocalPiece) {
@@ -1188,8 +1192,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier.object_digest, data.ToChunk(),
-        ChangeSource::LOCAL,
+        storage_, data.object_identifier, data.ToChunk(), ChangeSource::LOCAL,
         callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
@@ -1202,7 +1205,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     fxl::StringView content;
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, true));
+    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   });
 }
 
@@ -1213,8 +1216,8 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier.object_digest, data.ToChunk(),
-        ChangeSource::SYNC, callback::Capture(SetWhenCalled(&called), &status));
+        storage_, data.object_identifier, data.ToChunk(), ChangeSource::SYNC,
+        callback::Capture(SetWhenCalled(&called), &status));
     RunTasks();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -1226,7 +1229,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     fxl::StringView content;
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, false));
+    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
   });
 }
 
@@ -1235,8 +1238,8 @@ TEST_F(PageStorageTest, GetObject) {
     ObjectData data("Some data");
     ASSERT_EQ(Status::OK, WriteObject(handler, &data));
 
-    std::unique_ptr<const Object> object = TryGetObject(
-        data.object_identifier.object_digest, PageStorage::Location::LOCAL);
+    std::unique_ptr<const Object> object =
+        TryGetObject(data.object_identifier, PageStorage::Location::LOCAL);
     EXPECT_EQ(data.object_identifier.object_digest, object->GetDigest());
     fxl::StringView object_data;
     ASSERT_EQ(Status::OK, object->GetData(&object_data));
@@ -1250,8 +1253,8 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   sync.AddObject(data.object_identifier.object_digest, data.value);
   storage_->SetSyncDelegate(&sync);
 
-  std::unique_ptr<const Object> object = TryGetObject(
-      data.object_identifier.object_digest, PageStorage::Location::NETWORK);
+  std::unique_ptr<const Object> object =
+      TryGetObject(data.object_identifier, PageStorage::Location::NETWORK);
   EXPECT_EQ(data.object_identifier.object_digest, object->GetDigest());
   fxl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
@@ -1259,10 +1262,10 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
 
   storage_->SetSyncDelegate(nullptr);
   ObjectData other_data("Some other data", InlineBehavior::PREVENT);
-  TryGetObject(other_data.object_identifier.object_digest,
-               PageStorage::Location::LOCAL, Status::NOT_FOUND);
-  TryGetObject(other_data.object_identifier.object_digest,
-               PageStorage::Location::NETWORK, Status::NOT_CONNECTED_ERROR);
+  TryGetObject(other_data.object_identifier, PageStorage::Location::LOCAL,
+               Status::NOT_FOUND);
+  TryGetObject(other_data.object_identifier, PageStorage::Location::NETWORK,
+               Status::NOT_CONNECTED_ERROR);
 }
 
 TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
@@ -1272,8 +1275,8 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   sync.AddObject(data.object_identifier.object_digest, data2.value);
   storage_->SetSyncDelegate(&sync);
 
-  TryGetObject(data.object_identifier.object_digest,
-               PageStorage::Location::NETWORK, Status::OBJECT_DIGEST_MISMATCH);
+  TryGetObject(data.object_identifier, PageStorage::Location::NETWORK,
+               Status::OBJECT_DIGEST_MISMATCH);
 }
 
 TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
@@ -1286,26 +1289,26 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
 
   bool called;
   Status status;
-  ObjectDigest object_digest;
+  ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
       data.ToDataSource(),
-      callback::Capture(SetWhenCalled(&called), &status, &object_digest));
+      callback::Capture(SetWhenCalled(&called), &status, &object_identifier));
   RunTasks();
   ASSERT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(data.object_identifier.object_digest, object_digest);
+  EXPECT_EQ(data.object_identifier, object_identifier);
 
   std::unique_ptr<const Object> object =
-      TryGetObject(object_digest, PageStorage::Location::LOCAL);
+      TryGetObject(object_identifier, PageStorage::Location::LOCAL);
   fxl::StringView content;
   ASSERT_EQ(Status::OK, object->GetData(&content));
   EXPECT_EQ(data.value, content);
-  EXPECT_TRUE(ObjectIsUntracked(object_digest, true));
+  EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
 
   // Check that the object is encoded with an index, and is different than the
   // piece obtained at |object_digest|.
-  std::unique_ptr<const Object> piece = TryGetPiece(object_digest);
+  std::unique_ptr<const Object> piece = TryGetPiece(object_identifier);
   fxl::StringView piece_content;
   ASSERT_EQ(Status::OK, piece->GetData(&piece_content));
   EXPECT_NE(content, piece_content);
@@ -1319,8 +1322,8 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   };
   constexpr size_t size = arraysize(data_array);
   for (auto& data : data_array) {
-    TryAddFromLocal(data.value, data.object_identifier.object_digest);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, true));
+    TryAddFromLocal(data.value, data.object_identifier);
+    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   }
 
   std::vector<CommitId> commits;
@@ -1395,11 +1398,11 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
 
   // The object is not yet created and its id should not be marked as untracked.
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, false));
+  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
 
   // After creating the object it should be marked as untracked.
-  TryAddFromLocal(data.value, data.object_identifier.object_digest);
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, true));
+  TryAddFromLocal(data.value, data.object_identifier);
+  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
 
   // After adding the object in a commit it should not be untracked any more.
   bool called;
@@ -1414,9 +1417,9 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   EXPECT_TRUE(PutInJournal(journal.get(), "key",
                            data.object_identifier.object_digest,
                            KeyPriority::EAGER));
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, true));
+  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, false));
+  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsComplex) {
@@ -1426,8 +1429,8 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
       ObjectData("Even more data", InlineBehavior::PREVENT),
   };
   for (auto& data : data_array) {
-    TryAddFromLocal(data.value, data.object_identifier.object_digest);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier.object_digest, true));
+    TryAddFromLocal(data.value, data.object_identifier);
+    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   }
 
   // Add a first commit containing object_digests[0].
@@ -1443,15 +1446,11 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_TRUE(PutInJournal(journal.get(), "key0",
                            data_array[0].object_identifier.object_digest,
                            KeyPriority::LAZY));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[0].object_identifier.object_digest, true));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[0].object_identifier.object_digest, false));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[1].object_identifier.object_digest, true));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[2].object_identifier.object_digest, true));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_identifier, true));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_identifier, true));
 
   // Create a second commit. After calling Put for "key1" for the second time
   // object_digests[1] is no longer part of this commit: it should remain
@@ -1476,12 +1475,9 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
                            data_array[0].object_identifier.object_digest,
                            KeyPriority::LAZY));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[0].object_identifier.object_digest, false));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[1].object_identifier.object_digest, true));
-  EXPECT_TRUE(
-      ObjectIsUntracked(data_array[2].object_identifier.object_digest, false));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_identifier, true));
+  EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_identifier, false));
 }
 
 TEST_F(PageStorageTest, CommitWatchers) {
@@ -1566,8 +1562,8 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
       ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
       object_identifiers[i] = node->GetIdentifier();
       sync.AddObject(value.object_identifier.object_digest, value.value);
-      std::unique_ptr<const Object> root_object = TryGetObject(
-          object_identifiers[i].object_digest, PageStorage::Location::NETWORK);
+      std::unique_ptr<const Object> root_object =
+          TryGetObject(object_identifiers[i], PageStorage::Location::NETWORK);
       fxl::StringView root_data;
       ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
       sync.AddObject(object_identifiers[i].object_digest, root_data.ToString());

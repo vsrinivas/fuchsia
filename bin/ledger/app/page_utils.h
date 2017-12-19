@@ -24,20 +24,21 @@ class PageUtils {
   static Status ConvertStatus(storage::Status status,
                               Status not_found_status = Status::INTERNAL_ERROR);
 
-  // Returns a Reference as a StringView with no offset.
-  static void GetReferenceAsStringView(
+  // Retrieves the data referenced by the given identifier as a StringView with
+  // no offset.
+  static void ResolveObjectIdentifierAsStringView(
       storage::PageStorage* storage,
-      convert::ExtendedStringView opaque_id,
+      storage::ObjectIdentifier object_identifier,
       storage::PageStorage::Location location,
       Status not_found_status,
       std::function<void(Status, fxl::StringView)> callback);
 
-  // Returns a subset of a Reference contents as a buffer. |offset| can be
-  // negative. In that case, the offset is understood as starting from the end
-  // of the contents.
-  static void GetPartialReferenceAsBuffer(
+  // Retrieves the data referenced by the given identifier and returns a subset
+  // of its contents as a buffer. |offset| can be negative. In that case, the
+  // offset is understood as starting from the end of the contents.
+  static void ResolveObjectIdentifierAsBuffer(
       storage::PageStorage* storage,
-      convert::ExtendedStringView reference_id,
+      storage::ObjectIdentifier object_identifier,
       int64_t offset,
       int64_t max_size,
       storage::PageStorage::Location location,

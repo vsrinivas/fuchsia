@@ -291,7 +291,7 @@ class SplitContext {
 class CollectPiecesState
     : public fxl::RefCountedThreadSafe<CollectPiecesState> {
  public:
-  std::function<void(ObjectDigestView,
+  std::function<void(ObjectIdentifier,
                      std::function<void(Status, fxl::StringView)>)>
       data_accessor;
   std::function<bool(IterationStatus, ObjectIdentifier)> callback;
@@ -312,8 +312,8 @@ void CollectPiecesInternal(ObjectIdentifier root,
   }
 
   state->data_accessor(
-      root.object_digest, [state, on_done = std::move(on_done)](
-                              Status status, fxl::StringView data) mutable {
+      root, [state, on_done = std::move(on_done)](
+                Status status, fxl::StringView data) mutable {
         if (!state->running) {
           on_done();
           return;
@@ -380,7 +380,7 @@ Status ForEachPiece(fxl::StringView index_content,
 
 void CollectPieces(
     ObjectIdentifier root,
-    std::function<void(ObjectDigestView,
+    std::function<void(ObjectIdentifier,
                        std::function<void(Status, fxl::StringView)>)>
         data_accessor,
     std::function<bool(IterationStatus, ObjectIdentifier)> callback) {

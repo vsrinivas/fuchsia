@@ -196,7 +196,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
           Status::OK);
   auto on_next = [page_storage, waiter_](EntryAndNodeIdentifier e) {
     if (e.entry.priority == KeyPriority::EAGER) {
-      page_storage->GetObject(e.entry.object_identifier.object_digest,
+      page_storage->GetObject(e.entry.object_identifier,
                               PageStorage::Location::NETWORK,
                               waiter_->NewCallback());
     }

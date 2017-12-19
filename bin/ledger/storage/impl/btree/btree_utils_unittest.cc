@@ -52,15 +52,16 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
       : fake::FakePageStorage(id) {}
   ~TrackGetObjectFakePageStorage() override {}
 
-  void GetObject(ObjectDigestView object_digest,
+  void GetObject(ObjectIdentifier object_identifier,
                  Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override {
-    object_requests.insert(object_digest.ToString());
-    fake::FakePageStorage::GetObject(object_digest, location, callback);
+    object_requests.insert(object_identifier);
+    fake::FakePageStorage::GetObject(std::move(object_identifier), location,
+                                     callback);
   }
 
-  std::set<ObjectDigest> object_requests;
+  std::set<ObjectIdentifier> object_requests;
 };
 
 class BTreeUtilsTest : public StorageTest {
@@ -739,7 +740,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
-  std::vector<ObjectDigest> object_requests;
+  std::vector<ObjectIdentifier> object_requests;
   std::copy(fake_storage_.object_requests.begin(),
             fake_storage_.object_requests.end(),
             std::back_inserter(object_requests));
@@ -754,11 +755,11 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(3 + 5u, object_identifiers.size());
-  for (ObjectDigest& digest : object_requests) {
+  for (ObjectIdentifier& identifier : object_requests) {
     // entries[3] contains the lazy value.
-    if (digest != entries[3].entry.object_identifier.object_digest) {
-      EXPECT_TRUE(object_identifiers.find(MakeDefaultObjectIdentifier(
-                      digest)) != object_identifiers.end());
+    if (identifier != entries[3].entry.object_identifier) {
+      EXPECT_TRUE(object_identifiers.find(identifier) !=
+                  object_identifiers.end());
     }
   }
 }

@@ -33,14 +33,14 @@ Status ToBuffer(convert::ExtendedStringView value,
 
 }  // namespace
 
-void PageUtils::GetReferenceAsStringView(
+void PageUtils::ResolveObjectIdentifierAsStringView(
     storage::PageStorage* storage,
-    convert::ExtendedStringView opaque_id,
+    storage::ObjectIdentifier object_identifier,
     storage::PageStorage::Location location,
     Status not_found_status,
     std::function<void(Status, fxl::StringView)> callback) {
   storage->GetObject(
-      opaque_id, location,
+      object_identifier, location,
       [not_found_status, callback](
           storage::Status status,
           std::unique_ptr<const storage::Object> object) {
@@ -82,16 +82,16 @@ Status PageUtils::ConvertStatus(storage::Status status,
   }
 }
 
-void PageUtils::GetPartialReferenceAsBuffer(
+void PageUtils::ResolveObjectIdentifierAsBuffer(
     storage::PageStorage* storage,
-    convert::ExtendedStringView reference_id,
+    storage::ObjectIdentifier object_identifier,
     int64_t offset,
     int64_t max_size,
     storage::PageStorage::Location location,
     Status not_found_status,
     std::function<void(Status, fsl::SizedVmo)> callback) {
-  GetReferenceAsStringView(
-      storage, reference_id, location, not_found_status,
+  ResolveObjectIdentifierAsStringView(
+      storage, object_identifier, location, not_found_status,
       [offset, max_size, callback](Status status, fxl::StringView data) {
         if (status != Status::OK) {
           callback(status, nullptr);

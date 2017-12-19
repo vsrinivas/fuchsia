@@ -268,7 +268,7 @@ void JournalImpl::GetObjectsToSync(
             }
             auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
             for (const auto& key_value : key_values) {
-              page_storage_->ObjectIsUntracked(key_value.second.object_digest,
+              page_storage_->ObjectIsUntracked(key_value.second,
                                                waiter->NewCallback());
             }
             waiter->Finalize([key_values = std::move(key_values),

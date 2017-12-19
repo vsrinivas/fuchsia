@@ -52,8 +52,9 @@ class TestWithPageStorage : public ::test::TestWithMessageLoop {
   std::function<void(storage::Journal*)> DeleteKeyFromJournal(
       const std::string& key);
 
-  ::testing::AssertionResult GetValue(storage::ObjectDigestView digest,
-                                      std::string* value);
+  ::testing::AssertionResult GetValue(
+      storage::ObjectIdentifier object_identifier,
+      std::string* value);
 
   ::testing::AssertionResult CreatePageStorage(
       std::unique_ptr<storage::PageStorage>* page_storage);

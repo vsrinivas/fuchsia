@@ -74,14 +74,14 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectDigest)> callback) override;
+      std::function<void(Status, ObjectIdentifier)> callback) override;
 
-  void GetObject(ObjectDigestView object_digest,
+  void GetObject(ObjectIdentifier object_identifier,
                  Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
 
-  void GetPiece(ObjectDigestView object_digest,
+  void GetPiece(ObjectIdentifier object_identifier,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
 

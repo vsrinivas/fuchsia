@@ -143,10 +143,10 @@ StorageTest::~StorageTest(){};
     std::string value,
     std::unique_ptr<const Object>* object) {
   Status status;
-  ObjectDigest object_digest;
+  ObjectIdentifier object_identifier;
   GetStorage()->AddObjectFromLocal(
       DataSource::Create(value),
-      callback::Capture(MakeQuitTask(), &status, &object_digest));
+      callback::Capture(MakeQuitTask(), &status, &object_identifier));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal callback was not executed. value: " << value;
@@ -158,17 +158,17 @@ StorageTest::~StorageTest(){};
   }
 
   std::unique_ptr<const Object> result;
-  GetStorage()->GetObject(object_digest, PageStorage::Location::LOCAL,
+  GetStorage()->GetObject(object_identifier, PageStorage::Location::LOCAL,
                           callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "GetObject callback was not executed. value: " << value
-           << ", object_digest: " << object_digest;
+           << ", object_identifier: " << object_identifier;
   }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "GetObject failed with status " << status << ". value: " << value
-           << ", object_digest: " << object_digest;
+           << ", object_identifier: " << object_identifier;
   }
   object->swap(result);
   return ::testing::AssertionSuccess();

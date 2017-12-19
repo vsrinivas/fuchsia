@@ -50,8 +50,8 @@ ValuePtr GetValueFromEntry(
       value->priority = Priority::LAZY;
       break;
   }
-  PageUtils::GetPartialReferenceAsBuffer(
-      storage, entry->object_identifier.object_digest, 0u,
+  PageUtils::ResolveObjectIdentifierAsBuffer(
+      storage, entry->object_identifier, 0u,
       std::numeric_limits<int64_t>::max(),
       storage::PageStorage::Location::LOCAL, Status::OK, std::move(callback));
   return value;
@@ -134,8 +134,8 @@ void ComputePageChange(
                           ? Priority::EAGER
                           : Priority::LAZY;
     context->page_change->changes.push_back(std::move(entry));
-    PageUtils::GetPartialReferenceAsBuffer(
-        storage, change.entry.object_identifier.object_digest, 0u,
+    PageUtils::ResolveObjectIdentifierAsBuffer(
+        storage, change.entry.object_identifier, 0u,
         std::numeric_limits<int64_t>::max(),
         storage::PageStorage::Location::LOCAL, Status::OK,
         waiter->NewCallback());

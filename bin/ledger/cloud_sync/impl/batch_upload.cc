@@ -94,7 +94,7 @@ void BatchUpload::UploadNextObject() {
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_identifiers_.pop_back();
   storage_->GetPiece(
-      object_identifier_to_send.object_digest,
+      object_identifier_to_send,
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
           [this, object_identifier_to_send](

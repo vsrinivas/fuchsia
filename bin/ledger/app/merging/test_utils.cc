@@ -36,14 +36,15 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
   return
       [this, key, value = std::move(value)](storage::Journal* journal) mutable {
         storage::Status status;
-        storage::ObjectDigest object_digest;
+        storage::ObjectIdentifier object_identifier;
         page_storage()->AddObjectFromLocal(
             storage::DataSource::Create(std::move(value)),
-            callback::Capture(MakeQuitTask(), &status, &object_digest));
+            callback::Capture(MakeQuitTask(), &status, &object_identifier));
         EXPECT_FALSE(RunLoopWithTimeout());
         EXPECT_EQ(storage::Status::OK, status);
 
-        journal->Put(key, object_digest, storage::KeyPriority::EAGER,
+        journal->Put(key, object_identifier.object_digest,
+                     storage::KeyPriority::EAGER,
                      callback::Capture(MakeQuitTask(), &status));
         EXPECT_FALSE(RunLoopWithTimeout());
         EXPECT_EQ(storage::Status::OK, status);
@@ -61,12 +62,12 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
 }
 
 ::testing::AssertionResult TestWithPageStorage::GetValue(
-    storage::ObjectDigestView digest,
+    storage::ObjectIdentifier object_identifier,
     std::string* value) {
   storage::Status status;
   std::unique_ptr<const storage::Object> object;
   page_storage()->GetObject(
-      digest, storage::PageStorage::Location::LOCAL,
+      std::move(object_identifier), storage::PageStorage::Location::LOCAL,
       callback::Capture(MakeQuitTask(), &status, &object));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()

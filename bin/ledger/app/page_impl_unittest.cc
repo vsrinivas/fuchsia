@@ -24,6 +24,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/callback/capture.h"
@@ -81,24 +82,24 @@ class PageImplTest : public test::TestWithMessageLoop {
     }
   }
 
-  storage::ObjectDigest AddObjectToStorage(std::string value_string) {
+  storage::ObjectIdentifier AddObjectToStorage(std::string value_string) {
     storage::Status status;
-    storage::ObjectDigest object_digest;
+    storage::ObjectIdentifier object_identifier;
     fake_storage_->AddObjectFromLocal(
         storage::DataSource::Create(std::move(value_string)),
-        callback::Capture(MakeQuitTask(), &status, &object_digest));
+        callback::Capture(MakeQuitTask(), &status, &object_identifier));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
-    return object_digest;
+    return object_identifier;
   }
 
   std::unique_ptr<const storage::Object> AddObject(const std::string& value) {
-    storage::ObjectDigest object_digest = AddObjectToStorage(value);
+    storage::ObjectIdentifier object_identifier = AddObjectToStorage(value);
 
     storage::Status status;
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
-        object_digest, storage::PageStorage::Location::LOCAL,
+        object_identifier, storage::PageStorage::Location::LOCAL,
         callback::Capture(MakeQuitTask(), &status, &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
@@ -177,7 +178,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     EXPECT_EQ(1u, objects.size());
-    storage::ObjectDigest object_digest = objects.begin()->first;
+    storage::ObjectIdentifier object_identifier = objects.begin()->first;
     std::string actual_value = objects.begin()->second;
     EXPECT_EQ(value, actual_value);
 
@@ -190,7 +191,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key);
-    EXPECT_EQ(object_digest, entry.value);
+    EXPECT_EQ(object_identifier.object_digest, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.PostQuitTask();
@@ -367,7 +368,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     for (auto object : objects) {
       if (object.second == value) {
         object_found = true;
-        object_digest1 = object.first;
+        object_digest1 = object.first.object_digest;
         break;
       }
     }
@@ -524,7 +525,8 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   auto objects = fake_storage_->GetObjects();
-  auto it = objects.find(reference->opaque_id);
+  auto it = objects.find(storage::MakeDefaultObjectIdentifier(
+      convert::ToString(reference->opaque_id)));
   ASSERT_NE(objects.end(), it);
   ASSERT_EQ(value, it->second);
 }
@@ -547,7 +549,8 @@ TEST_F(PageImplTest, CreateReferenceFromVmo) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   auto objects = fake_storage_->GetObjects();
-  auto it = objects.find(reference->opaque_id);
+  auto it = objects.find(storage::MakeDefaultObjectIdentifier(
+      convert::ToString(reference->opaque_id)));
   ASSERT_NE(objects.end(), it);
   ASSERT_EQ(value, it->second);
 }
@@ -792,14 +795,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
-  storage::ObjectDigest lazy_object_digest =
+  storage::ObjectIdentifier lazy_object_identifier =
       fake_storage_->GetObjects().begin()->first;
 
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  fake_storage_->DeleteObjectFromLocal(lazy_object_digest);
+  fake_storage_->DeleteObjectFromLocal(lazy_object_identifier);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1135,11 +1138,12 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
   std::string value_string(fidl_serialization::kMaxInlineDataSize + 1, 'a');
-  storage::ObjectDigest object_digest = AddObjectToStorage(value_string);
+  storage::ObjectIdentifier object_identifier =
+      AddObjectToStorage(value_string);
 
   std::string key("some_key");
   ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_digest);
+  reference->opaque_id = convert::ToArray(object_identifier.object_digest);
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -1183,9 +1187,9 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
-  storage::ObjectDigest lazy_object_digest =
+  storage::ObjectIdentifier lazy_object_identifier =
       fake_storage_->GetObjects().begin()->first;
-  fake_storage_->DeleteObjectFromLocal(lazy_object_digest);
+  fake_storage_->DeleteObjectFromLocal(lazy_object_identifier);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 

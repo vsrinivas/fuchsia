@@ -24,8 +24,8 @@ namespace storage {
 namespace fake {
 namespace {
 
-storage::ObjectDigest ComputeObjectDigest(fxl::StringView value) {
-  return encryption::SHA256WithLengthHash(value);
+storage::ObjectIdentifier ComputeObjectIdentifier(fxl::StringView value) {
+  return MakeDefaultObjectIdentifier(encryption::SHA256WithLengthHash(value));
 }
 
 }  // namespace
@@ -147,7 +147,7 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
 
 void FakePageStorage::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, ObjectDigest)> callback) {
+    std::function<void(Status, ObjectIdentifier)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
   data_source_ptr->Get(fxl::MakeCopyable(
@@ -156,40 +156,41 @@ void FakePageStorage::AddObjectFromLocal(
           std::unique_ptr<DataSource::DataChunk> chunk,
           DataSource::Status status) mutable {
         if (status == DataSource::Status::ERROR) {
-          callback(Status::IO_ERROR, "");
+          callback(Status::IO_ERROR, {});
           return;
         }
         auto view = chunk->Get();
         value->append(view.data(), view.size());
         if (status == DataSource::Status::DONE) {
-          std::string object_digest = ComputeObjectDigest(*value);
-          objects_[object_digest] = std::move(*value);
-          callback(Status::OK, std::move(object_digest));
+          ObjectIdentifier object_identifier = ComputeObjectIdentifier(*value);
+          objects_[object_identifier] = std::move(*value);
+          callback(Status::OK, std::move(object_identifier));
         }
       }));
 }
 
 void FakePageStorage::GetObject(
-    ObjectDigestView object_digest,
+    ObjectIdentifier object_identifier,
     Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  GetPiece(object_digest, std::move(callback));
+  GetPiece(object_identifier, std::move(callback));
 }
 
 void FakePageStorage::GetPiece(
-    ObjectDigestView object_digest,
+    ObjectIdentifier object_identifier,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  object_requests_.emplace_back([this, object_digest = object_digest.ToString(),
-                                 callback = std::move(callback)] {
-    auto it = objects_.find(object_digest);
-    if (it == objects_.end()) {
-      callback(Status::NOT_FOUND, nullptr);
-      return;
-    }
+  object_requests_.emplace_back(
+      [this, object_identifier = std::move(object_identifier),
+       callback = std::move(callback)] {
+        auto it = objects_.find(object_identifier);
+        if (it == objects_.end()) {
+          callback(Status::NOT_FOUND, nullptr);
+          return;
+        }
 
-    callback(Status::OK,
-             std::make_unique<FakeObject>(object_digest, it->second));
-  });
+        callback(Status::OK, std::make_unique<FakeObject>(
+                                 object_identifier.object_digest, it->second));
+      });
   message_loop_->task_runner()->PostDelayedTask(
       [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));
 }
@@ -255,8 +256,8 @@ FakePageStorage::GetJournals() const {
   return journals_;
 }
 
-const std::map<ObjectDigest, std::string, convert::StringViewComparator>&
-FakePageStorage::GetObjects() const {
+const std::map<ObjectIdentifier, std::string>& FakePageStorage::GetObjects()
+    const {
   return objects_;
 }
 
@@ -269,8 +270,9 @@ void FakePageStorage::SendNextObject() {
   closure();
 }
 
-void FakePageStorage::DeleteObjectFromLocal(const ObjectDigest& object_digest) {
-  objects_.erase(object_digest);
+void FakePageStorage::DeleteObjectFromLocal(
+    const ObjectIdentifier& object_identifier) {
+  objects_.erase(object_identifier);
 }
 
 void FakePageStorage::SetDropCommitNotifications(bool drop) {

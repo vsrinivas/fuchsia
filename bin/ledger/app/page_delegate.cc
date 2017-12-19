@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -127,33 +128,33 @@ void PageDelegate::PutWithPriority(
     return;
   }
   auto promise =
-      callback::Promise<storage::Status, storage::ObjectDigest>::Create(
+      callback::Promise<storage::Status, storage::ObjectIdentifier>::Create(
           storage::Status::ILLEGAL_STATE);
   storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(value)),
                                promise->NewCallback());
 
   operation_serializer_.Serialize<Status>(
-      callback, fxl::MakeCopyable(
-                    [this, promise = std::move(promise), key = std::move(key),
-                     priority](Page::PutWithPriorityCallback callback) mutable {
-                      promise->Finalize(fxl::MakeCopyable(
-                          [this, key = std::move(key), priority,
-                           callback = std::move(callback)](
-                              storage::Status status,
-                              storage::ObjectDigest object_digest) mutable {
-                            if (status != storage::Status::OK) {
-                              callback(PageUtils::ConvertStatus(status));
-                              return;
-                            }
+      callback,
+      fxl::MakeCopyable([this, promise = std::move(promise),
+                         key = std::move(key), priority](
+                            Page::PutWithPriorityCallback callback) mutable {
+        promise->Finalize(fxl::MakeCopyable(
+            [this, key = std::move(key), priority,
+             callback = std::move(callback)](
+                storage::Status status,
+                storage::ObjectIdentifier object_identifier) mutable {
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status));
+                return;
+              }
 
-                            PutInCommit(std::move(key),
-                                        std::move(object_digest),
-                                        priority == Priority::EAGER
-                                            ? storage::KeyPriority::EAGER
-                                            : storage::KeyPriority::LAZY,
-                                        std::move(callback));
-                          }));
-                    }));
+              PutInCommit(
+                  std::move(key), std::move(object_identifier).object_digest,
+                  priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                              : storage::KeyPriority::LAZY,
+                  std::move(callback));
+            }));
+      }));
 }
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
@@ -172,7 +173,8 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
   auto promise = callback::
       Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::ILLEGAL_STATE);
-  storage_->GetObject(reference->opaque_id,
+  storage_->GetObject(storage::MakeDefaultObjectIdentifier(
+                          convert::ToString(reference->opaque_id)),
                       storage::PageStorage::Location::LOCAL,
                       promise->NewCallback());
 
@@ -227,15 +229,16 @@ void PageDelegate::CreateReference(
     std::function<void(Status, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
       std::move(data),
-      [callback = std::move(callback)](storage::Status status,
-                                       storage::ObjectDigest object_digest) {
+      [callback = std::move(callback)](
+          storage::Status status, storage::ObjectIdentifier object_identifier) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status), nullptr);
           return;
         }
 
         ReferencePtr reference = Reference::New();
-        reference->opaque_id = convert::ToArray(object_digest);
+        reference->opaque_id =
+            convert::ToArray(object_identifier.object_digest);
         callback(Status::OK, std::move(reference));
       });
 }

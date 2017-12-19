@@ -42,7 +42,7 @@ void TreeNode::FromIdentifier(
     ObjectIdentifier identifier,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   page_storage->GetObject(
-      identifier.object_digest, PageStorage::Location::NETWORK,
+      identifier, PageStorage::Location::NETWORK,
       [page_storage, identifier, callback = std::move(callback)](
           Status status, std::unique_ptr<const Object> object) mutable {
         if (status != Status::OK) {
@@ -77,11 +77,7 @@ void TreeNode::FromEntries(
 #endif
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
-      storage::DataSource::Create(std::move(encoding)),
-      [callback = std::move(callback)](Status status,
-                                       ObjectDigest object_digest) {
-        callback(status, MakeDefaultObjectIdentifier(std::move(object_digest)));
-      });
+      storage::DataSource::Create(std::move(encoding)), std::move(callback));
 }
 
 int TreeNode::GetKeyCount() const {

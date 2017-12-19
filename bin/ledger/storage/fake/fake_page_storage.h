@@ -53,12 +53,12 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectDigest)> callback) override;
-  void GetObject(ObjectDigestView object_digest,
+      std::function<void(Status, ObjectIdentifier)> callback) override;
+  void GetObject(ObjectIdentifier object_identifier,
                  Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
-  void GetPiece(ObjectDigestView object_digest,
+  void GetPiece(ObjectIdentifier object_identifier,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
   void GetCommitContents(const Commit& commit,
@@ -73,11 +73,10 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   void set_autocommit(bool autocommit) { autocommit_ = autocommit; }
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
   GetJournals() const;
-  const std::map<ObjectDigest, std::string, convert::StringViewComparator>&
-  GetObjects() const;
+  const std::map<ObjectIdentifier, std::string>& GetObjects() const;
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
-  void DeleteObjectFromLocal(const ObjectDigest& object_digest);
+  void DeleteObjectFromLocal(const ObjectIdentifier& object_identifier);
   // If set to true, no commit notification is sent to the commit watchers.
   void SetDropCommitNotifications(bool drop);
 
@@ -89,7 +88,7 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
 
   std::default_random_engine rng_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
-  std::map<ObjectDigest, std::string, convert::StringViewComparator> objects_;
+  std::map<ObjectIdentifier, std::string> objects_;
   std::set<CommitId> heads_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fxl::Closure> object_requests_;

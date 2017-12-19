@@ -17,6 +17,7 @@
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/util/ptr.h"
 
@@ -98,8 +99,8 @@ void ConflictResolverClient::Cancel() {
 
 void ConflictResolverClient::OnNextMergeResult(
     const MergedValuePtr& merged_value,
-    const fxl::RefPtr<callback::Waiter<storage::Status, storage::ObjectDigest>>&
-        waiter) {
+    const fxl::RefPtr<
+        callback::Waiter<storage::Status, storage::ObjectIdentifier>>& waiter) {
   switch (merged_value->source) {
     case ValueSource::RIGHT: {
       std::string key = convert::ToString(merged_value->key);
@@ -113,37 +114,30 @@ void ConflictResolverClient::OnNextMergeResult(
                     << "Key " << key
                     << " is not present in the right change. Unable to proceed";
               }
-              callback(status, storage::ObjectDigest());
+              callback(status, {});
               return;
             }
-            callback(storage::Status::OK,
-                     entry.object_identifier.object_digest);
+            callback(storage::Status::OK, entry.object_identifier);
           });
       break;
     }
     case ValueSource::NEW: {
       if (merged_value->new_value->is_bytes()) {
-        storage_->AddObjectFromLocal(
-            storage::DataSource::Create(
-                std::move(merged_value->new_value->get_bytes())),
-            fxl::MakeCopyable([callback = waiter->NewCallback()](
-                                  storage::Status status,
-                                  storage::ObjectDigest object_digest) {
-              callback(status, std::move(object_digest));
-            }));
+        storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(
+                                         merged_value->new_value->get_bytes())),
+                                     waiter->NewCallback());
       } else {
         waiter->NewCallback()(
             storage::Status::OK,
-            convert::ToString(
-                merged_value->new_value->get_reference()->opaque_id));
+            storage::MakeDefaultObjectIdentifier(convert::ToString(
+                merged_value->new_value->get_reference()->opaque_id)));
       }
       break;
     }
     case ValueSource::DELETE: {
-      journal_->Delete(merged_value->key, [callback = waiter->NewCallback()](
-                                              storage::Status status) {
-        callback(status, storage::ObjectDigest());
-      });
+      journal_->Delete(merged_value->key,
+                       [callback = waiter->NewCallback()](
+                           storage::Status status) { callback(status, {}); });
       break;
     }
   }
@@ -225,8 +219,8 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
           return;
         }
         auto waiter =
-            callback::Waiter<storage::Status, storage::ObjectDigest>::Create(
-                storage::Status::OK);
+            callback::Waiter<storage::Status, storage::ObjectIdentifier>::
+                Create(storage::Status::OK);
         for (const MergedValuePtr& merged_value : merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
@@ -234,7 +228,7 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
             [weak_this, merged_values = std::move(merged_values),
              callback = std::move(callback)](
                 storage::Status status,
-                std::vector<storage::ObjectDigest> object_digests) {
+                std::vector<storage::ObjectIdentifier> object_identifiers) {
               if (!weak_this) {
                 callback(Status::INTERNAL_ERROR);
                 return;
@@ -245,12 +239,12 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
 
               auto waiter = callback::StatusWaiter<storage::Status>::Create(
                   storage::Status::OK);
-              for (size_t i = 0; i < object_digests.size(); ++i) {
-                if (object_digests[i].empty()) {
+              for (size_t i = 0; i < object_identifiers.size(); ++i) {
+                if (object_identifiers[i].object_digest.empty()) {
                   continue;
                 }
                 weak_this->journal_->Put(
-                    merged_values[i]->key, object_digests[i],
+                    merged_values[i]->key, object_identifiers[i].object_digest,
                     merged_values[i]->priority == Priority::EAGER
                         ? storage::KeyPriority::EAGER
                         : storage::KeyPriority::LAZY,

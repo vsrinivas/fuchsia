@@ -142,8 +142,7 @@ TEST_F(TreeNodeTest, Serialization) {
 
   Status status;
   std::unique_ptr<const Object> object;
-  fake_storage_.GetObject(node->GetIdentifier().object_digest,
-                          PageStorage::Location::LOCAL,
+  fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::LOCAL,
                           callback::Capture(MakeQuitTask(), &status, &object));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);

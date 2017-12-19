@@ -253,9 +253,9 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   EXPECT_EQ(storage::Status::OK, storage_status);
 
   std::string value1, value2;
-  GetValue(key1_entry.object_identifier.object_digest, &value1);
+  GetValue(key1_entry.object_identifier, &value1);
   EXPECT_EQ("value1", value1);
-  GetValue(key2_entry.object_identifier.object_digest, &value2);
+  GetValue(key2_entry.object_identifier, &value2);
   EXPECT_EQ("value2", value2);
 }
 
@@ -336,9 +336,9 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_EQ(storage::Status::OK, storage_status);
 
   std::string value1, value2;
-  GetValue(key1_entry.object_identifier.object_digest, &value1);
+  GetValue(key1_entry.object_identifier, &value1);
   EXPECT_EQ("value1bis", value1);
-  GetValue(key2_entry.object_identifier.object_digest, &value2);
+  GetValue(key2_entry.object_identifier, &value2);
   EXPECT_EQ("value2", value2);
 }
 
