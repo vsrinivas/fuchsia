@@ -170,12 +170,12 @@ static const char* linux_cmdline(const char* cmdline,
                                  uintptr_t acpi_addr) {
   static char buf[128];
 #if __aarch64__
-  auto fmt = "earlycon=pl011,%#lx console=ttyS0 %s";
+  auto fmt = "earlycon=pl011,%#lx console=ttyAMA0 console=tty0 %s";
   snprintf(buf, sizeof(buf), fmt, uart_addr, cmdline);
 #elif __x86_64__
   auto fmt =
-      "earlycon=uart,io,%#lx console=tty0 io_delay=none clocksource=tsc "
-      "acpi_rsdp=%#lx %s";
+      "earlycon=uart,io,%#lx console=ttyS0 console=tty0 io_delay=none "
+      "clocksource=tsc acpi_rsdp=%#lx %s";
   snprintf(buf, sizeof(buf), fmt, uart_addr, acpi_addr, cmdline);
 #endif
   return buf;

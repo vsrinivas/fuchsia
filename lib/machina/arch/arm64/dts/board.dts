@@ -44,11 +44,13 @@
 
   timer {
     compatible = "arm,armv8-timer";
-    interrupts = <1 27 4>; /* PPI 27 HIGH/CPU-0 */
+    interrupts = <0 27 4>; /* SPI 27 HIGH/CPU-0 */
   };
 
   pclk {
     compatible = "fixed-clock";
+    clock-frequency = <0x16e3600>;
+    clock-output-names = "clk24mhz";
     phandle = <2>;
     #clock-cells = <0>;
   };
