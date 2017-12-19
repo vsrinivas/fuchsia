@@ -7,7 +7,8 @@
 
 ## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2
 ##               [--release] [--packages P1,P2,...]
-##               [--args ARG] [--build-dir DIR]
+##               [--build-dir DIR]
+##               [--args ARG] [--help-args [ARG]]
 ##               [--goma|--no-goma] [--no-ensure-goma]
 ##               [--goma-dir DIR]
 ##               [--ccache|--no-ccache]
@@ -29,6 +30,11 @@
 ##   --args                Additional argument to pass to gn. If the --args
 ##                         argument is given multiple times, all the specified
 ##                         arguments are passed to gn.
+##   --help-args           Display GN arguments documentation.  If --help-args
+##                         is followed by a GN build argument identifier, just
+##                         that argument's documentation is displayed.
+##                         If --help-args is used alone, all GN build arguments
+##                         are displayed (lots of output).
 ##   --build-dir           The directory (relative to FUCHSIA_DIR) into which to
 ##                         generate the build system. Defaults to
 ##                         "out/<variant>-<arch>".
@@ -144,6 +150,13 @@ function main {
         fi
         gen_args="${gen_args} --args $2"
         shift
+        ;;
+      --help-args)
+        gen_args="${gen_args} --help-args"
+        if [[ $# -ge 2 ]] && [[ "$2" != '--*' ]]; then
+          gen_args="${gen_args} $2"
+          shift
+        fi
         ;;
       --ccache)
         ccache=1
