@@ -191,7 +191,7 @@ def publish(pm_bin, amber_bin, far_key, repo_key_dir, pkg_stg_dir, update_repo,
 
         result = add_far_to_repo(amber_bin, "%s.far" % pkg, meta_far, repo_key_dir, update_repo)
         if result is not None:
-            print "Package not added to update repo: %s" % result 
+            print "Package not added to update repo: %s" % result
             break
         count -= 1
 
@@ -275,7 +275,7 @@ def main():
             print "No packages supplied!"
             return -1
     else:
-        list_path = os.path.join(build_dir, "gen", "packages", "gn", "packages")
+        list_path = os.path.join(build_dir, "gen", "build", "gn", "packages")
         with open(list_path, "r") as pfile:
             for l in pfile:
                 pkg_list.append(l.strip())
