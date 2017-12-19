@@ -5,12 +5,14 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 
-#include <string.h>
 #include <endian.h>
+#include <string.h>
+#include <zircon/assert.h>
 
 #include "dp-display.h"
 #include "edid.h"
 #include "macros.h"
+#include "pci-ids.h"
 #include "registers.h"
 #include "registers-ddi.h"
 #include "registers-dpll.h"
@@ -19,27 +21,122 @@
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-namespace {
+namespace i915 {
 
-// TODO(ZX-1416): Handle more HW variants
-// high dword, low dword, i_boost
-uint32_t ddi_buf_trans_skl_u[9][3] = {
-    { 0x000000a2, 0x0000201b, 0x01 },
-    { 0x00000088, 0x00005012, 0x01 },
-    { 0x000000cd, 0x80007011, 0x01 },
-    { 0x000000c0, 0x80009010, 0x01 },
-    { 0x0000009d, 0x0000201b, 0x01 },
-    { 0x000000c0, 0x80005012, 0x01 },
-    { 0x000000c0, 0x80007011, 0x01 },
-    { 0x00000088, 0x00002016, 0x01 },
-    { 0x000000c0, 0x80005012, 0x01 },
+// Recommended DDI buffer translation programming values
+
+struct ddi_buf_trans_entry {
+    uint32_t high_dword;
+    uint32_t low_dword;
 };
 
-} // namespace
+const ddi_buf_trans_entry dp_ddi_buf_trans_skl_hs[9] = {
+    { 0x000000a0, 0x00002016 },
+    { 0x0000009b, 0x00005012 },
+    { 0x00000088, 0x00007011 },
+    { 0x000000c0, 0x80009010 },
+    { 0x0000009b, 0x00002016 },
+    { 0x00000088, 0x00005012 },
+    { 0x000000c0, 0x80007011 },
+    { 0x000000df, 0x00002016 },
+    { 0x000000c0, 0x80005012 },
+};
+
+const ddi_buf_trans_entry dp_ddi_buf_trans_skl_y[9] = {
+    { 0x000000a2, 0x00000018 },
+    { 0x00000088, 0x00005012 },
+    { 0x000000cd, 0x80007011 },
+    { 0x000000c0, 0x80009010 },
+    { 0x0000009d, 0x00000018 },
+    { 0x000000c0, 0x80005012 },
+    { 0x000000c0, 0x80007011 },
+    { 0x00000088, 0x00000018 },
+    { 0x000000c0, 0x80005012 },
+};
+
+const ddi_buf_trans_entry dp_ddi_buf_trans_skl_u[9] = {
+    { 0x000000a2, 0x0000201b },
+    { 0x00000088, 0x00005012 },
+    { 0x000000cd, 0x80007011 },
+    { 0x000000c0, 0x80009010 },
+    { 0x0000009d, 0x0000201b },
+    { 0x000000c0, 0x80005012 },
+    { 0x000000c0, 0x80007011 },
+    { 0x00000088, 0x00002016 },
+    { 0x000000c0, 0x80005012 },
+};
+
+const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_hs[9] = {
+    { 0x000000a0, 0x00002016 },
+    { 0x0000009b, 0x00005012 },
+    { 0x00000088, 0x00007011 },
+    { 0x000000c0, 0x80009010 },
+    { 0x0000009b, 0x00002016 },
+    { 0x00000088, 0x00005012 },
+    { 0x000000c0, 0x80007011 },
+    { 0x00000097, 0x00002016 },
+    { 0x000000c0, 0x80005012 },
+};
+
+const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_y[9] = {
+    { 0x000000a1, 0x00001017 },
+    { 0x00000088, 0x00005012 },
+    { 0x000000cd, 0x80007011 },
+    { 0x000000c0, 0x8000800f },
+    { 0x0000009d, 0x00001017 },
+    { 0x000000c0, 0x80005012 },
+    { 0x000000c0, 0x80007011 },
+    { 0x0000004c, 0x00001017 },
+    { 0x000000c0, 0x80005012 },
+};
+
+const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_u[9] = {
+    { 0x000000a1, 0x0000201b },
+    { 0x00000088, 0x00005012 },
+    { 0x000000cd, 0x80007011 },
+    { 0x000000c0, 0x80009010 },
+    { 0x0000009d, 0x0000201b },
+    { 0x000000c0, 0x80005012 },
+    { 0x000000c0, 0x80007011 },
+    { 0x0000004f, 0x00002016 },
+    { 0x000000c0, 0x80005012 },
+};
+
+void get_dp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry** entries,
+                                  uint8_t* i_boost, unsigned* count) {
+    if (is_skl(device_id)) {
+        if (is_skl_u(device_id)) {
+            *entries = dp_ddi_buf_trans_skl_u;
+            *i_boost = 0x1;
+            *count = fbl::count_of(dp_ddi_buf_trans_skl_u);
+        } else if (is_skl_y(device_id)) {
+            *entries = dp_ddi_buf_trans_skl_y;
+            *i_boost = 0x3;
+            *count = fbl::count_of(dp_ddi_buf_trans_skl_y);
+        } else {
+            *entries = dp_ddi_buf_trans_skl_hs;
+            *i_boost = 0x1;
+            *count = fbl::count_of(dp_ddi_buf_trans_skl_hs);
+        }
+    } else {
+        ZX_DEBUG_ASSERT_MSG(is_kbl(device_id), "Expected kbl device");
+        if (is_kbl_u(device_id)) {
+            *entries = dp_ddi_buf_trans_kbl_u;
+            *i_boost = 0x1;
+            *count = fbl::count_of(dp_ddi_buf_trans_kbl_u);
+        } else if (is_kbl_y(device_id)) {
+            *entries = dp_ddi_buf_trans_kbl_y;
+            *i_boost = 0x3;
+            *count = fbl::count_of(dp_ddi_buf_trans_kbl_y);
+        } else {
+            *entries = dp_ddi_buf_trans_kbl_hs;
+            *i_boost = 0x3;
+            *count = fbl::count_of(dp_ddi_buf_trans_kbl_hs);
+        }
+    }
+}
 
 // Aux port functions
-
-namespace i915 {
 
 // 4-bit request type in Aux channel request messages.
 enum {
@@ -382,7 +479,7 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
     // to the v1.1a of the DP docs, if v + pe is too large then v should be reduced to the highest
     // supported value for the pe level (section 3.5.1.3)
     static constexpr uint32_t kMaxVPlusPe = 3;
-    // TODO(ZX-1416): max v for eDP is 3
+    // TODO(ZX-1416): If we're eDP, read the VBT to determine if we support low voltage swings
     static constexpr uint32_t kMaxV = 2;
     if (v + pe > kMaxVPlusPe) {
         v = static_cast<uint8_t>(kMaxVPlusPe - pe);
@@ -442,17 +539,24 @@ bool DpDisplay::LinkTrainingSetup() {
     dp_tp.WriteTo(mmio_space());
 
     // Configure ddi voltage swing
-    for (unsigned i = 0; i < 9; i++) {
-        auto ddi_buf_trans_hi = ddi_regs.DdiBufTransHi(i).ReadFrom(mmio_space());
-        auto ddi_buf_trans_lo = ddi_regs.DdiBufTransLo(i).ReadFrom(mmio_space());
-        ddi_buf_trans_hi.set_reg_value(ddi_buf_trans_skl_u[i][0]);
-        ddi_buf_trans_lo.set_reg_value(ddi_buf_trans_skl_u[i][1]);
-        ddi_buf_trans_hi.WriteTo(mmio_space());
-        ddi_buf_trans_lo.WriteTo(mmio_space());
+    // TODO(ZX-1416): Read the VBT to check for low voltage eDP
+    // TODO(ZX-1416): Read the VBT to handle unique motherboard configs for kaby lake
+    unsigned count;
+    uint8_t i_boost;
+    const ddi_buf_trans_entry* entries;
+    get_dp_ddi_buf_trans_entries(device_id(), &entries, &i_boost, &count);
+
+    for (unsigned i = 0; i < count; i++) {
+        auto ddi_buf_trans_high = ddi_regs.DdiBufTransHi(i).ReadFrom(mmio_space());
+        auto ddi_buf_trans_low = ddi_regs.DdiBufTransLo(i).ReadFrom(mmio_space());
+        ddi_buf_trans_high.set_reg_value(entries[i].high_dword);
+        ddi_buf_trans_low.set_reg_value(entries[i].low_dword);
+        ddi_buf_trans_high.WriteTo(mmio_space());
+        ddi_buf_trans_low.WriteTo(mmio_space());
     }
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
     disio_cr_tx_bmu.set_disable_balance_leg(0);
-    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(1);
+    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost);
     disio_cr_tx_bmu.WriteTo(mmio_space());
 
     // Enable and wait for DDI_BUF_CTL
@@ -654,8 +758,9 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, pipe) { }
+DpDisplay::DpDisplay(Controller* controller, uint16_t device_id,
+                     registers::Ddi ddi, registers::Pipe pipe)
+        : DisplayDevice(controller, device_id, ddi, pipe) { }
 
 bool DpDisplay::Init(zx_display_info* info) {
     if (!ResetPipe() || !ResetDdi()) {

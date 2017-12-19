@@ -22,7 +22,7 @@ using DisplayDeviceType = ddk::Device<DisplayDevice>;
 
 class DisplayDevice : public DisplayDeviceType, public ddk::DisplayProtocol<DisplayDevice> {
 public:
-    DisplayDevice(Controller* device, registers::Ddi ddi, registers::Pipe pipe);
+    DisplayDevice(Controller* device, uint16_t device_id, registers::Ddi ddi, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
     void DdkRelease();
@@ -37,6 +37,7 @@ public:
     const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
     const zx_display_info_t& info() const { return info_; }
+    uint16_t device_id() const { return device_id_; }
     registers::Ddi ddi() const { return ddi_; }
     registers::Pipe pipe() const { return pipe_; }
     int dpll() const {
@@ -56,6 +57,7 @@ private:
     // Borrowed reference to Controller instance
     Controller* controller_;
 
+    uint16_t device_id_;
     registers::Ddi ddi_;
     registers::Pipe pipe_;
 

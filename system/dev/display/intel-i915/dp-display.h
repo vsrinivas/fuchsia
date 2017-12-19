@@ -14,7 +14,7 @@ class DpAuxMessage;
 
 class DpDisplay : public DisplayDevice, private edid::EdidSource {
 public:
-    DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
+    DpDisplay(Controller* controller, uint16_t device_id, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
     bool Init(zx_display_info* info) final;

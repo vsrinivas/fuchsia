@@ -7,6 +7,7 @@
 
 #include "hdmi-display.h"
 #include "macros.h"
+#include "pci-ids.h"
 #include "registers.h"
 #include "registers-ddi.h"
 #include "registers-dpll.h"
@@ -127,8 +128,9 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 
 namespace i915 {
 
-HdmiDisplay::HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, pipe) { }
+HdmiDisplay::HdmiDisplay(Controller* controller, uint16_t device_id,
+                         registers::Ddi ddi, registers::Pipe pipe)
+        : DisplayDevice(controller, device_id, ddi, pipe) { }
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -580,13 +582,17 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     trans_conf.WriteTo(mmio_space());
 
     // Configure voltage swing and related IO settings.
-    // TODO(ZX-1413): Use different values for different hardware (hardcoded to NUC for now)
     registers::DdiRegs ddi_regs(ddi());
     auto ddi_buf_trans_hi = ddi_regs.DdiBufTransHi(9).ReadFrom(mmio_space());
     auto ddi_buf_trans_lo = ddi_regs.DdiBufTransLo(9).ReadFrom(mmio_space());
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
 
-    ddi_buf_trans_hi.set_reg_value(0x000000cd);
+    // TODO(ZX-1416): Check if the VBT overrides the recommended index into the values table
+    if (is_skl_y(device_id()) || is_kbl_y(device_id())) {
+        ddi_buf_trans_hi.set_reg_value(0x000000c0);
+    } else {
+        ddi_buf_trans_hi.set_reg_value(0x000000cd);
+    }
     ddi_buf_trans_lo.set_reg_value(0x80003015);
     disio_cr_tx_bmu.set_disable_balance_leg(0);
     disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(1);

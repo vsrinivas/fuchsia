@@ -19,8 +19,10 @@
 
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDeviceType(controller->zxdev()), controller_(controller), ddi_(ddi), pipe_(pipe) {}
+DisplayDevice::DisplayDevice(Controller* controller, uint16_t device_id,
+                             registers::Ddi ddi, registers::Pipe pipe)
+        : DisplayDeviceType(controller->zxdev()), controller_(controller)
+        , device_id_(device_id), ddi_(ddi), pipe_(pipe) {}
 
 DisplayDevice::~DisplayDevice() {
     if (framebuffer_) {

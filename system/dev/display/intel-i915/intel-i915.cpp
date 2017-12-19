@@ -30,6 +30,8 @@
 #include "hdmi-display.h"
 #include "intel-i915.h"
 #include "macros.h"
+#include "pci-ids.h"
+#include "registers.h"
 #include "registers-ddi.h"
 #include "registers-dpll.h"
 #include "registers-pipe.h"
@@ -49,14 +51,6 @@
 #define ENABLE_MODESETTING 0
 
 namespace {
-static bool is_gen9(uint16_t device_id) {
-    // Skylake graphics all match 0x19XX and kaby lake graphics all match
-    // 0x59XX. There are a few other devices which have matching device_ids,
-    // but none of them are display-class devices.
-    device_id &= 0xff00;
-    return device_id == 0x1900 || device_id == 0x5900;
-}
-
 static int irq_handler(void* arg) {
     return static_cast<i915::Controller*>(arg)->IrqLoop();
 }
@@ -418,14 +412,14 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
         for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
             zxlogf(TRACE, "Trying to init display %d\n", registers::kDdis[i]);
             fbl::unique_ptr<DisplayDevice> hdmi_disp(
-                new (&ac) HdmiDisplay(this, registers::kDdis[i], registers::PIPE_A));
+                new (&ac) HdmiDisplay(this, device_id, registers::kDdis[i], registers::PIPE_A));
             if (ac.check() && hdmi_disp->Init()) {
                 disp_device = fbl::move(hdmi_disp);
             }
 
             if (!disp_device) {
                 fbl::unique_ptr<DisplayDevice> dp_disp(
-                    new (&ac) DpDisplay(this, registers::kDdis[i], registers::PIPE_A));
+                    new (&ac) DpDisplay(this, device_id, registers::kDdis[i], registers::PIPE_A));
                 if (ac.check() && dp_disp->Init()) {
                     disp_device = fbl::move(dp_disp);
                 }
@@ -438,7 +432,8 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
         }
     } else {
         // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
-        disp_device.reset(new (&ac) BootloaderDisplay(this, registers::DDI_A, registers::PIPE_A));
+        disp_device.reset(new (&ac) BootloaderDisplay(this, device_id,
+                                                      registers::DDI_A, registers::PIPE_A));
         if (!ac.check()) {
             zxlogf(ERROR, "i915: failed to alloc disp_device\n");
             return ZX_ERR_NO_MEMORY;
@@ -482,6 +477,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     uint16_t device_id;
     pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
+    zxlogf(TRACE, "i915: device id %x\n", device_id);
     if (device_id == INTEL_I915_BROADWELL_DID) {
         // TODO: this should be based on the specific target
         flags_ |= FLAGS_BACKLIGHT;

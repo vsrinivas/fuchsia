@@ -8,9 +8,9 @@
 
 namespace i915 {
 
-BootloaderDisplay::BootloaderDisplay(Controller* controller,
+BootloaderDisplay::BootloaderDisplay(Controller* controller, uint16_t device_id,
                                      registers::Ddi ddi, registers::Pipe pipe)
-    : DisplayDevice(controller, ddi, pipe) {}
+    : DisplayDevice(controller, device_id, ddi, pipe) {}
 
 bool BootloaderDisplay::Init(zx_display_info_t* di) {
     uint32_t format, width, height, stride;
