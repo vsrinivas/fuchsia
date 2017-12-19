@@ -230,6 +230,14 @@ def main():
     p.add_argument('--base', type=str, default=None)
     p.add_argument('target', nargs='?', default='')
     p.add_argument('choice', nargs='?', default=None)
+
+    # Redirect help messages to stderr
+    if len(sys.argv) == 2:
+      if sys.argv[1] in ['-h', '--help']:
+        eprint(p.format_help())
+        print('.')  # Stay at the current directory
+        sys.exit(0)
+
     return p.parse_args()
 
   def get_abs_path(relative_dir):
