@@ -75,7 +75,7 @@ zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job,
                                        const char* name,
                                        launchpad_t** result);
 
-// Create a new launchpad for a given existing process handle and a
+// Create a new launchpad for a given existing process handle and
 // its root VMAR handle.  On success, the launchpad takes ownership
 // of both handles.
 zx_status_t launchpad_create_with_process(zx_handle_t proc,
