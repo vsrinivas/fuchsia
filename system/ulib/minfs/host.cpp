@@ -213,7 +213,9 @@ int emu_close(int fd) {
         return -1;
     }
     f->vn->Close();
-    memset(f, 0, sizeof(file_t));
+    f->vn.reset();
+    f->off = 0;
+    f->dircookie.Reset();
     return 0;
 }
 
@@ -460,6 +462,7 @@ int emu_closedir(DIR* dirp) {
 
     MINDIR* dir = (MINDIR*)dirp;
     dir->vn->Close();
+    dir->vn.reset();
     free(dirp);
 
     return 0;

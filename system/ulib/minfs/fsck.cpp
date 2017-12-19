@@ -503,12 +503,12 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const minfs_info_t* i
         FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked blocks: %d\n", status);
         return status;
     }
-    Minfs* fs;
-    if ((status = Minfs::Create(&fs, fbl::move(bc), info)) != ZX_OK) {
+    fbl::RefPtr<Minfs> fs;
+    if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
         FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
         return status;
     }
-    fs_.reset(fs);
+    fs_ = fs;
     return ZX_OK;
 }
 

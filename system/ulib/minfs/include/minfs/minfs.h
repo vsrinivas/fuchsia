@@ -76,13 +76,13 @@ constexpr uint32_t kMinfsBlockCacheSize = 64;
 class MinfsChecker;
 class VnodeMinfs;
 
-class Minfs {
+class Minfs : public fbl::RefCounted<Minfs> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
     ~Minfs();
-    static zx_status_t Create(Minfs** out, fbl::unique_ptr<Bcache> bc,
-                              const minfs_info_t* info);
+    static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
+                              fbl::RefPtr<Minfs>* out);
 
     zx_status_t Unmount();
 
@@ -249,7 +249,7 @@ public:
     // Lookup which can traverse '..'
     zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
-    Minfs* fs_{};
+    fbl::RefPtr<Minfs> fs_{};
     ino_t ino_{};
     minfs_inode_t inode_{};
 

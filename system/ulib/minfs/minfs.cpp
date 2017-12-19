@@ -796,7 +796,8 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
     de->name[1] = '.';
 }
 
-zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
+zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
+                          fbl::RefPtr<Minfs>* out) {
     zx_status_t status = minfs_check_info(info, bc.get());
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to check info: %d\n", status);
@@ -810,7 +811,7 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
     }
 #endif
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Minfs> fs(new (&ac) Minfs(fbl::move(bc), info));
+    fbl::RefPtr<Minfs> fs = fbl::AdoptRef(new (&ac) Minfs(fbl::move(bc), info));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -915,7 +916,7 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
     }
 #endif
 
-    *out = fs.release();
+    *out = fs;
     return ZX_OK;
 }
 
@@ -930,8 +931,8 @@ zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc
     }
     const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
 
-    Minfs* fs;
-    if ((status = Minfs::Create(&fs, fbl::move(bc), info)) != ZX_OK) {
+    fbl::RefPtr<Minfs> fs;
+    if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
     }
@@ -939,7 +940,6 @@ zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc
     fbl::RefPtr<VnodeMinfs> vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: cannot find root inode\n");
-        delete fs;
         return status;
     }
 

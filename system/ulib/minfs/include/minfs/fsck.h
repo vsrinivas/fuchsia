@@ -52,7 +52,7 @@ private:
     const char* CheckDataBlock(blk_t bno);
     zx_status_t CheckFile(minfs_inode_t* inode, ino_t ino);
 
-    fbl::unique_ptr<Minfs> fs_;
+    fbl::RefPtr<Minfs> fs_;
     RawBitmap checked_inodes_;
     RawBitmap checked_blocks_;
 
