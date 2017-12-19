@@ -26,7 +26,7 @@ class ClipboardImpl : Clipboard {
   void Peek(const PeekCallback& callback) override;
 
   // The current clipboard text.
-  std::string current_item_ = "";
+  std::string current_item_;
 
   // The bindings set containing the outgoing services request from the agent
   // driver.
