@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 
 // DisplayPort Configuration Data
 namespace dpcd {
@@ -24,7 +24,7 @@ enum {
 };
 
 // DPCD register: MAX_LINK_RATE and LINK_BW_SET
-class LinkBw : public  registers::RegisterBase<LinkBw> {
+class LinkBw : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(7, 0, link_bw_set);
     static constexpr int k1620Mbps = 0x06;
@@ -32,14 +32,14 @@ public:
 };
 
 // DPCD register: MAX_LANE_COUNT and LANE_COUNT_SET
-class LaneCount : public registers::RegisterBase<LaneCount> {
+class LaneCount : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(7, enhanced_frame_enabled);
     DEF_FIELD(4, 0, lane_count_set);
 };
 
 // DPCD register: TRAINING_PATTERN_SET
-class TrainingPatternSet : public registers::RegisterBase<TrainingPatternSet> {
+class TrainingPatternSet : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(1, 0, training_pattern_set);
     static constexpr int kNotTraining = 0;
@@ -52,7 +52,7 @@ public:
 };
 
 // DPCD register: TRAINING_LANEX_SET
-class TrainingLaneSet : public registers::RegisterBase<TrainingLaneSet> {
+class TrainingLaneSet : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(1, 0, voltage_swing_set);
     DEF_BIT(2, max_swing_reached);
@@ -61,35 +61,35 @@ public:
 };
 
 // DPCD register: LANEX_Y_STATUS
-class LaneStatus : public registers::RegisterBase<LaneStatus> {
+class LaneStatus : public hwreg::RegisterBase<uint32_t> {
 public:
-    registers::BitfieldRef<uint32_t> lane_cr_done(int lane) {
+    hwreg::BitfieldRef<uint32_t> lane_cr_done(int lane) {
         int bit = 4 * (lane % 2);
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    registers::BitfieldRef<uint32_t> lane_channel_eq_done(int lane) {
+    hwreg::BitfieldRef<uint32_t> lane_channel_eq_done(int lane) {
         int bit = 4 * (lane % 2) + 1;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    registers::BitfieldRef<uint32_t> lane_symbol_locked(int lane) {
+    hwreg::BitfieldRef<uint32_t> lane_symbol_locked(int lane) {
         int bit = 4 * (lane % 2) + 2;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 };
 
 // DPCD register: ADJUST_REQUEST_LANEX_Y
-class AdjustRequestLane : public registers::RegisterBase<AdjustRequestLane> {
+class AdjustRequestLane : public hwreg::RegisterBase<uint32_t> {
 public:
-    registers::BitfieldRef<uint32_t> voltage_swing(int lane) {
+    hwreg::BitfieldRef<uint32_t> voltage_swing(int lane) {
         int bit = 4 * (lane % 2);
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    registers::BitfieldRef<uint32_t> pre_emphasis(int lane) {
+    hwreg::BitfieldRef<uint32_t> pre_emphasis(int lane) {
         int bit = 4 * (lane % 2) + 2;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 };
 

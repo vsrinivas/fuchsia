@@ -9,13 +9,12 @@
 #include <ddk/protocol/pci.h>
 
 #include <fbl/unique_ptr.h>
+#include <hwreg/mmio.h>
 #include <threads.h>
-
 #include <zx/vmo.h>
 
 #include "display-device.h"
 #include "gtt.h"
-#include "mmio-space.h"
 
 namespace i915 {
 
@@ -31,7 +30,7 @@ public:
     void DdkRelease();
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
-    MmioSpace* mmio_space() { return mmio_space_.get(); }
+    hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
 
     int IrqLoop();
@@ -48,7 +47,7 @@ private:
 
     Gtt gtt_;
 
-    fbl::unique_ptr<MmioSpace> mmio_space_;
+    fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
     zx_handle_t regs_handle_;
 
     zx_handle_t irq_;

@@ -115,41 +115,41 @@ bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, b
     for (uint32_t offset = 0; offset < request.size; offset += 4) {
         // For some reason intel made these data registers big endian...
         const uint32_t* data = reinterpret_cast<const uint32_t*>(request.data + offset);
-        mmio_space()->Write32(data_reg + offset, htobe32(*data));
+        mmio_space()->Write<uint32_t>(data_reg + offset, htobe32(*data));
     }
 
     auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space());
-    status.message_size().set(request.size);
+    status.set_message_size(request.size);
     // Reset R/W Clear bits
-    status.done().set(1);
-    status.timeout().set(1);
-    status.rcv_error().set(1);
+    status.set_done(1);
+    status.set_timeout(1);
+    status.set_rcv_error(1);
     // The documentation says to not use setting 0 (400us), so use 1 (600us).
-    status.timeout_timer_value().set(1);
+    status.set_timeout_timer_value(1);
     // TODO(ZX-1416): Support interrupts
-    status.interrupt_on_done().set(1);
+    status.set_interrupt_on_done(1);
     // Send busy starts the transaction
-    status.send_busy().set(1);
+    status.set_send_busy(1);
     status.WriteTo(mmio_space());
 
     // Poll for the reply message.
     const int kNumTries = 10000;
     for (int tries = 0; tries < kNumTries; ++tries) {
         auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space());
-        if (!status.send_busy().get()) {
-            if (status.timeout().get()) {
+        if (!status.send_busy()) {
+            if (status.timeout()) {
                 *timeout_result = true;
                 return false;
             }
-            if (status.rcv_error().get()) {
+            if (status.rcv_error()) {
                 zxlogf(ERROR, "DP aux: rcv error\n");
                 return false;
             }
-            if (!status.done().get()) {
+            if (!status.done()) {
                 continue;
             }
 
-            reply->size = status.message_size().get();
+            reply->size = status.message_size();
             if (!reply->size || reply->size > DpAuxMessage::kMaxTotalSize) {
                 zxlogf(ERROR, "DP aux: Invalid reply size %d\n", reply->size);
                 return false;
@@ -158,7 +158,7 @@ bool DpDisplay::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, b
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
                 // For some reason intel made these data registers big endian...
                 *reinterpret_cast<uint32_t*>(reply->data + offset) =
-                        be32toh(mmio_space()->Read32(data_reg + offset));
+                        be32toh(mmio_space()->Read<uint32_t>(data_reg + offset));
             }
             return true;
         }
@@ -346,7 +346,7 @@ bool DpDisplay::DpcdRequestLinkTraining(const dpcd::TrainingPatternSet& tp_set,
 }
 
 template<uint32_t addr, typename T>
-bool DpDisplay::DpcdReadPairedRegs(registers::RegisterBase<T>* regs) {
+bool DpDisplay::DpcdReadPairedRegs(hwreg::RegisterBase<typename T::ValueType>* regs) {
     static_assert(addr == dpcd::DPCD_LANE0_1_STATUS || addr == dpcd::DPCD_ADJUST_REQUEST_LANE0_1,
                   "Bad register address");
     uint32_t num_bytes = dp_lane_count_ == 4 ? 2 : 1;
@@ -392,11 +392,11 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
     }
 
     for (unsigned i = 0; i < dp_lane_count_; i++) {
-        voltage_change |= (training[i].voltage_swing_set().get() != v);
-        training[i].voltage_swing_set().set(v);
-        training[i].max_swing_reached().set(v == kMaxV);
-        training[i].pre_emphasis_set().set(pe);
-        training[i].max_pre_emphasis_set().set(pe + v == kMaxVPlusPe);
+        voltage_change |= (training[i].voltage_swing_set() != v);
+        training[i].set_voltage_swing_set(v);
+        training[i].set_max_swing_reached(v == kMaxV);
+        training[i].set_pre_emphasis_set(pe);
+        training[i].set_max_pre_emphasis_set(pe + v == kMaxVPlusPe);
     }
 
     // Compute the index into the programmed table
@@ -413,7 +413,7 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
 
     registers::DdiRegs ddi_regs(ddi());
     auto buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-    buf_ctl.dp_vswing_emp_sel().set(level);
+    buf_ctl.set_dp_vswing_emp_sel(level);
     buf_ctl.WriteTo(mmio_space());
 
     return voltage_change;
@@ -431,14 +431,14 @@ bool DpDisplay::LinkTrainingSetup() {
     }
     dpcd::LaneCount max_lc;
     max_lc.set_reg_value(max_lc_byte);
-    dp_lane_count_ = max_lc.lane_count_set().get();
+    dp_lane_count_ = max_lc.lane_count_set();
 
     // Tell the source device to emit the training pattern.
     auto dp_tp = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
-    dp_tp.transport_enable().set(1);
-    dp_tp.transport_mode_select().set(0);
-    dp_tp.enhanced_framing_enable().set(max_lc.enhanced_frame_enabled().get());
-    dp_tp.dp_link_training_pattern().set(dp_tp.kTrainingPattern1);
+    dp_tp.set_transport_enable(1);
+    dp_tp.set_transport_mode_select(0);
+    dp_tp.set_enhanced_framing_enable(max_lc.enhanced_frame_enabled());
+    dp_tp.set_dp_link_training_pattern(dp_tp.kTrainingPattern1);
     dp_tp.WriteTo(mmio_space());
 
     // Configure ddi voltage swing
@@ -451,24 +451,24 @@ bool DpDisplay::LinkTrainingSetup() {
         ddi_buf_trans_lo.WriteTo(mmio_space());
     }
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
-    disio_cr_tx_bmu.disable_balance_leg().set(0);
+    disio_cr_tx_bmu.set_disable_balance_leg(0);
     disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(1);
     disio_cr_tx_bmu.WriteTo(mmio_space());
 
     // Enable and wait for DDI_BUF_CTL
     auto buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-    buf_ctl.ddi_buffer_enable().set(1);
-    buf_ctl.dp_vswing_emp_sel().set(0);
-    buf_ctl.dp_port_width_selection().set(dp_lane_count_ - 1);
+    buf_ctl.set_ddi_buffer_enable(1);
+    buf_ctl.set_dp_vswing_emp_sel(0);
+    buf_ctl.set_dp_port_width_selection(dp_lane_count_ - 1);
     buf_ctl.WriteTo(mmio_space());
     zx_nanosleep(zx_deadline_after(ZX_USEC(518)));
 
     // Configure the bandwidth and lane count settings
     dpcd::LinkBw bw_setting;
-    bw_setting.link_bw_set().set(bw_setting.k2700Mbps); // kLinkRateMhz
+    bw_setting.set_link_bw_set(bw_setting.k2700Mbps); // kLinkRateMhz
     dpcd::LaneCount lc_setting;
-    lc_setting.lane_count_set().set(dp_lane_count_);
-    lc_setting.enhanced_frame_enabled().set(max_lc.enhanced_frame_enabled().get());
+    lc_setting.set_lane_count_set(dp_lane_count_);
+    lc_setting.set_enhanced_frame_enabled(max_lc.enhanced_frame_enabled());
     uint8_t settings[2];
     settings[0] = static_cast<uint8_t>(bw_setting.reg_value());
     settings[1] = static_cast<uint8_t>(lc_setting.reg_value());
@@ -485,8 +485,8 @@ static const int kPollsPerVoltageLevel = 5;
 
 bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes) {
     // Tell the sink device to look for the training pattern.
-    tp_set->training_pattern_set().set(tp_set->kTrainingPattern1);
-    tp_set->scrambling_disable().set(1);
+    tp_set->set_training_pattern_set(tp_set->kTrainingPattern1);
+    tp_set->set_scrambling_disable(1);
 
     dpcd::AdjustRequestLane adjust_req[dp_lane_count_];
     dpcd::LaneStatus lane_status[dp_lane_count_];
@@ -514,7 +514,7 @@ bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::Train
         }
 
         for (unsigned i = 0; i < dp_lane_count_; i++) {
-            if (lanes[i].max_swing_reached().get()) {
+            if (lanes[i].max_swing_reached()) {
                 zxlogf(ERROR, "DP: Link training: max voltage swing reached\n");
                 return false;
             }
@@ -543,10 +543,10 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     dpcd::AdjustRequestLane adjust_req[dp_lane_count_];
     dpcd::LaneStatus lane_status[dp_lane_count_];
 
-    dp_tp.dp_link_training_pattern().set(dp_tp.kTrainingPattern2);
+    dp_tp.set_dp_link_training_pattern(dp_tp.kTrainingPattern2);
     dp_tp.WriteTo(mmio_space());
 
-    tp_set->training_pattern_set().set(tp_set->kTrainingPattern2);
+    tp_set->set_training_pattern_set(tp_set->kTrainingPattern2);
     int poll_count = 0;
     for (;;) {
         // lane0_training and lane1_training can change in the loop
@@ -597,7 +597,7 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
         DpcdHandleAdjustRequest(lanes, adjust_req);
     }
 
-    dp_tp.dp_link_training_pattern().set(dp_tp.kSendPixelData);
+    dp_tp.set_dp_link_training_pattern(dp_tp.kSendPixelData);
     dp_tp.WriteTo(mmio_space());
 
     return true;
@@ -688,7 +688,7 @@ bool DpDisplay::Init(zx_display_info* info) {
 
     // Enable this DPLL and wait for it to lock
     auto dpll_enable = registers::DpllEnable::Get(dpll()).ReadFrom(mmio_space());
-    dpll_enable.enable_dpll().set(1);
+    dpll_enable.set_enable_dpll(1);
     dpll_enable.WriteTo(mmio_space());
     if (!WAIT_ON_MS(registers::DpllStatus
             ::Get().ReadFrom(mmio_space()).dpll_lock(dpll()).get(), 5)) {
@@ -708,7 +708,7 @@ bool DpDisplay::Init(zx_display_info* info) {
     power_well.ddi_io_power_request(ddi()).set(1);
     power_well.WriteTo(mmio_space());
     if (!WAIT_ON_US(registers::PowerWellControl2
-            ::Get().ReadFrom(mmio_space()) .ddi_io_power_state(ddi()).get(), 20)) {
+            ::Get().ReadFrom(mmio_space()).ddi_io_power_state(ddi()).get(), 20)) {
         zxlogf(ERROR, "Failed to enable IO power for ddi\n");
         return false;
     }
@@ -721,7 +721,7 @@ bool DpDisplay::Init(zx_display_info* info) {
 
     // Configure Transcoder Clock Select
     auto clock_select = trans.ClockSelect().ReadFrom(mmio_space());
-    clock_select.trans_clock_select().set(ddi() + 1);
+    clock_select.set_trans_clock_select(ddi() + 1);
     clock_select.WriteTo(mmio_space());
 
     registers::EdidTimingDesc* timing = &edid.preferred_timing;
@@ -752,20 +752,20 @@ bool DpDisplay::Init(zx_display_info* info) {
     CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
 
     auto data_m_reg = trans.DataM().FromValue(0);
-    data_m_reg.tu_or_vcpayload_size().set(63); // Size - 1, default TU size is 64
-    data_m_reg.data_m_value().set(data_m);
+    data_m_reg.set_tu_or_vcpayload_size(63); // Size - 1, default TU size is 64
+    data_m_reg.set_data_m_value(data_m);
     data_m_reg.WriteTo(mmio_space());
 
     auto data_n_reg = trans.DataN().FromValue(0);
-    data_n_reg.data_n_value().set(data_n);
+    data_n_reg.set_data_n_value(data_n);
     data_n_reg.WriteTo(mmio_space());
 
     auto link_m_reg = trans.LinkM().FromValue(0);
-    link_m_reg.link_m_value().set(link_m);
+    link_m_reg.set_link_m_value(link_m);
     link_m_reg.WriteTo(mmio_space());
 
     auto link_n_reg = trans.LinkN().FromValue(0);
-    link_n_reg.link_n_value().set(link_n);
+    link_n_reg.set_link_n_value(link_n);
     link_n_reg.WriteTo(mmio_space());
 
     // Configure the rest of the transcoder
@@ -780,21 +780,21 @@ bool DpDisplay::Init(zx_display_info* info) {
     uint32_t v_total = v_active + timing->vertical_blanking();
 
     auto h_total_reg = trans.HTotal().FromValue(0);
-    h_total_reg.count_total().set(h_total);
-    h_total_reg.count_active().set(h_active);
+    h_total_reg.set_count_total(h_total);
+    h_total_reg.set_count_active(h_active);
     h_total_reg.WriteTo(mmio_space());
     auto v_total_reg = trans.VTotal().FromValue(0);
-    v_total_reg.count_total().set(v_total);
-    v_total_reg.count_active().set(v_active);
+    v_total_reg.set_count_total(v_total);
+    v_total_reg.set_count_active(v_active);
     v_total_reg.WriteTo(mmio_space());
 
     auto h_sync_reg = trans.HSync().FromValue(0);
-    h_sync_reg.sync_start().set(h_sync_start);
-    h_sync_reg.sync_end().set(h_sync_end);
+    h_sync_reg.set_sync_start(h_sync_start);
+    h_sync_reg.set_sync_end(h_sync_end);
     h_sync_reg.WriteTo(mmio_space());
     auto v_sync_reg = trans.VSync().FromValue(0);
-    v_sync_reg.sync_start().set(v_sync_start);
-    v_sync_reg.sync_end().set(v_sync_end);
+    v_sync_reg.set_sync_start(v_sync_start);
+    v_sync_reg.set_sync_end(v_sync_end);
     v_sync_reg.WriteTo(mmio_space());
 
     // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
@@ -802,46 +802,46 @@ bool DpDisplay::Init(zx_display_info* info) {
     trans.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
 
     auto msa_misc = trans.MsaMisc().FromValue(0);
-    msa_misc.sync_clock().set(1);
-    msa_misc.bits_per_color().set(msa_misc.k8Bbc); // kPixelFormat
-    msa_misc.color_format().set(msa_misc.kRgb); // kPixelFormat
+    msa_misc.set_sync_clock(1);
+    msa_misc.set_bits_per_color(msa_misc.k8Bbc); // kPixelFormat
+    msa_misc.set_color_format(msa_misc.kRgb); // kPixelFormat
     msa_misc.WriteTo(mmio_space());
 
     auto ddi_func = trans.DdiFuncControl().ReadFrom(mmio_space());
-    ddi_func.trans_ddi_function_enable().set(1);
-    ddi_func.ddi_select().set(ddi());
-    ddi_func.trans_ddi_mode_select().set(ddi_func.kModeDisplayPortSst);
-    ddi_func.bits_per_color().set(ddi_func.k8bbc); // kPixelFormat
-    ddi_func.sync_polarity().set(edid.preferred_timing.vsync_polarity().get() << 1
-                                | edid.preferred_timing.hsync_polarity().get());
-    ddi_func.port_sync_mode_enable().set(0);
-    ddi_func.dp_vc_payload_allocate().set(0);
-    ddi_func.dp_port_width_selection().set(dp_lane_count_ - 1);
+    ddi_func.set_trans_ddi_function_enable(1);
+    ddi_func.set_ddi_select(ddi());
+    ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
+    ddi_func.set_bits_per_color(ddi_func.k8bbc); // kPixelFormat
+    ddi_func.set_sync_polarity(edid.preferred_timing.vsync_polarity() << 1
+                                | edid.preferred_timing.hsync_polarity());
+    ddi_func.set_port_sync_mode_enable(0);
+    ddi_func.set_dp_vc_payload_allocate(0);
+    ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
     ddi_func.WriteTo(mmio_space());
 
     auto trans_conf = trans.Conf().FromValue(0);
-    trans_conf.transcoder_enable().set(1);
-    trans_conf.interlaced_mode().set(edid.preferred_timing.interlaced().get());
+    trans_conf.set_transcoder_enable(1);
+    trans_conf.set_interlaced_mode(edid.preferred_timing.interlaced());
     trans_conf.WriteTo(mmio_space());
 
     // Configure the pipe
     registers::PipeRegs pipe_regs(pipe());
 
     auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-    pipe_size.horizontal_source_size().set(h_active);
-    pipe_size.vertical_source_size().set(v_active);
+    pipe_size.set_horizontal_source_size(h_active);
+    pipe_size.set_vertical_source_size(v_active);
     pipe_size.WriteTo(mmio_space());
 
 
     auto plane_control = pipe_regs.PlaneControl().FromValue(0);
-    plane_control.plane_enable().set(1);
-    plane_control.source_pixel_format().set(plane_control.kFormatRgb8888); // kPixelFormat
-    plane_control.tiled_surface().set(plane_control.kLinear);
+    plane_control.set_plane_enable(1);
+    plane_control.set_source_pixel_format(plane_control.kFormatRgb8888); // kPixelFormat
+    plane_control.set_tiled_surface(plane_control.kLinear);
     plane_control.WriteTo(mmio_space());
 
     auto plane_size = pipe_regs.PlaneSurfaceSize().FromValue(0);
-    plane_size.width_minus_1().set(h_active);
-    plane_size.height_minus_1().set(v_active);
+    plane_size.set_width_minus_1(h_active);
+    plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
 
     info->width = edid.preferred_timing.horizontal_addressable();

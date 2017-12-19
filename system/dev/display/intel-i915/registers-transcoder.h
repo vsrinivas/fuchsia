@@ -4,28 +4,28 @@
 
 #pragma once
 
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 #include "registers-pipe.h"
 
 namespace registers {
 
 // TRANS_HTOTAL, TRANS_HBLANK,
 // TRANS_VTOTAL, TRANS_VBLANK
-class TransHVTotal : public RegisterBase<TransHVTotal> {
+class TransHVTotal : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(28, 16, count_total); // same as blank_start
     DEF_FIELD(12, 0, count_active); // same as blank_end
 };
 
 // TRANS_HSYNC, TRANS_VSYNC
-class TransHVSync : public RegisterBase<TransHVSync> {
+class TransHVSync : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(28, 16, sync_end);
     DEF_FIELD(12, 0, sync_start);
 };
 
 // TRANS_DDI_FUNC_CTL
-class TransDdiFuncControl : public RegisterBase<TransDdiFuncControl> {
+class TransDdiFuncControl : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, trans_ddi_function_enable);
     DEF_FIELD(30, 28, ddi_select);
@@ -49,7 +49,7 @@ public:
 };
 
 // TRANS_CONF
-class TransConf : public RegisterBase<TransConf> {
+class TransConf : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, transcoder_enable);
     DEF_BIT(30, transcoder_state);
@@ -57,39 +57,39 @@ public:
 };
 
 // TRANS_CLK_SEL
-class TransClockSelect : public RegisterBase<TransClockSelect> {
+class TransClockSelect : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(31, 29, trans_clock_select);
 };
 
 
 // DATAM
-class TransDataM : public RegisterBase<TransDataM> {
+class TransDataM : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(30, 25, tu_or_vcpayload_size);
     DEF_FIELD(23, 0, data_m_value);
 };
 
 // DATAN
-class TransDataN : public RegisterBase<TransDataN> {
+class TransDataN : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(23, 0, data_n_value);
 };
 
 // LINKM1
-class TransLinkM : public RegisterBase<TransLinkM> {
+class TransLinkM : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(23, 0, link_m_value);
 };
 
 // LINKN1
-class TransLinkN : public RegisterBase<TransLinkN> {
+class TransLinkN : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(23, 0, link_n_value);
 };
 
 // TRANS_MSA_MISC
-class TransMsaMisc : public RegisterBase<TransMsaMisc> {
+class TransMsaMisc : public hwreg::RegisterBase<uint32_t> {
 public:
     // Byte 1 is MISC1 from DP spec
     DEF_FIELD(10, 9, stereo_video);
@@ -116,30 +116,30 @@ public:
         offset_ = pipe * 0x1000;
     }
 
-    RegisterAddr<TransHVTotal> HTotal() { return GetReg<TransHVTotal>(0x60000); }
-    RegisterAddr<TransHVTotal> HBlank() { return GetReg<TransHVTotal>(0x60004); }
-    RegisterAddr<TransHVSync> HSync() { return GetReg<TransHVSync>(0x60008); }
-    RegisterAddr<TransHVTotal> VTotal() { return GetReg<TransHVTotal>(0x6000c); }
-    RegisterAddr<TransHVTotal> VBlank() { return GetReg<TransHVTotal>(0x60010); }
-    RegisterAddr<TransHVSync> VSync() { return GetReg<TransHVSync>(0x60014); }
-    RegisterAddr<TransDdiFuncControl> DdiFuncControl() {
+    hwreg::RegisterAddr<TransHVTotal> HTotal() { return GetReg<TransHVTotal>(0x60000); }
+    hwreg::RegisterAddr<TransHVTotal> HBlank() { return GetReg<TransHVTotal>(0x60004); }
+    hwreg::RegisterAddr<TransHVSync> HSync() { return GetReg<TransHVSync>(0x60008); }
+    hwreg::RegisterAddr<TransHVTotal> VTotal() { return GetReg<TransHVTotal>(0x6000c); }
+    hwreg::RegisterAddr<TransHVTotal> VBlank() { return GetReg<TransHVTotal>(0x60010); }
+    hwreg::RegisterAddr<TransHVSync> VSync() { return GetReg<TransHVSync>(0x60014); }
+    hwreg::RegisterAddr<TransDdiFuncControl> DdiFuncControl() {
         return GetReg<TransDdiFuncControl>(0x60400);
     }
-    RegisterAddr<TransConf> Conf() { return GetReg<TransConf>(0x70008); }
+    hwreg::RegisterAddr<TransConf> Conf() { return GetReg<TransConf>(0x70008); }
 
-    RegisterAddr<TransClockSelect> ClockSelect() {
+    hwreg::RegisterAddr<TransClockSelect> ClockSelect() {
         // This uses a different offset from the other transcoder registers.
-        return RegisterAddr<TransClockSelect>(0x46140 + pipe_ * 4);
+        return hwreg::RegisterAddr<TransClockSelect>(0x46140 + pipe_ * 4);
     }
-    RegisterAddr<TransDataM> DataM() { return GetReg<TransDataM>(0x60030); }
-    RegisterAddr<TransDataN> DataN() { return GetReg<TransDataN>(0x60034); }
-    RegisterAddr<TransLinkM> LinkM() { return GetReg<TransLinkM>(0x60040); }
-    RegisterAddr<TransLinkN> LinkN() { return GetReg<TransLinkN>(0x60044); }
-    RegisterAddr<TransMsaMisc> MsaMisc() { return GetReg<TransMsaMisc>(0x60410); }
+    hwreg::RegisterAddr<TransDataM> DataM() { return GetReg<TransDataM>(0x60030); }
+    hwreg::RegisterAddr<TransDataN> DataN() { return GetReg<TransDataN>(0x60034); }
+    hwreg::RegisterAddr<TransLinkM> LinkM() { return GetReg<TransLinkM>(0x60040); }
+    hwreg::RegisterAddr<TransLinkN> LinkN() { return GetReg<TransLinkN>(0x60044); }
+    hwreg::RegisterAddr<TransMsaMisc> MsaMisc() { return GetReg<TransMsaMisc>(0x60410); }
 
 private:
-    template <class RegType> RegisterAddr<RegType> GetReg(uint32_t base_addr) {
-        return RegisterAddr<RegType>(base_addr + offset_);
+    template <class RegType> hwreg::RegisterAddr<RegType> GetReg(uint32_t base_addr) {
+        return hwreg::RegisterAddr<RegType>(base_addr + offset_);
     }
 
     Pipe pipe_;

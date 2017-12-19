@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "mmio-space.h"
-
+#include <hwreg/mmio.h>
 #include <zx/vmo.h>
 
 namespace i915 {
@@ -14,8 +13,8 @@ class Device;
 
 class Gtt {
 public:
-    void Init(MmioSpace* mmio_space, uint32_t gtt_size);
-    bool Insert(MmioSpace* mmio_space, zx::vmo* buffer,
+    void Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size);
+    bool Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
                 uint32_t length, uint32_t pte_padding, uint32_t* gm_addr_out);
 };
 

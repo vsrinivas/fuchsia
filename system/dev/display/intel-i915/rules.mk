@@ -19,14 +19,14 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/gtt.cpp \
     $(LOCAL_DIR)/hdmi-display.cpp \
     $(LOCAL_DIR)/intel-i915.cpp \
-    $(LOCAL_DIR)/mmio-space.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/hwreg \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 

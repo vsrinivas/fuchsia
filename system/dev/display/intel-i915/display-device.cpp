@@ -28,7 +28,7 @@ DisplayDevice::~DisplayDevice() {
     }
 }
 
-MmioSpace* DisplayDevice::mmio_space() const {
+hwreg::RegisterIo* DisplayDevice::mmio_space() const {
     return controller_->mmio_space();
 }
 
@@ -103,18 +103,18 @@ bool DisplayDevice::LoadEdid(registers::BaseEdid* edid) {
 bool DisplayDevice::EnablePowerWell2() {
     // Enable Power Wells
     auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-    power_well.power_well_2_request().set(1);
+    power_well.set_power_well_2_request(1);
     power_well.WriteTo(mmio_space());
 
     // Wait for PWR_WELL_CTL Power Well 2 state and distribution status
     power_well.ReadFrom(mmio_space());
     if (!WAIT_ON_US(registers::PowerWellControl2
-            ::Get().ReadFrom(mmio_space()).power_well_2_state().get(), 20)) {
+            ::Get().ReadFrom(mmio_space()).power_well_2_state(), 20)) {
         zxlogf(ERROR, "i915: failed to enable Power Well 2\n");
         return false;
     }
     if (!WAIT_ON_US(registers::FuseStatus
-            ::Get().ReadFrom(mmio_space()).pg2_dist_status().get(), 1)) {
+            ::Get().ReadFrom(mmio_space()).pg2_dist_status(), 1)) {
         zxlogf(ERROR, "i915: Power Well 2 distribution failed\n");
         return false;
     }
@@ -165,11 +165,11 @@ bool DisplayDevice::Init() {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.stride().set(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+    plane_stride.set_stride(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
-    plane_surface.surface_base_addr().set(fb_gfx_addr >> plane_surface.kRShiftCount);
+    plane_surface.set_surface_base_addr(fb_gfx_addr >> plane_surface.kRShiftCount);
     plane_surface.WriteTo(controller_->mmio_space());
 
     return true;

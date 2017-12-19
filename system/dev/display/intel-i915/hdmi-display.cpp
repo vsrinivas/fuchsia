@@ -28,7 +28,7 @@ int ddi_to_pin(registers::Ddi ddi) {
     return -1;
 }
 
-void write_gmbus3(i915::MmioSpace* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
+void write_gmbus3(hwreg::RegisterIo* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
     int cur_byte = 0;
     uint32_t val = 0;
     while (idx < size && cur_byte < 4) {
@@ -37,7 +37,7 @@ void write_gmbus3(i915::MmioSpace* mmio_space, uint8_t* buf, uint32_t size, uint
     registers::GMBus3::Get().FromValue(val).WriteTo(mmio_space);
 }
 
-void read_gmbus3(i915::MmioSpace* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
+void read_gmbus3(hwreg::RegisterIo* mmio_space, uint8_t* buf, uint32_t size, uint32_t idx) {
     int cur_byte = 0;
     uint32_t val = registers::GMBus3::Get().ReadFrom(mmio_space).reg_value();
     while (idx < size && cur_byte++ < 4) {
@@ -65,19 +65,19 @@ bool HdmiDisplay::I2cTransfer(const uint32_t addr, uint8_t* buf,
                               const uint32_t size, bool read, bool allow_retry) {
     // Reset the GMBus I2C port
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
-    gmbus1.sw_clear_int().set(1);
+    gmbus1.set_sw_clear_int(1);
     gmbus1.WriteTo(mmio_space());
-    gmbus1.sw_clear_int().set(0);
+    gmbus1.set_sw_clear_int(0);
     gmbus1.WriteTo(mmio_space());
 
     // Set the transfer pin
     auto gmbus0 = registers::GMBus0::Get().FromValue(0);
-    gmbus0.pin_pair_select().set(ddi_to_pin(ddi()));
+    gmbus0.set_pin_pair_select(ddi_to_pin(ddi()));
     gmbus0.WriteTo(mmio_space());
 
     // Disable interrupts
     auto gmbus4 = registers::GMBus4::Get().FromValue(0);
-    gmbus4.interrupt_mask().set(0);
+    gmbus4.set_interrupt_mask(0);
     gmbus4.WriteTo(mmio_space());
 
     unsigned idx = 0;
@@ -87,11 +87,11 @@ bool HdmiDisplay::I2cTransfer(const uint32_t addr, uint8_t* buf,
     }
 
     gmbus1.ReadFrom(mmio_space());
-    gmbus1.sw_ready().set(1);
-    gmbus1.bus_cycle_wait().set(1);
-    gmbus1.total_byte_count().set(size);
-    gmbus1.slave_register_index().set(addr);
-    gmbus1.read_op().set(read);
+    gmbus1.set_sw_ready(1);
+    gmbus1.set_bus_cycle_wait(1);
+    gmbus1.set_total_byte_count(size);
+    gmbus1.set_slave_register_index(addr);
+    gmbus1.set_read_op(read);
     gmbus1.WriteTo(mmio_space());
 
     do {
@@ -125,14 +125,14 @@ bool HdmiDisplay::I2cTransfer(const uint32_t addr, uint8_t* buf,
 
 bool HdmiDisplay::I2cFinish() {
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
-    gmbus1.bus_cycle_stop().set(1);
-    gmbus1.sw_ready().set(1);
+    gmbus1.set_bus_cycle_stop(1);
+    gmbus1.set_sw_ready(1);
     gmbus1.WriteTo(mmio_space());
 
-    bool idle = WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active().get(), 100);
+    bool idle = WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active(), 100);
 
     auto gmbus0 = registers::GMBus0::Get().FromValue(0);
-    gmbus0.pin_pair_select().set(0);
+    gmbus0.set_pin_pair_select(0);
     gmbus0.WriteTo(mmio_space());
 
     if (!idle) {
@@ -143,11 +143,11 @@ bool HdmiDisplay::I2cFinish() {
 
 bool HdmiDisplay::I2cWaitForHwReady() {
     auto gmbus2 = registers::GMBus2::Get().FromValue(0);
-    if (!WAIT_ON_MS(gmbus2.ReadFrom(mmio_space())->nack().get() || gmbus2.hw_ready().get(), 50)) {
+    if (!WAIT_ON_MS({ gmbus2.ReadFrom(mmio_space()); gmbus2.nack() || gmbus2.hw_ready(); }, 50)) {
         zxlogf(ERROR, "hdmi: GMBus i2c wait for hwready timeout\n");
         return false;
     }
-    if (gmbus2.nack().get()) {
+    if (gmbus2.nack()) {
         zxlogf(ERROR, "hdmi: GMBus i2c got nack\n");
         return false;
     }
@@ -157,16 +157,16 @@ bool HdmiDisplay::I2cWaitForHwReady() {
 bool HdmiDisplay::I2cClearNack() {
     I2cFinish();
 
-    if (!WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active().get(), 10)) {
+    if (!WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active(), 10)) {
         zxlogf(ERROR, "hdmi: GMBus i2c failed to clear active nack\n");
         return false;
     }
 
     // Set/clear sw clear int to reset the bus
     auto gmbus1 = registers::GMBus1::Get().FromValue(0);
-    gmbus1.sw_clear_int().set(1);
+    gmbus1.set_sw_clear_int(1);
     gmbus1.WriteTo(mmio_space());
-    gmbus1.sw_clear_int().set(0);
+    gmbus1.set_sw_clear_int(0);
     gmbus1.WriteTo(mmio_space());
 
     // Reset GMBus0
@@ -323,47 +323,47 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     uint16_t dco_int = static_cast<uint16_t>((dco_freq_khz / 1000) / 24);
     uint16_t dco_frac = static_cast<uint16_t>(
             ((dco_freq_khz * (1 << 15) / 24) - ((dco_int * 1000L) * (1 << 15))) / 1000);
-    dpll_cfg1.frequency_enable().set(1);
-    dpll_cfg1.dco_integer().set(dco_int);
-    dpll_cfg1.dco_fraction().set(dco_frac);
+    dpll_cfg1.set_frequency_enable(1);
+    dpll_cfg1.set_dco_integer(dco_int);
+    dpll_cfg1.set_dco_fraction(dco_frac);
     dpll_cfg1.WriteTo(mmio_space());
     dpll_cfg1.ReadFrom(mmio_space());
 
     // Set the divisors and central frequency
     auto dpll_cfg2 = registers::DpllConfig2::Get(dpll()).FromValue(0);
-    dpll_cfg2.qdiv_ratio().set(p1);
-    dpll_cfg2.qdiv_mode().set(p1 != 1);
+    dpll_cfg2.set_qdiv_ratio(p1);
+    dpll_cfg2.set_qdiv_mode(p1 != 1);
     if (p2 == 5) {
-        dpll_cfg2.kdiv_ratio().set(dpll_cfg2.kKdiv5);
+        dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv5);
     } else if (p2 == 2) {
-        dpll_cfg2.kdiv_ratio().set(dpll_cfg2.kKdiv2);
+        dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv2);
     } else if (p2 == 3) {
-        dpll_cfg2.kdiv_ratio().set(dpll_cfg2.kKdiv3);
+        dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv3);
     } else { // p2 == 1
-        dpll_cfg2.kdiv_ratio().set(dpll_cfg2.kKdiv1);
+        dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv1);
     }
     if (p0 == 1) {
-        dpll_cfg2.pdiv_ratio().set(dpll_cfg2.kPdiv1);
+        dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv1);
     } else if (p0 == 2) {
-        dpll_cfg2.pdiv_ratio().set(dpll_cfg2.kPdiv2);
+        dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv2);
     } else if (p0 == 3) {
-        dpll_cfg2.pdiv_ratio().set(dpll_cfg2.kPdiv3);
+        dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv3);
     } else { // p0 == 7
-        dpll_cfg2.pdiv_ratio().set(dpll_cfg2.kPdiv7);
+        dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv7);
     }
     if (dco_central_freq_khz == 9600000) {
-        dpll_cfg2.central_freq().set(dpll_cfg2.k9600Mhz);
+        dpll_cfg2.set_central_freq(dpll_cfg2.k9600Mhz);
     } else if (dco_central_freq_khz == 9000000) {
-        dpll_cfg2.central_freq().set(dpll_cfg2.k9000Mhz);
+        dpll_cfg2.set_central_freq(dpll_cfg2.k9000Mhz);
     } else { // dco_central_freq == 8400000
-        dpll_cfg2.central_freq().set(dpll_cfg2.k8400Mhz);
+        dpll_cfg2.set_central_freq(dpll_cfg2.k8400Mhz);
     }
     dpll_cfg2.WriteTo(mmio_space());
     dpll_cfg2.ReadFrom(mmio_space()); // Posting read
 
     // Enable and wait for the DPLL
     auto dpll_enable = registers::DpllEnable::Get(dpll()).ReadFrom(mmio_space());
-    dpll_enable.enable_dpll().set(1);
+    dpll_enable.set_enable_dpll(1);
     dpll_enable.WriteTo(mmio_space());
     if (!WAIT_ON_MS(registers::DpllStatus
             ::Get().ReadFrom(mmio_space()).dpll_lock(dpll()).get(), 5)) {
@@ -392,7 +392,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
 
     // Configure Transcoder Clock Select
     auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    trans_clk_sel.trans_clock_select().set(ddi() + 1);
+    trans_clk_sel.set_trans_clock_select(ddi() + 1);
     trans_clk_sel.WriteTo(mmio_space());
 
     // Configure the transcoder
@@ -407,21 +407,21 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     uint32_t v_total = v_active + edid.preferred_timing.vertical_blanking();
 
     auto h_total_reg = trans_regs.HTotal().FromValue(0);
-    h_total_reg.count_total().set(h_total);
-    h_total_reg.count_active().set(h_active);
+    h_total_reg.set_count_total(h_total);
+    h_total_reg.set_count_active(h_active);
     h_total_reg.WriteTo(mmio_space());
     auto v_total_reg = trans_regs.VTotal().FromValue(0);
-    v_total_reg.count_total().set(v_total);
-    v_total_reg.count_active().set(v_active);
+    v_total_reg.set_count_total(v_total);
+    v_total_reg.set_count_active(v_active);
     v_total_reg.WriteTo(mmio_space());
 
     auto h_sync_reg = trans_regs.HSync().FromValue(0);
-    h_sync_reg.sync_start().set(h_sync_start);
-    h_sync_reg.sync_end().set(h_sync_end);
+    h_sync_reg.set_sync_start(h_sync_start);
+    h_sync_reg.set_sync_end(h_sync_end);
     h_sync_reg.WriteTo(mmio_space());
     auto v_sync_reg = trans_regs.VSync().FromValue(0);
-    v_sync_reg.sync_start().set(v_sync_start);
-    v_sync_reg.sync_end().set(v_sync_end);
+    v_sync_reg.set_sync_start(v_sync_start);
+    v_sync_reg.set_sync_end(v_sync_end);
     v_sync_reg.WriteTo(mmio_space());
 
     // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
@@ -429,19 +429,19 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
 
     auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-    ddi_func.trans_ddi_function_enable().set(1);
-    ddi_func.ddi_select().set(ddi());
-    ddi_func.trans_ddi_mode_select().set(ddi_func.kModeHdmi);
-    ddi_func.bits_per_color().set(ddi_func.k8bbc);
-    ddi_func.sync_polarity().set(edid.preferred_timing.vsync_polarity().get() << 1
-                                | edid.preferred_timing.hsync_polarity().get());
-    ddi_func.port_sync_mode_enable().set(0);
-    ddi_func.dp_vc_payload_allocate().set(0);
+    ddi_func.set_trans_ddi_function_enable(1);
+    ddi_func.set_ddi_select(ddi());
+    ddi_func.set_trans_ddi_mode_select(ddi_func.kModeHdmi);
+    ddi_func.set_bits_per_color(ddi_func.k8bbc);
+    ddi_func.set_sync_polarity(edid.preferred_timing.vsync_polarity() << 1
+                                | edid.preferred_timing.hsync_polarity());
+    ddi_func.set_port_sync_mode_enable(0);
+    ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.WriteTo(mmio_space());
 
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-    trans_conf.transcoder_enable().set(1);
-    trans_conf.interlaced_mode().set(edid.preferred_timing.interlaced().get());
+    trans_conf.set_transcoder_enable(1);
+    trans_conf.set_interlaced_mode(edid.preferred_timing.interlaced());
     trans_conf.WriteTo(mmio_space());
 
     // Configure voltage swing and related IO settings.
@@ -453,7 +453,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
 
     ddi_buf_trans_hi.set_reg_value(0x000000cd);
     ddi_buf_trans_lo.set_reg_value(0x80003015);
-    disio_cr_tx_bmu.disable_balance_leg().set(0);
+    disio_cr_tx_bmu.set_disable_balance_leg(0);
     disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(1);
 
     ddi_buf_trans_hi.WriteTo(mmio_space());
@@ -462,26 +462,26 @@ bool HdmiDisplay::Init(zx_display_info* info) {
 
     // Configure and enable DDI_BUF_CTL
     auto ddi_buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-    ddi_buf_ctl.ddi_buffer_enable().set(1);
+    ddi_buf_ctl.set_ddi_buffer_enable(1);
     ddi_buf_ctl.WriteTo(mmio_space());
 
     // Configure the pipe
     registers::PipeRegs pipe_regs(pipe());
 
     auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-    pipe_size.horizontal_source_size().set(h_active);
-    pipe_size.vertical_source_size().set(v_active);
+    pipe_size.set_horizontal_source_size(h_active);
+    pipe_size.set_vertical_source_size(v_active);
     pipe_size.WriteTo(mmio_space());
 
     auto plane_control = pipe_regs.PlaneControl().FromValue(0);
-    plane_control.plane_enable().set(1);
-    plane_control.source_pixel_format().set(plane_control.kFormatRgb8888);
-    plane_control.tiled_surface().set(plane_control.kLinear);
+    plane_control.set_plane_enable(1);
+    plane_control.set_source_pixel_format(plane_control.kFormatRgb8888);
+    plane_control.set_tiled_surface(plane_control.kLinear);
     plane_control.WriteTo(mmio_space());
 
     auto plane_size = pipe_regs.PlaneSurfaceSize().FromValue(0);
-    plane_size.width_minus_1().set(h_active);
-    plane_size.height_minus_1().set(v_active);
+    plane_size.set_width_minus_1(h_active);
+    plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
 
     info->width = edid.preferred_timing.horizontal_addressable();

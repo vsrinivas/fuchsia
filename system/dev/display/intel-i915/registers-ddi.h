@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 
 namespace registers {
 
@@ -20,13 +20,13 @@ static const Ddi kDdis[kDdiCount] = {
 };
 
 // South Display Engine Interrupt Bit Definition + SINTERRUPT
-class SdeInterruptBase : public RegisterBase<SdeInterruptBase> {
+class SdeInterruptBase : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kSdeIntMask = 0xc4004;
     static constexpr uint32_t kSdeIntIdentity = 0xc4008;
     static constexpr uint32_t kSdeIntEnable = 0xc400c;
 
-    registers::BitfieldRef<uint32_t> ddi_bit(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> ddi_bit(Ddi ddi) {
         uint32_t bit;
         switch (ddi) {
             case DDI_A:
@@ -43,16 +43,14 @@ public:
             default:
                 bit = -1;
         }
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    static RegisterAddr<SdeInterruptBase> Get(uint32_t offset) {
-        return RegisterAddr<SdeInterruptBase>(offset);
-    }
+    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<SdeInterruptBase>(offset); }
 };
 
 // SHOTPLUG_CTL + SHOTPLUG_CTL2
-class HotplugCtrl : public RegisterBase<HotplugCtrl> {
+class HotplugCtrl : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kOffset = 0xc4030;
     static constexpr uint32_t kOffset2 = 0xc403c;
@@ -61,18 +59,18 @@ public:
     static constexpr uint32_t kLongPulseBitSubOffset = 1;
     static constexpr uint32_t kHpdEnableBitSubOffset = 4;
 
-    registers::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
         uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    registers::BitfieldRef<uint32_t> long_pulse_detected(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> long_pulse_detected(Ddi ddi) {
         uint32_t bit = ddi_to_first_bit(ddi) + kLongPulseBitSubOffset;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    static RegisterAddr<HotplugCtrl> Get(Ddi ddi) {
-        return RegisterAddr<HotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
+    static auto Get(Ddi ddi) {
+        return hwreg::RegisterAddr<HotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
     }
 
 private:
@@ -93,17 +91,17 @@ private:
 };
 
 // SFUSE_STRAP
-class SouthFuseStrap : public RegisterBase<SouthFuseStrap> {
+class SouthFuseStrap : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(2, port_b_present);
     DEF_BIT(1, port_c_present);
     DEF_BIT(0, port_d_present);
 
-    static RegisterAddr<SouthFuseStrap> Get() { return RegisterAddr<SouthFuseStrap>(0xc2014); }
+    static auto Get() { return hwreg::RegisterAddr<SouthFuseStrap>(0xc2014); }
 };
 
 // DDI_BUF_CTL
-class DdiBufControl : public RegisterBase<DdiBufControl> {
+class DdiBufControl : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x64000;
 
@@ -117,36 +115,34 @@ public:
 };
 
 // High byte of DDI_BUF_TRANS
-class DdiBufTransHi : public RegisterBase<DdiBufTransHi> {
+class DdiBufTransHi : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, balance_leg_enable);
     DEF_FIELD(17, 0, deemphasis_level);
 };
 
 // Low byte of DDI_BUF_TRANS
-class DdiBufTransLo : public RegisterBase<DdiBufTransLo> {
+class DdiBufTransLo : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(20, 16, vref);
     DEF_FIELD(10, 0, vswing);
 };
 
 // DISPIO_CR_TX_BMU_CR0
-class DisplayIoCtrlRegTxBmu : public RegisterBase<DisplayIoCtrlRegTxBmu> {
+class DisplayIoCtrlRegTxBmu : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(27, 23, disable_balance_leg);
 
-    registers::BitfieldRef<uint32_t> tx_balance_leg_select(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> tx_balance_leg_select(Ddi ddi) {
         int bit = 8 +  3 * ddi;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
     }
 
-    static RegisterAddr<DisplayIoCtrlRegTxBmu> Get() {
-        return RegisterAddr<DisplayIoCtrlRegTxBmu>(0x6c00c);
-    }
+    static auto Get() { return hwreg::RegisterAddr<DisplayIoCtrlRegTxBmu>(0x6c00c); }
 };
 
 // DDI_AUX_CTL
-class DdiAuxControl : public RegisterBase<DdiAuxControl> {
+class DdiAuxControl : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x64010;
 
@@ -161,14 +157,14 @@ public:
 };
 
 // DDI_AUX_DATA
-class DdiAuxData : public RegisterBase<DdiAuxData> {
+class DdiAuxData : public hwreg::RegisterBase<uint32_t> {
 public:
     // There are 5 32-bit words at this register's address.
     static constexpr uint32_t kBaseAddr = 0x64014;
 };
 
 // DP_TP_CTL
-class DdiDpTransportControl : public RegisterBase<DdiDpTransportControl> {
+class DdiDpTransportControl : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x64040;
 
@@ -191,26 +187,26 @@ class DdiRegs {
 public:
     DdiRegs(Ddi ddi) : ddi_number_((int) ddi) { }
 
-    RegisterAddr<registers::DdiBufControl> DdiBufControl() {
+    hwreg::RegisterAddr<registers::DdiBufControl> DdiBufControl() {
         return GetReg<registers::DdiBufControl>();
     }
-    RegisterAddr<registers::DdiAuxControl> DdiAuxControl() {
+    hwreg::RegisterAddr<registers::DdiAuxControl> DdiAuxControl() {
         return GetReg<registers::DdiAuxControl>();
     }
-    RegisterAddr<registers::DdiAuxData> DdiAuxData() { return GetReg<registers::DdiAuxData>(); }
-    RegisterAddr<registers::DdiDpTransportControl> DdiDpTransportControl() {
+    hwreg::RegisterAddr<registers::DdiAuxData> DdiAuxData() { return GetReg<registers::DdiAuxData>(); }
+    hwreg::RegisterAddr<registers::DdiDpTransportControl> DdiDpTransportControl() {
         return GetReg<registers::DdiDpTransportControl>();
     }
-    RegisterAddr<registers::DdiBufTransHi> DdiBufTransHi(int index) {
-        return RegisterAddr<registers::DdiBufTransHi>(0x64e00 + 0x60 * ddi_number_ + 8 * index + 4);
+    hwreg::RegisterAddr<registers::DdiBufTransHi> DdiBufTransHi(int index) {
+        return hwreg::RegisterAddr<registers::DdiBufTransHi>(0x64e00 + 0x60 * ddi_number_ + 8 * index + 4);
     }
-    RegisterAddr<registers::DdiBufTransLo> DdiBufTransLo(int index) {
-        return RegisterAddr<registers::DdiBufTransLo>(0x64e00 + 0x60 * ddi_number_ + 8 * index);
+    hwreg::RegisterAddr<registers::DdiBufTransLo> DdiBufTransLo(int index) {
+        return hwreg::RegisterAddr<registers::DdiBufTransLo>(0x64e00 + 0x60 * ddi_number_ + 8 * index);
     }
 
 private:
-    template <class RegType> RegisterAddr<RegType> GetReg() {
-        return RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_number_);
+    template <class RegType> hwreg::RegisterAddr<RegType> GetReg() {
+        return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_number_);
     }
 
     uint32_t ddi_number_;

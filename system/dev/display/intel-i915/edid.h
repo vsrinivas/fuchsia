@@ -5,8 +5,7 @@
 #pragma once
 
 #include <stddef.h>
-
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 
 namespace registers {
 
@@ -21,29 +20,29 @@ namespace registers {
 // A, Revision 2 of the EDID spec, 2006).
 struct EdidTimingDesc {
     uint32_t horizontal_addressable() {
-        return horizontal_addressable_low | (horizontal_addressable_high().get() << 8);
+        return horizontal_addressable_low | (horizontal_addressable_high() << 8);
     }
     uint32_t horizontal_blanking() {
-        return horizontal_blanking_low | (horizontal_blanking_high().get() << 8);
+        return horizontal_blanking_low | (horizontal_blanking_high() << 8);
     }
     uint32_t vertical_addressable() {
-        return vertical_addressable_low | (vertical_addressable_high().get() << 8);
+        return vertical_addressable_low | (vertical_addressable_high() << 8);
     }
     uint32_t vertical_blanking() {
-        return vertical_blanking_low | (vertical_blanking_high().get() << 8);
+        return vertical_blanking_low | (vertical_blanking_high() << 8);
     }
     uint32_t horizontal_front_porch() {
-        return horizontal_front_porch_low | (horizontal_front_porch_high().get() << 8);
+        return horizontal_front_porch_low | (horizontal_front_porch_high() << 8);
     }
     uint32_t horizontal_sync_pulse_width() {
-        return horizontal_sync_pulse_width_low | (horizontal_sync_pulse_width_high().get() << 8);
+        return horizontal_sync_pulse_width_low | (horizontal_sync_pulse_width_high() << 8);
     }
     uint32_t vertical_front_porch() {
-        return vertical_front_porch_low().get() | (vertical_front_porch_high().get() << 4);
+        return vertical_front_porch_low() | (vertical_front_porch_high() << 4);
     }
     uint32_t vertical_sync_pulse_width() {
-        return vertical_sync_pulse_width_low().get() |
-               (vertical_sync_pulse_width_high().get() << 4);
+        return vertical_sync_pulse_width_low() |
+               (vertical_sync_pulse_width_high() << 4);
     }
 
     // Offset 0

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 
 namespace registers {
 
@@ -18,7 +18,7 @@ static const Pipe kPipes[kPipeCount] = {
 };
 
 // PIPE_SRCSZ
-class PipeSourceSize : public RegisterBase<PipeSourceSize> {
+class PipeSourceSize : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x6001c;
 
@@ -28,7 +28,7 @@ public:
 
 
 // PLANE_SURF
-class PlaneSurface : public RegisterBase<PlaneSurface> {
+class PlaneSurface : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x7019c;
 
@@ -47,7 +47,7 @@ public:
 };
 
 // PLANE_STRIDE
-class PlaneSurfaceStride : public RegisterBase<PlaneSurfaceStride> {
+class PlaneSurfaceStride : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
@@ -57,7 +57,7 @@ public:
 };
 
 // PLANE_SIZE
-class PlaneSurfaceSize : public RegisterBase<PlaneSurfaceSize> {
+class PlaneSurfaceSize : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70190;
 
@@ -66,7 +66,7 @@ public:
 };
 
 // PLANE_CTL
-class PlaneControl : public RegisterBase<PlaneControl> {
+class PlaneControl : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70180;
 
@@ -102,7 +102,7 @@ public:
 };
 
 // PLANE_BUF_CFG
-class PlaneBufCfg : public RegisterBase<PlaneBufCfg> {
+class PlaneBufCfg : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x7017c;
 
@@ -111,7 +111,7 @@ public:
 };
 
 // PLANE_WM
-class PlaneWm : public RegisterBase<PlaneWm> {
+class PlaneWm : public hwreg::RegisterBase<uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70240;
 
@@ -125,36 +125,36 @@ class PipeRegs {
 public:
     PipeRegs(Pipe pipe) : pipe_(pipe) { }
 
-    RegisterAddr<registers::PipeSourceSize> PipeSourceSize() {
+    hwreg::RegisterAddr<registers::PipeSourceSize> PipeSourceSize() {
         return GetReg<registers::PipeSourceSize>();
     }
 
     // The following methods get the instance of the plane register for plane 1.
-    RegisterAddr<registers::PlaneSurface> PlaneSurface() {
+    hwreg::RegisterAddr<registers::PlaneSurface> PlaneSurface() {
         return GetReg<registers::PlaneSurface>();
     }
-    RegisterAddr<registers::PlaneSurfaceStride> PlaneSurfaceStride() {
+    hwreg::RegisterAddr<registers::PlaneSurfaceStride> PlaneSurfaceStride() {
         return GetReg<registers::PlaneSurfaceStride>();
     }
-    RegisterAddr<registers::PlaneSurfaceSize> PlaneSurfaceSize() {
+    hwreg::RegisterAddr<registers::PlaneSurfaceSize> PlaneSurfaceSize() {
         return GetReg<registers::PlaneSurfaceSize>();
     }
-    RegisterAddr<registers::PlaneControl> PlaneControl() {
+    hwreg::RegisterAddr<registers::PlaneControl> PlaneControl() {
         return GetReg<registers::PlaneControl>();
     }
     // 0 == cursor, 1-3 are regular planes
-    RegisterAddr<registers::PlaneBufCfg> PlaneBufCfg(int plane) {
-        return RegisterAddr<registers::PlaneBufCfg>(
+    hwreg::RegisterAddr<registers::PlaneBufCfg> PlaneBufCfg(int plane) {
+        return hwreg::RegisterAddr<registers::PlaneBufCfg>(
                 PlaneBufCfg::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane);
     }
 
-    RegisterAddr<registers::PlaneWm>PlaneWatermark(int wm_num) {
-        return RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_ + 4 * wm_num);
+    hwreg::RegisterAddr<registers::PlaneWm>PlaneWatermark(int wm_num) {
+        return hwreg::RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_ + 4 * wm_num);
     }
 
 private:
-    template <class RegType> RegisterAddr<RegType> GetReg() {
-        return RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_);
+    template <class RegType> hwreg::RegisterAddr<RegType> GetReg() {
+        return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_);
     }
 
     Pipe pipe_;

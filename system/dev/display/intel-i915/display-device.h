@@ -6,7 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/display.h>
-
+#include <hwreg/mmio.h>
 #include <zx/vmo.h>
 
 #include "edid.h"
@@ -52,7 +52,7 @@ protected:
     virtual bool I2cWrite(uint32_t addr, uint8_t* buf, uint32_t size) { return false; }
 
     bool LoadEdid(registers::BaseEdid* edid);
-    MmioSpace* mmio_space() const;
+    hwreg::RegisterIo* mmio_space() const;
     bool EnablePowerWell2();
     bool ResetPipe();
     bool ResetDdi();

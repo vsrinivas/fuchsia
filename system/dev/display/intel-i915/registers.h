@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 #include "registers-ddi.h"
 
 namespace registers {
 
 // Graphics & Memory Controller Hub Graphics Control - GGC_0_0_0_PCI
 // This is a 16-bit register, so it needs to be populated manually
-class GmchGfxControl : public RegisterBase<GmchGfxControl> {
+// TODO(stevensd/teisenbe): Is this true still?
+class GmchGfxControl : public hwreg::RegisterBase<uint16_t> {
 public:
     static constexpr uint32_t kAddr = 0x50;
 
@@ -23,29 +24,27 @@ public:
 };
 
 // MASTER_INT_CTL
-class MasterInterruptControl : public RegisterBase<MasterInterruptControl> {
+class MasterInterruptControl : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, enable_mask);
     DEF_BIT(23, sde_int_pending);
 
-    static RegisterAddr<MasterInterruptControl> Get() {
-        return RegisterAddr<MasterInterruptControl>(0x44200);
-    }
+    static auto Get() { return hwreg::RegisterAddr<MasterInterruptControl>(0x44200); }
 };
 
 // GMBUS0
-class GMBus0 : public RegisterBase<GMBus0> {
+class GMBus0 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(2, 0, pin_pair_select);
     static constexpr uint32_t kDdiCPin = 4;
     static constexpr uint32_t kDdiBPin = 5;
     static constexpr uint32_t kDdiDPin = 6;
 
-    static RegisterAddr<GMBus0> Get() { return RegisterAddr<GMBus0>(0xc5100); }
+    static auto Get() { return hwreg::RegisterAddr<GMBus0>(0xc5100); }
 };
 
 // GMBUS1
-class GMBus1 : public RegisterBase<GMBus1> {
+class GMBus1 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, sw_clear_int);
     DEF_BIT(30, sw_ready);
@@ -55,35 +54,35 @@ public:
     DEF_FIELD(7, 1, slave_register_index);
     DEF_BIT(0, read_op);
 
-    static RegisterAddr<GMBus1> Get() { return RegisterAddr<GMBus1>(0xc5104); }
+    static auto Get() { return hwreg::RegisterAddr<GMBus1>(0xc5104); }
 };
 
 // GMBUS2
-class GMBus2 : public RegisterBase<GMBus2> {
+class GMBus2 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(11, hw_ready);
     DEF_BIT(10, nack);
     DEF_BIT(9, active);
 
-    static RegisterAddr<GMBus2> Get() { return RegisterAddr<GMBus2>(0xc5108); }
+    static auto Get() { return hwreg::RegisterAddr<GMBus2>(0xc5108); }
 };
 
 // GMBUS3
-class GMBus3 : public RegisterBase<GMBus3> {
+class GMBus3 : public hwreg::RegisterBase<uint32_t> {
 public:
-    static RegisterAddr<GMBus3> Get() { return RegisterAddr<GMBus3>(0xc510c); }
+    static auto Get() { return hwreg::RegisterAddr<GMBus3>(0xc510c); }
 };
 
 // GMBUS4
-class GMBus4 : public RegisterBase<GMBus4> {
+class GMBus4 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(4, 0, interrupt_mask);
 
-    static RegisterAddr<GMBus4> Get() { return RegisterAddr<GMBus4>(0xc5110); }
+    static auto Get() { return hwreg::RegisterAddr<GMBus4>(0xc5110); }
 };
 
 // PWR_WELL_CTL
-class PowerWellControl2 : public RegisterBase<PowerWellControl2> {
+class PowerWellControl2 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, power_well_2_request);
     DEF_BIT(30, power_well_2_state);
@@ -92,44 +91,40 @@ public:
     DEF_BIT(1, misc_io_power_request);
     DEF_BIT(0, misc_io_power_state);
 
-    registers::BitfieldRef<uint32_t> ddi_io_power_request(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> ddi_io_power_request(Ddi ddi) {
         int bit = 2 + ((ddi == DDI_A || ddi == DDI_E) ? 0 : ddi * 2) + 1;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    registers::BitfieldRef<uint32_t> ddi_io_power_state(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> ddi_io_power_state(Ddi ddi) {
         int bit = 2 + ((ddi == DDI_A || ddi == DDI_E) ? 0 : ddi * 2);
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    static RegisterAddr<PowerWellControl2> Get() {
-        return RegisterAddr<PowerWellControl2>(0x45404);
-    }
+    static auto Get() { return hwreg::RegisterAddr<PowerWellControl2>(0x45404); }
 };
 
 // FUSE_STATUS
-class FuseStatus : public RegisterBase<FuseStatus> {
+class FuseStatus : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, fuse_download_status);
     DEF_BIT(27, pg0_dist_status);
     DEF_BIT(26, pg1_dist_status);
     DEF_BIT(25, pg2_dist_status);
 
-    static RegisterAddr<FuseStatus> Get() { return RegisterAddr<FuseStatus>(0x42000); }
+    static auto Get() { return hwreg::RegisterAddr<FuseStatus>(0x42000); }
 };
 
 // NDE_RSTWRN_OPT
-class NorthDERestetWarning : public RegisterBase<NorthDERestetWarning> {
+class NorthDERestetWarning : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(4, rst_pch_handshake_enable);
 
-    static RegisterAddr<NorthDERestetWarning> Get() {
-        return RegisterAddr<NorthDERestetWarning>(0x46408);
-    }
+    static auto Get() { return hwreg::RegisterAddr<NorthDERestetWarning>(0x46408); }
 };
 
 // CLCLK_CTL
-class CdClockCtl : public RegisterBase<CdClockCtl> {
+class CdClockCtl : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(27, 26, cd_freq_select);
     static constexpr uint32_t kFreqSelect3XX = 2;
@@ -137,25 +132,25 @@ public:
     DEF_FIELD(10, 0, cd_freq_decimal);
     static constexpr uint32_t kFreqDecimal3375 = 0b01010100001;
 
-    static RegisterAddr<CdClockCtl> Get() { return RegisterAddr<CdClockCtl>(0x46000); }
+    static auto Get() { return hwreg::RegisterAddr<CdClockCtl>(0x46000); }
 
 };
 
 // DBUF_CTL
-class DbufCtl : public RegisterBase<DbufCtl> {
+class DbufCtl : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, power_request);
     DEF_BIT(31, power_state);
 
-    static RegisterAddr<DbufCtl> Get() { return RegisterAddr<DbufCtl>(0x45008); }
+    static auto Get() { return hwreg::RegisterAddr<DbufCtl>(0x45008); }
 };
 
 // VGA_CONTROL
-class VgaCtl : public RegisterBase<VgaCtl> {
+class VgaCtl : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, vga_display_disable);
 
-    static RegisterAddr<VgaCtl> Get() { return RegisterAddr<VgaCtl>(0x41000); }
+    static auto Get() { return hwreg::RegisterAddr<VgaCtl>(0x41000); }
 };
 
 } // namespace registers

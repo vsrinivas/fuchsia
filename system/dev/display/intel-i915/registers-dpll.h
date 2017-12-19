@@ -4,27 +4,27 @@
 
 #pragma once
 
-#include "registers-base.h"
+#include <hwreg/bitfields.h>
 #include "registers-ddi.h"
 
 namespace registers {
 
 // DPLL_CTRL1
-class DpllControl1 : public RegisterBase<DpllControl1> {
+class DpllControl1 : public hwreg::RegisterBase<uint32_t> {
 public:
-    registers::BitfieldRef<uint32_t> dpll_hdmi_mode(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_hdmi_mode(int dpll) {
         int bit = dpll * 6 + 5;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    registers::BitfieldRef<uint32_t> dpll_ssc_enable(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_ssc_enable(int dpll) {
         int bit = dpll * 6 + 4;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    registers::BitfieldRef<uint32_t> dpll_link_rate(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_link_rate(int dpll) {
         int bit = dpll * 6 + 1;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
     }
     static constexpr int kLinkRate2700Mhz = 0; // DisplayPort 5.4 GHz
     static constexpr int kLinkRate1350Mhz = 1; // DisplayPort 2.7 GHz
@@ -33,50 +33,50 @@ public:
     static constexpr int kLinkRate1080Mhz = 4; // DisplayPort 2.16 GHz
     static constexpr int kLinkRate2160Mhz = 5; // DisplayPort 4.32 GHz
 
-    registers::BitfieldRef<uint32_t> dpll_override(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_override(int dpll) {
         int bit = dpll * 6;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    static RegisterAddr<DpllControl1> Get() { return RegisterAddr<DpllControl1>(0x6c058); }
+    static auto Get() { return hwreg::RegisterAddr<DpllControl1>(0x6c058); }
 };
 
 // DPLL_CTRL2
-class DpllControl2 : public RegisterBase<DpllControl2> {
+class DpllControl2 : public hwreg::RegisterBase<uint32_t> {
 public:
-    registers::BitfieldRef<uint32_t> ddi_clock_off(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> ddi_clock_off(Ddi ddi) {
         int bit = 15 + ddi;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    registers::BitfieldRef<uint32_t> ddi_clock_select(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> ddi_clock_select(Ddi ddi) {
         int bit = ddi * 3 + 1;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
     }
 
-    registers::BitfieldRef<uint32_t> ddi_select_override(Ddi ddi) {
+    hwreg::BitfieldRef<uint32_t> ddi_select_override(Ddi ddi) {
         int bit = ddi * 3;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    static  RegisterAddr<DpllControl2> Get() { return RegisterAddr<DpllControl2>(0x6c05c); }
+    static auto Get() { return hwreg::RegisterAddr<DpllControl2>(0x6c05c); }
 };
 
 // DPLL_CFGCR1
-class DpllConfig1 : public RegisterBase<DpllConfig1> {
+class DpllConfig1 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, frequency_enable);
     DEF_FIELD(23, 9, dco_fraction);
     DEF_FIELD(8, 0, dco_integer);
 
-    static RegisterAddr<DpllConfig1> Get(int index) {
+    static auto Get(int index) {
         assert(index == 1 || index == 2 || index == 3);
-        return RegisterAddr<DpllConfig1>(0x6c040 + ((index - 1) * 8));
+        return hwreg::RegisterAddr<DpllConfig1>(0x6c040 + ((index - 1) * 8));
     }
 };
 
 // DPLL_CFGCR2
-class DpllConfig2 : public RegisterBase<DpllConfig2> {
+class DpllConfig2 : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_FIELD(15, 8, qdiv_ratio);
     DEF_BIT(7, qdiv_mode);
@@ -98,48 +98,48 @@ public:
     static constexpr uint8_t k9000Mhz = 1;
     static constexpr uint8_t k8400Mhz = 3;
 
-    static RegisterAddr<DpllConfig2> Get(int index) {
-        return RegisterAddr<DpllConfig2>(0x6c044 + ((index - 1) * 8));
+    static auto Get(int index) {
+        return hwreg::RegisterAddr<DpllConfig2>(0x6c044 + ((index - 1) * 8));
     }
 };
 
 // Virtual register which unifies the dpll enable bits (which are spread
 // across 4 registers)
-class DpllEnable : public RegisterBase<DpllEnable> {
+class DpllEnable : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, enable_dpll);
 
-    static RegisterAddr<DpllEnable> Get(int dpll) {
+    static auto Get(int dpll) {
         if (dpll == 0) {
-            return RegisterAddr<DpllEnable>(0x46010); // LCPLL1_CTL
+            return hwreg::RegisterAddr<DpllEnable>(0x46010); // LCPLL1_CTL
         } else if (dpll == 1) {
-            return RegisterAddr<DpllEnable>(0x46014); // LCPLL2_CTL
+            return hwreg::RegisterAddr<DpllEnable>(0x46014); // LCPLL2_CTL
         } else if (dpll == 2) {
-            return RegisterAddr<DpllEnable>(0x46040); // WRPLL_CTL1
+            return hwreg::RegisterAddr<DpllEnable>(0x46040); // WRPLL_CTL1
         } else { // dpll == 3
-            return RegisterAddr<DpllEnable>(0x46060); // WRPLL_CTL2
+            return hwreg::RegisterAddr<DpllEnable>(0x46060); // WRPLL_CTL2
         }
 
     }
 };
 
 // DPLL_STATUS
-class DpllStatus : public RegisterBase<DpllStatus> {
+class DpllStatus : public hwreg::RegisterBase<uint32_t> {
 public:
-    registers::BitfieldRef<uint32_t> dpll_lock(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_lock(int dpll) {
         int bit = dpll * 8;
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    static RegisterAddr<DpllStatus> Get() { return RegisterAddr<DpllStatus>(0x6c060); }
+    static auto Get() { return hwreg::RegisterAddr<DpllStatus>(0x6c060); }
 };
 
 // LCPLL1_CTL
-class Lcpll1Control : public RegisterBase<Lcpll1Control> {
+class Lcpll1Control : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(30, pll_lock);
 
-    static RegisterAddr<Lcpll1Control> Get() { return RegisterAddr<Lcpll1Control>(0x46010); }
+    static auto Get() { return hwreg::RegisterAddr<Lcpll1Control>(0x46010); }
 };
 
 } // namespace registers

@@ -30,18 +30,18 @@ inline uint32_t get_pte_offset(uint32_t idx) {
 
 namespace i915 {
 
-void Gtt::Init(MmioSpace* mmio_space, uint32_t gtt_size) {
+void Gtt::Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size) {
     zxlogf(SPEW, "i915: Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
 
     uint64_t pte = gen_pte_encode(0, false);
     unsigned i;
     for (i = 0; i < gtt_size / sizeof(uint64_t); i++) {
-        mmio_space->Write64(get_pte_offset(i), pte);
+        mmio_space->Write<uint64_t>(get_pte_offset(i), pte);
     }
-    mmio_space->Read32(get_pte_offset(i)); // Posting read
+    mmio_space->Read<uint32_t>(get_pte_offset(i)); // Posting read
 }
 
-bool Gtt::Insert(MmioSpace* mmio_space, zx::vmo* buffer,
+bool Gtt::Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
                  uint32_t length, uint32_t pte_padding, uint32_t* gm_addr_out) {
     // TODO(ZX-1413): Do actual allocation management
     uint32_t gfx_addr = 0;
@@ -61,14 +61,14 @@ bool Gtt::Insert(MmioSpace* mmio_space, zx::vmo* buffer,
         }
         for (unsigned j = 0; j < num_entries && i < length / PAGE_SIZE; i++, j++) {
             uint64_t pte = gen_pte_encode(paddrs[j], true);
-            mmio_space->Write64(get_pte_offset(pte_idx++), pte);
+            mmio_space->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
         }
     }
     uint64_t padding_pte = gen_pte_encode(paddrs[0], true);
     for (i = 0; i < pte_padding; i++) {
-        mmio_space->Write64(get_pte_offset(pte_idx++), padding_pte);
+        mmio_space->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
     }
-    mmio_space->Read32(get_pte_offset(pte_idx - 1)); // Posting read
+    mmio_space->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
 
     *gm_addr_out = gfx_addr;
 

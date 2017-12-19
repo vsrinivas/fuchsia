@@ -72,12 +72,12 @@ int Controller::IrqLoop() {
         }
 
         auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
-        interrupt_ctrl.enable_mask().set(0);
+        interrupt_ctrl.set_enable_mask(0);
         interrupt_ctrl.WriteTo(mmio_space_.get());
 
         zx_interrupt_complete(irq_);
 
-        if (interrupt_ctrl.sde_int_pending().get()) {
+        if (interrupt_ctrl.sde_int_pending()) {
             auto sde_int_identity = registers::SdeInterruptBase::Get(registers::SdeInterruptBase::kSdeIntIdentity).ReadFrom(mmio_space_.get());
             for (uint32_t i = 0; i < registers::kDdiCount; i++) {
                 registers::Ddi ddi = registers::kDdis[i];
@@ -92,7 +92,7 @@ int Controller::IrqLoop() {
             sde_int_identity.WriteTo(mmio_space_.get());
         }
 
-        interrupt_ctrl.enable_mask().set(1);
+        interrupt_ctrl.set_enable_mask(1);
         interrupt_ctrl.WriteTo(mmio_space_.get());
     }
     return 0;
@@ -100,7 +100,7 @@ int Controller::IrqLoop() {
 
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
-        uint32_t tmp = mmio_space_->Read32(BACKLIGHT_CTRL_OFFSET);
+        uint32_t tmp = mmio_space_->Read<uint32_t>(BACKLIGHT_CTRL_OFFSET);
 
         if (enable) {
             tmp |= BACKLIGHT_CTRL_BIT;
@@ -108,14 +108,14 @@ void Controller::EnableBacklight(bool enable) {
             tmp &= ~BACKLIGHT_CTRL_BIT;
         }
 
-        mmio_space_->Write32(BACKLIGHT_CTRL_OFFSET, tmp);
+        mmio_space_->Write<uint32_t>(BACKLIGHT_CTRL_OFFSET, tmp);
     }
 }
 
 zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
     // Disable interrupts here, we'll re-enable them at the very end of ::Bind
     auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
-    interrupt_ctrl.enable_mask().set(0);
+    interrupt_ctrl.set_enable_mask(0);
     interrupt_ctrl.WriteTo(mmio_space_.get());
 
     uint32_t irq_cnt = 0;
@@ -146,7 +146,7 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
         registers::Ddi ddi = registers::kDdis[i];
         // TODO(stevensd): gen9 doesn't have any registers to detect if ddi A or E are present.
         // For now just assume that they are, but we should eventually read from the VBT.
-        bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) || (ddi == registers::DDI_B && sfuse_strap.port_b_present().get()) || (ddi == registers::DDI_C && sfuse_strap.port_c_present().get()) || (ddi == registers::DDI_D && sfuse_strap.port_d_present().get());
+        bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) || (ddi == registers::DDI_B && sfuse_strap.port_b_present()) || (ddi == registers::DDI_C && sfuse_strap.port_c_present()) || (ddi == registers::DDI_D && sfuse_strap.port_d_present());
 
         auto hp_ctrl = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get());
         hp_ctrl.hpd_enable(ddi).set(enabled);
@@ -171,29 +171,29 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
 bool Controller::BringUpDisplayEngine() {
     // Enable PCH Reset Handshake
     auto nde_rstwrn_opt = registers::NorthDERestetWarning::Get().ReadFrom(mmio_space_.get());
-    nde_rstwrn_opt.rst_pch_handshake_enable().set(1);
+    nde_rstwrn_opt.set_rst_pch_handshake_enable(1);
     nde_rstwrn_opt.WriteTo(mmio_space_.get());
 
     // Wait for Power Well 0 distribution
-    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg0_dist_status().get(), 5)) {
+    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg0_dist_status(), 5)) {
         zxlogf(ERROR, "Power Well 0 distribution failed\n");
         return false;
     }
 
     // Enable and wait for Power Well 1 and Misc IO power
     auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get());
-    power_well.power_well_1_request().set(1);
-    power_well.misc_io_power_state().set(1);
+    power_well.set_power_well_1_request(1);
+    power_well.set_misc_io_power_state(1);
     power_well.WriteTo(mmio_space_.get());
-    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).power_well_1_state().get(), 10)) {
+    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).power_well_1_state(), 10)) {
         zxlogf(ERROR, "Power Well 1 failed to enable\n");
         return false;
     }
-    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).misc_io_power_state().get(), 10)) {
+    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).misc_io_power_state(), 10)) {
         zxlogf(ERROR, "Misc IO power failed to enable\n");
         return false;
     }
-    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg1_dist_status().get(), 5)) {
+    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg1_dist_status(), 5)) {
         zxlogf(ERROR, "Power Well 1 distribution failed\n");
         return false;
     }
@@ -201,11 +201,11 @@ bool Controller::BringUpDisplayEngine() {
     // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
     // something special (i.e. for eDP), assume that the BIOS already enabled it.
     auto dpll_enable = registers::DpllEnable::Get(0).ReadFrom(mmio_space_.get());
-    if (!dpll_enable.enable_dpll().get()) {
+    if (!dpll_enable.enable_dpll()) {
         // Set the cd_clk frequency to the minimum
         auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space_.get());
-        cd_clk.cd_freq_select().set(cd_clk.kFreqSelect3XX);
-        cd_clk.cd_freq_decimal().set(cd_clk.kFreqDecimal3375);
+        cd_clk.set_cd_freq_select(cd_clk.kFreqSelect3XX);
+        cd_clk.set_cd_freq_decimal(cd_clk.kFreqDecimal3375);
         cd_clk.WriteTo(mmio_space_.get());
 
         // Configure DPLL0
@@ -217,9 +217,9 @@ bool Controller::BringUpDisplayEngine() {
         dpll_ctl1.WriteTo(mmio_space_.get());
 
         // Enable DPLL0 and wait for it
-        dpll_enable.enable_dpll().set(1);
+        dpll_enable.set_enable_dpll(1);
         dpll_enable.WriteTo(mmio_space_.get());
-        if (!WAIT_ON_MS(registers::Lcpll1Control::Get().ReadFrom(mmio_space_.get()).pll_lock().get(), 5)) {
+        if (!WAIT_ON_MS(registers::Lcpll1Control::Get().ReadFrom(mmio_space_.get()).pll_lock(), 5)) {
             zxlogf(ERROR, "Failed to configure dpll0\n");
             return false;
         }
@@ -229,20 +229,20 @@ bool Controller::BringUpDisplayEngine() {
         constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
         constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
         constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
-        mmio_space_.get()->Write32(kGtDriverMailboxData0, 0x3);
-        mmio_space_.get()->Write32(kGtDriverMailboxData1, 0x0);
-        mmio_space_.get()->Write32(kGtDriverMailboxInterface, 0x80000007);
+        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData0, 0x3);
+        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData1, 0x0);
+        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxInterface, 0x80000007);
 
         int count = 0;
         for (;;) {
             if (!WAIT_ON_US(mmio_space_.get()
-                                    ->Read32(kGtDriverMailboxInterface) &
+                                    ->Read<uint32_t>(kGtDriverMailboxInterface) &
                                 0x80000000,
                             150)) {
                 zxlogf(ERROR, "GT Driver Mailbox driver busy\n");
                 return false;
             }
-            if (mmio_space_.get()->Read32(kGtDriverMailboxData0) & 0x1) {
+            if (mmio_space_.get()->Read<uint32_t>(kGtDriverMailboxData0) & 0x1) {
                 break;
             }
             if (count++ == 3) {
@@ -254,17 +254,17 @@ bool Controller::BringUpDisplayEngine() {
 
         cd_clk.WriteTo(mmio_space_.get());
 
-        mmio_space_.get()->Write32(kGtDriverMailboxData0, 0x3);
-        mmio_space_.get()->Write32(kGtDriverMailboxData1, 0x0);
-        mmio_space_.get()->Write32(kGtDriverMailboxInterface, 0x80000007);
+        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData0, 0x3);
+        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxData1, 0x0);
+        mmio_space_.get()->Write<uint32_t>(kGtDriverMailboxInterface, 0x80000007);
     }
 
     // Enable and wait for DBUF
     auto dbuf_ctl = registers::DbufCtl::Get().ReadFrom(mmio_space_.get());
-    dbuf_ctl.power_request().set(1);
+    dbuf_ctl.set_power_request(1);
     dbuf_ctl.WriteTo(mmio_space_.get());
 
-    if (!WAIT_ON_US(registers::DbufCtl::Get().ReadFrom(mmio_space_.get()).power_state().get(), 10)) {
+    if (!WAIT_ON_US(registers::DbufCtl::Get().ReadFrom(mmio_space_.get()).power_state(), 10)) {
         zxlogf(ERROR, "Failed to enable DBUF\n");
         return false;
     }
@@ -286,7 +286,7 @@ bool Controller::BringUpDisplayEngine() {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
         auto vga_ctl = registers::VgaCtl::Get().ReadFrom(mmio_space());
-        vga_ctl.vga_display_disable().set(1);
+        vga_ctl.set_vga_display_disable(1);
         vga_ctl.WriteTo(mmio_space());
     }
 
@@ -303,21 +303,21 @@ bool Controller::ResetPipe(registers::Pipe pipe) {
 
     // Disable transcoder and wait it to stop
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-    trans_conf.transcoder_enable().set(0);
+    trans_conf.set_transcoder_enable(0);
     trans_conf.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state().get(), 60)) {
+    if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state(), 60)) {
         zxlogf(ERROR, "Failed to reset transcoder\n");
         return false;
     }
 
     // Disable transcoder ddi select and clock select
     auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-    trans_ddi_ctl.trans_ddi_function_enable().set(0);
-    trans_ddi_ctl.ddi_select().set(0);
+    trans_ddi_ctl.set_trans_ddi_function_enable(0);
+    trans_ddi_ctl.set_ddi_select(0);
     trans_ddi_ctl.WriteTo(mmio_space());
 
     auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    trans_clk_sel.trans_clock_select().set(0);
+    trans_clk_sel.set_trans_clock_select(0);
     trans_clk_sel.WriteTo(mmio_space());
 
     return true;
@@ -328,16 +328,16 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
 
     // Disable the port
     auto ddi_buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-    bool was_enabled = ddi_buf_ctl.ddi_buffer_enable().get();
-    ddi_buf_ctl.ddi_buffer_enable().set(0);
+    bool was_enabled = ddi_buf_ctl.ddi_buffer_enable();
+    ddi_buf_ctl.set_ddi_buffer_enable(0);
     ddi_buf_ctl.WriteTo(mmio_space());
 
     auto ddi_dp_tp_ctl = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
-    ddi_dp_tp_ctl.transport_enable().set(0);
-    ddi_dp_tp_ctl.dp_link_training_pattern().set(ddi_dp_tp_ctl.kTrainingPattern1);
+    ddi_dp_tp_ctl.set_transport_enable(0);
+    ddi_dp_tp_ctl.set_dp_link_training_pattern(ddi_dp_tp_ctl.kTrainingPattern1);
     ddi_dp_tp_ctl.WriteTo(mmio_space());
 
-    if (was_enabled && !WAIT_ON_MS(ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status().get(), 8)) {
+    if (was_enabled && !WAIT_ON_MS(ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status(), 8)) {
         zxlogf(ERROR, "Port failed to go idle\n");
         return false;
     }
@@ -354,7 +354,7 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
 
     uint8_t dpll_number = static_cast<uint8_t>(dpll_ctrl2.ddi_clock_select(ddi).get());
     auto dpll_enable = registers::DpllEnable::Get(dpll_number).ReadFrom(mmio_space());
-    dpll_enable.enable_dpll().set(1);
+    dpll_enable.set_enable_dpll(1);
     dpll_enable.WriteTo(mmio_space());
 
     return true;
@@ -371,8 +371,8 @@ void Controller::AllocDisplayBuffers() {
         // Plane 1 gets everything
         constexpr uint32_t kPerDdi = 891 / 3;
         auto buf_cfg = pipe_regs.PlaneBufCfg(1).FromValue(0);
-        buf_cfg.buffer_start().set(kPerDdi * pipe);
-        buf_cfg.buffer_end().set(kPerDdi * (pipe + 1) - 1);
+        buf_cfg.set_buffer_start(kPerDdi * pipe);
+        buf_cfg.set_buffer_end(kPerDdi * (pipe + 1) - 1);
         buf_cfg.WriteTo(mmio_space());
 
         // Cursor and planes 2 and 3 get nothing
@@ -381,9 +381,9 @@ void Controller::AllocDisplayBuffers() {
         pipe_regs.PlaneBufCfg(3).FromValue(0).WriteTo(mmio_space());
 
         auto wm0 = pipe_regs.PlaneWatermark(0).FromValue(0);
-        wm0.enable().set(1);
-        wm0.lines().set(2);
-        wm0.blocks().set(kPerDdi);
+        wm0.set_enable(1);
+        wm0.set_lines(2);
+        wm0.set_blocks(kPerDdi);
         wm0.WriteTo(mmio_space());
 
         for (int i = 1; i < 8; i++) {
@@ -509,9 +509,10 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MmioSpace> mmio_space(new (&ac) MmioSpace(regs));
+    fbl::unique_ptr<hwreg::RegisterIo> mmio_space(
+            new (&ac) hwreg::RegisterIo(reinterpret_cast<volatile void*>(regs)));
     if (!ac.check()) {
-        zxlogf(ERROR, "i915: failed to alloc MmioSpace\n");
+        zxlogf(ERROR, "i915: failed to alloc RegisterIo\n");
         return ZX_ERR_NO_MEMORY;
     }
     mmio_space_ = fbl::move(mmio_space);
@@ -544,7 +545,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     if (is_gen9(device_id)) {
         auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
-        interrupt_ctrl.enable_mask().set(1);
+        interrupt_ctrl.set_enable_mask(1);
         interrupt_ctrl.WriteTo(mmio_space_.get());
     }
 
