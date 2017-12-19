@@ -12,8 +12,6 @@
 typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64
 
-struct MappingCursor;
-
 /* Different page table levels in the page table mgmt hirerachy */
 enum PageTableLevel {
     PT_L,
@@ -98,6 +96,9 @@ protected:
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(X86PageTableBase);
+
+    class CacheLineFlusher;
+    struct MappingCursor;
 
     zx_status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags,
                            PageTableLevel level, const MappingCursor& start_cursor,

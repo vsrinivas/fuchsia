@@ -19,53 +19,6 @@
 
 namespace {
 
-// Utility for coalescing cache line flushes when modifying page tables.  This
-// allows us to mutate adjacent page table entries without having to flush for
-// each cache line multiple times.
-class CacheLineFlusher {
-public:
-    // If |perform_invalidations| is false, this class acts as a no-op.
-    explicit CacheLineFlusher(bool perform_invalidations);
-    ~CacheLineFlusher();
-    void FlushPtEntry(const volatile pt_entry_t* entry);
-
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(CacheLineFlusher);
-
-    void flush() {
-        if (dirty_line_ && perform_invalidations_) {
-            __asm__ volatile("clflush %0"
-                             :
-                             : "m"(*reinterpret_cast<char*>(dirty_line_))
-                             : "memory");
-            dirty_line_ = 0;
-        }
-    }
-
-    // The cache-aligned address that currently dirty.  If 0, no dirty line.
-    uintptr_t dirty_line_;
-
-    const uintptr_t cl_mask_;
-    const bool perform_invalidations_;
-};
-
-CacheLineFlusher::CacheLineFlusher(bool perform_invalidations)
-    : dirty_line_(0), cl_mask_(~(x86_get_clflush_line_size() - 1ull)),
-      perform_invalidations_(perform_invalidations) {
-}
-
-CacheLineFlusher::~CacheLineFlusher() {
-    flush();
-}
-
-void CacheLineFlusher::FlushPtEntry(const volatile pt_entry_t* entry) {
-    uintptr_t entry_line = reinterpret_cast<uintptr_t>(entry) & cl_mask_;
-    if (entry_line != dirty_line_) {
-        flush();
-        dirty_line_ = entry_line;
-    }
-}
-
 // Return the page size for this level
 size_t page_size(PageTableLevel level) {
     switch (level) {
@@ -132,7 +85,54 @@ PageTableLevel lower_level(PageTableLevel level) {
 
 } // namespace
 
-struct MappingCursor {
+// Utility for coalescing cache line flushes when modifying page tables.  This
+// allows us to mutate adjacent page table entries without having to flush for
+// each cache line multiple times.
+class X86PageTableBase::CacheLineFlusher {
+public:
+    // If |perform_invalidations| is false, this class acts as a no-op.
+    explicit CacheLineFlusher(bool perform_invalidations);
+    ~CacheLineFlusher();
+    void FlushPtEntry(const volatile pt_entry_t* entry);
+
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(CacheLineFlusher);
+
+    void flush() {
+        if (dirty_line_ && perform_invalidations_) {
+            __asm__ volatile("clflush %0"
+                             :
+                             : "m"(*reinterpret_cast<char*>(dirty_line_))
+                             : "memory");
+            dirty_line_ = 0;
+        }
+    }
+
+    // The cache-aligned address that currently dirty.  If 0, no dirty line.
+    uintptr_t dirty_line_;
+
+    const uintptr_t cl_mask_;
+    const bool perform_invalidations_;
+};
+
+X86PageTableBase::CacheLineFlusher::CacheLineFlusher(bool perform_invalidations)
+    : dirty_line_(0), cl_mask_(~(x86_get_clflush_line_size() - 1ull)),
+      perform_invalidations_(perform_invalidations) {
+}
+
+X86PageTableBase::CacheLineFlusher::~CacheLineFlusher() {
+    flush();
+}
+
+void X86PageTableBase::CacheLineFlusher::FlushPtEntry(const volatile pt_entry_t* entry) {
+    uintptr_t entry_line = reinterpret_cast<uintptr_t>(entry) & cl_mask_;
+    if (entry_line != dirty_line_) {
+        flush();
+        dirty_line_ = entry_line;
+    }
+}
+
+struct X86PageTableBase::MappingCursor {
 public:
     /**
    * @brief Update the cursor to skip over a not-present page table entry.
