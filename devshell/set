@@ -8,7 +8,7 @@
 ## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2
 ##               [--release] [--packages P1,P2,...]
 ##               [--build-dir DIR]
-##               [--args ARG] [--help-args [ARG]]
+##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--goma|--no-goma] [--no-ensure-goma]
 ##               [--goma-dir DIR]
 ##               [--ccache|--no-ccache]
@@ -27,6 +27,10 @@
 ##                         for the Garnet layer). If the --package argument is
 ##                         given multiple times, all the specified packages are
 ##                         included in the build.
+##   --variant             Pass --variant=VARIANT to gen.py, which itself is
+##                         a shorthand for setting the `select_variant` GN
+##                         build argument using a standard set of values.
+##                         Multiple --variant arguments can be used.
 ##   --args                Additional argument to pass to gn. If the --args
 ##                         argument is given multiple times, all the specified
 ##                         arguments are passed to gn.
@@ -141,6 +145,14 @@ function main {
           echo -e "error: GOMA directory does not exist: "${goma_dir}""
           return 1
         fi
+        shift
+        ;;
+      --variant)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        gen_args="${gen_args} --variant $2"
         shift
         ;;
       --args)
