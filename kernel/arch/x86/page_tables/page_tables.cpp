@@ -95,18 +95,9 @@ public:
     ~CacheLineFlusher();
     void FlushPtEntry(const volatile pt_entry_t* entry);
 
+    void ForceFlush();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(CacheLineFlusher);
-
-    void flush() {
-        if (dirty_line_ && perform_invalidations_) {
-            __asm__ volatile("clflush %0"
-                             :
-                             : "m"(*reinterpret_cast<char*>(dirty_line_))
-                             : "memory");
-            dirty_line_ = 0;
-        }
-    }
 
     // The cache-aligned address that currently dirty.  If 0, no dirty line.
     uintptr_t dirty_line_;
@@ -121,13 +112,24 @@ X86PageTableBase::CacheLineFlusher::CacheLineFlusher(bool perform_invalidations)
 }
 
 X86PageTableBase::CacheLineFlusher::~CacheLineFlusher() {
-    flush();
+    ForceFlush();
+}
+
+void X86PageTableBase::CacheLineFlusher::ForceFlush() {
+    if (dirty_line_ && perform_invalidations_) {
+        __asm__ volatile("clflush %0\n"
+                         "mfence"
+                         :
+                         : "m"(*reinterpret_cast<char*>(dirty_line_))
+                         : "memory");
+        dirty_line_ = 0;
+    }
 }
 
 void X86PageTableBase::CacheLineFlusher::FlushPtEntry(const volatile pt_entry_t* entry) {
     uintptr_t entry_line = reinterpret_cast<uintptr_t>(entry) & cl_mask_;
     if (entry_line != dirty_line_) {
-        flush();
+        ForceFlush();
         dirty_line_ = entry_line;
     }
 }
@@ -169,6 +171,10 @@ void X86PageTableBase::UpdateEntry(CacheLineFlusher* flusher,
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
+        // Force the flush before the TLB invalidation, to avoid a race in which
+        // non-coherent remapping hardware sees the old PTE after the
+        // invalidation.
+        flusher->ForceFlush();
         TlbInvalidatePage(level, vaddr, is_kernel_address(vaddr), was_terminal);
     }
 }
@@ -185,6 +191,10 @@ void X86PageTableBase::UnmapEntry(CacheLineFlusher* flusher,
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
+        // Force the flush before the TLB invalidation, to avoid a race in which
+        // non-coherent remapping hardware sees the old PTE after the
+        // invalidation.
+        flusher->ForceFlush();
         TlbInvalidatePage(level, vaddr, is_kernel_address(vaddr), was_terminal);
     }
 }
