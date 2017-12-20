@@ -7,6 +7,10 @@
 
 #pragma once
 
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/rle-bitmap.h>
+#include <bitmap/storage.h>
+
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
@@ -44,7 +48,21 @@ public:
     ~AllocatorPromise();
 
     // Allocate a new item in allocator_. Return the index of the newly allocated item.
+    // A call to Allocate() is effectively the same as a call to Swap(0) + SwapCommit(), but under
+    // the hood completes these operations more efficiently as additional state doesn't need to be
+    // stored between the two.
     size_t Allocate(WriteTxn* txn);
+
+#ifdef __Fuchsia__
+    // Swap the element currently allocated at |old_index| for a new index.
+    // If |old_index| is 0, a new block will still be allocated, but no blocks will be de-allocated.
+    // The swap will not be persisted until a call to SwapCommit is made.
+    size_t Swap(size_t old_index);
+
+    // Commit any pending swaps, allocating new indices and de-allocating old indices.
+    void SwapCommit(WriteTxn* txn);
+#endif
+
 private:
     friend class Allocator;
 
@@ -56,6 +74,9 @@ private:
 
     Allocator* allocator_ = nullptr;
     size_t reserved_ = 0;
+
+    //TODO(planders): Optionally store swap info in AllocatorPromise,
+    //                to ensure we only swap the current promise's blocks on SwapCommit.
 };
 
 // Represents the FVM-related information for the allocator, including
@@ -221,8 +242,23 @@ private:
     // Extend the on-disk extent containing map_.
     zx_status_t Extend(WriteTxn* txn);
 
+    // Find and return a free element. This should only be called when reserved_ > 0,
+    // ensuring that at least one free element must exist.
+    size_t Find();
+
     // Allocate an element and return the newly allocated index.
     size_t Allocate(WriteTxn* txn);
+
+#ifdef __Fuchsia__
+    // Mark |index| for de-allocation by adding it to the swap_out map,
+    // and return the index of a new element to be swapped in.
+    // This is currently only used for the block allocator.
+    size_t Swap(size_t index);
+
+    // Allocate / de-allocate elements from the swap_in / swap_out maps (respectively).
+    // This is currently only used for the block allocator.
+    void SwapCommit(WriteTxn* txn);
+#endif
 
     // Write back the allocation of the following items to disk.
     void Persist(WriteTxn* txn, size_t index, size_t count);
@@ -233,8 +269,12 @@ private:
 
     // Return the number of total available elements, after taking reservations into account.
     size_t GetAvailable() {
-        ZX_DEBUG_ASSERT(metadata_.PoolAvailable() >= reserved_);
-        return metadata_.PoolAvailable() - reserved_;
+        size_t total_reserved = reserved_;
+#ifdef __Fuchsia__
+        total_reserved += swap_in_.num_bits();
+#endif
+        ZX_DEBUG_ASSERT(metadata_.PoolAvailable() >= total_reserved);
+        return metadata_.PoolAvailable() - total_reserved;
     }
 
     Bcache* bc_;
@@ -244,8 +284,21 @@ private:
     AllocatorMetadata metadata_;
     RawBitmap map_;
 
+#ifdef __Fuchsia__
+    // Bitmap of elements to be allocated on SwapCommit.
+    bitmap::RleBitmap swap_in_;
+    // Bitmap of elements to be de-allocated on SwapCommit.
+    bitmap::RleBitmap swap_out_;
+#endif
+
+    // Total number of elements reserved by AllocatorPromise objects. Represents the maximum number
+    // of elements that are allowed to be allocated or swapped in at a given time.
+    // Once an element is marked for allocation or swap, the reserved_ count is updated accordingly.
+    // Remaining reserved blocks will be committed by the end of each Vnode operation.
     size_t reserved_;
-    size_t hint_;
+
+    // Index of the first free element in the map.
+    size_t first_free_;
 };
 
 } // namespace minfs

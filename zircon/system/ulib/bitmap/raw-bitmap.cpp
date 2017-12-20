@@ -106,7 +106,7 @@ bool RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set,
 }
 
 bool RawBitmapBase::ReverseScan(size_t bitoff, size_t bitmax, bool is_set,
-                          size_t* out) const {
+                                size_t* out) const {
     bitmax = fbl::min(bitmax, size_);
     if (bitoff >= bitmax) {
         return true;

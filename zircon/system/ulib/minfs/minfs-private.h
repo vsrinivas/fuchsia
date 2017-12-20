@@ -55,13 +55,8 @@ constexpr uint32_t kExtentCount = 6;
 namespace minfs {
 
 #ifdef __Fuchsia__
-using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 using BlockRegion = fuchsia_minfs_BlockRegion;
-#else
-using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
-#endif
 
-#ifdef __Fuchsia__
 // Validate that |vmo| is large enough to access block |blk|,
 // relative to the start of the vmo.
 inline void ValidateVmoSize(zx_handle_t vmo, blk_t blk) {
@@ -157,6 +152,10 @@ public:
 
     // Allocate a new data block.
     void BlockNew(Transaction* state, blk_t* out_bno);
+
+    // Mark |in_bno| for de-allocation (if it is > 0), and return a new block |*out_bno|.
+    // The swap will not be persisted until the transaction is commited.
+    void BlockSwap(Transaction* state, blk_t in_bno, blk_t* out_bno);
 
     // Free a data block.
     void BlockFree(WriteTxn* txn, blk_t bno);
@@ -292,6 +291,9 @@ private:
 
     // Enqueues an update to the super block.
     void WriteInfo(WriteTxn* txn);
+
+    // Find an unallocated and unreserved block in the block bitmap starting from block |start|
+    zx_status_t FindBlock(size_t start, size_t* blkno_out);
 
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".

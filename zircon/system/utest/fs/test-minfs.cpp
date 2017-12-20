@@ -310,19 +310,24 @@ bool TestFullOperations() {
               minfs::kMinfsBlockSize * minfs::kMinfsDirect);
     ASSERT_LT(write(med_fd.get(), data, sizeof(data)), 0);
 
-    // Since the last operation failed, we should still have 1 free block remaining. Writing to the
-    // beginning of the second file should only require 1 (direct) block, and therefore pass.
-    // Note: This fails without block reservation.
-    ASSERT_EQ(write(sml_fd.get(), data, sizeof(data)), sizeof(data));
-
     // Without block reservation, something from the failed write remains allocated. Try editing
     // nearby blocks to force a writeback of partially allocated data.
-    // Note: This will likely fail without block reservation.
+    // Note: This will fail without block reservation since the previous failed write would leave
+    //       the only free block incorrectly allocated and 1 additional block is required for
+    //       copy-on-write truncation.
     struct stat s;
     ASSERT_EQ(fstat(big_fd.get(), &s), 0);
     ssize_t truncate_size = fbl::round_up(static_cast<uint64_t>(s.st_size / 2),
                                           minfs::kMinfsBlockSize);
     ASSERT_EQ(ftruncate(big_fd.get(), truncate_size), 0);
+
+    // We should still have 1 free block remaining. Writing to the beginning of the second file
+    // should only require 1 (direct) block, and therefore pass.
+    // Note: This fails without block reservation.
+    ASSERT_EQ(write(sml_fd.get(), data, sizeof(data)), sizeof(data));
+
+    // Attempt to remount. Without block reservation, an additional block from the previously
+    // failed write will still be incorrectly allocated, causing fsck to fail.
     ASSERT_TRUE(check_remount());
 
     // Re-open files.

@@ -398,7 +398,6 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* state, DirectArgs* params) {
             case BlockOp::kDelete: {
                 // If we found a valid block, delete it.
                 if (bno) {
-                    fs_->ValidateBno(bno);
                     fs_->BlockFree(state->GetWork(), bno);
                     params->SetBno(i, 0);
                     inode_.block_count--;
@@ -407,11 +406,26 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* state, DirectArgs* params) {
             }
             case BlockOp::kWrite: {
                 ZX_DEBUG_ASSERT(state != nullptr);
+#ifdef __Fuchsia__
+                // For copy-on-write, swap the block out if it's a data block.
+                if (bno == 0 && IsDirectory()) {
+                    fs_->BlockNew(state, &bno);
+                    inode_.block_count++;
+                } else if (!IsDirectory()) {
+                    // Swap old block for a new one.
+                    blk_t old_bno = bno;
+                    fs_->BlockSwap(state, bno, &bno);
+
+                    if (!old_bno) {
+                        inode_.block_count++;
+                    }
+                }
+#else
                 if (bno == 0) {
                     fs_->BlockNew(state, &bno);
                     inode_.block_count++;
                 }
-
+#endif
                 fs_->ValidateBno(bno);
             }
             __FALLTHROUGH;
@@ -468,8 +482,16 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
             return status;
         }
 
-        // only update the indirect block if an entry was deleted
-        if (dirty || direct_params.IsDirty()) {
+        // We can delete the current indirect block if all direct blocks within it are deleted
+        if (params->GetOp() == BlockOp::kDelete
+            && direct_params.GetCount() == kMinfsDirectPerIndirect) {
+            // release the direct block itself
+            fs_->BlockFree(state->GetWork(), params->GetBno(i));
+            params->SetBno(i, 0);
+            inode_.block_count--;
+        } else if (dirty || direct_params.IsDirty()) {
+            // Only update the indirect block if an entry was deleted, and the indirect block
+            // itself was not deleted.
 #ifdef __Fuchsia__
             state->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
                         params->GetBno(i) + fs_->Info().dat_block, 1);
@@ -477,14 +499,6 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
             fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, entry);
 #endif
             params->SetDirty();
-        }
-
-        // We can delete the current indirect block if all direct blocks within it are deleted
-        if (params->GetOp() == BlockOp::kDelete && direct_params.GetCount() == kMinfsDirectPerIndirect) {
-            // release the direct block itself
-            fs_->BlockFree(state->GetWork(), params->GetBno(i));
-            params->SetBno(i, 0);
-            inode_.block_count--;
         }
     }
 
@@ -532,17 +546,6 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
             return status;
         }
 
-        // only update the indirect block if an entry was deleted
-        if (dirty || indirect_params.IsDirty()) {
-#ifdef __Fuchsia__
-            state->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
-                                      params->GetBno(i) + fs_->Info().dat_block, 1);
-#else
-            fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, dientry);
-#endif
-            params->SetDirty();
-        }
-
         // We can delete the current doubly indirect block if all indirect blocks within it
         // (and direct blocks within those) are deleted
         if (params->GetOp() == BlockOp::kDelete &&
@@ -551,6 +554,16 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
             fs_->BlockFree(state->GetWork(), params->GetBno(i));
             params->SetBno(i, 0);
             inode_.block_count--;
+        } else if (dirty || indirect_params.IsDirty()) {
+            // Only update the indirect block if an entry was deleted, and the indirect block
+            // itself was not deleted.
+#ifdef __Fuchsia__
+            state->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
+                                      params->GetBno(i) + fs_->Info().dat_block, 1);
+#else
+            fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, dientry);
+#endif
+            params->SetDirty();
         }
     }
 
@@ -1334,6 +1347,17 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
 #else
     size_t max_size = off + len;
 #endif
+
+    // Write to data blocks must be done in a separate txn from the metadata updates to ensure that
+    // all user data goes out to disk before associated metadata.
+    fbl::unique_ptr<Transaction> data_state;
+    if (!IsDirectory()) {
+        // Since this transaction is only writing user data, no block reservation is needed.
+        if ((status = fs_->BeginTransaction(0, 0, &data_state)) != ZX_OK) {
+            return status;
+        }
+    }
+
     const void* const start = data;
     uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
     size_t adjust = off % kMinfsBlockSize;
@@ -1368,8 +1392,12 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
             break;
         }
         ZX_DEBUG_ASSERT(bno != 0);
-        state->GetWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
-#else
+        if (IsDirectory()) {
+            state->GetWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
+        } else {
+            data_state->GetWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
+        }
+#else // __Fuchsia__
         blk_t bno;
         if ((status = BlockGet(state, n, &bno))) {
             break;
@@ -1386,7 +1414,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
         if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, wdata)) {
             break;
         }
-#endif
+#endif // __Fuchsia__
 
         adjust = 0;
         len -= xfer;
@@ -1411,6 +1439,13 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
 
     *actual = len;
     ValidateVmoTail();
+
+#ifdef __Fuchsia__
+    if (!IsDirectory()) {
+        data_state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+        fs_->CommitTransaction(std::move(data_state));
+    }
+#endif
     return ZX_OK;
 }
 
@@ -1796,10 +1831,16 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
     });
 
     fbl::unique_ptr<Transaction> state;
-    // Since we will only edit existing blocks, no new blocks are required.
-    ZX_ASSERT(fs_->BeginTransaction(0, 0, &state) == ZX_OK);
-    zx_status_t status = TruncateInternal(state.get(), len);
-    if (status == ZX_OK) {
+    // For directory nodes we will only edit existing blocks, so no new blocks are required.
+    // For data nodes, due to copy-on-write, up to 1 new block may be required.
+    size_t reserve_blocks = IsDirectory() ? 0 : 1;
+    zx_status_t status;
+
+    if ((status = fs_->BeginTransaction(0, reserve_blocks, &state)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = TruncateInternal(state.get(), len)) == ZX_OK) {
         // Successful truncates update inode
         InodeSync(state->GetWork(), kMxFsSyncMtime);
     }
@@ -1809,12 +1850,12 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
 }
 
 zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
-    zx_status_t r = 0;
+    zx_status_t status = ZX_OK;
 #ifdef __Fuchsia__
     // TODO(smklein): We should only init up to 'len'; no need
     // to read in the portion of a large file we plan on deleting.
-    if ((r = InitVmo()) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: Truncate failed to initialize VMO: %d\n", r);
+    if ((status = InitVmo()) != ZX_OK) {
+        FS_TRACE_ERROR("minfs: Truncate failed to initialize VMO: %d\n", status);
         return ZX_ERR_IO;
     }
 #endif
@@ -1828,8 +1869,8 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
         // [start_bno, EOF) blocks should be deleted entirely.
         blk_t start_bno = static_cast<blk_t>((len % kMinfsBlockSize == 0) ?
                                              trunc_bno : trunc_bno + 1);
-        if ((r = BlocksShrink(state, start_bno)) < 0) {
-            return r;
+        if ((status = BlocksShrink(state, start_bno)) != ZX_OK) {
+            return status;
         }
 
 #ifdef __Fuchsia__
@@ -1849,26 +1890,52 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
         if (len < inode_.size) {
             char bdata[kMinfsBlockSize];
             blk_t rel_bno = static_cast<blk_t>(len / kMinfsBlockSize);
-            if ((r = BlockGet(nullptr, rel_bno, &bno)) != ZX_OK) {
-                FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n",
-                               rel_bno, r);
+            if ((status = BlockGet(nullptr, rel_bno, &bno)) != ZX_OK) {
+                FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n", rel_bno,
+                               status);
                 return ZX_ERR_IO;
             }
+
             if (bno != 0) {
                 size_t adjust = len % kMinfsBlockSize;
 #ifdef __Fuchsia__
-                if ((r = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
-                    FS_TRACE_ERROR("minfs: Truncate failed to read last block: %d\n", r);
+                // Write to data blocks must be done in a separate txn from the metadata updates.
+                if (!IsDirectory()) {
+                    // No more than 1 block will be allocated here. A new block is only required if
+                    // the block at |len| already exists. If any indirect blocks would be needed,
+                    // they should have been allocated when that block was initially written.
+
+                    // In the case of COW, we need to reserve a new block.
+                    if ((status = BlockGet(state, rel_bno, &bno)) != ZX_OK) {
+                        return status;
+                    }
+                }
+
+                if ((status = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Truncate failed to read last block: %d\n", status);
                     return ZX_ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 
-                if ((r = vmo_.write(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
-                    FS_TRACE_ERROR("minfs: Truncate failed to write last block: %d\n", r);
+                if ((status = vmo_.write(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Truncate failed to write last block: %d\n", status);
                     return ZX_ERR_IO;
                 }
-                state->GetWork()->Enqueue(vmo_.get(), rel_bno, bno + fs_->Info().dat_block, 1);
-#else
+
+                if (IsDirectory()) {
+                    state->GetWork()->Enqueue(vmo_.get(), rel_bno, bno + fs_->Info().dat_block, 1);
+                } else {
+                    fbl::unique_ptr<Transaction> data_state;
+                    if ((status = fs_->BeginTransaction(0, 0, &data_state)) != ZX_OK) {
+                        return status;
+                    }
+
+                    data_state->GetWork()->Enqueue(vmo_.get(), rel_bno,
+                                                   bno + fs_->Info().dat_block, 1);
+                    data_state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+                    fs_->CommitTransaction(std::move(data_state));
+                }
+#else // __Fuchsia__
                 if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
                     return ZX_ERR_IO;
                 }
@@ -1876,7 +1943,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
                 if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, bdata)) {
                     return ZX_ERR_IO;
                 }
-#endif
+#endif // __Fuchsia__
             }
         }
     } else if (len > inode_.size) {
@@ -1886,8 +1953,8 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
         }
 #ifdef __Fuchsia__
         uint64_t new_size = fbl::round_up(len, kMinfsBlockSize);
-        if ((r = vmo_.set_size(new_size)) != ZX_OK) {
-            return r;
+        if ((status = vmo_.set_size(new_size)) != ZX_OK) {
+            return status;
         }
         vmo_size_ = new_size;
 #endif
@@ -1896,6 +1963,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
     }
 
     inode_.size = static_cast<uint32_t>(len);
+
     ValidateVmoTail();
     return ZX_OK;
 }

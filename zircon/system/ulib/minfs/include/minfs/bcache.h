@@ -18,6 +18,7 @@
 #endif
 
 #include <fbl/algorithm.h>
+#include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/unique_fd.h>

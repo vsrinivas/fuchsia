@@ -95,13 +95,26 @@ public:
 
     size_t AllocateInode() {
         ZX_DEBUG_ASSERT(inode_promise_ != nullptr);
-        return inode_promise_->Allocate(work_.get());
+        return inode_promise_->Allocate(GetWork());
     }
 
     size_t AllocateBlock() {
         ZX_DEBUG_ASSERT(block_promise_ != nullptr);
-        return block_promise_->Allocate(work_.get());
+        return block_promise_->Allocate(GetWork());
     }
+
+#ifdef __Fuchsia__
+    size_t SwapBlock(size_t old_bno) {
+        ZX_DEBUG_ASSERT(block_promise_ != nullptr);
+        return block_promise_->Swap(old_bno);
+    }
+
+    void Resolve() {
+        if (block_promise_ != nullptr) {
+            block_promise_->SwapCommit(GetWork());
+        }
+    }
+#endif
 
     void SetWork(fbl::unique_ptr<WritebackWork> work) {
         work_ = std::move(work);

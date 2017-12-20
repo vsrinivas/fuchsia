@@ -307,6 +307,7 @@ void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
     // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(state->GetWork()->BlkCount() <= limits_.GetMaximumEntryDataBlocks());
+    state->Resolve();
     writeback_->Enqueue(state->RemoveWork());
 #else
     state->GetWork()->Complete();
@@ -708,9 +709,23 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 void Minfs::BlockNew(Transaction* state, blk_t* out_bno) {
     size_t allocated_bno = state->AllocateBlock();
     *out_bno = static_cast<blk_t>(allocated_bno);
+    ValidateBno(*out_bno);
 }
 
+#ifdef __Fuchsia__
+void Minfs::BlockSwap(Transaction* state, blk_t in_bno, blk_t* out_bno) {
+    if (in_bno > 0) {
+        ValidateBno(in_bno);
+    }
+
+    size_t allocated_bno = state->SwapBlock(in_bno);
+    *out_bno = static_cast<blk_t>(allocated_bno);
+    ValidateBno(*out_bno);
+}
+#endif
+
 void Minfs::BlockFree(WriteTxn* txn, blk_t bno) {
+    ValidateBno(bno);
     block_allocator_->Free(txn, bno);
 }
 

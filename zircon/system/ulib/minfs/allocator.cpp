@@ -25,8 +25,9 @@ blk_t BitmapBlocksForSize(size_t size) {
 }  // namespace
 
 AllocatorPromise::~AllocatorPromise() {
+    ZX_DEBUG_ASSERT(allocator_ != nullptr);
+
     if (reserved_ > 0) {
-        ZX_DEBUG_ASSERT(allocator_ != nullptr);
         allocator_->Unreserve(reserved_);
     }
 }
@@ -37,6 +38,20 @@ size_t AllocatorPromise::Allocate(WriteTxn* txn) {
     reserved_--;
     return allocator_->Allocate(txn);
 }
+
+#ifdef __Fuchsia__
+size_t AllocatorPromise::Swap(size_t old_index) {
+    ZX_DEBUG_ASSERT(allocator_ != nullptr);
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+    reserved_--;
+    return allocator_->Swap(old_index);
+}
+
+void AllocatorPromise::SwapCommit(WriteTxn* txn) {
+    ZX_DEBUG_ASSERT(allocator_ != nullptr);
+    allocator_->SwapCommit(txn);
+}
+#endif
 
 AllocatorFvmMetadata::AllocatorFvmMetadata() = default;
 AllocatorFvmMetadata::AllocatorFvmMetadata(uint32_t* data_slices,
@@ -79,8 +94,14 @@ AllocatorMetadata::~AllocatorMetadata() = default;
 Allocator::Allocator(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
                      AllocatorMetadata metadata) :
     bc_(bc), sb_(sb), unit_size_(unit_size), grow_cb_(std::move(grow_cb)),
-    metadata_(std::move(metadata)), reserved_(0), hint_(0) {}
-Allocator::~Allocator() = default;
+    metadata_(std::move(metadata)), reserved_(0), first_free_(0) {}
+
+Allocator::~Allocator() {
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
+    ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
+#endif
+}
 
 zx_status_t Allocator::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn, size_t unit_size,
                               GrowHandler grow_cb, AllocatorMetadata metadata,
@@ -129,28 +150,6 @@ zx_status_t Allocator::Reserve(WriteTxn* txn, size_t count,
     return ZX_OK;
 }
 
-void Allocator::Unreserve(size_t count) {
-    ZX_DEBUG_ASSERT(reserved_ >= count);
-    reserved_ -= count;
-}
-
-size_t Allocator::Allocate(WriteTxn* txn) {
-    ZX_DEBUG_ASSERT(reserved_ > 0);
-    size_t bitoff_start;
-    if (map_.Find(false, hint_, map_.size(), 1, &bitoff_start) != ZX_OK) {
-        ZX_ASSERT(map_.Find(false, 0, hint_, 1, &bitoff_start) == ZX_OK);
-    }
-
-    ZX_ASSERT(map_.Set(bitoff_start, bitoff_start + 1) == ZX_OK);
-
-    Persist(txn, bitoff_start, 1);
-    metadata_.PoolAllocate(1);
-    reserved_ -= 1;
-    sb_->Write(txn);
-    hint_ = bitoff_start + 1;
-    return bitoff_start;
-}
-
 void Allocator::Free(WriteTxn* txn, size_t index) {
     ZX_DEBUG_ASSERT(map_.Get(index, index + 1));
     map_.Clear(index, index + 1);
@@ -158,9 +157,58 @@ void Allocator::Free(WriteTxn* txn, size_t index) {
     metadata_.PoolRelease(1);
     sb_->Write(txn);
 
-    if (index < hint_) {
-        hint_ = index;
+    if (index < first_free_) {
+        first_free_ = index;
     }
+}
+
+size_t Allocator::Find() {
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+    size_t start = first_free_;
+
+    while (true) {
+        // Search for first free element in the map.
+        size_t index;
+        ZX_ASSERT(map_.Find(false, start, map_.size(), 1, &index) == ZX_OK);
+
+#ifdef __Fuchsia__
+        // Although this element is free in |map_|, it may be used by another in-flight transaction
+        // in |swap_in_|. Ensure it does not collide before returning it.
+
+        // Check the next |kBits| elements in the map. This number is somewhat arbitrary, but it
+        // will prevent us from scanning the entire map if all following elements are unset.
+        size_t upper_limit = fbl::min(index + bitmap::kBits, map_.size());
+        map_.Scan(index, upper_limit, false, &upper_limit);
+        ZX_DEBUG_ASSERT(upper_limit <= map_.size());
+
+        // Check the reserved map to see if there are any free blocks from |index| to
+        // |index + max_len|.
+        size_t out;
+        zx_status_t status = swap_in_.Find(false, index, upper_limit, 1, &out);
+
+        // If we found a valid range, return; otherwise start searching from upper_limit.
+        if (status == ZX_OK) {
+            ZX_DEBUG_ASSERT(out < upper_limit);
+            return out;
+        }
+
+        start = upper_limit;
+#else
+        return index;
+#endif
+    }
+}
+
+size_t Allocator::Allocate(WriteTxn* txn) {
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+    size_t bitoff_start = Find();
+    ZX_ASSERT(map_.Set(bitoff_start, bitoff_start + 1) == ZX_OK);
+    Persist(txn, bitoff_start, 1);
+    metadata_.PoolAllocate(1);
+    reserved_ -= 1;
+    sb_->Write(txn);
+    first_free_ = bitoff_start + 1;
+    return bitoff_start;
 }
 
 zx_status_t Allocator::Extend(WriteTxn* txn) {
@@ -235,6 +283,69 @@ zx_status_t Allocator::Extend(WriteTxn* txn) {
 #endif
 }
 
+#ifdef __Fuchsia__
+size_t Allocator::Swap(size_t old_index) {
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+
+    size_t bitoff_start = Find();
+    ZX_ASSERT(swap_in_.Set(bitoff_start, bitoff_start + 1) == ZX_OK);
+    reserved_--;
+    first_free_ = bitoff_start + 1;
+
+    if (old_index > 0) {
+        ZX_DEBUG_ASSERT(map_.Get(old_index, old_index + 1));
+        ZX_ASSERT(swap_out_.Set(old_index, old_index + 1) == ZX_OK);
+    }
+
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
+    return bitoff_start;
+}
+
+void Allocator::SwapCommit(WriteTxn* txn) {
+    // No action required if no blocks have been reserved.
+    if (!swap_in_.num_bits() && !swap_out_.num_bits()) {
+        return;
+    }
+
+    ZX_DEBUG_ASSERT(txn != nullptr);
+
+    for (auto range = swap_in_.begin(); range != swap_in_.end(); ++range) {
+        // Ensure that none of the bits are already allocated.
+        ZX_DEBUG_ASSERT(map_.Scan(range->bitoff, range->end(), false));
+
+        // Swap in the new bits.
+        zx_status_t status = map_.Set(range->bitoff, range->end());
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        Persist(txn, range->bitoff, range->bitlen);
+    }
+
+    for (auto range = swap_out_.begin(); range != swap_out_.end(); ++range) {
+        if (range->bitoff < first_free_) {
+            // If we are freeing up a value < our current hint, update hint now.
+            first_free_ = range->bitoff;
+        }
+        // Ensure that all bits are already allocated.
+        ZX_DEBUG_ASSERT(map_.Get(range->bitoff, range->end()));
+
+        // Swap out the old bits.
+        zx_status_t status = map_.Clear(range->bitoff, range->end());
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        Persist(txn, range->bitoff, range->bitlen);
+    }
+
+    // Update count of allocated blocks.
+    // Since we swap out 1 or fewer elements each time one is swapped in,
+    // the elements in swap_out can never be greater than those in swap_in.
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
+    metadata_.PoolAllocate(static_cast<blk_t>(swap_in_.num_bits() - swap_out_.num_bits()));
+    sb_->Write(txn);
+
+    // Clear the reserved/unreserved bitmaps
+    swap_in_.ClearAll();
+    swap_out_.ClearAll();
+}
+#endif
+
 void Allocator::Persist(WriteTxn* txn, size_t index, size_t count) {
     blk_t rel_block = static_cast<blk_t>(index) / kMinfsBlockBits;
     blk_t abs_block = metadata_.MetadataStartBlock() + rel_block;
@@ -263,4 +374,12 @@ fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
 }
 #endif
 
+void Allocator::Unreserve(size_t count) {
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
+    ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
+#endif
+    ZX_DEBUG_ASSERT(reserved_ >= count);
+    reserved_ -= count;
+}
 } // namespace minfs
