@@ -60,13 +60,13 @@ public:
 
 private:
     // The following data is immmutable after construction.
-    std::weak_ptr<MsdArmConnection> connection_;
-    uint64_t gpu_address_;
-    uint32_t slot_;
+    const std::weak_ptr<MsdArmConnection> connection_;
+    const uint64_t gpu_address_;
+    const uint32_t slot_;
     DependencyList dependencies_;
     // Assigned by client.
-    uint8_t atom_number_;
-    magma_arm_mali_user_data user_data_;
+    const uint8_t atom_number_;
+    const magma_arm_mali_user_data user_data_;
 
     // This data is mutable after construction from the device thread.
     bool finished_ = false;
@@ -103,8 +103,8 @@ public:
 
 private:
     // Immutable after construction.
-    AtomFlags soft_flags_{};
-    std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_;
+    const AtomFlags soft_flags_{};
+    const std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_;
 };
 
 #endif // MSD_ARM_ATOM_H_
