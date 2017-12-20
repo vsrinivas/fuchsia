@@ -63,11 +63,7 @@ template("go_build") {
 
     go_dependencies = []
     if (defined(invoker.go_dependencies)) {
-      # builds on this code path can be concurrent
       go_dependencies = invoker.go_dependencies
-    } else {
-      # only run one gobuild.py in parallel
-      pool = "//build/go:go_pool"
     }
 
     args = [
