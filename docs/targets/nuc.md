@@ -37,40 +37,15 @@ drive pulls your freshly-built OS across the network, from host machine to NUC.
   + Select Boot Configuration tab
   + Enable __Boot USB Devices First__, __Boot Network Devices Last__, and
   __Unlimited Boot to Network Attempts__
-  + Network Boot (bottom left pane) should display _UEFI PXE & iSCSI_
+  + Network Boot (bottom left pane) should display _UEFI PXE & iSCSI_.
+    __Note__: DO NOT disable netbooting here or netbooting from Gigaboot and
+    Zedboot may not work.
 7. Save BIOS changes
   + Press F10 (or click the top right (x) button) to Save and Exit, Y to confirm
   + Device will automatically reboot and begin looking for a USB or network boot
 8. Power down the NUC
+9. Continue to [Bootloader setup with USB flash drive](bootloader_setup.md)
 
-
-## Bootloader Setup with USB Flash Drive
-
-These instructions prepare a USB flash drive to be the bootloader for your NUC
-device. This USB flash drive can then direct your NUC to boot from the
-freshly-built OS on your network-connected host development machine (or
-alternately from the OS on the flash drive itself).
-
-+ Format the first partition of your USB flash drive as FAT; keep it connected
-+ Execute `fx set x86-64` (if you haven't already)
-+ To network-boot via __GigaBoot20x6__, execute `fx mkbootloader`. This command
-  does the following for you:
-  + Builds Zircon (for x86, as you have set)
-  + Creates a `/efi/boot` directory on your USB drive
-  + Copies 'build-zircon/build-x86/bootloader/bootx64.efi' (the
-    bootloader) from your host to `/EFI/BOOT/BOOTX64.EFI` on your USB drive
-+ To network-boot via __zedboot__, `fx mkzedboot`. The 'mkzedboot' command does
-  the above, as well as the following, for you:
-  + Creates a zedboot.bin (from zircon.bin and bootdata.bin in your 'out' tree)
-  + Creates a CMDLINE file that sets the default boot to zedboot with '0'timeout
-  + Copies these zedboot.bin and CMDLINE files to the root of your USB drive
-+ Use your host OS to safely remove the USB drive; insert it into your NUC
-+ On your host, run `fx build` (if you haven't already), then `fx boot`
-+ Connect your NUC to your host via built-in ethernet, then power up the NUC
-
-Note: to boot from flash drive (no network connection needed), copy 'zircon.bin'
-to `/zircon.bin` on the root of flash drive. The NUC will boot from that OS
-instead of the network.
 
 ### Important: network booting only works with the NUC's *built-in* ethernet
 ### Net-boot via USB-ethernet dongle is unsupported

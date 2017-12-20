@@ -35,9 +35,10 @@ Otherwise you’ll need to enter the password every time you use the BIOS.
 A password is required to modify the secure boot setting, but “disabled” will persist without one.
 12. Select “Exit” from the tabs at the left
 13. Select “Exit Saving Changes”
+14. Continue to [Bootloader setup with USB flash drive](bootloader_setup.md)
 
 ## What if you end up in the Windows 10 Setup?
-If you don’t enter the BIOS and haven’t installed another OS, You’ll end up on a blue background “Hi there” screen asking you to select country, language, etc.  
+If you don’t enter the BIOS and haven’t installed another OS, You’ll end up on a blue background “Hi there” screen asking you to select country, language, etc.
 
 1. Press Power and Hold it for about 10 seconds (the screen will turn off after 2-3 seconds).
 2. Boot into the BIOS as described above.
@@ -52,18 +53,6 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 5. When prompted “Restart to change UEFI firmware settings”, select “Restart”
 6. The machine should now reboot into the BIOS
 7. Check that “Windows Boot Manager” didn’t get moved to the top of the boot order, fix it if it did
-
-## How to Create a Bootable USB Flash Drive
-1. Build everything
-  * `(cd $FUCHSIA_ROOT; fx set x86-64; fx full-build)`
-2. Format your USB Flash Drive with a FAT32 partition as the first partition
-3. Copy `$FUCHSIA_ROOT/out/build-zircon/build-x86/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
-If you plan to netboot, you're done.
-4. Copy `$FUCHSIA_ROOT/out/build-zircon/build-x86/zircon.bin` to the root of the USB Flash Drive
-5. Optionally copy an additional bootfs image to `ramdisk.bin` on the root of the USB Flash Drive (for a Fuchsia build, a bootfs image can be found at `$FUCHSIA_ROOT/out/debug-x86-64/user.bootfs`)
-
-If you need to boot zircon over the network, skip step 4 and/or delete
-zircon.bin from the root of the USB Flash Drive.
 
 ## Quirks
 It has been observed that USB initialization is racy on a cold boot.  So if you're starting from a cold boot and trying to boot to USB, you may find that you boot to disk instead.
