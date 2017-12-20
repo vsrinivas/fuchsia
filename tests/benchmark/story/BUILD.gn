@@ -1,0 +1,47 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/tests/benchmark/*" ]
+
+group("story") {
+  testonly = true
+
+  public_deps = [
+    ":modular_benchmark_story_tspec",
+    ":modular_benchmark_story_user_shell",
+  ]
+}
+
+executable("modular_benchmark_story_user_shell") {
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user/fidl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+
+  sources = [
+    "modular_benchmark_story_user_shell.cc",
+  ]
+}
+
+copy("modular_benchmark_story_tspec") {
+  testonly = true
+
+  sources = [
+    "modular_benchmark_story.tspec",
+  ]
+  outputs = [
+    "$root_out_dir/modular_benchmark_story.tspec",
+  ]
+}

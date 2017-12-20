@@ -99,6 +99,7 @@ group("modular_all") {
     "bin/user_runner:dev_user_shell",
     "examples:modular_examples",
     "tests:modular_tests",
+    "tests/benchmark:modular_benchmarks",
   ]
 }
 

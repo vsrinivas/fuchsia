@@ -1,0 +1,42 @@
+{
+  "test_suite_name": "fuchsia.modular",
+  "app": "device_runner",
+  "args": ["--account_provider=dev_token_manager",
+           "--device_shell=dev_device_shell",
+           "--user_shell=/system/test/modular_tests/modular_benchmark_story_user_shell",
+           "--user_shell_args=--story_count=20",
+           "--story_shell=dev_story_shell"],
+  "categories": ["benchmark", "modular"],
+  "duration": 1200,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "story/create",
+      "event_category": "benchmark",
+      "split_samples_at": [1]
+    },
+    {
+      "type": "duration",
+      "event_name": "story/info",
+      "event_category": "benchmark",
+      "split_samples_at": [1]
+    },
+    {
+      "type": "duration",
+      "event_name": "story/start",
+      "event_category": "benchmark",
+      "split_samples_at": [1]
+    },
+    {
+      "type": "duration",
+      "event_name": "story/stop",
+      "event_category": "benchmark",
+      "split_samples_at": [1]
+    },
+    {
+      "type": "duration",
+      "event_name": "user/logout",
+      "event_category": "benchmark"
+    }
+  ]
+}

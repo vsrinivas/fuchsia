@@ -9,10 +9,15 @@
         "device_runner_monitor": "//peridot/bin/device_runner_monitor",
         "device_runner": "//peridot/bin/device_runner",
         "modular_tests": "//peridot/tests:modular_tests",
+        "modular_benchmarks": "//peridot/tests/benchmark:modular_benchmarks",
         "modular_unittests": "//peridot:modular_unittests",
         "user_runner": "//peridot/bin/user_runner"
     },
     "resources": [
+        {
+            "bootfs_path": "test/run_modular_benchmarks.sh",
+            "file": "peridot/tests/benchmark/run_modular_benchmarks.sh"
+        },
         {
             "bootfs_path": "test/run_modular_tests.sh",
             "file": "peridot/tests/run_modular_tests.sh"

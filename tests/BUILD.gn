@@ -94,7 +94,7 @@ package("modular_tests") {
     {
       name = "component_context_unstoppable_agent"
       dest = "modular_tests/component_context_unstoppable_agent"
-    },  # This should be a resource to avoid the extra copy() rule.
+    },
     {
       name = "embed_child_module"
       dest = "modular_tests/embed_child_module"
