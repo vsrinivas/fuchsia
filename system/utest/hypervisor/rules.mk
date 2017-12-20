@@ -36,7 +36,6 @@ MODULE_CPPFLAGS := \
 ifeq ($(ARCH),x86)
 MODULE_SRCS += \
     $(LOCAL_DIR)/decode.cpp \
-    $(LOCAL_DIR)/page_table.cpp \
 
 MODULE_STATIC_LIBS += \
     system/ulib/pretty

@@ -11,15 +11,6 @@
 #include <zircon/types.h>
 #include <zx/port.h>
 
-/**
- * Create an identity-mapped page table.
- *
- * @param addr The mapped address of guest physical memory.
- * @param size The size of guest physical memory.
- * @param end_off The offset to the end of the page table.
- */
-zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
-
 /* Convert a key from a port packet into a pointer to the mapping object. */
 static inline IoMapping* trap_key_to_mapping(uint64_t trap_key) {
     return reinterpret_cast<IoMapping*>(trap_key);
@@ -37,10 +28,6 @@ public:
     ~Guest();
 
     zx_status_t Init(size_t mem_size);
-
-    zx_status_t CreatePageTable(uintptr_t* end_off) {
-        return guest_create_page_table(phys_mem_.addr(), phys_mem_.size(), end_off);
-    }
 
     const PhysMem& phys_mem() const { return phys_mem_; }
     zx_handle_t handle() const { return guest_; }
