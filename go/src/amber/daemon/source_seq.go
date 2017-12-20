@@ -21,7 +21,7 @@ import (
 type SourceKeeper struct {
 	src  source.Source
 	mu   *sync.Mutex
-	last time.Time
+	hist []time.Time
 }
 
 // TODO(jmatt) include a notion of when we can retry
@@ -31,19 +31,36 @@ func NewSourceKeeper(src source.Source) *SourceKeeper {
 	return &SourceKeeper{
 		src:  src,
 		mu:   &sync.Mutex{},
-		last: time.Now().Add(0 - src.CheckInterval()),
+		hist: []time.Time{},
 	}
 }
 
 func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	n := time.Now().Sub(k.last)
-	if n < k.CheckInterval() {
-		log.Printf("Query rate exceeded %d \n", n)
+
+	slice_pt := len(k.hist)
+	interval := k.CheckInterval()
+	for idx, val := range k.hist {
+		if time.Since(val) < interval {
+			slice_pt = idx
+			break
+		}
+	}
+
+	if slice_pt > 0 {
+		nlen := len(k.hist) - slice_pt
+		nhist := make([]time.Time, nlen)
+		copy(nhist, k.hist[slice_pt:])
+		k.hist = nhist
+	}
+
+	if uint64(len(k.hist) + 1) > k.CheckLimit() {
+		log.Println("Query rate exceeded")
 		return nil, ErrRateExceeded
 	}
-	k.last = time.Now()
+
+	k.hist = append(k.hist, time.Now())
 	r, e := k.src.AvailableUpdates(pkgs)
 	return r, e
 }
@@ -60,4 +77,8 @@ func (k *SourceKeeper) CheckInterval() time.Duration {
 
 func (k *SourceKeeper) Equals(s source.Source) bool {
 	return k.src.Equals(s)
+}
+
+func (k *SourceKeeper) CheckLimit() uint64 {
+	return k.src.CheckLimit()
 }

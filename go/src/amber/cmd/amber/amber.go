@@ -101,10 +101,12 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 		reqSet.Add(&pkg)
 	}
 
-	// create source with 5 qps rate limit
+	// create source with an average 10qps over 5 seconds and a possible burst
+	// of up to 50 queries
 	fetcher := &source.TUFSource{
 		Client:   client,
-		Interval: time.Millisecond * 200,
+		Interval: time.Second * 5,
+		Limit:    50,
 	}
 	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
 	checker.AddSource(fetcher)

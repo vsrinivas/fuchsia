@@ -35,8 +35,13 @@ type Source interface {
 	// is returned, ready for reading.
 	FetchPkg(pkg *pkg.Package) (*os.File, error)
 
-	// CheckInterval is minimum time between polls of this source
+	// CheckInterval is the time window during which at most CheckLimit() calls
+	// are allowed
 	CheckInterval() time.Duration
+
+	// CheckLimit is the number of calls allowed per the unit of time specified in
+	// CheckInterval
+	CheckLimit() uint64
 
 	// Equals should return true if the provide Source is the same as the receiver.
 	Equals(s Source) bool

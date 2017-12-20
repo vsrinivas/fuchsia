@@ -24,6 +24,7 @@ var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 type TUFSource struct {
 	Client   *client.Client
 	Interval time.Duration
+	Limit    uint64
 }
 
 type merkle struct {
@@ -116,6 +117,10 @@ func (f *TUFSource) CheckInterval() time.Duration {
 	// TODO(jmatt) figure out how to establish a real value from the
 	// Client we wrap
 	return f.Interval
+}
+
+func (f *TUFSource) CheckLimit() uint64 {
+	return f.Limit
 }
 
 // Equals returns true if the Source passed in is a pointer to this instance
