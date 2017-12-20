@@ -102,7 +102,8 @@ class FrameScheduler {
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 
-  std::priority_queue<uint64_t> requested_presentation_times_;
+  std::priority_queue<uint64_t, std::vector<uint64_t>, std::greater<uint64_t>>
+      requested_presentation_times_;
 
   uint64_t frame_number_ = 0;
   constexpr static size_t kMaxOutstandingFrames = 2;
