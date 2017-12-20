@@ -113,16 +113,15 @@ void PageManager::OnSyncBacklogDownloaded() {
 }
 
 void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
-  page_storage_->GetHeadCommitIds(fxl::MakeCopyable(
-      [callback = std::move(callback)](storage::Status status,
-                                       std::vector<storage::CommitId> heads) {
+  page_storage_->GetHeadCommitIds(
+      [callback](storage::Status status, std::vector<storage::CommitId> heads) {
         fidl::Array<fidl::Array<uint8_t>> result =
             fidl::Array<fidl::Array<uint8_t>>::New(0);
-        for (size_t i = 0; i < heads.size(); ++i)
-          result.push_back(convert::ToArray(heads[i]));
+        for (const auto& head : heads)
+          result.push_back(convert::ToArray(head));
 
         callback(PageUtils::ConvertStatus(status), std::move(result));
-      }));
+      });
 }
 
 void PageManager::GetSnapshot(
@@ -132,8 +131,7 @@ void PageManager::GetSnapshot(
   page_storage_->GetCommit(
       convert::ToStringView(commit_id),
       fxl::MakeCopyable(
-          [this, snapshot_request = std::move(snapshot_request),
-           callback = std::move(callback)](
+          [this, snapshot_request = std::move(snapshot_request), callback](
               storage::Status status,
               std::unique_ptr<const storage::Commit> commit) mutable {
             if (status == storage::Status::OK) {

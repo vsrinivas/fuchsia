@@ -250,8 +250,8 @@ void LedgerManager::BindLedgerDebug(
 void LedgerManager::GetPagesList(const GetPagesListCallback& callback) {
   fidl::Array<fidl::Array<uint8_t>> result =
       fidl::Array<fidl::Array<uint8_t>>::New(0);
-  for (auto it = page_managers_.begin(); it != page_managers_.end(); ++it) {
-    result.push_back(convert::ToArray(it->first));
+  for (const auto& key_value : page_managers_) {
+    result.push_back(convert::ToArray(key_value.first));
   }
   callback(std::move(result));
 }

@@ -112,8 +112,8 @@ void LedgerRepositoryImpl::GetInstancesList(
     const GetInstancesListCallback& callback) {
   fidl::Array<fidl::Array<uint8_t>> result =
       fidl::Array<fidl::Array<uint8_t>>::New(0);
-  for (auto it = ledger_managers_.begin(); it != ledger_managers_.end(); ++it) {
-    result.push_back(convert::ToArray(it->first));
+  for (const auto& key_value : ledger_managers_) {
+    result.push_back(convert::ToArray(key_value.first));
   }
   callback(std::move(result));
 }

@@ -43,8 +43,8 @@ class ManagedContainer {
    public:
     ManagedElement(E* element, fxl::Closure cleanup)
         : element_(element), auto_cleanup_(std::move(cleanup)) {}
-    ManagedElement(ManagedElement<E>&& other) = default;
-    ManagedElement& operator=(ManagedElement<E>&& other) = default;
+    ManagedElement(ManagedElement<E>&& other) noexcept = default;
+    ManagedElement& operator=(ManagedElement<E>&& other) noexcept = default;
 
     E* get() const { return element_; }
 

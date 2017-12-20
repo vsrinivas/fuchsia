@@ -111,7 +111,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
                  std::function<void(ledger::Status,
                                     fidl::Array<ledger::DiffEntryPtr>,
                                     fidl::Array<uint8_t>)> callback) mutable {
-            result_provider->GetFullDiff(std::move(token), std::move(callback));
+            result_provider->GetFullDiff(std::move(token), callback);
           },
           entries, 0, min_queries);
     }
@@ -125,8 +125,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
                  std::function<void(ledger::Status,
                                     fidl::Array<ledger::DiffEntryPtr>,
                                     fidl::Array<uint8_t>)> callback) mutable {
-            result_provider->GetConflictingDiff(std::move(token),
-                                                std::move(callback));
+            result_provider->GetConflictingDiff(std::move(token), callback);
           },
           entries, 0, min_queries);
     }

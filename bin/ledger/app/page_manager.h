@@ -52,7 +52,7 @@ class PageManager : public PageDebug {
               std::unique_ptr<MergeResolver> merge_resolver,
               PageManager::PageStorageState state,
               fxl::TimeDelta sync_timeout = fxl::TimeDelta::FromSeconds(5));
-  ~PageManager();
+  ~PageManager() override;
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
   // request.

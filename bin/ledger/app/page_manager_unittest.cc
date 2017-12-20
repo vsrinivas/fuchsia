@@ -441,7 +441,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
 
   fidl::Array<EntryPtr> expected_entries1;
   fidl::Array<uint8_t> next_token;
-  snapshot1->GetEntries(NULL, NULL,
+  snapshot1->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries1, &next_token));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -451,7 +451,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_EQ(value1, ToString(expected_entries1[0]->value));
 
   fidl::Array<EntryPtr> expected_entries2;
-  snapshot2->GetEntries(NULL, NULL,
+  snapshot2->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries2, &next_token));
   EXPECT_FALSE(RunLoopWithTimeout());

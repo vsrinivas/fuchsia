@@ -76,7 +76,7 @@ class PutBenchmark : public ledger::PageWatcher {
   void BindWatcher(std::vector<fidl::Array<uint8_t>> keys);
   void RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys);
   void CommitAndRunNext(int i,
-                        size_t keyn,
+                        size_t key_number,
                         std::vector<fidl::Array<uint8_t>> keys);
 
   void ShutDown();

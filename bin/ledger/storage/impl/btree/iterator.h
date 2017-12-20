@@ -32,11 +32,11 @@ class BTreeIterator {
  public:
   explicit BTreeIterator(SynchronousStorage* storage);
 
-  BTreeIterator(BTreeIterator&& other);
-  BTreeIterator& operator=(BTreeIterator&& other);
+  BTreeIterator(BTreeIterator&& other) noexcept;
+  BTreeIterator& operator=(BTreeIterator&& other) noexcept;
 
   // Initializes the iterator with the root node of the tree.
-  Status Init(ObjectIdentifier identifier);
+  Status Init(ObjectIdentifier node_identifier);
 
   // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
@@ -82,7 +82,7 @@ class BTreeIterator {
   size_t& CurrentIndex();
   size_t CurrentIndex() const;
   const TreeNode& CurrentNode() const;
-  Status Descend(const ObjectIdentifier& identifier);
+  Status Descend(const ObjectIdentifier& node_identifier);
 
   SynchronousStorage* storage_;
   // Stack representing the current iteration state. Each level represents the

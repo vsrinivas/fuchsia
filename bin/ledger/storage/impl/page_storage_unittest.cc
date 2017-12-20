@@ -101,7 +101,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
   explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate,
                                 fxl::RefPtr<fxl::FakeTaskRunner> task_runner)
-      : delegate_(delegate), task_runner_(task_runner) {}
+      : delegate_(delegate), task_runner_(std::move(task_runner)) {}
 
   bool Yield() override { return delegate_->Yield(); }
 
@@ -134,7 +134,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 class FakeErrorDataSource : public DataSource {
  public:
   explicit FakeErrorDataSource(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : task_runner_(task_runner) {}
+      : task_runner_(std::move(task_runner)) {}
 
   uint64_t GetSize() override { return 1; }
 

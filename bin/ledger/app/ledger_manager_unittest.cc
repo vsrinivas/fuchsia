@@ -285,9 +285,10 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
   EXPECT_EQ(0u, actual_pages_list.size());
 
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
-  for (size_t i = 0; i < pages.size(); ++i)
+  for (size_t i = 0; i < pages.size(); ++i) {
     ledger_->GetPage(convert::ToArray(ids[i]), pages[i].NewRequest(),
                      waiter->NewCallback());
+  }
 
   waiter->Finalize(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());

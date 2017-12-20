@@ -51,7 +51,7 @@ class StringLikeDataSource : public DataSource {
 
 class VmoDataChunk : public DataSource::DataChunk {
  public:
-  VmoDataChunk(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {}
+  explicit VmoDataChunk(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {}
 
   zx_status_t Init() {
     uintptr_t allocate_address;

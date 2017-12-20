@@ -64,8 +64,8 @@ class AutoCleanableSet {
   AutoCleanableSet() {}
   ~AutoCleanableSet() {}
 
-  AutoCleanableSet(AutoCleanableSet&& other) = default;
-  AutoCleanableSet& operator=(AutoCleanableSet&& other) = default;
+  AutoCleanableSet(AutoCleanableSet&& other) noexcept = default;
+  AutoCleanableSet& operator=(AutoCleanableSet&& other) noexcept = default;
 
   bool empty() { return set_.empty(); }
 

@@ -45,7 +45,7 @@ class TracingLambda {
 
   // Copy constructor so that the resulting callback can be used as an
   // std::function, but acts as a move constructor. Only the last copy is valid.
-  TracingLambda(TracingLambda&& other)
+  TracingLambda(TracingLambda&& other) noexcept
       : id_(other.id_),
         category_(other.category_),
         name_(other.name_),

@@ -94,7 +94,7 @@ void PutBenchmark::Run() {
 }
 
 void PutBenchmark::OnChange(ledger::PageChangePtr page_change,
-                            ledger::ResultState result_state,
+                            ledger::ResultState /*result_state*/,
                             const OnChangeCallback& callback) {
   for (auto const& change : page_change->changes) {
     size_t key_number = std::stoul(convert::ToString(change->key));

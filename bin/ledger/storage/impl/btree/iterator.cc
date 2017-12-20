@@ -37,9 +37,10 @@ Status ForEachEntryInternal(
 
 BTreeIterator::BTreeIterator(SynchronousStorage* storage) : storage_(storage) {}
 
-BTreeIterator::BTreeIterator(BTreeIterator&& other) = default;
+BTreeIterator::BTreeIterator(BTreeIterator&& other) noexcept = default;
 
-BTreeIterator& BTreeIterator::operator=(BTreeIterator&& other) = default;
+BTreeIterator& BTreeIterator::operator=(BTreeIterator&& other) noexcept =
+    default;
 
 Status BTreeIterator::Init(ObjectIdentifier node_identifier) {
   return Descend(node_identifier);
@@ -170,8 +171,8 @@ void GetObjectIdentifiers(
 
   auto on_next = [object_digests =
                       object_digests.get()](EntryAndNodeIdentifier e) {
-    object_digests->insert(std::move(e.entry.object_identifier));
-    object_digests->insert(std::move(e.node_identifier));
+    object_digests->insert(e.entry.object_identifier);
+    object_digests->insert(e.node_identifier);
     return true;
   };
   auto on_done =

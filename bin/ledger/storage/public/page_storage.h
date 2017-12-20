@@ -27,9 +27,9 @@ class PageStorage {
   struct CommitIdAndBytes {
     CommitIdAndBytes();
     CommitIdAndBytes(CommitId id, std::string bytes);
-    CommitIdAndBytes(CommitIdAndBytes&& other);
+    CommitIdAndBytes(CommitIdAndBytes&& other) noexcept;
 
-    CommitIdAndBytes& operator=(CommitIdAndBytes&& other);
+    CommitIdAndBytes& operator=(CommitIdAndBytes&& other) noexcept;
 
     CommitId id;
     std::string bytes;

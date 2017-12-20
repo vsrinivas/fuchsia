@@ -139,7 +139,7 @@ class RowIterator
     return *this;
   }
 
-  bool Valid() const override {
+  bool Valid() const final {
     return it_->Valid() && it_->key().starts_with(prefix_);
   }
 
