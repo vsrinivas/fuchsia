@@ -115,6 +115,11 @@ func init() {
 			"tools",
 		},
 		{
+			tools,
+			x86Builddir + "host_x64/pm",
+			"tools/pm",
+		},
+		{
 			toolchain,
 			fmt.Sprintf("buildtools/%s-%s/clang", hostOs, hostCpu),
 			"clang",
