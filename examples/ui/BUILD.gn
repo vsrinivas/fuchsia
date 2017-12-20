@@ -7,9 +7,6 @@ import("//build/package.gni")
 group("ui") {
   public_deps = [
     "hello_scene_manager",
-    "jank",
-    "noodles",
-    "paint",
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
@@ -29,30 +26,6 @@ package("hello_scene_manager") {
   binaries = [ {
         name = "hello_scene_manager"
       } ]
-}
-
-package("jank_view") {
-  deps = [
-    "jank",
-  ]
-
-  binary = "jank_view"
-}
-
-package("noodles_view") {
-  deps = [
-    "noodles",
-  ]
-
-  binary = "noodles_view"
-}
-
-package("paint_view") {
-  deps = [
-    "//garnet/examples/ui/paint",
-  ]
-
-  binary = "paint_view"
 }
 
 package("shadertoy_client") {

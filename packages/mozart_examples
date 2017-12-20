@@ -7,9 +7,6 @@
     ],
     "packages": {
         "hello_scene_manager": "//garnet/examples/ui:hello_scene_manager",
-        "jank_view": "//garnet/examples/ui:jank_view",
-        "noodles_view": "//garnet/examples/ui:noodles_view",
-        "paint_view": "//garnet/examples/ui:paint_view",
         "shadertoy_client": "//garnet/examples/ui:shadertoy_client",
         "shadertoy_service": "//garnet/examples/ui:shadertoy_service",
         "shapes_view": "//garnet/examples/ui:shapes_view",
