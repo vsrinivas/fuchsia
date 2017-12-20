@@ -654,7 +654,7 @@ void PcieBusDriver::DisableBus() {
     fbl::AutoLock lock(&driver_lock_);
     ForeachDevice(
         [](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
-            if (!(dev->vendor_id() == 0x8086 && dev->device_id() == 0x9d66)) {
+            if (!dev->is_bridge() && !(dev->vendor_id() == 0x8086 && dev->device_id() == 0x9d66)) {
                 TRACEF("Disabling device %#02x:%#02x.%01x - VID %#04x DID %#04x\n",
                     dev->dev_id(), dev->bus_id(), dev->func_id(), dev->vendor_id(),
                     dev->device_id());
