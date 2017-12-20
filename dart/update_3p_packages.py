@@ -33,7 +33,7 @@ PROJECT_DEPENDENCIES = [
     'topaz/app/chat',
     'topaz/app/dashboard',
     'topaz/app/xi',
-    'topaz/public/dart',
+    'topaz/public/dart/widgets',
     'topaz/tools',
 ]
 
