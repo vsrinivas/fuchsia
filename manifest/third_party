@@ -2,7 +2,6 @@
 <manifest>
   <imports>
     <localimport file="minimal"/>
-    <localimport file="skia"/>
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="build"
             name="manifest"/>
