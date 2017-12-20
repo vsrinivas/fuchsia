@@ -208,7 +208,7 @@ class PciEcamHandler : public IoHandler {
 
 class PciBus {
  public:
-  PciBus(Guest* guest, const InterruptController* interrupt_controller);
+  PciBus(Guest* guest, InterruptController* interrupt_controller);
 
   zx_status_t Init();
 
@@ -233,7 +233,7 @@ class PciBus {
   zx_status_t WriteIoPort(uint64_t port, const IoValue& value);
 
   // Raise an interrupt for the given device.
-  zx_status_t Interrupt(const PciDevice& device) const;
+  zx_status_t Interrupt(const PciDevice& device);
 
   // Returns true if |bus|, |device|, |function| corresponds to a valid
   // device address.
@@ -261,7 +261,7 @@ class PciBus {
   // Devices on the virtual PCI bus.
   PciDevice* device_[PCI_MAX_DEVICES] = {};
   // IO APIC for use with interrupt redirects.
-  const InterruptController* interrupt_controller_ = nullptr;
+  InterruptController* interrupt_controller_ = nullptr;
   // Embedded root complex device.
   PciDevice root_complex_;
   // Next pio window to be allocated to connected devices.

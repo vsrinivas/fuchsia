@@ -111,7 +111,7 @@ static const PciDevice::Attributes kRootComplexAttributes = {
     .device_class = (PCI_CLASS_BRIDGE_HOST << 16),
 };
 
-PciBus::PciBus(Guest* guest, const InterruptController* interrupt_controller)
+PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
     : guest_(guest),
       ecam_handler_(this),
       port_handler_(this),
@@ -314,7 +314,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
   }
 }
 
-zx_status_t PciBus::Interrupt(const PciDevice& device) const {
+zx_status_t PciBus::Interrupt(const PciDevice& device) {
   return interrupt_controller_->Interrupt(device.global_irq_);
 }
 

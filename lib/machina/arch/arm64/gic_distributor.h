@@ -5,28 +5,14 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 #define GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 
+#include <fbl/mutex.h>
 #include <hypervisor/io.h>
 
 class Guest;
+class Vcpu;
+struct SoftwareGeneratedInterrupt;
 
 namespace machina {
-
-// Target CPU for the software-generated interrupt.
-enum class InterruptTarget {
-  MASK = 0b00,
-  ALL_BUT_LOCAL = 0b01,
-  LOCAL = 0b10,
-};
-
-// Software-generated interrupt received by the GIC distributor.
-struct SoftwareGeneratedInterrupt {
-  InterruptTarget target;
-  uint8_t cpu_mask;
-  bool non_secure;
-  uint8_t vector;
-
-  SoftwareGeneratedInterrupt(uint32_t sgi);
-};
 
 // Implements GIC distributor.
 class GicDistributor : public IoHandler {
@@ -36,7 +22,19 @@ class GicDistributor : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
-  zx_status_t Interrupt(uint32_t global_irq) const;
+  zx_status_t RegisterVcpu(uint8_t vcpu_id, Vcpu* vcpu);
+  zx_status_t Interrupt(uint32_t global_irq);
+
+ private:
+  // NOTE: This must match the same constant in arch/hypervisor.h within Zircon.
+  static constexpr size_t kNumInterrupts = 256;
+  static constexpr size_t kMaxVcpus = 8;
+
+  mutable fbl::Mutex mutex_;
+  uint8_t cpu_masks_[kNumInterrupts] __TA_GUARDED(mutex_) = {};
+  Vcpu* vcpus_[kMaxVcpus] = {};
+
+  zx_status_t TargetInterrupt(uint32_t global_irq, uint8_t cpu_mask);
 };
 
 }  // namespace machina

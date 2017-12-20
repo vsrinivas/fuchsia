@@ -19,7 +19,6 @@ class IoApic : public IoHandler {
  public:
   static constexpr size_t kNumRedirects = 48u;
   static constexpr size_t kNumRedirectOffsets = kNumRedirects * 2;
-  static constexpr size_t kMaxLocalApics = 16u;
 
   // An entry in the redirect table.
   struct RedirectEntry {
@@ -40,11 +39,10 @@ class IoApic : public IoHandler {
   zx_status_t SetRedirect(uint32_t global_irq, RedirectEntry& redirect);
 
   // Signals the given global IRQ.
-  zx_status_t Interrupt(uint32_t global_irq) const;
+  zx_status_t Interrupt(uint32_t global_irq);
 
  private:
-  zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
-  zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
+  static constexpr size_t kMaxLocalApics = 16u;
 
   mutable fbl::Mutex mutex_;
   // IO register-select register.
@@ -54,7 +52,10 @@ class IoApic : public IoHandler {
   // IO redirection table.
   RedirectEntry redirect_[kNumRedirects] __TA_GUARDED(mutex_) = {};
   // Connected local APICs.
-  LocalApic* local_apic_[kMaxLocalApics] = {};
+  LocalApic* local_apics_[kMaxLocalApics] = {};
+
+  zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
+  zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
 };
 
 }  // namespace machina

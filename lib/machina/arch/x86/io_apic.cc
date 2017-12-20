@@ -53,11 +53,11 @@ zx_status_t IoApic::RegisterLocalApic(uint8_t local_apic_id,
                                       LocalApic* local_apic) {
   if (local_apic_id >= kMaxLocalApics)
     return ZX_ERR_OUT_OF_RANGE;
-  if (local_apic_[local_apic_id] != nullptr)
+  if (local_apics_[local_apic_id] != nullptr)
     return ZX_ERR_ALREADY_EXISTS;
 
   local_apic->set_id(local_apic_id);
-  local_apic_[local_apic_id] = local_apic;
+  local_apics_[local_apic_id] = local_apic;
   return ZX_OK;
 }
 
@@ -69,7 +69,7 @@ zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
   return ZX_OK;
 }
 
-zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
+zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   if (global_irq >= kNumRedirects)
     return ZX_ERR_OUT_OF_RANGE;
 
@@ -96,7 +96,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
   uint32_t destmod = bit_shift(entry.lower, 11);
   if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
     uint32_t dest = bits_shift(entry.upper, 27, 24);
-    LocalApic* local_apic = dest < kMaxLocalApics ? local_apic_[dest] : nullptr;
+    LocalApic* local_apic = dest < kMaxLocalApics ? local_apics_[dest] : nullptr;
     if (local_apic == nullptr)
       return ZX_ERR_NOT_FOUND;
     return local_apic->Interrupt(vector);
@@ -106,7 +106,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
   uint32_t dest = bits_shift(entry.upper, 31, 24);
   for (uint8_t local_apic_id = 0; local_apic_id < kMaxLocalApics;
        ++local_apic_id) {
-    LocalApic* local_apic = local_apic_[local_apic_id];
+    LocalApic* local_apic = local_apics_[local_apic_id];
     if (local_apic == nullptr)
       continue;
 

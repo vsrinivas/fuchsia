@@ -363,6 +363,11 @@ int main(int argc, char** argv) {
   }
 
 #if __aarch64__
+  status = interrupt_controller.RegisterVcpu(0, &vcpu);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to register VCPU with GIC distributor\n");
+    return status;
+  }
   machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
