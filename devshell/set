@@ -206,11 +206,11 @@ function main {
     # conflicting version requirements of importing 2+ layers at the same time.
 
     if grep -q "manifest/garnet" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages garnet/packages/default"
+      gen_args="${gen_args} --packages garnet/packages/default --ignore-skia"
     fi
 
     if grep -q "manifest/peridot" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages peridot/packages/default"
+      gen_args="${gen_args} --packages peridot/packages/default --ignore-skia"
     fi
 
     if grep -q "manifest/topaz" "${jiri_manifest}"; then
