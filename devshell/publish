@@ -5,23 +5,25 @@
 
 ### create and publish packages from a build directory
 
+## usage: fx publish [--build-dir <DIR>] [--pkg-key <key file>]
+##                   [--far-dir <DIR>] [--update-repo <DIR>] [pkg1 pkg2 ...]
+##
+## One or more package name arguments may be supplied as the last arguments.
+## If no package name is supplied, all packages from the current build output
+## will be published.
+##
+## optional arguments:
+##   --build-dir          Directory containing the build output
+##   --pkg-key            Key used to sign the package's meta FAR
+##   --fars-dir           Directory to be used to build the meta FAR
+##   --update-repo        Directory to be used to publish the meta FAR and
+##                        associated content blobs
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
 function usage {
-  cat >&2 <<END
-usage: fx publish [--build-dir <DIR>] [--far-key <key file>] [--far-dir <DIR>] [--update-repo <DIR>] [pkg]
-Publish packages. If no package name is supplied, all packages from the current
-build output will be published.
-  --build-dir
-    Directory containing the build output
-  --far-key
-    Key used to sign the package's meta FAR
-  --fars-dir
-    Directory to be used to build the meta FAR
-  --update-repo
-    Directory to be used to publish the meta FAR and associated content blobs
-END
+  fx-command-help publish
 }
 
 # Create a package manager package and then create update files which are
@@ -30,29 +32,53 @@ END
 function main {
   local build_dir=""
   local fuchsia_dir="${FUCHSIA_DIR}"
-  local argz=( "$@" )
+  local argz=()
   local c=0
   local has_dir=0
 
-  # if an odd number of arguments were supplied, the last one is assumed
-  # to be the name of one or more packages to publish
-  local len=${#argz[@]}
-  if [[ $((len % 2)) -eq 1 ]]; then
-    # copy supplied packages one position down
-    argz+=("${argz[${len}-1]}")
-    # add the flag used by the Python script at the original position
-    argz["${len}-1"]="--pkgs"
-  fi
+  # first parse the non-pkg args which should be named
+  while (( "$#" )); do
+    case $1 in
+      # treat build-dir specially since we inject it if not supplied
+      --build-dir)
+        argz+=($1)
+        shift
+        build_dir=$1
+        argz+=($1)
+        shift
+        has_dir=1
+        ;;
+      --*)
+        argz+=($1)
+        shift
+        # seems like the current arg is a boolean, skip to the next
+        if [[ $1 == --* ]]; then
+          continue
+        else
+          argz+=($1)
+          shift
+        fi
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
 
-  # check if a build directory is supplied
-  while ((c<=len)); do
-    if [[ "${argz[${c}]}" == "--build-dir" ]]; then
-      : $(( c += 1 ))
-      build_dir="${argz[${c}]}"
-      has_dir=1
-      break
-    fi
-    : $(( c += 1 ))
+  # now process the trailing args which are all interpretted as packages
+  while (( "$#" )); do
+    case $1 in
+      --*)
+        echo "Non-package arg detected in packages section"
+        usage
+        exit 1
+        ;;
+      *)
+        argz+=("--pkgs")
+        argz+=($1)
+        shift
+        ;;
+    esac
   done
 
   # no build directory, use the default
@@ -62,7 +88,7 @@ function main {
   elif [[ -z "${build_dir}" ]]; then
     # the arg was passed, but wasn't acutally set
     echo >&2 "error: Build directory is not set!"
-    return -1
+    return 1
   fi
 
   (cd "${FUCHSIA_BUILD_DIR}" && ${fuchsia_dir}/scripts/publish-package.py "${argz[@]}")

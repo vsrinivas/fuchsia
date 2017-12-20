@@ -1,0 +1,60 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+## usage: fx push-package [-d|--device <device_address>] [pkg1 pkg2 ...]
+##
+## Push packages to a device. One or more package names may be supplied. If no
+## package name is suppled all pakages in the build output will be pushed. The
+## target must be reachable from the host and most already know the host's IP
+## address.
+##
+## optional arguments (must be first):
+##   -d|--device         IP address of the target
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+function usage {
+  fx-command-help push-package
+}
+
+function main {
+  local device=""
+  local pkgs=""
+
+  if [[ "$1" == "-d" || "$1" == "--device" ]]; then
+    shift
+    device="$1"
+    shift
+  fi
+
+  # if the second arg is set, but 0-length, publish nothing
+  if [[ $# -eq 1 ]] && [[ -z "${1}" ]]; then
+    exit 0
+  fi
+
+  fx-command-run publish "$@"
+
+  # pkgs is the last argument
+  local pkgs
+
+
+  if [[ $# -eq 0 ]]; then
+    pkgs=$(echo $(<"${FUCHSIA_BUILD_DIR}/gen/build/gn/packages"))
+  else
+    pkgs="$@"
+  fi
+
+  # The target doesn't support expansions, and a local expansion makes a command
+  # too long to spawn, so sending a loop makes things work ok.
+  local cmd="for c in $pkgs; do echo -n '' > /pkgfs/needs/\${c}.far; done"
+  if [[ -n "${device}" ]]; then
+    fx-command-run ssh "${device}" "${cmd}"
+  else
+    fx-command-run shell "${cmd}"
+  fi
+}
+
+main "$@"

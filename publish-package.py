@@ -11,7 +11,7 @@ import struct
 import subprocess
 import sys
 
-def gen_far_key(pm_bin, dest):
+def gen_pkg_key(pm_bin, dest):
     """Create a key to use for signing FARs.
 
     pm_bin: path to the 'pm' binary
@@ -29,11 +29,11 @@ def gen_far_key(pm_bin, dest):
     except OSError as e:
         return "Error launching PM binary: %s" % e
 
-def build_package(pm_bin, far_key, far_stg_dir, manifest, pkg_name):
+def build_package(pm_bin, pkg_key, far_stg_dir, manifest, pkg_name):
     """Build a metadata FAR describing the package.
 
     pm_bin     : path to the 'pm' binary
-    far_key    : path to the key to use to sign the FAR
+    pkg_key    : path to the key to use to sign the FAR
     far_stg_dir: a working directory to use for staging files before they are
                  written into a single file
     manifest   : path to a manifest file describing the contents of the package
@@ -53,7 +53,7 @@ def build_package(pm_bin, far_key, far_stg_dir, manifest, pkg_name):
     except OSError as e:
         return None, "Could not start package initializer: %s" % e
 
-    build_cmd = [pm_bin, "-o", far_stg_dir, "-k", far_key, "-m", manifest, "build"]
+    build_cmd = [pm_bin, "-o", far_stg_dir, "-k", pkg_key, "-m", manifest, "build"]
     try:
         subprocess.check_call(build_cmd)
     except subprocess.CalledProcessError as e:
@@ -135,14 +135,14 @@ def add_rsrcs_to_repo(amber_bin, manifest, key_dir, repo_dir):
 
     return None
 
-def publish(pm_bin, amber_bin, far_key, repo_key_dir, pkg_stg_dir, update_repo,
+def publish(pm_bin, amber_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
             manifests_dir, pkgs, verbose):
     """Publish packages as a signed metadata FAR and a collection of content
     blobs named after their content IDs.
 
     pm_bin       : path to the pm binary
     amber_bin    : path to the amber binary
-    far_key      : path to the key to use to sign the metdata FARs
+    pkg_key      : path to the key to use to sign the metdata FARs
     repo_key_dir : directory containing keys to use for the update respository
     pkg_stg_dir  : a directory that can be used for staging temporary files
                    when creating the packages
@@ -184,7 +184,7 @@ def publish(pm_bin, amber_bin, far_key, repo_key_dir, pkg_stg_dir, update_repo,
             for line in man_fd:
                 master_fd.write(line)
 
-        meta_far, err = build_package(pm_bin, far_key, far_stg, manifest, pkg)
+        meta_far, err = build_package(pm_bin, pkg_key, far_stg, manifest, pkg)
         if err is not None:
             print "Building package failed: %s" % e
             break
@@ -210,13 +210,13 @@ def main():
     parser.add_argument('--build-dir', action='store', required=True)
     parser.add_argument('--update-repo', action='store', required=False)
     parser.add_argument('--update-keys', action='store', required=False)
-    parser.add_argument('--far-key', action='store', required=False)
+    parser.add_argument('--pkg-key', action='store', required=False)
     parser.add_argument('--fars-dir', action='store', required=False,
                         help="""Directory where intermediate files for the
                         package(s) will be stored""")
-    parser.add_argument('--pkgs', action='store', required=False,
-                        help="""Comma-separated list of packages to publish. If
-                        not supplied, all packages will be published.""")
+    parser.add_argument('--pkgs', action='append', required=False,
+                        help="""Packages to publish. This argument may be
+                        repeated to publish multiple packages.""")
     parser.add_argument('--quiet', action='store_true', required=False, default=False)
     args = parser.parse_args()
 
@@ -247,10 +247,10 @@ def main():
     if not keys_src_dir:
         keys_src_dir = build_dir
 
-    far_key = args.far_key
-    if not far_key:
-        far_key = os.path.join(build_dir, "far_key")
-        result = gen_far_key(pm_bin, far_key)
+    pkg_key = args.pkg_key
+    if not pkg_key:
+        pkg_key = os.path.join(build_dir, "pkg_key")
+        result = gen_pkg_key(pm_bin, pkg_key)
         if result is not None:
             print result
             return -1
@@ -265,22 +265,15 @@ def main():
         print "Packages staging directory '%s' could not be found" % pkg_stg_dir
         return -1
 
-    pkgs = args.pkgs
-
-    pkg_list = []
-    if pkgs and pkgs.strip():
-        pkgs = pkgs.strip()
-        pkg_list = pkgs.split(",")
-        if len(pkg_list) == 0:
-            print "No packages supplied!"
-            return -1
-    else:
+    pkg_list = args.pkgs
+    if not pkg_list:
+        pkg_list = []
         list_path = os.path.join(build_dir, "gen", "build", "gn", "packages")
         with open(list_path, "r") as pfile:
             for l in pfile:
                 pkg_list.append(l.strip())
 
-    return publish(pm_bin, amber_bin, far_key, build_dir, pkg_stg_dir, repo_dir,
+    return publish(pm_bin, amber_bin, pkg_key, build_dir, pkg_stg_dir, repo_dir,
         os.path.join(build_dir, "package"), pkg_list, not args.quiet)
 
 if __name__ == '__main__':
