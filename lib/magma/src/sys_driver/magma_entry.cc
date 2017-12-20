@@ -402,10 +402,6 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
 {
     DLOG("sysdrv_bind start zx_device %p", zx_device);
 
-    pci_protocol_t pci;
-    if (device_get_protocol(zx_device, ZX_PROTOCOL_PCI, (void*)&pci))
-        return DRET_MSG(ZX_ERR_NOT_SUPPORTED, "device_get_protocol failed");
-
     // map resources and initialize the device
     auto device = std::make_unique<sysdrv_device_t>();
 
