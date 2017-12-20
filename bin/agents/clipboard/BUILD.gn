@@ -2,17 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("clipboard") {
-  output_name = "agents/clipboard"
-
+source_set("clipboard_sources") {
   sources = [
-    "clipboard_agent.cc",
     "clipboard_impl.cc",
     "clipboard_impl.h",
   ]
 
   deps = [
-    "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//garnet/public/lib/fidl/cpp/bindings",
     "//peridot/public/lib/clipboard/fidl",
+  ]
+}
+
+executable("clipboard") {
+  output_name = "agents/clipboard"
+
+  sources = [
+    "clipboard_agent.cc",
+  ]
+
+  deps = [
+    ":clipboard_sources",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+  ]
+}
+
+source_set("unittests") {
+  output_name = "clipboard_unittests"
+
+  testonly = true
+
+  sources = [
+    "clipboard_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":clipboard_sources",
+    "//peridot/public/lib/clipboard/fidl",
+    "//third_party/gtest",
   ]
 }

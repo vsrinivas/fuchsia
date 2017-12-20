@@ -13,13 +13,14 @@ using modular::testing::TestPoint;
 
 namespace {
 
-// The path to the clipboard agent under test.
+// The url of the clipboard agent under test.
 constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
 // A module that tests the ClipboardAgent.
 class ClipboardTestApp {
  public:
   TestPoint initialized_{"Clipboard module initialized"};
+  TestPoint successful_peek_{"Clipboard pushed and peeked value"};
 
   ClipboardTestApp(
       modular::ModuleHost* const module_host,
@@ -30,24 +31,15 @@ class ClipboardTestApp {
     initialized_.Pass();
 
     SetUp();
-    TestFirstPeek();
-  }
 
-  TestPoint first_peek_{"First peek returns empty string"};
-
-  void TestFirstPeek() {
-    ExpectPeekReturnsValue("", &first_peek_);
-    TestPeekAfterPush();
-  }
-
-  TestPoint peek_after_push_{"Peek after push returns pushed item"};
-
-  // |Peek()| returns the value previously passed to |Push()|, even when pipelined.
-  void TestPeekAfterPush() {
     const std::string expected_value = "hello there";
     clipboard_->Push(expected_value);
-    ExpectPeekReturnsValue(expected_value, &peek_after_push_,
-                           [this] { module_host_->module_context()->Done(); });
+    clipboard_->Peek([this, expected_value](const fidl::String& text) {
+      if (expected_value == text) {
+        successful_peek_.Pass();
+      }
+      module_host_->module_context()->Done();
+    });
   }
 
   TestPoint stopped_{"Clipboard module stopped"};
@@ -67,21 +59,6 @@ class ClipboardTestApp {
                                        agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), clipboard_.NewRequest());
-  }
-
-  // Verifies that a call to |Peek()| returns |expected_value|. Passes
-  // |test_point| if successful. |completed| is called once peek has returned a
-  // value, regardless of the value itself.
-  void ExpectPeekReturnsValue(const std::string& expected_value,
-                              TestPoint* const test_point,
-                              const std::function<void()>& completed = [] {}) {
-    clipboard_->Peek([this, expected_value, test_point,
-                      completed](const ::fidl::String& text) {
-      if (text == expected_value) {
-        test_point->Pass();
-      }
-      completed();
-    });
   }
 
   modular::ModuleHost* const module_host_;

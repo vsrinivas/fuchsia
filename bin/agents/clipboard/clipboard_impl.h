@@ -5,16 +5,17 @@
 #ifndef PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_AGENT_H_
 #define PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_AGENT_H_
 
-#include "lib/agent/fidl/agent.fidl.h"
-#include "lib/app_driver/cpp/agent_driver.h"
+#include <string>
+
 #include "lib/clipboard/fidl/clipboard.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace modular {
 
 // An agent responsible for providing the Clipboard service.
 class ClipboardImpl : Clipboard {
  public:
-  ClipboardImpl() = default;
+  ClipboardImpl();
 
   void Connect(fidl::InterfaceRequest<Clipboard> request);
 
@@ -33,6 +34,7 @@ class ClipboardImpl : Clipboard {
   fidl::BindingSet<Clipboard> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardImpl);
+  friend class ClipboardImplTest;
 };
 
 }  // namespace modular

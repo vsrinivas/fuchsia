@@ -8,6 +8,8 @@
 
 namespace modular {
 
+ClipboardImpl::ClipboardImpl() {}
+
 void ClipboardImpl::Push(const fidl::String& text) {
   current_item_ = text;
 }

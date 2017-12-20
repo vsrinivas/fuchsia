@@ -111,6 +111,7 @@ executable("modular_unittests_bin") {
   deps = [
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/agent_runner:unittests",
+    "//peridot/bin/agents/clipboard:unittests",
     "//peridot/bin/device_runner:unittests",
     "//peridot/bin/entity:unittests",
     "//peridot/bin/story_runner:unittests",
