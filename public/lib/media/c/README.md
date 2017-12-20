@@ -275,9 +275,11 @@ than the maximum allowed output gain *FUCHSIA_AUDIO_MAX_OUTPUT_GAIN*.
 ##### Notes
 This call sets the output gain for this specific stream. This setting is
 per-stream and does not affect any other output streams. Note that this output
-gain stage is applied during final system mixing. As a result, all audio samples
-provided by the *fuchsia_audio_output_stream_write* API must be no greater than
-1.0 and no less than -1.0, regardless of the output stream's gain.
+gain stage is applied during final system mixing. The enforcement that all audio
+samples are within maximum/minimum range must be done before gain is applied. As
+a result, all audio samples provided to the *fuchsia_audio_output_stream_write*
+API must be less than 1.0 and greater than or equal to -1.0, regardless of the
+output stream's gain.
 
 ### fuchsia_audio_output_stream_write
 ```
@@ -293,7 +295,7 @@ int fuchsia_audio_output_stream_write(
 system.
 - **sample_buffer**: pointer to memory allocated by the client, containing
 samples of audio data to be played. Audio samples are in *float* format, and
-each must have a value no greater than 1.0 and no less than -1.0.
+each must have a value less than 1.0 and greater than or equal to -1.0.
 - **num_samples**: total number of audio samples found in sample_buffer. This
 should be a multiple of the num_channels used when creating this stream.
 - **pres_time**: when to present the first audio sample in this buffer, as
@@ -341,11 +343,11 @@ Either way, once this amended *fuchsia_audio_output_stream_write()* call
 succeeds, then all subsequent calls to *fuchsia_audio_output_stream_write()*
 can again send a value of *FUCHSIA_AUDIO_NO_TIMESTAMP* for *pres_time*.
 
-The client must provide audio samples in the float format, within the range of
-[-1.0, 1.0]. Values greater than 1.0 will be clamped to 1.0, and values less
-than -1.0 will be clamped to -1.0, without any notification to the client. Note
-that these limits apply *regardless* of the per-stream gain specified by the
-*fuchsia_audio_output_stream_set_gain* call.
+The client must provide audio samples in the float format, within a range of
+[-1.0, +1.0). Values greater than or equal to 1.0 will be clamped to just less
+than 1.0, and values less than -1.0 will be clamped to -1.0, without client
+notification. Note that these limits apply *regardless* of any per-stream gain
+specified by the *fuchsia_audio_output_stream_set_gain* call.
 
 
 ## Structs

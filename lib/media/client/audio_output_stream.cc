@@ -4,8 +4,10 @@
 
 #include "garnet/lib/media/client/audio_output_stream.h"
 
+#include <fbl/algorithm.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <cmath>
 
 #include "garnet/lib/media/client/audio_output_device.h"
 #include "garnet/lib/media/client/audio_output_manager.h"
@@ -154,18 +156,16 @@ void AudioOutputStream::PullFromClientBuffer(float* client_buffer,
                                              int num_samples) {
   FXL_DCHECK(current_sample_offset_ + num_samples <= total_mapping_samples_);
 
-  const float kAmplitudeScalar = std::numeric_limits<int16_t>::max();
+  constexpr float kAmplitudeScalar = std::numeric_limits<int16_t>::max();
+
   for (int idx = 0; idx < num_samples; ++idx) {
-    // TODO(MTWN-44): Since we're passing int16 samples to the mixer, we need to
-    // clamp potentially out-of-bounds values here to the specified range.
-    float value = client_buffer[idx];
-    if (value < -1.0f) {
-      value = -1.0f;
-    } else if (value > 1.0f) {
-      value = 1.0f;
-    }
+    // TODO(MTWN-44): We pass int16 samples to the mixer, so here we (round and)
+    // clamp potentially out-of-bounds values into range. Once renderer accepts
+    // float data, pass values thru untouched (no rounding/clamping/conversion).
+    int value = round(client_buffer[idx] * kAmplitudeScalar);
     buffer_[idx + current_sample_offset_] =
-        static_cast<int16_t>(value * kAmplitudeScalar);
+        fbl::clamp<int>(value, std::numeric_limits<int16_t>::min(),
+                        std::numeric_limits<int16_t>::max());
   }
   current_sample_offset_ =
       (current_sample_offset_ + num_samples) % total_mapping_samples_;
