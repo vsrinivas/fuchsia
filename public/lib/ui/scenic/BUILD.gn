@@ -8,7 +8,6 @@ group("scenic") {
   deps = [
     ":client",
     ":fidl_helpers",
-    ":skia",
   ]
 }
 
@@ -41,22 +40,5 @@ source_set("client") {
 
   deps = [
     "//garnet/public/lib/fxl",
-  ]
-}
-
-source_set("skia") {
-  sources = [
-    "skia/host_canvas_cycler.cc",
-    "skia/host_canvas_cycler.h",
-    "skia/host_surfaces.cc",
-    "skia/host_surfaces.h",
-    "skia/image_info.cc",
-    "skia/image_info.h",
-  ]
-
-  public_deps = [
-    ":client",
-    "//garnet/public/lib/fxl",
-    "//third_party/skia",
   ]
 }

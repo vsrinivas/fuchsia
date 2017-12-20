@@ -37,16 +37,3 @@ source_set("view_provider") {
     ":view_framework",
   ]
 }
-
-source_set("skia") {
-  sources = [
-    "skia_view.cc",
-    "skia_view.h",
-  ]
-
-  public_deps = [
-    ":view_framework",
-    "//garnet/public/lib/ui/scenic:skia",
-    "//third_party/skia",
-  ]
-}
