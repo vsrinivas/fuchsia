@@ -46,8 +46,8 @@ To create your install media we recommend using a USB drive since these are
 well-supported as boot media by most systems. Note that the install media
 creation process **will be destructive** to the USB drive being used. Insert the
 USB drive and then run `fx mkvbootzedboot <device_path>`, which on Linux is
-typically something like /dev/sd<X> where X is a letter and on Mac is typically
-something like /dev/disk<N> where 'N' is a number. **Be careful not to select
+typically something like /dev/sd&lt;X&gt; where X is a letter and on Mac is typically
+something like /dev/disk&lt;N&gt; where 'N' is a number. **Be careful not to select
 the wrong device**. Once this is done, remove the USB drive.
 
 ## Paving
