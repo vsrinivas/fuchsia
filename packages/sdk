@@ -6,6 +6,7 @@
         "garnet/packages/openssh",
         "garnet/packages/runtime",
         "garnet/packages/runtime_config",
-        "garnet/packages/sbase"
+        "garnet/packages/sbase",
+        "garnet/packages/tracing"
     ]
 }
