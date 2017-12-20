@@ -96,6 +96,13 @@ package("ledger_tests") {
       disabled = true
     },
     {
+      name = "launch_validation_tests_firestore"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in /system/test/disabled/.
+      disabled = true
+    },
+    {
       name = "ledger_integration_tests"
     },
 

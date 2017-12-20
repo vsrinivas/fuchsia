@@ -47,5 +47,6 @@ group("tests") {
 
   public_deps = [
     ":unittests",
+    "//peridot/bin/cloud_provider_firestore/validation",
   ]
 }
