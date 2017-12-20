@@ -51,6 +51,10 @@
              remote="https://fuchsia.googlesource.com/cobalt"
              revision="579a2eabad3b953b80a1ee0ae9e1ae46dc9d7825"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="cobalt_config"
+             path="third_party/cobalt_config"
+             remote="https://cobalt-analytics.googlesource.com/config"
+             gerrithost="https://cobalt-analytics-review.googlesource.com"/>
     <project name="third_party/expat"
              path="third_party/expat"
              remote="https://fuchsia.googlesource.com/third_party/expat"
