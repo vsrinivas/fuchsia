@@ -50,18 +50,20 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 class TestObject : public storage::Object {
  public:
   TestObject() = default;
-  TestObject(storage::ObjectDigest digest, std::string data)
-      : digest(std::move(digest)), data(std::move(data)) {}
+  TestObject(storage::ObjectIdentifier identifier, std::string data)
+      : identifier(std::move(identifier)), data(std::move(data)) {}
   ~TestObject() override = default;
 
-  storage::ObjectDigest GetDigest() const override { return digest; };
+  storage::ObjectIdentifier GetIdentifier() const override {
+    return identifier;
+  };
 
   storage::Status GetData(fxl::StringView* result) const override {
     *result = fxl::StringView(data);
     return storage::Status::OK;
   }
 
-  storage::ObjectDigest digest;
+  storage::ObjectIdentifier identifier;
   std::string data;
 };
 
@@ -98,20 +100,21 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK, std::move(object_identifiers));
   }
 
-  void GetObject(storage::ObjectIdentifier object_digest,
+  void GetObject(storage::ObjectIdentifier object_identifier,
                  Location /*location*/,
                  std::function<void(storage::Status,
                                     std::unique_ptr<const storage::Object>)>
                      callback) override {
-    GetPiece(object_digest, callback);
+    GetPiece(std::move(object_identifier), callback);
   }
 
-  void GetPiece(storage::ObjectIdentifier object_digest,
+  void GetPiece(storage::ObjectIdentifier object_identifier,
                 std::function<void(storage::Status,
                                    std::unique_ptr<const storage::Object>)>
                     callback) override {
-    callback(storage::Status::OK,
-             std::move(unsynced_objects_to_return[object_digest]));
+    callback(
+        storage::Status::OK,
+        std::move(unsynced_objects_to_return[std::move(object_identifier)]));
   }
 
   void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
@@ -262,13 +265,13 @@ TEST_F(BatchUploadTest, MultipleCommits) {
 TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
+  auto id1 = storage::MakeDefaultObjectIdentifier("obj_digest1");
+  auto id2 = storage::MakeDefaultObjectIdentifier("obj_digest2");
 
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -301,16 +304,19 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
 TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
+  storage::ObjectIdentifier id0 =
+      storage::MakeDefaultObjectIdentifier("obj_digest0");
+  storage::ObjectIdentifier id1 =
+      storage::MakeDefaultObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 =
+      storage::MakeDefaultObjectIdentifier("obj_digest2");
 
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest0")] =
-      std::make_unique<TestObject>("obj_digest0", "obj_data0");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage_.unsynced_objects_to_return[id0] =
+      std::make_unique<TestObject>(id0, "obj_data0");
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   // Create the commit upload with |max_concurrent_uploads| = 2.
   auto batch_upload = MakeBatchUpload(std::move(commits), 2);
@@ -348,12 +354,15 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage::ObjectIdentifier id1 =
+      storage::MakeDefaultObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 =
+      storage::MakeDefaultObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -377,12 +386,15 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage::ObjectIdentifier id1 =
+      storage::MakeDefaultObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 =
+      storage::MakeDefaultObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -413,12 +425,15 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage::ObjectIdentifier id1 =
+      storage::MakeDefaultObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 =
+      storage::MakeDefaultObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -434,12 +449,10 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
 
   // TestStorage moved the objects to be returned out, need to add them again
   // before retry.
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
   page_cloud_.object_status_to_return = cloud_provider::Status::OK;
   batch_upload->Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -488,12 +501,15 @@ TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  test_storage.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  test_storage.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage::ObjectIdentifier id1 =
+      storage::MakeDefaultObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 =
+      storage::MakeDefaultObjectIdentifier("obj_digest2");
+
+  test_storage.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  test_storage.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   auto batch_upload =
       MakeBatchUploadWithStorage(&test_storage, std::move(commits));
@@ -515,15 +531,19 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest0")] =
-      std::make_unique<TestObject>("obj_digest0", "obj_data0");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage::ObjectIdentifier id0 =
+      storage::MakeDefaultObjectIdentifier("obj_digest0");
+  storage::ObjectIdentifier id1 =
+      storage::MakeDefaultObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 =
+      storage::MakeDefaultObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id0] =
+      std::make_unique<TestObject>(id0, "obj_data0");
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -541,15 +561,12 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
 
   // TestStorage moved the objects to be returned out, need to add them again
   // before retry.
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest0")] =
-      std::make_unique<TestObject>("obj_digest0", "obj_data0");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest1")] =
-      std::make_unique<TestObject>("obj_digest1", "obj_data1");
-  storage_.unsynced_objects_to_return[storage::MakeDefaultObjectIdentifier(
-      "obj_digest2")] =
-      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+  storage_.unsynced_objects_to_return[id0] =
+      std::make_unique<TestObject>(id0, "obj_data0");
+  storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
 
   // Try upload again.
   batch_upload->Retry();

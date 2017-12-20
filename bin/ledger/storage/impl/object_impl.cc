@@ -14,26 +14,26 @@ uint64_t ToFullPages(uint64_t value) {
 }
 }  // namespace
 
-InlinedObject::InlinedObject(ObjectDigest digest)
-    : digest_(std::move(digest)) {}
+InlinedObject::InlinedObject(ObjectIdentifier identifier)
+    : identifier_(std::move(identifier)) {}
 InlinedObject::~InlinedObject() {}
 
-ObjectDigest InlinedObject::GetDigest() const {
-  return digest_;
+ObjectIdentifier InlinedObject::GetIdentifier() const {
+  return identifier_;
 }
 
 Status InlinedObject::GetData(fxl::StringView* data) const {
-  *data = digest_;
+  *data = identifier_.object_digest;
   return Status::OK;
 }
 
-StringObject::StringObject(ObjectDigest digest, std::string content)
-    : digest_(std::move(digest)), content_(std::move(content)) {}
+StringObject::StringObject(ObjectIdentifier identifier, std::string content)
+    : identifier_(std::move(identifier)), content_(std::move(content)) {}
 
 StringObject::~StringObject() {}
 
-ObjectDigest StringObject::GetDigest() const {
-  return digest_;
+ObjectIdentifier StringObject::GetIdentifier() const {
+  return identifier_;
 }
 
 Status StringObject::GetData(fxl::StringView* data) const {
@@ -41,14 +41,14 @@ Status StringObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-LevelDBObject::LevelDBObject(ObjectDigest digest,
+LevelDBObject::LevelDBObject(ObjectIdentifier identifier,
                              std::unique_ptr<leveldb::Iterator> iterator)
-    : digest_(std::move(digest)), iterator_(std::move(iterator)) {}
+    : identifier_(std::move(identifier)), iterator_(std::move(iterator)) {}
 
 LevelDBObject::~LevelDBObject() {}
 
-ObjectDigest LevelDBObject::GetDigest() const {
-  return digest_;
+ObjectIdentifier LevelDBObject::GetIdentifier() const {
+  return identifier_;
 }
 
 Status LevelDBObject::GetData(fxl::StringView* data) const {
@@ -56,8 +56,8 @@ Status LevelDBObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-VmoObject::VmoObject(ObjectDigest digest, fsl::SizedVmo vmo)
-    : digest_(std::move(digest)), vmo_(std::move(vmo)) {}
+VmoObject::VmoObject(ObjectIdentifier identifier, fsl::SizedVmo vmo)
+    : identifier_(std::move(identifier)), vmo_(std::move(vmo)) {}
 
 VmoObject::~VmoObject() {
   if (vmar_) {
@@ -65,8 +65,8 @@ VmoObject::~VmoObject() {
   }
 }
 
-ObjectDigest VmoObject::GetDigest() const {
-  return digest_;
+ObjectIdentifier VmoObject::GetIdentifier() const {
+  return identifier_;
 }
 
 Status VmoObject::GetData(fxl::StringView* data) const {

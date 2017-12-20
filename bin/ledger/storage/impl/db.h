@@ -70,11 +70,11 @@ class Db {
       bool* has_key) = 0;
 
   // Retrieves the value for the given |key| as an Object with the provided
-  // |object_digest|.
+  // |object_identifier|.
   FXL_WARN_UNUSED_RESULT virtual Status GetObject(
       coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView key,
-      ObjectDigest object_digest,
+      ObjectIdentifier object_identifier,
       std::unique_ptr<const Object>* object) = 0;
 
   // Retrieves all keys matching the given |prefix|. |key_suffixes| will be

@@ -502,10 +502,10 @@ class PageStorageTest : public ::testing::Test {
   }
 
   Status ReadObject(CoroutineHandler* handler,
-                    ObjectDigest object_digest,
+                    ObjectIdentifier object_identifier,
                     std::unique_ptr<const Object>* object) {
     return PageStorageImplAccessorForTest::GetDb(storage_).ReadObject(
-        handler, object_digest, object);
+        handler, object_identifier, object);
   }
 
   Status DeleteObject(CoroutineHandler* handler, ObjectDigest object_digest) {
@@ -1128,8 +1128,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     EXPECT_EQ(data.object_identifier, object_identifier);
 
     std::unique_ptr<const Object> object;
-    ASSERT_EQ(Status::OK,
-              ReadObject(handler, object_identifier.object_digest, &object));
+    ASSERT_EQ(Status::OK, ReadObject(handler, object_identifier, &object));
     fxl::StringView content;
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
@@ -1155,7 +1154,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
 
     std::unique_ptr<const Object> object;
     EXPECT_EQ(Status::NOT_FOUND,
-              ReadObject(handler, object_identifier.object_digest, &object));
+              ReadObject(handler, object_identifier, &object));
     // Inline objects do not need to ever be tracked.
     EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
   });
@@ -1166,7 +1165,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
 
   storage_->AddObjectFromLocal(
       data.ToDataSource(),
-      [](Status returned_status, ObjectIdentifier returned_object_digest) {});
+      [](Status returned_status, ObjectIdentifier object_identifier) {});
 
   // Checking that we do not crash when deleting the storage while an AddObject
   // call is in progress.
@@ -1201,9 +1200,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<const Object> object;
-    ASSERT_EQ(
-        Status::OK,
-        ReadObject(handler, data.object_identifier.object_digest, &object));
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &object));
     fxl::StringView content;
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
@@ -1225,9 +1222,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<const Object> object;
-    ASSERT_EQ(
-        Status::OK,
-        ReadObject(handler, data.object_identifier.object_digest, &object));
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &object));
     fxl::StringView content;
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
@@ -1242,7 +1237,7 @@ TEST_F(PageStorageTest, GetObject) {
 
     std::unique_ptr<const Object> object =
         TryGetObject(data.object_identifier, PageStorage::Location::LOCAL);
-    EXPECT_EQ(data.object_identifier.object_digest, object->GetDigest());
+    EXPECT_EQ(data.object_identifier, object->GetIdentifier());
     fxl::StringView object_data;
     ASSERT_EQ(Status::OK, object->GetData(&object_data));
     EXPECT_EQ(data.value, convert::ToString(object_data));
@@ -1257,7 +1252,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
 
   std::unique_ptr<const Object> object =
       TryGetObject(data.object_identifier, PageStorage::Location::NETWORK);
-  EXPECT_EQ(data.object_identifier.object_digest, object->GetDigest());
+  EXPECT_EQ(data.object_identifier, object->GetIdentifier());
   fxl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
   EXPECT_EQ(data.value, convert::ToString(object_data));
@@ -1309,7 +1304,7 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
   EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
 
   // Check that the object is encoded with an index, and is different than the
-  // piece obtained at |object_digest|.
+  // piece obtained at |object_identifier|.
   std::unique_ptr<const Object> piece = TryGetPiece(object_identifier);
   fxl::StringView piece_content;
   ASSERT_EQ(Status::OK, piece->GetData(&piece_content));
@@ -1434,7 +1429,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   }
 
-  // Add a first commit containing object_digests[0].
+  // Add a first commit containing data_array[0].
   bool called;
   Status status;
   std::unique_ptr<Journal> journal;
@@ -1453,7 +1448,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_identifier, true));
 
   // Create a second commit. After calling Put for "key1" for the second time
-  // object_digests[1] is no longer part of this commit: it should remain
+  // data_array[1] is no longer part of this commit: it should remain
   // untracked after committing.
   journal.reset();
   storage_->StartCommit(

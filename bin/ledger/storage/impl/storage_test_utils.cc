@@ -193,8 +193,7 @@ StorageTest::~StorageTest(){};
       return assertion_result;
     }
     result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i),
-                           MakeDefaultObjectIdentifier(object->GetDigest()),
-                           KeyPriority::EAGER});
+                           object->GetIdentifier(), KeyPriority::EAGER});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();

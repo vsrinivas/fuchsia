@@ -34,7 +34,7 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   EXPECT_EQ(expected.deleted, found.deleted);
   EXPECT_EQ(expected.entry.key, found.entry.key);
   if (!expected.deleted) {
-    // If the entry is deleted, object_digest and priority are not valid.
+    // If the entry is deleted, object_identifier and priority are not valid.
     EXPECT_EQ(expected.entry, found.entry);
   }
 }
@@ -227,26 +227,29 @@ TEST_F(PageDbTest, JournalEntries) {
 
 TEST_F(PageDbTest, ObjectStorage) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectDigest object_digest = RandomObjectDigest();
+    ObjectIdentifier object_identifier = RandomObjectIdentifier();
     std::string content = RandomString(32 * 1024);
     std::unique_ptr<const Object> object;
     PageDbObjectStatus object_status;
 
     EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.ReadObject(handler, object_digest, &object));
+              page_db_.ReadObject(handler, object_identifier, &object));
     ASSERT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_digest,
+              page_db_.WriteObject(handler, object_identifier.object_digest,
                                    DataSource::DataChunk::Create(content),
                                    PageDbObjectStatus::TRANSIENT));
-    page_db_.GetObjectStatus(handler, object_digest, &object_status);
+    page_db_.GetObjectStatus(handler, object_identifier.object_digest,
+                             &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
-    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_digest, &object));
+    ASSERT_EQ(Status::OK,
+              page_db_.ReadObject(handler, object_identifier, &object));
     fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
-    EXPECT_EQ(Status::OK, page_db_.DeleteObject(handler, object_digest));
+    EXPECT_EQ(Status::OK,
+              page_db_.DeleteObject(handler, object_identifier.object_digest));
     EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.ReadObject(handler, object_digest, &object));
+              page_db_.ReadObject(handler, object_identifier, &object));
   }));
 }
 

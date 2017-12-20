@@ -7,13 +7,13 @@
 namespace storage {
 namespace fake {
 
-FakeObject::FakeObject(ObjectDigestView digest, fxl::StringView content)
-    : digest_(digest.ToString()), content_(content.ToString()) {}
+FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)
+    : identifier_(std::move(identifier)), content_(content.ToString()) {}
 
 FakeObject::~FakeObject() {}
 
-ObjectDigest FakeObject::GetDigest() const {
-  return digest_;
+ObjectIdentifier FakeObject::GetIdentifier() const {
+  return identifier_;
 }
 
 Status FakeObject::GetData(fxl::StringView* data) const {

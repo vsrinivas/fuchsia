@@ -268,8 +268,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
     std::unique_ptr<const Object> object;
     ASSERT_TRUE(
         AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
-    entries_to_update[i].object_identifier =
-        MakeDefaultObjectIdentifier(object->GetDigest());
+    entries_to_update[i].object_identifier = object->GetIdentifier();
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
 
@@ -321,8 +320,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
     std::unique_ptr<const Object> object;
     ASSERT_TRUE(
         AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
-    entries_to_update[i].object_identifier =
-        MakeDefaultObjectIdentifier(object->GetDigest());
+    entries_to_update[i].object_identifier = object->GetIdentifier();
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
 

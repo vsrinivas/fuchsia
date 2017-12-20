@@ -19,56 +19,56 @@ namespace storage {
 // Object whose data is equal to its id.
 class InlinedObject : public Object {
  public:
-  explicit InlinedObject(ObjectDigest digest);
+  explicit InlinedObject(ObjectIdentifier identifier);
   ~InlinedObject() override;
 
   // Object:
-  ObjectDigest GetDigest() const override;
+  ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  const ObjectDigest digest_;
+  const ObjectIdentifier identifier_;
 };
 
 // Object whose data is backed by a string.
 class StringObject : public Object {
  public:
-  StringObject(ObjectDigest digest, std::string content);
+  StringObject(ObjectIdentifier identifier, std::string content);
   ~StringObject() override;
 
   // Object:
-  ObjectDigest GetDigest() const override;
+  ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  const ObjectDigest digest_;
+  const ObjectIdentifier identifier_;
   std::string content_;
 };
 
 // Object whose data is backed by a value in LevelDB.
 class LevelDBObject : public Object {
  public:
-  LevelDBObject(ObjectDigest digest,
+  LevelDBObject(ObjectIdentifier identifier,
                 std::unique_ptr<leveldb::Iterator> iterator);
   ~LevelDBObject() override;
 
   // Object:
-  ObjectDigest GetDigest() const override;
+  ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  const ObjectDigest digest_;
+  const ObjectIdentifier identifier_;
   std::unique_ptr<leveldb::Iterator> iterator_;
 };
 
 // Object whose data is backed by a VMO.
 class VmoObject : public Object {
  public:
-  VmoObject(ObjectDigest digest, fsl::SizedVmo vmo);
+  VmoObject(ObjectIdentifier identifier, fsl::SizedVmo vmo);
   ~VmoObject() override;
 
   // Object:
-  ObjectDigest GetDigest() const override;
+  ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
   Status GetVmo(fsl::SizedVmo* vmo) const override;
 
@@ -76,7 +76,7 @@ class VmoObject : public Object {
   Status Initialize() const;
 
   mutable bool initialized_ = false;
-  const ObjectDigest digest_;
+  const ObjectIdentifier identifier_;
   fsl::SizedVmo vmo_;
   mutable zx::vmar vmar_;
   mutable fxl::StringView data_;

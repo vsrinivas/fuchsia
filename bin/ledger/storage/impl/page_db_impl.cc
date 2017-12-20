@@ -173,10 +173,11 @@ Status PageDbImpl::GetJournalEntries(
 }
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler,
-                              ObjectDigest object_digest,
+                              ObjectIdentifier object_identifier,
                               std::unique_ptr<const Object>* object) {
-  return db_.GetObject(handler, ObjectRow::GetKeyFor(object_digest),
-                       object_digest, object);
+  return db_.GetObject(handler,
+                       ObjectRow::GetKeyFor(object_identifier.object_digest),
+                       object_identifier, object);
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,

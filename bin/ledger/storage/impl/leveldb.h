@@ -35,7 +35,7 @@ class LevelDb : public Db {
                 bool* has_key) override;
   Status GetObject(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key,
-                   ObjectDigest object_digest,
+                   ObjectIdentifier object_identifier,
                    std::unique_ptr<const Object>* object) override;
   Status GetByPrefix(coroutine::CoroutineHandler* handler,
                      convert::ExtendedStringView prefix,

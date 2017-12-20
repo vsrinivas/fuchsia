@@ -21,13 +21,17 @@ std::string RandomString(size_t size) {
   return result;
 }
 
+ObjectIdentifier CreateObjectIdentifier(std::string digest) {
+  return {1u, 2u, std::move(digest)};
+}
+
 ::testing::AssertionResult CheckObjectValue(const Object& object,
-                                            fxl::StringView digest,
+                                            ObjectIdentifier identifier,
                                             fxl::StringView data) {
-  if (object.GetDigest() != digest) {
+  if (object.GetIdentifier() != identifier) {
     return ::testing::AssertionFailure()
-           << "Expected id: " << convert::ToHex(digest)
-           << ", but got: " << convert::ToHex(object.GetDigest());
+           << "Expected id: " << identifier
+           << ", but got: " << object.GetIdentifier();
   }
 
   fxl::StringView found_data;
@@ -66,18 +70,20 @@ std::string RandomString(size_t size) {
 
 TEST(ObjectImplTest, InlinedObject) {
   std::string data = RandomString(12);
-  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
+  ObjectIdentifier identifier =
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
 
-  InlinedObject object(digest);
-  EXPECT_TRUE(CheckObjectValue(object, digest, data));
+  InlinedObject object(identifier);
+  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
 TEST(ObjectImplTest, StringObject) {
   std::string data = RandomString(256);
-  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
+  ObjectIdentifier identifier =
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
 
-  StringObject object(digest, data);
-  EXPECT_TRUE(CheckObjectValue(object, digest, data));
+  StringObject object(identifier, data);
+  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
 TEST(ObjectImplTest, LevelDBObject) {
@@ -95,7 +101,8 @@ TEST(ObjectImplTest, LevelDBObject) {
   leveldb::ReadOptions read_options_;
 
   std::string data = RandomString(256);
-  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
+  ObjectIdentifier identifier =
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
 
   status = db_ptr->Put(write_options_, "", data);
   ASSERT_TRUE(status.ok());
@@ -105,19 +112,20 @@ TEST(ObjectImplTest, LevelDBObject) {
   ASSERT_TRUE(iterator->Valid());
   ASSERT_TRUE(iterator->key() == "");
 
-  LevelDBObject object(digest, std::move(iterator));
-  EXPECT_TRUE(CheckObjectValue(object, digest, data));
+  LevelDBObject object(identifier, std::move(iterator));
+  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
 TEST(ObjectImplTest, VmoObject) {
   std::string data = RandomString(256);
-  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
+  ObjectIdentifier identifier =
+      CreateObjectIdentifier(ComputeObjectDigest(ObjectType::VALUE, data));
 
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(data, &vmo));
 
-  VmoObject object(digest, std::move(vmo));
-  EXPECT_TRUE(CheckObjectValue(object, digest, data));
+  VmoObject object(identifier, std::move(vmo));
+  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
 }  // namespace

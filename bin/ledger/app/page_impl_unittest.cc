@@ -205,7 +205,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   std::string object_data("some_data");
   std::unique_ptr<const storage::Object> object = AddObject(object_data);
 
-  storage::ObjectDigest object_digest = object->GetDigest();
+  storage::ObjectDigest object_digest = object->GetIdentifier().object_digest;
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_digest);
 
@@ -284,7 +284,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   std::string object_data("some_data");
   std::unique_ptr<const storage::Object> object = AddObject(object_data);
 
-  storage::ObjectDigest object_digest = object->GetDigest();
+  storage::ObjectDigest object_digest = object->GetIdentifier().object_digest;
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_digest);
 
@@ -341,7 +341,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   std::string key2("some_key2");
   std::string value2("another value");
   std::unique_ptr<const storage::Object> object2 = AddObject(value2);
-  storage::ObjectDigest object_digest2 = object2->GetDigest();
+  storage::ObjectDigest object_digest2 = object2->GetIdentifier().object_digest;
 
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_digest2);

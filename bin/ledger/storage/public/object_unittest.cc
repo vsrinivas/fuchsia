@@ -15,7 +15,7 @@ class StringObject : public Object {
   explicit StringObject(std::string value) : value_(std::move(value)) {}
   ~StringObject() override {}
 
-  ObjectDigest GetDigest() const override { return "digest"; }
+  ObjectIdentifier GetIdentifier() const override { return {1u, 2u, "digest"}; }
 
   Status GetData(fxl::StringView* data) const override {
     *data = value_;

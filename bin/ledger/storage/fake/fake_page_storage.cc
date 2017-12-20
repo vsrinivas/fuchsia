@@ -188,8 +188,8 @@ void FakePageStorage::GetPiece(
           return;
         }
 
-        callback(Status::OK, std::make_unique<FakeObject>(
-                                 object_identifier.object_digest, it->second));
+        callback(Status::OK,
+                 std::make_unique<FakeObject>(object_identifier, it->second));
       });
   message_loop_->task_runner()->PostDelayedTask(
       [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));

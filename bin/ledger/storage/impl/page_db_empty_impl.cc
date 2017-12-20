@@ -41,7 +41,7 @@ Status PageDbEmptyImpl::GetJournalEntries(
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
-                                   ObjectDigest /*object_digest*/,
+                                   ObjectIdentifier /*object_identifier*/,
                                    std::unique_ptr<const Object>* /*object*/) {
   return Status::NOT_IMPLEMENTED;
 }

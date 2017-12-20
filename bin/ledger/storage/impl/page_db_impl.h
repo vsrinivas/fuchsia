@@ -44,7 +44,7 @@ class PageDbImpl : public PageDb {
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;
   Status ReadObject(coroutine::CoroutineHandler* handler,
-                    ObjectDigest object_digest,
+                    ObjectIdentifier object_identifier,
                     std::unique_ptr<const Object>* object) override;
   Status HasObject(coroutine::CoroutineHandler* handler,
                    ObjectDigestView object_digest,

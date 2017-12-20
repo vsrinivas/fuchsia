@@ -98,9 +98,9 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
 
   Status status;
   std::string encrypted_bytes;
-  EncryptObject(std::make_unique<storage::fake::FakeObject>(
-                    identifier.object_digest, content),
-                &status, &encrypted_bytes);
+  EncryptObject(
+      std::make_unique<storage::fake::FakeObject>(identifier, content), &status,
+      &encrypted_bytes);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(encrypted_bytes.empty());
 

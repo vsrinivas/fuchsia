@@ -68,8 +68,7 @@ class DiffTest : public StorageTest {
 TEST_F(DiffTest, ForEachDiff) {
   std::unique_ptr<const Object> object;
   ASSERT_TRUE(AddObject("change1", &object));
-  ObjectIdentifier object_identifier =
-      MakeDefaultObjectIdentifier(object->GetDigest());
+  ObjectIdentifier object_identifier = object->GetIdentifier();
 
   std::vector<EntryChange> base_changes;
   ASSERT_TRUE(CreateEntryChanges(50, &base_changes));
@@ -248,8 +247,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
 
   std::unique_ptr<const Object> object;
   ASSERT_TRUE(AddObject("change1", &object));
-  ObjectIdentifier object_identifier =
-      MakeDefaultObjectIdentifier(object->GetDigest());
+  ObjectIdentifier object_identifier = object->GetIdentifier();
 
   // Left tree.
   std::vector<EntryChange> left_changes;
@@ -270,8 +268,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
   // Right tree.
   std::unique_ptr<const Object> object2;
   ASSERT_TRUE(AddObject("change2", &object2));
-  ObjectIdentifier object_identifier2 =
-      MakeDefaultObjectIdentifier(object2->GetDigest());
+  ObjectIdentifier object_identifier2 = object2->GetIdentifier();
   std::vector<EntryChange> right_changes;
   // Update to same value for key1.
   right_changes.push_back(
@@ -342,8 +339,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
 
   std::unique_ptr<const Object> object;
   ASSERT_TRUE(AddObject("change1", &object));
-  ObjectIdentifier object_identifier =
-      MakeDefaultObjectIdentifier(object->GetDigest());
+  ObjectIdentifier object_identifier = object->GetIdentifier();
 
   // Left tree.
   std::vector<EntryChange> left_changes;
@@ -364,8 +360,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
   // Right tree.
   std::unique_ptr<const Object> object2;
   ASSERT_TRUE(AddObject("change2", &object2));
-  ObjectIdentifier object_identifier2 =
-      MakeDefaultObjectIdentifier(object2->GetDigest());
+  ObjectIdentifier object_identifier2 = object2->GetIdentifier();
   std::vector<EntryChange> right_changes;
   // Update to same value for key1.
   right_changes.push_back(
@@ -424,8 +419,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
 
   std::unique_ptr<const Object> object;
   ASSERT_TRUE(AddObject("change1", &object));
-  ObjectIdentifier object_identifier =
-      MakeDefaultObjectIdentifier(object->GetDigest());
+  ObjectIdentifier object_identifier = object->GetIdentifier();
 
   // Left tree.
   std::vector<EntryChange> left_changes;
@@ -446,8 +440,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   // Right tree.
   std::unique_ptr<const Object> object2;
   ASSERT_TRUE(AddObject("change2", &object2));
-  ObjectIdentifier object_identifier2 =
-      MakeDefaultObjectIdentifier(object2->GetDigest());
+  ObjectIdentifier object_identifier2 = object2->GetIdentifier();
   std::vector<EntryChange> right_changes;
   // Update to same value for key1.
   right_changes.push_back(
@@ -483,17 +476,13 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
 
   std::unique_ptr<const Object> object1, object2, object3, object4;
   ASSERT_TRUE(AddObject("change1", &object1));
-  ObjectIdentifier object1_identifier =
-      MakeDefaultObjectIdentifier(object1->GetDigest());
+  ObjectIdentifier object1_identifier = object1->GetIdentifier();
   ASSERT_TRUE(AddObject("change2", &object2));
-  ObjectIdentifier object2_identifier =
-      MakeDefaultObjectIdentifier(object2->GetDigest());
+  ObjectIdentifier object2_identifier = object2->GetIdentifier();
   ASSERT_TRUE(AddObject("change3", &object3));
-  ObjectIdentifier object3_identifier =
-      MakeDefaultObjectIdentifier(object3->GetDigest());
+  ObjectIdentifier object3_identifier = object3->GetIdentifier();
   ASSERT_TRUE(AddObject("change4", &object4));
-  ObjectIdentifier object4_identifier =
-      MakeDefaultObjectIdentifier(object4->GetDigest());
+  ObjectIdentifier object4_identifier = object4->GetIdentifier();
 
   // Left tree.
   std::vector<EntryChange> left_changes;

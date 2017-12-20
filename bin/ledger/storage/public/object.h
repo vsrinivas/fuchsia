@@ -19,8 +19,8 @@ class Object {
   Object() {}
   virtual ~Object() {}
 
-  // Returns the digest of this storage object.
-  virtual ObjectDigest GetDigest() const = 0;
+  // Returns the identifier of this storage object.
+  virtual ObjectIdentifier GetIdentifier() const = 0;
 
   // Returns the data of this object. The returned view is valid as long as this
   // object is not deleted.

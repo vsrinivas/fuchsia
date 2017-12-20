@@ -34,10 +34,10 @@ class TreeNodeTest : public StorageTest {
   PageStorage* GetStorage() override { return &fake_storage_; }
 
   std::unique_ptr<const TreeNode> CreateEmptyNode() {
-    ObjectIdentifier root_digest;
-    EXPECT_TRUE(GetEmptyNodeIdentifier(&root_digest));
+    ObjectIdentifier root_identifier;
+    EXPECT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
     std::unique_ptr<const TreeNode> node;
-    EXPECT_TRUE(CreateNodeFromIdentifier(root_digest, &node));
+    EXPECT_TRUE(CreateNodeFromIdentifier(root_identifier, &node));
     return node;
   }
 
@@ -147,7 +147,7 @@ TEST_F(TreeNodeTest, Serialization) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node;
-  EXPECT_EQ(node->GetIdentifier().object_digest, object->GetDigest());
+  EXPECT_EQ(node->GetIdentifier(), object->GetIdentifier());
   ASSERT_TRUE(CreateNodeFromIdentifier(node->GetIdentifier(), &retrieved_node));
 
   fxl::StringView data;

@@ -475,7 +475,7 @@ void PageStorageImpl::GetObject(
     }
 
     auto final_object = std::make_unique<VmoObject>(
-        std::move(object_identifier).object_digest, std::move(vmo));
+        std::move(object_identifier), std::move(vmo));
 
     waiter->Finalize(fxl::MakeCopyable(
         [object = std::move(final_object), callback = std::move(callback)](
@@ -490,7 +490,7 @@ void PageStorageImpl::GetPiece(
       GetObjectDigestType(object_identifier.object_digest);
   if (digest_type == ObjectDigestType::INLINE) {
     callback(Status::OK,
-             std::make_unique<InlinedObject>(object_identifier.object_digest));
+             std::make_unique<InlinedObject>(std::move(object_identifier)));
     return;
   }
 
@@ -502,8 +502,8 @@ void PageStorageImpl::GetPiece(
             UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
         std::unique_ptr<const Object> object;
-        Status status = db_->ReadObject(
-            handler, std::move(object_identifier).object_digest, &object);
+        Status status =
+            db_->ReadObject(handler, std::move(object_identifier), &object);
         callback(status, std::move(object));
       });
 }
@@ -677,9 +677,9 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     CoroutineHandler* handler,
     PageDb::Batch* batch,
     std::vector<ObjectIdentifier> object_identifiers) {
-  std::set<ObjectIdentifier> seen_digests;
+  std::set<ObjectIdentifier> seen_identifiers;
   while (!object_identifiers.empty()) {
-    auto it = seen_digests.insert(std::move(object_identifiers.back()));
+    auto it = seen_identifiers.insert(std::move(object_identifiers.back()));
     object_identifiers.pop_back();
     const ObjectIdentifier& object_identifier = *(it.first);
     FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
@@ -692,8 +692,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     if (GetObjectDigestType(object_identifier.object_digest) ==
         ObjectDigestType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
-      status =
-          db_->ReadObject(handler, object_identifier.object_digest, &object);
+      status = db_->ReadObject(handler, object_identifier, &object);
       if (status != Status::OK) {
         return status;
       }
@@ -717,7 +716,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(
             ObjectDigestType::INLINE) {
           ObjectIdentifier new_object_identifier =
               ToObjectIdentifier(child->object_identifier());
-          if (!seen_digests.count(new_object_identifier)) {
+          if (!seen_identifiers.count(new_object_identifier)) {
             object_identifiers.push_back(std::move(new_object_identifier));
           }
         }
@@ -816,8 +815,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
                             return Status::OK;
                           }
 
-                          Status status = db_->ReadObject(
-                              handler, identifier.object_digest, nullptr);
+                          Status status =
+                              db_->ReadObject(handler, identifier, nullptr);
                           if (status == Status::NOT_FOUND) {
                             DownloadFullObject(std::move(identifier),
                                                waiter->NewCallback());
@@ -917,14 +916,13 @@ void PageStorageImpl::FillBufferWithObjectContent(
              }
 
              ObjectDigestType digest_type =
-                 GetObjectDigestType(object->GetDigest());
+                 GetObjectDigestType(object->GetIdentifier().object_digest);
              if (digest_type == ObjectDigestType::INLINE ||
                  digest_type == ObjectDigestType::VALUE_HASH) {
                if (size != content.size()) {
                  FXL_LOG(ERROR)
                      << "Error in serialization format. Expecting object: "
-                     << convert::ToHex(object->GetDigest())
-                     << " to have size: " << size
+                     << object->GetIdentifier() << " to have size: " << size
                      << ", but found an object of size: " << content.size();
                  callback(Status::FORMAT_ERROR);
                  return;
@@ -959,8 +957,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
              if (file_index->size() != size) {
                FXL_LOG(ERROR)
                    << "Error in serialization format. Expecting object: "
-                   << convert::ToHex(object->GetDigest())
-                   << " to have size: " << size
+                   << object->GetIdentifier() << " to have size: " << size
                    << ", but found an index object of size: "
                    << file_index->size();
                callback(Status::FORMAT_ERROR);
@@ -1441,8 +1438,7 @@ Status PageStorageImpl::SynchronousAddPiece(
                                  data->Get()));
 
   std::unique_ptr<const Object> object;
-  Status status =
-      db_->ReadObject(handler, object_identifier.object_digest, &object);
+  Status status = db_->ReadObject(handler, object_identifier, &object);
   if (status == Status::NOT_FOUND) {
     PageDbObjectStatus object_status =
         (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT

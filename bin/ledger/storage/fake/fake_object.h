@@ -14,13 +14,13 @@ namespace fake {
 
 class FakeObject : public Object {
  public:
-  FakeObject(ObjectDigestView digest, fxl::StringView content);
+  FakeObject(ObjectIdentifier identifier, fxl::StringView content);
   ~FakeObject() override;
-  ObjectDigest GetDigest() const override;
+  ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  ObjectDigest digest_;
+  ObjectIdentifier identifier_;
   std::string content_;
 };
 

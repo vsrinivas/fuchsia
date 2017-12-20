@@ -222,7 +222,7 @@ class PageDb : public PageDbMutator {
   // |object| argument.
   FXL_WARN_UNUSED_RESULT virtual Status ReadObject(
       coroutine::CoroutineHandler* handler,
-      ObjectDigest object_digest,
+      ObjectIdentifier object_identifier,
       std::unique_ptr<const Object>* object) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
@@ -254,8 +254,7 @@ class PageDb : public PageDbMutator {
 
   // Object sync metadata.
   // Finds the set of unsynced pieces and replaces the contents of
-  // |object_digests| with their digests. |object_digests| will be
-  // lexicographically sorted.
+  // |object_identifiers| with their identifiers.
   FXL_WARN_UNUSED_RESULT virtual Status GetUnsyncedPieces(
       coroutine::CoroutineHandler* handler,
       std::vector<ObjectIdentifier>* object_identifiers) = 0;
