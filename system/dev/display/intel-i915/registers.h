@@ -140,7 +140,7 @@ public:
 class DbufCtl : public hwreg::RegisterBase<uint32_t> {
 public:
     DEF_BIT(31, power_request);
-    DEF_BIT(31, power_state);
+    DEF_BIT(30, power_state);
 
     static auto Get() { return hwreg::RegisterAddr<DbufCtl>(0x45008); }
 };
