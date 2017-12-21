@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-dart_toolchain = "//build/dart/config:dartlang"
+dart_toolchain = "//build/dart:dartlang"
 
 dart_root_gen_dir = get_label_info("//bogus($dart_toolchain)", "root_gen_dir")
 
@@ -10,7 +10,4 @@ dart_root_gen_dir = get_label_info("//bogus($dart_toolchain)", "root_gen_dir")
 # in the source tree, use the following:
 #   dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
 
-# The toolchain used to build the host version of the Dart SDK.
-dart_sdk_host_toolchain = "//build/dart/config:dart_host"
-
-dart_sdk_root_out_dir = get_label_info("//bogus($dart_sdk_host_toolchain)", "root_out_dir")
+dart_sdk_root_out_dir = get_label_info("//bogus($dart_host_sdk_toolchain)", "root_out_dir")

@@ -6,6 +6,15 @@ import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/variant.gni")
 
+# Each toolchain must define "stamp" and "copy" tools,
+# but they are always the same in every toolchain.
+stamp_command = "touch {{output}}"
+stamp_description = "STAMP {{output}}"
+# We use link instead of copy; the way "copy" tool is being used is
+# compatible with links since Ninja is tracking changes to the source.
+copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+copy_description = "COPY {{source}} {{output}}"
+
 declare_args() {
   # The default clang toolchain provided by the buildtools. This variable is
   # additionally consumed by the Go toolchain.
@@ -260,7 +269,8 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs}}"
       }
       if (use_strip) {
-        command += " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
+        command +=
+            " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
       }
       description = "LINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -273,15 +283,12 @@ template("clang_toolchain") {
     }
 
     tool("stamp") {
-      command = "touch {{output}}"
-      description = "STAMP {{output}}"
+      command = stamp_command
+      description = stamp_description
     }
-
     tool("copy") {
-      # We use link instead of copy; the way "copy" tool is being used is
-      # compatible with links since Ninja is tracking changes to the source.
-      command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
-      description = "COPY {{source}} {{output}}"
+      command = copy_command
+      description = copy_description
     }
 
     # When invoking this toolchain not as the default one, these args will be
@@ -386,4 +393,15 @@ template("clang_toolchain_suite") {
 set_defaults("clang_toolchain_suite") {
   variants = known_variants + extra_variants
   with_shared = true
+}
+
+template("clang_host_toolchain_suite") {
+  not_needed([ "invoker" ])
+  clang_toolchain_suite(target_name) {
+    toolchain_cpu = host_cpu
+    toolchain_os = host_os
+
+    with_shared = false
+    use_strip = false
+  }
 }

@@ -1,9 +1,0 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# Set the location of the Flutter engine project.
-flutter_root = "//third_party/flutter"
-
-# Define the toolchain used to build the host Dart SDK.
-dart_host_sdk_toolchain = "//build/dart/config:dart_host"

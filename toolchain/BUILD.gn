@@ -4,10 +4,5 @@
 
 import("//build/toolchain/clang_toolchain.gni")
 
-clang_toolchain_suite("host_${host_cpu}") {
-  toolchain_cpu = host_cpu
-  toolchain_os = host_os
-
-  with_shared = false
-  use_strip = false
+clang_host_toolchain_suite("host_${host_cpu}") {
 }

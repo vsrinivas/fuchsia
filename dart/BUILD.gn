@@ -8,4 +8,29 @@ if (current_toolchain == dart_toolchain) {
   pool("analysis_pool") {
     depth = 10
   }
+} else {
+  import("//build/toolchain/clang_toolchain.gni")
+
+  # A toolchain dedicated to processing and analyzing Dart packages.
+  # The only targets in this toolchain are action() targets, so it
+  # has no real tools.  But every toolchain needs stamp and copy.
+  toolchain("dartlang") {
+    tool("stamp") {
+      command = stamp_command
+      description = stamp_description
+    }
+    tool("copy") {
+      command = copy_command
+      description = copy_description
+    }
+  }
+
+  # $dart_host_sdk_toolchain points to this.  It's the toolchain
+  # used to build a host-native Dart (whereas $host_toolchain builds
+  # cross-Dart that runs on the host and targets $target_cpu).  We
+  # define it as a parallel to host_toolchain that's identical in
+  # every way, but has a separate name so that the Dart GN files can
+  # treat it differently.
+  clang_host_toolchain_suite("dart_host_${host_cpu}") {
+  }
 }

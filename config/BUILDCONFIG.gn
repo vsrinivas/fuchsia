@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/config.gni")
+# The GN files in //third_party/flutter all use $flutter_root/
+# in place of // to refer to the root of the flutter source tree.
+flutter_root = "//third_party/flutter"
 
 declare_args() {
   # Debug build.
@@ -34,6 +36,11 @@ if (host_os == "linux" || host_os == "mac") {
 } else {
   assert(false, "Host OS not supported")
 }
+
+# //third_party/dart/build/dart_host_sdk_toolchain.gni uses this, so
+# it must be defined globally.  See //build/dart/BUILD.gn for details.
+# We treat it here as an exact parallel to host_toolchain.
+dart_host_sdk_toolchain = "//build/dart:dart_host_${host_cpu}"
 
 set_default_toolchain(target_toolchain)
 
@@ -103,6 +110,7 @@ foreach(subvariant, toolchain_variant) {
 # variant toolchains as a copy of the real executable.
 if (is_fuchsia_host) {
   host_toolchain += current_toolchain_variant
+  dart_host_sdk_toolchain += current_toolchain_variant
 }
 
 # References should use "label($shlib_toolchain)" rather than
@@ -514,13 +522,14 @@ template("variant_target") {
     # Hence the program uses the variant builds of shared libraries that
     # go with the variant build of the executable, rather using than the
     # vanilla host_toolchain builds with the variant executable.
-    if (current_toolchain == host_toolchain) {
+    if (current_toolchain == host_toolchain ||
+        current_toolchain == dart_host_sdk_toolchain) {
       action(target_name) {
         forward_variables_from(copy_vars, "*")
         script = "/bin/ln"
         args = [
           "-snf",
-          rebase_path(sources[0], root_out_dir),
+          rebase_path(sources[0], get_path_info(outputs[0], "dir")),
           rebase_path(outputs[0]),
         ]
       }
