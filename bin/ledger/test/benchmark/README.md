@@ -52,4 +52,4 @@ trace record --categories=benchmark,ledger launch_benchmark \
   --append-args="--transaction-size=1,--key-size=64,--value-size=1000,--refs=auto"
 ```
 
-[configured]: https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md
+[configured]: /docs/ledger/user_guide.md
