@@ -9,8 +9,8 @@ import argparse
 from argparse import RawTextHelpFormatter
 import base64
 import json
-import requests
 import sys
+import urllib2
 import xml.etree.ElementTree as xml
 
 
@@ -21,6 +21,15 @@ LAYERS = [
     'garnet',
     'zircon',
 ]
+
+
+def http_get(url):
+    """Fetches the content at a given URL."""
+    try:
+        target = urllib2.urlopen(url)
+        return target.read()
+    finally:
+        target.close()
 
 
 def get_lower_layer(layer):
@@ -38,7 +47,7 @@ def get_lower_layer_commit(layer, at):
         return (None, None)
     url = ('https://fuchsia.googlesource.com/%s/+/%s/manifest/%s?format=TEXT'
            % (layer, at, layer))
-    content = requests.get(url).content
+    content = http_get(url)
     content = base64.b64decode(content)
     manifest = xml.fromstring(content)
     nodes = manifest.findall('./imports/import[@name="%s"]' % lower_layer)
@@ -52,7 +61,7 @@ def get_commits(layer, revision):
         get_url = url
         if start:
             get_url = '%s&s=%s' % (url, start)
-        content = requests.get(url).content
+        content = http_get(url)
         # Remove the anti-XSSI header.
         content = content[5:]
         data = json.loads(content)
