@@ -35,6 +35,7 @@ class DemoHarness {
       InstanceParams instance_params);
   virtual ~DemoHarness();
 
+  const WindowParams& GetWindowParams() const { return window_params_; }
   escher::VulkanContext GetVulkanContext();
   escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
   const escher::VulkanDeviceQueuesPtr& device_queues() const {
@@ -101,7 +102,7 @@ class DemoHarness {
   virtual vk::SurfaceKHR CreateWindowAndSurface(
       const WindowParams& window_params) = 0;
   void CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params);
-  void CreateSwapchain(const WindowParams& window_params);
+  void CreateSwapchain();
 
   // Called by Init() via CreateInstance().
   virtual void AppendPlatformSpecificInstanceExtensionNames(

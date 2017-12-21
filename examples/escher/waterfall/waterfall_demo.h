@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "garnet/examples/escher/common/demo.h"
+#include "garnet/examples/escher/common/demo_harness.h"
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 
 #include "lib/escher/escher.h"
@@ -46,7 +47,7 @@ class WaterfallDemo : public Demo {
 
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
-  void InitializeEscherStage();
+  void InitializeEscherStage(const DemoHarness::WindowParams& window_params);
   void InitializeDemoScenes();
 
   // Toggle debug overlays.

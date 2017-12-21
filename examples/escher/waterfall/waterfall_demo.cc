@@ -40,7 +40,7 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {
   ProcessCommandLineArgs(argc, argv);
-  InitializeEscherStage();
+  InitializeEscherStage(harness->GetWindowParams());
   InitializeDemoScenes();
 }
 
@@ -77,9 +77,9 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
   }
 }
 
-void WaterfallDemo::InitializeEscherStage() {
+void WaterfallDemo::InitializeEscherStage(const DemoHarness::WindowParams& window_params) {
   stage_.set_viewing_volume(
-      escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
+      escher::ViewingVolume(window_params.width, window_params.height, kNear, kFar));
   stage_.set_key_light(
       escher::DirectionalLight(escher::vec2(1.5f * M_PI, 1.5f * M_PI),
                                0.15f * M_PI, vec3(kLightIntensity)));

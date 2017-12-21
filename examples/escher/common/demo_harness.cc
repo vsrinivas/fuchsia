@@ -35,7 +35,7 @@ void DemoHarness::Init(InstanceParams instance_params) {
   CreateInstance(std::move(instance_params));
   vk::SurfaceKHR surface = CreateWindowAndSurface(window_params_);
   CreateDeviceAndQueue({{}, surface});
-  CreateSwapchain(window_params_);
+  CreateSwapchain();
   escher::GlslangInitializeProcess();
 }
 
@@ -88,7 +88,7 @@ void DemoHarness::CreateDeviceAndQueue(
       escher::VulkanDeviceQueues::New(instance_, std::move(params));
 }
 
-void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
+void DemoHarness::CreateSwapchain() {
   FXL_CHECK(!swapchain_.swapchain);
   FXL_CHECK(swapchain_.images.empty());
   FXL_CHECK(!swapchain_image_owner_);
@@ -112,13 +112,18 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
   vk::Extent2D swapchain_extent = surface_caps.currentExtent;
   constexpr uint32_t VK_UNDEFINED_WIDTH_OR_HEIGHT = 0xFFFFFFFF;
   if (swapchain_extent.width == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
-    swapchain_extent.width = window_params.width;
+    swapchain_extent.width = window_params_.width;
   }
   if (swapchain_extent.height == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
-    swapchain_extent.height = window_params.height;
+    swapchain_extent.height = window_params_.height;
   }
-  FXL_CHECK(swapchain_extent.width == window_params.width);
-  FXL_CHECK(swapchain_extent.height == window_params.height);
+
+  if(swapchain_extent.width != window_params_.width || swapchain_extent.height != window_params_.height){
+    window_params_.width = swapchain_extent.width;
+    window_params_.height = swapchain_extent.height;
+  }
+  FXL_CHECK(swapchain_extent.width == window_params_.width);
+  FXL_CHECK(swapchain_extent.height == window_params_.height);
 
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.
@@ -139,7 +144,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
 #endif
 
   // Determine number of images in the swapchain.
-  swapchain_image_count_ = window_params.desired_swapchain_image_count;
+  swapchain_image_count_ = window_params_.desired_swapchain_image_count;
   if (surface_caps.minImageCount > swapchain_image_count_) {
     swapchain_image_count_ = surface_caps.minImageCount;
   } else if (surface_caps.maxImageCount < swapchain_image_count_ &&
