@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 extern crate ddk_rs;
-extern crate ddk_sys;
 extern crate fuchsia_zircon;
 
 use fuchsia_zircon::{DurationNum, Status};
 use ddk_rs::{DeviceOps, Device, DriverOps, UsbProtocol};
 use ddk_rs as ddk;
-use ddk_sys::{USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
+use ddk_rs::sys::{USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
 use std::mem::size_of;
 use std::slice;
 

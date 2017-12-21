@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use byteorder::{ByteOrder, LittleEndian};
-use ddk_sys;
-use ddk_sys::{device_get_protocol, usb_device_descriptor_t, usb_protocol_t, usb_request_type_t, USB_DIR_IN, USB_DIR_MASK, USB_DIR_OUT, USB_DT_DEVICE, USB_DT_STRING, USB_REQ_GET_DESCRIPTOR, USB_REQ_GET_STATUS};
+use sys;
+use sys::{device_get_protocol, usb_device_descriptor_t, usb_protocol_t, usb_request_type_t, USB_DIR_IN, USB_DIR_MASK, USB_DIR_OUT, USB_DT_DEVICE, USB_DT_STRING, USB_REQ_GET_DESCRIPTOR, USB_REQ_GET_STATUS};
 use std::char::decode_utf16;
 use std::mem::size_of;
 use std::slice;
@@ -23,7 +23,7 @@ impl UsbProtocol {
     pub fn get(device: &Device) -> Result<UsbProtocol, Status> {
         let mut protocol: usb_protocol_t = Default::default();
         let status = unsafe {
-            device_get_protocol(device.device, ddk_sys::ZX_PROTOCOL_USB,
+            device_get_protocol(device.device, sys::ZX_PROTOCOL_USB,
                 &mut protocol as *mut usb_protocol_t as *mut u8)
         };
         into_result(status, || UsbProtocol(protocol))
