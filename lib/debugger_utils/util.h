@@ -83,10 +83,9 @@ std::string ArgvToString(const Argv& argv);
 // Same as strdup but exit if malloc fails.
 char* xstrdup(const char* s);
 
-// Same as basename, except will not modify |file|.
-// This assumes there are no trailing /s. If there are then |file| is returned
-// as is.
-const char* basename(const char* s);
+// Same as basename, except will not modify |path|.
+// Returns "" if |path| has a trailing /.
+const char* basename(const char* path);
 
 void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr);
 

@@ -197,18 +197,11 @@ char* xstrdup(const char* s) {
   return result;
 }
 
-const char* basename(const char* s) {
-  // This implementation is copied from musl's basename.c,
-  // but this will not modify its argument.
-  size_t i;
-  if (!s || !*s)
-    return ".";
-  i = strlen(s) - 1;
-  if (i > 0 && s[i] == '/')
-    return s;
-  for (; i && s[i - 1] != '/'; i--)
-    ;
-  return s + i;
+const char* basename(const char* path) {
+  const char* base = strrchr(path, '/');
+  if (base == nullptr)
+    return path;
+  return base + 1;
 }
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
