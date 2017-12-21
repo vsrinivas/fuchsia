@@ -33,9 +33,6 @@ struct ViewHit {
   // The view which was hit.
   mozart::ViewToken view_token;
 
-  // The point that was hit.
-  mozart::PointF point;
-
   // Transforms the view tree coordinate system to the view's coordinate system.
   mozart::TransformPtr inverse_transform;
 };

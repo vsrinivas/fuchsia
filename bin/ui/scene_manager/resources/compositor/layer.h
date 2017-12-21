@@ -6,10 +6,8 @@
 #define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_COMPOSITOR_LAYER_H_
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "garnet/bin/ui/scene_manager/engine/hit.h"
 
 #include "lib/escher/geometry/types.h"
-#include "lib/escher/scene/viewing_volume.h"
 
 namespace scene_manager {
 
@@ -60,16 +58,6 @@ class Layer : public Resource {
 
   // TODO(MZ-250): support detecting and/or setting layer opacity.
   bool opaque() const { return false; }
-
-  // Performs a hit test into the scene of renderer, along the provided ray in
-  // the layer's coordinate system.
-  //
-  // |session| is a pointer to the session that initiated the hit test.
-  std::vector<Hit> HitTest(const escher::ray4& ray, Session* session) const;
-
-  // Returns the current viewing volume of the layer. Used by the compositor
-  // when initializing the stage, as well as for hit testing.
-  escher::ViewingVolume GetViewingVolume() const;
 
  private:
   friend class LayerStack;

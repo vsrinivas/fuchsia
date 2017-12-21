@@ -93,13 +93,6 @@ class Session : private scenic::SessionListener {
                const float ray_direction[3],
                HitTestCallback callback);
 
-  // Performs a hit test along the specified ray into the engine's first
-  // compositor.
-  void HitTestDeviceRay(
-      const float ray_origin[3],
-      const float ray_direction[3],
-      const scenic::Session::HitTestDeviceRayCallback& callback);
-
  private:
   // |scenic::SessionListener|
   void OnError(const fidl::String& error) override;

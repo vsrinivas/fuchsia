@@ -93,9 +93,8 @@ class Engine : private FrameSchedulerDelegate {
 
   size_t GetSessionCount() { return session_count_; }
 
-  // Returns the first compositor in the current compositors, or nullptr if no
-  // compositor exists.
-  Compositor* GetFirstCompositor() const;
+  void AddCompositor(Compositor* compositor);
+  void RemoveCompositor(Compositor* compositor);
 
   // Dumps the contents of all scene graphs.
   std::string DumpScenes() const;
@@ -107,13 +106,8 @@ class Engine : private FrameSchedulerDelegate {
       std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller);
 
  private:
-  friend class Compositor;
   friend class SessionHandler;
   friend class Session;
-
-  // Compositors register/unregister themselves upon creation/destruction.
-  void AddCompositor(Compositor* compositor);
-  void RemoveCompositor(Compositor* compositor);
 
   // Allow overriding to support tests.
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(

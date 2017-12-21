@@ -115,4 +115,30 @@ Camera Camera::NewPerspective(const ViewingVolume& volume,
   return Camera(transform, projection);
 }
 
+ray4 Camera::ScreenPointToRay(float x,
+                              float y,
+                              float screen_width,
+                              float screen_height,
+                              float fovy,
+                              const mat4& camera_transform) {
+  // NOTE: we divide both by screen_height intentionally; this causes the screen
+  // aspect ratio to automatically be taken into account.
+  float canonical_x = (x - 0.5f * screen_width) / screen_height;
+  float canonical_y = (y - 0.5f * screen_height) / screen_height;
+
+  // Compute the distance from a virtual screen of unit height, such that the
+  // view frustum is fovy radians.
+  float screen_dist = 0.5f / tan(fovy * 0.5f);
+
+  vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+  vec4 ray_passthrough(canonical_x, canonical_y, -screen_dist, 1.f);
+
+  mat4 inverse_transform = glm::inverse(camera_transform);
+  vec4 transformed_origin = inverse_transform * ray_origin;
+  vec4 transformed_passthrough = inverse_transform * ray_passthrough;
+
+  return ray4{transformed_origin,
+              glm::normalize(transformed_passthrough - transformed_origin)};
+}
+
 }  // namespace escher

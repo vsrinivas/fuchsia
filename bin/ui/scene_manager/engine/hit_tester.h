@@ -22,21 +22,8 @@ class HitTester {
 
   // Performs a hit test along the specified ray.
   // Returns a list of hits sorted by increasing distance then by increasing
-  // tree depth.
-  //
-  // Only returns hits for Nodes within the same session as |node|.
-  //
-  // See the |Session.HitTest()| API for more information.
+  // tree depth.  See the |Session.HitTest()| API for more information.
   std::vector<Hit> HitTest(Node* node, const escher::ray4& ray);
-
-  // Performs a hit test along the specified ray.
-  // Returns a list of hits sorted by increasing distance then by increasing
-  // tree depth.
-  //
-  // Only returns hits for Nodes within |session|.
-  std::vector<Hit> HitTest(Node* node,
-                           const escher::ray4& ray,
-                           Session* session);
 
  private:
   // Describes a possible hit within an enclosing tag node.

@@ -4,12 +4,10 @@
 
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer.h"
 
-#include "garnet/bin/ui/scene_manager/engine/hit_tester.h"
 #include "garnet/bin/ui/scene_manager/resources/camera.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer_stack.h"
 #include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
-#include "garnet/public/lib/escher/util/type_utils.h"
 
 namespace scene_manager {
 
@@ -69,34 +67,6 @@ bool Layer::IsDrawable() const {
 
   // TODO(MZ-249): Layers can also have a material or image pipe.
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
-}
-
-std::vector<Hit> Layer::HitTest(const escher::ray4& ray,
-                                Session* session) const {
-  Camera* camera = renderer()->camera();
-
-  if (width() == 0.f || height() == 0.f) {
-    return std::vector<Hit>();
-  }
-
-  // Normalize the origin of the ray with respect to the width and height of the
-  // layer before passing it to the camera.
-  escher::mat4 layer_normalization =
-      glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
-
-  escher::ray4 camera_ray = camera->ProjectRayIntoScene(
-      layer_normalization * ray, GetViewingVolume());
-
-  HitTester hit_tester;
-  return hit_tester.HitTest(camera->scene().get(), camera_ray, session);
-}
-
-escher::ViewingVolume Layer::GetViewingVolume() const {
-  // TODO(MZ-194): Define these properties somewhere better (perhaps Scene?)
-  // instead of hardcoding them here.
-  constexpr float kTop = 1000;
-  constexpr float kBottom = 0;
-  return escher::ViewingVolume(size_.x, size_.y, kTop, kBottom);
 }
 
 }  // namespace scene_manager
