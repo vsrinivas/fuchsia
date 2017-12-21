@@ -16,6 +16,7 @@ fidl("fidl") {
   ]
 
   deps = [
+    "//peridot/public/lib/module/fidl:module_data",
     "//peridot/public/lib/user_intelligence/fidl:scope",
   ]
 }
