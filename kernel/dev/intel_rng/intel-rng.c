@@ -10,7 +10,7 @@
 #include <sys/types.h>
 
 #include <arch/x86/feature.h>
-#include <arch/x86/x86intrin.h>
+#include <x86intrin.h>
 #include <dev/hw_rng.h>
 
 enum entropy_instr {

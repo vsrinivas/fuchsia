@@ -10,7 +10,7 @@
 // <x86intrin.h> are incompatible with -mno-sse.
 // When https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80298 is fixed,
 // these #define hacks can be removed.
-#ifndef __clang__
+#if !defined(__clang__) && !defined(__SSE__)
 #define _AVX512VLINTRIN_H_INCLUDED
 #define _AVX512BWINTRIN_H_INCLUDED
 #define _AVX512DQINTRIN_H_INCLUDED
@@ -22,4 +22,17 @@
 #define _FMA4INTRIN_H_INCLUDED
 #define _XOPMMINTRIN_H_INCLUDED
 #endif
-#include <x86intrin.h>
+
+// The warning-happy compiler's own headers are not warning-clean.  Quality.
+// TODO(mcgrathr): https://bugs.llvm.org/show_bug.cgi?id=35721 tracks this
+// for Clang.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
+// Get the real file provided by the compiler.
+#include_next <x86intrin.h>
+
+#pragma GCC diagnostic pop
