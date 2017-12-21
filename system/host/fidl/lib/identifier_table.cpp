@@ -9,7 +9,7 @@ namespace fidl {
 IdentifierTable::IdentifierTable() {
     keyword_table_ = {
 #define KEYWORD(Name, Spelling) {Spelling, Token::Name},
-#include "token_definitions.h"
+#include "token_definitions.inc"
     };
 }
 

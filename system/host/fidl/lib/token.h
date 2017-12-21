@@ -19,7 +19,7 @@ class Token {
 public:
     enum Kind : uint8_t {
 #define TOKEN(Name) Name,
-#include "token_definitions.h"
+#include "token_definitions.inc"
     };
 
     Token(StringView data, uint32_t offset, Kind kind)
@@ -32,7 +32,7 @@ public:
 #define TOKEN(Name)                                                                                \
     case fidl::Token::Kind::Name:                                                                  \
         return #Name;
-#include "token_definitions.h"
+#include "token_definitions.inc"
         }
     }
 
