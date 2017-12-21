@@ -259,7 +259,7 @@ zx_status_t devhost_device_install(zx_device_t* dev) {
         dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
         return status;
     }
-    // Don't create an event handle if we alredy have one
+    // Don't create an event handle if we already have one
     if ((dev->event == ZX_HANDLE_INVALID) &&
         ((status = zx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
