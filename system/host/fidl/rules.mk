@@ -11,6 +11,7 @@ MODULE_TYPE := hostapp
 MODULE_COMPILEFLAGS := -O0 -g
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/lib/error_reporter.cpp \
     $(LOCAL_DIR)/lib/identifier_table.cpp \
     $(LOCAL_DIR)/lib/lexer.cpp \
     $(LOCAL_DIR)/lib/parser.cpp \

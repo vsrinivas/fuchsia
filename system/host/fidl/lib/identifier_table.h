@@ -8,6 +8,7 @@
 
 #include <map>
 
+#include "source_file.h"
 #include "string_view.h"
 #include "token.h"
 
@@ -17,7 +18,8 @@ class IdentifierTable {
 public:
     IdentifierTable();
 
-    Token MakeIdentifier(StringView source_data, uint32_t offset, bool escaped_identifier) const;
+    Token MakeIdentifier(StringView source_data, const SourceFile& source_file,
+                         bool escaped_identifier) const;
 
 private:
     std::map<StringView, Token::Kind> keyword_table_;

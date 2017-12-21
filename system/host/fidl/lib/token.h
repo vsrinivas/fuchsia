@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#include "source_location.h"
 #include "string_view.h"
 
 namespace fidl {
@@ -22,10 +23,10 @@ public:
 #include "token_definitions.inc"
     };
 
-    Token(StringView data, uint32_t offset, Kind kind)
-        : data_(data), offset_(offset), kind_(kind) {}
+    Token(SourceLocation location, Kind kind)
+        : location_(location), kind_(kind) {}
 
-    Token() : Token(StringView(), 0u, Token::Kind::NotAToken) {}
+    Token() : Token(SourceLocation::Nowhere(), Token::Kind::NotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {
@@ -36,13 +37,12 @@ public:
         }
     }
 
-    constexpr StringView data() const { return data_; }
-    constexpr uint32_t offset() const { return offset_; }
-    constexpr Kind kind() const { return kind_; }
+    StringView data() const { return location_.data(); }
+    SourceLocation location() const { return location_; }
+    Kind kind() const { return kind_; }
 
 private:
-    StringView data_;
-    uint32_t offset_;
+    SourceLocation location_;
     Kind kind_;
 };
 

@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "identifier_table.h"
+#include "source_manager.h"
 #include "string_view.h"
 #include "token.h"
 
@@ -20,10 +21,10 @@ class Lexer {
 public:
     // The Lexer assumes the final character is 0. This substantially
     // simplifies advancing to the next character.
-    Lexer(StringView data, IdentifierTable* identifier_table)
-        : data_(data), identifier_table_(identifier_table) {
-        assert(data[data.size() - 1] == 0);
-        current_ = data_.data();
+    Lexer(const SourceFile& source_file, IdentifierTable* identifier_table)
+        : source_file_(source_file), identifier_table_(identifier_table) {
+        assert(data()[data().size() - 1] == 0);
+        current_ = data().data();
         token_start_ = current_;
     }
     Lexer(const Lexer&) = delete;
@@ -32,6 +33,8 @@ public:
     Token LexNoComments();
 
 private:
+    StringView data() { return source_file_.data(); }
+
     constexpr char Peek() const;
     void Skip();
     char Consume();
@@ -48,12 +51,11 @@ private:
     Token LexCXXComment();
     Token LexCComment();
 
-    const StringView data_;
+    const SourceFile& source_file_;
     const IdentifierTable* identifier_table_;
 
     const char* current_ = nullptr;
     const char* token_start_ = nullptr;
-    uint32_t offset_ = 0u;
     size_t token_size_ = 0u;
 };
 

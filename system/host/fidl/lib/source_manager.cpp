@@ -6,25 +6,23 @@
 
 namespace fidl {
 
-bool SourceManager::CreateSource(const char* filename, StringView* out_source) {
-    FILE* file = fopen(filename, "rb");
+const SourceFile* SourceManager::CreateSource(StringView filename) {
+    FILE* file = fopen(filename.data(), "rb");
     if (!file)
-        return false;
-
-    sources_.emplace_back();
-    auto& source = sources_.back();
+        return nullptr;
 
     // The lexer requires zero terminated data.
+    std::string data;
     fseek(file, 0, SEEK_END);
     auto filesize = ftell(file);
-    source.resize(filesize + 1);
+    data.resize(filesize + 1);
     rewind(file);
-    fread(&source[0], 1, filesize, file);
-    source[filesize] = 0;
+    fread(&data[0], 1, filesize, file);
+    data[filesize] = 0;
     fclose(file);
 
-    *out_source = StringView(source);
-    return true;
+    sources_.emplace_back(filename, std::move(data));
+    return &sources_.back();
 }
 
 } // namespace fidl

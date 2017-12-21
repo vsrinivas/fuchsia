@@ -4,20 +4,20 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
-#include "source_file.h"
 #include "string_view.h"
 
 namespace fidl {
 
-class SourceManager {
+class ErrorReporter {
 public:
-    // Returns nullptr if |filename| could not be read.
-    const SourceFile* CreateSource(StringView filename);
+    void ReportError(StringView error);
+    void PrintReports();
 
 private:
-    std::vector<SourceFile> sources_;
+    std::vector<std::string> errors_;
 };
 
 } // namespace fidl

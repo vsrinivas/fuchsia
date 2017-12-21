@@ -24,21 +24,22 @@ enum struct Behavior {
 
 bool TestParser(int file_count, char** file_names, Behavior behavior) {
     SourceManager source_manager;
+    ErrorReporter error_reporter;
     IdentifierTable identifier_table;
 
     for (int idx = 0; idx < file_count; ++idx) {
-        StringView source;
-        if (!source_manager.CreateSource(file_names[idx], &source)) {
+        const SourceFile* source_file = source_manager.CreateSource(file_names[idx]);
+        if (source_file == nullptr) {
             fprintf(stderr, "Couldn't read in source data from %s\n", file_names[idx]);
             return false;
         }
 
-        Lexer lexer(source, &identifier_table);
-        Parser parser(&lexer);
+        Lexer lexer(*source_file, &identifier_table);
+        Parser parser(&lexer, &error_reporter);
 
         auto raw_ast = parser.Parse();
         if (!parser.Ok()) {
-            fprintf(stderr, "Parse failed!\n");
+            error_reporter.PrintReports();
             return false;
         }
     }

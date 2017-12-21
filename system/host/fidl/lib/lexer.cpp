@@ -56,14 +56,12 @@ constexpr char Lexer::Peek() const {
 }
 
 void Lexer::Skip() {
-    ++offset_;
     ++current_;
     ++token_start_;
 }
 
 char Lexer::Consume() {
     auto current = *current_;
-    ++offset_;
     ++current_;
     ++token_size_;
     return current;
@@ -77,7 +75,7 @@ StringView Lexer::Reset() {
 }
 
 Token Lexer::Finish(Token::Kind kind) {
-    return Token(Reset(), offset_, kind);
+    return Token(SourceLocation(Reset(), source_file_), kind);
 }
 
 Token Lexer::LexEndOfStream() {
@@ -93,7 +91,7 @@ Token Lexer::LexNumericLiteral() {
 Token Lexer::LexIdentifier() {
     while (IsIdentifierBody(Peek()))
         Consume();
-    return identifier_table_->MakeIdentifier(Reset(), offset_, /* escaped */ false);
+    return identifier_table_->MakeIdentifier(Reset(), source_file_, /* escaped */ false);
 }
 
 Token Lexer::LexEscapedIdentifier() {
@@ -102,7 +100,7 @@ Token Lexer::LexEscapedIdentifier() {
 
     while (IsIdentifierBody(Peek()))
         Consume();
-    return identifier_table_->MakeIdentifier(Reset(), offset_, /* escaped */ true);
+    return identifier_table_->MakeIdentifier(Reset(), source_file_, /* escaped */ true);
 }
 
 Token Lexer::LexStringLiteral() {

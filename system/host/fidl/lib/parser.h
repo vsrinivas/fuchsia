@@ -7,13 +7,18 @@
 #include <memory>
 
 #include "ast.h"
+#include "error_reporter.h"
 #include "lexer.h"
 
 namespace fidl {
 
 class Parser {
 public:
-    explicit Parser(Lexer* lexer) : lexer_(lexer) { last_token_ = Lex(); }
+    Parser(Lexer* lexer, ErrorReporter* error_reporter)
+        : lexer_(lexer)
+        , error_reporter_(error_reporter) {
+        last_token_ = Lex();
+    }
 
     std::unique_ptr<File> Parse() { return ParseFile(); }
 
@@ -48,10 +53,7 @@ private:
         }
     }
 
-    decltype(nullptr) Fail() {
-        ok_ = false;
-        return nullptr;
-    }
+    decltype(nullptr) Fail();
 
     std::unique_ptr<Identifier> ParseIdentifier();
     std::unique_ptr<CompoundIdentifier> ParseCompoundIdentifier();
@@ -94,6 +96,8 @@ private:
     std::unique_ptr<File> ParseFile();
 
     Lexer* lexer_;
+    ErrorReporter* error_reporter_;
+
     Token last_token_;
     bool ok_ = true;
 };

@@ -4,6 +4,8 @@
 
 #include "identifier_table.h"
 
+#include "source_location.h"
+
 namespace fidl {
 
 IdentifierTable::IdentifierTable() {
@@ -13,7 +15,8 @@ IdentifierTable::IdentifierTable() {
     };
 }
 
-Token IdentifierTable::MakeIdentifier(StringView source_data, uint32_t offset,
+Token IdentifierTable::MakeIdentifier(StringView source_data,
+                                      const SourceFile& source_file,
                                       bool escaped_identifier) const {
     auto kind = Token::Kind::Identifier;
     if (!escaped_identifier) {
@@ -21,7 +24,7 @@ Token IdentifierTable::MakeIdentifier(StringView source_data, uint32_t offset,
         if (lookup != keyword_table_.end())
             kind = lookup->second;
     }
-    return Token(source_data, offset, kind);
+    return Token(SourceLocation(source_data, source_file), kind);
 }
 
 } // namespace fidl

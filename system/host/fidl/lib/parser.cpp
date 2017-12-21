@@ -43,6 +43,18 @@ enum {
 };
 } // namespace
 
+decltype(nullptr) Parser::Fail() {
+    if (ok_) {
+        std::string error = "found unexpected token: ";
+        error += last_token_.data();
+        error += "\n";
+
+        error_reporter_->ReportError(error);
+        ok_ = false;
+    }
+    return nullptr;
+}
+
 std::unique_ptr<Identifier> Parser::ParseIdentifier() {
     auto identifier = ConsumeToken(Token::Kind::Identifier);
     if (!Ok())
