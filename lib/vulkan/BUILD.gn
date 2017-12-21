@@ -22,17 +22,17 @@ package("image-pipe-swapchain") {
   }
 }
 
-package("image-pipe-swapchain-tests") {
+package("vkcube_image_pipe_swapchain") {
   testonly = true
-  system_image = true
 
-  if (target_cpu == "x64") {
-    deps = [
-      "tests/unit:test_vkcube_image_pipe_swapchain",
-      "tests/vkcube:vkcube_image_pipe_swapchain",
-    ]
-    binaries = [ {
-          name = "vkcube_image_pipe_swapchain"
-        } ]
-  }
+  deps = [
+    "tests/unit:test_vkcube_image_pipe_swapchain",
+    "tests/vkcube:vkcube_image_pipe_swapchain",
+  ]
+  binary = "vkcube_image_pipe_swapchain"
+
+  meta = [ {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    } ]
 }
