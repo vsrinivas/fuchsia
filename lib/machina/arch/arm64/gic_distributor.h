@@ -22,7 +22,9 @@ class GicDistributor : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
-  zx_status_t RegisterVcpu(uint8_t vcpu_id, Vcpu* vcpu);
+  zx_status_t RegisterVcpu(uint8_t vcpu_id,
+                           Vcpu* vcpu) __TA_NO_THREAD_SAFETY_ANALYSIS;
+
   zx_status_t Interrupt(uint32_t global_irq);
 
  private:

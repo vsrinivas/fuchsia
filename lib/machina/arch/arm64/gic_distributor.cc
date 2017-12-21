@@ -152,6 +152,9 @@ zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_id, Vcpu* vcpu) {
     return ZX_ERR_ALREADY_EXISTS;
   }
   vcpus_[vcpu_id] = vcpu;
+  // We set the default state of all CPU masks to target every registered VCPU.
+  uint8_t default_mask = cpu_masks_[0] | 1u << vcpu_id;
+  memset(cpu_masks_, default_mask, sizeof(cpu_masks_));
   return ZX_OK;
 }
 
@@ -164,7 +167,8 @@ zx_status_t GicDistributor::Interrupt(uint32_t global_irq) {
   return TargetInterrupt(global_irq, cpu_mask);
 }
 
-zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq, uint8_t cpu_mask) {
+zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
+                                            uint8_t cpu_mask) {
   for (Vcpu** vcpu = vcpus_; cpu_mask != 0; vcpu++, cpu_mask >>= 1) {
     if (!(cpu_mask & 1)) {
       continue;
