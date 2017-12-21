@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 #include <features.h>
+#include <bits/null.h>
 
 #define __NEED_FILE
 #define __NEED___isoc_va_list
@@ -38,12 +39,6 @@ extern "C" {
 #define WCHAR_MIN (-WCHAR_MAX - 1)
 #endif // defined (__WCHAR_UNSIGNED)
 #endif // defined(__WCHAR_MIN__)
-#endif
-
-#ifdef __cplusplus
-#define NULL 0L
-#else
-#define NULL ((void*)0)
 #endif
 
 #undef WEOF

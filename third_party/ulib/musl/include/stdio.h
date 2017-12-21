@@ -21,12 +21,7 @@ extern "C" {
 #endif
 
 #include <bits/alltypes.h>
-
-#ifdef __cplusplus
-#define NULL 0L
-#else
-#define NULL ((void*)0)
-#endif
+#include <bits/null.h>
 
 #undef EOF
 #define EOF (-1)

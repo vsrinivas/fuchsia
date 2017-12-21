@@ -307,7 +307,7 @@ bool vmo_resize_test() {
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, len,
                          ZX_VM_FLAG_PERM_READ, &ptr);
     EXPECT_EQ(ZX_OK, status, "vm_map");
-    EXPECT_NONNULL(ptr, "vm_map");
+    EXPECT_NE(ptr, 0, "vm_map");
 
     // resize it with it mapped
     status = zx_vmo_set_size(vmo, size);
@@ -582,21 +582,21 @@ bool vmo_commit_test() {
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
                          ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr);
     EXPECT_EQ(ZX_OK, status, "map");
-    EXPECT_NONNULL(ptr, "map address");
+    EXPECT_NE(ptr, 0, "map address");
 
     // second mapping with an offset
     ptr2 = 0;
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, PAGE_SIZE, size,
                          ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr2);
     EXPECT_EQ(ZX_OK, status, "map2");
-    EXPECT_NONNULL(ptr2, "map address2");
+    EXPECT_NE(ptr2, 0, "map address2");
 
     // third mapping with a totally non-overlapping offset
     ptr3 = 0;
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, size * 2, size,
                          ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr3);
     EXPECT_EQ(ZX_OK, status, "map3");
-    EXPECT_NONNULL(ptr3, "map address3");
+    EXPECT_NE(ptr3, 0, "map address3");
 
     // write into it at offset PAGE_SIZE, read it back
     volatile uint32_t *u32 = (volatile uint32_t *)(ptr + PAGE_SIZE);
@@ -857,7 +857,7 @@ bool vmo_clone_test_3() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr),
             "map");
-    EXPECT_NONNULL(ptr, "map address");
+    EXPECT_NE(ptr, 0, "map address");
     p = (volatile uint32_t *)ptr;
 
     // clone it and map that
@@ -867,7 +867,7 @@ bool vmo_clone_test_3() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, clone_vmo[0], 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &clone_ptr),
             "map");
-    EXPECT_NONNULL(clone_ptr, "map address");
+    EXPECT_NE(clone_ptr, 0, "map address");
     cp = (volatile uint32_t *)clone_ptr;
 
     // read zeros from both
@@ -928,7 +928,7 @@ bool vmo_clone_decommit_test() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr),
             "map");
-    EXPECT_NONNULL(ptr, "map address");
+    EXPECT_NE(ptr, 0, "map address");
     p = (volatile uint32_t *)ptr;
 
     // clone it and map that
@@ -938,7 +938,7 @@ bool vmo_clone_decommit_test() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, clone_vmo, 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &clone_ptr),
             "map");
-    EXPECT_NONNULL(clone_ptr, "map address");
+    EXPECT_NE(clone_ptr, 0, "map address");
     cp = (volatile uint32_t *)clone_ptr;
 
     // write to parent and make sure clone sees it
@@ -995,7 +995,7 @@ bool vmo_clone_commit_test() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr),
             "map");
-    EXPECT_NONNULL(ptr, "map address");
+    EXPECT_NE(ptr, 0, "map address");
     p = (volatile uint32_t *)ptr;
 
     // clone it and map that
@@ -1005,7 +1005,7 @@ bool vmo_clone_commit_test() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, clone_vmo, 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &clone_ptr),
             "map");
-    EXPECT_NONNULL(clone_ptr, "map address");
+    EXPECT_NE(clone_ptr, 0, "map address");
     cp = (volatile uint32_t *)clone_ptr;
 
     // write to parent and make sure clone sees it
@@ -1108,14 +1108,14 @@ bool vmo_cache_flush_test() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ, &ptr_ro),
             "map");
-    EXPECT_NONNULL(ptr_ro, "map address");
+    EXPECT_NE(ptr_ro, 0, "map address");
     void *pro = (void*)ptr_ro;
 
     uintptr_t ptr_rw;
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr_rw),
             "map");
-    EXPECT_NONNULL(ptr_rw, "map address");
+    EXPECT_NE(ptr_rw, 0, "map address");
     void *prw = (void*)ptr_rw;
 
     zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
@@ -1173,7 +1173,7 @@ bool vmo_clone_test_4() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &ptr),
             "map");
-    EXPECT_NONNULL(ptr, "map address");
+    EXPECT_NE(ptr, 0, "map address");
     p = (volatile size_t *)ptr;
 
     // fill it with stuff
@@ -1192,7 +1192,7 @@ bool vmo_clone_test_4() {
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), 0, clone_vmo[0], 0, size, ZX_VM_FLAG_PERM_READ|ZX_VM_FLAG_PERM_WRITE, &clone_ptr),
             "map");
-    EXPECT_NONNULL(clone_ptr, "map address");
+    EXPECT_NE(clone_ptr, 0, "map address");
     cp = (volatile size_t *)clone_ptr;
 
     // verify that it seems to be mapping the original at an offset

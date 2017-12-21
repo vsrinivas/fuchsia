@@ -5,12 +5,7 @@ extern "C" {
 #endif
 
 #include <features.h>
-
-#ifdef __cplusplus
-#define NULL 0L
-#else
-#define NULL ((void*)0)
-#endif
+#include <bits/null.h>
 
 #define __NEED_size_t
 

@@ -27,7 +27,8 @@
 #include <unittest/unittest.h>
 
 static zx_status_t validate_handle(zx_handle_t handle) {
-    return zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, 0, NULL, 0u, NULL);
+    return zx_object_get_info(handle, ZX_INFO_HANDLE_VALID,
+                              nullptr, 0, 0u, nullptr);
 }
 
 static bool handle_invalid_test() {
