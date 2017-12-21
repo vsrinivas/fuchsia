@@ -2102,25 +2102,28 @@ static void demo_init_vk(struct demo* demo)
     VkResult err;
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
-    uint32_t validation_layer_count = 0;
     const char** instance_validation_layers = NULL;
     demo->enabled_extension_count = 0;
     demo->enabled_layer_count = 0;
 
     const char* instance_validation_layers_alt1[] = {
+#ifndef NDEBUG
         "VK_LAYER_LUNARG_standard_validation",
+#endif
 #if defined(CUBE_USE_IMAGE_PIPE)
         "VK_LAYER_GOOGLE_image_pipe_swapchain",
 #endif
     };
 
     const char* instance_validation_layers_alt2[] = {
+#ifndef NDEBUG
         "VK_LAYER_GOOGLE_threading",
         "VK_LAYER_LUNARG_parameter_validation",
         "VK_LAYER_LUNARG_object_tracker",
         "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_LUNARG_swapchain",
         "VK_LAYER_GOOGLE_unique_objects",
+#endif
 #if defined(CUBE_USE_IMAGE_PIPE)
         "VK_LAYER_GOOGLE_image_pipe_swapchain",
 #endif
@@ -2128,7 +2131,7 @@ static void demo_init_vk(struct demo* demo)
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
-    if (demo->validate) {
+    if (true) {
 
         err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         assert(!err);
@@ -2146,7 +2149,9 @@ static void demo_init_vk(struct demo* demo)
             if (validation_found) {
                 demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
                 demo->enabled_layers[0] = "VK_LAYER_LUNARG_standard_validation";
-                validation_layer_count = 1;
+                for (uint32_t i = 0; i < demo->enabled_layer_count; i++) {
+                    demo->enabled_layers[i] = instance_validation_layers[i];
+                }
             } else {
                 // use alternative set of validation layers
                 instance_validation_layers = instance_validation_layers_alt2;
@@ -2154,8 +2159,7 @@ static void demo_init_vk(struct demo* demo)
                 validation_found = demo_check_layers(ARRAY_SIZE(instance_validation_layers_alt2),
                                                      instance_validation_layers,
                                                      instance_layer_count, instance_layers);
-                validation_layer_count = ARRAY_SIZE(instance_validation_layers_alt2);
-                for (uint32_t i = 0; i < validation_layer_count; i++) {
+                for (uint32_t i = 0; i < demo->enabled_layer_count; i++) {
                     demo->enabled_layers[i] = instance_validation_layers[i];
                 }
             }
