@@ -9,6 +9,7 @@ config("hwreg_config") {
 source_set("hwreg") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
+    "printers.cpp",
     "include/hwreg/bitfields.h",
     "include/hwreg/mmio.h",
     "include/hwreg/internal.h",

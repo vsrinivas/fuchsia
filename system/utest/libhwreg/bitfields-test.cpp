@@ -379,6 +379,66 @@ static bool reg_field_test() {
     END_TEST;
 }
 
+static bool print_test() {
+    BEGIN_TEST;
+
+    class TestReg : public hwreg::RegisterBase<uint32_t> {
+    public:
+        DEF_RSVDZ_BIT(31);
+        DEF_FIELD(30, 21, field1);
+        DEF_FIELD(20, 12, field2);
+        DEF_RSVDZ_FIELD(11, 0);
+
+        static auto Get() { return hwreg::RegisterAddr<TestReg>(0); }
+    };
+
+    volatile uint64_t fake_reg;
+    hwreg::RegisterIo mmio(&fake_reg);
+
+    constexpr uint32_t kInitVal = 0xe987'2fffu;
+    fake_reg = kInitVal;
+    {
+        auto reg = TestReg::Get().ReadFrom(&mmio);
+        unsigned call_count = 0;
+        const char* expected[] = {
+            "RsvdZ[31:31]: 0x1 (1)",
+            "field1[30:21]: 0x34c (844)",
+            "field2[20:12]: 0x072 (114)",
+            "RsvdZ[11:0]: 0xfff (4095)",
+        };
+        reg.Print([&](const char* buf) {
+            EXPECT_STR_EQ(expected[call_count], buf, strlen(buf), "mismatch");
+            call_count++;
+        });
+        EXPECT_EQ(fbl::count_of(expected), call_count);
+    }
+
+    class TestReg2 : public hwreg::RegisterBase<uint32_t> {
+    public:
+        DEF_FIELD(30, 21, field1);
+        DEF_FIELD(20, 12, field2);
+
+        static auto Get() { return hwreg::RegisterAddr<TestReg2>(0); }
+    };
+
+    {
+        auto reg = TestReg2::Get().ReadFrom(&mmio);
+        unsigned call_count = 0;
+        const char* expected[] = {
+            "field1[30:21]: 0x34c (844)",
+            "field2[20:12]: 0x072 (114)",
+            "unknown set bits: 0x80000fff",
+        };
+        reg.Print([&](const char* buf) {
+            EXPECT_STR_EQ(expected[call_count], buf, strlen(buf), "mismatch");
+            call_count++;
+        });
+        EXPECT_EQ(fbl::count_of(expected), call_count);
+    }
+
+    END_TEST;
+}
+
 #define RUN_TEST_FOR_UINTS(test) \
         RUN_TEST(test<uint8_t>) \
         RUN_TEST(test<uint16_t>) \
@@ -391,6 +451,7 @@ RUN_TEST_FOR_UINTS(struct_sub_field_test)
 RUN_TEST(reg_rsvdz_test)
 RUN_TEST(reg_rsvdz_full_test)
 RUN_TEST(reg_field_test)
+RUN_TEST(print_test)
 END_TEST_CASE(libhwreg_tests)
 
 int main(int argc, char** argv) {

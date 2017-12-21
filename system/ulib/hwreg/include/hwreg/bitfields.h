@@ -100,9 +100,41 @@ public:
         reg_io->Write(reg_addr_, static_cast<IntType>(reg_value_ & ~rsvdz_mask_));
     }
 
+    // Invokes print_fn(const char* buf) once for each field, including each
+    // RsvdZ field, and one extra time if there are any undefined bits set.
+    // The callback argument must not be accessed after the callback
+    // returns.  The callback will be called once for each field with a
+    // null-terminated string describing the name and contents of the field.
+    //
+    // Printed fields will look like: "field_name[26:8]: 0x00123 (291)"
+    // The undefined bits message will look like: "unknown set bits: 0x00301000"
+    //
+    // WARNING: This will substantially increase code size at the call site.
+    //
+    // Example use:
+    // reg.Print([](const char* arg) { printf("%s\n", arg); });
+    template <typename F>
+    void Print(F print_fn) {
+        internal::PrintRegister(print_fn, fields_, num_fields_, reg_value_, fields_mask_,
+                                sizeof(ValueType));
+    }
+
+    // Equivalent to Print([](const char* arg) { printf("%s\n", arg); });
+    void Print() {
+        internal::PrintRegisterPrintf(fields_, num_fields_, reg_value_, fields_mask_,
+                                      sizeof(ValueType));
+    }
+
 private:
+    friend internal::Field<ValueType>;
     friend internal::RsvdZField<ValueType>;
     ValueType rsvdz_mask_ = 0;
+    ValueType fields_mask_ = 0;
+
+    // These two members are used for implementing the Print() function above.
+    // They will typically be optimized away if Print() is not used.
+    internal::FieldPrinter fields_[sizeof(ValueType) * CHAR_BIT];
+    unsigned num_fields_ = 0;
 
     uint32_t reg_addr_ = 0;
     ValueType reg_value_ = 0;
@@ -170,6 +202,8 @@ private:
 #define DEF_FIELD(BIT_HIGH, BIT_LOW, NAME)                                                        \
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
     static_assert((BIT_HIGH) < sizeof(ValueType) * CHAR_BIT, "Upper bit is out of range");        \
+    hwreg::internal::Field<ValueType> Field ## BIT_HIGH ## _ ## BIT_LOW =                         \
+        hwreg::internal::Field<ValueType>(this, #NAME, (BIT_HIGH), (BIT_LOW));                    \
     ValueType NAME() const {                                                                      \
         return hwreg::BitfieldRef<const ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)).get(); \
     }                                                                                             \
@@ -187,6 +221,8 @@ private:
 #define DEF_RSVDZ_FIELD(BIT_HIGH, BIT_LOW)                                                        \
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
     static_assert((BIT_HIGH) < sizeof(ValueType) * CHAR_BIT, "Upper bit is out of range");        \
+    hwreg::internal::Field<ValueType> Field ## BIT_HIGH ## _ ## BIT_LOW =                         \
+        hwreg::internal::Field<ValueType>(this, "RsvdZ", (BIT_HIGH), (BIT_LOW));                  \
     hwreg::internal::RsvdZField<ValueType> RsvdZ ## BIT_HIGH ## _ ## BIT_LOW =                    \
         hwreg::internal::RsvdZField<ValueType>(this, (BIT_HIGH), (BIT_LOW));
 

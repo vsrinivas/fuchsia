@@ -6,9 +6,10 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
+MODULE_EXPORT := so
 MODULE_TYPE := userlib
 
-MODULE_SRCS += $(LOCAL_DIR)/empty.cpp
+MODULE_SRCS += $(LOCAL_DIR)/printers.cpp
 MODULE_LIBS += system/ulib/fbl
 
 include make/module.mk
