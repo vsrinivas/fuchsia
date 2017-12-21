@@ -404,6 +404,7 @@ bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     ASSERT_EQ(info->block_size, blobstore::kBlobstoreBlockSize);
     ASSERT_EQ(info->max_filename_size, Digest::kLength * 2);
     ASSERT_EQ(info->fs_type, VFS_TYPE_BLOBSTORE);
+    ASSERT_NE(info->fs_id, 0);
 
     // Check that used_bytes are within a reasonable range
     ASSERT_GE(info->used_bytes, expected_bytes);

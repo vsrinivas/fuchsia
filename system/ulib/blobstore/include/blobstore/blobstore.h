@@ -269,6 +269,9 @@ public:
         return blockfd_.get();
     }
 
+    // Returns an unique identifier for this instance.
+    uint64_t GetFsId() const { return fs_id_; }
+
     blobstore_info_t info_;
 
 private:
@@ -298,6 +301,10 @@ private:
     // Enqueues an update for allocated inode/block counts
     zx_status_t CountUpdate(WriteTxn* txn);
 
+    // Creates an unique identifier for this instance. This is to be called only during
+    // "construction".
+    zx_status_t CreateFsId();
+
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
     using WAVLTreeByMerkle = fbl::WAVLTree<const uint8_t*,
@@ -315,6 +322,7 @@ private:
     vmoid_t node_map_vmoid_{};
     fbl::unique_ptr<MappedVmo> info_vmo_{};
     vmoid_t info_vmoid_{};
+    uint64_t fs_id_{};
 };
 
 zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd);

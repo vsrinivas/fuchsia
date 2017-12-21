@@ -150,6 +150,7 @@ typedef struct vfs_query_info {
     uint64_t used_bytes;
     uint64_t total_nodes;
     uint64_t used_nodes;
+    uint64_t fs_id;     // An identifier suitable for statfs.
     uint32_t block_size;
     uint32_t max_filename_size;
     uint32_t fs_type;   // An identifier suitable for statfs.

@@ -126,6 +126,9 @@ public:
     }
 
 #ifdef __Fuchsia__
+    // Returns an unique identifier for this instance.
+    uint64_t GetFsId() const { return fs_id_; }
+
     // Signals the completion object as soon as...
     // (1) A sync probe has entered and exited the writeback queue, and
     // (2) The block cache has sync'd with the underlying block device.
@@ -167,6 +170,10 @@ private:
     zx_status_t AddInodes();
     zx_status_t AddBlocks();
 
+    // Creates an unique identifier for this instance. This is to be called only during
+    // "construction".
+    zx_status_t CreateFsId();
+
 #ifndef __Fuchsia__
     zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
 #endif
@@ -189,6 +196,7 @@ private:
     vmoid_t inode_table_vmoid_{};
     vmoid_t info_vmoid_{};
     fbl::unique_ptr<WritebackBuffer> writeback_;
+    uint64_t fs_id_{};
 #else
     // Store start block + length for all extents. These may differ from info block for
     // sparse files.

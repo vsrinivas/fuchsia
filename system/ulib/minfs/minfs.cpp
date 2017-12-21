@@ -21,6 +21,7 @@
 
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
+#include <zx/event.h>
 #endif
 
 #include <minfs/fsck.h>
@@ -554,6 +555,25 @@ zx_status_t Minfs::AddBlocks() {
 #endif
 }
 
+#ifdef __Fuchsia__
+zx_status_t Minfs::CreateFsId() {
+    ZX_DEBUG_ASSERT(!fs_id_);
+    zx::event event;
+    zx_status_t status = zx::event::create(0, &event);
+    if (status != ZX_OK) {
+        return status;
+    }
+    zx_info_handle_basic_t info;
+    status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fs_id_ = info.koid;
+    return ZX_OK;
+}
+#endif
+
 zx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* ino_out) {
     size_t bitoff_start;
     zx_status_t status = inode_map_.Find(false, 0, inode_map_.size(), 1, &bitoff_start);
@@ -901,7 +921,13 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         return status;
     }
 
-#else
+    status = fs->CreateFsId();
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs: failed to create fs_id:%d\n", status);
+        return status;
+    }
+
+#else  // !__Fuchsia__
     for (uint32_t n = 0; n < fs->abmblks_; n++) {
         void* bmdata = fs::GetBlock<kMinfsBlockSize>(fs->block_map_.StorageUnsafe()->GetData(), n);
         if (fs->ReadAbm(n, bmdata)) {

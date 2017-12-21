@@ -19,6 +19,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
+#include <zx/event.h>
 
 #define MXDEBUG 0
 
@@ -621,6 +622,23 @@ zx_status_t Blobstore::CountUpdate(WriteTxn* txn) {
     return status;
 }
 
+zx_status_t Blobstore::CreateFsId() {
+    ZX_DEBUG_ASSERT(!fs_id_);
+    zx::event event;
+    zx_status_t status = zx::event::create(0, &event);
+    if (status != ZX_OK) {
+        return status;
+    }
+    zx_info_handle_basic_t info;
+    status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fs_id_ = info.koid;
+    return ZX_OK;
+}
+
 typedef struct dircookie {
     size_t index;      // Index into node map
     uint64_t reserved; // Unused
@@ -879,6 +897,9 @@ zx_status_t Blobstore::Create(fbl::unique_fd fd, const blobstore_info_t* info,
     } else if ((status = fs->AttachVmo(fs->info_vmo_->GetVmo(),
                                        &fs->info_vmoid_)) != ZX_OK) {
         fprintf(stderr, "blobstore: Failed to attach info vmo: %d\n", status);
+        return status;
+    } else if ((status = fs->CreateFsId()) != ZX_OK) {
+        fprintf(stderr, "blobstore: Failed to create fs_id: %d\n", status);
         return status;
     }
 

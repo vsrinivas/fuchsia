@@ -1615,6 +1615,9 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
             info->block_size = kMinfsBlockSize;
             info->max_filename_size = kMinfsMaxNameSize;
             info->fs_type = VFS_TYPE_MINFS;
+#ifdef __Fuchsia__
+            info->fs_id = fs_->GetFsId();
+#endif
             info->total_bytes = fs_->info_.block_count * fs_->info_.block_size;
             info->used_bytes = fs_->info_.alloc_block_count * fs_->info_.block_size;
             info->total_nodes = fs_->info_.inode_count;

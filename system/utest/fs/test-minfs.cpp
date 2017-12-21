@@ -33,6 +33,7 @@ bool QueryInfo(size_t expected_nodes) {
     ASSERT_EQ(info->block_size, minfs::kMinfsBlockSize);
     ASSERT_EQ(info->max_filename_size, minfs::kMinfsMaxNameSize);
     ASSERT_EQ(info->fs_type, VFS_TYPE_MINFS);
+    ASSERT_NE(info->fs_id, 0);
 
     ASSERT_EQ(info->total_bytes, 8 * 1024 * 1024);
 
