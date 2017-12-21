@@ -132,7 +132,6 @@ GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS)
 GLOBAL_COMPILEFLAGS += -fdebug-prefix-map=$(shell pwd)=$(DEBUG_BUILDROOT)
 GLOBAL_COMPILEFLAGS += -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-error=deprecated-declarations
-GLOBAL_COMPILEFLAGS += -Wsystem-headers
 GLOBAL_COMPILEFLAGS += -Wno-unused-parameter -Wno-unused-function -Werror=unused-label -Werror=return-type
 GLOBAL_COMPILEFLAGS += -fno-common
 # kernel/include/lib/counters.h and kernel.ld depend on -fdata-sections.

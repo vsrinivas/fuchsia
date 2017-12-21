@@ -19,7 +19,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/registers.h>
-#include <x86intrin.h>
+#include <arch/x86/x86intrin.h>
 
 void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
 {
@@ -159,3 +159,4 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
+
