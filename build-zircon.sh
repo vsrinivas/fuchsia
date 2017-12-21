@@ -63,6 +63,7 @@ fi
 
 have_arm64=false
 have_x86=false
+IFS=','
 for project in $PROJECTS; do
     case "$project" in
     *x86*) have_x86=true ;;
@@ -119,13 +120,8 @@ for ARCH in "${ARCHLIST[@]}"; do
         ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false
 done
 
-# Build kernels.
-IFS=','
+# Build kernels and bootloaders.
 for project in $PROJECTS; do
     make_zircon_target PROJECT="$project" kernel-only
-done
-
-# Build bootloaders. Some Zircon projects produce no outputs for bootloader.
-for project in $PROJECTS; do
     make_zircon_target PROJECT="$project" bootloader
 done
