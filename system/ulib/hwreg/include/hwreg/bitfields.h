@@ -100,9 +100,10 @@ public:
         reg_io->Write(reg_addr_, static_cast<IntType>(reg_value_ & ~rsvdz_mask_));
     }
 
-protected:
-    ValueType rsvdz_mask_ = 0;
 private:
+    friend internal::RsvdZField<ValueType>;
+    ValueType rsvdz_mask_ = 0;
+
     uint32_t reg_addr_ = 0;
     ValueType reg_value_ = 0;
 };
@@ -140,25 +141,6 @@ public:
 private:
     const uint32_t reg_addr_;
 };
-
-namespace internal {
-
-template <class IntType> constexpr IntType ComputeMask(uint32_t num_bits) {
-    if (num_bits == sizeof(IntType) * CHAR_BIT) {
-        return static_cast<IntType>(~0ull);
-    }
-    return static_cast<IntType>((static_cast<IntType>(1) << num_bits) - 1);
-}
-
-template <class IntType> class RsvdZField {
-public:
-    RsvdZField(IntType* mask, uint32_t bit_high_incl, uint32_t bit_low) {
-        *mask = static_cast<IntType>(
-                *mask | (internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1) << bit_low));
-    }
-};
-
-} // namespace internal
 
 template <class IntType> class BitfieldRef {
 public:
@@ -206,7 +188,7 @@ private:
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
     static_assert((BIT_HIGH) < sizeof(ValueType) * CHAR_BIT, "Upper bit is out of range");        \
     hwreg::internal::RsvdZField<ValueType> RsvdZ ## BIT_HIGH ## _ ## BIT_LOW =                    \
-        hwreg::internal::RsvdZField<ValueType>(&this->rsvdz_mask_, (BIT_HIGH), (BIT_LOW));
+        hwreg::internal::RsvdZField<ValueType>(this, (BIT_HIGH), (BIT_LOW));
 
 // Declares single-bit reserved-zero fields in a derived class of RegisterBase<T>.
 // This will ensure that on RegisterBase<T>::WriteTo(), reserved-zero bits are
