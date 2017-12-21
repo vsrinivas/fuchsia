@@ -14,7 +14,7 @@
 // This function exists so that the resulting code can be inspected easily in the
 // object file.
 void compilation_test() {
-    class TestReg32 : public hwreg::RegisterBase<uint32_t> {
+    class TestReg32 : public hwreg::RegisterBase<TestReg32, uint32_t> {
     public:
         DEF_FIELD(30, 12, field1);
         DEF_BIT(11, field2);
@@ -146,19 +146,19 @@ static bool struct_sub_field_test() {
 static bool reg_rsvdz_test() {
     BEGIN_TEST;
 
-    class TestReg8 : public hwreg::RegisterBase<uint8_t> {
+    class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
     public:
         DEF_RSVDZ_FIELD(7, 3);
 
         static auto Get() { return hwreg::RegisterAddr<TestReg8>(0); }
     };
-    class TestReg16 : public hwreg::RegisterBase<uint16_t> {
+    class TestReg16 : public hwreg::RegisterBase<TestReg16, uint16_t> {
     public:
         DEF_RSVDZ_FIELD(14, 1);
 
         static auto Get() { return hwreg::RegisterAddr<TestReg16>(0); }
     };
-    class TestReg32 : public hwreg::RegisterBase<uint32_t> {
+    class TestReg32 : public hwreg::RegisterBase<TestReg32, uint32_t> {
     public:
         DEF_RSVDZ_FIELD(31, 12);
         DEF_RSVDZ_FIELD(10, 5);
@@ -166,7 +166,7 @@ static bool reg_rsvdz_test() {
 
         static auto Get() { return hwreg::RegisterAddr<TestReg32>(0); }
     };
-    class TestReg64 : public hwreg::RegisterBase<uint64_t> {
+    class TestReg64 : public hwreg::RegisterBase<TestReg64, uint64_t> {
     public:
         DEF_RSVDZ_FIELD(63, 18);
         DEF_RSVDZ_FIELD(10, 0);
@@ -214,25 +214,25 @@ static bool reg_rsvdz_test() {
 static bool reg_rsvdz_full_test() {
     BEGIN_TEST;
 
-    class TestReg8 : public hwreg::RegisterBase<uint8_t> {
+    class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
     public:
         DEF_RSVDZ_FIELD(7, 0);
 
         static auto Get() { return hwreg::RegisterAddr<TestReg8>(0); }
     };
-    class TestReg16 : public hwreg::RegisterBase<uint16_t> {
+    class TestReg16 : public hwreg::RegisterBase<TestReg16, uint16_t> {
     public:
         DEF_RSVDZ_FIELD(15, 0);
 
         static auto Get() { return hwreg::RegisterAddr<TestReg16>(0); }
     };
-    class TestReg32 : public hwreg::RegisterBase<uint32_t> {
+    class TestReg32 : public hwreg::RegisterBase<TestReg32, uint32_t> {
     public:
         DEF_RSVDZ_FIELD(31, 0);
 
         static auto Get() { return hwreg::RegisterAddr<TestReg32>(0); }
     };
-    class TestReg64 : public hwreg::RegisterBase<uint64_t> {
+    class TestReg64 : public hwreg::RegisterBase<TestReg64, uint64_t> {
     public:
         DEF_RSVDZ_FIELD(63, 0);
 
@@ -279,14 +279,14 @@ static bool reg_rsvdz_full_test() {
 static bool reg_field_test() {
     BEGIN_TEST;
 
-    class TestReg8 : public hwreg::RegisterBase<uint8_t> {
+    class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
     public:
         DEF_FIELD(7, 3, field1);
         DEF_FIELD(2, 0, field2);
 
         static auto Get() { return hwreg::RegisterAddr<TestReg8>(0); }
     };
-    class TestReg16 : public hwreg::RegisterBase<uint16_t> {
+    class TestReg16 : public hwreg::RegisterBase<TestReg16, uint16_t> {
     public:
         DEF_FIELD(13, 3, field1);
         DEF_FIELD(2, 1, field2);
@@ -294,7 +294,7 @@ static bool reg_field_test() {
 
         static auto Get() { return hwreg::RegisterAddr<TestReg16>(0); }
     };
-    class TestReg32 : public hwreg::RegisterBase<uint32_t> {
+    class TestReg32 : public hwreg::RegisterBase<TestReg32, uint32_t> {
     public:
         DEF_FIELD(30, 21, field1);
         DEF_FIELD(20, 12, field2);
@@ -302,7 +302,7 @@ static bool reg_field_test() {
 
         static auto Get() { return hwreg::RegisterAddr<TestReg32>(0); }
     };
-    class TestReg64 : public hwreg::RegisterBase<uint64_t> {
+    class TestReg64 : public hwreg::RegisterBase<TestReg64, uint64_t> {
     public:
         DEF_FIELD(60, 20, field1);
         DEF_FIELD(10, 0, field2);
@@ -382,7 +382,7 @@ static bool reg_field_test() {
 static bool print_test() {
     BEGIN_TEST;
 
-    class TestReg : public hwreg::RegisterBase<uint32_t> {
+    class TestReg : public hwreg::RegisterBase<TestReg, uint32_t> {
     public:
         DEF_RSVDZ_BIT(31);
         DEF_FIELD(30, 21, field1);
@@ -413,7 +413,7 @@ static bool print_test() {
         EXPECT_EQ(fbl::count_of(expected), call_count);
     }
 
-    class TestReg2 : public hwreg::RegisterBase<uint32_t> {
+    class TestReg2 : public hwreg::RegisterBase<TestReg2, uint32_t> {
     public:
         DEF_FIELD(30, 21, field1);
         DEF_FIELD(20, 12, field2);
@@ -439,6 +439,38 @@ static bool print_test() {
     END_TEST;
 }
 
+// Test using the "fluent" style of chaining calls, like:
+// TestReg::Get().ReadFrom(&mmio).set_field1(0x234).set_field2(0x123).WriteTo(&mmio);
+static bool set_chaining_test() {
+    BEGIN_TEST;
+
+    class TestReg : public hwreg::RegisterBase<TestReg, uint32_t> {
+    public:
+        DEF_RSVDZ_BIT(31);
+        DEF_FIELD(30, 21, field1);
+        DEF_FIELD(20, 12, field2);
+        DEF_RSVDZ_FIELD(11, 0);
+
+        static auto Get() { return hwreg::RegisterAddr<TestReg>(0); }
+    };
+
+    volatile uint32_t fake_reg;
+    hwreg::RegisterIo mmio(&fake_reg);
+
+    // With ReadFrom from a RegAddr
+    fake_reg = ~0u;
+    TestReg::Get().ReadFrom(&mmio).set_field1(0x234).set_field2(0x123).WriteTo(&mmio);
+    EXPECT_EQ((0x234u << 21) | (0x123u << 12), fake_reg);
+
+    // With ReadFrom from TestReg
+    fake_reg = ~0u;
+    auto reg = TestReg::Get().FromValue(0);
+    reg.ReadFrom(&mmio).set_field1(0x234).set_field2(0x123).WriteTo(&mmio);
+    EXPECT_EQ((0x234u << 21) | (0x123u << 12), fake_reg);
+
+    END_TEST;
+}
+
 #define RUN_TEST_FOR_UINTS(test) \
         RUN_TEST(test<uint8_t>) \
         RUN_TEST(test<uint16_t>) \
@@ -452,6 +484,7 @@ RUN_TEST(reg_rsvdz_test)
 RUN_TEST(reg_rsvdz_full_test)
 RUN_TEST(reg_field_test)
 RUN_TEST(print_test)
+RUN_TEST(set_chaining_test)
 END_TEST_CASE(libhwreg_tests)
 
 int main(int argc, char** argv) {

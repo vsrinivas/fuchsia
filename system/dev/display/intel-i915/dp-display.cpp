@@ -346,7 +346,7 @@ bool DpDisplay::DpcdRequestLinkTraining(const dpcd::TrainingPatternSet& tp_set,
 }
 
 template<uint32_t addr, typename T>
-bool DpDisplay::DpcdReadPairedRegs(hwreg::RegisterBase<typename T::ValueType>* regs) {
+bool DpDisplay::DpcdReadPairedRegs(hwreg::RegisterBase<T, typename T::ValueType>* regs) {
     static_assert(addr == dpcd::DPCD_LANE0_1_STATUS || addr == dpcd::DPCD_ADJUST_REQUEST_LANE0_1,
                   "Bad register address");
     uint32_t num_bytes = dp_lane_count_ == 4 ? 2 : 1;

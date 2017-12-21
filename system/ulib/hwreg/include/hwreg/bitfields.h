@@ -17,7 +17,7 @@
 // Example usage:
 //
 //   // Define bitfields for an "AuxControl" 32-bit register.
-//   class AuxControl : public hwreg::RegisterBase<uint32_t> {
+//   class AuxControl : public hwreg::RegisterBase<AuxControl, uint32_t> {
 //   public:
 //       // Define a single-bit field.
 //       DEF_BIT(31, enabled);
@@ -45,9 +45,16 @@
 //       reg.WriteTo(reg_io);
 //   }
 //
+//   // Fields may also be set in a fluent style
+//   void Example2(hwreg::RegisterIo* reg_io) {
+//       // Read the register's value from MMIO, updates the message size and
+//       // enabled bit, then writes the value back to MMIO
+//       AuxControl::Get().ReadFrom(reg_io).set_message_size(1234).set_enabled(1).WriteTo(reg_io);
+//   }
+//
 //   // It is also possible to write a register without having to read it
 //   // first:
-//   void Example2(hwreg::RegisterIo* reg_io) {
+//   void Example3(hwreg::RegisterIo* reg_io) {
 //       // Start off with a value that is initialized to zero.
 //       auto reg = AuxControl::Get().FromValue(0);
 //       // Fill out fields.
@@ -81,9 +88,10 @@ namespace hwreg {
 //
 // Any bits not declared using DEF_FIELD/DEF_BIT/DEF_RSVDZ_FIELD/DEF_RSVDZ_BIT
 // will be automatically preserved across RMW operations.
-template <class IntType> class RegisterBase {
+template <class DerivedType, class IntType> class RegisterBase {
     static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
 public:
+    using SelfType = DerivedType;
     using ValueType = IntType;
     uint32_t reg_addr() const { return reg_addr_; }
     void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
@@ -93,11 +101,13 @@ public:
     const ValueType* reg_value_ptr() const { return &reg_value_; }
     void set_reg_value(IntType value) { reg_value_ = value; }
 
-    void ReadFrom(RegisterIo* reg_io) {
+    SelfType& ReadFrom(RegisterIo* reg_io) {
         reg_value_ = reg_io->Read<ValueType>(reg_addr_);
+        return *static_cast<SelfType*>(this);
     }
-    void WriteTo(RegisterIo* reg_io) {
+    SelfType& WriteTo(RegisterIo* reg_io) {
         reg_io->Write(reg_addr_, static_cast<IntType>(reg_value_ & ~rsvdz_mask_));
+        return *static_cast<SelfType*>(this);
     }
 
     // Invokes print_fn(const char* buf) once for each field, including each
@@ -126,8 +136,8 @@ public:
     }
 
 private:
-    friend internal::Field<ValueType>;
-    friend internal::RsvdZField<ValueType>;
+    friend internal::Field<SelfType>;
+    friend internal::RsvdZField<SelfType>;
     ValueType rsvdz_mask_ = 0;
     ValueType fields_mask_ = 0;
 
@@ -148,7 +158,8 @@ template <class RegType> class RegisterAddr {
 public:
     RegisterAddr(uint32_t reg_addr) : reg_addr_(reg_addr) {}
 
-    static_assert(fbl::is_base_of<RegisterBase<typename RegType::ValueType>, RegType>::value,
+    static_assert(fbl::is_base_of<RegisterBase<RegType,
+                                               typename RegType::ValueType>, RegType>::value,
                   "Parameter of RegisterAddr<> should derive from RegisterBase");
 
     // Instantiate a RegisterBase using the value of the register read from
@@ -196,37 +207,38 @@ private:
     const IntType mask_;
 };
 
-// Declares multi-bit fields in a derived class of RegisterBase<T>.  This
-// produces functions "T NAME() const" and "void set_NAME(T)".  Both bit indices
+// Declares multi-bit fields in a derived class of RegisterBase<D, T>.  This
+// produces functions "T NAME() const" and "D& set_NAME(T)".  Both bit indices
 // are inclusive.
 #define DEF_FIELD(BIT_HIGH, BIT_LOW, NAME)                                                        \
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
     static_assert((BIT_HIGH) < sizeof(ValueType) * CHAR_BIT, "Upper bit is out of range");        \
-    hwreg::internal::Field<ValueType> Field ## BIT_HIGH ## _ ## BIT_LOW =                         \
-        hwreg::internal::Field<ValueType>(this, #NAME, (BIT_HIGH), (BIT_LOW));                    \
+    hwreg::internal::Field<SelfType> Field ## BIT_HIGH ## _ ## BIT_LOW =                          \
+        hwreg::internal::Field<SelfType>(this, #NAME, (BIT_HIGH), (BIT_LOW));                     \
     ValueType NAME() const {                                                                      \
         return hwreg::BitfieldRef<const ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)).get(); \
     }                                                                                             \
-    void set_ ## NAME(ValueType val) {                                                            \
+    SelfType& set_ ## NAME(ValueType val) {                                                       \
         hwreg::BitfieldRef<ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)).set(val);           \
+        return *this;                                                                             \
     }
 
-// Declares single-bit fields in a derived class of RegisterBase<T>.  This
+// Declares single-bit fields in a derived class of RegisterBase<D, T>.  This
 // produces functions "T NAME() const" and "void set_NAME(T)".
 #define DEF_BIT(BIT, NAME) DEF_FIELD(BIT, BIT, NAME)
 
-// Declares multi-bit reserved-zero fields in a derived class of RegisterBase<T>.
+// Declares multi-bit reserved-zero fields in a derived class of RegisterBase<D, T>.
 // This will ensure that on RegisterBase<T>::WriteTo(), reserved-zero bits are
 // automatically zeroed.  Both bit indices are inclusive.
 #define DEF_RSVDZ_FIELD(BIT_HIGH, BIT_LOW)                                                        \
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
     static_assert((BIT_HIGH) < sizeof(ValueType) * CHAR_BIT, "Upper bit is out of range");        \
-    hwreg::internal::Field<ValueType> Field ## BIT_HIGH ## _ ## BIT_LOW =                         \
-        hwreg::internal::Field<ValueType>(this, "RsvdZ", (BIT_HIGH), (BIT_LOW));                  \
-    hwreg::internal::RsvdZField<ValueType> RsvdZ ## BIT_HIGH ## _ ## BIT_LOW =                    \
-        hwreg::internal::RsvdZField<ValueType>(this, (BIT_HIGH), (BIT_LOW));
+    hwreg::internal::Field<SelfType> Field ## BIT_HIGH ## _ ## BIT_LOW =                          \
+        hwreg::internal::Field<SelfType>(this, "RsvdZ", (BIT_HIGH), (BIT_LOW));                   \
+    hwreg::internal::RsvdZField<SelfType> RsvdZ ## BIT_HIGH ## _ ## BIT_LOW =                     \
+        hwreg::internal::RsvdZField<SelfType>(this, (BIT_HIGH), (BIT_LOW));
 
-// Declares single-bit reserved-zero fields in a derived class of RegisterBase<T>.
+// Declares single-bit reserved-zero fields in a derived class of RegisterBase<D, T>.
 // This will ensure that on RegisterBase<T>::WriteTo(), reserved-zero bits are
 // automatically zeroed.
 #define DEF_RSVDZ_BIT(BIT) DEF_RSVDZ_FIELD(BIT, BIT)

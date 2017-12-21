@@ -20,7 +20,7 @@ static const Ddi kDdis[kDdiCount] = {
 };
 
 // South Display Engine Interrupt Bit Definition + SINTERRUPT
-class SdeInterruptBase : public hwreg::RegisterBase<uint32_t> {
+class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> {
 public:
     static constexpr uint32_t kSdeIntMask = 0xc4004;
     static constexpr uint32_t kSdeIntIdentity = 0xc4008;
@@ -50,7 +50,7 @@ public:
 };
 
 // SHOTPLUG_CTL + SHOTPLUG_CTL2
-class HotplugCtrl : public hwreg::RegisterBase<uint32_t> {
+class HotplugCtrl : public hwreg::RegisterBase<HotplugCtrl, uint32_t> {
 public:
     static constexpr uint32_t kOffset = 0xc4030;
     static constexpr uint32_t kOffset2 = 0xc403c;
@@ -91,7 +91,7 @@ private:
 };
 
 // SFUSE_STRAP
-class SouthFuseStrap : public hwreg::RegisterBase<uint32_t> {
+class SouthFuseStrap : public hwreg::RegisterBase<SouthFuseStrap, uint32_t> {
 public:
     DEF_BIT(2, port_b_present);
     DEF_BIT(1, port_c_present);
@@ -101,7 +101,7 @@ public:
 };
 
 // DDI_BUF_CTL
-class DdiBufControl : public hwreg::RegisterBase<uint32_t> {
+class DdiBufControl : public hwreg::RegisterBase<DdiBufControl, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x64000;
 
@@ -115,21 +115,21 @@ public:
 };
 
 // High byte of DDI_BUF_TRANS
-class DdiBufTransHi : public hwreg::RegisterBase<uint32_t> {
+class DdiBufTransHi : public hwreg::RegisterBase<DdiBufTransHi, uint32_t> {
 public:
     DEF_BIT(31, balance_leg_enable);
     DEF_FIELD(17, 0, deemphasis_level);
 };
 
 // Low byte of DDI_BUF_TRANS
-class DdiBufTransLo : public hwreg::RegisterBase<uint32_t> {
+class DdiBufTransLo : public hwreg::RegisterBase<DdiBufTransLo, uint32_t> {
 public:
     DEF_FIELD(20, 16, vref);
     DEF_FIELD(10, 0, vswing);
 };
 
 // DISPIO_CR_TX_BMU_CR0
-class DisplayIoCtrlRegTxBmu : public hwreg::RegisterBase<uint32_t> {
+class DisplayIoCtrlRegTxBmu : public hwreg::RegisterBase<DisplayIoCtrlRegTxBmu, uint32_t> {
 public:
     DEF_FIELD(27, 23, disable_balance_leg);
 
@@ -142,7 +142,7 @@ public:
 };
 
 // DDI_AUX_CTL
-class DdiAuxControl : public hwreg::RegisterBase<uint32_t> {
+class DdiAuxControl : public hwreg::RegisterBase<DdiAuxControl, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x64010;
 
@@ -157,14 +157,14 @@ public:
 };
 
 // DDI_AUX_DATA
-class DdiAuxData : public hwreg::RegisterBase<uint32_t> {
+class DdiAuxData : public hwreg::RegisterBase<DdiAuxData, uint32_t> {
 public:
     // There are 5 32-bit words at this register's address.
     static constexpr uint32_t kBaseAddr = 0x64014;
 };
 
 // DP_TP_CTL
-class DdiDpTransportControl : public hwreg::RegisterBase<uint32_t> {
+class DdiDpTransportControl : public hwreg::RegisterBase<DdiDpTransportControl, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x64040;
 

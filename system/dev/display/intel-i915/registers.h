@@ -12,7 +12,7 @@ namespace registers {
 // Graphics & Memory Controller Hub Graphics Control - GGC_0_0_0_PCI
 // This is a 16-bit register, so it needs to be populated manually
 // TODO(stevensd/teisenbe): Is this true still?
-class GmchGfxControl : public hwreg::RegisterBase<uint16_t> {
+class GmchGfxControl : public hwreg::RegisterBase<GmchGfxControl, uint16_t> {
 public:
     static constexpr uint32_t kAddr = 0x50;
 
@@ -24,7 +24,7 @@ public:
 };
 
 // MASTER_INT_CTL
-class MasterInterruptControl : public hwreg::RegisterBase<uint32_t> {
+class MasterInterruptControl : public hwreg::RegisterBase<MasterInterruptControl, uint32_t> {
 public:
     DEF_BIT(31, enable_mask);
     DEF_BIT(23, sde_int_pending);
@@ -33,7 +33,7 @@ public:
 };
 
 // GMBUS0
-class GMBus0 : public hwreg::RegisterBase<uint32_t> {
+class GMBus0 : public hwreg::RegisterBase<GMBus0, uint32_t> {
 public:
     DEF_FIELD(2, 0, pin_pair_select);
     static constexpr uint32_t kDdiCPin = 4;
@@ -44,7 +44,7 @@ public:
 };
 
 // GMBUS1
-class GMBus1 : public hwreg::RegisterBase<uint32_t> {
+class GMBus1 : public hwreg::RegisterBase<GMBus1, uint32_t> {
 public:
     DEF_BIT(31, sw_clear_int);
     DEF_BIT(30, sw_ready);
@@ -58,7 +58,7 @@ public:
 };
 
 // GMBUS2
-class GMBus2 : public hwreg::RegisterBase<uint32_t> {
+class GMBus2 : public hwreg::RegisterBase<GMBus2, uint32_t> {
 public:
     DEF_BIT(11, hw_ready);
     DEF_BIT(10, nack);
@@ -68,13 +68,13 @@ public:
 };
 
 // GMBUS3
-class GMBus3 : public hwreg::RegisterBase<uint32_t> {
+class GMBus3 : public hwreg::RegisterBase<GMBus3, uint32_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<GMBus3>(0xc510c); }
 };
 
 // GMBUS4
-class GMBus4 : public hwreg::RegisterBase<uint32_t> {
+class GMBus4 : public hwreg::RegisterBase<GMBus4, uint32_t> {
 public:
     DEF_FIELD(4, 0, interrupt_mask);
 
@@ -82,7 +82,7 @@ public:
 };
 
 // PWR_WELL_CTL
-class PowerWellControl2 : public hwreg::RegisterBase<uint32_t> {
+class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t> {
 public:
     DEF_BIT(31, power_well_2_request);
     DEF_BIT(30, power_well_2_state);
@@ -105,7 +105,7 @@ public:
 };
 
 // FUSE_STATUS
-class FuseStatus : public hwreg::RegisterBase<uint32_t> {
+class FuseStatus : public hwreg::RegisterBase<FuseStatus, uint32_t> {
 public:
     DEF_BIT(31, fuse_download_status);
     DEF_BIT(27, pg0_dist_status);
@@ -116,7 +116,7 @@ public:
 };
 
 // NDE_RSTWRN_OPT
-class NorthDERestetWarning : public hwreg::RegisterBase<uint32_t> {
+class NorthDERestetWarning : public hwreg::RegisterBase<NorthDERestetWarning, uint32_t> {
 public:
     DEF_BIT(4, rst_pch_handshake_enable);
 
@@ -124,7 +124,7 @@ public:
 };
 
 // CLCLK_CTL
-class CdClockCtl : public hwreg::RegisterBase<uint32_t> {
+class CdClockCtl : public hwreg::RegisterBase<CdClockCtl, uint32_t> {
 public:
     DEF_FIELD(27, 26, cd_freq_select);
     static constexpr uint32_t kFreqSelect3XX = 2;
@@ -137,7 +137,7 @@ public:
 };
 
 // DBUF_CTL
-class DbufCtl : public hwreg::RegisterBase<uint32_t> {
+class DbufCtl : public hwreg::RegisterBase<DbufCtl, uint32_t> {
 public:
     DEF_BIT(31, power_request);
     DEF_BIT(30, power_state);
@@ -146,7 +146,7 @@ public:
 };
 
 // VGA_CONTROL
-class VgaCtl : public hwreg::RegisterBase<uint32_t> {
+class VgaCtl : public hwreg::RegisterBase<VgaCtl, uint32_t> {
 public:
     DEF_BIT(31, vga_display_disable);
 

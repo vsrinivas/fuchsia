@@ -11,21 +11,21 @@ namespace registers {
 
 // TRANS_HTOTAL, TRANS_HBLANK,
 // TRANS_VTOTAL, TRANS_VBLANK
-class TransHVTotal : public hwreg::RegisterBase<uint32_t> {
+class TransHVTotal : public hwreg::RegisterBase<TransHVTotal, uint32_t> {
 public:
     DEF_FIELD(28, 16, count_total); // same as blank_start
     DEF_FIELD(12, 0, count_active); // same as blank_end
 };
 
 // TRANS_HSYNC, TRANS_VSYNC
-class TransHVSync : public hwreg::RegisterBase<uint32_t> {
+class TransHVSync : public hwreg::RegisterBase<TransHVSync, uint32_t> {
 public:
     DEF_FIELD(28, 16, sync_end);
     DEF_FIELD(12, 0, sync_start);
 };
 
 // TRANS_DDI_FUNC_CTL
-class TransDdiFuncControl : public hwreg::RegisterBase<uint32_t> {
+class TransDdiFuncControl : public hwreg::RegisterBase<TransDdiFuncControl, uint32_t> {
 public:
     DEF_BIT(31, trans_ddi_function_enable);
     DEF_FIELD(30, 28, ddi_select);
@@ -49,7 +49,7 @@ public:
 };
 
 // TRANS_CONF
-class TransConf : public hwreg::RegisterBase<uint32_t> {
+class TransConf : public hwreg::RegisterBase<TransConf, uint32_t> {
 public:
     DEF_BIT(31, transcoder_enable);
     DEF_BIT(30, transcoder_state);
@@ -57,39 +57,39 @@ public:
 };
 
 // TRANS_CLK_SEL
-class TransClockSelect : public hwreg::RegisterBase<uint32_t> {
+class TransClockSelect : public hwreg::RegisterBase<TransClockSelect, uint32_t> {
 public:
     DEF_FIELD(31, 29, trans_clock_select);
 };
 
 
 // DATAM
-class TransDataM : public hwreg::RegisterBase<uint32_t> {
+class TransDataM : public hwreg::RegisterBase<TransDataM, uint32_t> {
 public:
     DEF_FIELD(30, 25, tu_or_vcpayload_size);
     DEF_FIELD(23, 0, data_m_value);
 };
 
 // DATAN
-class TransDataN : public hwreg::RegisterBase<uint32_t> {
+class TransDataN : public hwreg::RegisterBase<TransDataN, uint32_t> {
 public:
     DEF_FIELD(23, 0, data_n_value);
 };
 
 // LINKM1
-class TransLinkM : public hwreg::RegisterBase<uint32_t> {
+class TransLinkM : public hwreg::RegisterBase<TransLinkM, uint32_t> {
 public:
     DEF_FIELD(23, 0, link_m_value);
 };
 
 // LINKN1
-class TransLinkN : public hwreg::RegisterBase<uint32_t> {
+class TransLinkN : public hwreg::RegisterBase<TransLinkN, uint32_t> {
 public:
     DEF_FIELD(23, 0, link_n_value);
 };
 
 // TRANS_MSA_MISC
-class TransMsaMisc : public hwreg::RegisterBase<uint32_t> {
+class TransMsaMisc : public hwreg::RegisterBase<TransMsaMisc, uint32_t> {
 public:
     // Byte 1 is MISC1 from DP spec
     DEF_FIELD(10, 9, stereo_video);

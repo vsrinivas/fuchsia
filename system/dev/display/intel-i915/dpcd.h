@@ -24,7 +24,7 @@ enum {
 };
 
 // DPCD register: MAX_LINK_RATE and LINK_BW_SET
-class LinkBw : public hwreg::RegisterBase<uint32_t> {
+class LinkBw : public hwreg::RegisterBase<LinkBw, uint32_t> {
 public:
     DEF_FIELD(7, 0, link_bw_set);
     static constexpr int k1620Mbps = 0x06;
@@ -32,14 +32,14 @@ public:
 };
 
 // DPCD register: MAX_LANE_COUNT and LANE_COUNT_SET
-class LaneCount : public hwreg::RegisterBase<uint32_t> {
+class LaneCount : public hwreg::RegisterBase<LaneCount, uint32_t> {
 public:
     DEF_BIT(7, enhanced_frame_enabled);
     DEF_FIELD(4, 0, lane_count_set);
 };
 
 // DPCD register: TRAINING_PATTERN_SET
-class TrainingPatternSet : public hwreg::RegisterBase<uint32_t> {
+class TrainingPatternSet : public hwreg::RegisterBase<TrainingPatternSet, uint32_t> {
 public:
     DEF_FIELD(1, 0, training_pattern_set);
     static constexpr int kNotTraining = 0;
@@ -52,7 +52,7 @@ public:
 };
 
 // DPCD register: TRAINING_LANEX_SET
-class TrainingLaneSet : public hwreg::RegisterBase<uint32_t> {
+class TrainingLaneSet : public hwreg::RegisterBase<TrainingLaneSet, uint32_t> {
 public:
     DEF_FIELD(1, 0, voltage_swing_set);
     DEF_BIT(2, max_swing_reached);
@@ -61,7 +61,7 @@ public:
 };
 
 // DPCD register: LANEX_Y_STATUS
-class LaneStatus : public hwreg::RegisterBase<uint32_t> {
+class LaneStatus : public hwreg::RegisterBase<LaneStatus, uint32_t> {
 public:
     hwreg::BitfieldRef<uint32_t> lane_cr_done(int lane) {
         int bit = 4 * (lane % 2);
@@ -80,7 +80,7 @@ public:
 };
 
 // DPCD register: ADJUST_REQUEST_LANEX_Y
-class AdjustRequestLane : public hwreg::RegisterBase<uint32_t> {
+class AdjustRequestLane : public hwreg::RegisterBase<AdjustRequestLane, uint32_t> {
 public:
     hwreg::BitfieldRef<uint32_t> voltage_swing(int lane) {
         int bit = 4 * (lane % 2);

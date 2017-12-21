@@ -10,7 +10,7 @@
 namespace registers {
 
 // DPLL_CTRL1
-class DpllControl1 : public hwreg::RegisterBase<uint32_t> {
+class DpllControl1 : public hwreg::RegisterBase<DpllControl1, uint32_t> {
 public:
     hwreg::BitfieldRef<uint32_t> dpll_hdmi_mode(int dpll) {
         int bit = dpll * 6 + 5;
@@ -42,7 +42,7 @@ public:
 };
 
 // DPLL_CTRL2
-class DpllControl2 : public hwreg::RegisterBase<uint32_t> {
+class DpllControl2 : public hwreg::RegisterBase<DpllControl2, uint32_t> {
 public:
     hwreg::BitfieldRef<uint32_t> ddi_clock_off(Ddi ddi) {
         int bit = 15 + ddi;
@@ -63,7 +63,7 @@ public:
 };
 
 // DPLL_CFGCR1
-class DpllConfig1 : public hwreg::RegisterBase<uint32_t> {
+class DpllConfig1 : public hwreg::RegisterBase<DpllConfig1, uint32_t> {
 public:
     DEF_BIT(31, frequency_enable);
     DEF_FIELD(23, 9, dco_fraction);
@@ -76,7 +76,7 @@ public:
 };
 
 // DPLL_CFGCR2
-class DpllConfig2 : public hwreg::RegisterBase<uint32_t> {
+class DpllConfig2 : public hwreg::RegisterBase<DpllConfig2, uint32_t> {
 public:
     DEF_FIELD(15, 8, qdiv_ratio);
     DEF_BIT(7, qdiv_mode);
@@ -105,7 +105,7 @@ public:
 
 // Virtual register which unifies the dpll enable bits (which are spread
 // across 4 registers)
-class DpllEnable : public hwreg::RegisterBase<uint32_t> {
+class DpllEnable : public hwreg::RegisterBase<DpllEnable, uint32_t> {
 public:
     DEF_BIT(31, enable_dpll);
 
@@ -124,7 +124,7 @@ public:
 };
 
 // DPLL_STATUS
-class DpllStatus : public hwreg::RegisterBase<uint32_t> {
+class DpllStatus : public hwreg::RegisterBase<DpllStatus, uint32_t> {
 public:
     hwreg::BitfieldRef<uint32_t> dpll_lock(int dpll) {
         int bit = dpll * 8;
@@ -135,7 +135,7 @@ public:
 };
 
 // LCPLL1_CTL
-class Lcpll1Control : public hwreg::RegisterBase<uint32_t> {
+class Lcpll1Control : public hwreg::RegisterBase<Lcpll1Control, uint32_t> {
 public:
     DEF_BIT(30, pll_lock);
 

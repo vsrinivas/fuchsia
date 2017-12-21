@@ -13,7 +13,7 @@
 
 namespace hwreg {
 
-template <typename T> class RegisterBase;
+template <typename D, typename T> class RegisterBase;
 
 namespace internal {
 
@@ -51,9 +51,11 @@ private:
 
 // Used to record information about a field at construction time.  This enables
 // checking for overlapping fields and pretty-printing.
-template <class IntType> class Field {
+template <class RegType> class Field {
+private:
+    using IntType = typename RegType::ValueType;
 public:
-    Field(RegisterBase<IntType>* reg, const char* name, uint32_t bit_high_incl, uint32_t bit_low) {
+    Field(RegType* reg, const char* name, uint32_t bit_high_incl, uint32_t bit_low) {
         IntType mask = static_cast<IntType>(
                 internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1) << bit_low);
         // Check for overlapping bit ranges
@@ -67,9 +69,12 @@ public:
 
 // Used to record information about reserved-zero fields at construction time.
 // This enables auto-zeroing of reserved-zero fields on register write.
-template <class IntType> class RsvdZField {
+// Represents a field that must be zeroed on write.
+template <class RegType> class RsvdZField {
+private:
+    using IntType = typename RegType::ValueType;
 public:
-    RsvdZField(RegisterBase<IntType>* reg, uint32_t bit_high_incl, uint32_t bit_low) {
+    RsvdZField(RegType* reg, uint32_t bit_high_incl, uint32_t bit_low) {
         IntType mask = static_cast<IntType>(
                 internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1) << bit_low);
         reg->rsvdz_mask_ = static_cast<IntType>(reg->rsvdz_mask_ | mask);

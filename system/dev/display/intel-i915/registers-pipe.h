@@ -18,7 +18,7 @@ static const Pipe kPipes[kPipeCount] = {
 };
 
 // PIPE_SRCSZ
-class PipeSourceSize : public hwreg::RegisterBase<uint32_t> {
+class PipeSourceSize : public hwreg::RegisterBase<PipeSourceSize, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x6001c;
 
@@ -28,7 +28,7 @@ public:
 
 
 // PLANE_SURF
-class PlaneSurface : public hwreg::RegisterBase<uint32_t> {
+class PlaneSurface : public hwreg::RegisterBase<PlaneSurface, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x7019c;
 
@@ -47,7 +47,7 @@ public:
 };
 
 // PLANE_STRIDE
-class PlaneSurfaceStride : public hwreg::RegisterBase<uint32_t> {
+class PlaneSurfaceStride : public hwreg::RegisterBase<PlaneSurfaceStride, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
@@ -57,7 +57,7 @@ public:
 };
 
 // PLANE_SIZE
-class PlaneSurfaceSize : public hwreg::RegisterBase<uint32_t> {
+class PlaneSurfaceSize : public hwreg::RegisterBase<PlaneSurfaceSize, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70190;
 
@@ -66,7 +66,7 @@ public:
 };
 
 // PLANE_CTL
-class PlaneControl : public hwreg::RegisterBase<uint32_t> {
+class PlaneControl : public hwreg::RegisterBase<PlaneControl, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70180;
 
@@ -102,7 +102,7 @@ public:
 };
 
 // PLANE_BUF_CFG
-class PlaneBufCfg : public hwreg::RegisterBase<uint32_t> {
+class PlaneBufCfg : public hwreg::RegisterBase<PlaneBufCfg, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x7017c;
 
@@ -111,7 +111,7 @@ public:
 };
 
 // PLANE_WM
-class PlaneWm : public hwreg::RegisterBase<uint32_t> {
+class PlaneWm : public hwreg::RegisterBase<PlaneWm, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70240;
 

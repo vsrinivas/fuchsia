@@ -33,7 +33,7 @@ private:
     bool DpcdRequestLinkTraining(const dpcd::TrainingPatternSet& tp_set,
                                  const dpcd::TrainingLaneSet lanes[]);
     template<uint32_t addr, typename T> bool DpcdReadPairedRegs(
-            hwreg::RegisterBase<typename T::ValueType>* status);
+            hwreg::RegisterBase<T, typename T::ValueType>* status);
     bool DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training, dpcd::AdjustRequestLane* adjust);
     bool DoLinkTraining();
     bool LinkTrainingSetup();
