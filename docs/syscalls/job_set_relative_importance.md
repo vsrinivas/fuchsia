@@ -26,7 +26,7 @@ object](../objects/job.md) is relative to another job.
 
 Upon success, updates a partial ordering between jobs so that
 *less_important_job* will be killed before *job* in low-resource situations. If
-*less_important_job* is **ZX_INVALID_HANDLE**, then *job* becomes the
+*less_important_job* is **ZX_HANDLE_INVALID**, then *job* becomes the
 least-important job in the system.
 
 If the new order pair would create a cycle, an existing order pair will be
@@ -49,7 +49,7 @@ failure, a negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE** *resource* is not a resource handle, *job* is not a job
 handle, or *less_important_job* is not a job handle (if it is a value other than
-**ZX_INVALID_HANDLE**).
+**ZX_HANDLE_INVALID**).
 
 ## SEE ALSO
 
