@@ -95,7 +95,7 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
             break;
         size_t i = __builtin_ctzl(elrs);
         gich_state->gich->lr[i] = kGichLrPending | vector;
-        elrs &= ~i;
+        elrs &= ~(1u << i);
     }
     return elrs != prev_elrs;
 }
