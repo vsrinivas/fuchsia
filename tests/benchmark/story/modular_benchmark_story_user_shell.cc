@@ -83,7 +83,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   fidl::Binding<modular::StoryWatcher> binding_;
 
   modular::StoryState continue_state_{modular::StoryState::DONE};
-  std::function<void()> continue_;
+  std::function<void()> continue_{[]{}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
