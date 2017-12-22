@@ -188,7 +188,19 @@ void UserIntelligenceProviderImpl::StartActionLog(
 void UserIntelligenceProviderImpl::StartKronk() {
   component_context_->ConnectToAgent(kronk_url_, kronk_services_.NewRequest(),
                                      kronk_controller_.NewRequest());
-  kronk_services_.set_connection_error_handler([this] {
+  // Agent runner closes the agent controller connection when the agent
+  // terminates. We restart the agent (up to a limit) when we notice this.
+  //
+  // NOTE(rosswang,mesch): Although the interface we're actually interested in
+  // is kronk_services_, we still need to put the restart handler on the
+  // controller. When the agent crashes, kronk_services_ often gets closed quite
+  // a bit earlier (~1 second) than the agent runner notices via the application
+  // controller (which it must use as opposed to any interface on the agent
+  // itself since the agent is not required to implement any interfaces itself,
+  // even though it is recommended that it does). If we try to restart the agent
+  // at that time, the agent runner would attempt to simply send the connection
+  // request to the crashed agent instance and not relaunch the agent.
+  kronk_controller_.set_connection_error_handler([this] {
     kronk_services_.reset();
     kronk_controller_.reset();
 
