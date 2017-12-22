@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_SPLIT_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_SPLIT_H_
 
-#include <unordered_set>
-
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 

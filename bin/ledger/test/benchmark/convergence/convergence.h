@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -61,7 +61,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   fidl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
-  std::unordered_multiset<std::string> remaining_keys_;
+  std::multiset<std::string> remaining_keys_;
   int current_step_ = -1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);

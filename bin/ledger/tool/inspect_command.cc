@@ -10,8 +10,8 @@
 #include <cctype>
 #include <iostream>
 #include <queue>
+#include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -283,7 +283,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
     FXL_NOTREACHED();
   }
 
-  std::unordered_set<storage::CommitId> unsynced_commit_ids;
+  std::set<storage::CommitId> unsynced_commit_ids;
   std::for_each(unsynced_commits.begin(), unsynced_commits.end(),
                 [&unsynced_commit_ids](
                     const std::unique_ptr<const storage::Commit>& commit) {
@@ -300,7 +300,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
           &status, &heads)) {
     FXL_NOTREACHED();
   }
-  std::unordered_set<storage::CommitId> commit_ids;
+  std::set<storage::CommitId> commit_ids;
   std::deque<storage::CommitId> to_explore;
   if (status != storage::Status::OK) {
     FXL_LOG(FATAL) << "Unable to get head commits due to error " << status;

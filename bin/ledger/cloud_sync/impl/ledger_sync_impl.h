@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_LEDGER_SYNC_IMPL_H_
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
@@ -45,7 +45,7 @@ class LedgerSyncImpl : public LedgerSync {
   const UserConfig* const user_config_;
   const std::string app_id_;
   bool upload_enabled_ = false;
-  std::unordered_set<PageSyncImpl*> active_page_syncs_;
+  std::set<PageSyncImpl*> active_page_syncs_;
   // Called on destruction.
   std::function<void()> on_delete_;
   std::unique_ptr<SyncStateWatcher> user_watcher_;

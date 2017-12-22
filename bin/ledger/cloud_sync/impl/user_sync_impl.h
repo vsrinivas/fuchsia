@@ -8,7 +8,7 @@
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -73,7 +73,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
   // Fingerprint of the device in the cloud device list.
   std::string fingerprint_;
-  std::unordered_set<LedgerSyncImpl*> active_ledger_syncs_;
+  std::set<LedgerSyncImpl*> active_ledger_syncs_;
 
   // Aggregates the synchronization state of multiple ledgers into one
   // notification stream.

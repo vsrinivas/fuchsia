@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/tool/tool.h"
 
 #include <iostream>
-#include <unordered_set>
+#include <set>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -52,7 +52,7 @@ bool ToolApp::Initialize() {
               << "Please use 'ledger_tool' instead." << std::endl;
   }
 
-  std::unordered_set<std::string> valid_commands = {"inspect"};
+  std::set<std::string> valid_commands = {"inspect"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (!args.empty() && valid_commands.count(args[0]) == 0) {
     std::cerr << "Unknown command: " << args[0] << std::endl;

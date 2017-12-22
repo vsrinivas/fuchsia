@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
 #include <algorithm>
-#include <unordered_set>
+#include <set>
 #include <utility>
 
 #include <trace/event.h>
@@ -184,8 +184,7 @@ void BatchUpload::FilterAndUploadCommits() {
       weak_ptr_factory_.GetWeakPtr(),
       [this](storage::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
-        std::unordered_set<storage::CommitId> commit_ids;
-        commit_ids.reserve(commits.size());
+        std::set<storage::CommitId> commit_ids;
         std::transform(
             commits.begin(), commits.end(),
             std::inserter(commit_ids, commit_ids.begin()),

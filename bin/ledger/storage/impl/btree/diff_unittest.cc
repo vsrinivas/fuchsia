@@ -132,7 +132,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
   Status status;
   ObjectIdentifier base_root_identifier = CreateTree(base_entries);
   ObjectIdentifier other_root_identifier;
-  std::unordered_set<ObjectDigest> new_nodes;
+  std::set<ObjectDigest> new_nodes;
   ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes,
                                     &other_root_identifier));
 

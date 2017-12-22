@@ -10,7 +10,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_set>
 
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"

@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_AGGREGATOR_H_
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
@@ -35,7 +35,7 @@ class Aggregator {
 
   SyncStateWatcher::SyncStateContainer state_;
 
-  std::unordered_set<Listener*> listeners_;
+  std::set<Listener*> listeners_;
   SyncStateWatcher* base_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Aggregator);

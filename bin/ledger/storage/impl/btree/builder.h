@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_BTREE_BUILDER_H_
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"

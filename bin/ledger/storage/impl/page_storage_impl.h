@@ -21,7 +21,7 @@
 #include "peridot/lib/callback/operation_serializer.h"
 #include "peridot/lib/convert/convert.h"
 
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 namespace storage {
@@ -257,7 +257,7 @@ class PageStorageImpl : public PageStorage {
       std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
       commits_to_send_;
   // The set of active handlers.
-  std::unordered_set<coroutine::CoroutineHandler*> handlers_;
+  std::set<coroutine::CoroutineHandler*> handlers_;
 
   callback::OperationSerializer commit_serializer_;
 

@@ -6,7 +6,6 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_BTREE_TREE_NODE_H_
 
 #include <memory>
-#include <unordered_set>
 #include <vector>
 
 #include "peridot/bin/ledger/storage/public/object.h"
