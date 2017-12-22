@@ -33,7 +33,6 @@
 #define PCI_VENDOR_ID_INTEL         0x8086u
 #define PCI_DEVICE_ID_INTEL_Q35     0x29c0u
 #define PCI_CLASS_BRIDGE_HOST       0x0600u
-#define PCI_CLASS_MASS_STORAGE      0x0100u
 
 // PCI type 1 address manipulation.
 #define PCI_TYPE1_BUS(addr)         (((addr) >> 16) & 0xff)
