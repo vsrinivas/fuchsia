@@ -16,7 +16,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t physmem_vmo,
                              user_out_handle* out) {

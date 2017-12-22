@@ -28,7 +28,7 @@
 #include <string.h>
 #include <trace.h>
 
-#include "syscalls_system_priv.h"
+#include "system_priv.h"
 
 #define LOCAL_TRACE 0
 

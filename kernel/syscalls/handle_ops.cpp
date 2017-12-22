@@ -12,7 +12,7 @@
 #include <object/process_dispatcher.h>
 #include <fbl/auto_lock.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 #define LOCAL_TRACE 0
 

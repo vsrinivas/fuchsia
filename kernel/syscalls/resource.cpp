@@ -13,7 +13,7 @@
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 // Create a new resource, child of the provided resource.
 // On success, a new resource is created and handle is returned.

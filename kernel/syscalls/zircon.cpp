@@ -34,7 +34,7 @@
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 #define LOCAL_TRACE 0
 

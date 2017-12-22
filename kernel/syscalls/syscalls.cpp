@@ -18,7 +18,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 #include "vdso-valid-sysret.h"
 
 #define LOCAL_TRACE 0

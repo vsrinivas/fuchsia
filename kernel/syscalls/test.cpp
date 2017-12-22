@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 zx_status_t sys_syscall_test_0(void) {
     return 0;

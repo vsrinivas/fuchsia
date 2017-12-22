@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "syscalls_system_priv.h"
+#include "system_priv.h"
 
 #include <arch/arch_ops.h>
 #include <arch/mp.h>

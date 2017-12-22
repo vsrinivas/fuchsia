@@ -19,7 +19,7 @@
 #include <zircon/syscalls/policy.h>
 #include <fbl/ref_ptr.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 #define LOCAL_TRACE 0
 

@@ -22,7 +22,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 using fbl::AutoLock;
 

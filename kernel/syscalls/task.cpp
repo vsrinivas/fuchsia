@@ -31,7 +31,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 #define LOCAL_TRACE 0
 #define THREAD_SET_PRIORITY_EXPERIMENT 1

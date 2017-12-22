@@ -26,7 +26,7 @@
 
 #include <zircon/types.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 using fbl::AutoLock;
 

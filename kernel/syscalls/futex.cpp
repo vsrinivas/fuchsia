@@ -9,7 +9,7 @@
 #include <object/process_dispatcher.h>
 #include <zircon/types.h>
 
-#include "syscalls_priv.h"
+#include "priv.h"
 
 #define LOCAL_TRACE 0
 
