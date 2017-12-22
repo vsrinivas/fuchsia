@@ -15,7 +15,7 @@
     },
     "resources": [
         {
-            "bootfs_path": "test/run_modular_benchmarks.sh",
+            "bootfs_path": "test/modular_tests/run_modular_benchmarks.sh",
             "file": "peridot/tests/benchmark/run_modular_benchmarks.sh"
         },
         {
