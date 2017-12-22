@@ -30,8 +30,12 @@
 })
 
 static const uint16_t kSmcPsci = 0;
-static const uint32_t kCntpCtlEnable = 1u << 0;
 static const uint32_t kTimerVector = 27;
+
+enum TimerControl : uint64_t {
+    ENABLE = 1u << 0,
+    IMASK = 1u << 1,
+};
 
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
@@ -65,8 +69,8 @@ static void next_pc(GuestState* guest_state) {
 }
 
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
-    bool has_timer = ARM64_READ_SYSREG(cntp_ctl_el0) & kCntpCtlEnable;
-    if (!has_timer)
+    bool masked = ARM64_READ_SYSREG(cntv_ctl_el0) & TimerControl::IMASK;
+    if (masked)
         return INT_NO_RESCHEDULE;
 
     GichState* gich_state = static_cast<GichState*>(arg);
@@ -85,9 +89,9 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
         return ZX_ERR_NOT_SUPPORTED;
 
     timer_cancel(&gich_state->timer);
-    bool has_timer = ARM64_READ_SYSREG(cntp_ctl_el0) & kCntpCtlEnable;
+    bool has_timer = ARM64_READ_SYSREG(cntv_ctl_el0) & TimerControl::ENABLE;
     if (has_timer) {
-        uint64_t cntpct_deadline = ARM64_READ_SYSREG(cntp_cval_el0);
+        uint64_t cntpct_deadline = ARM64_READ_SYSREG(cntv_cval_el0);
         zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
         timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
     }
