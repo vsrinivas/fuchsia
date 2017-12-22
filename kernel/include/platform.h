@@ -16,9 +16,10 @@ __BEGIN_CDECLS
 #define BOOT_CPU_ID 0
 
 typedef enum {
-    HALT_ACTION_HALT = 0,       // Spin forever.
-    HALT_ACTION_REBOOT,         // Reset the CPU.
-    HALT_ACTION_SHUTDOWN,       // Shutdown and power off.
+    HALT_ACTION_HALT = 0,           // Spin forever.
+    HALT_ACTION_REBOOT,             // Reset the CPU.
+    HALT_ACTION_REBOOT_BOOTLOADER,  // Reboot into the bootloader.
+    HALT_ACTION_SHUTDOWN,           // Shutdown and power off.
 } platform_halt_action;
 
 typedef enum {

@@ -562,7 +562,8 @@ int zxc_k(int argc, char** argv) {
     size_t command_length = 0u;
     // If we detect someone trying to use the LK poweroff/reboot,
     // divert it to devmgr backed one instead.
-    if (!strcmp(argv[1], "poweroff") || !strcmp(argv[1], "reboot")) {
+    if (!strcmp(argv[1], "poweroff") || !strcmp(argv[1], "reboot")
+        || !strcmp(argv[1], "reboot-bootloader")) {
         strcpy(buffer, argv[1]);
         command_length = strlen(buffer);
     } else {

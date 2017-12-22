@@ -513,7 +513,7 @@ static zx_protocol_device_t acpi_root_device_proto = {
 };
 
 static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
-    switch (flags) {
+    switch (flags & DEVICE_SUSPEND_REASON_MASK) {
     case DEVICE_SUSPEND_FLAG_REBOOT:
         reboot();
         // Kill this driver so that the IPC channel gets closed; devmgr will

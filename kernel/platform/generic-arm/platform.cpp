@@ -706,6 +706,9 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     if (suggested_action == HALT_ACTION_REBOOT) {
         power_reboot(REBOOT_NORMAL);
         printf("reboot failed\n");
+    } else if (suggested_action == HALT_ACTION_REBOOT_BOOTLOADER) {
+        power_reboot(REBOOT_BOOTLOADER);
+        printf("reboot-bootloader failed\n");
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         power_shutdown();
     }

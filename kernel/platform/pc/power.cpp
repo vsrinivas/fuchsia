@@ -80,6 +80,7 @@ void platform_halt(
             printf("Power off failed, halting\n");
             break;
         case HALT_ACTION_REBOOT:
+        case HALT_ACTION_REBOOT_BOOTLOADER:
             printf("Rebooting...\n");
             reboot();
             printf("Reboot failed, halting\n");

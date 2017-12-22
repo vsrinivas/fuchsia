@@ -26,10 +26,14 @@ typedef struct zx_protocol_device zx_protocol_device_t;
 
 // TODO: temporary flags used by devcoord to communicate
 // with the system bus device.
-#define DEVICE_SUSPEND_FLAG_REBOOT      0xdcdc0001
-#define DEVICE_SUSPEND_FLAG_POWEROFF    0xdcdc0002
-#define DEVICE_SUSPEND_FLAG_MEXEC       0xdcdc0003
-#define DEVICE_SUSPEND_FLAG_SUSPEND_RAM 0xdcdc0004
+#define DEVICE_SUSPEND_FLAG_REBOOT      0xdcdc0100
+#define DEVICE_SUSPEND_FLAG_POWEROFF    0xdcdc0200
+#define DEVICE_SUSPEND_FLAG_MEXEC       0xdcdc0300
+#define DEVICE_SUSPEND_FLAG_SUSPEND_RAM 0xdcdc0400
+#define DEVICE_SUSPEND_REASON_MASK      0xffffff00
+
+// reboot modifiers
+#define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER   (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
 
 //@doc(docs/ddk/device-ops.md)
 
