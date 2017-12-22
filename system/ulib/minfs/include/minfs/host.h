@@ -97,3 +97,40 @@ private:
     bool hostfile_;
     int fd_{};
 };
+
+// DirWrapper is a wrapper around an open directory,
+// which abstracts away the "hostness" or "targetness"
+// of the underlying target. Additionally, it provides
+// RAII semantics to the underlying directory.
+class DirWrapper {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(DirWrapper);
+    constexpr DirWrapper() : hostdir_(false), dir_(NULL) {};
+
+    ~DirWrapper() {
+        Close();
+    }
+
+    static int Make(const char* path, mode_t mode) {
+        return host_path(path) ? mkdir(path, mode) : emu_mkdir(path, mode);
+    }
+    static int Open(const char* path, DirWrapper* out) {
+        if (host_path(path)) {
+            out->hostdir_ = true;
+            out->dir_ = opendir(path);
+        } else {
+            out->hostdir_ = false;
+            out->dir_ = emu_opendir(path);
+        }
+        return out->dir_ == NULL ? -1 : 0;
+    }
+    int Close() {
+        return hostdir_ ? closedir(dir_) : emu_closedir(dir_);
+    }
+    struct dirent* ReadDir() {
+        return hostdir_ ? readdir(dir_) : emu_readdir(dir_);
+    }
+private:
+    bool hostdir_;
+    DIR* dir_;
+};

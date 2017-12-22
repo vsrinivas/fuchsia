@@ -79,6 +79,17 @@ int io_setup(fbl::unique_ptr<minfs::Bcache> bc) {
     return 0;
 }
 
+int is_dir(const char* path, bool* result) {
+    struct stat s;
+    int r = host_path(path) ? stat(path, &s) : emu_stat(path, &s);
+    if (S_ISDIR(s.st_mode)) {
+        *result = true;
+    } else {
+        *result = false;
+    }
+    return r;
+}
+
 int cp_file(const char* src_path, const char* dst_path) {
     FileWrapper src;
     FileWrapper dst;
@@ -116,6 +127,65 @@ done:
     return r;
 }
 
+// Recursive helper function for cp_dir.
+int cp_dir_(char* src, char* dst) {
+    if (DirWrapper::Make(dst, 0777)) {
+        fprintf(stderr, "minfs: could not create directory\n");
+        return -1;
+    }
+    DirWrapper current_dir;
+    if (DirWrapper::Open(src, &current_dir)) {
+        return -1;
+    }
+
+    size_t src_len = strlen(src);
+    size_t dst_len = strlen(dst);
+    struct dirent* de;
+    while ((de = current_dir.ReadDir()) != nullptr) {
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+            continue;
+        }
+        size_t name_len = strlen(de->d_name);
+        if (src_len + name_len + 1 > PATH_MAX - 1 ||
+            dst_len + name_len + 1 > PATH_MAX - 1) {
+            return -1;
+        }
+        strncat(src, "/", 1);
+        strncat(src, de->d_name, PATH_MAX - src_len - 2);
+        strncat(dst, "/", 1);
+        strncat(dst, de->d_name, PATH_MAX - dst_len - 2);
+
+        bool dir;
+        if (is_dir(src, &dir)) {
+            return -1;
+        }
+        if (dir) {
+            int err = cp_dir_(src, dst);
+            if (err) {
+                return err;
+            }
+        } else if (cp_file(src, dst)) {
+            return -1;
+        }
+        src[src_len] = '\0';
+        dst[dst_len] = '\0';
+    }
+    return 0;
+}
+
+// Copies a directory recursively.
+int cp_dir(const char* src_path, const char* dst_path) {
+    char src[PATH_MAX];
+    char dst[PATH_MAX];
+
+    if (strlen(src_path) >= PATH_MAX || strlen(dst_path) >= PATH_MAX) {
+        return -1;
+    }
+    strncpy(src, src_path, PATH_MAX);
+    strncpy(dst, dst_path, PATH_MAX);
+    return cp_dir_(src, dst);
+}
+
 int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "cp requires two arguments\n");
@@ -126,6 +196,14 @@ int do_cp(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return -1;
     }
 
+    bool dir;
+    if (is_dir(argv[0], &dir)) {
+        fprintf(stderr, "minfs: failed to stat %s\n", argv[0]);
+        return -1;
+    }
+    if (dir) {
+        return cp_dir(argv[0], argv[1]);
+    }
     return cp_file(argv[0], argv[1]);
 }
 
