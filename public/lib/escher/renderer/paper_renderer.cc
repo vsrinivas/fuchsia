@@ -562,14 +562,14 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
   // Compute the illumination and store the result in a texture.
   TexturePtr shadow_texture;
   ImagePtr illum1 =
-      image_cache_->NewImage({impl::SsdoSampler::kColorFormat, width, height, 1,
+      image_cache_->NewImage({ssdo_->color_format(), width, height, 1,
                               vk::ImageUsageFlagBits::eSampled |
                                   vk::ImageUsageFlagBits::eColorAttachment |
                                   vk::ImageUsageFlagBits::eStorage |
                                   vk::ImageUsageFlagBits::eTransferSrc});
 
   ImagePtr illum2 =
-      image_cache_->NewImage({impl::SsdoSampler::kColorFormat, width, height, 1,
+      image_cache_->NewImage({ssdo_->color_format(), width, height, 1,
                               vk::ImageUsageFlagBits::eSampled |
                                   vk::ImageUsageFlagBits::eColorAttachment |
                                   vk::ImageUsageFlagBits::eStorage |

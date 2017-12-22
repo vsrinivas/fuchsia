@@ -433,7 +433,24 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
   return {sampler_pipeline, filter_pipeline};
 }
 
-vk::RenderPass CreateRenderPass(vk::Device device) {
+vk::Format ChooseColorFormat(vk::PhysicalDevice physical_device) {
+  // TODO: eR8G8Srgb would be preferable, but must check if it is supported.
+  // TODO: validate this choice via performance profiling.
+  vk::Format color_formats[] = {vk::Format::eR8G8Unorm,
+                                vk::Format::eR8G8B8A8Unorm};
+  for (auto format : color_formats) {
+    vk::FormatProperties properties;
+    physical_device.getFormatProperties(format, &properties);
+    if (properties.optimalTilingFeatures &
+        vk::FormatFeatureFlagBits::eStorageImage)
+      return format;
+  }
+
+  FXL_DCHECK(false);
+  return vk::Format::eUndefined;
+}
+
+vk::RenderPass CreateRenderPass(vk::Device device, vk::Format color_format) {
   constexpr uint32_t kAttachmentCount = 1;
   vk::AttachmentDescription attachments[kAttachmentCount];
 
@@ -441,7 +458,7 @@ vk::RenderPass CreateRenderPass(vk::Device device) {
   // one from a previous pass will be provided to the shader as a texture).
   const uint32_t kColorAttachment = 0;
   auto& color_attachment = attachments[kColorAttachment];
-  color_attachment.format = SsdoSampler::kColorFormat;
+  color_attachment.format = color_format;
   color_attachment.samples = vk::SampleCountFlagBits::e1;
   color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -510,6 +527,7 @@ SsdoSampler::SsdoSampler(Escher* escher,
                          ImagePtr noise_image,
                          ModelData* model_data)
     : device_(escher->vulkan_context().device),
+      color_format_(ChooseColorFormat(escher->vk_physical_device())),
       pool_(escher, GetDescriptorSetLayoutCreateInfo(), 6),
       full_screen_(full_screen),
       noise_texture_(fxl::MakeRefCounted<Texture>(escher->resource_recycler(),
@@ -517,7 +535,7 @@ SsdoSampler::SsdoSampler(Escher* escher,
                                                   vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
       // it.
-      render_pass_(CreateRenderPass(device_)) {
+      render_pass_(CreateRenderPass(device_, color_format_)) {
   FXL_DCHECK(noise_image->width() == kNoiseSize &&
              noise_image->height() == kNoiseSize);
 

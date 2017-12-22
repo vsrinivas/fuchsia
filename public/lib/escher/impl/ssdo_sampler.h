@@ -32,10 +32,6 @@ class SsdoSampler {
   // Must match the fragment shader in ssdo_sampler.cc
   constexpr static uint32_t kSsdoAccelDownsampleFactor = 8;
 
-  // TODO: eR8G8Srgb would be preferable, but must check if it is supported.
-  // TODO: validate this choice via performance profiling.
-  const static vk::Format kColorFormat = vk::Format::eR8G8Unorm;
-
   struct SamplerConfig {
     vec4 key_light;
     vec3 viewing_volume;
@@ -57,6 +53,8 @@ class SsdoSampler {
               ImagePtr noise_image,
               ModelData* model_data);
   ~SsdoSampler();
+
+  vk::Format color_format() const { return color_format_; }
 
   // Stochastic sampling to determine obscurance.  The output requires filtering
   // to reduce noise.
@@ -81,6 +79,7 @@ class SsdoSampler {
 
  private:
   const vk::Device device_;
+  const vk::Format color_format_;
   DescriptorSetPool pool_;
   MeshPtr full_screen_;
   TexturePtr noise_texture_;
