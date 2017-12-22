@@ -12,10 +12,17 @@ namespace internal {
 void FieldPrinter::Print(uint64_t value, char* buf, size_t len) const {
     unsigned num_bits = bit_high_incl_ - bit_low_ + 1;
     uint64_t mask = internal::ComputeMask<uint64_t>(num_bits);
-    int pad_len = (num_bits + 3) / 4;
     uint64_t val = static_cast<uint64_t>((value >> bit_low_) & mask);
+#ifdef _KERNEL
+    // The kernel does not support the * directive in printf, so we lose out on
+    // the length-matching padding.
+    snprintf(buf, len, "%s[%u:%u]: 0x%" PRIx64 " (%" PRIu64 ")", name_,
+             bit_high_incl_, bit_low_, val, val);
+#else
+    int pad_len = (num_bits + 3) / 4;
     snprintf(buf, len, "%s[%u:%u]: 0x%0*" PRIx64 " (%" PRIu64 ")", name_,
              bit_high_incl_, bit_low_, pad_len, val, val);
+#endif // _KERNEL
     buf[len - 1] = 0;
 }
 

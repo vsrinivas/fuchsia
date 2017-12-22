@@ -11,7 +11,7 @@ MODULE := $(LOCAL_DIR)
 
 KERNEL_INCLUDES += $(SRC_DIR)/include
 
-MODULE_SRCS := $(LOCAL_DIR)/empty.cpp
+MODULE_SRCS := $(SRC_DIR)/printers.cpp
 MODULE_DEPS := kernel/lib/fbl
 
 include make/module.mk
