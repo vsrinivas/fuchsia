@@ -22,6 +22,7 @@ MODULE_DEPS += \
 	kernel/lib/memory_limit \
 	kernel/dev/pcie \
 	kernel/dev/pdev \
+	kernel/dev/pdev/power \
 	kernel/dev/timer/arm_generic \
 	kernel/dev/interrupt/arm_gicv2 \
 	kernel/dev/interrupt/arm_gicv3 \

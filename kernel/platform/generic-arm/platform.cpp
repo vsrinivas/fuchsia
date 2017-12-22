@@ -22,6 +22,7 @@
 #include <kernel/spinlock.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
+#include <dev/power.h>
 #include <dev/psci.h>
 
 #include <platform.h>
@@ -699,25 +700,14 @@ zx_status_t display_get_info(struct display_info *info) {
     return ZX_ERR_NOT_FOUND;
 }
 
-static void reboot() {
-        psci_system_reset();
-#ifdef MSM8998_PSHOLD_PHYS
-        // Deassert PSHold
-        *REG32(paddr_to_kvaddr(MSM8998_PSHOLD_PHYS)) = 0;
-#endif
-}
-
-
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
 {
 
     if (suggested_action == HALT_ACTION_REBOOT) {
-        reboot();
+        power_reboot(REBOOT_NORMAL);
         printf("reboot failed\n");
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
-        // XXX shutdown seem to not work through psci
-        // implement shutdown via pmic
-        psci_system_off();
+        power_shutdown();
     }
 
 #if WITH_LIB_DEBUGLOG
@@ -727,7 +717,7 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 
     if (reason == HALT_REASON_SW_PANIC) {
         if (!halt_on_panic) {
-            reboot();
+            power_reboot(REBOOT_NORMAL);
             printf("reboot failed\n");
         }
 #if ENABLE_PANIC_SHELL
