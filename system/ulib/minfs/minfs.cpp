@@ -272,25 +272,25 @@ Minfs::Minfs(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(fbl::mo
 #ifndef __Fuchsia__
     if (bc_->extent_lengths_.size() > 0) {
         ZX_ASSERT(bc_->extent_lengths_.size() == EXTENT_COUNT);
-        ibm_block_count = bc_->extent_lengths_[1] / kMinfsBlockSize;
-        abm_block_count = bc_->extent_lengths_[2] / kMinfsBlockSize;
-        ino_block_count = bc_->extent_lengths_[3] / kMinfsBlockSize;
-        dat_block_count = bc_->extent_lengths_[4] / kMinfsBlockSize;
+        ibm_block_count_ = bc_->extent_lengths_[1] / kMinfsBlockSize;
+        abm_block_count_ = bc_->extent_lengths_[2] / kMinfsBlockSize;
+        ino_block_count_ = bc_->extent_lengths_[3] / kMinfsBlockSize;
+        dat_block_count_ = bc_->extent_lengths_[4] / kMinfsBlockSize;
 
-        ibm_start_block = bc_->extent_lengths_[0] / kMinfsBlockSize;
-        abm_start_block = ibm_start_block + ibm_block_count;
-        ino_start_block = abm_start_block + abm_block_count;
-        dat_start_block = ino_start_block + ino_block_count;
+        ibm_start_block_ = bc_->extent_lengths_[0] / kMinfsBlockSize;
+        abm_start_block_ = ibm_start_block_ + ibm_block_count_;
+        ino_start_block_ = abm_start_block_ + abm_block_count_;
+        dat_start_block_ = ino_start_block_ + ino_block_count_;
     } else {
-        ibm_start_block = info_.ibm_block;
-        abm_start_block = info_.abm_block;
-        ino_start_block = info_.ino_block;
-        dat_start_block = info_.dat_block;
+        ibm_start_block_ = info_.ibm_block;
+        abm_start_block_ = info_.abm_block;
+        ino_start_block_ = info_.ino_block;
+        dat_start_block_ = info_.dat_block;
 
-        ibm_block_count = abm_start_block - ibm_start_block;
-        abm_block_count = ino_start_block - abm_start_block;
-        ino_block_count = dat_start_block - ino_start_block;
-        dat_block_count = info_.block_count;
+        ibm_block_count_ = abm_start_block_ - ibm_start_block_;
+        abm_block_count_ = ino_start_block_ - abm_start_block_;
+        ino_block_count_ = dat_start_block_ - ino_start_block_;
+        dat_block_count_ = info_.block_count;
     }
 #endif
 }
@@ -1055,9 +1055,9 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        uint32_t dat_block_count = blocks - non_dat_blocks;
-        abmblks = (dat_block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        info.block_count = dat_block_count - fbl::round_up(abmblks, 8u);
+        uint32_t dat_block_count_ = blocks - non_dat_blocks;
+        abmblks = (dat_block_count_ + kMinfsBlockBits - 1) / kMinfsBlockBits;
+        info.block_count = dat_block_count_ - fbl::round_up(abmblks, 8u);
         info.ibm_block = 8;
         info.abm_block = info.ibm_block + fbl::round_up(ibmblks, 8u);
         info.ino_block = info.abm_block + fbl::round_up(abmblks, 8u);
@@ -1158,7 +1158,7 @@ zx_status_t Minfs::ReadIbm(blk_t bno, void* data) {
 #ifdef __Fuchsia__
     return bc_->Readblk(info_.ibm_block + bno, data);
 #else
-    return ReadBlk(bno, ibm_start_block, ibm_block_count, ibmblks_, data);
+    return ReadBlk(bno, ibm_start_block_, ibm_block_count_, ibmblks_, data);
 #endif
 }
 
@@ -1166,7 +1166,7 @@ zx_status_t Minfs::ReadAbm(blk_t bno, void* data) {
 #ifdef __Fuchsia__
     return bc_->Readblk(info_.abm_block + bno, data);
 #else
-    return ReadBlk(bno, abm_start_block, abm_block_count, abmblks_, data);
+    return ReadBlk(bno, abm_start_block_, abm_block_count_, abmblks_, data);
 #endif
 }
 
@@ -1174,7 +1174,7 @@ zx_status_t Minfs::ReadIno(blk_t bno, void* data) {
 #ifdef __Fuchsia__
     return bc_->Readblk(info_.ino_block + bno, data);
 #else
-    return ReadBlk(bno, ino_start_block, ino_block_count, inoblks_, data);
+    return ReadBlk(bno, ino_start_block_, ino_block_count_, inoblks_, data);
 #endif
 }
 
@@ -1182,7 +1182,7 @@ zx_status_t Minfs::ReadDat(blk_t bno, void* data) {
 #ifdef __Fuchsia__
     return bc_->Readblk(info_.dat_block + bno, data);
 #else
-    return ReadBlk(bno, dat_start_block, dat_block_count, info_.block_count, data);
+    return ReadBlk(bno, dat_start_block_, dat_block_count_, info_.block_count, data);
 #endif
 }
 
