@@ -22,7 +22,6 @@ void arch_suspend(void);
 // reinitialize arch components.  Must be called with interrupts disabled.
 void arch_resume(void);
 
-void arch_quiesce(void);
 void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
                        uintptr_t arg1, uintptr_t arg2) __NO_RETURN;
 
