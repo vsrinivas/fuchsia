@@ -13,7 +13,7 @@
 
 namespace hwreg {
 
-template <typename D, typename T> class RegisterBase;
+struct EnablePrinter;
 
 namespace internal {
 
@@ -49,6 +49,25 @@ private:
     uint32_t bit_low_;
 };
 
+// Structure used to reduce the storage cost of the pretty-printing features if
+// they are not enabled.
+template <typename T, typename IntType> struct FieldPrinterList {
+    void AppendField(const char* name, uint32_t bit_high_incl, uint32_t bit_low) {
+    }
+};
+
+template <typename IntType> struct FieldPrinterList<EnablePrinter, IntType> {
+    // These two members are used for implementing the Print() function above.
+    // They will typically be optimized away if Print() is not used.
+    FieldPrinter fields[sizeof(IntType) * CHAR_BIT];
+    unsigned num_fields = 0;
+
+    void AppendField(const char* name, uint32_t bit_high_incl, uint32_t bit_low) {
+        ZX_DEBUG_ASSERT(num_fields < fbl::count_of(fields));
+        fields[num_fields++] = FieldPrinter(name, bit_high_incl, bit_low);
+    }
+};
+
 // Used to record information about a field at construction time.  This enables
 // checking for overlapping fields and pretty-printing.
 template <class RegType> class Field {
@@ -62,8 +81,7 @@ public:
         ZX_DEBUG_ASSERT((reg->fields_mask_ & mask) == 0ull);
         reg->fields_mask_ = static_cast<IntType>(reg->fields_mask_ | mask);
 
-        ZX_DEBUG_ASSERT(reg->num_fields_ < fbl::count_of(reg->fields_));
-        reg->fields_[reg->num_fields_++] = FieldPrinter(name, bit_high_incl, bit_low);
+        reg->printer_.AppendField(name, bit_high_incl, bit_low);
     }
 };
 

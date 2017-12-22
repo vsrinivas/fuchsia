@@ -76,6 +76,10 @@
 
 namespace hwreg {
 
+// Tag that can be passed as the third template parameter for RegisterBase to enable
+// the pretty-printing interfaces on a register.
+struct EnablePrinter;
+
 // An instance of RegisterBase represents a staging copy of a register,
 // which can be written to the register itself.  It knows the register's
 // address and stores a value for the register.
@@ -88,11 +92,16 @@ namespace hwreg {
 //
 // Any bits not declared using DEF_FIELD/DEF_BIT/DEF_RSVDZ_FIELD/DEF_RSVDZ_BIT
 // will be automatically preserved across RMW operations.
-template <class DerivedType, class IntType> class RegisterBase {
+template <class DerivedType, class IntType, class PrinterState = void>
+class RegisterBase {
     static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
+    static_assert(fbl::is_same<PrinterState, void>::value ||
+                  fbl::is_same<PrinterState, EnablePrinter>::value, "unsupported printer state");
 public:
     using SelfType = DerivedType;
     using ValueType = IntType;
+    using PrinterEnabled = fbl::is_same<PrinterState, EnablePrinter>;
+
     uint32_t reg_addr() const { return reg_addr_; }
     void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
 
@@ -125,14 +134,16 @@ public:
     // reg.Print([](const char* arg) { printf("%s\n", arg); });
     template <typename F>
     void Print(F print_fn) {
-        internal::PrintRegister(print_fn, fields_, num_fields_, reg_value_, fields_mask_,
-                                sizeof(ValueType));
+        static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
+        internal::PrintRegister(print_fn, printer_.fields, printer_.num_fields, reg_value_,
+                                fields_mask_, sizeof(ValueType));
     }
 
     // Equivalent to Print([](const char* arg) { printf("%s\n", arg); });
     void Print() {
-        internal::PrintRegisterPrintf(fields_, num_fields_, reg_value_, fields_mask_,
-                                      sizeof(ValueType));
+        static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
+        internal::PrintRegisterPrintf(printer_.fields, printer_.num_fields, reg_value_,
+                                      fields_mask_, sizeof(ValueType));
     }
 
 private:
@@ -141,13 +152,10 @@ private:
     ValueType rsvdz_mask_ = 0;
     ValueType fields_mask_ = 0;
 
-    // These two members are used for implementing the Print() function above.
-    // They will typically be optimized away if Print() is not used.
-    internal::FieldPrinter fields_[sizeof(ValueType) * CHAR_BIT];
-    unsigned num_fields_ = 0;
-
     uint32_t reg_addr_ = 0;
     ValueType reg_value_ = 0;
+
+    internal::FieldPrinterList<PrinterState, ValueType> printer_;
 };
 
 // An instance of RegisterAddr represents a typed register address: It
@@ -159,7 +167,10 @@ public:
     RegisterAddr(uint32_t reg_addr) : reg_addr_(reg_addr) {}
 
     static_assert(fbl::is_base_of<RegisterBase<RegType,
-                                               typename RegType::ValueType>, RegType>::value,
+                                               typename RegType::ValueType>, RegType>::value ||
+                  fbl::is_base_of<RegisterBase<RegType,
+                                               typename RegType::ValueType,
+                                               EnablePrinter>, RegType>::value,
                   "Parameter of RegisterAddr<> should derive from RegisterBase");
 
     // Instantiate a RegisterBase using the value of the register read from

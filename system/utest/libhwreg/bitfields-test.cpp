@@ -382,7 +382,7 @@ static bool reg_field_test() {
 static bool print_test() {
     BEGIN_TEST;
 
-    class TestReg : public hwreg::RegisterBase<TestReg, uint32_t> {
+    class TestReg : public hwreg::RegisterBase<TestReg, uint32_t, hwreg::EnablePrinter> {
     public:
         DEF_RSVDZ_BIT(31);
         DEF_FIELD(30, 21, field1);
@@ -413,7 +413,7 @@ static bool print_test() {
         EXPECT_EQ(fbl::count_of(expected), call_count);
     }
 
-    class TestReg2 : public hwreg::RegisterBase<TestReg2, uint32_t> {
+    class TestReg2 : public hwreg::RegisterBase<TestReg2, uint32_t, hwreg::EnablePrinter> {
     public:
         DEF_FIELD(30, 21, field1);
         DEF_FIELD(20, 12, field2);
@@ -469,6 +469,17 @@ static bool set_chaining_test() {
     EXPECT_EQ((0x234u << 21) | (0x123u << 12), fake_reg);
 
     END_TEST;
+}
+
+// Compile-time test that not enabling printing functions provides a size reduction
+static void printer_size_reduction() {
+    class TestRegWithPrinter : public hwreg::RegisterBase<TestRegWithPrinter, uint64_t,
+                                      hwreg::EnablePrinter> {
+    };
+    class TestRegWithoutPrinter : public hwreg::RegisterBase<TestRegWithoutPrinter, uint64_t> {
+    };
+
+    static_assert(sizeof(TestRegWithPrinter) > sizeof(TestRegWithoutPrinter), "");
 }
 
 #define RUN_TEST_FOR_UINTS(test) \
