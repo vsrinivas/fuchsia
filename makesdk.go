@@ -116,8 +116,8 @@ func init() {
 		},
 		{
 			tools,
-			x86Builddir + "host_x64/pm",
-			"tools/pm",
+			x86Builddir + "host_x64/far",
+			"tools/far",
 		},
 		{
 			toolchain,
