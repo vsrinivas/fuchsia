@@ -41,18 +41,25 @@ Texture::Texture(ResourceRecycler* resource_recycler,
   sampler_info.magFilter = filter;
   sampler_info.minFilter = filter;
 
-  sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-  sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-  sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
   sampler_info.anisotropyEnable = false;
   sampler_info.maxAnisotropy = 1.0;
   sampler_info.unnormalizedCoordinates = use_unnormalized_coordinates;
   sampler_info.compareEnable = VK_FALSE;
   sampler_info.compareOp = vk::CompareOp::eAlways;
-  sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
   sampler_info.mipLodBias = 0.0f;
   sampler_info.minLod = 0.0f;
   sampler_info.maxLod = 0.0f;
+  if (use_unnormalized_coordinates) {
+    sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+    sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+    sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+    sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+  } else {
+    sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+    sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+    sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+  }
   sampler_ = ESCHER_CHECKED_VK_RESULT(device.createSampler(sampler_info));
 }
 
