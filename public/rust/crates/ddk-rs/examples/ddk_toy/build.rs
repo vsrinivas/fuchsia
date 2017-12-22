@@ -18,6 +18,6 @@ fn main() {
     gcc::Build::new()
                  .file("src/binding.c")
                  .compiler(format!("{}/buildtools/linux-x64/clang/bin/clang", fuchsia_root))
-                 .flag(format!("--sysroot={}/out/build-zircon/build-zircon-pc-x86-64/sysroot", fuchsia_root).as_str())
+                 .flag(format!("--sysroot={}/out/build-zircon/build-user-x86-64/sysroot", fuchsia_root).as_str())
                  .compile("libbinding.a");
 }
