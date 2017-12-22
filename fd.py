@@ -174,6 +174,7 @@ def choose_options(t, key, choice):
     for pk in prefixed_keys:
       options.extend(t[pk])
 
+  options = sorted(options)
   if options.__len__() == 0:
     eprint('No such directory: {}'.format(key))
     return None
