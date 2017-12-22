@@ -55,6 +55,8 @@ std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
       return stream << "SET_CAMERA";
     case Op::Tag::SET_CAMERA_PROJECTION:
       return stream << "SET_CAMERA_PROJECTION";
+    case scenic::Op::Tag::SET_CAMERA_POSE_BUFFER:
+      return stream << "SET_CAMERA_POSE_BUFFER";
     case Op::Tag::SET_LIGHT_COLOR:
       return stream << "SET_LIGHT_COLOR";
     case Op::Tag::SET_LIGHT_DIRECTION:

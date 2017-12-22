@@ -110,6 +110,8 @@ bool Session::ApplyOp(const scenic::OpPtr& op) {
       return ApplySetCameraOp(op->get_set_camera());
     case scenic::Op::Tag::SET_CAMERA_PROJECTION:
       return ApplySetCameraProjectionOp(op->get_set_camera_projection());
+    case scenic::Op::Tag::SET_CAMERA_POSE_BUFFER:
+      return false;
     case scenic::Op::Tag::SET_LIGHT_COLOR:
       return ApplySetLightColorOp(op->get_set_light_color());
     case scenic::Op::Tag::SET_LIGHT_DIRECTION:

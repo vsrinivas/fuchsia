@@ -41,6 +41,7 @@ union Op {
   // Camera and lighting operations.
   SetCameraOp set_camera;
   SetCameraProjectionOp set_camera_projection;
+  SetCameraPoseBufferOp set_camera_pose_buffer;
   SetLightColorOp set_light_color;
   SetLightDirectionOp set_light_direction;
   AddLightOp add_light;
@@ -368,6 +369,85 @@ struct SetCameraProjectionOp {
   Vector3Value eye_look_at;
   Vector3Value eye_up;
   FloatValue fovy;  // Y-axis field of view, in radians.
+};
+
+// Sets the "pose buffer" for the camera identified by |camera_id|.
+//
+// This will override any position and rotation set for the camera and will
+// make it take its position and rotation from the pose buffer each frame
+// based on the presentation time for that frame.
+//
+// A pose buffer represents a ring buffer of poses for a fixed number of time
+// points in the future. Each entry in the buffer identified by |buffer_id| is
+// a quaternion and a position layed out as follows:
+//
+// struct Pose {
+//   // Quaternion
+//   float a;
+//   float b;
+//   float c;
+//   float d;
+//
+//   // Position
+//   float x;
+//   float y;
+//   float z;
+//
+//   // Reserved/Padding
+//   byte[4] reserved;
+// }
+//
+// The buffer can be thought of as a packed array of |num_entries| Pose structs
+// and is required to be at least num_entries * sizeof(Pose) bytes.
+//
+// The quaternions and positions are specified in the space of the camera's
+// parent node.
+//
+// |base_time| is a base time point expressed in nanoseconds in the
+// |CLOCK_MONOTONIC| timebase and |time_interval| is the time in nanoseconds
+// between entries in the buffer. |base_time| must be in the past.
+//
+// For a given point in time |t| expressed in nanoseconds in the
+// |CLOCK_MONOTONIC| timebase the index of the corresponding pose in
+// the pose buffer can be computed as follows:
+//
+// index(t) = ((t - base_time) / time_interval) % num_entries
+//
+// poses[index(t)] is valid for t over the time interval (t - time_interval, t]
+// and should be expected to updated continuously without synchronization
+// for the duration of that interval. If a single pose value is needed for
+// multiple non-atomic operations a value should be latched and stored outside
+// the pose buffer.
+//
+// Because the poses are not protected by any synchronization primitives it is
+// possible that when a pose is latched it will be only partially updated, and
+// the pose being read will contain some components from the pose before it is
+// updated and some components from the updated pose. The safety of using these
+// "torn" poses relies on two things:
+//
+// 1) Sequential poses written to poses[index(t)] are very similar to each
+// other numerically, so that if some components are taken from the first and
+// some are taken from another the result is numerically similar to both
+//
+// 2) The space of positions and quaternions is locally flat at the scale of
+// changes between sequential updates, which guarantees that two poses which
+// are numerically similar also represent semantically similar poses (i.e.
+// there are no discontinuities which will cause a small numerical change in
+// the position or quaterninon to cause a large change in the encoded pose)
+// For positions this is guaranteed because Scenic uses a Euclidean 3-space
+// which is globally flat and for quaternions this is guaranteed because
+// quaternions encode rotation as points on a unit 4-sphere, and spheres are
+// locally flat. For more details on the encoding of rotations in quaterions
+// see https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
+//
+// This operation is intended for late latching camera pose to support
+// low-latency motion-tracked rendering.
+struct SetCameraPoseBufferOp {
+  uint32 camera_id;
+  uint32 buffer_id;
+  uint32 num_entries;
+  uint64 base_time;
+  uint64 time_interval;
 };
 
 // Sets the color of the Light identified by |light_id|.
