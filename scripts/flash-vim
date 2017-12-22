@@ -6,7 +6,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-BUILD_DIR=build-zircon-vim-arm64
+BUILD_DIR=build-vim
 
 KERNEL=$BUILD_DIR/zzircon.bin
 RAMDISK=$BUILD_DIR/bootdata.bin
