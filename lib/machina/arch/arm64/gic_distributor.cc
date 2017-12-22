@@ -22,9 +22,9 @@ enum GicdRegister : uint64_t {
     CTL           = 0x000,
     TYPE          = 0x004,
     ISENABLE0     = 0x100,
-    ISENABLE15    = 0x13c,
+    ISENABLE7     = 0x11c,
     ICENABLE0     = 0x180,
-    ICENABLE15    = 0x1bc,
+    ICENABLE7     = 0x19c,
     ICPEND0       = 0x280,
     ICPEND15      = 0x2bc,
     ICFG0         = 0xc00,
@@ -118,7 +118,6 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     case GicdRegister::ITARGETS0... GicdRegister::ITARGETS255: {
       fbl::AutoLock lock(&mutex_);
       uint8_t* cpu_mask = &cpu_masks_[addr - GicdRegister::ITARGETS0];
-      // Target registers are written to 4 at a time.
       *reinterpret_cast<uint32_t*>(cpu_mask) = value.u32;
       return ZX_OK;
     }
@@ -129,13 +128,23 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       }
       return TargetInterrupt(sgi.vector, sgi.cpu_mask);
     }
+    case GicdRegister::ISENABLE0... GicdRegister::ISENABLE7: {
+      fbl::AutoLock lock(&mutex_);
+      uint8_t* enable = &enabled_[addr - GicdRegister::ISENABLE0];
+      *reinterpret_cast<uint32_t*>(enable) |= value.u32;
+      return ZX_OK;
+    }
+    case GicdRegister::ICENABLE0... GicdRegister::ICENABLE7: {
+      fbl::AutoLock lock(&mutex_);
+      uint8_t* enable = &enabled_[addr - GicdRegister::ICENABLE0];
+      *reinterpret_cast<uint32_t*>(enable) &= ~value.u32;
+      return ZX_OK;
+    }
     case GicdRegister::CTL:
     case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
-    case GicdRegister::ICENABLE0... GicdRegister::ICENABLE15:
     case GicdRegister::ICFG0... GicdRegister::ICFG31:
     case GicdRegister::ICPEND0... GicdRegister::ICPEND15:
     case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY255:
-    case GicdRegister::ISENABLE0... GicdRegister::ISENABLE15:
       return ZX_OK;
     default:
       FXL_LOG(ERROR) << "Unhandled GIC distributor address write 0x" << std::hex
@@ -169,6 +178,17 @@ zx_status_t GicDistributor::Interrupt(uint32_t global_irq) {
 
 zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
                                             uint8_t cpu_mask) {
+  if (global_irq >= kNumInterrupts) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  {
+    fbl::AutoLock lock(&mutex_);
+    bool is_enabled =
+        enabled_[global_irq / CHAR_BIT] & (1u << global_irq % CHAR_BIT);
+    if (!is_enabled) {
+      return ZX_OK;
+    }
+  }
   for (Vcpu** vcpu = vcpus_; cpu_mask != 0; vcpu++, cpu_mask >>= 1) {
     if (!(cpu_mask & 1)) {
       continue;

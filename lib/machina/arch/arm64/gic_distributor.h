@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 #define GARNET_LIB_MACHINA_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 
+#include <limits.h>
+
 #include <fbl/mutex.h>
 #include <hypervisor/io.h>
 
@@ -33,6 +35,7 @@ class GicDistributor : public IoHandler {
   static constexpr size_t kMaxVcpus = 8;
 
   mutable fbl::Mutex mutex_;
+  uint8_t enabled_[kNumInterrupts / CHAR_BIT] __TA_GUARDED(mutex_) = {};
   uint8_t cpu_masks_[kNumInterrupts] __TA_GUARDED(mutex_) = {};
   Vcpu* vcpus_[kMaxVcpus] = {};
 
