@@ -73,33 +73,6 @@ void DisplayDevice::Flush() {
     }
 }
 
-bool DisplayDevice::LoadEdid(registers::BaseEdid* edid) {
-    // Seek to the start of the EDID data, in case the current seek position is non-zero
-    uint8_t segment = 0;
-    if (!I2cWrite(kDdcSegmentI2cAddress, &segment, 1)) {
-        zxlogf(ERROR, "i915: ddc segment selection failed\n");
-        return false;
-    }
-    uint8_t data_offset = 0;
-    if (!I2cWrite(kDdcI2cAddress, &data_offset, 1)) {
-        zxlogf(ERROR, "i915: ddc index selection failed\n");
-        return false;
-    }
-
-    // Read the data.
-    if (!I2cRead(kDdcI2cAddress, reinterpret_cast<uint8_t*>(edid), sizeof(registers::BaseEdid))) {
-        zxlogf(ERROR, "i915: ddc read failed\n");
-        return false;
-    } else if (!edid->valid_header()) {
-        zxlogf(ERROR, "i915: Read EDID data, but got bad header\n");
-        return false;
-    } else if (!edid->valid_checksum()) {
-        zxlogf(ERROR, "i915: Read EDID data, but got bad checksum\n");
-        return false;
-    }
-    return true;
-}
-
 bool DisplayDevice::EnablePowerWell2() {
     // Enable Power Wells
     auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());

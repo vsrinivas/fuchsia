@@ -6,19 +6,19 @@
 
 #include "display-device.h"
 #include "dpcd.h"
+#include "edid.h"
 
 namespace i915 {
 
 class DpAuxMessage;
 
-class DpDisplay : public DisplayDevice {
+class DpDisplay : public DisplayDevice, private edid::EdidSource {
 public:
     DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
     bool Init(zx_display_info* info) final;
-    bool I2cRead(uint32_t addr, uint8_t* buf, uint32_t size) final;
-    bool I2cWrite(uint32_t addr, uint8_t* buf, uint32_t size) final;
+    bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
     bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size);
     bool DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,

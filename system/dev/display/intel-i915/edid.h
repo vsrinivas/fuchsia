@@ -4,10 +4,14 @@
 
 #pragma once
 
-#include <stddef.h>
 #include <hwreg/bitfields.h>
+#include <stddef.h>
+#include <stdint.h>
 
-namespace registers {
+namespace edid {
+
+// The size of an EDID block;
+static constexpr size_t kBlockSize = 128;
 
 // Definitions for parsing EDID data.
 
@@ -18,7 +22,7 @@ namespace registers {
 //
 // See "Table 3.21 - Detailed Timing Definition - Part 1" (in Release
 // A, Revision 2 of the EDID spec, 2006).
-struct EdidTimingDesc {
+struct DetailedTimingDescriptor {
     uint32_t horizontal_addressable() {
         return horizontal_addressable_low | (horizontal_addressable_high() << 8);
     }
@@ -74,12 +78,12 @@ struct EdidTimingDesc {
     DEF_SUBFIELD(combined, 1, 0, vertical_sync_pulse_width_high);
     uint8_t rest[5]; // Fields that we don't need to read yet.
     uint8_t features;
-    DEF_SUBFIELD(features, 7, 7, interlaced);
-    DEF_SUBFIELD(features, 2, 2, vsync_polarity);
-    DEF_SUBFIELD(features, 1, 1, hsync_polarity);
+    DEF_SUBBIT(features, 7, interlaced);
+    DEF_SUBBIT(features, 2, vsync_polarity);
+    DEF_SUBBIT(features, 1, hsync_polarity);
 };
 
-static_assert(sizeof(EdidTimingDesc) == 18, "Size check for EdidTimingDesc");
+static_assert(sizeof(DetailedTimingDescriptor) == 18, "Size check for EdidTimingDesc");
 
 // This covers the "base" EDID data -- the first 128 bytes (block 0).  In
 // many cases, that is all the display provides, but there may be more data
@@ -88,19 +92,149 @@ static_assert(sizeof(EdidTimingDesc) == 18, "Size check for EdidTimingDesc");
 // See "Table 3.1 - EDID Structure Version 1, Revision 4" (in Release
 // A, Revision 2 of the EDID spec, 2006).
 struct BaseEdid {
-    bool valid_header();
-    bool valid_checksum();
+    bool validate();
+    // Not actually a tag, but the first byte will always be this
+    static constexpr uint8_t kTag = 0x00;
 
     // Offset 0
     uint8_t header[8];
     uint8_t various[46]; // Fields that we don't need to read yet.
     // Offset 0x36
-    EdidTimingDesc preferred_timing;
-    uint8_t rest[128 - 0x36 - 18 - 1]; // Fields that we don't need to read yet.
+    DetailedTimingDescriptor preferred_timing;
+    uint8_t rest[kBlockSize - 0x36 - 18 - 2]; // Fields that we don't need to read yet.
+    uint8_t num_extensions;
     uint8_t checksum_byte;
 };
 
-static_assert(sizeof(BaseEdid) == 128, "Size check for Edid struct");
 static_assert(offsetof(BaseEdid, preferred_timing) == 0x36, "Layout check");
 
-} // namespace registers
+// EDID block type map. Block 1 if there are >1 blocks, and block
+// 128 if there are >128 blocks. See EDID specification for the meaning
+// of each entry in the tag_map
+struct BlockMap {
+    static constexpr uint8_t kTag = 0xf0;
+    bool validate();
+
+    uint8_t tag;
+    uint8_t tag_map[126];
+    uint8_t checksum_byte;
+};
+
+// Version 3 of the CEA EDID Timing Extension
+struct CeaEdidTimingExtension {
+    static constexpr uint8_t kTag = 0x02;
+    bool validate();
+
+    uint8_t tag;
+    uint8_t revision_number;
+    uint8_t dtd_start_idx;
+
+    uint8_t combined;
+    DEF_SUBBIT(combined, 7, underscan);
+    DEF_SUBBIT(combined, 6, basic_audio);
+    DEF_SUBBIT(combined, 5, ycbcr_444);
+    DEF_SUBBIT(combined, 4, ycbcr_422);
+    DEF_SUBFIELD(combined, 3, 0, native_format_dtds);
+
+    uint8_t payload[123];
+    uint8_t checksum_byte;
+};
+
+// Short audio descriptor from CEA EDID timing extension's data block collection.
+struct ShortAudioDescriptor {
+    static constexpr uint8_t kType = 1;
+
+    uint8_t format_and_channels;
+    DEF_SUBFIELD(format_and_channels, 6, 3, format);
+    DEF_SUBFIELD(format_and_channels, 2, 0, num_channels_minus_1);
+    uint8_t sampling_frequencies;
+    uint8_t bitrate;
+};
+static_assert(sizeof(ShortAudioDescriptor) == 3, "Bad size for ShortAudioDescriptor");
+
+// Short video descriptor from CEA EDID timing extension's data block collection.
+struct ShortVideoDescriptor {
+    static constexpr uint8_t kType = 2;
+
+    uint8_t data;
+    DEF_SUBBIT(data, 7, native);
+    DEF_SUBFIELD(data, 6, 0, standard_mode_idx);
+};
+static_assert(sizeof(ShortVideoDescriptor) == 1, "Bad size for ShortVideoDescriptor");
+
+// Vendor specific block from CEA EDID timing extension's data block collection.
+struct VendorSpecificBlock {
+    static constexpr uint8_t kType = 3;
+
+    uint8_t vendor_number[3];
+    uint8_t physical_addr_low;
+    uint8_t physical_addr_high;
+    // The payload contains vendor defined data. It is only valid up to the
+    // index specified by the data block's length.
+    uint8_t payload[26];
+};
+static_assert(sizeof(VendorSpecificBlock) == 31, "Bad size for VendorSpecificBlock");
+
+// Short speaker descriptor from CEA EDID timing extension's data block collection.
+struct ShortSpeakerDescriptor {
+    static constexpr uint8_t kType = 4;
+
+    uint8_t features;
+    DEF_SUBBIT(features, 6, rear_left_right_center);
+    DEF_SUBBIT(features, 5, front_left_right_center);
+    DEF_SUBBIT(features, 4, rear_center);
+    DEF_SUBBIT(features, 3, rear_left_right);
+    DEF_SUBBIT(features, 2, front_center);
+    DEF_SUBBIT(features, 1, lfe);
+    DEF_SUBBIT(features, 0, front_left_right);
+    uint8_t reserved;
+    uint8_t reserved2;
+};
+static_assert(sizeof(ShortSpeakerDescriptor) == 3, "Bad size for ShortSpeakerDescriptor");
+
+// Data block from CEA EDID timing extension's data block collection. Although this
+// struct is 32 bytes long, only the first length+1 bytes are actually valid.
+struct DataBlock {
+    uint8_t header;
+    DEF_SUBFIELD(header, 7, 5, type);
+    DEF_SUBFIELD(header, 4, 0, length);
+
+    union {
+        ShortAudioDescriptor audio;
+        // Only valid up to the index specified by length;
+        ShortVideoDescriptor video[31];
+        VendorSpecificBlock vendor;
+        ShortSpeakerDescriptor speaker;
+    } payload;
+};
+static_assert(sizeof(DataBlock) == 32, "Bad size for DataBlock");
+
+class EdidSource {
+public:
+    // The I2C address for writing the DDC segment
+    static constexpr int kDdcSegmentI2cAddress = 0x60;
+    // The I2C address for writing the DDC data offset
+    static constexpr int kDdcOffsetI2cAddress = 0xa0;
+    // The I2C address for reading the DDC data
+    static constexpr int kDdcDataI2cAddress = 0xa1;
+
+    virtual bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
+};
+
+class Edid {
+public:
+    explicit Edid(EdidSource* edid_source);
+    bool Init();
+    bool CheckForHdmi(bool* is_hdmi);
+
+    DetailedTimingDescriptor& preferred_timing() { return base_edid_.preferred_timing; }
+private:
+    bool CheckBlockMap(uint8_t block_num, bool* is_hdmi);
+    bool CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi);
+    template<typename T> bool ReadBlock(uint8_t block_num, T* block);
+
+    EdidSource* edid_source_;
+    BaseEdid base_edid_;
+};
+
+} // namespace edid

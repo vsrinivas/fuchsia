@@ -5,6 +5,8 @@
 #pragma once
 
 #include <hwreg/bitfields.h>
+#include <zircon/assert.h>
+
 #include "registers-ddi.h"
 
 namespace registers {
@@ -51,8 +53,7 @@ public:
     DEF_BIT(27, bus_cycle_stop);
     DEF_BIT(25, bus_cycle_wait);
     DEF_FIELD(24, 16, total_byte_count);
-    DEF_FIELD(7, 1, slave_register_index);
-    DEF_BIT(0, read_op);
+    DEF_FIELD(7, 0, slave_register_addr);
 
     static auto Get() { return hwreg::RegisterAddr<GMBus1>(0xc5104); }
 };
@@ -60,6 +61,7 @@ public:
 // GMBUS2
 class GMBus2 : public hwreg::RegisterBase<GMBus2, uint32_t> {
 public:
+    DEF_BIT(14, wait);
     DEF_BIT(11, hw_ready);
     DEF_BIT(10, nack);
     DEF_BIT(9, active);
@@ -151,6 +153,33 @@ public:
     DEF_BIT(31, vga_display_disable);
 
     static auto Get() { return hwreg::RegisterAddr<VgaCtl>(0x41000); }
+};
+
+// GPIO_CTL
+class GpioCtl : public hwreg::RegisterBase<GpioCtl, uint32_t> {
+public:
+    DEF_BIT(12, data_in);
+    DEF_BIT(11, data_out);
+    DEF_BIT(10, data_mask);
+    DEF_BIT(9, data_direction_val);
+    DEF_BIT(8, data_direction_mask);
+
+    DEF_BIT(4, clock_in);
+    DEF_BIT(3, clock_out);
+    DEF_BIT(2, clock_mask);
+    DEF_BIT(1, clock_direction_val);
+    DEF_BIT(0, clock_direction_mask);
+
+    static auto Get(registers::Ddi ddi) {
+        if (ddi == registers::DDI_B) {
+            return hwreg::RegisterAddr<GpioCtl>(0xc5020);
+        } else if (ddi == registers::DDI_C) {
+            return hwreg::RegisterAddr<GpioCtl>(0xc501c);
+        } else { // ddi == registers::DDI_D
+            ZX_DEBUG_ASSERT(ddi == registers::DDI_D);
+            return hwreg::RegisterAddr<GpioCtl>(0xc5024);
+        }
+    }
 };
 
 } // namespace registers

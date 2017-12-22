@@ -301,16 +301,16 @@ bool DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, u
     return true;
 }
 
-bool DpDisplay::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size) {
-    return DpAuxRead(DP_REQUEST_I2C_READ, addr, buf, size);
+bool DpDisplay::ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
+    // Ignore failures setting the segment if segment == 0, since it could be the case
+    // that the display doesn't support segments.
+    return (DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcSegmentI2cAddress, &segment, 1) || segment == 0)
+            && DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcOffsetI2cAddress, &offset, 1)
+            && DpAuxRead(DP_REQUEST_I2C_READ, kDdcDataI2cAddress, buf, len);
 }
 
 bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size) {
     return DpAuxRead(DP_REQUEST_NATIVE_READ, addr, buf, size);
-}
-
-bool DpDisplay::I2cWrite(uint32_t addr, uint8_t* buf, uint32_t size) {
-    return DpAuxWrite(DP_REQUEST_I2C_WRITE, addr, buf, size);
 }
 
 bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size) {
@@ -662,10 +662,11 @@ bool DpDisplay::Init(zx_display_info* info) {
         return false;
     }
 
-    registers::BaseEdid edid;
-    if (!LoadEdid(&edid)) {
+    edid::Edid edid(this);
+    if (!edid.Init()) {
         return false;
     }
+    zxlogf(TRACE, "Found a displayport monitor\n");
 
     if (pipe() == registers::PIPE_A && ddi() == registers::DDI_A && !EnablePowerWell2()) {
         return false;
@@ -724,7 +725,7 @@ bool DpDisplay::Init(zx_display_info* info) {
     clock_select.set_trans_clock_select(ddi() + 1);
     clock_select.WriteTo(mmio_space());
 
-    registers::EdidTimingDesc* timing = &edid.preferred_timing;
+    edid::DetailedTimingDescriptor* timing = &edid.preferred_timing();
 
     // Pixel clock rate: The rate at which pixels are sent, in pixels per
     // second (Hz), divided by 10000.
@@ -812,8 +813,7 @@ bool DpDisplay::Init(zx_display_info* info) {
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
     ddi_func.set_bits_per_color(ddi_func.k8bbc); // kPixelFormat
-    ddi_func.set_sync_polarity(edid.preferred_timing.vsync_polarity() << 1
-                                | edid.preferred_timing.hsync_polarity());
+    ddi_func.set_sync_polarity(timing->vsync_polarity() << 1 | timing->hsync_polarity());
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
@@ -821,7 +821,7 @@ bool DpDisplay::Init(zx_display_info* info) {
 
     auto trans_conf = trans.Conf().FromValue(0);
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(edid.preferred_timing.interlaced());
+    trans_conf.set_interlaced_mode(timing->interlaced());
     trans_conf.WriteTo(mmio_space());
 
     // Configure the pipe
@@ -844,8 +844,8 @@ bool DpDisplay::Init(zx_display_info* info) {
     plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
 
-    info->width = edid.preferred_timing.horizontal_addressable();
-    info->height = edid.preferred_timing.vertical_addressable();
+    info->width = timing->horizontal_addressable();
+    info->height = timing->vertical_addressable();
     info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
     info->format = kPixelFormat;
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);

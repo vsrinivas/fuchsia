@@ -47,22 +47,12 @@ public:
 protected:
     virtual bool Init(zx_display_info_t* info) = 0;
 
-    // Subclasses must implement these for LoadEdid to work
-    virtual bool I2cRead(uint32_t addr, uint8_t* buf, uint32_t size) { return false; }
-    virtual bool I2cWrite(uint32_t addr, uint8_t* buf, uint32_t size) { return false; }
-
-    bool LoadEdid(registers::BaseEdid* edid);
     hwreg::RegisterIo* mmio_space() const;
     bool EnablePowerWell2();
     bool ResetPipe();
     bool ResetDdi();
 
 private:
-    // This is the I2C address for DDC segment, for fetching EDID data.
-    static constexpr int kDdcSegmentI2cAddress = 0x30;
-    // This is the I2C address for DDC, for fetching EDID data.
-    static constexpr int kDdcI2cAddress = 0x50;
-
     // Borrowed reference to Controller instance
     Controller* controller_;
 

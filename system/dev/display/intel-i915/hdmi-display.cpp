@@ -46,6 +46,83 @@ void read_gmbus3(hwreg::RegisterIo* mmio_space, uint8_t* buf, uint32_t size, uin
     }
 }
 
+static constexpr uint8_t kI2cClockUs = 10; // 100 kHz
+
+// For bit banging i2c over the gpio pins
+bool i2c_scl(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, bool hi) {
+    auto gpio = registers::GpioCtl::Get(ddi).FromValue(0);
+
+    if (!hi) {
+        gpio.set_clock_direction_val(1);
+        gpio.set_clock_mask(1);
+    }
+    gpio.set_clock_direction_mask(1);
+
+    gpio.WriteTo(mmio_space);
+    gpio.ReadFrom(mmio_space); // Posting read
+
+    // Handle the case where something on the bus is holding the clock
+    // low. Timeout after 1ms.
+    if (hi) {
+        int count = 0;
+        do {
+            if (count != 0) {
+                zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs)));
+            }
+            gpio.ReadFrom(mmio_space);
+        } while (count++ < 100 && hi != gpio.clock_in());
+        if (hi != gpio.clock_in()) {
+            return false;
+        }
+    }
+    zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
+    return true;
+}
+
+// For bit banging i2c over the gpio pins
+void i2c_sda(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, bool hi) {
+    auto gpio = registers::GpioCtl::Get(ddi).FromValue(0);
+
+    if (!hi) {
+        gpio.set_data_direction_val(1);
+        gpio.set_data_mask(1);
+    }
+    gpio.set_data_direction_mask(1);
+
+    gpio.WriteTo(mmio_space);
+    gpio.ReadFrom(mmio_space); // Posting read
+
+    zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
+}
+
+// For bit banging i2c over the gpio pins
+bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t byte) {
+    // Set the bits from MSB to LSB
+    for (int i = 7; i >= 0; i--) {
+        i2c_sda(mmio_space, ddi, (byte >> i) & 0x1);
+
+        i2c_scl(mmio_space, ddi, 1);
+
+        // Leave the data line where it is for the rest of the cycle
+        zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
+
+        i2c_scl(mmio_space, ddi, 0);
+    }
+
+    // Release the data line and check for an ack
+    i2c_sda(mmio_space, ddi, 1);
+    i2c_scl(mmio_space, ddi, 1);
+
+    bool ack = !registers::GpioCtl::Get(ddi).ReadFrom(mmio_space).data_in();
+
+    // Sleep for the rest of the cycle
+    zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
+
+    i2c_scl(mmio_space, ddi, 0);
+
+    return ack;
+}
+
 } // namespace
 
 namespace i915 {
@@ -53,74 +130,124 @@ namespace i915 {
 HdmiDisplay::HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, ddi, pipe) { }
 
-bool HdmiDisplay::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size) {
-    return I2cTransfer(addr, buf, size, true /* read */, true /* allow_retry */);
-}
+// Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
+// directly support segment pointer addressing. Instead, the segment pointer needs to be
+// set by bit-banging the GPIO pins.
+bool HdmiDisplay::SetDdcSegment(uint8_t segment_num) {
+    // Reset the clock and data lines
+    i2c_scl(mmio_space(), ddi(), 0);
+    i2c_sda(mmio_space(), ddi(), 0);
 
-bool HdmiDisplay::I2cWrite(uint32_t addr, uint8_t* buf, uint32_t size) {
-    return I2cTransfer(addr, buf, size, false /* read */, true /* allow_retry */);
-}
+    if (!i2c_scl(mmio_space(), ddi(), 1)) {
+        return false;
+    }
+    i2c_sda(mmio_space(), ddi(), 1);
+    // Wait for the rest of the cycle
+    zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
 
-bool HdmiDisplay::I2cTransfer(const uint32_t addr, uint8_t* buf,
-                              const uint32_t size, bool read, bool allow_retry) {
-    // Reset the GMBus I2C port
-    auto gmbus1 = registers::GMBus1::Get().FromValue(0);
-    gmbus1.set_sw_clear_int(1);
-    gmbus1.WriteTo(mmio_space());
-    gmbus1.set_sw_clear_int(0);
-    gmbus1.WriteTo(mmio_space());
+    // Send a start condition
+    i2c_sda(mmio_space(), ddi(), 0);
+    i2c_scl(mmio_space(), ddi(), 0);
 
-    // Set the transfer pin
-    auto gmbus0 = registers::GMBus0::Get().FromValue(0);
-    gmbus0.set_pin_pair_select(ddi_to_pin(ddi()));
-    gmbus0.WriteTo(mmio_space());
-
-    // Disable interrupts
-    auto gmbus4 = registers::GMBus4::Get().FromValue(0);
-    gmbus4.set_interrupt_mask(0);
-    gmbus4.WriteTo(mmio_space());
-
-    unsigned idx = 0;
-    if (!read) {
-        write_gmbus3(mmio_space(), buf, size, idx);
-        idx += 4;
+    // Send the segment register index and the segment number
+    if (!i2c_send_byte(mmio_space(), ddi(), kDdcSegmentI2cAddress)
+            || !i2c_send_byte(mmio_space(), ddi(), segment_num)) {
+        return false;
     }
 
-    gmbus1.ReadFrom(mmio_space());
+    // Set the data and clock lines high to prepare for the GMBus start
+    i2c_sda(mmio_space(), ddi(), 1);
+    return i2c_scl(mmio_space(), ddi(), 1);
+}
+
+bool HdmiDisplay::ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
+    registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
+
+    int retries = 0;
+    int i = 0;
+    while (i < 3) {
+        bool success;
+        if (i == 0) {
+            success = segment == 0 || SetDdcSegment(segment);
+        } else {
+            if (i == 1) {
+                auto gmbus0 = registers::GMBus0::Get().FromValue(0);
+                gmbus0.set_pin_pair_select(ddi_to_pin(ddi()));
+                gmbus0.WriteTo(mmio_space());
+
+                success = GMBusWrite(kDdcOffsetI2cAddress, &offset, 1);
+            } else {
+                success = GMBusRead(kDdcDataI2cAddress, buf, len);
+            }
+            if (success) {
+                if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space()).wait(), 10)) {
+                    zxlogf(ERROR, "Transition to wait phase timed out\n");
+                    success = false;
+                }
+            }
+        }
+        if (!success) {
+            if (retries++ > 1) {
+                zxlogf(ERROR, "Too many block read failures\n");
+                return false;
+            }
+            zxlogf(TRACE, "Block read failed at step %d\n", i);
+            i = 0;
+            if (!I2cClearNack()) {
+                zxlogf(ERROR, "Failed to clear nack\n");
+                return false;
+            }
+        } else {
+            i++;
+        }
+    }
+
+    return I2cFinish() && i == 3;
+}
+
+bool HdmiDisplay::GMBusWrite(uint8_t addr, uint8_t* buf, uint8_t size) {
+    unsigned idx = 0;
+    write_gmbus3(mmio_space(), buf, size, idx);
+    idx += 4;
+
+    auto gmbus1 = registers::GMBus1::Get().FromValue(0);
     gmbus1.set_sw_ready(1);
     gmbus1.set_bus_cycle_wait(1);
     gmbus1.set_total_byte_count(size);
-    gmbus1.set_slave_register_index(addr);
-    gmbus1.set_read_op(read);
+    gmbus1.set_slave_register_addr(addr);
     gmbus1.WriteTo(mmio_space());
 
-    do {
-        // Allow one retry
+    while (idx < size) {
         if (!I2cWaitForHwReady()) {
-            if (!I2cClearNack()) {
-                return false;
-            }
-            if (allow_retry) {
-                return I2cTransfer(addr, buf, size, read, false /* allow_retry */);
-            } else {
-                zxlogf(ERROR, "hdmi: GMBus i2c %s too many failures\n", read ? "read" : "write");
-                return false;
-            }
+            return false;
         }
 
-        if (idx >=  size) {
-            break;
-        }
-
-        if (!read) {
-            write_gmbus3(mmio_space(), buf, size, idx);
-        } else {
-            read_gmbus3(mmio_space(), buf, size, idx);
-        }
+        write_gmbus3(mmio_space(), buf, size, idx);
         idx += 4;
-    } while (idx < size);
+    }
+    // One more wait to ensure we're ready when we leave the function
+    return I2cWaitForHwReady();
+}
 
-    return I2cFinish();
+bool HdmiDisplay::GMBusRead(uint8_t addr, uint8_t* buf, uint8_t size) {
+    auto gmbus1 = registers::GMBus1::Get().FromValue(0);
+    gmbus1.set_sw_ready(1);
+    gmbus1.set_bus_cycle_wait(1);
+    gmbus1.set_total_byte_count(size);
+    gmbus1.set_slave_register_addr(addr);
+    gmbus1.WriteTo(mmio_space());
+
+    unsigned idx = 0;
+    while (idx < size) {
+        if (!I2cWaitForHwReady()) {
+            return false;
+        }
+
+        read_gmbus3(mmio_space(), buf, size, idx);
+        idx += 4;
+    }
+
+    return true;
 }
 
 bool HdmiDisplay::I2cFinish() {
@@ -291,14 +418,20 @@ bool HdmiDisplay::Init(zx_display_info* info) {
         return false;
     }
 
+    // Reset the GMBus registers and disable GMBus interrupts
+    registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
+    registers::GMBus4::Get().FromValue(0).WriteTo(mmio_space());
+
     if (!ResetPipe() || !ResetDdi()) {
         return false;
     }
 
-    registers::BaseEdid edid;
-    if (!LoadEdid(&edid) || !EnablePowerWell2()) {
+    edid::Edid edid(this);
+    bool is_hdmi;
+    if (!edid.Init() || !edid.CheckForHdmi(&is_hdmi) || !EnablePowerWell2()) {
         return false;
     }
+    zxlogf(TRACE, "Found a %s monitor\n", is_hdmi ? "hdmi" : "dvi");
 
     // Set the the DPLL control settings
     auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
@@ -312,7 +445,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     uint8_t p0, p1, p2;
     uint32_t dco_central_freq_khz;
     uint64_t dco_freq_khz;
-    if (!calculate_params(edid.preferred_timing.pixel_clock_10khz * 10,
+    if (!calculate_params(edid.preferred_timing().pixel_clock_10khz * 10,
                           &dco_freq_khz, &dco_central_freq_khz, &p0, &p1, &p2)) {
         zxlogf(ERROR, "hdmi: failed to calculate clock params\n");
         return false;
@@ -396,15 +529,15 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     trans_clk_sel.WriteTo(mmio_space());
 
     // Configure the transcoder
-    uint32_t h_active = edid.preferred_timing.horizontal_addressable() - 1;
-    uint32_t h_sync_start = h_active + edid.preferred_timing.horizontal_front_porch();
-    uint32_t h_sync_end = h_sync_start + edid.preferred_timing.horizontal_sync_pulse_width();
-    uint32_t h_total = h_active + edid.preferred_timing.horizontal_blanking();
+    uint32_t h_active = edid.preferred_timing().horizontal_addressable() - 1;
+    uint32_t h_sync_start = h_active + edid.preferred_timing().horizontal_front_porch();
+    uint32_t h_sync_end = h_sync_start + edid.preferred_timing().horizontal_sync_pulse_width();
+    uint32_t h_total = h_active + edid.preferred_timing().horizontal_blanking();
 
-    uint32_t v_active = edid.preferred_timing.vertical_addressable() - 1;
-    uint32_t v_sync_start = v_active + edid.preferred_timing.vertical_front_porch();
-    uint32_t v_sync_end = v_sync_start + edid.preferred_timing.vertical_sync_pulse_width();
-    uint32_t v_total = v_active + edid.preferred_timing.vertical_blanking();
+    uint32_t v_active = edid.preferred_timing().vertical_addressable() - 1;
+    uint32_t v_sync_start = v_active + edid.preferred_timing().vertical_front_porch();
+    uint32_t v_sync_end = v_sync_start + edid.preferred_timing().vertical_sync_pulse_width();
+    uint32_t v_total = v_active + edid.preferred_timing().vertical_blanking();
 
     auto h_total_reg = trans_regs.HTotal().FromValue(0);
     h_total_reg.set_count_total(h_total);
@@ -431,17 +564,17 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
     ddi_func.set_trans_ddi_function_enable(1);
     ddi_func.set_ddi_select(ddi());
-    ddi_func.set_trans_ddi_mode_select(ddi_func.kModeHdmi);
+    ddi_func.set_trans_ddi_mode_select(is_hdmi ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
     ddi_func.set_bits_per_color(ddi_func.k8bbc);
-    ddi_func.set_sync_polarity(edid.preferred_timing.vsync_polarity() << 1
-                                | edid.preferred_timing.hsync_polarity());
+    ddi_func.set_sync_polarity(edid.preferred_timing().vsync_polarity() << 1
+                                | edid.preferred_timing().hsync_polarity());
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.WriteTo(mmio_space());
 
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(edid.preferred_timing.interlaced());
+    trans_conf.set_interlaced_mode(edid.preferred_timing().interlaced());
     trans_conf.WriteTo(mmio_space());
 
     // Configure voltage swing and related IO settings.
@@ -484,8 +617,8 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
 
-    info->width = edid.preferred_timing.horizontal_addressable();
-    info->height = edid.preferred_timing.vertical_addressable();
+    info->width = edid.preferred_timing().horizontal_addressable();
+    info->height = edid.preferred_timing().vertical_addressable();
     info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
     info->format = ZX_PIXEL_FORMAT_ARGB_8888;
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);

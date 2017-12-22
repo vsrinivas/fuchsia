@@ -417,7 +417,6 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
 
         for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
             zxlogf(TRACE, "Trying to init display %d\n", registers::kDdis[i]);
-            zxlogf(SPEW, "Trying hdmi\n");
             fbl::unique_ptr<DisplayDevice> hdmi_disp(
                 new (&ac) HdmiDisplay(this, registers::kDdis[i], registers::PIPE_A));
             if (ac.check() && hdmi_disp->Init()) {
@@ -425,7 +424,6 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
             }
 
             if (!disp_device) {
-                zxlogf(SPEW, "Trying dp\n");
                 fbl::unique_ptr<DisplayDevice> dp_disp(
                     new (&ac) DpDisplay(this, registers::kDdis[i], registers::PIPE_A));
                 if (ac.check() && dp_disp->Init()) {
