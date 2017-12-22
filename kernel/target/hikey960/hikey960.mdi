@@ -23,11 +23,13 @@ mem-map = {
 }
 
 const PERIPH_VIRT = 0xffffffffc0000000
+const PERIPH_PHYS = 0xe8100000
+const PERIPH_VIRT_OFFSET = PERIPH_VIRT - PERIPH_PHYS
 
 periph-mem-map = {
     bank = {
         base-virt = PERIPH_VIRT
-        base-phys = 0xe8100000
+        base-phys = PERIPH_PHYS
         length    = 0x17f00000
     }
 }
@@ -64,12 +66,12 @@ kernel = {
     // Keep pll011 uart at top so it is initialized first
     //  (uart6)
     arm-pl011-uart = {
-        base-virt = PERIPH_VIRT + 0x17e32000
+        base-virt = PERIPH_VIRT_OFFSET + 0xfff32000
         base-phys = 0xfff32000
         irq = 111
     }
     arm-gic-v2 = {
-        base-virt = PERIPH_VIRT + 0x001b0000
+        base-virt = PERIPH_VIRT_OFFSET + 0xe82b0000
         base-phys = 0xe82b0000
         gicd-offset = 0x1000
         gicc-offset = 0x2000
@@ -82,5 +84,10 @@ kernel = {
     }
     arm-timer = {
         irq-virt = 27
+    }
+
+    hisi-power = {
+        sctrl-base-virt = PERIPH_VIRT_OFFSET + 0xfff0a000
+        pmu-base-virt = PERIPH_VIRT_OFFSET + 0xfff34000
     }
 }

@@ -26,6 +26,7 @@ MODULE_DEPS += \
 	kernel/dev/timer/arm_generic \
 	kernel/dev/interrupt/arm_gicv2 \
 	kernel/dev/interrupt/arm_gicv3 \
+	kernel/dev/power/hisi \
 	kernel/dev/psci \
 	kernel/dev/uart/amlogic_s905 \
 	kernel/dev/uart/pl011 \

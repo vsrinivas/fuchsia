@@ -74,3 +74,8 @@ boolean kernel.arm-gic-v2.msi             MDI_ARM_GIC_V2_USE_MSI                
 
 // AmLogic S905
 list    kernel.s905-uart                  MDI_S905_UART                         1090
+
+// HiSilicon power driver
+list    kernel.hisi-power                 MDI_HISI_POWER                        1100
+uint64  kernel.hisi-power.sctrl-base-virt MDI_HISI_POWER_SCTRL_BASE_VIRT        1101
+uint64  kernel.hisi-power.pmu-base-virt   MDI_HISI_POWER_PMU_BASE_VIRT          1102
