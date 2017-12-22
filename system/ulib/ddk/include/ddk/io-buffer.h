@@ -37,7 +37,8 @@ enum {
     IO_BUFFER_FLAGS_MASK = IO_BUFFER_RW | IO_BUFFER_CONTIG,
 };
 
-// Initializes a new io_buffer
+// Initializes a new io_buffer.  If this call fails, it is still safe to call
+// io_buffer_release on |buffer|.
 zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags);
 // An alignment of zero is interpreted as requesting page alignment.
 // Requesting a specific alignment is not supported for non-contiguous buffers,

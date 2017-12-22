@@ -54,11 +54,16 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
     buffer->offset = offset;
     buffer->virt = (void *)virt;
     buffer->phys = phys;
+    buffer->phys_list = NULL;
+    buffer->phys_count = 0;
 
     return ZX_OK;
 }
 
 zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2, uint32_t flags) {
+    buffer->vmo_handle = ZX_HANDLE_INVALID;
+    buffer->phys_list = NULL;
+
     if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -93,7 +98,8 @@ zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) {
 
 zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t vmo_handle, zx_off_t offset,
                                uint32_t flags) {
-    uint64_t size;
+    buffer->vmo_handle = ZX_HANDLE_INVALID;
+    buffer->phys_list = NULL;
 
     if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
         return ZX_ERR_INVALID_ARGS;
@@ -102,6 +108,7 @@ zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t vmo_handle, zx_o
     zx_status_t status = zx_handle_duplicate(vmo_handle, ZX_RIGHT_SAME_RIGHTS, &vmo_handle);
     if (status != ZX_OK) return status;
 
+    uint64_t size;
     status = zx_vmo_get_size(vmo_handle, &size);
     if (status != ZX_OK) {
         zx_handle_close(vmo_handle);
@@ -141,11 +148,13 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
     buffer->offset = 0;
     buffer->virt = (void *)virt;
     buffer->phys = addr;
+    buffer->phys_list = NULL;
+    buffer->phys_count = 0;
     return ZX_OK;
 }
 
 void io_buffer_release(io_buffer_t* buffer) {
-    if (buffer->vmo_handle) {
+    if (buffer->vmo_handle != ZX_HANDLE_INVALID) {
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buffer->virt, buffer->size);
         zx_handle_close(buffer->vmo_handle);
         buffer->vmo_handle = ZX_HANDLE_INVALID;
