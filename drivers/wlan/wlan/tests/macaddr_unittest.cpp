@@ -86,6 +86,13 @@ TEST_F(MacAddrTest, Conversion) {
     MacAddr addr2;
     addr2.Set(arr);
     EXPECT_EQ(true, addr == addr2);
+
+    MacAddr addr3(addr.ToU64());
+    EXPECT_EQ(true, addr == addr3);
+
+    uint64_t val = 0x0102030405060708;
+    MacAddr addr4(val);
+    EXPECT_EQ(false, addr == addr4);
 }
 
 }  // namespace

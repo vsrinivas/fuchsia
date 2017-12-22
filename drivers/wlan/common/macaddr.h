@@ -29,6 +29,12 @@ struct MacAddr {
     explicit MacAddr(const std::string& addr) { Set(addr); }
     explicit MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
     explicit MacAddr(std::initializer_list<uint8_t> addr) { Set(addr); }
+    explicit MacAddr(uint64_t val) {
+        for (size_t idx = 0; idx < kMacAddrLen; idx++) {
+            byte[kMacAddrLen - 1 - idx] = val & 0xff;
+            val >>= 8;
+        }
+    }
 
     std::string ToString() const {
         char buf[17 + 1];
