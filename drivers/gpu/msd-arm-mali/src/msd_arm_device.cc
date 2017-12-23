@@ -381,7 +381,8 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
         registers::JobSlotRegisters regs(slot);
         uint32_t result = regs.Status().ReadFrom(register_io_.get()).reg_value();
 
-        DASSERT(IsHardwareResultCode(result));
+        if (!IsHardwareResultCode(result))
+            result = kArmMaliResultUnknownFault;
         scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result));
         failed &= ~(1 << slot);
     }
