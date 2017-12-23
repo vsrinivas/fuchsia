@@ -54,6 +54,9 @@ You can configure the set of packages that `gen.py` uses with the `--packages`
 argument. After running `gen.py` once, you can do incremental builds using
 `ninja`.
 
+You can configure how specific components will be built using `--variant`
+arguments.  [See here](build_variants.md) for details.
+
 For a list of all `gen.py` options, run `gen.py --help`.
 
 ### Running Fuchsia

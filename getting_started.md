@@ -220,6 +220,7 @@ you can launch [moterm](https://fuchsia.googlesource.com/topaz/+/master/app/mote
 
 * Using Zircon - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Fuchsia documentation](/README.md) hub
+* [Building with variants](build_variants.md), such as sanitizers or LTO.
 * Build [Fuchsia's toolchain](toolchain.md)
 * More about the [build commands](build_system.md) called under-the-hood by `fx full-build`
 * More information on the system bootstrap application is
