@@ -81,6 +81,40 @@ better runtime performance of the final compiler. LTO often requires a large
 amount of memory and is very slow. Therefore it may not be very practical for
 day-to-day development.
 
+### Using Monorepo Layout
+
+Alternatively, it is also possible to use the new [monorepo layout](https://llvm.org/docs/Proposals/GitHubMove.html#monorepo-variant).
+When using this layout, each sub-project has its own top-level directory.
+
+The [https://fuchsia.googlesource.com/third_party/llvm-project](https://fuchsia.googlesource.com/third_party/llvm-project)
+repository emulates this layout via Git submodules and is updated
+automatically by Gerrit. You can use the following command to download
+this repository including all the submodules after setting the
+`LLVM_MONOREPO` variable.
+
+```bash
+LLVM_MONOREPO=${HOME}/llvm-project
+git clone --recursive https://fuchsia.googlesource.com/third_party/llvm-project ${LLVM_MONOREPO}
+```
+
+To update the repository including all the submodules, you can use:
+
+```bash
+git pull --recurse-submodules
+git submodule update
+```
+
+To build the Fuchsia Clang compiler using the monorepo layout, you can
+use the following commands:
+
+```bash
+cmake -G Ninja -DLLVM_ENABLE_PROJECTS=clang\;lldb\;lld -DLLVM_ENABLE_RUNTIMES=compiler-rt\;libcxx\;libcxxabi\;libunwind -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_MONOREPO}/clang/cmake/caches/Fuchsia.cmake ${LLVM_MONOREPO}/llvm
+ninja stage2-distribution
+```
+
+Everything else is the same as in the case of standard layout described
+above.
+
 ## Developing Clang
 
 When developing Clang, you may want to use a setup that is more suitable for
@@ -98,7 +132,7 @@ the low-level target-specific routines) for Fuchsia, you need a few additional
 flags:
 
 ```bash
--DLLVM_BUILTIN_TARGETS='x86_64-fuchsia-none;aarch64-fuchsia-none' -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia
+-DLLVM_BUILTIN_TARGETS=x86_64-fuchsia-none\;aarch64-fuchsia-none -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia
 ```
 
 For this kind of build, the `bin` directory immediate under your main LLVM
