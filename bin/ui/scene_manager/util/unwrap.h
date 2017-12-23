@@ -48,7 +48,13 @@ inline escher::Transform Unwrap(const scenic::TransformPtr& args) {
 }
 
 inline escher::BoundingBox Unwrap(const scenic::BoundingBoxPtr& args) {
-  return {Unwrap(args->min), Unwrap(args->max)};
+  escher::vec3 min = Unwrap(args->min);
+  escher::vec3 max = Unwrap(args->max);
+  if (min.x > max.x || min.y > max.y || min.z > max.z) {
+    // This bounding box is empty.
+    return escher::BoundingBox();
+  }
+  return {min, max};
 }
 
 inline bool IsFloat(const scenic::ValuePtr& val) {

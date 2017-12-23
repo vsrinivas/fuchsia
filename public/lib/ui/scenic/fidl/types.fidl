@@ -194,6 +194,9 @@ struct Metrics {
   float scale_z;
 };
 
+// Represents an axis-aligned bounding box.  If any of the dimensions has a
+// negative extent (e.g. max.x < min.x) then the bounding box is treated as
+// empty.
 struct BoundingBox {
   vec3 min;
   vec3 max;
