@@ -149,6 +149,7 @@
              path="third_party/mesa"
              remote="https://fuchsia.googlesource.com/third_party/mesa"
              remotebranch="master"
+             revision="3603babc3ccea6a4424473b7869eb881996622a2"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/netstack"
              path="third_party/netstack"
