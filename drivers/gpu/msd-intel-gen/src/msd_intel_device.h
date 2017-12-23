@@ -146,7 +146,8 @@ private:
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
     magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                        std::shared_ptr<MsdIntelBuffer> buffer);
-    magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control);
+    magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
+                                    uint32_t render_interrupt_status);
     magma::Status ProcessDumpStatusToLog();
 
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);

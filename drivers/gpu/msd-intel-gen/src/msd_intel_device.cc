@@ -79,18 +79,23 @@ private:
 
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
 public:
-    InterruptRequest(uint64_t interrupt_time_ns, uint32_t master_interrupt_control)
-        : interrupt_time_ns_(interrupt_time_ns), master_interrupt_control_(master_interrupt_control)
+    InterruptRequest(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
+                     uint32_t render_interrupt_status)
+        : interrupt_time_ns_(interrupt_time_ns),
+          master_interrupt_control_(master_interrupt_control),
+          render_interrupt_status_(render_interrupt_status)
     {
     }
 
 protected:
     magma::Status Process(MsdIntelDevice* device) override
     {
-        return device->ProcessInterrupts(interrupt_time_ns_, master_interrupt_control_);
+        return device->ProcessInterrupts(interrupt_time_ns_, master_interrupt_control_,
+                                         render_interrupt_status_);
     }
     uint64_t interrupt_time_ns_;
     uint32_t master_interrupt_control_;
+    uint32_t render_interrupt_status_;
 };
 
 class MsdIntelDevice::DumpRequest : public DeviceRequest {
@@ -308,15 +313,33 @@ void MsdIntelDevice::StartDeviceThread()
 void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_control)
 {
     DASSERT(data);
+    auto device = reinterpret_cast<MsdIntelDevice*>(data);
 
-    auto request =
-        std::make_unique<InterruptRequest>(get_current_time_ns(), master_interrupt_control);
-    auto reply = request->GetReply();
+    RegisterIo* register_io = device->register_io_for_interrupt();
+    uint64_t now = get_current_time_ns();
+    uint32_t render_interrupt_status = 0;
 
-    reinterpret_cast<MsdIntelDevice*>(data)->EnqueueDeviceRequest(std::move(request), true);
+    if (master_interrupt_control &
+        registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
 
-    TRACE_DURATION("magma", "Interrupt Request Wait");
-    reply->Wait();
+        render_interrupt_status = registers::GtInterruptIdentity0::read(
+            register_io, registers::InterruptRegisterBase::RENDER_ENGINE);
+        DLOG("gt IIR0 0x%08x", render_interrupt_status);
+
+        if (render_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
+            registers::GtInterruptIdentity0::clear(register_io,
+                                                   registers::InterruptRegisterBase::RENDER_ENGINE,
+                                                   registers::InterruptRegisterBase::USER);
+        }
+        if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
+            registers::GtInterruptIdentity0::clear(
+                register_io, registers::InterruptRegisterBase::RENDER_ENGINE,
+                registers::InterruptRegisterBase::CONTEXT_SWITCH);
+        }
+
+        device->EnqueueDeviceRequest(std::make_unique<InterruptRequest>(
+            now, master_interrupt_control, render_interrupt_status));
+    }
 }
 
 void MsdIntelDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
@@ -450,7 +473,8 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
 }
 
 magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
-                                                uint32_t master_interrupt_control)
+                                                uint32_t master_interrupt_control,
+                                                uint32_t render_interrupt_status)
 {
     DLOG("ProcessInterrupts 0x%08x", master_interrupt_control);
 
@@ -458,15 +482,8 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
 
     if (master_interrupt_control &
         registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-        uint32_t val = registers::GtInterruptIdentity0::read(
-            register_io(), registers::InterruptRegisterBase::RENDER_ENGINE);
-        DLOG("gt IIR0 0x%08x", val);
 
-        if (val & registers::InterruptRegisterBase::kUserInterruptBit) {
-            registers::GtInterruptIdentity0::clear(register_io(),
-                                                   registers::InterruptRegisterBase::RENDER_ENGINE,
-                                                   registers::InterruptRegisterBase::USER);
-
+        if (render_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
             bool fault = registers::AllEngineFault::read(register_io_.get()) &
                          registers::AllEngineFault::kValid;
             if (fault) {
@@ -478,10 +495,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
                 ProcessCompletedCommandBuffers();
             }
         }
-        if (val & registers::InterruptRegisterBase::kContextSwitchBit) {
-            registers::GtInterruptIdentity0::clear(
-                register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
-                registers::InterruptRegisterBase::CONTEXT_SWITCH);
+        if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
             render_engine_cs_->ContextSwitched();
         }
     }
