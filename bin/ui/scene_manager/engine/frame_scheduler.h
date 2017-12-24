@@ -43,7 +43,7 @@ class FrameSchedulerDelegate {
   // callback which is invoked when all renderers finish work for that frame.
   // Then FrameScheduler should listen to the callback to count how many
   // frames are in flight and back off.
-  virtual void RenderFrame(const FrameTimingsPtr& frame_timings,
+  virtual bool RenderFrame(const FrameTimingsPtr& frame_timings,
                            uint64_t presentation_time,
                            uint64_t presentation_interval) = 0;
 };

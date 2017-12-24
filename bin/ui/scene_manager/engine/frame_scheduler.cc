@@ -180,9 +180,10 @@ void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
     FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
     auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
         this, ++frame_number_, presentation_time);
-    outstanding_frames_.push_back(frame_timings);
-    delegate_->RenderFrame(frame_timings, presentation_time,
-                           display_->GetVsyncInterval());
+    if (delegate_->RenderFrame(frame_timings, presentation_time,
+                               display_->GetVsyncInterval())) {
+      outstanding_frames_.push_back(frame_timings);
+    }
   }
 
   // If necessary, schedule another frame.

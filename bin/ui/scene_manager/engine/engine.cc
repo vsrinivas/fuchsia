@@ -135,14 +135,14 @@ void Engine::TearDownSession(SessionId id) {
   }
 }
 
-void Engine::RenderFrame(const FrameTimingsPtr& timings,
+bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
                          uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
   if (!ApplyScheduledSessionUpdates(presentation_time, presentation_interval))
-    return;
+    return false;
 
   UpdateAndDeliverMetrics(presentation_time);
 
@@ -150,6 +150,7 @@ void Engine::RenderFrame(const FrameTimingsPtr& timings,
     compositor->DrawFrame(timings, paper_renderer_.get(),
                           shadow_renderer_.get());
   }
+  return true;
 }
 
 bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,

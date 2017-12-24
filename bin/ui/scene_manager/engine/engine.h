@@ -119,7 +119,7 @@ class Engine : private FrameSchedulerDelegate {
   void TearDownSession(SessionId id);
 
   // |FrameSchedulerDelegate|:
-  void RenderFrame(const FrameTimingsPtr& frame,
+  bool RenderFrame(const FrameTimingsPtr& frame,
                    uint64_t presentation_time,
                    uint64_t presentation_interval) override;
 
