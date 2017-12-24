@@ -43,13 +43,15 @@
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
 #include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 
-#include "garnet/public/lib/ui/scenic/fidl_helpers.h"
-#include "garnet/public/lib/ui/scenic/types.h"
 #include "garnet/public/lib/ui/scenic/fidl/ops.fidl.h"
 #include "garnet/public/lib/ui/scenic/fidl/scene_manager.fidl.h"
 #include "garnet/public/lib/ui/scenic/fidl/session.fidl.h"
+#include "garnet/public/lib/ui/scenic/fidl_helpers.h"
+#include "garnet/public/lib/ui/scenic/types.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
+#include "lib/ui/view_framework/view_provider_service.h"
+#include "vkcube_view.h"
 #endif // defined(CUBE_USE_IMAGE_PIPE)
 
 #include "linmath.h"
@@ -83,6 +85,21 @@ typedef struct {
     VkImageView view;
 } SwapchainBuffers;
 
+#if defined(VK_USE_PLATFORM_MAGMA_KHR) && defined(CUBE_USE_IMAGE_PIPE)
+struct FuchsiaState {
+    fsl::MessageLoop loop;
+    uint32_t image_pipe_handle = 0;
+    display_pipe::DisplayProviderPtr display;
+    scenic::ImagePipePtr pipe;
+#if defined(CUBE_USE_MOZART)
+    std::unique_ptr<mozart::ViewProviderService> view_provider_service;
+#endif
+    uint32_t num_frames = 60;
+    uint32_t elapsed_frames = 0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> t0{};
+};
+#endif
+
 struct demo {
 #if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     Display* display;
@@ -94,16 +111,9 @@ struct demo {
     xcb_window_t xcb_window;
     xcb_intern_atom_reply_t* atom_wm_delete_window;
 #elif defined(VK_USE_PLATFORM_MAGMA_KHR) && defined(CUBE_USE_IMAGE_PIPE)
-    uint32_t image_pipe_handle;
-    display_pipe::DisplayProviderPtr display;
-    scenic::ImagePipePtr pipe;
-#if defined(CUBE_USE_MOZART)
-    scenic::SceneManagerPtr scene_manager;
-    std::unique_ptr<scenic_lib::Session> session;
-    std::unique_ptr<scenic_lib::DisplayCompositor> compositor;
-    std::unique_ptr<scenic_lib::Camera> camera;
+    std::unique_ptr<FuchsiaState> fuchsia_state;
 #endif
-#endif
+
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;

@@ -31,6 +31,8 @@ source_set("vkcube_common") {
     "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
     "//garnet/lib/vulkan/third_party/vkcube/cube.h",
     "test_vk_cube.h",
+    "vkcube_view.cc",
+    "vkcube_view.h",
   ]
 
   deps = [
@@ -42,6 +44,8 @@ source_set("vkcube_common") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/vulkan",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 
   if (cube_use_mozart) {

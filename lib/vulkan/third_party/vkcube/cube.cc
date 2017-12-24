@@ -2039,38 +2039,33 @@ static void demo_create_xcb_window(struct demo* demo)
 #endif
 
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
-static void demo_run_magma(struct demo* demo)
+static void demo_update_magma_one_frame(struct demo* demo)
 {
-    uint32_t num_frames = 60;
-    uint32_t elapsed_frames = 0;
-    static const float kMsPerSec = std::chrono::milliseconds(std::chrono::seconds(1)).count();
+    static constexpr float kMsPerSec = std::chrono::milliseconds(std::chrono::seconds(1)).count();
 
-    float total_ms = 0;
-    auto t0 = std::chrono::high_resolution_clock::now();
+    demo_update_data_buffer(demo);
 
-    while (!demo->quit) {
-        demo_update_data_buffer(demo);
+    auto& num_frames = demo->fuchsia_state->num_frames;
+    auto& elapsed_frames = demo->fuchsia_state->elapsed_frames;
+    auto& t0 = demo->fuchsia_state->t0;
 
+    if (elapsed_frames && (elapsed_frames % num_frames) == 0) {
         auto t1 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = t1 - t0;
-        total_ms += elapsed.count();
+
+        float fps = num_frames / (elapsed.count() / kMsPerSec);
+        printf("Framerate average for last %u frames: %f frames per second\n", num_frames, fps);
+        // attempt to log once per second
+        num_frames = fps;
+        elapsed_frames = 0;
         t0 = t1;
-
-        if (elapsed_frames && (elapsed_frames % num_frames) == 0) {
-            float fps = num_frames / (total_ms / kMsPerSec);
-            printf("Framerate average for last %u frames: %f frames per second\n", num_frames, fps);
-            total_ms = 0;
-            // attempt to log once per second
-            num_frames = fps;
-            elapsed_frames = 0;
-        }
-
-        demo_draw(demo);
-        demo->curFrame++;
-        elapsed_frames++;
-        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
-            demo->quit = true;
     }
+
+    demo_draw(demo);
+    demo->curFrame++;
+    elapsed_frames++;
+    if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
+        demo->quit = true;
 }
 #endif /**/
 
@@ -2516,7 +2511,7 @@ void demo_init_vk_swapchain(struct demo* demo)
         VkMagmaSurfaceCreateInfoKHR createInfo = {
             .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
 #if defined(CUBE_USE_IMAGE_PIPE)
-            .imagePipeHandle = demo->image_pipe_handle,
+            .imagePipeHandle = demo->fuchsia_state->image_pipe_handle,
             .width = demo->width,
             .height = demo->height,
 #endif
@@ -2760,93 +2755,45 @@ void demo_init(struct demo* demo, int argc, char** argv)
 
 #if defined(CUBE_USE_IMAGE_PIPE)
 
-#if defined(CUBE_USE_MOZART)
-
-void demo_create_scene(struct demo* demo) {
-  auto session = demo->session.get();
-
-  // The top-level nesting for drawing anything is compositor -> layer-stack
-  // -> layer.  Layer content can come from an image, or by rendering a scene.
-  // In this case, we do the latter, so we nest layer -> renderer -> camera ->
-  // scene.
-  demo->compositor = std::make_unique<scenic_lib::DisplayCompositor>(session);
-  scenic_lib::LayerStack layer_stack(session);
-  scenic_lib::Layer layer(session);
-  scenic_lib::Renderer renderer(session);
-  scenic_lib::Scene scene(session);
-  demo->camera = std::make_unique<scenic_lib::Camera>(scene);
-
-  demo->compositor->SetLayerStack(layer_stack);
-  layer_stack.AddLayer(layer);
-  layer.SetSize(demo->width, demo->height);
-  layer.SetRenderer(renderer);
-  renderer.SetCamera(demo->camera->id());
-
-  scenic_lib::RoundedRectangle pane_shape(session, demo->width, demo->height, 0,
-                                          0, 0, 0);
-  scenic_lib::Material pane_material(session);
-
-  scenic_lib::ShapeNode pane_node(session);
-  pane_node.SetShape(pane_shape);
-  pane_node.SetMaterial(pane_material);
-  pane_node.SetTranslation(demo->width * 0.5, demo->height * 0.5, 0);
-
-  uint32_t image_pipe_id = session->AllocResourceId();
-  session->Enqueue(
-      scenic_lib::NewCreateImagePipeOp(image_pipe_id, demo->pipe.NewRequest()));
-  pane_material.SetTexture(image_pipe_id);
-  session->ReleaseResource(image_pipe_id);
-
-  scene.AddChild(pane_node);
-}
-
-#endif
-
 void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
 {
-    auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-    if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
-        printf("Failed to set log settings from command line\n");
-        return;
-    }
+    demo->fuchsia_state = std::make_unique<FuchsiaState>();
 
-    fsl::MessageLoop loop;
+    demo->fuchsia_state->t0 = std::chrono::high_resolution_clock::now();
 
 #ifdef MAGMA_ENABLE_TRACING
-    trace::TraceProvider trace_provider(loop.async());
+    trace::TraceProvider trace_provider(demo->fuchsia_state->loop.async());
 #endif
 
     auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
-    app::ServiceProviderPtr services;
 
 #if defined(CUBE_USE_MOZART)
-    demo->scene_manager =
-        application_context_
-            ->ConnectToEnvironmentService<scenic::SceneManager>();
-    demo->scene_manager.set_connection_error_handler([&loop] {
-      FXL_LOG(INFO) << "Lost connection to SceneManager service.";
-      loop.QuitNow();
-    });
+    demo->fuchsia_state->view_provider_service = std::make_unique<mozart::ViewProviderService>(
+        application_context_.get(), [demo](mozart::ViewContext view_context) {
+            auto resize_callback = [demo](
+                                       float width, float height,
+                                       fidl::InterfaceHandle<scenic::ImagePipe> interface_handle) {
+                demo->width = width;
+                demo->height = height;
+                demo->fuchsia_state->image_pipe_handle = interface_handle.PassHandle().release();
+                if (demo->prepared) {
+                    demo_resize(demo);
+                } else {
+                    demo_init_vk_swapchain(demo);
+                    demo_prepare(demo);
+                }
+            };
+            return std::make_unique<VkCubeView>(std::move(view_context.view_manager),
+                                                std::move(view_context.view_owner_request),
+                                                resize_callback);
+        });
 
-    FXL_LOG(INFO) << "Creating new Session";
-    demo->session =
-        std::make_unique<scenic_lib::Session>(demo->scene_manager.get());
-    demo->session->set_connection_error_handler([&loop] {
-      FXL_LOG(INFO) << "Session terminated.";
-      loop.QuitNow();
-    });
-
-    demo_create_scene(demo);
-
-    demo->session->Present(0, [](scenic::PresentationInfoPtr info) {});
-
-    demo->image_pipe_handle =
-        demo->pipe.PassInterfaceHandle().PassHandle().release();
-
-    demo_init_vk_swapchain(demo);
-    demo_prepare(demo);
-    demo_run_magma(demo);
-    loop.QuitNow();
+    while (!demo->quit) {
+        if (demo->prepared) {
+            demo_update_magma_one_frame(demo);
+        }
+        demo->fuchsia_state->loop.RunUntilIdle();
+    }
 #else
     demo->display =
         application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
@@ -2857,16 +2804,18 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
 
         demo->width = info->width;
         demo->height = info->height;
-        demo->image_pipe_handle = demo->pipe.PassInterfaceHandle().PassHandle().release();
+        demo->fuchsia_state->image_pipe_handle =
+            demo->fuchsia_state->pipe.PassInterfaceHandle().PassHandle().release();
 
         demo_init_vk_swapchain(demo);
         demo_prepare(demo);
-        demo_run_magma(demo);
-        loop.QuitNow();
+        while (!demo->quit) {
+            demo_update_magma_one_frame(demo);
+        }
+        demo->fuchsia_state->loop.QuitNow();
+        demo->fuchsia_state->loop.Run();
     });
 #endif
-
-    loop.Run();
 }
 
 #endif // defined(CUBE_USE_IMAGE_PIPE)
