@@ -11,13 +11,13 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace storage {
 namespace {
 
-class LedgerStorageTest : public test::TestWithMessageLoop {
+class LedgerStorageTest : public gtest::TestWithMessageLoop {
  public:
   LedgerStorageTest()
       : storage_(message_loop_.task_runner(),

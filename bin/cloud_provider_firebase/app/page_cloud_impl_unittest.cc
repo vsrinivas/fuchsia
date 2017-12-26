@@ -10,15 +10,15 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firebase {
 namespace {
 
-class PageCloudImplTest : public ::test::TestWithMessageLoop,
+class PageCloudImplTest : public gtest::TestWithMessageLoop,
                           cloud_provider::PageCloudWatcher {
  public:
   PageCloudImplTest()

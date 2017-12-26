@@ -11,12 +11,12 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {
 
-class SyncWatcherSetTest : public test::TestWithMessageLoop {
+class SyncWatcherSetTest : public gtest::TestWithMessageLoop {
  public:
   SyncWatcherSetTest() {}
   ~SyncWatcherSetTest() override {}

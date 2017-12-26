@@ -6,13 +6,13 @@
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase_auth/test/test_token_provider.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 
-class FactoryImplTest : public test::TestWithMessageLoop {
+class FactoryImplTest : public gtest::TestWithMessageLoop {
  public:
   FactoryImplTest()
       : factory_impl_(message_loop_.task_runner()),

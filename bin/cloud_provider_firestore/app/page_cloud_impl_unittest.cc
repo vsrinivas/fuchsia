@@ -6,12 +6,12 @@
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 namespace {
 
-class PageCloudImplTest : public ::test::TestWithMessageLoop {
+class PageCloudImplTest : public gtest::TestWithMessageLoop {
  public:
   PageCloudImplTest() : page_cloud_impl_(page_cloud_.NewRequest()) {}
   ~PageCloudImplTest() override {}

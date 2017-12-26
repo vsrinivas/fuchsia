@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-namespace modular {
-namespace testing {
+namespace gtest {
 
 namespace {
 
@@ -42,18 +42,14 @@ bool RunGivenLoopWithTimeout(fsl::MessageLoop* message_loop,
 
 bool RunGivenLoopUntil(fsl::MessageLoop* message_loop,
                        std::function<bool()> condition,
-                       fxl::TimeDelta timeout) {
-  if (condition()) {
-    FXL_LOG(ERROR) << "|condition| is already true prior to running the loop.";
-    return false;
-  }
-
+                       fxl::TimeDelta timeout,
+                       fxl::TimeDelta step) {
   const fxl::TimePoint deadline = fxl::TimePoint::Now() + timeout;
   while (fxl::TimePoint::Now() < deadline) {
     if (condition()) {
       return true;
     }
-    RunGivenLoopWithTimeout(message_loop, fxl::TimeDelta::FromMilliseconds(10));
+    RunGivenLoopWithTimeout(message_loop, step);
   }
   return condition();
 }
@@ -69,9 +65,22 @@ bool TestWithMessageLoop::RunLoopWithTimeout(fxl::TimeDelta timeout) {
 }
 
 bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
-                                       fxl::TimeDelta timeout) {
-  return RunGivenLoopUntil(&message_loop_, std::move(condition), timeout);
+                                       fxl::TimeDelta timeout,
+                                       fxl::TimeDelta step) {
+  return RunGivenLoopUntil(&message_loop_, std::move(condition), timeout, step);
 }
 
-}  // namespace testing
-}  // namespace modular
+fxl::Closure TestWithMessageLoop::MakeQuitTask() {
+  return [this] { message_loop_.PostQuitTask(); };
+}
+
+fxl::Closure TestWithMessageLoop::MakeQuitTaskOnce() {
+  return fxl::MakeCopyable([this, called = false]() mutable {
+    if (!called) {
+      called = true;
+      message_loop_.PostQuitTask();
+    }
+  });
+}
+
+}  // namespace gtest

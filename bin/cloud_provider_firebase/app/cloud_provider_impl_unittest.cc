@@ -7,9 +7,9 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/firebase_auth/test/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 
 namespace cloud_provider_firebase {
@@ -33,7 +33,7 @@ std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
 
 }  // namespace
 
-class CloudProviderImplTest : public test::TestWithMessageLoop {
+class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudProviderImplTest()
       : network_service_(message_loop_.task_runner()),

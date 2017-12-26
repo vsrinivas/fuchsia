@@ -8,8 +8,8 @@
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "peridot/lib/fidl/app_client_unittest.fidl.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace testing {
@@ -49,7 +49,7 @@ class TestApplicationController : app::ApplicationController {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApplicationController);
 };
 
-class AppClientTest : public testing::TestWithMessageLoop {};
+class AppClientTest : public gtest::TestWithMessageLoop {};
 
 TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;

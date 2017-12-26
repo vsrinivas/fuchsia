@@ -8,8 +8,8 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firebase {
 namespace {
@@ -81,7 +81,7 @@ class FakeFirebase : public firebase::Firebase {
   int unwatch_calls = 0;
 };
 
-class CloudDeviceSetImplTest : public ::test::TestWithMessageLoop {
+class CloudDeviceSetImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudDeviceSetImplTest() : cloud_device_set_(InitFirebase()) {}
 

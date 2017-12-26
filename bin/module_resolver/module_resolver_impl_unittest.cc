@@ -5,8 +5,8 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 #include "peridot/public/lib/module_resolver/cpp/formatting.h"
 
 namespace maxwell {
@@ -74,7 +74,7 @@ class TestManifestSource : public modular::ModuleManifestSource {
   }
 };
 
-class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
+class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
  protected:
   void ResetResolver() {
     modular::EntityResolverPtr entity_resolver_ptr;

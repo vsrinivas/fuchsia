@@ -5,9 +5,6 @@
 #ifndef PERIDOT_BIN_LEDGER_TEST_APP_TEST_H_
 #define PERIDOT_BIN_LEDGER_TEST_APP_TEST_H_
 
-#include "lib/app/cpp/application_context.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
-
 namespace test {
 
 int TestMain(int argc, char** argv);

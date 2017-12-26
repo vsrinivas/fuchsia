@@ -21,9 +21,9 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
 namespace {
@@ -60,7 +60,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   std::vector<SyncStateContainer> states;
 };
 
-class PageSyncImplTest : public ::test::TestWithMessageLoop {
+class PageSyncImplTest : public gtest::TestWithMessageLoop {
  public:
   PageSyncImplTest()
       : storage_(&message_loop_),

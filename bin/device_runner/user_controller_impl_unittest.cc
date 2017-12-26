@@ -6,14 +6,14 @@
 
 #include "gtest/gtest.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace testing {
 namespace {
 
-class UserControllerImplTest : public testing::TestWithMessageLoop {};
+class UserControllerImplTest : public gtest::TestWithMessageLoop {};
 
 TEST_F(UserControllerImplTest, StartUserRunner) {
   FakeApplicationLauncher launcher;

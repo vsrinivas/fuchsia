@@ -60,9 +60,7 @@ source_set("unittests") {
 
   deps = [
     ":callback",
-
-    # TODO(ppi): use the test helpers from //peridot/lib/testing instead.
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/gtest",
     "//third_party/gtest",
   ]
 }

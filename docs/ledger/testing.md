@@ -50,7 +50,7 @@ All local application tests in the Ledger tree are built into a single
 `/system/test/disabled/ledger_e2e_sync`.
 
 [Google Test]: https://github.com/google/googletest
-[TestWithMessageLoop]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/test_with_message_loop.h
+[TestWithMessageLoop]: https://fuchsia.googlesource.com/peridot/+/master/lib/gtest/test_with_message_loop.h
 [IntegrationTest]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/integration/integration_test.h
 [/bin/ledger/test/integration]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/integration/
 [Synchronization end-to-end tests]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/e2e_sync/README.md

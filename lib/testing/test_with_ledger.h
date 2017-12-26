@@ -7,8 +7,8 @@
 
 #include <memory>
 
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 class LedgerClient;
@@ -26,7 +26,7 @@ namespace testing {
 //
 // A fixture class that extends this fixture and has its own SetUp() and
 // TearDown() must call this fixture's SetUp() and TearDown().
-class TestWithLedger : public testing::TestWithMessageLoop {
+class TestWithLedger : public gtest::TestWithMessageLoop {
  public:
   TestWithLedger();
   ~TestWithLedger() override;

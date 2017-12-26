@@ -18,7 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {
@@ -111,7 +111,7 @@ class DestroyWatcher : public fxl::RefCountedThreadSafe<DestroyWatcher> {
   FRIEND_REF_COUNTED_THREAD_SAFE(DestroyWatcher);
 };
 
-class NetworkServiceImplTest : public test::TestWithMessageLoop {
+class NetworkServiceImplTest : public gtest::TestWithMessageLoop {
  public:
   NetworkServiceImplTest()
       : network_service_(message_loop_.task_runner(),

@@ -9,17 +9,17 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace {
 
-class DirectoryModuleManifestSourceTest : public testing::TestWithMessageLoop {
+class DirectoryModuleManifestSourceTest : public gtest::TestWithMessageLoop {
  public:
   void SetUp() override {
-    testing::TestWithMessageLoop::SetUp();
+    gtest::TestWithMessageLoop::SetUp();
 
     // Set up a temp dir for the repository.
     char temp_dir[] = "/tmp/module_manifest_repo_XXXXXX";
@@ -34,7 +34,7 @@ class DirectoryModuleManifestSourceTest : public testing::TestWithMessageLoop {
 
     rmdir(repo_dir_.c_str());
 
-    testing::TestWithMessageLoop::TearDown();
+    gtest::TestWithMessageLoop::TearDown();
   }
 
  protected:

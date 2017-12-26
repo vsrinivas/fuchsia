@@ -27,10 +27,10 @@ executable("context_engine_test") {
     ":context_common",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/context_engine:scope_utils",
+    "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-    "//peridot/lib/testing:entity_resolver_fake",
   ]
 }
 
@@ -105,9 +105,9 @@ source_set("common") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/user:agent_launcher",
     "//peridot/lib/environment_host",
+    "//peridot/lib/gtest",
     "//peridot/lib/testing:component_context_fake",
     "//peridot/lib/testing:entity_resolver_fake",
-    "//peridot/lib/testing:test_with_message_loop",
   ]
 
   public_deps = [

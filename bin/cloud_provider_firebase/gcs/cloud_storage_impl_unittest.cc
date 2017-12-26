@@ -17,8 +17,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 
 namespace gcs {
@@ -35,7 +35,7 @@ network::HttpHeaderPtr GetHeader(
   return nullptr;
 }
 
-class CloudStorageImplTest : public test::TestWithMessageLoop {
+class CloudStorageImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudStorageImplTest()
       : fake_network_service_(message_loop_.task_runner()),

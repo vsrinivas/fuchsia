@@ -49,7 +49,7 @@ source_set("directory_source_unittest") {
     ":directory_source",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/testing:test_with_message_loop",
+    "//peridot/lib/gtest",
     "//third_party/gtest",
   ]
 }

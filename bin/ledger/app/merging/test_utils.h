@@ -14,8 +14,8 @@
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace test {
@@ -33,7 +33,7 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-class TestWithPageStorage : public ::test::TestWithMessageLoop {
+class TestWithPageStorage : public gtest::TestWithMessageLoop {
  public:
   TestWithPageStorage();
   ~TestWithPageStorage() override;

@@ -16,10 +16,10 @@
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
-#import "peridot/lib/callback/waiter.h"
+#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {
@@ -104,13 +104,13 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
-class LedgerManagerTest : public test::TestWithMessageLoop {
+class LedgerManagerTest : public gtest::TestWithMessageLoop {
  public:
   LedgerManagerTest() : environment_(message_loop_.task_runner(), nullptr) {}
 
-  // test::TestWithMessageLoop:
+  // gtest::TestWithMessageLoop:
   void SetUp() override {
-    test::TestWithMessageLoop::SetUp();
+    gtest::TestWithMessageLoop::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage =
         std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
     storage_ptr = storage.get();

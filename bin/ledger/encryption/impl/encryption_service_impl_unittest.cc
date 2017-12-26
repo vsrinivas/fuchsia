@@ -6,13 +6,13 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace encryption {
 namespace {
 
-class EncryptionServiceTest : public ::test::TestWithMessageLoop {
+class EncryptionServiceTest : public gtest::TestWithMessageLoop {
  public:
   EncryptionServiceTest() : encryption_service_(message_loop_.task_runner()) {}
 

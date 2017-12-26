@@ -21,8 +21,8 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
 namespace {
@@ -162,7 +162,7 @@ class TestPageStorageFailingToMarkPieces : public TestPageStorage {
   }
 };
 
-class BatchUploadTest : public ::test::TestWithMessageLoop {
+class BatchUploadTest : public gtest::TestWithMessageLoop {
  public:
   BatchUploadTest()
       : encryption_service_(message_loop_.task_runner()),

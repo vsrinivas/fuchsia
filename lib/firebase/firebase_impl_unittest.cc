@@ -15,7 +15,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 #include "peridot/lib/network/network_service_impl.h"
 #include "peridot/lib/socket/socket_pair.h"
@@ -23,7 +23,7 @@
 namespace firebase {
 namespace {
 
-class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
+class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
  public:
   FirebaseImplTest()
       : fake_network_service_(message_loop_.task_runner()),

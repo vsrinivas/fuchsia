@@ -9,16 +9,16 @@
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase_auth/test/test_token_provider.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace firebase_auth {
 
 namespace {
 
-class FirebaseAuthImplTest : public ::test::TestWithMessageLoop {
+class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
  public:
   FirebaseAuthImplTest()
       : token_provider_(message_loop_.task_runner()),

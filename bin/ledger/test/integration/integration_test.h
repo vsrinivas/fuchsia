@@ -13,7 +13,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace test {
 namespace integration {
@@ -23,7 +23,7 @@ namespace integration {
 // Integration tests verify interactions with client-facing FIDL services
 // exposed by Ledger. The FIDL services are run within the test process, on a
 // separate thread.
-class IntegrationTest : public test::TestWithMessageLoop {
+class IntegrationTest : public gtest::TestWithMessageLoop {
  public:
   IntegrationTest() {}
   ~IntegrationTest() override {}

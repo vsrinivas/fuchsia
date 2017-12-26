@@ -31,8 +31,8 @@ source_set("unittests") {
 
   deps = [
     ":firebase_auth",
-    "//peridot/bin/ledger/test:lib",
     "//peridot/lib/backoff/testing",
     "//peridot/lib/firebase_auth/test",
+    "//peridot/lib/gtest",
   ]
 }

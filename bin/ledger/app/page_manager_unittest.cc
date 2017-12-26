@@ -20,8 +20,8 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {
@@ -63,7 +63,7 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
   fxl::Closure on_idle;
 };
 
-class PageManagerTest : public test::TestWithMessageLoop {
+class PageManagerTest : public gtest::TestWithMessageLoop {
  public:
   PageManagerTest()
       : environment_(fsl::MessageLoop::GetCurrent()->task_runner(), nullptr) {}

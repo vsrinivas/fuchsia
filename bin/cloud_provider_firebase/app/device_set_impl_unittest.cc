@@ -8,10 +8,10 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/testing/test_cloud_device_set.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firebase {
 
@@ -23,7 +23,7 @@ std::unique_ptr<TestCloudDeviceSet> InitCloudDeviceSet(
   return ret;
 }
 
-class DeviceSetImplTest : public test::TestWithMessageLoop,
+class DeviceSetImplTest : public gtest::TestWithMessageLoop,
                           cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()

@@ -14,8 +14,8 @@
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
 
@@ -63,7 +63,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   fsl::MessageLoop* message_loop_;
 };
 
-class BatchDownloadTest : public ::test::TestWithMessageLoop {
+class BatchDownloadTest : public gtest::TestWithMessageLoop {
  public:
   BatchDownloadTest()
       : storage_(&message_loop_),

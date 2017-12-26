@@ -25,10 +25,10 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/make_object_identifier.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {
@@ -39,7 +39,7 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   return value;
 }
 
-class PageImplTest : public test::TestWithMessageLoop {
+class PageImplTest : public gtest::TestWithMessageLoop {
  public:
   PageImplTest() : environment_(message_loop_.task_runner(), nullptr) {}
   ~PageImplTest() override {}

@@ -10,9 +10,9 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/story/fidl/link.fidl.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace {
@@ -100,7 +100,7 @@ TEST(Counter, ToDocument_Success) {
       json);
 }
 
-class StoreTest : public testing::TestWithMessageLoop {};
+class StoreTest : public gtest::TestWithMessageLoop {};
 
 TEST_F(StoreTest, Store_ModelChanged) {
   LinkMock link_mock;

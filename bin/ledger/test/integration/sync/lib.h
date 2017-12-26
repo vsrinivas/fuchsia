@@ -18,8 +18,8 @@
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/get_ledger.h"
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/firebase_auth/test/fake_token_provider.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace test {
 namespace integration {
@@ -27,7 +27,7 @@ namespace sync {
 
 // Base test class for synchronization tests. Other tests should derive from
 // this class to use the proper synchronization configuration.
-class SyncTest : public ::test::TestWithMessageLoop {
+class SyncTest : public gtest::TestWithMessageLoop {
  public:
   SyncTest();
   ~SyncTest() override;

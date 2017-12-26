@@ -10,9 +10,9 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
 
@@ -26,7 +26,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
-class UserSyncImplTest : public ::test::TestWithMessageLoop {
+class UserSyncImplTest : public gtest::TestWithMessageLoop {
  public:
   UserSyncImplTest()
       : environment_(message_loop_.task_runner()),

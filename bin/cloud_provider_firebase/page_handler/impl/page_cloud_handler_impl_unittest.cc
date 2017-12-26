@@ -18,11 +18,11 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase/encoding.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 
@@ -31,7 +31,7 @@
 namespace cloud_provider_firebase {
 namespace {
 
-class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
+class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
                                  public gcs::CloudStorage,
                                  public firebase::Firebase,
                                  public CommitWatcher {

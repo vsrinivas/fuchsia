@@ -11,11 +11,9 @@ package("module_resolver") {
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "module_resolver"
-    },
-  ]
+  binaries = [ {
+        name = "module_resolver"
+      } ]
 }
 
 executable("bin") {
@@ -31,10 +29,10 @@ executable("bin") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib/module_resolver/fidl",
     "//peridot/lib/module_manifest_source:directory_source",
     "//peridot/lib/module_manifest_source:firebase_source",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//peridot/public/lib/module_resolver/fidl",
   ]
 }
 
@@ -50,19 +48,19 @@ source_set("module_resolver_impl") {
   sources = [
     "module_resolver_impl.cc",
     "module_resolver_impl.h",
-    "type_inference.h",
     "type_inference.cc",
+    "type_inference.h",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/lib/module_manifest_source",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/entity/cpp:json",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module_resolver/fidl",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user_intelligence/fidl",
-    "//peridot/lib/module_manifest_source",
   ]
 }
 
@@ -78,8 +76,8 @@ source_set("module_resolver_impl_unittest") {
     "//garnet/public/lib/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/gtest",
     "//peridot/lib/testing:entity_resolver_fake",
-    "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",
   ]

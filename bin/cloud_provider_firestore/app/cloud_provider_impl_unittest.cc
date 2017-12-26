@@ -7,12 +7,12 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 
-class CloudProviderImplTest : public test::TestWithMessageLoop {
+class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudProviderImplTest() {
     auto firebase_auth =

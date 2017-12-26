@@ -88,40 +88,12 @@ source_set("test_with_ledger") {
 
   public_deps = [
     ":ledger_repository_for_testing",
-    ":test_with_message_loop",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/gtest",
     "//peridot/lib/ledger_client:page_client",
     "//third_party/gtest",
-  ]
-}
-
-source_set("test_with_message_loop") {
-  testonly = true
-
-  sources = [
-    "test_with_message_loop.cc",
-    "test_with_message_loop.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//third_party/gtest",
-  ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "test_with_message_loop_unittest.cc",
-  ]
-
-  deps = [
-    ":test_with_message_loop",
   ]
 }
 

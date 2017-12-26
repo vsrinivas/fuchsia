@@ -8,11 +8,11 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace test {
 
-class TestWithCoroutines : public TestWithMessageLoop {
+class TestWithCoroutines : public gtest::TestWithMessageLoop {
  public:
   TestWithCoroutines();
 

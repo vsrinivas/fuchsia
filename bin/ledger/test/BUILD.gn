@@ -26,8 +26,6 @@ source_set("lib") {
     "get_ledger.h",
     "test_with_coroutines.cc",
     "test_with_coroutines.h",
-    "test_with_message_loop.cc",
-    "test_with_message_loop.h",
   ]
 
   public_deps = [
@@ -37,6 +35,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/lib/gtest",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
@@ -89,20 +88,6 @@ source_set("app_test_main") {
 
   deps = [
     ":app_test",
-  ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "test_with_message_loop_unittest.cc",
-  ]
-
-  deps = [
-    ":lib",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

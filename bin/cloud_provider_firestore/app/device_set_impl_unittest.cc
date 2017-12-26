@@ -7,11 +7,11 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 
-class DeviceSetImplTest : public test::TestWithMessageLoop {
+class DeviceSetImplTest : public gtest::TestWithMessageLoop {
  public:
   DeviceSetImplTest() : device_set_impl_(device_set_.NewRequest()) {}
 

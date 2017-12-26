@@ -7,13 +7,13 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
+#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace storage {
 namespace {
 
-class DataSourceTest : public test::TestWithMessageLoop {
+class DataSourceTest : public gtest::TestWithMessageLoop {
  protected:
   ::testing::AssertionResult TestDataSource(
       std::string expected,

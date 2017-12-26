@@ -13,11 +13,9 @@ package("device_runner") {
     ":device_runner_bin",
   ]
 
-  binaries = [
-    {
-      name = "device_runner"
-    },
-  ]
+  binaries = [ {
+        name = "device_runner"
+      } ]
 }
 
 package("dev_device_shell") {
@@ -27,11 +25,9 @@ package("dev_device_shell") {
     ":dev_device_shell_bin",
   ]
 
-  binaries = [
-    {
-      name = "dev_device_shell"
-    },
-  ]
+  binaries = [ {
+        name = "dev_device_shell"
+      } ]
 }
 
 flatbuffer("users") {
@@ -87,8 +83,8 @@ source_set("lib") {
     "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/common:async_holder",
-    "//peridot/lib/common:xdr",
     "//peridot/lib/common:teardown",
+    "//peridot/lib/common:xdr",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
@@ -132,8 +128,8 @@ source_set("unittests") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/gtest",
     "//peridot/lib/testing:fake_application_launcher",
-    "//peridot/lib/testing:test_with_message_loop",
     "//third_party/gtest",
   ]
 }
