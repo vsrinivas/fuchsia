@@ -146,11 +146,12 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
 
   UpdateAndDeliverMetrics(presentation_time);
 
+  bool frame_drawn = false;
   for (auto& compositor : compositors_) {
-    compositor->DrawFrame(timings, paper_renderer_.get(),
-                          shadow_renderer_.get());
+    frame_drawn |= compositor->DrawFrame(timings, paper_renderer_.get(),
+                                         shadow_renderer_.get());
   }
-  return true;
+  return frame_drawn;
 }
 
 bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,

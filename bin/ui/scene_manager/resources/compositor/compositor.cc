@@ -176,14 +176,14 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
                              shadow_map, overlay_model);
 }
 
-void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
+bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
                            escher::PaperRenderer* escher_renderer,
                            escher::ShadowMapRenderer* shadow_renderer) {
   TRACE_DURATION("gfx", "Compositor::DrawFrame");
 
   // Obtain a list of drawable layers.
   if (!layer_stack_)
-    return;
+    return false;
   std::vector<Layer*> drawable_layers;
   for (auto& layer : layer_stack_->layers()) {
     if (layer->IsDrawable()) {
@@ -191,7 +191,7 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
     }
   }
   if (drawable_layers.empty())
-    return;
+    return false;
 
   // Sort the layers from bottom to top.
   std::sort(drawable_layers.begin(), drawable_layers.end(), [](auto a, auto b) {
@@ -226,7 +226,7 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   }
   escher::Model overlay_model(std::move(layer_objects));
 
-  swapchain_->DrawAndPresentFrame(
+  bool success = swapchain_->DrawAndPresentFrame(
       frame_timings,
       [
         this, frame{std::move(frame)}, escher_renderer, shadow_renderer,
@@ -246,6 +246,8 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
     Accept(&visitor);
     FXL_VLOG(3) << "Renderer dump\n" << output.str();
   }
+
+  return success;
 }
 
 escher::ImagePtr Compositor::GetLayerFramebufferImage(uint32_t width,

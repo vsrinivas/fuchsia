@@ -50,7 +50,9 @@ class Compositor : public Resource {
   // Determine the appropriate order to render all layers, and then combine them
   // into a single output image.  Subclasses determine how to obtain and present
   // the output image.
-  void DrawFrame(const FrameTimingsPtr& frame_timings,
+  //
+  // Returns true if at least one layer is drawn.
+  bool DrawFrame(const FrameTimingsPtr& frame_timings,
                  escher::PaperRenderer* renderer,
                  escher::ShadowMapRenderer* shadow_renderer);
 
