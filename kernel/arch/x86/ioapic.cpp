@@ -10,11 +10,13 @@
 #include <trace.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
+#include <fbl/array.h>
 #include <kernel/spinlock.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
+#include <zxcpp/new.h>
 
 #define IO_APIC_IND(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOREGSEL))
 #define IO_APIC_DAT(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOWIN))
@@ -100,7 +102,7 @@ static struct io_apic *apic_io_resolve_global_irq_no_panic(uint32_t irq);
 static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 
 // Track all IO APICs in the system
-static struct io_apic *io_apics;
+static fbl::Array<io_apic> io_apics;
 static uint32_t num_io_apics;
 
 // The first 16 global IRQs are identity mapped to the legacy ISA IRQs unless
@@ -114,11 +116,14 @@ void apic_io_init(
         struct io_apic_isa_override *overrides,
         unsigned int num_overrides)
 {
-    ASSERT(io_apics == nullptr);
+    ASSERT(!io_apics);
 
     num_io_apics = num_io_apic_descs;
-    io_apics = (io_apic *)calloc(num_io_apics, sizeof(*io_apics));
-    ASSERT(io_apics != NULL);
+    {
+        fbl::AllocChecker ac;
+        io_apics.reset(new (&ac) io_apic[num_io_apics], num_io_apics);
+        ASSERT(ac.check());
+    }
     for (unsigned int i = 0; i < num_io_apics; ++i) {
         io_apics[i].desc = io_apic_descs[i];
     }
