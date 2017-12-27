@@ -11,6 +11,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <fbl/array.h>
+#include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -75,31 +76,24 @@ struct io_apic {
     uint64_t saved_rtes[IO_APIC_NUM_REDIRECTIONS];
 };
 
+// This lock guards all access to IO APIC registers
+static SpinLock lock;
+
 // General register accessors
-static inline uint32_t apic_io_read_reg(
-        struct io_apic *io_apic,
-        uint8_t reg);
-static inline void apic_io_write_reg(
-        struct io_apic *io_apic,
-        uint8_t reg,
-        uint32_t val);
+static inline uint32_t apic_io_read_reg(struct io_apic *io_apic, uint8_t reg) TA_REQ(lock);
+static inline void apic_io_write_reg(struct io_apic *io_apic, uint8_t reg,
+                                     uint32_t val) TA_REQ(lock);
 
 // Register-specific accessors
-static uint64_t apic_io_read_redirection_entry(
-        struct io_apic *io_apic,
-        uint32_t global_irq);
-static void apic_io_write_redirection_entry(
-        struct io_apic *io_apic,
-        uint32_t global_irq,
-        uint64_t value);
+static uint64_t apic_io_read_redirection_entry(struct io_apic *io_apic,
+                                               uint32_t global_irq) TA_REQ(lock);
+static void apic_io_write_redirection_entry(struct io_apic *io_apic, uint32_t global_irq,
+                                            uint64_t value) TA_REQ(lock);
 
 // Utility for finding the right IO APIC for a specific global IRQ, cannot fail
 static struct io_apic *apic_io_resolve_global_irq(uint32_t irq);
 // Utility for finding the right IO APIC for a specific global IRQ, can fail
 static struct io_apic *apic_io_resolve_global_irq_no_panic(uint32_t irq);
-
-// This lock guards all access to IO APIC registers
-static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 
 // Track all IO APICs in the system
 static fbl::Array<io_apic> io_apics;
@@ -154,10 +148,9 @@ void apic_io_init(
         // Populate the rest of the descriptor
         apic->vaddr = vaddr;
 
-        spin_lock_saved_state_t state;
-        spin_lock_irqsave(&lock, state);
-        uint32_t ver = apic_io_read_reg(apic, IO_APIC_REG_VER);
+        AutoSpinLockIrqSave guard(&lock);
 
+        uint32_t ver = apic_io_read_reg(apic, IO_APIC_REG_VER);
         apic->version = IO_APIC_VER_VERSION(ver);
         apic->max_redirection_entry = IO_APIC_VER_MAX_REDIR_ENTRY(ver);
         LTRACEF("Found an IO APIC at phys %p, virt %p: ver %08x\n", (void *)paddr, vaddr, ver);
@@ -172,7 +165,6 @@ void apic_io_init(
             apic_io_write_redirection_entry(
                     apic, j + apic->desc.global_irq_base, IO_APIC_RTE_MASKED);
         }
-        spin_unlock_irqrestore(&lock, state);
     }
 
     // Process ISA IRQ overrides
@@ -212,7 +204,7 @@ static inline uint32_t apic_io_read_reg(
         uint8_t reg)
 {
     ASSERT(io_apic != nullptr);
-    DEBUG_ASSERT(spin_lock_held(&lock));
+    DEBUG_ASSERT(lock.IsHeld());
     *IO_APIC_IND(io_apic->vaddr) = reg;
     uint32_t val = *IO_APIC_DAT(io_apic->vaddr);
     return val;
@@ -224,7 +216,7 @@ static inline void apic_io_write_reg(
         uint32_t val)
 {
     ASSERT(io_apic != nullptr);
-    DEBUG_ASSERT(spin_lock_held(&lock));
+    DEBUG_ASSERT(lock.IsHeld());
     *IO_APIC_IND(io_apic->vaddr) = reg;
     *IO_APIC_DAT(io_apic->vaddr) = val;
 }
@@ -233,7 +225,7 @@ static uint64_t apic_io_read_redirection_entry(
         struct io_apic *io_apic,
         uint32_t global_irq)
 {
-    DEBUG_ASSERT(spin_lock_held(&lock));
+    DEBUG_ASSERT(lock.IsHeld());
 
     ASSERT(global_irq >= io_apic->desc.global_irq_base);
     uint32_t offset = global_irq - io_apic->desc.global_irq_base;
@@ -251,7 +243,7 @@ static void apic_io_write_redirection_entry(
         uint32_t global_irq,
         uint64_t value)
 {
-    DEBUG_ASSERT(spin_lock_held(&lock));
+    DEBUG_ASSERT(lock.IsHeld());
 
     ASSERT(global_irq >= io_apic->desc.global_irq_base);
     uint32_t offset = global_irq - io_apic->desc.global_irq_base;
@@ -284,21 +276,17 @@ void apic_io_issue_eoi(uint32_t global_irq, uint8_t vec)
 {
     struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
 
     ASSERT(io_apic->version >= IO_APIC_EOIR_MIN_VERSION);
     *IO_APIC_EOIR(io_apic->vaddr) = vec;
-
-    spin_unlock_irqrestore(&lock, state);
 }
 
 void apic_io_mask_irq(uint32_t global_irq, bool mask)
 {
     struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
 
     uint64_t reg = apic_io_read_redirection_entry(io_apic, global_irq);
     if (mask) {
@@ -310,8 +298,6 @@ void apic_io_mask_irq(uint32_t global_irq, bool mask)
         reg &= ~IO_APIC_RTE_MASKED;
     }
     apic_io_write_redirection_entry(io_apic, global_irq, reg);
-
-    spin_unlock_irqrestore(&lock, state);
 }
 
 void apic_io_configure_irq(
@@ -326,8 +312,7 @@ void apic_io_configure_irq(
 {
     struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
 
     /* If we are configuring an invalid vector, for the IRQ to be masked. */
     if ((del_mode == DELIVERY_MODE_FIXED || del_mode == DELIVERY_MODE_LOWEST_PRI) &&
@@ -347,8 +332,6 @@ void apic_io_configure_irq(
         reg |= IO_APIC_RTE_MASKED;
     }
     apic_io_write_redirection_entry(io_apic, global_irq, reg);
-
-    spin_unlock_irqrestore(&lock, state);
 }
 
 zx_status_t apic_io_fetch_irq_config(
@@ -361,14 +344,11 @@ zx_status_t apic_io_fetch_irq_config(
     if (!io_apic)
         return ZX_ERR_INVALID_ARGS;
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
 
     uint64_t reg = apic_io_read_redirection_entry(io_apic, global_irq);
     if (trig_mode) *trig_mode = IO_APIC_RTE_GET_TRIGGER_MODE(reg);
     if (polarity)  *polarity  = IO_APIC_RTE_GET_POLARITY(reg);
-
-    spin_unlock_irqrestore(&lock, state);
 
     return ZX_OK;
 }
@@ -379,8 +359,7 @@ void apic_io_configure_irq_vector(
 {
     struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
 
     uint64_t reg = apic_io_read_redirection_entry(io_apic, global_irq);
 
@@ -393,21 +372,16 @@ void apic_io_configure_irq_vector(
     reg &= ~IO_APIC_RTE_MASK;
     reg |= IO_APIC_RTE_VECTOR(vector);
     apic_io_write_redirection_entry(io_apic, global_irq, reg);
-
-    spin_unlock_irqrestore(&lock, state);
 }
 
 uint8_t apic_io_fetch_irq_vector(uint32_t global_irq)
 {
     struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
 
     uint64_t reg = apic_io_read_redirection_entry(io_apic, global_irq);
     uint8_t  vector = IO_APIC_RTE_GET_VECTOR(reg);
-
-    spin_unlock_irqrestore(&lock, state);
 
     return vector;
 }
@@ -465,7 +439,7 @@ uint32_t apic_io_isa_to_global(uint8_t isa_irq)
 void apic_io_save(void)
 {
     DEBUG_ASSERT(arch_ints_disabled());
-    spin_lock(&lock);
+    AutoSpinLock guard(&lock);
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic *apic = &io_apics[i];
         for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
@@ -474,13 +448,12 @@ void apic_io_save(void)
             apic->saved_rtes[j] = reg;
         }
     }
-    spin_unlock(&lock);
 }
 
 void apic_io_restore(void)
 {
     DEBUG_ASSERT(arch_ints_disabled());
-    spin_lock(&lock);
+    AutoSpinLock guard(&lock);
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic *apic = &io_apics[i];
         for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
@@ -488,13 +461,11 @@ void apic_io_restore(void)
             apic_io_write_redirection_entry(apic, global_irq, apic->saved_rtes[j]);
         }
     }
-    spin_unlock(&lock);
 }
 
 void apic_io_debug(void)
 {
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic *apic = &io_apics[i];
         printf("IO APIC idx %u:\n", i);
@@ -517,5 +488,4 @@ void apic_io_debug(void)
                    (reg & (1 << 14)) ? "RIRR" : "");
         }
     }
-    spin_unlock_irqrestore(&lock, state);
 }
