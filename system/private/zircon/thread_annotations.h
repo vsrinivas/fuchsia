@@ -19,6 +19,7 @@
 //                              that this mutex must be acquired before mutex |x|.
 // TA_ACQ_AFTER(x)              Indicates that if both this mutex and muxex |x| are to be acquired,
 //                              that this mutex must be acquired after mutex |x|.
+// TA_TRY_ACQ(bool, x)          function acquires the mutex |x| if the function returns |bool|
 // TA_REL(x)                    function releases the mutex |x|
 // TA_REQ(x)                    function requires that the caller hold the mutex |x|
 // TA_EXCL(x)                   function requires that the caller not be holding the mutex |x|
@@ -37,6 +38,7 @@
 #define TA_ACQ(...) THREAD_ANNOTATION(acquire_capability(__VA_ARGS__))
 #define TA_ACQ_BEFORE(...) THREAD_ANNOTATION(acquired_before(__VA_ARGS__))
 #define TA_ACQ_AFTER(...) THREAD_ANNOTATION(acquired_after(__VA_ARGS__))
+#define TA_TRY_ACQ(...) THREAD_ANNOTATION(try_acquire_capability(__VA_ARGS__))
 #define TA_REL(...) THREAD_ANNOTATION(release_capability(__VA_ARGS__))
 #define TA_REQ(...) THREAD_ANNOTATION(requires_capability(__VA_ARGS__))
 #define TA_EXCL(...) THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
