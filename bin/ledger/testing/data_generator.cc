@@ -13,6 +13,10 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace {
+constexpr size_t kPageIdSize = 16;
+}
+
 namespace test {
 
 DataGenerator::DataGenerator() : generator_(fxl::RandUint64()) {}
@@ -28,6 +32,10 @@ fidl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
 
   return convert::ToArray(
       fxl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
+}
+
+fidl::Array<uint8_t> DataGenerator::MakePageId() {
+  return MakeValue(kPageIdSize);
 }
 
 fidl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {

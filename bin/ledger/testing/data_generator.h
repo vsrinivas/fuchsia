@@ -25,6 +25,9 @@ class DataGenerator {
   // |i| value each time, but the resulting B-tree nodes are always distinct.
   fidl::Array<uint8_t> MakeKey(int i, size_t size);
 
+  // Builds a random value that can be used as a page id.
+  fidl::Array<uint8_t> MakePageId();
+
   // Builds a random value of the given length.
   fidl::Array<uint8_t> MakeValue(size_t size);
 

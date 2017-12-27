@@ -51,6 +51,10 @@ package("ledger_tests") {
     },
 
     {
+      name = "ledger_benchmark_get_page"
+    },
+
+    {
       name = "ledger_benchmark_delete_entry"
     },
 
@@ -128,6 +132,18 @@ package("ledger_tests") {
   ]
 
   resources = [
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/get_page/add_new_page.tspec")
+      dest = "ledger/benchmark/add_new_page.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/get_page/get_same_page.tspec")
+      dest = "ledger/benchmark/get_same_page.tspec"
+    },
+
     {
       path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/convergence/convergence.tspec")
