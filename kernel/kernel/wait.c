@@ -18,7 +18,10 @@ void wait_queue_init(wait_queue_t* wait) {
     *wait = (wait_queue_t)WAIT_QUEUE_INITIAL_VALUE(*wait);
 }
 
-static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t now, void* arg) {
+// Disable thread safety analysis here since Clang has trouble with the analysis
+// around timer_trylock_or_cancel.
+static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
+                                                      void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     thread_t* thread = (thread_t*)arg;
 
     DEBUG_ASSERT(thread->magic == THREAD_MAGIC);

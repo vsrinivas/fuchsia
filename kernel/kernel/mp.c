@@ -224,7 +224,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     spin_unlock_irqrestore(&mp.ipi_task_lock, irqstate);
 }
 
-static void mp_unplug_trampoline(void) __NO_RETURN;
+static void mp_unplug_trampoline(void) TA_REQ(thread_lock) __NO_RETURN;
 static void mp_unplug_trampoline(void) {
     /* We're still holding the thread lock from the reschedule that took us
      * here. */

@@ -60,7 +60,7 @@ static_assert(TP_OFFSET(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 #undef TP_OFFSET
 
 /* smp boot lock */
-static spin_lock_t arm_boot_cpu_lock = 1;
+static spin_lock_t arm_boot_cpu_lock = (spin_lock_t){1};
 static volatile int secondaries_to_init = 0;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
@@ -137,7 +137,7 @@ void arch_early_init(void)
     platform_init_mmu_mappings();
 }
 
-void arch_init(void)
+void arch_init(void) TA_NO_THREAD_SAFETY_ANALYSIS
 {
     arch_mp_init_percpu();
 

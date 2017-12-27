@@ -75,7 +75,7 @@ static void init_thread_struct(thread_t* t, const char* name) {
     wait_queue_init(&t->retcode_wait_queue);
 }
 
-static void initial_thread_func(void) __NO_RETURN;
+static void initial_thread_func(void) TA_REQ(thread_lock) __NO_RETURN;
 static void initial_thread_func(void) {
     int ret;
 
@@ -661,7 +661,7 @@ void thread_migrate_to_cpu(const cpu_num_t target_cpu) {
 // thread_lock must be held when calling this function.  This function will
 // not return if it decides to kill the thread.
 static void check_kill_signal(thread_t* current_thread,
-                              spin_lock_saved_state_t state) {
+                              spin_lock_saved_state_t state) TA_REQ(thread_lock) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
@@ -825,7 +825,8 @@ void thread_reschedule(void) {
 }
 
 /* timer callback to wake up a sleeping thread */
-static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
+static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now,
+                                                void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     thread_t* t = (thread_t*)arg;
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);

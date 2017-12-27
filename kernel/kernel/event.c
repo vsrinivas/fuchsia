@@ -132,7 +132,10 @@ zx_status_t event_wait_with_mask(event_t* e, uint signal_mask) {
     return event_wait_worker(e, ZX_TIME_INFINITE, true, signal_mask);
 }
 
-static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result, bool thread_lock_held) {
+// We need to disable thread safety analysis due to the conditional locking of
+// the thread lock (Clang does not support conditional analysis).
+static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result,
+                                 bool thread_lock_held) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!reschedule || !arch_in_int_handler());
 

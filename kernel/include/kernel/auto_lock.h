@@ -16,17 +16,14 @@
 
 class TA_SCOPED_CAP AutoSpinLock {
 public:
-    explicit AutoSpinLock(spin_lock_t* lock)
+    explicit AutoSpinLock(spin_lock_t* lock) TA_ACQ(lock)
         : spinlock_(lock) {
         DEBUG_ASSERT(lock);
-        acquire();
+        spin_lock(spinlock_);
     }
-    explicit AutoSpinLock(SpinLock* lock)
-        : spinlock_(lock->GetInternal()) {
-        DEBUG_ASSERT(lock);
-        acquire();
-    }
-    ~AutoSpinLock() { release(); }
+    explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock)
+        : AutoSpinLock(lock->GetInternal()) { }
+    ~AutoSpinLock() TA_REL() { release(); }
 
     void release() TA_REL() {
         if (spinlock_) {
@@ -39,25 +36,21 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLock);
 
 private:
-    void acquire() TA_ACQ() { spin_lock(spinlock_); }
     spin_lock_t* spinlock_;
 };
 
-class AutoSpinLockIrqSave {
+class TA_SCOPED_CAP AutoSpinLockIrqSave {
 public:
-    explicit AutoSpinLockIrqSave(spin_lock_t* lock)
+    explicit AutoSpinLockIrqSave(spin_lock_t* lock) TA_ACQ(lock)
         : spinlock_(lock) {
         DEBUG_ASSERT(lock);
-        acquire();
+        spin_lock_irqsave(spinlock_, state_);
     }
-    explicit AutoSpinLockIrqSave(SpinLock* lock)
-        : spinlock_(lock->GetInternal()) {
-        DEBUG_ASSERT(lock);
-        acquire();
-    }
-    ~AutoSpinLockIrqSave() { release(); }
+    explicit AutoSpinLockIrqSave(SpinLock* lock) TA_ACQ(lock)
+        : AutoSpinLockIrqSave(lock->GetInternal()) { }
+    ~AutoSpinLockIrqSave() TA_REL() { release(); }
 
-    void release() {
+    void release() TA_REL() {
         if (spinlock_) {
             spin_unlock_irqrestore(spinlock_, state_);
             spinlock_ = nullptr;
@@ -68,7 +61,6 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLockIrqSave);
 
 private:
-    void acquire() { spin_lock_irqsave(spinlock_, state_); }
     spin_lock_t* spinlock_;
     spin_lock_saved_state_t state_;
 };
