@@ -78,7 +78,7 @@ class TA_CAP("mutex") SpinLock {
 public:
     SpinLock() { spin_lock_init(&spinlock_); }
     void Acquire() TA_ACQ() { spin_lock(&spinlock_); }
-    void TryAcquire() TA_TRY_ACQ(false) { spin_trylock(&spinlock_); }
+    bool TryAcquire() TA_TRY_ACQ(false) { return spin_trylock(&spinlock_); }
     void Release() TA_REL() { spin_unlock(&spinlock_); }
     bool IsHeld() { return spin_lock_held(&spinlock_); }
 
