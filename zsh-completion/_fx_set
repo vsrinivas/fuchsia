@@ -7,7 +7,7 @@ _packages() {
 _gn_args() {
   if [[ -n ${fuchsia_build_dir} ]]; then
     # complete the list of gn args with an = suffix
-    compadd -S = $(${fuchsia_dir}/buildtools/gn args ${fuchsia_build_dir} --list --short|sed -e 's/ .*//')
+    compadd -S = $(${fuchsia_dir}/buildtools/gn args ${fuchsia_dir}/${fuchsia_build_dir} --list --short|sed -e 's/ .*//')
   fi
 }
 
