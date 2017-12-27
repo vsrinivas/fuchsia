@@ -21,7 +21,7 @@ void IntelHDAController::WakeupIRQThread() {
     ZX_DEBUG_ASSERT(irq_handle_ != ZX_HANDLE_INVALID);
 
     VERBOSE_LOG("Waking up IRQ thread\n");
-    zx_interrupt_signal(irq_handle_);
+    zx_interrupt_signal(irq_handle_, ZX_INTERRUPT_SLOT_USER, 0);
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
@@ -34,21 +34,13 @@ void IntelHDAController::WaitForIrqOrWakeup() {
     // TODO(johngro) : Fix this.  The IRQ API has changed out from under us, and
     // we cannot currently wait with a timeout.
 
-    // If we are using legacy interrupts, make sure to ack the interrupt before
-    // we wait.
-    if (!msi_irq_)
-        zx_interrupt_complete(irq_handle_);
-
     VERBOSE_LOG("IRQ thread waiting on IRQ\n");
-    zx_interrupt_wait(irq_handle_);
+    uint64_t slots;
+    zx_interrupt_wait(irq_handle_, &slots);
     VERBOSE_LOG("IRQ thread woke up\n");
 
     // Disable IRQs at the device level
     REG_WR(&regs_->intctl, 0u);
-
-    // If we are using MSI interrupts, ack the interrupt as soon as we wake up.
-    if (msi_irq_)
-        zx_interrupt_complete(irq_handle_);
 }
 
 void IntelHDAController::SnapshotRIRB() {

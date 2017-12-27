@@ -47,12 +47,12 @@ zx_status_t I2cCr50Interface::Validate() {
 zx_status_t I2cCr50Interface::WaitForIrqLocked() {
     if (irq_) {
         zxlogf(TRACE, "tpm: Waiting for IRQ\n");
-        zx_status_t status = zx_interrupt_wait(irq_.get());
+        uint64_t slots;
+        zx_status_t status = zx_interrupt_wait(irq_.get(), &slots);
         if (status != ZX_OK) {
             return status;
         }
 
-        zx_interrupt_complete(irq_.get());
         zxlogf(TRACE, "tpm: Received IRQ\n");
     } else {
         zx::nanosleep(zx::deadline_after(kNoIrqTimeout));

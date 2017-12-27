@@ -55,7 +55,8 @@ static int aml_i2c_irq_thread(void *arg) {
     zx_status_t status;
 
     while (1) {
-        status = zx_interrupt_wait(dev->irq);
+        uint64_t slots;
+        status = zx_interrupt_wait(dev->irq, &slots);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c: interrupt error\n");
             continue;
@@ -68,7 +69,6 @@ static int aml_i2c_irq_thread(void *arg) {
         } else {
             zx_object_signal(dev->event, 0, I2C_TXN_COMPLETE_SIGNAL);
         }
-        zx_interrupt_complete(dev->irq);
     }
     return ZX_OK;
 }
@@ -359,31 +359,31 @@ void aml_i2c_release(aml_i2c_connection_t* conn) {
 /* create instance of aml_i2c_t and do basic initialization.  There will
 be one of these instances for each of the soc i2c ports.
 */
-zx_status_t aml_i2c_init(aml_i2c_dev_t **device, aml_i2c_port_t portnum) {
+zx_status_t aml_i2c_init(aml_i2c_dev_t **out_device, aml_i2c_port_t portnum) {
 
     aml_i2c_dev_desc_t *dev_desc = get_i2c_dev(portnum);
     if (!dev_desc) return ZX_ERR_INVALID_ARGS;
 
-    *device = calloc(1, sizeof(aml_i2c_dev_t));
-    if (!(*device)) {
+    aml_i2c_dev_t* device = calloc(1, sizeof(aml_i2c_dev_t));
+    if (!device) {
         return ZX_ERR_NO_MEMORY;
     }
 
     //Initialize the connection list;
-    list_initialize(&(*device)->connections);
-    list_initialize(&(*device)->txn_list);
-    list_initialize(&(*device)->free_txn_list);
-    mtx_init(&(*device)->conn_mutex, mtx_plain);
-    mtx_init(&(*device)->txn_mutex, mtx_plain);
+    list_initialize(&device->connections);
+    list_initialize(&device->txn_list);
+    list_initialize(&device->free_txn_list);
+    mtx_init(&device->conn_mutex, mtx_plain);
+    mtx_init(&device->txn_mutex, mtx_plain);
 
-    (*device)->txn_active =  COMPLETION_INIT;
+    device->txn_active =  COMPLETION_INIT;
 
-    (*device)->timeout = ZX_SEC(1);
+    device->timeout = ZX_SEC(1);
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
 
-    status = io_buffer_init_physical(&(*device)->regs_iobuff,
+    status = io_buffer_init_physical(&device->regs_iobuff,
                                         dev_desc->base_phys,
                                         PAGE_SIZE, resource,
                                         ZX_CACHE_POLICY_UNCACHED_DEVICE);
@@ -393,34 +393,40 @@ zx_status_t aml_i2c_init(aml_i2c_dev_t **device, aml_i2c_port_t portnum) {
         goto init_fail;
     }
 
-    (*device)->virt_regs = (aml_i2c_regs_t*)(io_buffer_virt(&(*device)->regs_iobuff));
+    device->virt_regs = (aml_i2c_regs_t*)(io_buffer_virt(&device->regs_iobuff));
 
-    status = zx_interrupt_create(resource, dev_desc->irqnum, ZX_INTERRUPT_MODE_LEVEL_HIGH, &(*device)->irq);
+    status = zx_interrupt_create(resource, 0, &device->irq);
+    if (status != ZX_OK) {
+        goto init_fail;
+    }
+    status = zx_interrupt_bind(device->irq, 0, resource, dev_desc->irqnum,
+                               ZX_INTERRUPT_MODE_LEVEL_HIGH);
     if (status != ZX_OK) {
         goto init_fail;
     }
 
-    status = zx_event_create(0, &(*device)->event);
+    status = zx_event_create(0, &device->event);
     if (status != ZX_OK) {
         goto init_fail;
     }
 
 
     thrd_t thrd;
-    thrd_create_with_name(&thrd, aml_i2c_thread, *device, "i2c_thread");
+    thrd_create_with_name(&thrd, aml_i2c_thread, device, "i2c_thread");
     thrd_t irqthrd;
-    thrd_create_with_name(&irqthrd, aml_i2c_irq_thread, *device, "i2c_irq_thread");
+    thrd_create_with_name(&irqthrd, aml_i2c_irq_thread, device, "i2c_irq_thread");
 
+    *out_device = device;
     return ZX_OK;
 
 init_fail:
-    if (*device) {
-        io_buffer_release(&(*device)->regs_iobuff);
-        if ((*device)->event != ZX_HANDLE_INVALID)
-            zx_handle_close((*device)->event);
-        if ((*device)->irq != ZX_HANDLE_INVALID)
-            zx_handle_close((*device)->irq);
-        free(*device);
+    if (device) {
+        io_buffer_release(&device->regs_iobuff);
+        if (device->event != ZX_HANDLE_INVALID)
+            zx_handle_close(device->event);
+        if (device->irq != ZX_HANDLE_INVALID)
+            zx_handle_close(device->irq);
+        free(device);
      };
     return status;
 }

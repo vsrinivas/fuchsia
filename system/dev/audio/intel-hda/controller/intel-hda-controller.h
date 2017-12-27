@@ -139,7 +139,6 @@ private:
 
     // PCI Registers and IRQ
     zx_handle_t      irq_handle_  = ZX_HANDLE_INVALID;
-    bool             msi_irq_     = false;
     zx_handle_t      regs_handle_ = ZX_HANDLE_INVALID;
     hda_registers_t* regs_        = nullptr;
 

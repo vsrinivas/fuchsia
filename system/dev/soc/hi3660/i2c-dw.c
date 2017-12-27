@@ -246,7 +246,8 @@ static int i2c_dw_irq_thread(void* arg) {
     zx_status_t status;
 
     while (1) {
-        status = zx_interrupt_wait(dev->irq_handle);
+        uint64_t slots;
+        status = zx_interrupt_wait(dev->irq_handle, &slots);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: irq wait failed, retcode = %d\n", __FUNCTION__, status);
             continue;
@@ -263,7 +264,6 @@ static int i2c_dw_irq_thread(void* arg) {
         }
         i2c_dw_clear_intrrupts(dev);
         i2c_dw_disable_interrupts(dev);
-        zx_interrupt_complete(dev->irq_handle);
     }
 
     return ZX_OK;
@@ -586,9 +586,12 @@ zx_status_t i2c_dw_init(i2c_dw_dev_t** device, i2c_dw_port_t portnum) {
     }
     (*device)->virt_reg = io_buffer_virt(&(*device)->regs_iobuff);
 
-    status = zx_interrupt_create(resource, dev_desc->irqnum,
-                                                            ZX_INTERRUPT_MODE_LEVEL_HIGH,
-                                                            &(*device)->irq_handle);
+    status = zx_interrupt_create(resource, 0, &(*device)->irq_handle);
+    if (status != ZX_OK) {
+        goto init_fail;
+    }
+    status = zx_interrupt_bind((*device)->irq_handle, 0, resource, dev_desc->irqnum,
+                               ZX_INTERRUPT_MODE_LEVEL_HIGH);
     if (status != ZX_OK) {
         goto init_fail;
     }

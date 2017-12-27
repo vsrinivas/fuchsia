@@ -7,8 +7,7 @@
 #pragma once
 #if WITH_DEV_PCIE
 
-#include <dev/pcie_irqs.h>
-#include <zircon/types.h>
+#include <fbl/canary.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/pci_device_dispatcher.h>
 #include <sys/types.h>
@@ -24,20 +23,27 @@ public:
                               fbl::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
-    zx_status_t InterruptComplete() final;
-    zx_status_t UserSignal() final;
+
+    zx_status_t Bind(uint32_t slot, uint32_t vector, uint32_t options) final;
+
+protected:
+    void MaskInterrupt(uint32_t vector) final;
+    void UnmaskInterrupt(uint32_t vector) final;
+    zx_status_t RegisterInterruptHandler(uint32_t vector, void* data) final;
+    void UnregisterInterruptHandler(uint32_t vector) final;
 
 private:
     static pcie_irq_handler_retval_t IrqThunk(const PcieDevice& dev,
                                               uint irq_id,
                                               void* ctx);
-    PciInterruptDispatcher(uint32_t irq_id, bool maskable)
-        : irq_id_(irq_id),
+    PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device, bool maskable)
+        : device_(device),
           maskable_(maskable) { }
 
-    const uint32_t irq_id_;
-    const bool     maskable_;
+    fbl::Canary<fbl::magic("INPD")> canary_;
+
     fbl::RefPtr<PcieDevice> device_;
+    const bool maskable_;
 };
 
 #endif  // if WITH_DEV_PCIE

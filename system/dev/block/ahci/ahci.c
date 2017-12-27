@@ -596,7 +596,8 @@ static int ahci_irq_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     zx_status_t status;
     for (;;) {
-        status = zx_interrupt_wait(dev->irq_handle);
+        uint64_t slots;
+        status = zx_interrupt_wait(dev->irq_handle, &slots);
         if (status) {
             zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
             continue;
@@ -604,7 +605,6 @@ static int ahci_irq_thread(void* arg) {
         // mask hba interrupts while interrupts are being handled
         uint32_t ghc = ahci_read(&dev->regs->ghc);
         ahci_write(&dev->regs->ghc, ghc & ~AHCI_GHC_IE);
-        zx_interrupt_complete(dev->irq_handle);
 
         // handle interrupt for each port
         uint32_t is = ahci_read(&dev->regs->is);

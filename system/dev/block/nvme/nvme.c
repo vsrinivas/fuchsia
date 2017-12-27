@@ -60,11 +60,9 @@ static_assert(PAGE_SIZE == (1 << PAGE_SHIFT), "");
 #define CQMAX (PAGE_SIZE / sizeof(nvme_cpl_t))
 
 // global driver state bits
-#define FLAG_EDGE_IRQ            0x0001
-#define FLAG_LEVEL_IRQ           0x0002
-#define FLAG_IRQ_THREAD_STARTED  0x0004
-#define FLAG_IO_THREAD_STARTED   0x0008
-#define FLAG_SHUTDOWN            0x0010
+#define FLAG_IRQ_THREAD_STARTED  0x0001
+#define FLAG_IO_THREAD_STARTED   0x0002
+#define FLAG_SHUTDOWN            0x0004
 
 #define FLAG_HAS_VWC             0x0100
 
@@ -277,13 +275,10 @@ static int irq_thread(void* arg) {
     nvme_device_t* nvme = arg;
     for (;;) {
         zx_status_t r;
-        if ((r = zx_interrupt_wait(nvme->irqh)) != ZX_OK) {
+        uint64_t slots;
+        if ((r = zx_interrupt_wait(nvme->irqh, &slots)) != ZX_OK) {
             zxlogf(ERROR, "nvme: irq wait failed: %d\n", r);
             break;
-        }
-
-        if (nvme->flags & FLAG_EDGE_IRQ) {
-            zx_interrupt_complete(nvme->irqh);
         }
 
         nvme_cpl_t cpl;
@@ -293,10 +288,6 @@ static int irq_thread(void* arg) {
         }
 
         completion_signal(&nvme->io_signal);
-
-        if (nvme->flags & FLAG_LEVEL_IRQ) {
-            zx_interrupt_complete(nvme->irqh);
-        }
     }
     return 0;
 }
@@ -1043,15 +1034,11 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     uint32_t modes[3] = {
         ZX_PCIE_IRQ_MODE_MSI_X, ZX_PCIE_IRQ_MODE_MSI, ZX_PCIE_IRQ_MODE_LEGACY,
     };
-    uint32_t modeflags[3] = {
-        FLAG_EDGE_IRQ, FLAG_EDGE_IRQ, FLAG_LEVEL_IRQ,
-    };
     uint32_t nirq = 0;
     for (unsigned n = 0; n < countof(modes); n++) {
         if ((pci_query_irq_mode_caps(&nvme->pci, modes[n], &nirq) == ZX_OK) &&
             (pci_set_irq_mode(&nvme->pci, modes[n], 1) == ZX_OK)) {
             zxlogf(INFO, "nvme: irq mode %u, irq count %u (#%u)\n", modes[n], nirq, n);
-            nvme->flags |= modeflags[n];
             goto irq_configured;
         }
     }

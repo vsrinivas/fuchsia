@@ -347,7 +347,8 @@ static int i2c_hid_irq_thread(void* arg) {
     const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
 
     while (true) {
-        zx_status_t status = zx_interrupt_wait(dev->irq);
+        uint64_t slots;
+        zx_status_t status = zx_interrupt_wait(dev->irq, &slots);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c-hid: interrupt wait failed %d\n", status);
             break;
@@ -365,16 +366,16 @@ static int i2c_hid_irq_thread(void* arg) {
                     last_timeout_warning = now;
                 }
                 mtx_unlock(&dev->i2c_lock);
-                goto complete_irq;
+                continue;
             }
             zxlogf(ERROR, "i2c-hid: device_read failure %d\n", status);
             mtx_unlock(&dev->i2c_lock);
-            goto complete_irq;
+            continue;
         }
         if (actual < 2) {
             zxlogf(ERROR, "i2c-hid: short read (%zd < 2)!!!\n", actual);
             mtx_unlock(&dev->i2c_lock);
-            goto complete_irq;
+            continue;
         }
 
         uint16_t report_len = letoh16(*(uint16_t*)buf);
@@ -384,20 +385,20 @@ static int i2c_hid_irq_thread(void* arg) {
             dev->i2c_pending_reset = false;
             cnd_broadcast(&dev->i2c_reset_cnd);
             mtx_unlock(&dev->i2c_lock);
-            goto complete_irq;
+            continue;
         }
 
         if (dev->i2c_pending_reset) {
             zxlogf(INFO, "i2c-hid: received event while waiting for reset? %u\n", report_len);
             mtx_unlock(&dev->i2c_lock);
-            goto complete_irq;
+            continue;
         }
 
         if ((report_len > actual) || (report_len < 2)) {
             zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %zd)!!!\n",
                     report_len, actual);
             mtx_unlock(&dev->i2c_lock);
-            goto complete_irq;
+            continue;
         }
 
         mtx_unlock(&dev->i2c_lock);
@@ -407,14 +408,6 @@ static int i2c_hid_irq_thread(void* arg) {
             dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
         }
         mtx_unlock(&dev->ifc_lock);
-
-complete_irq:
-        status = zx_interrupt_complete(dev->irq);
-        if (status != ZX_OK) {
-            // TODO: what to do here
-            zxlogf(ERROR, "i2c-hid: zx_interrupt_complete failed: %d\n", status);
-            break;
-        }
     }
 
     // TODO: figure out how to clean up

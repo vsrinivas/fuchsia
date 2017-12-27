@@ -47,58 +47,93 @@ static_assert(ZX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(ZX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
-zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t vector, uint32_t options,
+zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t options,
                                  user_out_handle* out_handle) {
-    LTRACEF("vector %u options 0x%x\n", vector, options);
+    LTRACEF("options 0x%x\n", options);
 
+    if (options != 0u)
+        return ZX_ERR_INVALID_ARGS;
+
+    // TODO(ZX-971): finer grained validation
     zx_status_t status;
-    if ((status = validate_resource_irq(hrsrc, vector)) < 0) {
+    if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    zx_status_t result = InterruptEventDispatcher::Create(vector, options, &dispatcher, &rights);
+    zx_status_t result = InterruptEventDispatcher::Create(&dispatcher, &rights);
     if (result != ZX_OK)
         return result;
 
     return out_handle->make(fbl::move(dispatcher), rights);
 }
 
-zx_status_t sys_interrupt_complete(zx_handle_t handle_value) {
-    LTRACEF("handle %x\n", handle_value);
+zx_status_t sys_interrupt_bind(zx_handle_t handle, uint32_t slot, zx_handle_t hrsrc,
+                               uint32_t vector, uint32_t options) {
+    LTRACEF("handle %x\n", handle);
+
+    // resource not required for virtual interrupts
+    if (!(options & ZX_INTERRUPT_VIRTUAL)) {
+        // TODO(ZX-971): finer grained validation
+        zx_status_t status;
+        if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
+            return status;
+        }
+    }
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<InterruptDispatcher> interrupt;
-    zx_status_t status = up->GetDispatcher(handle_value, &interrupt);
+    zx_status_t status = up->GetDispatcher(handle, &interrupt);
     if (status != ZX_OK)
         return status;
 
-    return interrupt->InterruptComplete();
+    return interrupt->Bind(slot, vector, options);
 }
 
-zx_status_t sys_interrupt_wait(zx_handle_t handle_value) {
-    LTRACEF("handle %x\n", handle_value);
+zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<uint64_t> out_slots) {
+    LTRACEF("handle %x\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<InterruptDispatcher> interrupt;
-    zx_status_t status = up->GetDispatcher(handle_value, &interrupt);
+    zx_status_t status = up->GetDispatcher(handle, &interrupt);
     if (status != ZX_OK)
         return status;
 
-    return interrupt->WaitForInterrupt();
+    uint64_t slots = 0;
+    status = interrupt->WaitForInterrupt(&slots);
+    if (status == ZX_OK)
+        status = out_slots.copy_to_user(slots);
+    return status;
 }
 
-zx_status_t sys_interrupt_signal(zx_handle_t handle_value) {
-    LTRACEF("handle %x\n", handle_value);
+zx_status_t sys_interrupt_get_timestamp(zx_handle_t handle, uint32_t slot,
+                                        user_out_ptr<zx_time_t> out_timestamp) {
+    LTRACEF("handle %x\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<InterruptDispatcher> interrupt;
-    zx_status_t status = up->GetDispatcher(handle_value, &interrupt);
+    zx_status_t status = up->GetDispatcher(handle, &interrupt);
     if (status != ZX_OK)
         return status;
 
-    return interrupt->UserSignal();
+    zx_time_t timestamp;
+    status = interrupt->GetTimeStamp(slot, &timestamp);
+    if (status == ZX_OK)
+        status = out_timestamp.copy_to_user(timestamp);
+    return status;
+}
+
+zx_status_t sys_interrupt_signal(zx_handle_t handle, uint32_t slot, zx_time_t timestamp) {
+    LTRACEF("handle %x\n", handle);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt;
+    zx_status_t status = up->GetDispatcher(handle, &interrupt);
+    if (status != ZX_OK)
+        return status;
+
+    return interrupt->UserSignal(slot, timestamp);
 }
 
 zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,

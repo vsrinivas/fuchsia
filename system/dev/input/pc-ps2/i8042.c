@@ -507,12 +507,9 @@ static int i8042_irq_thread(void* arg) {
         return 0;
 
     for (;;) {
-        status = zx_interrupt_wait(device->irq);
+         uint64_t slots;
+       status = zx_interrupt_wait(device->irq, &slots);
         if (status == ZX_OK) {
-            // ack IRQ so we don't lose any IRQs that arrive while processing
-            // (as this is an edge-triggered IRQ)
-            zx_interrupt_complete(device->irq);
-
             // keep handling status on the controller until no bits are set we care about
             bool retry;
             do {
@@ -738,9 +735,13 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
 
     uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
-    zx_status_t status = zx_interrupt_create(get_root_resource(), interrupt, ZX_INTERRUPT_REMAP_IRQ,
-                                             &(dev->irq));
+    zx_status_t status = zx_interrupt_create(get_root_resource(), 0, &(dev->irq));
     if (status != ZX_OK) {
+        return status;
+    }
+    status = zx_interrupt_bind(dev->irq, 0, get_root_resource(), interrupt, ZX_INTERRUPT_REMAP_IRQ);
+    if (status != ZX_OK) {
+        zx_handle_close(dev->irq);
         return status;
     }
 

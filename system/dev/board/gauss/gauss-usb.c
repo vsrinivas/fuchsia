@@ -62,12 +62,13 @@ static int phy_irq_thread(void* arg) {
     gpio_config(&bus->gpio.proto, USB_VBUS_GPIO, GPIO_DIR_OUT);
 
     while (1) {
-        zx_status_t status = zx_interrupt_wait(bus->usb_phy_irq_handle);
-        zx_interrupt_complete(bus->usb_phy_irq_handle);
+        uint64_t slots;
+        zx_status_t status = zx_interrupt_wait(bus->usb_phy_irq_handle, &slots);
         if (status != ZX_OK) {
-            if (status != ZX_ERR_CANCELED) {
-                zxlogf(ERROR, "phy_irq_thread: zx_interrupt_wait returned %d\n", status);
-            }
+            zxlogf(ERROR, "phy_irq_thread: zx_interrupt_wait returned %d\n", status);
+            break;
+        }
+        if (slots & ZX_INTERRUPT_SLOT_USER) {
             break;
         }
 
@@ -137,10 +138,17 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
         return status;
     }
 
-    status = zx_interrupt_create(get_root_resource(), USB_PHY_IRQ, ZX_INTERRUPT_MODE_DEFAULT,
-                                 &bus->usb_phy_irq_handle);
+    status = zx_interrupt_create(get_root_resource(), 0, &bus->usb_phy_irq_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "gauss_usb_init zx_interrupt_create failed %d\n", status);
+        io_buffer_release(&bus->usb_phy);
+        return status;
+    }
+    status = zx_interrupt_bind(bus->usb_phy_irq_handle, 0, get_root_resource(), USB_PHY_IRQ,
+                               ZX_INTERRUPT_MODE_DEFAULT);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "gauss_usb_init zx_interrupt_bind failed %d\n", status);
+        zx_handle_close(bus->usb_phy_irq_handle);
         io_buffer_release(&bus->usb_phy);
         return status;
     }

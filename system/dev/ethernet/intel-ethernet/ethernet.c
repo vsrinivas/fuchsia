@@ -36,7 +36,6 @@ typedef struct ethernet_device {
     pci_protocol_t pci;
     zx_handle_t ioh;
     zx_handle_t irqh;
-    bool edge_triggered_irq;
     thrd_t thread;
     io_buffer_t buffer;
     bool online;
@@ -50,14 +49,11 @@ static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
     for (;;) {
         zx_status_t r;
-        if ((r = zx_interrupt_wait(edev->irqh)) < 0) {
+        uint64_t slots;
+        if ((r = zx_interrupt_wait(edev->irqh, &slots)) < 0) {
             printf("eth: irq wait failed? %d\n", r);
-            zx_interrupt_complete(edev->irqh);
             break;
         }
-
-        if (edev->edge_triggered_irq)
-            zx_interrupt_complete(edev->irqh);
 
         mtx_lock(&edev->lock);
         unsigned irq = eth_handle_irq(&edev->eth);
@@ -83,9 +79,6 @@ static int irq_thread(void* arg) {
             }
         }
         mtx_unlock(&edev->lock);
-
-        if (!edev->edge_triggered_irq)
-            zx_interrupt_complete(edev->irqh);
     }
     return 0;
 }
@@ -242,11 +235,9 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     uint32_t irq_cnt = 0;
     if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
         (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
-        edev->edge_triggered_irq = true;
         printf("eth: using MSI mode\n");
     } else if ((pci_query_irq_mode_caps(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
                (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
-        edev->edge_triggered_irq = false;
         printf("eth: using legacy irq mode\n");
     } else {
         printf("eth: failed to configure irqs\n");

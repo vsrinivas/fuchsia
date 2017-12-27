@@ -66,10 +66,16 @@ static zx_status_t platform_dev_get_interrupt(platform_dev_t* dev, uint32_t inde
         return ZX_ERR_INVALID_ARGS;
     }
     pbus_irq_t* irq = &dev->irqs[index];
-    zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ,
-                                             out_handle);
+    zx_status_t status = zx_interrupt_create(dev->bus->resource, 0, out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
+        return status;
+    }
+    status = zx_interrupt_bind(*out_handle, 0, dev->bus->resource, irq->irq,
+                               ZX_INTERRUPT_REMAP_IRQ);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_get_interrupt: zx_interrupt_bind failed %d\n", status);
+        zx_handle_close(*out_handle);
         return status;
     }
     *out_handle_count = 1;

@@ -219,10 +219,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
             return res;
         } else {
             LOG("Falling back on legacy IRQ mode!\n");
-            msi_irq_ = false;
         }
-    } else {
-        msi_irq_ = true;
     }
 
     ZX_DEBUG_ASSERT(irq_handle_ == ZX_HANDLE_INVALID);

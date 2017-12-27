@@ -41,7 +41,7 @@ Zircon actively manages the following resources:
 
 ## Kernel objects for drivers
 
-+ [Interrupt request](objects/interrupt_request.md)
++ [Interrupts](objects/interrupts.md)
 + [Resource](objects/resource.md)
 + [Log](objects/log.md)
 

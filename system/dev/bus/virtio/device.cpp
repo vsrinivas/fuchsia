@@ -46,7 +46,8 @@ void Device::IrqWorker() {
     zxlogf(TRACE, "%s: starting irq worker\n", tag());
 
     while (backend_->irq_handle()) {
-        if ((rc = zx_interrupt_wait(backend_->irq_handle())) != ZX_OK) {
+        uint64_t slots;
+        if ((rc = zx_interrupt_wait(backend_->irq_handle(), &slots)) != ZX_OK) {
             zxlogf(SPEW, "%s: error while waiting for interrupt: %s\n",
                    tag(), zx_status_get_string(rc));
             continue;
@@ -57,12 +58,6 @@ void Device::IrqWorker() {
         uint32_t irq_status = IsrStatus();
 
         LTRACEF_LEVEL(2, "irq_status %#x\n", irq_status);
-
-        if ((rc = zx_interrupt_complete(backend_->irq_handle())) != ZX_OK) {
-            zxlogf(SPEW, "%s: error while completing interrupt: %s\n", tag(),
-                   zx_status_get_string(rc));
-            continue;
-        }
 
         // Since we handle both interrupt types here it's possible for a
         // spurious interrupt if they come in sequence and we check IsrStatus

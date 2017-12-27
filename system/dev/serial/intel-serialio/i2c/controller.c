@@ -319,7 +319,8 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
     intel_serialio_i2c_device_t* dev = (intel_serialio_i2c_device_t*)arg;
     zx_status_t status;
     for (;;) {
-        status = zx_interrupt_wait(dev->irq_handle);
+        uint64_t slots;
+        status = zx_interrupt_wait(dev->irq_handle, &slots);
         if (status != ZX_OK) {
             xprintf("i2c: error waiting for interrupt: %d\n", status);
             continue;
@@ -383,8 +384,6 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             mtx_unlock(&dev->irq_mask_mutex);
             zxlogf(INFO, "i2c: spurious general call irq\n");
         }
-
-        zx_interrupt_complete(dev->irq_handle);
     }
     return 0;
 }
