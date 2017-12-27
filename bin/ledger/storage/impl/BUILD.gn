@@ -137,7 +137,7 @@ source_set("test_utils") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/testing:lib",
   ]
 }
 
@@ -172,7 +172,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/testing:lib",
     "//third_party/gtest",
   ]
 

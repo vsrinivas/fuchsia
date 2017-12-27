@@ -53,7 +53,7 @@ source_set("unittests") {
 
   deps = [
     ":public",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/socket",
   ]
 }

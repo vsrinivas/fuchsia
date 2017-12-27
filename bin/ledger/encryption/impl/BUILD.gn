@@ -39,7 +39,7 @@ source_set("unittests") {
   deps = [
     ":impl",
     "//peridot/bin/ledger/storage/fake:lib",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/callback",
     "//third_party/gtest",
   ]

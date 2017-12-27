@@ -36,10 +36,10 @@ package("ledger_tests") {
 
   deps = [
     ":ledger_unittests",
-    "test/benchmark",
-    "test/e2e_local",
-    "test/e2e_sync",
-    "test/integration",
+    "tests/benchmark",
+    "tests/e2e_local",
+    "tests/e2e_sync",
+    "tests/integration",
     "//peridot/bin/cloud_provider_firebase:tests",
     "//peridot/bin/cloud_provider_firestore:tests",
     "//peridot/public/lib/cloud_provider/validation",
@@ -130,89 +130,89 @@ package("ledger_tests") {
   resources = [
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/convergence/convergence.tspec")
+              "//peridot/bin/ledger/tests/benchmark/convergence/convergence.tspec")
       dest = "ledger/benchmark/convergence.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/put/transaction.tspec")
+              "//peridot/bin/ledger/tests/benchmark/put/transaction.tspec")
       dest = "ledger/benchmark/transaction.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/put/entry_count.tspec")
+              "//peridot/bin/ledger/tests/benchmark/put/entry_count.tspec")
       dest = "ledger/benchmark/entry_count.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/put/entry_count_update.tspec")
+              "//peridot/bin/ledger/tests/benchmark/put/entry_count_update.tspec")
       dest = "ledger/benchmark/entry_count_update.tspec"
     },
 
     {
       path =
-          rebase_path("//peridot/bin/ledger/test/benchmark/put/key_size.tspec")
+          rebase_path("//peridot/bin/ledger/tests/benchmark/put/key_size.tspec")
       dest = "ledger/benchmark/key_size.tspec"
     },
 
     {
-      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/put.tspec")
+      path = rebase_path("//peridot/bin/ledger/tests/benchmark/put/put.tspec")
       dest = "ledger/benchmark/put.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/put/transaction_size.tspec")
+              "//peridot/bin/ledger/tests/benchmark/put/transaction_size.tspec")
       dest = "ledger/benchmark/transaction_size.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/put/value_size.tspec")
+              "//peridot/bin/ledger/tests/benchmark/put/value_size.tspec")
       dest = "ledger/benchmark/value_size.tspec"
     },
 
     {
-      path = rebase_path("//peridot/bin/ledger/test/benchmark/sync/sync.tspec")
+      path = rebase_path("//peridot/bin/ledger/tests/benchmark/sync/sync.tspec")
       dest = "ledger/benchmark/sync.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/update_entry/update_entry.tspec")
+              "//peridot/bin/ledger/tests/benchmark/update_entry/update_entry.tspec")
       dest = "ledger/benchmark/update_entry.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/update_entry/update_entry_transactions.tspec")
+              "//peridot/bin/ledger/tests/benchmark/update_entry/update_entry_transactions.tspec")
       dest = "ledger/benchmark/update_entry_transactions.tspec"
     },
 
     {
       path =
-          rebase_path("//peridot/bin/ledger/test/benchmark/fetch/fetch.tspec")
+          rebase_path("//peridot/bin/ledger/tests/benchmark/fetch/fetch.tspec")
       dest = "ledger/benchmark/fetch.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/fetch/fetch_partial.tspec")
+              "//peridot/bin/ledger/tests/benchmark/fetch/fetch_partial.tspec")
       dest = "ledger/benchmark/fetch_partial.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/delete_entry/delete_entry.tspec")
+              "//peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry.tspec")
       dest = "ledger/benchmark/delete_entry.tspec"
     },
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/test/benchmark/delete_entry/delete_entry_transaction.tspec")
+              "//peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry_transaction.tspec")
       dest = "ledger/benchmark/delete_entry_transaction.tspec"
     },
   ]

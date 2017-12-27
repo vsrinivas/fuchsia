@@ -42,7 +42,7 @@ source_set("unittests") {
     ":gcs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/network:fake",
     "//third_party/gtest",
   ]

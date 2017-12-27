@@ -71,7 +71,7 @@ source_set("unittests") {
     "//peridot/bin/cloud_provider_firebase/device_set/testing",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/cloud_provider_firebase/page_handler/testing",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/firebase_auth/test",
     "//peridot/lib/network:fake",
     "//peridot/public/lib/auth/fidl",

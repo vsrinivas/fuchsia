@@ -22,7 +22,7 @@ binary, that by default can be executed on Fuchsia by running
 Ledger, although these services still run in the same process as the test code.
 
 Integration tests inherit from [IntegrationTest] and are placed under
-[/bin/ledger/test/integration].
+[/bin/ledger/tests/integration].
 
 All integration tests in the Ledger tree are built into a single
 `ledger_integration_tests` binary, that by default can be executed on Fuchsia by
@@ -38,10 +38,10 @@ and connects to Ledger the same way any other client application would do. This
 is the highest-level way of testing that exercises all of the Ledger stack.
 
 End-to-end tests exercising only the local part of the Ledger are in
-[/bin/ledger/test/e2e_local]. [Synchronization end-to-end tests] exercising
-multi-device synchronization are in [/bin/ledger/test/e2e_sync] and compiled both as
-end-to-end tests exercising real cloud services, and as integration tests using
-fake services.
+[/bin/ledger/tests/e2e_local]. [Synchronization end-to-end tests] exercising
+multi-device synchronization are in [/bin/ledger/tests/e2e_sync] and compiled
+both as end-to-end tests exercising real cloud services, and as integration
+tests using fake services.
 
 All local application tests in the Ledger tree are built into a single
 `ledger_e2e_local` binary, that by default can be executed on Fuchsia by running
@@ -50,9 +50,9 @@ All local application tests in the Ledger tree are built into a single
 `/system/test/disabled/ledger_e2e_sync`.
 
 [Google Test]: https://github.com/google/googletest
-[TestWithMessageLoop]: https://fuchsia.googlesource.com/peridot/+/master/lib/gtest/test_with_message_loop.h
-[IntegrationTest]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/integration/integration_test.h
-[/bin/ledger/test/integration]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/integration/
-[Synchronization end-to-end tests]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/e2e_sync/README.md
-[/bin/ledger/test/e2e_local]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/e2e_local/
-[/bin/ledger/test/e2e_sync]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/e2e_sync/
+[TestWithMessageLoop]: /lib/gtest/test_with_message_loop.h
+[IntegrationTest]: /bin/ledger/tests/integration/integration_test.h
+[/bin/ledger/tests/integration]: /bin/ledger/tests/integration
+[Synchronization end-to-end tests]: /bin/ledger/tests/e2e_sync/README.md
+[/bin/ledger/tests/e2e_local]: /bin/ledger/tests/e2e_local
+[/bin/ledger/tests/e2e_sync]: /bin/ledger/tests/e2e_sync

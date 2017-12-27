@@ -1,0 +1,50 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+group("benchmark") {
+  testonly = true
+
+  public_deps = [
+    ":launch_benchmark",
+    ":run_ledger_benchmarks",
+    "//peridot/bin/ledger/tests/benchmark/convergence",
+    "//peridot/bin/ledger/tests/benchmark/delete_entry",
+    "//peridot/bin/ledger/tests/benchmark/fetch",
+    "//peridot/bin/ledger/tests/benchmark/lib",
+    "//peridot/bin/ledger/tests/benchmark/put",
+    "//peridot/bin/ledger/tests/benchmark/sync",
+    "//peridot/bin/ledger/tests/benchmark/update_entry",
+  ]
+}
+
+executable("launch_benchmark") {
+  testonly = true
+
+  sources = [
+    "launch_benchmark.cc",
+    "launch_benchmark.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/tests/benchmark/lib",
+    "//peridot/bin/ledger/tests/benchmark/put:lib",
+    "//peridot/public/lib/ledger/fidl",
+  ]
+}
+
+copy("run_ledger_benchmarks") {
+  sources = [
+    "run_ledger_benchmarks.sh",
+  ]
+  outputs = [
+    "$root_out_dir/run_ledger_benchmarks.sh",
+  ]
+}

@@ -43,6 +43,6 @@ source_set("unittests") {
     ":firestore",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
-    "//peridot/bin/ledger/test:lib",
+    "//peridot/lib/gtest",
   ]
 }

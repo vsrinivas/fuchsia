@@ -32,8 +32,8 @@ source_set("unittests") {
 
   deps = [
     ":device_set",
-    "//peridot/bin/ledger/test:lib",
     "//peridot/lib/firebase",
+    "//peridot/lib/gtest",
     "//third_party/rapidjson",
   ]
 

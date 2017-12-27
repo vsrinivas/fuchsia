@@ -23,7 +23,7 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/test/test_with_coroutines.h"
+#include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
 namespace storage {
 namespace {

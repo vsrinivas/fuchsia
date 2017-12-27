@@ -8,7 +8,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/test/cloud_provider_firebase_factory.h"
+#include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/public/lib/cloud_provider/validation/launcher/validation_tests_launcher.h"
 
 namespace cloud_provider_firebase {
