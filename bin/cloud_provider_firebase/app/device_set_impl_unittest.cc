@@ -10,7 +10,7 @@
 #include "peridot/bin/cloud_provider_firebase/device_set/testing/test_cloud_device_set.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firebase {
@@ -48,7 +48,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
   }
 
  protected:
-  firebase_auth::test::TestFirebaseAuth firebase_auth_;
+  firebase_auth::TestFirebaseAuth firebase_auth_;
   TestCloudDeviceSet* cloud_device_set_;
   cloud_provider::DeviceSetPtr device_set_;
   DeviceSetImpl device_set_impl_;

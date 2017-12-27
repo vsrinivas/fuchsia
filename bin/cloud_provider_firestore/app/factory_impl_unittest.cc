@@ -7,7 +7,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/lib/callback/capture.h"
-#include "peridot/lib/firebase_auth/test/test_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
@@ -26,7 +26,7 @@ class FactoryImplTest : public gtest::TestWithMessageLoop {
   FactoryPtr factory_;
   fidl::Binding<Factory> factory_binding_;
 
-  firebase_auth::test::TestTokenProvider token_provider_;
+  firebase_auth::TestTokenProvider token_provider_;
   fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
 
  private:

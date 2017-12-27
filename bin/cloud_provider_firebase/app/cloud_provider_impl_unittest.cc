@@ -7,8 +7,8 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
-#include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 
@@ -24,9 +24,9 @@ ConfigPtr GetFirebaseConfig() {
 
 std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
-    firebase_auth::test::TestFirebaseAuth** ptr) {
-  auto firebase_auth = std::make_unique<firebase_auth::test::TestFirebaseAuth>(
-      std::move(task_runner));
+    firebase_auth::TestFirebaseAuth** ptr) {
+  auto firebase_auth =
+      std::make_unique<firebase_auth::TestFirebaseAuth>(std::move(task_runner));
   *ptr = firebase_auth.get();
   return firebase_auth;
 }
@@ -47,7 +47,7 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
   ~CloudProviderImplTest() override {}
 
  protected:
-  firebase_auth::test::TestFirebaseAuth* firebase_auth_ = nullptr;
+  firebase_auth::TestFirebaseAuth* firebase_auth_ = nullptr;
 
   ledger::FakeNetworkService network_service_;
   cloud_provider::CloudProviderPtr cloud_provider_;

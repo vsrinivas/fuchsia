@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 #include <utility>
 
@@ -10,7 +10,6 @@
 #include "peridot/lib/callback/cancellable_helper.h"
 
 namespace firebase_auth {
-namespace test {
 
 TestFirebaseAuth::TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
@@ -45,5 +44,4 @@ void TestFirebaseAuth::TriggerConnectionErrorHandler() {
   error_handler_();
 }
 
-}  // namespace test
 }  // namespace firebase_auth

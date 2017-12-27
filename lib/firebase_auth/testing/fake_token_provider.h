@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TEST_FAKE_TOKEN_PROVIDER_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TEST_FAKE_TOKEN_PROVIDER_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_PROVIDER_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_PROVIDER_H_
 
 #include <functional>
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 
-namespace test {
+namespace firebase_auth {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be
 // used to connect to unauthenticated firebase instances.
 class FakeTokenProvider : public modular::auth::TokenProvider {
@@ -35,6 +35,6 @@ class FakeTokenProvider : public modular::auth::TokenProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeTokenProvider);
 };
 
-}  // namespace test
+}  // namespace firebase_auth
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TEST_FAKE_TOKEN_PROVIDER_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_PROVIDER_H_

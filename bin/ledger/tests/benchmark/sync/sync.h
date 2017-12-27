@@ -12,7 +12,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
-#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
 namespace test {
 namespace benchmark {

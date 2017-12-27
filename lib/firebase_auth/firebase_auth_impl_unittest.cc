@@ -11,7 +11,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
-#include "peridot/lib/firebase_auth/test/test_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace firebase_auth {
@@ -37,7 +37,7 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
     return backoff;
   }
 
-  test::TestTokenProvider token_provider_;
+  TestTokenProvider token_provider_;
   fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
   FirebaseAuthImpl firebase_auth_;
   backoff::TestBackoff* backoff_;

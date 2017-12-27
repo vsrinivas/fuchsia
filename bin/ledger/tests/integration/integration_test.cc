@@ -15,7 +15,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/callback/synchronous_task.h"
-#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 

@@ -13,7 +13,7 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
 namespace test {
 
@@ -42,7 +42,7 @@ class CloudProviderFirebaseFactory {
   fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
   ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
-                                          FakeTokenProvider>
+                                          firebase_auth::FakeTokenProvider>
       token_provider_;
 
   app::ApplicationControllerPtr cloud_provider_controller_;

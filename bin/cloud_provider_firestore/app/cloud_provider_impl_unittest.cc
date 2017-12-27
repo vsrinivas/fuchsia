@@ -7,7 +7,7 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
@@ -15,9 +15,8 @@ namespace cloud_provider_firestore {
 class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudProviderImplTest() {
-    auto firebase_auth =
-        std::make_unique<firebase_auth::test::TestFirebaseAuth>(
-            message_loop_.task_runner());
+    auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
+        message_loop_.task_runner());
     firebase_auth_ = firebase_auth.get();
     std::unique_ptr<FirestoreService> firestore_service;
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
@@ -27,7 +26,7 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
   ~CloudProviderImplTest() override {}
 
  protected:
-  firebase_auth::test::TestFirebaseAuth* firebase_auth_ = nullptr;
+  firebase_auth::TestFirebaseAuth* firebase_auth_ = nullptr;
 
   cloud_provider::CloudProviderPtr cloud_provider_;
   std::unique_ptr<CloudProviderImpl> cloud_provider_impl_;

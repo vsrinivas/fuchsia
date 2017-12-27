@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
 
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace firebase_auth {
-namespace test {
 
 class TestFirebaseAuth : public FirebaseAuth {
  public:
@@ -39,7 +38,6 @@ class TestFirebaseAuth : public FirebaseAuth {
   fxl::Closure error_handler_;
 };
 
-}  // namespace test
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_FIREBASE_AUTH_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_

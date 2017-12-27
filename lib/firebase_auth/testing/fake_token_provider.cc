@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
-namespace test {
+namespace firebase_auth {
 
 FakeTokenProvider::FakeTokenProvider(std::string firebase_id_token,
                                      std::string firebase_local_id,
@@ -56,4 +56,4 @@ void FakeTokenProvider::GetClientId(const GetClientIdCallback& callback) {
   }
 }
 
-}  // namespace test
+}  // namespace firebase_auth

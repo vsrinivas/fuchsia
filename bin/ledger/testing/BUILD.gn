@@ -43,7 +43,7 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/test",
+    "//peridot/lib/firebase_auth/testing",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

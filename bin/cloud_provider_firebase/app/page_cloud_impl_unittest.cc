@@ -12,7 +12,7 @@
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/firebase_auth/test/test_firebase_auth.h"
+#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firebase {
@@ -54,7 +54,7 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
   }
 
  protected:
-  firebase_auth::test::TestFirebaseAuth firebase_auth_;
+  firebase_auth::TestFirebaseAuth firebase_auth_;
   cloud_provider::PageCloudPtr page_cloud_;
   TestPageCloudHandler* handler_ = nullptr;
   std::unique_ptr<PageCloudImpl> page_cloud_impl_;

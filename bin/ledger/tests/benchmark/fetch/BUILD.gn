@@ -25,7 +25,7 @@ executable("ledger_benchmark_fetch") {
     "//peridot/bin/ledger/tests/benchmark/lib",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/test",
+    "//peridot/lib/firebase_auth/testing",
     "//peridot/public/lib/ledger/fidl",
     "//zircon/system/ulib/trace-provider",
   ]

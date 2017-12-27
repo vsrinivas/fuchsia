@@ -37,7 +37,7 @@ executable("integration") {
     "//peridot/bin/ledger/tests/integration/sync",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/test",
+    "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/socket",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/ledger/fidl",

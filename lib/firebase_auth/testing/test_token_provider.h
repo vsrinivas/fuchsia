@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
+#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_PROVIDER_H_
+#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_PROVIDER_H_
 
 #include <string>
 
@@ -14,7 +14,6 @@
 
 namespace firebase_auth {
 
-namespace test {
 class TestTokenProvider : public modular::auth::TokenProvider {
  public:
   explicit TestTokenProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
@@ -44,7 +43,6 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
 };
 
-}  // namespace test
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TEST_TEST_TOKEN_PROVIDER_H_
+#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_PROVIDER_H_

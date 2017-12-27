@@ -19,7 +19,7 @@
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/lib/callback/synchronous_task.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/firebase_auth/test/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
 namespace test {
 namespace {

@@ -64,7 +64,7 @@ source_set("unittests") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//peridot/lib/callback",
-    "//peridot/lib/firebase_auth/test",
+    "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/gtest",
   ]
 }
