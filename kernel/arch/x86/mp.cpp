@@ -40,7 +40,7 @@ extern struct idt _idt;
 
 zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
 {
-    ASSERT(ap_percpus == NULL);
+    ASSERT(ap_percpus == nullptr);
 
     DEBUG_ASSERT(cpu_count >= 1);
     if (cpu_count == 0) {
@@ -50,7 +50,7 @@ zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     if (cpu_count > 1) {
         size_t len = sizeof(*ap_percpus) * (cpu_count - 1);
         ap_percpus = (x86_percpu *)memalign(MAX_CACHE_LINE, len);
-        if (ap_percpus == NULL) {
+        if (ap_percpus == nullptr) {
             return ZX_ERR_NO_MEMORY;
         }
         memset(ap_percpus, 0, len);

@@ -120,7 +120,7 @@ void apic_vm_init(void)
 {
     // only memory map the aperture if we're using the legacy mmio interface
     if (!x2apic_enabled) {
-        ASSERT(apic_virt_base == NULL);
+        ASSERT(apic_virt_base == nullptr);
         // Create a mapping for the page of MMIO registers
         zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
                 "lapic",
@@ -134,7 +134,7 @@ void apic_vm_init(void)
         if (res != ZX_OK) {
             panic("Could not allocate APIC management page: %d\n", res);
         }
-        ASSERT(apic_virt_base != NULL);
+        ASSERT(apic_virt_base != nullptr);
     }
 }
 

@@ -151,7 +151,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
 /**
  * @brief Invalidate a single page at a given page table level
  *
- * @param pt The page table we're invalidating for (if NULL, assume for current one)
+ * @param pt The page table we're invalidating for (if nullptr, assume for current one)
  * @param vaddr The virtual address we are invalidating the TLB entry for
  * @param level The page table level that maps this vaddr
  * @param global_page True if we are invalidating a global mapping

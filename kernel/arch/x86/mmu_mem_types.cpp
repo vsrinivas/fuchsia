@@ -300,7 +300,7 @@ usage:
         uint num_cpus = arch_max_num_cpus();
         for (uint i = 0; i < num_cpus; ++i) {
             printf("CPU %u Page Attribute Table types:\n", i);
-            mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, print_pat_entries, NULL);
+            mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, print_pat_entries, nullptr);
         }
     } else {
         printf("unknown command\n");

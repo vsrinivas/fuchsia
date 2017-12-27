@@ -54,7 +54,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace> *te
     if (!bootstrap_aspace) {
         return ZX_ERR_NO_MEMORY;
     }
-    void *bootstrap_virt_addr = NULL;
+    void *bootstrap_virt_addr = nullptr;
 
     // Ensure only one caller is using the bootstrap region
     bootstrap_lock.Acquire();
@@ -119,7 +119,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace> *te
         TRACEF("could not allocate AP bootstrap page: %d\n", status);
         return status;
     }
-    DEBUG_ASSERT(bootstrap_virt_addr != NULL);
+    DEBUG_ASSERT(bootstrap_virt_addr != nullptr);
     uintptr_t bootstrap_code_len = (uintptr_t)x86_bootstrap16_end -
             (uintptr_t)x86_bootstrap16_start;
     DEBUG_ASSERT(bootstrap_code_len <= PAGE_SIZE);

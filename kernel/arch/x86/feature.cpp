@@ -239,7 +239,7 @@ void x86_feature_debug(void)
         { X86_FEATURE_HWP, "hwp" },
     };
 
-    const char *vendor_string = NULL;
+    const char *vendor_string = nullptr;
     switch (x86_vendor) {
         case X86_VENDOR_UNKNOWN: vendor_string = "unknown"; break;
         case X86_VENDOR_INTEL: vendor_string = "Intel"; break;
@@ -247,7 +247,7 @@ void x86_feature_debug(void)
     }
     printf("Vendor: %s\n", vendor_string);
 
-    const char *microarch_string = NULL;
+    const char *microarch_string = nullptr;
     switch (x86_microarch) {
         case X86_MICROARCH_UNKNOWN: microarch_string = "unknown"; break;
         case X86_MICROARCH_INTEL_NEHALEM: microarch_string = "Nehalem"; break;

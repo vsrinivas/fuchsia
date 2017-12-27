@@ -145,6 +145,6 @@ void idt_setup_readonly(void) {
 
 // Get the read-only IDT
 struct idt * idt_get_readonly(void) {
-    ASSERT(_idt_ro != NULL);
+    ASSERT(_idt_ro != nullptr);
     return _idt_ro;
 }

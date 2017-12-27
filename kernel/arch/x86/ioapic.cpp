@@ -114,7 +114,7 @@ void apic_io_init(
         struct io_apic_isa_override *overrides,
         unsigned int num_overrides)
 {
-    ASSERT(io_apics == NULL);
+    ASSERT(io_apics == nullptr);
 
     num_io_apics = num_io_apic_descs;
     io_apics = (io_apic *)calloc(num_io_apics, sizeof(*io_apics));
@@ -130,7 +130,7 @@ void apic_io_init(
         void *vaddr = paddr_to_physmap(paddr);
         // If the window isn't mapped yet (multiple IO APICs can be in the
         // same page), map it in.
-        if (vaddr == NULL) {
+        if (vaddr == nullptr) {
             paddr_t paddr_page_base = ROUNDDOWN(paddr, PAGE_SIZE);
             ASSERT(paddr + IO_APIC_WINDOW_SIZE <= paddr_page_base + PAGE_SIZE);
             zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
@@ -189,7 +189,7 @@ static struct io_apic *apic_io_resolve_global_irq_no_panic(uint32_t irq)
             return &io_apics[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 static struct io_apic *apic_io_resolve_global_irq(uint32_t irq)
@@ -206,7 +206,7 @@ static inline uint32_t apic_io_read_reg(
         struct io_apic *io_apic,
         uint8_t reg)
 {
-    ASSERT(io_apic != NULL);
+    ASSERT(io_apic != nullptr);
     DEBUG_ASSERT(spin_lock_held(&lock));
     *IO_APIC_IND(io_apic->vaddr) = reg;
     uint32_t val = *IO_APIC_DAT(io_apic->vaddr);
@@ -218,7 +218,7 @@ static inline void apic_io_write_reg(
         uint8_t reg,
         uint32_t val)
 {
-    ASSERT(io_apic != NULL);
+    ASSERT(io_apic != nullptr);
     DEBUG_ASSERT(spin_lock_held(&lock));
     *IO_APIC_IND(io_apic->vaddr) = reg;
     *IO_APIC_DAT(io_apic->vaddr) = val;
@@ -259,7 +259,7 @@ static void apic_io_write_redirection_entry(
 
 bool apic_io_is_valid_irq(uint32_t global_irq)
 {
-    return apic_io_resolve_global_irq_no_panic(global_irq) != NULL;
+    return apic_io_resolve_global_irq_no_panic(global_irq) != nullptr;
 }
 
 /*

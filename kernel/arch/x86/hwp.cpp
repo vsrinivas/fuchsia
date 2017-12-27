@@ -43,7 +43,7 @@ static void hwp_enable(void)
         return;
     }
 
-    mp_sync_exec(MP_IPI_TARGET_ALL, 0, hwp_enable_sync_task, NULL);
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, hwp_enable_sync_task, nullptr);
 
     hwp_enabled = true;
 }

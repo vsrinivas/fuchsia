@@ -58,7 +58,7 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         aps_still_booting |= 1U << cpu;
     }
 
-    struct x86_ap_bootstrap_data *bootstrap_data = NULL;
+    struct x86_ap_bootstrap_data *bootstrap_data = nullptr;
     fbl::RefPtr<VmAspace> bootstrap_aspace;
     paddr_t bootstrap_instr_ptr;
     status = x86_bootstrap16_acquire((uintptr_t)_x86_secondary_cpu_long_mode_entry,
