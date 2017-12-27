@@ -302,9 +302,6 @@ extern fn ddk_write(ctx: *mut u8, buf: *const u8, count: usize, off: zsys::zx_of
     ret
 }
 
-extern fn ddk_iotxn_queue(_ctx: *mut u8, _txn: *mut sys::iotxn_t) {
-}
-
 extern fn ddk_get_size(ctx: *mut u8) -> u64 {
     let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
     let size = context.ops.get_size();
@@ -350,7 +347,7 @@ static mut DEVICE_OPS: sys::zx_protocol_device_t = sys::zx_protocol_device_t {
     release: Some(ddk_release),
     read: Some(ddk_read),
     write: Some(ddk_write),
-    iotxn_queue: Some(ddk_iotxn_queue),
+    iotxn_queue: None,
     get_size: Some(ddk_get_size),
     ioctl: Some(ddk_ioctl),
     suspend: Some(ddk_suspend),
