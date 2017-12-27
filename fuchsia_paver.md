@@ -27,7 +27,7 @@ Read this all before? Here are the common case commands
 2. `fx full-build`
 3. Make the install media
     * [[ insert USB drive into host ]]
-    * `fx mkvbootzedboot <usb_drive_device_path>`
+    * `fx mkzedboot <usb_drive_device_path>`
 4. Boot and pave
     * [[ move USB drive to target ]]
     * `fx boot-paver <efi|vboot|nuc|cros|..>`
@@ -45,7 +45,7 @@ configure our build for this we can run `fx set x86-64` and then build with
 To create your install media we recommend using a USB drive since these are
 well-supported as boot media by most systems. Note that the install media
 creation process **will be destructive** to the USB drive being used. Insert the
-USB drive and then run `fx mkvbootzedboot <device_path>`, which on Linux is
+USB drive and then run `fx mkzedboot <device_path>`, which on Linux is
 typically something like /dev/sd&lt;X&gt; where X is a letter and on Mac is typically
 something like /dev/disk&lt;N&gt; where 'N' is a number. **Be careful not to select
 the wrong device**. Once this is done, remove the USB drive.
@@ -71,10 +71,14 @@ creating install media.
 Paving should occur automatically after the device is booted into Zedboot from the
 USB drive. After the paving process completes the system should boot into the
 Zircon kernel. After paving, the whole system is installed on storage. At this
-point the USB key can and should be removed. Future boots can be done entirely
-from local storage. If you need to re-pave, select Zedboot from Gigaboot (UEFI
-systems) or plug the USB drive into your target machine (vboot systems) and run
-`fx boot-paver <target_type>`.
+point the USB key can be removed since the system has everything it needs stored
+locally. If you plan to re-pave frequently it may be useful to keep the
+USB drive inserted so your system boots into Zedboot by default where paving
+will happen automatically. After the initial pave on UEFI systems that use
+Gigaboot, another option for re-paving is to press 'z' while in Gigaboot to
+select Zedboot. For vboot-based systems using the USB drive is currently the
+only option for re-paving. In all cases the bootserver needs to have been
+started with `fx boot-paver <target_type>`
 
 ## Troubleshooting
 
@@ -105,5 +109,5 @@ For EFI-based systems, it is possible to change the default boot option of the
 system paved on the target between local booting and Zedboot for network booting.
 By default the system boots locally with a 1-second delay in Gigaboot to allow you
 to select a different mode. To change this default to Zedboot, supply the
-`--always_zedboot` option when calling `fx boot-paver <target_type>` or
-`fx build-paver`.
+`--always_zedboot` option when calling your build command, for example
+`fx full-build --always_zedboot`.
