@@ -72,7 +72,7 @@ class Station : public FrameHandler {
 
     zx_status_t SendKeepAliveResponse();
 
-    bool ShouldDropMlmeMessage(Method& method) override;
+    bool ShouldDropMlmeMessage(const Method& method) override;
     zx_status_t HandleMlmeJoinReq(const JoinRequest& req) override;
     zx_status_t HandleMlmeAuthReq(const AuthenticateRequest& req) override;
     zx_status_t HandleMlmeDeauthReq(const DeauthenticateRequest& req) override;
@@ -94,7 +94,7 @@ class Station : public FrameHandler {
                                         const wlan_rx_info_t& rxinfo) override;
 
     bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleNullDataFrame(const DataFrameHeader& frame,
+    zx_status_t HandleNullDataFrame(const DataFrame<NilHeader>& frame,
                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame,
                                 const wlan_rx_info_t& rxinfo) override;

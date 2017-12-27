@@ -21,25 +21,30 @@
 #define WLAN_DECL_FUNC_HANDLE_MLME(methodName, mlmeMsgType) \
     WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const mlmeMsgType&)
 
-#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)          \
-    zx_status_t HandleFrameInternal(Method& method, const mlmeMsgType& msg) { \
-        if (ShouldDropMlmeMessage(method)) { return ZX_ERR_STOP; }            \
-        return methodName(msg);                                               \
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                    \
+    zx_status_t HandleMlmeFrameInternal(const Method& method, const mlmeMsgType& msg) { \
+        return methodName(msg);                                                         \
     }
 
 #define WLAN_DECL_FUNC_HANDLE_MGMT(mgmtFrameType)                                      \
     WLAN_DECL_VIRT_FUNC_HANDLE(Handle##mgmtFrameType, const MgmtFrame<mgmtFrameType>&, \
                                const wlan_rx_info_t&)
 
-#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(mgmtFrameType)                 \
-    zx_status_t HandleFrameInternal(const MgmtFrame<mgmtFrameType>& frame, \
-                                    const wlan_rx_info_t& info) {          \
-        if (ShouldDropMgmtFrame(*frame.hdr)) { return ZX_ERR_STOP; }       \
-        return Handle##mgmtFrameType(frame, info);                         \
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(mgmtFrameType)                     \
+    zx_status_t HandleMgmtFrameInternal(const MgmtFrame<mgmtFrameType>& frame, \
+                                        const wlan_rx_info_t& info) {          \
+        return Handle##mgmtFrameType(frame, info);                             \
     }
 
-#define WLAN_DECL_VIRT_FUNC_HANDLE_DATA(methodName, args...) \
-    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##methodName, args, const wlan_rx_info_t&)
+#define WLAN_DECL_VIRT_FUNC_HANDLE_DATA(methodName, BodyType)                  \
+    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##methodName, const DataFrame<BodyType>&, \
+                               const wlan_rx_info_t&)
+
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(methodName, BodyType)         \
+    zx_status_t HandleDataFrameInternal(const DataFrame<BodyType>& frame, \
+                                        const wlan_rx_info_t& rxinfo) {   \
+        return Handle##methodName(frame, rxinfo);                         \
+    }
 
 namespace wlan {
 
@@ -68,6 +73,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
         // Do not forward frame if processing failed.
         if (status != ZX_OK) { return status; }
 
+        // TODO(hahnr): Extract forwarding logic into dedicated component.
         // Forward frame to all children.
         uint16_t i = 0;
         for (auto& handler : children_) {
@@ -96,7 +102,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_VIRT_FUNC_HANDLE(HandleEthFrame, const BaseFrame<EthernetII>& frame)
 
     // Service Message handlers.
-    virtual bool ShouldDropMlmeMessage(Method& method) { return false; }
+    virtual bool ShouldDropMlmeMessage(const Method& method) { return false; }
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
@@ -110,8 +116,8 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
     // Data frame handlers.
     virtual bool ShouldDropDataFrame(const DataFrameHeader& hdr) { return false; }
-    WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, const DataFrameHeader&)
-    WLAN_DECL_VIRT_FUNC_HANDLE_DATA(DataFrame, const DataFrame<LlcHeader>&)
+    WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, NilHeader)
+    WLAN_DECL_VIRT_FUNC_HANDLE_DATA(DataFrame, LlcHeader)
 
     // Management frame handlers.
     virtual bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) { return false; }
@@ -126,6 +132,11 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
    private:
     // Internal Service Message handlers.
+    template <typename Message>
+    zx_status_t HandleFrameInternal(const Method& method, const Message& msg) {
+        if (ShouldDropMlmeMessage(method)) { return ZX_ERR_STOP; }
+        return HandleMlmeFrameInternal(method, msg);
+    }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
@@ -138,6 +149,11 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
 
     // Internal Management frame handlers.
+    template <typename Body>
+    zx_status_t HandleFrameInternal(const MgmtFrame<Body>& frame, const wlan_rx_info_t& info) {
+        if (ShouldDropMgmtFrame(*frame.hdr)) { return ZX_ERR_STOP; }
+        return HandleMgmtFrameInternal(frame, info);
+    }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Beacon)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(ProbeResponse)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Authentication)
@@ -147,21 +163,20 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Disassociation)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaRequestFrame)
 
+    // Internal Ethernet frame handlers.
     zx_status_t HandleFrameInternal(const BaseFrame<EthernetII>& frame) {
-        if (ShouldDropEthFrame(frame)) { return ZX_ERR_NOT_SUPPORTED; }
+        if (ShouldDropEthFrame(frame)) { return ZX_ERR_STOP; }
         return HandleEthFrame(frame);
     }
 
-    zx_status_t HandleFrameInternal(const DataFrameHeader& hdr, const wlan_rx_info_t& rxinfo) {
-        if (ShouldDropDataFrame(hdr)) { return ZX_ERR_NOT_SUPPORTED; }
-        return HandleNullDataFrame(hdr, rxinfo);
+    // Internal Data frame handlers.
+    template <typename Body>
+    zx_status_t HandleFrameInternal(const DataFrame<Body>& frame, const wlan_rx_info_t& info) {
+        if (ShouldDropDataFrame(*frame.hdr)) { return ZX_ERR_STOP; }
+        return HandleDataFrameInternal(frame, info);
     }
-
-    zx_status_t HandleFrameInternal(const DataFrame<LlcHeader>& frame,
-                                    const wlan_rx_info_t& rxinfo) {
-        if (ShouldDropDataFrame(*frame.hdr)) { return ZX_ERR_NOT_SUPPORTED; }
-        return HandleDataFrame(frame, rxinfo);
-    }
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(NullDataFrame, NilHeader)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(DataFrame, LlcHeader)
 
     std::vector<fbl::RefPtr<FrameHandler>> children_;
 };

@@ -41,7 +41,7 @@ void Station::Reset() {
     bssid_.Reset();
 }
 
-bool Station::ShouldDropMlmeMessage(Method& method) {
+bool Station::ShouldDropMlmeMessage(const Method& method) {
     // Always allow MLME-JOIN.request.
     if (method == Method::JOIN_request) { return false; }
     // Drop other MLME requests if there is no BSSID set yet.
@@ -607,11 +607,12 @@ bool Station::ShouldDropDataFrame(const DataFrameHeader& hdr) {
     return !from_bss || !associated;
 }
 
-zx_status_t Station::HandleNullDataFrame(const DataFrameHeader& hdr, const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
+                                         const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(hdr.fc.subtype() == DataSubtype::kNull);
+    ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == DataSubtype::kNull);
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(hdr.addr2 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.

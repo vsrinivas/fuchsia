@@ -193,9 +193,10 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
     ZX_DEBUG_ASSERT(rxinfo);
 
     switch (hdr->fc.subtype()) {
-    case DataSubtype::kNull:
-        // TODO(hahnr): Use DataFrame with an empty body rather than the header directly.
-        return mlme_->HandleFrame(*hdr, *rxinfo);
+    case DataSubtype::kNull: {
+        auto frame = DataFrame<NilHeader>(hdr, nullptr, 0);
+        return mlme_->HandleFrame(frame, *rxinfo);
+    }
     case DataSubtype::kDataSubtype:
         // Fall-through
     case DataSubtype::kQosdata:

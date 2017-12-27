@@ -633,6 +633,7 @@ template <typename Header, typename Body> struct Frame {
 };
 
 using Payload = uint8_t;
+struct NilHeader {};
 
 // Frame which contains a known header but unknown payload.
 template <typename Header> using BaseFrame = Frame<Header, Payload>;
