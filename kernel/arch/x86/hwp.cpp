@@ -5,18 +5,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <zircon/compiler.h>
+#include <arch/x86/feature.h>
 #include <err.h>
 #include <inttypes.h>
-#include <string.h>
-#include <arch/x86/feature.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
+#include <kernel/spinlock.h>
 #include <lib/console.h>
+#include <string.h>
+#include <zircon/compiler.h>
 
 static bool hwp_enabled = false;
 
-static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock lock;
 
 static void hwp_enable_sync_task(void* ctx)
 {

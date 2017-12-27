@@ -20,18 +20,19 @@
  ****************************************************************************/
 
 #include <arch/ops.h>
+#include <arch/x86/feature.h>
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
-#include <arch/x86/feature.h>
 #include <arch/x86/proc_trace.h>
 #include <arch/x86/registers.h>
+#include <fbl/auto_call.h>
 #include <inttypes.h>
-#include <zircon/compiler.h>
+#include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <fbl/auto_call.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/compiler.h>
 
 #define LOCAL_TRACE 0
 
@@ -81,7 +82,7 @@ static bool fxsave_supported = false;
 /* Maximum register state size */
 static size_t register_state_size = 0;
 /* Spinlock to guard register state size changes */
-static spin_lock_t state_lock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock state_lock;
 
 /* For FXRSTOR, we need 512 bytes to save the state.  For XSAVE-based
  * mechanisms, we only need 512 + 64 bytes for the initial state, since
@@ -444,14 +445,13 @@ static void recompute_state_size(void) {
         new_size = leaf.b;
     }
 
-    spin_lock(&state_lock);
+    AutoSpinLock guard(&state_lock);
     /* Only allow size to increase; all CPUs should converge to the same value,
      * but for sanity let's keep it monotonically increasing */
     if (new_size > register_state_size) {
         register_state_size = new_size;
         DEBUG_ASSERT(register_state_size <= X86_MAX_EXTENDED_REGISTER_SIZE);
     }
-    spin_unlock(&state_lock);
 }
 
 static void fxsave(void *register_state)
