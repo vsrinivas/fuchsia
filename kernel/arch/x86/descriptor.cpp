@@ -6,36 +6,34 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
+#include <arch/arch_ops.h>
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/idt.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
-#include <arch/arch_ops.h>
 #include <assert.h>
 #include <bits.h>
-#include <zircon/compiler.h>
 #include <err.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/compiler.h>
 
 #define TSS_DESC_BUSY_BIT (1ull << 41)
 
 /* the main global gdt in the system, declared in assembly */
 extern uint8_t _gdt[];
-static void x86_tss_assign_ists(struct x86_percpu *percpu, tss_t *tss);
+static void x86_tss_assign_ists(struct x86_percpu* percpu, tss_t* tss);
 
 struct task_desc {
     uint64_t low;
     uint64_t high;
 } __PACKED;
 
-void x86_initialize_percpu_tss(void)
-{
-    struct x86_percpu *percpu = x86_get_percpu();
+void x86_initialize_percpu_tss(void) {
+    struct x86_percpu* percpu = x86_get_percpu();
     uint cpu_num = percpu->cpu_num;
-    tss_t *tss = &percpu->default_tss;
+    tss_t* tss = &percpu->default_tss;
     memset(tss, 0, sizeof(*tss));
 
     /* zeroed out TSS is okay for now */
@@ -50,30 +48,26 @@ void x86_initialize_percpu_tss(void)
     x86_ltr(TSS_SELECTOR(cpu_num));
 }
 
-static void x86_tss_assign_ists(struct x86_percpu *percpu, tss_t *tss)
-{
+static void x86_tss_assign_ists(struct x86_percpu* percpu, tss_t* tss) {
     tss->ist1 = (uintptr_t)&percpu->interrupt_stacks[0] + PAGE_SIZE;
     tss->ist2 = (uintptr_t)&percpu->interrupt_stacks[1] + PAGE_SIZE;
     tss->ist3 = (uintptr_t)&percpu->interrupt_stacks[2] + PAGE_SIZE;
 }
 
-void x86_set_tss_sp(vaddr_t sp)
-{
-    tss_t *tss = &x86_get_percpu()->default_tss;
+void x86_set_tss_sp(vaddr_t sp) {
+    tss_t* tss = &x86_get_percpu()->default_tss;
     tss->rsp0 = sp;
 }
 
-void x86_clear_tss_busy(seg_sel_t sel)
-{
+void x86_clear_tss_busy(seg_sel_t sel) {
     uint index = sel >> 3;
-    struct task_desc *desc = (struct task_desc *)(_gdt + index * 8);
+    struct task_desc* desc = (struct task_desc*)(_gdt + index * 8);
     desc->low &= ~TSS_DESC_BUSY_BIT;
 }
 
 void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
-                                      uint8_t present, uint8_t ring, uint8_t sys,
-                                      uint8_t type, uint8_t gran, uint8_t bits)
-{
+                        uint8_t present, uint8_t ring, uint8_t sys,
+                        uint8_t type, uint8_t gran, uint8_t bits) {
     // 64 bit descriptor structure
     struct seg_desc_64 {
         uint16_t limit_15_0;
@@ -118,6 +112,6 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
     uint index = sel >> 3;
 
     // for x86_64 index is still in units of 8 bytes into the gdt table
-    struct seg_desc_64 *g = (struct seg_desc_64 *)(_gdt + index * 8);
+    struct seg_desc_64* g = (struct seg_desc_64*)(_gdt + index * 8);
     *g = entry;
 }

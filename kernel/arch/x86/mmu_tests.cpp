@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <unittest.h>
-#include <err.h>
 #include <arch/aspace.h>
 #include <arch/mmu.h>
 #include <arch/x86/mmu.h>
+#include <err.h>
+#include <unittest.h>
 #include <vm/arch_vm_aspace.h>
 #include <zircon/types.h>
 

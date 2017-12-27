@@ -20,8 +20,8 @@
  ****************************************************************************/
 
 #include <arch/ops.h>
-#include <arch/x86/feature.h>
 #include <arch/x86.h>
+#include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
 #include <arch/x86/registers.h>
@@ -41,17 +41,17 @@
 #define XSAVE_EXTENDED_AREA_OFFSET 576
 /* bits 2 through 62 of state vector can optionally be set */
 #define XSAVE_MAX_EXT_COMPONENTS 61
-#define XSAVE_XCOMP_BV_COMPACT (1ULL<<63)
+#define XSAVE_XCOMP_BV_COMPACT (1ULL << 63)
 #define XSAVE_STATE_PT_BIT 8
 #define XSAVE_STATE_MAX_BIT 62
 
-static void fxsave(void *register_state);
-static void fxrstor(void *register_state);
-static void xrstor(void *register_state, uint64_t feature_mask);
-static void xrstors(void *register_state, uint64_t feature_mask);
-static void xsave(void *register_state, uint64_t feature_mask);
-static void xsaveopt(void *register_state, uint64_t feature_mask);
-static void xsaves(void *register_state, uint64_t feature_mask);
+static void fxsave(void* register_state);
+static void fxrstor(void* register_state);
+static void xrstor(void* register_state, uint64_t feature_mask);
+static void xrstors(void* register_state, uint64_t feature_mask);
+static void xsave(void* register_state, uint64_t feature_mask);
+static void xsaveopt(void* register_state, uint64_t feature_mask);
+static void xsaves(void* register_state, uint64_t feature_mask);
 
 static void read_xsave_state_info(void);
 static void recompute_state_size(void);
@@ -107,8 +107,7 @@ struct xsave_area {
     uint8_t extended_region[];
 } __PACKED;
 
-static void x86_extended_register_cpu_init(void)
-{
+static void x86_extended_register_cpu_init(void) {
     if (likely(xsave_supported)) {
         ulong cr4 = x86_get_cr4();
         /* Enable XSAVE feature set */
@@ -119,14 +118,13 @@ static void x86_extended_register_cpu_init(void)
 
     /* Enable the FPU */
     __UNUSED bool enabled = x86_extended_register_enable_feature(
-            X86_EXTENDED_REGISTER_X87);
+        X86_EXTENDED_REGISTER_X87);
     DEBUG_ASSERT(enabled);
 }
 
 /* Figure out what forms of register saving this machine supports and
  * select the best one */
-void x86_extended_register_init(void)
-{
+void x86_extended_register_init(void) {
     /* Have we already read the cpu support info */
     static bool info_initialized = false;
     bool initialized_cpu_already = false;
@@ -149,8 +147,8 @@ void x86_extended_register_init(void)
             if (xsave_supported) {
                 /* The only change we want to make to the init state is having
                  * SIMD exceptions masked */
-                struct xsave_area *area =
-                        (struct xsave_area *)extended_register_init_state;
+                struct xsave_area* area =
+                    (struct xsave_area*)extended_register_init_state;
                 area->xstate_bv |= X86_XSAVE_STATE_SSE;
                 area->mxcsr = 0x3f << 7;
 
@@ -182,105 +180,110 @@ void x86_extended_register_init(void)
 }
 
 bool x86_extended_register_enable_feature(
-        enum x86_extended_register_feature feature)
-{
+    enum x86_extended_register_feature feature) {
     /* We currently assume this is only called during initialization.
      * We rely on interrupts being disabled so xgetbv/xsetbv will not be
      * racey */
     DEBUG_ASSERT(arch_ints_disabled());
 
     switch (feature) {
-        case X86_EXTENDED_REGISTER_X87: {
-            if (unlikely(!x86_feature_test(X86_FEATURE_FPU) ||
-                         (!fxsave_supported && !xsave_supported))) {
-                return false;
-            }
-
-            /* No x87 emul, monitor co-processor */
-            ulong cr0 = x86_get_cr0();
-            cr0 &= ~X86_CR0_EM;
-            cr0 |= X86_CR0_NE;
-            cr0 |= X86_CR0_MP;
-            x86_set_cr0(cr0);
-
-            /* Init x87, starts with exceptions masked */
-            __asm__ __volatile__ ("finit" : : : "memory");
-
-            if (likely(xsave_supported)) {
-                x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_X87);
-            }
-            break;
-        }
-        case X86_EXTENDED_REGISTER_SSE: {
-            if (unlikely(
-                    !x86_feature_test(X86_FEATURE_SSE) ||
-                    !x86_feature_test(X86_FEATURE_FXSR))) {
-
-                return false;
-            }
-
-            /* Init SSE */
-            ulong cr4 = x86_get_cr4();
-            cr4 |= X86_CR4_OSXMMEXPT;
-            cr4 |= X86_CR4_OSFXSR;
-            x86_set_cr4(cr4);
-
-            /* mask all exceptions */
-            uint32_t mxcsr = 0;
-            __asm__ __volatile__("stmxcsr %0" : "=m" (mxcsr));
-            mxcsr = (0x3f << 7);
-            __asm__ __volatile__("ldmxcsr %0" : : "m" (mxcsr));
-
-            if (likely(xsave_supported)) {
-                x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_SSE);
-            }
-            break;
-        }
-        case X86_EXTENDED_REGISTER_AVX: {
-            if (!xsave_supported ||
-                !(xcr0_component_bitmap & X86_XSAVE_STATE_AVX)) {
-                return false;
-            }
-
-            /* Enable SIMD exceptions */
-            ulong cr4 = x86_get_cr4();
-            cr4 |= X86_CR4_OSXMMEXPT;
-            x86_set_cr4(cr4);
-
-            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_AVX);
-            break;
-        }
-        case X86_EXTENDED_REGISTER_MPX: {
-            /* Currently unsupported */
+    case X86_EXTENDED_REGISTER_X87: {
+        if (unlikely(!x86_feature_test(X86_FEATURE_FPU) ||
+                     (!fxsave_supported && !xsave_supported))) {
             return false;
         }
-        case X86_EXTENDED_REGISTER_AVX512: {
-            const uint64_t xsave_avx512 =
-                    X86_XSAVE_STATE_AVX512_OPMASK |
-                    X86_XSAVE_STATE_AVX512_LOWERZMM_HIGH |
-                    X86_XSAVE_STATE_AVX512_HIGHERZMM;
 
-            if (!xsave_supported ||
-                (xcr0_component_bitmap & xsave_avx512) != xsave_avx512) {
-                return false;
-            }
-            x86_xsetbv(0, x86_xgetbv(0) | xsave_avx512);
-            break;
+        /* No x87 emul, monitor co-processor */
+        ulong cr0 = x86_get_cr0();
+        cr0 &= ~X86_CR0_EM;
+        cr0 |= X86_CR0_NE;
+        cr0 |= X86_CR0_MP;
+        x86_set_cr0(cr0);
+
+        /* Init x87, starts with exceptions masked */
+        __asm__ __volatile__("finit"
+                             :
+                             :
+                             : "memory");
+
+        if (likely(xsave_supported)) {
+            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_X87);
         }
-        case X86_EXTENDED_REGISTER_PT: {
-            if (!xsaves_supported ||
-                !(xss_component_bitmap & X86_XSAVE_STATE_PT)) {
-                return false;
-            }
-            x86_set_extended_register_pt_state(true);
-            break;
-        }
-        case X86_EXTENDED_REGISTER_PKRU: {
-            /* Currently unsupported */
+        break;
+    }
+    case X86_EXTENDED_REGISTER_SSE: {
+        if (unlikely(
+                !x86_feature_test(X86_FEATURE_SSE) ||
+                !x86_feature_test(X86_FEATURE_FXSR))) {
+
             return false;
         }
-        default:
+
+        /* Init SSE */
+        ulong cr4 = x86_get_cr4();
+        cr4 |= X86_CR4_OSXMMEXPT;
+        cr4 |= X86_CR4_OSFXSR;
+        x86_set_cr4(cr4);
+
+        /* mask all exceptions */
+        uint32_t mxcsr = 0;
+        __asm__ __volatile__("stmxcsr %0"
+                             : "=m"(mxcsr));
+        mxcsr = (0x3f << 7);
+        __asm__ __volatile__("ldmxcsr %0"
+                             :
+                             : "m"(mxcsr));
+
+        if (likely(xsave_supported)) {
+            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_SSE);
+        }
+        break;
+    }
+    case X86_EXTENDED_REGISTER_AVX: {
+        if (!xsave_supported ||
+            !(xcr0_component_bitmap & X86_XSAVE_STATE_AVX)) {
             return false;
+        }
+
+        /* Enable SIMD exceptions */
+        ulong cr4 = x86_get_cr4();
+        cr4 |= X86_CR4_OSXMMEXPT;
+        x86_set_cr4(cr4);
+
+        x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_AVX);
+        break;
+    }
+    case X86_EXTENDED_REGISTER_MPX: {
+        /* Currently unsupported */
+        return false;
+    }
+    case X86_EXTENDED_REGISTER_AVX512: {
+        const uint64_t xsave_avx512 =
+            X86_XSAVE_STATE_AVX512_OPMASK |
+            X86_XSAVE_STATE_AVX512_LOWERZMM_HIGH |
+            X86_XSAVE_STATE_AVX512_HIGHERZMM;
+
+        if (!xsave_supported ||
+            (xcr0_component_bitmap & xsave_avx512) != xsave_avx512) {
+            return false;
+        }
+        x86_xsetbv(0, x86_xgetbv(0) | xsave_avx512);
+        break;
+    }
+    case X86_EXTENDED_REGISTER_PT: {
+        if (!xsaves_supported ||
+            !(xss_component_bitmap & X86_XSAVE_STATE_PT)) {
+            return false;
+        }
+        x86_set_extended_register_pt_state(true);
+        break;
+    }
+    case X86_EXTENDED_REGISTER_PKRU: {
+        /* Currently unsupported */
+        return false;
+    }
+    default:
+        return false;
     }
 
     recompute_state_size();
@@ -291,15 +294,13 @@ size_t x86_extended_register_size(void) {
     return register_state_size;
 }
 
-void x86_extended_register_init_state(void *register_state)
-{
+void x86_extended_register_init_state(void* register_state) {
     // Copy the initialization state; this overcopies on systems that fall back
     // to fxsave, but the buffer is required to be large enough.
     memcpy(register_state, extended_register_init_state, sizeof(extended_register_init_state));
 }
 
-void x86_extended_register_save_state(void *register_state)
-{
+void x86_extended_register_save_state(void* register_state) {
     /* The idle threads have no extended register state */
     if (unlikely(!register_state)) {
         return;
@@ -316,8 +317,7 @@ void x86_extended_register_save_state(void *register_state)
     }
 }
 
-void x86_extended_register_restore_state(void *register_state)
-{
+void x86_extended_register_restore_state(void* register_state) {
     /* The idle threads have no extended register state */
     if (unlikely(!register_state)) {
         return;
@@ -333,16 +333,14 @@ void x86_extended_register_restore_state(void *register_state)
 }
 
 void x86_extended_register_context_switch(
-        thread_t *old_thread, thread_t *new_thread)
-{
+    thread_t* old_thread, thread_t* new_thread) {
     if (likely(old_thread)) {
         x86_extended_register_save_state(old_thread->arch.extended_register_state);
     }
     x86_extended_register_restore_state(new_thread->arch.extended_register_state);
 }
 
-static void read_xsave_state_info(void)
-{
+static void read_xsave_state_info(void) {
     xsave_supported = x86_feature_test(X86_FEATURE_XSAVE);
     if (!xsave_supported) {
         LTRACEF("xsave not supported\n");
@@ -368,9 +366,9 @@ static void read_xsave_state_info(void)
     size_t max_area = XSAVE_EXTENDED_AREA_OFFSET;
 
     x86_get_cpuid_subleaf(X86_CPUID_XSAVE, 1, &leaf);
-    xgetbv_1_supported = !!(leaf.a & (1<<2));
-    xsaves_supported = !!(leaf.a & (1<<3));
-    xsaveopt_supported = !!(leaf.a & (1<<0));
+    xgetbv_1_supported = !!(leaf.a & (1 << 2));
+    xsaves_supported = !!(leaf.a & (1 << 3));
+    xsaveopt_supported = !!(leaf.a & (1 << 0));
     xss_component_bitmap = ((uint64_t)leaf.d << 32) | leaf.c;
 
     LTRACEF("xcr0 bitmap: %016" PRIx64 "\n", xcr0_component_bitmap);
@@ -454,82 +452,72 @@ static void recompute_state_size(void) {
     }
 }
 
-static void fxsave(void *register_state)
-{
+static void fxsave(void* register_state) {
     __asm__ __volatile__("fxsave %0"
-                         : "=m" (*(uint8_t *)register_state)
+                         : "=m"(*(uint8_t*)register_state)
                          :
                          : "memory");
 }
 
-static void fxrstor(void *register_state)
-{
+static void fxrstor(void* register_state) {
     __asm__ __volatile__("fxrstor %0"
                          :
-                         : "m" (*(uint8_t *)register_state)
+                         : "m"(*(uint8_t*)register_state)
                          : "memory");
 }
 
-static void xrstor(void *register_state, uint64_t feature_mask)
-{
+static void xrstor(void* register_state, uint64_t feature_mask) {
     __asm__ volatile("xrstor %0"
                      :
-                     : "m"(*(uint8_t *)register_state),
+                     : "m"(*(uint8_t*)register_state),
                        "d"((uint32_t)(feature_mask >> 32)),
                        "a"((uint32_t)feature_mask)
                      : "memory");
 }
 
-static void xrstors(void *register_state, uint64_t feature_mask)
-{
+static void xrstors(void* register_state, uint64_t feature_mask) {
     __asm__ volatile("xrstors %0"
                      :
-                     : "m"(*(uint8_t *)register_state),
+                     : "m"(*(uint8_t*)register_state),
                        "d"((uint32_t)(feature_mask >> 32)),
                        "a"((uint32_t)feature_mask)
                      : "memory");
 }
 
-
-static void xsave(void *register_state, uint64_t feature_mask)
-{
+static void xsave(void* register_state, uint64_t feature_mask) {
     __asm__ volatile("xsave %0"
-                     : "+m"(*(uint8_t *)register_state)
+                     : "+m"(*(uint8_t*)register_state)
                      : "d"((uint32_t)(feature_mask >> 32)),
                        "a"((uint32_t)feature_mask)
                      : "memory");
 }
 
-static void xsaveopt(void *register_state, uint64_t feature_mask)
-{
+static void xsaveopt(void* register_state, uint64_t feature_mask) {
     __asm__ volatile("xsaveopt %0"
-                     : "+m"(*(uint8_t *)register_state)
+                     : "+m"(*(uint8_t*)register_state)
                      : "d"((uint32_t)(feature_mask >> 32)),
                        "a"((uint32_t)feature_mask)
                      : "memory");
 }
 
-static void xsaves(void *register_state, uint64_t feature_mask)
-{
+static void xsaves(void* register_state, uint64_t feature_mask) {
     __asm__ volatile("xsaves %0"
-                     : "+m"(*(uint8_t *)register_state)
+                     : "+m"(*(uint8_t*)register_state)
                      : "d"((uint32_t)(feature_mask >> 32)),
                        "a"((uint32_t)feature_mask)
                      : "memory");
 }
 
-uint64_t x86_xgetbv(uint32_t reg)
-{
+uint64_t x86_xgetbv(uint32_t reg) {
     uint32_t hi, lo;
     __asm__ volatile("xgetbv"
-                     : "=d" (hi), "=a" (lo)
+                     : "=d"(hi), "=a"(lo)
                      : "c"(reg)
                      : "memory");
     return ((uint64_t)hi << 32) + lo;
 }
 
-void x86_xsetbv(uint32_t reg, uint64_t val)
-{
+void x86_xsetbv(uint32_t reg, uint64_t val) {
     __asm__ volatile("xsetbv"
                      :
                      : "c"(reg), "d"((uint32_t)(val >> 32)), "a"((uint32_t)val)

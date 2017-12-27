@@ -7,17 +7,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
-#include <assert.h>
-#include <zircon/compiler.h>
-#include <debug.h>
-#include <err.h>
-#include <trace.h>
-#include <assert.h>
-#include <inttypes.h>
 #include <arch.h>
-#include <arch/ops.h>
+#include <arch/mmu.h>
 #include <arch/mp.h>
+#include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
@@ -28,36 +21,40 @@
 #include <arch/x86/perf_mon.h>
 #include <arch/x86/proc_trace.h>
 #include <arch/x86/tsc.h>
-#include <arch/mmu.h>
+#include <assert.h>
+#include <assert.h>
+#include <debug.h>
+#include <err.h>
+#include <inttypes.h>
 #include <lib/console.h>
 #include <lk/init.h>
 #include <lk/main.h>
 #include <platform.h>
-#include <sys/types.h>
 #include <string.h>
+#include <sys/types.h>
+#include <trace.h>
 #include <vm/vm.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
 /* save a pointer to the multiboot information coming in from whoever called us */
-void *_multiboot_info;
+void* _multiboot_info;
 
 /* save a pointer to the bootdata, if present */
-void *_bootdata_base;
+void* _bootdata_base;
 
-void arch_early_init(void)
-{
+void arch_early_init(void) {
     x86_mmu_early_init();
 }
 
-void arch_init(void)
-{
+void arch_init(void) {
     const struct x86_model_info* model = x86_get_model();
     printf("Processor Model Info: type %#x family %#x model %#x stepping %#x\n",
-        model->processor_type, model->family, model->model, model->stepping);
+           model->processor_type, model->family, model->model, model->stepping);
     printf("\tdisplay_family %#x display_model %#x\n",
-        model->display_family, model->display_model);
+           model->display_family, model->display_model);
 
     x86_feature_debug();
 
@@ -119,8 +116,8 @@ void arch_resume(void) {
     apic_io_restore();
 }
 
-[[noreturn, gnu::noinline]] static void finish_secondary_entry(
-    volatile int *aps_still_booting, thread_t *thread, uint cpu_num) {
+[[ noreturn, gnu::noinline ]] static void finish_secondary_entry(
+    volatile int* aps_still_booting, thread_t* thread, uint cpu_num) {
 
     // Signal that this CPU is initialized.  It is important that after this
     // operation, we do not touch any resources associated with bootstrap
@@ -152,12 +149,12 @@ void arch_resume(void) {
 
     lk_secondary_cpu_entry();
 
-    // lk_secondary_cpu_entry only returns on an error, halt the core in this
-    // case.
+// lk_secondary_cpu_entry only returns on an error, halt the core in this
+// case.
 fail:
     arch_disable_ints();
     while (1) {
-      x86_hlt();
+        x86_hlt();
     }
 }
 
@@ -166,9 +163,8 @@ fail:
 // this function is simple enough that the compiler won't
 // want to generate stack-protector prologue/epilogue code,
 // which would use %gs.
-__NO_SAFESTACK __NO_RETURN
-void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
-{
+__NO_SAFESTACK __NO_RETURN void x86_secondary_entry(volatile int* aps_still_booting,
+                                                    thread_t* thread) {
     // Would prefer this to be in init_percpu, but there is a dependency on a
     // page mapping existing, and the BP calls that before the VM subsystem is
     // initialized.
@@ -189,7 +185,7 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     // Set %gs.base to our percpu struct.  This has to be done before
     // calling x86_init_percpu, which initializes most of that struct, so
     // that x86_init_percpu can use safe-stack and/or stack-protector code.
-    struct x86_percpu *const percpu = &ap_percpus[cpu_num - 1];
+    struct x86_percpu* const percpu = &ap_percpus[cpu_num - 1];
     write_msr(X86_MSR_IA32_GS_BASE, (uintptr_t)percpu);
 
     // Copy the stack-guard value from the boot CPU's perpcu.
@@ -209,11 +205,10 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     finish_secondary_entry(aps_still_booting, thread, cpu_num);
 }
 
-static int cmd_cpu(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
         printf("not enough arguments\n");
-usage:
+    usage:
         printf("usage:\n");
         printf("%s features\n", argv[0].str);
         printf("%s unplug <cpu_id>\n", argv[0].str);

@@ -36,8 +36,7 @@ static int initialized = 0;
 static enum x86_microarch_list get_microarch(struct x86_model_info* info);
 static void select_microarch_config(void);
 
-void x86_feature_init(void)
-{
+void x86_feature_init(void) {
     if (atomic_swap(&initialized, 1)) {
         return;
     }
@@ -114,55 +113,54 @@ void x86_feature_init(void)
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
     if (x86_vendor == X86_VENDOR_INTEL && info->family == 0x6) {
         switch (info->display_model) {
-            case 0x1a: /* Nehalem */
-            case 0x1e: /* Nehalem */
-            case 0x1f: /* Nehalem */
-            case 0x2e: /* Nehalem */
-                return X86_MICROARCH_INTEL_NEHALEM;
-            case 0x25: /* Westmere */
-            case 0x2c: /* Westmere */
-            case 0x2f: /* Westmere */
-                return X86_MICROARCH_INTEL_WESTMERE;
-            case 0x2a: /* Sandy Bridge */
-            case 0x2d: /* Sandy Bridge EP */
-                return X86_MICROARCH_INTEL_SANDY_BRIDGE;
-            case 0x3a: /* Ivy Bridge */
-            case 0x3e: /* Ivy Bridge EP */
-                return X86_MICROARCH_INTEL_IVY_BRIDGE;
-            case 0x3c: /* Haswell DT */
-            case 0x3f: /* Haswell MB */
-            case 0x45: /* Haswell ULT */
-            case 0x46: /* Haswell ULX */
-                return X86_MICROARCH_INTEL_HASWELL;
-            case 0x3d: /* Broadwell */
-            case 0x47: /* Broadwell H */
-            case 0x56: /* Broadwell EP */
-            case 0x4f: /* Broadwell EX */
-                return X86_MICROARCH_INTEL_BROADWELL;
-            case 0x4e: /* Skylake Y/U */
-            case 0x5e: /* Skylake H/S */
-            case 0x55: /* Skylake E */
-                return X86_MICROARCH_INTEL_SKYLAKE;
-            case 0x8e: /* Kabylake Y/U */
-            case 0x9e: /* Kabylake H/S */
-                return X86_MICROARCH_INTEL_KABYLAKE;
+        case 0x1a: /* Nehalem */
+        case 0x1e: /* Nehalem */
+        case 0x1f: /* Nehalem */
+        case 0x2e: /* Nehalem */
+            return X86_MICROARCH_INTEL_NEHALEM;
+        case 0x25: /* Westmere */
+        case 0x2c: /* Westmere */
+        case 0x2f: /* Westmere */
+            return X86_MICROARCH_INTEL_WESTMERE;
+        case 0x2a: /* Sandy Bridge */
+        case 0x2d: /* Sandy Bridge EP */
+            return X86_MICROARCH_INTEL_SANDY_BRIDGE;
+        case 0x3a: /* Ivy Bridge */
+        case 0x3e: /* Ivy Bridge EP */
+            return X86_MICROARCH_INTEL_IVY_BRIDGE;
+        case 0x3c: /* Haswell DT */
+        case 0x3f: /* Haswell MB */
+        case 0x45: /* Haswell ULT */
+        case 0x46: /* Haswell ULX */
+            return X86_MICROARCH_INTEL_HASWELL;
+        case 0x3d: /* Broadwell */
+        case 0x47: /* Broadwell H */
+        case 0x56: /* Broadwell EP */
+        case 0x4f: /* Broadwell EX */
+            return X86_MICROARCH_INTEL_BROADWELL;
+        case 0x4e: /* Skylake Y/U */
+        case 0x5e: /* Skylake H/S */
+        case 0x55: /* Skylake E */
+            return X86_MICROARCH_INTEL_SKYLAKE;
+        case 0x8e: /* Kabylake Y/U */
+        case 0x9e: /* Kabylake H/S */
+            return X86_MICROARCH_INTEL_KABYLAKE;
         }
     } else if (x86_vendor == X86_VENDOR_AMD && info->family == 0xf) {
         switch (info->display_family) { // zen
-            case 0x15: /* Bulldozer */
-                return X86_MICROARCH_AMD_BULLDOZER;
-            case 0x16: /* Jaguar */
-                return X86_MICROARCH_AMD_JAGUAR;
-            case 0x17: /* Zen */
-                return X86_MICROARCH_AMD_ZEN;
+        case 0x15:                      /* Bulldozer */
+            return X86_MICROARCH_AMD_BULLDOZER;
+        case 0x16: /* Jaguar */
+            return X86_MICROARCH_AMD_JAGUAR;
+        case 0x17: /* Zen */
+            return X86_MICROARCH_AMD_ZEN;
         }
     }
     return X86_MICROARCH_UNKNOWN;
 }
 
 bool x86_get_cpuid_subleaf(
-        enum x86_cpuid_leaf_num num, uint32_t subleaf, struct cpuid_leaf *leaf)
-{
+    enum x86_cpuid_leaf_num num, uint32_t subleaf, struct cpuid_leaf* leaf) {
     if (num < X86_CPUID_EXT_BASE) {
         if (num > max_cpuid)
             return false;
@@ -174,8 +172,7 @@ bool x86_get_cpuid_subleaf(
     return true;
 }
 
-bool x86_topology_enumerate(uint8_t level, struct x86_topology_level *info)
-{
+bool x86_topology_enumerate(uint8_t level, struct x86_topology_level* info) {
     DEBUG_ASSERT(info);
 
     uint32_t eax, ebx, ecx, edx;
@@ -191,76 +188,104 @@ bool x86_topology_enumerate(uint8_t level, struct x86_topology_level *info)
     return true;
 }
 
-const struct x86_model_info * x86_get_model(void)
-{
+const struct x86_model_info* x86_get_model(void) {
     return &model_info;
 }
 
-void x86_feature_debug(void)
-{
+void x86_feature_debug(void) {
     const struct {
         struct x86_cpuid_bit bit;
-        const char *name;
+        const char* name;
     } features[] = {
-        { X86_FEATURE_FPU, "fpu" },
-        { X86_FEATURE_SSE, "sse" },
-        { X86_FEATURE_SSE2, "sse2" },
-        { X86_FEATURE_SSE3, "sse3" },
-        { X86_FEATURE_SSSE3, "ssse3" },
-        { X86_FEATURE_SSE4_1, "sse4.1" },
-        { X86_FEATURE_SSE4_2, "sse4.2" },
-        { X86_FEATURE_MMX, "mmx" },
-        { X86_FEATURE_AVX, "avx" },
-        { X86_FEATURE_AVX2, "avx2" },
-        { X86_FEATURE_FXSR, "fxsr" },
-        { X86_FEATURE_XSAVE, "xsave" },
-        { X86_FEATURE_AESNI, "aesni" },
-        { X86_FEATURE_CLFLUSH, "clflush" },
-        { X86_FEATURE_CLFLUSHOPT, "clflushopt" },
-        { X86_FEATURE_CLWB, "clwb" },
-        { X86_FEATURE_FSGSBASE, "fsgsbase" },
-        { X86_FEATURE_TSC_ADJUST, "tsc_adj" },
-        { X86_FEATURE_SMEP, "smep" },
-        { X86_FEATURE_SMAP, "smap" },
-        { X86_FEATURE_ERMS, "erms" },
-        { X86_FEATURE_RDRAND, "rdrand" },
-        { X86_FEATURE_RDSEED, "rdseed" },
-        { X86_FEATURE_PKU, "pku" },
-        { X86_FEATURE_SYSCALL, "syscall" },
-        { X86_FEATURE_NX, "nx" },
-        { X86_FEATURE_HUGE_PAGE, "huge" },
-        { X86_FEATURE_RDTSCP, "rdtscp" },
-        { X86_FEATURE_INVAR_TSC, "invar_tsc" },
-        { X86_FEATURE_TSC_DEADLINE, "tsc_deadline" },
-        { X86_FEATURE_X2APIC, "x2apic" },
-        { X86_FEATURE_VMX, "vmx" },
-        { X86_FEATURE_HYPERVISOR, "hypervisor" },
-        { X86_FEATURE_PT, "pt" },
-        { X86_FEATURE_HWP, "hwp" },
+        {X86_FEATURE_FPU, "fpu"},
+        {X86_FEATURE_SSE, "sse"},
+        {X86_FEATURE_SSE2, "sse2"},
+        {X86_FEATURE_SSE3, "sse3"},
+        {X86_FEATURE_SSSE3, "ssse3"},
+        {X86_FEATURE_SSE4_1, "sse4.1"},
+        {X86_FEATURE_SSE4_2, "sse4.2"},
+        {X86_FEATURE_MMX, "mmx"},
+        {X86_FEATURE_AVX, "avx"},
+        {X86_FEATURE_AVX2, "avx2"},
+        {X86_FEATURE_FXSR, "fxsr"},
+        {X86_FEATURE_XSAVE, "xsave"},
+        {X86_FEATURE_AESNI, "aesni"},
+        {X86_FEATURE_CLFLUSH, "clflush"},
+        {X86_FEATURE_CLFLUSHOPT, "clflushopt"},
+        {X86_FEATURE_CLWB, "clwb"},
+        {X86_FEATURE_FSGSBASE, "fsgsbase"},
+        {X86_FEATURE_TSC_ADJUST, "tsc_adj"},
+        {X86_FEATURE_SMEP, "smep"},
+        {X86_FEATURE_SMAP, "smap"},
+        {X86_FEATURE_ERMS, "erms"},
+        {X86_FEATURE_RDRAND, "rdrand"},
+        {X86_FEATURE_RDSEED, "rdseed"},
+        {X86_FEATURE_PKU, "pku"},
+        {X86_FEATURE_SYSCALL, "syscall"},
+        {X86_FEATURE_NX, "nx"},
+        {X86_FEATURE_HUGE_PAGE, "huge"},
+        {X86_FEATURE_RDTSCP, "rdtscp"},
+        {X86_FEATURE_INVAR_TSC, "invar_tsc"},
+        {X86_FEATURE_TSC_DEADLINE, "tsc_deadline"},
+        {X86_FEATURE_X2APIC, "x2apic"},
+        {X86_FEATURE_VMX, "vmx"},
+        {X86_FEATURE_HYPERVISOR, "hypervisor"},
+        {X86_FEATURE_PT, "pt"},
+        {X86_FEATURE_HWP, "hwp"},
     };
 
-    const char *vendor_string = nullptr;
+    const char* vendor_string = nullptr;
     switch (x86_vendor) {
-        case X86_VENDOR_UNKNOWN: vendor_string = "unknown"; break;
-        case X86_VENDOR_INTEL: vendor_string = "Intel"; break;
-        case X86_VENDOR_AMD: vendor_string = "AMD"; break;
+    case X86_VENDOR_UNKNOWN:
+        vendor_string = "unknown";
+        break;
+    case X86_VENDOR_INTEL:
+        vendor_string = "Intel";
+        break;
+    case X86_VENDOR_AMD:
+        vendor_string = "AMD";
+        break;
     }
     printf("Vendor: %s\n", vendor_string);
 
-    const char *microarch_string = nullptr;
+    const char* microarch_string = nullptr;
     switch (x86_microarch) {
-        case X86_MICROARCH_UNKNOWN: microarch_string = "unknown"; break;
-        case X86_MICROARCH_INTEL_NEHALEM: microarch_string = "Nehalem"; break;
-        case X86_MICROARCH_INTEL_WESTMERE: microarch_string = "Westmere"; break;
-        case X86_MICROARCH_INTEL_SANDY_BRIDGE: microarch_string = "Sandy Bridge"; break;
-        case X86_MICROARCH_INTEL_IVY_BRIDGE: microarch_string = "Ivy Bridge"; break;
-        case X86_MICROARCH_INTEL_BROADWELL: microarch_string = "Broadwell"; break;
-        case X86_MICROARCH_INTEL_HASWELL: microarch_string = "Haswell"; break;
-        case X86_MICROARCH_INTEL_SKYLAKE: microarch_string = "Skylake"; break;
-        case X86_MICROARCH_INTEL_KABYLAKE: microarch_string = "Kaby Lake"; break;
-        case X86_MICROARCH_AMD_BULLDOZER: microarch_string = "Bulldozer"; break;
-        case X86_MICROARCH_AMD_JAGUAR: microarch_string = "Jaguar"; break;
-        case X86_MICROARCH_AMD_ZEN: microarch_string = "Zen"; break;
+    case X86_MICROARCH_UNKNOWN:
+        microarch_string = "unknown";
+        break;
+    case X86_MICROARCH_INTEL_NEHALEM:
+        microarch_string = "Nehalem";
+        break;
+    case X86_MICROARCH_INTEL_WESTMERE:
+        microarch_string = "Westmere";
+        break;
+    case X86_MICROARCH_INTEL_SANDY_BRIDGE:
+        microarch_string = "Sandy Bridge";
+        break;
+    case X86_MICROARCH_INTEL_IVY_BRIDGE:
+        microarch_string = "Ivy Bridge";
+        break;
+    case X86_MICROARCH_INTEL_BROADWELL:
+        microarch_string = "Broadwell";
+        break;
+    case X86_MICROARCH_INTEL_HASWELL:
+        microarch_string = "Haswell";
+        break;
+    case X86_MICROARCH_INTEL_SKYLAKE:
+        microarch_string = "Skylake";
+        break;
+    case X86_MICROARCH_INTEL_KABYLAKE:
+        microarch_string = "Kaby Lake";
+        break;
+    case X86_MICROARCH_AMD_BULLDOZER:
+        microarch_string = "Bulldozer";
+        break;
+    case X86_MICROARCH_AMD_JAGUAR:
+        microarch_string = "Jaguar";
+        break;
+    case X86_MICROARCH_AMD_ZEN:
+        microarch_string = "Zen";
+        break;
     }
     printf("Microarch: %s\n", microarch_string);
     printf("F/M/S: %x/%x/%x\n", model_info.display_family, model_info.display_model,
@@ -301,7 +326,7 @@ static uint64_t default_apic_freq() {
     // enumerated in the CPUID leaf 0x15, or the processor's bus clock
     // frequency.
 
-    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+    const struct cpuid_leaf* tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
     if (tsc_leaf && tsc_leaf->c != 0) {
         return tsc_leaf->c;
     }
@@ -350,7 +375,7 @@ static uint64_t intel_tsc_freq() {
 
     // If this leaf is present, then 18.18.3 (Determining the Processor Base
     // Frequency) documents this as the nominal TSC frequency.
-    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+    const struct cpuid_leaf* tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
     if (tsc_leaf && tsc_leaf->a) {
         return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
     }
@@ -366,22 +391,22 @@ static uint64_t amd_compute_p_state_clock(uint64_t p_state_msr) {
     // the effective clock rate of a P state
     uint64_t clock = 0;
     switch (x86_microarch) {
-        case X86_MICROARCH_AMD_BULLDOZER:
-        case X86_MICROARCH_AMD_JAGUAR: {
-            uint64_t did = BITS_SHIFT(p_state_msr, 8, 6);
-            uint64_t fid = BITS(p_state_msr, 5, 0);
+    case X86_MICROARCH_AMD_BULLDOZER:
+    case X86_MICROARCH_AMD_JAGUAR: {
+        uint64_t did = BITS_SHIFT(p_state_msr, 8, 6);
+        uint64_t fid = BITS(p_state_msr, 5, 0);
 
-            clock = (100 * (fid + 0x10) / (1 << did)) * 1000 * 1000;
-            break;
-        }
-        case X86_MICROARCH_AMD_ZEN: {
-            uint64_t fid = BITS(p_state_msr, 7, 0);
+        clock = (100 * (fid + 0x10) / (1 << did)) * 1000 * 1000;
+        break;
+    }
+    case X86_MICROARCH_AMD_ZEN: {
+        uint64_t fid = BITS(p_state_msr, 7, 0);
 
-            clock = (fid * 25) * 1000 * 1000;
-            break;
-        }
-        default:
-            break;
+        clock = (fid * 25) * 1000 * 1000;
+        break;
+    }
+    default:
+        break;
     }
 
     return clock;
@@ -399,76 +424,76 @@ static uint64_t zen_tsc_freq() {
 }
 
 // Intel microarches
-static const x86_microarch_config_t kbl_config {
+static const x86_microarch_config_t kbl_config{
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t skl_config {
+static const x86_microarch_config_t skl_config{
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t bdw_config {
+static const x86_microarch_config_t bdw_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t hsw_config {
+static const x86_microarch_config_t hsw_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t ivb_config {
+static const x86_microarch_config_t ivb_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t snb_config {
+static const x86_microarch_config_t snb_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t westmere_config {
+static const x86_microarch_config_t westmere_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t nehalem_config {
+static const x86_microarch_config_t nehalem_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = true,
 };
-static const x86_microarch_config_t intel_default_config {
+static const x86_microarch_config_t intel_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .disable_c1e = false,
 };
 
 // AMD microarches
-static const x86_microarch_config_t zen_config {
+static const x86_microarch_config_t zen_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = zen_tsc_freq,
     .disable_c1e = false,
 };
-static const x86_microarch_config_t jaguar_config {
+static const x86_microarch_config_t jaguar_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
     .disable_c1e = false,
 };
-static const x86_microarch_config_t bulldozer_config {
+static const x86_microarch_config_t bulldozer_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
     .disable_c1e = false,
 };
-static const x86_microarch_config_t amd_default_config {
+static const x86_microarch_config_t amd_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = unknown_freq,
     .disable_c1e = false,
 };
 
 // Unknown vendor config
-static const x86_microarch_config_t unknown_vendor_config {
+static const x86_microarch_config_t unknown_vendor_config{
     .get_apic_freq = unknown_freq,
     .get_tsc_freq = unknown_freq,
     .disable_c1e = false,
@@ -476,25 +501,53 @@ static const x86_microarch_config_t unknown_vendor_config {
 
 void select_microarch_config(void) {
     switch (x86_microarch) {
-        case X86_MICROARCH_INTEL_NEHALEM: x86_microarch_config = &nehalem_config; break;
-        case X86_MICROARCH_INTEL_WESTMERE: x86_microarch_config = &westmere_config; break;
-        case X86_MICROARCH_INTEL_SANDY_BRIDGE: x86_microarch_config = &snb_config; break;
-        case X86_MICROARCH_INTEL_IVY_BRIDGE: x86_microarch_config = &ivb_config; break;
-        case X86_MICROARCH_INTEL_BROADWELL: x86_microarch_config = &bdw_config; break;
-        case X86_MICROARCH_INTEL_HASWELL: x86_microarch_config = &hsw_config; break;
-        case X86_MICROARCH_INTEL_SKYLAKE: x86_microarch_config = &skl_config; break;
-        case X86_MICROARCH_INTEL_KABYLAKE: x86_microarch_config = &kbl_config; break;
-        case X86_MICROARCH_AMD_BULLDOZER: x86_microarch_config = &bulldozer_config; break;
-        case X86_MICROARCH_AMD_JAGUAR: x86_microarch_config = &jaguar_config; break;
-        case X86_MICROARCH_AMD_ZEN: x86_microarch_config = &zen_config; break;
-        case X86_MICROARCH_UNKNOWN: {
-            printf("WARNING: Could not identify microarch.\n");
-            printf("Please file a bug with your boot log and description of hardware.\n");
-            switch (x86_vendor) {
-                case X86_VENDOR_INTEL: x86_microarch_config = &intel_default_config; break;
-                case X86_VENDOR_AMD: x86_microarch_config = &amd_default_config; break;
-                case X86_VENDOR_UNKNOWN: x86_microarch_config = &unknown_vendor_config; break;
-            }
+    case X86_MICROARCH_INTEL_NEHALEM:
+        x86_microarch_config = &nehalem_config;
+        break;
+    case X86_MICROARCH_INTEL_WESTMERE:
+        x86_microarch_config = &westmere_config;
+        break;
+    case X86_MICROARCH_INTEL_SANDY_BRIDGE:
+        x86_microarch_config = &snb_config;
+        break;
+    case X86_MICROARCH_INTEL_IVY_BRIDGE:
+        x86_microarch_config = &ivb_config;
+        break;
+    case X86_MICROARCH_INTEL_BROADWELL:
+        x86_microarch_config = &bdw_config;
+        break;
+    case X86_MICROARCH_INTEL_HASWELL:
+        x86_microarch_config = &hsw_config;
+        break;
+    case X86_MICROARCH_INTEL_SKYLAKE:
+        x86_microarch_config = &skl_config;
+        break;
+    case X86_MICROARCH_INTEL_KABYLAKE:
+        x86_microarch_config = &kbl_config;
+        break;
+    case X86_MICROARCH_AMD_BULLDOZER:
+        x86_microarch_config = &bulldozer_config;
+        break;
+    case X86_MICROARCH_AMD_JAGUAR:
+        x86_microarch_config = &jaguar_config;
+        break;
+    case X86_MICROARCH_AMD_ZEN:
+        x86_microarch_config = &zen_config;
+        break;
+    case X86_MICROARCH_UNKNOWN: {
+        printf("WARNING: Could not identify microarch.\n");
+        printf("Please file a bug with your boot log and description of hardware.\n");
+        switch (x86_vendor) {
+        case X86_VENDOR_INTEL:
+            x86_microarch_config = &intel_default_config;
+            break;
+        case X86_VENDOR_AMD:
+            x86_microarch_config = &amd_default_config;
+            break;
+        case X86_VENDOR_UNKNOWN:
+            x86_microarch_config = &unknown_vendor_config;
+            break;
         }
+    }
     }
 }

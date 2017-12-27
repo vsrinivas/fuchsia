@@ -7,22 +7,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <assert.h>
-#include <sys/types.h>
-#include <string.h>
-#include <stdlib.h>
-#include <debug.h>
-#include <kernel/thread.h>
-#include <kernel/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/registers.h>
 #include <arch/x86/x86intrin.h>
+#include <assert.h>
+#include <debug.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 
-void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
-{
+void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     // create a default stack frame on the stack
     vaddr_t stack_top = (vaddr_t)t->stack + t->stack_size;
 
@@ -34,12 +33,12 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     // of the way the context switch will pop the return address off the stack. After the first
     // context switch, this leaves the stack in unaligned relative to how a called function expects it.
     stack_top -= 8;
-    struct x86_64_context_switch_frame *frame = (struct x86_64_context_switch_frame *)(stack_top);
+    struct x86_64_context_switch_frame* frame = (struct x86_64_context_switch_frame*)(stack_top);
 
     // Record a zero return address so that backtraces will stop here.
     // Otherwise if heap debugging is on, and say there is 99..99 here,
     // then the debugger could try to continue the backtrace from there.
-    memset((void*) stack_top, 0, 8);
+    memset((void*)stack_top, 0, 8);
 
     // move down a frame size and zero it out
     frame--;
@@ -51,8 +50,8 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     vaddr_t buf = ROUNDUP(((vaddr_t)t->arch.extended_register_buffer), 64);
     __UNUSED size_t overhead = buf - (vaddr_t)t->arch.extended_register_buffer;
     DEBUG_ASSERT(sizeof(t->arch.extended_register_buffer) - overhead >=
-            x86_extended_register_size());
-    t->arch.extended_register_state = (vaddr_t *)buf;
+                 x86_extended_register_size());
+    t->arch.extended_register_state = (vaddr_t*)buf;
     x86_extended_register_init_state(t->arch.extended_register_state);
 
     // set the stack pointer
@@ -67,31 +66,26 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     t->arch.gs_base = 0;
 }
 
-void arch_thread_construct_first(thread_t *t)
-{
+void arch_thread_construct_first(thread_t* t) {
 }
 
-void arch_dump_thread(thread_t *t)
-{
+void arch_dump_thread(thread_t* t) {
     if (t->state != THREAD_RUNNING) {
         dprintf(INFO, "\tarch: ");
         dprintf(INFO, "sp %#" PRIxPTR "\n", t->arch.sp);
     }
 }
 
-void* arch_thread_get_blocked_fp(struct thread *t)
-{
+void* arch_thread_get_blocked_fp(struct thread* t) {
     if (!WITH_FRAME_POINTERS)
         return nullptr;
 
-    struct x86_64_context_switch_frame *frame = (struct x86_64_context_switch_frame *)t->arch.sp;
+    struct x86_64_context_switch_frame* frame = (struct x86_64_context_switch_frame*)t->arch.sp;
 
-    return (void *)frame->rbp;
+    return (void*)frame->rbp;
 }
 
-__NO_SAFESTACK __attribute__((target("fsgsbase")))
-void arch_context_switch(thread_t *oldthread, thread_t *newthread)
-{
+__NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thread_t* oldthread, thread_t* newthread) {
     x86_extended_register_context_switch(oldthread, newthread);
 
     //printf("cs 0x%llx\n", kstack_top);
@@ -142,8 +136,8 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
             "rdgsbase %[old_value]\n"
             "wrgsbase %[new_value]\n"
             "swapgs\n"
-            : [old_value] "=&r" (oldthread->arch.gs_base)
-            : [new_value] "r" (newthread->arch.gs_base));
+            : [old_value] "=&r"(oldthread->arch.gs_base)
+            : [new_value] "r"(newthread->arch.gs_base));
 
         _writefsbase_u64(newthread->arch.fs_base);
     } else {
@@ -159,4 +153,3 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
-

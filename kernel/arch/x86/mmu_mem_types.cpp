@@ -4,17 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <assert.h>
-#include <debug.h>
-#include <err.h>
-#include <stdio.h>
-#include <string.h>
 #include <arch/x86.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/registers.h>
+#include <assert.h>
+#include <debug.h>
+#include <err.h>
 #include <kernel/mp.h>
 #include <lib/console.h>
+#include <stdio.h>
+#include <string.h>
 
 /* address widths from mmu.c */
 extern uint8_t g_paddr_width;
@@ -28,7 +28,7 @@ extern uint8_t g_paddr_width;
 #define IA32_MTRR_PHYSMASK(x) (X86_MSR_IA32_MTRR_PHYSMASK0 + 2 * (x))
 
 /* IA32_MTRRCAP read functions */
-#define MTRRCAP_VCNT(x) ((x) & 0xff)
+#define MTRRCAP_VCNT(x) ((x)&0xff)
 #define MTRRCAP_VCNT_MAX 255
 #define MTRRCAP_FIX(x) !!((x) & (1 << 8))
 #define MTRRCAP_WC(x) !!((x) & (1 << 10))
@@ -74,18 +74,17 @@ struct mtrrs {
 };
 
 static struct mtrrs THE_MTRRS;
-static struct mtrrs *target_mtrrs = &THE_MTRRS;
+static struct mtrrs* target_mtrrs = &THE_MTRRS;
 
 /* Function called by all CPUs to setup their PAT */
-static void x86_pat_sync_task(void *context);
+static void x86_pat_sync_task(void* context);
 struct pat_sync_task_context {
     /* Barrier counters for the two barriers described in Intel's algorithm */
     volatile int barrier1;
     volatile int barrier2;
 };
 
-void x86_mmu_mem_type_init(void)
-{
+void x86_mmu_mem_type_init(void) {
     uint64_t caps = read_msr(X86_MSR_IA32_MTRRCAP);
     num_variable = MTRRCAP_VCNT(caps);
     supports_fixed_range = MTRRCAP_FIX(caps);
@@ -106,7 +105,7 @@ void x86_mmu_mem_type_init(void)
 
     /* Update the PAT on the bootstrap processor (and sync any changes to the
      * MTRR that may have been made above). */
-    x86_pat_sync(1<<0);
+    x86_pat_sync(1 << 0);
 }
 
 /* @brief Give the specificed CPUs our Page Attribute Tables and
@@ -119,8 +118,7 @@ void x86_mmu_mem_type_init(void)
  *
  * This algorithm is based on section 11.11.8 of Intel 3A
  */
-void x86_pat_sync(cpu_mask_t targets)
-{
+void x86_pat_sync(cpu_mask_t targets) {
     targets &= mp_get_online_mask();
 
     struct pat_sync_task_context context = {
@@ -131,12 +129,11 @@ void x86_pat_sync(cpu_mask_t targets)
     mp_sync_exec(MP_IPI_TARGET_MASK, targets, x86_pat_sync_task, &context);
 }
 
-static void x86_pat_sync_task(void *raw_context)
-{
+static void x86_pat_sync_task(void* raw_context) {
     /* Step 2: Disable interrupts */
     DEBUG_ASSERT(arch_ints_disabled());
 
-    struct pat_sync_task_context *context = (struct pat_sync_task_context *)raw_context;
+    struct pat_sync_task_context* context = (struct pat_sync_task_context*)raw_context;
 
     uint cpu = arch_curr_cpu_num();
 
@@ -154,7 +151,8 @@ static void x86_pat_sync_task(void *raw_context)
     x86_set_cr0(cr0);
 
     /* Step 5: Flush all caches */
-    __asm volatile ("wbinvd" ::: "memory");
+    __asm volatile("wbinvd" ::
+                       : "memory");
 
     /* Step 6: If the PGE flag is set, clear it to flush the TLB */
     ulong cr4 = x86_get_cr4();
@@ -208,7 +206,8 @@ static void x86_pat_sync_task(void *raw_context)
     write_msr(X86_MSR_IA32_MTRR_DEF_TYPE, target_mtrrs->mtrr_def);
 
     /* Step 11: Flush all cache and the TLB again */
-    __asm volatile ("wbinvd" ::: "memory");
+    __asm volatile("wbinvd" ::
+                       : "memory");
     x86_set_cr3(x86_get_cr3());
 
     /* Step 12: Enter the normal cache mode */
@@ -231,8 +230,7 @@ static void x86_pat_sync_task(void *raw_context)
 }
 
 /* Helper for decoding and printing MTRRs */
-static void print_fixed_range_mtrr(uint32_t msr, uint32_t base, uint32_t record_size)
-{
+static void print_fixed_range_mtrr(uint32_t msr, uint32_t base, uint32_t record_size) {
     uint64_t val = read_msr(msr);
     for (int i = 0; i < 8; ++i) {
         printf("  f %#05x-%#05x: %#02x\n", base, base + record_size - 1, (uint8_t)val);
@@ -241,8 +239,7 @@ static void print_fixed_range_mtrr(uint32_t msr, uint32_t base, uint32_t record_
     }
 }
 
-static void print_pat_entries(void *_ignored)
-{
+static void print_pat_entries(void* _ignored) {
     uint64_t pat = read_msr(X86_MSR_IA32_PAT);
     for (int i = 0; i < 8; ++i) {
         printf("  Index %d: %#02x\n", i, (uint8_t)pat);
@@ -250,11 +247,10 @@ static void print_pat_entries(void *_ignored)
     }
 }
 
-static int cmd_memtype(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_memtype(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
         printf("not enough arguments\n");
-usage:
+    usage:
         printf("usage:\n");
         printf("%s mtrr\n", argv[0].str);
         printf("%s pat\n", argv[0].str);
@@ -280,10 +276,10 @@ usage:
         if (supports_fixed_range && print_fixed) {
             print_fixed_range_mtrr(X86_MSR_IA32_MTRR_FIX64K_00000, 0x00000, (1 << 16));
             for (int i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
-                print_fixed_range_mtrr(IA32_MTRR_FIX16K_80000(i), 0x80000 + i * (1<<17), (1 << 14));
+                print_fixed_range_mtrr(IA32_MTRR_FIX16K_80000(i), 0x80000 + i * (1 << 17), (1 << 14));
             }
             for (int i = 0; i < IA32_MTRR_NUM_FIX4K; ++i) {
-                print_fixed_range_mtrr(IA32_MTRR_FIX4K_C0000(i), 0xC0000 + i * (1<<15), (1 << 12));
+                print_fixed_range_mtrr(IA32_MTRR_FIX4K_C0000(i), 0xC0000 + i * (1 << 15), (1 << 12));
             }
         }
 

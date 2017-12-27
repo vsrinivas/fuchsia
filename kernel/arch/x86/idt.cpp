@@ -4,15 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/ops.h>
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <err.h>
-#include <string.h>
+#include <fbl/algorithm.h>
 #include <kernel/mp.h>
+#include <string.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <fbl/algorithm.h>
-#include <arch/ops.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <arch/x86.h>
@@ -26,23 +26,23 @@
 
 // Early boot shared IDT structure
 struct idt _idt_startup;
+// clang-format off
 struct idtr _idtr = {
     .limit = sizeof(_idt_startup) - 1,
-    .address =  (uintptr_t)&_idt_startup
+    .address = (uintptr_t)&_idt_startup
 };
+// clang-format on
 
 // IDT after early boot
 struct idt _idt __ALIGNED(PAGE_SIZE);
 // Read-only remapping of the IDT
-static struct idt *_idt_ro;
+static struct idt* _idt_ro;
 
-static inline void idt_set_segment_sel(struct idt_entry *entry, uint16_t sel)
-{
+static inline void idt_set_segment_sel(struct idt_entry* entry, uint16_t sel) {
     entry->w0 = (entry->w0 & 0x0000ffff) | (sel << 16);
 }
 
-static inline void idt_set_offset(struct idt_entry *entry, uintptr_t offset)
-{
+static inline void idt_set_offset(struct idt_entry* entry, uintptr_t offset) {
     uint32_t low_16 = offset & 0xffff;
     uint32_t mid_16 = (offset >> 16) & 0xffff;
     entry->w0 = (entry->w0 & 0xffff0000) | low_16;
@@ -51,33 +51,29 @@ static inline void idt_set_offset(struct idt_entry *entry, uintptr_t offset)
     entry->w2 = high_32;
 }
 
-static inline void idt_set_present(struct idt_entry *entry, bool present)
-{
+static inline void idt_set_present(struct idt_entry* entry, bool present) {
     entry->w1 = (entry->w1 & ~(1 << 15)) | ((!!present) << 15);
 }
 
-static inline void idt_set_dpl(struct idt_entry *entry, enum idt_dpl dpl)
-{
+static inline void idt_set_dpl(struct idt_entry* entry, enum idt_dpl dpl) {
     ASSERT(dpl <= 3);
     entry->w1 = (entry->w1 & ~(3 << 13)) | ((uint32_t)dpl << 13);
 }
 
 static inline void idt_set_type(
-        struct idt_entry *entry,
-        enum idt_entry_type typ)
-{
+    struct idt_entry* entry,
+    enum idt_entry_type typ) {
     entry->w1 = (entry->w1 & ~(0xf << 8)) | ((uint32_t)typ << 8);
 }
 
 void idt_set_vector(
-        struct idt *idt,
-        uint8_t vec,
-        uint16_t code_segment_sel,
-        uintptr_t entry_point_offset,
-        enum idt_dpl dpl,
-        enum idt_entry_type typ)
-{
-    struct idt_entry *entry = &idt->entries[vec];
+    struct idt* idt,
+    uint8_t vec,
+    uint16_t code_segment_sel,
+    uintptr_t entry_point_offset,
+    enum idt_dpl dpl,
+    enum idt_entry_type typ) {
+    struct idt_entry* entry = &idt->entries[vec];
     memset(entry, 0, sizeof(*entry));
     idt_set_segment_sel(entry, code_segment_sel);
     idt_set_offset(entry, entry_point_offset);
@@ -86,15 +82,13 @@ void idt_set_vector(
     idt_set_present(entry, true);
 }
 
-void idt_set_ist_index(struct idt *idt, uint8_t vec, uint8_t ist_idx)
-{
+void idt_set_ist_index(struct idt* idt, uint8_t vec, uint8_t ist_idx) {
     ASSERT(ist_idx < 8);
-    struct idt_entry *entry = &idt->entries[vec];
+    struct idt_entry* entry = &idt->entries[vec];
     entry->w1 = (entry->w1 & ~0x7) | ist_idx;
 }
 
-void idt_setup(struct idt *idt)
-{
+void idt_setup(struct idt* idt) {
     extern uintptr_t const _isr_table[];
 
     // If SMAP is not available, we need to skip past the CLAC instruction
@@ -132,19 +126,19 @@ void idt_setup_readonly(void) {
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
     DEBUG_ASSERT(mp_get_online_mask() == 1);
     zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
-                                         "idt_readonly",
-                                         sizeof(_idt),
-                                         (void **)&_idt_ro,
-                                         PAGE_SIZE_SHIFT,
-                                         vaddr_to_paddr(&_idt),
-                                         0 /* vmm flags */,
-                                         ARCH_MMU_FLAG_PERM_READ);
+        "idt_readonly",
+        sizeof(_idt),
+        (void**)&_idt_ro,
+        PAGE_SIZE_SHIFT,
+        vaddr_to_paddr(&_idt),
+        0 /* vmm flags */,
+        ARCH_MMU_FLAG_PERM_READ);
     ASSERT(status == ZX_OK);
     idt_load(_idt_ro);
 }
 
 // Get the read-only IDT
-struct idt * idt_get_readonly(void) {
+struct idt* idt_get_readonly(void) {
     ASSERT(_idt_ro != nullptr);
     return _idt_ro;
 }

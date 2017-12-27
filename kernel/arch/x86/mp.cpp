@@ -6,12 +6,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/compiler.h>
 
 #include <arch/mp.h>
 #include <arch/ops.h>
@@ -33,13 +33,12 @@
 
 #define LOCAL_TRACE 0
 
-struct x86_percpu *ap_percpus;
+struct x86_percpu* ap_percpus;
 uint8_t x86_num_cpus = 1;
 
 extern struct idt _idt;
 
-zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
-{
+zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
     ASSERT(ap_percpus == nullptr);
 
     DEBUG_ASSERT(cpu_count >= 1);
@@ -49,7 +48,7 @@ zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
 
     if (cpu_count > 1) {
         size_t len = sizeof(*ap_percpus) * (cpu_count - 1);
-        ap_percpus = (x86_percpu *)memalign(MAX_CACHE_LINE, len);
+        ap_percpus = (x86_percpu*)memalign(MAX_CACHE_LINE, len);
         if (ap_percpus == nullptr) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -79,9 +78,8 @@ zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     return ZX_OK;
 }
 
-void x86_init_percpu(cpu_num_t cpu_num)
-{
-    struct x86_percpu *const percpu =
+void x86_init_percpu(cpu_num_t cpu_num) {
+    struct x86_percpu* const percpu =
         cpu_num == 0 ? &bp_percpu : &ap_percpus[cpu_num - 1];
     DEBUG_ASSERT(percpu->cpu_num == cpu_num);
     DEBUG_ASSERT(percpu->direct == percpu);
@@ -174,7 +172,7 @@ void x86_init_percpu(cpu_num_t cpu_num)
     // to save time on the irq path from idle. (5-10us on skylake nuc from kernel irq
     // handler to user space handler).
     if (!x86_feature_test(X86_FEATURE_HYPERVISOR) &&
-            x86_get_microarch_config()->disable_c1e) {
+        x86_get_microarch_config()->disable_c1e) {
         uint64_t power_ctl_msr = read_msr(0x1fc);
         write_msr(0x1fc, power_ctl_msr & ~0x2);
     }
@@ -182,15 +180,13 @@ void x86_init_percpu(cpu_num_t cpu_num)
     mp_set_curr_cpu_online(true);
 }
 
-void x86_set_local_apic_id(uint32_t apic_id)
-{
-    struct x86_percpu *percpu = x86_get_percpu();
+void x86_set_local_apic_id(uint32_t apic_id) {
+    struct x86_percpu* percpu = x86_get_percpu();
     DEBUG_ASSERT(percpu->cpu_num == 0);
     percpu->apic_id = apic_id;
 }
 
-int x86_apic_id_to_cpu_num(uint32_t apic_id)
-{
+int x86_apic_id_to_cpu_num(uint32_t apic_id) {
     if (bp_percpu.apic_id == apic_id) {
         return (int)bp_percpu.cpu_num;
     }
@@ -203,21 +199,20 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id)
     return -1;
 }
 
-zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi)
-{
+zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
     uint8_t vector = 0;
     switch (ipi) {
-        case MP_IPI_GENERIC:
-            vector = X86_INT_IPI_GENERIC;
-            break;
-        case MP_IPI_RESCHEDULE:
-            vector = X86_INT_IPI_RESCHEDULE;
-            break;
-        case MP_IPI_HALT:
-            vector = X86_INT_IPI_HALT;
-            break;
-        default:
-            panic("Unexpected MP IPI value: %u", (uint)ipi);
+    case MP_IPI_GENERIC:
+        vector = X86_INT_IPI_GENERIC;
+        break;
+    case MP_IPI_RESCHEDULE:
+        vector = X86_INT_IPI_RESCHEDULE;
+        break;
+    case MP_IPI_HALT:
+        vector = X86_INT_IPI_HALT;
+        break;
+    default:
+        panic("Unexpected MP IPI value: %u", (uint)ipi);
     }
 
     if (target == MP_IPI_TARGET_ALL_BUT_LOCAL) {
@@ -234,7 +229,7 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     uint cpu_id = 0;
     while (remaining && cpu_id < x86_num_cpus) {
         if (remaining & 1) {
-            struct x86_percpu *percpu;
+            struct x86_percpu* percpu;
             if (cpu_id == 0) {
                 percpu = &bp_percpu;
             } else {
@@ -257,20 +252,17 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     return ZX_OK;
 }
 
-enum handler_return x86_ipi_generic_handler(void)
-{
+enum handler_return x86_ipi_generic_handler(void) {
     LTRACEF("cpu %u\n", arch_curr_cpu_num());
     return mp_mbx_generic_irq();
 }
 
-enum handler_return x86_ipi_reschedule_handler(void)
-{
+enum handler_return x86_ipi_reschedule_handler(void) {
     LTRACEF("cpu %u\n", arch_curr_cpu_num());
     return mp_mbx_reschedule_irq();
 }
 
-void x86_ipi_halt_handler(void)
-{
+void x86_ipi_halt_handler(void) {
     printf("halting cpu %u\n", arch_curr_cpu_num());
 
     platform_halt_cpu();
@@ -288,8 +280,7 @@ zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
     return ZX_OK;
 }
 
-zx_status_t arch_mp_cpu_unplug(uint cpu_id)
-{
+zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
     /* we do not allow unplugging the bootstrap processor */
     if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
         return ZX_ERR_INVALID_ARGS;
@@ -306,8 +297,7 @@ zx_status_t arch_mp_cpu_unplug(uint cpu_id)
     return ZX_OK;
 }
 
-zx_status_t arch_mp_cpu_hotplug(uint cpu_id)
-{
+zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {
     if (cpu_id >= x86_num_cpus) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -321,20 +311,25 @@ zx_status_t arch_mp_cpu_hotplug(uint cpu_id)
         return ZX_ERR_INVALID_ARGS;
     }
 
-    struct x86_percpu *percpu = &ap_percpus[cpu_id - 1];
+    struct x86_percpu* percpu = &ap_percpus[cpu_id - 1];
     DEBUG_ASSERT(percpu->apic_id != INVALID_APIC_ID);
     return x86_bringup_aps(&percpu->apic_id, 1);
 }
 
 /* Used to suspend work on a CPU until it is further shutdown */
-void arch_flush_state_and_halt(event_t *flush_done)
-{
+void arch_flush_state_and_halt(event_t* flush_done) {
     DEBUG_ASSERT(arch_ints_disabled());
 
-    __asm__ volatile("wbinvd" : : : "memory");
+    __asm__ volatile("wbinvd"
+                     :
+                     :
+                     : "memory");
 
     event_signal(flush_done, false);
     while (1) {
-        __asm__ volatile("cli; hlt" : : : "memory");
+        __asm__ volatile("cli; hlt"
+                         :
+                         :
+                         : "memory");
     }
 }

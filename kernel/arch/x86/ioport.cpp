@@ -14,9 +14,9 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <vm/vm_aspace.h>
-#include <vm/vm.h>
 #include <string.h>
+#include <vm/vm.h>
+#include <vm/vm_aspace.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
@@ -73,7 +73,7 @@ IoBitmap& IoBitmap::GetCurrent() {
     return aspace->arch_aspace().io_bitmap();
 }
 
-IoBitmap::~IoBitmap() { }
+IoBitmap::~IoBitmap() {}
 
 struct ioport_update_context {
     // IoBitmap that we're trying to update
@@ -141,9 +141,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         }
         DEBUG_ASSERT(bitmap_);
 
-        status = enable ?
-                bitmap_->SetNoAlloc(port, port + len, &bitmap_freelist) :
-                bitmap_->ClearNoAlloc(port, port + len, &bitmap_freelist);
+        status = enable ? bitmap_->SetNoAlloc(port, port + len, &bitmap_freelist) : bitmap_->ClearNoAlloc(port, port + len, &bitmap_freelist);
         if (status != ZX_OK) {
             break;
         }

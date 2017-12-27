@@ -33,22 +33,22 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/proc_trace.h>
 #include <err.h>
-#include <kernel/mp.h>
-#include <kernel/thread.h>
-#include <vm/vm_aspace.h>
-#include <lib/ktrace.h>
-#include <zircon/device/cpu-trace/intel-pt.h>
-#include <zircon/ktrace.h>
-#include <zircon/mtrace.h>
-#include <zircon/thread_annotations.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <kernel/mp.h>
+#include <kernel/thread.h>
+#include <lib/ktrace.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm.h>
+#include <vm/vm_aspace.h>
+#include <zircon/device/cpu-trace/intel-pt.h>
+#include <zircon/ktrace.h>
+#include <zircon/mtrace.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 using fbl::AutoLock;
@@ -94,7 +94,7 @@ struct ipt_cpu_state_t {
     uint64_t output_mask_ptrs;
     uint64_t cr3_match;
     struct {
-        uint64_t a,b;
+        uint64_t a, b;
     } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
 };
 
@@ -106,8 +106,7 @@ static bool active TA_GUARDED(ipt_lock) = false;
 
 static ipt_trace_mode_t trace_mode TA_GUARDED(ipt_lock) = IPT_TRACE_CPUS;
 
-void x86_processor_trace_init(void)
-{
+void x86_processor_trace_init(void) {
     if (!x86_feature_test(X86_FEATURE_PT)) {
         return;
     }
@@ -120,17 +119,17 @@ void x86_processor_trace_init(void)
     supports_pt = true;
 
     // Keep our own copy of these flags, mostly for potential sanity checks.
-    supports_cr3_filtering = !!(leaf.b & (1<<0));
-    supports_psb = !!(leaf.b & (1<<1));
-    supports_ip_filtering = !!(leaf.b & (1<<2));
-    supports_mtc = !!(leaf.b & (1<<3));
-    supports_ptwrite = !!(leaf.b & (1<<4));
-    supports_power_events = !!(leaf.b & (1<<5));
+    supports_cr3_filtering = !!(leaf.b & (1 << 0));
+    supports_psb = !!(leaf.b & (1 << 1));
+    supports_ip_filtering = !!(leaf.b & (1 << 2));
+    supports_mtc = !!(leaf.b & (1 << 3));
+    supports_ptwrite = !!(leaf.b & (1 << 4));
+    supports_power_events = !!(leaf.b & (1 << 5));
 
-    supports_output_topa = !!(leaf.c & (1<<0));
-    supports_output_topa_multi = !!(leaf.c & (1<<1));
-    supports_output_single = !!(leaf.c & (1<<2));
-    supports_output_transport = !!(leaf.c & (1<<3));
+    supports_output_topa = !!(leaf.c & (1 << 0));
+    supports_output_topa_multi = !!(leaf.c & (1 << 1));
+    supports_output_single = !!(leaf.c & (1 << 2));
+    supports_output_transport = !!(leaf.c & (1 << 3));
 }
 
 // Intel Processor Trace support needs to be able to map cr3 values that
@@ -367,7 +366,7 @@ zx_status_t x86_ipt_stage_cpu_data(uint32_t cpu, const zx_x86_pt_regs_t* regs) {
     if (active)
         return ZX_ERR_BAD_STATE;
     if (!ipt_cpu_state)
-            return ZX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
     uint32_t num_cpus = arch_max_num_cpus();
     if (cpu >= num_cpus)
         return ZX_ERR_INVALID_ARGS;

@@ -46,16 +46,13 @@ void fill_out_clac_instruction(const CodePatchInfo* patch) {
         memset(patch->dest_addr, kNopInstruction, kSize);
     }
 }
-
 }
 
-static inline bool ac_flag(void)
-{
+static inline bool ac_flag(void) {
     return x86_save_flags() & X86_FLAGS_AC;
 }
 
-static bool can_access(const void *base, size_t len)
-{
+static bool can_access(const void* base, size_t len) {
     LTRACEF("can_access: base %p, len %zu\n", base, len);
 
     // We don't care about whether pages are actually mapped or what their
@@ -65,14 +62,13 @@ static bool can_access(const void *base, size_t len)
     return is_user_address_range((vaddr_t)base, len);
 }
 
-zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len)
-{
+zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
     DEBUG_ASSERT(!ac_flag());
 
     if (!can_access(src, len))
         return ZX_ERR_INVALID_ARGS;
 
-    thread_t *thr = get_current_thread();
+    thread_t* thr = get_current_thread();
     zx_status_t status = _x86_copy_to_or_from_user(dst, src, len,
                                                    &thr->arch.page_fault_resume);
 
@@ -80,14 +76,13 @@ zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len)
     return status;
 }
 
-zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len)
-{
+zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
     DEBUG_ASSERT(!ac_flag());
 
     if (!can_access(dst, len))
         return ZX_ERR_INVALID_ARGS;
 
-    thread_t *thr = get_current_thread();
+    thread_t* thr = get_current_thread();
     zx_status_t status = _x86_copy_to_or_from_user(dst, src, len,
                                                    &thr->arch.page_fault_resume);
 

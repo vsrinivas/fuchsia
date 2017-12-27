@@ -8,23 +8,22 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <err.h>
-#include <trace.h>
 #include <arch/mmu.h>
 #include <arch/x86.h>
-#include <arch/x86/bootstrap16.h>
 #include <arch/x86/apic.h>
+#include <arch/x86/bootstrap16.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
-#include <lk/main.h>
+#include <err.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <lk/main.h>
+#include <trace.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
 
-void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
-{
+void x86_init_smp(uint32_t* apic_ids, uint32_t num_cpus) {
     DEBUG_ASSERT(num_cpus <= UINT8_MAX);
     zx_status_t status = x86_allocate_ap_structures(apic_ids, (uint8_t)num_cpus);
     if (status != ZX_OK) {
@@ -35,8 +34,7 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
     lk_init_secondary_cpus(num_cpus - 1);
 }
 
-zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
-{
+zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     volatile int aps_still_booting = 0;
     zx_status_t status = ZX_ERR_INTERNAL;
 
@@ -58,11 +56,11 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         aps_still_booting |= 1U << cpu;
     }
 
-    struct x86_ap_bootstrap_data *bootstrap_data = nullptr;
+    struct x86_ap_bootstrap_data* bootstrap_data = nullptr;
     fbl::RefPtr<VmAspace> bootstrap_aspace;
     paddr_t bootstrap_instr_ptr;
     status = x86_bootstrap16_acquire((uintptr_t)_x86_secondary_cpu_long_mode_entry,
-                                     &bootstrap_aspace, (void **)&bootstrap_data,
+                                     &bootstrap_aspace, (void**)&bootstrap_data,
                                      &bootstrap_instr_ptr);
     if (status != ZX_OK) {
         return status;
@@ -75,22 +73,22 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
     for (unsigned int i = 0; i < count; ++i) {
-        thread_t *thread = (thread_t *)memalign(16,
-                                    ROUNDUP(sizeof(thread_t), 16) +
+        thread_t* thread = (thread_t*)memalign(16,
+                                               ROUNDUP(sizeof(thread_t), 16) +
 #if __has_feature(safe_stack)
-                                    PAGE_SIZE +
+                                                   PAGE_SIZE +
 #endif
-                                    PAGE_SIZE);
+                                                   PAGE_SIZE);
         if (!thread) {
             status = ZX_ERR_NO_MEMORY;
             goto cleanup_allocations;
         }
         uintptr_t kstack_base =
-                (uint64_t)thread + ROUNDUP(sizeof(thread_t), 16);
+            (uint64_t)thread + ROUNDUP(sizeof(thread_t), 16);
         bootstrap_data->per_cpu[i].kstack_base = kstack_base;
         bootstrap_data->per_cpu[i].thread = (uint64_t)thread;
 #if __has_feature(safe_stack)
-        thread->unsafe_stack = (void *) (kstack_base + PAGE_SIZE);
+        thread->unsafe_stack = (void*)(kstack_base + PAGE_SIZE);
         thread->stack_size = PAGE_SIZE;
 #endif
     }
@@ -160,11 +158,11 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
             ASSERT(!mp_is_cpu_active(cpu));
 
             // Make sure the CPU is not marked online
-            atomic_and((volatile int *)&mp.online_cpus, ~mask);
+            atomic_and((volatile int*)&mp.online_cpus, ~mask);
 
             // Free the failed AP's thread, it was cancelled before it could use
             // it.
-            free((void *)bootstrap_data->per_cpu[i].thread);
+            free((void*)bootstrap_data->per_cpu[i].thread);
 
             failed_aps &= ~mask;
         }
@@ -181,7 +179,7 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 cleanup_allocations:
     for (unsigned int i = 0; i < count; ++i) {
         if (bootstrap_data->per_cpu[i].thread) {
-            free((void *)bootstrap_data->per_cpu[i].thread);
+            free((void*)bootstrap_data->per_cpu[i].thread);
         }
     }
 cleanup_aspace:

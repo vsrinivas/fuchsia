@@ -6,19 +6,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <debug.h>
-#include <trace.h>
 #include <arch/exception.h>
 #include <arch/user_copy.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
+#include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
-#include <arch/x86/descriptor.h>
 #include <arch/x86/perf_mon.h>
-#include <kernel/thread.h>
+#include <debug.h>
 #include <kernel/stats.h>
+#include <kernel/thread.h>
 #include <platform.h>
+#include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
 
@@ -28,9 +28,7 @@
 
 #include <lib/ktrace.h>
 
-
-static void dump_fault_frame(x86_iframe_t *frame)
-{
+static void dump_fault_frame(x86_iframe_t* frame) {
     dprintf(CRITICAL, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
             frame->cs, frame->ip, frame->flags, x86_get_cr2());
     dprintf(CRITICAL, " RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
@@ -45,7 +43,7 @@ static void dump_fault_frame(x86_iframe_t *frame)
             frame->err_code);
 
     // dump the bottom of the current stack
-    void *stack = frame;
+    void* stack = frame;
 
     if (frame->cs == CODE_64_SELECTOR) {
         dprintf(CRITICAL, "bottom of kernel stack at %p:\n", stack);
@@ -53,18 +51,17 @@ static void dump_fault_frame(x86_iframe_t *frame)
     }
 }
 
-__NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
-{
+__NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
     platform_panic_start();
 
-    printf("vector %lu\n", (ulong) frame->vector);
+    printf("vector %lu\n", (ulong)frame->vector);
     dprintf(CRITICAL, "%s", msg);
     dump_fault_frame(frame);
 
     // try to dump the user stack
     if (is_user_address(frame->user_sp)) {
         uint8_t buf[256];
-        if (arch_copy_from_user(buf, (void *)frame->user_sp, sizeof(buf)) == ZX_OK) {
+        if (arch_copy_from_user(buf, (void*)frame->user_sp, sizeof(buf)) == ZX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)frame->user_sp);
             hexdump_ex(buf, sizeof(buf), frame->user_sp);
         }
@@ -74,21 +71,19 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
 }
 
 static zx_status_t call_dispatch_user_exception(uint kind,
-                                                struct arch_exception_context *context,
-                                                x86_iframe_t *frame)
-{
-    thread_t *thread = get_current_thread();
+                                                struct arch_exception_context* context,
+                                                x86_iframe_t* frame) {
+    thread_t* thread = get_current_thread();
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
     zx_status_t status = dispatch_user_exception(kind, context);
     x86_reset_suspended_general_regs(&thread->arch);
     return status;
 }
 
-static bool try_dispatch_user_exception(x86_iframe_t *frame, uint kind)
-{
+static bool try_dispatch_user_exception(x86_iframe_t* frame, uint kind) {
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
-        struct arch_exception_context context = { false, frame, 0 };
+        struct arch_exception_context context = {false, frame, 0};
         arch_set_in_int_handler(false);
         arch_enable_ints();
         zx_status_t erc = call_dispatch_user_exception(kind, &context, frame);
@@ -101,32 +96,28 @@ static bool try_dispatch_user_exception(x86_iframe_t *frame, uint kind)
     return false;
 }
 
-static void x86_debug_handler(x86_iframe_t *frame)
-{
+static void x86_debug_handler(x86_iframe_t* frame) {
     if (try_dispatch_user_exception(frame, ZX_EXCP_HW_BREAKPOINT))
         return;
 
     exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
-static void x86_nmi_handler(x86_iframe_t *frame)
-{
+static void x86_nmi_handler(x86_iframe_t* frame) {
 }
 
-static void x86_breakpoint_handler(x86_iframe_t *frame)
-{
+static void x86_breakpoint_handler(x86_iframe_t* frame) {
     if (try_dispatch_user_exception(frame, ZX_EXCP_SW_BREAKPOINT))
         return;
 
     exception_die(frame, "unhandled sw breakpoint, halting\n");
 }
 
-static void x86_gpf_handler(x86_iframe_t *frame)
-{
+static void x86_gpf_handler(x86_iframe_t* frame) {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // Check if we were doing a GPF test, e.g. to check if an MSR exists.
-    struct x86_percpu *percpu = x86_get_percpu();
+    struct x86_percpu* percpu = x86_get_percpu();
     if (unlikely(percpu->gpf_return_target)) {
         ASSERT(SELECTOR_PL(frame->cs) == 0);
 
@@ -142,38 +133,34 @@ static void x86_gpf_handler(x86_iframe_t *frame)
     exception_die(frame, "unhandled gpf, halting\n");
 }
 
-static void x86_invop_handler(x86_iframe_t *frame)
-{
+static void x86_invop_handler(x86_iframe_t* frame) {
     if (try_dispatch_user_exception(frame, ZX_EXCP_UNDEFINED_INSTRUCTION))
         return;
 
     exception_die(frame, "invalid opcode, halting\n");
 }
 
-static void x86_df_handler(x86_iframe_t *frame)
-{
+static void x86_df_handler(x86_iframe_t* frame) {
     // Do not give the user exception handler the opportunity to handle double
     // faults, since they indicate an unexpected system state and cannot be
     // recovered from.
     exception_die(frame, "double fault, halting\n");
 }
 
-static void x86_unhandled_exception(x86_iframe_t *frame)
-{
+static void x86_unhandled_exception(x86_iframe_t* frame) {
     if (try_dispatch_user_exception(frame, ZX_EXCP_GENERAL))
         return;
 
     exception_die(frame, "unhandled exception, halting\n");
 }
 
-static void x86_dump_pfe(x86_iframe_t *frame, ulong cr2)
-{
+static void x86_dump_pfe(x86_iframe_t* frame, ulong cr2) {
     uint64_t error_code = frame->err_code;
 
     addr_t v_addr = cr2;
     addr_t ssp = frame->user_ss & X86_8BYTE_MASK;
     addr_t sp = frame->user_sp;
-    addr_t cs  = frame->cs & X86_8BYTE_MASK;
+    addr_t cs = frame->cs & X86_8BYTE_MASK;
     addr_t ip = frame->ip;
 
     dprintf(CRITICAL, "<PAGE FAULT> Instruction Pointer   = 0x%lx:0x%lx\n",
@@ -194,9 +181,7 @@ static void x86_dump_pfe(x86_iframe_t *frame, ulong cr2)
             error_code & PFEX_P ? "protection violation" : "page not present");
 }
 
-
-__NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
-{
+__NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t* frame, ulong cr2) {
     x86_dump_pfe(frame, cr2);
 
     uint64_t error_code = frame->err_code;
@@ -206,31 +191,30 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
     if (error_code & PFEX_U) {
         // User mode page fault
         switch (error_code) {
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-                exception_die(frame, "User Page Fault exception, halting\n");
-                break;
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            exception_die(frame, "User Page Fault exception, halting\n");
+            break;
         }
     } else {
         // Supervisor mode page fault
         switch (error_code) {
 
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                exception_die(frame, "Supervisor Page Fault exception, halting\n");
-                break;
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            exception_die(frame, "Supervisor Page Fault exception, halting\n");
+            break;
         }
     }
 
     exception_die(frame, "unhandled page fault, halting\n");
 }
 
-static zx_status_t x86_pfe_handler(x86_iframe_t *frame)
-{
+static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     /* Handle a page fault exception */
     uint64_t error_code = frame->err_code;
     vaddr_t va = x86_get_cr2();
@@ -253,11 +237,11 @@ static zx_status_t x86_pfe_handler(x86_iframe_t *frame)
 
     /* check for a potential SMAP failure */
     if (unlikely(
-        !(error_code & PFEX_U) &&
-         (error_code & PFEX_P) &&
-        x86_feature_test(X86_FEATURE_SMAP) &&
-        !(frame->flags & X86_FLAGS_AC) &&
-         is_user_address(va))) {
+            !(error_code & PFEX_U) &&
+            (error_code & PFEX_P) &&
+            x86_feature_test(X86_FEATURE_SMAP) &&
+            !(frame->flags & X86_FLAGS_AC) &&
+            is_user_address(va))) {
         /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */
         printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n", va);
         return ZX_ERR_ACCESS_DENIED;
@@ -279,7 +263,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t *frame)
      * resort to trying to recover first, before bailing */
 
     /* Check if a resume address is specified, and just return to it if so */
-    thread_t *current_thread = get_current_thread();
+    thread_t* current_thread = get_current_thread();
     if (unlikely(current_thread->arch.page_fault_resume)) {
         frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
         return ZX_OK;
@@ -289,7 +273,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t *frame)
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         CPU_STATS_INC(exceptions);
-        struct arch_exception_context context = { true, frame, va };
+        struct arch_exception_context context = {true, frame, va};
         return call_dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT,
                                             &context, frame);
     }
@@ -298,9 +282,8 @@ static zx_status_t x86_pfe_handler(x86_iframe_t *frame)
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void x86_iframe_process_pending_signals(x86_iframe_t *frame)
-{
-    thread_t *thread = get_current_thread();
+static void x86_iframe_process_pending_signals(x86_iframe_t* frame) {
+    thread_t* thread = get_current_thread();
     if (unlikely(thread_is_signaled(thread))) {
         x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
         thread_process_pending_signals();
@@ -309,8 +292,7 @@ static void x86_iframe_process_pending_signals(x86_iframe_t *frame)
 }
 
 /* top level x86 exception handler for most exceptions and irqs */
-void x86_exception_handler(x86_iframe_t *frame)
-{
+void x86_exception_handler(x86_iframe_t* frame) {
     // are we recursing?
     if (unlikely(arch_in_int_handler()) && frame->vector != X86_INT_NMI) {
         exception_die(frame, "recursion in interrupt handler\n");
@@ -327,101 +309,103 @@ void x86_exception_handler(x86_iframe_t *frame)
     ktrace_tiny(TAG_IRQ_ENTER, ((uint32_t)frame->vector << 8) | arch_curr_cpu_num());
 
     switch (frame->vector) {
-        case X86_INT_DEBUG:
-            CPU_STATS_INC(exceptions);
-            x86_debug_handler(frame);
-            break;
-        case X86_INT_NMI:
-            CPU_STATS_INC(exceptions);
-            x86_nmi_handler(frame);
-            break;
-        case X86_INT_BREAKPOINT:
-            CPU_STATS_INC(exceptions);
-            x86_breakpoint_handler(frame);
-            break;
+    case X86_INT_DEBUG:
+        CPU_STATS_INC(exceptions);
+        x86_debug_handler(frame);
+        break;
+    case X86_INT_NMI:
+        CPU_STATS_INC(exceptions);
+        x86_nmi_handler(frame);
+        break;
+    case X86_INT_BREAKPOINT:
+        CPU_STATS_INC(exceptions);
+        x86_breakpoint_handler(frame);
+        break;
 
-        case X86_INT_INVALID_OP:
-            CPU_STATS_INC(exceptions);
-            x86_invop_handler(frame);
-            break;
+    case X86_INT_INVALID_OP:
+        CPU_STATS_INC(exceptions);
+        x86_invop_handler(frame);
+        break;
 
-        case X86_INT_DEVICE_NA:
-            CPU_STATS_INC(exceptions);
-            exception_die(frame, "device na fault\n");
-            break;
+    case X86_INT_DEVICE_NA:
+        CPU_STATS_INC(exceptions);
+        exception_die(frame, "device na fault\n");
+        break;
 
-        case X86_INT_DOUBLE_FAULT:
-            x86_df_handler(frame);
-            break;
-        case X86_INT_FPU_FP_ERROR: {
-            CPU_STATS_INC(exceptions);
-            uint16_t fsw;
-            __asm__ __volatile__("fnstsw %0" : "=m" (fsw));
-            TRACEF("fsw 0x%hx\n", fsw);
-            exception_die(frame, "x87 math fault\n");
-            break;
-        }
-        case X86_INT_SIMD_FP_ERROR: {
-            CPU_STATS_INC(exceptions);
-            uint32_t mxcsr;
-            __asm__ __volatile__("stmxcsr %0" : "=m" (mxcsr));
-            TRACEF("mxcsr 0x%x\n", mxcsr);
-            exception_die(frame, "simd math fault\n");
-            break;
-        }
-        case X86_INT_GP_FAULT:
-            CPU_STATS_INC(exceptions);
-            x86_gpf_handler(frame);
-            break;
+    case X86_INT_DOUBLE_FAULT:
+        x86_df_handler(frame);
+        break;
+    case X86_INT_FPU_FP_ERROR: {
+        CPU_STATS_INC(exceptions);
+        uint16_t fsw;
+        __asm__ __volatile__("fnstsw %0"
+                             : "=m"(fsw));
+        TRACEF("fsw 0x%hx\n", fsw);
+        exception_die(frame, "x87 math fault\n");
+        break;
+    }
+    case X86_INT_SIMD_FP_ERROR: {
+        CPU_STATS_INC(exceptions);
+        uint32_t mxcsr;
+        __asm__ __volatile__("stmxcsr %0"
+                             : "=m"(mxcsr));
+        TRACEF("mxcsr 0x%x\n", mxcsr);
+        exception_die(frame, "simd math fault\n");
+        break;
+    }
+    case X86_INT_GP_FAULT:
+        CPU_STATS_INC(exceptions);
+        x86_gpf_handler(frame);
+        break;
 
-        case X86_INT_PAGE_FAULT:
-            CPU_STATS_INC(page_faults);
-            if (x86_pfe_handler(frame) != ZX_OK)
-                x86_fatal_pfe_handler(frame, x86_get_cr2());
-            break;
+    case X86_INT_PAGE_FAULT:
+        CPU_STATS_INC(page_faults);
+        if (x86_pfe_handler(frame) != ZX_OK)
+            x86_fatal_pfe_handler(frame, x86_get_cr2());
+        break;
 
-        /* ignore spurious APIC irqs */
-        case X86_INT_APIC_SPURIOUS:
-            break;
-        case X86_INT_APIC_ERROR: {
-            ret = apic_error_interrupt_handler();
-            apic_issue_eoi();
-            break;
-        }
-        case X86_INT_APIC_TIMER: {
-            ret = apic_timer_interrupt_handler();
-            apic_issue_eoi();
-            break;
-        }
-        case X86_INT_IPI_GENERIC: {
-            ret = x86_ipi_generic_handler();
-            apic_issue_eoi();
-            break;
-        }
-        case X86_INT_IPI_RESCHEDULE: {
-            ret = x86_ipi_reschedule_handler();
-            apic_issue_eoi();
-            break;
-        }
-        case X86_INT_IPI_HALT: {
-            x86_ipi_halt_handler();
-            /* no return */
-            break;
-        }
-        case X86_INT_APIC_PMI: {
-            ret = apic_pmi_interrupt_handler(frame);
-            // Note: apic_pmi_interrupt_handler calls apic_issue_eoi().
-            break;
-        }
-        /* pass all other non-Intel defined irq vectors to the platform */
-        case X86_INT_PLATFORM_BASE  ... X86_INT_PLATFORM_MAX: {
-            CPU_STATS_INC(interrupts);
-            ret = platform_irq(frame);
-            break;
-        }
-        default:
-            x86_unhandled_exception(frame);
-            break;
+    /* ignore spurious APIC irqs */
+    case X86_INT_APIC_SPURIOUS:
+        break;
+    case X86_INT_APIC_ERROR: {
+        ret = apic_error_interrupt_handler();
+        apic_issue_eoi();
+        break;
+    }
+    case X86_INT_APIC_TIMER: {
+        ret = apic_timer_interrupt_handler();
+        apic_issue_eoi();
+        break;
+    }
+    case X86_INT_IPI_GENERIC: {
+        ret = x86_ipi_generic_handler();
+        apic_issue_eoi();
+        break;
+    }
+    case X86_INT_IPI_RESCHEDULE: {
+        ret = x86_ipi_reschedule_handler();
+        apic_issue_eoi();
+        break;
+    }
+    case X86_INT_IPI_HALT: {
+        x86_ipi_halt_handler();
+        /* no return */
+        break;
+    }
+    case X86_INT_APIC_PMI: {
+        ret = apic_pmi_interrupt_handler(frame);
+        // Note: apic_pmi_interrupt_handler calls apic_issue_eoi().
+        break;
+    }
+    /* pass all other non-Intel defined irq vectors to the platform */
+    case X86_INT_PLATFORM_BASE... X86_INT_PLATFORM_MAX: {
+        CPU_STATS_INC(interrupts);
+        ret = platform_irq(frame);
+        break;
+    }
+    default:
+        x86_unhandled_exception(frame);
+        break;
     }
 
     /* at this point we're able to be rescheduled, so we're 'outside' of the int handler */
@@ -441,20 +425,18 @@ void x86_exception_handler(x86_iframe_t *frame)
     ktrace_tiny(TAG_IRQ_EXIT, ((uint)frame->vector << 8) | arch_curr_cpu_num());
 
     DEBUG_ASSERT_MSG(arch_ints_disabled(),
-        "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
-        frame->vector, frame->ip);
+                     "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
+                     frame->vector, frame->ip);
 }
 
-void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs)
-{
-    thread_t *thread = get_current_thread();
+void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs) {
+    thread_t* thread = get_current_thread();
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_SYSCALL, gregs);
     thread_process_pending_signals();
     x86_reset_suspended_general_regs(&thread->arch);
 }
 
-void arch_dump_exception_context(const arch_exception_context_t *context)
-{
+void arch_dump_exception_context(const arch_exception_context_t* context) {
     if (context->is_page_fault) {
         x86_dump_pfe(context->frame, context->cr2);
     }
@@ -464,24 +446,23 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (context->frame->cs != CODE_64_SELECTOR && is_user_address(context->frame->user_sp)) {
         uint8_t buf[256];
-        if (arch_copy_from_user(buf, (void *)context->frame->user_sp, sizeof(buf)) == ZX_OK) {
+        if (arch_copy_from_user(buf, (void*)context->frame->user_sp, sizeof(buf)) == ZX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->user_sp);
             hexdump_ex(buf, sizeof(buf), context->frame->user_sp);
         }
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, zx_exception_report_t *report)
-{
-    zx_exception_context_t *zx_context = &report->context;
+void arch_fill_in_exception_context(const arch_exception_context_t* arch_context,
+                                    zx_exception_report_t* report) {
+    zx_exception_context_t* zx_context = &report->context;
 
     zx_context->arch.u.x86_64.vector = arch_context->frame->vector;
     zx_context->arch.u.x86_64.err_code = arch_context->frame->err_code;
     zx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
-zx_status_t arch_dispatch_user_policy_exception(void)
-{
+zx_status_t arch_dispatch_user_policy_exception(void) {
     x86_iframe_t frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
