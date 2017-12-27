@@ -10,7 +10,7 @@ use ddk_rs::{DeviceOps, Device, DriverOps, UsbProtocol};
 use ddk_rs as ddk;
 use ddk_rs::sys::{USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
 use std::mem::size_of;
-use std::slice;
+use std::{cmp, slice};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
@@ -55,6 +55,7 @@ unsafe fn as_slice<T: Sized>(s: &T) -> &[u8] {
 
 struct MicroOrb {
     usb: UsbProtocol,
+    serial: Option<String>,
 }
 
 impl DeviceOps for MicroOrb {
@@ -70,6 +71,24 @@ impl DeviceOps for MicroOrb {
 
     fn release(&mut self) {
         println!("DeviceOps::release called");
+    }
+
+    fn get_size(&mut self) -> u64 {
+        println!("get_size");
+        match self.get_cached_serial() {
+            Ok(serial) => serial.len() as u64,
+            Err(_) => 0,
+        }
+    }
+
+    fn read(&mut self, buf: &mut [u8], offset: u64) -> Result<usize, Status> {
+        println!("read {} from {}", buf.len(), offset);
+        let start = offset as usize;
+        let serial = self.get_cached_serial()?;
+        let size = cmp::min(buf.len(), cmp::max(serial.len() - start, 0));
+        buf[0..size].copy_from_slice(&serial.as_bytes()[start..start + size]);
+        println!("returning {} bytes", size);
+        Ok(size)
     }
 }
 
@@ -92,6 +111,18 @@ impl MicroOrb {
         }
         let language_id = languages[0];
         self.usb.get_string_descriptor(serial_number, language_id, timeout)
+    }
+
+    fn get_cached_serial(&mut self) -> Result<&str, Status> {
+        match self.serial {
+            None => {
+                self.serial = Some(self.get_serial()?);
+                Ok(self.serial.as_ref().unwrap())
+            },
+            Some(ref serial) => {
+                Ok(&serial)
+            },
+        }
     }
 
     fn set_sequence(&mut self, sequence: &[orb_color_period_t]) -> Result<(), Status> {
@@ -132,10 +163,10 @@ impl DriverOps for MicroOrbDriver {
         // Create now MicroOrb instance, and add the device to the system.
         let mut orb = Box::new(MicroOrb {
             usb: usb,
+            serial: None,
         });
 
-        let serial = orb.get_serial()?;
-        println!("New MicroOrb, serial {}", serial);
+        println!("New MicroOrb, serial {}", orb.get_cached_serial()?);
         let color = orb_rgb_t {
             red: 64,
             green: 32,
