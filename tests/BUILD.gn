@@ -70,9 +70,6 @@ package("modular_tests") {
       name = "suggestion_test_user_shell"
     },
     {
-      name = "test_last_focus_time"
-    },
-    {
       name = "test_link_data"
     },
     {
@@ -152,6 +149,10 @@ package("modular_tests") {
     {
       name = "embed_watcher_test_story_shell"
       dest = "modular_tests/embed_watcher_test_story_shell"
+    },
+    {
+      name = "last_focus_time_test_user_shell"
+      dest = "modular_tests/last_focus_time_test_user_shell"
     },
     {
       name = "link_context_entities_module"

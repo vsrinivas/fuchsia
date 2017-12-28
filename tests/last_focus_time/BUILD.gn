@@ -6,15 +6,15 @@ group("last_focus_time") {
   testonly = true
 
   public_deps = [
-    ":test_last_focus_time",
+    ":last_focus_time_test_user_shell",
   ]
 }
 
-executable("test_last_focus_time") {
+executable("last_focus_time_test_user_shell") {
   testonly = true
 
   sources = [
-    "test_last_focus_time.cc",
+    "last_focus_time_test_user_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
