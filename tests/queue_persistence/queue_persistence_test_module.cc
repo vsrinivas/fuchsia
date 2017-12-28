@@ -11,7 +11,7 @@
 #include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
+#include "peridot/tests/queue_persistence/queue_persistence_test_service.fidl.h"
 
 namespace {
 
@@ -37,8 +37,7 @@ class ParentApp {
     app::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(),
-                     queue_persistence_agent_interface_.NewRequest());
+    ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
@@ -64,7 +63,7 @@ class ParentApp {
  private:
   void AgentConnected() {
     agent_connected_.Pass();
-    queue_persistence_agent_interface_->GetMessageQueueToken(
+    agent_service_->GetMessageQueueToken(
         [this](const fidl::String& token) { ReceivedQueueToken(token); });
   }
 
@@ -74,7 +73,7 @@ class ParentApp {
 
     // Stop the agent.
     agent_controller_.reset();
-    queue_persistence_agent_interface_.reset();
+    agent_service_.reset();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_stopped",
         [this](const fidl::String&) { AgentStopped(); });
@@ -95,7 +94,7 @@ class ParentApp {
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(),
-                     queue_persistence_agent_interface_.NewRequest());
+                     agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
@@ -114,7 +113,7 @@ class ParentApp {
 
     // Stop the agent again.
     agent_controller_.reset();
-    queue_persistence_agent_interface_.reset();
+    agent_service_.reset();
     modular::testing::GetStore()->Get("queue_persistence_test_agent_stopped",
                                       [this](const fidl::String&) {
                                         module_host_->module_context()->Done();
@@ -123,8 +122,7 @@ class ParentApp {
 
   modular::ModuleHost* module_host_;
   modular::AgentControllerPtr agent_controller_;
-  modular::testing::QueuePersistenceAgentInterfacePtr
-      queue_persistence_agent_interface_;
+  modular::QueuePersistenceTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 

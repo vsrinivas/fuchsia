@@ -10,13 +10,13 @@
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
+#include "peridot/tests/queue_persistence/queue_persistence_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
-class TestAgentApp : modular::testing::QueuePersistenceAgentInterface {
+class TestAgentApp : modular::QueuePersistenceTestService {
  public:
   TestAgentApp(modular::AgentHost* agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
@@ -35,9 +35,9 @@ class TestAgentApp : modular::testing::QueuePersistenceAgentInterface {
               "queue_persistence_test_agent_received_message", "", [] {});
         });
 
-    services_.AddService<modular::testing::QueuePersistenceAgentInterface>(
+    services_.AddService<modular::QueuePersistenceTestService>(
         [this](fidl::InterfaceRequest<
-               modular::testing::QueuePersistenceAgentInterface> request) {
+               modular::QueuePersistenceTestService> request) {
           services_bindings_.AddBinding(this, std::move(request));
         });
 
@@ -67,7 +67,7 @@ class TestAgentApp : modular::testing::QueuePersistenceAgentInterface {
   }
 
  private:
-  // |QueuePersistenceAgentInterface|
+  // |QueuePersistenceTestService|
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
     msg_queue_->GetToken(
@@ -82,7 +82,7 @@ class TestAgentApp : modular::testing::QueuePersistenceAgentInterface {
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   app::ServiceNamespace services_;
-  fidl::BindingSet<modular::testing::QueuePersistenceAgentInterface>
+  fidl::BindingSet<modular::QueuePersistenceTestService>
       services_bindings_;
 };
 
