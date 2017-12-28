@@ -11,7 +11,7 @@
 #include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/triggers/trigger_test_agent_interface.fidl.h"
+#include "peridot/tests/trigger/trigger_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
@@ -25,8 +25,14 @@ constexpr char kTestAgent[] =
 
 class ParentApp {
  public:
+  TestPoint initialized_{"Root module initialized"};
+  TestPoint received_trigger_token_{"Received trigger token"};
+  TestPoint agent_connected_{"Agent accepted connection"};
+  TestPoint agent_stopped_{"Agent1 stopped"};
+  TestPoint task_triggered_{"Agent task triggered"};
+
   ParentApp(
-      modular::ModuleHost* module_host,
+      modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
@@ -40,13 +46,12 @@ class ParentApp {
     app::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(),
-                     trigger_agent_interface_.NewRequest());
+    ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
         "trigger_test_agent_connected", [this](const fidl::String&) {
           agent_connected_.Pass();
-          trigger_agent_interface_->GetMessageQueueToken(
+          agent_service_->GetMessageQueueToken(
               [this](const fidl::String& token) {
                 received_trigger_token_.Pass();
 
@@ -88,6 +93,8 @@ class ParentApp {
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
+  TestPoint stopped_{"Root module stopped"};
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -95,19 +102,11 @@ class ParentApp {
   }
 
  private:
-  modular::ModuleHost* module_host_;
+  modular::ModuleHost* const module_host_;
   modular::AgentControllerPtr agent_controller_;
-  modular::testing::TriggerAgentInterfacePtr trigger_agent_interface_;
+  modular::TriggerTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
-
-  TestPoint initialized_{"Root module initialized"};
-  TestPoint received_trigger_token_{"Received trigger token"};
-  TestPoint stopped_{"Root module stopped"};
-  TestPoint agent_connected_{"Agent accepted connection"};
-  TestPoint agent_stopped_{"Agent1 stopped"};
-  TestPoint task_triggered_{"Agent task triggered"};
-
   fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
 };
 

@@ -9,15 +9,17 @@
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/triggers/trigger_test_agent_interface.fidl.h"
+#include "peridot/tests/trigger/trigger_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
-class TestAgentApp : modular::testing::TriggerAgentInterface {
+class TestAgentApp : modular::TriggerTestService {
  public:
-  TestAgentApp(modular::AgentHost* agent_host) {
+  TestPoint initialized_{"Trigger test agent initialized"};
+
+  TestAgentApp(modular::AgentHost* const agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
@@ -33,11 +35,10 @@ class TestAgentApp : modular::testing::TriggerAgentInterface {
     task_info->trigger_condition = std::move(trigger_condition);
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
-    agent_services_.AddService<modular::testing::TriggerAgentInterface>(
-        [this](fidl::InterfaceRequest<modular::testing::TriggerAgentInterface>
-                   interface_request) {
-          trigger_agent_interface_.AddBinding(this,
-                                              std::move(interface_request));
+    agent_services_.AddService<modular::TriggerTestService>(
+        [this](fidl::InterfaceRequest<modular::TriggerTestService>
+                   request) {
+          service_bindings_.AddBinding(this, std::move(request));
         });
 
     initialized_.Pass();
@@ -64,7 +65,7 @@ class TestAgentApp : modular::testing::TriggerAgentInterface {
   }
 
  private:
-  // |TriggerAgentInterface|
+  // |TriggerTestService|
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
     msg_queue_->GetToken(
@@ -76,10 +77,7 @@ class TestAgentApp : modular::testing::TriggerAgentInterface {
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
-  fidl::BindingSet<modular::testing::TriggerAgentInterface>
-      trigger_agent_interface_;
-
-  TestPoint initialized_{"Trigger test agent initialized"};
+  fidl::BindingSet<modular::TriggerTestService> service_bindings_;
 };
 
 }  // namespace

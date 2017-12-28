@@ -4,23 +4,23 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-group("triggers") {
+group("trigger") {
   testonly = true
 
   public_deps = [
-    ":agent_trigger_test",
     ":trigger_test_agent",
+    ":trigger_test_module",
   ]
 }
 
-executable("agent_trigger_test") {
+executable("trigger_test_module") {
   testonly = true
 
   sources = [
-    "root_module.cc",
+    "trigger_test_module.cc",
   ]
   deps = [
-    ":trigger_test_agent_interface",
+    ":trigger_test_service",
     "//garnet/public/lib/fsl",
     "//peridot/lib/callback",
     "//peridot/lib/testing",
@@ -35,10 +35,10 @@ executable("trigger_test_agent") {
   testonly = true
 
   sources = [
-    "test_agent.cc",
+    "trigger_test_agent.cc",
   ]
   deps = [
-    ":trigger_test_agent_interface",
+    ":trigger_test_service",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib/agent/fidl",
@@ -47,8 +47,8 @@ executable("trigger_test_agent") {
   ]
 }
 
-fidl("trigger_test_agent_interface") {
+fidl("trigger_test_service") {
   sources = [
-    "trigger_test_agent_interface.fidl",
+    "trigger_test_service.fidl",
   ]
 }

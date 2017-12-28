@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular.testing;
+module modular;
 
-// An interface implemented by test_agent.cc which the root module uses.
-[ServiceName="modular.testing.TriggerAgentInterface"]
-interface TriggerAgentInterface {
+[ServiceName="modular.TriggerTestService"]
+interface TriggerTestService {
   GetMessageQueueToken@0() => (string message_queue_token);
 };

@@ -61,7 +61,7 @@ package("modular_tests") {
     "story_importance",
     "story_update",
     "suggestion",
-    "triggers",
+    "trigger",
     "user_shell",
   ]
 
@@ -75,10 +75,6 @@ package("modular_tests") {
   ]
 
   tests = [
-    {
-      name = "agent_trigger_test"
-      dest = "modular_tests/agent_trigger_test"
-    },
     {
       name = "clipboard_test_module"
       dest = "modular_tests/clipboard_test_module"
@@ -202,6 +198,10 @@ package("modular_tests") {
     {
       name = "trigger_test_agent"
       dest = "modular_tests/trigger_test_agent"
+    },
+    {
+      name = "trigger_test_module"
+      dest = "modular_tests/trigger_test_module"
     },
   ]
 }
