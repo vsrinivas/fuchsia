@@ -6,15 +6,15 @@ group("story_update") {
   testonly = true
 
   public_deps = [
-    ":test_story_update",
+    ":story_update_test_user_shell",
   ]
 }
 
-executable("test_story_update") {
+executable("story_update_test_user_shell") {
   testonly = true
 
   sources = [
-    "test_story_update.cc",
+    "story_update_test_user_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",

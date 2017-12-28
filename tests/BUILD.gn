@@ -70,9 +70,6 @@ package("modular_tests") {
       name = "suggestion_test_user_shell"
     },
     {
-      name = "test_story_update"
-    },
-    {
       name = "dev_token_manager"
     },
     {
@@ -184,6 +181,10 @@ package("modular_tests") {
     {
       name = "story_importance_test_user_shell"
       dest = "modular_tests/story_importance_test_user_shell"
+    },
+    {
+      name = "story_update_test_user_shell"
+      dest = "modular_tests/story_update_test_user_shell"
     },
     {
       name = "done_module"
