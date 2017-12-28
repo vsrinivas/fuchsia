@@ -26,7 +26,7 @@
 namespace {
 
 constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/link_context_entities_module";
+    "file:///system/test/modular_tests/link_context_entities_test_module";
 
 // A context reader watcher implementation.
 class ContextListenerImpl : maxwell::ContextListener {

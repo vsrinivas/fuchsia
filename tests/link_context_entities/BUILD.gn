@@ -6,16 +6,16 @@ group("link_context_entities") {
   testonly = true
 
   public_deps = [
-    ":link_context_entities_module",
-    ":link_context_entities_user_shell",
+    ":link_context_entities_test_module",
+    ":link_context_entities_test_user_shell",
   ]
 }
 
-executable("link_context_entities_user_shell") {
+executable("link_context_entities_test_user_shell") {
   testonly = true
 
   sources = [
-    "link_context_entities_user_shell.cc",
+    "link_context_entities_test_user_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -35,11 +35,11 @@ executable("link_context_entities_user_shell") {
   ]
 }
 
-executable("link_context_entities_module") {
+executable("link_context_entities_test_module") {
   testonly = true
 
   sources = [
-    "link_context_entities_module.cc",
+    "link_context_entities_test_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

@@ -155,12 +155,12 @@ package("modular_tests") {
       dest = "modular_tests/last_focus_time_test_user_shell"
     },
     {
-      name = "link_context_entities_module"
-      dest = "modular_tests/link_context_entities_module"
+      name = "link_context_entities_test_module"
+      dest = "modular_tests/link_context_entities_test_module"
     },
     {
-      name = "link_context_entities_user_shell"
-      dest = "modular_tests/link_context_entities_user_shell"
+      name = "link_context_entities_test_user_shell"
+      dest = "modular_tests/link_context_entities_test_user_shell"
     },
     {
       name = "modular_tests.json"
