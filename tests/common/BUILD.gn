@@ -6,16 +6,16 @@ group("common") {
   testonly = true
 
   public_deps = [
-    ":done_module",
-    ":null_module",
+    ":common_done_module",
+    ":common_null_module",
   ]
 }
 
-executable("done_module") {
+executable("common_done_module") {
   testonly = true
 
   sources = [
-    "done_module.cc",
+    "common_done_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -28,11 +28,11 @@ executable("done_module") {
   ]
 }
 
-executable("null_module") {
+executable("common_null_module") {
   testonly = true
 
   sources = [
-    "null_module.cc",
+    "common_null_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

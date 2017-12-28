@@ -18,6 +18,8 @@
 
 namespace {
 
+constexpr char kModuleUrl[] = "file:///system/test/modular_tests/common_null_module";
+
 // A simple link watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
 class LinkWatcherImpl : modular::LinkWatcher {
@@ -72,7 +74,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     story_provider_->CreateStory(
-        "file:///system/test/modular_tests/null_module",
+        kModuleUrl,
         [this](const fidl::String& story_id) {
           story_create_.Pass();
           GetController(story_id);

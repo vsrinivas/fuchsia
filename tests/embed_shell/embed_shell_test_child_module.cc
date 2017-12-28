@@ -14,12 +14,12 @@ using modular::testing::TestPoint;
 namespace {
 
 constexpr char kChildModuleName[] = "child";
-constexpr char kChildModule[] = "file:///system/test/modular_tests/null_module";
+constexpr char kChildModuleUrl[] = "file:///system/test/modular_tests/common_null_module";
 
 class ChildApp : modular::ModuleWatcher {
  public:
   ChildApp(
-      modular::ModuleHost* module_host,
+      modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
@@ -35,7 +35,7 @@ class ChildApp : modular::ModuleWatcher {
  private:
   void StartChildModule() {
     module_host_->module_context()->StartModuleInShell(
-        kChildModuleName, kChildModule, nullptr /* link_name */,
+        kChildModuleName, kChildModuleUrl, nullptr /* link_name */,
         nullptr /* incoming_services */, child_module_.NewRequest(),
         nullptr /* surface_relation */, true /* focused */);
 

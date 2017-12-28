@@ -25,13 +25,16 @@
 
 namespace {
 
+constexpr char kDoneModuleUrl[] = "file:///system/test/modular_tests/common_done_module";
+constexpr char kNullModuleUrl[] = "file:///system/test/modular_tests/common_null_module";
+
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
     first_module = command_line.GetOptionValueWithDefault(
-        "first_module", "file:///system/test/modular_tests/done_module");
+        "first_module", kDoneModuleUrl);
     second_module = command_line.GetOptionValueWithDefault(
-        "second_module", "file:///system/test/modular_tests/null_module");
+        "second_module", kNullModuleUrl);
   }
 
   std::string first_module;

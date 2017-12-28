@@ -77,6 +77,14 @@ package("modular_tests") {
       dest = "modular_tests/clipboard_test_module"
     },
     {
+      name = "common_done_module"
+      dest = "modular_tests/common_done_module"
+    },
+    {
+      name = "common_null_module"
+      dest = "modular_tests/common_null_module"
+    },
+    {
       name = "context_link_test_module"
       dest = "modular_tests/context_link_test_module"
     },
@@ -175,14 +183,6 @@ package("modular_tests") {
     {
       name = "story_update_test_user_shell"
       dest = "modular_tests/story_update_test_user_shell"
-    },
-    {
-      name = "done_module"
-      dest = "modular_tests/done_module"
-    },
-    {
-      name = "null_module"
-      dest = "modular_tests/null_module"
     },
     {
       name = "suggestion_test_module"

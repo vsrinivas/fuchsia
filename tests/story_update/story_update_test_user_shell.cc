@@ -19,7 +19,7 @@
 
 namespace {
 
-const char kNullModuleUrl[] = "file:///system/test/modular_tests/null_module";
+const char kModuleUrl[] = "file:///system/test/modular_tests/common_null_module";
 
 // A simple module watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
@@ -76,7 +76,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(kNullModuleUrl,
+    story_provider_->CreateStory(kModuleUrl,
                                  [this](const fidl::String& story_id) {
                                    story_create_.Pass();
                                    GetController(story_id);
@@ -126,7 +126,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // observability of the state transitions.
     //
     // The observability of the STOPPED state, however, is guaranteed.
-    story_controller_->AddModule(nullptr, "module1", kNullModuleUrl, "root",
+    story_controller_->AddModule(nullptr, "module1", kModuleUrl, "root",
                                  nullptr);
 
     fidl::Array<fidl::String> module_path;
@@ -175,14 +175,14 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // observe the STARTING state. It only guarantees to observe the RUNNING
     // state, and only if the module doesn't call Done() in its own.
     //
-    // TODO(mesch): If the module calls Done() on its context (as done_module,
-    // for example, would), it is stopped by the story runner because it's a top
-    // level module. If this happens at the same time as this call, the callback
-    // may never invoked because it's preempted by the story runner handling the
-    // Done() request from the module. Instead, the controller connection is
-    // just closed, and flow of control would need to resume from the connection
-    // error handler of the module controller.
-    story_controller_->AddModule(nullptr, "module2", kNullModuleUrl, "root",
+    // TODO(mesch): If the module calls Done() on its context (as
+    // common_done_module, for example, would), it is stopped by the story
+    // runner because it's a top level module. If this happens at the same time
+    // as this call, the callback may never invoked because it's preempted by
+    // the story runner handling the Done() request from the module. Instead,
+    // the controller connection is just closed, and flow of control would need
+    // to resume from the connection error handler of the module controller.
+    story_controller_->AddModule(nullptr, "module2", kModuleUrl, "root",
                                  nullptr);
 
     fidl::Array<fidl::String> module_path;
