@@ -6,15 +6,15 @@ group("link_update") {
   testonly = true
 
   public_deps = [
-    ":test_link_update",
+    ":link_update_test_user_shell",
   ]
 }
 
-executable("test_link_update") {
+executable("link_update_test_user_shell") {
   testonly = true
 
   sources = [
-    "test_link_update.cc",
+    "link_update_test_user_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
