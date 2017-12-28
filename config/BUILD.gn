@@ -92,8 +92,18 @@ config("release") {
   }
 }
 
+config("exceptions") {
+  cflags_cc = [ "-fexceptions" ]
+  cflags_objcc = cflags_cc
+}
+
 config("no_exceptions") {
   cflags_cc = [ "-fno-exceptions" ]
+  cflags_objcc = cflags_cc
+}
+
+config("rtti") {
+  cflags_cc = [ "-frtti" ]
   cflags_objcc = cflags_cc
 }
 
