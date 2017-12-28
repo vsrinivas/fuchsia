@@ -105,24 +105,28 @@ CommandBuffer* CommandBufferPool::GetCommandBuffer() {
   return buffer;
 }
 
-void CommandBufferPool::Cleanup() {
+bool CommandBufferPool::Cleanup() {
   // TODO: add some guard against potential re-entrant calls resulting from
   // invocation of CommandBufferFinishedCallbacks.
 
   while (!pending_buffers_.empty()) {
     auto& buffer = pending_buffers_.front();
-    if (buffer->Retire()) {
-      CommandBufferFinished(sequencer_, buffer->sequence_number());
-      free_buffers_.push(std::move(pending_buffers_.front()));
-      pending_buffers_.pop();
-    } else {
+    if (!buffer->Retire()) {
       // The first buffer in the queue is not finished, so neither are the rest.
-      // TODO: this is not necessarily true, but it should be close enough as
-      // long as everyone is being a "good citizen" (e.g. by submitting buffers
-      // in a timely fashion.)
-      break;
+      // Return false to notify the caller that more cleanup will need to be
+      // done in the future.
+      // TODO: the "first buffer in the queue is not finished, so..." logic is
+      // not necessarily true, but it should be close enough as long as everyone
+      // is being a "good citizen" (e.g. by submitting buffers in a timely
+      // fashion).
+      return false;
     }
+    CommandBufferFinished(sequencer_, buffer->sequence_number());
+    free_buffers_.push(std::move(pending_buffers_.front()));
+    pending_buffers_.pop();
   }
+  // No pending buffers remain.
+  return true;
 }
 
 }  // namespace impl

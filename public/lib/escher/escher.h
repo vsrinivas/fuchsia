@@ -61,7 +61,10 @@ class Escher : public MeshBuilderFactory {
   // don't need to call it if your application is constantly renderering.
   // However, if your app enters a "quiet period" then you might want to
   // arrange to call Cleanup() after the last frame has finished rendering.
-  void Cleanup();
+  // Return true if cleanup was complete, and false if more cleanup remains
+  // (in that case, the app should wait a moment before calling Cleanup()
+  // again).
+  bool Cleanup();
 
   VulkanDeviceQueues* device() const { return device_.get(); }
   vk::Device vk_device() const { return device_->vk_device(); }

@@ -113,11 +113,13 @@ Escher::~Escher() {
   Cleanup();
 }
 
-void Escher::Cleanup() {
-  command_buffer_pool()->Cleanup();
+bool Escher::Cleanup() {
+  bool finished = true;
+  finished = command_buffer_pool()->Cleanup() && finished;
   if (auto pool = transfer_command_buffer_pool()) {
-    pool->Cleanup();
+    finished = pool->Cleanup() && finished;
   }
+  return finished;
 }
 
 MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,

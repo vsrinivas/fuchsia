@@ -37,8 +37,9 @@ class CommandBufferPool : CommandBufferSequencerController {
   // has finished running on the GPU.
   CommandBuffer* GetCommandBuffer();
 
-  // Do periodic housekeeping.
-  void Cleanup();
+  // Do periodic housekeeping.  Return true if cleanup was complete, i.e. all
+  // pending command buffers are now finished.
+  bool Cleanup();
 
   vk::Device device() const { return device_; }
   vk::Queue queue() const { return queue_; }
