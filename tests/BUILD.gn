@@ -69,9 +69,6 @@ package("modular_tests") {
     {
       name = "dev_token_manager"
     },
-    {
-      name = "test_user_shell"
-    },
   ]
 
   tests = [
@@ -202,6 +199,10 @@ package("modular_tests") {
     {
       name = "trigger_test_module"
       dest = "modular_tests/trigger_test_module"
+    },
+    {
+      name = "user_shell_test_user_shell"
+      dest = "modular_tests/user_shell_test_user_shell"
     },
   ]
 }
