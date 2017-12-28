@@ -6,15 +6,15 @@ group("clipboard") {
   testonly = true
 
   public_deps = [
-    ":clipboard_test",
+    ":clipboard_test_module",
   ]
 }
 
-executable("clipboard_test") {
+executable("clipboard_test_module") {
   testonly = true
 
   sources = [
-    "clipboard_test.cc",
+    "clipboard_test_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",

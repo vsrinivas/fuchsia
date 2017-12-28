@@ -102,8 +102,8 @@ package("modular_tests") {
       dest = "modular_tests/child_module"
     },
     {
-      name = "clipboard_test"
-      dest = "modular_tests/clipboard_test"
+      name = "clipboard_test_module"
+      dest = "modular_tests/clipboard_test_module"
     },
     {
       name = "context_link_module"
