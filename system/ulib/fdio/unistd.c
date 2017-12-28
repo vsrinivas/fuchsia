@@ -2165,7 +2165,6 @@ int fstatfs(int fd, struct statfs* buf) {
 
     struct statfs stats = {};
 
-    // TODO(rvargas): Return some sensible f_type. Maybe get the FS return a type.
     if (info->block_size) {
         stats.f_bsize = info->block_size;
         stats.f_blocks = info->total_bytes / stats.f_bsize;
@@ -2175,6 +2174,9 @@ int fstatfs(int fd, struct statfs* buf) {
     stats.f_files = info->total_nodes;
     stats.f_ffree = info->total_nodes - info->used_nodes;
     stats.f_namelen = info->max_filename_size;
+    stats.f_type = info->fs_type;
+    stats.f_fsid.__val[0] = info->fs_id;
+    stats.f_fsid.__val[1] = info->fs_id >> 32;
 
     *buf = stats;
     return 0;

@@ -583,7 +583,8 @@ bool StatfsTest(void) {
     ASSERT_EQ(rc, 0);
 
     // Verify that at least some values make sense, without making the test too brittle.
-    ASSERT_EQ(stats.f_type, 0u);
+    ASSERT_EQ(stats.f_type, VFS_TYPE_MINFS);
+    ASSERT_NE(stats.f_fsid.__val[0] | stats.f_fsid.__val[1], 0);
     ASSERT_EQ(stats.f_bsize, 8192u);
     ASSERT_EQ(stats.f_namelen, 255u);
     ASSERT_GT(stats.f_bavail, 0u);
