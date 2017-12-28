@@ -142,16 +142,16 @@ package("modular_tests") {
       dest = "modular_tests/embed_shell_test_story_shell"
     },
     {
-      name = "embed_watcher_child_module"
-      dest = "modular_tests/embed_watcher_child_module"
+      name = "embed_watcher_test_child_module"
+      dest = "modular_tests/embed_watcher_test_child_module"
     },
     {
-      name = "embed_watcher_parent_module"
-      dest = "modular_tests/embed_watcher_parent_module"
+      name = "embed_watcher_test_parent_module"
+      dest = "modular_tests/embed_watcher_test_parent_module"
     },
     {
-      name = "embed_watcher_story_shell"
-      dest = "modular_tests/embed_watcher_story_shell"
+      name = "embed_watcher_test_story_shell"
+      dest = "modular_tests/embed_watcher_test_story_shell"
     },
     {
       name = "link_context_entities_module"

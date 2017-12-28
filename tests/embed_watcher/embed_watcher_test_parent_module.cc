@@ -20,7 +20,7 @@ namespace {
 
 constexpr char kChildModuleName[] = "child";
 constexpr char kChildModule[] =
-    "file:///system/test/modular_tests/embed_watcher_child_module";
+    "file:///system/test/modular_tests/embed_watcher_test_child_module";
 
 class ParentApp : modular::EmbedModuleWatcher {
  public:

@@ -6,17 +6,17 @@ group("embed_watcher") {
   testonly = true
 
   public_deps = [
-    ":embed_watcher_child_module",
-    ":embed_watcher_parent_module",
-    ":embed_watcher_story_shell",
+    ":embed_watcher_test_child_module",
+    ":embed_watcher_test_parent_module",
+    ":embed_watcher_test_story_shell",
   ]
 }
 
-executable("embed_watcher_child_module") {
+executable("embed_watcher_test_child_module") {
   testonly = true
 
   sources = [
-    "embed_watcher_child_module.cc",
+    "embed_watcher_test_child_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -28,11 +28,11 @@ executable("embed_watcher_child_module") {
   ]
 }
 
-executable("embed_watcher_parent_module") {
+executable("embed_watcher_test_parent_module") {
   testonly = true
 
   sources = [
-    "embed_watcher_parent_module.cc",
+    "embed_watcher_test_parent_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -45,11 +45,11 @@ executable("embed_watcher_parent_module") {
   ]
 }
 
-executable("embed_watcher_story_shell") {
+executable("embed_watcher_test_story_shell") {
   testonly = true
 
   sources = [
-    "embed_watcher_story_shell.cc",
+    "embed_watcher_test_story_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
