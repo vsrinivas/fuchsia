@@ -6,16 +6,16 @@ group("parent_child") {
   testonly = true
 
   public_deps = [
-    ":child_module",
-    ":parent_module",
+    ":parent_child_test_child_module",
+    ":parent_child_test_parent_module",
   ]
 }
 
-executable("child_module") {
+executable("parent_child_test_child_module") {
   testonly = true
 
   sources = [
-    "child_module.cc",
+    "parent_child_test_child_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -27,11 +27,11 @@ executable("child_module") {
   ]
 }
 
-executable("parent_module") {
+executable("parent_child_test_parent_module") {
   testonly = true
 
   sources = [
-    "parent_module.cc",
+    "parent_child_test_parent_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

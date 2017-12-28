@@ -21,7 +21,7 @@ constexpr int kTimeoutMilliseconds = 5000;
 
 constexpr char kChildModuleName[] = "child";
 constexpr char kChildModule[] =
-    "file:///system/test/modular_tests/child_module";
+    "file:///system/test/modular_tests/parent_child_test_child_module";
 
 constexpr char kChildLink[] = "child";
 constexpr char kChildLinkAlternate[] = "child2";
