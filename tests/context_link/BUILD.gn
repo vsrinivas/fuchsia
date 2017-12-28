@@ -6,16 +6,16 @@ group("context_link") {
   testonly = true
 
   public_deps = [
-    ":context_link_module",
-    ":context_link_user_shell",
+    ":context_link_test_module",
+    ":context_link_test_user_shell",
   ]
 }
 
-executable("context_link_user_shell") {
+executable("context_link_test_user_shell") {
   testonly = true
 
   sources = [
-    "context_link_user_shell.cc",
+    "context_link_test_user_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -35,11 +35,11 @@ executable("context_link_user_shell") {
   ]
 }
 
-executable("context_link_module") {
+executable("context_link_test_module") {
   testonly = true
 
   sources = [
-    "context_link_module.cc",
+    "context_link_test_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

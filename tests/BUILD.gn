@@ -106,12 +106,12 @@ package("modular_tests") {
       dest = "modular_tests/clipboard_test_module"
     },
     {
-      name = "context_link_module"
-      dest = "modular_tests/context_link_module"
+      name = "context_link_test_module"
+      dest = "modular_tests/context_link_test_module"
     },
     {
-      name = "context_link_user_shell"
-      dest = "modular_tests/context_link_user_shell"
+      name = "context_link_test_user_shell"
+      dest = "modular_tests/context_link_test_user_shell"
     },
     {
       name = "component_context_test_module"
