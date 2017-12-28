@@ -17,12 +17,29 @@ namespace {
 uint32_t expand_bitfield(uint32_t bitfield) {
     uint32_t result = 0u;
     for (uint8_t ix = 0; ix != 16; ++ix) {
-        uint32_t twobit = (bitfield & 0x1) ? 0x10 : 0x01;
+        uint32_t twobit = (bitfield & 0x1) ? 0x02 : 0x01;
         result |= twobit << (2 * ix);
         bitfield >>= 1;
     }
     return result;
 }
+
+// Helper template class that translates pointers from two different
+// array allocations using memory offsets.
+template <typename T>
+class Fixup {
+public:
+    Fixup(const T* src_base, T* dest_base)
+        : src_base_(src_base), dest_base_(dest_base) {}
+
+    T* operator()(const T* src) {
+        return (src == nullptr) ? nullptr : dest_base_ + (src - src_base_);
+    }
+
+private:
+    const T* const src_base_;
+    T* const dest_base_;
+};
 
 }  // namespace
 
@@ -80,22 +97,103 @@ bool is_app_collection(uint32_t col) {
     return (col == static_cast<uint32_t>(CollectionType::kApplication));
 }
 
-bool field_flag(FieldTypeFlags flag, uint32_t field_type) {
-    return (((field_type >> static_cast<uint8_t>(flag)) & 0x1) == 0x1);
-}
-
 class ParseState {
 public:
     ParseState()
         : usage_range_(),
           table_(),
-          curr_col_ix_(-1) {
+          parent_coll_(nullptr),
+          report_id_count_(0) {
     }
 
     bool Init() {
         fbl::AllocChecker ac;
         coll_.reserve(kMaxCollectionCount, &ac);
         return ac.check();
+    }
+
+    ParseResult Finish(DeviceDescriptor** device) {
+        // A single heap allocation is used to pack the constructed model so
+        // that the client can do a single free. There are 3 arrays in
+        // order:
+        //  - The report array, one entry per unique report id.
+        //  - all reports fields
+        //  - all collections
+        //
+        // The bottom two need fixups. Which means that inner pointers that
+        // refer to collections in the source need to be translated to pointers
+        // valid within the destination memory area.
+
+        if (report_id_count_ == 0) {
+            // The reports don't have an id. This is scenario #1 as
+            // explained in the header.
+            report_id_count_ = 1;
+        }
+
+        size_t device_sz =
+            sizeof(DeviceDescriptor) + report_id_count_ * sizeof(ReportDescriptor);
+        size_t fields_sz = fields_.size() * sizeof(ReportField);
+        size_t collect_sz = coll_.size() * sizeof(Collection);
+
+        fbl::AllocChecker ac;
+        auto mem = new (&ac) char[device_sz + fields_sz + collect_sz];
+        if (!ac.check())
+            return kParseNoMemory;
+
+        auto dev = new (mem) DeviceDescriptor { report_id_count_, {} };
+
+        mem += device_sz;
+        auto dest_fields = reinterpret_cast<ReportField*>(mem);
+
+        mem += fields_sz;
+        auto dest_colls = reinterpret_cast<Collection*>(mem);
+
+        Fixup<Collection> coll_fixup(&coll_[0], &dest_colls[0]);
+
+        size_t ix = 0u;
+        // Copy and fix the collections first.
+        for (const auto& c: coll_) {
+            dest_colls[ix] = c;
+            dest_colls[ix].parent = coll_fixup(c.parent);
+            ++ix;
+        }
+
+        // Copy and fix the fields next.
+        ix = 0u;
+        size_t ifr = 0u;
+        int32_t last_id = -1;
+        size_t count = 0;
+
+        for (const auto& f: fields_) {
+            dest_fields[ix] = f;
+            dest_fields[ix].col = coll_fixup(f.col);
+
+            if (static_cast<int32_t>(f.report_id) != last_id) {
+                // New report id. Fill the next ReportDescriptor entry with the address
+                // of the first field, the new report id.
+                dev->report[ifr] = ReportDescriptor { f.report_id, 0, &dest_fields[ix] };
+
+                if (ifr != 0) {
+                    // Update the previous ReportDescriptor with the field count.
+                    dev->report[ifr - 1].count = count;
+                }
+
+                last_id = f.report_id;
+                count = 0;
+                ++ifr;
+            }
+
+            ++count;
+            ++ix;
+        }
+
+        if (ifr != 0) {
+            // Last ReportDescriptor need field count updated.
+            dev->report[ifr - 1].count = count;
+        }
+
+        *device = dev;
+        return kParseOk;
     }
 
     ParseResult start_collection(uint32_t data) {                 // Main
@@ -107,35 +205,34 @@ public:
         if (coll_.size() > kMaxCollectionCount)
             return kParseOverflow;
 
-        Collection* parent = nullptr;
-
-        if (curr_col_ix_ < 0) {
+        if (parent_coll_ == nullptr) {
             // The first collection must be an application collection.
             if (!is_app_collection(data))
                 return kParseUnexpectedCol;
-        } else if (!is_app_collection(data)) {
-            parent = &coll_[curr_col_ix_];
         }
+
+        uint16_t usage = usages_.is_empty() ? 0 : usages_[0];
 
         Collection col {
             static_cast<CollectionType>(data),
-            table_.attributes.usage,
-            parent,
-            nullptr         // first report node. It will be
-        };                  // wired during post processing.
+            Usage {table_.attributes.usage.page, usage},
+            parent_coll_
+        };
 
         coll_.push_back(col);
-        curr_col_ix_ = static_cast<int32_t>(coll_.size() - 1);
+        parent_coll_ = &coll_[coll_.size() - 1];
         return kParseOk;
     }
 
     ParseResult end_collection(uint32_t data) {
         if (data != 0u)
             return kParseInvalidItemValue;
-        if (curr_col_ix_ < 0)
+        if (parent_coll_ == nullptr)
             return kParseInvalidTag;
-        // We don't free collection items until post-processing.
-        curr_col_ix_--;
+        // We don't free collection items until Finish().
+        parent_coll_ = parent_coll_->parent;
+        // TODO(cpu): make sure there are fields between start and end
+        // otherwise this is malformed.
         return kParseOk;
     }
 
@@ -146,10 +243,10 @@ public:
         if (!validate_ranges())
             return kParseInvalidRange;
 
-        auto field_type = expand_bitfield(data);
+        auto flags = expand_bitfield(data);
         Attributes attributes = table_.attributes;
 
-        UsageIterator usage_it(this, field_type);
+        UsageIterator usage_it(this, flags);
 
         for (uint32_t ix = 0; ix != table_.report_count; ++ ix) {
             if (!usage_it.next_usage(&attributes.usage.usage))
@@ -161,10 +258,9 @@ public:
                 table_.report_id,
                 attributes,
                 type,
-                field_type,
-                curr_col,
-                nullptr     // next node. It will be wired
-            };              // during post-processing.
+                flags,
+                curr_col
+            };
 
             fbl::AllocChecker ac;
             fields_.push_back(field, &ac);
@@ -261,6 +357,7 @@ public:
         if (data > UINT8_MAX)
             return kParseInvalidRange;
         table_.report_id = static_cast<uint8_t>(data);
+        ++report_id_count_;
         return kParseOk;
     }
 
@@ -320,6 +417,9 @@ private:
     //      Report Count (1), Report Size (2)
     //      Usage (Sys Sleep (82)), Usage (Sys Power Down(81)), Usage (Sys Wake Up(83))
     //      Input (Data,Array)
+    //
+    // In other words, array might need a lookup table to be generated
+    // see the header for a potential approach.
 
     class UsageIterator {
     public:
@@ -328,7 +428,7 @@ private:
               usage_range_(),
               index_(0),
               last_usage_(0),
-              is_array_(field_flag(FieldTypeFlags::kArray, field_type)) {
+              is_array_(FieldTypeFlags::kArray & field_type) {
             if ((ps->usage_range_.max == 0) && (ps->usage_range_.min == 0)) {
                 usages_ = &ps->usages_;
             } else {
@@ -372,11 +472,11 @@ private:
     fbl::Vector<StateTable> stack_;
     fbl::Vector<uint16_t> usages_;
     // Temporary output model:
-    int32_t curr_col_ix_;
+    Collection* parent_coll_;
+    size_t report_id_count_;
     fbl::Vector<Collection> coll_;
     fbl::Vector<ReportField> fields_;
 };
-
 
 ParseResult ProcessMainItem(const hid::Item& item, ParseState* state) {
     ParseResult res;
@@ -470,7 +570,7 @@ ParseResult ParseReportDescriptor(
         buf += actual;
     }
 
-    return kParseOk;
+    return state.Finish(device);
 }
 
 }  // namespace hid

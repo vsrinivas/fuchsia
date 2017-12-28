@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/hid-parser-test.cpp \
+    $(LOCAL_DIR)/hid-report-data.cpp
 
 MODULE_NAME := hidparse-test
 

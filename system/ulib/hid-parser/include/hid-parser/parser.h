@@ -16,14 +16,14 @@ namespace hid {
 //
 // The DeviceDescriptor data is organized at the first level by the
 // array |report[rep_count]| in which each entry points to the first
-// field of each report.
+// field of each report and how many fields are expected on each report.
 //
-// report[0] --->  ReportField
-//                 +report_id
-//                 +field_type
-//                 +col ---------> Collection
-//                                 +type
-//                                 +parent ------> Collection
+// report[0].first_field --->  ReportField
+//                              +report_id
+//                              +field_type
+//                              +col -------> Collection
+//                                            +type
+//                                            +parent ---> Collection
 //                             1
 // The structure describes all the information returned by the device;
 // no information present in the original stream is lost.
@@ -45,7 +45,8 @@ namespace hid {
 // An example will enlighten. Assume |report| array as follows,
 // with most fields omitted for brevity:
 //
-//    report[0] --->  [0] report_id:      1
+//    report[0]
+//    .first_field--> [0] report_id:      1
 //                        usage           button,1
 //                        flags           data,var
 //                        bit_sz          1
@@ -59,8 +60,8 @@ namespace hid {
 //                        usage           button,none
 //                        flags           const
 //                        bit_sz          6
-//
-//    report[1] --->  [3] report_id:      3
+//    report[1]
+//    .first_field--> [3] report_id:      3
 //                        usage           desktop,X
 //                        flags           data,var
 //                        bit_sz          8
@@ -69,8 +70,8 @@ namespace hid {
 //                        usage           desktop,Y
 //                        flags           data,var
 //                        bit_sz          8
-//
-//    report[2] --->  [5] report_id:      4
+//    report[2]
+//    .first_field--> [5] report_id:      4
 //                        usage           desktop,wheel
 //                        flags           data,var
 //                        bit_sz          5
@@ -146,46 +147,45 @@ enum NodeType : uint32_t {
     kFeature
 };
 
-enum FieldTypeFlags : uint8_t {
+enum FieldTypeFlags : uint32_t {
     // Indicates if field can be modfied. Constant often means is padding.
-    kData,
-    kConstant,
+    kData               = 1 << 0,
+    kConstant           = 1 << 1,
     // The field is either an array or scalar. If it is an array only
     // the kData|kConstant and kAbsolute|kRelative flags are valid.
-    kArray,
-    kVariable,
+    kArray              = 1 << 2,
+    kScalar             = 1 << 3,
     // Value is absolute wrt to a fixed origin or not.
-    kAbsolute,
-    kRelative,
+    kAbsolute           = 1 << 4,
+    kRelative           = 1 << 5,
     // Whether the data rolls over wrt to the logical min/max.
-    kNoWrap,
-    kWrap,
+    kNoWrap             = 1 << 6,
+    kWrap               = 1 << 7,
     // Data has been pre-processed, for example dead-zone.
-    kLinear,
-    kNonLinear,
+    kLinear             = 1 << 8,
+    kNonLinear          = 1 << 9,
     // Value returns to a preset value when the user is not interacting with control.
-    kPreferredState,
-    kNoPreferred,
+    kPreferredState     = 1 << 10,
+    kNoPreferred        = 1 << 11,
     // If the control can enter a state when it does not report data.
-    kNoNullPosition,
-    kNullState,
+    kNoNullPosition     = 1 << 12,
+    kNullState          = 1 << 13,
     // Output-only: can the value be modified without host interaction.
-    kNonVolatile,
-    kVolatile,
+    kNonVolatile        = 1 << 14,
+    kVolatile           = 1 << 15,
     // Data is a fixed size stream.
-    kBitField,
-    kBufferedBytes,
-
-    kReserved,
+    kBitField           = 1 << 16,
+    kBufferedBytes      = 1 << 17,
 };
 
-struct ReportField;
+// TODO(cpu): consider repurposing the kData| kArray | kNonLinear to indicate
+// an array field which requires a lookup table. See adafruit trinket report id 4
+// for an example of this case.
 
 struct Collection {
     CollectionType type;
     Usage usage;
     Collection* parent;            // Enclosing collection or null.
-    ReportField* node;             // First field or null.
 };
 
 struct Attributes {
@@ -200,14 +200,19 @@ struct ReportField {
     uint8_t report_id;
     Attributes attr;
     NodeType type;
-    uint32_t field_type;
+    uint32_t flags;
     Collection* col;
-    ReportField* next;          // Next field in same report or null.
+};
+
+struct ReportDescriptor {
+    uint8_t report_id;
+    size_t count;
+    ReportField* first_field;
 };
 
 struct DeviceDescriptor {
     size_t rep_count;
-    ReportField* report[];
+    ReportDescriptor report[];
 };
 
 enum ParseResult : uint32_t {
