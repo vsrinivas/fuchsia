@@ -33,6 +33,10 @@ boot-reserve-mem-map = {
         length = 0x00200000
     }
     {
+        base-phys = 0x05100000
+        length = 0x2000000
+    }
+    {
         base-phys = 0x7300000
         length = 0x100000
     }
