@@ -1,6 +1,45 @@
 {
   "tests":[
     {
+      "name":"clipboard",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/clipboard_test_module --story_shell=dev_story_shell",
+      "copy":{
+        "/system/test/modular_tests":[
+          "clipboard_test_module"
+        ]
+      }
+    },
+    {
+      "name":"component_context",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/test/modular_tests/component_context_test_module",
+      "copy":{
+        "/system/test/modular_tests":[
+          "component_context_test_module",
+          "component_context_test_one_agent",
+          "component_context_test_agent2",
+          "component_context_unstoppable_agent"
+        ]
+      }
+    },
+    {
+      "name":"context_engine",
+      "exec":"/system/test/maxwell/context_engine_test"
+    },
+    {
+      "name":"context_index",
+      "exec":"/system/test/maxwell_unittests"
+    },
+    {
+      "name":"context_link",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/context_link_test_user_shell --story_shell=dev_story_shell",
+      "copy":{
+        "/system/test/modular_tests":[
+          "context_link_test_user_shell",
+          "context_link_test_module"
+        ]
+      }
+    },
+    {
       "name":"embed_shell",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=/system/test/modular_tests/embed_shell_test_story_shell --user_shell_args=--root_module=/system/test/modular_tests/embed_shell_test_parent_module",
       "copy":{
@@ -23,29 +62,21 @@
       }
     },
     {
-      "name":"modular_unittests",
-      "exec":"/system/test/modular_unittests"
-    },
-    {
-      "name":"peridot_lib_unittests",
-      "exec":"/system/test/peridot_lib_unittests"
-    },
-    {
-      "name":"user_shell",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/user_shell_test_user_shell --story_shell=dev_story_shell",
+      "name":"last_focus_time",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/last_focus_time_test_user_shell --story_shell=dev_story_shell",
       "copy":{
         "/system/test/modular_tests":[
-          "user_shell_test_user_shell"
+          "last_focus_time_test_user_shell"
         ]
       }
     },
     {
-      "name":"suggestion",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/suggestion_test_user_shell --story_shell=dev_story_shell",
+      "name":"link_context_entities",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/link_context_entities_test_user_shell --story_shell=dev_story_shell",
       "copy":{
         "/system/test/modular_tests":[
-          "suggestion_test_module",
-          "suggestion_test_user_shell"
+          "link_context_entities_test_user_shell",
+          "link_context_entities_test_module"
         ]
       }
     },
@@ -68,31 +99,8 @@
       }
     },
     {
-      "name":"story_importance",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/story_importance_test_user_shell --story_shell=dev_story_shell",
-      "copy":{
-        "/system/test/modular_tests":[
-          "story_importance_test_user_shell"
-        ]
-      }
-    },
-    {
-      "name":"story_update",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/story_update_test_user_shell --story_shell=dev_story_shell",
-      "copy":{
-        "/system/test/modular_tests":[
-          "story_update_test_user_shell"
-        ]
-      }
-    },
-    {
-      "name":"last_focus_time",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/last_focus_time_test_user_shell --story_shell=dev_story_shell",
-      "copy":{
-        "/system/test/modular_tests":[
-          "last_focus_time_test_user_shell"
-        ]
-      }
+      "name":"modular_unittests",
+      "exec":"/system/test/modular_unittests"
     },
     {
       "name":"parent_child",
@@ -105,46 +113,8 @@
       }
     },
     {
-      "name":"component_context",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/test/modular_tests/component_context_test_module",
-      "copy":{
-        "/system/test/modular_tests":[
-          "component_context_test_module",
-          "component_context_test_one_agent",
-          "component_context_test_agent2",
-          "component_context_unstoppable_agent"
-        ]
-      }
-    },
-    {
-      "name":"context_link",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/context_link_test_user_shell --story_shell=dev_story_shell",
-      "copy":{
-        "/system/test/modular_tests":[
-          "context_link_test_user_shell",
-          "context_link_test_module"
-        ]
-      }
-    },
-    {
-      "name":"link_context_entities",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/link_context_entities_test_user_shell --story_shell=dev_story_shell",
-      "copy":{
-        "/system/test/modular_tests":[
-          "link_context_entities_test_user_shell",
-          "link_context_entities_test_module"
-        ]
-      }
-    },
-    {
-      "name":"triggers",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/trigger_test_module --story_shell=dev_story_shell",
-      "copy":{
-        "/system/test/modular_tests":[
-          "trigger_test_agent",
-          "trigger_test_module"
-        ]
-      }
+      "name":"peridot_lib_unittests",
+      "exec":"/system/test/peridot_lib_unittests"
     },
     {
       "name":"queue_persistence",
@@ -166,19 +136,49 @@
       }
     },
     {
-      "name":"context_engine",
-      "exec":"/system/test/maxwell/context_engine_test"
-    },
-    {
-      "name":"context_index",
-      "exec":"/system/test/maxwell_unittests"
-    },
-    {
-      "name":"clipboard",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/clipboard_test_module --story_shell=dev_story_shell",
+      "name":"story_importance",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/story_importance_test_user_shell --story_shell=dev_story_shell",
       "copy":{
         "/system/test/modular_tests":[
-          "clipboard_test_module"
+          "story_importance_test_user_shell"
+        ]
+      }
+    },
+    {
+      "name":"story_update",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/story_update_test_user_shell --story_shell=dev_story_shell",
+      "copy":{
+        "/system/test/modular_tests":[
+          "story_update_test_user_shell"
+        ]
+      }
+    },
+    {
+      "name":"suggestion",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/suggestion_test_user_shell --story_shell=dev_story_shell",
+      "copy":{
+        "/system/test/modular_tests":[
+          "suggestion_test_module",
+          "suggestion_test_user_shell"
+        ]
+      }
+    },
+    {
+      "name":"trigger",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/trigger_test_module --story_shell=dev_story_shell",
+      "copy":{
+        "/system/test/modular_tests":[
+          "trigger_test_agent",
+          "trigger_test_module"
+        ]
+      }
+    },
+    {
+      "name":"user_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/user_shell_test_user_shell --story_shell=dev_story_shell",
+      "copy":{
+        "/system/test/modular_tests":[
+          "user_shell_test_user_shell"
         ]
       }
     }

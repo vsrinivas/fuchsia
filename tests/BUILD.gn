@@ -20,8 +20,8 @@
 #    components belonging to the same test are lexicographically sorted
 #    together.
 #
-# 3. Components shared between tests are named after their function followed by
-#    a suffix indicating the component type.
+# 3. Common components shared between tests are named after their function
+#    followed by a suffix indicating the component type.
 #
 # 4. The suffix that indicates the component type (i.e. the primary service
 #    provided by the component) is:
@@ -31,10 +31,9 @@
 #    - _user_shell -- UserShell
 #    - _device_shell -- DeviceShell
 #    - _story_shell -- StoryShell
+#    - _service -- FIDL interfaces
 #
 # 5. The main sources of the components are named like the binaries they create.
-#
-# TODO(mesch): These conventions are applied in followup changes.
 
 import("//build/package.gni")
 
@@ -85,14 +84,6 @@ package("modular_tests") {
       dest = "modular_tests/common_null_module"
     },
     {
-      name = "context_link_test_module"
-      dest = "modular_tests/context_link_test_module"
-    },
-    {
-      name = "context_link_test_user_shell"
-      dest = "modular_tests/context_link_test_user_shell"
-    },
-    {
       name = "component_context_test_module"
       dest = "modular_tests/component_context_test_module"
     },
@@ -107,6 +98,14 @@ package("modular_tests") {
     {
       name = "component_context_test_unstoppable_agent"
       dest = "modular_tests/component_context_test_unstoppable_agent"
+    },
+    {
+      name = "context_link_test_module"
+      dest = "modular_tests/context_link_test_module"
+    },
+    {
+      name = "context_link_test_user_shell"
+      dest = "modular_tests/context_link_test_user_shell"
     },
     {
       name = "embed_shell_test_child_module"
