@@ -114,8 +114,8 @@ package("modular_tests") {
       dest = "modular_tests/context_link_user_shell"
     },
     {
-      name = "component_context_test"
-      dest = "modular_tests/component_context_test"
+      name = "component_context_test_module"
+      dest = "modular_tests/component_context_test_module"
     },
     {
       name = "component_context_test_agent1"
