@@ -6,17 +6,17 @@ group("embed_shell") {
   testonly = true
 
   public_deps = [
-    ":embed_child_module",
-    ":embed_parent_module",
-    ":embed_story_shell",
+    ":embed_shell_test_child_module",
+    ":embed_shell_test_parent_module",
+    ":embed_shell_test_story_shell",
   ]
 }
 
-executable("embed_child_module") {
+executable("embed_shell_test_child_module") {
   testonly = true
 
   sources = [
-    "embed_child_module.cc",
+    "embed_shell_test_child_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -28,11 +28,11 @@ executable("embed_child_module") {
   ]
 }
 
-executable("embed_parent_module") {
+executable("embed_shell_test_parent_module") {
   testonly = true
 
   sources = [
-    "embed_parent_module.cc",
+    "embed_shell_test_parent_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -45,11 +45,11 @@ executable("embed_parent_module") {
   ]
 }
 
-executable("embed_story_shell") {
+executable("embed_shell_test_story_shell") {
   testonly = true
 
   sources = [
-    "embed_story_shell.cc",
+    "embed_shell_test_story_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",

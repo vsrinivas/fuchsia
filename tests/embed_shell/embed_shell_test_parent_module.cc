@@ -20,12 +20,12 @@ namespace {
 
 constexpr char kChildModuleName[] = "child";
 constexpr char kChildModule[] =
-    "file:///system/test/modular_tests/embed_child_module";
+    "file:///system/test/modular_tests/embed_shell_test_child_module";
 
 class ParentApp {
  public:
   ParentApp(
-      modular::ModuleHost* module_host,
+      modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {

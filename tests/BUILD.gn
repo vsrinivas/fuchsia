@@ -130,16 +130,16 @@ package("modular_tests") {
       dest = "modular_tests/component_context_test_unstoppable_agent"
     },
     {
-      name = "embed_child_module"
-      dest = "modular_tests/embed_child_module"
+      name = "embed_shell_test_child_module"
+      dest = "modular_tests/embed_shell_test_child_module"
     },
     {
-      name = "embed_parent_module"
-      dest = "modular_tests/embed_parent_module"
+      name = "embed_shell_test_parent_module"
+      dest = "modular_tests/embed_shell_test_parent_module"
     },
     {
-      name = "embed_story_shell"
-      dest = "modular_tests/embed_story_shell"
+      name = "embed_shell_test_story_shell"
+      dest = "modular_tests/embed_shell_test_story_shell"
     },
     {
       name = "embed_watcher_child_module"

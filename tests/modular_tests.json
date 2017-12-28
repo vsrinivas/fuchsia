@@ -2,12 +2,12 @@
   "tests":[
     {
       "name":"embed_shell",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=/system/test/modular_tests/embed_story_shell --user_shell_args=--root_module=/system/test/modular_tests/embed_parent_module",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=/system/test/modular_tests/embed_shell_test_story_shell --user_shell_args=--root_module=/system/test/modular_tests/embed_shell_test_parent_module",
       "copy":{
         "/system/test/modular_tests":[
-          "embed_parent_module",
-          "embed_child_module",
-          "embed_story_shell"
+          "embed_shell_test_parent_module",
+          "embed_shell_test_child_module",
+          "embed_shell_test_story_shell"
         ]
       }
     },
