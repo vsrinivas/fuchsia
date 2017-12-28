@@ -6,15 +6,15 @@ group("story_importance") {
   testonly = true
 
   public_deps = [
-    ":test_story_importance",
+    ":story_importance_test_user_shell",
   ]
 }
 
-executable("test_story_importance") {
+executable("story_importance_test_user_shell") {
   testonly = true
 
   sources = [
-    "test_story_importance.cc",
+    "story_importance_test_user_shell.cc",
   ]
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",

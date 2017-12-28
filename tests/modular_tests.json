@@ -71,10 +71,10 @@
     },
     {
       "name":"story_importance",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=test_story_importance --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/story_importance_test_user_shell --story_shell=dev_story_shell",
       "copy":{
-        "/system/bin":[
-          "test_story_importance"
+        "/system/test/modular_tests":[
+          "story_importance_test_user_shell"
         ]
       }
     },

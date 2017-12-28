@@ -70,9 +70,6 @@ package("modular_tests") {
       name = "suggestion_test_user_shell"
     },
     {
-      name = "test_story_importance"
-    },
-    {
       name = "test_story_update"
     },
     {
@@ -183,6 +180,10 @@ package("modular_tests") {
     {
       name = "remote_test_module"
       dest = "modular_tests/remote_test_module"
+    },
+    {
+      name = "story_importance_test_user_shell"
+      dest = "modular_tests/story_importance_test_user_shell"
     },
     {
       name = "done_module"
