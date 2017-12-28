@@ -6,16 +6,16 @@ group("suggestion") {
   testonly = true
 
   public_deps = [
-    ":suggestion_proposal_test_module",
+    ":suggestion_test_module",
     ":suggestion_test_user_shell",
   ]
 }
 
-executable("suggestion_proposal_test_module") {
+executable("suggestion_test_module") {
   testonly = true
 
   sources = [
-    "suggestion_proposal_test_module.cc",
+    "suggestion_test_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

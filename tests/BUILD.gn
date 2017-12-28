@@ -67,9 +67,6 @@ package("modular_tests") {
 
   binaries = [
     {
-      name = "suggestion_test_user_shell"
-    },
-    {
       name = "dev_token_manager"
     },
     {
@@ -195,8 +192,12 @@ package("modular_tests") {
       dest = "modular_tests/null_module"
     },
     {
-      name = "suggestion_proposal_test_module"
-      dest = "modular_tests/suggestion_proposal_test_module"
+      name = "suggestion_test_module"
+      dest = "modular_tests/suggestion_test_module"
+    },
+    {
+      name = "suggestion_test_user_shell"
+      dest = "modular_tests/suggestion_test_user_shell"
     },
     {
       name = "trigger_test_agent"
