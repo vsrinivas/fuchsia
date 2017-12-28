@@ -181,8 +181,8 @@ package("modular_tests") {
       dest = "modular_tests/queue_persistence_test_module"
     },
     {
-      name = "remote_invoker_test"
-      dest = "modular_tests/remote_invoker_test"
+      name = "remote_test_module"
+      dest = "modular_tests/remote_test_module"
     },
     {
       name = "done_module"

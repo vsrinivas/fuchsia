@@ -8,15 +8,15 @@ group("remote") {
   testonly = true
 
   public_deps = [
-    ":remote_invoker_test",
+    ":remote_test_module",
   ]
 }
 
-executable("remote_invoker_test") {
+executable("remote_test_module") {
   testonly = true
 
   sources = [
-    "remote_invoker_test_module.cc",
+    "remote_test_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

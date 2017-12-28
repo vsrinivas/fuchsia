@@ -160,10 +160,10 @@
     },
     {
       "name":"remote",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/remote_invoker_test --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/remote_test_module --story_shell=dev_story_shell",
       "copy":{
         "/system/test/modular_tests":[
-          "remote_invoker_test"
+          "remote_test_module"
         ]
       }
     },
