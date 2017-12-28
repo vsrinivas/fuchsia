@@ -30,7 +30,7 @@ impl UsbProtocol {
     }
 
     /// Send a USB control message.
-    fn control(&mut self, request_type: usb_request_type_t, request: u8,
+    pub fn control(&mut self, request_type: usb_request_type_t, request: u8,
         value: u16, index: u16, data: &mut [u8], timeout: Time) -> Result<usize, Status>
     {
         let mut out_length: usize = 0;
