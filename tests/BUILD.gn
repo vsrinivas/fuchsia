@@ -2,6 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# We follow these conventions for the organization of the package here:
+#
+# 1. All the binaries used in tests are run through a device_runner invocation
+#    configured in modular_tests.json. It usually does not ever make sense to
+#    run a test binary directly, especially not as a test. Therefore, all
+#    binaries are deployed in the subdirectory tests/modular_tests instead of
+#    under tests/ directly, so that they are not run automatically by roller
+#    scripts. Instead, only the run_modular_tests.sh script is present in
+#    tests/, which then invokes the test runner, which in turn invokes all the
+#    test binaries in the right configuration.
+#
+# 2. The component is named with a prefix that tells the test it belongs to,
+#    followed by "_test", optionally followed by a name component indicating its
+#    function if there are multiple components of the same type in a single
+#    test, followed a suffix indicating the component type. This way, all
+#    components belonging to the same test are lexicographically sorted
+#    together.
+#
+# 3. Components shared between tests are named after their function followed by
+#    a suffix indicating the component type.
+#
+# 4. The suffix that indicates the component type (i.e. the primary service
+#    provided by the component) is:
+#
+#    - _module -- Module
+#    - _agent -- Agent
+#    - _user_shell -- UserShell
+#    - _device_shell -- DeviceShell
+#    - _story_shell -- StoryShell
+#
+# 5. The main sources of the components are named like the binaries they create.
+#
+# TODO(mesch): These conventions are applied in followup changes.
+
 import("//build/package.gni")
 
 package("modular_tests") {
