@@ -15,7 +15,7 @@
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/component_context/test_agent1_interface.fidl.h"
+#include "peridot/tests/component_context/component_context_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
@@ -25,11 +25,11 @@ namespace {
 // down our test.
 constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(15);
 
-constexpr char kTest1Agent[] =
-    "file:///system/test/modular_tests/component_context_test_agent1";
+constexpr char kOneAgentUrl[] =
+    "file:///system/test/modular_tests/component_context_test_one_agent";
 
 constexpr char kUnstoppableAgent[] =
-    "file:///system/test/modular_tests/component_context_unstoppable_agent";
+    "file:///system/test/modular_tests/component_context_test_unstoppable_agent";
 
 constexpr int kTotalSimultaneousTests = 2;
 
@@ -71,6 +71,9 @@ class CounterTrigger {
 
 class ParentApp {
  public:
+  TestPoint initialized_{"Root module initialized"};
+  TestPoint one_agent_connected_{"One agent accepted connection"};
+
   ParentApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
@@ -86,15 +89,15 @@ class ParentApp {
     module_host->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
-    app::ServiceProviderPtr agent1_services;
-    component_context_->ConnectToAgent(kTest1Agent,
-                                       agent1_services.NewRequest(),
-                                       agent1_controller.NewRequest());
-    ConnectToService(agent1_services.get(), agent1_interface_.NewRequest());
+    app::ServiceProviderPtr one_agent_services;
+    component_context_->ConnectToAgent(kOneAgentUrl,
+                                       one_agent_services.NewRequest(),
+                                       one_agent_controller.NewRequest());
+    ConnectToService(one_agent_services.get(), one_agent_interface_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "test_agent1_connected", [this](const fidl::String&) {
-          agent1_connected_.Pass();
+        "one_agent_connected", [this](const fidl::String&) {
+          one_agent_connected_.Pass();
           TestMessageQueue([this] {
             TestAgentController(callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(), [this] { steps_.Step(); }));
@@ -112,6 +115,8 @@ class ParentApp {
         kTimeout);
   }
 
+  TestPoint stopped_{"Root module stopped"};
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -119,6 +124,9 @@ class ParentApp {
   }
 
  private:
+  TestPoint msg_queue_communicated_{
+      "Communicated message between Agent one using a MessageQueue"};
+
   // Tests message queues. Calls |done_cb| when completed successfully.
   void TestMessageQueue(std::function<void()> done_cb) {
     constexpr char kTestMessage[] = "test message!";
@@ -142,18 +150,20 @@ class ParentApp {
         });
 
     msg_queue_->GetToken([this, kTestMessage](const fidl::String& token) {
-      agent1_interface_->SendToMessageQueue(token, kTestMessage);
+      one_agent_interface_->SendToMessageQueue(token, kTestMessage);
     });
   }
+
+  TestPoint one_agent_stopped_{"One agent stopped"};
 
   // Tests AgentController. Calls |done_cb| when completed successfully.
   void TestAgentController(std::function<void()> done_cb) {
     // Closing the agent controller should trigger the agent to stop.
-    agent1_controller.reset();
+    one_agent_controller.reset();
 
-    modular::testing::GetStore()->Get("test_agent1_stopped",
+    modular::testing::GetStore()->Get("one_agent_stopped",
                                       [this, done_cb](const fidl::String&) {
-                                        agent1_stopped_.Pass();
+                                        one_agent_stopped_.Pass();
                                         done_cb();
                                       });
   }
@@ -180,21 +190,14 @@ class ParentApp {
 
   CounterTrigger steps_;
 
-  modular::AgentControllerPtr agent1_controller;
-  modular::testing::Agent1InterfacePtr agent1_interface_;
+  modular::AgentControllerPtr one_agent_controller;
+  modular::ComponentContextTestServicePtr one_agent_interface_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
   modular::AgentControllerPtr unstoppable_agent_controller_;
 
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
-
-  TestPoint initialized_{"Root module initialized"};
-  TestPoint stopped_{"Root module stopped"};
-  TestPoint agent1_connected_{"Agent1 accepted connection"};
-  TestPoint agent1_stopped_{"Agent1 stopped"};
-  TestPoint msg_queue_communicated_{
-      "Communicated message between Agent1 using a MessageQueue"};
 
   fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
 };

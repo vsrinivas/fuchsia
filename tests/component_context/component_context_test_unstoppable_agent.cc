@@ -15,6 +15,8 @@ namespace {
 
 class UnstoppableAgentApp {
  public:
+  TestPoint initialized_{"Unstoppable agent initialized"};
+
   UnstoppableAgentApp(modular::AgentHost* agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
@@ -29,6 +31,8 @@ class UnstoppableAgentApp {
   void RunTask(const fidl::String& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
+  TestPoint stopped_{"Unstoppable agent stopped"};
+
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -38,9 +42,6 @@ class UnstoppableAgentApp {
  private:
   modular::AgentContextPtr agent_context_;
   modular::ComponentContextPtr component_context_;
-
-  TestPoint initialized_{"Unstoppable agent initialized"};
-  TestPoint stopped_{"Unstoppable agent stopped"};
 };
 
 }  // namespace

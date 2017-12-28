@@ -9,9 +9,9 @@ group("component_context") {
 
   public_deps = [
     ":component_context_test_module",
-    ":component_context_test_agent1",
-    ":component_context_test_agent2",
-    ":component_context_unstoppable_agent",
+    ":component_context_test_one_agent",
+    ":component_context_test_two_agent",
+    ":component_context_test_unstoppable_agent",
   ]
 }
 
@@ -22,7 +22,7 @@ executable("component_context_test_module") {
     "component_context_test_module.cc",
   ]
   deps = [
-    ":test_agent1_interface",
+    ":component_context_test_service",
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/callback",
@@ -34,14 +34,14 @@ executable("component_context_test_module") {
   ]
 }
 
-executable("component_context_test_agent1") {
+executable("component_context_test_one_agent") {
   testonly = true
 
   sources = [
-    "test_agent1.cc",
+    "component_context_test_one_agent.cc",
   ]
   deps = [
-    ":test_agent1_interface",
+    ":component_context_test_service",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib/agent/fidl",
@@ -49,25 +49,11 @@ executable("component_context_test_agent1") {
   ]
 }
 
-executable("component_context_test_agent2") {
+executable("component_context_test_two_agent") {
   testonly = true
 
   sources = [
-    "test_agent2.cc",
-  ]
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//peridot/lib/testing",
-    "//peridot/public/lib/agent/fidl",
-    "//peridot/public/lib/app_driver/cpp:agent_driver",
-  ]
-}
-
-executable("component_context_unstoppable_agent") {
-  testonly = true
-
-  sources = [
-    "unstoppable_agent.cc",
+    "component_context_test_two_agent.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -77,8 +63,22 @@ executable("component_context_unstoppable_agent") {
   ]
 }
 
-fidl("test_agent1_interface") {
+executable("component_context_test_unstoppable_agent") {
+  testonly = true
+
   sources = [
-    "test_agent1_interface.fidl",
+    "component_context_test_unstoppable_agent.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/testing",
+    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+  ]
+}
+
+fidl("component_context_test_service") {
+  sources = [
+    "component_context_test_service.fidl",
   ]
 }

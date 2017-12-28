@@ -15,27 +15,26 @@ namespace {
 
 class TestAgentApp {
  public:
-  TestAgentApp(modular::AgentHost* agent_host) {
+  TestAgentApp(modular::AgentHost* const agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
   }
 
   // Called by AgentDriver.
   void Connect(fidl::InterfaceRequest<app::ServiceProvider> /*services*/) {
-    modular::testing::GetStore()->Put("test_agent2_connected", "", [] {});
+    modular::testing::GetStore()->Put("two_agent_connected", "", [] {});
   }
 
   // Called by AgentDriver.
   void RunTask(const fidl::String& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
+  TestPoint terminate_called_{"Terminate() called."};
+
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     terminate_called_.Pass();
     modular::testing::Done(done);
   }
-
- private:
-  TestPoint terminate_called_{"Terminate() called."};
 };
 
 }  // namespace

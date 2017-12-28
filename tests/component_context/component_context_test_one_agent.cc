@@ -8,52 +8,54 @@
 #include "lib/fxl/logging.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/component_context/test_agent1_interface.fidl.h"
+#include "peridot/tests/component_context/component_context_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
-constexpr char kTest2Agent[] =
-    "file:///system/test/modular_tests/component_context_test_agent2";
+constexpr char kTwoAgentUrl[] =
+    "file:///system/test/modular_tests/component_context_test_two_agent";
 
-class TestAgentApp : modular::testing::Agent1Interface {
+class TestAgentApp : modular::ComponentContextTestService {
  public:
-  TestAgentApp(modular::AgentHost* agent_host) {
+  TestAgentApp(modular::AgentHost* const agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
-    agent1_services_.AddService<modular::testing::Agent1Interface>(
-        [this](fidl::InterfaceRequest<modular::testing::Agent1Interface>
-                   interface_request) {
-          agent1_interface_.AddBinding(this, std::move(interface_request));
+    agent_services_.AddService<modular::ComponentContextTestService>(
+        [this](fidl::InterfaceRequest<modular::ComponentContextTestService>
+                   request) {
+          agent_interface_.AddBinding(this, std::move(request));
         });
 
     // Connecting to the agent should start it up.
     app::ServiceProviderPtr agent_services;
-    component_context_->ConnectToAgent(kTest2Agent, agent_services.NewRequest(),
-                                       agent2_controller_.NewRequest());
+    component_context_->ConnectToAgent(kTwoAgentUrl, agent_services.NewRequest(),
+                                       two_agent_controller_.NewRequest());
   }
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<app::ServiceProvider> services) {
-    agent1_services_.AddBinding(std::move(services));
-    modular::testing::GetStore()->Put("test_agent1_connected", "", [] {});
+  void Connect(fidl::InterfaceRequest<app::ServiceProvider> request) {
+    agent_services_.AddBinding(std::move(request));
+    modular::testing::GetStore()->Put("one_agent_connected", "", [] {});
   }
 
   // Called by AgentDriver.
   void RunTask(const fidl::String& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
+  TestPoint two_agent_connected_{"Two agent accepted connection"};
+
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
-    // Before reporting that we stop, we wait until agent2 has connected.
+    // Before reporting that we stop, we wait until two_agent has connected.
     modular::testing::GetStore()->Get(
-        "test_agent2_connected", [this, done](const fidl::String&) {
+        "two_agent_connected", [this, done](const fidl::String&) {
           // Killing the agent controller should stop it.
-          agent2_controller_.reset();
-          agent2_connected_.Pass();
-          modular::testing::GetStore()->Put("test_agent1_stopped", "", [done] {
+          two_agent_controller_.reset();
+          two_agent_connected_.Pass();
+          modular::testing::GetStore()->Put("one_agent_stopped", "", [done] {
             modular::testing::Done(done);
           });
         });
@@ -70,13 +72,11 @@ class TestAgentApp : modular::testing::Agent1Interface {
     message_sender->Send(message_to_send);
   }
 
-  TestPoint agent2_connected_{"Test agent2 accepted connection"};
-
   modular::ComponentContextPtr component_context_;
-  modular::AgentControllerPtr agent2_controller_;
+  modular::AgentControllerPtr two_agent_controller_;
 
-  app::ServiceNamespace agent1_services_;
-  fidl::BindingSet<modular::testing::Agent1Interface> agent1_interface_;
+  app::ServiceNamespace agent_services_;
+  fidl::BindingSet<modular::ComponentContextTestService> agent_interface_;
 };
 
 }  // namespace

@@ -118,16 +118,16 @@ package("modular_tests") {
       dest = "modular_tests/component_context_test_module"
     },
     {
-      name = "component_context_test_agent1"
-      dest = "modular_tests/component_context_test_agent1"
+      name = "component_context_test_one_agent"
+      dest = "modular_tests/component_context_test_one_agent"
     },
     {
-      name = "component_context_test_agent2"
-      dest = "modular_tests/component_context_test_agent2"
+      name = "component_context_test_two_agent"
+      dest = "modular_tests/component_context_test_two_agent"
     },
     {
-      name = "component_context_unstoppable_agent"
-      dest = "modular_tests/component_context_unstoppable_agent"
+      name = "component_context_test_unstoppable_agent"
+      dest = "modular_tests/component_context_test_unstoppable_agent"
     },
     {
       name = "embed_child_module"

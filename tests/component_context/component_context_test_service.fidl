@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular.testing;
+module modular;
 
-// An interface to "agent1" (implemented by test_agent1.cc) which the root
-// module uses.
-[ServiceName="modular.testing.Agent1Interface"]
-interface Agent1Interface {
+// An interface implemented by component_context_test_one_agent.cc) which the
+// root module uses.
+[ServiceName="modular.ComponentContextTestService"]
+interface ComponentContextTestService {
   // Send |message_to_send| to the message queue backed by
   // |message_queue_token|.
   SendToMessageQueue@0(string message_queue_token, string message_to_send);

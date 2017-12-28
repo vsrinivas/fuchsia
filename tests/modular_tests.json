@@ -112,7 +112,7 @@
       "copy":{
         "/system/test/modular_tests":[
           "component_context_test_module",
-          "component_context_test_agent1",
+          "component_context_test_one_agent",
           "component_context_test_agent2",
           "component_context_unstoppable_agent"
         ]
