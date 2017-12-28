@@ -70,9 +70,6 @@ package("modular_tests") {
       name = "suggestion_test_user_shell"
     },
     {
-      name = "test_link_data"
-    },
-    {
       name = "test_link_update"
     },
     {
@@ -161,6 +158,10 @@ package("modular_tests") {
     {
       name = "link_context_entities_test_user_shell"
       dest = "modular_tests/link_context_entities_test_user_shell"
+    },
+    {
+      name = "link_data_test_user_shell"
+      dest = "modular_tests/link_data_test_user_shell"
     },
     {
       name = "modular_tests.json"
