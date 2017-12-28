@@ -9,6 +9,20 @@
 #if defined(__ASSEMBLER__)
 
 // This is used in assembly code to specify a code fragment that will get
+// filled in by the given function, patch_func() when the kernel starts up.
+// |loc| specifies which code will be patched up, so that a functioning
+// version of the code may be used before patching takes place.  This is
+// needed, for example, for memcpy and memset.
+#define APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(patch_func, loc, size_in_bytes) \
+    /* Add "struct CodePatchInfo" entry to the code_patch_table array. */  \
+    .pushsection code_patch_table,"a",%progbits;                           \
+    .balign 8;                                                             \
+    .quad patch_func; /* apply_func field */                               \
+    .quad loc; /* dest_addr field */                                       \
+    .quad size_in_bytes; /* dest_size field */                             \
+    .popsection
+
+// This is used in assembly code to specify a code fragment that will get
 // filled in by the given function, patch_func(), when the kernel starts
 // up.  This is used for selecting instructions based on which instructions
 // the CPU supports.
@@ -18,13 +32,7 @@
     /* instruction (0xcc), which will fault if we accidentally execute */ \
     /* it before applying the patch. */                                   \
     .fill size_in_bytes, 1, 0xcc;                                         \
-    /* Add "struct CodePatchInfo" entry to the code_patch_table array. */ \
-    .pushsection code_patch_table,"a",%progbits;                          \
-    .balign 8;                                                            \
-    .quad patch_func; /* apply_func field */                              \
-    .quad 0b; /* dest_addr field */                                       \
-    .quad size_in_bytes; /* dest_size field */                            \
-    .popsection
+    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(patch_func, 0b, size_in_bytes)
 
 #else
 
