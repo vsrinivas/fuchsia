@@ -8,6 +8,9 @@
 3. Go into developer mode by pressing Ctrl+D.
 4. Wait for the device to re-configure itself, this may take a while
 
+Note: You may need to reboot the device once again to be able to access the
+command shell needed for step #2 below.
+
 ## Booting from USB
 
 1. Boot into ChromeOS
