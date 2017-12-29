@@ -25,8 +25,8 @@ RECOVERY_PORT=/dev/serial/by-id/usb-HISILICON_USB_SER-if00-port0
 UEFI_DIR=/tmp/hikey/uefi
 UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/25/hikey960/release/
 
-MKBOOTIMG=${TOOLS_DIR}/build-from-source/mkbootimg
-MKDTIMG=${TOOLS_DIR}/build-from-source/mkdtimg
+MKBOOTIMG=third_party/tools/android/mkbootimg
+MKDTIMG=third_party/tools/android/mkdtimg
 
 help() {
     echo "usage: ${0} [options]"
@@ -154,18 +154,12 @@ flash_dts() {
     DTB_FILE=kernel/target/hikey960/device-tree.dtb
     DT_IMAGE="${BUILD_DIR}/dt.img"
 
-    if [[ ! -d $TOOLS_DIR ]]; then
-        git_clone $TOOLS_GIT $TOOLS_DIR
-    fi
     ${MKDTIMG} -c -d $DTB_FILE -o $DT_IMAGE
 
     fastboot flash dts $DT_IMAGE
 }
 
 flash_kernel() {
-    if [[ ! -d $TOOLS_DIR ]]; then
-        git_clone $TOOLS_GIT $TOOLS_DIR
-    fi
     "${MKBOOTIMG}" \
         --kernel $KERNEL \
         --kernel_offset $KERNEL_OFFSET \
