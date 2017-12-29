@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/cloud_sync/test/page_sync_empty_impl.h"
+#include "peridot/bin/ledger/cloud_sync/testing/page_sync_empty_impl.h"
 
 #include "lib/fxl/logging.h"
 
 namespace cloud_sync {
-namespace test {
 
 void PageSyncEmptyImpl::Start() {
   FXL_NOTIMPLEMENTED();
@@ -31,5 +30,4 @@ void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-}  // namespace test
 }  // namespace cloud_sync

@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_TEST_PAGE_SYNC_EMPTY_IMPL_H_
-#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_TEST_PAGE_SYNC_EMPTY_IMPL_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_TESTING_PAGE_SYNC_EMPTY_IMPL_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_TESTING_PAGE_SYNC_EMPTY_IMPL_H_
 
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 
 namespace cloud_sync {
-namespace test {
 
 class PageSyncEmptyImpl : public PageSync {
  public:
@@ -21,7 +20,6 @@ class PageSyncEmptyImpl : public PageSync {
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 };
 
-}  // namespace test
 }  // namespace cloud_sync
 
-#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_TEST_PAGE_SYNC_EMPTY_IMPL_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_TESTING_PAGE_SYNC_EMPTY_IMPL_H_

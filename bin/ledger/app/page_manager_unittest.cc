@@ -13,7 +13,7 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
-#include "peridot/bin/ledger/cloud_sync/test/page_sync_empty_impl.h"
+#include "peridot/bin/ledger/cloud_sync/testing/page_sync_empty_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
@@ -41,7 +41,7 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   return value;
 }
 
-class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
+class FakePageSync : public cloud_sync::PageSyncEmptyImpl {
  public:
   void Start() override { start_called = true; }
 

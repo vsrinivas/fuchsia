@@ -62,7 +62,7 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cloud_sync/impl/testing",
-    "//peridot/bin/ledger/cloud_sync/test",
+    "//peridot/bin/ledger/cloud_sync/testing",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
