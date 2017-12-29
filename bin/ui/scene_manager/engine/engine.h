@@ -101,9 +101,9 @@ class Engine : private FrameSchedulerDelegate {
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(
-      DisplayManager* display_manager,
-      std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller);
+  Engine(DisplayManager* display_manager,
+         std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
+         escher::Escher* escher);
 
  private:
   friend class SessionHandler;

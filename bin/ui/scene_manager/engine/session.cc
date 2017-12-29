@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 
 #include <trace/event.h>
+#include <zx/time.h>
 
 #include "garnet/bin/ui/scene_manager/engine/hit_tester.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
@@ -33,6 +34,7 @@
 #include "garnet/bin/ui/scene_manager/util/print_op.h"
 #include "garnet/bin/ui/scene_manager/util/unwrap.h"
 #include "garnet/bin/ui/scene_manager/util/wrap.h"
+#include "garnet/lib/scenic/pose_buffer.h"
 
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
@@ -111,7 +113,7 @@ bool Session::ApplyOp(const scenic::OpPtr& op) {
     case scenic::Op::Tag::SET_CAMERA_PROJECTION:
       return ApplySetCameraProjectionOp(op->get_set_camera_projection());
     case scenic::Op::Tag::SET_CAMERA_POSE_BUFFER:
-      return false;
+      return ApplySetCameraPoseBufferOp(op->get_set_camera_pose_buffer());
     case scenic::Op::Tag::SET_LIGHT_COLOR:
       return ApplySetLightColorOp(op->get_set_light_color());
     case scenic::Op::Tag::SET_LIGHT_DIRECTION:
@@ -523,6 +525,48 @@ bool Session::ApplySetCameraProjectionOp(
     return true;
   }
   return false;
+}
+
+bool Session::ApplySetCameraPoseBufferOp(
+    const scenic::SetCameraPoseBufferOpPtr& op) {
+  if (op->base_time > zx::clock::get(ZX_CLOCK_MONOTONIC).get()) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+           "base time not in the past";
+    return false;
+  }
+
+  auto buffer = resources_.FindResource<Buffer>(op->buffer_id);
+  if (!buffer) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+           "invalid buffer ID";
+    return false;
+  }
+
+  if (op->num_entries < 1) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+           "must have at least one entry in the pose buffer";
+    return false;
+  }
+
+  if (buffer->size() < op->num_entries * sizeof(scenic_lib::Pose)) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+           "buffer is not large enough";
+    return false;
+  }
+
+  auto camera = resources_.FindResource<Camera>(op->camera_id);
+  if (!camera) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+           "invalid camera ID";
+    return false;
+  }
+  // Do the actual thing here in a later change
+  return true;
 }
 
 bool Session::ApplySetLightColorOp(const scenic::SetLightColorOpPtr& op) {

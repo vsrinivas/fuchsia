@@ -826,6 +826,24 @@ scenic::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
   return op;
 }
 
+scenic::OpPtr NewSetCameraPoseBufferOp(uint32_t camera_id,
+                                       uint32_t buffer_id,
+                                       uint32_t num_entries,
+                                       uint64_t base_time,
+                                       uint64_t time_interval) {
+  auto set_op = scenic::SetCameraPoseBufferOp::New();
+  set_op->camera_id = camera_id;
+  set_op->buffer_id = buffer_id;
+  set_op->num_entries = num_entries;
+  set_op->base_time = base_time;
+  set_op->time_interval = time_interval;
+
+  auto op = scenic::Op::New();
+  op->set_set_camera_pose_buffer(std::move(set_op));
+
+  return op;
+}
+
 scenic::OpPtr NewSetLightColorOp(uint32_t light_id, const float rgb[3]) {
   auto set_op = scenic::SetLightColorOp::New();
   set_op->light_id = light_id;

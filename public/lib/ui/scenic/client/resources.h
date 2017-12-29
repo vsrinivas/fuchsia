@@ -459,6 +459,12 @@ class Camera final : public Resource {
                      const float eye_up[3],
                      float fovy);
 
+  // Sets the camera pose buffer
+  void SetPoseBuffer(const Buffer& buffer,
+                     uint32_t num_entries,
+                     uint64_t base_time,
+                     uint64_t time_interval);
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Camera);
 };

@@ -48,9 +48,10 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
 
 Engine::Engine(
     DisplayManager* display_manager,
-    std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller)
+    std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
+    escher::Escher* escher = nullptr)
     : display_manager_(display_manager),
-      escher_(nullptr),
+      escher_(escher),
       release_fence_signaller_(std::move(release_fence_signaller)),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);

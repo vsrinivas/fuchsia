@@ -138,6 +138,13 @@ scenic::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
                                        const float eye_look_at[3],
                                        const float eye_up[3],
                                        float fovy);
+
+scenic::OpPtr NewSetCameraPoseBufferOp(uint32_t camera_id,
+                                       uint32_t buffer_id,
+                                       uint32_t num_entries,
+                                       uint64_t base_time,
+                                       uint64_t time_interval);
+
 scenic::OpPtr NewSetLightColorOp(uint32_t light_id, const float rgb[3]);
 scenic::OpPtr NewSetLightColorOp(uint32_t light_id, uint32_t variable_id);
 scenic::OpPtr NewSetLightDirectionOp(uint32_t light_id,

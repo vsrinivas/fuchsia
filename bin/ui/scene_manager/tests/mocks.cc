@@ -54,8 +54,9 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
 }
 
 EngineForTest::EngineForTest(DisplayManager* display_manager,
-                             std::unique_ptr<escher::ReleaseFenceSignaller> r)
-    : Engine(display_manager, std::move(r)) {}
+                             std::unique_ptr<escher::ReleaseFenceSignaller> r,
+                             escher::Escher* escher)
+    : Engine(display_manager, std::move(r), escher) {}
 
 std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
     SessionId session_id,

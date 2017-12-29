@@ -68,7 +68,8 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 class EngineForTest : public Engine {
  public:
   EngineForTest(DisplayManager* display_manager,
-                std::unique_ptr<escher::ReleaseFenceSignaller> r);
+                std::unique_ptr<escher::ReleaseFenceSignaller> r,
+                escher::Escher* escher = nullptr);
   using Engine::FindSession;
 
  private:

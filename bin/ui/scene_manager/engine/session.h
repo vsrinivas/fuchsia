@@ -140,6 +140,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetHitTestBehaviorOp(const scenic::SetHitTestBehaviorOpPtr& op);
   bool ApplySetCameraOp(const scenic::SetCameraOpPtr& op);
   bool ApplySetCameraProjectionOp(const scenic::SetCameraProjectionOpPtr& op);
+  bool ApplySetCameraPoseBufferOp(const scenic::SetCameraPoseBufferOpPtr& op);
   bool ApplySetLightColorOp(const scenic::SetLightColorOpPtr& op);
   bool ApplySetLightDirectionOp(const scenic::SetLightDirectionOpPtr& op);
   bool ApplyAddLightOp(const scenic::AddLightOpPtr& op);

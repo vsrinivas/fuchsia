@@ -371,6 +371,14 @@ void Camera::SetProjection(const float eye_position[3],
       NewSetCameraProjectionOp(id(), eye_position, eye_look_at, eye_up, fovy));
 }
 
+void Camera::SetPoseBuffer(const Buffer& buffer,
+                           uint32_t num_entries,
+                           uint64_t base_time,
+                           uint64_t time_interval) {
+  session()->Enqueue(scenic_lib::NewSetCameraPoseBufferOp(
+      id(), buffer.id(), num_entries, base_time, time_interval));
+}
+
 Renderer::Renderer(Session* session) : Resource(session) {
   session->Enqueue(NewCreateRendererOp(id()));
 }

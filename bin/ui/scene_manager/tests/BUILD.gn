@@ -69,11 +69,14 @@ executable("unittests") {
     "imagepipe_unittest.cc",
     "import_unittest.cc",
     "node_unittest.cc",
+    "pose_buffer_unit_test.cc",
     "resource_linker_unittest.cc",
     "session_test.cc",
     "session_test.h",
     "session_unittest.cc",
     "shape_unittest.cc",
+    "vk_session_test.cc",
+    "vk_session_test.h",
   ]
 
   deps = [
