@@ -14,14 +14,13 @@ using modular::testing::TestPoint;
 namespace {
 
 // The path to the clipboard agent under test.
-constexpr char kClipboardAgentPath[] = "file:///system/bin/agents/clipboard";
+constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
 // A module that tests the ClipboardAgent.
 class ClipboardTestApp {
  public:
   TestPoint initialized_{"Clipboard module initialized"};
-  TestPoint first_peek_{"First peek returns empty string"};
-  TestPoint peek_after_push_{"Peek after push returns pushed item"};
+
   ClipboardTestApp(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
@@ -31,12 +30,28 @@ class ClipboardTestApp {
     initialized_.Pass();
 
     SetUp();
+    TestFirstPeek();
+  }
 
+  TestPoint first_peek_{"First peek returns empty string"};
+
+  void TestFirstPeek() {
     ExpectPeekReturnsValue("", &first_peek_);
     TestPeekAfterPush();
   }
 
+  TestPoint peek_after_push_{"Peek after push returns pushed item"};
+
+  // |Peek()| returns the value previously passed to |Push()|, even when pipelined.
+  void TestPeekAfterPush() {
+    const std::string expected_value = "hello there";
+    clipboard_->Push(expected_value);
+    ExpectPeekReturnsValue(expected_value, &peek_after_push_,
+                           [this] { module_host_->module_context()->Done(); });
+  }
+
   TestPoint stopped_{"Clipboard module stopped"};
+
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     modular::testing::Done(done);
@@ -48,17 +63,17 @@ class ClipboardTestApp {
         component_context_.NewRequest());
 
     app::ServiceProviderPtr agent_services;
-    component_context_->ConnectToAgent(kClipboardAgentPath,
+    component_context_->ConnectToAgent(kClipboardAgentUrl,
                                        agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), clipboard_.NewRequest());
   }
 
-  // Verifies that a call to |Peek()| returns |expected_value|
-  // |test_point| if successful. |completed| is called once peek has returned
-  // a value, regardless of the value itself.
+  // Verifies that a call to |Peek()| returns |expected_value|. Passes
+  // |test_point| if successful. |completed| is called once peek has returned a
+  // value, regardless of the value itself.
   void ExpectPeekReturnsValue(const std::string& expected_value,
-                              TestPoint* test_point,
+                              TestPoint* const test_point,
                               const std::function<void()>& completed = [] {}) {
     clipboard_->Peek([this, expected_value, test_point,
                       completed](const ::fidl::String& text) {
@@ -67,14 +82,6 @@ class ClipboardTestApp {
       }
       completed();
     });
-  }
-
-  // Tests that |Peek()| returns the value previously passed to |Push()|.
-  void TestPeekAfterPush() {
-    std::string expected_value = "hello there";
-    clipboard_->Push(expected_value);
-    ExpectPeekReturnsValue(expected_value, &peek_after_push_,
-                           [this] { module_host_->module_context()->Done(); });
   }
 
   modular::ModuleHost* const module_host_;
