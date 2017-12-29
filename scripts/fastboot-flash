@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+BUILD_DIR=
+
+MKBOOTIMG=third_party/tools/android/mkbootimg
+
+MEMBASE=0x00000000
+KERNEL_OFFSET=0x1080000
+
+CMDLINE="TERM=uart"
+
+function HELP {
+    echo "help:"
+    echo "-b <build dir> : build directory containing image to flash"
+    echo "-m             : Add mexec option to command line"
+    echo "-h for help"
+    exit 1
+}
+
+while getopts "b:mh" FLAG; do
+    case $FLAG in
+        b) BUILD_DIR=$OPTARG;;
+        m) CMDLINE+=" netsvc.netboot=true";;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ -z $BUILD_DIR ]]; then
+    echo must specify build dirctory
+    HELP
+fi
+
+
+KERNEL=$BUILD_DIR/zzircon.bin
+RAMDISK=$BUILD_DIR/bootdata.bin
+OUT_IMAGE=$BUILD_DIR/boot.img
+
+$MKBOOTIMG --kernel $KERNEL \
+--kernel_offset $KERNEL_OFFSET \
+--base $MEMBASE \
+--ramdisk $RAMDISK \
+--cmdline "$CMDLINE" \
+-o $OUT_IMAGE || exit 1
+
+fastboot flash boot $OUT_IMAGE || exit 1
+fastboot reboot

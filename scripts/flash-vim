@@ -6,46 +6,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-BUILD_DIR=build-vim
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-KERNEL=$BUILD_DIR/zzircon.bin
-RAMDISK=$BUILD_DIR/bootdata.bin
-
-OUT_IMAGE=$BUILD_DIR/boot.img
-
-MEMBASE=0x00000000
-KERNEL_OFFSET=0x1080000
-
-CMDLINE="TERM=uart"
-
-# Amlogic update tool must be in your path
-UPDATE=update
-
-function HELP {
-    echo "help:"
-    echo "-m : Add mexec option to command line"
-    echo "-h for help"
-    exit 1
-}
-
-while getopts "mh" FLAG; do
-    case $FLAG in
-        m) CMDLINE+=" netsvc.netboot=true";;
-        h) HELP;;
-        \?)
-            echo unrecognized option
-            HELP
-            ;;
-    esac
-done
-shift $((OPTIND-1))
-
-mkbootimg --kernel $KERNEL \
---kernel_offset $KERNEL_OFFSET \
---base $MEMBASE \
---ramdisk $RAMDISK \
---cmdline "$CMDLINE" \
--o $OUT_IMAGE || exit 1
-
-$UPDATE partition boot $OUT_IMAGE || exit 1
-$UPDATE bulkcmd "reset"
+exec $DIR/fastboot-flash -b build-vim "$@"
