@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <hid/acer12.h>
+#include <hid/egalax.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 
@@ -32,6 +33,7 @@ enum touch_panel_type {
     TOUCH_PANEL_UNKNOWN,
     TOUCH_PANEL_ACER12,
     TOUCH_PANEL_PARADISE,
+    TOUCH_PANEL_EGALAX,
 };
 
 // Array of colors for each finger
@@ -78,6 +80,15 @@ static void paradise_touch_dump(paradise_touch_t* rpt) {
         printf("  y:      %u\n", rpt->fingers[i].y);
     }
     printf("scan_time: %u\n", rpt->scan_time);
+}
+
+static void egalax_touch_dump(egalax_touch_t* rpt) {
+    printf("report id: %u\n", rpt->report_id);
+    printf("pad: %02x\n", egalax_pad(rpt->button_pad));
+    printf("device supports one contact\n");
+    printf("  finger down: %u\n", egalax_pressed_flags(rpt->button_pad));
+    printf("    x: %u\n", rpt->x);
+    printf("    y: %u\n", rpt->y);
 }
 
 static uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
@@ -133,6 +144,36 @@ static void process_acer12_touchscreen_input(void* buf, size_t len, int vcfd, ui
     if (acer12_finger_id_tswitch(rpt->fingers[0].finger_id)) {
         uint32_t x = scale32(rpt->fingers[0].x, fb->info.width, ACER12_X_MAX);
         uint32_t y = scale32(rpt->fingers[0].y, fb->info.height, ACER12_Y_MAX);
+        if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, fb);
+        }
+    }
+    ssize_t ret = ioctl_display_flush_fb(vcfd);
+    if (ret < 0) {
+        printf("failed to flush: %zd\n", ret);
+    }
+}
+
+static void process_egalax_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+                                             ioctl_display_get_fb_t* fb) {
+    egalax_touch_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+#if I2C_HID_DEBUG
+    egalax_touch_dump(rpt);
+#endif
+    if (!egalax_pressed_flags(rpt->button_pad)) {
+        uint32_t x = scale32(rpt->x, fb->info.width, EGALAX_X_MAX);
+        uint32_t y = scale32(rpt->y, fb->info.height, EGALAX_Y_MAX);
+        uint32_t width = 5;
+        uint32_t height = 5;
+        uint32_t color = get_color(1);
+        draw_points(pixels, color, x, y, width, height, fb->info.stride, fb->info.height);
+    } else {
+        uint32_t x = scale32(rpt->x, fb->info.width, EGALAX_X_MAX);
+        uint32_t y = scale32(rpt->y, fb->info.height, EGALAX_Y_MAX);
         if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
             clear_screen(pixels, fb);
         }
@@ -324,6 +365,12 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        if (is_egalax_touchscreen_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_EGALAX;
+            printf("touchscreen: %s is egalax\n", devname);
+            break;
+        }
+
 next_node:
         rpt_desc_len = 0;
 
@@ -381,6 +428,10 @@ next_node:
         } else if (panel == TOUCH_PANEL_PARADISE) {
             if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
                 process_paradise_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+            }
+        } else if (panel == TOUCH_PANEL_EGALAX) {
+            if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
+                process_egalax_touchscreen_input(buf, r, vcfd, pixels32, &fb);
             }
         }
     }
