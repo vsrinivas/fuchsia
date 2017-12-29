@@ -108,9 +108,12 @@ VkResult ImagePipeSwapchain::Initialize(
   VkInstance instance =
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->instance;
 
+  VkLayerInstanceDispatchTable* instance_dispatch_table =
+      GetLayerDataPtr(get_dispatch_key(instance), layer_data_map)->instance_dispatch_table;
+
   uint32_t physical_device_count;
   result =
-      vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
+      instance_dispatch_table->EnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
   if (result != VK_SUCCESS)
     return result;
 
@@ -118,15 +121,15 @@ VkResult ImagePipeSwapchain::Initialize(
     return VK_ERROR_DEVICE_LOST;
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-  result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
-                                      physical_devices.data());
+  result = instance_dispatch_table->EnumeratePhysicalDevices(instance, &physical_device_count,
+                                                             physical_devices.data());
   if (result != VK_SUCCESS)
     return VK_ERROR_DEVICE_LOST;
 
   bool external_semaphore_extension_available = false;
   for (auto physical_device : physical_devices) {
     uint32_t device_extension_count;
-    result = vkEnumerateDeviceExtensionProperties(
+    result = instance_dispatch_table->EnumerateDeviceExtensionProperties(
         physical_device, nullptr, &device_extension_count, nullptr);
     if (result != VK_SUCCESS)
       return VK_ERROR_DEVICE_LOST;
@@ -134,9 +137,8 @@ VkResult ImagePipeSwapchain::Initialize(
     if (device_extension_count > 0) {
       std::vector<VkExtensionProperties> device_extensions(
           device_extension_count);
-      result = vkEnumerateDeviceExtensionProperties(physical_device, nullptr,
-                                                    &device_extension_count,
-                                                    device_extensions.data());
+      result = instance_dispatch_table->EnumerateDeviceExtensionProperties(
+          physical_device, nullptr, &device_extension_count, device_extensions.data());
       if (result != VK_SUCCESS)
         return VK_ERROR_DEVICE_LOST;
 
@@ -154,28 +156,32 @@ VkResult ImagePipeSwapchain::Initialize(
     return VK_ERROR_SURFACE_LOST_KHR;
 
   VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  uint32_t instance_extension_count;
-  result = vkEnumerateInstanceExtensionProperties(
-      nullptr, &instance_extension_count, nullptr);
-  if (result != VK_SUCCESS)
-    return result;
 
-  if (instance_extension_count > 0) {
-    std::vector<VkExtensionProperties> instance_extensions(
-        instance_extension_count);
-    result = vkEnumerateInstanceExtensionProperties(
-        nullptr, &instance_extension_count, instance_extensions.data());
-    if (result != VK_SUCCESS)
-      return result;
+  // See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/2064
+  if (instance_dispatch_table->EnumerateInstanceExtensionProperties) {
+      uint32_t instance_extension_count;
 
-    for (uint32_t i = 0; i < instance_extension_count; i++) {
-      if (!strcmp(VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME,
-                  instance_extensions[i].extensionName)) {
-        // TODO(MA-345) support display tiling on request
-        // usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
-        break;
+      result = instance_dispatch_table->EnumerateInstanceExtensionProperties(
+          nullptr, &instance_extension_count, nullptr);
+      if (result != VK_SUCCESS)
+          return result;
+
+      if (instance_extension_count > 0) {
+          std::vector<VkExtensionProperties> instance_extensions(instance_extension_count);
+          result = instance_dispatch_table->EnumerateInstanceExtensionProperties(
+              nullptr, &instance_extension_count, instance_extensions.data());
+          if (result != VK_SUCCESS)
+              return result;
+
+          for (uint32_t i = 0; i < instance_extension_count; i++) {
+              if (!strcmp(VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME,
+                          instance_extensions[i].extensionName)) {
+                  // TODO(MA-345) support display tiling on request
+                  // usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
+                  break;
+              }
+          }
       }
-    }
   }
 
   uint32_t num_images = pCreateInfo->minImageCount;
