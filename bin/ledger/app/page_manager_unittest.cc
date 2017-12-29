@@ -19,7 +19,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -126,8 +126,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   on_empty_called = false;
   PageSnapshotPtr snapshot;
   page_manager.BindPageSnapshot(
-      std::make_unique<const storage::test::CommitEmptyImpl>(),
-      snapshot.NewRequest(), "");
+      std::make_unique<const storage::CommitEmptyImpl>(), snapshot.NewRequest(),
+      "");
   snapshot.reset();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);

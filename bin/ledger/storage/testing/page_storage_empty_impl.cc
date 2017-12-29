@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 
 #include "lib/fxl/logging.h"
 
 namespace storage {
-namespace test {
 
 PageId PageStorageEmptyImpl::GetId() {
   FXL_NOTIMPLEMENTED();
@@ -180,5 +179,4 @@ void PageStorageEmptyImpl::GetThreeWayContentsDiff(
   on_done(Status::NOT_IMPLEMENTED);
 }
 
-}  // namespace test
 }  // namespace storage

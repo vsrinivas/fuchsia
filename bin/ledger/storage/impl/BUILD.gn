@@ -171,7 +171,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//third_party/gtest",
   ]

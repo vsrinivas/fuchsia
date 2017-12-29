@@ -65,7 +65,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/cloud_sync/test",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/backoff/testing",
     "//third_party/gtest",

@@ -13,7 +13,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
-#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -25,7 +25,7 @@ namespace {
 // CommitUpload asks about: page id and unsynced objects to be uploaded.
 // Registers the reported results of the upload: commits and objects marked as
 // synced.
-class TestPageStorage : public storage::test::PageStorageEmptyImpl {
+class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(fsl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}

@@ -19,8 +19,8 @@
 #include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
-#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -28,7 +28,7 @@ namespace cloud_sync {
 namespace {
 
 // Fake implementation of storage::Commit.
-class TestCommit : public storage::test::CommitEmptyImpl {
+class TestCommit : public storage::CommitEmptyImpl {
  public:
   TestCommit(std::string id, std::string storage_bytes)
       : id(std::move(id)), storage_bytes(std::move(storage_bytes)) {}
@@ -71,7 +71,7 @@ class TestObject : public storage::Object {
 // BatchUpload asks about: page id and unsynced objects to be uploaded.
 // Registers the reported results of the upload: commits and objects marked as
 // synced.
-class TestPageStorage : public storage::test::PageStorageEmptyImpl {
+class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   TestPageStorage() = default;
   ~TestPageStorage() override = default;
@@ -478,7 +478,7 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
 
 // Test a commit upload that gets an error from storage.
 TEST_F(BatchUploadTest, FailedCommitUploadWitStorageError) {
-  storage::test::PageStorageEmptyImpl test_storage;
+  storage::PageStorageEmptyImpl test_storage;
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 

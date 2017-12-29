@@ -93,7 +93,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",
     "//peridot/bin/ledger/storage/impl:test_utils",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/callback",
     "//third_party/gtest",

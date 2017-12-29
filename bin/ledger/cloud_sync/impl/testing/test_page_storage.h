@@ -15,7 +15,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
@@ -23,7 +23,7 @@ namespace cloud_sync {
 // asks about: page id, existing unsynced commits to be retrieved through
 // GetUnsyncedCommits() and new commits to be retrieved through GetCommit().
 // Registers the commits marked as synced.
-class TestPageStorage : public storage::test::PageStorageEmptyImpl {
+class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(fsl::MessageLoop* message_loop);
 

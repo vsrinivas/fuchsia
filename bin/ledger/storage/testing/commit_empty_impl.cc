@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 
 #include "lib/fxl/logging.h"
 
 namespace storage {
-namespace test {
 
 std::unique_ptr<Commit> CommitEmptyImpl::Clone() const {
   FXL_NOTIMPLEMENTED();
@@ -45,5 +44,4 @@ fxl::StringView CommitEmptyImpl::GetStorageBytes() const {
   return "NOT_IMPLEMENTED";
 }
 
-}  // namespace test
 }  // namespace storage

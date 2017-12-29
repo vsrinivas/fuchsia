@@ -126,7 +126,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/backoff/testing",
     "//peridot/lib/convert",

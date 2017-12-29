@@ -9,12 +9,12 @@
 #include <vector>
 
 #include "peridot/bin/ledger/storage/public/commit.h"
-#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 
 namespace cloud_sync {
 
 // Fake implementation of storage::Commit.
-class TestCommit : public storage::test::CommitEmptyImpl {
+class TestCommit : public storage::CommitEmptyImpl {
  public:
   TestCommit() = default;
   TestCommit(storage::CommitId id, std::string content);

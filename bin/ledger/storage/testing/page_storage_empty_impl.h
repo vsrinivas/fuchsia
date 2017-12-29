@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_STORAGE_TEST_PAGE_STORAGE_EMPTY_IMPL_H_
-#define PERIDOT_BIN_LEDGER_STORAGE_TEST_PAGE_STORAGE_EMPTY_IMPL_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_TESTING_PAGE_STORAGE_EMPTY_IMPL_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_TESTING_PAGE_STORAGE_EMPTY_IMPL_H_
 
 #include <functional>
 #include <memory>
@@ -12,7 +12,6 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace storage {
-namespace test {
 
 // Empty implementaton of PageStorage. All methods do nothing and return dummy
 // or empty responses.
@@ -116,7 +115,6 @@ class PageStorageEmptyImpl : public PageStorage {
                                std::function<void(Status)> on_done) override;
 };
 
-}  // namespace test
 }  // namespace storage
 
-#endif  // PERIDOT_BIN_LEDGER_STORAGE_TEST_PAGE_STORAGE_EMPTY_IMPL_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_TESTING_PAGE_STORAGE_EMPTY_IMPL_H_

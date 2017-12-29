@@ -17,12 +17,12 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 
 namespace storage {
 namespace fake {
 
-class FakePageStorage : public test::PageStorageEmptyImpl {
+class FakePageStorage : public PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(PageId page_id);
   FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id);

@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "peridot/bin/ledger/storage/public/commit.h"
-#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 
 namespace cloud_sync {
 TestCommit::TestCommit(storage::CommitId id, std::string content)
