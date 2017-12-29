@@ -49,43 +49,6 @@ source_set("lib") {
   configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
-source_set("app_test") {
-  testonly = true
-
-  sources = [
-    "app_test.cc",
-    "app_test.h",
-  ]
-
-  public_deps = [
-    ":lib",
-    "//garnet/public/lib/app/cpp",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/cpp/reporting",
-    "//third_party/gtest",
-  ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
-}
-
-source_set("app_test_main") {
-  testonly = true
-
-  sources = [
-    "app_test_main.cc",
-  ]
-
-  deps = [
-    ":app_test",
-  ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
-}
-
 source_set("ledger_instance_factory") {
   testonly = true
 

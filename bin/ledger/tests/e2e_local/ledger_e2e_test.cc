@@ -19,9 +19,9 @@
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/bin/ledger/testing/app_test.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
+#include "peridot/bin/ledger/testing/e2e/e2e_test.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -43,12 +43,12 @@ fidl::Array<uint8_t> TestArray() {
   return result;
 }
 
-class LedgerAppTest : public gtest::TestWithMessageLoop {
+class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  public:
-  LedgerAppTest()
+  LedgerEndToEndTest()
       : application_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
-  ~LedgerAppTest() override {}
+  ~LedgerEndToEndTest() override {}
 
  protected:
   void Init(std::vector<std::string> additional_args) {
@@ -155,7 +155,7 @@ class LedgerAppTest : public gtest::TestWithMessageLoop {
   fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
 };
 
-TEST_F(LedgerAppTest, PutAndGet) {
+TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
   ledger::Status status;
   fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
@@ -186,7 +186,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
   EXPECT_TRUE(Equals(TestArray(), value_as_string));
 }
 
-TEST_F(LedgerAppTest, Terminate) {
+TEST_F(LedgerEndToEndTest, Terminate) {
   Init({});
   bool called = false;
   RegisterShutdownCallback([this, &called] {
@@ -203,7 +203,7 @@ TEST_F(LedgerAppTest, Terminate) {
 //
 // Expected behavior: Ledger disconnects the clients and the local state is
 // cleared.
-TEST_F(LedgerAppTest, CloudEraseRecoveryOnInitialCheck) {
+TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   Init({});
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
@@ -260,7 +260,7 @@ TEST_F(LedgerAppTest, CloudEraseRecoveryOnInitialCheck) {
 //
 // Expected behavior: Ledger disconnects the clients and the local state is
 // cleared.
-TEST_F(LedgerAppTest, CloudEraseRecoveryFromTheWatcher) {
+TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   Init({});
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
@@ -306,7 +306,7 @@ TEST_F(LedgerAppTest, CloudEraseRecoveryFromTheWatcher) {
   EXPECT_FALSE(ledger_shut_down);
 }
 
-TEST_F(LedgerAppTest, ShutDownWhenCloudProviderDisconnects) {
+TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   Init({});
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback(
