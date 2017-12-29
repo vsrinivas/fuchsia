@@ -37,3 +37,6 @@ zx_status_t hi3660_usb_init(hi3660_t* hi3660);
 zx_status_t hi3660_i2c1_init(hi3660_t* hi3660);
 zx_status_t hi3660_i2c_pinmux(hi3660_t* hi3660);
 zx_status_t hi3660_enable_ldo(hi3660_t* hi3660);
+
+// hi3660-dsi.c
+zx_status_t hi3660_dsi_init(hi3660_t* hi3660);

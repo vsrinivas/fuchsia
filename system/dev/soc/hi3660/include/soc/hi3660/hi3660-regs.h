@@ -72,6 +72,15 @@
 #define LDO3_ENABLE_REG                         (0x60 << 2)
 #define LDO3_ENABLE_BIT                         (0x2)
 
-#define CLKGATE_SEPERATED_ENABLE        0x0
-#define CLKGATE_SEPERATED_DISABLE       0x4
-#define CLKGATE_SEPERATED_STATUS        0x8
+// DSI0
+#define PERRSTDIS3                              0x088
+#define TXDPHY0_CFG_OFFSET                      0x30
+#define TXDPHY0_CFG_BIT                         28
+#define TXDPHY0_REF_OFFSET                      0x30
+#define TXDPHY0_REF_BIT                         29
+#define PCLK_GATE_DSI0_OFFSET                   0x50
+#define PCLK_GATE_DSI0_BIT                      28
+
+#define CLKGATE_SEPERATED_ENABLE                0x0
+#define CLKGATE_SEPERATED_DISABLE               0x4
+#define CLKGATE_SEPERATED_STATUS                0x8

@@ -26,7 +26,8 @@
 #include <soc/hi3660/hi3660-regs.h>
 #include <hw/reg.h>
 
-//#define ENABLE_I2C
+// #define ENABLE_I2C
+// #define ENABLE_DSI
 
 zx_status_t hi3660_enable_ldo3(hi3660_t* hi3660) {
     volatile void* iopmu = io_buffer_virt(&hi3660->pmu_ssio);
@@ -90,6 +91,13 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
     if ((status = i2c_dw_bus_init(&hi3660->i2c)) != ZX_OK) {
         zxlogf(ERROR, "hi3660_init could not add i2c: %d\n", status);
         return status;
+    }
+#endif
+
+#ifdef ENABLE_DSI
+    status = hi3660_dsi_init(hi3660);
+    if (status != ZX_OK) {
+        goto fail;
     }
 #endif
 

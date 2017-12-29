@@ -13,6 +13,7 @@
 
 // #define GPIO_TEST 1
 // #define I2C_TEST 1
+// #define DSI_ENABLE 1
 
 static const pbus_mmio_t dwc3_mmios[] = {
     {
@@ -37,6 +38,59 @@ static const pbus_dev_t dwc3_dev = {
     .irqs = dwc3_irqs,
     .irq_count = countof(dwc3_irqs),
 };
+
+#ifdef DSI_ENABLE
+static const pbus_mmio_t dsi_mmios[] = {
+    {
+        .base = MMIO_DSI_BASE,
+        .length = MMIO_DSI_LENGTH,
+    },
+};
+
+static const pbus_i2c_channel_t dsi_i2c_channels[] = {
+    {
+        // HDMI_MAIN
+        .bus_id = DW_I2C_1,
+        .address = 0x39,
+    },
+    {
+        // HDMI_CEC
+        .bus_id = DW_I2C_1,
+        .address = 0x38,
+    },
+    {
+        // HDMI_EDID
+        .bus_id = DW_I2C_1,
+        .address = 0x3b,
+    },
+};
+
+static const pbus_gpio_t dsi_gpios[] = {
+    {
+        .gpio = GPIO_HDMI_MUX,
+    },
+    {
+        .gpio = GPIO_HDMI_PD,
+    },
+    {
+        .gpio = GPIO_HDMI_INT,
+    },
+
+};
+
+static const pbus_dev_t dsi_dev = {
+    .name = "dsi",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_DSI,
+    .mmios = dsi_mmios,
+    .mmio_count = countof(dsi_mmios),
+    .i2c_channels = dsi_i2c_channels,
+    .i2c_channel_count = countof(dsi_i2c_channels),
+    .gpios = dsi_gpios,
+    .gpio_count = countof(dsi_gpios),
+};
+#endif
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
@@ -125,11 +179,6 @@ static const pbus_i2c_channel_t i2c_test_channels[] = {
         .bus_id = DW_I2C_1,
         .address = 0x4e,
     },
-    {
-        // HDMI
-        .bus_id = DW_I2C_1,
-        .address = 0x39,
-    },
 };
 
 static const pbus_dev_t i2c_test_dev = {
@@ -158,6 +207,12 @@ zx_status_t hikey960_add_devices(hikey960_t* hikey) {
         zxlogf(ERROR, "hi3360_add_devices could not add mali_dev: %d\n", status);
         return status;
     }
+#ifdef DSI_ENABLE
+    if ((status = pbus_device_add(&hikey->pbus, &dsi_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "hi3360_add_devices could not add dsi_dev: %d\n", status);
+        return status;
+    }
+#endif
 
 #if GPIO_TEST
     if ((status = pbus_device_add(&hikey->pbus, &gpio_test_dev, 0)) != ZX_OK) {

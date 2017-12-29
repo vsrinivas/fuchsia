@@ -15,6 +15,8 @@
 #define MMIO_CODEC_SSI_LENGTH                   0x1000
 #define MMIO_G3D_BASE                           0xE82C0000
 #define MMIO_G3D_LENGTH                         0x4000
+#define MMIO_DSI_BASE                           0xE8601000
+#define MMIO_DSI_LENGTH                         0x7F000
 #define MMIO_IPC_BASE                           0xE896A000
 #define MMIO_IPC_LENGTH                         0x1000
 #define MMIO_IPC_NS_BASE                        0xE896B000
