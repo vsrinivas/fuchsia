@@ -17,12 +17,12 @@ Resource::~Resource() {
   canvas_->ops_.push_back(std::move(op));
 }
 
-void Resource::EnqueueOp(sketchy::OpPtr op) {
+void Resource::EnqueueOp(sketchy::OpPtr op) const {
   canvas_->ops_.push_back(std::move(op));
 }
 
 void Resource::EnqueueCreateResourceOp(ResourceId resource_id,
-                                       sketchy::ResourceArgsPtr args) {
+                                       sketchy::ResourceArgsPtr args) const {
   auto create_resource = sketchy::CreateResourceOp::New();
   create_resource->id = resource_id;
   create_resource->args = std::move(args);
@@ -33,7 +33,7 @@ void Resource::EnqueueCreateResourceOp(ResourceId resource_id,
 
 void Resource::EnqueueImportResourceOp(ResourceId resource_id,
                                        zx::eventpair token,
-                                       scenic::ImportSpec spec) {
+                                       scenic::ImportSpec spec) const {
   auto import_resource = scenic::ImportResourceOp::New();
   import_resource->id = resource_id;
   import_resource->token = std::move(token);
@@ -50,7 +50,7 @@ Stroke::Stroke(Canvas* canvas) : Resource(canvas) {
   EnqueueCreateResourceOp(id(), std::move(resource_args));
 }
 
-void Stroke::SetPath(StrokePath& path) {
+void Stroke::SetPath(const StrokePath& path) const {
   auto set_stroke_path = sketchy::SetStrokePathOp::New();
   set_stroke_path->stroke_id = id();
   set_stroke_path->path = path.NewSketchyStrokePath();
@@ -59,7 +59,7 @@ void Stroke::SetPath(StrokePath& path) {
   EnqueueOp(std::move(op));
 }
 
-void Stroke::Begin(glm::vec2 pt) {
+void Stroke::Begin(glm::vec2 pt) const {
   auto begin_stroke = sketchy::BeginStrokeOp::New();
   begin_stroke->stroke_id = id();
   auto touch = sketchy::Touch::New();
@@ -72,7 +72,7 @@ void Stroke::Begin(glm::vec2 pt) {
   EnqueueOp(std::move(op));
 }
 
-void Stroke::Extend(std::vector<glm::vec2> pts) {
+void Stroke::Extend(std::vector<glm::vec2> pts) const {
   auto extend_stroke = sketchy::ExtendStrokeOp::New();
   extend_stroke->stroke_id = id();
   auto touches = ::fidl::Array<sketchy::TouchPtr>::New(pts.size());
@@ -90,7 +90,7 @@ void Stroke::Extend(std::vector<glm::vec2> pts) {
   EnqueueOp(std::move(op));
 }
 
-void Stroke::Finish() {
+void Stroke::Finish() const {
   auto finish_stroke = sketchy::FinishStrokeOp::New();
   finish_stroke->stroke_id = id();
   auto op = sketchy::Op::New();
@@ -105,7 +105,7 @@ StrokeGroup::StrokeGroup(Canvas* canvas) : Resource(canvas) {
   EnqueueCreateResourceOp(id(), std::move(resource_args));
 }
 
-void StrokeGroup::AddStroke(Stroke& stroke) {
+void StrokeGroup::AddStroke(const Stroke& stroke) const {
   auto add_stroke = sketchy::AddStrokeOp::New();
   add_stroke->stroke_id = stroke.id();
   add_stroke->group_id = id();
@@ -114,12 +114,20 @@ void StrokeGroup::AddStroke(Stroke& stroke) {
   EnqueueOp(std::move(op));
 }
 
-void StrokeGroup::RemoveStroke(Stroke& stroke) {
+void StrokeGroup::RemoveStroke(const Stroke& stroke) const {
   auto remove_stroke = sketchy::RemoveStrokeOp::New();
   remove_stroke->stroke_id = stroke.id();
   remove_stroke->group_id = id();
   auto op = sketchy::Op::New();
   op->set_remove_stroke(std::move(remove_stroke));
+  EnqueueOp(std::move(op));
+}
+
+void StrokeGroup::Clear() const {
+  auto clear_group = sketchy::ClearGroupOp::New();
+  clear_group->group_id = id();
+  auto op = sketchy::Op::New();
+  op->set_clear_group(std::move(clear_group));
   EnqueueOp(std::move(op));
 }
 
@@ -130,7 +138,7 @@ ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
   EnqueueImportResourceOp(id(), std::move(token), scenic::ImportSpec::NODE);
 }
 
-void ImportNode::AddChild(const Resource& child) {
+void ImportNode::AddChild(const Resource& child) const {
   auto add_child = scenic::AddChildOp::New();
   add_child->child_id = child.id();
   add_child->node_id = id();

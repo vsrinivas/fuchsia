@@ -5,6 +5,7 @@
 #ifndef LIB_UI_SKETCHY_RESOURCES_H_
 #define LIB_UI_SKETCHY_RESOURCES_H_
 
+#include <garnet/public/lib/fxl/memory/ref_counted.h>
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/fun/sketchy/fidl/ops.fidl.h"
 #include "lib/ui/fun/sketchy/fidl/resources.fidl.h"
@@ -39,7 +40,7 @@ class Resource {
   // Enqueue an op in canvas to create a resource. Called in the constructor of
   // concrete resources to be created.
   void EnqueueCreateResourceOp(ResourceId resource_id,
-                               sketchy::ResourceArgsPtr args);
+                               sketchy::ResourceArgsPtr args) const;
 
   // Enqueue an op in canvas to import the resource. Called in the constructor
   // of concrete resources to be imported.
@@ -49,10 +50,10 @@ class Resource {
   // |spec| Type of the resource.
   void EnqueueImportResourceOp(ResourceId resource_id,
                                zx::eventpair token,
-                               scenic::ImportSpec spec);
+                               scenic::ImportSpec spec) const;
 
   // Enqueue an op in canvas.
-  void EnqueueOp(sketchy::OpPtr op);
+  void EnqueueOp(sketchy::OpPtr op) const;
 
  private:
   Canvas* const canvas_;
@@ -62,25 +63,29 @@ class Resource {
 };
 
 // Represents a stroke in a canvas.
-class Stroke final : public Resource {
+class Stroke final : public Resource,
+                     public fxl::RefCountedThreadSafe<Stroke> {
  public:
   explicit Stroke(Canvas* canvas);
-  void SetPath(StrokePath& path);
-  void Begin(glm::vec2 pt);
+  void SetPath(const StrokePath& path) const;
+  void Begin(glm::vec2 pt) const;
   // TODO(MZ-269): Also pass in predicted points.
-  void Extend(std::vector<glm::vec2> pts);
-  void Finish();
+  void Extend(std::vector<glm::vec2> pts) const;
+  void Finish() const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Stroke);
 };
 
+using StrokePtr = fxl::RefPtr<Stroke>;
+
 // Represents a group of stroke(s) in a canvas.
 class StrokeGroup final : public Resource {
  public:
   explicit StrokeGroup(Canvas* canvas);
-  void AddStroke(Stroke& stroke);
-  void RemoveStroke(Stroke& stroke);
+  void AddStroke(const Stroke& stroke) const;
+  void RemoveStroke(const Stroke& stroke) const;
+  void Clear() const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
@@ -90,7 +95,7 @@ class StrokeGroup final : public Resource {
 class ImportNode final : public Resource {
  public:
   ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node);
-  void AddChild(const Resource& child);
+  void AddChild(const Resource& child) const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ImportNode);

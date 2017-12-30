@@ -15,7 +15,7 @@ class CubicBezier2 {
  public:
   CubicBezier2(glm::vec2 pt0, glm::vec2 pt1,
                glm::vec2 pt2, glm::vec2 pt3);
-  sketchy::CubicBezier2Ptr NewSketchyCubicBezier2();
+  sketchy::CubicBezier2Ptr NewSketchyCubicBezier2() const;
 
  private:
   glm::vec2 pt0_;
@@ -28,7 +28,7 @@ class CubicBezier2 {
 class StrokePath {
  public:
   explicit StrokePath(std::vector<CubicBezier2> segments);
-  sketchy::StrokePathPtr NewSketchyStrokePath();
+  sketchy::StrokePathPtr NewSketchyStrokePath() const;
 
  private:
   std::vector<CubicBezier2> segments_;

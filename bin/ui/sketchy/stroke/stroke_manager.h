@@ -31,6 +31,8 @@ class StrokeManager {
   bool ExtendStroke(StrokePtr stroke, std::vector<glm::vec2> sampled_pts);
   bool FinishStroke(StrokePtr stroke);
 
+  bool ClearGroup(StrokeGroupPtr group);
+
   void Update(Frame* frame);
 
   StrokeTessellator* stroke_tessellator() { return &stroke_tessellator_; }

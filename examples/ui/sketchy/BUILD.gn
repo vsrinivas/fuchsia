@@ -6,11 +6,9 @@ executable("sketchy") {
   output_name = "sketchy_client"
 
   sources = [
-    "app.cc",
-    "app.h",
     "main.cc",
-    "scene.cc",
-    "scene.h",
+    "view.cc",
+    "view.h",
   ]
 
   deps = [
@@ -18,6 +16,9 @@ executable("sketchy") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/sketchy",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/fidl",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   include_dirs = [ "//third_party/glm" ]

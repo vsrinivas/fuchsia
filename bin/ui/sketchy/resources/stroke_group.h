@@ -30,6 +30,8 @@ class StrokeGroup final : public Resource {
   bool AddStroke(StrokePtr stroke);
   // Remove a stroke from record.
   bool RemoveStroke(StrokePtr stroke);
+  // Clear all strokes from record.
+  bool Clear();
 
   void SetNeedsReTessellation() { needs_re_tessellation_ = true; }
 

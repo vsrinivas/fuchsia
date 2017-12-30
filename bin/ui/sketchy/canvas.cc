@@ -95,6 +95,8 @@ bool CanvasImpl::ApplyOp(const sketchy::OpPtr& op) {
       return ApplyExtendStrokeOp(op->get_extend_stroke());
     case sketchy::Op::Tag::FINISH_STROKE:
       return ApplyFinishStrokeOp(op->get_finish_stroke());
+    case sketchy::Op::Tag::CLEAR_GROUP:
+      return ApplyClearGroupOp(op->get_clear_group());
     case sketchy::Op::Tag::SCENIC_IMPORT_RESOURCE:
       return ApplyScenicImportResourceOp(op->get_scenic_import_resource());
     case sketchy::Op::Tag::SCENIC_ADD_CHILD:
@@ -211,6 +213,15 @@ bool CanvasImpl::ApplyFinishStrokeOp(const sketchy::FinishStrokeOpPtr& op) {
     return false;
   }
   return stroke_manager_.FinishStroke(stroke);
+}
+
+bool CanvasImpl::ApplyClearGroupOp(const sketchy::ClearGroupOpPtr& op) {
+  auto group = resource_map_.FindResource<StrokeGroup>(op->group_id);
+  if (!group) {
+    FXL_LOG(ERROR) << "No Group of id " << op->group_id << " was found!";
+    return false;
+  }
+  return stroke_manager_.ClearGroup(group);
 }
 
 bool CanvasImpl::ApplyScenicImportResourceOp(

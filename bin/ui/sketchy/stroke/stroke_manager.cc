@@ -81,6 +81,11 @@ bool StrokeManager::FinishStroke(StrokePtr stroke) {
   return stroke->Finish();
 }
 
+bool StrokeManager::ClearGroup(StrokeGroupPtr group) {
+  dirty_stroke_groups_.insert(group);
+  return group->Clear();
+}
+
 void StrokeManager::Update(Frame* frame) {
   while (!dirty_stroke_groups_.empty()) {
     const auto& stroke_group = *dirty_stroke_groups_.begin();
