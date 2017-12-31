@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_DIVIDED_STROKE_PATH_H_
-#define GARNET_BIN_UI_SKETCHY_RESOURCES_DIVIDED_STROKE_PATH_H_
+#ifndef GARNET_BIN_UI_SKETCHY_STROKE_DIVIDED_STROKE_PATH_H_
+#define GARNET_BIN_UI_SKETCHY_STROKE_DIVIDED_STROKE_PATH_H_
 
 #include <vector>
-#include "garnet/bin/ui/sketchy/resources/stroke_path.h"
+#include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
 #include "lib/escher/geometry/bounding_box.h"
 
 namespace sketchy_service {

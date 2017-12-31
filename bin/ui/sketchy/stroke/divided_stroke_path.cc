@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/sketchy/resources/divided_stroke_path.h"
+#include "garnet/bin/ui/sketchy/stroke/divided_stroke_path.h"
 
 #include "lib/escher/util/trace_macros.h"
 

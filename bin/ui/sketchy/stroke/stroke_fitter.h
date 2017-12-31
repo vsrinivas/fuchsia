@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_FITTER_H_
-#define GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_FITTER_H_
+#ifndef GARNET_BIN_UI_SKETCHY_STROKE_STROKE_FITTER_H_
+#define GARNET_BIN_UI_SKETCHY_STROKE_STROKE_FITTER_H_
 
-#include "garnet/bin/ui/sketchy/resources/stroke_path.h"
+#include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
 
 #include <vector>
 #include "garnet/public/lib/fxl/macros.h"
@@ -39,4 +39,4 @@ class StrokeFitter final {
 
 }  // namespace sketchy_service
 
-#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_FITTER_H_
+#endif  // GARNET_BIN_UI_SKETCHY_STROKE_STROKE_FITTER_H_

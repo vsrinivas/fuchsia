@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/sketchy/resources/stroke_tessellator.h"
+#include "garnet/bin/ui/sketchy/stroke/stroke_tessellator.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/texture.h"

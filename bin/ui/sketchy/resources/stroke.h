@@ -10,11 +10,11 @@
 #include "garnet/bin/ui/sketchy/buffer/escher_buffer.h"
 #include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
-#include "garnet/bin/ui/sketchy/resources/divided_stroke_path.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
-#include "garnet/bin/ui/sketchy/resources/stroke_fitter.h"
-#include "garnet/bin/ui/sketchy/resources/stroke_path.h"
-#include "garnet/bin/ui/sketchy/resources/stroke_tessellator.h"
+#include "garnet/bin/ui/sketchy/stroke/divided_stroke_path.h"
+#include "garnet/bin/ui/sketchy/stroke/stroke_fitter.h"
+#include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
+#include "garnet/bin/ui/sketchy/stroke/stroke_tessellator.h"
 #include "sketchy/stroke_segment.h"
 
 namespace sketchy_service {
