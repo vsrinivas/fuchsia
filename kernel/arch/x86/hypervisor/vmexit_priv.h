@@ -79,6 +79,21 @@ enum class X2ApicMsr : uint64_t {
     SELF_IPI            = 0x83f,
 };
 
+// Interprocess interrupt delivery mode.
+enum class InterruptDeliveryMode : uint8_t {
+    IPI_FIXED           = 0,
+    IPI_LOWEST_PRIORITY = 1,
+    IPI_SMI             = 2,
+    IPI_NMI             = 4,
+    IPI_INIT            = 5,
+    IPI_START_UP        = 6,
+};
+
+enum class InterruptDestinationMode : bool {
+    PHYSICAL            = 0,
+    LOGICAL             = 1,
+};
+
 // clang-format on
 
 typedef struct zx_port_packet zx_port_packet_t;
@@ -128,6 +143,16 @@ struct IoInfo {
     uint16_t port;
 
     IoInfo(uint64_t qualification);
+};
+
+// Interrupt command register.
+struct InterruptCommandRegister {
+    uint32_t destination;
+    enum InterruptDestinationMode destination_mode;
+    enum InterruptDeliveryMode delivery_mode;
+    uint32_t addr;
+
+    InterruptCommandRegister(uint32_t hi, uint32_t lo);
 };
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,

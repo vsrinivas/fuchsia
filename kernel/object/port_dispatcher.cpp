@@ -31,6 +31,8 @@ static_assert(sizeof(zx_packet_guest_mem_t) == sizeof(zx_packet_user_t),
               "size of zx_packet_guest_mem_t must match zx_packet_user_t");
 static_assert(sizeof(zx_packet_guest_io_t) == sizeof(zx_packet_user_t),
               "size of zx_packet_guest_io_t must match zx_packet_user_t");
+static_assert(sizeof(zx_packet_guest_vcpu_t) == sizeof(zx_packet_user_t),
+              "size of zx_packet_guest_vcpu_t must match zx_packet_user_t");
 
 class ArenaPortAllocator final : public PortAllocator {
 public:

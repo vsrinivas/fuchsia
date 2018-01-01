@@ -19,7 +19,8 @@ __BEGIN_CDECLS
 #define ZX_PKT_TYPE_GUEST_BELL      0x03u
 #define ZX_PKT_TYPE_GUEST_MEM       0x04u
 #define ZX_PKT_TYPE_GUEST_IO        0x05u
-#define ZX_PKT_TYPE_EXCEPTION(n)    (0x06u | (((n) & 0xFFu) << 8))
+#define ZX_PKT_TYPE_GUEST_VCPU      0x06u
+#define ZX_PKT_TYPE_EXCEPTION(n)    (0x07u | (((n) & 0xFFu) << 8))
 
 #define ZX_PKT_TYPE_MASK            0xFFu
 
@@ -29,6 +30,7 @@ __BEGIN_CDECLS
 #define ZX_PKT_IS_GUEST_BELL(type)  ((type) == ZX_PKT_TYPE_GUEST_BELL)
 #define ZX_PKT_IS_GUEST_MEM(type)   ((type) == ZX_PKT_TYPE_GUEST_MEM)
 #define ZX_PKT_IS_GUEST_IO(type)    ((type) == ZX_PKT_TYPE_GUEST_IO)
+#define ZX_PKT_IS_GUEST_VCPU(type)  ((type) == ZX_PKT_TYPE_GUEST_VCPU)
 #define ZX_PKT_IS_EXCEPTION(type)   (((type) & ZX_PKT_TYPE_MASK) == ZX_PKT_TYPE_EXCEPTION(0))
 
 // port_packet_t::type ZX_PKT_TYPE_USER.
@@ -94,6 +96,13 @@ typedef struct zx_packet_guest_io {
     uint64_t reserved2;
 } zx_packet_guest_io_t;
 
+typedef struct zx_packet_guest_vcpu {
+    zx_vaddr_t addr;
+    uint64_t id;
+    uint64_t reserved0;
+    uint64_t reserved1;
+} zx_packet_guest_vcpu_t;
+
 typedef struct zx_port_packet {
     uint64_t key;
     uint32_t type;
@@ -105,6 +114,7 @@ typedef struct zx_port_packet {
         zx_packet_guest_bell_t guest_bell;
         zx_packet_guest_mem_t guest_mem;
         zx_packet_guest_io_t guest_io;
+        zx_packet_guest_vcpu_t guest_vcpu;
     };
 } zx_port_packet_t;
 

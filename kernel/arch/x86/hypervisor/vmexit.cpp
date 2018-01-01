@@ -102,6 +102,13 @@ EptViolationInfo::EptViolationInfo(uint64_t qualification) {
     instruction = BIT(qualification, 2);
 }
 
+InterruptCommandRegister::InterruptCommandRegister(uint32_t hi, uint32_t lo) {
+    destination = hi;
+    destination_mode = static_cast<InterruptDestinationMode>(BIT_SHIFT(lo, 11));
+    delivery_mode = static_cast<InterruptDeliveryMode>(BITS_SHIFT(lo, 10, 8));
+    addr = BITS(lo, 7, 0) << 12;
+}
+
 static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
 
@@ -453,8 +460,33 @@ static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
     }
 }
 
+static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
+                              zx_port_packet* packet) {
+    if (guest_state->rax > UINT32_MAX || guest_state->rdx > UINT32_MAX)
+        return ZX_ERR_INVALID_ARGS;
+    InterruptCommandRegister icr(static_cast<uint32_t>(guest_state->rdx),
+                                 static_cast<uint32_t>(guest_state->rax));
+    switch (icr.delivery_mode) {
+    case InterruptDeliveryMode::IPI_INIT:
+        next_rip(exit_info, vmcs);
+        return ZX_OK;
+    case InterruptDeliveryMode::IPI_START_UP:
+        if (icr.destination_mode != InterruptDestinationMode::PHYSICAL)
+            return ZX_ERR_NOT_SUPPORTED;
+        memset(packet, 0, sizeof(*packet));
+        packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+        packet->guest_vcpu.addr = icr.addr;
+        packet->guest_vcpu.id = icr.destination;
+        next_rip(exit_info, vmcs);
+        return ZX_ERR_NEXT;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                     GuestState* guest_state, LocalApicState* local_apic_state) {
+                                     GuestState* guest_state, LocalApicState* local_apic_state,
+                                     zx_port_packet* packet) {
     switch (static_cast<X2ApicMsr>(guest_state->rcx)) {
     case X2ApicMsr::EOI:
     case X2ApicMsr::ESR:
@@ -499,6 +531,8 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return ZX_OK;
     case X2ApicMsr::SELF_IPI:
         return ZX_ERR_NOT_SUPPORTED;
+    case X2ApicMsr::ICR:
+        return handle_ipi(exit_info, vmcs, guest_state, packet);
     default:
         // Issue a general protection fault for read only and unimplemented
         // registers.
@@ -508,7 +542,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
-                                LocalApicState* local_apic_state) {
+                                LocalApicState* local_apic_state, zx_port_packet* packet) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rax != kLocalApicPhysBase || guest_state->rdx != 0)
@@ -537,7 +571,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return ZX_OK;
     }
     case kX2ApicMsrBase... kX2ApicMsrMax:
-        return handle_apic_wrmsr(exit_info, vmcs, guest_state, local_apic_state);
+        return handle_apic_wrmsr(exit_info, vmcs, guest_state, local_apic_state, packet);
     default:
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
@@ -739,7 +773,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         return handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     case ExitReason::WRMSR:
         LTRACEF("handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
-        return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state);
+        return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, packet);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         LTRACEF("handling VM entry failure\n\n");

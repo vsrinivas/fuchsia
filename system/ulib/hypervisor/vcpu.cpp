@@ -167,6 +167,13 @@ static zx_status_t handle_io(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_
 }
 #endif // __x86_64__
 
+static zx_status_t handle_vcpu(Vcpu* vcpu, const zx_packet_guest_vcpu_t* packet,
+                               uint64_t trap_key) {
+    // TODO: Start up a new VCPU.
+    fprintf(stderr, "Got VCPU packet with addr = %lx, apic_id = %ld\n", packet->addr, packet->id);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 struct Vcpu::ThreadEntryArgs {
     const Guest* guest;
     Vcpu* vcpu;
@@ -251,6 +258,8 @@ static zx_status_t handle_packet(Vcpu* vcpu, zx_port_packet_t* packet) {
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
         return handle_io(vcpu, &packet->guest_io, packet->key);
+    case ZX_PKT_TYPE_GUEST_VCPU:
+        return handle_vcpu(vcpu, &packet->guest_vcpu, packet->key);
 #endif // __x86_64__
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);

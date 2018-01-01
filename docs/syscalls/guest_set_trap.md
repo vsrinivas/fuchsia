@@ -45,8 +45,10 @@ access to the memory region specified by the trap, then a packet is generated
 that does not fetch the instruction associated with the access, and the packet
 may be delivered via *port*.
 
-To identify what *kind* of trap generated a packet, use *ZX_PKT_TYPE_GUEST_MEM*
-and *ZX_PKT_TYPE_GUEST_IO*.
+To identify what *kind* of trap generated a packet, use *ZX_PKT_TYPE_GUEST_MEM*,
+*ZX_PKT_TYPE_GUEST_IO*, *ZX_PKT_TYPE_GUEST_BELL*, and *ZX_PKT_TYPE_GUEST_VCPU*.
+*ZX_PKT_TYPE_GUEST_VCPU* is a special packet, not caused by a trap, that
+indicates that the guest requested to start an additional VCPU.
 
 ## RETURN VALUE
 
