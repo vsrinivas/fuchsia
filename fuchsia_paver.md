@@ -44,7 +44,7 @@ configure our build for this we can run `fx set x86-64` and then build with
 
 To create your install media we recommend using a USB drive since these are
 well-supported as boot media by most systems. Note that the install media
-creation process **will be destructive** to the USB drive being used. Insert the
+creation process **will wipe everything** from the USB drive being used. Insert the
 USB drive and then run `fx mkzedboot <device_path>`, which on Linux is
 typically something like /dev/sd&lt;X&gt; where X is a letter and on Mac is typically
 something like /dev/disk&lt;N&gt; where 'N' is a number. **Be careful not to select
