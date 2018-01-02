@@ -45,10 +45,19 @@ public:
     ~UsbVideoStream();
 
 private:
-    enum class RingBufferState {
+    enum class StreamingState {
         STOPPED,
         STOPPING,
         STARTED,
+    };
+
+    struct RingBuffer {
+        zx_status_t Init(uint32_t size);
+
+        zx::vmo vmo;
+        void* virt = nullptr;
+        uint32_t size = 0;
+        uint32_t offset = 0;
     };
 
     UsbVideoStream(zx_device_t* parent,
@@ -88,8 +97,8 @@ private:
                           const UsbVideoStreamingSetting** out_setting);
 
     // Creates a new ring buffer and maps it into our address space.
-    // The current ring buffer state must be RingBufferState::STOPPED.
-    zx_status_t CreateRingBuffer();
+    // The current streaming state must be StreamingState::STOPPED.
+    zx_status_t CreateDataRingBuffer();
     zx_status_t StartStreaming();
     zx_status_t StopStreaming();
 
@@ -125,12 +134,10 @@ private:
     // Whether the current frame contains an error.
     bool cur_frame_error_ = false;
 
-    zx::vmo ring_buffer_vmo_;
-    void* ring_buffer_virt_ = nullptr;
-    uint32_t ring_buffer_size_ = 0;
-    uint32_t ring_buffer_offset_ = 0;
-    volatile RingBufferState ring_buffer_state_
-        __TA_GUARDED(lock_) = RingBufferState::STOPPED;
+    RingBuffer data_ring_buffer_ __TA_GUARDED(lock_);
+
+    volatile StreamingState streaming_state_
+        __TA_GUARDED(lock_) = StreamingState::STOPPED;
 
     list_node_t free_reqs_ __TA_GUARDED(lock_);
     uint32_t num_free_reqs_ __TA_GUARDED(lock_);

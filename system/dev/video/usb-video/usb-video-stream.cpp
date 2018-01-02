@@ -29,9 +29,9 @@ UsbVideoStream::~UsbVideoStream() {
             usb_request_release(list_remove_head_type(&free_reqs_, usb_request_t, node));
         }
     }
-    if (ring_buffer_virt_ != nullptr) {
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ring_buffer_virt_),
-                                    ring_buffer_size_);
+    if (data_ring_buffer_.virt != nullptr) {
+        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(data_ring_buffer_.virt),
+                                    data_ring_buffer_.size);
     }
 }
 
@@ -130,7 +130,7 @@ zx_status_t UsbVideoStream::Init() {
 zx_status_t UsbVideoStream::SetFormat() {
     fbl::AutoLock lock(&lock_);
 
-    if (ring_buffer_state_ != RingBufferState::STOPPED) {
+    if (streaming_state_ != StreamingState::STOPPED) {
         // TODO(jocelyndang): stop the ring buffer rather than returning an error.
         return ZX_ERR_BAD_STATE;
     }
@@ -240,35 +240,40 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
     return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::CreateRingBuffer() {
-    fbl::AutoLock lock(&lock_);
-
-    if (ring_buffer_state_ != RingBufferState::STOPPED) {
-        return ZX_ERR_BAD_STATE;
-    }
-    // TODO(jocelyndang): figure out what to do for non frame based formats.
-    ring_buffer_size_ = RING_BUFFER_NUM_FRAMES * max_frame_size_;
-    zx_status_t status = zx::vmo::create(ring_buffer_size_, 0, &ring_buffer_vmo_);
+zx_status_t UsbVideoStream::RingBuffer::Init(uint32_t size) {
+    zx_status_t status = zx::vmo::create(size, 0, &this->vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "failed to create ring buffer: %d\n", status);
         return status;
     }
 
-    status = zx::vmar::root_self().map(0, ring_buffer_vmo_,
-                                       0, ring_buffer_size_,
+    status = zx::vmar::root_self().map(0, this->vmo,
+                                       0, size,
                                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                       reinterpret_cast<uintptr_t*>(&ring_buffer_virt_));
+                                       reinterpret_cast<uintptr_t*>(&this->virt));
     if (status != ZX_OK) {
         zxlogf(ERROR, "failed to map ring buffer: %d\n", status);
         return status;
     }
+    this->size = size;
     return ZX_OK;
+}
+
+zx_status_t UsbVideoStream::CreateDataRingBuffer() {
+    fbl::AutoLock lock(&lock_);
+
+    if (streaming_state_ != StreamingState::STOPPED) {
+        return ZX_ERR_BAD_STATE;
+    }
+    // TODO(jocelyndang): figure out what to do for non frame based formats.
+    uint32_t ring_buffer_size = RING_BUFFER_NUM_FRAMES * max_frame_size_;
+    return data_ring_buffer_.Init(ring_buffer_size);
 }
 
 zx_status_t UsbVideoStream::StartStreaming() {
     fbl::AutoLock lock(&lock_);
 
-    if (!ring_buffer_virt_ || ring_buffer_state_ != RingBufferState::STOPPED) {
+    if (!data_ring_buffer_.virt || streaming_state_ != StreamingState::STOPPED) {
         return ZX_ERR_BAD_STATE;
     }
     zx_status_t status = usb_set_interface(&usb_, iface_num_,
@@ -276,7 +281,7 @@ zx_status_t UsbVideoStream::StartStreaming() {
     if (status != ZX_OK) {
         return status;
     }
-    ring_buffer_state_ = RingBufferState::STARTED;
+    streaming_state_ = StreamingState::STARTED;
 
     while (!list_is_empty(&free_reqs_)) {
         QueueRequestLocked();
@@ -287,12 +292,12 @@ zx_status_t UsbVideoStream::StartStreaming() {
 zx_status_t UsbVideoStream::StopStreaming() {
     fbl::AutoLock lock(&lock_);
 
-    if (ring_buffer_state_ != RingBufferState::STARTED) {
+    if (streaming_state_ != StreamingState::STARTED) {
         return ZX_ERR_BAD_STATE;
     }
     // Need to wait for all the in-flight usb requests to complete
     // before we can be completely stopped.
-    ring_buffer_state_ = RingBufferState::STOPPING;
+    streaming_state_ = StreamingState::STOPPING;
 
     // Switch to the zero bandwidth alternate setting.
     zx_status_t status = usb_set_interface(&usb_, iface_num_, 0);
@@ -313,14 +318,14 @@ void UsbVideoStream::QueueRequestLocked() {
 void UsbVideoStream::RequestComplete(usb_request_t* req) {
     fbl::AutoLock lock(&lock_);
 
-    if (ring_buffer_state_ != RingBufferState::STARTED) {
+    if (streaming_state_ != StreamingState::STARTED) {
         // Stopped streaming so don't need to process the result.
         list_add_head(&free_reqs_, &req->node);
         num_free_reqs_++;
         if (num_free_reqs_ == num_allocated_reqs_) {
             zxlogf(TRACE, "setting ring buffer as stopped, got %u frames\n",
                    num_frames_);
-            ring_buffer_state_ = RingBufferState::STOPPED;
+            streaming_state_ = StreamingState::STOPPED;
         }
         return;
     }
@@ -358,10 +363,10 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
         // Only advance the ring buffer position if the frame had no errors.
         // TODO(jocelyndang): figure out if we should do something else.
         if (!cur_frame_error_) {
-            ring_buffer_offset_ += cur_frame_bytes_;
-            if (ring_buffer_offset_ >= ring_buffer_size_) {
-                ring_buffer_offset_ -= ring_buffer_size_;
-                ZX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
+            data_ring_buffer_.offset += cur_frame_bytes_;
+            if (data_ring_buffer_.offset >= data_ring_buffer_.size) {
+                data_ring_buffer_.offset -= data_ring_buffer_.size;
+                ZX_DEBUG_ASSERT(data_ring_buffer_.offset < data_ring_buffer_.size);
             }
         }
         num_frames_++;
@@ -388,20 +393,20 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     }
 
     // Append the data to the end of the current frame.
-    uint32_t frame_end_offset = ring_buffer_offset_ + cur_frame_bytes_;
-    if (frame_end_offset >= ring_buffer_size_) {
-        frame_end_offset -= ring_buffer_size_;
+    uint32_t frame_end_offset = data_ring_buffer_.offset + cur_frame_bytes_;
+    if (frame_end_offset >= data_ring_buffer_.size) {
+        frame_end_offset -= data_ring_buffer_.size;
     }
 
-    uint32_t avail = ring_buffer_size_ - frame_end_offset;
-    ZX_DEBUG_ASSERT(frame_end_offset < ring_buffer_size_);
+    uint32_t avail = data_ring_buffer_.size - frame_end_offset;
+    ZX_DEBUG_ASSERT(frame_end_offset < data_ring_buffer_.size);
 
     uint32_t amt = fbl::min(avail, data_size);
-    uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + frame_end_offset;
+    uint8_t* dst = reinterpret_cast<uint8_t*>(data_ring_buffer_.virt) + frame_end_offset;
 
     usb_request_copyfrom(req, dst, amt, 0);
     if (amt < data_size) {
-        usb_request_copyfrom(req, ring_buffer_virt_, data_size - amt, amt);
+        usb_request_copyfrom(req, data_ring_buffer_.virt, data_size - amt, amt);
     }
     cur_frame_bytes_ += data_size;
 }
