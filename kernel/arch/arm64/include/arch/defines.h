@@ -22,7 +22,10 @@
 #define USER_PAGE_SIZE_SHIFT SHIFT_4K
 
 #define PAGE_SIZE (1L << PAGE_SIZE_SHIFT)
+#define PAGE_MASK (PAGE_SIZE - 1)
+
 #define USER_PAGE_SIZE (1L << USER_PAGE_SIZE_SHIFT)
+#define USER_PAGE_MASK (USER_PAGE_SIZE - 1)
 
 /* the maximum cache line seen on any known ARM hardware */
 #define MAX_CACHE_LINE 128

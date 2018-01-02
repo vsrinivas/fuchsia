@@ -20,6 +20,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <lib/heap.h>
+#include <lib/ktrace.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -32,6 +33,19 @@
 
 #define LOCAL_TRACE 0
 #define TRACE_CONTEXT_SWITCH 0
+
+/* ktraces just local to this file */
+#define LOCAL_KTRACE 0
+
+#if LOCAL_KTRACE
+#define LOCAL_KTRACE0(probe) ktrace_probe0(probe)
+#define LOCAL_KTRACE2(probe, x, y) ktrace_probe2(probe, x, y)
+#define LOCAL_KTRACE64(probe, x) ktrace_probe64(probe, x)
+#else
+#define LOCAL_KTRACE0(probe)
+#define LOCAL_KTRACE2(probe, x, y)
+#define LOCAL_KTRACE64(probe, x)
+#endif
 
 static_assert(((long)KERNEL_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
@@ -295,6 +309,8 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
         pt_pages_++;
     }
 
+    LOCAL_KTRACE0("page table alloc");
+
     LTRACEF("allocated 0x%lx\n", *paddrp);
     return 0;
 }
@@ -306,6 +322,8 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
 
     size_t size = 1U << page_size_shift;
     vm_page_t* page;
+
+    LOCAL_KTRACE0("page table free");
 
     if (size == PAGE_SIZE) {
         page = paddr_to_vm_page(paddr);
@@ -638,6 +656,8 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size,
         return ZX_ERR_INVALID_ARGS;
     }
 
+    LOCAL_KTRACE64("mmu map", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
+
     ssize_t ret = MapPageTable(vaddr, vaddr_rel, paddr, size, attrs,
                                top_index_shift, page_size_shift, top_page_table,
                                asid);
@@ -668,6 +688,8 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size,
         return ZX_ERR_INVALID_ARGS;
     }
 
+    LOCAL_KTRACE64("mmu unmap", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
+
     ssize_t ret = UnmapPageTable(vaddr, vaddr_rel, size, top_index_shift,
                                  page_size_shift, top_page_table, asid);
     DSB;
@@ -695,6 +717,8 @@ zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attr
         TRACEF("page table is NULL\n");
         return ZX_ERR_INVALID_ARGS;
     }
+
+    LOCAL_KTRACE64("mmu protect", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
     zx_status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs,
                                        top_index_shift, page_size_shift,
