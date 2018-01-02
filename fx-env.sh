@@ -122,7 +122,7 @@ if [[ -z "${ZSH_VERSION}" ]]; then
     case "${cmd}" in
       set)
         if [[ ${COMP_CWORD} -eq 2 ]]; then
-          COMPREPLY=($(compgen -W "x86-64 aarch64 gauss hikey960 odroidc2" "${cur}"))
+          COMPREPLY=($(compgen -W "x86-64 aarch64 gauss hikey960 odroidc2 vim vim2" "${cur}"))
           return
         fi
         case "${prev}" in

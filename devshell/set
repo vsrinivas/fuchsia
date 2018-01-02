@@ -5,7 +5,7 @@
 
 ### set build configuration
 
-## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2
+## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2|vim|vim2
 ##               [--release] [--packages P1,P2,...]
 ##               [--build-dir DIR]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
@@ -84,6 +84,14 @@ function main {
     odroidc2)
       arch=aarch64
       zircon_project=odroidc2
+      ;;
+    vim)
+      arch=aarch64
+      zircon_project=vim
+      ;;
+    vim2)
+      arch=aarch64
+      zircon_project=vim2
       ;;
     *)
       fx-command-help
