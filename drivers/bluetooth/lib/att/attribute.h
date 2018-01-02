@@ -92,8 +92,8 @@ class Attribute final {
   // The grouping that this attribute belongs to.
   const AttributeGrouping& group() const { return *group_; }
 
-  // Returns the current attribute value. Returns nullptr if no value was cached
-  // for this attribute (in which case this attribute is dynamic).
+  // Returns the current attribute value. Returns nullptr if the attribute has a
+  // dynamic value.
   const common::ByteBuffer* value() const {
     return value_.size() ? &value_ : nullptr;
   }
@@ -102,7 +102,7 @@ class Attribute final {
   const AccessRequirements& read_reqs() const { return read_reqs_; }
   const AccessRequirements& write_reqs() const { return write_reqs_; }
 
-  // Sets |value| as the cached attribute value. Once a value is assigned it
+  // Sets |value| as the static attribute value. Once a value is assigned it
   // cannot be overwritten. A static value cannot be assigned to an attribute
   // that permits writes as attribute writes need to propagate to the service
   // layer.

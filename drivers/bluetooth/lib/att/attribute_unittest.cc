@@ -97,7 +97,7 @@ TEST(ATT_AttributeTest, GroupingAddAttribute) {
   EXPECT_EQ(kTestHandle + 1, attr->handle());
   EXPECT_EQ(&group, &attr->group());
 
-  // The attribute should have no cached value until assigned.
+  // The attribute should have no value until assigned.
   EXPECT_FALSE(attr->value());
   attr->SetValue(kTestValue);
   ASSERT_TRUE(attr->value());
