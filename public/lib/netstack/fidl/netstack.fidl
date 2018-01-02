@@ -125,4 +125,7 @@ interface Netstack {
 
   // Sets the status (up or down) for the interface with the given nicid.
   SetInterfaceStatus@8(uint32 nicid, bool enabled);
+
+  SetRouteTable@9(array<RouteTableEntry> rt);
+
 };

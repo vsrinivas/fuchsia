@@ -28,6 +28,17 @@ type netstackImpl struct {
 	stub     *bindings.Stub
 }
 
+func toTCPIPAddress(addr net_address.NetAddress) tcpip.Address {
+	out := tcpip.Address("")
+	switch addr.Family {
+	case net_address.NetAddressFamily_Ipv4:
+		out = tcpip.Address(addr.Ipv4[:])
+	case net_address.NetAddressFamily_Ipv6:
+		out = tcpip.Address(addr.Ipv6[:])
+	}
+	return out
+}
+
 func toNetAddress(addr tcpip.Address) net_address.NetAddress {
 	out := net_address.NetAddress{Family: net_address.NetAddressFamily_Unspecified}
 	switch len(addr) {
@@ -177,6 +188,25 @@ func (ni *netstackImpl) GetRouteTable() (out []nsfidl.RouteTableEntry, err error
 		})
 	}
 	return out, nil
+}
+
+func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
+	routes := []tcpip.Route{}
+	for _, r := range rt {
+		route := tcpip.Route{
+			Destination: toTCPIPAddress(r.Destination),
+			Mask:        toTCPIPAddress(r.Netmask),
+			Gateway:     toTCPIPAddress(r.Gateway),
+			NIC:         tcpip.NICID(r.Nicid),
+		}
+		routes = append(routes, route)
+	}
+
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+	ns.stack.SetRouteTable(routes)
+
+	return nil
 }
 
 func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {
