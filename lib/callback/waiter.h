@@ -31,7 +31,8 @@ template <typename A, typename R, typename... Args>
 class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
  public:
   std::function<void(Args...)> NewCallback() {
-    FXL_DCHECK(!finalized_);
+    FXL_DCHECK(!finalized_) << "Waiter was already finalized.";
+    FXL_DCHECK(!cancelled_) << "Waiter has been cancelled.";
     if (done_) {
       return [](Args...) {};
     }
@@ -44,10 +45,13 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
   void Finalize(std::function<void(R)> callback) {
     FXL_DCHECK(!finalized_) << "Waiter already finalized, can't finalize more!";
+    FXL_DCHECK(!cancelled_) << "Waiter has been cancelled.";
     result_callback_ = std::move(callback);
     finalized_ = true;
     ExecuteCallbackIfFinished();
   }
+
+  void Cancel() { cancelled_ = true; }
 
  protected:
   explicit BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
@@ -71,15 +75,19 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   void ExecuteCallbackIfFinished() {
     FXL_DCHECK(!finished_) << "Waiter already finished.";
     if (finalized_ && !pending_callbacks_) {
-      result_callback_(accumulator_.Result());
+      if (!cancelled_) {
+        result_callback_(accumulator_.Result());
+      }
       finished_ = true;
     }
   }
 
   A accumulator_;
+  // TODO(LE-382): Simplify the state machine here.
   bool done_ = false;
   bool finalized_ = false;
   bool finished_ = false;
+  bool cancelled_ = false;
   size_t pending_callbacks_ = 0;
 
   std::function<void(R)> result_callback_;

@@ -178,5 +178,19 @@ TEST(CompletionWaiter, MixedInitialize) {
   EXPECT_TRUE(called);
 }
 
+TEST(Waiter, Cancel) {
+  auto waiter = CompletionWaiter::Create();
+
+  auto callback = waiter->NewCallback();
+
+  bool called = false;
+  waiter->Finalize([&called] { called = true; });
+
+  EXPECT_FALSE(called);
+  waiter->Cancel();
+  callback();
+  EXPECT_FALSE(called);
+}
+
 }  //  namespace
 }  //  namespace callback
