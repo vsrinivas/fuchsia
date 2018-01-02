@@ -6,6 +6,9 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+#include <sync/completion.h>
+
+#include <string.h>
 
 __BEGIN_CDECLS;
 
@@ -86,6 +89,49 @@ static inline zx_status_t i2c_get_channel(i2c_protocol_t* i2c, uint32_t channel_
 static inline zx_status_t i2c_get_channel_by_address(i2c_protocol_t* i2c, uint32_t bus_id,
                                                      uint16_t address, i2c_channel_t* channel) {
     return i2c->ops->get_channel_by_address(i2c->ctx, bus_id, address, channel);
+}
+
+// Helper for synchronous i2c transactions
+typedef struct {
+    completion_t completion;
+    void* read_buf;
+    size_t actual;
+    zx_status_t result;
+} pdev_i2c_ctx_t;
+
+static inline void pdev_i2c_sync_cb(zx_status_t status, const uint8_t* data, size_t actual,
+                                    void* cookie) {
+    pdev_i2c_ctx_t* ctx = (pdev_i2c_ctx_t *)cookie;
+    ctx->result = status;
+    ctx->actual = actual;
+    if (status == ZX_OK && ctx->read_buf && actual) {
+        memcpy(ctx->read_buf, data, actual);
+    }
+
+    completion_signal(&ctx->completion);
+}
+
+static inline zx_status_t i2c_transact_sync(i2c_channel_t* channel, const void* write_buf,
+                                            size_t write_length, void* read_buf, size_t read_length,
+                                            size_t* out_read_actual) {
+    pdev_i2c_ctx_t ctx;
+    completion_reset(&ctx.completion);
+    ctx.read_buf = read_buf;
+
+    zx_status_t status = i2c_transact(channel, write_buf, write_length, read_length,
+                                       pdev_i2c_sync_cb, &ctx);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = completion_wait(&ctx.completion, ZX_TIME_INFINITE);
+    if (status == ZX_OK) {
+        if (out_read_actual) {
+            *out_read_actual = ctx.actual;
+        }
+        return ctx.result;
+    } else {
+        return status;
+    }
 }
 
 __END_CDECLS;
