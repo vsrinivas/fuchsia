@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"netstack/deviceid"
+	"netstack/filter"
 	"netstack/link/eth"
 	"netstack/link/stats"
 	"netstack/netiface"
@@ -384,6 +385,9 @@ func (ns *netstack) addEth(path string) error {
 		// A wrapper LinkEndpoint should encapsulate the underlying one,
 		// and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)
+	}
+	if filter.Enabled {
+		linkID = filter.New(linkID)
 	}
 	linkID = ifs.statsEP.Wrap(linkID)
 

@@ -58,11 +58,15 @@ package("netstack_gotests") {
   deprecated_system_image = true
 
   deps = [
+    ":netstack_filter_test",
     ":netstack_netiface_test",
     "//garnet/go/src/netstack/netstat:netstack_netstat_test",
   ]
 
   tests = [
+    {
+      name = "netstack_filter_test"
+    },
     {
       name = "netstack_netiface_test"
     },
@@ -98,6 +102,20 @@ go_binary("netstack_bin") {
 
 go_test("netstack_netiface_test") {
   gopackage = "netstack/netiface"
+  go_dependencies = [
+    {
+      package = "netstack"
+      source = "//garnet/go/src/netstack"
+    },
+    {
+      package = "github.com/google/netstack"
+      source = "//third_party/netstack"
+    },
+  ]
+}
+
+go_test("netstack_filter_test") {
+  gopackage = "netstack/filter"
   go_dependencies = [
     {
       package = "netstack"
