@@ -9,11 +9,17 @@ executable("validation") {
 
   sources = [
     "app.cc",
-    "device_set_tests.cc",
+    "convert.cc",
+    "convert.h",
+    "device_set_test.cc",
+    "page_cloud_test.cc",
+    "validation_test.cc",
+    "validation_test.h",
   ]
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/cloud_provider/fidl",
     "//third_party/gtest",
