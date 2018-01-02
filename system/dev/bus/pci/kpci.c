@@ -213,7 +213,7 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
 #endif
 
     char name[20];
-    snprintf(name, sizeof(name), "%02x:%02x:%02x", info.bus_id, info.dev_id, info.func_id);
+    snprintf(name, sizeof(name), "%02x:%02x.%1x", info.bus_id, info.dev_id, info.func_id);
 
 #if !PROXY_DEVICE
     zx_device_prop_t device_props[] = {
