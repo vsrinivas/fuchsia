@@ -90,6 +90,61 @@ func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface, cidr st
 	}
 }
 
+func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry, args []string) (remaining []string, err error) {
+	if len(args) < 2 {
+		return args, fmt.Errorf("not enough args to make attribute")
+	}
+	var attr, val string
+	switch attr, val, remaining = args[0], args[1], args[2:]; attr {
+	case "gateway":
+		in.Gateway = toNetAddress(net.ParseIP(val))
+	case "iface":
+		iface := a.getIfaceByName(val)
+		if iface == nil {
+			return remaining, fmt.Errorf("no such interface '%s'\n", val)
+		}
+
+		in.Nicid = iface.Id
+	default:
+		return remaining, fmt.Errorf("unknown route attribute: %s %s", attr, val)
+	}
+
+	return remaining, nil
+}
+
+func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.RouteTableEntry, err error) {
+	destination, remaining := args[0], args[1:]
+	dstAddr, dstSubnet, err := net.ParseCIDR(destination)
+	if err != nil {
+		return route, fmt.Errorf("invalid destination (destination must be provided in CIDR format): %s", destination)
+	}
+
+	route.Destination = toNetAddress(dstAddr)
+	route.Netmask = toNetAddress(net.IP(dstSubnet.Mask))
+
+	for len(remaining) > 0 {
+		remaining, err = a.parseRouteAttribute(&route, remaining)
+		if err != nil {
+			return route, err
+		}
+	}
+
+	if len(remaining) != 0 {
+		return route, fmt.Errorf("could not parse all route arguments. remaining: %s", remaining)
+	}
+
+	return route, nil
+}
+
+func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
+	rs, err := a.netstack.GetRouteTable()
+	if err != nil {
+		return fmt.Errorf("Could not get route table from netstack: %s", err)
+	}
+
+	return a.netstack.SetRouteTable(append(rs, r))
+}
+
 func hwAddrToString(hwaddr []uint8) string {
 	str := ""
 	for i := 0; i < len(hwaddr); i++ {
@@ -184,10 +239,35 @@ func main() {
 		return
 	}
 
-	iface := a.getIfaceByName(os.Args[1])
-	if iface == nil {
-		fmt.Printf("ifconfig: no such interface '%s'\n", os.Args[1])
+	var iface *netstack.NetInterface
+	switch os.Args[1] {
+	case "route":
+		routeFlags := os.Args[3:]
+		r, err := a.newRouteFromArgs(routeFlags)
+		if err != nil {
+			fmt.Printf("Error parsing route from args: %s, error: %s\n", routeFlags, err)
+		}
+
+		switch op := os.Args[2]; op {
+		case "add":
+			err = a.addRoute(r)
+			if err != nil {
+				fmt.Printf("Error adding route to route table: %s", err)
+			}
+		case "del":
+			fmt.Printf("Deleting routes from the route table is not yet supported.\n")
+		default:
+			fmt.Printf("Unknown route operation: %s", op)
+			usage()
+		}
+
 		return
+	default:
+		iface = a.getIfaceByName(os.Args[1])
+		if iface == nil {
+			fmt.Printf("ifconfig: no such interface '%s'\n", os.Args[1])
+			return
+		}
 	}
 
 	switch len(os.Args) {
@@ -202,7 +282,7 @@ func main() {
 		case "add":
 			a.addIfaceAddress(*iface, os.Args[3])
 		case "del":
-			fmt.Printf("Deleting addresses from an interface is not yet supported.")
+			fmt.Printf("Deleting addresses from an interface is not yet supported.\n")
 			usage()
 		default:
 			usage()
