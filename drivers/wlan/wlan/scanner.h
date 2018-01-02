@@ -42,7 +42,7 @@ class Scanner : public FrameHandler {
 
     zx_status_t HandleMlmeScanReq(const ScanRequest& req) override;
 
-    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) override;
+    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
                                     const wlan_rx_info_t& rxinfo) override;

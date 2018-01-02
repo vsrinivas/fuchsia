@@ -16,9 +16,12 @@ zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
     return ZX_OK;
 }
 
-bool InfraBss::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
+zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     // Drop management frames which are not targeted towards this BSS.
-    return bssid_ != hdr.addr1 || bssid_ != hdr.addr3;
+    if (bssid_ != hdr.addr1 || bssid_ != hdr.addr3) {
+        return ZX_ERR_STOP;
+    }
+    return ZX_OK;
 }
 
 zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& frame,

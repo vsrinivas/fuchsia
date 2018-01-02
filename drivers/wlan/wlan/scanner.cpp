@@ -111,9 +111,9 @@ wlan_channel_t Scanner::ScanChannel() const {
     };
 }
 
-bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
+zx_status_t Scanner::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     // Ignore all management frames when scanner is not running.
-    return !IsRunning();
+    return IsRunning() ? ZX_OK : ZX_ERR_STOP;
 }
 
 zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {

@@ -72,7 +72,7 @@ class Station : public FrameHandler {
 
     zx_status_t SendKeepAliveResponse();
 
-    bool ShouldDropMlmeMessage(const Method& method) override;
+    zx_status_t HandleMlmeMessage(const Method& method) override;
     zx_status_t HandleMlmeJoinReq(const JoinRequest& req) override;
     zx_status_t HandleMlmeAuthReq(const AuthenticateRequest& req) override;
     zx_status_t HandleMlmeDeauthReq(const DeauthenticateRequest& req) override;
@@ -80,7 +80,7 @@ class Station : public FrameHandler {
     zx_status_t HandleMlmeEapolReq(const EapolRequest& req) override;
     zx_status_t HandleMlmeSetKeysReq(const SetKeysRequest& req) override;
 
-    bool ShouldDropDataFrame(const DataFrameHeader& hdr) override;
+    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
@@ -93,13 +93,12 @@ class Station : public FrameHandler {
     zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame,
                                         const wlan_rx_info_t& rxinfo) override;
 
-    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) override;
+    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleNullDataFrame(const DataFrame<NilHeader>& frame,
                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame,
                                 const wlan_rx_info_t& rxinfo) override;
 
-    bool ShouldDropEthFrame(const BaseFrame<EthernetII>& hdr) override;
     zx_status_t HandleEthFrame(const BaseFrame<EthernetII>& frame) override;
     zx_status_t HandleTimeout();
 

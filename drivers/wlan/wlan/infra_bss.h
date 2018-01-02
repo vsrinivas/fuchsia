@@ -38,7 +38,7 @@ class InfraBss : public FrameHandler {
     uint64_t timestamp();
 
    private:
-    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) override;
+    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,

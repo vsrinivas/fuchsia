@@ -50,30 +50,43 @@ namespace wlan {
 
 // FrameHandler provides frame handling capabilities. It is not thread safe.
 // By default the FrameHandler will ignore every frame. If the component wishes to handle a
-// specific frame it must override the corresponding method, for example HandleBeacon(...). The
-// FrameHandler also offers to provide custom logic for dropping frames in a centralized manner
-// by overriding ShouldDropXYZ(...). Using these methods for dropping results in two benefits,
-// (1) frame filtering logic is in one single place rather than being spread out through
-// various HandleXYZ(...) methods, and
-// (2) dropped frames will not be forwarded to forwarding targets.
-// Children are targets which frames are automatically forwarded to.
-// Frames are only forwarded to the children if they were not dropped by the parent, and
-// the parent did not fail processing the frame itself.
-// Frame processing errors returned by children are logged but have no effect onto their
-// siblings or the parent.
+// specific frame it must override the corresponding method, for example
+// HandleBeacon(MgmtFrame<Beacon>).
+// The FrameHandler invokes multiple callbacks per frame with each callback providing a more
+// specific frame type. Hence, the callback invoked last provides the fully resolved type of the
+// frame, while an earlier callback might only know whether the current frame is a management or
+// data frame. For example, for every received Beacon frame, the FrameHandler invokes the following
+// callbacks: HandleAnyFrame() > HandleMgmtFrame(MgmtFrameHeader) >
+// HandleBeaconFrame(MgmtFrame<Beacon>).
+// This chain of handlers can be broken by returning ZX_ERR_STOP. This effectively results in a
+// simple way to enrich components with sophisticated frame dropping logic. If a handler returns
+// ZX_ERR_STOP the frame is not processed any further, for example, a client can drop all Beacon
+// frames by returning ZX_ERR_STOP inside HandleMgmtFrame(MgmtFrameHeader) when the header indicates
+// that the received frame is a Beacon.
+// A FrameHandler also provides two ways of forwarding frames to other components. Either, a
+// component is registered as a child of a FrameHandler, by invoking AddChildHandler(FrameHandler*),
+// which will forward all incoming frames to the child, or by invoking
+// ForwardCurrentFrameTo(FrameHandler*) which will only forward the current frame to the given
+// handler (Note: the current frame can be forwarded to only one handler at a time).
+// Use the latter option when dealing with dynamic frame targets, such as a forwarding the current
+// frame to a specific client. Use the first option when the frame targets are fixed and the amount
+// of targets is rather small.
 class FrameHandler : public fbl::RefCounted<FrameHandler> {
    public:
     FrameHandler() {}
     virtual ~FrameHandler() = default;
 
     template <typename... Args> zx_status_t HandleFrame(Args&&... args) {
-        auto status = HandleFrameInternal(std::forward<Args>(args)...);
+        auto status = HandleAnyFrame();
         // Do not forward frame if it was dropped.
         if (status == ZX_ERR_STOP) { return ZX_OK; }
         // Do not forward frame if processing failed.
         if (status != ZX_OK) { return status; }
 
-        // TODO(hahnr): Extract forwarding logic into dedicated component.
+        status = HandleFrameInternal(std::forward<Args>(args)...);
+        if (status == ZX_ERR_STOP) { return ZX_OK; }
+        if (status != ZX_OK) { return status; }
+
         // Forward frame to all children.
         uint16_t i = 0;
         for (auto& handler : children_) {
@@ -84,25 +97,41 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
             }
             i++;
         }
+
+        // If there is a dynamic target registered, forward frame.
+        if (dynamic_target_ != nullptr) {
+            status = dynamic_target_->HandleFrame(std::forward<Args>(args)...);
+            if (status != ZX_OK) {
+                debugfhandler("dynamic target failed handling frame: %d\n", status);
+            }
+            dynamic_target_ = nullptr;
+        }
         return ZX_OK;
+    }
+
+    void ForwardCurrentFrameTo(FrameHandler* handler) {
+        ZX_DEBUG_ASSERT(handler != nullptr);
+        ZX_DEBUG_ASSERT(dynamic_target_ == nullptr);
+        dynamic_target_ = handler;
     }
 
     void AddChildHandler(fbl::RefPtr<FrameHandler> ptr) { children_.push_back(ptr); }
 
     void RemoveChildHandler(fbl::RefPtr<FrameHandler> ptr) {
         children_.erase(
-            std::remove_if(children_.begin(), children_.end(),
-                           [ptr](fbl::RefPtr<FrameHandler>& entry) { return entry == ptr; }),
-            children_.end());
+                std::remove_if(children_.begin(), children_.end(),
+                               [ptr](fbl::RefPtr<FrameHandler>& entry) { return entry == ptr; }),
+                children_.end());
     }
 
    protected:
+    virtual zx_status_t HandleAnyFrame() { return ZX_OK; }
+
     // Ethernet frame handlers.
-    virtual bool ShouldDropEthFrame(const BaseFrame<EthernetII>& frame) { return false; }
-    WLAN_DECL_VIRT_FUNC_HANDLE(HandleEthFrame, const BaseFrame<EthernetII>& frame)
+    virtual zx_status_t HandleEthFrame(const BaseFrame<EthernetII>& frame) { return ZX_OK; }
 
     // Service Message handlers.
-    virtual bool ShouldDropMlmeMessage(const Method& method) { return false; }
+    virtual zx_status_t HandleMlmeMessage(const Method& method) { return ZX_OK; }
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
@@ -115,12 +144,13 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
 
     // Data frame handlers.
-    virtual bool ShouldDropDataFrame(const DataFrameHeader& hdr) { return false; }
+    virtual zx_status_t HandleDataFrame(const DataFrameHeader& hdr) { return ZX_OK; }
     WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, NilHeader)
+    // TODO(hahnr): Rename to something more specific since there are two HandleDataFrame methods now.
     WLAN_DECL_VIRT_FUNC_HANDLE_DATA(DataFrame, LlcHeader)
 
     // Management frame handlers.
-    virtual bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) { return false; }
+    virtual zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) { return ZX_OK; }
     WLAN_DECL_FUNC_HANDLE_MGMT(Beacon)
     WLAN_DECL_FUNC_HANDLE_MGMT(ProbeResponse)
     WLAN_DECL_FUNC_HANDLE_MGMT(Authentication)
@@ -134,7 +164,9 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     // Internal Service Message handlers.
     template <typename Message>
     zx_status_t HandleFrameInternal(const Method& method, const Message& msg) {
-        if (ShouldDropMlmeMessage(method)) { return ZX_ERR_STOP; }
+        auto status = HandleMlmeMessage(method);
+        if (status != ZX_OK) { return status; }
+
         return HandleMlmeFrameInternal(method, msg);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
@@ -151,7 +183,9 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     // Internal Management frame handlers.
     template <typename Body>
     zx_status_t HandleFrameInternal(const MgmtFrame<Body>& frame, const wlan_rx_info_t& info) {
-        if (ShouldDropMgmtFrame(*frame.hdr)) { return ZX_ERR_STOP; }
+        auto status = HandleMgmtFrame(*frame.hdr);
+        if (status != ZX_OK) { return status; }
+
         return HandleMgmtFrameInternal(frame, info);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Beacon)
@@ -165,19 +199,26 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
     // Internal Ethernet frame handlers.
     zx_status_t HandleFrameInternal(const BaseFrame<EthernetII>& frame) {
-        if (ShouldDropEthFrame(frame)) { return ZX_ERR_STOP; }
         return HandleEthFrame(frame);
     }
 
     // Internal Data frame handlers.
     template <typename Body>
     zx_status_t HandleFrameInternal(const DataFrame<Body>& frame, const wlan_rx_info_t& info) {
-        if (ShouldDropDataFrame(*frame.hdr)) { return ZX_ERR_STOP; }
+        auto status = HandleDataFrame(*frame.hdr);
+        if (status != ZX_OK) { return status; }
+
         return HandleDataFrameInternal(frame, info);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(NullDataFrame, NilHeader)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(DataFrame, LlcHeader)
 
+    // Frame target which will only receive the current frame. Will be reset after each frame.
+    // TODO(hahnr): This is still not exactly what I fancy but good enough for now.
+    // Ideally, this will turn into its own component which is also better testable and replaceable.
+    // However, most of my prototyping hit compiler limitations.
+    FrameHandler* dynamic_target_ = nullptr;
+    // List of all children which all incoming frames should get forwarded to.
     std::vector<fbl::RefPtr<FrameHandler>> children_;
 };
 

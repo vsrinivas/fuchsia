@@ -41,11 +41,11 @@ void Station::Reset() {
     bssid_.Reset();
 }
 
-bool Station::ShouldDropMlmeMessage(const Method& method) {
+zx_status_t Station::HandleMlmeMessage(const Method& method) {
     // Always allow MLME-JOIN.request.
-    if (method == Method::JOIN_request) { return false; }
+    if (method == Method::JOIN_request) { return ZX_OK; }
     // Drop other MLME requests if there is no BSSID set yet.
-    return bssid() == nullptr;
+    return (bssid() == nullptr ? ZX_ERR_STOP : ZX_OK);
 }
 
 zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
@@ -340,10 +340,13 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     return status;
 }
 
-bool Station::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
+zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     // Drop management frames if either, there is no BSSID set yet,
     // or the frame is not from the BSS.
-    return bssid() == nullptr || *bssid() != hdr.addr3;
+    if (bssid() == nullptr || *bssid() != hdr.addr3) {
+        return ZX_ERR_STOP;
+    }
+    return ZX_OK;
 }
 
 // TODO(hahnr): Support ProbeResponses.
@@ -598,13 +601,16 @@ zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>&
     return ZX_OK;
 }
 
-bool Station::ShouldDropDataFrame(const DataFrameHeader& hdr) {
+zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
     // Drop data frames if either, there is no BSSID set yet,
     // or the frame is not from the BSS.
     auto from_bss = (bssid() != nullptr && *bssid() == hdr.addr2);
     auto associated = (state_ == WlanState::kAssociated);
     if (!associated) { debugf("dropping data packet while not associated\n"); }
-    return !from_bss || !associated;
+    if (!from_bss || !associated) {
+        return ZX_ERR_STOP;
+    }
+    return ZX_OK;
 }
 
 zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
@@ -689,18 +695,16 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
     return status;
 }
 
-bool Station::ShouldDropEthFrame(const BaseFrame<EthernetII>& hdr) {
+zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>& frame) {
+    debugfn();
+
     // Drop Ethernet frames when not associated.
     auto bss_setup = (bssid() != nullptr);
     auto associated = (state_ == WlanState::kAssociated);
     if (!associated) { debugf("dropping eth packet while not associated\n"); }
-    return !bss_setup || !associated;
-}
-
-zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>& frame) {
-    debugfn();
-    ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
+    if (!bss_setup || !associated) {
+        return ZX_OK;
+    }
 
     auto eth = frame.hdr;
     const size_t wlan_len = kDataPayloadHeader + frame.body_len;
