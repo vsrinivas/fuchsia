@@ -30,6 +30,8 @@ This repository contains documentation for Fuchsia.
   + In [Dart](/dart.md)
   + In [Rust](/rust.md)
 
++ [How do I write useful tests?][testing_best_practices]
+
 + [How do I work with multiple devices?](/multi_device.md)
 
 
@@ -54,3 +56,4 @@ This repository contains documentation for Fuchsia.
 [pixelbook]: /hardware/pixelbook.md "Pixelbook"
 [flutter_module]: https://fuchsia.googlesource.com/peridot/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [contributing]: /CONTRIBUTING.md "Contributing changes"
+[testing_best_practices]: /best-practices/testing.md "Testing best practices"
