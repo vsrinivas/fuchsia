@@ -8,6 +8,7 @@
 #include <zx/vmo.h>
 
 #include "garnet/bin/appmgr/application_namespace.h"
+#include "garnet/lib/farfs/file_system.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_runner.fidl.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -26,6 +27,7 @@ class ApplicationRunnerHolder {
   void StartApplication(
       ApplicationPackagePtr package,
       ApplicationStartupInfoPtr startup_info,
+      std::unique_ptr<archive::FileSystem> file_system,
       fxl::RefPtr<ApplicationNamespace> application_namespace,
       fidl::InterfaceRequest<ApplicationController> controller);
 
@@ -34,6 +36,9 @@ class ApplicationRunnerHolder {
   ApplicationControllerPtr controller_;
   ApplicationRunnerPtr runner_;
 
+  // TODO(abarth): We hold these objects for the lifetime of the runner, but we
+  // should actuall drop them once their controller is done.
+  std::vector<std::unique_ptr<archive::FileSystem>> file_systems_;
   std::vector<fxl::RefPtr<ApplicationNamespace>> namespaces_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);

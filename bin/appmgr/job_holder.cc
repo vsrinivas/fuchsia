@@ -380,7 +380,7 @@ void JobHolder::CreateApplicationWithRunner(
                    << launch_info->url;
   }
   runner_ptr->StartApplication(std::move(package), std::move(startup_info),
-                               std::move(application_namespace),
+                               nullptr, std::move(application_namespace),
                                std::move(controller));
 }
 
@@ -484,6 +484,7 @@ void JobHolder::CreateApplicationFromArchive(
       return;
     }
     runner->StartApplication(std::move(inner_package), std::move(startup_info),
+                             std::move(file_system),
                              std::move(application_namespace),
                              std::move(controller));
   } else {
