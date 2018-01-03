@@ -392,10 +392,8 @@ __BEGIN_CDECLS
     ISB; \
 })
 
-#define MMU_ARM64_GLOBAL_ASID (~0U)
-#define MMU_ARM64_USER_ASID (0U)
-
-#define MMU_ARM64_ASID_BITS (16U)
+const uint16_t MMU_ARM64_GLOBAL_ASID = 0xffff;
+const size_t MMU_ARM64_ASID_BITS = 16;
 
 pte_t *arm64_get_kernel_ptable();
 

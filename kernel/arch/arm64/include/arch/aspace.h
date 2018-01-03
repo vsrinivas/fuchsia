@@ -61,37 +61,34 @@ private:
     ssize_t MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                          paddr_t paddr_in, size_t size_in, pte_t attrs,
                          uint index_shift, uint page_size_shift,
-                         volatile pte_t* page_table, uint asid) TA_REQ(lock_);
+                         volatile pte_t* page_table) TA_REQ(lock_);
 
     ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                            uint index_shift, uint page_size_shift,
-                           volatile pte_t* page_table, uint asid) TA_REQ(lock_);
+                           volatile pte_t* page_table) TA_REQ(lock_);
 
     int ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
                          pte_t attrs, uint index_shift, uint page_size_shift,
-                         volatile pte_t* page_table, uint asid) TA_REQ(lock_);
+                         volatile pte_t* page_table) TA_REQ(lock_);
 
     void MmuParamsFromFlags(uint mmu_flags,
                             pte_t* attrs, vaddr_t* vaddr_base,
                             uint* top_size_shift, uint* top_index_shift,
-                            uint* page_size_shift, uint* asid);
+                            uint* page_size_shift);
     ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                      vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
-                     uint page_size_shift, volatile pte_t* top_page_table,
-                     uint asid) TA_REQ(lock_);
+                     uint page_size_shift) TA_REQ(lock_);
 
     ssize_t UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
                        uint top_size_shift, uint top_index_shift,
-                       uint page_size_shift, volatile pte_t* top_page_table,
-                       uint asid) TA_REQ(lock_);
+                       uint page_size_shift) TA_REQ(lock_);
 
     zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
                              vaddr_t vaddr_base, uint top_size_shift,
-                             uint top_index_shift, uint page_size_shift,
-                             volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
+                             uint top_index_shift, uint page_size_shift) TA_REQ(lock_);
     zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
-    void FlushTLBEntry(vaddr_t vaddr, uint asid, bool terminal) TA_REQ(lock_);
+    void FlushTLBEntry(vaddr_t vaddr, bool terminal) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("VAAS")> canary_;
 
