@@ -59,8 +59,15 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
         uint8_t phase_cal_tx1 = 0;
     };
 
-    // wireless channel information
+    // TODO(porce): Rename to reflect RF calibration values
+    // Also avoid confusion from
+    // wlan/common/channel.h:Channel{}
+    // ddk/protocol/wlan.h:wlan_channel_t{}
+    // wlan_mlme.fidl:WlanChan{}
+    // RF calibration values defined per channel number
     struct Channel {
+        Channel() : channel(0), N(0), R(0), K(0), mod(0) {}
+
         Channel(int channel, uint32_t N, uint32_t R, uint32_t K)
             : channel(channel), N(N), R(R), K(K), mod(0) {}
 
@@ -158,11 +165,12 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t StopRxQueue();
     zx_status_t SetupInterface();
 
-    zx_status_t ConfigureChannel(const Channel& channel);
-    zx_status_t ConfigureChannel5390(const Channel& channel);
-    zx_status_t ConfigureChannel5592(const Channel& channel);
+    zx_status_t LookupRfVal(const wlan_channel_t& chan, Channel* rf_val);
+    zx_status_t ConfigureChannel(const wlan_channel_t& chan);
+    zx_status_t ConfigureChannel5390(const wlan_channel_t& chan);
+    zx_status_t ConfigureChannel5592(const wlan_channel_t& chan);
 
-    zx_status_t ConfigureTxPower(const Channel& channel);
+    zx_status_t ConfigureTxPower(const wlan_channel_t& chan);
 
     template <typename R, typename Predicate>
     zx_status_t BusyWait(R* reg, Predicate pred, zx_duration_t delay = kDefaultBusyWait);
@@ -202,7 +210,13 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     uint8_t antenna_diversity_ = 0;
 
     std::map<int, Channel> channels_;
-    int current_channel_ = -1;
+
+    // cfg_chan_ is what is configured (from higher layers)
+    // TODO(porce): Define oper_chan_ to read from the registers directly
+    wlan_channel_t cfg_chan_ = wlan_channel_t{
+        .primary = 0,
+        .cbw = CBW20,
+    };
     uint16_t lna_gain_ = 0;
     uint8_t bg_rssi_offset_[3] = {};
     uint8_t bssid_[6];

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "device.h"
+#include "garnet/drivers/wlan/common/channel.h"
 #include "garnet/drivers/wlan/common/cipher.h"
 #include "logging.h"
 #include "ralink.h"
@@ -1917,8 +1918,6 @@ zx_status_t Device::NormalModeSetup() {
 }
 
 zx_status_t Device::StartQueues() {
-    debugfn();
-
     // RX queue
     MacSysCtrl msc;
     zx_status_t status = ReadRegister(&msc);
@@ -2191,23 +2190,28 @@ zx_status_t Device::InitializeChannelInfo() {
 constexpr uint8_t kRfPowerBound2_4Ghz = 0x27;
 constexpr uint8_t kRfPowerBound5Ghz = 0x2b;
 
-zx_status_t Device::ConfigureChannel5390(const Channel& channel) {
-    WriteRfcsr(RfcsrRegister<8>(channel.N));
-    WriteRfcsr(RfcsrRegister<9>(channel.K & 0x0f));
+zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
+    zx_status_t status;
+    Channel rf_val;
+    status = LookupRfVal(chan, &rf_val);
+    if (status != ZX_OK) { return status; }
+
+    WriteRfcsr(RfcsrRegister<8>(rf_val.N));
+    WriteRfcsr(RfcsrRegister<9>(rf_val.K & 0x0f));
     Rfcsr11 r11;
-    zx_status_t status = ReadRfcsr(&r11);
+    status = ReadRfcsr(&r11);
     CHECK_READ(RF11, status);
-    r11.set_r(channel.R);
+    r11.set_r(rf_val.R);
     status = WriteRfcsr(r11);
     CHECK_WRITE(RF11, status);
 
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
-    if (channel.default_power1 > kRfPowerBound2_4Ghz) {
+    if (rf_val.default_power1 > kRfPowerBound2_4Ghz) {
         r49.set_tx(kRfPowerBound2_4Ghz);
     } else {
-        r49.set_tx(channel.default_power1);
+        r49.set_tx(rf_val.default_power1);
     }
     status = WriteRfcsr(r49);
     CHECK_WRITE(RF49, status);
@@ -2225,8 +2229,8 @@ zx_status_t Device::ConfigureChannel5390(const Channel& channel) {
     status = AdjustFreqOffset();
     if (status != ZX_OK) { return status; }
 
-    if (channel.channel <= 14) {
-        int hw_index = channel.channel - 1;
+    if (chan.primary <= 14) {
+        int hw_index = chan.primary - 1;
         if (rt_rev_ >= REV_RT5390F) {
             static const uint8_t r55[] = {
                 0x23, 0x23, 0x23, 0x23, 0x13, 0x13, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
@@ -2266,14 +2270,17 @@ zx_status_t Device::ConfigureChannel5390(const Channel& channel) {
     return status;
 }
 
-zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
+zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
     zx_status_t status;
+    Channel rf_val;
+    status = LookupRfVal(chan, &rf_val);
+    if (status != ZX_OK) { return status; }
 
     // Set LDO_CORE_VLEVEL in LDO_CFG0
     LdoCfg0 lc0;
     status = ReadRegister(&lc0);
     CHECK_READ(LDO_CFG0, status);
-    if (channel.channel > 14) {
+    if (chan.primary > 14) {
         lc0.set_ldo_core_vlevel(5);
     } else {
         lc0.set_ldo_core_vlevel(0);
@@ -2283,28 +2290,28 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
 
     // Set N, R, K, mod values
     Rfcsr8 r8;
-    r8.set_n(channel.N & 0xff);
+    r8.set_n(rf_val.N & 0xff);
     status = WriteRfcsr(r8);
     CHECK_WRITE(RF8, status);
 
     Rfcsr9 r9;
     status = ReadRfcsr(&r9);
     CHECK_READ(RF9, status);
-    r9.set_k(channel.K & 0xf);
-    r9.set_n(channel.N >> 8);
-    r9.set_mod((channel.mod - 8) >> 2);
+    r9.set_k(rf_val.K & 0xf);
+    r9.set_n(rf_val.N >> 8);
+    r9.set_mod((rf_val.mod - 8) >> 2);
     status = WriteRfcsr(r9);
     CHECK_WRITE(RF9, status);
 
     Rfcsr11 r11;
     status = ReadRfcsr(&r11);
     CHECK_READ(RF11, status);
-    r11.set_r(channel.R - 1);
-    r11.set_mod(channel.mod - 8);
+    r11.set_r(rf_val.R - 1);
+    r11.set_mod(rf_val.mod - 8);
     status = WriteRfcsr(r11);
     CHECK_WRITE(RF11, status);
 
-    if (channel.channel <= 14) {
+    if (chan.primary <= 14) {
         std::vector<RegInitValue> reg_init_values{
             // clang-format off
             RegInitValue(10, 0x90),
@@ -2341,7 +2348,7 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
         status = WriteRfcsrGroup(reg_init_values);
         if (status != ZX_OK) { return status; }
 
-        uint8_t val = (channel.channel <= 10) ? 0x07 : 0x06;
+        uint8_t val = (chan.primary <= 10) ? 0x07 : 0x06;
         status = WriteRfcsr(23, val);
         CHECK_WRITE(RF23, status);
         status = WriteRfcsr(59, val);
@@ -2372,14 +2379,14 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
         status = WriteRfcsrGroup(reg_init_values);
         if (status != ZX_OK) { return status; }
 
-        if (channel.channel <= 64) {
+        if (chan.primary <= 64) {
             std::vector<RegInitValue> reg_init_values{
                 // clang-format off
                 RegInitValue(12, 0x2e),
                 RegInitValue(13, 0x22),
                 RegInitValue(22, 0x60),
                 RegInitValue(23, 0x7f),
-                RegInitValue(24, channel.channel <= 50 ? 0x09 : 0x07),
+                RegInitValue(24, chan.primary <= 50 ? 0x09 : 0x07),
                 RegInitValue(39, 0x1c),
                 RegInitValue(43, 0x5b),
                 RegInitValue(44, 0x40),
@@ -2387,8 +2394,8 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
                 RegInitValue(51, 0xfe),
                 RegInitValue(52, 0x0c),
                 RegInitValue(54, 0xf8),
-                RegInitValue(55, channel.channel <= 50 ? 0x06 : 0x04),
-                RegInitValue(56, channel.channel <= 50 ? 0xd3 : 0xbb),
+                RegInitValue(55, chan.primary <= 50 ? 0x06 : 0x04),
+                RegInitValue(56, chan.primary <= 50 ? 0xd3 : 0xbb),
                 RegInitValue(58, 0x15),
                 RegInitValue(59, 0x7f),
                 RegInitValue(62, 0x15),
@@ -2396,26 +2403,26 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
             };
             status = WriteRfcsrGroup(reg_init_values);
             if (status != ZX_OK) { return status; }
-        } else if (channel.channel <= 165) {
+        } else if (chan.primary <= 165) {
             std::vector<RegInitValue> reg_init_values{
                 // clang-format off
                 RegInitValue(12, 0x0e),
                 RegInitValue(13, 0x42),
                 RegInitValue(22, 0x40),
-                RegInitValue(23, channel.channel <= 153 ? 0x3c : 0x38),
-                RegInitValue(24, channel.channel <= 153 ? 0x06 : 0x05),
-                RegInitValue(39, channel.channel <= 138 ? 0x1a : 0x18),
-                RegInitValue(43, channel.channel <= 138 ? 0x3b : 0x1b),
-                RegInitValue(44, channel.channel <= 138 ? 0x20 : 0x10),
-                RegInitValue(46, channel.channel <= 138 ? 0x18 : 0x08),
-                RegInitValue(51, channel.channel <= 124 ? 0xfc : 0xec),
+                RegInitValue(23, chan.primary <= 153 ? 0x3c : 0x38),
+                RegInitValue(24, chan.primary <= 153 ? 0x06 : 0x05),
+                RegInitValue(39, chan.primary <= 138 ? 0x1a : 0x18),
+                RegInitValue(43, chan.primary <= 138 ? 0x3b : 0x1b),
+                RegInitValue(44, chan.primary <= 138 ? 0x20 : 0x10),
+                RegInitValue(46, chan.primary <= 138 ? 0x18 : 0x08),
+                RegInitValue(51, chan.primary <= 124 ? 0xfc : 0xec),
                 RegInitValue(52, 0x06),
                 RegInitValue(54, 0xeb),
-                RegInitValue(55, channel.channel <= 138 ? 0x01 : 0x00),
-                RegInitValue(56, channel.channel <= 128 ? 0xbb : 0xab),
-                RegInitValue(58, channel.channel <= 116 ? 0x1d : 0x15),
-                RegInitValue(59, channel.channel <= 138 ? 0x3f : 0x7c),
-                RegInitValue(62, channel.channel <= 116 ? 0x1d : 0x15),
+                RegInitValue(55, chan.primary <= 138 ? 0x01 : 0x00),
+                RegInitValue(56, chan.primary <= 128 ? 0xbb : 0xab),
+                RegInitValue(58, chan.primary <= 116 ? 0x1d : 0x15),
+                RegInitValue(59, chan.primary <= 138 ? 0x3f : 0x7c),
+                RegInitValue(62, chan.primary <= 116 ? 0x1d : 0x15),
                 // clang-format on
             };
             status = WriteRfcsrGroup(reg_init_values);
@@ -2423,9 +2430,9 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
         }
     }
 
-    uint8_t power_bound = channel.channel <= 14 ? kRfPowerBound2_4Ghz : kRfPowerBound5Ghz;
-    uint8_t power1 = (channel.default_power1 > power_bound) ? power_bound : channel.default_power1;
-    uint8_t power2 = (channel.default_power2 > power_bound) ? power_bound : channel.default_power2;
+    uint8_t power_bound = chan.primary <= 14 ? kRfPowerBound2_4Ghz : kRfPowerBound5Ghz;
+    uint8_t power1 = (rf_val.default_power1 > power_bound) ? power_bound : rf_val.default_power1;
+    uint8_t power2 = (rf_val.default_power2 > power_bound) ? power_bound : rf_val.default_power2;
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
@@ -2502,20 +2509,33 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
     return ZX_OK;
 }
 
-zx_status_t Device::ConfigureChannel(const Channel& channel) {
-    debugf("attempting to change to channel %d\n", channel.channel);
+zx_status_t Device::LookupRfVal(const wlan_channel_t& chan, Channel* rf_val) {
+    auto entry = channels_.find(chan.primary);
+    if (entry == channels_.end()) {
+        errorf("Radio hardware does not support the requested channel %s\n",
+               wlan::common::ChanStr(chan).c_str());
+        return ZX_ERR_NOT_FOUND;
+    }
 
+    *rf_val = entry->second;
+    return ZX_OK;
+}
+
+zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     EepromLna lna;
     zx_status_t status = ReadEepromField(&lna);
     CHECK_READ(EEPROM_LNA, status);
     lna_gain_ = lna.bg();
 
-    if (rt_type_ == RT5390) {
-        status = ConfigureChannel5390(channel);
-    } else if (rt_type_ == RT5592) {
-        status = ConfigureChannel5592(channel);
-    } else {
-        errorf("Invalid device type in %s\n", __FUNCTION__);
+    switch (rt_type_) {
+    case RT5390:
+        status = ConfigureChannel5390(chan);
+        break;
+    case RT5592:
+        status = ConfigureChannel5592(chan);
+        break;
+    default:
+        errorf("Ralink device type %u not supported\n", rt_type_);
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -2527,7 +2547,7 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     WriteBbp(BbpRegister<86>(0x00));
 
     if (rt_type_ == RT5592) {
-        if (channel.channel <= 14) {
+        if (chan.primary <= 14) {
             WriteBbp(BbpRegister<82>(has_external_lna_2g_ ? 0x62 : 0x84));
             WriteBbp(BbpRegister<75>(has_external_lna_2g_ ? 0x46 : 0x50));
         } else {
@@ -2540,7 +2560,7 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = ReadRegister(&tbc);
     CHECK_READ(TX_BAND_CFG, status);
     tbc.set_tx_band_sel(0);
-    if (channel.channel <= 14) {
+    if (chan.primary <= 14) {
         tbc.set_a(0);
         tbc.set_bg(1);
     } else {
@@ -2553,10 +2573,10 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     TxPinCfg tpc;
     status = ReadRegister(&tpc);
     CHECK_READ(TX_PIN_CFG, status);
-    tpc.set_pa_pe_g0_en(channel.channel <= 14);
-    tpc.set_pa_pe_g1_en((channel.channel <= 14) && (tx_path_ > 1));
-    tpc.set_pa_pe_a0_en(channel.channel > 14);
-    tpc.set_pa_pe_a1_en((channel.channel > 14) && (tx_path_ > 1));
+    tpc.set_pa_pe_g0_en(chan.primary <= 14);
+    tpc.set_pa_pe_g1_en((chan.primary <= 14) && (tx_path_ > 1));
+    tpc.set_pa_pe_a0_en(chan.primary > 14);
+    tpc.set_pa_pe_a1_en((chan.primary > 14) && (tx_path_ > 1));
     tpc.set_lna_pe_a0_en(1);
     tpc.set_lna_pe_g0_en(1);
     tpc.set_lna_pe_a1_en(tx_path_ > 1);
@@ -2578,24 +2598,29 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
             b27.set_rx_chain_sel(rx_ndx);
             status = WriteBbp(b27);
             CHECK_WRITE(BBP27, status);
-            status = WriteBbp(66, (lna_gain_ * 2) + (channel.channel <= 14 ? 0x1c : 0x24));
+            status = WriteBbp(66, (lna_gain_ * 2) + (chan.primary <= 14 ? 0x1c : 0x24));
             CHECK_WRITE(BBP66, status);
         }
+
+        struct Channel rf_val;
+        status = LookupRfVal(chan, &rf_val);
+        if (status != ZX_OK) { return status; }
+
         status = WriteBbp(158, 0x2c);
         CHECK_WRITE(BBP158, status);
-        status = WriteBbp(159, channel.cal_values.gain_cal_tx0);
+        status = WriteBbp(159, rf_val.cal_values.gain_cal_tx0);
         CHECK_WRITE(BBP159, status);
         status = WriteBbp(158, 0x2d);
         CHECK_WRITE(BBP158, status);
-        status = WriteBbp(159, channel.cal_values.phase_cal_tx0);
+        status = WriteBbp(159, rf_val.cal_values.phase_cal_tx0);
         CHECK_WRITE(BBP159, status);
         status = WriteBbp(158, 0x4a);
         CHECK_WRITE(BBP158, status);
-        status = WriteBbp(159, channel.cal_values.gain_cal_tx1);
+        status = WriteBbp(159, rf_val.cal_values.gain_cal_tx1);
         CHECK_WRITE(BBP159, status);
         status = WriteBbp(158, 0x4b);
         CHECK_WRITE(BBP158, status);
-        status = WriteBbp(159, channel.cal_values.phase_cal_tx1);
+        status = WriteBbp(159, rf_val.cal_values.phase_cal_tx1);
         CHECK_WRITE(BBP159, status);
 
         uint8_t comp_ctl, imbalance_comp_ctl;
@@ -2640,8 +2665,6 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = ReadRegister(&ecbs);
     CHECK_READ(EXT_CH_BUSY_STA, status);
 
-    debugf("changed to channel %d\n", channel.channel);
-
     return ZX_OK;
 }
 
@@ -2654,7 +2677,7 @@ uint8_t CompensateTx(uint8_t power) {
 }
 }  // namespace
 
-zx_status_t Device::ConfigureTxPower(const Channel& channel) {
+zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
     // TODO(tkilbourn): calculate tx power control
     //       use 0 (normal) for now
     Bbp1 b1;
@@ -3007,7 +3030,12 @@ void Device::HandleRxComplete(usb_request_t* request) {
         if (wlanmac_proxy_ != nullptr) {
             wlan_rx_info_t wlan_rx_info = {};
             fill_rx_info(&wlan_rx_info, rx_desc, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
-            wlan_rx_info.chan.primary = current_channel_;
+
+            // Be mindful in interpretation of wlan_rx_info.chan:
+            // That reflects how the radio was configured in prior,
+            // and does not reflect how the incoming frame is received, which
+            // shall be referred by rxwi.
+            wlan_rx_info.chan = cfg_chan_;
             wlanmac_proxy_->Recv(0u, data + rx_hdr_size, rxwi0.mpdu_total_byte_count(),
                                  &wlan_rx_info);
         }
@@ -3455,26 +3483,58 @@ uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
 }
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+    // Beware the multiple different return paths with different recovery requirements.
+
+    debugf("channel change: from %s to %s attempting..\n", wlan::common::ChanStr(cfg_chan_).c_str(),
+           wlan::common::ChanStr(*chan).c_str());
+
     zx_status_t status;
-    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
-    auto channel = channels_.find(chan->primary);
-    if (channel == channels_.end()) { return ZX_ERR_NOT_FOUND; }
+    if (options != 0) {
+        status = ZX_ERR_INVALID_ARGS;
+        goto setchan_failure;
+    }
+
     status = StopRxQueue();
     if (status != ZX_OK) {
+        // TODO(porce): Recover fully if the RxQueue stopped in a half-way.
         errorf("could not stop rx queue\n");
-        return status;
+        goto setchan_failure;
     }
-    status = ConfigureChannel(channel->second);
-    if (status != ZX_OK) { return status; }
-    status = ConfigureTxPower(channel->second);
-    if (status != ZX_OK) { return status; }
+
+    status = ConfigureChannel(*chan);
+    if (status != ZX_OK) {
+        errorf("failed in channel configuration\n");
+        goto setchan_recover;
+    }
+
+    status = ConfigureTxPower(*chan);
+    if (status != ZX_OK) {
+        errorf("failed in txpower configuration\n");
+        goto setchan_recover;
+    }
+
     status = StartQueues();
     if (status != ZX_OK) {
         errorf("could not start queues\n");
-        return status;
+        // Try one more time to start queues before returning.
+        goto setchan_recover;
     }
-    current_channel_ = chan->primary;
+
+    debugf("channel change: from %s to %s succeeded\n", wlan::common::ChanStr(cfg_chan_).c_str(),
+           wlan::common::ChanStr(*chan).c_str());
+    cfg_chan_ = *chan;
     return ZX_OK;
+
+setchan_recover:
+    StartQueues();
+    if (StartQueues() != ZX_OK) { errorf("could not start queues\n"); }
+    // fall-through to setchan_failure
+
+setchan_failure:
+    errorf("channel change: from %s to %s failed (status %u)\n",
+           wlan::common::ChanStr(cfg_chan_).c_str(), wlan::common::ChanStr(*chan).c_str(), status);
+
+    return status;
 }
 
 zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
