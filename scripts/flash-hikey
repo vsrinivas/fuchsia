@@ -13,6 +13,9 @@ DT_OFFSET=0x07a00000
 
 CMDLINE="TERM=uart"
 
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ZIRCON_DIR="${SCRIPTS_DIR}/.."
+
 FIRMWARE_DIR=/tmp/hikey/hikey-firmware
 FIRMWARE_GIT=https://android.googlesource.com/device/linaro/hikey
 FIRMWARE_TAG=android-o-iot-preview-5
@@ -25,8 +28,8 @@ RECOVERY_PORT=/dev/serial/by-id/usb-HISILICON_USB_SER-if00-port0
 UEFI_DIR=/tmp/hikey/uefi
 UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/25/hikey960/release/
 
-MKBOOTIMG=third_party/tools/android/mkbootimg
-MKDTIMG=third_party/tools/android/mkdtimg
+MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
+MKDTIMG="${ZIRCON_DIR}/third_party/tools/android/mkdtimg"
 
 help() {
     echo "usage: ${0} [options]"

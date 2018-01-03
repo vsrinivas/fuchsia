@@ -23,14 +23,6 @@ __The following software is required:__
 
   To install on Ubuntu: `sudo apt-get install android-tools-fastboot`
 
-+ `mkbootimg` and `mkdtimg`
-
-  We suggest you use the versions found in the `build-from-source` directory
-  of the github repo listed below. Both tools must be in your execution path.
-
-        git clone https://github.com/96boards-hikey/tools-images-hikey960.git
-
-
 ## Overview
 
 At a high level, these are the steps for getting a HiKey development environment
@@ -320,7 +312,7 @@ is needed before connecting the serial console and interacting with the device.
 
 ## Manually Installing Low-Level Firmware
 
-Note: the following requires fastboot/mkdtimg/mkbootimg in your execution path.
+Note: the following requires fastboot in your execution path.
 
 To install firmware, put your board in fastboot mode and run the following:
 
