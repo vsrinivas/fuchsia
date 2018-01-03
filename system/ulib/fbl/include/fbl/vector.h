@@ -72,6 +72,7 @@ public:
         ptr_ = other.release();
     }
 
+#ifndef _KERNEL
     Vector(fbl::initializer_list<T> init)
         : ptr_(init.size() != 0u ? reinterpret_cast<T*>(AllocatorTraits::Allocate(
                                        init.size() * sizeof(T)))
@@ -83,6 +84,7 @@ public:
             new (out) T(*in);
         }
     }
+#endif
 
     Vector& operator=(Vector&& o) {
         auto size = o.size_;
@@ -112,12 +114,14 @@ public:
         reallocate(capacity, ac);
     }
 
+#ifndef _KERNEL
     void reserve(size_t capacity) {
         if (capacity <= capacity_) {
             return;
         }
         reallocate(capacity);
     }
+#endif // _KERNEL
 
     void reset() {
         reset(nullptr, 0U, 0U);
@@ -145,6 +149,7 @@ public:
         push_back_internal(value, ac);
     }
 
+#ifndef _KERNEL
     void push_back(T&& value) {
         push_back_internal(fbl::move(value));
     }
@@ -152,6 +157,7 @@ public:
     void push_back(const T& value) {
         push_back_internal(value);
     }
+#endif // _KERNEL
 
     void insert(size_t index, T&& value, AllocChecker* ac) {
         insert_internal(index, fbl::move(value), ac);
@@ -161,6 +167,7 @@ public:
         insert_internal(index, value, ac);
     }
 
+#ifndef _KERNEL
     void insert(size_t index, T&& value) {
         insert_internal(index, fbl::move(value));
     }
@@ -168,6 +175,7 @@ public:
     void insert(size_t index, const T& value) {
         insert_internal(index, value);
     }
+#endif // _KERNEL
 
     // Remove an element from the |index| position in the vector, shifting
     // all subsequent elements one position to fill in the gap.
@@ -365,7 +373,12 @@ private:
             static_assert((kCapacityMinimum + 1) >= kCapacityShrinkFactor,
                           "Capacity heuristics risk reallocating to zero capacity");
             size_t newCapacity = capacity_ / kCapacityShrinkFactor;
-            reallocate(newCapacity);
+
+            // If the vector cannot be reallocated to a smaller size (reallocate fails) it will
+            // continue to use a larger capacity.
+            AllocChecker ac;
+            reallocate(newCapacity, &ac);
+            ac.check();
         }
     }
 
@@ -388,6 +401,7 @@ private:
         return true;
     }
 
+#ifndef _KERNEL
     void reallocate(size_t newCapacity) {
         ZX_DEBUG_ASSERT(newCapacity > 0);
         ZX_DEBUG_ASSERT(newCapacity >= size_);
@@ -397,6 +411,7 @@ private:
         capacity_ = newCapacity;
         ptr_ = newPtr;
     }
+#endif
 
     // Release returns the underlying storage of the vector,
     // while emptying out the vector itself (so it can be destroyed
