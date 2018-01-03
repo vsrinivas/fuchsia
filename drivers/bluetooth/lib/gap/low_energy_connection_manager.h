@@ -33,6 +33,10 @@ namespace l2cap {
 class ChannelManager;
 }  // namespace l2cap
 
+namespace gatt {
+class LocalServiceManager;
+}  // namespace gatt
+
 namespace gap {
 
 namespace internal {
@@ -300,6 +304,9 @@ class LowEnergyConnectionManager final {
   // The L2CAP layer is shared between the BR/EDR and LE connection managers and
   // it is expected to out-live both. Expected to outlive this instance.
   l2cap::ChannelManager* l2cap_;  // weak
+
+  // Local GATT service registry.
+  std::unique_ptr<gatt::LocalServiceManager> gatt_registry_;
 
   // Event handler ID for the HCI Disconnection Complete event.
   hci::CommandChannel::EventHandlerId disconn_cmpl_handler_id_;

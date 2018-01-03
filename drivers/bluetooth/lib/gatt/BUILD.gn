@@ -4,6 +4,8 @@
 
 static_library("gatt") {
   sources = [
+    "connection.cc",
+    "connection.h",
     "gatt.h",
     "local_service_manager.cc",
     "local_service_manager.h",

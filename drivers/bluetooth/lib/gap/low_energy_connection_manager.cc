@@ -4,6 +4,8 @@
 
 #include "low_energy_connection_manager.h"
 
+#include "garnet/drivers/bluetooth/lib/gatt/connection.h"
+#include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
@@ -70,6 +72,15 @@ class LowEnergyConnection {
         handle(), ref_count());
   }
 
+  void InitializeGATT(fxl::RefPtr<att::Database> local_db,
+                      std::unique_ptr<l2cap::Channel> att_chan) {
+    FXL_DCHECK(!gatt_);
+    FXL_DCHECK(local_db);
+    FXL_DCHECK(att_chan);
+
+    gatt_ = std::make_unique<gatt::Connection>(std::move(att_chan), local_db);
+  }
+
   size_t ref_count() const { return refs_.size(); }
 
   const std::string& id() const { return id_; }
@@ -88,6 +99,8 @@ class LowEnergyConnection {
   std::string id_;
   std::unique_ptr<hci::Connection> link_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
+
+  std::unique_ptr<gatt::Connection> gatt_;
 
   // LowEnergyConnectionManager is responsible for making sure that these
   // pointers are always valid.
@@ -150,11 +163,13 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       device_cache_(device_cache),
       l2cap_(l2cap),
+      gatt_registry_(std::make_unique<gatt::LocalServiceManager>()),
       next_listener_id_(1),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(device_cache_);
   FXL_DCHECK(l2cap_);
+  FXL_DCHECK(gatt_registry_);
   FXL_DCHECK(hci_);
 
   // TODO(armansito): Use |mode| initialize the |connector_| when we support the
@@ -538,6 +553,12 @@ void LowEnergyConnectionManager::OnConnectionCreated(
   //      e. If master, allow slave to initiate procedures (service discovery,
   //         encryption setup, etc) for kLEConnectionPauseCentralMs before
   //         updating the connection parameters to the slave's preferred values.
+
+  // Initialize GATT
+  auto att_chan =
+      l2cap_->OpenFixedChannel(conn_ptr->handle(), l2cap::kATTChannelId);
+  FXL_DCHECK(att_chan);
+  conn->InitializeGATT(gatt_registry_->database(), std::move(att_chan));
 
   // For now, jump to the initialized state.
   peer->set_connection_state(RemoteDevice::ConnectionState::kConnected);
