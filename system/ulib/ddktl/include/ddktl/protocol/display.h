@@ -22,7 +22,7 @@ class DisplayProtocol : public internal::base_protocol {
         ops_.flush = FlushThunk;
 
         // Can only inherit from one base_protocol implemenation
-        ZX_ASSERT(ddk_proto_ops_ == nullptr);
+        ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_DISPLAY;
         ddk_proto_ops_ = &ops_;
     }

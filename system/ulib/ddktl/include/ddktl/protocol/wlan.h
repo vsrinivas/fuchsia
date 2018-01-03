@@ -199,7 +199,7 @@ public:
         ops_.set_key = SetKey;
 
         // Can only inherit from one base_protocol implemenation
-        ZX_ASSERT(this->ddk_proto_ops_ == nullptr);
+        ZX_ASSERT(this->ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_WLANMAC;
         ddk_proto_ops_ = &ops_;
     }

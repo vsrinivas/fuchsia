@@ -48,7 +48,7 @@ class BlockProtocol : public internal::base_protocol {
   public:
     BlockProtocol() {
         // Can only inherit from one base_protocol implemenation
-        ZX_ASSERT(ddk_proto_ops_ == nullptr);
+        ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_BLOCK_CORE;
     }
 };
