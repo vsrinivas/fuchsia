@@ -19,21 +19,19 @@
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace test {
-enum Erase { KEEP_DATA = 0, ERASE_CLOUD };
 
+// Creates a new Ledger application instance and returns a LedgerPtr connection
+// to it.
+//
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
-// Creates a new Ledger application instance and returns a LedgerPtr connection
-// to it. If |erase_first| is true, an EraseRepository command is issued first
-// before connecting, ensuring a clean state before proceeding.
 ledger::Status GetLedger(fsl::MessageLoop* loop,
                          app::ApplicationContext* context,
                          app::ApplicationControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,
                          std::string ledger_repository_path,
-                         ledger::LedgerPtr* ledger_ptr,
-                         Erase erase = KEEP_DATA);
+                         ledger::LedgerPtr* ledger_ptr);
 
 // Retrieves the requested page of the given Ledger instance and calls the
 // callback only after executing a GetId() call on the page, ensuring that it is

@@ -233,9 +233,6 @@ class ConvergenceTest
     fidl::Array<uint8_t> page_id;
     for (int i = 0; i < num_ledgers_; i++) {
       auto ledger_instance = NewLedgerAppInstance();
-      if (i == 0) {
-        ledger_instance->EraseTestLedgerRepository();
-      }
       ASSERT_TRUE(ledger_instance);
       ledger_instances_.push_back(std::move(ledger_instance));
       pages_.emplace_back();

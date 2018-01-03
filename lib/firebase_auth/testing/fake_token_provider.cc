@@ -4,16 +4,15 @@
 
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
+#include "lib/fxl/random/uuid.h"
+
 namespace firebase_auth {
 
-FakeTokenProvider::FakeTokenProvider(std::string firebase_id_token,
-                                     std::string firebase_local_id,
-                                     std::string email,
-                                     std::string client_id)
-    : firebase_id_token_(std::move(firebase_id_token)),
-      firebase_local_id_(std::move(firebase_local_id)),
-      email_(std::move(email)),
-      client_id_(std::move(client_id)) {}
+FakeTokenProvider::FakeTokenProvider()
+    : firebase_id_token_(""),
+      firebase_local_id_(fxl::GenerateUUID()),
+      email_("dummy@example.com"),
+      client_id_("client_id") {}
 
 void FakeTokenProvider::GetAccessToken(const GetAccessTokenCallback& callback) {
   modular::auth::AuthErrPtr error = modular::auth::AuthErr::New();

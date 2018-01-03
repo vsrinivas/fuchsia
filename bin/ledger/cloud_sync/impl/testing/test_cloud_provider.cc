@@ -29,8 +29,4 @@ void TestCloudProvider::GetPageCloud(
   FXL_NOTIMPLEMENTED();
 }
 
-void TestCloudProvider::EraseAllData(const EraseAllDataCallback& /*callback*/) {
-  FXL_NOTIMPLEMENTED();
-}
-
 }  // namespace cloud_sync

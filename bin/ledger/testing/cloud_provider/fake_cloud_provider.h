@@ -35,8 +35,6 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
-  void EraseAllData(const EraseAllDataCallback& callback) override;
-
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet>
       device_set_;
 

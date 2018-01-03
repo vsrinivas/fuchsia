@@ -27,8 +27,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,
                          std::string ledger_repository_path,
-                         ledger::LedgerPtr* ledger_ptr,
-                         Erase erase) {
+                         ledger::LedgerPtr* ledger_ptr) {
   ledger::LedgerRepositoryFactoryPtr repository_factory;
   app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -43,16 +42,6 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
   ledger::LedgerRepositoryPtr repository;
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-  if (erase == Erase::ERASE_CLOUD) {
-    cloud_provider::Status cloud_provider_status;
-    cloud_provider->EraseAllData(
-        callback::Capture([] {}, &cloud_provider_status));
-    if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout) ||
-        cloud_provider_status != cloud_provider::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to erase repository.";
-      return ledger::Status::INTERNAL_ERROR;
-    }
-  }
 
   repository_factory->GetRepository(
       ledger_repository_path, std::move(cloud_provider),

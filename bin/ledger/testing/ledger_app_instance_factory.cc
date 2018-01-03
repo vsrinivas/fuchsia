@@ -42,14 +42,6 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   return repository;
 }
 
-void LedgerAppInstanceFactory::LedgerAppInstance::EraseTestLedgerRepository() {
-  cloud_provider::Status status;
-  auto cloud_provider = MakeCloudProvider();
-  cloud_provider->EraseAllData([&status](auto s) { status = s; });
-  EXPECT_TRUE(cloud_provider.WaitForIncomingResponseWithTimeout(kTimeout));
-  EXPECT_EQ(cloud_provider::Status::OK, status);
-}
-
 ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
   ledger::LedgerPtr ledger;
 

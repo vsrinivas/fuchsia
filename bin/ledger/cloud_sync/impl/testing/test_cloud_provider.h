@@ -33,8 +33,6 @@ class TestCloudProvider : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
-  void EraseAllData(const EraseAllDataCallback& callback) override;
-
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fidl::Binding<cloud_provider::DeviceSet> device_set_binding_;
 

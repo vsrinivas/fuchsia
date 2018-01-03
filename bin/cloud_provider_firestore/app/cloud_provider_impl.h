@@ -41,8 +41,6 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
-  void EraseAllData(const EraseAllDataCallback& callback) override;
-
   const std::string user_id_;
 
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;

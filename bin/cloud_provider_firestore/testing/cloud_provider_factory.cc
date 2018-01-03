@@ -18,8 +18,7 @@ constexpr char kAppUrl[] = "cloud_provider_firestore";
 
 CloudProviderFactory::CloudProviderFactory(
     app::ApplicationContext* application_context)
-    : application_context_(application_context),
-      token_provider_("", "sync_user", "sync_user@example.com", "client_id") {}
+    : application_context_(application_context) {}
 
 CloudProviderFactory::~CloudProviderFactory() {
   services_task_runner_->PostTask(

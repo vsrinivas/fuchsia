@@ -50,14 +50,11 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
-  void EraseAllData(const EraseAllDataCallback& callback) override;
-
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
   ledger::NetworkService* const network_service_;
   const std::string user_id_;
   const std::string server_id_;
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
-  firebase::FirebaseImpl user_firebase_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;
 

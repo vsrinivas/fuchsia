@@ -12,12 +12,14 @@
 namespace firebase_auth {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be
 // used to connect to unauthenticated firebase instances.
+//
+// The local ID Firebase token are set to a random UUID fixed at the
+// construction time.
+//
+// Other token values are set to dummy const values.
 class FakeTokenProvider : public modular::auth::TokenProvider {
  public:
-  FakeTokenProvider(std::string firebase_id_token,
-                    std::string firebase_local_id,
-                    std::string email,
-                    std::string client_id);
+  FakeTokenProvider();
   ~FakeTokenProvider() override {}
 
  private:

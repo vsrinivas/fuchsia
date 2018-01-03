@@ -53,9 +53,4 @@ void CloudProviderImpl::GetPageCloud(
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }
 
-void CloudProviderImpl::EraseAllData(const EraseAllDataCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
-}
-
 }  // namespace cloud_provider_firestore

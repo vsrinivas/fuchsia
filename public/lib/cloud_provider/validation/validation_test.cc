@@ -15,12 +15,6 @@ void ValidationTest::SetUp() {
   fidl::InterfacePtr<CloudProvider> cloud_provider =
       application_context_->ConnectToEnvironmentService<CloudProvider>();
   cloud_provider_ = CloudProviderPtr::Create(std::move(cloud_provider));
-
-  Status status = Status::INTERNAL_ERROR;
-  cloud_provider_->EraseAllData(
-      [&status](Status got_status) { status = got_status; });
-  ASSERT_TRUE(cloud_provider_.WaitForIncomingResponse());
-  EXPECT_EQ(Status::OK, status);
 }
 
 }  // namespace cloud_provider

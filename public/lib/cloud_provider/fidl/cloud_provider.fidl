@@ -36,10 +36,6 @@ interface CloudProvider {
   // Retrieves the controller for cloud sync of a particular page.
   GetPageCloud@1(array<uint8> app_id, array<uint8> page_id, PageCloud& page_cloud)
       => (Status status);
-
-  // Permanently removes all data stored by the user in the cloud. Before
-  // calling this method, make sure this is really what we want.
-  EraseAllData@2() => (Status status);
 };
 
 // Cloud registry of devices participating in cloud sync.

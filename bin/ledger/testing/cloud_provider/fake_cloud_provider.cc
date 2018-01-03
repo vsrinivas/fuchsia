@@ -43,18 +43,4 @@ void FakeCloudProvider::GetPageCloud(
   callback(cloud_provider::Status::OK);
 }
 
-void FakeCloudProvider::EraseAllData(const EraseAllDataCallback& callback) {
-  if (device_set_.size() == 0u && page_clouds_.empty()) {
-    // If there is nothing to be erased, just report success. This allows the
-    // sync tests that want to clean up the cloud before running to work.
-    callback(cloud_provider::Status::OK);
-    return;
-  }
-
-  // If there is any state to be erased, report an error. We don't have yet any
-  // tests that need this implemented.
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
-}
-
 }  // namespace ledger

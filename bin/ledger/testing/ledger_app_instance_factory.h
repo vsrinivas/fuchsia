@@ -38,8 +38,6 @@ class LedgerAppInstanceFactory {
     // Builds and returns a new connection to the default LedgerRepository
     // object.
     ledger::LedgerRepositoryPtr GetTestLedgerRepository();
-    // Erases the default ledger repository.
-    void EraseTestLedgerRepository();
     // Builds and returns a new connection to the default Ledger object.
     ledger::LedgerPtr GetTestLedger();
     // Builds and returns a new connection to a new random page on the default
