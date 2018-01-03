@@ -18,8 +18,6 @@ x86-64) arch=x86 ;;
 *) echo >&2 "Unexpected FUCHSIA_ARCH=$FUCHSIA_ARCH"; exit 2 ;;
 esac
 
-fx-command-run build "${fvm_block}" "${ramdisk_bin}"
-
 # Construction of a qcow image prevents qemu from writing back to the
 # build-produced image file, which could cause timestamp issues with that file.
 qcowdir="$(mktemp -d)"
