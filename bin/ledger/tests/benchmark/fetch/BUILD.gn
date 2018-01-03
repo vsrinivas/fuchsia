@@ -22,7 +22,6 @@ executable("ledger_benchmark_fetch") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:lib",
-    "//peridot/bin/ledger/tests/benchmark/lib",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",

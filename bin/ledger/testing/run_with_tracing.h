@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LIB_RUN_WITH_TRACING_H_
-#define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LIB_RUN_WITH_TRACING_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTING_RUN_WITH_TRACING_H_
+#define PERIDOT_BIN_LEDGER_TESTING_RUN_WITH_TRACING_H_
 
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -20,4 +20,4 @@ int RunWithTracing(fsl::MessageLoop* loop, std::function<void()> runnable);
 }  // namespace benchmark
 }  // namespace test
 
-#endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LIB_RUN_WITH_TRACING_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTING_RUN_WITH_TRACING_H_

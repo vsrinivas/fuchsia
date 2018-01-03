@@ -11,7 +11,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
-#include "peridot/bin/ledger/tests/benchmark/lib/logging.h"
+#include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/lib/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/run_with_tracing.h"
 
 #include <trace-provider/provider.h>
 #include <trace/event.h>

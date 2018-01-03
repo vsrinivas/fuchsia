@@ -31,7 +31,6 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:lib",
-    "//peridot/bin/ledger/tests/benchmark/lib",
     "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",
   ]
@@ -44,7 +43,7 @@ executable("ledger_benchmark_put") {
     ":lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/tests/benchmark/lib",
+    "//peridot/bin/ledger/testing:lib",
   ]
 
   sources = [

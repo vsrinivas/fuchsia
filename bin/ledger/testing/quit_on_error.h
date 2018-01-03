@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LIB_LOGGING_H_
-#define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LIB_LOGGING_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTING_QUIT_ON_ERROR_H_
+#define PERIDOT_BIN_LEDGER_TESTING_QUIT_ON_ERROR_H_
 
 #include <functional>
 #include <string>
@@ -25,4 +25,4 @@ std::function<void(ledger::Status)> QuitOnErrorCallback(
 }  // namespace benchmark
 }  // namespace test
 
-#endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LIB_LOGGING_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTING_QUIT_ON_ERROR_H_

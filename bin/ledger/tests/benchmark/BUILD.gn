@@ -10,11 +10,11 @@ group("benchmark") {
   public_deps = [
     ":launch_benchmark",
     ":run_ledger_benchmarks",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/tests/benchmark/convergence",
     "//peridot/bin/ledger/tests/benchmark/delete_entry",
     "//peridot/bin/ledger/tests/benchmark/fetch",
     "//peridot/bin/ledger/tests/benchmark/get_page",
-    "//peridot/bin/ledger/tests/benchmark/lib",
     "//peridot/bin/ledger/tests/benchmark/put",
     "//peridot/bin/ledger/tests/benchmark/sync",
     "//peridot/bin/ledger/tests/benchmark/update_entry",
@@ -35,7 +35,7 @@ executable("launch_benchmark") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
-    "//peridot/bin/ledger/tests/benchmark/lib",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/tests/benchmark/put:lib",
     "//peridot/public/lib/ledger/fidl",
   ]

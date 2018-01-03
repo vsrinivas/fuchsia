@@ -17,6 +17,10 @@ source_set("lib") {
     "data_generator.h",
     "get_ledger.cc",
     "get_ledger.h",
+    "quit_on_error.cc",
+    "quit_on_error.h",
+    "run_with_tracing.cc",
+    "run_with_tracing.h",
     "test_with_coroutines.cc",
     "test_with_coroutines.h",
   ]
@@ -33,6 +37,7 @@ source_set("lib") {
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//third_party/gtest",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   deps = [

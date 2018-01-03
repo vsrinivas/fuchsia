@@ -16,8 +16,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
-#include "peridot/bin/ledger/tests/benchmark/lib/logging.h"
-#include "peridot/bin/ledger/tests/benchmark/lib/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/quit_on_error.h"
+#include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 

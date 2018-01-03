@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/lib/logging.h"
+#include "peridot/bin/ledger/testing/quit_on_error.h"
 
 #include "lib/fsl/tasks/message_loop.h"
 
