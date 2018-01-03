@@ -69,6 +69,9 @@ def main():
       # Create a gopath for the packages dependency tree
       for dep in args.go_dependency:
         dst, src = string.split(dep, '=', 2)
+        # |dst| must be relative
+        if os.path.isabs(dst):
+          raise ValueError("--go-dependency destination location must be relative to $project_path/src")
         dstdir = os.path.join(project_path, 'src', os.path.dirname(dst))
         try:
           os.makedirs(dstdir)
@@ -77,6 +80,14 @@ def main():
           if e.errno != errno.EEXIST:
             raise
         tgt = os.path.join(dstdir, os.path.basename(dst))
+        # The source tree is effectively read-only once the build begins.
+        # Therefore it is an error if tgt is in the source tree. At first
+        # glance this may seem impossible, but it can happen if dst is foo/bar
+        # and foo is a symlink back to the source tree.
+        canon_root_out_dir = os.path.realpath(args.root_out_dir)
+        canon_tgt = os.path.realpath(tgt)
+        if not canon_tgt.startswith(canon_root_out_dir):
+          raise ValueError("--go-dependency destination not in --root-out-dir: provided=%s, path=%s, realpath=%s" % (dst, tgt, canon_tgt))
         os.symlink(src, tgt)
 
     gopath = os.path.abspath(project_path)
