@@ -91,6 +91,8 @@ private:
                              volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
     zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
+    void FlushTLBEntry(vaddr_t vaddr, uint asid, bool terminal) TA_REQ(lock_);
+
     fbl::Canary<fbl::magic("VAAS")> canary_;
 
     fbl::Mutex lock_;

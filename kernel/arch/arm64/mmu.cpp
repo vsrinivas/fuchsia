@@ -399,6 +399,29 @@ static bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift
     return true;
 }
 
+// use the appropriate TLB flush instruction to globally flush the modified entry
+// terminal is set when flushing at the final level of the page table.
+void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, uint asid, bool terminal) {
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+        __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr >> 12);
+        DEBUG_ASSERT(status == ZX_OK);
+    } else if (asid == MMU_ARM64_GLOBAL_ASID) {
+        // flush this address on all ASIDs
+        if (terminal) {
+            ARM64_TLBI(vaale1is, vaddr >> 12);
+        } else {
+            ARM64_TLBI(vaae1is, vaddr >> 12);
+        }
+    } else {
+        // flush this address for the specific asid
+        if (terminal) {
+            ARM64_TLBI(vale1is, vaddr >> 12 | (vaddr_t)asid << 48);
+        } else {
+            ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
+        }
+    }
+}
 
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
@@ -443,22 +466,21 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
                 // ensure that the update is observable from hardware page table walkers
                 DMB_ISHST;
 
+                // flush the non terminal TLB entry
+                FlushTLBEntry(vaddr, asid, false);
+
                 FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr,
                               page_size_shift);
             }
         } else if (pte) {
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
-            fbl::atomic_signal_fence();
-            if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-                paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
-                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr >> 12);
-                DEBUG_ASSERT(status == ZX_OK);
-            } else if (asid == MMU_ARM64_GLOBAL_ASID) {
-                ARM64_TLBI(vaae1is, vaddr >> 12);
-            } else {
-                ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
-            }
+
+            // ensure that the update is observable from hardware page table walkers
+            DMB_ISHST;
+
+            // flush the terminal TLB entry
+            FlushTLBEntry(vaddr, asid, true);
         } else {
             LTRACEF("pte %p[0x%lx] already clear\n", page_table, index);
         }
@@ -609,16 +631,11 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                     page_table, index, pte);
             page_table[index] = pte;
 
-            fbl::atomic_signal_fence();
-            if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-                paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
-                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr >> 12);
-                DEBUG_ASSERT(status == ZX_OK);
-            } else if (asid == MMU_ARM64_GLOBAL_ASID) {
-                ARM64_TLBI(vaae1is, vaddr >> 12);
-            } else {
-                ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
-            }
+            // ensure that the update is observable from hardware page table walkers
+            DMB_ISHST;
+
+            // flush the terminal TLB entry
+            FlushTLBEntry(vaddr, asid, true);
         } else {
             LTRACEF("page table entry does not exist, index %#" PRIxPTR
                     ", %#" PRIx64 "\n",
