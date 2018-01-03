@@ -6,6 +6,9 @@
         "library_path": "libVkLayer_image_pipe_swapchain.so",
         "api_version": "1.0.38",
         "implementation_version": "1",
-        "description": "Image Pipe Swapchain"
+        "description": "Image Pipe Swapchain",
+        "disable_environment": {
+            "DISABLE_IMAGEPIPE_SWAPCHAIN_LAYER": "1"
+        }
     }
 }

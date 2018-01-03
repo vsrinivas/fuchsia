@@ -17,7 +17,7 @@ package("image-pipe-swapchain") {
         } ]
     resources = [ {
           path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain.json")
-          dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json"
+          dest = "vulkan/implicit_layer.d/VkLayer_image_pipe_swapchain.json"
         } ]
   }
 }
