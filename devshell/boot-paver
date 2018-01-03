@@ -77,8 +77,6 @@ else
   fi
 fi
 
-fx-command-run build-paver
-
 exec "${ZIRCON_TOOLS_DIR}/bootserver" \
   "${disks[@]}" \
   "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
