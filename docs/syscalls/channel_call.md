@@ -58,7 +58,7 @@ are discarded and **ZX_ERR_BUFFER_TOO_SMALL** is returned in that case.
 
 ## RETURN VALUE
 
-**channel_write**() returns **ZX_OK** on success and the number of bytes and
+**channel_call**() returns **ZX_OK** on success and the number of bytes and
 count of handles in the reply message are returned via *actual_bytes* and
 *actual_handles*, respectively.
 
