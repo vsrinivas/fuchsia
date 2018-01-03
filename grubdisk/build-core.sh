@@ -73,7 +73,7 @@ terminal_output serial
 set timeout=0
 menuentry "Zircon" {
   search    --set root --file /zircon.bin --hint hd1,gpt2
-  multiboot /zircon.bin gfxconsole.early kernel.debug_uart_poll=1
+  multiboot /zircon.bin
   module    /bootdata.bin
   boot
 }

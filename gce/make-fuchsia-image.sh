@@ -19,4 +19,4 @@ diskimage="$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.img"
 # TODO(raggi): look at size that sys part needs to be and use that.
 makefile 10g "$diskimage"
 
-$mfv "$diskimage" || exit 1
+$mfv "$@" "$diskimage" || exit 1
