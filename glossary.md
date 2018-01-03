@@ -89,7 +89,7 @@ qualities suitable for user interfaces.
 
 The Fuchsia Archive Format is a container for files to be used by Zircon and Fuchsia.
 It will replace Zircon's older BootFS container and be used in Fuchsia Packages.
-- [FAR Spec](https://fuchsia.googlesource.com/docs/+/master/archive_format.md)
+- [FAR Spec](/archive_format.md)
 
 #### **fdio**
 

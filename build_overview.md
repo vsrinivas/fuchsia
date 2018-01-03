@@ -192,4 +192,4 @@ You likely forgot to run **A** before running **B**.
 [ninja-main]: https://ninja-build.org/
 [gn-reference]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/build/+/master/
-[packages-source]: https://fuchsia.googlesource.com/docs/+/master/build_packages.md
+[packages-source]: /build_packages.md

@@ -54,8 +54,8 @@ provide filesystems. libc itself defines weak symbols for Posix file
 I/O functions such as `open`, `write`, and `fstat`. However, all these
 calls simply fail. In addition to libc.so, programs can link the
 fdio.so library. fdio knows how to speak to those other Fuchsia
-services over 
-[Channel IPC](concepts.md#message-passing-sockets-and-channels), and 
+services over
+[Channel IPC][zircon-concepts-message-passing], and
 provides a Posix-like layer for libc to expose. Sockets are similarly
 implemented via fdio communicating with the userspace network stack.
 
@@ -89,3 +89,6 @@ provided by [launchpad](launchpad.md). While Zircon has Process and
 Thread objects, these are pretty raw and know nothing about
 ELF. Launchpad knows how to turn an ELF and some initial state into a
 running process.
+
+
+[zircon-concepts-message-passing]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#message-passing-sockets-and-channels

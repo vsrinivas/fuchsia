@@ -40,7 +40,7 @@ The runtime file is a JSON object with the following schema:
 
 The `runner` property names another application (or a package that contains
 one) to which execution is to be delegated. The target application must expose
-the [`ApplicationRunner`](../../services/application_runner.fidl) service.
+the [`ApplicationRunner`][application-runner] service.
 
 ## sandbox
 
@@ -118,3 +118,6 @@ The set of currently known features are as follows:
   graphics interface.
 
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
+
+
+[application-runner]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/app/fidl/application_runner.fidl

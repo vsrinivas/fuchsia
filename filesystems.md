@@ -84,7 +84,7 @@ according to application-launching policy.
 
 For more detail the mechanisms and policies applied to restricting process
 capability, refer to the documentation on
-[sandboxing](https://fuchsia.googlesource.com/docs/+/master/sandboxing.md).
+[sandboxing](/sandboxing.md).
 
 ### Passing Data
 
@@ -199,7 +199,7 @@ intending to satisfy a variety of distinct needs.
 
 ### MemFS: An in-memory filesystem
 
-[MemFS](https://fuchsia.googlesource.com/zircon/+/master/system/core/devmgr/vfs-memory.cpp)
+[MemFS](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/memfs)
 is used to implement requests to temporary filesystems like `/tmp`, where files
 exist entirely in RAM, and are not transmitted to an underlying block device.
 This filesystem is also currently used for the “bootfs” protocol, where a
@@ -238,18 +238,3 @@ FAT filesystem in Go. It serves a dual purpose: first, proving that our system
 is actually modular, and capable of using novel filesystems, regardless of
 language or runtime. Secondly, it provides a mechanism for reading a universal
 filesystem, found on EFI partitions and many USB sticks.
-
-### ServiceFS (svcfs): A filesystem used for service discovery
-
-[ServiceFS](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/svcfs),
-used by the [Fuchsia Application
-Manager](https://fuchsia.googlesource.com/application/+/master), provides a
-mechanism for discovering non-filesystem services using the filesystem
-namespace. As mentioned earlier, the client-provided tools in fdio which can be
-used to access files have the option of both synchronous and asynchronous
-operations, and upon success, return a handle (or handles) to a remote
-filesystem. ServiceFS takes this one step further -- since arbitrary services
-are accessible by handle, why not use this universal mechanism to access objects
-that might not implement operations like “read” and “write”, but might implement
-arbitrary other protocols? Svcfs, combined with FIDL is the primary mechanism to
-find and talk to arbitrary components that exist within a process’s namespace.
