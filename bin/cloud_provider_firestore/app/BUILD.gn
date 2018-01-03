@@ -30,6 +30,8 @@ source_set("lib") {
     "device_set_impl.h",
     "factory_impl.cc",
     "factory_impl.h",
+    "grpc_status.cc",
+    "grpc_status.h",
     "page_cloud_impl.cc",
     "page_cloud_impl.h",
   ]
@@ -42,10 +44,14 @@ source_set("lib") {
     "//peridot/lib/firebase_auth",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
+    "//third_party/grpc:grpc++",
   ]
 
   deps = [
+    # Needed to access the serialization version constant.
+    "//peridot/bin/ledger/storage/public",
     "//peridot/lib/callback",
+    "//peridot/lib/convert",
   ]
 }
 
@@ -63,7 +69,9 @@ source_set("unittests") {
     ":lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
+    "//peridot/bin/cloud_provider_firestore/firestore/testing",
     "//peridot/lib/callback",
+    "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/gtest",
   ]

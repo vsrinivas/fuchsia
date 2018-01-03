@@ -7,8 +7,24 @@
 #include <utility>
 
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace cloud_provider_firestore {
+
+constexpr char kSeparator[] = "/";
+constexpr char kUsersCollection[] = "users";
+constexpr char kDefaultDocument[] = "default_document";
+
+std::string GetUserPath(fxl::StringView root_path, fxl::StringView user_id) {
+  std::string encoded_user_id = EncodeKey(user_id);
+  return fxl::Concatenate({root_path, kSeparator, kUsersCollection, kSeparator,
+                           encoded_user_id, kSeparator,
+                           storage::kSerializationVersion, kSeparator,
+                           kDefaultDocument});
+}
 
 CloudProviderImpl::CloudProviderImpl(
     std::string user_id,
@@ -38,10 +54,13 @@ CloudProviderImpl::CloudProviderImpl(
 CloudProviderImpl::~CloudProviderImpl() {}
 
 void CloudProviderImpl::GetDeviceSet(
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> /*device_set*/,
+    fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  std::string user_path =
+      GetUserPath(firestore_service_->GetRootPath(), user_id_);
+  device_sets_.emplace(std::move(user_path), firestore_service_.get(),
+                       std::move(device_set));
+  callback(cloud_provider::Status::OK);
 }
 
 void CloudProviderImpl::GetPageCloud(

@@ -1,0 +1,21 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/cloud_provider_firestore/*" ]
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "test_firestore_service.cc",
+    "test_firestore_service.h",
+  ]
+
+  deps = [
+    "//peridot/bin/cloud_provider_firestore/firestore",
+    "//third_party/googleapis/google/firestore/v1beta1",
+    "//third_party/googleapis/google/firestore/v1beta1:service",
+    "//third_party/grpc:grpc++",
+  ]
+}

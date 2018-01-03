@@ -4,13 +4,40 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 
+#include <google/firestore/v1beta1/firestore.pb.h>
+
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
 
+namespace {
+constexpr char kSeparator[] = "/";
+constexpr char kDeviceCollection[] = "devices";
+constexpr char kExistsKey[] = "exists";
+
+std::string GetDevicePath(fxl::StringView user_path,
+                          fxl::StringView fingerprint) {
+  std::string encoded_fingerprint = EncodeKey(fingerprint);
+  return fxl::Concatenate({user_path, kSeparator, kDeviceCollection, kSeparator,
+                           encoded_fingerprint});
+}
+}  // namespace
+
 DeviceSetImpl::DeviceSetImpl(
+    std::string user_path,
+    FirestoreService* firestore_service,
     fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
-    : binding_(this, std::move(request)) {
+    : user_path_(std::move(user_path)),
+      firestore_service_(firestore_service),
+      binding_(this, std::move(request)) {
+  FXL_DCHECK(!user_path_.empty());
+  FXL_DCHECK(firestore_service_);
+
   // The class shuts down when the client connection is disconnected.
   binding_.set_connection_error_handler([this] {
     if (on_empty_) {
@@ -21,16 +48,41 @@ DeviceSetImpl::DeviceSetImpl(
 
 DeviceSetImpl::~DeviceSetImpl() {}
 
-void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> /*fingerprint*/,
+void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  auto request = google::firestore::v1beta1::GetDocumentRequest();
+  request.set_name(
+      GetDevicePath(user_path_, convert::ToStringView(fingerprint)));
+
+  firestore_service_->GetDocument(
+      std::move(request), [callback](auto status, auto result) {
+        if (!status.ok()) {
+          callback(ConvertGrpcStatus(status.error_code()));
+          return;
+        }
+
+        callback(cloud_provider::Status::OK);
+      });
 }
 
-void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> /*fingerprint*/,
+void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
                                    const SetFingerprintCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  auto request = google::firestore::v1beta1::CreateDocumentRequest();
+  request.set_parent(user_path_);
+  request.set_collection_id(kDeviceCollection);
+  request.set_document_id(EncodeKey(convert::ToString(fingerprint)));
+  google::firestore::v1beta1::Value exists;
+  exists.set_boolean_value(true);
+  (*(request.mutable_document()->mutable_fields()))[kExistsKey] = exists;
+
+  firestore_service_->CreateDocument(
+      std::move(request), [callback](auto status, auto result) {
+        if (!status.ok()) {
+          callback(cloud_provider::Status::SERVER_ERROR);
+          return;
+        }
+        callback(cloud_provider::Status::OK);
+      });
 }
 
 void DeviceSetImpl::SetWatcher(
