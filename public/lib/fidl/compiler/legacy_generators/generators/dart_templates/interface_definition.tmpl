@@ -49,22 +49,22 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
     ctrl.onResponse = _handleResponse;
   }
 
-  void _handleResponse(bindings.ServiceMessage message) {
-    switch (message.header.type) {
+  void _handleResponse(bindings.ServiceMessage $message) {
+    switch ($message.header.type) {
 {%- for method in interface.methods %}
 {%- if method.response_parameters != None %}
 {%- set response_struct = method.response_param_struct %}
       case _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name:
-        final Function callback = ctrl.getCallback(message);
-        if (callback == null) {
-          message.closeAllHandles();
+        final Function $callback = ctrl.getCallback($message);
+        if ($callback == null) {
+          $message.closeAllHandles();
         } else {
           {%- if method.response_parameters %}
-            final response = {{response_struct|name}}.deserialize(message.payload);
+            final $response = {{response_struct|name}}.deserialize($message.payload);
           {%- endif %}
-          callback(
+          $callback(
             {%- for param in method.response_parameters -%}
-              response.{{param|name}} {% if not loop.last %}, {% endif %}
+              $response.{{param|name}} {% if not loop.last %}, {% endif %}
             {%- endfor -%}
           );
         }
@@ -72,7 +72,7 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
 {%- endif %}
 {%- endfor %}
       default:
-        ctrl.proxyError('Unexpected message type: ${message.header.type}');
+        ctrl.proxyError('Unexpected message type: ${$message.header.type}');
         ctrl.close();
         break;
     }
@@ -91,12 +91,12 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
       ctrl.proxyError("The Proxy is closed.");
       return;
     }
-    var params = new {{request_struct|name}}(
+    var $params = new {{request_struct|name}}(
 {%- for parameter in method.parameters %}
         {{parameter|name}}: {{parameter|name}}{% if not loop.last %}, {% endif %}
 {%- endfor %}
     );
-    ctrl.sendMessage(params, _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name);
+    ctrl.sendMessage($params, _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name);
   }
 {%- else %}
 {%- set request_struct = method.param_struct %}
@@ -106,28 +106,28 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
 {%- for parameter in method.parameters -%}
     {{parameter.kind|dart_type}} {{parameter|name}},
 {%- endfor -%}
-    void callback(
+    void $callback(
       {%- for param in method.response_parameters -%}
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
     )) {
-    var params = new {{request_struct|name}}(
+    var $params = new {{request_struct|name}}(
 {%- for parameter in method.parameters %}
         {{parameter|name}}: {{parameter|name}}{% if not loop.last %}, {% endif %}
 {%- endfor %}
     );
-    Function zonedCallback;
-    if ((callback == null) || identical(Zone.current, Zone.ROOT)) {
-      zonedCallback = callback;
+    Function $zonedCallback;
+    if (($callback == null) || identical(Zone.current, Zone.ROOT)) {
+      $zonedCallback = $callback;
     } else {
-      Zone z = Zone.current;
-      zonedCallback = ((
+      Zone $z = Zone.current;
+      $zonedCallback = ((
       {%- for param in method.response_parameters -%}
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
       ) {
-        z.bindCallback(() {
-          callback(
+        $z.bindCallback(() {
+          $callback(
       {%- for param in method.response_parameters -%}
         {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
@@ -136,11 +136,11 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
       });
     }
     ctrl.sendMessageWithRequestId(
-        params,
+        $params,
         _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name,
         -1,
         bindings.MessageHeader.kMessageExpectsResponse,
-        zonedCallback);
+        $zonedCallback);
   }
 {%- endif %}
 {%- endfor %}
@@ -153,50 +153,50 @@ class {{interface|name}}Binding
 {%- if method.response_parameters != None %}
 {%- set response_struct = method.response_param_struct %}
   Function _{{response_struct|name|lower_camel}}Responder(
-      bindings.MessageSink respond, int requestId) {
+      bindings.MessageSink $respond, int $requestId) {
   return (
       {%- for param in method.response_parameters -%}
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
     ) {
-      var result = new {{response_struct|name}}(
+      var $result = new {{response_struct|name}}(
         {%- for param in method.response_parameters %}
         {{param|name}}: {{param|name}}{% if not loop.last %}, {% endif %}
         {%- endfor %}
       );
-      respond(result.serializeWithHeader(new bindings.MessageHeader.withRequestId(
+      $respond($result.serializeWithHeader(new bindings.MessageHeader.withRequestId(
           _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name,
           bindings.MessageHeader.kMessageIsResponse,
-          requestId)));
+          $requestId)));
     };
   }
 {%- endif %}
 {%- endfor %}
 
   @override
-  void handleMessage(bindings.ServiceMessage message,
-                     bindings.MessageSink respond) {
-    switch (message.header.type) {
+  void handleMessage(bindings.ServiceMessage $message,
+                     bindings.MessageSink $respond) {
+    switch ($message.header.type) {
 {%- for method in interface.methods %}
 {%- set request_struct = method.param_struct %}
       case _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name:
 {%- if method.parameters %}
-        var params = {{request_struct|name}}.deserialize(
-            message.payload);
+        var $params = {{request_struct|name}}.deserialize(
+            $message.payload);
 {%- endif %}
 {%- if method.response_parameters == None %}
         impl.{{method|name}}(
           {%- for parameter in method.parameters -%}
-              params.{{parameter|name}}{% if not loop.last %}, {% endif %}
+              $params.{{parameter|name}}{% if not loop.last %}, {% endif %}
           {%- endfor -%}
         );
 {%- else %}
 {%- set response_struct = method.response_param_struct %}
         impl.{{method|name}}(
           {%- for parameter in method.parameters -%}
-              params.{{parameter|name}}, {% endfor -%}
+              $params.{{parameter|name}}, {% endfor -%}
           _{{response_struct|name|lower_camel}}Responder(
-              respond, message.header.requestId));
+              $respond, $message.header.requestId));
 {%- endif %}
         break;
 {%- endfor %}
