@@ -1288,6 +1288,7 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         size_t xfer_off = n * kMinfsBlockSize + adjust;
         if ((xfer_off + xfer) > inode_.size) {
             size_t new_size = fbl::round_up(xfer_off + xfer, kMinfsBlockSize);
+            ZX_DEBUG_ASSERT(new_size >= inode_.size); // Overflow.
             if ((status = vmo_.set_size(new_size)) != ZX_OK) {
                 goto done;
             }

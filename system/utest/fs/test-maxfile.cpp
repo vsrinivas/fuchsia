@@ -93,6 +93,8 @@ bool test_maxfile(void) {
     }
     fd = open("::bigfile", O_RDWR, 0644);
     ASSERT_GT(fd, 0);
+    ASSERT_EQ(fstat(fd, &buf), 0, "Couldn't stat max file");
+    ASSERT_EQ(buf.st_size, sz, "Unexpected max file size");
     char readbuf[8192];
     ssize_t bytes_read = 0;
     data = data_a;
