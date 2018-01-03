@@ -2,6 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("common_include_dirs") {
+  include_dirs = [
+    "//third_party/glm",
+  ]
+}
+
 source_set("input") {
   sources = [
     "input_connection_impl.cc",
@@ -22,4 +28,6 @@ source_set("input") {
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/lib/ui/views/fidl",
   ]
+
+  public_configs = [ ":common_include_dirs" ]
 }

@@ -107,7 +107,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // VIEW INSPECTOR REQUESTS
 
   void HitTest(const mozart::ViewTreeToken& view_tree_token,
-               const mozart::PointF& point,
+               const mozart::Point3F& ray_origin,
+               const mozart::Point3F& ray_direction,
                HitTestCallback callback) override;
   void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
                          const ResolveFocusChainCallback& callback) override;

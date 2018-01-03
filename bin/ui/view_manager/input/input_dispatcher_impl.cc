@@ -5,28 +5,77 @@
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 
 #include <queue>
-
 #include "lib/ui/geometry/cpp/geometry_util.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
+#include "lib/escher/scene/camera.h"
+#include "lib/escher/util/type_utils.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace view_manager {
 namespace {
-void TransformEvent(const mozart::Transform& transform,
-                    mozart::InputEvent* event) {
+
+// Returns a pair of points representing a ray's origin and direction, in that
+// order. The ray is constructed to point directly into the scene at the
+// provided device coordinate.
+std::pair<mozart::Point3F, mozart::Point3F> DefaultRayForHitTestingScreenPoint(
+    const mozart::PointF& point) {
+  mozart::Point3F origin;
+  origin.x = point.x;
+  origin.y = point.y;
+  origin.z = -1.f;
+  mozart::Point3F direction;
+  direction.z = 1.f;
+  return {origin, direction};
+}
+
+// Converts a mozart::Transform into a escher::mat4 suitable for use in
+// mathematical operations.
+escher::mat4 Unwrap(const mozart::Transform& matrix) {
+  const auto& in = matrix.matrix;
+  return {in[0], in[4], in[8],  in[12], in[1], in[5], in[9],  in[13],
+          in[2], in[6], in[10], in[14], in[3], in[7], in[11], in[15]};
+}
+
+// Transforms the provided input event into the local coordinate system of the
+// view associated with the event.
+//
+// This transformation makes several assumptions:
+//   * The ray must be the same as the one passed to |inspector_|'s hit test,
+//     which determined the originally hit view.
+//   * For MOVE and up UP, which don't go through hit testing, the distance
+//     is pinned to whatever distance the original hit occurred at. The origin
+//     of the ray is the only thing that is shifted relative to the DOWN event.
+//
+// |ray_origin| is the origin of the ray in the device coordinate space.
+// |ray_direction| is the direction of the ray in the device coordinate space.
+// |transform| is the transform from the hit node's local coordinate space into
+// the coordinate space of the ray.
+// |distance| is the distance along the ray that the original hit occured.
+// |event| is the event to transform.
+void TransformPointerEvent(const mozart::Point3F& ray_origin,
+                           const mozart::Point3F& ray_direction,
+                           const mozart::Transform& transform,
+                           float distance,
+                           mozart::InputEvent* event) {
   if (!event->is_pointer())
     return;
   const mozart::PointerEventPtr& pointer = event->get_pointer();
-  mozart::PointF point;
-  point.x = pointer->x;
-  point.y = pointer->y;
-  point = TransformPoint(transform, point);
-  pointer->x = point.x;
-  pointer->y = point.y;
+
+  escher::mat4 hit_node_to_device_transform = Unwrap(transform);
+  escher::ray4 ray{{ray_origin.x, ray_origin.y, ray_origin.z, 1.f},
+                   {ray_direction.x, ray_direction.y, ray_direction.z, 0.f}};
+  escher::ray4 transformed_ray =
+      glm::inverse(hit_node_to_device_transform) * ray;
+
+  escher::vec4 hit = escher::homogenize(transformed_ray.origin +
+                                        distance * transformed_ray.direction);
+
+  pointer->x = hit[0];
+  pointer->y = hit[1];
 }
 
 // The input event fidl is currently defined to expect some number
@@ -81,7 +130,9 @@ void InputDispatcherImpl::ProcessNextEvent() {
         point.x = pointer->x;
         point.y = pointer->y;
         FXL_VLOG(1) << "HitTest: point=" << point;
-        inspector_->HitTest(*view_tree_token_, point, [
+        std::pair<mozart::Point3F, mozart::Point3F> ray =
+            DefaultRayForHitTestingScreenPoint(point);
+        inspector_->HitTest(*view_tree_token_, ray.first, ray.second, [
           weak = weak_factory_.GetWeakPtr(), point
         ](std::vector<ViewHit> view_hits) mutable {
           if (weak)
@@ -91,9 +142,9 @@ void InputDispatcherImpl::ProcessNextEvent() {
       }
     } else if (event->is_keyboard()) {
       inspector_->ResolveFocusChain(
-          view_tree_token_.Clone(), [weak = weak_factory_.GetWeakPtr()](
-                                        std::unique_ptr<FocusChain>
-                                            focus_chain) {
+          view_tree_token_.Clone(),
+          [weak = weak_factory_.GetWeakPtr()](
+              std::unique_ptr<FocusChain> focus_chain) {
             if (weak) {
               // Make sure to keep processing events when no focus is defined
               if (focus_chain) {
@@ -122,7 +173,15 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
   // TODO(MZ-33) once input arena is in place, we won't need the "handled"
   // boolean on the callback anymore.
   mozart::InputEventPtr view_event = event.Clone();
-  TransformEvent(*event_path_[index].inverse_transform, view_event.get());
+  const ViewHit& view_hit = event_path_[index];
+  const mozart::PointerEventPtr& pointer = event->get_pointer();
+  mozart::PointF point;
+  point.x = pointer->x;
+  point.y = pointer->y;
+  std::pair<mozart::Point3F, mozart::Point3F> ray =
+      DefaultRayForHitTestingScreenPoint(point);
+  TransformPointerEvent(ray.first, ray.second, *view_hit.inverse_transform,
+                        view_hit.distance, view_event.get());
   FXL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " to "
               << event_path_[index].view_token << ": " << *view_event;
   owner_->DeliverEvent(
@@ -220,8 +279,9 @@ void InputDispatcherImpl::OnHitTestResult(const mozart::PointF& point,
   inspector_->ActivateFocusChain(
       view_hits.front().view_token.Clone(),
       [this](std::unique_ptr<FocusChain> new_chain) {
-        if (!active_focus_chain_ || active_focus_chain_->chain.front()->value !=
-                                        new_chain->chain.front()->value) {
+        if (!active_focus_chain_ ||
+            active_focus_chain_->chain.front()->value !=
+                new_chain->chain.front()->value) {
           if (active_focus_chain_) {
             FXL_VLOG(1) << "Input focus lost by "
                         << *(active_focus_chain_->chain.front().get());

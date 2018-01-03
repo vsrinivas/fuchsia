@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/scene_manager/engine/hit_tester.h"
 
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
+#include "lib/escher/util/type_utils.h"
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {
@@ -14,13 +15,19 @@ HitTester::HitTester() {}
 HitTester::~HitTester() = default;
 
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
+  return HitTest(node, ray, node->session());
+}
+
+std::vector<Hit> HitTester::HitTest(Node* node,
+                                    const escher::ray4& ray,
+                                    Session* session) {
   FXL_DCHECK(node);
   FXL_DCHECK(session_ == nullptr);
   FXL_DCHECK(ray_info_ == nullptr);
   FXL_DCHECK(tag_info_ == nullptr);
 
   // Trace the ray.
-  session_ = node->session();
+  session_ = session;
   RayInfo local_ray_info{ray, escher::mat4(1.f)};
   ray_info_ = &local_ray_info;
   AccumulateHitsLocal(node);
@@ -74,7 +81,8 @@ void HitTester::AccumulateHitsLocal(Node* node) {
   tag_info_ = outer_tag_info;
 
   if (local_tag_info.is_hit()) {
-    hits_.emplace_back(Hit{node->tag_value(), ray_info_->inverse_transform,
+    hits_.emplace_back(Hit{node->tag_value(), ray_info_->ray,
+                           ray_info_->inverse_transform,
                            local_tag_info.distance});
     if (outer_tag_info)
       outer_tag_info->ReportIntersection(local_tag_info.distance);

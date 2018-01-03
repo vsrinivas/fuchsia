@@ -51,6 +51,11 @@ class SessionHandler : public scenic::Session,
                scenic::vec3Ptr ray_direction,
                const HitTestCallback& callback) override;
 
+  void HitTestDeviceRay(
+      scenic::vec3Ptr ray_origin,
+      scenic::vec3Ptr ray_direction,
+      const scenic::Session::HitTestCallback& callback) override;
+
  private:
   friend class Engine;
 

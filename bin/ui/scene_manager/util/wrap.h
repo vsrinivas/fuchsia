@@ -33,6 +33,15 @@ inline scenic::mat4Ptr Wrap(const escher::mat4& args) {
   return result;
 }
 
+inline scenic::vec4Ptr Wrap(const escher::vec4& p) {
+  auto result = scenic::vec4::New();
+  result->x = p[0];
+  result->y = p[1];
+  result->z = p[2];
+  result->w = p[3];
+  return result;
+}
+
 }  // namespace scene_manager
 
 #endif  // GARNET_BIN_UI_SCENE_MANAGER_UTIL_WRAP_H_

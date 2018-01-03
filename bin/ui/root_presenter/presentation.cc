@@ -114,15 +114,15 @@ void Presentation::Present(
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scene_manager_->GetDisplayInfo(fxl::MakeCopyable(
-      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
-       presentation_request = std::move(presentation_request)](
-          scenic::DisplayInfoPtr display_info) mutable {
-        if (weak)
-          weak->CreateViewTree(std::move(view_owner),
-                               std::move(presentation_request),
-                               std::move(display_info));
-      }));
+  scene_manager_->GetDisplayInfo(fxl::MakeCopyable([
+    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+    presentation_request = std::move(presentation_request)
+  ](scenic::DisplayInfoPtr display_info) mutable {
+    if (weak)
+      weak->CreateViewTree(std::move(view_owner),
+                           std::move(presentation_request),
+                           std::move(display_info));
+  }));
 }
 
 void Presentation::CreateViewTree(
@@ -326,8 +326,8 @@ void Presentation::OnReport(uint32_t device_id,
 
   mozart::DeviceState* state = device_states_by_id_[device_id].second.get();
   mozart::Size size;
-  size.width = display_metrics_.width_in_pp();
-  size.height = display_metrics_.height_in_pp();
+  size.width = display_metrics_.width_in_px();
+  size.height = display_metrics_.height_in_px();
   state->Update(std::move(input_report), size);
 }
 
@@ -591,9 +591,12 @@ void Presentation::PresentScene() {
         scene_.AddChild(*state.node);
         state.created = true;
       }
-      state.node->SetTranslation(state.position.x + kCursorWidth * .5f,
-                                 state.position.y + kCursorHeight * .5f,
-                                 kCursorElevation);
+      state.node->SetTranslation(
+          state.position.x * display_metrics_.x_scale_in_pp_per_px() +
+              kCursorWidth * .5f,
+          state.position.y * display_metrics_.y_scale_in_pp_per_px() +
+              kCursorHeight * .5f,
+          kCursorElevation);
     } else if (state.created) {
       state.node->Detach();
       state.created = false;

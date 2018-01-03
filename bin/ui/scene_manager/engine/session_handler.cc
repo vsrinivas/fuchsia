@@ -63,6 +63,14 @@ void SessionHandler::HitTest(uint32_t node_id,
                     callback);
 }
 
+void SessionHandler::HitTestDeviceRay(
+    scenic::vec3Ptr ray_origin,
+    scenic::vec3Ptr ray_direction,
+    const scenic::Session::HitTestDeviceRayCallback& callback) {
+  session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
+                             callback);
+}
+
 void SessionHandler::ReportError(fxl::LogSeverity severity,
                                  std::string error_string) {
   switch (severity) {

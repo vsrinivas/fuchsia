@@ -14,10 +14,12 @@ struct Hit {
   // The node's tag value.
   uint32_t tag_value;
 
+  // The ray that was used to perform the hit test, in the hit node's coordinate
+  // system.
+  escher::ray4 ray;
+
   // The inverse transformation matrix which maps the coordinate system of
-  // the node at which the hit test was initiated into the local coordinate
-  // system of the node which was hit.  To convert the hit test ray into the
-  // node's local coordinate system, multiply |inverse_transform| by the ray.
+  // the hit node to the node at which the hit test was initiated.
   escher::mat4 inverse_transform;
 
   // The distance from the ray's origin to the closest point of intersection

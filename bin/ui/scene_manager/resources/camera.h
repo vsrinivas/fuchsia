@@ -9,6 +9,7 @@
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 
 #include "lib/escher/scene/camera.h"
+#include "lib/escher/scene/stage.h"
 
 namespace scene_manager {
 
@@ -34,6 +35,15 @@ class Camera final : public Resource {
   float fovy() const { return fovy_; }
 
   escher::Camera GetEscherCamera(const escher::ViewingVolume& volume) const;
+
+  // Projects the provided |ray| into the coordinate space of this camera's
+  // scene.
+  //
+  // The first entry in the pair is the projected ray, and the second entry
+  // is the transformation that was applied to the passed in ray.
+  std::pair<escher::ray4, escher::mat4> ProjectRayIntoScene(
+      const escher::ray4& ray,
+      const escher::ViewingVolume& viewing_volume) const;
 
  private:
   ScenePtr scene_;

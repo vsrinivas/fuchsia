@@ -62,16 +62,10 @@ bool Compositor::SetLayerStack(LayerStackPtr layer_stack) {
 // Helper function for DrawLayer().
 static void InitEscherStage(
     escher::Stage* stage,
-    uint32_t width,
-    uint32_t height,
+    const escher::ViewingVolume& viewing_volume,
     const std::vector<AmbientLightPtr>& ambient_lights,
     const std::vector<DirectionalLightPtr>& directional_lights) {
-  // TODO(MZ-194): Define these properties on the Scene instead of hardcoding
-  // them here.
-  constexpr float kTop = 1000;
-  constexpr float kBottom = 0;
-  stage->set_viewing_volume(
-      {static_cast<float>(width), static_cast<float>(height), kTop, kBottom});
+  stage->set_viewing_volume(viewing_volume);
 
   if (ambient_lights.empty()) {
     constexpr float kIntensity = 0.3f;
@@ -143,8 +137,8 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
   auto& scene = renderer->camera()->scene();
 
   escher::Stage stage;
-  InitEscherStage(&stage, output_image->width(), output_image->height(),
-                  scene->ambient_lights(), scene->directional_lights());
+  InitEscherStage(&stage, layer->GetViewingVolume(), scene->ambient_lights(),
+                  scene->directional_lights());
   escher::Model model(renderer->CreateDisplayList(renderer->camera()->scene(),
                                                   escher::vec2(layer->size())));
   escher::Camera camera =
@@ -161,7 +155,7 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
       break;
     case scenic::ShadowTechnique::MOMENT_SHADOW_MAP:
       FXL_DLOG(WARNING) << "Moment shadow maps not implemented";
-      // fallthrough to regular shadow maps.
+    // Fallthrough to regular shadow maps.
     case scenic::ShadowTechnique::SHADOW_MAP:
       escher_renderer->set_shadow_type(
           escher::PaperRendererShadowType::kShadowMap);

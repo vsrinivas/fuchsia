@@ -33,6 +33,18 @@ struct ViewHit {
   // The view which was hit.
   mozart::ViewToken view_token;
 
+  // The origin of the ray that was used for the hit test, in device
+  // coordinates.
+  mozart::Point3F ray_origin;
+
+  // The direction of the ray that was used for the hit test, in device
+  // coordinates.
+  mozart::Point3F ray_direction;
+
+  // The distance along the ray that was passed in to the hit test, in the
+  // coordinate system of the view.
+  float distance;
+
   // Transforms the view tree coordinate system to the view's coordinate system.
   mozart::TransformPtr inverse_transform;
 };
@@ -51,10 +63,11 @@ class ViewInspector {
 
   virtual ~ViewInspector() {}
 
-  // Performs a hit test at the given point and returns the list of views
-  // which were hit.
+  // Performs a hit test using a vector with the provided ray, and returns the
+  // list of views which were hit.
   virtual void HitTest(const mozart::ViewTreeToken& view_tree_token,
-                       const mozart::PointF& point,
+                       const mozart::Point3F& ray_origin,
+                       const mozart::Point3F& ray_direction,
                        HitTestCallback callback) = 0;
 
   // Given a token for a view tree, retrieve the current active focus chain for

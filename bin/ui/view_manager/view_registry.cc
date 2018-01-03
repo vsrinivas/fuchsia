@@ -10,6 +10,8 @@
 
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
+#include "garnet/bin/ui/scene_manager/util/unwrap.h"
+#include "garnet/public/lib/escher/util/type_utils.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -23,9 +25,6 @@
 
 namespace view_manager {
 namespace {
-// The height at which hit tests originate.
-// TODO(MZ-163): This shouldn't be hardcoded here.
-constexpr float kHitTestOriginZ = 10000.f;
 
 bool Validate(const mozart::DisplayMetrics& value) {
   return std::isnormal(value.device_pixel_ratio) &&
@@ -714,7 +713,8 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
 // VIEW INSPECTOR
 
 void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
-                           const mozart::PointF& point,
+                           const mozart::Point3F& ray_origin,
+                           const mozart::Point3F& ray_direction,
                            HitTestCallback callback) {
   FXL_VLOG(1) << "HitTest: tree=" << view_tree_token;
 
@@ -725,23 +725,21 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
     return;
   }
 
-  // TODO(MZ-163): We're making 2D assumptions all over view manager.
-  // We should redesign the relevant input related APIs to handle 3D content
-  // and revisit this.
-  session_.HitTest(
-      view_tree->GetRoot()->host_node()->id(),
-      (float[3]){point.x, point.y, kHitTestOriginZ}, (float[3]){0.f, 0.f, -1.f},
-      [ this,
-        callback = std::move(callback) ](fidl::Array<scenic::HitPtr> hits) {
+  session_.HitTestDeviceRay(
+      (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
+      (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
+      [ this, callback = std::move(callback), ray_origin,
+        ray_direction ](fidl::Array<scenic::HitPtr> hits) {
         std::vector<ViewHit> view_hits;
         view_hits.reserve(hits.size());
         for (auto& hit : hits) {
           auto it = views_by_token_.find(hit->tag_value);
           if (it != views_by_token_.end()) {
             ViewState* view_state = it->second;
-            view_hits.emplace_back(
-                ViewHit{*view_state->view_token(),
-                        ToTransform(std::move(hit->inverse_transform))});
+
+            view_hits.emplace_back(ViewHit{
+                *view_state->view_token(), ray_origin, ray_direction,
+                hit->distance, ToTransform(std::move(hit->inverse_transform))});
           }
         }
         callback(std::move(view_hits));
@@ -870,8 +868,9 @@ void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
         FXL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
 
         view_state->set_invalidation_flags(
-            old_flags & ~(ViewState::INVALIDATION_IN_PROGRESS |
-                          ViewState::INVALIDATION_STALLED));
+            old_flags &
+            ~(ViewState::INVALIDATION_IN_PROGRESS |
+              ViewState::INVALIDATION_STALLED));
 
         if (old_flags & ViewState::INVALIDATION_STALLED) {
           FXL_VLOG(2) << "View recovered from stalled invalidation: view_state="

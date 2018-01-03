@@ -14,6 +14,12 @@ struct PointF {
   float y;
 };
 
+struct Point3F {
+  float x;
+  float y;
+  float z;
+};
+
 struct Size {
   int32 width;
   int32 height;

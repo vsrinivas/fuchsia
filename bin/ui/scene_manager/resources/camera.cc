@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/scene_manager/resources/camera.h"
+#include "garnet/bin/ui/scene_manager/util/unwrap.h"
+#include "garnet/public/lib/escher/util/type_utils.h"
 
 namespace scene_manager {
 
@@ -29,6 +31,38 @@ escher::Camera Camera::GetEscherCamera(
     return escher::Camera::NewPerspective(
         volume, glm::lookAt(eye_position_, eye_look_at_, eye_up_), fovy_);
   }
+}
+
+std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(
+    const escher::ray4& ray,
+    const escher::ViewingVolume& viewing_volume) const {
+  auto camera = GetEscherCamera(viewing_volume);
+
+  // This screen transform shifts the x, y from [-1, 1] to [0, 1]. Therefore,
+  // when we invert it below, it takes the input coords into Vulkan normalized
+  // device coordinates.
+  auto scale = glm::scale(glm::vec3(0.5f, 0.5f, 1.f));
+  auto translate = glm::translate(glm::vec3(1.f, 1.f, 0.f));
+  auto device_transform = scale * translate;
+
+  // This operation can be thought of as constructing the ray originating at the
+  // camera's position, that passes through a point on the near plane.
+  //
+  // First the constructed near/mid points get passed through the inverse of the
+  // device transform. After that the projection gets "undone," and finally the
+  // camera transform is taken into account.
+  //
+  // For more information about world, view, and projection matrices, and how
+  // they can be used for ray picking, see:
+  // http://www.codinglabs.net/article_world_view_projection_matrix.aspx
+  // https://stackoverflow.com/questions/2093096/implementing-ray-picking
+  auto inverse_vp =
+      glm::inverse(device_transform * camera.projection() * camera.transform());
+  auto inverse_scene_transform =
+      glm::inverse(static_cast<escher::mat4>(scene()->transform()));
+
+  return {inverse_scene_transform * inverse_vp * ray,
+          inverse_scene_transform * inverse_vp};
 }
 
 }  // namespace scene_manager

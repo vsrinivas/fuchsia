@@ -6,6 +6,7 @@
 #define GARNET_BIN_UI_SCENE_MANAGER_RESOURCES_COMPOSITOR_LAYER_STACK_H_
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/engine/hit.h"
 
 #include <unordered_set>
 
@@ -24,6 +25,12 @@ class LayerStack : public Resource {
   LayerStack(Session* session, scenic::ResourceId id);
 
   ~LayerStack() override;
+
+  // Performs a hit test on all the layers in this stack, along the provided ray
+  // in the layer stack's coordinate system.
+  //
+  // |session| is a pointer to the session that initiated the hit test.
+  std::vector<Hit> HitTest(const escher::ray4& ray, Session* session) const;
 
   // AddLayerOp.
   bool AddLayer(LayerPtr layer);

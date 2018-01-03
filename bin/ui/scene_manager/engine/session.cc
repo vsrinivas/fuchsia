@@ -38,6 +38,7 @@
 
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
+#include "lib/escher/util/type_utils.h"
 
 namespace scene_manager {
 
@@ -49,6 +50,24 @@ namespace {
 // this will necessarily involve looking up the value in the ResourceMap.
 constexpr std::array<scenic::Value::Tag, 2> kFloatValueTypes{
     {scenic::Value::Tag::VECTOR1, scenic::Value::Tag::VARIABLE_ID}};
+
+// Converts the provided vector of scene_manager hits into a fidl array of
+// HitPtrs.
+fidl::Array<scenic::HitPtr> WrapHits(const std::vector<Hit>& hits) {
+  fidl::Array<scenic::HitPtr> wrapped_hits;
+  wrapped_hits.resize(hits.size());
+  for (size_t i = 0; i < hits.size(); ++i) {
+    const Hit& hit = hits[i];
+    scenic::HitPtr wrapped_hit = scenic::Hit::New();
+    wrapped_hit->tag_value = hit.tag_value;
+    wrapped_hit->ray_origin = Wrap(hit.ray.origin);
+    wrapped_hit->ray_direction = Wrap(hit.ray.direction);
+    wrapped_hit->inverse_transform = Wrap(hit.inverse_transform);
+    wrapped_hit->distance = hit.distance;
+    wrapped_hits[i] = std::move(wrapped_hit);
+  }
+  return wrapped_hits;
+}
 
 }  // anonymous namespace
 
@@ -1289,19 +1308,12 @@ void Session::HitTest(uint32_t node_id,
                       scenic::vec3Ptr ray_origin,
                       scenic::vec3Ptr ray_direction,
                       const scenic::Session::HitTestCallback& callback) {
-  fidl::Array<scenic::HitPtr> wrapped_hits;
   if (auto node = resources_.FindResource<Node>(node_id)) {
     HitTester hit_tester;
     std::vector<Hit> hits = hit_tester.HitTest(
         node.get(), escher::ray4{escher::vec4(Unwrap(ray_origin), 1.f),
                                  escher::vec4(Unwrap(ray_direction), 0.f)});
-    wrapped_hits.resize(hits.size());
-    for (size_t i = 0; i < hits.size(); i++) {
-      wrapped_hits[i] = scenic::Hit::New();
-      wrapped_hits[i]->tag_value = hits[i].tag_value;
-      wrapped_hits[i]->inverse_transform = Wrap(hits[i].inverse_transform);
-      wrapped_hits[i]->distance = hits[i].distance;
-    }
+    callback(WrapHits(hits));
   } else {
     // TODO(MZ-162): Currently the test fails if the node isn't presented yet.
     // Perhaps we should given clients more control over which state of
@@ -1309,8 +1321,23 @@ void Session::HitTest(uint32_t node_id,
     error_reporter_->WARN()
         << "Cannot perform hit test because node " << node_id
         << " does not exist in the currently presented content.";
+    callback(nullptr);
   }
-  callback(std::move(wrapped_hits));
+}
+
+void Session::HitTestDeviceRay(
+    scenic::vec3Ptr ray_origin,
+    scenic::vec3Ptr ray_direction,
+    const scenic::Session::HitTestCallback& callback) {
+  escher::ray4 ray =
+      escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};
+
+  // The layer stack expects the input to the hit test to be in unscaled device
+  // coordinates.
+  std::vector<Hit> layer_stack_hits =
+      engine_->GetFirstCompositor()->layer_stack()->HitTest(ray, this);
+
+  callback(WrapHits(layer_stack_hits));
 }
 
 void Session::BeginTearDown() {
