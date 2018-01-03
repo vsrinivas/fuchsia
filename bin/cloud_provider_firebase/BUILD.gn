@@ -22,7 +22,6 @@ executable("cloud_provider_firebase_unittests") {
     "//peridot/bin/cloud_provider_firebase/device_set:unittests",
     "//peridot/bin/cloud_provider_firebase/gcs:unittests",
     "//peridot/bin/cloud_provider_firebase/page_handler/impl:unittests",
-    "//peridot/bin/cloud_provider_firebase/testing/token_provider:unittests",
   ]
 }
 
@@ -32,7 +31,6 @@ group("tests") {
   public_deps = [
     ":cloud_provider_firebase_unittests",
     "//peridot/bin/cloud_provider_firebase/testing/server",
-    "//peridot/bin/cloud_provider_firebase/testing/token_provider",
     "//peridot/bin/cloud_provider_firebase/validation",
   ]
 }
