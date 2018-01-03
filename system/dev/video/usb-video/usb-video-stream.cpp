@@ -384,7 +384,8 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
         return;
     }
     // Copy the data into the ring buffer;
-    uint32_t data_size = static_cast<uint32_t>(req->response.actual) - header.bHeaderLength;
+    uint32_t offset = header.bHeaderLength;
+    uint32_t data_size = static_cast<uint32_t>(req->response.actual) - offset;
     if (cur_frame_bytes_ + data_size > max_frame_size_) {
         zxlogf(ERROR, "invalid data size %u, cur frame bytes %u, frame size %u\n",
                data_size, cur_frame_bytes_, max_frame_size_);
@@ -404,9 +405,9 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     uint32_t amt = fbl::min(avail, data_size);
     uint8_t* dst = reinterpret_cast<uint8_t*>(data_ring_buffer_.virt) + frame_end_offset;
 
-    usb_request_copyfrom(req, dst, amt, 0);
+    usb_request_copyfrom(req, dst, amt, offset);
     if (amt < data_size) {
-        usb_request_copyfrom(req, data_ring_buffer_.virt, data_size - amt, amt);
+        usb_request_copyfrom(req, data_ring_buffer_.virt, data_size - amt, offset + amt);
     }
     cur_frame_bytes_ += data_size;
 }
