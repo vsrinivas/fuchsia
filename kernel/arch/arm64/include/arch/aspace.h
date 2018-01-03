@@ -94,7 +94,7 @@ private:
 
     fbl::Mutex lock_;
 
-    uint16_t asid_ = 0;
+    uint16_t asid_ = MMU_ARM64_UNUSED_ASID;
 
     // Pointer to the translation table.
     paddr_t tt_phys_ = 0;

@@ -19,6 +19,8 @@
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 #include <fbl/atomic.h>
@@ -52,9 +54,6 @@ static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
-static fbl::Mutex asid_lock;
-static uint64_t asid_pool[(1 << MMU_ARM64_ASID_BITS) / 64] TA_GUARDED(asid_lock);
-
 // The main translation table.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
     __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
@@ -63,33 +62,74 @@ pte_t *arm64_get_kernel_ptable() {
     return arm64_kernel_translation_table;
 }
 
-static zx_status_t arm64_mmu_alloc_asid(uint16_t* asid) {
-    uint16_t new_asid;
-    uint32_t retry = 1 << MMU_ARM64_ASID_BITS;
+namespace {
 
+class AsidAllocator {
+public:
+    AsidAllocator() { bitmap_.Reset(MMU_ARM64_MAX_USER_ASID + 1); }
+    ~AsidAllocator() = default;
+
+    zx_status_t Alloc(uint16_t *asid);
+    zx_status_t Free(uint16_t asid);
+
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AsidAllocator);
+
+    fbl::Mutex lock_;
+    uint16_t last_ TA_GUARDED(lock_) = MMU_ARM64_FIRST_USER_ASID - 1;
+
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<MMU_ARM64_MAX_USER_ASID + 1>> bitmap_ TA_GUARDED(lock_);
+
+    static_assert(MMU_ARM64_ASID_BITS <= 16, "");
+};
+
+zx_status_t AsidAllocator::Alloc(uint16_t* asid) {
+    uint16_t new_asid;
+
+    // use the bitmap allocator to allocate ids in the range of
+    // [MMU_ARM64_FIRST_USER_ASID, MMU_ARM64_MAX_USER_ASID]
+    // start the search from the last found id + 1 and wrap when hitting the end of the range
     {
-        fbl::AutoLock lock(&asid_lock);
-        do {
-            new_asid = static_cast<uint16_t>(rand()) & ~(-(1 << MMU_ARM64_ASID_BITS));
-            retry--;
-            if (retry == 0) {
+        fbl::AutoLock al(&lock_);
+
+        size_t val;
+        bool notfound = bitmap_.Get(last_ + 1, MMU_ARM64_MAX_USER_ASID + 1, &val);
+        if (unlikely(notfound)) {
+            // search again from the start
+            notfound = bitmap_.Get(MMU_ARM64_FIRST_USER_ASID, MMU_ARM64_MAX_USER_ASID + 1, &val);
+            if (unlikely(notfound)) {
+                TRACEF("ARM64: out of ASIDs\n");
                 return ZX_ERR_NO_MEMORY;
             }
-        } while ((asid_pool[new_asid >> 6] & (1 << (new_asid % 64))) || (new_asid == 0));
+        }
+        bitmap_.SetOne(val);
 
-        asid_pool[new_asid >> 6] = asid_pool[new_asid >> 6] | (1 << (new_asid % 64));
+        DEBUG_ASSERT(val <= UINT16_MAX);
+
+        new_asid = (uint16_t)val;
+        last_ = new_asid;
     }
+
+    LTRACEF("new asid %#x\n", new_asid);
 
     *asid = new_asid;
 
     return ZX_OK;
 }
 
-static zx_status_t arm64_mmu_free_asid(uint16_t asid) {
-    fbl::AutoLock lock(&asid_lock);
-    asid_pool[asid >> 6] = asid_pool[asid >> 6] & ~(1 << (asid % 64));
+zx_status_t AsidAllocator::Free(uint16_t asid) {
+    LTRACEF("free asid %#x\n", asid);
+
+    fbl::AutoLock al(&lock_);
+
+    bitmap_.ClearOne(asid);
+
     return ZX_OK;
 }
+
+AsidAllocator asid;
+
+} // namespace
 
 // Convert user level mmu flags to flags that go in L1 descriptors.
 static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
@@ -971,7 +1011,7 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
             DEBUG_ASSERT(base + size <= 1UL << MMU_GUEST_SIZE_SHIFT);
         } else {
             DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
-            if (arm64_mmu_alloc_asid(&asid_) != ZX_OK)
+            if (asid.Alloc(&asid_) != ZX_OK)
                 return ZX_ERR_NO_MEMORY;
         }
 
@@ -1017,8 +1057,8 @@ zx_status_t ArmArchVmAspace::Destroy() {
         DEBUG_ASSERT(status == ZX_OK);
     } else {
         ARM64_TLBI(ASIDE1IS, asid_);
-        arm64_mmu_free_asid(asid_);
-        asid_ = 0;
+        asid.Free(asid_);
+        asid_ = MMU_ARM64_UNUSED_ASID;
     }
 
     return ZX_OK;

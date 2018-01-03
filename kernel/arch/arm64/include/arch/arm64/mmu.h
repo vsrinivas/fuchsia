@@ -392,8 +392,11 @@ __BEGIN_CDECLS
     ISB; \
 })
 
-const uint16_t MMU_ARM64_GLOBAL_ASID = 0xffff;
 const size_t MMU_ARM64_ASID_BITS = 16;
+const uint16_t MMU_ARM64_GLOBAL_ASID = (1u << MMU_ARM64_ASID_BITS) - 1;
+const uint16_t MMU_ARM64_UNUSED_ASID = 0;
+const uint16_t MMU_ARM64_FIRST_USER_ASID = 1;
+const uint16_t MMU_ARM64_MAX_USER_ASID = MMU_ARM64_GLOBAL_ASID - 1;
 
 pte_t *arm64_get_kernel_ptable();
 

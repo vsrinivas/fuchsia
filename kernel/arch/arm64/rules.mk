@@ -32,6 +32,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
 	kernel/dev/iommu/dummy \
+	kernel/lib/bitmap \
 	kernel/object \
 	third_party/lib/fdt \
 
