@@ -734,19 +734,25 @@ void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags,
                                          uint* page_size_shift) {
 
     if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
-        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+        if (attrs) {
+            *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+        }
         *vaddr_base = ~0UL << MMU_KERNEL_SIZE_SHIFT;
         *top_size_shift = MMU_KERNEL_SIZE_SHIFT;
         *top_index_shift = MMU_KERNEL_TOP_SHIFT;
         *page_size_shift = MMU_KERNEL_PAGE_SIZE_SHIFT;
     } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-        *attrs = mmu_flags_to_s2_pte_attr(mmu_flags);
+        if (attrs) {
+            *attrs = mmu_flags_to_s2_pte_attr(mmu_flags);
+        }
         *vaddr_base = 0;
         *top_size_shift = MMU_GUEST_SIZE_SHIFT;
         *top_index_shift = MMU_GUEST_TOP_SHIFT;
         *page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
     } else {
-        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+        if (attrs) {
+            *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+        }
         *vaddr_base = 0;
         *top_size_shift = MMU_USER_SIZE_SHIFT;
         *top_index_shift = MMU_USER_TOP_SHIFT;
@@ -889,18 +895,15 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
     fbl::AutoLock a(&lock_);
 
     ssize_t ret;
-    if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+    {
+        vaddr_t vaddr_base;
+        uint top_size_shift, top_index_shift, page_size_shift;
+        MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift,
+                           &page_size_shift);
+
         ret = UnmapPages(vaddr, count * PAGE_SIZE,
-                         ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
-                         MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT);
-    } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-        ret = UnmapPages(vaddr, count * PAGE_SIZE,
-                         0, MMU_GUEST_SIZE_SHIFT,
-                         MMU_GUEST_TOP_SHIFT, MMU_GUEST_PAGE_SIZE_SHIFT);
-    } else {
-        ret = UnmapPages(vaddr, count * PAGE_SIZE,
-                         0, MMU_USER_SIZE_SHIFT,
-                         MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT);
+                         vaddr_base, top_size_shift,
+                         top_index_shift, page_size_shift);
     }
 
     if (unmapped) {
@@ -926,21 +929,16 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
     fbl::AutoLock a(&lock_);
 
     int ret;
-    if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+    {
+        pte_t attrs;
+        vaddr_t vaddr_base;
+        uint top_size_shift, top_index_shift, page_size_shift;
+        MmuParamsFromFlags(mmu_flags, &attrs, &vaddr_base, &top_size_shift, &top_index_shift,
+                           &page_size_shift);
+
         ret = ProtectPages(vaddr, count * PAGE_SIZE,
-                           mmu_flags_to_s1_pte_attr(mmu_flags),
-                           ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
-                           MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT);
-    } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-        ret = ProtectPages(vaddr, count * PAGE_SIZE,
-                           mmu_flags_to_s2_pte_attr(mmu_flags),
-                           0, MMU_GUEST_SIZE_SHIFT,
-                           MMU_GUEST_TOP_SHIFT, MMU_GUEST_PAGE_SIZE_SHIFT);
-    } else {
-        ret = ProtectPages(vaddr, count * PAGE_SIZE,
-                           mmu_flags_to_s1_pte_attr(mmu_flags),
-                           0, MMU_USER_SIZE_SHIFT,
-                           MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT);
+                           attrs, vaddr_base,
+                           top_size_shift, top_index_shift, page_size_shift);
     }
 
     return ret;
