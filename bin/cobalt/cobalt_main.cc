@@ -389,12 +389,17 @@ ClientSecret CobaltApp::getClientSecret() {
 }  // namespace
 
 int main(int argc, const char** argv) {
-   setenv(
+  setenv(
       "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/system/data/boringssl/cert.pem", 1);
 
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
+
+  if (fxl::GetVlogVerbosity() >= 10) {
+    setenv("GRPC_VERBOSITY", "DEBUG", 1);
+    setenv("GRPC_TRACE", "all,-timer,-timer_check", 1);
+  }
 
   // Parse the schedule_interval_seconds flag.
   std::chrono::seconds schedule_interval = kScheduleIntervalDefault;
