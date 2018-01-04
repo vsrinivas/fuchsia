@@ -368,7 +368,7 @@ static zx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t ou
     }
     if ((status = zx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->rx_fifo, &edev->rx_fifo)) < 0) {
         zxlogf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d\n", edev->name, status);
-        zx_handle_close(fifos->rx_fifo);
+        zx_handle_close(fifos->tx_fifo);
         zx_handle_close(edev->tx_fifo);
         edev->tx_fifo = ZX_HANDLE_INVALID;
         return status;
