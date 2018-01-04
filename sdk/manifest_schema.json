@@ -37,6 +37,7 @@
           "type": "string",
           "enum": [
             "c-pp",
+            "dart",
             "exe",
             "fidl"
           ]
@@ -90,6 +91,9 @@
           "oneOf": [
             {
               "$ref": "#/definitions/cppTags"
+            },
+            {
+              "$ref": "#/definitions/dartTags"
             },
             {
               "$ref": "#/definitions/exeTags"
@@ -182,6 +186,23 @@
       "required": [
         "domain",
         "type"
+      ],
+      "additionalProperties": false
+    },
+    "dartTags": {
+      "description": "Tag definitions for the 'dart' domain",
+      "type": "object",
+      "properties": {
+        "domain": {
+          "description": "Marker for this type of tags",
+          "type": "string",
+          "enum": [
+            "dart"
+          ]
+        }
+      },
+      "required": [
+        "domain"
       ],
       "additionalProperties": false
     },

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/toolchain.gni")
+import("//build/sdk/sdk_atom.gni")
 import("//third_party/flutter/lib/ui/dart_ui.gni")
 import("//topaz/public/dart-pkg/fuchsia/sdk_ext.gni")
 import("//topaz/public/dart-pkg/zircon/sdk_ext.gni")
@@ -56,6 +57,12 @@ declare_args() {
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
+#   sdk_candidate (optional)
+#     Whether this library may be included in SDKs.
+#     Note that the resulting SDK target will only be available in the Dart
+#     toolchain.
+#     Defaults to false.
+#
 # Example of usage:
 #
 #   dart_library("baz") {
@@ -66,7 +73,7 @@ declare_args() {
 #     ]
 #
 #     deps = [
-#       "//foo/bar/owl"
+#       "//foo/bar/owl",
 #     ]
 #   }
 
@@ -379,6 +386,113 @@ if (current_toolchain == dart_toolchain) {
       deps = dart_deps
 
       public_deps = group_deps
+    }
+
+    ################################################
+    # SDK support
+    #
+
+    if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
+      atom_name = target_name
+      if (defined(invoker.package_name)) {
+        atom_name = invoker.package_name
+      }
+
+      # Dependencies that should normally be included in any SDK containing this
+      # target.
+      sdk_deps = []
+      # Path to manifest files for third-party dependencies.
+      third_party_specs = []
+      if (defined(invoker.deps)) {
+        sorted_deps = exec_script("//build/dart/sdk/sort_deps.py",
+                                  invoker.deps,
+                                  "scope")
+        foreach(dep, sorted_deps.local) {
+          full_label = get_label_info(dep, "label_no_toolchain")
+          sdk_deps += [
+            "${full_label}_sdk",
+          ]
+        }
+        foreach(dep, sorted_deps.third_party) {
+          path = get_label_info(dep, "dir")
+          third_party_specs += [
+            rebase_path("$path/pubspec.yaml"),
+          ]
+        }
+      }
+
+      # Build a manifest file listing third-party dependencies of this package.
+      # This will make it easier to build the final published package.
+      third_party_spec_target_name = "${target_name}_third_party_spec"
+      third_party_spec_file = "$target_gen_dir/${target_name}_3p.yaml"
+
+      action(third_party_spec_target_name) {
+
+        script = "//build/dart/sdk/gen_3p_manifest.py"
+
+        outputs = [
+          third_party_spec_file,
+        ]
+
+        args = [
+          "--out",
+          rebase_path(third_party_spec_file),
+          "--name",
+          atom_name,
+          "--specs",
+        ] + third_party_specs
+      }
+
+      # List all the sources which will be included in the package.
+      sdk_sources_target_name = "${target_name}_sdk_sources"
+      sdk_sources_file = "$target_gen_dir/${target_name}_sdk_sources.txt"
+
+      action(sdk_sources_target_name) {
+        script = "//build/dart/sdk/list_sources.py"
+
+        inputs = [
+          source_file,
+        ]
+
+        outputs = [
+          sdk_sources_file,
+        ]
+
+        args = [
+          "--out",
+          rebase_path(sdk_sources_file),
+          "--source-list",
+          rebase_path(source_file),
+          "--source-dir",
+          rebase_path(source_dir),
+        ]
+
+        deps = [
+          ":$source_target_name",
+        ]
+      }
+
+      sdk_atom("${target_name}_sdk") {
+        print(get_label_info(":$target_name", "label_no_toolchain"))
+        domain = "dart"
+        name = atom_name
+
+        deps = sdk_deps
+
+        non_sdk_deps = [
+          ":$sdk_sources_target_name",
+          ":$third_party_spec_target_name",
+        ]
+
+        file_manifest = sdk_sources_file
+
+        files = [
+          {
+            source = third_party_spec_file
+            dest = "third_party/pubspec.yaml"
+          },
+        ]
+      }
     }
   }
 } else {  # Not the Dart toolchain.
