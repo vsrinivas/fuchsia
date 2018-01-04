@@ -53,18 +53,16 @@ void FirebaseAuthImpl::GetToken(
                     modular::auth::FirebaseTokenPtr token,
                     modular::auth::AuthErrPtr error) mutable {
         if (!token || error->status != modular::auth::Status::OK) {
-          if (!token) {
-            // This should not happen - the token provider returns nullptr when
-            // running in the guest mode, but in this case we don't initialize
-            // sync and should never call auth provider.
+          if (!token && error->status == modular::auth::Status::OK) {
             FXL_LOG(ERROR)
-                << "null Firebase token returned from token provider, "
-                << "this should never happen. Retrying.";
+                << "null Firebase token returned from token provider with no "
+                << "error reported. This should never happen. Retrying.";
           } else {
             FXL_LOG(ERROR)
                 << "Error retrieving the Firebase token from token provider: "
                 << error->status << ", '" << error->message << "', retrying.";
           }
+
           task_runner_.PostDelayedTask(
               [this, callback = std::move(callback)]() mutable {
                 GetToken(std::move(callback));
