@@ -39,6 +39,7 @@ source_set("unittests") {
   deps = [
     ":clipboard_sources",
     "//peridot/public/lib/clipboard/fidl",
+    "//peridot/lib/gtest",
     "//third_party/gtest",
   ]
 }
