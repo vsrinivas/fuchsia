@@ -15,6 +15,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 if [[ "$#" -ne 1 ]]; then
   fx-command-help
+  exit 1
 fi
 
 layer="$1"
