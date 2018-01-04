@@ -8,7 +8,9 @@
 
 namespace modular {
 
-ClipboardImpl::ClipboardImpl() {}
+ClipboardImpl::ClipboardImpl() = default;
+
+ClipboardImpl::~ClipboardImpl() = default;
 
 void ClipboardImpl::Push(const fidl::String& text) {
   current_item_ = text;

@@ -16,6 +16,7 @@ namespace modular {
 class ClipboardImpl : Clipboard {
  public:
   ClipboardImpl();
+  ~ClipboardImpl();
 
   void Connect(fidl::InterfaceRequest<Clipboard> request);
 
