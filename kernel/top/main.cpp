@@ -38,7 +38,7 @@ static void call_constructors() {
         (*a)();
 }
 
-/* called from arch code */
+// called from arch code
 void lk_main() {
     // get us into some sort of thread context
     thread_init_early();
@@ -58,7 +58,7 @@ void lk_main() {
     lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_TARGET_EARLY - 1);
     target_early_init();
 
-    dprintf(INFO, "\nwelcome to lk/MP\n\n");
+    dprintf(INFO, "\nwelcome to Zircon\n\n");
 
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_VM_PREHEAP - 1);
     dprintf(SPEW, "initializing vm pre-heap\n");
@@ -122,7 +122,7 @@ void lk_secondary_cpu_entry() {
         return;
     }
 
-    /* secondary cpu initialize from threading level up. 0 to threading was handled in arch */
+    // secondary cpu initialize from threading level up. 0 to threading was handled in arch
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_LAST);
 
     dprintf(SPEW, "entering scheduler on cpu %u\n", cpu);
