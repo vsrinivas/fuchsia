@@ -30,7 +30,7 @@ Read this all before? Here are the common case commands
     * `fx mkzedboot <usb_drive_device_path>`
 4. Boot and pave
     * [[ move USB drive to target ]]
-    * `fx boot-paver <efi|vboot|nuc|cros|..>`
+    * `fx boot <efi|vboot|nuc|cros|..> -w 150`
 
 ## Building
 
@@ -55,13 +55,13 @@ the wrong device**. Once this is done, remove the USB drive.
 Now we'll build the artifacts to transfer over the network during the paving
 process. What is transferred is dependent on the target device. For UEFI based
 systems (like Intel NUC or Acer Switch 12) our output target type is 'efi'. For
-ChromeOS-based systems (like Pixelbook) that use vboot-format images the target
-type is 'vboot'. To build our output set you can run
-`fx boot-paver <target_type>`, ie. `fx boot-paver efi`.
+ChromeOS-based systems (like Pixelbook) that use vboot-format images, the target
+type is 'vboot'. To start the bootserver with the correct image set you can run
+`fx boot <target_type> -w 150`, ie. `fx boot efi -w 150`.
 
 Insert the install media into the target device that you want to pave. The target
 device's boot settings may need to be changed to boot from the USB device and
-this is typically device-specific. For the guides provided here, **only** go
+this is typically device-specific. For the guides listed below, **only** go
 through the steps to set the boot device, don't continue with any instructions on
 creating install media.
 * [Acer Switch Alpha 12](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md)
@@ -69,16 +69,16 @@ creating install media.
 * [Google Pixelbook](hardware/pixelbook.md)
 
 Paving should occur automatically after the device is booted into Zedboot from the
-USB drive. After the paving process completes the system should boot into the
-Zircon kernel. After paving, the whole system is installed on storage. At this
-point the USB key can be removed since the system has everything it needs stored
-locally. If you plan to re-pave frequently it may be useful to keep the
+USB drive. After the paving process completes, the system should boot into the
+Zircon kernel. After paving, the whole system is installed on internal storage. At
+this point the USB key can be removed since the system has everything it needs
+stored locally. If you plan to re-pave frequently it may be useful to keep the
 USB drive inserted so your system boots into Zedboot by default where paving
 will happen automatically. After the initial pave on UEFI systems that use
 Gigaboot, another option for re-paving is to press 'z' while in Gigaboot to
 select Zedboot. For vboot-based systems using the USB drive is currently the
 only option for re-paving. In all cases the bootserver needs to have been
-started with `fx boot-paver <target_type>`
+started with `fx boot <target_type> -w 150`
 
 ## Troubleshooting
 
@@ -86,22 +86,22 @@ In some cases paving may fail because you have a disk layout that is incompatibl
 In these cases you will see a message that asks you to run
 'install-disk-image wipe'. If it is incompatible because it contains an older
 Fuchsia layout put there by installer (vs the paver) you can fix this by killing
-the boot-paver process on the host, switching to a different console (Alt+F3) on
+the fx boot process on the host, switching to a different console (Alt+F3) on
 the target, and running `install-disk-image wipe`. Then reboot the target,
-re-run `fx boot-paver <target_type>` on the host, and the pave should succeed.
+re-run `fx boot <target_type> -w 150` on the host, and the pave should succeed.
 
 ## Running without a persistent /data partition
 
 It is possible to run the system without a persistent data partition. When this is
-done /data is backed by a RAM filesystem and thus the device is kind of running in
-an incognito mode. To create a device without a persistent data partition you can
-start the boot-paver with the '--no-data' option, for example
-`fx boot-paver <target_type> --no-data`. If the device already has a data
+done `/data` is backed by a RAM filesystem and thus the device is kind of running
+in an incognito mode. To create a device without a persistent data partition you
+can start the bootserver with the '--no-data' option, for example
+`fx boot <target_type> --no-data -w 150`. If the device already has a data
 partition, running paver this way will **not** remove it. To remove the persistent
 data partition, don't run bootserver, boot the device into Zedboot, switch to a
 command line (Alt+F3), and run `install-disk-image wipe`. Then reboot the
 device into Zedboot and start boot server with
-`fx boot-paver <target_type> --no-data`.
+`fx boot <target_type> --no-data -w 150`.
 
 ## Changing boot target (localboot, netboot, etc) default
 
