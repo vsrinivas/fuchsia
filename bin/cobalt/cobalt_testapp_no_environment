@@ -11,4 +11,4 @@
 
 set -e
 
-/system/bin/cobalt_testapp --skip_environment_test --verbose=10
+/system/bin/cobalt_testapp --skip_environment_test
