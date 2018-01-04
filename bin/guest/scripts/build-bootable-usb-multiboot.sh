@@ -9,9 +9,9 @@
 set -eu
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ZIRCONDIR="${ZIRCON_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
+ZIRCONDIR="${ZIRCON_DIR:-${GUEST_SCRIPTS_DIR}/../../../../zircon}"
 ZIRCON_SCRIPTS_DIR="${ZIRCONDIR}/scripts"
-BUILDDIR="${ZIRCONDIR}/build-zircon-pc-x86-64"
+BUILDDIR="${ZIRCONDIR}/build-x86"
 
 get_confirmation() {
   echo -n "Press 'y' to confirm: "
@@ -85,13 +85,8 @@ if [[ -n $(df -Hl | grep "$DEVICE") ]]; then
 fi
 echo " SUCCESS"
 
-echo -n "Building zircon..."
-${ZIRCON_SCRIPTS_DIR}/build-zircon-x86-64
-${GUEST_SCRIPTS_DIR}/mkbootfs.sh zircon-pc-x86-64
-echo " SUCCESS"
-
-echo -n "Building zircon-guest kernel..."
-$GUEST_SCRIPTS_DIR/mklinux.sh
+echo -n "Building gigaboot..."
+make -C ${ZIRCONDIR} gigaboot
 echo " SUCCESS"
 
 # Confirm that the user knows what they are doing
@@ -110,7 +105,7 @@ SECTOR_SIZE=`cat "/sys/block/$DEVICE/queue/hw_sector_size"`
 echo "[format_usb] Creating 200MB EFI System Partition"
 sudo sgdisk -n 1:0:+200M -c 1:"EFI System Partition" -t 1:ef00 "$DEVICE_PATH"
 EFI_PARTITION_PATH="${DEVICE_PATH}1"
-sudo mkfs.vfat "$EFI_PARTITION_PATH"
+sudo mkfs.vfat -F 32 "$EFI_PARTITION_PATH"
 
 echo "[format_usb] Creating 5GB Linux Root Partition"
 sudo sgdisk -n 2:0:+5G -c 2:"Root" "$DEVICE_PATH"
@@ -175,11 +170,6 @@ echo -n "Copying Bootloader..."
 sudo cp "${BUILDDIR}/bootloader/bootx64.efi" "${EFI_MOUNT_PATH}/EFI/BOOT/gigaboot.efi"
 echo " SUCCESS"
 
-echo -n "Copying zircon.bin..."
-sudo cp "${BUILDDIR}/zircon.bin" "${EFI_MOUNT_PATH}/zircon.bin"
-sudo cp "${BUILDDIR}/bootdata-with-guest.bin" "${EFI_MOUNT_PATH}/ramdisk.bin"
-echo " SUCCESS"
-
 echo -n "Copying fstab..."
 ROOT_UUID=$(sudo blkid -s UUID -o value "${ROOT_PARTITION_PATH}")
 EFI_UUID=$(sudo blkid -s UUID -o value "${EFI_PARTITION_PATH}")
@@ -192,9 +182,7 @@ rm "${FSTAB}"
 echo "SUCCESS"
 
 echo -n "Copying run-qemu.sh..."
-sudo cp /tmp/linux/arch/x86/boot/bzImage "${MOUNT_PATH}/opt/bzImage"
 RUN_QEMU=$(mktemp)
-
 ###############################################################################
 # Emit run-qemu.sh.
 ###############################################################################
@@ -232,7 +220,7 @@ qemu-system-x86_64 \\
     -enable-kvm \\
     -cpu "\${CPU_SPEC}" \\
     -initrd /initrd.img \\
-    -kernel /opt/bzImage \\
+    -kernel /vmlinuz \\
     -append "\${KERNEL_CMDLINE}"
 EOF
 ###############################################################################

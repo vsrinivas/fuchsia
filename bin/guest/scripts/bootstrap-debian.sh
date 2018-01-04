@@ -115,7 +115,7 @@ bootstrap_stage2() {
     # Setup grub.
     grub-install --target x86_64-efi --efi-directory /boot --removable
     cat >> /etc/grub.d/40_custom << EOF
-menuentry "Zircon" {
+menuentry "Gigaboot" {
   insmod chain
   echo "Loading gigaboot..."
   chainloader /EFI/BOOT/gigaboot.efi

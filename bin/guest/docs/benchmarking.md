@@ -23,7 +23,13 @@ boot itself as a KVM guest.
 
 ## Creating a Zircon guest
 
-Boot off the flash drive and select "Zircon" from the GRUB menu.
+Start a bootserver to serve the host kernel and bootdata. Ex:
+
+```
+$ $FUCHSIA_DIR/garnet/bin/guest/scripts/build.sh -p "garnet/packages/default" x86
+```
+
+Boot off the flash drive and select "Gigaboot" from the GRUB menu.
 
 The appropriate block device corresponding to the USB flash drive must be
 determined. We're looking for a removable device (RE flags) with 3 partitions
@@ -42,7 +48,12 @@ In the example above, the correct device is `000`. Using that block device we ca
 create a guest:
 
 ```
-$ run guest -b /dev/class/block/000 -c "root=/dev/vda2 ro" /boot/data/bzImage
+$ mkdir /system/data/guest
+# This should be the path for the "EFI System Partition" above.
+$ mount -r /dev/class/block/001 /system/data/guest
+# The initrd and kernel names will change as the kernel is updated. Use whatever
+# is on your system.
+$ launch guest -b /dev/class/block/000 -c "root=/dev/vda2 ro lockfs" -r /system/data/guest/initrd.img-4.14.0-2-amd64 /sytem/data/guest/vmlinuz-4.14.0-2-amd64
 ```
 Upon a successful boot you should see a login prompt with default login
 credentials provided.
