@@ -150,7 +150,8 @@ bool HdmiDisplay::SetDdcSegment(uint8_t segment_num) {
     i2c_scl(mmio_space(), ddi(), 0);
 
     // Send the segment register index and the segment number
-    if (!i2c_send_byte(mmio_space(), ddi(), kDdcSegmentI2cAddress)
+    uint8_t segment_write_command = kDdcSegmentI2cAddress << 1;
+    if (!i2c_send_byte(mmio_space(), ddi(), segment_write_command)
             || !i2c_send_byte(mmio_space(), ddi(), segment_num)) {
         return false;
     }
@@ -175,7 +176,7 @@ bool HdmiDisplay::ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_
                 gmbus0.set_pin_pair_select(ddi_to_pin(ddi()));
                 gmbus0.WriteTo(mmio_space());
 
-                success = GMBusWrite(kDdcOffsetI2cAddress, &offset, 1);
+                success = GMBusWrite(kDdcDataI2cAddress, &offset, 1);
             } else {
                 success = GMBusRead(kDdcDataI2cAddress, buf, len);
             }
@@ -235,6 +236,7 @@ bool HdmiDisplay::GMBusRead(uint8_t addr, uint8_t* buf, uint8_t size) {
     gmbus1.set_bus_cycle_wait(1);
     gmbus1.set_total_byte_count(size);
     gmbus1.set_slave_register_addr(addr);
+    gmbus1.set_read_op(1);
     gmbus1.WriteTo(mmio_space());
 
     unsigned idx = 0;

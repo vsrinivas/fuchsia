@@ -53,7 +53,8 @@ public:
     DEF_BIT(27, bus_cycle_stop);
     DEF_BIT(25, bus_cycle_wait);
     DEF_FIELD(24, 16, total_byte_count);
-    DEF_FIELD(7, 0, slave_register_addr);
+    DEF_FIELD(7, 1, slave_register_addr);
+    DEF_BIT(0, read_op);
 
     static auto Get() { return hwreg::RegisterAddr<GMBus1>(0xc5104); }
 };

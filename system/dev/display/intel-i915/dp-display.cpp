@@ -305,7 +305,7 @@ bool DpDisplay::ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t 
     // Ignore failures setting the segment if segment == 0, since it could be the case
     // that the display doesn't support segments.
     return (DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcSegmentI2cAddress, &segment, 1) || segment == 0)
-            && DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcOffsetI2cAddress, &offset, 1)
+            && DpAuxWrite(DP_REQUEST_I2C_WRITE, kDdcDataI2cAddress, &offset, 1)
             && DpAuxRead(DP_REQUEST_I2C_READ, kDdcDataI2cAddress, buf, len);
 }
 

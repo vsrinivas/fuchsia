@@ -212,11 +212,9 @@ static_assert(sizeof(DataBlock) == 32, "Bad size for DataBlock");
 class EdidSource {
 public:
     // The I2C address for writing the DDC segment
-    static constexpr int kDdcSegmentI2cAddress = 0x60;
-    // The I2C address for writing the DDC data offset
-    static constexpr int kDdcOffsetI2cAddress = 0xa0;
-    // The I2C address for reading the DDC data
-    static constexpr int kDdcDataI2cAddress = 0xa1;
+    static constexpr int kDdcSegmentI2cAddress = 0x30;
+    // The I2C address for writing the DDC data offset/reading DDC data
+    static constexpr int kDdcDataI2cAddress = 0x50;
 
     virtual bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
 };
