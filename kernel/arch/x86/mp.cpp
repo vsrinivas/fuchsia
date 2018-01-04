@@ -161,10 +161,15 @@ void x86_init_percpu(cpu_num_t cpu_num) {
     efer_msr |= X86_EFER_SCE;
     write_msr(X86_MSR_IA32_EFER, efer_msr);
 
+    uint64_t cr4 = x86_get_cr4();
     // Enable {rd,wr}{fs,gs}base instructions.
     if (x86_feature_test(X86_FEATURE_FSGSBASE)) {
-        x86_set_cr4(x86_get_cr4() | X86_CR4_FSGSBASE);
+        cr4 |= X86_CR4_FSGSBASE;
     }
+    if (x86_feature_test(X86_FEATURE_UMIP)) {
+        cr4 |= X86_CR4_UMIP;
+    }
+    x86_set_cr4(cr4);
 
     // Some intel cpus support auto-entering C1E state when all cores are at C1. In
     // C1E state the voltage is reduced on all cores as well as clock gated. There is
