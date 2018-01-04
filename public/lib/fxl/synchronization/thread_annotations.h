@@ -30,6 +30,9 @@
 #define FXL_ACQUIRE(...) \
   FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquire_capability(__VA_ARGS__))
 
+#define FXL_RELEASE(...) \
+  FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(__VA_ARGS__))
+
 #define FXL_ACQUIRED_AFTER(...) \
   FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquired_after(__VA_ARGS__))
 
