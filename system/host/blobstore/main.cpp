@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <future>
@@ -60,6 +61,23 @@ int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
     fbl::RefPtr<blobstore::Blobstore> bs;
     if (blobstore_create(&bs, fbl::move(fd)) < 0) {
         return -1;
+    }
+
+    struct rlimit rlp;
+    if (getrlimit(RLIMIT_NOFILE, &rlp) != 0) {
+        perror("warning: getrlimit failed, can't get open file limits");
+    } else {
+        if (rlp.rlim_cur < 1024) {
+#if defined(__APPLE__)
+            rlp.rlim_cur = OPEN_MAX < rlp.rlim_max ? OPEN_MAX : rlp.rlim_max;
+#else
+            rlp.rlim_cur = rlp.rlim_max;
+#endif
+        }
+        if (setrlimit(RLIMIT_NOFILE, &rlp) != 0) {
+            fprintf(stderr, "setrlimit failed, can't set open file limits to %llu\n", rlp.rlim_cur);
+            return -1;
+        }
     }
 
     std::vector<std::future<int>> futures;
