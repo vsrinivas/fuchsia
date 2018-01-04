@@ -12,9 +12,10 @@ static const char* kLayerName = "VK_LAYER_GOOGLE_image_pipe_swapchain";
 // inside the layer.
 
 const char* expected_instance_extensions[] = {VK_KHR_SURFACE_EXTENSION_NAME,
-                                              VK_KHR_MAGMA_SURFACE_EXTENSION_NAME};
+                                              VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+                                              "foobar"};
 
-const char* expected_device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+const char* expected_device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME, "bluecheese"};
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
@@ -47,6 +48,10 @@ TEST(Swapchain, InstanceExtensions)
         }
     }
     EXPECT_EQ(found_count, ARRAY_SIZE(expected_instance_extensions));
+
+    // Without this loader will only allow extensions that it knows about.
+    char envstr[] = "VK_LOADER_DISABLE_INST_EXT_FILTER=1";
+    putenv(envstr);
 
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
