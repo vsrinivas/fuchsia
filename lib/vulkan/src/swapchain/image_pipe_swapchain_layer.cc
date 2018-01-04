@@ -35,8 +35,20 @@ struct LayerData {
 // how to make it work otherwise
 std::unordered_map<void*, LayerData*> layer_data_map;
 
-constexpr VkExtensionProperties instance_extensions[] = {
-    {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
+static const VkExtensionProperties instance_extensions[] = {
+    {
+        .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
+        .specVersion = 25,
+    },
+    {
+        .extensionName = VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+        .specVersion = 1,
+    }};
+
+static const VkExtensionProperties device_extensions[] = {{
+    .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    .specVersion = 68,
+}};
 
 constexpr VkLayerProperties swapchain_layer = {
     "VK_LAYER_GOOGLE_image_pipe_swapchain",
@@ -682,11 +694,11 @@ VKAPI_ATTR VkResult VKAPI_CALL
 EnumerateInstanceExtensionProperties(const char* pLayerName,
                                      uint32_t* pCount,
                                      VkExtensionProperties* pProperties) {
-  if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
-    return util_GetExtensionProperties(1, instance_extensions, pCount,
-                                       pProperties);
+    if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
+        return util_GetExtensionProperties(ARRAY_SIZE(instance_extensions), instance_extensions,
+                                           pCount, pProperties);
 
-  return VK_ERROR_LAYER_NOT_PRESENT;
+    return VK_ERROR_LAYER_NOT_PRESENT;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -694,15 +706,16 @@ EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                    const char* pLayerName,
                                    uint32_t* pCount,
                                    VkExtensionProperties* pProperties) {
-  if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
-    return util_GetExtensionProperties(0, nullptr, pCount, pProperties);
+    if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
+        return util_GetExtensionProperties(ARRAY_SIZE(device_extensions), device_extensions, pCount,
+                                           pProperties);
 
-  assert(physicalDevice);
+    assert(physicalDevice);
 
-  dispatch_key key = get_dispatch_key(physicalDevice);
-  LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
-  return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
-      physicalDevice, NULL, pCount, pProperties);
+    dispatch_key key = get_dispatch_key(physicalDevice);
+    LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
+    return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+        physicalDevice, NULL, pCount, pProperties);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
