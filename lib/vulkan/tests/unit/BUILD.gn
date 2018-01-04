@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("test_vkcube_image_pipe_swapchain") {
+executable("test_image_pipe_swapchain") {
   testonly = true
   sources = [
+    "test_extensions.cc",
     "test_main.cc",
-    "test_vk_cube.cc",
   ]
   deps = [
-    "//garnet/lib/vulkan/tests/vkcube:vkcube_common",
     "//third_party/gtest",
+    "//third_party/vulkan_loader_and_validation_layers:vulkan",
   ]
 }

@@ -5,6 +5,7 @@
     ],
     "packages": {
         "image-pipe-swapchain": "//garnet/lib/vulkan:image-pipe-swapchain",
+        "image-pipe-swapchain-tests": "//garnet/lib/vulkan:image-pipe-swapchain-tests",
         "vkcube_image_pipe_swapchain": "//garnet/lib/vulkan:vkcube_image_pipe_swapchain",
         "display-pipe": "//garnet/lib/magma:display-pipe"
     }
