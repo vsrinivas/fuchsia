@@ -125,9 +125,6 @@ class PageSyncImpl : public PageSync,
   DownloadSyncState download_state_ = DOWNLOAD_STOPPED;
   UploadSyncState upload_state_ = UPLOAD_STOPPED;
 
-  // Pending auth token requests to be cancelled when this class goes away.
-  callback::CancellableContainer auth_token_requests_;
-
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
 };

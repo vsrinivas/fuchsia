@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/lib/callback/cancellable.h"
 
 namespace cloud_sync {
 
@@ -105,9 +104,6 @@ class BatchUpload {
   // If an error has occurred while handling the objects, |error_types_|
   // stores the type of error.
   ErrorType error_type_ = ErrorType::TEMPORARY;
-
-  // Pending auth token requests to be cancelled when this class goes away.
-  callback::CancellableContainer auth_token_requests_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<BatchUpload> weak_ptr_factory_;
