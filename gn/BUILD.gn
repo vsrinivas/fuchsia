@@ -949,7 +949,7 @@ if (generate_zircon_gn_files) {
 }
 
 group("default") {
-  deps = [ ":images" ]
+  deps = [ ":netboot", ":images" ]
 
   if (build_ramdisk) {
     # TODO(mcgrathr): Remove dep when deprecated user.bootfs is gone.
