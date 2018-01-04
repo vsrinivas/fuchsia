@@ -40,5 +40,9 @@ struct UsbVideoStreamingSetting {
     uint16_t max_packet_size;
 };
 
+inline uint32_t setting_bandwidth(const UsbVideoStreamingSetting& setting) {
+    return setting.max_packet_size * setting.transactions_per_microframe;
+}
+
 } // namespace usb
 } // namespace video

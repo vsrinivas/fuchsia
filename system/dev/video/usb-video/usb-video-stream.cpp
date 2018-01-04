@@ -66,15 +66,16 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
     iface_num_ = intf->bInterfaceNumber;
     usb_ep_addr_ = input_header->bEndpointAddress;
 
-    uint16_t max_packet_size = 0;
+    uint32_t max_bandwidth = 0;
     for (const auto& setting : streaming_settings_) {
-        if (setting.max_packet_size > max_packet_size) {
-            max_packet_size = setting.max_packet_size;
+        uint32_t bandwidth = setting_bandwidth(setting);
+        if (bandwidth > max_bandwidth) {
+            max_bandwidth = bandwidth;
         }
     }
 
     zxlogf(TRACE, "allocating %d usb requests of size %u\n",
-           MAX_OUTSTANDING_REQS, max_packet_size);
+           MAX_OUTSTANDING_REQS, max_bandwidth);
 
     {
         fbl::AutoLock lock(&lock_);
@@ -84,7 +85,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
         for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
             usb_request_t* req;
             zx_status_t status = usb_request_alloc(&req,
-                                                   max_packet_size,
+                                                   max_bandwidth,
                                                    usb_ep_addr_);
             if (status != ZX_OK) {
                 zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
@@ -221,12 +222,8 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
     bool found = false;
     // Find a setting that supports the required bandwidth.
     for (const auto& setting : streaming_settings_) {
-        uint32_t bandwidth =
-            setting.max_packet_size * setting.transactions_per_microframe;
-        // TODO(jocelyndang): figure out why multiple transactions per microframe
-        // isn't working for usb video.
-        if (setting.transactions_per_microframe == 1 &&
-            bandwidth >= required_bandwidth) {
+        uint32_t bandwidth = setting_bandwidth(setting);
+        if (bandwidth >= required_bandwidth) {
             found = true;
             *out_setting = &setting;
             break;
@@ -311,7 +308,7 @@ void UsbVideoStream::QueueRequestLocked() {
     auto req = list_remove_head_type(&free_reqs_, usb_request_t, node);
     ZX_DEBUG_ASSERT(req != nullptr);
     num_free_reqs_--;
-    req->header.length = cur_streaming_setting_->max_packet_size;
+    req->header.length = setting_bandwidth(*cur_streaming_setting_);
     usb_request_queue(&usb_, req);
 }
 
@@ -336,12 +333,12 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
 }
 
 void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
-    // Empty responses should be ignored.
-    if (req->response.actual == 0) {
-        return;
-    }
     if (req->response.status != ZX_OK) {
         zxlogf(ERROR, "usb request failed: %d\n", req->response.status);
+        return;
+    }
+    // Empty responses should be ignored.
+    if (req->response.actual == 0) {
         return;
     }
     // Different payload types have different header types but always share
