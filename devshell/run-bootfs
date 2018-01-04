@@ -1,0 +1,24 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### start fuchsia in qemu with a bootfs
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+qemu_dir="${QEMU_DIR:-$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n ${BUILDTOOLS_QEMU_DIR})/bin}"
+
+case "$FUCHSIA_ARCH" in
+aarch64) arch=arm64 ;;
+x86-64) arch=x86 ;;
+*) echo >&2 "Unexpected FUCHSIA_ARCH=$FUCHSIA_ARCH"; exit 2 ;;
+esac
+
+"${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
+  -o "${ZIRCON_BUILD_DIR}" \
+  -a "${arch}" \
+  -q "${qemu_dir}" \
+  -x "${FUCHSIA_BUILD_DIR}/user.bootfs" \
+  "$@"

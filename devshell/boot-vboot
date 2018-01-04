@@ -3,12 +3,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### run bootserver in cros paver mode
+### [DEPRECATED] (use 'fx boot cros' instead)
 
-## See `fx boot-paver`
-
-set -e
-
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
-
-fx-command-run boot-paver cros
+echo "Run 'fx boot cros' instead."

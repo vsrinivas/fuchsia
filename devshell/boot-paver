@@ -3,82 +3,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### run bootserver in zedboot disk paver mode
+### [DEPRECATED] (now an alias for boot)
 
-## usage: fx boot-paver <machine type> [--no-data] [bootserver arguments]
-##   --no-data  Use FVM images without a /data partition (preserve existing data)
+## [DEPRECATED] (now an alias for boot)
+##
+## [DEPRECATED] usage: fx boot-paver <type> [--no-data] [bootserver arguments]
 
-set -e
+echo
+echo "boot-paver is no longer needed - just run \`boot\` instead"
+echo
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+# TODO(raggi): remove on or after Jan 6, 2018
 
-if [[ $# == 0 ]]; then
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+if [[ "$#" -eq 0 ]]; then
   fx-command-help
-  fx-machine-types
   exit 1
 fi
 
-declare -a disks=()
-ramdisk="${FUCHSIA_BUILD_DIR}/${ramdisk_bin}"
+# motivational sleep
+sleep 5
 
-machine_type="$1"
-shift
-case "${machine_type}" in
-  # TODO(raggi): ramdisk isn't a paver, but, this script will replace `fx boot` at which point this is correct behavior
-  ram)
-    netbootbin="netboot-${ZIRCON_PROJECT}.bin"
-    ramdisk="${FUCHSIA_BUILD_DIR}/${netbootbin}"
-    # TODO(raggi): temporary build invocation until build produces all boot
-    # volumes by default
-    fx-command-run build "${netbootbin}"
-    disks=()
-  ;;
-  efi|acer|nuc)
-    disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}")
-  ;;
-  cros|pixel|vboot)
-    disks=("${disks[@]}" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
-  ;;
-  *)
-  echo "Unsupported machine type: \"${machine_type}\""
-  fx-machine-types
-  exit 1
-esac
-
-# XXX(raggi): this is ugly, but we want to retain argument pass-through to
-# bootserver
-bootserver_args=()
-if [[ "${machine_type}" == "ram" ]]; then
-  bootserver_args=("$@")
-else
-  disks=("${disks[@]}" --fvm "${FUCHSIA_BUILD_DIR}/${fvm_sparse_block}")
-  add_data=true
-
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --no-data)
-        echo "##"
-        echo "## Note: if the target has no pre-existing data partition, then"
-        echo "## none will be created. The resultant system will behave in a"
-        echo "## kind of 'incognito' fashion, as /data will be backed by ram."
-        echo "##"
-        add_data=false
-        shift
-        ;;
-      *)
-        bootserver_args=("${bootserver_args[@]}" "$1")
-        shift
-        ;;
-    esac
-  done
-
-  if $add_data; then
-    disks=("${disks[@]}" --fvm "${FUCHSIA_BUILD_DIR}/${fvm_data_sparse_block}")
-  fi
-fi
-
-exec "${ZIRCON_TOOLS_DIR}/bootserver" \
-  "${disks[@]}" \
-  "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
-  "${ramdisk}" \
-  "${bootserver_args[@]}"
+fx-command-run boot "$@"

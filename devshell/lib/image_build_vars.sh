@@ -8,6 +8,7 @@ fx-config-read
 fx-machine-types() {
   echo "Available machine types:"
   echo "  ram"
+  echo "  bootfs"
   echo "  efi"
   echo "  cros"
   echo "Machine type aliases:"
