@@ -12,10 +12,13 @@
 static constexpr uint32_t kDisplayWidth = 1024;
 static constexpr uint32_t kDisplayHeight = 768;
 
-ScenicScanout::ScenicScanout(GuestView* view) {}
+ScenicScanout::ScenicScanout(GuestView* view)
+    : view_(view),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 
 void ScenicScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
   GpuScanout::FlushRegion(rect);
+  task_runner_->PostTask([this] { view_->InvalidateScene(); });
 }
 
 struct ViewTaskArgs {
@@ -108,9 +111,6 @@ void GuestView::OnSceneInvalidated(
 
   scenic_lib::HostImage image(*memory_, 0u, image_info_.Clone());
   material_.SetTexture(image);
-
-  // TODO(MZ-403): Move this into ScenicScanout::FlushRegion.
-  InvalidateScene();
 }
 
 bool GuestView::OnInputEvent(mozart::InputEventPtr event) {

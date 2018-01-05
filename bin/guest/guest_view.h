@@ -22,6 +22,10 @@ class ScenicScanout : public machina::GpuScanout {
  public:
   ScenicScanout(GuestView* view);
   void FlushRegion(const virtio_gpu_rect_t& rect) override;
+
+ private:
+  GuestView* view_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 };
 
 class GuestView : public mozart::BaseView {
