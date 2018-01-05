@@ -13,13 +13,18 @@ extern crate garnet_public_lib_bluetooth_fidl;
 extern crate garnet_public_lib_power_fidl;
 extern crate tokio_core;
 
+mod cancelable_future;
+
 use bt::gatt;
+use bt::low_energy as le;
+use garnet_public_lib_bluetooth_fidl as bt;
+
+use cancelable_future::{Cancelable, CancelHandle};
 use failure::{Error, Fail};
 use fidl::{ClientEnd, FidlService, InterfacePtr};
 use fuchsia_app::client::ApplicationContext;
 use futures::Future;
 use futures::future::ok as fok;
-use garnet_public_lib_bluetooth_fidl as bt;
 use garnet_public_lib_power_fidl::{BatteryStatus, PowerManager, PowerManagerWatcher};
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -30,6 +35,9 @@ use tokio_core::reactor;
 const BATTERY_LEVEL_ID: u64 = 0;
 const BATTERY_SERVICE_UUID: &'static str = "0000180f-0000-1000-8000-00805f9b34fb";
 const BATTERY_LEVEL_UUID: &'static str = "00002A19-0000-1000-8000-00805f9b34fb";
+
+// Name used when advertising.
+const DEVICE_NAME: &'static str = "FX BLE Battery";
 
 #[derive(Debug)]
 struct BluetoothError(bt::Error);
@@ -154,6 +162,98 @@ impl PowerManagerWatcher::Server for BatteryService {
     }
 }
 
+// Start LE advertising to listen for connections. Advertising is stopped when a
+// central connects and restarted when it disconnects.
+fn start_advertising(state_rc: Rc<RefCell<BatteryPeripheralState>>) -> Result<(), Error> {
+    println!("Listening for BLE centrals...");
+
+    let ad = le::AdvertisingData {
+        name: Some(DEVICE_NAME.to_owned()),
+        tx_power_level: None,
+        appearance: None,
+        service_uuids: Some(vec![BATTERY_SERVICE_UUID.to_string()]),
+        service_data: None,
+        manufacturer_specific_data: None,
+        solicited_service_uuids: None,
+        uris: None,
+    };
+
+    let (delegate_local, delegate_remote) = zx::Channel::create()?;
+    let delegate_ptr = InterfacePtr {
+        inner: ClientEnd::new(delegate_remote),
+        version: le::PeripheralDelegate::VERSION,
+    };
+
+    let mut state = state_rc.borrow_mut();
+    let start_adv = state.peripheral.start_advertising(
+        ad,
+        None,
+        Some(delegate_ptr),
+        60,
+        false,
+    );
+
+    state.delegate_handle = CancelHandle::new();
+    let start_server =
+        Cancelable::new(
+            fidl::Server::new(
+                le::PeripheralDelegate::Dispatcher(BatteryPeripheral { state: state_rc.clone() }),
+                delegate_local,
+                &state.handle,
+            )?,
+            &state.delegate_handle,
+        );
+
+    // Spin up the PeripheralDelegate server.
+    state.handle.spawn(
+        start_adv.and_then(|_| start_server).map_err(
+            |e| {
+                eprintln!("Failed to start advertising {:?}", e);
+                ()
+            },
+        ),
+    );
+    Ok(())
+}
+
+struct BatteryPeripheralState {
+    peripheral: le::Peripheral::Proxy,
+    delegate_handle: CancelHandle,
+    handle: reactor::Handle,
+}
+
+struct BatteryPeripheral {
+    state: Rc<RefCell<BatteryPeripheralState>>,
+}
+
+impl le::PeripheralDelegate::Server for BatteryPeripheral {
+    type OnCentralConnected = fidl::ServerImmediate<()>;
+    fn on_central_connected(
+        &mut self,
+        _advertisement_id: String,
+        central: le::RemoteDevice,
+    ) -> Self::OnCentralConnected {
+        println!("Central connected: {}", central.identifier);
+        fok(())
+    }
+
+    type OnCentralDisconnected = fidl::ServerImmediate<()>;
+    fn on_central_disconnected(&mut self, device_id: String) -> Self::OnCentralDisconnected {
+        println!("Central disconnected: {}", device_id);
+
+        {
+            let state = self.state.borrow();
+            state.delegate_handle.cancel();
+        }
+
+        if let Err(e) = start_advertising(self.state.clone()) {
+            eprintln!("@@ Failed to start advertising {:?}", e);
+        }
+
+        fok(())
+    }
+}
+
 fn main() {
     if let Err(e) = main_res() {
         println!("Error: {:?}", e);
@@ -161,6 +261,23 @@ fn main() {
 }
 
 fn main_res() -> Result<(), Error> {
+    let listen = match std::env::args().nth(1) {
+        Some(ref flag) => {
+            match flag.as_ref() {
+                "--listen" => true,
+                "--help" => {
+                    println!("Options:\n  --listen: listen for BLE connections");
+                    return Ok(());
+                }
+                _ => {
+                    println!("invalid argument: {}", flag);
+                    return Ok(());
+                }
+            }
+        }
+        None => false,
+    };
+
     let mut core = reactor::Core::new()?;
     let handle = core.handle();
 
@@ -244,18 +361,35 @@ fn main_res() -> Result<(), Error> {
         PowerManagerWatcher::Dispatcher(BatteryService::new(state.clone())),
         power_watcher_local,
         &handle,
-    )?.map_err(|e|
-       Error::from(e.context("PowerManagerWatcher server error"))
-    );
+    )?
+        .map_err(|e| {
+            Error::from(e.context("PowerManagerWatcher server error"))
+        });
 
     // Set up the GATT service delegate.
-    let service_delegate_server = fidl::Server::new(
-        bt::ServiceDelegate::Dispatcher(BatteryService::new(state.clone())),
-        delegate_local,
-        &handle,
-    )?.map_err(|e|
-        Error::from(e.context("ServiceDelegate dispatcher server error"))
-    );
+    let service_delegate_server =
+        fidl::Server::new(
+            bt::ServiceDelegate::Dispatcher(BatteryService::new(state.clone())),
+            delegate_local,
+            &handle,
+        )?
+            .map_err(|e| {
+                Error::from(e.context("ServiceDelegate dispatcher server error"))
+            });
+
+    // Listen for incoming connections if the user requested it. Otherwise, this
+    // will simply publish the GATT service without advertising.
+    if listen {
+        let peripheral = app_context.connect_to_service::<le::Peripheral::Service>(
+            &handle,
+        )?;
+        let peripheral_state = Rc::new(RefCell::new(BatteryPeripheralState {
+            peripheral: peripheral,
+            delegate_handle: CancelHandle::new(),
+            handle: handle.clone(),
+        }));
+        start_advertising(peripheral_state)?;
+    }
 
     let main_fut = publish.and_then(|()| power_watcher_server.join(service_delegate_server));
 
