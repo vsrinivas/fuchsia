@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
+
 config("fbl_config") {
   include_dirs = [ "include" ]
 }
 
-source_set("fbl") {
+sdk_source_set("fbl") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "alloc_checker.cpp",

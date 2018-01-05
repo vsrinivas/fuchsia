@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_static_library.gni")
+
 config("zx_config") {
   include_dirs = [ "include" ]
 }
 
-static_library("zx") {
+sdk_static_library("zx") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "channel.cpp",

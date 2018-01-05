@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
+
 config("async_config") {
   include_dirs = [ "include" ]
 }
 
-source_set("async") {
+sdk_source_set("async") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "auto_task.cpp",
@@ -32,7 +34,7 @@ source_set("async") {
   public_configs = [ ":async_config" ]
 }
 
-source_set("default") {
+sdk_source_set("default") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/async/default.h",
@@ -45,7 +47,7 @@ source_set("default") {
   ]
 }
 
-source_set("loop") {
+sdk_source_set("loop") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/async/loop.h",
