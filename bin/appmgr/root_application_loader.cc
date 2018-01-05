@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/url_resolver.h"
+#include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
@@ -33,8 +34,24 @@ void RootApplicationLoader::LoadApplication(
   } else {
     fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
     if (!fd.is_valid() && path[0] != '/') {
+      if (path.find('/') == std::string::npos) {
+        // TODO(abarth): We're currently hardcoding version 0 of the package,
+        // but we'll eventually need to do something smarter.
+        std::string pkg_path = fxl::Concatenate({"/pkgfs/packages/", path, "/0"});
+        fd.reset(open(pkg_path.c_str(), O_DIRECTORY | O_RDONLY));
+        if (fd.is_valid()) {
+          zx::channel directory = fsl::CloneChannelFromFileDescriptor(fd.get());
+          if (directory) {
+            ApplicationPackagePtr package = ApplicationPackage::New();
+            package->directory = std::move(directory);
+            package->resolved_url = fxl::Concatenate({"file://", pkg_path});
+            callback(std::move(package));
+            return;
+          }
+        }
+      }
       for (const auto& entry : path_) {
-        std::string qualified_path = entry + "/" + path;
+        std::string qualified_path = fxl::Concatenate({entry, "/", path});
         fd.reset(open(qualified_path.c_str(), O_RDONLY));
         if (fd.is_valid()) {
           path = qualified_path;

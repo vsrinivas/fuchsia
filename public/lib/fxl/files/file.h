@@ -31,10 +31,13 @@ FXL_EXPORT bool WriteFileInTwoPhases(const std::string& path,
                                      fxl::StringView data,
                                      const std::string& temp_root);
 
-// Reads the contents of the file at the given path and stores the data in
-// result. Returns true if the file was read successfully, otherwise returns
-// false. If this function returns false, |result| will be the empty string.
+// Reads the contents of the file at the given path or file descriptor and
+// stores the data in result. Returns true if the file was read successfully,
+// otherwise returns false. If this function returns false, |result| will be
+// the empty string.
 FXL_EXPORT bool ReadFileToString(const std::string& path, std::string* result);
+FXL_EXPORT bool ReadFileDescriptorToString(int fd, std::string* result);
+FXL_EXPORT bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result);
 
 // Reads the contents of the file at the given path and stores the data in
 // result. Returns true if the file was read successfully, otherwise returns

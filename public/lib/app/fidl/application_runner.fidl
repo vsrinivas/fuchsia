@@ -34,6 +34,11 @@ struct ApplicationPackage {
   // contain a dartx package.
   fsl.SizedVmoTransport? data;
 
+  // A directory containing the contents of the package. For example, if the
+  // application is stored in pkgfs, this directory will be the pkgfs directory
+  // containing the package.
+  handle<channel>? directory;
+
   // Resolved URL of the application. This is the url specified in startup_info
   // after following redirects and resolving relative paths.
   string resolved_url;

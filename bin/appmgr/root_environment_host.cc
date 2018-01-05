@@ -19,7 +19,7 @@ constexpr char kRootLabel[] = "root";
 constexpr char kRootInfoDirName[] = "root_info_experimental";
 
 zx::channel Mount(const char* path) {
-  fxl::UniqueFD fd(open("/", O_RDONLY | O_DIRECTORY | O_ADMIN));
+  fxl::UniqueFD fd(open("/", O_DIRECTORY | O_RDONLY | O_ADMIN));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << "Could not open root directory: errno=" << errno;
     return zx::channel();

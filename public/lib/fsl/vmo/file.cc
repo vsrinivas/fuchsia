@@ -29,10 +29,15 @@ bool VmoFromFd(fxl::UniqueFD fd, SizedVmo* handle_ptr) {
 
 bool VmoFromFilename(const std::string& filename, SizedVmo* handle_ptr) {
   int fd = open(filename.c_str(), O_RDONLY);
-  if (fd == -1) {
-    FXL_LOG(WARNING) << "zx::vmo::open failed to open file " << filename;
+  if (fd == -1)
     return false;
-  }
+  return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
+}
+
+bool VmoFromFilenameAt(int dirfd, const std::string& filename, SizedVmo* handle_ptr) {
+  int fd = openat(dirfd, filename.c_str(), O_RDONLY);
+  if (fd == -1)
+    return false;
   return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
 }
 

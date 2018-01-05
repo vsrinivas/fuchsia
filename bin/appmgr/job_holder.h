@@ -84,7 +84,7 @@ class JobHolder {
       ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
-  void CreateApplicationFromArchive(
+  void CreateApplicationFromPackage(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,

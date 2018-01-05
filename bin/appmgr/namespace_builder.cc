@@ -13,32 +13,9 @@
 #include <unistd.h>
 
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fsl/io/fd.h"
 
 namespace app {
-namespace {
-
-zx::channel CloneChannel(int fd) {
-  zx_handle_t handle[FDIO_MAX_HANDLES];
-  uint32_t type[FDIO_MAX_HANDLES];
-
-  zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
-  if (r < 0 || r == 0)
-    return zx::channel();
-
-  if (type[0] != PA_FDIO_REMOTE) {
-    for (int i = 0; i < r; ++i)
-      zx_handle_close(handle[i]);
-    return zx::channel();
-  }
-
-  // Close any extra handles.
-  for (int i = 1; i < r; ++i)
-    zx_handle_close(handle[i]);
-
-  return zx::channel(handle[0]);
-}
-
-}  // namespace
 
 NamespaceBuilder::NamespaceBuilder() = default;
 
@@ -123,7 +100,7 @@ void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path,
   fxl::UniqueFD dir(open(src_path.c_str(), O_DIRECTORY | O_RDONLY));
   if (!dir.is_valid())
     return;
-  zx::channel handle = CloneChannel(dir.get());
+  zx::channel handle = fsl::CloneChannelFromFileDescriptor(dir.get());
   if (!handle) {
     FXL_DLOG(WARNING) << "Failed to clone channel for " << src_path;
     return;

@@ -25,12 +25,11 @@ namespace files {
 namespace {
 
 template <typename T>
-bool ReadFile(const std::string& path, T* result) {
+bool ReadFileDescriptor(int fd, T* result) {
   FXL_DCHECK(result);
   result->clear();
 
-  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
-  if (!fd.is_valid())
+  if (fd < 0)
     return false;
 
   constexpr size_t kBufferSize = 1 << 16;
@@ -39,7 +38,7 @@ bool ReadFile(const std::string& path, T* result) {
   do {
     offset += bytes_read;
     result->resize(offset + kBufferSize);
-    bytes_read = HANDLE_EINTR(read(fd.get(), &(*result)[offset], kBufferSize));
+    bytes_read = HANDLE_EINTR(read(fd, &(*result)[offset], kBufferSize));
   } while (bytes_read > 0);
 
   if (bytes_read < 0) {
@@ -82,11 +81,22 @@ bool WriteFileInTwoPhases(const std::string& path,
 }
 
 bool ReadFileToString(const std::string& path, std::string* result) {
-  return ReadFile(path, result);
+  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+  return ReadFileDescriptor(fd.get(), result);
+}
+
+bool ReadFileDescriptorToString(int fd, std::string* result) {
+  return ReadFileDescriptor(fd, result);
+}
+
+bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result) {
+  fxl::UniqueFD fd(openat(dirfd, path.c_str(), O_RDONLY));
+  return ReadFileDescriptor(fd.get(), result);
 }
 
 bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
-  return ReadFile(path, result);
+  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+  return ReadFileDescriptor(fd.get(), result);
 }
 
 std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {

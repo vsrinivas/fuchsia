@@ -22,6 +22,9 @@
 #include "garnet/lib/far/format.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
+#include "lib/fsl/io/fd.h"
+#include "lib/fsl/vmo/file.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -285,24 +288,30 @@ void JobHolder::CreateApplication(
         }
 
         if (package) {
-          std::string runner;
-          LaunchType type = Classify(package->data->vmo, &runner);
-          switch (type) {
-            case LaunchType::kProcess:
-              CreateApplicationWithProcess(
-                  std::move(package), std::move(launch_info),
-                  std::move(controller), std::move(application_namespace));
-              break;
-            case LaunchType::kArchive:
-              CreateApplicationFromArchive(
-                  std::move(package), std::move(launch_info),
-                  std::move(controller), std::move(application_namespace));
-              break;
-            case LaunchType::kRunner:
-              CreateApplicationWithRunner(
-                  std::move(package), std::move(launch_info), runner,
-                  std::move(controller), std::move(application_namespace));
-              break;
+          if (package->data) {
+            std::string runner;
+            LaunchType type = Classify(package->data->vmo, &runner);
+            switch (type) {
+              case LaunchType::kProcess:
+                CreateApplicationWithProcess(
+                    std::move(package), std::move(launch_info),
+                    std::move(controller), std::move(application_namespace));
+                break;
+              case LaunchType::kArchive:
+                CreateApplicationFromPackage(
+                    std::move(package), std::move(launch_info),
+                    std::move(controller), std::move(application_namespace));
+                break;
+              case LaunchType::kRunner:
+                CreateApplicationWithRunner(
+                    std::move(package), std::move(launch_info), runner,
+                    std::move(controller), std::move(application_namespace));
+                break;
+            }
+          } else if (package->directory) {
+            CreateApplicationFromPackage(
+                std::move(package), std::move(launch_info),
+                std::move(controller), std::move(application_namespace));
           }
         }
       }));
@@ -416,18 +425,38 @@ void JobHolder::CreateApplicationWithProcess(
   }
 }
 
-void JobHolder::CreateApplicationFromArchive(
+void JobHolder::CreateApplicationFromPackage(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
-  auto file_system =
-      std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
-  zx::channel pkg = file_system->OpenAsDirectory();
-  if (!pkg)
-    return;
   zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
+    return;
+
+  zx::channel pkg;
+  std::unique_ptr<archive::FileSystem> pkg_fs;
+  std::string sandbox_data;
+  std::string runtime_data;
+  fsl::SizedVmo app_data;
+
+  if (package->data) {
+    pkg_fs = std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
+    pkg = pkg_fs->OpenAsDirectory();
+    pkg_fs->GetFileAsString(kSandboxPath, &sandbox_data);
+    if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
+      app_data = pkg_fs->GetFileAsVMO(kAppPath);
+  } else if (package->directory) {
+    fxl::UniqueFD fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+    files::ReadFileToStringAt(fd.get(), kSandboxPath, &sandbox_data);
+    if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
+      VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+    // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
+    // should be able to tear down the file descriptor in a way that gives us
+    // the channel back.
+    pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
+  }
+  if (!pkg)
     return;
 
   // Note that |builder| is only used in the else block below. It is left here
@@ -437,8 +466,7 @@ void JobHolder::CreateApplicationFromArchive(
   builder.AddServices(std::move(svc));
   AddInfoDir(&builder);
 
-  std::string sandbox_data;
-  if (file_system->GetFileAsString(kSandboxPath, &sandbox_data)) {
+  if (!sandbox_data.empty()) {
     SandboxMetadata sandbox;
     if (!sandbox.Parse(sandbox_data)) {
       FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
@@ -454,8 +482,22 @@ void JobHolder::CreateApplicationFromArchive(
   // steps.
   builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
 
-  std::string runtime_data;
-  if (file_system->GetFileAsString(kRuntimePath, &runtime_data)) {
+  if (app_data) {
+    const std::string url = launch_info->url;  // Keep a copy before moving it.
+    zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
+    zx::process process = CreateProcess(job_for_child_, std::move(app_data),
+        kAppArv0, std::move(launch_info), builder.Build());
+
+    if (process) {
+      auto application = std::make_unique<ApplicationControllerImpl>(
+          std::move(controller), this, std::move(pkg_fs),
+          std::move(process), url, GetLabelFromURL(url),
+          std::move(application_namespace), fbl::move(service_dir_channel));
+      ApplicationControllerImpl* key = application.get();
+      info_dir_->AddEntry(application->label(), application->info_dir());
+      applications_.emplace(key, std::move(application));
+    }
+  } else {
     RuntimeMetadata runtime;
     if (!runtime.Parse(runtime_data)) {
       FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
@@ -477,25 +519,8 @@ void JobHolder::CreateApplicationFromArchive(
       return;
     }
     runner->StartApplication(std::move(inner_package), std::move(startup_info),
-                             std::move(file_system),
-                             std::move(application_namespace),
+                             std::move(pkg_fs), std::move(application_namespace),
                              std::move(controller));
-  } else {
-    const std::string url = launch_info->url;  // Keep a copy before moving it.
-    zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
-    zx::process process = CreateProcess(
-        job_for_child_, file_system->GetFileAsVMO(kAppPath),
-        kAppArv0, std::move(launch_info), builder.Build());
-
-    if (process) {
-      auto application = std::make_unique<ApplicationControllerImpl>(
-          std::move(controller), this, std::move(file_system),
-          std::move(process), url, GetLabelFromURL(url),
-          std::move(application_namespace), fbl::move(service_dir_channel));
-      ApplicationControllerImpl* key = application.get();
-      info_dir_->AddEntry(application->label(), application->info_dir());
-      applications_.emplace(key, std::move(application));
-    }
   }
 }
 
