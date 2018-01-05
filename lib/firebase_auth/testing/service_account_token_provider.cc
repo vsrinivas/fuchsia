@@ -365,6 +365,8 @@ std::string ServiceAccountTokenProvider::GetIdentityRequestBody(
   writer.Key("returnSecureToken");
   writer.Bool(true);
 
+  writer.EndObject();
+
   return std::string(string_buffer.GetString(), string_buffer.GetSize());
 }
 
