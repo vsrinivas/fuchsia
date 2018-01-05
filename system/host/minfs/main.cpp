@@ -19,13 +19,11 @@
 #include <fbl/unique_free_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <minfs/fsck.h>
-#include <minfs/minfs.h>
 #include <minfs/host.h>
+#include <minfs/minfs.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-
-extern fbl::RefPtr<minfs::VnodeMinfs> fake_root;
 
 namespace {
 
@@ -34,12 +32,7 @@ int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
 }
 
 int io_setup(fbl::unique_ptr<minfs::Bcache> bc) {
-    fbl::RefPtr<minfs::VnodeMinfs> vn;
-    if (minfs_mount(&vn, fbl::move(bc)) < 0) {
-        return -1;
-    }
-    fake_root = vn;
-    return 0;
+    return emu_mount_bcache(fbl::move(bc));
 }
 
 int is_dir(const char* path, bool* result) {
@@ -361,7 +354,7 @@ int do_ls(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
 }
 
 int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
-    return minfs_mkfs(fbl::move(bc));
+    return Mkfs(fbl::move(bc));
 }
 
 struct {

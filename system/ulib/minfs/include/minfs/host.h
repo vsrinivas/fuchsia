@@ -17,6 +17,8 @@
 #include <unistd.h>
 
 #include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
+#include <minfs/bcache.h>
 
 #define PATH_PREFIX "::"
 #define PREFIX_SIZE 2
@@ -32,6 +34,7 @@ static inline bool host_path(const char* path) {
 }
 int emu_mkfs(const char* path);
 int emu_mount(const char* path);
+int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc);
 
 int emu_open(const char* path, int flags, mode_t mode);
 int emu_close(int fd);

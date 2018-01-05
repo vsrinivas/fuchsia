@@ -8,15 +8,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fs/trace.h>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fs/trace.h>
 #include <zircon/device/device.h>
 
 #include <minfs/format.h>
-#include <minfs/minfs.h>
+#include "minfs-private.h"
 
 namespace minfs {
 

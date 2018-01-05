@@ -17,13 +17,16 @@
 #include <fbl/ref_ptr.h>
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
+#include <minfs/format.h>
+#include <minfs/host.h>
+#include <minfs/minfs.h>
 #include <zircon/assert.h>
 
-#include <minfs/host.h>
-#include <minfs/format.h>
-#include <minfs/minfs.h>
+#include "minfs-private.h"
 
-static zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
+namespace {
+
+zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
     vnattr_t a;
     zx_status_t status = vn->Getattr(&a);
     if (status == ZX_OK) {
@@ -49,7 +52,7 @@ static file_t fdtab[MAXFD];
 
 #define FD_MAGIC 0x45AB0000
 
-static file_t* file_get(int fd) {
+file_t* file_get(int fd) {
     if (((fd)&0xFFFF0000) != FD_MAGIC) {
         return nullptr;
     }
@@ -84,8 +87,10 @@ int status_to_errno(zx_status_t status) {
 #define STATUS(status) \
     FAIL(status_to_errno(status))
 
-fbl::RefPtr<fs::Vnode> fake_root = nullptr;
+fbl::RefPtr<minfs::VnodeMinfs> fake_root = nullptr;
 fs::Vfs fake_vfs;
+
+} // namespace anonymous
 
 int emu_mkfs(const char* path) {
     fbl::unique_fd fd(open(path, O_RDWR));
@@ -108,7 +113,7 @@ int emu_mkfs(const char* path) {
         return -1;
     }
 
-    return minfs_mkfs(fbl::move(bc));
+    return Mkfs(fbl::move(bc));
 }
 
 int emu_mount(const char* path) {
@@ -132,12 +137,11 @@ int emu_mount(const char* path) {
         return -1;
     }
 
-    fbl::RefPtr<minfs::VnodeMinfs> vn;
-    if (minfs_mount(&vn, fbl::move(bc)) < 0) {
-        return -1;
-    }
-    fake_root = vn;
-    return 0;
+    return minfs::minfs_mount(fbl::move(bc), &fake_root);
+}
+
+int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
+    return minfs::minfs_mount(fbl::move(bc), &fake_root) == ZX_OK ? 0 : -1;
 }
 
 // Since this is a host-side tool, the client may be bringing

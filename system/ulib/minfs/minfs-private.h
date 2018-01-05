@@ -33,7 +33,7 @@
 #include <zircon/misc/fnv1hash.h>
 
 #include <minfs/format.h>
-#include "writeback.h"
+#include <minfs/writeback.h>
 
 #define EXTENT_COUNT 5
 
@@ -515,9 +515,10 @@ constexpr size_t GetVmoSizeForDoublyIndirect() {
 void minfs_sync_vnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
 void minfs_dump_info(const minfs_info_t* info);
 void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
-
 void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
-int minfs_mkfs(fbl::unique_ptr<Bcache> bc);
-zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* root_out, fbl::unique_ptr<Bcache> bc);
+
+// Given an input bcache, initialize the filesystem and return a reference to the
+// root node.
+zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out);
 
 } // namespace minfs

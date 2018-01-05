@@ -19,12 +19,16 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-rw-workers.cpp \
     $(LOCAL_DIR)/test-sparse.cpp \
     $(LOCAL_DIR)/test-truncate.cpp \
-
+    system/ulib/bitmap/raw-bitmap.cpp \
+    system/ulib/fs/vfs.cpp \
+    system/ulib/fs/vnode.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/unittest/include \
+    -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/fs/include \
     -Isystem/ulib/fs-management/include \
     -Isystem/ulib/minfs/include \
     -Isystem/ulib/fbl/include \
@@ -39,5 +43,11 @@ MODULE_HOST_LIBS := \
     system/ulib/pretty.hostlib \
     system/ulib/minfs.hostlib \
     system/ulib/fbl.hostlib
+
+# The VFS library uses Clang's thread annotations extensively, but
+# the mutex implementation is not shared between target / host. As a
+# consequence, host-side thread annotations are disabled so all
+# thread annotation macros (referencing mutexes) are ignored.
+MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 
 include make/module.mk

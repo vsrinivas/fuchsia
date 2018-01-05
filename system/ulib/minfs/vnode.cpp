@@ -20,7 +20,7 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include <minfs/minfs.h>
+#include "minfs-private.h"
 
 // #define DEBUG_PRINTF
 #ifdef DEBUG_PRINTF

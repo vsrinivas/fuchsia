@@ -25,7 +25,7 @@
 #endif
 
 #include <minfs/fsck.h>
-#include <minfs/minfs.h>
+#include "minfs-private.h"
 
 // #define DEBUG_PRINTF
 #ifdef DEBUG_PRINTF
@@ -946,7 +946,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
     return ZX_OK;
 }
 
-zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc) {
+zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out) {
     TRACE_DURATION("minfs", "minfs_mount");
     zx_status_t status;
 
@@ -970,9 +970,23 @@ zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc
     }
 
     ZX_DEBUG_ASSERT(vn->IsDirectory());
-    *out = fbl::move(vn);
+    *root_out = fbl::move(vn);
     return ZX_OK;
 }
+
+#ifdef __Fuchsia__
+zx_status_t MountAndServe(fs::Vfs *vfs, fbl::unique_ptr<Bcache> bc, zx::channel mount_channel) {
+    TRACE_DURATION("minfs", "MountAndServe");
+
+    fbl::RefPtr<VnodeMinfs> vn;
+    zx_status_t status = minfs_mount(fbl::move(bc), &vn);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return vfs->ServeDirectory(fbl::move(vn), fbl::move(mount_channel));
+}
+#endif
 
 zx_status_t Minfs::Unmount() {
 #ifdef __Fuchsia__
@@ -991,7 +1005,7 @@ zx_status_t Minfs::Unmount() {
     return ZX_OK;
 }
 
-int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
+zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
     minfs_info_t info;
     memset(&info, 0x00, sizeof(info));
     info.magic0 = kMinfsMagic0;
@@ -1004,6 +1018,7 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     uint32_t blocks = 0;
     uint32_t inodes = 0;
 
+    zx_status_t status;
 #ifdef __Fuchsia__
     fvm_info_t fvm_info;
     if (bc->FVMQuery(&fvm_info) == ZX_OK) {
@@ -1020,34 +1035,34 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
         extend_request_t request;
         request.length = 1;
         request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
-        if (bc->FVMReset()) {
-            fprintf(stderr, "minfs mkfs: Failed to reset FVM slices\n");
-            return -1;
+        if ((status = bc->FVMReset()) != ZX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to reset FVM slices: %d\n", status);
+            return status;
         }
-        if (bc->FVMExtend(&request) != ZX_OK) {
-            fprintf(stderr, "minfs mkfs: Failed to allocate inode bitmap\n");
-            return -1;
+        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate inode bitmap: %d\n", status);
+            return status;
         }
         info.ibm_slices = 1;
         request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
-        if (bc->FVMExtend(&request) != ZX_OK) {
-            fprintf(stderr, "minfs mkfs: Failed to allocate data bitmap\n");
+        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate data bitmap: %d\n", status);
             minfs_free_slices(bc.get(), &info);
-            return -1;
+            return status;
         }
         info.abm_slices = 1;
         request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
-        if (bc->FVMExtend(&request) != ZX_OK) {
-            fprintf(stderr, "minfs mkfs: Failed to allocate inode table\n");
+        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate inode table: %d\n", status);
             minfs_free_slices(bc.get(), &info);
-            return -1;
+            return status;
         }
         info.ino_slices = 1;
         request.offset = kFVMBlockDataStart / kBlocksPerSlice;
-        if (bc->FVMExtend(&request) != ZX_OK) {
+        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
             fprintf(stderr, "minfs mkfs: Failed to allocate data blocks\n");
             minfs_free_slices(bc.get(), &info);
-            return -1;
+            return status;
         }
         info.dat_slices = 1;
 
@@ -1105,7 +1120,6 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     // By allocating the bitmap and then shrinking it, we keep the underlying
     // storage a block multiple but ensure we can't allocate beyond the last
     // real block or inode.
-    zx_status_t status;
     if ((status = abm.Reset(fbl::round_up(info.block_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap\n");
         minfs_free_slices(bc.get(), &info);
@@ -1177,7 +1191,7 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     memset(blk, 0, sizeof(blk));
     memcpy(blk, &info, sizeof(info));
     bc->Writeblk(0, blk);
-    return 0;
+    return ZX_OK;
 }
 
 zx_status_t Minfs::ReadIbm(blk_t bno, void* data) {

@@ -31,11 +31,6 @@ int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
 }
 
 int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
-    fbl::RefPtr<minfs::VnodeMinfs> vn;
-    if (minfs_mount(&vn, fbl::move(bc)) < 0) {
-        return -1;
-    }
-
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -46,16 +41,17 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
     fs::Vfs vfs(loop.async());
     trace::TraceProvider trace_provider(loop.async());
     vfs.SetReadonly(readonly);
-    zx_status_t status;
-    if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
-        return status;
+
+    if (MountAndServe(&vfs, fbl::move(bc), zx::channel(h)) != ZX_OK) {
+        return -1;
     }
+
     loop.Run();
     return 0;
 }
 
 int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
-    return minfs_mkfs(fbl::move(bc));
+    return Mkfs(fbl::move(bc));
 }
 
 struct {
