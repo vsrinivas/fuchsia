@@ -153,7 +153,8 @@ fsentry_t* import_manifest_entry(const char* fn, int lineno, const char* dst, co
         return NULL;
     }
     if (s.st_size > INT32_MAX) {
-        fprintf(stderr, "%s:%d: file too large '%s'\n", fn, lineno, src);
+        fprintf(stderr, "%s:%d: file too large '%s': %jd > %jd\n",
+                fn, lineno, src, (intmax_t)s.st_size, (intmax_t)INT32_MAX);
         return NULL;
     }
 
@@ -174,7 +175,8 @@ fsentry_t* import_directory_entry(const char* dst, const char* src, struct stat*
     fsentry_t* e;
 
     if (s->st_size > INT32_MAX) {
-        fprintf(stderr, "error: file too large '%s'\n", src);
+        fprintf(stderr, "error: file too large '%s': %jd > %jd\n",
+                src, (intmax_t)s->st_size, (intmax_t)INT32_MAX);
         return NULL;
     }
 
@@ -1328,7 +1330,8 @@ int main(int argc, char **argv) {
                 e->offset = off;
                 off += PAGEALIGN(e->length);
                 if (off > INT32_MAX) {
-                    fprintf(stderr, "error: userfs too large\n");
+                    fprintf(stderr, "error: userfs too large: %jd > %jd\n",
+                            (intmax_t)off, (intmax_t)INT32_MAX);
                     return -1;
                 }
                 last_entry = e;
