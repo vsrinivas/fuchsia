@@ -51,7 +51,7 @@ int printf_xy(int x, int y, char attr, char* fmt, ...) __PRINTFLIKE(4, 5);
 #define GREEN 2
 #define CYAN 3
 #define RED 4
-#define ZIRCON 5
+#define MAGENTA 5
 #define BROWN 6
 #define LIGHTGRAY 7
 #define DARKGRAY 8
@@ -59,7 +59,7 @@ int printf_xy(int x, int y, char attr, char* fmt, ...) __PRINTFLIKE(4, 5);
 #define LIGHTGREEN 10
 #define LIGHTCYAN 11
 #define LIGHTRED 12
-#define LIGHTZIRCON 13
+#define LIGHTMAGENTA 13
 #define YELLOW 14
 #define WHITE 15
 
