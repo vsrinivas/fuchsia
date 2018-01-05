@@ -24,7 +24,7 @@ ZirconPlatformPciDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::Cache
     uint64_t size;
     zx_handle_t handle;
     zx_status_t status =
-        pci().ops->map_resource(pci().ctx, pci_bar, cache_policy, &addr, &size, &handle);
+        pci_map_bar(&pci(), pci_bar, cache_policy, &addr, &size, &handle);
     if (status != ZX_OK)
         return DRETP(nullptr, "map_resource failed");
 
@@ -38,11 +38,12 @@ ZirconPlatformPciDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::Cache
 
 bool ZirconPlatformPciDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 {
-    if (!value || addr >= cfg_size_)
-        return DRETF(false, "bad value or addr");
+    if (!value)
+        return DRETF(false, "bad value");
 
-    *value =
-        *reinterpret_cast<const uint16_t*>(reinterpret_cast<const uint8_t*>(pci_config()) + addr);
+    zx_status_t status = pci_config_read16(&pci(), addr, value);
+    if (status != ZX_OK)
+        return DRETF(false, "failed to read config: %d\n", status);
 
     return true;
 }
@@ -51,7 +52,7 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
 {
     uint32_t max_irqs;
     zx_status_t status =
-        pci().ops->query_irq_mode_caps(pci().ctx, ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
+        pci_query_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
     if (status != ZX_OK)
         return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
 
@@ -59,16 +60,16 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
         return DRETP(nullptr, "max_irqs is zero");
 
     // Mode must be Disabled before we can request Legacy
-    status = pci().ops->set_irq_mode(pci().ctx, ZX_PCIE_IRQ_MODE_DISABLED, 0);
+    status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_DISABLED, 0);
     if (status != ZX_OK)
         return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
 
-    status = pci().ops->set_irq_mode(pci().ctx, ZX_PCIE_IRQ_MODE_LEGACY, 1);
+    status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1);
     if (status != ZX_OK)
         return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
 
     zx_handle_t interrupt_handle;
-    status = pci().ops->map_interrupt(pci().ctx, 0, &interrupt_handle);
+    status = pci_map_interrupt(&pci(), 0, &interrupt_handle);
     if (status < 0)
         return DRETP(nullptr, "map_interrupt failed (%d)", status);
 
@@ -77,12 +78,6 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
 
 ZirconPlatformPciDevice::~ZirconPlatformPciDevice()
 {
-    // Clean up the pci config mapping that was made in ::Create().
-    zx_status_t status =
-        zx_vmar_unmap(zx_vmar_root_self(), reinterpret_cast<uintptr_t>(cfg_), cfg_size_);
-    if (status != ZX_OK)
-        DLOG("error unmapping %p (len %zu): %d\n", cfg_, cfg_size_, status);
-    zx_handle_close(cfg_handle_);
 }
 
 std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle)
@@ -96,16 +91,8 @@ std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle
     if (status != ZX_OK)
         return DRETP(nullptr, "pci protocol is null, cannot create PlatformPciDevice");
 
-    pci_config_t* cfg;
-    size_t cfg_size;
-    zx_handle_t cfg_handle;
-    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   reinterpret_cast<void**>(&cfg), &cfg_size, &cfg_handle);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "failed to map pci config, cannot create PlatformPciDevice");
-
     return std::unique_ptr<PlatformPciDevice>(
-        new ZirconPlatformPciDevice(zx_device, pci, cfg, cfg_size, cfg_handle));
+        new ZirconPlatformPciDevice(zx_device, pci));
 }
 
 } // namespace

@@ -13,9 +13,8 @@ namespace magma {
 
 class ZirconPlatformPciDevice : public PlatformPciDevice {
 public:
-    ZirconPlatformPciDevice(zx_device_t* zx_device, pci_protocol_t& pci, pci_config_t* cfg,
-                            size_t cfg_size, zx_handle_t cfg_handle)
-        : zx_device_(zx_device), pci_(pci), cfg_(cfg), cfg_size_(cfg_size), cfg_handle_(cfg_handle)
+    ZirconPlatformPciDevice(zx_device_t* zx_device, pci_protocol_t& pci)
+        : zx_device_(zx_device), pci_(pci)
     {
     }
 
@@ -32,14 +31,10 @@ public:
 
 private:
     zx_device_t* zx_device() const { return zx_device_; }
-    const pci_protocol_t& pci() const { return pci_; }
-    pci_config_t* pci_config() const { return cfg_; }
+    pci_protocol_t& pci() { return pci_; }
 
     zx_device_t* zx_device_;
     pci_protocol_t pci_;
-    pci_config_t* cfg_;
-    size_t cfg_size_;
-    zx_handle_t cfg_handle_;
 };
 
 } // namespace
