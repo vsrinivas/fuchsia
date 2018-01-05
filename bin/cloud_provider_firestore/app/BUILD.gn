@@ -26,6 +26,9 @@ source_set("lib") {
   sources = [
     "cloud_provider_impl.cc",
     "cloud_provider_impl.h",
+    "credentials_provider.h",
+    "credentials_provider_impl.cc",
+    "credentials_provider_impl.h",
     "device_set_impl.cc",
     "device_set_impl.h",
     "factory_impl.cc",
@@ -60,6 +63,7 @@ source_set("unittests") {
 
   sources = [
     "cloud_provider_impl_unittest.cc",
+    "credentials_provider_impl_unittest.cc",
     "device_set_impl_unittest.cc",
     "factory_impl_unittest.cc",
     "page_cloud_impl_unittest.cc",
