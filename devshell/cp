@@ -3,12 +3,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### copy a file to a target device
+### copy a file to/from a target device
 
-## usage: fx cp SRC DST
-## Copies a file from the host to the target device.
+## usage: fx cp [--to-target|--to-host] SRC DST
+##
+## Copies a file from the host to the target device, or vice versa.
+##
+## --to-target: copy file SRC from host to DST on the target
+## --to-host: copy file SRC from target to DST on the host
+##
+## The default is to copy files to the target.
+
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+to_target=true
+if [[ $# -eq 3 ]]; then
+  case "$1" in
+  --to-target)
+    to_target=true
+    ;;
+  --to-host)
+    to_target=false
+    ;;
+  *)
+    fx-command-help
+    exit 1
+  esac
+  shift
+fi
 
 if [[ $# -ne 2 ]]; then
   fx-command-help
@@ -19,7 +42,14 @@ src=$1
 dst=$2
 host="$(fx-command-run netaddr --fuchsia)"
 
-fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF
+if [[ "${to_target}" = "true" ]]; then
+  fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF
 - rm ${dst}
 put ${src} ${dst}
 EOF
+else
+  rm -f -- "${dst}"
+  fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF
+get ${src} ${dst}
+EOF
+fi
