@@ -62,10 +62,16 @@ function fx-command-run {
   "${command_path}" "$@"
 }
 
-function fx-command-help {
-  if grep '^## ' "$0" > /dev/null; then
-    sed -n 's/^## //p' < "$0"
+function fx-print-command-help {
+  local -r command_path="$1"
+  if grep '^## ' "$command_path" > /dev/null; then
+    sed -n -e 's/^## //p' -e 's/^##$//p' < "$command_path"
   else
-    echo "No help found. Try \`fx $0 -h\`"
+    local -r command_name=$(basename "$command_path")
+    echo "No help found. Try \`fx $command_name -h\`"
   fi
+}
+
+function fx-command-help {
+  fx-print-command-help "$0"
 }

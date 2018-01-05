@@ -4,8 +4,7 @@
 # found in the LICENSE file.
 
 function get_build_dir {
-  local vars="${fuchsia_dir}/scripts/devshell/lib/vars.sh"
-  (source "${vars}" && fx-config-read-if-present && echo "${FUCHSIA_BUILD_DIR}")
+  (source "${vars_sh}" && fx-config-read-if-present && echo "${FUCHSIA_BUILD_DIR}")
 }
 
 function commands {
@@ -69,9 +68,10 @@ function help {
     done | column -t -s '|' -c 2
   else
     local cmd_path="$(find_command "${cmd}")"
-    if [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]] &&
-         grep '^## ' "${cmd_path}" > /dev/null; then
-      sed -n -e 's/^## //p' -e 's/^##$//p' < "${cmd_path}"
+    if [[ -z "$cmd_path" ]]; then
+      echo "Command not found"
+    elif [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]]; then
+      fx-print-command-help "${cmd_path}"
     else
       echo "No help found. Try \`fx ${cmd} -h\`"
     fi
@@ -127,6 +127,9 @@ if [[ -z "${fuchsia_dir}" ]]; then
   done
 fi
 
+declare -r vars_sh="${fuchsia_dir}/scripts/devshell/lib/vars.sh"
+source "${vars_sh}"
+
 while [[ $# -ne 0 ]]; do
   case $1 in
     --config)
@@ -174,16 +177,6 @@ if [[ $# -lt 1 ]]; then
 fi
 
 command_name="$1"
-
-# The "help" command is built-in and just prints the usage.
-#
-# Rather than adding more built-in commands, please add separate scripts in the
-# "devshell" directory.
-if [[ "$command_name" == "help" ]]; then
-  usage
-  exit 0
-fi
-
 command_path="$(find_command ${command_name})"
 
 if [[ $? -ne 0 ]]; then
