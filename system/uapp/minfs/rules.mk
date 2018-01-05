@@ -36,8 +36,19 @@ MODULE_LIBS := \
 
 include make/module.mk
 
+# host minfs tool
+
+MODULE := $(LOCAL_DIR).host
+
+MODULE_NAME := minfs
+
+MODULE_TYPE := hostapp
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/main-host.cpp \
+
 MODULE_HOST_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/main-host.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
@@ -51,17 +62,6 @@ MODULE_HOST_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/minfs/include \
-
-# host minfs tool
-
-MODULE := $(LOCAL_DIR).host
-
-MODULE_NAME := minfs
-
-MODULE_TYPE := hostapp
-
-MODULE_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 
