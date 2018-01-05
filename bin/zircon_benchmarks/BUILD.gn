@@ -87,9 +87,15 @@ package("zircon_benchmarks") {
     ":test",
   ]
 
+  perf_tests = [ {
+        name = "zircon_benchmarks"
+      } ]
+
+  #TODO(kjharland, IN-210): Delete this rule after perf tests are running on CI.
   binaries = [ {
         name = "zircon_benchmarks"
       } ]
+
   tests = [ {
         name = "zircon_benchmarks_test"
       } ]
