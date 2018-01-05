@@ -76,6 +76,15 @@ public:
              std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) override;
 
 private:
+    struct BufferReference {
+        uint64_t refcount = 1;
+        std::shared_ptr<MagmaSystemBuffer> buffer;
+    };
+    struct SemaphoreReference {
+        uint64_t refcount = 1;
+        std::shared_ptr<MagmaSystemSemaphore> semaphore;
+    };
+
     // MagmaSystemContext::Owner
     std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) override
     {
@@ -89,8 +98,8 @@ private:
     std::weak_ptr<MagmaSystemDevice> device_;
     msd_connection_unique_ptr_t msd_connection_;
     std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
-    std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
-    std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemSemaphore>> semaphore_map_;
+    std::unordered_map<uint64_t, BufferReference> buffer_map_;
+    std::unordered_map<uint64_t, SemaphoreReference> semaphore_map_;
 
     bool has_display_capability_;
     bool has_render_capability_;

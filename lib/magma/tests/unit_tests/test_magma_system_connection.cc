@@ -114,8 +114,11 @@ TEST(MagmaSystemConnection, BufferManagement)
     EXPECT_NE(get_buf, nullptr);
     EXPECT_EQ(get_buf->id(), id); // they are shared ptrs after all
 
-    // should not be able to import it again
-    EXPECT_FALSE(connection.ImportBuffer(duplicate_handle, &id));
+    EXPECT_TRUE(connection.ImportBuffer(duplicate_handle, &id));
+
+    // freeing the allocated buffer should cause refcount to drop to 1
+    EXPECT_TRUE(connection.ReleaseBuffer(id));
+    EXPECT_NE(connection.LookupBuffer(id), nullptr);
 
     // freeing the allocated buffer should work
     EXPECT_TRUE(connection.ReleaseBuffer(id));
@@ -154,8 +157,11 @@ TEST(MagmaSystemConnection, Semaphores)
     EXPECT_NE(system_semaphore, nullptr);
     EXPECT_EQ(system_semaphore->platform_semaphore()->id(), semaphore->id());
 
-    // should not be able to import it again
-    EXPECT_FALSE(connection.ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE));
+    EXPECT_TRUE(connection.ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE));
+
+    // freeing the allocated semaphore should decrease refcount to 1
+    EXPECT_TRUE(connection.ReleaseObject(semaphore->id(), magma::PlatformObject::SEMAPHORE));
+    EXPECT_NE(connection.LookupSemaphore(semaphore->id()), nullptr);
 
     // freeing the allocated buffer should work
     EXPECT_TRUE(connection.ReleaseObject(semaphore->id(), magma::PlatformObject::SEMAPHORE));

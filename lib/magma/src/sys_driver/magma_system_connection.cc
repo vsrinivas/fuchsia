@@ -134,10 +134,15 @@ bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
     uint64_t id = buf->id();
 
     auto iter = buffer_map_.find(id);
-    if (iter != buffer_map_.end())
-        return DRETF(false, "buffer 0x%" PRIx64 " already imported", id);
+    if (iter != buffer_map_.end()) {
+        iter->second.refcount++;
+        return true;
+    }
 
-    buffer_map_.insert(std::make_pair(id, buf));
+    BufferReference ref;
+    ref.buffer = buf;
+
+    buffer_map_.insert(std::make_pair(id, ref));
     *id_out = id;
     return true;
 }
@@ -152,8 +157,11 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to free invalid buffer id");
 
+    if (--iter->second.refcount > 0)
+        return true;
+
     for (auto& pair : context_map_) {
-        pair.second->ReleaseBuffer(iter->second);
+        pair.second->ReleaseBuffer(iter->second.buffer);
     }
 
     buffer_map_.erase(iter);
@@ -170,8 +178,8 @@ bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t 
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to gpu map invalid buffer id");
-    msd_connection_map_buffer_gpu(msd_connection(), iter->second->msd_buf(), gpu_va, page_offset,
-                                  page_count, flags);
+    msd_connection_map_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va,
+                                  page_offset, page_count, flags);
 
     return true;
 }
@@ -181,7 +189,7 @@ bool MagmaSystemConnection::UnmapBufferGpu(uint64_t id, uint64_t gpu_va)
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to gpu unmap invalid buffer id");
-    msd_connection_unmap_buffer_gpu(msd_connection(), iter->second->msd_buf(), gpu_va);
+    msd_connection_unmap_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va);
 
     return true;
 }
@@ -191,7 +199,7 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to commit invalid buffer id");
-    msd_connection_commit_buffer(msd_connection(), iter->second->msd_buf(), page_offset,
+    msd_connection_commit_buffer(msd_connection(), iter->second.buffer->msd_buf(), page_offset,
                                  page_count);
 
     return true;
@@ -216,14 +224,18 @@ bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject:
                 return DRETF(false, "failed to get semaphore id for handle");
 
             auto iter = semaphore_map_.find(id);
-            if (iter != semaphore_map_.end())
-                return DRETF(false, "semaphore 0x%" PRIx64 " already imported", id);
+            if (iter != semaphore_map_.end()) {
+                iter->second.refcount++;
+                return true;
+            }
 
             auto semaphore = MagmaSystemSemaphore::Create(magma::PlatformSemaphore::Import(handle));
             if (!semaphore)
                 return DRETF(false, "failed to import platform semaphore");
 
-            semaphore_map_.insert(std::make_pair(id, std::move(semaphore)));
+            SemaphoreReference ref;
+            ref.semaphore = std::move(semaphore);
+            semaphore_map_.insert(std::make_pair(id, ref));
         } break;
     }
 
@@ -240,6 +252,9 @@ bool MagmaSystemConnection::ReleaseObject(uint64_t object_id,
                 return DRETF(false, "Attempting to free invalid semaphore id 0x%" PRIx64,
                              object_id);
 
+            if (--iter->second.refcount > 0)
+                return true;
+
             semaphore_map_.erase(iter);
         } break;
     }
@@ -252,7 +267,7 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t 
     if (iter == buffer_map_.end())
         return DRETP(nullptr, "Attempting to lookup invalid buffer id");
 
-    return iter->second;
+    return iter->second.buffer;
 }
 
 std::shared_ptr<MagmaSystemSemaphore> MagmaSystemConnection::LookupSemaphore(uint64_t id)
@@ -260,7 +275,7 @@ std::shared_ptr<MagmaSystemSemaphore> MagmaSystemConnection::LookupSemaphore(uin
     auto iter = semaphore_map_.find(id);
     if (iter == semaphore_map_.end())
         return nullptr;
-    return iter->second;
+    return iter->second.semaphore;
 }
 
 magma::Status MagmaSystemConnection::PageFlip(
