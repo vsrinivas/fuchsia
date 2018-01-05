@@ -102,13 +102,14 @@ static bool match_test_names(const char* dirent_name, const char** test_names,
 }
 
 static bool run_tests(const char* dirn, const char** test_names, const int num_test_names,
-                      const char* output_dir) {
+                      const char* output_dir, FILE* summary_json) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
         return false;
     }
 
     int init_failed_count = failed_count;
+    int test_count = 0;
     struct dirent* de;
     struct stat stat_buf;
     while ((de = readdir(dir)) != NULL) {
@@ -121,7 +122,11 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
             continue;
         }
 
-        total_count++;
+        if (summary_json != NULL && test_count != 0) {
+            fprintf(summary_json, ",\n");
+        }
+
+        test_count++;
         if (verbosity) {
             printf(
                 "\n------------------------------------------------\n"
@@ -152,7 +157,7 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
             snprintf(output_path, sizeof(output_path), "%s/%s.out", output_dir, output_name);
             int outfd = open(output_path, O_CREAT | O_WRONLY | O_APPEND, 0664);
             if (outfd < 0) {
-                printf("FAILURE: Failed to open output file %s", output_path);
+                printf("FAILURE: Failed to open output file %s\n", output_path);
                 continue;
             }
             // Set the file as the subprocess's stdout and stderr.
@@ -166,8 +171,7 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
         if (status < 0) {
             printf("FAILURE: Failed to launch %s: %d: %s\n", de->d_name, status, errmsg);
             fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);
-            failed_count++;
-            continue;
+            goto failure;
         }
 
         status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED,
@@ -175,8 +179,7 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
         if (status != ZX_OK) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
             fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);
-            failed_count++;
-            continue;
+            goto failure;
         }
 
         // read the return code
@@ -187,20 +190,30 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
         if (status < 0) {
             printf("FAILURE: Failed to get process return code %s: %d\n", de->d_name, status);
             fail_test(&failures, de->d_name, FAILED_TO_RETURN_CODE, 0);
-            failed_count++;
-            continue;
+            goto failure;
         }
 
-        if (proc_info.return_code == 0) {
-            printf("PASSED: %s passed\n", de->d_name);
-        } else {
+        if (proc_info.return_code != 0) {
             printf("FAILED: %s exited with nonzero status: %d\n", de->d_name, proc_info.return_code);
             fail_test(&failures, de->d_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
-            failed_count++;
+            goto failure;
+        }
+
+        printf("PASSED: %s passed\n", de->d_name);
+        if (summary_json != NULL) {
+            fprintf(summary_json, "{\"name\": \"%s\", \"result\": \"PASS\"}", name);
+        }
+        continue;
+
+    failure:
+        failed_count++;
+        if (summary_json != NULL) {
+            fprintf(summary_json, "{\"name\": \"%s\", \"result\": \"FAIL\"}", name);
         }
     }
 
     closedir(dir);
+    total_count += test_count;
     return (init_failed_count == failed_count);
 }
 
@@ -230,7 +243,16 @@ int usage(char* name) {
             "   -a: Turn on All tests                              \n"
             "   -t: Filter tests by name                           \n"
             "       (accepts a comma-separated list)               \n"
-            "   -o: Write test output to a directory               \n", name);
+            "   -o: Write test output to a directory               \n"
+            "\n"
+            "If -o is enabled, then a JSON summary of the test     \n"
+            "results will be written to a file named 'summary.json'\n"
+            "under the desired directory, in addition to each      \n"
+            "test's standard output and error.                     \n"
+            "The summary contains a listing of the tests executed  \n"
+            "by full path (e.g. /boot/test/core/futex_test) as well\n"
+            "as whether the test passed or failed. For details, see\n"
+            "//system/uapp/runtests/summary-schema.json            \n", name);
     return -1;
 }
 
@@ -315,6 +337,24 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    // Create a summary JSON file if there's an output directory.
+    //
+    // The summary JSON file is useful primarily for providing a
+    // machine-readable summary of test results, and to allow bots to access
+    // test output without having to enumerate a directory.
+    FILE* summary_json = NULL;
+    if (output_dir != NULL) {
+        char summary_path[64 + NAME_MAX];
+        snprintf(summary_path, sizeof(summary_path), "%s/summary.json", output_dir);
+        summary_json = fopen(summary_path, "w");
+        if (summary_json != NULL) {
+            fprintf(summary_json, "{\"tests\": [\n");
+        } else {
+            printf("Failed: Could not create file %s\n", summary_path);
+            return -1;
+        }
+    }
+
     bool success = true;
     for (i = 0; i < num_test_dirs; i++) {
         if (stat(test_dirs[i], &st) < 0) {
@@ -327,15 +367,26 @@ int main(int argc, char** argv) {
         }
 
         // Don't continue running tests if one directory failed.
-        success = run_tests(test_dirs[i], test_names, num_test_names, output_dir);
+        success = run_tests(test_dirs[i], test_names, num_test_names, output_dir,
+                            summary_json);
         if (!success) {
             break;
         }
     }
     free(test_names);
 
-    // Sync output filesystem.
+    // It's not catastrophic if we can't unset it; we're just trying to clean up
+    unsetenv(TEST_ENV_NAME);
+
     if (output_dir != NULL) {
+        // Close summary JSON file.
+        fprintf(summary_json, "]}\n");
+        if (fclose(summary_json)) {
+            printf("Failed: Could not close 'summary.json'.\n");
+            return -1;
+        }
+
+        // Sync output filesystem.
         int fd = open(output_dir, O_RDONLY);
         if (fd < 0) {
             printf("Failed: Could not open %s", output_dir);
@@ -345,9 +396,6 @@ int main(int argc, char** argv) {
             close(fd);
         }
     }
-
-    // It's not catastrophic if we can't unset it; we're just trying to clean up
-    unsetenv(TEST_ENV_NAME);
 
     if (failed_count) {
         printf("\nThe following tests failed:\n");

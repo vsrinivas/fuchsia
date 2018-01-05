@@ -1,0 +1,28 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+
+    "type": "object",
+    "properties": {
+        "tests": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/test"
+            }
+        }
+    },
+    "required": [ "tests" ],
+
+    "definitions": {
+        "test": {
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "result": {
+                    "type": "string",
+                    "enum": ["PASS", "FAIL"]
+                }
+            },
+            "required": [ "name", "result" ]
+        }
+    }
+}
