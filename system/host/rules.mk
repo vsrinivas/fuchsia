@@ -5,12 +5,15 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 HOSTAPPS := \
+	$(LOCAL_DIR)/blobstore/rules.mk \
 	$(LOCAL_DIR)/bootserver/rules.mk \
 	$(LOCAL_DIR)/fidl/rules.mk \
+	$(LOCAL_DIR)/fvm/rules.mk \
 	$(LOCAL_DIR)/kernel-buildsig/rules.mk \
 	$(LOCAL_DIR)/loglistener/rules.mk \
 	$(LOCAL_DIR)/mdi/rules.mk \
 	$(LOCAL_DIR)/merkleroot/rules.mk \
+	$(LOCAL_DIR)/minfs/rules.mk \
 	$(LOCAL_DIR)/mkbootfs/rules.mk \
 	$(LOCAL_DIR)/mkfs-msdosfs/rules.mk \
 	$(LOCAL_DIR)/mkkdtb/rules.mk \

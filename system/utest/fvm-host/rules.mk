@@ -10,19 +10,19 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
-    system/uapp/fvm/container/container.cpp \
-    system/uapp/fvm/container/fvm.cpp \
-    system/uapp/fvm/container/sparse.cpp \
-    system/uapp/fvm/format/format.cpp \
-    system/uapp/fvm/format/minfs.cpp \
-    system/uapp/fvm/format/blobstore.cpp \
+    system/host/fvm/container/container.cpp \
+    system/host/fvm/container/fvm.cpp \
+    system/host/fvm/container/sparse.cpp \
+    system/host/fvm/format/format.cpp \
+    system/host/fvm/format/minfs.cpp \
+    system/host/fvm/format/blobstore.cpp \
 
 MODULE_NAME := fvm-host-test
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
-    -Isystem/uapp/fvm/include \
+    -Isystem/host/fvm/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fvm/include \
     -Isystem/ulib/digest/include \
@@ -38,7 +38,7 @@ MODULE_COMPILEFLAGS := \
 
 MODULE_HOST_LIBS := \
     third_party/ulib/uboringssl.hostlib \
-    system/uapp/fvm.hostlib \
+    system/ulib/fvm.hostlib \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib \
     system/ulib/minfs.hostlib \
