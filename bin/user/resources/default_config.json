@@ -1,11 +1,11 @@
 {
   "startup_agents": [
-    "agents/module_suggester.dartx",
-    "agents/eddystone_agent",
+    "module_suggester",
+    "eddystone_agent",
     "agents/maxwell_btl",
     "agents/maxwell_entity_selector",
     "agents/maxwell_proposal_maker",
-    "agents/usage_log.dartx"
+    "usage_log"
   ],
   "kronk": "https://storage.googleapis.com/maxwell-agents/kronk-2017.12.16.21.27",
   "mi_dashboard": true
