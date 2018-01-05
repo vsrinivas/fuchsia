@@ -167,8 +167,12 @@ if [ "${SECOND_STAGE}" != "true" ]; then
     # Copy ourselves into the chroot and run the second stage.
     cp "${BASH_SOURCE[0]}" "${1}/second-stage.sh"
     mount --bind /dev "${1}/dev"
+    mount --bind /proc "${1}/proc"
+    mount --bind /sys "${1}/sys"
     SECOND_STAGE=true chroot ${1} "/second-stage.sh"
     umount "${1}/dev"
+    umount "${1}/proc"
+    umount "${1}/sys"
 else
     bootstrap_stage2
 
