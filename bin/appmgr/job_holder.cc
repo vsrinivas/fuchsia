@@ -37,6 +37,7 @@ constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
+constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kRuntimePath[] = "meta/runtime";
 constexpr char kSandboxPath[] = "meta/sandbox";
 constexpr char kInfoDirPath[] = "/info_experimental";
@@ -47,10 +48,11 @@ enum class LaunchType {
   kRunner,
 };
 
-std::vector<const char*> GetArgv(const ApplicationLaunchInfoPtr& launch_info) {
+std::vector<const char*> GetArgv(const std::string& argv0,
+                                 const ApplicationLaunchInfoPtr& launch_info) {
   std::vector<const char*> argv;
   argv.reserve(launch_info->arguments.size() + 1);
-  argv.push_back(launch_info->url.get().c_str());
+  argv.push_back(argv0.c_str());
   for (const auto& argument : launch_info->arguments)
     argv.push_back(argument.get().c_str());
   return argv;
@@ -135,29 +137,16 @@ zx::process Launch(const zx::job& job,
 }
 
 zx::process CreateProcess(const zx::job& job,
-                          ApplicationPackagePtr package,
+                          fsl::SizedVmo data,
+                          const std::string& argv0,
                           ApplicationLaunchInfoPtr launch_info,
                           fdio_flat_namespace_t* flat) {
-  fsl::SizedVmo data;
-  if (!fsl::SizedVmo::FromTransport(std::move(package->data), &data)) {
-    return zx::process();
-  }
-  return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
-                flat, TakeAppServices(launch_info),
-                std::move(launch_info->service_request), std::move(data));
-}
-
-zx::process CreateSandboxedProcess(const zx::job& job,
-                                   fsl::SizedVmo data,
-                                   ApplicationLaunchInfoPtr launch_info,
-                                   fdio_flat_namespace_t* flat) {
   if (!data)
     return zx::process();
-
   return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
-                flat, TakeAppServices(launch_info),
+                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON,
+                GetArgv(argv0, launch_info), flat,
+                TakeAppServices(launch_info),
                 std::move(launch_info->service_request), std::move(data));
 }
 
@@ -407,10 +396,14 @@ void JobHolder::CreateApplicationWithProcess(
   // every application has a proper sandbox configuration.
   builder.AddDeprecatedDefaultDirectories();
 
+  fsl::SizedVmo executable;
+  if (!fsl::SizedVmo::FromTransport(std::move(package->data), &executable))
+    return;
+
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
-  zx::process process = CreateProcess(job_for_child_, std::move(package),
-                                      std::move(launch_info), builder.Build());
+  zx::process process = CreateProcess(job_for_child_, std::move(executable),
+                                      url, std::move(launch_info), builder.Build());
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
@@ -490,9 +483,9 @@ void JobHolder::CreateApplicationFromArchive(
   } else {
     const std::string url = launch_info->url;  // Keep a copy before moving it.
     zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
-    zx::process process = CreateSandboxedProcess(
+    zx::process process = CreateProcess(
         job_for_child_, file_system->GetFileAsVMO(kAppPath),
-        std::move(launch_info), builder.Build());
+        kAppArv0, std::move(launch_info), builder.Build());
 
     if (process) {
       auto application = std::make_unique<ApplicationControllerImpl>(
