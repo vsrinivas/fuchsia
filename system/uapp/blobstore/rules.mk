@@ -49,7 +49,7 @@ MODULE_NAME := blobstore
 MODULE_TYPE := hostapp
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/main-host.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
