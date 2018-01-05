@@ -69,6 +69,18 @@ import("//build/toolchain/clang_toolchain.gni")
 #       dest (path, optional)
 #         Location the binary will be placed within "bin/"
 #
+#   perf_tests (optional)
+#     List of scopes defining the performance tests in the package.
+#
+#     Entries in a scope in the perf_tests list:
+#
+#       name (string, required)
+#         Name of the binary
+#
+#       dest (path, optional)
+#         Location the binary will be placed within "perf_tests/". Defaults
+#         to the tests's name.
+#
 #   tests (optional)
 #     List of scopes defining the test binaries in the package. A test is
 #     typically produced by the build system and is placed in the "test/"
@@ -80,7 +92,8 @@ import("//build/toolchain/clang_toolchain.gni")
 #         Name of the test
 #
 #       dest (path, optional)
-#         Location the binary will be placed within "test/"
+#         Location the binary will be placed within "test/". Defaults to the
+#         tests name.
 #
 #       disabled (bool, optional)
 #         Whether to disable the test on continuous integration jobs. This can
@@ -145,6 +158,7 @@ template("package") {
       meta = []
       package_name = target_name
       resources = []
+      perf_tests = []
       tests = []
       forward_variables_from(invoker, "*")
     }
@@ -208,6 +222,16 @@ template("package") {
           basename = binary.dest
         }
         package_manifest_contents += [ "$dirname/$basename=$source" ]
+      }
+      foreach(perf_test, pkg.perf_tests) {
+        source = rebase_path("$root_build_dir/${perf_test.name}")
+        sources += [ "$root_build_dir/${perf_test.name}" ]
+        basename = perf_test.name
+        if (defined(perf_test.dest)) {
+          basename = perf_test.dest
+        }
+        dest = "perf_test/" + basename
+        package_manifest_contents += [ "$dest=$source" ]
       }
       foreach(test, pkg.tests) {
         source = rebase_path("$root_build_dir/${test.name}")
