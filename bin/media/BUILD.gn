@@ -34,8 +34,6 @@ package("audio_server") {
 }
 
 package("tts_service") {
-  app = true
-
   deps = [
     "//garnet/bin/media/tts_service",
   ]
