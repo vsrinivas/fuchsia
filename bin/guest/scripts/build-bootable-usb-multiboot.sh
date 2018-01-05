@@ -169,7 +169,8 @@ EFI_UUID=$(sudo blkid -s UUID -o value "${EFI_PARTITION_PATH}")
 HOME_UUID=$(sudo blkid -s UUID -o value "${HOME_PARTITION_PATH}")
 FSTAB=$(mktemp)
 echo "" > "${FSTAB}"
-echo "UUID=${EFI_UUID} /boot vfat defaults,iversion,nofail 0 1" > "${FSTAB}"
+echo "UUID=${HOME_UUID} /home ext4 errors=remount-ro,iversion 0 1" >> "${FSTAB}"
+echo "UUID=${EFI_UUID} /boot vfat ro,defaults,iversion,nofail 0 2" >> "${FSTAB}"
 sudo cp "${FSTAB}" "${MOUNT_PATH}/etc/fstab"
 rm "${FSTAB}"
 echo "SUCCESS"
