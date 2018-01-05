@@ -55,6 +55,8 @@ the dashboard of the current user.
 The dashboard is also accessible from any device connected to the fuchsia machine
 on the same local network.
 
-The dashboard exposes the instances for the current user. For each instance, it displays
-its pages. For each page, it displays its commits. And then for each commit, it displays
-its entries (keys, values, priorities).
+The dashboard exposes the instances for the current user. When you select an instance,
+it displays its pages. When you select a page, it displays the commits graph, where the root node is
+colored in a different color than the other nodes. When you select a commit,
+it displays its entries (keys, values, priorities), generation (internal Ledger counter)
+and timestamp.
