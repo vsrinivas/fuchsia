@@ -13,7 +13,8 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
-#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
+#include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
+#include "peridot/lib/network/network_service_impl.h"
 
 namespace cloud_provider_firestore {
 
@@ -24,10 +25,11 @@ namespace cloud_provider_firestore {
 // the cloud provider.
 class CloudProviderFactory {
  public:
-  explicit CloudProviderFactory(app::ApplicationContext* application_context);
+  CloudProviderFactory(fxl::RefPtr<fxl::TaskRunner> main_task_runner,
+                       app::ApplicationContext* application_context);
   ~CloudProviderFactory();
 
-  void Init();
+  bool Init(std::string credentials_path);
 
   void MakeCloudProvider(
       std::string server_id,
@@ -37,11 +39,12 @@ class CloudProviderFactory {
  private:
   app::ApplicationContext* application_context_;
 
-  // Thread used to run the fake token manager on.
+  // Thread used to run the token manager on.
   std::thread services_thread_;
   fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
-  firebase_auth::FakeTokenProvider token_provider_;
+  ledger::NetworkServiceImpl network_service_;
+  service_account::ServiceAccountTokenProvider token_provider_;
   fidl::BindingSet<modular::auth::TokenProvider> token_provider_bindings_;
 
   app::ApplicationControllerPtr cloud_provider_controller_;

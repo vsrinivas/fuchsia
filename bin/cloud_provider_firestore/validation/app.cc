@@ -6,6 +6,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
@@ -14,11 +15,17 @@
 namespace cloud_provider_firestore {
 namespace {
 constexpr fxl::StringView kServerIdFlag = "server-id";
+constexpr fxl::StringView kApiKey = "api-key";
+constexpr fxl::StringView kCredentialsFlag = "credentials";
 }  // namespace
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << "--" << kServerIdFlag
-            << "=<string>" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << "--" << kServerIdFlag << "=<string> "
+            << "--" << kApiKey << "=<string> "
+            << "--" << kCredentialsFlag << "=<file path>" << std::endl;
 }
 
 }  // namespace cloud_provider_firestore
@@ -26,8 +33,21 @@ void PrintUsage(const char* executable_name) {
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string server_id;
+  std::string api_key;
+  std::string credentials_path;
   if (!command_line.GetOptionValue(
-          cloud_provider_firestore::kServerIdFlag.ToString(), &server_id)) {
+          cloud_provider_firestore::kServerIdFlag.ToString(), &server_id) ||
+      !command_line.GetOptionValue(cloud_provider_firestore::kApiKey.ToString(),
+                                   &api_key) ||
+      !command_line.GetOptionValue(
+          cloud_provider_firestore::kCredentialsFlag.ToString(),
+          &credentials_path)) {
+    cloud_provider_firestore::PrintUsage(argv[0]);
+    return -1;
+  }
+
+  if (!files::IsFile(credentials_path)) {
+    std::cerr << "Cannot access " << credentials_path << std::endl;
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
   }
@@ -36,17 +56,25 @@ int main(int argc, char** argv) {
   std::unique_ptr<app::ApplicationContext> application_context =
       app::ApplicationContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(
-      application_context.get());
+      message_loop.task_runner(), application_context.get());
 
   cloud_provider::ValidationTestsLauncher launcher(
-      application_context.get(), [&factory, server_id](auto request) {
-        factory.MakeCloudProvider(server_id, "", std::move(request));
+      application_context.get(), [&factory, api_key, server_id](auto request) {
+        factory.MakeCloudProvider(server_id, api_key, std::move(request));
       });
 
   int32_t return_code = -1;
   message_loop.task_runner()->PostTask(
-      [&factory, &launcher, &return_code, &message_loop] {
-        factory.Init();
+      [&factory, &launcher, &return_code, &message_loop,
+       credentials_path = std::move(credentials_path)]() mutable {
+        if (!factory.Init(std::move(credentials_path))) {
+          std::cerr << "Failed to initialize the cloud provider factory."
+                    << std::endl;
+          message_loop.PostQuitTask();
+          return_code = -1;
+          return;
+        }
+
         launcher.Run([&return_code, &message_loop](int32_t result) {
           return_code = result;
           message_loop.PostQuitTask();
