@@ -28,10 +28,12 @@ def resolve_imports(import_queue):
                 except Exception as e:
                     import traceback
                     traceback.print_exc()
-                    sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
+                    sys.stderr.write("Failed to parse config %s, error %s\n" %
+                                     (config_path, str(e)))
                     return None
         except IOError, e:
-            sys.stderr.write("Failed to read package '%s' from '%s'.\n" % (config_name, config_path))
+            sys.stderr.write("Failed to read package '%s' from '%s'.\n" %
+                             (config_name, config_path))
             if "/" not in config_name:
                 sys.stderr.write("""
 Package names are relative to the root of the source tree but the requested path
@@ -48,17 +50,20 @@ def get_dep_from_package_name(package_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Determine languages used by set of modules")
-    parser.add_argument("--modules", help="list of modules", required=True)
+    parser = argparse.ArgumentParser(description="Determine languages used by a"
+                                     + " given set of packages")
+    parser.add_argument("--packages", help="list of packages", required=True)
     args = parser.parse_args()
 
-    languages, imported = resolve_imports(args.modules.split(","))
+    languages, imported = resolve_imports(args.packages.split(","))
     if languages is None:
         return -1
 
     for language in ["cpp", "dart", "go", "rust"]:
-        sys.stdout.write("have_%s = %s\n" % (language, str(language in languages).lower()))
-    sys.stdout.write("imported = [%s]\n" % ",".join(map(get_dep_from_package_name, imported)))
+        sys.stdout.write("have_%s = %s\n" %
+                         (language, str(language in languages).lower()))
+    sys.stdout.write("imported = [%s]\n" %
+                     ",".join(map(get_dep_from_package_name, imported)))
     return 0
 
 if __name__ == "__main__":

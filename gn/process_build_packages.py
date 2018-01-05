@@ -96,7 +96,8 @@ def resolve_imports(import_queue, build_root):
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
+                sys.stderr.write("Failed to parse config %s, error %s\n" %
+                    (config_path, str(e)))
                 return None
     return amalgamation
 
@@ -119,17 +120,23 @@ def update_file(file, contents):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate bootfs manifest and "
-                                     + "list of GN targets for a list of Fuchsia modules")
-    parser.add_argument("--packages", help="path to packages file to generate")
-    parser.add_argument("--system-manifest", help="path to manifest file to generate for /system")
-    parser.add_argument("--modules", help="list of modules", default="default")
-    parser.add_argument("--omit-files", help="list of files omitted from user.bootfs", default="")
+                                     + "list of GN targets for a list of "
+                                     + "Fuchsia packages")
+    parser.add_argument("--targets-file",
+                        help="path to the GN targets file to generate")
+    parser.add_argument("--system-manifest",
+                        help="path to manifest file to generate for /system")
+    parser.add_argument("--packages", help="list of packages",
+                        default="default")
+    parser.add_argument("--omit-files",
+                        help="list of files omitted from user.bootfs",
+                        default="")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
     parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
-    amalgamation = resolve_imports(args.modules.split(","), args.build_root)
+    amalgamation = resolve_imports(args.packages.split(","), args.build_root)
     if not amalgamation:
         return 1
 
@@ -144,7 +151,7 @@ def main():
             for resource in amalgamation.resources:
                 f.write(" " + resource)
 
-    update_file(args.packages, '\n'.join(amalgamation.packages) + '\n')
+    update_file(args.targets_file, '\n'.join(amalgamation.packages) + '\n')
 
     sys.stdout.write("\n".join(amalgamation.deps))
     sys.stdout.write("\n")

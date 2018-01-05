@@ -7,9 +7,9 @@ declare_args() {
   fuchsia_packages = ""
 }
 
-_languages = exec_script("determine_languages_of_modules.py",
+_languages = exec_script("determine_languages_of_packages.py",
                          [
-                           "--modules",
+                           "--packages",
                            fuchsia_packages,
                          ],
                          "scope")

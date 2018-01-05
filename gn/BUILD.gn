@@ -147,13 +147,13 @@ action("finalize_manifests") {
   system_manifest_file = "$target_gen_dir/system.bootfs.manifest"
   build_id_file = "$root_out_dir/ids.txt"
 
-  deps = exec_script("process_modules.py",
+  deps = exec_script("process_build_packages.py",
                      [
-                       "--packages",
+                       "--targets-file",
                        rebase_path(packages_file),
                        "--system-manifest",
                        rebase_path(system_manifest_file),
-                       "--modules",
+                       "--packages",
                        fuchsia_packages,
                        "--build-root",
                        rebase_path(root_build_dir),
@@ -228,7 +228,7 @@ action("finalize_manifests") {
     "--groups=all",
   ]
 
-  # TODO(mcgrathr,jamesr): When process_modules.py drops support for
+  # TODO(mcgrathr,jamesr): When process_build_packages.py drops support for
   # package JSON files adding files directly, this can go away.
   # GN won't let us make it a source because it's in the build directory
   # but is written implicitly at gen time rather than by a proper action.
