@@ -24,6 +24,11 @@
 #     time.
 #     At least one of "files" and "file_mappings" must be set.
 #
+#   source_dir (optional)
+#     If set, path to the base directory of the sources.
+#     This is useful if the sources are generated and therefore not hosted
+#     directly under the directory where the GN rules are declared.
+#
 #   deps (optional)
 #     List of GN labels for other SDK elements this element depends on.
 #     These labels must point to "sdk_atom" targets.
@@ -94,6 +99,11 @@ template("sdk_atom") {
     }
   }
 
+  source_dir = "."
+  if (defined(invoker.source_dir)) {
+    source_dir = invoker.source_dir
+  }
+
   tags = []
   if (defined(invoker.tags)) {
     tags = invoker.tags
@@ -103,6 +113,7 @@ template("sdk_atom") {
 
   # Builds a manifest representing this element.
   action(target_name) {
+    forward_variables_from(invoker, ["testonly"])
 
     manifest = "$target_gen_dir/$target_name.sdk"
 
@@ -122,7 +133,7 @@ template("sdk_atom") {
       "--out",
       rebase_path(manifest),
       "--base",
-      rebase_path("."),
+      rebase_path(source_dir),
       "--deps",
     ] + dep_manifests + [
       "--files",

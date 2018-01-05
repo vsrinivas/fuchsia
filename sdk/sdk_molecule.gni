@@ -12,10 +12,6 @@
 #
 #   non_sdk_deps (optional)
 #     List of GN labels which this target needs built.
-#
-#   tags (optional)
-#     List of strings characterizing the elements in this group.
-#     Examples: "service:networking", "language:rust", "layer:garnet"
 
 template("sdk_molecule") {
 
@@ -34,13 +30,9 @@ template("sdk_molecule") {
     }
   }
 
-  tags = []
-  if (defined(invoker.tags)) {
-    tags = invoker.tags
-  }
-
   # Builds a manifest representing members of the group.
   action(target_name) {
+    forward_variables_from(invoker, ["testonly"])
 
     manifest = "$target_gen_dir/$target_name.sdk"
 
@@ -48,7 +40,10 @@ template("sdk_molecule") {
 
     deps = gn_deps
 
-    inputs = dep_manifests
+    inputs = dep_manifests + [
+      # Imported by the action's script.
+      "//build/sdk/create_atom_manifest.py",
+    ]
 
     outputs = [
       manifest,
@@ -58,8 +53,6 @@ template("sdk_molecule") {
       "--out",
       rebase_path(manifest),
       "--deps",
-    ] + dep_manifests + [
-      "--tags",
-    ] + tags
+    ] + dep_manifests
   }
 }

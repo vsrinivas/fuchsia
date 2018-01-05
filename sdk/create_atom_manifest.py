@@ -9,6 +9,41 @@ import os
 import sys
 
 
+class Atom(object):
+    '''Wrapper class for atom data, adding convenience methods.'''
+
+    def __init__(self, json):
+        self.json = json
+        self.name = json['name']
+
+    def __str__(self):
+        return self.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __ne__(self, other):
+        return not __eq__(self, other)
+
+
+def gather_dependencies(manifests):
+    '''Extracts all required atoms from the given manifests, as well as the
+       names of all the direct dependencies.
+       '''
+    direct_deps = []
+    atoms = set()
+    for dep in manifests:
+        with open(dep, 'r') as dep_file:
+            dep_manifest = json.load(dep_file)
+            if dep_manifest['type'] == 'atom':
+                direct_deps.append(dep_manifest['name'])
+            atoms.update(map(lambda a: Atom(a), dep_manifest['atoms']))
+    return (direct_deps, atoms)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name',
@@ -34,12 +69,8 @@ def main():
                         nargs='*')
     args = parser.parse_args()
 
-    # Gather the names of other atoms this atom depends on.
-    deps = []
-    for dep in args.deps:
-      with open(dep, 'r') as dep_file:
-        dep_manifest = json.load(dep_file)
-        deps.append(dep_manifest['name'])
+    # Gather the definitions of other atoms this atom depends on.
+    (deps, atoms) = gather_dependencies(args.deps)
 
     # Build the list of files making up this atom.
     files = {}
@@ -63,13 +94,18 @@ def main():
             raise Exception('Destination cannot be absolute: %s' % destination)
         files[destination] = real_source
 
-    manifest = {
-        'type': 'atom',
+    atoms.update([Atom({
         'name': args.name,
         'tags': args.tags,
         'deps': deps,
         'files': files,
+    })])
+    manifest = {
+        'type': 'atom',
+        'name': args.name,
+        'atoms': map(lambda a: a.json, list(atoms)),
     }
+
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(manifest, out, indent=2, sort_keys=True)
 

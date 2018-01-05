@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_library.gni")
+
+# A static library that can be exported to an SDK.
+#
+# An equivalent to the built-in shared_library which adds an SDK atom
+# declaration to allow the library to be included in an SDK.
+
+template("sdk_static_library") {
+
+  sdk_library(target_name) {
+    forward_variables_from(invoker, "*")
+
+    type = "static_library"
+  }
+}

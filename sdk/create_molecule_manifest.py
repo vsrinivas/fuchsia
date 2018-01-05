@@ -8,6 +8,8 @@ import json
 import os
 import sys
 
+from create_atom_manifest import gather_dependencies
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -17,29 +19,12 @@ def main():
     parser.add_argument('--deps',
                         help='List of manifest paths for the included elements',
                         nargs='*')
-    parser.add_argument('--tags',
-                        help='List of tags for the included elements',
-                        nargs='*')
     args = parser.parse_args()
 
-    def add_tags(atom):
-        existing_tags = set(atom['tags'])
-        atom['tags'] = list(existing_tags.union(args.tags))
-        return atom
-
-    atoms = []
-    for dep in args.deps:
-        with open(dep, 'r') as dep_file:
-            manifest = json.load(dep_file)
-            if manifest['type'] == 'atom':
-                atoms.append(add_tags(manifest))
-            else:
-                for atom in manifest['atoms']:
-                    atoms.append(add_tags(atom))
-
+    (_, atoms) = gather_dependencies(args.deps)
     manifest = {
         'type': 'molecule',
-        'atoms': atoms,
+        'atoms': map(lambda a: a.json, list(atoms)),
     }
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(manifest, out, indent=2, sort_keys=True)
