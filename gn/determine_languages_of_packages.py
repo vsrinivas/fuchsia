@@ -4,43 +4,17 @@
 # found in the LICENSE file.
 
 import argparse
-import json
-import os.path
-import paths
 import sys
 
-def resolve_imports(import_queue):
-    imported = set(import_queue)
-    languages = set()
-    while import_queue:
-        config_name = import_queue.pop()
-        config_path = os.path.join(paths.FUCHSIA_ROOT, config_name)
-        try:
-            with open(config_path) as f:
-                try:
-                    config = json.load(f)
-                    if config.get("languages"):
-                        languages.update(config.get("languages"))
-                    for i in config.get("imports", []):
-                        if i not in imported:
-                            import_queue.append(i)
-                            imported.add(i)
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc()
-                    sys.stderr.write("Failed to parse config %s, error %s\n" %
-                                     (config_path, str(e)))
-                    return None
-        except IOError, e:
-            sys.stderr.write("Failed to read package '%s' from '%s'.\n" %
-                             (config_name, config_path))
-            if "/" not in config_name:
-                sys.stderr.write("""
-Package names are relative to the root of the source tree but the requested path
-did not contain a '/'. Did you mean 'build/gn/%s' instead?
-""" % config_name)
-            return None
-    return languages, imported
+from package_imports_resolver import PackageImportsResolver
+
+class PackageLangageObserver:
+    def __init__(self):
+        self.languages = set()
+
+    def import_resolved(self, config, config_path):
+        if config.get("languages"):
+            self.languages.update(config.get("languages"))
 
 
 def get_dep_from_package_name(package_name):
@@ -48,14 +22,18 @@ def get_dep_from_package_name(package_name):
         return '"%s"' % package_name
     return '"//%s"' % package_name
 
-
 def main():
     parser = argparse.ArgumentParser(description="Determine languages used by a"
                                      + " given set of packages")
     parser.add_argument("--packages", help="list of packages", required=True)
     args = parser.parse_args()
 
-    languages, imported = resolve_imports(args.packages.split(","))
+
+    language_observer = PackageLangageObserver()
+    imports_resolver = PackageImportsResolver(language_observer)
+    imported = imports_resolver.resolve_imports(args.packages.split(","))
+    languages = language_observer.languages
+
     if languages is None:
         return -1
 

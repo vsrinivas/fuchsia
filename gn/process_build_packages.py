@@ -11,6 +11,9 @@ import re
 import sys
 import urlparse
 
+from package_imports_resolver import PackageImportsResolver
+
+
 class Filesystem:
     def __init__(self):
         self.files = []
@@ -27,20 +30,20 @@ class Filesystem:
         self.files.append(file)
         self.paths[bootfs_path] = file
 
+
 class Amalgamation:
 
-    def __init__(self):
+    def __init__(self, build_root):
         self.packages = []
         self.deps = []
         self.labels = []
         self.config_paths = []
         self.component_urls = []
-        self.build_root = ""
+        self.build_root = build_root
         self.system = Filesystem() # Files that will live in /system
         self.resources = []
 
-
-    def add_config(self, config, config_path):
+    def import_resolved(self, config, config_path):
         self.config_paths.append(config_path)
         packages = config.get("packages", {})
         for package in packages:
@@ -65,41 +68,6 @@ class Amalgamation:
         for key in ["binaries", "components", "drivers", "gopaths"]:
             if config.has_key(key):
                 raise Exception("The \"%s\" key is no longer supported" % key)
-
-
-def detect_duplicate_keys(pairs):
-    keys = set()
-    result = {}
-    for k, v in pairs:
-        if k in keys:
-            raise Exception("Duplicate key %s" % k)
-        keys.add(k)
-        result[k] = v
-    return result
-
-
-def resolve_imports(import_queue, build_root):
-    imported = set(import_queue)
-    amalgamation = Amalgamation()
-    amalgamation.build_root = build_root
-    while import_queue:
-        config_name = import_queue.pop()
-        config_path = os.path.join(paths.FUCHSIA_ROOT, config_name)
-        with open(config_path) as f:
-            try:
-                config = json.load(f, object_pairs_hook=detect_duplicate_keys)
-                amalgamation.add_config(config, config_path)
-                for i in config.get("imports", []):
-                    if i not in imported:
-                        import_queue.append(i)
-                        imported.add(i)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                sys.stderr.write("Failed to parse config %s, error %s\n" %
-                    (config_path, str(e)))
-                return None
-    return amalgamation
 
 
 def manifest_contents(files):
@@ -136,8 +104,10 @@ def main():
     parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
-    amalgamation = resolve_imports(args.packages.split(","), args.build_root)
-    if not amalgamation:
+    amalgamation = Amalgamation(args.build_root)
+    imports_resolver = PackageImportsResolver(amalgamation)
+    imported = imports_resolver.resolve_imports(args.packages.split(","))
+    if not imported:
         return 1
 
     system_manifest_contents = manifest_contents(amalgamation.system.files)

@@ -138,6 +138,7 @@ finalize_manifests_extra = [
   "elfinfo.py",
   "manifest.py",
   "variant.py",
+  "package_imports_resolver.py",
 ]
 
 action("finalize_manifests") {

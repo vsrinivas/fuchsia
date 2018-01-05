@@ -12,7 +12,8 @@ _languages = exec_script("determine_languages_of_packages.py",
                            "--packages",
                            fuchsia_packages,
                          ],
-                         "scope")
+                         "scope",
+                         ["package_imports_resolver.py"])
 
 packages_have_cpp = _languages.have_cpp
 packages_have_dart = _languages.have_dart
