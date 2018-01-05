@@ -233,17 +233,46 @@ bool InputInterpreter::Initialize() {
       touchscreen_report_->touchscreen = mozart::TouchscreenReport::New();
 
       touch_device_type_ = TouchDeviceType::PARADISE;
-    } else if (is_paradise_touchpad_report_desc(desc.data(), desc.size())) {
+    } else if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
       zx_status_t setup_res = setup_paradise_touchpad(fd_);
       if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Paradise touchpad (res "
+        FXL_LOG(ERROR) << "Failed to setup Paradise touchpad V1 (res "
                        << setup_res << ")";
         return true;
       }
 
       FXL_VLOG(2) << "Device " << name_ << " has touchpad";
       has_mouse_ = true;
-      mouse_device_type_ = MouseDeviceType::PARADISE;
+      mouse_device_type_ = MouseDeviceType::PARADISEv1;
+
+      mouse_descriptor_ = mozart::MouseDescriptor::New();
+      mouse_descriptor_->rel_x = mozart::Axis::New();
+      mouse_descriptor_->rel_x->range = mozart::Range::New();
+      mouse_descriptor_->rel_x->range->min = INT32_MIN;
+      mouse_descriptor_->rel_x->range->max = INT32_MAX;
+      mouse_descriptor_->rel_x->resolution = 1;
+
+      mouse_descriptor_->rel_y = mozart::Axis::New();
+      mouse_descriptor_->rel_y->range = mozart::Range::New();
+      mouse_descriptor_->rel_y->range->min = INT32_MIN;
+      mouse_descriptor_->rel_y->range->max = INT32_MAX;
+      mouse_descriptor_->rel_y->resolution = 1;
+
+      mouse_descriptor_->buttons |= kMouseButtonPrimary;
+
+      mouse_report_ = mozart::InputReport::New();
+      mouse_report_->mouse = mozart::MouseReport::New();
+    } else if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
+      zx_status_t setup_res = setup_paradise_touchpad(fd_);
+      if (setup_res != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to setup Paradise touchpad V2 (res "
+                       << setup_res << ")";
+        return true;
+      }
+
+      FXL_VLOG(2) << "Device " << name_ << " has touchpad";
+      has_mouse_ = true;
+      mouse_device_type_ = MouseDeviceType::PARADISEv2;
 
       mouse_descriptor_ = mozart::MouseDescriptor::New();
       mouse_descriptor_->rel_x = mozart::Axis::New();
@@ -335,8 +364,15 @@ bool InputInterpreter::Read(bool discard) {
         input_device_->DispatchReport(mouse_report_.Clone());
       }
       break;
-    case MouseDeviceType::PARADISE:
-      if (ParseParadiseTouchpadReport(report_.data(), rc)) {
+    case MouseDeviceType::PARADISEv1:
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report_.data(), rc)) {
+        if (!discard) {
+          input_device_->DispatchReport(mouse_report_.Clone());
+        }
+      }
+      break;
+    case MouseDeviceType::PARADISEv2:
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report_.data(), rc)) {
         if (!discard) {
           input_device_->DispatchReport(mouse_report_.Clone());
         }
@@ -549,15 +585,16 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
   return true;
 }
 
+template <typename ReportT>
 bool InputInterpreter::ParseParadiseTouchpadReport(uint8_t* r, size_t len) {
-  if (len != sizeof(paradise_touchpad_t)) {
+  if (len != sizeof(ReportT)) {
     FXL_LOG(INFO) << "paradise wrong size " << len;
     return false;
   }
 
   mouse_report_->event_time = InputEventTimestampNow();
 
-  const auto& report = *(reinterpret_cast<paradise_touchpad_t*>(r));
+  const auto& report = *(reinterpret_cast<ReportT*>(r));
   if (!report.fingers[0].tip_switch) {
     mouse_report_->mouse->rel_x = 0;
     mouse_report_->mouse->rel_y = 0;

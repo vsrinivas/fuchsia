@@ -51,7 +51,8 @@ class InputInterpreter {
   enum class MouseDeviceType {
     NONE,
     BOOT,
-    PARADISE,
+    PARADISEv1,
+    PARADISEv2
   };
 
   InputInterpreter(std::string name,
@@ -72,6 +73,7 @@ class InputInterpreter {
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
   bool ParseParadiseTouchscreenReport(uint8_t* report, size_t len);
+  template <typename ReportT>
   bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
 
   const int fd_;
