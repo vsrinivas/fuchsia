@@ -10,27 +10,27 @@
 #include <arch/aspace.h>
 #include <arch/mmu.h>
 #include <assert.h>
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <bits.h>
 #include <debug.h>
 #include <err.h>
-#include <inttypes.h>
-#include <kernel/mutex.h>
-#include <vm/vm.h>
-#include <vm/arch_vm_aspace.h>
-#include <vm/physmap.h>
-#include <vm/pmm.h>
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
-#include <lib/heap.h>
-#include <lib/ktrace.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <inttypes.h>
+#include <kernel/mutex.h>
+#include <lib/heap.h>
+#include <lib/ktrace.h>
 #include <rand.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <vm/arch_vm_aspace.h>
+#include <vm/physmap.h>
+#include <vm/pmm.h>
+#include <vm/vm.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
@@ -55,10 +55,9 @@ static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
 // The main translation table.
-pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
-    __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
+pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
 
-pte_t *arm64_get_kernel_ptable() {
+pte_t* arm64_get_kernel_ptable() {
     return arm64_kernel_translation_table;
 }
 
@@ -69,7 +68,7 @@ public:
     AsidAllocator() { bitmap_.Reset(MMU_ARM64_MAX_USER_ASID + 1); }
     ~AsidAllocator() = default;
 
-    zx_status_t Alloc(uint16_t *asid);
+    zx_status_t Alloc(uint16_t* asid);
     zx_status_t Free(uint16_t asid);
 
 private:
@@ -1102,22 +1101,26 @@ void arch_zero_page(void* _ptr) {
     } while (ptr != end_ptr);
 }
 
-zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t *pa, bool user, bool write) {
+zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) {
     // disable interrupts around this operation to make the at/par instruction combination atomic
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     if (user) {
         if (write) {
-            __asm__ volatile("at s1e0w, %0" :: "r"(va) : "memory");
+            __asm__ volatile("at s1e0w, %0" ::"r"(va)
+                             : "memory");
         } else {
-            __asm__ volatile("at s1e0r, %0" :: "r"(va) : "memory");
+            __asm__ volatile("at s1e0r, %0" ::"r"(va)
+                             : "memory");
         }
     } else {
         if (write) {
-            __asm__ volatile("at s1e1w, %0" :: "r"(va) : "memory");
+            __asm__ volatile("at s1e1w, %0" ::"r"(va)
+                             : "memory");
         } else {
-            __asm__ volatile("at s1e1r, %0" :: "r"(va) : "memory");
+            __asm__ volatile("at s1e1r, %0" ::"r"(va)
+                             : "memory");
         }
     }
 

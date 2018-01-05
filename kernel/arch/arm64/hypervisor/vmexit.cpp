@@ -21,13 +21,13 @@
 
 #define LOCAL_TRACE 0
 
-#define SET_SYSREG(sysreg) \
-({ \
-    guest_state->system_state.sysreg = reg; \
-    LTRACEF("guest " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
-    next_pc(guest_state); \
-    ZX_OK; \
-})
+#define SET_SYSREG(sysreg)                                                      \
+    ({                                                                          \
+        guest_state->system_state.sysreg = reg;                                 \
+        LTRACEF("guest " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
+        next_pc(guest_state);                                                   \
+        ZX_OK;                                                                  \
+    })
 
 static const uint16_t kSmcPsci = 0;
 static const uint32_t kTimerVector = 27;
@@ -251,7 +251,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
         return handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
     default:
         LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n",
-            static_cast<uint32_t>(syndrome.ec), syndrome.iss);
+                static_cast<uint32_t>(syndrome.ec), syndrome.iss);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }

@@ -3,25 +3,25 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
-#include <arch/arm64.h>
 
 #if ARCH_ARM64
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
-#define SYSREG_READ_COMMAND(sysreg_string) \
-    if (!strncasecmp(regname,#sysreg_string, sizeof(#sysreg_string))){          \
-        printf(#sysreg_string " = %016lx\n", ARM64_READ_SYSREG(sysreg_string));   \
-        return 0; \
+#define SYSREG_READ_COMMAND(sysreg_string)                                      \
+    if (!strncasecmp(regname, #sysreg_string, sizeof(#sysreg_string))) {        \
+        printf(#sysreg_string " = %016lx\n", ARM64_READ_SYSREG(sysreg_string)); \
+        return 0;                                                               \
     } else
 
-static uint64_t read_sysregs(const char *regname) {
+static uint64_t read_sysregs(const char* regname) {
     SYSREG_READ_COMMAND(ACTLR_EL1)
     SYSREG_READ_COMMAND(CCSIDR_EL1)
     SYSREG_READ_COMMAND(CLIDR_EL1)
@@ -37,7 +37,7 @@ static uint64_t read_sysregs(const char *regname) {
     SYSREG_READ_COMMAND(TTBR1_EL1)
     SYSREG_READ_COMMAND(VBAR_EL1)
 
-//Generic Timer regs
+    //Generic Timer regs
     SYSREG_READ_COMMAND(CNTFRQ_EL0)
     SYSREG_READ_COMMAND(CNTKCTL_EL1)
     SYSREG_READ_COMMAND(CNTPCT_EL0)
@@ -50,9 +50,8 @@ static uint64_t read_sysregs(const char *regname) {
     SYSREG_READ_COMMAND(CNTVCT_EL0)
     SYSREG_READ_COMMAND(CNTV_CTL_EL0)
     SYSREG_READ_COMMAND(CNTV_CVAL_EL0)
-    SYSREG_READ_COMMAND(CNTV_TVAL_EL0)
-    {
-        printf("Could not find register %s in list (you may need to add it to kernel/kernel/sysreg.c)\n",regname);
+    SYSREG_READ_COMMAND(CNTV_TVAL_EL0) {
+        printf("Could not find register %s in list (you may need to add it to kernel/kernel/sysreg.c)\n", regname);
     }
     return 0;
 }
@@ -62,7 +61,6 @@ static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags);
 STATIC_COMMAND_START
 STATIC_COMMAND("sysreg", "read armv8 systerm register", &cmd_sysreg)
 STATIC_COMMAND_END(kernel);
-
 
 static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {

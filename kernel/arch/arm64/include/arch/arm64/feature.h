@@ -13,6 +13,7 @@
 __BEGIN_CDECLS
 
 // feature flags
+// clang-format off
 #define ARM64_FEATURE_ISA_FP        (1u << 0)
 #define ARM64_FEATURE_ISA_ASIMD     (1u << 1)
 #define ARM64_FEATURE_ISA_AES       (1u << 2)
@@ -27,6 +28,7 @@ __BEGIN_CDECLS
 #define ARM64_FEATURE_ISA_SM4       (1u << 11)
 #define ARM64_FEATURE_ISA_DP        (1u << 12)
 #define ARM64_FEATURE_ISA_DPB       (1u << 13)
+// clang-format on
 
 static inline bool arm64_feature_test(uint32_t feature) {
     extern uint32_t arm64_features;

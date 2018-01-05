@@ -5,11 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 #pragma once
 
 #include <arch/defines.h>
 
+// clang-format off
 #define IFTE(c,t,e) (!!(c) * (t) | !(c) * (e))
 #define NBITS01(n)      IFTE(n, 1, 0)
 #define NBITS02(n)      IFTE((n) >>  1,  1 + NBITS01((n) >>  1), NBITS01(n))
@@ -368,6 +368,7 @@
 #define MMU_PTE_IDENT_FLAGS \
     (MMU_PTE_IDENT_DESCRIPTOR | \
      MMU_PTE_KERNEL_RWX_FLAGS)
+// clang-format on
 
 #ifndef __ASSEMBLER__
 
@@ -380,17 +381,17 @@ typedef uint64_t pte_t;
 
 __BEGIN_CDECLS
 
-#define ARM64_TLBI_NOADDR(op) \
-({ \
-    __asm__ volatile("tlbi " #op::); \
-    ISB; \
-})
+#define ARM64_TLBI_NOADDR(op)            \
+    ({                                   \
+        __asm__ volatile("tlbi " #op::); \
+        ISB;                             \
+    })
 
-#define ARM64_TLBI(op, val) \
-({ \
-    __asm__ volatile("tlbi " #op ", %0" :: "r" ((uint64_t)(val))); \
-    ISB; \
-})
+#define ARM64_TLBI(op, val)                                          \
+    ({                                                               \
+        __asm__ volatile("tlbi " #op ", %0" ::"r"((uint64_t)(val))); \
+        ISB;                                                         \
+    })
 
 const size_t MMU_ARM64_ASID_BITS = 16;
 const uint16_t MMU_ARM64_GLOBAL_ASID = (1u << MMU_ARM64_ASID_BITS) - 1;
@@ -398,16 +399,16 @@ const uint16_t MMU_ARM64_UNUSED_ASID = 0;
 const uint16_t MMU_ARM64_FIRST_USER_ASID = 1;
 const uint16_t MMU_ARM64_MAX_USER_ASID = MMU_ARM64_GLOBAL_ASID - 1;
 
-pte_t *arm64_get_kernel_ptable();
+pte_t* arm64_get_kernel_ptable();
 
 zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
-                                 const paddr_t paddr,
-                                 const size_t len,
-                                 const pte_t flags);
+                             const paddr_t paddr,
+                             const size_t len,
+                             const pte_t flags);
 
 // use built-in virtual to physical translation instructions to query
 // the physical address of a virtual address
-zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t *pa, bool user, bool write);
+zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write);
 
 __END_CDECLS
 #endif /* __ASSEMBLER__ */

@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/user_copy.h>
 #include <arch/arm64/user_copy.h>
+#include <arch/user_copy.h>
 #include <kernel/thread.h>
 #include <vm/vm.h>
 

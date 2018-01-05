@@ -19,52 +19,58 @@
 
 __BEGIN_CDECLS
 
-#define DSB __asm__ volatile("dsb sy" ::: "memory")
-#define DSB_ISHST __asm__ volatile("dsb ishst" ::: "memory")
-#define DMB __asm__ volatile("dmb sy" ::: "memory")
-#define DMB_ISHST __asm__ volatile("dmb ishst" ::: "memory")
-#define ISB __asm__ volatile("isb" ::: "memory")
+#define DSB __asm__ volatile("dsb sy" :: \
+                                 : "memory")
+#define DSB_ISHST __asm__ volatile("dsb ishst" :: \
+                                       : "memory")
+#define DMB __asm__ volatile("dmb sy" :: \
+                                 : "memory")
+#define DMB_ISHST __asm__ volatile("dmb ishst" :: \
+                                       : "memory")
+#define ISB __asm__ volatile("isb" :: \
+                                 : "memory")
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-#define ARM64_READ_SYSREG(reg) \
-({ \
-    uint64_t _val; \
-    __asm__ volatile("mrs %0," TOSTRING(reg) : "=r" (_val)); \
-    _val; \
-})
+#define ARM64_READ_SYSREG(reg)                   \
+    ({                                           \
+        uint64_t _val;                           \
+        __asm__ volatile("mrs %0," TOSTRING(reg) \
+                         : "=r"(_val));          \
+        _val;                                    \
+    })
 
-#define ARM64_WRITE_SYSREG(reg, val) \
-({ \
-    uint64_t _val = (val); \
-    __asm__ volatile("msr " TOSTRING(reg) ", %0" :: "r" (_val)); \
-    ISB; \
-})
+#define ARM64_WRITE_SYSREG(reg, val)                               \
+    ({                                                             \
+        uint64_t _val = (val);                                     \
+        __asm__ volatile("msr " TOSTRING(reg) ", %0" ::"r"(_val)); \
+        ISB;                                                       \
+    })
 
-void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
+void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2,
                         uintptr_t pc, uintptr_t sp,
                         vaddr_t kstack, uint32_t spsr) __NO_RETURN;
 
 typedef struct {
-    uint8_t     ctype;
-    bool        write_through;
-    bool        write_back;
-    bool        read_alloc;
-    bool        write_alloc;
-    uint32_t    num_sets;
-    uint32_t    associativity;
-    uint32_t    line_size;
+    uint8_t ctype;
+    bool write_through;
+    bool write_back;
+    bool read_alloc;
+    bool write_alloc;
+    uint32_t num_sets;
+    uint32_t associativity;
+    uint32_t line_size;
 } arm64_cache_desc_t;
 
 typedef struct {
-    uint8_t                 inner_boundary;
-    uint8_t                 lou_u;
-    uint8_t                 loc;
-    uint8_t                 lou_is;
-    arm64_cache_desc_t      level_data_type[7];
-    arm64_cache_desc_t      level_inst_type[7];
+    uint8_t inner_boundary;
+    uint8_t lou_u;
+    uint8_t loc;
+    uint8_t lou_is;
+    arm64_cache_desc_t level_data_type[7];
+    arm64_cache_desc_t level_inst_type[7];
 } arm64_cache_info_t;
 
 /* exception handling */
@@ -89,7 +95,7 @@ struct arm64_iframe_short {
 static_assert(sizeof(struct arm64_iframe_long) == sizeof(struct arm64_iframe_short), "");
 
 struct arch_exception_context {
-    struct arm64_iframe_long *frame;
+    struct arm64_iframe_long* frame;
     uint64_t far;
     uint32_t esr;
 };
@@ -97,8 +103,8 @@ struct arch_exception_context {
 struct thread;
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
-void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags, uint32_t esr);
-void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe);
+void arm64_sync_exception(struct arm64_iframe_long* iframe, uint exception_flags, uint32_t esr);
+void arm64_thread_process_pending_signals(struct arm64_iframe_long* iframe);
 
 typedef struct arm64_iframe_short iframe;
 
@@ -106,8 +112,8 @@ enum handler_return platform_irq(iframe* frame);
 enum handler_return platform_fiq(iframe* frame);
 
 /* fpu routines */
-void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags);
-void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread);
+void arm64_fpu_exception(struct arm64_iframe_long* iframe, uint exception_flags);
+void arm64_fpu_context_switch(struct thread* oldthread, struct thread* newthread);
 
 uint64_t arm64_get_boot_el(void);
 
@@ -125,5 +131,5 @@ __END_CDECLS
 #endif // __ASSEMBLER__
 
 /* used in above exception_flags arguments */
-#define ARM64_EXCEPTION_FLAG_LOWER_EL (1<<0)
-#define ARM64_EXCEPTION_FLAG_ARM32    (1<<1)
+#define ARM64_EXCEPTION_FLAG_LOWER_EL (1 << 0)
+#define ARM64_EXCEPTION_FLAG_ARM32 (1 << 1)

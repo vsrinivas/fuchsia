@@ -48,8 +48,8 @@ zx_status_t El2TranslationTable::Init() {
     // L1: Identity map the first 512GB of physical memory at.
     pte_t* l1_pte = static_cast<pte_t*>(paddr_to_physmap(l1_pa_));
     for (size_t i = 0; i < PAGE_SIZE / sizeof(pte_t); i++) {
-        l1_pte[i] = i * (1u << 30) | MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE | \
-                    MMU_PTE_ATTR_AP_P_RW_U_RW | MMU_PTE_ATTR_NORMAL_MEMORY | \
+        l1_pte[i] = i * (1u << 30) | MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE |
+                    MMU_PTE_ATTR_AP_P_RW_U_RW | MMU_PTE_ATTR_NORMAL_MEMORY |
                     MMU_PTE_L012_DESCRIPTOR_BLOCK;
     }
 

@@ -5,21 +5,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <stdio.h>
-#include <debug.h>
-#include <bits.h>
-#include <inttypes.h>
-#include <trace.h>
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <arch/arm64/exceptions.h>
 #include <arch/exception.h>
 #include <arch/user_copy.h>
-#include <kernel/thread.h>
+#include <bits.h>
+#include <debug.h>
+#include <inttypes.h>
 #include <kernel/stats.h>
-#include <vm/vm.h>
+#include <kernel/thread.h>
 #include <platform.h>
+#include <stdio.h>
+#include <trace.h>
 #include <vm/fault.h>
+#include <vm/vm.h>
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -28,8 +28,7 @@
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
 
-static void dump_iframe(const struct arm64_iframe_long *iframe)
-{
+static void dump_iframe(const struct arm64_iframe_long* iframe) {
     printf("iframe %p:\n", iframe);
     printf("x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n", iframe->r[0], iframe->r[1], iframe->r[2], iframe->r[3]);
     printf("x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n", iframe->r[4], iframe->r[5], iframe->r[6], iframe->r[7]);
@@ -44,10 +43,9 @@ static void dump_iframe(const struct arm64_iframe_long *iframe)
 }
 
 static zx_status_t try_dispatch_user_data_fault_exception(
-    zx_excp_type_t type, struct arm64_iframe_long *iframe,
-    uint32_t esr, uint64_t far)
-{
-    thread_t *thread = get_current_thread();
+    zx_excp_type_t type, struct arm64_iframe_long* iframe,
+    uint32_t esr, uint64_t far) {
+    thread_t* thread = get_current_thread();
     arch_exception_context_t context = {};
     DEBUG_ASSERT(iframe != nullptr);
     context.frame = iframe;
@@ -64,13 +62,11 @@ static zx_status_t try_dispatch_user_data_fault_exception(
 }
 
 static zx_status_t try_dispatch_user_exception(
-    zx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
-{
+    zx_excp_type_t type, struct arm64_iframe_long* iframe, uint32_t esr) {
     return try_dispatch_user_data_fault_exception(type, iframe, esr, 0);
 }
 
-__NO_RETURN static void exception_die(struct arm64_iframe_long *iframe, uint32_t esr)
-{
+__NO_RETURN static void exception_die(struct arm64_iframe_long* iframe, uint32_t esr) {
     platform_panic_start();
 
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
@@ -84,9 +80,8 @@ __NO_RETURN static void exception_die(struct arm64_iframe_long *iframe, uint32_t
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-static void arm64_unknown_handler(struct arm64_iframe_long *iframe, uint exception_flags,
-                                  uint32_t esr)
-{
+static void arm64_unknown_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                                  uint32_t esr) {
     /* this is for a lot of reasons, but most of them are undefined instructions */
     if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
         /* trapped inside the kernel, this is bad */
@@ -96,9 +91,8 @@ static void arm64_unknown_handler(struct arm64_iframe_long *iframe, uint excepti
     try_dispatch_user_exception(ZX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 }
 
-static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_flags,
-                              uint32_t esr)
-{
+static void arm64_brk_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                              uint32_t esr) {
     if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
         /* trapped inside the kernel, this is bad */
         printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
@@ -107,9 +101,8 @@ static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_f
     try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
 
-static void arm64_fpu_handler(struct arm64_iframe_long *iframe, uint exception_flags,
-                              uint32_t esr)
-{
+static void arm64_fpu_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                              uint32_t esr) {
     if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
         /* we trapped a floating point instruction inside our own EL, this is bad */
         printf("invalid fpu use in kernel: PC at %#" PRIx64 "\n",
@@ -119,9 +112,8 @@ static void arm64_fpu_handler(struct arm64_iframe_long *iframe, uint exception_f
     arm64_fpu_exception(iframe, exception_flags);
 }
 
-static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, uint exception_flags,
-                                            uint32_t esr)
-{
+static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                                            uint32_t esr) {
     /* read the FAR register */
     uint64_t far = ARM64_READ_SYSREG(far_el1);
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
@@ -160,16 +152,15 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
     exception_die(iframe, esr);
 }
 
-static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exception_flags,
-                                     uint32_t esr)
-{
+static void arm64_data_abort_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                                     uint32_t esr) {
     /* read the FAR register */
     uint64_t far = ARM64_READ_SYSREG(far_el1);
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
     uint32_t iss = BITS(esr, 24, 0);
     bool is_user = !BIT(ec, 0);
     bool WnR = BIT(iss, 6); // Write not Read
-    bool CM = BIT(iss, 8); // cache maintenance op
+    bool CM = BIT(iss, 8);  // cache maintenance op
 
     uint pf_flags = 0;
     // if it was marked Write but the cache maintenance bit was set, treat it as read
@@ -190,14 +181,14 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
         arch_enable_ints();
         zx_status_t err = vmm_page_fault_handler(far, pf_flags);
         arch_disable_ints();
-        if (err >= 0){
+        if (err >= 0) {
             return;
         }
     }
 
     // Check if the current thread was expecting a data fault and
     // we should return to its handler.
-    thread_t *thr = get_current_thread();
+    thread_t* thr = get_current_thread();
     if (thr->arch.data_fault_resume != NULL && is_user_address(far)) {
         iframe->elr = (uintptr_t)thr->arch.data_fault_resume;
         return;
@@ -229,15 +220,13 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     exception_die(iframe, esr);
 }
 
-static inline void arm64_restore_percpu_pointer()
-{
+static inline void arm64_restore_percpu_pointer() {
     arm64_write_percpu_ptr(get_current_thread()->arch.current_percpu_ptr);
 }
 
 /* called from assembly */
 extern "C" void arm64_sync_exception(
-    struct arm64_iframe_long *iframe, uint exception_flags, uint32_t esr)
-{
+    struct arm64_iframe_long* iframe, uint exception_flags, uint32_t esr) {
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
 
     if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
@@ -246,46 +235,46 @@ extern "C" void arm64_sync_exception(
     }
 
     switch (ec) {
-        case 0b000000: /* unknown reason */
-            CPU_STATS_INC(exceptions);
-            arm64_unknown_handler(iframe, exception_flags, esr);
-            break;
-        case 0b111000: /* BRK from arm32 */
-        case 0b111100: /* BRK from arm64 */
-            CPU_STATS_INC(exceptions);
-            arm64_brk_handler(iframe, exception_flags, esr);
-            break;
-        case 0b000111: /* floating point */
-            CPU_STATS_INC(exceptions);
-            arm64_fpu_handler(iframe, exception_flags, esr);
-            break;
-        case 0b010001: /* syscall from arm32 */
-        case 0b010101: /* syscall from arm64 */
-            printf("syscalls should be handled in assembly\n");
-            exception_die(iframe, esr);
-            break;
-        case 0b100000: /* instruction abort from lower level */
-        case 0b100001: /* instruction abort from same level */
-            arm64_instruction_abort_handler(iframe, exception_flags, esr);
-            break;
-        case 0b100100: /* data abort from lower level */
-        case 0b100101: /* data abort from same level */
-            arm64_data_abort_handler(iframe, exception_flags, esr);
-            break;
-        default: {
-            CPU_STATS_INC(exceptions);
-            /* TODO: properly decode more of these */
-            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-                /* trapped inside the kernel, this is bad */
-                printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-                exception_die(iframe, esr);
-            }
-            /* let the user exception handler get a shot at it */
-            if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
-                break;
-            printf("unhandled synchronous exception\n");
+    case 0b000000: /* unknown reason */
+        CPU_STATS_INC(exceptions);
+        arm64_unknown_handler(iframe, exception_flags, esr);
+        break;
+    case 0b111000: /* BRK from arm32 */
+    case 0b111100: /* BRK from arm64 */
+        CPU_STATS_INC(exceptions);
+        arm64_brk_handler(iframe, exception_flags, esr);
+        break;
+    case 0b000111: /* floating point */
+        CPU_STATS_INC(exceptions);
+        arm64_fpu_handler(iframe, exception_flags, esr);
+        break;
+    case 0b010001: /* syscall from arm32 */
+    case 0b010101: /* syscall from arm64 */
+        printf("syscalls should be handled in assembly\n");
+        exception_die(iframe, esr);
+        break;
+    case 0b100000: /* instruction abort from lower level */
+    case 0b100001: /* instruction abort from same level */
+        arm64_instruction_abort_handler(iframe, exception_flags, esr);
+        break;
+    case 0b100100: /* data abort from lower level */
+    case 0b100101: /* data abort from same level */
+        arm64_data_abort_handler(iframe, exception_flags, esr);
+        break;
+    default: {
+        CPU_STATS_INC(exceptions);
+        /* TODO: properly decode more of these */
+        if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+            /* trapped inside the kernel, this is bad */
+            printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
             exception_die(iframe, esr);
         }
+        /* let the user exception handler get a shot at it */
+        if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
+            break;
+        printf("unhandled synchronous exception\n");
+        exception_die(iframe, esr);
+    }
     }
 
     /* if we came from user space, check to see if we have any signals to handle */
@@ -303,8 +292,7 @@ extern "C" void arm64_sync_exception(
 }
 
 /* called from assembly */
-extern "C" uint32_t arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
-{
+extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_flags) {
     if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
         // if we came from a lower level, restore the per cpu pointer
         arm64_restore_percpu_pointer();
@@ -341,8 +329,7 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short *iframe, uint exception_
 }
 
 /* called from assembly */
-extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_long *iframe)
-{
+extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_long* iframe) {
     // we came from a lower level, so restore the per cpu pointer
     arm64_restore_percpu_pointer();
 
@@ -360,8 +347,7 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_l
 }
 
 /* called from assembly */
-extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which)
-{
+extern "C" void arm64_invalid_exception(struct arm64_iframe_long* iframe, unsigned int which) {
     // restore the percpu pointer (x18) unconditionally
     arm64_restore_percpu_pointer();
 
@@ -372,9 +358,8 @@ extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsign
 }
 
 /* called from assembly */
-extern "C" void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe)
-{
-    thread_t *thread = get_current_thread();
+extern "C" void arm64_thread_process_pending_signals(struct arm64_iframe_long* iframe) {
+    thread_t* thread = get_current_thread();
     DEBUG_ASSERT(iframe != nullptr);
     DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
 
@@ -383,28 +368,27 @@ extern "C" void arm64_thread_process_pending_signals(struct arm64_iframe_long *i
     thread->arch.suspended_general_regs = nullptr;
 }
 
-void arch_dump_exception_context(const arch_exception_context_t *context)
-{
+void arch_dump_exception_context(const arch_exception_context_t* context) {
     uint32_t ec = BITS_SHIFT(context->esr, 31, 26);
     uint32_t iss = BITS(context->esr, 24, 0);
 
     switch (ec) {
-        case 0b100000: /* instruction abort from lower level */
-        case 0b100001: /* instruction abort from same level */
-            printf("instruction abort: PC at %#" PRIx64
-                   ", address %#" PRIx64 " IFSC %#x %s\n",
-                    context->frame->elr, context->far,
-                    BITS(context->esr, 5, 0),
-                    BIT(ec, 0) ? "" : "user ");
+    case 0b100000: /* instruction abort from lower level */
+    case 0b100001: /* instruction abort from same level */
+        printf("instruction abort: PC at %#" PRIx64
+               ", address %#" PRIx64 " IFSC %#x %s\n",
+               context->frame->elr, context->far,
+               BITS(context->esr, 5, 0),
+               BIT(ec, 0) ? "" : "user ");
 
-            break;
-        case 0b100100: /* data abort from lower level */
-        case 0b100101: /* data abort from same level */
-            printf("data abort: PC at %#" PRIx64
-                   ", address %#" PRIx64 " %s%s\n",
-                    context->frame->elr, context->far,
-                    BIT(ec, 0) ? "" : "user ",
-                    BIT(iss, 6) ? "write" : "read");
+        break;
+    case 0b100100: /* data abort from lower level */
+    case 0b100101: /* data abort from same level */
+        printf("data abort: PC at %#" PRIx64
+               ", address %#" PRIx64 " %s%s\n",
+               context->frame->elr, context->far,
+               BIT(ec, 0) ? "" : "user ",
+               BIT(iss, 6) ? "write" : "read");
     }
 
     dump_iframe(context->frame);
@@ -412,15 +396,14 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (is_user_address(context->frame->usp)) {
         uint8_t buf[256];
-        if (arch_copy_from_user(buf, (void *)context->frame->usp, sizeof(buf)) == ZX_OK) {
+        if (arch_copy_from_user(buf, (void*)context->frame->usp, sizeof(buf)) == ZX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->usp);
             hexdump_ex(buf, sizeof(buf), context->frame->usp);
         }
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, zx_exception_report_t *report)
-{
+void arch_fill_in_exception_context(const arch_exception_context_t* arch_context, zx_exception_report_t* report) {
     zx_exception_context_t* zx_context = &report->context;
 
     zx_context->arch.u.arm_64.esr = arch_context->esr;
@@ -433,8 +416,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     }
 }
 
-zx_status_t arch_dispatch_user_policy_exception(void)
-{
+zx_status_t arch_dispatch_user_policy_exception(void) {
     struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;

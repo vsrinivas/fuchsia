@@ -113,7 +113,7 @@ efi_boot_ret efi_boot(void* handle, efi_system_table_t* systable, uint64_t image
 
     efi_printf("EFI: booting Zircon from EFI loader...\n");
     efi_printf("EFI: currently running at address %#" PRIxPTR " EL%lu\n",
-            image_addr, ARM64_READ_SYSREG(currentel) >> 2);
+               image_addr, ARM64_READ_SYSREG(currentel) >> 2);
 
     efi_loaded_image_t* image;
     efi_guid_t loaded_image_proto = LOADED_IMAGE_PROTOCOL_GUID;
@@ -195,7 +195,6 @@ efi_boot_ret efi_boot(void* handle, efi_system_table_t* systable, uint64_t image
     // Copy ramdisk to new location
     memcpy((void*)ramdisk_target_addr,
            (void*)initrd_start_phys, initrd_size);
-
 
     // kernel will be located at the next aligned boundary after the ramdisk
     efi_physical_addr_t kernel_target_addr = ramdisk_target_addr + initrd_size;

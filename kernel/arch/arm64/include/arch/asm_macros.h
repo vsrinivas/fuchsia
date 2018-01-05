@@ -7,6 +7,8 @@
 
 #pragma once
 
+// clang-format off
+
 .macro movlit reg, literal
 mov \reg, #((\literal) & 0xffff)
 .ifne (((\literal) >> 16) & 0xffff)

@@ -76,8 +76,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
 Vcpu::Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
            TrapMap* traps)
     : vmid_(vmid), vpid_(vpid), thread_(thread), gpas_(gpas), traps_(traps),
-    el2_state_(/* zero-init */) {
-    (void) thread_;
+      el2_state_(/* zero-init */) {
+    (void)thread_;
 }
 
 Vcpu::~Vcpu() {
@@ -113,12 +113,12 @@ AutoGich::AutoGich(GichState* gich_state)
     : gich_state_(gich_state) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
-    gich_copy(gich_state_->gich, *gich_state_, gich_state_->num_lrs);   // Load
+    gich_copy(gich_state_->gich, *gich_state_, gich_state_->num_lrs); // Load
 }
 
 AutoGich::~AutoGich() {
     DEBUG_ASSERT(arch_ints_disabled());
-    gich_copy(gich_state_, *gich_state_->gich, gich_state_->num_lrs);   // Save
+    gich_copy(gich_state_, *gich_state_->gich, gich_state_->num_lrs); // Save
     arch_enable_ints();
 }
 

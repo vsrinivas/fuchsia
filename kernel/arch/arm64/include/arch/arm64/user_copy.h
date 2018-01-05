@@ -17,9 +17,9 @@ __BEGIN_CDECLS
 // addresses during the call.  arch_copy_from_user and arch_copy_to_user
 // should be the only callers of this.
 zx_status_t _arm64_user_copy(
-        void *dst,
-        const void *src,
-        size_t len,
-        void **fault_return);
+    void* dst,
+    const void* src,
+    size_t len,
+    void** fault_return);
 
 __END_CDECLS

@@ -57,7 +57,8 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     return ZX_OK;
 }
 
-Guest::Guest(uint8_t vmid) : vmid_(vmid) {}
+Guest::Guest(uint8_t vmid)
+    : vmid_(vmid) {}
 
 Guest::~Guest() {
     free_vmid(vmid_);
@@ -69,7 +70,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     case ZX_GUEST_TRAP_MEM:
         if (port)
             return ZX_ERR_INVALID_ARGS;
-        /* fall-through */
+    /* fall-through */
     case ZX_GUEST_TRAP_BELL:
         break;
     case ZX_GUEST_TRAP_IO:

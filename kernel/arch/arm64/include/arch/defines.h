@@ -7,9 +7,9 @@
 
 #pragma once
 
-#define SHIFT_4K        (12)
-#define SHIFT_16K       (14)
-#define SHIFT_64K       (16)
+#define SHIFT_4K (12)
+#define SHIFT_16K (14)
+#define SHIFT_64K (16)
 
 /* arm specific stuff */
 #ifdef ARM64_LARGE_PAGESIZE_64K
@@ -36,9 +36,9 @@
 #define BM(base, count, val) (((val) & ((0x1 << (count)) - 1)) << (base))
 #endif
 
-#define ARM64_MMFR0_ASIDBITS_16     BM(4,4,2)
-#define ARM64_MMFR0_ASIDBITS_8      BM(4,4,0)
-#define ARM64_MMFR0_ASIDBITS_MASK   BM(4,4,15)
+#define ARM64_MMFR0_ASIDBITS_16 BM(4, 4, 2)
+#define ARM64_MMFR0_ASIDBITS_8 BM(4, 4, 0)
+#define ARM64_MMFR0_ASIDBITS_MASK BM(4, 4, 15)
 
 #define ARCH_DEFAULT_STACK_SIZE 8192
 
@@ -50,4 +50,3 @@
 #else
 #define ARCH_PHYSMAP_SIZE (0x1 << 39)
 #endif
-

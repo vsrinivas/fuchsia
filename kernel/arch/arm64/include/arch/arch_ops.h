@@ -9,33 +9,38 @@
 
 #ifndef __ASSEMBLER__
 
-#include <stdbool.h>
-#include <zircon/compiler.h>
-#include <reg.h>
 #include <arch/arm64.h>
 #include <arch/arm64/feature.h>
-#include <arch/arm64/mp.h>
 #include <arch/arm64/interrupt.h>
+#include <arch/arm64/mp.h>
+#include <reg.h>
+#include <stdbool.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
 #define ENABLE_CYCLE_COUNTER 1
 
-static inline void arch_spinloop_pause(void)
-{
-    __asm__ volatile("wfe" ::: "memory");
+static inline void arch_spinloop_pause(void) {
+    __asm__ volatile("wfe" ::
+                         : "memory");
 }
 
-static inline void arch_spinloop_signal(void)
-{
-    __asm__ volatile("sev" ::: "memory");
+static inline void arch_spinloop_signal(void) {
+    __asm__ volatile("sev" ::
+                         : "memory");
 }
 
-#define mb()        __asm__ volatile("dsb sy" : : : "memory")
-#define smp_mb()    __asm__ volatile("dmb ish" : : : "memory")
+#define mb() __asm__ volatile("dsb sy" \
+                              :        \
+                              :        \
+                              : "memory")
+#define smp_mb() __asm__ volatile("dmb ish" \
+                                  :         \
+                                  :         \
+                                  : "memory")
 
-static inline uint64_t arch_cycle_count(void)
-{
+static inline uint64_t arch_cycle_count(void) {
     return ARM64_READ_SYSREG(pmccntr_el0);
 }
 

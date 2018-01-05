@@ -5,14 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <sys/types.h>
-#include <string.h>
-#include <stdlib.h>
-#include <debug.h>
-#include <trace.h>
-#include <kernel/thread.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mp.h>
+#include <debug.h>
+#include <kernel/thread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <trace.h>
 
 #define LOCAL_TRACE 0
 
@@ -38,10 +38,9 @@ struct context_switch_frame {
 // stack alignment requirements per ABI
 static_assert(sizeof(context_switch_frame) % 16 == 0, "");
 
-extern void arm64_context_switch(addr_t *old_sp, addr_t new_sp);
+extern void arm64_context_switch(addr_t* old_sp, addr_t new_sp);
 
-void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
-{
+void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     // zero out the entire arch state
     t->arch = {};
 
@@ -52,7 +51,7 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     stack_top = ROUNDDOWN(stack_top, 16);
     t->stack_top = stack_top;
 
-    struct context_switch_frame *frame = (struct context_switch_frame *)(stack_top);
+    struct context_switch_frame* frame = (struct context_switch_frame*)(stack_top);
     frame--;
 
     // fill in the entry point
@@ -71,12 +70,11 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
 #endif
 }
 
-__NO_SAFESTACK void arch_thread_construct_first(thread_t *t)
-{
+__NO_SAFESTACK void arch_thread_construct_first(thread_t* t) {
     // Propagate the values from the fake arch_thread that the thread
     // pointer points to now (set up in start.S) into the real thread
     // structure being set up now.
-    thread_t *fake = get_current_thread();
+    thread_t* fake = get_current_thread();
     t->arch.stack_guard = fake->arch.stack_guard;
     t->arch.unsafe_sp = fake->arch.unsafe_sp;
 
@@ -93,9 +91,8 @@ __NO_SAFESTACK void arch_thread_construct_first(thread_t *t)
     set_current_thread(t);
 }
 
-__NO_SAFESTACK void arch_context_switch(thread_t *oldthread,
-                                        thread_t *newthread)
-{
+__NO_SAFESTACK void arch_context_switch(thread_t* oldthread,
+                                        thread_t* newthread) {
     LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
     DSB; /* broadcast tlb operations in case the thread moves to another cpu */
 
@@ -108,21 +105,18 @@ __NO_SAFESTACK void arch_context_switch(thread_t *oldthread,
     arm64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
 
-void arch_dump_thread(thread_t *t)
-{
+void arch_dump_thread(thread_t* t) {
     if (t->state != THREAD_RUNNING) {
         dprintf(INFO, "\tarch: ");
         dprintf(INFO, "sp 0x%lx\n", t->arch.sp);
     }
 }
 
-void* arch_thread_get_blocked_fp(struct thread *t)
-{
+void* arch_thread_get_blocked_fp(struct thread* t) {
     if (!WITH_FRAME_POINTERS)
         return nullptr;
 
-    struct context_switch_frame *frame = (struct context_switch_frame *)t->arch.sp;
+    struct context_switch_frame* frame = (struct context_switch_frame*)t->arch.sp;
 
-    return (void *)frame->r29;
+    return (void*)frame->r29;
 }
-

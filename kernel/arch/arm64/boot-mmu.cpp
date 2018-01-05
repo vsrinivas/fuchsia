@@ -42,7 +42,6 @@ static size_t vaddr_to_l3_index(uintptr_t addr) {
     return (addr >> MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 3)) & (MMU_KERNEL_PAGE_TABLE_ENTRIES - 1);
 }
 
-
 // called from start.S to grab another page to back a page table from the boot allocator
 __NO_SAFESTACK
 extern "C" pte_t* boot_alloc_ptable() {
@@ -62,12 +61,12 @@ extern "C" pte_t* boot_alloc_ptable() {
 // inner mapping routine passed two helper routines
 __NO_SAFESTACK
 static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0,
-                    const vaddr_t vaddr,
-                    const paddr_t paddr,
-                    const size_t len,
-                    const pte_t flags,
-                    paddr_t (*alloc_func)(),
-                    pte_t* phys_to_virt(paddr_t)) {
+                                          const vaddr_t vaddr,
+                                          const paddr_t paddr,
+                                          const size_t len,
+                                          const pte_t flags,
+                                          paddr_t (*alloc_func)(),
+                                          pte_t* phys_to_virt(paddr_t)) {
 
     // loop through the virtual range and map each physical page, using the largest
     // page size supported. Allocates necessar page tables along the way.
@@ -77,83 +76,83 @@ static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0,
         size_t index0 = vaddr_to_l0_index(vaddr + off);
         pte_t* kernel_table1 = nullptr;
         switch (kernel_table0[index0] & MMU_PTE_DESCRIPTOR_MASK) {
-            default: { // invalid/unused entry
-                paddr_t pa = alloc_func();
+        default: { // invalid/unused entry
+            paddr_t pa = alloc_func();
 
-                kernel_table0[index0] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
-                                        MMU_PTE_L012_DESCRIPTOR_TABLE;
-                // fallthrough
-            }
-            case MMU_PTE_L012_DESCRIPTOR_TABLE:
-                kernel_table1 = phys_to_virt(kernel_table0[index0] & MMU_PTE_OUTPUT_ADDR_MASK);
-                break;
-            case MMU_PTE_L012_DESCRIPTOR_BLOCK:
-                // not legal to have a block pointer at this level
-                return ZX_ERR_BAD_STATE;
+            kernel_table0[index0] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
+                                    MMU_PTE_L012_DESCRIPTOR_TABLE;
+            // fallthrough
+        }
+        case MMU_PTE_L012_DESCRIPTOR_TABLE:
+            kernel_table1 = phys_to_virt(kernel_table0[index0] & MMU_PTE_OUTPUT_ADDR_MASK);
+            break;
+        case MMU_PTE_L012_DESCRIPTOR_BLOCK:
+            // not legal to have a block pointer at this level
+            return ZX_ERR_BAD_STATE;
         }
 
         // make sure the level 2 pointer is valid
         size_t index1 = vaddr_to_l1_index(vaddr + off);
         pte_t* kernel_table2 = nullptr;
         switch (kernel_table1[index1] & MMU_PTE_DESCRIPTOR_MASK) {
-            default: { // invalid/unused entry
-                // a large page at this level is 1GB long, see if we can make one here
-                if ((((vaddr + off) & l1_large_page_size_mask) == 0) &&
-                    (((paddr + off) & l1_large_page_size_mask) == 0) &&
-                    (len - off) >= l1_large_page_size) {
+        default: { // invalid/unused entry
+            // a large page at this level is 1GB long, see if we can make one here
+            if ((((vaddr + off) & l1_large_page_size_mask) == 0) &&
+                (((paddr + off) & l1_large_page_size_mask) == 0) &&
+                (len - off) >= l1_large_page_size) {
 
-                    // set up a 1GB page here
-                    kernel_table1[index1] = ((paddr + off) & ~l1_large_page_size_mask) |
-                                            flags | MMU_PTE_L012_DESCRIPTOR_BLOCK;
+                // set up a 1GB page here
+                kernel_table1[index1] = ((paddr + off) & ~l1_large_page_size_mask) |
+                                        flags | MMU_PTE_L012_DESCRIPTOR_BLOCK;
 
-                    off += l1_large_page_size;
-                    continue;
-                }
-
-                paddr_t pa = alloc_func();
-
-                kernel_table1[index1] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
-                                        MMU_PTE_L012_DESCRIPTOR_TABLE;
-                // fallthrough
+                off += l1_large_page_size;
+                continue;
             }
-            case MMU_PTE_L012_DESCRIPTOR_TABLE:
-                kernel_table2 = phys_to_virt(kernel_table1[index1] & MMU_PTE_OUTPUT_ADDR_MASK);
-                break;
-            case MMU_PTE_L012_DESCRIPTOR_BLOCK:
-                // not legal to have a block pointer at this level
-                return ZX_ERR_BAD_STATE;
+
+            paddr_t pa = alloc_func();
+
+            kernel_table1[index1] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
+                                    MMU_PTE_L012_DESCRIPTOR_TABLE;
+            // fallthrough
+        }
+        case MMU_PTE_L012_DESCRIPTOR_TABLE:
+            kernel_table2 = phys_to_virt(kernel_table1[index1] & MMU_PTE_OUTPUT_ADDR_MASK);
+            break;
+        case MMU_PTE_L012_DESCRIPTOR_BLOCK:
+            // not legal to have a block pointer at this level
+            return ZX_ERR_BAD_STATE;
         }
 
         // make sure the level 3 pointer is valid
         size_t index2 = vaddr_to_l2_index(vaddr + off);
         pte_t* kernel_table3 = nullptr;
         switch (kernel_table2[index2] & MMU_PTE_DESCRIPTOR_MASK) {
-            default: { // invalid/unused entry
-                // a large page at this level is 2MB long, see if we can make one here
-                if ((((vaddr + off) & l2_large_page_size_mask) == 0) &&
-                    (((paddr + off) & l2_large_page_size_mask) == 0) &&
-                    (len - off) >= l2_large_page_size) {
+        default: { // invalid/unused entry
+            // a large page at this level is 2MB long, see if we can make one here
+            if ((((vaddr + off) & l2_large_page_size_mask) == 0) &&
+                (((paddr + off) & l2_large_page_size_mask) == 0) &&
+                (len - off) >= l2_large_page_size) {
 
-                    // set up a 2MB page here
-                    kernel_table2[index2] = ((paddr + off) & ~l2_large_page_size_mask) |
-                                            flags | MMU_PTE_L012_DESCRIPTOR_BLOCK;
+                // set up a 2MB page here
+                kernel_table2[index2] = ((paddr + off) & ~l2_large_page_size_mask) |
+                                        flags | MMU_PTE_L012_DESCRIPTOR_BLOCK;
 
-                    off += l2_large_page_size;
-                    continue;
-                }
-
-                paddr_t pa = alloc_func();
-
-                kernel_table2[index2] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
-                                        MMU_PTE_L012_DESCRIPTOR_TABLE;
-                // fallthrough
+                off += l2_large_page_size;
+                continue;
             }
-            case MMU_PTE_L012_DESCRIPTOR_TABLE:
-                kernel_table3 = phys_to_virt(kernel_table2[index2] & MMU_PTE_OUTPUT_ADDR_MASK);
-                break;
-            case MMU_PTE_L012_DESCRIPTOR_BLOCK:
-                // not legal to have a block pointer at this level
-                return ZX_ERR_BAD_STATE;
+
+            paddr_t pa = alloc_func();
+
+            kernel_table2[index2] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
+                                    MMU_PTE_L012_DESCRIPTOR_TABLE;
+            // fallthrough
+        }
+        case MMU_PTE_L012_DESCRIPTOR_TABLE:
+            kernel_table3 = phys_to_virt(kernel_table2[index2] & MMU_PTE_OUTPUT_ADDR_MASK);
+            break;
+        case MMU_PTE_L012_DESCRIPTOR_BLOCK:
+            // not legal to have a block pointer at this level
+            return ZX_ERR_BAD_STATE;
         }
 
         // generate a standard page mapping
@@ -170,10 +169,10 @@ static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0,
 // to KERNEL_BASE
 __NO_SAFESTACK
 extern "C" zx_status_t arm64_boot_map(pte_t* kernel_table0,
-                               const vaddr_t vaddr,
-                               const paddr_t paddr,
-                               const size_t len,
-                               const pte_t flags) {
+                                      const vaddr_t vaddr,
+                                      const paddr_t paddr,
+                                      const size_t len,
+                                      const pte_t flags) {
 
     // the following helper routines assume that code is running in physical addressing mode (mmu off).
     // any physical addresses calculated are assumed to be the same as virtual
@@ -200,9 +199,9 @@ extern "C" zx_status_t arm64_boot_map(pte_t* kernel_table0,
 
 // called a bit later in the boot process once the kernel is in virtual memory to map early kernel data
 extern "C" zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
-                               const paddr_t paddr,
-                               const size_t len,
-                               const pte_t flags) {
+                                        const paddr_t paddr,
+                                        const size_t len,
+                                        const pte_t flags) {
 
     // assumed to be running with virtual memory enabled, so use a slightly different set of routines
     // to allocate and find the virtual mapping of memory
@@ -211,7 +210,7 @@ extern "C" zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
         paddr_t pa = boot_alloc_page_phys();
 
         // zero the memory using the physmap
-        void *ptr = paddr_to_physmap(pa);
+        void* ptr = paddr_to_physmap(pa);
         memset(ptr, 0, MMU_KERNEL_PAGE_TABLE_ENTRIES * sizeof(pte_t));
 
         return pa;
