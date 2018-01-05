@@ -28,7 +28,6 @@ fi
 qimg="${qcowdir}/fuchsia.qcow2"
 trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
 
-qimg="${qcowdir}/fuchsia.qcow2"
 "${qemu_dir}/qemu-img" create -f qcow2 -b "${FUCHSIA_BUILD_DIR}/${fvm_block}" \
   "${qimg}"
 
