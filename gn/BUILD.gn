@@ -900,6 +900,11 @@ group("images") {
     ":fvm.sparse.blk",
     ":fvm.data.sparse.blk"
   ]
+
+  foreach(platform, zircon_platforms) {
+    deps += [ ":zircon-${platform}.vboot" ]
+  }
+
   if (target_cpu == "x64") {
     foreach(platform, zircon_platforms) {
       deps += [
