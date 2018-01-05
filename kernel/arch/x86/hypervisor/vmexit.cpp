@@ -212,6 +212,12 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
             // Disable the hardware coordination feedback bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_HW_FEEDBACK.bit);
+            // Disable HWP MSRs.
+            guest_state->rax &= ~(
+                1u << X86_FEATURE_HWP.bit |
+                1u << X86_FEATURE_HWP_NOT.bit |
+                1u << X86_FEATURE_HWP_ACT.bit |
+                1u << X86_FEATURE_HWP_PREF.bit);
             break;
         case X86_CPUID_PERFORMANCE_MONITORING: {
             // Disable all performance monitoring.

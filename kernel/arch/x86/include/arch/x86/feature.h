@@ -128,6 +128,8 @@ void x86_feature_debug(void);
 #define X86_FEATURE_SSE2         X86_CPUID_BIT(0x1, 3, 26)
 #define X86_FEATURE_TM           X86_CPUID_BIT(0x1, 3, 29)
 #define X86_FEATURE_HWP          X86_CPUID_BIT(0x6, 0, 7)
+#define X86_FEATURE_HWP_NOT      X86_CPUID_BIT(0x6, 0, 8)
+#define X86_FEATURE_HWP_ACT      X86_CPUID_BIT(0x6, 0, 9)
 #define X86_FEATURE_HWP_PREF     X86_CPUID_BIT(0x6, 0, 10)
 #define X86_FEATURE_HW_FEEDBACK  X86_CPUID_BIT(0x6, 2, 0)
 #define X86_FEATURE_PERF_BIAS    X86_CPUID_BIT(0x6, 2, 3)
