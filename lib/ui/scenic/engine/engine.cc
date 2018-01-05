@@ -16,6 +16,7 @@
 #include "garnet/lib/ui/scenic/resources/dump_visitor.h"
 #include "garnet/lib/ui/scenic/resources/nodes/traversal.h"
 #include "garnet/lib/ui/scenic/swapchain/display_swapchain.h"
+#include "garnet/lib/ui/scenic/swapchain/vulkan_display_swapchain.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -101,8 +102,13 @@ void Engine::CreateSession(
 
 std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
   FXL_DCHECK(!display->is_claimed());
+#if defined(SCENE_MANAGER_VULKAN_SWAPCHAIN)
+  return std::make_unique<VulkanDisplaySwapchain>(display, event_timestamper(),
+                                                  escher());
+#else
   return std::make_unique<DisplaySwapchain>(display, event_timestamper(),
                                             escher());
+#endif
 }
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(

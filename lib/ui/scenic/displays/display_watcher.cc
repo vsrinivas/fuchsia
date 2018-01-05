@@ -21,11 +21,16 @@ DisplayWatcher::~DisplayWatcher() = default;
 
 void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
   FXL_DCHECK(!device_watcher_);
-
+#if SCENE_MANAGER_VULKAN_SWAPCHAIN
+  // This is just for testing, so notify that there's a fake display that's
+  // 800x608. Without a display the scene manager won't try to draw anything.
+  callback(800, 608);
+#else
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDisplayDir,
       std::bind(&DisplayWatcher::HandleDevice, this, std::move(callback),
                 std::placeholders::_1, std::placeholders::_2));
+#endif
 }
 
 void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,

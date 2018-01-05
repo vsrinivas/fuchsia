@@ -12,6 +12,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace scene_manager {
 
@@ -226,7 +227,7 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
   // TODO(MZ-260): replace Vulkan swapchain with Magma C ABI calls, and use
   // EventTimestamper::Wait to notify |frame| when the frame is finished
   // rendering, and when it is presented.
-  // auto timing_index = frame->AddSwapchain(this);
+  auto timing_index = frame_timings->AddSwapchain(this);
   if (event_timestamper_ && !event_timestamper_) {
     // Avoid unused-variable error.
     FXL_CHECK(false) << "I don't believe you.";
@@ -279,6 +280,16 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
         << "VulkanDisplaySwapchain::DrawAndPresentFrame(): failed to "
            "present rendered image.";
   }
+  // TODO: Wait for sema before triggering callbacks. This class is only used
+  // for debugging, so the precise timestamps don't matter as much.
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+      [frame_timings, timing_index] {
+        frame_timings->OnFrameRendered(timing_index,
+                                       zx_clock_get(ZX_CLOCK_MONOTONIC));
+        frame_timings->OnFramePresented(timing_index,
+                                        zx_clock_get(ZX_CLOCK_MONOTONIC));
+      });
+
   return true;
 }
 

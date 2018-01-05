@@ -4,6 +4,10 @@
 
 import("//garnet/public/lib/ui/config.gni")
 
+declare_args() {
+  scene_manager_vulkan_swapchain = false
+}
+
 config("common_include_dirs") {
   include_dirs = [
     "//garnet",
@@ -135,6 +139,11 @@ source_set("scenic") {
     "util/vulkan_utils.h",
     "util/wrap.h",
   ]
+
+  defines = []
+  if (scene_manager_vulkan_swapchain) {
+    defines += ["SCENE_MANAGER_VULKAN_SWAPCHAIN"]
+  }
 
   public_configs = [ ":common_include_dirs" ]
 
