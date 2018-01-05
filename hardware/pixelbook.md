@@ -28,7 +28,8 @@ keyboard.)
 4. Press Enter to confirm your choice to enter Developer Mode.
 5. Wait for the device to re-configure itself, which will take several minutes.
 Initially it may not appear to be doing anything. Let the device sit for a
-minute or two. The process is complete when you hear two loud &lt;BEEP&gt;s.
+minute or two. You will heard two loud &lt;BEEP&gt;s early in the process. The
+process is complete when you hear two more loud &lt;BEEP&gt;s.
 6. The device should reboot itself when the Developer Mode transition is
 complete. You can now jump to Step #2 in the "Boot from USB" section.
 
@@ -44,6 +45,9 @@ combination has no effect, try rebooting the Pixelbook once more.
 5. Enable USB booting by running `sudo crossystem dev_boot_usb=1`
 6. (optional) Default to USB booting by running `sudo crossystem dev_default_boot=usb`.
 7. Reboot by typing `sudo reboot`
+8. On the "OS verification is OFF" screen press Ctrl+U to bypass the timeout and
+boot from USB immediately. (See [Tips and Tricks](#tips-and-tricks) for other
+short circuit options)
 
 The USB drive is only needed for booting when you want to re-pave or otherwise
 netboot the device. If you didn't make USB booting the default (Step #6), you
