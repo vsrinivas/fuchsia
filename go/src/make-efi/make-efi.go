@@ -136,7 +136,7 @@ func main() {
 
 	root := fatfs.RootDirectory()
 	for dst, src := range dstSrc {
-		msCopyIn(src, root, dst)
+		msCopyIn(root, src, dst)
 	}
 
 	root.Sync()
@@ -154,7 +154,7 @@ func main() {
 
 // msCopyIn copies src from the host filesystem into dst under the given
 // msdosfs root.
-func msCopyIn(src string, root fs.Directory, dst string) {
+func msCopyIn(root fs.Directory, src, dst string) {
 	d := root
 	defer d.Sync()
 
@@ -170,16 +170,18 @@ func msCopyIn(src string, root fs.Directory, dst string) {
 	destdir := filepath.Dir(dst)
 	name := filepath.Base(dst)
 
-	if destdir != "." {
-		for _, part := range strings.Split(destdir, "/") {
-			var err error
-			_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
-			if err != nil {
-				log.Fatalf("open/create %s: %#v %s", part, err, err)
-			}
-			d.Sync()
-			dStack = append(dStack, d)
+	for _, part := range strings.Split(destdir, "/") {
+		if part == "." {
+			continue
 		}
+
+		var err error
+		_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
+		if err != nil {
+			log.Fatalf("open/create %s: %#v %s", part, err, err)
+		}
+		d.Sync()
+		dStack = append(dStack, d)
 	}
 
 	to, _, _, err := d.Open(name, fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)

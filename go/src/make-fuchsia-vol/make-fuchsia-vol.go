@@ -34,25 +34,25 @@ var (
 	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILD_DIR"), "zircon build dir")
 	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 
-	bootloader   = flag.String("bootloader", "", "path to bootx64.efi")
-	kernel       = flag.String("kernel", "", "path to zircon.bin")
-	bootmanifest = flag.String("boot-manifest", "", "path to boot.manifest")
-	sysmanifest  = flag.String("system-manifest", "", "path to system.manifest")
-	cmdline      = flag.String("cmdline", "", "path to command line file (if exists)")
+	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
+	kernel     = flag.String("kernel", "", "path to zircon.bin")
+	ramdisk    = flag.String("ramdisk", "", "path to ramdisk.bin")
+	cmdline    = flag.String("cmdline", "", "path to command line file (if exists)")
+	zedboot    = flag.String("zedboot", "", "path to zedboot.bin")
 
 	grub        = flag.Bool("grub", false, "install grub to the disk")
 	grubBootImg = flag.String("grub-mbr", "", "path to grub mbr image")
 	grubCoreImg = flag.String("grub-core", "", "path to grub standalone core.img")
 
-	ramdisk   = flag.Bool("ramdisk-only", false, "ramdisk-only mode - include /system in boot ramdisk and only write an ESP partition (requires sysmanifest)")
-	blobstore = flag.String("blobstore", "", "path to blobstore partition image (not used with ramdisk)")
-	data      = flag.String("data", "", "path to data partition image (not used with ramdisk)")
+	ramdiskOnly = flag.Bool("ramdisk-only", false, "ramdisk-only mode - only write an ESP partition")
+	blobstore   = flag.String("blobstore", "", "path to blobstore partition image (not used with ramdisk)")
+	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
 	optimalTransferSize = flag.Int64("optimal-transfer-size", 0, "the optimal transfer size of the target disk (0 means unknown/unused)")
 
-	efiSize = flag.Int64("efi-size", 100*1024*1024, "efi partition size in bytes")
+	efiSize = flag.Int64("efi-size", 63*1024*1024, "efi partition size in bytes")
 	fvmSize = flag.Int64("fvm-size", 0, "fvm partition size in bytes (0 means `fill`)")
 )
 
@@ -101,13 +101,14 @@ func main() {
 		needZirconBuildDir()
 		*kernel = filepath.Join(*zirconBuildDir, "zircon.bin")
 	}
-	if *bootmanifest == "" {
+	if *ramdisk == "" {
 		needFuchsiaBuildDir()
-		*bootmanifest = filepath.Join(*fuchsiaBuildDir, "boot.manifest")
-	}
-	if *sysmanifest == "" {
-		needFuchsiaBuildDir()
-		*sysmanifest = filepath.Join(*fuchsiaBuildDir, "system.manifest")
+		if *ramdiskOnly {
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, "user.bootfs")
+		} else {
+			// XXX(raggi): does not support ARM
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, "bootdata-blobstore-x86.bin")
+		}
 	}
 	if *cmdline == "" {
 		needFuchsiaBuildDir()
@@ -132,7 +133,12 @@ func main() {
 		}
 	}
 
-	if !*ramdisk {
+	if *zedboot == "" {
+		needFuchsiaBuildDir()
+		*zedboot = filepath.Join(*fuchsiaBuildDir, "images", "zedboot-x86.bin")
+	}
+
+	if !*ramdiskOnly {
 		if *blobstore == "" {
 			needFuchsiaBuildDir()
 			*blobstore = filepath.Join(*fuchsiaBuildDir, "images", "blobstore.blk")
@@ -168,37 +174,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, path := range []string{*kernel, *bootmanifest, disk} {
+	for _, path := range []string{*kernel, *ramdisk, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
 	}
-
-	tempDir, err := ioutil.TempDir("", "make-fuchsia-vol")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	bootdata := filepath.Join(tempDir, "bootdata.bin")
-
-	args := []string{"-o", bootdata, "--target=boot"}
-	args = append(args, *bootmanifest)
-
-	if *ramdisk {
-		args = append(args, "--target=system")
-		args = append(args, *sysmanifest)
-	}
-
-	cmd := exec.Command(zirconTool("mkbootfs"), args...)
-	cmd.Dir = *fuchsiaBuildDir
-	b2, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("%s %v failed:\n%s\n", cmd.Path, cmd.Args, b2)
-		log.Fatal(err)
-	}
-
-	log.Printf("combined bootdata written to: %s", bootdata)
 
 	f, err := os.Open(disk)
 	if err != nil {
@@ -328,7 +308,16 @@ func main() {
 
 	var efiStart uint64
 	efiStart, end = optimialBlockAlign(end, uint64(*efiSize), logical, physical, optimal)
-	*efiSize = int64((end - efiStart) * logical)
+	// compute the size of the fat geometry that fits within the well-aligned GPT
+	// partition that was computed above.
+	*efiSize = fitFAT(int64((end-1)-efiStart) * int64(logical))
+	// efiEnd is the last sector of viable fat geometry, which may be different
+	// from end, which is the last sector of the gpt partition.
+	efiEnd := efiStart + (uint64(*efiSize) / logical) - 1
+
+	log.Printf("EFI START: %d", efiStart)
+	log.Printf("EFI END: %d", efiEnd)
+	log.Printf("EFI LB SIZE: %d", efiEnd-efiStart+1)
 
 	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 		PartitionTypeGUID:   gpt.GUIDEFI,
@@ -343,7 +332,6 @@ func main() {
 	startingCHS[1] = byte((efiStart / 63) % 16)
 	startingCHS[2] = byte((efiStart % 63) + 1)
 
-	efiEnd := end
 	var endingCHS [3]byte
 	endingCHS[0] = byte(efiEnd / (16 * 63))
 	endingCHS[1] = byte((efiEnd / 63) % 16)
@@ -357,24 +345,26 @@ func main() {
 		EndingCHS:     endingCHS,
 		OSType:        mbr.FAT32,
 		StartingLBA:   uint32(efiStart),
-		SizeInLBA:     uint32(uint64(*efiSize) / logical),
+		SizeInLBA:     uint32(efiEnd),
 	}
 
 	var fvmStart uint64
 
 	fvmStart, end = optimialBlockAlign(end+1, uint64(*fvmSize), logical, physical, optimal)
-	if *fvmSize == 0 {
-		end = g.Primary.LastUsableLBA
-	}
-	*fvmSize = int64((end - fvmStart) * logical)
+	if !*ramdiskOnly {
+		if *fvmSize == 0 {
+			end = g.Primary.LastUsableLBA
+		}
+		*fvmSize = int64((end - fvmStart) * logical)
 
-	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-		PartitionTypeGUID:   gpt.GUIDFuchsiaFVM,
-		UniquePartitionGUID: gpt.NewRandomGUID(),
-		PartitionName:       gpt.NewPartitionName("FVM"),
-		StartingLBA:         fvmStart,
-		EndingLBA:           end,
-	})
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaFVM,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("FVM"),
+			StartingLBA:         fvmStart,
+			EndingLBA:           end,
+		})
+	}
 
 	g.Update(logical, physical, optimal, diskSize)
 
@@ -383,7 +373,9 @@ func main() {
 	}
 
 	log.Printf("EFI size: %d", *efiSize)
-	log.Printf("FVM size: %d", *fvmSize)
+	if !*ramdiskOnly {
+		log.Printf("FVM size: %d", *fvmSize)
+	}
 
 	log.Printf("Writing GPT")
 
@@ -422,10 +414,15 @@ func main() {
 
 	log.Printf("Writing EFI partition and files")
 
-	cmd = exec.Command(zirconTool("mkfs-msdosfs"), "-LESP", "-F32",
-		fmt.Sprintf("-@%d", efiStart),
-		fmt.Sprintf("-b%d", logical),
-		fmt.Sprintf("-S%d", *efiSize),
+	cmd := exec.Command(zirconTool("mkfs-msdosfs"),
+		"-@", strconv.FormatUint(efiStart, 10),
+		// XXX(raggi): mkfs-msdosfs offset gets subtracted by the tool for available
+		// size, so we have to add the offset back on to get the correct geometry.
+		"-S", strconv.FormatUint(uint64(*efiSize)+efiStart, 10),
+		"-F", "32",
+		"-L", "ESP",
+		"-O", "Fuchsia",
+		"-b", fmt.Sprintf("%d", logical),
 		disk,
 	)
 
@@ -446,26 +443,33 @@ func main() {
 
 	root := fatfs.RootDirectory()
 
-	msCopyIn(*bootloader, root, "EFI/BOOT")
-	msCopyIn(*kernel, root, "")
-	msCopyIn(bootdata, root, "")
+	msCopyIn(root, *bootloader, "EFI/BOOT/bootx64.efi")
+	msCopyIn(root, *kernel, "zircon.bin")
+	msCopyIn(root, *ramdisk, "bootdata.bin")
+	msCopyIn(root, *zedboot, "zedboot.bin")
 	if _, err := os.Stat(*cmdline); err == nil {
-		msCopyIn(*cmdline, root, "")
+		msCopyIn(root, *cmdline, "cmdline")
 	}
 
 	root.Sync()
-	root.Close()
-	fatfs.Close()
+	if err := root.Close(); err != nil {
+		log.Fatal(err)
+	}
+	if err := fatfs.Close(); err != nil {
+		log.Fatal(err)
+	}
 
 	f.Sync()
 
-	if !*ramdisk {
+	if !*ramdiskOnly {
 		log.Print("Populating FVM in GPT image")
 		fvm(disk, int64(fvmStart), *fvmSize, "create", "--blobstore", *blobstore, "--data", *data)
 	}
 
 	// Keep the file open so that OSX doesn't try to remount the disk while tools are working on it.
-	f.Close()
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
 
 	log.Printf("Done")
 }
@@ -483,9 +487,9 @@ func fvm(disk string, offset, size int64, command string, args ...string) {
 	}
 }
 
-// msCopyIn copies srcpath from the host filesystem into destdir under the given
-// thinfs root.
-func msCopyIn(srcpath string, root fs.Directory, destdir string) {
+// msCopyIn copies src from the host filesystem into dst under the given
+// msdosfs root.
+func msCopyIn(root fs.Directory, src, dst string) {
 	d := root
 	defer d.Sync()
 
@@ -498,19 +502,22 @@ func msCopyIn(srcpath string, root fs.Directory, destdir string) {
 		}
 	}()
 
-	if destdir != "" && destdir != "/" {
-		for _, part := range strings.Split(destdir, "/") {
-			var err error
-			_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
-			if err != nil {
-				log.Fatalf("open/create %s: %#v %s", part, err, err)
-			}
-			d.Sync()
-			dStack = append(dStack, d)
-		}
-	}
+	destdir := filepath.Dir(dst)
+	name := filepath.Base(dst)
 
-	name := filepath.Base(srcpath)
+	for _, part := range strings.Split(destdir, "/") {
+		if part == "." {
+			continue
+		}
+
+		var err error
+		_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
+		if err != nil {
+			log.Fatalf("open/create %s: %#v %s", part, err, err)
+		}
+		d.Sync()
+		dStack = append(dStack, d)
+	}
 
 	to, _, _, err := d.Open(name, fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)
 	if err != nil {
@@ -518,7 +525,7 @@ func msCopyIn(srcpath string, root fs.Directory, destdir string) {
 	}
 	defer to.Close()
 
-	from, err := os.Open(srcpath)
+	from, err := os.Open(src)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -529,7 +536,7 @@ func msCopyIn(srcpath string, root fs.Directory, destdir string) {
 		var n int
 		n, err = from.Read(b)
 		if n > 0 {
-			if _, err := to.Write(b, 0, fs.WhenceFromCurrent); err != nil {
+			if _, err := to.Write(b[:n], 0, fs.WhenceFromCurrent); err != nil {
 				log.Fatalf("writing %s to msdosfs file: %s", name, err)
 			}
 		}
@@ -579,4 +586,17 @@ func zirconTool(name string) string {
 		log.Fatalf("Could not find %q, you might need to build zircon", name)
 	}
 	return tool
+}
+
+// sectors per track is 63, and a sector is 512, so we must round to the nearest
+// 32256.
+const sizeAlignment = 32256
+
+// N.B. fitFAT shrinks, not grows, as it intends to identify the nearest
+// FAT-compatible geometry that fits inside of "total".
+func fitFAT(total int64) int64 {
+	if d := total % sizeAlignment; d != 0 {
+		total = total - d
+	}
+	return total
 }
