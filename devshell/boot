@@ -6,7 +6,7 @@
 ### run bootserver in zedboot disk paver mode
 
 ## usage: fx boot [<type>] [--no-data] [bootserver arguments]
-##   <type>     For example, efi, cros, bootfs, or ram (default: ram)
+##   <type>     For example, efi, cros, bootfs, or ram (default: bootfs)
 ##   --no-data  Use FVM images without a /data partition (preserve existing data)
 
 set -e
@@ -17,7 +17,7 @@ declare -a disks=()
 ramdisk="${FUCHSIA_BUILD_DIR}/${ramdisk_bin}"
 
 if [[ $# == 0 ]]; then
-  machine_type="ram"
+  machine_type="bootfs"
 else
   machine_type="$1"
   shift
