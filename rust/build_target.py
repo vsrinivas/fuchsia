@@ -17,7 +17,6 @@ import pytoml
 
 import local_crates
 
-
 # Creates the directory containing the given file.
 def create_base_directory(file):
     path = os.path.dirname(file)
@@ -27,148 +26,11 @@ def create_base_directory(file):
         # Already existed.
         pass
 
-
-# Extracts a (path, name) tuple from the given build label.
-def get_target(label):
-    if not label.startswith("//"):
-        raise Exception("Expected label to start with //, got %s" % label)
-    base = label[2:]
-    separator_index = string.rfind(base, ":")
-    if separator_index >= 0:
-        name = base[separator_index+1:]
-        path = base[:separator_index]
-    else:
-        name = base[base.rfind("/")+1:]
-        path = base
-    return path, name
-
-
-# Updates paths in a TOML block.
-def fix_paths(block, default_name, crate_root, new_base):
-    if block is None:
-        return
-    name = block["name"] if "name" in block else default_name
-    if "path" not in block:
-        raise Exception("Need to specify entry point for %s" % name)
-    relative_path = block["path"]
-    new_path = os.path.join(crate_root, relative_path)
-    block["path"] = os.path.relpath(new_path, new_base)
-
-
-# Gathers build metadata from the given dependencies.
-def gather_dependency_infos(root_gen_dir, deps, fail_if_missing=True):
-    result = []
-    for dep in deps:
-        path, name = get_target(dep)
-        base_path = os.path.join(root_gen_dir, path, "%s.rust" % name)
-        # Read the information attached to the target.
-        info_path = os.path.join(base_path, "%s.info.toml" % name)
-        if not os.path.exists(info_path):
-            if fail_if_missing:
-                raise Exception("Could not locate dependency info %s at %s" %
-                                (name, info_path))
-            else:
-                continue
-        with open(info_path, "r") as info_file:
-            result.append(pytoml.load(info_file))
-    return result
-
-
-# Write some metadata about the target.
-def write_target_info(label, gen_dir, package_name, native_libs,
-                      has_generated_code=True):
-    # Note: gen_dir already contains the "target.rust" directory.
-    info = {
-        "name": package_name,
-        "native_libs": native_libs,
-        "base_path": gen_dir,
-        "has_generated_code": has_generated_code,
-    }
-
-    _, target_name = get_target(label)
-    info_path = os.path.join(gen_dir, "%s.info.toml" % target_name)
-
-    # Remove any output from previous runs in case we fail.
-    if os.path.exists(info_path):
-        os.remove(info_path)
-
-    # Write to a temporary file and atomically move to the final location once
-    # complete. Without this, the build may try to read an empty or incomplete
-    # .info.toml file.
-    tmp_info_path = info_path + ".TMP"
-    create_base_directory(tmp_info_path)
-    try:
-        with open(tmp_info_path, "w") as info_file:
-            pytoml.dump(info, info_file)
-        os.rename(tmp_info_path, info_path)
-    except (OSError, IOError) as e:
-        if os.path.exists(tmp_info_path):
-            os.remove(tmp_info_path)
-        raise Exception("Could not create %s: %s" % (info_path, repr(e)))
-
-
 # Returns the list of native libs inherited from the given dependencies.
 def extract_native_libs(dependency_infos):
     all_libs = itertools.chain.from_iterable(map(lambda i: i["native_libs"],
                                                  dependency_infos))
     return list(set(all_libs))
-
-
-# Writes a cargo config file.
-def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
-                       native_libs):
-    create_base_directory(path)
-    config = {
-        "source": {
-            "crates-io": {
-                "registry": "https://github.com/rust-lang/crates.io-index",
-                "replace-with": "vendored-sources"
-            },
-            "vendored-sources": {
-                "directory": vendor_directory
-            },
-        },
-    }
-
-    if native_libs is not None:
-        config["target"] = {}
-        config["target"][target_triple] = {}
-        for lib in native_libs:
-            config["target"][target_triple][lib] = {
-                "rustc-link-search": [ shared_libs_root ],
-                "rustc-link-lib": [ lib ],
-                "root": shared_libs_root,
-            }
-
-    with open(path, "w") as config_file:
-        pytoml.dump(config, config_file)
-
-
-# Generates the contents of the replace section for a Cargo.toml file based on
-# published and mirrored crates.
-def generate_replace_section(root_gen_dir, gen_dir):
-    deps = map(lambda (name, data): data["target"],
-               local_crates.RUST_CRATES["published"].iteritems())
-    # Gather metadata about replaced crates. Some of these crates might not be
-    # needed to build the current artifact in which case the metadata will be
-    # missing. It's fine to skip those.
-    infos = gather_dependency_infos(root_gen_dir, deps, fail_if_missing=False)
-    result = {}
-    def add_paths(crates, get_path):
-        for name in crates:
-            data = crates[name]
-            version = data["version"]
-            full_path = get_path(name, data)
-            if not full_path:
-                continue
-            path = os.path.relpath(full_path, gen_dir)
-            result["%s:%s" % (name, version)] = {"path": path}
-    add_paths(local_crates.RUST_CRATES["published"],
-              lambda name, data: next((x["base_path"] for x in infos
-                                       if x["name"] == name), None))
-    add_paths(local_crates.RUST_CRATES["mirrors"],
-              lambda name, data: os.path.join(ROOT_PATH, data["path"]))
-    return result
 
 
 # Fixes the target path in the given depfile.
@@ -254,8 +116,6 @@ def main():
                         action="store_true")
     args = parser.parse_args()
 
-    dependency_infos = gather_dependency_infos(args.root_gen_dir, args.deps)
-
     env = os.environ.copy()
     if args.sysroot is not None:
         env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = args.clang_prefix + '/clang'
@@ -263,107 +123,18 @@ def main():
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
+    env["FUCHSIA_GEN_ROOT"] = args.root_gen_dir
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
 
     # Generate Cargo.toml.
     original_manifest = os.path.join(args.crate_root, "Cargo.toml")
-    generated_manifest = os.path.join(args.gen_dir, "Cargo.toml")
-    create_base_directory(generated_manifest)
+    target_directory = os.path.join(args.gen_dir, "target")
+    create_base_directory(target_directory)
     package_name = None
     with open(original_manifest, "r") as manifest:
         config = pytoml.load(manifest)
         package_name = config["package"]["name"]
         default_name = package_name.replace("-", "_")
-
-        # Create an explicit bin section with standard defaults if it does not
-        # already exist.
-        if args.type == "bin" and "bin" not in config:
-            config["bin"] = [{
-                "name": package_name,
-                "path": "src/main.rs"
-            }]
-
-        # Update the various paths to the binary sources and locate the desired
-        # binary if applicable.
-        base = None
-        if "bin" in config:
-            for bin in config["bin"]:
-                if "name" in bin:
-                    fix_paths(bin, args.name, args.crate_root, args.gen_dir)
-                    if bin["name"] == args.name:
-                        base = bin
-        if args.type == "bin" and base is None:
-            print("Could not find binary named %s" % args.name)
-            return 1
-
-        # Create an explicit lib section with standard defaults if it does not
-        # already exist.
-        if args.type == "lib" and "lib" not in config:
-            config["lib"] = {
-                "name": default_name,
-                "path": "src/lib.rs"
-            }
-
-        # Update the various paths to the library sources and locate the desired
-        # library if applicable.
-        if "lib" in config:
-            lib = config["lib"]
-            fix_paths(lib, args.name, args.crate_root, args.gen_dir)
-            if args.type == "lib":
-                if "name" not in lib or lib["name"] != args.name:
-                    print("Could not find library %s" % args.name)
-                    return 1
-
-        # Add or edit dependency sections for local deps.
-        def adjust_dependencies(dependencies):
-          for dep in dependencies:
-              if "git" in dependencies[dep]:
-                  print("Detected git dependency on %s" % dep)
-                  print("These are not supported, use explicit versions instead")
-                  return 1
-          for info in dependency_infos:
-              if not info["has_generated_code"]:
-                  # This is a third-party dependency, cargo already knows how to
-                  # find it.
-                  continue
-              artifact_name = info["name"]
-              base_path = info["base_path"]
-              dependencies[artifact_name] = {
-                  "path": os.path.relpath(base_path, args.gen_dir),
-              }
-        if "dependencies" not in config:
-            config["dependencies"] = {}
-        adjust_dependencies(config["dependencies"])
-        # The conditional dependency sections also need to be adjusted.
-        if "target" in config:
-          for key in config["target"]:
-            target = config["target"][key]
-            if "dependencies" in target:
-              adjust_dependencies(target["dependencies"])
-
-
-        # Create replace section with mirrors and local crates.
-        # This intentionally erases any existing replace section which could
-        # interfere with the build.
-        config["replace"] = generate_replace_section(args.root_gen_dir,
-                                                     args.gen_dir)
-
-        # Write the complete manifest.
-        with open(generated_manifest, "w") as generated_config:
-            pytoml.dump(config, generated_config)
-
-    # Gather the set of native libraries that will need to be linked.
-    native_libs = extract_native_libs(dependency_infos)
-
-    if args.type == "lib":
-        # Write a file mapping target name to some metadata about the target.
-        # This will be used to set up dependencies.
-        write_target_info(args.label, args.gen_dir, package_name, native_libs)
-
-    # Write a config file to allow cargo to find the vendored crates.
-    config_path = os.path.join(args.gen_dir, ".cargo", "config")
-    write_cargo_config(config_path, args.vendor_directory, args.target_triple,
-                       args.shared_libs_root, native_libs)
 
     if args.type == "lib":
         # Since the generated .rlib artifact won't actually be used (for now),
@@ -383,10 +154,7 @@ def main():
         args.cargo,
         build_command,
         "--target=%s" % args.target_triple,
-        # Unfortunately, this option also freezes the lockfile meaning it cannot
-        # be generated.
-        # TODO(pylaligand): find a way to disable network access only or remove.
-        # "--frozen",  # Prohibit network access.
+        "--frozen",  # Require Cargo.lock and cache are up to date.
         "--verbose",
     ]
     if args.release:
@@ -395,7 +163,7 @@ def main():
         call_args.append("--lib")
     if args.type == "bin":
         call_args.extend(["--bin", args.name])
-    retcode, stdout, stderr = run_command(call_args, env, args.gen_dir)
+    retcode, stdout, stderr = run_command(call_args, env, args.crate_root)
     if retcode != 0:
         print(stdout + stderr)
         return retcode
@@ -416,12 +184,12 @@ def main():
         test_args[1] = "test"
         test_args.append("--no-run")
         test_args.append("--message-format=json")
-        retcode, stdout, _ = run_command(test_args, env, args.gen_dir)
+        retcode, stdout, _ = run_command(test_args, env, args.crate_root)
         if retcode != 0:
             # The output is not particularly useful as it is formatted in JSON.
             # Re-run the command with a user-friendly format instead.
             del test_args[-1]
-            _, stdout, stderr = run_command(test_args, env, args.gen_dir)
+            _, stdout, stderr = run_command(test_args, env, args.crate_root)
             print(stdout + stderr)
             return retcode
         generated_test_path = None

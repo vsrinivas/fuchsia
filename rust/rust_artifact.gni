@@ -137,18 +137,11 @@ template("rust_artifact") {
 
     inputs = [
       "${source_dir}/Cargo.toml",
-      "//build/rust/local_crates.py",
-
-      # This will trigger rebuilds whenever third-party crates are updated.
-      "//third_party/rust-crates/.vendor-update.stamp",
     ]
 
     outputs = [
       output_file,
     ]
-    if (type == "lib") {
-      outputs += [ "$base_gen_dir/$main_target_name.info.toml" ]
-    }
 
     deps = rust_deps
     if (defined(invoker.non_rust_deps)) {
