@@ -59,19 +59,14 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
         uint8_t phase_cal_tx1 = 0;
     };
 
-    // TODO(porce): Rename to reflect RF calibration values
-    // Also avoid confusion from
-    // wlan/common/channel.h:Channel{}
-    // ddk/protocol/wlan.h:wlan_channel_t{}
-    // wlan_mlme.fidl:WlanChan{}
-    // RF calibration values defined per channel number
-    struct Channel {
-        Channel() : channel(0), N(0), R(0), K(0), mod(0) {}
+    // RF register values defined per channel number
+    struct RfVal {
+        RfVal() : channel(0), N(0), R(0), K(0), mod(0) {}
 
-        Channel(int channel, uint32_t N, uint32_t R, uint32_t K)
+        RfVal(int channel, uint32_t N, uint32_t R, uint32_t K)
             : channel(channel), N(N), R(R), K(K), mod(0) {}
 
-        Channel(int channel, uint32_t N, uint32_t R, uint32_t K, uint32_t mod)
+        RfVal(int channel, uint32_t N, uint32_t R, uint32_t K, uint32_t mod)
             : channel(channel), N(N), R(R), K(K), mod(mod) {}
 
         int channel;
@@ -93,8 +88,8 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
         uint8_t val;
     };
 
-    // Configure channel tables
-    zx_status_t InitializeChannelInfo();
+    // Configure RfVal tables
+    zx_status_t InitializeRfVal();
 
     // read and write general registers
     zx_status_t ReadRegister(uint16_t offset, uint32_t* value);
@@ -165,7 +160,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t StopRxQueue();
     zx_status_t SetupInterface();
 
-    zx_status_t LookupRfVal(const wlan_channel_t& chan, Channel* rf_val);
+    zx_status_t LookupRfVal(const wlan_channel_t& chan, RfVal* rf_val);
     zx_status_t ConfigureChannel(const wlan_channel_t& chan);
     zx_status_t ConfigureChannel5390(const wlan_channel_t& chan);
     zx_status_t ConfigureChannel5592(const wlan_channel_t& chan);
@@ -209,7 +204,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     uint8_t antenna_diversity_ = 0;
 
-    std::map<int, Channel> channels_;
+    std::map<int, RfVal> rf_vals_;
 
     // cfg_chan_ is what is configured (from higher layers)
     // TODO(porce): Define oper_chan_ to read from the registers directly

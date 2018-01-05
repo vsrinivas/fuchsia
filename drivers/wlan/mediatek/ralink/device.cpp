@@ -122,11 +122,11 @@ zx_status_t Device::Bind() {
         return status;
     }
 
-    status = InitializeChannelInfo();
+    status = InitializeRfVal();
     if (status != ZX_OK) { return status; }
 
     int count = 0;
-    for (auto& entry : channels_) {
+    for (auto& entry : rf_vals_) {
         bool is_5ghz = entry.second.channel > 14;
 
         // The eeprom is organized into uint16_ts, but the tx power elements are 8 bits.
@@ -1987,25 +1987,25 @@ zx_status_t Device::SetupInterface() {
     return ZX_OK;
 }
 
-zx_status_t Device::InitializeChannelInfo() {
+zx_status_t Device::InitializeRfVal() {
     if (rt_type_ == RT5390) {
-        channels_.insert({
+        rf_vals_.insert({
             // clang-format off
-                // Channel(channel, N, R, K)
-                {1, Channel(1, 241, 2, 2)},
-                {2, Channel(2, 241, 2, 7)},
-                {3, Channel(3, 242, 2, 2)},
-                {4, Channel(4, 242, 2, 7)},
-                {5, Channel(5, 243, 2, 2)},
-                {6, Channel(6, 243, 2, 7)},
-                {7, Channel(7, 244, 2, 2)},
-                {8, Channel(8, 244, 2, 7)},
-                {9, Channel(9, 245, 2, 2)},
-                {10, Channel(10, 245, 2, 7)},
-                {11, Channel(11, 246, 2, 2)},
-                {12, Channel(12, 246, 2, 7)},
-                {13, Channel(13, 247, 2, 2)},
-                {14, Channel(14, 248, 2, 4)},
+                // RfVal(channel, N, R, K)
+                {1, RfVal(1, 241, 2, 2)},
+                {2, RfVal(2, 241, 2, 7)},
+                {3, RfVal(3, 242, 2, 2)},
+                {4, RfVal(4, 242, 2, 7)},
+                {5, RfVal(5, 243, 2, 2)},
+                {6, RfVal(6, 243, 2, 7)},
+                {7, RfVal(7, 244, 2, 2)},
+                {8, RfVal(8, 244, 2, 7)},
+                {9, RfVal(9, 245, 2, 2)},
+                {10, RfVal(10, 245, 2, 7)},
+                {11, RfVal(11, 246, 2, 2)},
+                {12, RfVal(12, 246, 2, 7)},
+                {13, RfVal(13, 247, 2, 2)},
+                {14, RfVal(14, 248, 2, 4)},
             // clang-format on
         });
     } else if (rt_type_ == RT5592) {
@@ -2014,140 +2014,140 @@ zx_status_t Device::InitializeChannelInfo() {
         CHECK_READ(DEBUG_INDEX, status);
         if (debug_index.reserved_xtal()) {
             // 40 MHz xtal
-            channels_.insert({
+            rf_vals_.insert({
                 // clang-format off
-                    // Channel(channel,  N, R, K,  mod)
-                    {1,   Channel(1,   241, 3, 2,  10)},
-                    {2,   Channel(2,   241, 3, 7,  10)},
-                    {3,   Channel(3,   242, 3, 2,  10)},
-                    {4,   Channel(4,   242, 3, 7,  10)},
-                    {5,   Channel(5,   243, 3, 2,  10)},
-                    {6,   Channel(6,   243, 3, 7,  10)},
-                    {7,   Channel(7,   244, 3, 2,  10)},
-                    {8,   Channel(8,   244, 3, 7,  10)},
-                    {9,   Channel(9,   245, 3, 2,  10)},
-                    {10,  Channel(10,  245, 3, 7,  10)},
-                    {11,  Channel(11,  246, 3, 2,  10)},
-                    {12,  Channel(12,  246, 3, 7,  10)},
-                    {13,  Channel(13,  247, 3, 2,  10)},
-                    {14,  Channel(14,  248, 3, 4,  10)},
-                    {36,  Channel(36,  86,  1, 4,  12)},
-                    {38,  Channel(38,  86,  1, 6,  12)},
-                    {40,  Channel(40,  86,  1, 8,  12)},
-                    {42,  Channel(42,  86,  1, 10, 12)},
-                    {44,  Channel(44,  87,  1, 0,  12)},
-                    {46,  Channel(46,  87,  1, 2,  12)},
-                    {48,  Channel(48,  87,  1, 4,  12)},
-                    {50,  Channel(50,  87,  1, 6,  12)},
-                    {52,  Channel(52,  87,  1, 8,  12)},
-                    {54,  Channel(54,  87,  1, 10, 12)},
-                    {56,  Channel(56,  88,  1, 0,  12)},
-                    {58,  Channel(58,  88,  1, 2,  12)},
-                    {60,  Channel(60,  88,  1, 4,  12)},
-                    {62,  Channel(62,  88,  1, 6,  12)},
-                    {64,  Channel(64,  88,  1, 8,  12)},
-                    {100, Channel(100, 91,  1, 8,  12)},
-                    {102, Channel(102, 91,  1, 10, 12)},
-                    {104, Channel(104, 92,  1, 0,  12)},
-                    {106, Channel(106, 92,  1, 2,  12)},
-                    {108, Channel(108, 92,  1, 4,  12)},
-                    {110, Channel(110, 92,  1, 6,  12)},
-                    {112, Channel(112, 92,  1, 8,  12)},
-                    {114, Channel(114, 92,  1, 10, 12)},
-                    {116, Channel(116, 93,  1, 0,  12)},
-                    {118, Channel(118, 93,  1, 2,  12)},
-                    {120, Channel(120, 93,  1, 4,  12)},
-                    {122, Channel(122, 93,  1, 6,  12)},
-                    {124, Channel(124, 93,  1, 8,  12)},
-                    {126, Channel(126, 93,  1, 10, 12)},
-                    {128, Channel(128, 94,  1, 0,  12)},
-                    {130, Channel(130, 94,  1, 2,  12)},
-                    {132, Channel(132, 94,  1, 4,  12)},
-                    {134, Channel(134, 94,  1, 6,  12)},
-                    {136, Channel(136, 94,  1, 8,  12)},
-                    {138, Channel(138, 94,  1, 10, 12)},
-                    {140, Channel(140, 95,  1, 0,  12)},
-                    {149, Channel(149, 95,  1, 9,  12)},
-                    {151, Channel(151, 95,  1, 11, 12)},
-                    {153, Channel(153, 96,  1, 1,  12)},
-                    {155, Channel(155, 96,  1, 3,  12)},
-                    {157, Channel(157, 96,  1, 5,  12)},
-                    {159, Channel(159, 96,  1, 7,  12)},
-                    {161, Channel(161, 96,  1, 9,  12)},
-                    {165, Channel(165, 97,  1, 1,  12)},
-                    {184, Channel(184, 82,  1, 0,  12)},
-                    {188, Channel(188, 82,  1, 4,  12)},
-                    {192, Channel(192, 82,  1, 8,  12)},
-                    {196, Channel(196, 83,  1, 0,  12)},
+                    // RfVal(channel,  N, R, K,  mod)
+                    {1,   RfVal(1,   241, 3, 2,  10)},
+                    {2,   RfVal(2,   241, 3, 7,  10)},
+                    {3,   RfVal(3,   242, 3, 2,  10)},
+                    {4,   RfVal(4,   242, 3, 7,  10)},
+                    {5,   RfVal(5,   243, 3, 2,  10)},
+                    {6,   RfVal(6,   243, 3, 7,  10)},
+                    {7,   RfVal(7,   244, 3, 2,  10)},
+                    {8,   RfVal(8,   244, 3, 7,  10)},
+                    {9,   RfVal(9,   245, 3, 2,  10)},
+                    {10,  RfVal(10,  245, 3, 7,  10)},
+                    {11,  RfVal(11,  246, 3, 2,  10)},
+                    {12,  RfVal(12,  246, 3, 7,  10)},
+                    {13,  RfVal(13,  247, 3, 2,  10)},
+                    {14,  RfVal(14,  248, 3, 4,  10)},
+                    {36,  RfVal(36,  86,  1, 4,  12)},
+                    {38,  RfVal(38,  86,  1, 6,  12)},
+                    {40,  RfVal(40,  86,  1, 8,  12)},
+                    {42,  RfVal(42,  86,  1, 10, 12)},
+                    {44,  RfVal(44,  87,  1, 0,  12)},
+                    {46,  RfVal(46,  87,  1, 2,  12)},
+                    {48,  RfVal(48,  87,  1, 4,  12)},
+                    {50,  RfVal(50,  87,  1, 6,  12)},
+                    {52,  RfVal(52,  87,  1, 8,  12)},
+                    {54,  RfVal(54,  87,  1, 10, 12)},
+                    {56,  RfVal(56,  88,  1, 0,  12)},
+                    {58,  RfVal(58,  88,  1, 2,  12)},
+                    {60,  RfVal(60,  88,  1, 4,  12)},
+                    {62,  RfVal(62,  88,  1, 6,  12)},
+                    {64,  RfVal(64,  88,  1, 8,  12)},
+                    {100, RfVal(100, 91,  1, 8,  12)},
+                    {102, RfVal(102, 91,  1, 10, 12)},
+                    {104, RfVal(104, 92,  1, 0,  12)},
+                    {106, RfVal(106, 92,  1, 2,  12)},
+                    {108, RfVal(108, 92,  1, 4,  12)},
+                    {110, RfVal(110, 92,  1, 6,  12)},
+                    {112, RfVal(112, 92,  1, 8,  12)},
+                    {114, RfVal(114, 92,  1, 10, 12)},
+                    {116, RfVal(116, 93,  1, 0,  12)},
+                    {118, RfVal(118, 93,  1, 2,  12)},
+                    {120, RfVal(120, 93,  1, 4,  12)},
+                    {122, RfVal(122, 93,  1, 6,  12)},
+                    {124, RfVal(124, 93,  1, 8,  12)},
+                    {126, RfVal(126, 93,  1, 10, 12)},
+                    {128, RfVal(128, 94,  1, 0,  12)},
+                    {130, RfVal(130, 94,  1, 2,  12)},
+                    {132, RfVal(132, 94,  1, 4,  12)},
+                    {134, RfVal(134, 94,  1, 6,  12)},
+                    {136, RfVal(136, 94,  1, 8,  12)},
+                    {138, RfVal(138, 94,  1, 10, 12)},
+                    {140, RfVal(140, 95,  1, 0,  12)},
+                    {149, RfVal(149, 95,  1, 9,  12)},
+                    {151, RfVal(151, 95,  1, 11, 12)},
+                    {153, RfVal(153, 96,  1, 1,  12)},
+                    {155, RfVal(155, 96,  1, 3,  12)},
+                    {157, RfVal(157, 96,  1, 5,  12)},
+                    {159, RfVal(159, 96,  1, 7,  12)},
+                    {161, RfVal(161, 96,  1, 9,  12)},
+                    {165, RfVal(165, 97,  1, 1,  12)},
+                    {184, RfVal(184, 82,  1, 0,  12)},
+                    {188, RfVal(188, 82,  1, 4,  12)},
+                    {192, RfVal(192, 82,  1, 8,  12)},
+                    {196, RfVal(196, 83,  1, 0,  12)},
                 // clang-format on
             });
         } else {
             // 20 MHz xtal
-            channels_.insert({
+            rf_vals_.insert({
                 // clang-format off
-                    // Channel(channel,  N, R, K, mod)
-                    {1,   Channel(1,   482, 3, 4,  10)},
-                    {2,   Channel(2,   483, 3, 4,  10)},
-                    {3,   Channel(3,   484, 3, 4,  10)},
-                    {4,   Channel(4,   485, 3, 4,  10)},
-                    {5,   Channel(5,   486, 3, 4,  10)},
-                    {6,   Channel(6,   487, 3, 4,  10)},
-                    {7,   Channel(7,   488, 3, 4,  10)},
-                    {8,   Channel(8,   489, 3, 4,  10)},
-                    {9,   Channel(9,   490, 3, 4,  10)},
-                    {10,  Channel(10,  491, 3, 4,  10)},
-                    {11,  Channel(11,  492, 3, 4,  10)},
-                    {12,  Channel(12,  493, 3, 4,  10)},
-                    {13,  Channel(13,  494, 3, 4,  10)},
-                    {14,  Channel(14,  496, 3, 8,  10)},
-                    {36,  Channel(36,  172, 1, 8,  12)},
-                    {38,  Channel(38,  173, 1, 0,  12)},
-                    {40,  Channel(40,  173, 1, 4,  12)},
-                    {42,  Channel(42,  173, 1, 8,  12)},
-                    {44,  Channel(44,  174, 1, 0,  12)},
-                    {46,  Channel(46,  174, 1, 4,  12)},
-                    {48,  Channel(48,  174, 1, 8,  12)},
-                    {50,  Channel(50,  175, 1, 0,  12)},
-                    {52,  Channel(52,  175, 1, 4,  12)},
-                    {54,  Channel(54,  175, 1, 8,  12)},
-                    {56,  Channel(56,  176, 1, 0,  12)},
-                    {58,  Channel(58,  176, 1, 4,  12)},
-                    {60,  Channel(60,  176, 1, 8,  12)},
-                    {62,  Channel(62,  177, 1, 0,  12)},
-                    {64,  Channel(64,  177, 1, 4,  12)},
-                    {100, Channel(100, 183, 1, 4,  12)},
-                    {102, Channel(102, 183, 1, 8,  12)},
-                    {104, Channel(104, 184, 1, 0,  12)},
-                    {106, Channel(106, 184, 1, 4,  12)},
-                    {108, Channel(108, 184, 1, 8,  12)},
-                    {110, Channel(110, 185, 1, 0,  12)},
-                    {112, Channel(112, 185, 1, 4,  12)},
-                    {114, Channel(114, 185, 1, 8,  12)},
-                    {116, Channel(116, 186, 1, 0,  12)},
-                    {118, Channel(118, 186, 1, 4,  12)},
-                    {120, Channel(120, 186, 1, 8,  12)},
-                    {122, Channel(122, 187, 1, 0,  12)},
-                    {124, Channel(124, 187, 1, 4,  12)},
-                    {126, Channel(126, 187, 1, 8,  12)},
-                    {128, Channel(128, 188, 1, 0,  12)},
-                    {130, Channel(130, 188, 1, 4,  12)},
-                    {132, Channel(132, 188, 1, 8,  12)},
-                    {134, Channel(134, 189, 1, 0,  12)},
-                    {136, Channel(136, 189, 1, 4,  12)},
-                    {138, Channel(138, 189, 1, 8,  12)},
-                    {140, Channel(140, 190, 1, 0,  12)},
-                    {149, Channel(149, 191, 1, 6,  12)},
-                    {151, Channel(151, 191, 1, 10, 12)},
-                    {153, Channel(153, 192, 1, 2,  12)},
-                    {155, Channel(155, 192, 1, 6,  12)},
-                    {157, Channel(157, 192, 1, 10, 12)},
-                    {159, Channel(159, 193, 1, 2,  12)},
-                    {161, Channel(161, 193, 1, 6,  12)},
-                    {165, Channel(165, 194, 1, 2,  12)},
-                    {184, Channel(184, 164, 1, 0,  12)},
-                    {188, Channel(188, 164, 1, 4,  12)},
-                    {192, Channel(192, 165, 1, 8,  12)},
-                    {196, Channel(196, 166, 1, 0,  12)},
+                    // RfVal(channel,  N, R, K, mod)
+                    {1,   RfVal(1,   482, 3, 4,  10)},
+                    {2,   RfVal(2,   483, 3, 4,  10)},
+                    {3,   RfVal(3,   484, 3, 4,  10)},
+                    {4,   RfVal(4,   485, 3, 4,  10)},
+                    {5,   RfVal(5,   486, 3, 4,  10)},
+                    {6,   RfVal(6,   487, 3, 4,  10)},
+                    {7,   RfVal(7,   488, 3, 4,  10)},
+                    {8,   RfVal(8,   489, 3, 4,  10)},
+                    {9,   RfVal(9,   490, 3, 4,  10)},
+                    {10,  RfVal(10,  491, 3, 4,  10)},
+                    {11,  RfVal(11,  492, 3, 4,  10)},
+                    {12,  RfVal(12,  493, 3, 4,  10)},
+                    {13,  RfVal(13,  494, 3, 4,  10)},
+                    {14,  RfVal(14,  496, 3, 8,  10)},
+                    {36,  RfVal(36,  172, 1, 8,  12)},
+                    {38,  RfVal(38,  173, 1, 0,  12)},
+                    {40,  RfVal(40,  173, 1, 4,  12)},
+                    {42,  RfVal(42,  173, 1, 8,  12)},
+                    {44,  RfVal(44,  174, 1, 0,  12)},
+                    {46,  RfVal(46,  174, 1, 4,  12)},
+                    {48,  RfVal(48,  174, 1, 8,  12)},
+                    {50,  RfVal(50,  175, 1, 0,  12)},
+                    {52,  RfVal(52,  175, 1, 4,  12)},
+                    {54,  RfVal(54,  175, 1, 8,  12)},
+                    {56,  RfVal(56,  176, 1, 0,  12)},
+                    {58,  RfVal(58,  176, 1, 4,  12)},
+                    {60,  RfVal(60,  176, 1, 8,  12)},
+                    {62,  RfVal(62,  177, 1, 0,  12)},
+                    {64,  RfVal(64,  177, 1, 4,  12)},
+                    {100, RfVal(100, 183, 1, 4,  12)},
+                    {102, RfVal(102, 183, 1, 8,  12)},
+                    {104, RfVal(104, 184, 1, 0,  12)},
+                    {106, RfVal(106, 184, 1, 4,  12)},
+                    {108, RfVal(108, 184, 1, 8,  12)},
+                    {110, RfVal(110, 185, 1, 0,  12)},
+                    {112, RfVal(112, 185, 1, 4,  12)},
+                    {114, RfVal(114, 185, 1, 8,  12)},
+                    {116, RfVal(116, 186, 1, 0,  12)},
+                    {118, RfVal(118, 186, 1, 4,  12)},
+                    {120, RfVal(120, 186, 1, 8,  12)},
+                    {122, RfVal(122, 187, 1, 0,  12)},
+                    {124, RfVal(124, 187, 1, 4,  12)},
+                    {126, RfVal(126, 187, 1, 8,  12)},
+                    {128, RfVal(128, 188, 1, 0,  12)},
+                    {130, RfVal(130, 188, 1, 4,  12)},
+                    {132, RfVal(132, 188, 1, 8,  12)},
+                    {134, RfVal(134, 189, 1, 0,  12)},
+                    {136, RfVal(136, 189, 1, 4,  12)},
+                    {138, RfVal(138, 189, 1, 8,  12)},
+                    {140, RfVal(140, 190, 1, 0,  12)},
+                    {149, RfVal(149, 191, 1, 6,  12)},
+                    {151, RfVal(151, 191, 1, 10, 12)},
+                    {153, RfVal(153, 192, 1, 2,  12)},
+                    {155, RfVal(155, 192, 1, 6,  12)},
+                    {157, RfVal(157, 192, 1, 10, 12)},
+                    {159, RfVal(159, 193, 1, 2,  12)},
+                    {161, RfVal(161, 193, 1, 6,  12)},
+                    {165, RfVal(165, 194, 1, 2,  12)},
+                    {184, RfVal(184, 164, 1, 0,  12)},
+                    {188, RfVal(188, 164, 1, 4,  12)},
+                    {192, RfVal(192, 165, 1, 8,  12)},
+                    {196, RfVal(196, 166, 1, 0,  12)},
                 // clang-format on
             });
         }
@@ -2169,7 +2169,7 @@ zx_status_t Device::InitializeChannelInfo() {
         ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH36_64, &ch36_64.phase_cal_tx1);
         ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH100_138, &ch100_138.phase_cal_tx1);
         ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH140_165, &ch140_165.phase_cal_tx1);
-        for (auto& entry : channels_) {
+        for (auto& entry : rf_vals_) {
             if (entry.second.channel <= 14) {
                 entry.second.cal_values = ch0_14;
             } else if (entry.second.channel <= 64) {
@@ -2192,7 +2192,7 @@ constexpr uint8_t kRfPowerBound5Ghz = 0x2b;
 
 zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
     zx_status_t status;
-    Channel rf_val;
+    RfVal rf_val;
     status = LookupRfVal(chan, &rf_val);
     if (status != ZX_OK) { return status; }
 
@@ -2272,7 +2272,7 @@ zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
 
 zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
     zx_status_t status;
-    Channel rf_val;
+    RfVal rf_val;
     status = LookupRfVal(chan, &rf_val);
     if (status != ZX_OK) { return status; }
 
@@ -2509,9 +2509,9 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
     return ZX_OK;
 }
 
-zx_status_t Device::LookupRfVal(const wlan_channel_t& chan, Channel* rf_val) {
-    auto entry = channels_.find(chan.primary);
-    if (entry == channels_.end()) {
+zx_status_t Device::LookupRfVal(const wlan_channel_t& chan, RfVal* rf_val) {
+    auto entry = rf_vals_.find(chan.primary);
+    if (entry == rf_vals_.end()) {
         errorf("Radio hardware does not support the requested channel %s\n",
                wlan::common::ChanStr(chan).c_str());
         return ZX_ERR_NOT_FOUND;
@@ -2602,7 +2602,7 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
             CHECK_WRITE(BBP66, status);
         }
 
-        struct Channel rf_val;
+        struct RfVal rf_val;
         status = LookupRfVal(chan, &rf_val);
         if (status != ZX_OK) { return status; }
 
