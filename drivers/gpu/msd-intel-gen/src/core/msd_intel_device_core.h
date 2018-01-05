@@ -41,7 +41,7 @@ public:
         return true;
     }
 
-    void DeleteInterruptManager() { interrupt_manager_.reset(); }
+    void UnregisterCallback() { interrupt_manager_.reset(); }
 
     Gtt* gtt() { return gtt_.get(); }
 

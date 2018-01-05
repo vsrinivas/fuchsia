@@ -60,7 +60,6 @@ public:
             EXPECT_TRUE(buffers[buffer_index]->platform_buffer()->duplicate_handle(&handle));
 
             TestMsdIntelDevice::pci_device(device.get())
-                ->device()
                 ->PresentBuffer(handle, &image_desc, {}, {signal_semaphore},
                                 [frame](magma_status_t status, uint64_t vblank_time_ns) {
                                     static uint32_t callback_frame = 0;
@@ -139,7 +138,6 @@ public:
             EXPECT_TRUE(buffers_[i]->platform_buffer()->duplicate_handle(&handle));
 
             TestMsdIntelDevice::pci_device(device_.get())
-                ->device()
                 ->PresentBuffer(handle, &image_desc,
                                 std::vector<std::shared_ptr<magma::PlatformSemaphore>>{
                                     this->wait_semaphores_[i]},
@@ -152,7 +150,6 @@ public:
                 EXPECT_TRUE(follow_on->platform_buffer()->duplicate_handle(&handle));
 
                 TestMsdIntelDevice::pci_device(device_.get())
-                    ->device()
                     ->PresentBuffer(handle, &image_desc, {}, {}, nullptr);
             }
 
@@ -171,7 +168,6 @@ public:
 
         // Extra flip to release the last buffer
         TestMsdIntelDevice::pci_device(device_.get())
-            ->device()
             ->PresentBuffer(handle, &image_desc,
                             std::vector<std::shared_ptr<magma::PlatformSemaphore>>{},
                             std::vector<std::shared_ptr<magma::PlatformSemaphore>>{}, nullptr);

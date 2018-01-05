@@ -129,9 +129,6 @@ public:
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
         EXPECT_TRUE(gtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
-        // Try to insert without pinning
-        EXPECT_FALSE(gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
-
         EXPECT_TRUE(buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE));
         EXPECT_TRUE(buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE));
 

@@ -22,12 +22,12 @@ private:
     Owner* owner_;
 };
 
-InterruptManagerShim::~InterruptManagerShim() { pci_device()->device()->DeleteInterruptManager(); }
+InterruptManagerShim::~InterruptManagerShim() { pci_device()->UnregisterInterruptCallback(); }
 
 bool InterruptManagerShim::RegisterCallback(InterruptCallback callback, void* data,
                                             uint32_t interrupt_mask)
 {
-    return pci_device()->device()->RegisterCallback(callback, data, interrupt_mask);
+    return pci_device()->RegisterInterruptCallback(callback, data, interrupt_mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

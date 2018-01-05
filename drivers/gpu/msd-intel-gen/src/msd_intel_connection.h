@@ -56,9 +56,8 @@ public:
                        present_buffer_callback_t callback)
     {
         auto pci_device = static_cast<MsdIntelPciDevice*>(owner_->platform_device());
-        return pci_device->device()->PresentBuffer(
-            buffer_handle, image_desc, std::move(wait_semaphores), std::move(signal_semaphores),
-            std::move(callback));
+        return pci_device->PresentBuffer(buffer_handle, image_desc, std::move(wait_semaphores),
+                                         std::move(signal_semaphores), std::move(callback));
     }
 
     bool context_killed() { return context_killed_; }

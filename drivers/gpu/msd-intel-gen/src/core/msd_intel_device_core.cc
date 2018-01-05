@@ -91,6 +91,15 @@ bool MsdIntelDeviceCore::Init(void* device_handle)
     if (!platform_device_)
         return DRETF(false, "failed to create platform device");
 
+    uint16_t gmch_graphics_ctrl;
+    if (!platform_device_->ReadPciConfig16(registers::GmchGraphicsControl::kOffset,
+                                           &gmch_graphics_ctrl))
+        return DRETF(false, "ReadPciConfig16 failed");
+
+    uint32_t gtt_size = registers::GmchGraphicsControl::gtt_size(gmch_graphics_ctrl);
+
+    DLOG("gtt_size: %uMB", gtt_size >> 20);
+
     std::unique_ptr<magma::PlatformMmio> mmio(
         platform_device_->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
     if (!mmio)
@@ -99,6 +108,9 @@ bool MsdIntelDeviceCore::Init(void* device_handle)
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
     gtt_ = Gtt::CreateCore(this);
+
+    if (!gtt_->Init(gtt_size))
+        return DRETF(false, "failed to Init gtt");
 
     interrupt_manager_ = InterruptManager::CreateCore(this);
     if (!interrupt_manager_)

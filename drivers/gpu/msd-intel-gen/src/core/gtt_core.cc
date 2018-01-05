@@ -27,7 +27,7 @@ public:
     bool Free(uint64_t addr) override;
 
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+    bool Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
                 CachingType caching_type) override;
 
 private:
@@ -187,12 +187,20 @@ bool GttCore::Clear(uint64_t start, uint64_t length)
     return true;
 }
 
-bool GttCore::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+bool GttCore::Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
                      CachingType caching_type)
 {
     DLOG("InsertEntries addr 0x%lx", addr);
     DASSERT(magma::is_page_aligned(offset));
     DASSERT(magma::is_page_aligned(length));
+
+    // When this platform buffer goes out of scope, the vmo will be unpinned.
+    // To ensure the pages stay pinned, we re-pin in Gtt::Insert; this ping-pong
+    // isn't ideal but pin doesn't actually mean anything currently, and this
+    // core device implementation will be going away shortly.
+    auto buffer = magma::PlatformBuffer::Import(buffer_handle);
+    if (!buffer)
+        return DRETF(false, "failed to import buffer handle");
 
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -215,6 +223,9 @@ bool GttCore::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offs
 
     std::vector<uint64_t> bus_addr_array;
     bus_addr_array.resize(num_pages);
+
+    if (!buffer->PinPages(start_page_index, num_pages))
+        return DRETF(false, "failed to pin pages");
 
     if (!buffer->MapPageRangeBus(start_page_index, num_pages, bus_addr_array.data()))
         return DRETF(false, "failed obtaining bus addresses");

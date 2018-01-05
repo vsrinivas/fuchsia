@@ -9,22 +9,28 @@ class GttShim : public Gtt {
 public:
     GttShim(Owner* owner) : owner_(owner) {}
 
-    uint64_t Size() const override { return pci_device()->device()->gtt()->Size(); }
+    uint64_t Size() const override { return pci_device()->GetGtt()->Size(); }
 
-    bool Init(uint64_t gtt_size) override { return pci_device()->device()->gtt()->Init(gtt_size); }
+    // Init only on core gtt
+    bool Init(uint64_t gtt_size) override
+    {
+        DASSERT(false);
+        return false;
+    }
 
     // AddressSpace overrides
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override
     {
-        return pci_device()->device()->gtt()->Alloc(size, align_pow2, addr_out);
+        return pci_device()->GetGtt()->Alloc(size, align_pow2, addr_out);
     }
-    bool Free(uint64_t addr) override { return pci_device()->device()->gtt()->Free(addr); }
+    bool Free(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
 
-    bool Clear(uint64_t addr) override { return pci_device()->device()->gtt()->Clear(addr); }
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+    bool Clear(uint64_t addr) override { return pci_device()->GetGtt()->Clear(addr); }
+
+    bool Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
                 CachingType caching_type) override
     {
-        return pci_device()->device()->gtt()->Insert(addr, buffer, offset, length, caching_type);
+        return pci_device()->GetGtt()->Insert(addr, buffer_handle, offset, length, caching_type);
     }
 
 private:
