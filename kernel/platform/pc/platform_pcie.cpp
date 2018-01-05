@@ -11,20 +11,21 @@
 
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_platform.h>
+#include <fbl/limits.h>
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <lk/init.h>
-#include <zircon/syscalls/pci.h>
-#include <zircon/types.h>
-#include <fbl/limits.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
 
 #include "platform_p.h"
 
 class X86PciePlatformSupport : public PciePlatformInterface {
 public:
-    X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) { }
+    X86PciePlatformSupport()
+        : PciePlatformInterface(MsiSupportLevel::MSI) {}
     zx_status_t AllocMsiBlock(uint requested_irqs,
                               bool can_target_64bit,
                               bool is_msix,
@@ -37,9 +38,9 @@ public:
     }
 
     void RegisterMsiHandler(const pcie_msi_block_t* block,
-                            uint                    msi_id,
-                            int_handler             handler,
-                            void*                   ctx) override {
+                            uint msi_id,
+                            int_handler handler,
+                            void* ctx) override {
         x86_register_msi_handler(block, msi_id, handler, ctx);
     }
 };
@@ -64,7 +65,8 @@ static void x86_pcie_init_hook(uint level) {
     zx_status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
     if (res != ZX_OK) {
         TRACEF("Failed to initialize PCI bus driver (res = %d).  "
-               "PCI will be non-functional.\n", res);
+               "PCI will be non-functional.\n",
+               res);
         return;
     }
 
@@ -82,8 +84,8 @@ static void x86_pcie_init_hook(uint level) {
     res = pcie->AddBusRegion(pcie_pio_base, pcie_pio_size, PciAddrSpace::PIO);
     if (res != ZX_OK) {
         TRACEF("WARNING - Failed to add initial PCIe PIO region "
-               "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
-                pcie_pio_base, pcie_pio_base + pcie_pio_size, res);
+               "[%" PRIx64 ", %" PRIx64 ") to bus driver! (res %d)\n",
+               pcie_pio_base, pcie_pio_base + pcie_pio_size, res);
     }
 
     // TODO(johngro) : Right now, we add only the low memory (< 4GB) region to
@@ -101,13 +103,12 @@ static void x86_pcie_init_hook(uint level) {
     res = pcie->AddBusRegion(pcie_mmio_base, pcie_mmio_size, PciAddrSpace::MMIO);
     if (res != ZX_OK) {
         TRACEF("WARNING - Failed to add initial PCIe MMIO region "
-               "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
-                pcie_mmio_base, pcie_mmio_base + pcie_mmio_size, res);
+               "[%" PRIx64 ", %" PRIx64 ") to bus driver! (res %d)\n",
+               pcie_mmio_base, pcie_mmio_base + pcie_mmio_size, res);
         return;
     }
 
-    res = enumerate_e820([](uint64_t base, uint64_t size, bool is_mem, void* ctx) -> void
-    {
+    res = enumerate_e820([](uint64_t base, uint64_t size, bool is_mem, void* ctx) -> void {
         DEBUG_ASSERT(ctx != nullptr);
         auto pcie = reinterpret_cast<PcieBusDriver*>(ctx);
         zx_status_t res;
@@ -119,11 +120,12 @@ static void x86_pcie_init_hook(uint level) {
             // dangerous situation.  For now, log a message, then attempt to
             // lockdown the bus.
             TRACEF("FATAL ERROR - Failed to subtract PCIe MMIO region "
-                   "[%" PRIx64 ", %" PRIx64") from bus driver! (res %d)\n",
-                    base, base + size, res);
+                   "[%" PRIx64 ", %" PRIx64 ") from bus driver! (res %d)\n",
+                   base, base + size, res);
             lockdown_pcie_bus_regions(*pcie);
         }
-    }, pcie.get());
+    },
+                         pcie.get());
 
     if (res != ZX_OK) {
         // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
@@ -137,4 +139,4 @@ static void x86_pcie_init_hook(uint level) {
 
 LK_INIT_HOOK(x86_pcie_init, x86_pcie_init_hook, LK_INIT_LEVEL_PLATFORM);
 
-#endif  // WITH_DEV_PCIE
+#endif // WITH_DEV_PCIE

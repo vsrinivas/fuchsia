@@ -8,11 +8,11 @@
 
 #include <bits.h>
 #include <err.h>
-#include <lk/init.h>
+#include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
+#include <lk/init.h>
 #include <vm/vm_aspace.h>
-#include <fbl/algorithm.h>
 #include <zircon/types.h>
 
 struct hpet_timer_registers {
@@ -28,7 +28,7 @@ struct hpet_registers {
     volatile uint64_t general_config;
     uint8_t _reserved1[8];
     volatile uint64_t general_int_status;
-    uint8_t _reserved2[0xf0-0x28];
+    uint8_t _reserved2[0xf0 - 0x28];
     volatile uint64_t main_counter_value;
     uint8_t _reserved3[8];
     struct hpet_timer_registers timers[];
@@ -38,7 +38,7 @@ static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 
 static struct acpi_hpet_descriptor hpet_desc;
 static bool hpet_present = false;
-static struct hpet_registers *hpet_regs;
+static struct hpet_registers* hpet_regs;
 uint64_t _hpet_ticks_per_ms;
 static uint64_t tick_period_in_fs;
 static uint8_t num_timers;
@@ -53,17 +53,16 @@ static uint64_t min_ticks_ahead;
 #define GEN_CONF_EN 1
 
 /* Bit masks for the per-time conf_caps register */
-#define TIMER_CONF_LEVEL_TRIGGERED (1ULL<<1)
-#define TIMER_CONF_INT_EN (1ULL<<2)
-#define TIMER_CONF_PERIODIC (1ULL<<3)
+#define TIMER_CONF_LEVEL_TRIGGERED (1ULL << 1)
+#define TIMER_CONF_INT_EN (1ULL << 2)
+#define TIMER_CONF_PERIODIC (1ULL << 3)
 #define TIMER_CAP_PERIODIC(reg) BIT_SET(reg, 4)
 #define TIMER_CAP_64BIT(reg) BIT_SET(reg, 5)
-#define TIMER_CONF_PERIODIC_SET_COUNT (1ULL<<6)
-#define TIMER_CONF_IRQ(n) ((uint64_t)((n) & (0x1f))<<9)
+#define TIMER_CONF_PERIODIC_SET_COUNT (1ULL << 6)
+#define TIMER_CONF_IRQ(n) ((uint64_t)((n) & (0x1f)) << 9)
 #define TIMER_CAP_IRQS(reg) static_cast<uint32_t>(BITS_SHIFT(reg, 63, 32))
 
-static void hpet_init(uint level)
-{
+static void hpet_init(uint level) {
     zx_status_t status = platform_find_hpet(&hpet_desc);
     if (status != ZX_OK) {
         return;
@@ -74,14 +73,14 @@ static void hpet_init(uint level)
     }
 
     zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
-            "hpet",
-            PAGE_SIZE, /* size */
-            (void **)&hpet_regs, /* returned virtual address */
-            PAGE_SIZE_SHIFT, /* alignment log2 */
-            (paddr_t)hpet_desc.address, /* physical address */
-            0, /* vmm flags */
-            ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
-                ARCH_MMU_FLAG_PERM_WRITE);
+        "hpet",
+        PAGE_SIZE,                  /* size */
+        (void**)&hpet_regs,         /* returned virtual address */
+        PAGE_SIZE_SHIFT,            /* alignment log2 */
+        (paddr_t)hpet_desc.address, /* physical address */
+        0,                          /* vmm flags */
+        ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+            ARCH_MMU_FLAG_PERM_WRITE);
     if (res != ZX_OK) {
         return;
     }
@@ -116,8 +115,7 @@ fail:
 /* Begin running after ACPI tables are up */
 LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2);
 
-zx_status_t hpet_timer_disable(uint n)
-{
+zx_status_t hpet_timer_disable(uint n) {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -128,8 +126,7 @@ zx_status_t hpet_timer_disable(uint n)
     return ZX_OK;
 }
 
-uint64_t hpet_get_value(void)
-{
+uint64_t hpet_get_value(void) {
     uint64_t v = hpet_regs->main_counter_value;
     uint64_t v2 = hpet_regs->main_counter_value;
     /* Even though the specification says it should not be necessary to read
@@ -141,8 +138,7 @@ uint64_t hpet_get_value(void)
     return fbl::min(v, v2);
 }
 
-zx_status_t hpet_set_value(uint64_t v)
-{
+zx_status_t hpet_set_value(uint64_t v) {
     AutoSpinLock guard(&lock);
 
     if (hpet_regs->general_config & GEN_CONF_EN) {
@@ -153,8 +149,7 @@ zx_status_t hpet_set_value(uint64_t v)
     return ZX_OK;
 }
 
-zx_status_t hpet_timer_configure_irq(uint n, uint irq)
-{
+zx_status_t hpet_timer_configure_irq(uint n, uint irq) {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -174,8 +169,7 @@ zx_status_t hpet_timer_configure_irq(uint n, uint irq)
     return ZX_OK;
 }
 
-zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
-{
+zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline) {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -183,7 +177,7 @@ zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
     AutoSpinLock guard(&lock);
 
     uint64_t difference = deadline - hpet_get_value();
-    if (unlikely(difference > (1ULL>>63))) {
+    if (unlikely(difference > (1ULL >> 63))) {
         /* Either this is a very long timer, or we wrapped around */
         return ZX_ERR_INVALID_ARGS;
     }
@@ -192,15 +186,14 @@ zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
     }
 
     hpet_regs->timers[n].conf_caps &= ~(TIMER_CONF_PERIODIC |
-            TIMER_CONF_PERIODIC_SET_COUNT);
+                                        TIMER_CONF_PERIODIC_SET_COUNT);
     hpet_regs->timers[n].comparator_value = deadline;
     hpet_regs->timers[n].conf_caps |= TIMER_CONF_INT_EN;
 
     return ZX_OK;
 }
 
-zx_status_t hpet_timer_set_periodic(uint n, uint64_t period)
-{
+zx_status_t hpet_timer_set_periodic(uint n, uint64_t period) {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -219,28 +212,25 @@ zx_status_t hpet_timer_set_periodic(uint n, uint64_t period)
     }
 
     hpet_regs->timers[n].conf_caps |= TIMER_CONF_PERIODIC |
-            TIMER_CONF_PERIODIC_SET_COUNT;
+                                      TIMER_CONF_PERIODIC_SET_COUNT;
     hpet_regs->timers[n].comparator_value = period;
     hpet_regs->timers[n].conf_caps |= TIMER_CONF_INT_EN;
 
     return ZX_OK;
 }
 
-bool hpet_is_present(void)
-{
+bool hpet_is_present(void) {
     return hpet_present;
 }
 
-void hpet_enable(void)
-{
+void hpet_enable(void) {
     DEBUG_ASSERT(hpet_is_present());
 
     AutoSpinLock guard(&lock);
     hpet_regs->general_config |= GEN_CONF_EN;
 }
 
-void hpet_disable(void)
-{
+void hpet_disable(void) {
     DEBUG_ASSERT(hpet_is_present());
 
     AutoSpinLock guard(&lock);
@@ -249,9 +239,9 @@ void hpet_disable(void)
 
 /* Blocks for the requested number of milliseconds.
  * For use in calibration */
-void hpet_wait_ms(uint16_t ms)
-{
+void hpet_wait_ms(uint16_t ms) {
     uint64_t init_timer_value = hpet_regs->main_counter_value;
     uint64_t target = (uint64_t)ms * _hpet_ticks_per_ms;
-    while (hpet_regs->main_counter_value - init_timer_value <= target);
+    while (hpet_regs->main_counter_value - init_timer_value <= target)
+        ;
 }

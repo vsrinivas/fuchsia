@@ -7,34 +7,34 @@
 
 #include <debug.h>
 #include <err.h>
-#include <fbl/auto_lock.h>
 #include <fbl/atomic.h>
+#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <reg.h>
 #include <trace.h>
 
-#include <dev/uart.h>
 #include <arch.h>
-#include <lk/init.h>
-#include <kernel/cmdline.h>
-#include <vm/vm.h>
-#include <vm/physmap.h>
-#include <kernel/spinlock.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
 #include <dev/power.h>
 #include <dev/psci.h>
+#include <dev/uart.h>
+#include <kernel/cmdline.h>
+#include <kernel/spinlock.h>
+#include <lk/init.h>
+#include <vm/physmap.h>
+#include <vm/vm.h>
 
-#include <platform.h>
 #include <mexec.h>
+#include <platform.h>
 
 #include <target.h>
 
-#include <arch/efi.h>
-#include <arch/mp.h>
-#include <arch/arm64/mp.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
+#include <arch/arm64/mp.h>
+#include <arch/efi.h>
+#include <arch/mp.h>
 
 #include <vm/vm_aspace.h>
 
@@ -47,12 +47,12 @@
 #include <kernel/thread.h>
 #endif
 
+#include <libfdt.h>
+#include <mdi/mdi-defs.h>
+#include <mdi/mdi.h>
+#include <pdev/pdev.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/types.h>
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
-#include <pdev/pdev.h>
-#include <libfdt.h>
 
 extern paddr_t boot_structure_paddr; // Defined in start.S.
 
@@ -85,17 +85,16 @@ static mem_bank periph_banks[MAX_PERIPH_BANKS];
 // all of the configured memory arenas from the mdi/fdt
 // at the moment, only support 1 arena
 static pmm_arena_info_t mem_arena = {
-    /* .name */     "sdram",
-    /* .flags */    PMM_ARENA_FLAG_KMAP,
+    /* .name */ "sdram",
+    /* .flags */ PMM_ARENA_FLAG_KMAP,
     /* .priority */ 0,
-    /* .base */     0, // filled in by MDI
-    /* .size */     0, // filled in by MDI/FDT
+    /* .base */ 0, // filled in by MDI
+    /* .size */ 0, // filled in by MDI/FDT
 };
 
 static volatile int panic_started;
 
-static void halt_other_cpus(void)
-{
+static void halt_other_cpus(void) {
     static volatile int halted = 0;
 
     if (atomic_swap(&halted, 1) == 0) {
@@ -106,13 +105,12 @@ static void halt_other_cpus(void)
         // spin for a while
         // TODO: find a better way to spin at this low level
         for (volatile int i = 0; i < 100000000; i++) {
-            __asm volatile ("nop");
+            __asm volatile("nop");
         }
     }
 }
 
-void platform_panic_start(void)
-{
+void platform_panic_start(void) {
     arch_disable_ints();
 
     halt_other_cpus();
@@ -126,9 +124,12 @@ void platform_panic_start(void)
 
 // Reads Linux device tree to initialize command line and return ramdisk location
 static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
-    if (ramdisk_base) *ramdisk_base = nullptr;
-    if (ramdisk_size) *ramdisk_size = 0;
-    if (mem_size) *mem_size = 0;
+    if (ramdisk_base)
+        *ramdisk_base = nullptr;
+    if (ramdisk_size)
+        *ramdisk_size = 0;
+    if (mem_size)
+        *mem_size = 0;
 
     void* fdt = paddr_to_physmap(boot_structure_paddr);
     if (!fdt) {
@@ -159,17 +160,17 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
         const void* ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &length);
         if (ptr) {
             if (length == 4) {
-                ramdisk_start_phys = fdt32_to_cpu(*(uint32_t *)ptr);
+                ramdisk_start_phys = fdt32_to_cpu(*(uint32_t*)ptr);
             } else if (length == 8) {
-                ramdisk_start_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+                ramdisk_start_phys = fdt64_to_cpu(*(uint64_t*)ptr);
             }
         }
         ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &length);
         if (ptr) {
             if (length == 4) {
-                ramdisk_end_phys = fdt32_to_cpu(*(uint32_t *)ptr);
+                ramdisk_end_phys = fdt32_to_cpu(*(uint32_t*)ptr);
             } else if (length == 8) {
-                ramdisk_end_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+                ramdisk_end_phys = fdt64_to_cpu(*(uint64_t*)ptr);
             }
         }
         // Some bootloaders pass initrd via cmdline, lets look there
@@ -178,9 +179,9 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
             const char* value = cmdline_get("initrd");
             if (value != NULL) {
                 char* endptr;
-                ramdisk_start_phys = strtoll(value,&endptr,16);
+                ramdisk_start_phys = strtoll(value, &endptr, 16);
                 endptr++; //skip the comma
-                ramdisk_end_phys = strtoll(endptr,NULL,16) + ramdisk_start_phys;
+                ramdisk_end_phys = strtoll(endptr, NULL, 16) + ramdisk_start_phys;
             }
         }
 
@@ -199,11 +200,11 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
             return;
         }
         int lenp;
-        const void *prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
+        const void* prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
         if (prop_ptr && lenp == 0x10) {
             /* we're looking at a memory descriptor */
             //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
-            *mem_size = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
+            *mem_size = fdt64_to_cpu(*((const uint64_t*)prop_ptr + 1));
         }
     }
 }
@@ -224,13 +225,13 @@ static void platform_preserve_ramdisk(void) {
     }
 
     // mark all of the pages we allocated as WIRED
-    vm_page_t *p;
-    list_for_every_entry(&list, p, vm_page_t, free.node) {
+    vm_page_t* p;
+    list_for_every_entry (&list, p, vm_page_t, free.node) {
         p->state = VM_PAGE_STATE_WIRED;
     }
 }
 
-void* platform_get_ramdisk(size_t *size) {
+void* platform_get_ramdisk(size_t* size) {
     if (ramdisk_base) {
         *size = ramdisk_size;
         return ramdisk_base;
@@ -241,14 +242,14 @@ void* platform_get_ramdisk(size_t *size) {
 }
 
 static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
-    mdi_node_ref_t  clusters;
+    mdi_node_ref_t clusters;
 
     if (mdi_find_node(cpu_map, MDI_CPU_CLUSTERS, &clusters) != ZX_OK) {
         panic("platform_cpu_early_init couldn't find clusters\n");
         return;
     }
 
-    mdi_node_ref_t  cluster;
+    mdi_node_ref_t cluster;
 
     mdi_each_child(&clusters, &cluster) {
         mdi_node_ref_t node;
@@ -347,8 +348,7 @@ static void platform_start_cpu(uint cluster, uint cpu) {
 
 static void* allocate_one_stack(void) {
     uint8_t* stack = static_cast<uint8_t*>(
-        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, nullptr, nullptr)
-    );
+        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, nullptr, nullptr));
     return static_cast<void*>(stack + ARCH_DEFAULT_STACK_SIZE);
 }
 
@@ -373,7 +373,6 @@ static inline bool is_zircon_boot_header(void* addr) {
 
     efi_zircon_hdr_t* header = (efi_zircon_hdr_t*)addr;
 
-
     return header->magic == EFI_ZIRCON_MAGIC;
 }
 
@@ -396,7 +395,7 @@ static void ramdisk_from_bootdata_container(void* bootdata,
     *ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
 }
 
-static void process_mdi_banks(mdi_node_ref &map, void (*func)(const mem_bank &)) {
+static void process_mdi_banks(mdi_node_ref& map, void (*func)(const mem_bank&)) {
     mdi_node_ref_t bank_node;
     if (mdi_first_child(&map, &bank_node) == ZX_OK) {
         size_t bank_num = 0;
@@ -423,12 +422,12 @@ static void process_mdi_banks(mdi_node_ref &map, void (*func)(const mem_bank &))
 }
 
 static void platform_mdi_init(const bootdata_t* section) {
-    mdi_node_ref_t  root;
-    mdi_node_ref_t  cpu_map;
-    mdi_node_ref_t  kernel_drivers;
+    mdi_node_ref_t root;
+    mdi_node_ref_t cpu_map;
+    mdi_node_ref_t kernel_drivers;
 
     const void* ramdisk_end = reinterpret_cast<uint8_t*>(ramdisk_base) + ramdisk_size;
-    const void* section_ptr = reinterpret_cast<const void *>(section);
+    const void* section_ptr = reinterpret_cast<const void*>(section);
     const size_t length = reinterpret_cast<uintptr_t>(ramdisk_end) - reinterpret_cast<uintptr_t>(section_ptr);
 
     if (mdi_init(section_ptr, length, &root) != ZX_OK) {
@@ -492,7 +491,7 @@ static void platform_mdi_init(const bootdata_t* section) {
 }
 
 static uint32_t process_bootsection(bootdata_t* section) {
-    switch(section->type) {
+    switch (section->type) {
     case BOOTDATA_MDI:
         platform_mdi_init(section);
         break;
@@ -548,8 +547,7 @@ static void process_bootdata(bootdata_t* root) {
     }
 }
 
-void platform_early_init(void)
-{
+void platform_early_init(void) {
     // QEMU does not put device tree pointer in the boot-time x0 register if loaded
     // as a ELF file. so set it here before calling read_device_tree.
     if (boot_structure_paddr == 0) {
@@ -573,12 +571,12 @@ void platform_early_init(void)
         ramdisk_from_bootdata_container(boot_structure_kvaddr, &ramdisk_base,
                                         &ramdisk_size);
     } else if (is_zircon_boot_header(boot_structure_kvaddr)) {
-            efi_zircon_hdr_t *hdr = (efi_zircon_hdr_t*)boot_structure_kvaddr;
-            cmdline_append(hdr->cmd_line);
-            ramdisk_start_phys = hdr->ramdisk_base_phys;
-            ramdisk_size = hdr->ramdisk_size;
-            ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
-            ramdisk_base =  paddr_to_physmap(ramdisk_start_phys);
+        efi_zircon_hdr_t* hdr = (efi_zircon_hdr_t*)boot_structure_kvaddr;
+        cmdline_append(hdr->cmd_line);
+        ramdisk_start_phys = hdr->ramdisk_base_phys;
+        ramdisk_size = hdr->ramdisk_size;
+        ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
+        ramdisk_base = paddr_to_physmap(ramdisk_start_phys);
     } else {
         // on qemu we read arena size from the device tree
         read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
@@ -625,7 +623,7 @@ void platform_early_init(void)
     }
 
     // Allocate memory regions reserved by bootloaders for other functions
-    for (const auto& b: boot_reserve_banks) {
+    for (const auto& b : boot_reserve_banks) {
         if (b.length == 0)
             break;
 
@@ -637,14 +635,13 @@ void platform_early_init(void)
     platform_preserve_ramdisk();
 }
 
-void platform_init(void)
-{
+void platform_init(void) {
     platform_cpu_init();
 }
 
 // after the fact create a region to reserve the peripheral map(s)
 static void platform_init_postvm(uint level) {
-    for (auto& b: periph_banks) {
+    for (auto& b : periph_banks) {
         if (b.length == 0)
             break;
 
@@ -654,8 +651,7 @@ static void platform_init_postvm(uint level) {
 
 LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM);
 
-void platform_dputs(const char* str, size_t len)
-{
+void platform_dputs(const char* str, size_t len) {
     while (len-- > 0) {
         char c = *str++;
         if (c == '\n') {
@@ -665,8 +661,7 @@ void platform_dputs(const char* str, size_t len)
     }
 }
 
-int platform_dgetc(char *c, bool wait)
-{
+int platform_dgetc(char* c, bool wait) {
     int ret = uart_getc(wait);
     if (ret == -1)
         return -1;
@@ -674,20 +669,18 @@ int platform_dgetc(char *c, bool wait)
     return 0;
 }
 
-void platform_pputc(char c)
-{
+void platform_pputc(char c) {
     uart_pputc(c);
 }
 
-int platform_pgetc(char *c, bool wait)
-{
-     int r = uart_pgetc();
-     if (r == -1) {
-         return -1;
-     }
+int platform_pgetc(char* c, bool wait) {
+    int r = uart_pgetc();
+    if (r == -1) {
+        return -1;
+    }
 
-     *c = static_cast<char>(r);
-     return 0;
+    *c = static_cast<char>(r);
+    return 0;
 }
 
 /* stub out the hardware rng entropy generator, which doesn't exist on this platform */
@@ -696,12 +689,11 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
 }
 
 /* no built in framebuffer */
-zx_status_t display_get_info(struct display_info *info) {
+zx_status_t display_get_info(struct display_info* info) {
     return ZX_ERR_NOT_FOUND;
 }
 
-void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
-{
+void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) {
 
     if (suggested_action == HALT_ACTION_REBOOT) {
         power_reboot(REBOOT_NORMAL);
@@ -727,14 +719,15 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", reason);
         arch_disable_ints();
         panic_shell_start();
-#endif  // ENABLE_PANIC_SHELL
+#endif // ENABLE_PANIC_SHELL
     }
 
     dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
 
     // catch all fallthrough cases
     arch_disable_ints();
-    for (;;);
+    for (;;)
+        ;
 }
 
 size_t platform_stow_crashlog(void* log, size_t len) {

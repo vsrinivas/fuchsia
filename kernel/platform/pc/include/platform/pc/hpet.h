@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include <platform/pc/acpi.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <platform/pc/acpi.h>
 
 __BEGIN_CDECLS
 

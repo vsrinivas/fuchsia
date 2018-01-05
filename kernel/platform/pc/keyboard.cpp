@@ -8,85 +8,81 @@
 
 #include <platform/keyboard.h>
 
-#include <sys/types.h>
-#include <err.h>
-#include <reg.h>
-#include <trace.h>
-#include <ctype.h>
-#include <debug.h>
-#include <assert.h>
-#include <kernel/thread.h>
-#include <platform.h>
-#include <dev/interrupt.h>
-#include <platform/console.h>
-#include <platform/timer.h>
-#include <platform/pc.h>
 #include "platform_p.h"
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
+#include <assert.h>
+#include <ctype.h>
+#include <debug.h>
+#include <dev/interrupt.h>
+#include <err.h>
+#include <kernel/thread.h>
 #include <lib/cbuf.h>
+#include <platform.h>
+#include <platform/console.h>
+#include <platform/pc.h>
+#include <platform/timer.h>
+#include <reg.h>
+#include <sys/types.h>
+#include <trace.h>
 
 #define LOCAL_TRACE 0
 
-static inline uint8_t i8042_read_data(void)
-{
+static inline uint8_t i8042_read_data(void) {
     return inp(I8042_DATA_REG);
 }
 
-static inline uint8_t i8042_read_status(void)
-{
+static inline uint8_t i8042_read_status(void) {
     return inp(I8042_STATUS_REG);
 }
 
-static inline void i8042_write_data(uint8_t val)
-{
+static inline void i8042_write_data(uint8_t val) {
     outp(I8042_DATA_REG, val);
 }
 
-static inline void i8042_write_command(uint8_t val)
-{
+static inline void i8042_write_command(uint8_t val) {
     outp(I8042_COMMAND_REG, val);
 }
 
 /*
  * timeout in milliseconds
  */
-#define I8042_CTL_TIMEOUT   500
+#define I8042_CTL_TIMEOUT 500
 
 /*
  * status register bits
  */
-#define I8042_STR_PARITY    0x80
-#define I8042_STR_TIMEOUT   0x40
-#define I8042_STR_AUXDATA   0x20
-#define I8042_STR_KEYLOCK   0x10
-#define I8042_STR_CMDDAT    0x08
-#define I8042_STR_MUXERR    0x04
-#define I8042_STR_IBF       0x02
-#define I8042_STR_OBF       0x01
+#define I8042_STR_PARITY 0x80
+#define I8042_STR_TIMEOUT 0x40
+#define I8042_STR_AUXDATA 0x20
+#define I8042_STR_KEYLOCK 0x10
+#define I8042_STR_CMDDAT 0x08
+#define I8042_STR_MUXERR 0x04
+#define I8042_STR_IBF 0x02
+#define I8042_STR_OBF 0x01
 
 /*
  * control register bits
  */
-#define I8042_CTR_KBDINT    0x01
-#define I8042_CTR_AUXINT    0x02
-#define I8042_CTR_IGNKEYLK  0x08
-#define I8042_CTR_KBDDIS    0x10
-#define I8042_CTR_AUXDIS    0x20
-#define I8042_CTR_XLATE     0x40
+#define I8042_CTR_KBDINT 0x01
+#define I8042_CTR_AUXINT 0x02
+#define I8042_CTR_IGNKEYLK 0x08
+#define I8042_CTR_KBDDIS 0x10
+#define I8042_CTR_AUXDIS 0x20
+#define I8042_CTR_XLATE 0x40
 
 /*
  * commands
  */
-#define I8042_CMD_CTL_RCTR  0x0120
-#define I8042_CMD_CTL_WCTR  0x1060
-#define I8042_CMD_CTL_TEST  0x01aa
+#define I8042_CMD_CTL_RCTR 0x0120
+#define I8042_CMD_CTL_WCTR 0x1060
+#define I8042_CMD_CTL_TEST 0x01aa
 
-#define I8042_CMD_KBD_DIS   0x00ad
-#define I8042_CMD_KBD_EN    0x00ae
+#define I8042_CMD_KBD_DIS 0x00ad
+#define I8042_CMD_KBD_EN 0x00ae
 #define I8042_CMD_PULSE_RESET 0x00fe
-#define I8042_CMD_KBD_TEST  0x01ab
-#define I8042_CMD_KBD_MODE  0x01f0
+#define I8042_CMD_KBD_TEST 0x01ab
+#define I8042_CMD_KBD_MODE 0x01f0
 
 /*
  * used for flushing buffers. the i8042 internal buffer shoudn't exceed this.
@@ -171,9 +167,9 @@ const uint8_t pc_keymap_set1_lower[128] = {
     /* 0x10 */ 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', KEY_RETURN, KEY_LCTRL, 'a', 's',
     /* 0x20 */ 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', KEY_LSHIFT, '\\', 'z', 'x', 'c', 'v',
     /* 0x30 */ 'b', 'n', 'm', ',', '.', '/', KEY_RSHIFT, '*', KEY_LALT, ' ', KEY_CAPSLOCK, KEY_F1, KEY_F2,
-                KEY_F3, KEY_F4, KEY_F5,
+    KEY_F3, KEY_F4, KEY_F5,
     /* 0x40 */ KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_PAD_NUMLOCK, KEY_SCRLOCK, KEY_PAD_7, KEY_PAD_8,
-                KEY_PAD_9, KEY_PAD_MINUS, KEY_PAD_4, KEY_PAD_5, KEY_PAD_6, KEY_PAD_PLUS, KEY_PAD_1,
+    KEY_PAD_9, KEY_PAD_MINUS, KEY_PAD_4, KEY_PAD_5, KEY_PAD_6, KEY_PAD_PLUS, KEY_PAD_1,
     /* 0x50 */ KEY_PAD_2, KEY_PAD_3, KEY_PAD_0, KEY_PAD_PERIOD, 0, 0, 0, KEY_F11, KEY_F12, 0, 0, 0, 0, 0, 0, 0,
 };
 
@@ -182,9 +178,9 @@ const uint8_t pc_keymap_set1_upper[128] = {
     /* 0x10 */ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', KEY_RETURN, KEY_LCTRL, 'A', 'S',
     /* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', KEY_LSHIFT, '|', 'Z', 'X', 'C', 'V',
     /* 0x30 */ 'B', 'N', 'M', '<', '>', '?', KEY_RSHIFT, '*', KEY_LALT, ' ', KEY_CAPSLOCK, KEY_F1, KEY_F2,
-                KEY_F3, KEY_F4, KEY_F5,
+    KEY_F3, KEY_F4, KEY_F5,
     /* 0x40 */ KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_PAD_NUMLOCK, KEY_SCRLOCK, KEY_PAD_7, KEY_PAD_8,
-                KEY_PAD_9, KEY_PAD_MINUS, KEY_PAD_4, KEY_PAD_5, KEY_PAD_6, KEY_PAD_PLUS, KEY_PAD_1,
+    KEY_PAD_9, KEY_PAD_MINUS, KEY_PAD_4, KEY_PAD_5, KEY_PAD_6, KEY_PAD_PLUS, KEY_PAD_1,
     /* 0x50 */ KEY_PAD_2, KEY_PAD_3, KEY_PAD_0, KEY_PAD_PERIOD, 0, 0, 0, KEY_F11, KEY_F12, 0, 0, 0, 0, 0, 0, 0,
 };
 
@@ -194,8 +190,7 @@ const uint8_t pc_keymap_set1_e0[128] = {
     /* 0x20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* 0x30 */ 0, 0, 0, 0, 0, KEY_PAD_DIVIDE, 0, KEY_PRTSCRN, KEY_RALT, 0, 0, 0, 0, 0, 0, 0,
     /* 0x40 */ 0, 0, 0, 0, 0, 0, 0, KEY_HOME, KEY_ARROW_UP, KEY_PGUP, 0, KEY_ARROW_LEFT, 0, KEY_ARROW_RIGHT, 0, KEY_END,
-    /* 0x50 */ KEY_ARROW_DOWN, KEY_PGDN, KEY_INS, 0, 0, 0, 0, 0, 0, 0, 0, KEY_LWIN, KEY_RWIN, KEY_MENU, 0, 0
-};
+    /* 0x50 */ KEY_ARROW_DOWN, KEY_PGDN, KEY_INS, 0, 0, 0, 0, 0, 0, 0, 0, KEY_LWIN, KEY_RWIN, KEY_MENU, 0, 0};
 
 /*
  * state key flags
@@ -204,10 +199,9 @@ static bool key_lshift;
 static bool key_rshift;
 static int last_code;
 
-static cbuf_t *key_buf;
+static cbuf_t* key_buf;
 
-static int i8042_process_scode(uint8_t scode, unsigned int flags)
-{
+static int i8042_process_scode(uint8_t scode, unsigned int flags) {
     // is this a multi code sequence?
     bool multi = (last_code == 0xe0);
 
@@ -231,58 +225,57 @@ static int i8042_process_scode(uint8_t scode, unsigned int flags)
     LTRACEF("scancode 0x%x, keyup %d, multi %d: keycode 0x%x\n", scode, !!key_up, multi, key_code);
 
     // generate a character string to feed into the queue
-    char str[4] = { 0 };
+    char str[4] = {0};
     switch (key_code) {
-        // for all the usual ascii strings, generate the target string directly
-        case 1 ... 0x7f:
-            str[0] = key_code;
-            break;
+    // for all the usual ascii strings, generate the target string directly
+    case 1 ... 0x7f:
+        str[0] = key_code;
+        break;
 
-        // a few special keys we can generate stuff for directly
-        case KEY_RETURN:
-        case KEY_PAD_ENTER:
-            str[0] = '\n';
-            break;
-        case KEY_BACKSPACE:
-            str[0] = '\b';
-            break;
-        case KEY_TAB:
-            str[0] = '\t';
-            break;
+    // a few special keys we can generate stuff for directly
+    case KEY_RETURN:
+    case KEY_PAD_ENTER:
+        str[0] = '\n';
+        break;
+    case KEY_BACKSPACE:
+        str[0] = '\b';
+        break;
+    case KEY_TAB:
+        str[0] = '\t';
+        break;
 
-        // generate vt100 key codes for arrows
-        case KEY_ARROW_UP:
-            str[0] = 0x1b;
-            str[1] = '[';
-            str[2] = 65;
-            break;
-        case KEY_ARROW_DOWN:
-            str[0] = 0x1b;
-            str[1] = '[';
-            str[2] = 66;
-            break;
-        case KEY_ARROW_RIGHT:
-            str[0] = 0x1b;
-            str[1] = '[';
-            str[2] = 67;
-            break;
-        case KEY_ARROW_LEFT:
-            str[0] = 0x1b;
-            str[1] = '[';
-            str[2] = 68;
-            break;
+    // generate vt100 key codes for arrows
+    case KEY_ARROW_UP:
+        str[0] = 0x1b;
+        str[1] = '[';
+        str[2] = 65;
+        break;
+    case KEY_ARROW_DOWN:
+        str[0] = 0x1b;
+        str[1] = '[';
+        str[2] = 66;
+        break;
+    case KEY_ARROW_RIGHT:
+        str[0] = 0x1b;
+        str[1] = '[';
+        str[2] = 67;
+        break;
+    case KEY_ARROW_LEFT:
+        str[0] = 0x1b;
+        str[1] = '[';
+        str[2] = 68;
+        break;
 
-        // left and right shift are special
-        case KEY_LSHIFT:
-            key_lshift = !key_up;
-            break;
-        case KEY_RSHIFT:
-            key_rshift = !key_up;
-            break;
+    // left and right shift are special
+    case KEY_LSHIFT:
+        key_lshift = !key_up;
+        break;
+    case KEY_RSHIFT:
+        key_rshift = !key_up;
+        break;
 
-        // everything else we just eat
-        default:
-            ; // nothing
+    // everything else we just eat
+    default:; // nothing
     }
 
     int chars_added = 0;
@@ -297,8 +290,7 @@ static int i8042_process_scode(uint8_t scode, unsigned int flags)
     return chars_added;
 }
 
-static int i8042_wait_read(void)
-{
+static int i8042_wait_read(void) {
     int i = 0;
     while ((~i8042_read_status() & I8042_STR_OBF) && (i < I8042_CTL_TIMEOUT)) {
         spin(10);
@@ -307,8 +299,7 @@ static int i8042_wait_read(void)
     return -(i == I8042_CTL_TIMEOUT);
 }
 
-static int i8042_wait_write(void)
-{
+static int i8042_wait_write(void) {
     int i = 0;
     while ((i8042_read_status() & I8042_STR_IBF) && (i < I8042_CTL_TIMEOUT)) {
         spin(10);
@@ -317,8 +308,7 @@ static int i8042_wait_write(void)
     return -(i == I8042_CTL_TIMEOUT);
 }
 
-static int i8042_flush(void)
-{
+static int i8042_flush(void) {
     unsigned char data __UNUSED;
     int i = 0;
 
@@ -330,8 +320,7 @@ static int i8042_flush(void)
     return i;
 }
 
-static int i8042_command(uint8_t *param, uint16_t command)
-{
+static int i8042_command(uint8_t* param, uint16_t command) {
     int retval = 0, i = 0;
 
     retval = i8042_wait_write();
@@ -366,8 +355,7 @@ static int i8042_command(uint8_t *param, uint16_t command)
     return retval;
 }
 
-static int keyboard_command(uint8_t *param, int command)
-{
+static int keyboard_command(uint8_t* param, int command) {
     int retval = 0, i = 0;
 
     retval = i8042_wait_write();
@@ -402,8 +390,7 @@ static int keyboard_command(uint8_t *param, int command)
     return retval;
 }
 
-static enum handler_return i8042_interrupt(void *arg)
-{
+static enum handler_return i8042_interrupt(void* arg) {
     bool resched = false;
 
     // keep handling status on the keyboard controller until no bits are set we care about
@@ -417,8 +404,8 @@ static enum handler_return i8042_interrupt(void *arg)
         if (str & I8042_STR_OBF) {
             uint8_t data = i8042_read_data();
             int chars_added = i8042_process_scode(data,
-                                ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
-                                ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
+                                                  ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
+                                                      ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
             if (chars_added > 0)
                 resched = true;
 
@@ -431,14 +418,12 @@ static enum handler_return i8042_interrupt(void *arg)
     return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-int platform_read_key(char *c)
-{
+int platform_read_key(char* c) {
     ssize_t len = cbuf_read_char(key_buf, c, true);
     return static_cast<int>(len);
 }
 
-void platform_init_keyboard(cbuf_t *buffer)
-{
+void platform_init_keyboard(cbuf_t* buffer) {
     uint8_t ctr;
 
     key_buf = buffer;
@@ -476,9 +461,9 @@ void platform_init_keyboard(cbuf_t *buffer)
     i8042_interrupt(NULL);
 }
 
-void pc_keyboard_reboot(void)
-{
-    while (i8042_read_status() & I8042_STR_IBF);
+void pc_keyboard_reboot(void) {
+    while (i8042_read_status() & I8042_STR_IBF)
+        ;
     i8042_write_command(I8042_CMD_PULSE_RESET);
     // Wait a second for the command to process before declaring failure
     spin(1000000);

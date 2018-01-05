@@ -6,7 +6,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 #include <sys/types.h>
 
 #include <arch/ops.h>
@@ -28,11 +27,11 @@ void pic_map(uint8_t pic1, uint8_t pic2) {
     outp(PIC2, ICW1);
 
     /* send ICW2 */
-    outp(PIC1 + 1, pic1);   /* remap */
-    outp(PIC2 + 1, pic2);   /*  pics */
+    outp(PIC1 + 1, pic1); /* remap */
+    outp(PIC2 + 1, pic2); /*  pics */
 
     /* send ICW3 */
-    outp(PIC1 + 1, 4);  /* IRQ2 -> connection to slave */
+    outp(PIC1 + 1, 4); /* IRQ2 -> connection to slave */
     outp(PIC2 + 1, 2);
 
     /* send ICW4 */

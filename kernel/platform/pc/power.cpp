@@ -5,18 +5,18 @@
 // https://opensource.org/licenses/MIT
 //
 
-#include <stdio.h>
-#include <string.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
+#include <stdio.h>
+#include <string.h>
 
 #include <platform.h>
 #include <platform/keyboard.h>
 
+#include <arch/x86/apic.h>
 #include <lib/console.h>
 #include <lib/version.h>
-#include <arch/x86/apic.h>
 
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
@@ -43,13 +43,12 @@ static void halt_other_cpus(void) {
         // spin for a while
         // TODO: find a better way to spin at this low level
         for (volatile int i = 0; i < 100000000; i++) {
-            __asm volatile ("nop");
+            __asm volatile("nop");
         }
     }
 }
 
-void platform_halt_cpu(void)
-{
+void platform_halt_cpu(void) {
     apic_send_self_ipi(0x00, DELIVERY_MODE_INIT);
 }
 
@@ -68,27 +67,26 @@ void platform_panic_start(void) {
 bool halt_on_panic = false;
 
 void platform_halt(
-        platform_halt_action suggested_action,
-        platform_halt_reason reason)
-{
+    platform_halt_action suggested_action,
+    platform_halt_reason reason) {
     printf("platform_halt suggested_action %d reason %d\n", suggested_action, reason);
 
     arch_disable_ints();
 
     switch (suggested_action) {
-        case HALT_ACTION_SHUTDOWN:
-            printf("Power off failed, halting\n");
-            break;
-        case HALT_ACTION_REBOOT:
-        case HALT_ACTION_REBOOT_BOOTLOADER:
-            printf("Rebooting...\n");
-            reboot();
-            printf("Reboot failed, halting\n");
-            break;
-        case HALT_ACTION_HALT:
-            printf("Halting...\n");
-            halt_other_cpus();
-            break;
+    case HALT_ACTION_SHUTDOWN:
+        printf("Power off failed, halting\n");
+        break;
+    case HALT_ACTION_REBOOT:
+    case HALT_ACTION_REBOOT_BOOTLOADER:
+        printf("Rebooting...\n");
+        reboot();
+        printf("Reboot failed, halting\n");
+        break;
+    case HALT_ACTION_HALT:
+        printf("Halting...\n");
+        halt_other_cpus();
+        break;
     }
 
 #if WITH_LIB_DEBUGLOG

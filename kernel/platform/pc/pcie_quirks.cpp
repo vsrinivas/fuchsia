@@ -10,11 +10,11 @@
 #if WITH_DEV_PCIE
 
 #include <arch/x86/feature.h>
-#include <inttypes.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
+#include <inttypes.h>
 #include <trace.h>
 #include <zircon/types.h>
 
@@ -46,13 +46,13 @@ static void pcie_tolud_quirk(const fbl::RefPtr<PcieDevice>& dev) {
         uint16_t offset;
     } TOLUD_CHIPSET_LUT[] = {
         // QEMU's emulation of Intel Q35.   No TOLUD register that I know of.
-        { .match = 0x808629c0, .mask = 0xFFFFFFFF, .offset = 0x0 },
+        {.match = 0x808629c0, .mask = 0xFFFFFFFF, .offset = 0x0},
         // PIIX4
-        { .match = 0x80861237, .mask = 0xFFFFFFFF, .offset = 0x0 },
+        {.match = 0x80861237, .mask = 0xFFFFFFFF, .offset = 0x0},
         // Second/Third gen core family
-        { .match = 0x80860100, .mask = 0xFFFFFF00, .offset = 0xBC },
+        {.match = 0x80860100, .mask = 0xFFFFFF00, .offset = 0xBC},
         // Intel 6th Generation Core Family (Skylake)
-        { .match = 0x80861900, .mask = 0xFFFFFF00, .offset = 0xBC },
+        {.match = 0x80861900, .mask = 0xFFFFFF00, .offset = 0xBC},
 
         // Intel 7th Generation Core Family (Kaby Lake)
         //
@@ -61,7 +61,7 @@ static void pcie_tolud_quirk(const fbl::RefPtr<PcieDevice>& dev) {
         // (i3-7100u), as well as HW that people have talked about online
         // (i5-7500u, as well as some desktop SKUs), however, all seem to use
         // 0x59xx.
-        { .match = 0x80865900, .mask = 0xFFFFFF00, .offset = 0xBC },
+        {.match = 0x80865900, .mask = 0xFFFFFF00, .offset = 0xBC},
     };
 
     // only makes sense on intel hardware
@@ -124,7 +124,8 @@ static void pcie_tolud_quirk(const fbl::RefPtr<PcieDevice>& dev) {
             zx_status_t res = dev->driver().SubtractBusRegion(0u, tolud_val, PciAddrSpace::MMIO);
             if (res != ZX_OK)
                 TRACEF("WARNING : PCIe TOLUD Quirk failed to subtract region "
-                       "[0x%08x, 0x%08x) (res %d)!\n", 0u, tolud_val, res);
+                       "[0x%08x, 0x%08x) (res %d)!\n",
+                       0u, tolud_val, res);
         }
     }
 
@@ -152,10 +153,10 @@ static void pcie_amd_topmem_quirk(const fbl::RefPtr<PcieDevice>& dev) {
     // see AMD64 architecture programming manual, volume 2, rev 3.25, page 209
     uint64_t top_mem = 0;
     uint64_t top_mem2 = 0;
-    if (syscfg & (1<<20)) { // MtrrVarDramEn
+    if (syscfg & (1 << 20)) { // MtrrVarDramEn
         top_mem = read_msr(0xc001001a);
     }
-    if (syscfg & (1<<21)) { // MtrrTom2En
+    if (syscfg & (1 << 21)) { // MtrrTom2En
         top_mem2 = read_msr(0xc001001d);
     }
 
@@ -175,7 +176,8 @@ static void pcie_amd_topmem_quirk(const fbl::RefPtr<PcieDevice>& dev) {
         zx_status_t res = dev->driver().SubtractBusRegion(0u, top_mem, PciAddrSpace::MMIO);
         if (res != ZX_OK) {
             TRACEF("WARNING : PCIe AMD top_mem quirk failed to subtract region "
-                   "[0x0, %#" PRIx64 ") (res %d)!\n", top_mem, res);
+                   "[0x0, %#" PRIx64 ") (res %d)!\n",
+                   top_mem, res);
         }
     }
 
@@ -187,7 +189,8 @@ static void pcie_amd_topmem_quirk(const fbl::RefPtr<PcieDevice>& dev) {
         zx_status_t res = dev->driver().AddBusRegion(top_mem2, max, PciAddrSpace::MMIO);
         if (res != ZX_OK) {
             TRACEF("WARNING : PCIe AMD top_mem quirk failed to add 64bit region "
-                   "[%#" PRIx64 ", %#" PRIx64 ") (res %d)!\n", top_mem2, max, res);
+                   "[%#" PRIx64 ", %#" PRIx64 ") (res %d)!\n",
+                   top_mem2, max, res);
         }
     }
 }
@@ -198,4 +201,4 @@ extern const PcieBusDriver::QuirkHandler pcie_quirk_handlers[] = {
     nullptr,
 };
 
-#endif  // WITH_DEV_PCIE
+#endif // WITH_DEV_PCIE

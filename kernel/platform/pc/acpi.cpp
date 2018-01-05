@@ -32,8 +32,7 @@ static ACPI_STATUS acpi_set_apic_irq_mode(void);
  * This function enables *only* the ACPICA Table Manager subsystem.
  * The rest of the ACPI subsystem will remain uninitialized.
  */
-void platform_init_acpi_tables(uint level)
-{
+void platform_init_acpi_tables(uint level) {
     DEBUG_ASSERT(!acpi_initialized);
 
     ACPI_STATUS status;
@@ -57,15 +56,14 @@ void platform_init_acpi_tables(uint level)
 /* initialize ACPI tables as soon as we have a working VM */
 LK_INIT_HOOK(acpi_tables, &platform_init_acpi_tables, LK_INIT_LEVEL_VM + 1);
 
-static zx_status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
-{
-    ACPI_TABLE_HEADER *table = NULL;
-    ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_MADT, 1, &table);
+static zx_status_t acpi_get_madt_record_limits(uintptr_t* start, uintptr_t* end) {
+    ACPI_TABLE_HEADER* table = NULL;
+    ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MADT, 1, &table);
     if (status != AE_OK) {
         TRACEF("could not find MADT\n");
         return ZX_ERR_NOT_FOUND;
     }
-    ACPI_TABLE_MADT *madt = (ACPI_TABLE_MADT *)table;
+    ACPI_TABLE_MADT* madt = (ACPI_TABLE_MADT*)table;
     uintptr_t records_start = ((uintptr_t)madt) + sizeof(*madt);
     uintptr_t records_end = ((uintptr_t)madt) + madt->Header.Length;
     if (records_start >= records_end) {
@@ -95,10 +93,9 @@ static zx_status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
  *         logical apic_ids will be returned.
  */
 zx_status_t platform_enumerate_cpus(
-        uint32_t *apic_ids,
-        uint32_t len,
-        uint32_t *num_cpus)
-{
+    uint32_t* apic_ids,
+    uint32_t len,
+    uint32_t* num_cpus) {
     if (num_cpus == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -110,27 +107,27 @@ zx_status_t platform_enumerate_cpus(
     }
     uint32_t count = 0;
     uintptr_t addr;
-    ACPI_SUBTABLE_HEADER *record_hdr;
+    ACPI_SUBTABLE_HEADER* record_hdr;
     for (addr = records_start; addr < records_end; addr += record_hdr->Length) {
-        record_hdr = (ACPI_SUBTABLE_HEADER *)addr;
+        record_hdr = (ACPI_SUBTABLE_HEADER*)addr;
         switch (record_hdr->Type) {
-            case ACPI_MADT_TYPE_LOCAL_APIC: {
-                ACPI_MADT_LOCAL_APIC *lapic = (ACPI_MADT_LOCAL_APIC *)record_hdr;
-                if (!(lapic->LapicFlags & ACPI_MADT_ENABLED)) {
-                    TRACEF("Skipping disabled processor %02x\n", lapic->Id);
-                    continue;
-                }
-                if (apic_ids != NULL && count < len) {
-                    apic_ids[count] = lapic->Id;
-                }
-                count++;
-                break;
+        case ACPI_MADT_TYPE_LOCAL_APIC: {
+            ACPI_MADT_LOCAL_APIC* lapic = (ACPI_MADT_LOCAL_APIC*)record_hdr;
+            if (!(lapic->LapicFlags & ACPI_MADT_ENABLED)) {
+                TRACEF("Skipping disabled processor %02x\n", lapic->Id);
+                continue;
             }
+            if (apic_ids != NULL && count < len) {
+                apic_ids[count] = lapic->Id;
+            }
+            count++;
+            break;
+        }
         }
     }
     if (addr != records_end) {
-      TRACEF("malformed MADT\n");
-      return ZX_ERR_INTERNAL;
+        TRACEF("malformed MADT\n");
+        return ZX_ERR_INTERNAL;
     }
     *num_cpus = count;
     return ZX_OK;
@@ -149,10 +146,9 @@ zx_status_t platform_enumerate_cpus(
  *         IO APICs will be returned.
  */
 zx_status_t platform_enumerate_io_apics(
-        struct io_apic_descriptor *io_apics,
-        uint32_t len,
-        uint32_t *num_io_apics)
-{
+    struct io_apic_descriptor* io_apics,
+    uint32_t len,
+    uint32_t* num_io_apics) {
     if (num_io_apics == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -166,25 +162,25 @@ zx_status_t platform_enumerate_io_apics(
     uint32_t count = 0;
     uintptr_t addr;
     for (addr = records_start; addr < records_end;) {
-        ACPI_SUBTABLE_HEADER *record_hdr = (ACPI_SUBTABLE_HEADER *)addr;
+        ACPI_SUBTABLE_HEADER* record_hdr = (ACPI_SUBTABLE_HEADER*)addr;
         switch (record_hdr->Type) {
-            case ACPI_MADT_TYPE_IO_APIC: {
-                ACPI_MADT_IO_APIC *io_apic = (ACPI_MADT_IO_APIC *)record_hdr;
-                if (io_apics != NULL && count < len) {
-                    io_apics[count].apic_id = io_apic->Id;
-                    io_apics[count].paddr = io_apic->Address;
-                    io_apics[count].global_irq_base = io_apic->GlobalIrqBase;
-                }
-                count++;
-                break;
+        case ACPI_MADT_TYPE_IO_APIC: {
+            ACPI_MADT_IO_APIC* io_apic = (ACPI_MADT_IO_APIC*)record_hdr;
+            if (io_apics != NULL && count < len) {
+                io_apics[count].apic_id = io_apic->Id;
+                io_apics[count].paddr = io_apic->Address;
+                io_apics[count].global_irq_base = io_apic->GlobalIrqBase;
             }
+            count++;
+            break;
+        }
         }
 
         addr += record_hdr->Length;
     }
     if (addr != records_end) {
-      TRACEF("malformed MADT\n");
-      return ZX_ERR_INVALID_ARGS;
+        TRACEF("malformed MADT\n");
+        return ZX_ERR_INVALID_ARGS;
     }
     *num_io_apics = count;
     return ZX_OK;
@@ -202,10 +198,9 @@ zx_status_t platform_enumerate_io_apics(
  *         ISOs will be returned.
  */
 zx_status_t platform_enumerate_interrupt_source_overrides(
-        struct io_apic_isa_override *isos,
-        uint32_t len,
-        uint32_t *num_isos)
-{
+    struct io_apic_isa_override* isos,
+    uint32_t len,
+    uint32_t* num_isos) {
     if (num_isos == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -219,59 +214,59 @@ zx_status_t platform_enumerate_interrupt_source_overrides(
     uint32_t count = 0;
     uintptr_t addr;
     for (addr = records_start; addr < records_end;) {
-        ACPI_SUBTABLE_HEADER *record_hdr = (ACPI_SUBTABLE_HEADER *)addr;
+        ACPI_SUBTABLE_HEADER* record_hdr = (ACPI_SUBTABLE_HEADER*)addr;
         switch (record_hdr->Type) {
-            case ACPI_MADT_TYPE_INTERRUPT_OVERRIDE: {
-                ACPI_MADT_INTERRUPT_OVERRIDE *iso =
-                        (ACPI_MADT_INTERRUPT_OVERRIDE *)record_hdr;
-                if (isos != NULL && count < len) {
-                    ASSERT(iso->Bus == 0); // 0 means ISA, ISOs are only ever for ISA IRQs
-                    isos[count].isa_irq = iso->SourceIrq;
-                    isos[count].remapped = true;
-                    isos[count].global_irq = iso->GlobalIrq;
+        case ACPI_MADT_TYPE_INTERRUPT_OVERRIDE: {
+            ACPI_MADT_INTERRUPT_OVERRIDE* iso =
+                (ACPI_MADT_INTERRUPT_OVERRIDE*)record_hdr;
+            if (isos != NULL && count < len) {
+                ASSERT(iso->Bus == 0); // 0 means ISA, ISOs are only ever for ISA IRQs
+                isos[count].isa_irq = iso->SourceIrq;
+                isos[count].remapped = true;
+                isos[count].global_irq = iso->GlobalIrq;
 
-                    uint32_t flags = iso->IntiFlags;
-                    uint32_t polarity = flags & ACPI_MADT_POLARITY_MASK;
-                    uint32_t trigger = flags & ACPI_MADT_TRIGGER_MASK;
+                uint32_t flags = iso->IntiFlags;
+                uint32_t polarity = flags & ACPI_MADT_POLARITY_MASK;
+                uint32_t trigger = flags & ACPI_MADT_TRIGGER_MASK;
 
-                    // Conforms below means conforms to the bus spec.  ISA is
-                    // edge triggered and active high.
-                    switch (polarity) {
-                        case ACPI_MADT_POLARITY_CONFORMS:
-                        case ACPI_MADT_POLARITY_ACTIVE_HIGH:
-                            isos[count].pol = IRQ_POLARITY_ACTIVE_HIGH;
-                            break;
-                        case ACPI_MADT_POLARITY_ACTIVE_LOW:
-                            isos[count].pol = IRQ_POLARITY_ACTIVE_LOW;
-                            break;
-                        default:
-                            panic("Unknown IRQ polarity in override: %u\n",
-                                  polarity);
-                    }
-
-                    switch (trigger) {
-                        case ACPI_MADT_TRIGGER_CONFORMS:
-                        case ACPI_MADT_TRIGGER_EDGE:
-                            isos[count].tm = IRQ_TRIGGER_MODE_EDGE;
-                            break;
-                        case ACPI_MADT_TRIGGER_LEVEL:
-                            isos[count].tm = IRQ_TRIGGER_MODE_LEVEL;
-                            break;
-                        default:
-                            panic("Unknown IRQ trigger in override: %u\n",
-                                  trigger);
-                    }
+                // Conforms below means conforms to the bus spec.  ISA is
+                // edge triggered and active high.
+                switch (polarity) {
+                case ACPI_MADT_POLARITY_CONFORMS:
+                case ACPI_MADT_POLARITY_ACTIVE_HIGH:
+                    isos[count].pol = IRQ_POLARITY_ACTIVE_HIGH;
+                    break;
+                case ACPI_MADT_POLARITY_ACTIVE_LOW:
+                    isos[count].pol = IRQ_POLARITY_ACTIVE_LOW;
+                    break;
+                default:
+                    panic("Unknown IRQ polarity in override: %u\n",
+                          polarity);
                 }
-                count++;
-                break;
+
+                switch (trigger) {
+                case ACPI_MADT_TRIGGER_CONFORMS:
+                case ACPI_MADT_TRIGGER_EDGE:
+                    isos[count].tm = IRQ_TRIGGER_MODE_EDGE;
+                    break;
+                case ACPI_MADT_TRIGGER_LEVEL:
+                    isos[count].tm = IRQ_TRIGGER_MODE_LEVEL;
+                    break;
+                default:
+                    panic("Unknown IRQ trigger in override: %u\n",
+                          trigger);
+                }
             }
+            count++;
+            break;
+        }
         }
 
         addr += record_hdr->Length;
     }
     if (addr != records_end) {
-      TRACEF("malformed MADT\n");
-      return ZX_ERR_INVALID_ARGS;
+        TRACEF("malformed MADT\n");
+        return ZX_ERR_INVALID_ARGS;
     }
     *num_isos = count;
     return ZX_OK;
@@ -283,15 +278,14 @@ zx_status_t platform_enumerate_interrupt_source_overrides(
  *
  * @return ZX_OK on success.
  */
-zx_status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
-{
-    ACPI_TABLE_HEADER *table = NULL;
-    ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_HPET, 1, &table);
+zx_status_t platform_find_hpet(struct acpi_hpet_descriptor* hpet) {
+    ACPI_TABLE_HEADER* table = NULL;
+    ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_HPET, 1, &table);
     if (status != AE_OK) {
         TRACEF("could not find HPET\n");
         return ZX_ERR_NOT_FOUND;
     }
-    ACPI_TABLE_HPET *hpet_tbl = (ACPI_TABLE_HPET *)table;
+    ACPI_TABLE_HPET* hpet_tbl = (ACPI_TABLE_HPET*)table;
     if (hpet_tbl->Header.Length != sizeof(ACPI_TABLE_HPET)) {
         TRACEF("Unexpected HPET table length\n");
         return ZX_ERR_NOT_FOUND;
@@ -301,9 +295,14 @@ zx_status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
     hpet->sequence = hpet_tbl->Sequence;
     hpet->address = hpet_tbl->Address.Address;
     switch (hpet_tbl->Address.SpaceId) {
-        case ACPI_ADR_SPACE_SYSTEM_IO: hpet->port_io = true; break;
-        case ACPI_ADR_SPACE_SYSTEM_MEMORY: hpet->port_io = false; break;
-        default: return ZX_ERR_NOT_SUPPORTED;
+    case ACPI_ADR_SPACE_SYSTEM_IO:
+        hpet->port_io = true;
+        break;
+    case ACPI_ADR_SPACE_SYSTEM_MEMORY:
+        hpet->port_io = false;
+        break;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     return ZX_OK;

@@ -18,21 +18,21 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/timer_freq.h>
-#include <lib/fixed_point.h>
-#include <lk/init.h>
+#include <dev/interrupt.h>
 #include <fbl/algorithm.h>
 #include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <lib/fixed_point.h>
+#include <lk/init.h>
 #include <platform.h>
-#include <pow2.h>
-#include <dev/interrupt.h>
 #include <platform/console.h>
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/hpet.h>
 #include <platform/pc/timer.h>
 #include <platform/timer.h>
+#include <pow2.h>
 #include <zircon/types.h>
 
 #include "platform_p.h"
@@ -60,13 +60,12 @@ enum clock_source {
     CLOCK_COUNT
 };
 
-const char *clock_name[] = {
-    [CLOCK_PIT] = "PIT",
-    [CLOCK_HPET] = "HPET",
-    [CLOCK_TSC] = "TSC",
+const char* clock_name[] = {
+        [CLOCK_PIT] = "PIT",
+        [CLOCK_HPET] = "HPET",
+        [CLOCK_TSC] = "TSC",
 };
 static_assert(fbl::count_of(clock_name) == CLOCK_COUNT, "");
-
 
 // PIT time accounting info
 static struct fp_32_64 us_per_pit;
@@ -105,7 +104,7 @@ static uint32_t ns_per_hpet_rounded_up;
 #define INTERNAL_FREQ 1193182U
 #define INTERNAL_FREQ_3X 3579546U
 
-#define INTERNAL_FREQ_TICKS_PER_MS (INTERNAL_FREQ/1000)
+#define INTERNAL_FREQ_TICKS_PER_MS (INTERNAL_FREQ / 1000)
 
 /* Maximum amount of time that can be program on the timer to schedule the next
  *  interrupt, in miliseconds */
@@ -113,27 +112,26 @@ static uint32_t ns_per_hpet_rounded_up;
 
 #define LOCAL_TRACE 0
 
-zx_time_t current_time(void)
-{
+zx_time_t current_time(void) {
     zx_time_t time;
 
     switch (wall_clock) {
-        case CLOCK_TSC: {
-            uint64_t tsc = rdtsc();
-            time = ticks_to_nanos(tsc);
-            break;
-        }
-        case CLOCK_HPET: {
-            uint64_t counter = hpet_get_value();
-            time = u64_mul_u64_fp32_64(counter, ns_per_hpet);
-            break;
-        }
-        case CLOCK_PIT: {
-            time = u64_mul_u64_fp32_64(pit_ticks, us_per_pit) * 1000;
-            break;
-        }
-        default:
-            panic("Invalid wall clock source\n");
+    case CLOCK_TSC: {
+        uint64_t tsc = rdtsc();
+        time = ticks_to_nanos(tsc);
+        break;
+    }
+    case CLOCK_HPET: {
+        uint64_t counter = hpet_get_value();
+        time = u64_mul_u64_fp32_64(counter, ns_per_hpet);
+        break;
+    }
+    case CLOCK_PIT: {
+        time = u64_mul_u64_fp32_64(pit_ticks, us_per_pit) * 1000;
+        break;
+    }
+    default:
+        panic("Invalid wall clock source\n");
     }
 
     return time;
@@ -144,20 +142,20 @@ zx_time_t current_time(void)
 static zx_time_t discrete_time_roundup(zx_time_t t) {
     zx_time_t value = t;
     switch (wall_clock) {
-        case CLOCK_TSC: {
-            value += ns_per_tsc_rounded_up;
-            break;
-        }
-        case CLOCK_HPET: {
-            value += ns_per_hpet_rounded_up;
-            break;
-        }
-        case CLOCK_PIT: {
-            value += ns_per_pit_rounded_up;
-            break;
-        }
-        default:
-            panic("Invalid wall clock source\n");
+    case CLOCK_TSC: {
+        value += ns_per_tsc_rounded_up;
+        break;
+    }
+    case CLOCK_HPET: {
+        value += ns_per_hpet_rounded_up;
+        break;
+    }
+    case CLOCK_PIT: {
+        value += ns_per_pit_rounded_up;
+        break;
+    }
+    default:
+        panic("Invalid wall clock source\n");
     }
 
     // Check for overflow
@@ -167,13 +165,11 @@ static zx_time_t discrete_time_roundup(zx_time_t t) {
     return value;
 }
 
-uint64_t ticks_per_second(void)
-{
+uint64_t ticks_per_second(void) {
     return tsc_ticks_per_ms * 1000;
 }
 
-uint64_t current_ticks(void)
-{
+uint64_t current_ticks(void) {
     return rdtsc();
 }
 
@@ -182,8 +178,7 @@ zx_time_t ticks_to_nanos(uint64_t ticks) {
 }
 
 // The PIT timer will keep track of wall time if we aren't using the TSC
-static enum handler_return pit_timer_tick(void *arg)
-{
+static enum handler_return pit_timer_tick(void* arg) {
     pit_ticks += 1;
     return INT_NO_RESCHEDULE;
 }
@@ -193,8 +188,7 @@ enum handler_return platform_handle_apic_timer_tick(void) {
     return timer_tick(current_time());
 }
 
-static void set_pit_frequency(uint32_t frequency)
-{
+static void set_pit_frequency(uint32_t frequency) {
     uint32_t count, remainder;
 
     /* figure out the correct pit_divisor for the desired frequency */
@@ -236,12 +230,11 @@ static void set_pit_frequency(uint32_t frequency)
      * timer 0, mode 2, binary counter, LSB followed by MSB
      */
     outp(I8253_CONTROL_REG, 0x34);
-    outp(I8253_DATA_REG, static_cast<uint8_t>(pit_divisor)); // LSB
+    outp(I8253_DATA_REG, static_cast<uint8_t>(pit_divisor));      // LSB
     outp(I8253_DATA_REG, static_cast<uint8_t>(pit_divisor >> 8)); // MSB
 }
 
-static inline void pit_calibration_cycle_preamble(uint16_t ms)
-{
+static inline void pit_calibration_cycle_preamble(uint16_t ms) {
     // Make the PIT run for
     const uint16_t init_pic_count = static_cast<uint16_t>(INTERNAL_FREQ_TICKS_PER_MS * ms);
     // Program PIT in the interrupt on terminal count configuration,
@@ -250,8 +243,7 @@ static inline void pit_calibration_cycle_preamble(uint16_t ms)
     outp(I8253_DATA_REG, static_cast<uint8_t>(init_pic_count)); // LSB
 }
 
-static inline void pit_calibration_cycle(uint16_t ms)
-{
+static inline void pit_calibration_cycle(uint16_t ms) {
     // Make the PIT run for ms millis, see comments in the preamble
     const uint16_t init_pic_count = static_cast<uint16_t>(INTERNAL_FREQ_TICKS_PER_MS * ms);
     outp(I8253_DATA_REG, static_cast<uint8_t>(init_pic_count >> 8)); // MSB
@@ -261,33 +253,28 @@ static inline void pit_calibration_cycle(uint16_t ms)
         // Send a read-back command that latches the status of ch0
         outp(I8253_CONTROL_REG, 0xe2);
         status = inp(I8253_DATA_REG);
-    // Wait for bit 7 (output) to go high and for bit 6 (null count) to go low
+        // Wait for bit 7 (output) to go high and for bit 6 (null count) to go low
     } while ((status & 0xc0) != 0x80);
 }
 
-static inline void pit_calibration_cycle_cleanup(void)
-{
+static inline void pit_calibration_cycle_cleanup(void) {
     // Stop the PIT by starting a mode change but not writing a counter
     outp(I8253_CONTROL_REG, 0x38);
 }
 
-static inline void hpet_calibration_cycle_preamble(void)
-{
+static inline void hpet_calibration_cycle_preamble(void) {
     hpet_enable();
 }
 
-static inline void hpet_calibration_cycle(uint16_t ms)
-{
+static inline void hpet_calibration_cycle(uint16_t ms) {
     hpet_wait_ms(ms);
 }
 
-static inline void hpet_calibration_cycle_cleanup(void)
-{
+static inline void hpet_calibration_cycle_cleanup(void) {
     hpet_disable();
 }
 
-static void calibrate_apic_timer(void)
-{
+static void calibrate_apic_timer(void) {
     ASSERT(arch_ints_disabled());
 
     const uint64_t apic_freq = x86_lookup_core_crystal_freq();
@@ -307,34 +294,36 @@ static void calibrate_apic_timer(void)
 outer:
     while (apic_divisor != 0) {
         uint32_t best_time[2] = {UINT32_MAX, UINT32_MAX};
-        const uint16_t duration_ms[2] = { 2, 4 };
+        const uint16_t duration_ms[2] = {2, 4};
         for (int trial = 0; trial < 2; ++trial) {
             for (int tries = 0; tries < 3; ++tries) {
                 switch (calibration_clock) {
-                    case CLOCK_HPET:
-                        hpet_calibration_cycle_preamble();
-                        break;
-                    case CLOCK_PIT:
-                        pit_calibration_cycle_preamble(duration_ms[trial]);
-                        break;
-                    default: PANIC_UNIMPLEMENTED;
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_preamble();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_preamble(duration_ms[trial]);
+                    break;
+                default:
+                    PANIC_UNIMPLEMENTED;
                 }
 
                 // Setup APIC timer to count down with interrupt masked
                 zx_status_t status = apic_timer_set_oneshot(
-                        UINT32_MAX,
-                        apic_divisor,
-                        true);
+                    UINT32_MAX,
+                    apic_divisor,
+                    true);
                 ASSERT(status == ZX_OK);
 
                 switch (calibration_clock) {
-                    case CLOCK_HPET:
-                        hpet_calibration_cycle(duration_ms[trial]);
-                        break;
-                    case CLOCK_PIT:
-                        pit_calibration_cycle(duration_ms[trial]);
-                        break;
-                    default: PANIC_UNIMPLEMENTED;
+                case CLOCK_HPET:
+                    hpet_calibration_cycle(duration_ms[trial]);
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle(duration_ms[trial]);
+                    break;
+                default:
+                    PANIC_UNIMPLEMENTED;
                 }
 
                 uint32_t apic_ticks = UINT32_MAX - apic_timer_current_count();
@@ -345,13 +334,14 @@ outer:
                         tries, apic_ticks);
 
                 switch (calibration_clock) {
-                    case CLOCK_HPET:
-                        hpet_calibration_cycle_cleanup();
-                        break;
-                    case CLOCK_PIT:
-                        pit_calibration_cycle_cleanup();
-                        break;
-                    default: PANIC_UNIMPLEMENTED;
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_cleanup();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_cleanup();
+                    break;
+                default:
+                    PANIC_UNIMPLEMENTED;
                 }
             }
 
@@ -361,7 +351,6 @@ outer:
                 apic_divisor = static_cast<uint8_t>(apic_divisor * 2);
                 goto outer;
             }
-
         }
         apic_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
         fp_32_64_div_32_32(&apic_ticks_per_ns, apic_ticks_per_ms, 1000 * 1000);
@@ -370,11 +359,10 @@ outer:
     ASSERT(apic_divisor != 0);
 
     printf("APIC timer calibrated: %" PRIu32 " ticks/ms, divisor %d\n",
-            apic_ticks_per_ms, apic_divisor);
+           apic_ticks_per_ms, apic_divisor);
 }
 
-static uint64_t calibrate_tsc_count(uint16_t duration_ms)
-{
+static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
     uint64_t best_time = UINT64_MAX;
 
     for (int tries = 0; tries < 3; ++tries) {
@@ -385,7 +373,8 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms)
         case CLOCK_PIT:
             pit_calibration_cycle_preamble(duration_ms);
             break;
-        default: PANIC_UNIMPLEMENTED;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
 
         // Use CPUID to serialize the instruction stream
@@ -395,13 +384,14 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms)
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
 
         switch (calibration_clock) {
-            case CLOCK_HPET:
-                hpet_calibration_cycle(duration_ms);
-                break;
-            case CLOCK_PIT:
-                pit_calibration_cycle(duration_ms);
-                break;
-            default: PANIC_UNIMPLEMENTED;
+        case CLOCK_HPET:
+            hpet_calibration_cycle(duration_ms);
+            break;
+        case CLOCK_PIT:
+            pit_calibration_cycle(duration_ms);
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
 
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
@@ -415,21 +405,21 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms)
         LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
                 tries, tsc_ticks);
         switch (calibration_clock) {
-            case CLOCK_HPET:
-                hpet_calibration_cycle_cleanup();
-                break;
-            case CLOCK_PIT:
-                pit_calibration_cycle_cleanup();
-                break;
-            default: PANIC_UNIMPLEMENTED;
+        case CLOCK_HPET:
+            hpet_calibration_cycle_cleanup();
+            break;
+        case CLOCK_PIT:
+            pit_calibration_cycle_cleanup();
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
     }
 
     return best_time;
 }
 
-static void calibrate_tsc(void)
-{
+static void calibrate_tsc(void) {
     ASSERT(arch_ints_disabled());
 
     const uint64_t tsc_freq = x86_lookup_tsc_freq();
@@ -440,11 +430,10 @@ static void calibrate_tsc(void)
         printf("Could not find TSC frequency: Calibrating TSC with %s\n",
                clock_name[calibration_clock]);
 
-        uint32_t duration_ms[2] = { 2, 4 };
+        uint32_t duration_ms[2] = {2, 4};
         uint64_t best_time[2] = {
             calibrate_tsc_count(static_cast<uint16_t>(duration_ms[0])),
-            calibrate_tsc_count(static_cast<uint16_t>(duration_ms[1]))
-        };
+            calibrate_tsc_count(static_cast<uint16_t>(duration_ms[1]))};
 
         while (best_time[0] >= best_time[1] && 2 * duration_ms[1] < MAX_TIMER_INTERVAL) {
             duration_ms[0] = duration_ms[1];
@@ -469,9 +458,8 @@ static void calibrate_tsc(void)
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
-static void pc_init_timer(uint level)
-{
-    const struct x86_model_info *cpu_model = x86_get_model();
+static void pc_init_timer(uint level) {
+    const struct x86_model_info* cpu_model = x86_get_model();
 
     constant_tsc = false;
     if (x86_vendor == X86_VENDOR_INTEL) {
@@ -499,11 +487,11 @@ static void pc_init_timer(uint level)
         calibration_clock = CLOCK_PIT;
     }
 
-    const char *force_wallclock = cmdline_get("kernel.wallclock");
+    const char* force_wallclock = cmdline_get("kernel.wallclock");
     bool use_invariant_tsc = invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"));
 
     use_tsc_deadline = use_invariant_tsc &&
-            x86_feature_test(X86_FEATURE_TSC_DEADLINE);
+                       x86_feature_test(X86_FEATURE_TSC_DEADLINE);
     if (!use_tsc_deadline) {
         calibrate_apic_timer();
     }
@@ -543,13 +531,12 @@ static void pc_init_timer(uint level)
     }
 
     printf("timer features: constant_tsc %d invariant_tsc %d tsc_deadline %d\n",
-            constant_tsc, invariant_tsc, use_tsc_deadline);
+           constant_tsc, invariant_tsc, use_tsc_deadline);
     printf("Using %s as wallclock\n", clock_name[wall_clock]);
 }
 LK_INIT_HOOK(timer, &pc_init_timer, LK_INIT_LEVEL_VM + 3);
 
-zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
-{
+zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     DEBUG_ASSERT(arch_ints_disabled());
 
     deadline = discrete_time_roundup(deadline);
@@ -611,35 +598,33 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
     return apic_timer_set_oneshot(count, static_cast<uint8_t>(divisor), false /* unmasked */);
 }
 
-void platform_stop_timer(void)
-{
+void platform_stop_timer(void) {
     /* Enable interrupt mode that will stop the decreasing counter of the PIT */
     //outp(I8253_CONTROL_REG, 0x30);
     apic_timer_stop();
 }
 
 static uint64_t saved_hpet_val;
-void pc_prep_suspend_timer(void)
-{
+void pc_prep_suspend_timer(void) {
     if (hpet_is_present()) {
         saved_hpet_val = hpet_get_value();
     }
 }
 
-void pc_resume_timer(void)
-{
+void pc_resume_timer(void) {
     switch (wall_clock) {
-        case CLOCK_HPET:
-            hpet_set_value(saved_hpet_val);
-            hpet_enable();
-            break;
-        case CLOCK_PIT: {
-            set_pit_frequency(1000); // ~1ms granularity
+    case CLOCK_HPET:
+        hpet_set_value(saved_hpet_val);
+        hpet_enable();
+        break;
+    case CLOCK_PIT: {
+        set_pit_frequency(1000); // ~1ms granularity
 
-            uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-            unmask_interrupt(irq);
-            break;
-        }
-        default: break;
+        uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
+        unmask_interrupt(irq);
+        break;
+    }
+    default:
+        break;
     }
 }
