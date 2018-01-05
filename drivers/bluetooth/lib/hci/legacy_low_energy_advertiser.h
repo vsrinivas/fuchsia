@@ -4,21 +4,18 @@
 
 #pragma once
 
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_advertiser.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace btlib {
-
 namespace hci {
-class Transport;
-}
 
-namespace gap {
+class Transport;
 
 class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
  public:
-  LegacyLowEnergyAdvertiser(fxl::RefPtr<hci::Transport> hci);
+  LegacyLowEnergyAdvertiser(fxl::RefPtr<Transport> hci);
   ~LegacyLowEnergyAdvertiser() override;
 
   // LowEnergyAdvertiser overrides:
@@ -27,15 +24,14 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
 
   // LegacyLowEnergyAdvertiser supports only a single advertising instance,
   // hence it can report additional errors in the following conditions:
-  // 1. If called while a start request is pending, reports
-  //    hci::kRepeatedAttempts.
+  // 1. If called while a start request is pending, reports kRepeatedAttempts.
   // 2. If called while a stop request is pending, then cancels the stop request
   //    and proceeds with start.
   // TODO(armansito): We need to stop using HCI error codes for errors that are
   // not reported by the controller (NET-288).
   void StartAdvertising(const common::DeviceAddress& address,
-                        const AdvertisingData& data,
-                        const AdvertisingData& scan_rsp,
+                        const common::ByteBuffer& data,
+                        const common::ByteBuffer& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
@@ -49,7 +45,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
 
   // Clears the advertising state before passing |link| on to
   // |connect_callback_|.
-  void OnIncomingConnection(hci::ConnectionPtr link) override;
+  void OnIncomingConnection(ConnectionPtr link) override;
 
  private:
   // Unconditionally stops advertising.
@@ -59,12 +55,12 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   bool advertising() const { return advertised_ != common::DeviceAddress(); }
 
   // The transport that's used to issue commands
-  fxl::RefPtr<hci::Transport> hci_;
+  fxl::RefPtr<Transport> hci_;
 
   // |hci_cmd_runner_| will be running when a start or stop is pending.
   // |starting_| is set to true if a start is pending.
   bool starting_;
-  std::unique_ptr<hci::SequentialCommandRunner> hci_cmd_runner_;
+  std::unique_ptr<SequentialCommandRunner> hci_cmd_runner_;
 
   // Non-zero if advertising has been enabled.
   common::DeviceAddress advertised_;
@@ -75,6 +71,6 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyAdvertiser);
 };
 
-}  // namespace gap
+}  // namespace hci
 
 }  // namespace btlib

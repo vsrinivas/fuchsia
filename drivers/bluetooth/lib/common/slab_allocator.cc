@@ -4,6 +4,9 @@
 
 #include "slab_allocator.h"
 
+#include <memory>
+
+#include "byte_buffer.h"
 #include "slab_buffer.h"
 
 namespace btlib {
@@ -18,6 +21,8 @@ using SmallAllocator = fbl::SlabAllocator<SmallBufferTraits>;
 using LargeAllocator = fbl::SlabAllocator<LargeBufferTraits>;
 
 common::MutableByteBufferPtr NewSlabBuffer(size_t size) {
+  if (size == 0)
+    return std::make_unique<common::DynamicByteBuffer>();
   if (size <= kSmallBufferSize) {
     auto buffer = SmallAllocator::New(size);
     if (buffer)

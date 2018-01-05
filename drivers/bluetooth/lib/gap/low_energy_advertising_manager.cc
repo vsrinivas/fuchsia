@@ -4,6 +4,7 @@
 
 #include "low_energy_advertising_manager.h"
 
+#include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/gap/random_address_generator.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
@@ -14,6 +15,25 @@
 
 namespace btlib {
 namespace gap {
+
+namespace {
+
+constexpr size_t kFlagsSize = 3;
+constexpr uint8_t kDefaultFlags = 0;
+
+// Write the block for the flags to the |buffer|.
+void WriteFlags(common::MutableByteBuffer* buffer, bool limited = false) {
+  FXL_CHECK(buffer->size() >= kFlagsSize);
+  (*buffer)[0] = 2;
+  (*buffer)[1] = static_cast<uint8_t>(DataType::kFlags);
+  if (limited) {
+    (*buffer)[2] = kDefaultFlags | AdvFlag::kLELimitedDiscoverableMode;
+  } else {
+    (*buffer)[2] = kDefaultFlags | AdvFlag::kLEGeneralDiscoverableMode;
+  }
+}
+
+}  // namespace
 
 class LowEnergyAdvertisingManager::ActiveAdvertisement final {
  public:
@@ -33,10 +53,8 @@ class LowEnergyAdvertisingManager::ActiveAdvertisement final {
 };
 
 LowEnergyAdvertisingManager::LowEnergyAdvertisingManager(
-    LowEnergyAdvertiser* advertiser)
-    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
-      advertiser_(advertiser),
-      weak_ptr_factory_(this) {
+    hci::LowEnergyAdvertiser* advertiser)
+    : advertiser_(advertiser), weak_ptr_factory_(this) {
   FXL_CHECK(advertiser_);
 }
 
@@ -67,7 +85,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
   auto ad_ptr = std::make_unique<ActiveAdvertisement>(address);
   auto self = weak_ptr_factory_.GetWeakPtr();
 
-  LowEnergyAdvertiser::ConnectionCallback adv_conn_cb;
+  hci::LowEnergyAdvertiser::ConnectionCallback adv_conn_cb;
   if (connect_callback) {
     adv_conn_cb = [self, id = ad_ptr->id(), connect_callback](auto link) {
       FXL_VLOG(1)
@@ -93,9 +111,20 @@ void LowEnergyAdvertisingManager::StartAdvertising(
         self->advertisements_.emplace(id, std::move(ad_ptr));
         result_callback(id, status);
       });
+
+  // Serialize the data
+  auto data_block =
+      common::NewSlabBuffer(data.CalculateBlockSize() + kFlagsSize);
+  WriteFlags(data_block.get());
+  auto data_view = data_block->mutable_view(kFlagsSize);
+  data.WriteBlock(&data_view);
+
+  auto scan_rsp_block = common::NewSlabBuffer(scan_rsp.CalculateBlockSize());
+  scan_rsp.WriteBlock(scan_rsp_block.get());
+
   // Call StartAdvertising, with the callback
-  advertiser_->StartAdvertising(address, data, scan_rsp, adv_conn_cb,
-                                interval_ms, anonymous, result_cb);
+  advertiser_->StartAdvertising(address, *data_block, *scan_rsp_block,
+                                adv_conn_cb, interval_ms, anonymous, result_cb);
 }
 
 bool LowEnergyAdvertisingManager::StopAdvertising(

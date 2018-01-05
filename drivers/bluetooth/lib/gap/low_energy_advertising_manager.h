@@ -6,9 +6,8 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
-
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_advertiser.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -23,7 +22,7 @@ namespace gap {
 
 class LowEnergyAdvertisingManager {
  public:
-  explicit LowEnergyAdvertisingManager(LowEnergyAdvertiser* advertiser);
+  explicit LowEnergyAdvertisingManager(hci::LowEnergyAdvertiser* advertiser);
   virtual ~LowEnergyAdvertisingManager();
 
   // Asynchronously attempts to start advertising a set of |data| with
@@ -83,7 +82,7 @@ class LowEnergyAdvertisingManager {
 
   // Used to communicate with the controller. |advertiser_| must outlive this
   // advertising manager.
-  LowEnergyAdvertiser* advertiser_;  // weak
+  hci::LowEnergyAdvertiser* advertiser_;  // weak
 
   // Note: Should remain the last member so it'll be destroyed and
   // invalidate it's pointers before other members are destroyed.

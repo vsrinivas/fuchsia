@@ -18,6 +18,7 @@
 namespace btlib {
 
 namespace hci {
+class LowEnergyAdvertiser;
 class LowEnergyConnector;
 class SequentialCommandRunner;
 class Transport;
@@ -29,7 +30,6 @@ class ChannelManager;
 
 namespace gap {
 
-class LowEnergyAdvertiser;
 class LowEnergyAdvertisingManager;
 class LowEnergyConnectionManager;
 class LowEnergyDiscoveryManager;
@@ -176,7 +176,7 @@ class Adapter final {
   // Objects that abstract the controller for connection and advertising
   // procedures.
   // TODO(armansito): Move hci::LowEnergyScanner here.
-  std::unique_ptr<LowEnergyAdvertiser> hci_le_advertiser_;
+  std::unique_ptr<hci::LowEnergyAdvertiser> hci_le_advertiser_;
   std::unique_ptr<hci::LowEnergyConnector> hci_le_connector_;
 
   // Objects that perform BLE procedures.

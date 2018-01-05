@@ -35,14 +35,14 @@ struct AdvertisementStatus {
   AdvertisingData scan_rsp;
   bool anonymous;
   uint32_t interval_ms;
-  LowEnergyAdvertiser::ConnectionCallback connect_cb;
+  hci::LowEnergyAdvertiser::ConnectionCallback connect_cb;
 };
 
 // LowEnergyAdvertiser for testing purposes:
 //  - Reports max_ads supported
 //  - Reports mas_ad_size supported
 //  - Actually just accepts all ads and stores them in ad_store
-class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
+class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
  public:
   FakeLowEnergyAdvertiser(
       size_t max_ads,
@@ -62,8 +62,8 @@ class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   size_t GetMaxAdvertisements() const override { return max_ads_; }
 
   void StartAdvertising(const common::DeviceAddress& address,
-                        const AdvertisingData& data,
-                        const AdvertisingData& scan_rsp,
+                        const common::ByteBuffer& data,
+                        const common::ByteBuffer& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
@@ -73,17 +73,17 @@ class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
       pending_error_ = hci::kSuccess;
       return;
     }
-    if (data.CalculateBlockSize() > max_ad_size_) {
+    if (data.size() > max_ad_size_) {
       callback(0, hci::kMemoryCapacityExceeded);
       return;
     }
-    if (scan_rsp.CalculateBlockSize() > max_ad_size_) {
+    if (scan_rsp.size() > max_ad_size_) {
       callback(0, hci::kMemoryCapacityExceeded);
       return;
     }
     AdvertisementStatus new_status;
-    data.Copy(&new_status.data);
-    scan_rsp.Copy(&new_status.scan_rsp);
+    AdvertisingData::FromBytes(data, &new_status.data);
+    AdvertisingData::FromBytes(scan_rsp, &new_status.scan_rsp);
     new_status.connect_cb = connect_callback;
     new_status.interval_ms = interval_ms;
     new_status.anonymous = anonymous;

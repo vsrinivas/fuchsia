@@ -7,13 +7,13 @@
 #include <functional>
 #include <memory>
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
 namespace btlib {
-namespace gap {
+namespace hci {
 
 class LowEnergyAdvertiser {
  public:
@@ -40,13 +40,13 @@ class LowEnergyAdvertiser {
   //
   // Provides results in |callback|. If advertising is setup, the final
   // interval of advertising is provided in |interval_ms| and |status|
-  // is hci::kSuccess.
+  // is kSuccess.
   //
   // Otherwise, |status| will indicate the type of error:
-  //  - hci::kInvalidHCICommandParameters if the parameters are invalid
-  //  - hci::kConnectionLimitExceeded if no more advertisements can be made
-  //  - hci::kMemoryCapacityExceeded if the data provided is too large
-  //  - hci::kUnsupportedFeatureOrParameter if anonymous or connectable
+  //  - kInvalidHCICommandParameters if the parameters are invalid
+  //  - kConnectionLimitExceeded if no more advertisements can be made
+  //  - kMemoryCapacityExceeded if the data provided is too large
+  //  - kUnsupportedFeatureOrParameter if anonymous or connectable
   //    advertising is requested but unsupported
   //  - another error if the Controller provides one
   //
@@ -55,11 +55,11 @@ class LowEnergyAdvertiser {
   // TODO(jamuraa): In the future, use stack-based error codes instead
   // of coopting the HCI error statuses.
   using AdvertisingResultCallback =
-      std::function<void(uint32_t interval_ms, hci::Status status)>;
-  using ConnectionCallback = std::function<void(hci::ConnectionPtr link)>;
+      std::function<void(uint32_t interval_ms, Status status)>;
+  using ConnectionCallback = std::function<void(ConnectionPtr link)>;
   virtual void StartAdvertising(const common::DeviceAddress& address,
-                                const AdvertisingData& data,
-                                const AdvertisingData& scan_rsp,
+                                const common::ByteBuffer& data,
+                                const common::ByteBuffer& scan_rsp,
                                 const ConnectionCallback& connect_callback,
                                 uint32_t interval_ms,
                                 bool anonymous,
@@ -74,8 +74,8 @@ class LowEnergyAdvertiser {
   // in reaction to any connection that was not initiated locally.   This object
   // will determine if it was a result of an active advertisement and call the
   // appropriate callback.
-  virtual void OnIncomingConnection(hci::ConnectionPtr link) = 0;
+  virtual void OnIncomingConnection(ConnectionPtr connection) = 0;
 };
 
-}  // namespace gap
+}  // namespace hci
 }  // namespace btlib

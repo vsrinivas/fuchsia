@@ -6,9 +6,9 @@
 
 #include <endian.h>
 
-#include "garnet/drivers/bluetooth/lib/gap/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
@@ -386,7 +386,7 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
     }
   };
 
-  hci_le_advertiser_ = std::make_unique<LegacyLowEnergyAdvertiser>(hci_);
+  hci_le_advertiser_ = std::make_unique<hci::LegacyLowEnergyAdvertiser>(hci_);
   hci_le_connector_ = std::make_unique<hci::LowEnergyConnector>(
       hci_, task_runner_, std::move(incoming_conn_cb));
 

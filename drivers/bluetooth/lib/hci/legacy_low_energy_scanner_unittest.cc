@@ -147,20 +147,20 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   };
 
   // Set Scan Parameters will fail.
-  test_device()->SetDefaultResponseStatus(hci::kLESetScanParameters,
-                                          hci::Status::kHardwareFailure);
+  test_device()->SetDefaultResponseStatus(kLESetScanParameters,
+                                          Status::kHardwareFailure);
   EXPECT_EQ(0, test_device()->le_scan_state().scan_interval);
 
   EXPECT_TRUE(scanner()->StartScan(
-      false, hci::defaults::kLEScanInterval, hci::defaults::kLEScanWindow,
-      false, hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      false, defaults::kLEScanInterval, defaults::kLEScanWindow, false,
+      LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
 
   // Calling StartScan() should fail as the state is not kIdle.
   EXPECT_FALSE(scanner()->StartScan(
-      false, hci::defaults::kLEScanInterval, hci::defaults::kLEScanWindow,
-      false, hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      false, defaults::kLEScanInterval, defaults::kLEScanWindow, false,
+      LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
   RunMessageLoop();
 
@@ -172,24 +172,24 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   EXPECT_FALSE(scanner()->IsScanning());
 
   // Set Scan Parameters will succeed but Set Scan Enable will fail.
-  test_device()->ClearDefaultResponseStatus(hci::kLESetScanParameters);
-  test_device()->SetDefaultResponseStatus(hci::kLESetScanEnable,
-                                          hci::Status::kHardwareFailure);
+  test_device()->ClearDefaultResponseStatus(kLESetScanParameters);
+  test_device()->SetDefaultResponseStatus(kLESetScanEnable,
+                                          Status::kHardwareFailure);
 
   EXPECT_TRUE(scanner()->StartScan(
-      false, hci::defaults::kLEScanInterval, hci::defaults::kLEScanWindow,
-      false, hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      false, defaults::kLEScanInterval, defaults::kLEScanWindow, false,
+      LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunMessageLoop();
 
   // Status should be failure but the scan parameters should have applied.
   EXPECT_EQ(LowEnergyScanner::Status::kFailed, status);
-  EXPECT_EQ(hci::defaults::kLEScanInterval,
+  EXPECT_EQ(defaults::kLEScanInterval,
             test_device()->le_scan_state().scan_interval);
-  EXPECT_EQ(hci::defaults::kLEScanWindow,
+  EXPECT_EQ(defaults::kLEScanWindow,
             test_device()->le_scan_state().scan_window);
-  EXPECT_EQ(hci::LEScanFilterPolicy::kNoWhiteList,
+  EXPECT_EQ(LEScanFilterPolicy::kNoWhiteList,
             test_device()->le_scan_state().filter_policy);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
@@ -208,22 +208,22 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   };
 
   EXPECT_TRUE(scanner()->StartScan(
-      true /* active */, hci::defaults::kLEScanInterval,
-      hci::defaults::kLEScanWindow, true /* filter_duplicates */,
-      hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      true /* active */, defaults::kLEScanInterval, defaults::kLEScanWindow,
+      true /* filter_duplicates */, LEScanFilterPolicy::kNoWhiteList,
+      kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunMessageLoop();
 
   // Scan should have started.
   EXPECT_EQ(LowEnergyScanner::Status::kStarted, status);
-  EXPECT_EQ(hci::defaults::kLEScanInterval,
+  EXPECT_EQ(defaults::kLEScanInterval,
             test_device()->le_scan_state().scan_interval);
-  EXPECT_EQ(hci::defaults::kLEScanWindow,
+  EXPECT_EQ(defaults::kLEScanWindow,
             test_device()->le_scan_state().scan_window);
-  EXPECT_EQ(hci::LEScanFilterPolicy::kNoWhiteList,
+  EXPECT_EQ(LEScanFilterPolicy::kNoWhiteList,
             test_device()->le_scan_state().filter_policy);
-  EXPECT_EQ(hci::LEScanType::kActive, test_device()->le_scan_state().scan_type);
+  EXPECT_EQ(LEScanType::kActive, test_device()->le_scan_state().scan_type);
   EXPECT_TRUE(test_device()->le_scan_state().filter_duplicates);
   EXPECT_TRUE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
@@ -231,9 +231,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
 
   // Calling StartScan should fail as a scan is already in progress.
   EXPECT_FALSE(scanner()->StartScan(
-      true /* active */, hci::defaults::kLEScanInterval,
-      hci::defaults::kLEScanWindow, true /* filter_duplicates */,
-      hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      true /* active */, defaults::kLEScanInterval, defaults::kLEScanWindow,
+      true /* filter_duplicates */, LEScanFilterPolicy::kNoWhiteList,
+      kScanPeriodMs, cb));
 
   // After 200 ms (kScanPeriodMs) the scan should stop by itself.
   RunMessageLoop();
@@ -260,9 +260,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   // Pass a long scan period value. This should not matter as we will terminate
   // the scan directly.
   EXPECT_TRUE(scanner()->StartScan(
-      true /* active */, hci::defaults::kLEScanInterval,
-      hci::defaults::kLEScanWindow, true /* filter_duplicates */,
-      hci::LEScanFilterPolicy::kNoWhiteList, 10 * kScanPeriodMs, cb));
+      true /* active */, defaults::kLEScanInterval, defaults::kLEScanWindow,
+      true /* filter_duplicates */, LEScanFilterPolicy::kNoWhiteList,
+      10 * kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunMessageLoop();
@@ -296,9 +296,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
   };
 
   EXPECT_TRUE(scanner()->StartScan(
-      true /* active */, hci::defaults::kLEScanInterval,
-      hci::defaults::kLEScanWindow, true /* filter_duplicates */,
-      hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      true /* active */, defaults::kLEScanInterval, defaults::kLEScanWindow,
+      true /* filter_duplicates */, LEScanFilterPolicy::kNoWhiteList,
+      kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
 
@@ -332,8 +332,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
 
   // Perform an active scan.
   EXPECT_TRUE(scanner()->StartScan(
-      true, hci::defaults::kLEScanInterval, hci::defaults::kLEScanWindow, true,
-      hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      true, defaults::kLEScanInterval, defaults::kLEScanWindow, true,
+      LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunMessageLoop();
@@ -434,10 +434,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
 
   // Perform an active scan indefinitely. This means that the scan period will
   // never complete by itself.
-  EXPECT_TRUE(scanner()->StartScan(true, hci::defaults::kLEScanInterval,
-                                   hci::defaults::kLEScanWindow, true,
-                                   hci::LEScanFilterPolicy::kNoWhiteList,
-                                   LowEnergyScanner::kPeriodInfinite, cb));
+  EXPECT_TRUE(scanner()->StartScan(
+      true, defaults::kLEScanInterval, defaults::kLEScanWindow, true,
+      LEScanFilterPolicy::kNoWhiteList, LowEnergyScanner::kPeriodInfinite, cb));
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunMessageLoop();
   EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
@@ -478,8 +477,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
 
   // Perform a passive scan.
   EXPECT_TRUE(scanner()->StartScan(
-      false, hci::defaults::kLEScanInterval, hci::defaults::kLEScanWindow, true,
-      hci::LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
+      false, defaults::kLEScanInterval, defaults::kLEScanWindow, true,
+      LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
   RunMessageLoop();
