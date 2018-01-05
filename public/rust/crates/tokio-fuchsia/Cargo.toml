@@ -8,7 +8,7 @@ repository = "https://fuchsia.googlesource.com/tokio-fuchsia/"
 [dependencies]
 bytes = "0.4"
 futures = "0.1"
-mio = { path = "../../../../../third_party/rust-mirrors/mio" }
-tokio-core = { path = "../../../../../third_party/rust-mirrors/tokio-core" }
+mio = "0.6"
+tokio-core = "0.1"
 tokio-io = "0.1"
-fuchsia-zircon = { path = "../fuchsia-zircon" }
+fuchsia-zircon = "0.3"

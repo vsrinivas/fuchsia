@@ -1,0 +1,51 @@
+[workspace]
+# Any crate in the Garnet tree must be listed as a member of this
+# workspace.
+members =  [
+  "bin/device_settings",
+  "examples/bluetooth/ble_battery_service",
+  "examples/fidl/*_rust",
+  "examples/network/wget-rs",
+  "public/lib/fidl/rust/fidl",
+  "public/rust/crates/fdio",
+  "public/rust/crates/fuchsia-app",
+  "public/rust/crates/fuchsia-vfs",
+  "public/rust/crates/fuchsia-zircon",
+  "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
+  "public/rust/crates/mxruntime",
+  "public/rust/crates/mxruntime/mxruntime-sys",
+  "public/rust/fidl_crates/garnet_examples_fidl_services",
+  "public/rust/fidl_crates/garnet_public_lib_app_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider",
+  "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_device_settings_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address",
+  "public/rust/fidl_crates/garnet_public_lib_network_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_power_fidl",
+]
+
+# Any crate in the Fuchsia tree that is a dependency of a member of this
+# workspace must have a patch statement here and the version of the crate
+# at the path specified must be compatible with all crates in the tree.
+[patch.crates-io]
+fdio = { path = "public/rust/crates/fdio" }
+fidl = { path = "public/lib/fidl/rust/fidl" }
+fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
+fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
+fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
+garnet_examples_fidl_services = { path = "public/rust/fidl_crates/garnet_examples_fidl_services" }
+garnet_public_lib_app_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl" }
+garnet_public_lib_app_fidl_service_provider = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider" }
+garnet_public_lib_bluetooth_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl" }
+garnet_public_lib_device_settings_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_device_settings_fidl" }
+garnet_public_lib_fsl_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_fsl_fidl" }
+garnet_public_lib_netstack_fidl_net_address = { path = "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address" }
+garnet_public_lib_network_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_network_fidl" }
+garnet_public_lib_power_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_power_fidl" }
+mio = { path = "../third_party/rust-mirrors/mio" }
+mxruntime = { path = "public/rust/crates/mxruntime" }
+mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }
+rand = { path = "../third_party/rust-mirrors/rand" }
+tokio-core = { path = "../third_party/rust-mirrors/tokio-core" }
+tokio-fuchsia = { path = "public/rust/crates/tokio-fuchsia" }

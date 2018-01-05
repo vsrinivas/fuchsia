@@ -10,7 +10,12 @@ authors = ["Arman Uguray <armansito@google.com>"]
 description = "Example of a BLE GATT Battery Service Fuchsia app in Rust"
 
 [dependencies]
+fidl = "0.1"
+fuchsia-app = "0.1"
+fuchsia-zircon = "0.3"
 futures = "0.1.15"
+garnet_public_lib_bluetooth_fidl = "0.1"
+garnet_public_lib_power_fidl = "0.1"
 tokio-core = "0.1"
 
 [profile.release]

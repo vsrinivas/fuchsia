@@ -6,6 +6,8 @@
 
 import sys
 
+def remove_prefix(text, prefix):
+    return text[text.startswith(prefix) and len(prefix):]
 
 # convert a directory corresponding to a GN-style label (ex garnet/foo/services/services)
 # to a crate name (ex garnet_foo_services).
@@ -17,7 +19,7 @@ def label_to_crate(label):
 
 
 def main():
-  print label_to_crate(sys.argv[1])
+  print label_to_crate(remove_prefix(sys.argv[1], "//"))
   return 0
 
 

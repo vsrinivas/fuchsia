@@ -7,15 +7,9 @@ import("//build/package.gni")
 
 rust_library("fuchsia-app") {
   deps = [
-    "//garnet/public/lib/app/fidl:fidl_rust_library",
-    "//garnet/public/lib/app/fidl:service_provider_rust_library",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-zircon",
-    "//garnet/public/rust/crates/mxruntime",
-    "//garnet/public/rust/crates/tokio-fuchsia",
-    "//third_party/rust-crates:futures-0.1.16",
-    "//third_party/rust-mirrors/mio",
-    "//third_party/rust-mirrors/tokio-core",
+    "//garnet/public/rust/fidl_crates/garnet_examples_fidl_services",
+    "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl",
+    "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider",
+    "//garnet/public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
   ]
 }

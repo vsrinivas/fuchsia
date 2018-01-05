@@ -8,7 +8,7 @@ repository = "https://fuchsia.googlesource.com/fidl/"
 
 [dependencies]
 byteorder = "1.1.0"
-fuchsia-zircon = { path = "../../../../rust/crates/fuchsia-zircon" }
+fuchsia-zircon = "0.3"
 futures = "0.1"
-tokio-core = { path = "../../../../../../third_party/rust-mirrors/tokio-core" }
-tokio-fuchsia = { path = "../../../../rust/crates/tokio-fuchsia" }
+tokio-core = "0.1"
+tokio-fuchsia = "0.1"

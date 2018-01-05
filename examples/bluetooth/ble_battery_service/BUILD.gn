@@ -6,13 +6,7 @@ import("//build/rust/rust_binary.gni")
 
 rust_binary("ble_battery_service") {
   deps = [
-    "//garnet/public/lib/bluetooth/fidl:fidl_rust_library",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/lib/power/fidl:fidl_rust_library",
-    "//garnet/public/rust/crates/fuchsia-app",
-    "//garnet/public/rust/crates/fuchsia-zircon",
-    "//third_party/rust-crates:futures-0.1.16",
-    "//third_party/rust-mirrors/mio",
-    "//third_party/rust-mirrors/tokio-core",
+    "//garnet/public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl",
+    "//garnet/public/rust/fidl_crates/garnet_public_lib_power_fidl",
   ]
 }

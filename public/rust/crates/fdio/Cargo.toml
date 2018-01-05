@@ -7,6 +7,6 @@ description = "Rust bindings for Zircon fdio"
 repository = "https://fuchsia.googlesource.com/fdio-rs/"
 
 [dependencies]
-fuchsia-zircon = { path = "../fuchsia-zircon" }
-fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }
+fuchsia-zircon = "0.3"
+fuchsia-zircon-sys = "0.3"
 bytes = "0.4"

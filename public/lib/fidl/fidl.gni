@@ -24,9 +24,6 @@ declare_args() {
 if (generate_fidl_for_dart) {
   import("//build/dart/dart_library.gni")
 }
-if (generate_fidl_for_rust) {
-  import("//build/rust/rust_library.gni")
-}
 
 # Generate C++/JavaScript/Java/Python/Dart/Go source files from fidl files. The
 # output files will go under the generated file directory tree with the same
@@ -332,10 +329,16 @@ template("fidl") {
   }
 
   if (generate_fidl_for_rust) {
+    target_dir = get_label_info(target_name, "dir")
     rust_crate_target_name = "${target_name}_rust"
+    path_based_name =
+        exec_script("//garnet/public/lib/fidl/build/label_to_crate.py",
+                    [ target_dir ],
+                    "trim string")
+    generated_file = "${target_gen_dir}/${path_based_name}.rs"
 
     action(rust_crate_target_name) {
-      script = "//garnet/public/lib/fidl/build/make_crate.py"
+      script = "//garnet/public/lib/fidl/build/make_rust_library.py"
 
       deps = []
       dep_inputs = []
@@ -358,8 +361,7 @@ template("fidl") {
 
       output_base = generator_rust_crate_output
       outputs = [
-        "$output_base/Cargo.toml",
-        "$output_base/src/lib.rs",
+        generated_file,
       ]
 
       rebase_gen_dir = rebase_path(root_gen_dir)
@@ -378,33 +380,6 @@ template("fidl") {
       if (defined(invoker.sources)) {
         args += [ "--inputs=$rebase_inputs" ]
       }
-    }
-
-    rust_library("${target_name}_rust_library") {
-      name = exec_script("//garnet/public/lib/fidl/build/label_to_crate.py",
-                         [ rebase_path(generator_rust_crate_output,
-                                       root_gen_dir) ],
-                         "trim string")
-
-      source_dir = generator_rust_crate_output
-
-      deps = []
-      foreach(d, all_deps) {
-        # Resolve the name, so that a target //fidl/something becomes
-        # //fidl/something:something and we can append "_rust_library" to get the
-        # rust dependency name.
-        full_name = get_label_info(d, "label_no_toolchain")
-        deps += [ "${full_name}_rust_library" ]
-      }
-
-      deps += [
-        "//garnet/public/lib/fidl/rust/fidl",
-        "//garnet/public/rust/crates/tokio-fuchsia",
-        "//garnet/public/rust/crates/fuchsia-zircon",
-        "//third_party/rust-crates:futures-0.1.16",
-      ]
-
-      non_rust_deps = [ ":${rust_crate_target_name}" ]
     }
 
     # Creates a map from fidl file to GN build target which supplies it. Used primarily

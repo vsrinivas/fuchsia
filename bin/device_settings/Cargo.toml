@@ -8,13 +8,17 @@ version = "0.1.0"
 license = "BSD-3-Clause"
 
 [dependencies]
+fidl = "0.1"
+fuchsia-app = "0.1"
+fuchsia-zircon = "0.3"
 futures = "0.1"
-tokio-core = { path = "../../../third_party/rust-mirrors/tokio-core" }
+mxruntime = "0.1"
+mxruntime-sys = "0.1"
+tokio-core = "0.1.10"
+tokio-fuchsia = "0.1"
 bytes = "0.4"
-fdio = { path = "../../../public/rust/crates/fdio" }
+fdio = "0.2"
+garnet_public_lib_device_settings_fidl = "0.1"
 
 [dev-dependencies]
 tempdir = "0.3"
-
-[profile.release]
-panic = 'abort'

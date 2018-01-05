@@ -1,7 +1,6 @@
 *~
 .*.sw?
 .DS_Store
-.cargo
 .checkstyle
 .classpath
 .cproject
@@ -14,7 +13,6 @@
 *.pyc
 .pydevproject
 .vscode
-Cargo.lock
 Session.vim
 Thumbs.db
 cscope.*
