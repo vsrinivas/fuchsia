@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 if (is_fuchsia) {
+  import("//build/cpp/sdk_shared_library.gni")
+  import("//build/cpp/sdk_source_set.gni")
   import("//build/package.gni")
 }
 
@@ -10,7 +12,13 @@ if (is_android) {
   import("//build/config/android/config.gni")
 }
 
-source_set("fxl_common") {
+if (is_fuchsia) {
+  source_set_template = "sdk_source_set"
+} else {
+  source_set_template = "source_set"
+}
+
+target(source_set_template, "fxl_common") {
   visibility = [ ":*" ]
 
   sources = [
@@ -24,7 +32,7 @@ source_set("fxl_common") {
   public_configs = [ "//garnet/public:config" ]
 }
 
-source_set("fxl_header_only_types") {
+target(source_set_template, "fxl_header_only_types") {
   visibility = [ ":*" ]
 
   sources = [
@@ -37,7 +45,7 @@ source_set("fxl_header_only_types") {
 
 # These are sources that store static global state that may impose potential
 # constraints on dynamic linking. We separate these out here.
-source_set("stateful_sources") {
+target(source_set_template, "stateful_sources") {
   visibility = [ ":*" ]
 
   sources = [
@@ -51,7 +59,7 @@ source_set("stateful_sources") {
   ]
 }
 
-source_set("fxl_lib") {
+target(source_set_template, "fxl_lib") {
   visibility = [ ":*" ]
 
   sources = [
@@ -155,7 +163,7 @@ source_set("fxl_lib") {
   ]
 }
 
-source_set("fxl_logging_lib") {
+target(source_set_template, "fxl_logging_lib") {
   visibility = [
     ":fxl_logging",
     ":fxl_logging_shlib",
@@ -181,7 +189,7 @@ source_set("fxl_logging_lib") {
 }
 
 if (is_fuchsia) {
-  shared_library("fxl_logging") {
+  sdk_shared_library("fxl_logging") {
     public_deps = [
       ":fxl_logging_lib",
     ]
@@ -197,7 +205,7 @@ if (is_fuchsia) {
 }
 
 if (is_fuchsia) {
-  shared_library("fxl") {
+  sdk_shared_library("fxl") {
     public_deps = [
       ":fxl_lib",
     ]

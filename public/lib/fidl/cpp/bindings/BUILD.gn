@@ -2,13 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
+
 config("bindings_config") {
   configs = [ "//zircon/system/ulib/zx:zx_config" ]
 }
 
 # This target provides source files and dependencies required for serializing
 # fidl types.
-source_set("serialization") {
+sdk_source_set("serialization") {
   sources = [
     "array.h",
     "formatting.h",
@@ -52,7 +54,7 @@ source_set("serialization") {
   public_configs = [ ":bindings_config" ]
 }
 
-source_set("bindings") {
+sdk_source_set("bindings") {
   sources = [
     "binding.h",
     "binding_set.h",

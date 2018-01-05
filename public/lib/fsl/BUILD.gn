@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_shared_library.gni")
 import("//build/package.gni")
+import("//build/sdk/sdk_group.gni")
 
-group("fsl") {
+sdk_group("fsl") {
   public_deps = [
     ":fsl_lib",
     "//zircon/system/ulib/fbl",
@@ -13,7 +15,7 @@ group("fsl") {
   ]
 }
 
-shared_library("fsl_lib") {
+sdk_shared_library("fsl_lib") {
   output_name = "fsl"
 
   public_deps = [
