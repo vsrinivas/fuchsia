@@ -5,8 +5,9 @@
 If your Pixelbook has never been booted, it is best to boot it normally to check
 for any critical updates, as follows:
 
-1. Boot the Pixelbook normally. The power button is on the left side of the
-device, near the front of the wrist rest.
+1. Boot the Pixelbook normally. Opening the lid usually powers on the device.
+If this doesn't work, the power button is on the left side of the device, near
+the front of the wrist rest.
 2. Tap the "Let's go" button.
 3. Connect to a wired or wireless network.
 4. Accept the terms to proceed to the update check step.
@@ -33,22 +34,31 @@ complete. You can now jump to Step #2 in the "Boot from USB" section.
 
 ## Boot from USB
 
-1. Boot into ChromeOS. You should see a screen that says "OS verification is
-OFF" and approximately 30 seconds later the boot will continue.
-2. Wait for the Welcome or Login screen to load. **Ignore** any link for "Enable
-debugging features". Instead press Ctrl+Alt+Refresh/F3 to enter a
-command shell. If pressing this key combination has no effect, try rebooting the
-Pixelbook once more.
-3. Enter 'chronos' as the user with a blank password
-4. Enable USB booting by running `sudo crossystem dev_boot_usb=1`
-5. (optional) Default to USB booting by running `sudo crossystem dev_default_boot=usb`.
-6. Reboot by typing `sudo reboot`
+1. Boot into ChromeOS.
+2. You should see a screen that says "OS verification is OFF" and approximately
+30 seconds later the boot will continue. Wait for the Welcome or Login screen
+to load. **Ignore** any link for "Enable debugging features".
+3. Press Ctrl+Alt+Refresh/F3 to enter a command shell. If pressing this key
+combination has no effect, try rebooting the Pixelbook once more.
+4. Enter 'chronos' as the user with a blank password
+5. Enable USB booting by running `sudo crossystem dev_boot_usb=1`
+6. (optional) Default to USB booting by running `sudo crossystem dev_default_boot=usb`.
+7. Reboot by typing `sudo reboot`
 
-If you didn't make USB booting the default (step 5), you will need to press
-Ctrl+U at the grey 'warning OS-not verified' screen when you power on your
-device. If the device tries to boot from USB, either because that is the default
-or you pressed Ctrl+U, and the device fails to boot from USB you'll hear a
-fairly loud <BEEP>. Note that ChromeOS bootloader USB enumeration during boot
-has been observed to be slow. If you're having trouble booting from USB, it may
-be helpful to remove other USB devices until the device is through the bootloader
-and also avoid using a USB hub.
+The USB drive is only needed for booting when you want to re-pave or otherwise
+netboot the device. If you didn't make USB booting the default (Step #6), you
+will need to press Ctrl+U at the grey 'warning OS-not verified' screen to boot
+from USB when you power on your device. If the device tries to boot from USB,
+either because that is the default or you pressed Ctrl+U, and the device fails
+to boot from USB you'll hear a fairly loud &lt;BEEP&gt;. Note that ChromeOS
+bootloader USB enumeration during boot has been observed to be slow. If you're
+having trouble booting from USB, it may be helpful to remove other USB devices
+until the device is through the bootloader and also avoid using a USB hub.
+
+## Tips and Tricks
+
+By default the ChromeOS bootloader has a long timeout to allow you to press
+buttons. To shortcut this you can press Ctrl+D or Ctrl+U when on the grey screen
+that warns that the OS will not be verified. Ctrl+D will cause the device to
+skip the timeout and boot from its default source. Ctrl+U will skip the timeout
+and boot the device from USB.
