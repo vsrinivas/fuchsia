@@ -15,20 +15,31 @@
 
 namespace service_account {
 
-// An implementation of |TokenProvider| that uses a firebase service account to
-// register an user and mint token for it.
+// An implementation of |TokenProvider| that uses a Firebase service account to
+// register a new user of the given id and mint tokens for it.
+//
+// A Firebase service account with admin access to the project is automatically
+// created for every Firebase project.
+//
+// In order to download the JSON credential file corresponding to this account,
+// visit `Settings > Service accounts > Firebase admin SDK` in the Firebase
+// Console and click on the 'Generate new private key' button. This JSON file
+// must be available on the device, and its path must be passed to the
+// LoadCredentials() method to initialize this class.
 class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
  public:
   ServiceAccountTokenProvider(ledger::NetworkService* network_service,
                               std::string user_id);
   ~ServiceAccountTokenProvider() override;
 
-  // Load the service account credentials. This method must be called before
-  // this class is usable. |json_file| must be a path to the service account
-  // configuration file that can be retrieved from the firebase admin console.
+  // Loads the service account credentials.
+  //
+  // This method must be called before this class is usable. |json_file| must be
+  // a path to the service account configuration file that can be retrieved from
+  // the firebase admin console (see the class-level comment).
   bool LoadCredentials(const std::string& json_file);
 
-  // modular::auth::TokenProvider
+  // modular::auth::TokenProvider:
   void GetAccessToken(const GetAccessTokenCallback& callback) override;
   void GetIdToken(const GetIdTokenCallback& callback) override;
   void GetFirebaseAuthToken(
