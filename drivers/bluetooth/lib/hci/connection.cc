@@ -47,8 +47,7 @@ Connection::Connection(ConnectionHandle handle,
       le_params_(params),
       hci_(hci),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(handle);
-  FXL_DCHECK(le_params_.interval());
+  FXL_DCHECK(handle_);
   FXL_DCHECK(hci_);
 }
 

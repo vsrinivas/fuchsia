@@ -6,8 +6,8 @@
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/random_address_generator.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
@@ -21,13 +21,17 @@ namespace {
 using ::btlib::testing::FakeController;
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
+constexpr hci::ConnectionHandle kHandle = 0x0001;
+
 const common::DeviceAddress kPublicAddress(
     common::DeviceAddress::Type::kLEPublic,
     "00:00:00:00:00:01");
+const common::DeviceAddress kPeerAddress(common::DeviceAddress::Type::kLERandom,
+                                         "00:00:00:00:00:02");
 
 constexpr size_t kDefaultAdSize = 20;
 
-void NopConnectionCallback(LowEnergyConnectionRefPtr) {}
+void NopConnectionCallback(hci::ConnectionPtr) {}
 
 class GAP_LegacyLowEnergyAdvertiserTest : public TestingBase {
  public:
@@ -150,19 +154,22 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
-  LowEnergyConnectionRefPtr ref;
-  auto conn_cb = [&ref](auto conn_ref) { ref = std::move(conn_ref); };
+  hci::ConnectionPtr link;
+  auto conn_cb = [&link](auto cb_link) { link = std::move(cb_link); };
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
   RunMessageLoop();
   EXPECT_TRUE(MoveLastStatus());
 
-  // When a connection is created, the ConnectionManager will call this.
-  // TODO(armansito): Introduce a FakeLowEnergyConnectionRef or make the
-  // existing one available to tests and remove this hack (see NET-277).
-  LowEnergyConnectionRefPtr result((LowEnergyConnectionRef*)0xF00DFACE);
-  advertiser()->OnIncomingConnection(std::move(result));
-  EXPECT_EQ((LowEnergyConnectionRef*)0xF00DFACE, ref.release());
+  // The connection manager will hand us a connection when one gets created.
+  hci::LEConnectionParameters params;
+  advertiser()->OnIncomingConnection(
+      std::make_unique<hci::Connection>(kHandle, hci::Connection::Role::kSlave,
+                                        kPeerAddress, params, transport()));
+
+  ASSERT_TRUE(link);
+  EXPECT_EQ(kHandle, link->handle());
+  link->set_closed();
 
   // Advertising state should get cleared.
   bool disabling = true;
@@ -192,9 +199,9 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
-  LowEnergyConnectionRefPtr ref;
-  auto conn_cb = [&, this](auto conn_ref) {
-    ref = std::move(conn_ref);
+  hci::ConnectionPtr link;
+  auto conn_cb = [&, this](auto cb_link) {
+    link = std::move(cb_link);
     advertiser()->StartAdvertising(kPublicAddress, ad, scan_data,
                                    NopConnectionCallback, 1000, false,
                                    GetSuccessCallback());
@@ -217,12 +224,10 @@ TEST_F(GAP_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
       },
       message_loop()->task_runner());
 
-  // When a connection is created, the ConnectionManager will call this.
-  // TODO(armansito): Introduce a FakeLowEnergyConnectionRef or make the
-  // existing one available to tests and remove this hack (see NET-277).
-  LowEnergyConnectionRefPtr result((LowEnergyConnectionRef*)0xF00DFACE);
-  advertiser()->OnIncomingConnection(std::move(result));
-  EXPECT_EQ((LowEnergyConnectionRef*)0xF00DFACE, ref.release());
+  hci::LEConnectionParameters params;
+  advertiser()->OnIncomingConnection(
+      std::make_unique<hci::Connection>(kHandle, hci::Connection::Role::kSlave,
+                                        kPeerAddress, params, transport()));
 
   // Advertising should get disabled and re-enabled.
   RunMessageLoop();

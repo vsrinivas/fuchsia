@@ -81,7 +81,7 @@ class LowEnergyPeripheralFidlImpl : public ::bluetooth::low_energy::Peripheral,
   // Called when a central connects to us.  When this is called, the
   // advertisement in |advertisement_id| has been stopped.
   void OnConnected(std::string advertisement_id,
-                   ::btlib::gap::LowEnergyConnectionRefPtr connection);
+                   ::btlib::hci::ConnectionPtr link);
 
   // Helper function to the current advertisement manager or nullptr.
   ::btlib::gap::LowEnergyAdvertisingManager* GetAdvertisingManager() const;

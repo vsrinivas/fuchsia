@@ -10,6 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
@@ -57,8 +58,14 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     dev_cache_ = std::make_unique<RemoteDeviceCache>();
     l2cap_ = std::make_unique<l2cap::ChannelManager>(
         transport(), message_loop()->task_runner());
+
+    // TODO(armansito): Pass a fake connector here.
+    connector_ = std::make_unique<hci::LowEnergyConnector>(
+        transport(), message_loop()->task_runner(),
+        [this](auto link) { OnIncomingConnection(std::move(link)); });
+
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
-        Mode::kLegacy, transport(), dev_cache_.get(), l2cap_.get());
+        transport(), connector_.get(), dev_cache_.get(), l2cap_.get());
 
     test_device()->SetConnectionStateCallback(
         std::bind(&LowEnergyConnectionManagerTest::OnConnectionStateChanged,
@@ -91,16 +98,30 @@ class LowEnergyConnectionManagerTest : public TestingBase {
   // Addresses of devices with a canceled connection attempt.
   const DeviceList& canceled_devices() const { return canceled_devices_; }
 
+  // If set to true, this will quit the message loop when this object processes
+  // an incoming conneciton.
+  void set_quit_message_loop_on_incoming_connection(bool value) {
+    quit_message_loop_on_incoming_connection_ = value;
+  }
+
   // If set to true, this will quit the message loop whenever the FakeController
   // notifies us of a state change.
   void set_quit_message_loop_on_state_change(bool value) {
     quit_message_loop_on_state_change_ = value;
   }
 
+  hci::ConnectionPtr MoveLastRemoteInitiated() {
+    return std::move(last_remote_initiated_);
+  }
+
  private:
-  std::unique_ptr<RemoteDeviceCache> dev_cache_;
-  std::unique_ptr<l2cap::ChannelManager> l2cap_;
-  std::unique_ptr<LowEnergyConnectionManager> conn_mgr_;
+  // Called by |connector_| when a new remote initiated connection is received.
+  void OnIncomingConnection(hci::ConnectionPtr link) {
+    last_remote_initiated_ = std::move(link);
+
+    if (quit_message_loop_on_incoming_connection_)
+      message_loop()->QuitNow();
+  }
 
   // Called by FakeController on connection events.
   void OnConnectionStateChanged(const common::DeviceAddress& address,
@@ -120,7 +141,16 @@ class LowEnergyConnectionManagerTest : public TestingBase {
       message_loop()->QuitNow();
   }
 
+  std::unique_ptr<RemoteDeviceCache> dev_cache_;
+  std::unique_ptr<l2cap::ChannelManager> l2cap_;
+  std::unique_ptr<hci::LowEnergyConnector> connector_;
+  std::unique_ptr<LowEnergyConnectionManager> conn_mgr_;
+
+  // The most recent remote-initiated connection reported by |connector_|.
+  hci::ConnectionPtr last_remote_initiated_;
+
   bool quit_message_loop_on_state_change_ = false;
+  bool quit_message_loop_on_incoming_connection_ = false;
   DeviceList connected_devices_;
   DeviceList canceled_devices_;
 
@@ -720,146 +750,31 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   RunMessageLoop();
 }
 
-// Listener receives local initiated connection ref.
-TEST_F(GAP_LowEnergyConnectionManagerTest, Listener) {
-  auto* dev = dev_cache()->NewDevice(kAddress0, true);
-  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
-
-  LowEnergyConnectionRefPtr conn_ref;
-  auto listener = [&conn_ref](auto cb_conn_ref) {
-    ASSERT_TRUE(cb_conn_ref);
-    EXPECT_TRUE(cb_conn_ref->active());
-
-    conn_ref = std::move(cb_conn_ref);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  };
-
-  conn_mgr()->AddListener(listener);
-  EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), [](auto, auto) {}));
-  RunMessageLoop();
-  ASSERT_TRUE(conn_ref);
-  EXPECT_EQ(dev->identifier(), conn_ref->device_identifier());
-
-  conn_ref = nullptr;
-  set_quit_message_loop_on_state_change(true);
-  RunMessageLoop();
-  EXPECT_TRUE(connected_devices().empty());
-}
-
-// Listener receives local initiated connection ref but does not take its
-// ownership.
-TEST_F(GAP_LowEnergyConnectionManagerTest, ListenerRefUnclaimed) {
-  auto* dev = dev_cache()->NewDevice(kAddress0, true);
-  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
-
-  bool listener_called = false;
-  auto listener = [&listener_called](auto conn_ref) {
-    ASSERT_TRUE(conn_ref);
-    EXPECT_TRUE(conn_ref->active());
-
-    listener_called = true;
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  };
-
-  conn_mgr()->AddListener(listener);
-  EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), [](auto, auto) {}));
-
-  RunMessageLoop();
-  EXPECT_TRUE(listener_called);
-  EXPECT_EQ(1u, connected_devices().size());
-
-  set_quit_message_loop_on_state_change(true);
-  RunMessageLoop();
-  EXPECT_TRUE(connected_devices().empty());
-}
-
 // Listener receives remote initiated connection ref.
-TEST_F(GAP_LowEnergyConnectionManagerTest, ListenerRemoteInitiated) {
-  auto* dev = dev_cache()->NewDevice(kAddress0, true);
+TEST_F(GAP_LowEnergyConnectionManagerTest, RegisterRemoteInitiatedLink) {
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
-  LowEnergyConnectionRefPtr conn_ref;
-  auto listener = [&conn_ref](auto cb_conn_ref) {
-    ASSERT_TRUE(cb_conn_ref);
-    EXPECT_TRUE(cb_conn_ref->active());
-
-    conn_ref = std::move(cb_conn_ref);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  };
-
-  conn_mgr()->AddListener(listener);
+  // First create a fake incoming connection.
   test_device()->ConnectLowEnergy(kAddress0);
 
+  set_quit_message_loop_on_incoming_connection(true);
   RunMessageLoop();
+
+  auto link = MoveLastRemoteInitiated();
+  ASSERT_TRUE(link);
+
+  LowEnergyConnectionRefPtr conn_ref =
+      conn_mgr()->RegisterRemoteInitiatedLink(std::move(link));
   ASSERT_TRUE(conn_ref);
+  EXPECT_TRUE(conn_ref->active());
+
+  // A RemoteDevice should now exist in the cache.
+  auto* dev = dev_cache()->FindDeviceByAddress(kAddress0);
+  ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), conn_ref->device_identifier());
 
   conn_ref = nullptr;
-  set_quit_message_loop_on_state_change(true);
-  RunMessageLoop();
-  EXPECT_TRUE(connected_devices().empty());
-}
 
-// Listener receives remote initiated connection ref but does not take its
-// ownership.
-TEST_F(GAP_LowEnergyConnectionManagerTest,
-       ListenerRemoteInitiatedRefUnclaimed) {
-  dev_cache()->NewDevice(kAddress0, true);
-  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
-
-  bool listener_called = false;
-  auto listener = [&listener_called](auto conn_ref) {
-    ASSERT_TRUE(conn_ref);
-    EXPECT_TRUE(conn_ref->active());
-
-    listener_called = true;
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  };
-
-  // As |listener| does not claim the ref, we expect the test device to
-  // eventually disconnect on its own.
-  conn_mgr()->AddListener(listener);
-  test_device()->ConnectLowEnergy(kAddress0);
-
-  RunMessageLoop();
-  EXPECT_TRUE(listener_called);
-  EXPECT_EQ(1u, connected_devices().size());
-
-  set_quit_message_loop_on_state_change(true);
-  RunMessageLoop();
-  EXPECT_TRUE(connected_devices().empty());
-}
-
-// Listener receives remote initiated connection ref from a peer that was not
-// seen before.
-TEST_F(GAP_LowEnergyConnectionManagerTest,
-       ListenerRemoteInitiatedFromUnknownDevice) {
-  // Set up a fake device but don't add it to the device cache.
-  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
-
-  LowEnergyConnectionRefPtr conn_ref;
-  auto listener = [&conn_ref](auto cb_conn_ref) {
-    ASSERT_TRUE(cb_conn_ref);
-    EXPECT_TRUE(cb_conn_ref->active());
-
-    conn_ref = std::move(cb_conn_ref);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  };
-
-  conn_mgr()->AddListener(listener);
-  test_device()->ConnectLowEnergy(kAddress0);
-
-  RunMessageLoop();
-  ASSERT_TRUE(conn_ref);
-
-  // There should be a matching device in the cache now.
-  auto dev = dev_cache()->FindDeviceById(conn_ref->device_identifier());
-  ASSERT_TRUE(dev);
-  EXPECT_EQ(kAddress0, dev->address());
-  EXPECT_EQ(TechnologyType::kLowEnergy, dev->technology());
-  EXPECT_TRUE(dev->connectable());
-
-  conn_ref = nullptr;
   set_quit_message_loop_on_state_change(true);
   RunMessageLoop();
   EXPECT_TRUE(connected_devices().empty());
@@ -875,14 +790,18 @@ void QuitMessageLoopIf(const std::function<bool()>& cond) {
 // Tests that the master accepts the connection parameters that are sent from
 // a fake slave and eventually applies them to the link.
 TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
+  // Set up a fake device and a connection over which to process the L2CAP
+  // request.
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+  auto* dev = dev_cache()->NewDevice(kAddress0, true);
+  ASSERT_TRUE(dev);
 
   LowEnergyConnectionRefPtr conn_ref;
-  conn_mgr()->AddListener([&conn_ref](auto cr) {
+  auto conn_cb = [&conn_ref](const auto& dev_id, auto cr) {
     conn_ref = std::move(cr);
     fsl::MessageLoop::GetCurrent()->QuitNow();
-  });
-  test_device()->ConnectLowEnergy(kAddress0, hci::LEConnectionRole::kMaster);
+  };
+  ASSERT_TRUE(conn_mgr()->Connect(dev->identifier(), conn_cb));
 
   RunMessageLoop();
   ASSERT_TRUE(conn_ref);
@@ -922,8 +841,6 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
   EXPECT_TRUE(fake_dev_cb_called);
   ASSERT_TRUE(conn_params_cb_called);
 
-  auto dev = dev_cache()->FindDeviceById(conn_ref->device_identifier());
-  ASSERT_TRUE(dev);
   EXPECT_EQ(preferred, *dev->le_preferred_connection_params());
   EXPECT_EQ(actual, *dev->le_connection_params());
 }

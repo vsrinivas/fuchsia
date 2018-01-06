@@ -15,9 +15,7 @@
 namespace btlib {
 namespace gap {
 
-namespace internal {
-
-class ActiveAdvertisement {
+class LowEnergyAdvertisingManager::ActiveAdvertisement final {
  public:
   explicit ActiveAdvertisement(const common::DeviceAddress& address)
       : address_(address), id_(fxl::GenerateUUID()) {}
@@ -34,12 +32,10 @@ class ActiveAdvertisement {
   FXL_DISALLOW_COPY_AND_ASSIGN(ActiveAdvertisement);
 };
 
-}  // namespace internal
-
 LowEnergyAdvertisingManager::LowEnergyAdvertisingManager(
-    std::unique_ptr<LowEnergyAdvertiser> advertiser)
+    LowEnergyAdvertiser* advertiser)
     : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
-      advertiser_(std::move(advertiser)),
+      advertiser_(advertiser),
       weak_ptr_factory_(this) {
   FXL_CHECK(advertiser_);
 }
@@ -68,18 +64,25 @@ void LowEnergyAdvertisingManager::StartAdvertising(
   // TODO(jamuraa): Generate resolvable private addresses instead if they're
   // connectable.
   auto address = RandomAddressGenerator::PrivateAddress();
-  auto ad_ptr = std::make_unique<internal::ActiveAdvertisement>(address);
+  auto ad_ptr = std::make_unique<ActiveAdvertisement>(address);
+  auto self = weak_ptr_factory_.GetWeakPtr();
+
   LowEnergyAdvertiser::ConnectionCallback adv_conn_cb;
   if (connect_callback) {
-    adv_conn_cb = [this, id = ad_ptr->id(), connect_callback](auto conn_ref) {
+    adv_conn_cb = [self, id = ad_ptr->id(), connect_callback](auto link) {
+      FXL_VLOG(1)
+          << "gap: LowEnergyAdvertisingManager: received new connection.";
+      if (!self)
+        return;
+
       // remove the advertiser because advertising has stopped
-      advertisements_.erase(id);
-      connect_callback(id, std::move(conn_ref));
+      self->advertisements_.erase(id);
+      connect_callback(id, std::move(link));
     };
   }
-  auto result_cb = fxl::MakeCopyable(
-      [self = weak_ptr_factory_.GetWeakPtr(), ad_ptr = std::move(ad_ptr),
-       result_callback](uint32_t, hci::Status status) mutable {
+  auto result_cb =
+      fxl::MakeCopyable([self, ad_ptr = std::move(ad_ptr), result_callback](
+                            uint32_t, hci::Status status) mutable {
         if (!self)
           return;
         if (status != hci::kSuccess) {

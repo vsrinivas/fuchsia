@@ -47,13 +47,16 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   // Returns false if called while not advertising.
   bool StopAdvertising(const common::DeviceAddress& address) override;
 
-  // Clears the advertising state before passing |connection| on to
+  // Clears the advertising state before passing |link| on to
   // |connect_callback_|.
-  void OnIncomingConnection(LowEnergyConnectionRefPtr connection) override;
+  void OnIncomingConnection(hci::ConnectionPtr link) override;
 
  private:
   // Unconditionally stops advertising.
   void StopAdvertisingInternal();
+
+  // Returns true if currently advertising.
+  bool advertising() const { return advertised_ != common::DeviceAddress(); }
 
   // The transport that's used to issue commands
   fxl::RefPtr<hci::Transport> hci_;

@@ -4,16 +4,16 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
 namespace btlib {
 namespace gap {
-
-// TODO(jamuraa): consolidate these into a common header
-class LowEnergyConnectionRef;
-using LowEnergyConnectionRefPtr = std::unique_ptr<LowEnergyConnectionRef>;
 
 class LowEnergyAdvertiser {
  public:
@@ -30,15 +30,18 @@ class LowEnergyAdvertiser {
   // Attempt to start advertising |data| with scan response |scan_rsp| using
   // advertising address |address|.  If |anonymous| is set, |address| is
   // ignored.
+  //
   // If |address| is currently advertised, the advertisement is updated.
+  //
   // If |connect_callback| is provided, the advertisement will be connectable,
   // and the provided callback will be called with a connection reference
   // when this advertisement is connected to and the advertisement has been
   // stopped.
   //
-  // Provides results in |callback|. If advertising is setup, the expected
+  // Provides results in |callback|. If advertising is setup, the final
   // interval of advertising is provided in |interval_ms| and |status|
   // is hci::kSuccess.
+  //
   // Otherwise, |status| will indicate the type of error:
   //  - hci::kInvalidHCICommandParameters if the parameters are invalid
   //  - hci::kConnectionLimitExceeded if no more advertisements can be made
@@ -46,13 +49,14 @@ class LowEnergyAdvertiser {
   //  - hci::kUnsupportedFeatureOrParameter if anonymous or connectable
   //    advertising is requested but unsupported
   //  - another error if the Controller provides one
+  //
   // |callback| may be called before this function returns, but will
   // be called before any calls to |connect_callback|.
   // TODO(jamuraa): In the future, use stack-based error codes instead
   // of coopting the HCI error statuses.
   using AdvertisingResultCallback =
       std::function<void(uint32_t interval_ms, hci::Status status)>;
-  using ConnectionCallback = std::function<void(LowEnergyConnectionRefPtr)>;
+  using ConnectionCallback = std::function<void(hci::ConnectionPtr link)>;
   virtual void StartAdvertising(const common::DeviceAddress& address,
                                 const AdvertisingData& data,
                                 const AdvertisingData& scan_rsp,
@@ -70,7 +74,7 @@ class LowEnergyAdvertiser {
   // in reaction to any connection that was not initiated locally.   This object
   // will determine if it was a result of an active advertisement and call the
   // appropriate callback.
-  virtual void OnIncomingConnection(LowEnergyConnectionRefPtr connection) = 0;
+  virtual void OnIncomingConnection(hci::ConnectionPtr link) = 0;
 };
 
 }  // namespace gap

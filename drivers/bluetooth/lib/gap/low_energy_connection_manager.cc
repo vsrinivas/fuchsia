@@ -154,8 +154,8 @@ void LowEnergyConnectionManager::PendingRequestData::NotifyCallbacks(
 }
 
 LowEnergyConnectionManager::LowEnergyConnectionManager(
-    Mode /* mode */,
     fxl::RefPtr<hci::Transport> hci,
+    hci::LowEnergyConnector* connector,
     RemoteDeviceCache* device_cache,
     l2cap::ChannelManager* l2cap)
     : hci_(hci),
@@ -164,24 +164,16 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
       device_cache_(device_cache),
       l2cap_(l2cap),
       gatt_registry_(std::make_unique<gatt::LocalServiceManager>()),
-      next_listener_id_(1),
+      connector_(connector),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(device_cache_);
   FXL_DCHECK(l2cap_);
   FXL_DCHECK(gatt_registry_);
   FXL_DCHECK(hci_);
+  FXL_DCHECK(connector_);
 
-  // TODO(armansito): Use |mode| initialize the |connector_| when we support the
-  // extended feature. For now |mode| is ignored.
   auto self = weak_ptr_factory_.GetWeakPtr();
-  connector_ = std::make_unique<hci::LowEnergyConnector>(
-      hci_, task_runner_, [self](auto conn) {
-        // TODO(armansito): Adapter should assign this delegate as
-        // LowEnergyAdvertiser.
-        if (self)
-          self->OnConnectionCreated(std::move(conn));
-      });
 
   // TODO(armansito): Setting this up here means that the
   // ClassicConnectionManager won't be able to listen to the same event. So this
@@ -213,7 +205,9 @@ LowEnergyConnectionManager::~LowEnergyConnectionManager() {
   weak_ptr_factory_.InvalidateWeakPtrs();
 
   // This will cancel any pending request.
-  connector_ = nullptr;
+  if (connector_->request_pending()) {
+    connector_->Cancel();
+  }
 
   // Clear |pending_requests_| and notify failure.
   for (auto& iter : pending_requests_) {
@@ -327,21 +321,19 @@ bool LowEnergyConnectionManager::Disconnect(
   return true;
 }
 
-LowEnergyConnectionManager::ListenerId LowEnergyConnectionManager::AddListener(
-    const ConnectionCallback& callback) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(listeners_.find(next_listener_id_) == listeners_.end());
+LowEnergyConnectionRefPtr
+LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
+    hci::ConnectionPtr link) {
+  FXL_DCHECK(link);
+  FXL_VLOG(1) << "gap: le connmgr: new remote-initiated link (local addr: "
+              << link->peer_address().ToString() << ") " << link->ToString();
 
-  auto id = next_listener_id_++;
-  FXL_DCHECK(next_listener_id_);
-  FXL_DCHECK(id);
-  listeners_[id] = callback;
+  RemoteDevice* peer = UpdateRemoteDeviceWithLink(*link);
 
-  return id;
-}
-
-void LowEnergyConnectionManager::RemoveListener(ListenerId id) {
-  listeners_.erase(id);
+  // TODO(armansito): Use own address when storing the connection (NET-321).
+  // Currently this will refuse the connection and disconnect the link if |peer|
+  // is already connected to us by a different local address.
+  return InitializeConnection(peer->identifier(), std::move(link));
 }
 
 void LowEnergyConnectionManager::SetConnectionParametersCallbackForTesting(
@@ -455,8 +447,7 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
   // peer. This should change once this has more context on the local
   // destination for remote initiated connections (see NET-321).
   if (connections_.find(device_id) != connections_.end()) {
-    FXL_LOG(WARNING)
-        << "gap: Multiple connections from same device; closing link";
+    FXL_VLOG(1) << "gap: Multiple links to same device; connection refused";
     link->Close();
     return nullptr;
   }
@@ -489,8 +480,8 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
   auto first_ref = conn->AddRef();
   connections_[device_id] = std::move(conn);
 
-  // TODO(armansito): Listeners and pending request handlers should not be
-  // called yet since there are still a few more things to complete:
+  // TODO(armansito): Should complete a few more things before returning the
+  // connection:
   //    1. Initialize SMP bearer
   //    2. If this is the first time we connected to this device:
   //      a. Obtain LE remote features
@@ -539,20 +530,14 @@ void LowEnergyConnectionManager::CleanUpConnection(
   // The |conn| is destroyed when it goes out of scope.
 }
 
-void LowEnergyConnectionManager::OnConnectionCreated(
+void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
     std::unique_ptr<hci::Connection> link) {
   FXL_DCHECK(link);
   FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
   FXL_LOG(INFO) << "gap: LowEnergyConnectionManager: new connection: "
                 << link->ToString();
 
-  RemoteDevice* peer = device_cache_->FindDeviceByAddress(link->peer_address());
-  if (!peer) {
-    peer = device_cache_->NewDevice(link->peer_address(), true);
-  }
-
-  peer->TryMakeNonTemporary();
-  peer->set_le_connection_params(link->low_energy_parameters());
+  RemoteDevice* peer = UpdateRemoteDeviceWithLink(*link);
 
   // Initialize the connection  and obtain the initial reference.
   // This reference lasts until this method returns to prevent it from dropping
@@ -560,9 +545,8 @@ void LowEnergyConnectionManager::OnConnectionCreated(
   // listeners below.
   auto first_ref = InitializeConnection(peer->identifier(), std::move(link));
 
-  // Abort if the connection was rejected.
-  if (!first_ref)
-    return;
+  // We take care never to initiate more than one connection to the same peer.
+  FXL_DCHECK(first_ref);
 
   auto conn_iter = connections_.find(peer->identifier());
   FXL_DCHECK(conn_iter != connections_.end());
@@ -581,17 +565,26 @@ void LowEnergyConnectionManager::OnConnectionCreated(
     });
   }
 
-  // Notify each listener with a unique reference.
-  for (const auto& iter : listeners_) {
-    iter.second(conn_iter->second->AddRef());
-  }
-
   // Release the extra reference before attempting the next connection. This
-  // will disconnect the link if no callback or listener retained its reference.
+  // will disconnect the link if no callback retained its reference.
   first_ref = nullptr;
 
   FXL_DCHECK(!connector_->request_pending());
   TryCreateNextConnection();
+}
+
+RemoteDevice* LowEnergyConnectionManager::UpdateRemoteDeviceWithLink(
+    const hci::Connection& link) {
+  RemoteDevice* peer = device_cache_->FindDeviceByAddress(link.peer_address());
+  if (!peer) {
+    peer =
+        device_cache_->NewDevice(link.peer_address(), true /* connectable */);
+  }
+
+  peer->TryMakeNonTemporary();
+  peer->set_le_connection_params(link.low_energy_parameters());
+
+  return peer;
 }
 
 void LowEnergyConnectionManager::OnConnectResult(
@@ -602,9 +595,8 @@ void LowEnergyConnectionManager::OnConnectResult(
   FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
 
   if (result == hci::LowEnergyConnector::Result::kSuccess) {
-    FXL_VLOG(1)
-        << "gap: LowEnergyConnectionManager: LE connection request successful";
-    OnConnectionCreated(std::move(link));
+    FXL_VLOG(1) << "gap: le connmgr: LE connection request successful";
+    RegisterLocalInitiatedLink(std::move(link));
     return;
   }
 

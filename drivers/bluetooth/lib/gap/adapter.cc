@@ -9,6 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
@@ -367,75 +368,36 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
   // Initialize the scan manager based on current feature support.
   if (state_.low_energy_state().IsFeatureSupported(
           hci::LESupportedFeature::kLEExtendedAdvertising)) {
-    FXL_LOG(INFO) << "gap: Adapter: Using extended LE scan procedures";
-    le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        Mode::kExtended, hci_, &device_cache_);
-  } else if (state_.IsCommandSupported(
-                 26, hci::SupportedCommand::kLESetScanParameters) &&
-             state_.IsCommandSupported(
-                 26, hci::SupportedCommand::kLESetScanEnable)) {
-    // TODO(jamuraa): Always provide at least a legacy discovery manager
-    // and depend on the controller to return an error in the case it doesn't
-    // support the legacy commands.
-    FXL_LOG(INFO) << "gap: Adapter: Using legacy LE scan procedures";
-    le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        Mode::kLegacy, hci_, &device_cache_);
-  } else {
-    FXL_LOG(WARNING)
-        << "gap: Adapter: controller does not support LE scanner role";
+    FXL_LOG(INFO) << "gap: adapter: controller supports extended advertising";
+    FXL_LOG(INFO) << "gap: adapter: host doesn't support 5.0 extended features,"
+                  << " defaulting to legacy procedures.";
+
+    // TODO(armansito): Initialize |hci_le_*| objects here with extended-mode
+    // versions.
   }
 
-  // Initialize L2CAP.
+  // Called by |hci_le_connector_| when a connection was created due to an
+  // incoming connection. This callback routes the received |link| to
+  // |hci_le_advertiser_| for it to be matched to an advertisement instance.
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto incoming_conn_cb = [self](std::unique_ptr<hci::Connection> link) {
+    if (self && self->hci_le_advertiser_) {
+      self->hci_le_advertiser_->OnIncomingConnection(std::move(link));
+    }
+  };
+
+  hci_le_advertiser_ = std::make_unique<LegacyLowEnergyAdvertiser>(hci_);
+  hci_le_connector_ = std::make_unique<hci::LowEnergyConnector>(
+      hci_, task_runner_, std::move(incoming_conn_cb));
+
+  le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
+      Mode::kLegacy, hci_, &device_cache_);
+
   l2cap_ = std::make_unique<l2cap::ChannelManager>(hci_, task_runner_);
-
-  // Initialize LE connection manager based on current feature support.
-  if (state_.low_energy_state().IsFeatureSupported(
-          hci::LESupportedFeature::kLEExtendedAdvertising)) {
-    // TODO(armansito): Add extended feature version of this.
-    FXL_LOG(INFO) << "gap: Adapter: Controller supports extended LE connection "
-                     "procedures";
-    FXL_LOG(WARNING)
-        << "gap: Adapter: extended LE connection procedures not implemented;"
-        << " defaulting to legacy features";
-  }
-  if (state_.IsCommandSupported(26,
-                                hci::SupportedCommand::kLECreateConnection) &&
-      state_.IsCommandSupported(
-          26, hci::SupportedCommand::kLECreateConnectionCancel)) {
-    FXL_LOG(INFO) << "gap: Adapter: Using legacy LE connection procedures";
-    // TODO(jamuraa): Always provide at least a legacy connection manager
-    // and depend on the controller to return an error in the case it doesn't
-    // support the legacy commands.
-    le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
-        Mode::kLegacy, hci_, &device_cache_, l2cap_.get());
-  } else {
-    FXL_LOG(WARNING)
-        << "gap: Adapter: controller does not support LE central role";
-  }
-
-  // Initialize LE advertising based on features available
-  std::unique_ptr<LowEnergyAdvertiser> advertiser;
-  if (state_.low_energy_state().IsFeatureSupported(
-          hci::LESupportedFeature::kLEExtendedAdvertising)) {
-    // TODO(jamuraa): use ExtendedLowEnergyAdvertiser once implemented
-    FXL_LOG(INFO)
-        << "gap: Adapter: Controller supports multiple advertisements.";
-    FXL_LOG(WARNING)
-        << "gap: Adapter: multiple advertisements not supported yet, "
-        << "defaulting to legacy advertising";
-  } else {
-    FXL_LOG(INFO) << "gap: Adapter: Using legacy LE advertising procedures";
-  }
-
-  advertiser.reset(new LegacyLowEnergyAdvertiser(hci_));
-  if (le_connection_manager_) {
-    // NOTE: Using the raw advertiser pointer is okay here, because the listener
-    // will be removed before the advertising manager is released.
-    incoming_listener_id_ = le_connection_manager_->AddListener(fbl::BindMember(
-        advertiser.get(), &LowEnergyAdvertiser::OnIncomingConnection));
-  }
+  le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
+      hci_, hci_le_connector_.get(), &device_cache_, l2cap_.get());
   le_advertising_manager_ =
-      std::make_unique<LowEnergyAdvertisingManager>(std::move(advertiser));
+      std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
   // This completes the initialization sequence.
   init_state_ = State::kInitialized;
@@ -443,9 +405,6 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
 }
 
 uint64_t Adapter::BuildEventMask() {
-  // TODO(armansito): This only enables events that are relevant to supported
-  // BLE features. Revisit this as we add more features (e.g. for SSP and
-  // general BR/EDR support).
   uint64_t event_mask = 0;
 
   // Enable events that are needed for basic flow control.
@@ -475,14 +434,12 @@ void Adapter::CleanUp() {
   state_ = AdapterState();
   transport_closed_cb_ = nullptr;
 
-  if (le_connection_manager_) {
-    le_connection_manager_->RemoveListener(incoming_listener_id_);
-  }
   le_advertising_manager_ = nullptr;
-  // TODO(armansito): This should notify all session clients that they are not
-  // scanning any more.
-  le_discovery_manager_ = nullptr;
   le_connection_manager_ = nullptr;
+  le_discovery_manager_ = nullptr;
+
+  hci_le_connector_ = nullptr;
+  hci_le_advertiser_ = nullptr;
 
   if (hci_->IsInitialized())
     hci_->ShutDown();

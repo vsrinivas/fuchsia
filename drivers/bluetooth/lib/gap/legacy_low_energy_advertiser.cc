@@ -175,7 +175,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     return;
   }
 
-  if (advertised_ != common::DeviceAddress()) {
+  if (advertising()) {
     FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already advertising";
     callback(0, hci::kConnectionLimitExceeded);
     return;
@@ -284,7 +284,7 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
       FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already stopping";
 
       // The advertised address must have been cleared in this state.
-      FXL_DCHECK(advertised_ == common::DeviceAddress());
+      FXL_DCHECK(!advertising());
       return;
     }
 
@@ -324,14 +324,23 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
   });
 }
 
-void LegacyLowEnergyAdvertiser::OnIncomingConnection(
-    LowEnergyConnectionRefPtr connection) {
+void LegacyLowEnergyAdvertiser::OnIncomingConnection(hci::ConnectionPtr link) {
+  if (!advertising()) {
+    FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: connection received "
+                   "without advertising!";
+    return;
+  }
+
+  if (!connect_callback_) {
+    FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: connection received when "
+                   "not connectable!";
+    return;
+  }
+
   auto callback = std::move(connect_callback_);
   StopAdvertisingInternal();
 
-  if (callback) {
-    callback(std::move(connection));
-  }
+  callback(std::move(link));
 }
 
 }  // namespace gap

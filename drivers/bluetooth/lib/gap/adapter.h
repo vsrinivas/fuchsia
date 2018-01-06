@@ -8,7 +8,6 @@
 #include <string>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -19,6 +18,7 @@
 namespace btlib {
 
 namespace hci {
+class LowEnergyConnector;
 class SequentialCommandRunner;
 class Transport;
 }  // namespace hci
@@ -29,7 +29,9 @@ class ChannelManager;
 
 namespace gap {
 
+class LowEnergyAdvertiser;
 class LowEnergyAdvertisingManager;
+class LowEnergyConnectionManager;
 class LowEnergyDiscoveryManager;
 
 // Represents the host-subsystem state for a Bluetooth controller. All
@@ -171,20 +173,15 @@ class Adapter final {
   // The L2CAP layer.
   std::unique_ptr<l2cap::ChannelManager> l2cap_;
 
-  // Interface for performing BLE scan procedures. This is initialized based on
-  // feature support. Contains nullptr if the controller does not support
-  // scanning.
+  // Objects that abstract the controller for connection and advertising
+  // procedures.
+  // TODO(armansito): Move hci::LowEnergyScanner here.
+  std::unique_ptr<LowEnergyAdvertiser> hci_le_advertiser_;
+  std::unique_ptr<hci::LowEnergyConnector> hci_le_connector_;
+
+  // Objects that perform BLE procedures.
   std::unique_ptr<LowEnergyDiscoveryManager> le_discovery_manager_;
-
-  // Interface for BLE central-role connection procedures. This is initialized
-  // based on feature support. Contains nullptr if the controller does not
-  // support LE connections.
   std::unique_ptr<LowEnergyConnectionManager> le_connection_manager_;
-  LowEnergyConnectionManager::ListenerId incoming_listener_id_;
-
-  // Interface for performing BLE advertisement procedures.  Initialized based
-  // on feature support.  nullptr when a controller does not support
-  // advertising.
   std::unique_ptr<LowEnergyAdvertisingManager> le_advertising_manager_;
 
   // This must remain the last member to make sure that all weak pointers are

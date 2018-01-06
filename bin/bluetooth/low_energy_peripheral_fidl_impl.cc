@@ -103,17 +103,23 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
     ::btlib::gap::AdvertisingData::FromFidl(scan_result, &scan_data);
   }
 
+  auto self = weak_ptr_factory_.GetWeakPtr();
+
   ::btlib::gap::LowEnergyAdvertisingManager::ConnectionCallback connect_cb;
   if (delegate) {
-    connect_cb =
-        fbl::BindMember(this, &LowEnergyPeripheralFidlImpl::OnConnected);
+    // TODO(armansito): The conversion from hci::Connection to
+    // gap::LowEnergyConnectionRef should be performed by a gap library object
+    // and not in this layer (see NET-355).
+    connect_cb = [self](auto adv_id, auto link) {
+      if (self)
+        self->OnConnected(std::move(adv_id), std::move(link));
+    };
   }
   // |delegate| is temporarily held by the result callback, which will close the
   // delegate channel if the advertising fails (after returning the status)
   auto advertising_result_cb = fxl::MakeCopyable(
-      [self = weak_ptr_factory_.GetWeakPtr(), callback,
-       delegate = std::move(delegate)](std::string advertisement_id,
-                                       ::btlib::hci::Status status) mutable {
+      [self, callback, delegate = std::move(delegate)](
+          std::string advertisement_id, ::btlib::hci::Status status) mutable {
         if (!self)
           return;
 
@@ -165,6 +171,7 @@ void LowEnergyPeripheralFidlImpl::StopAdvertising(
 void LowEnergyPeripheralFidlImpl::OnActiveAdapterChanged(
     ::btlib::gap::Adapter* adapter) {
   // TODO(jamuraa): re-add the advertisements that have been started here?
+  // TODO(armansito): Stop advertisements started using the old active adapter.
 
   // Clean up all connections and advertising instances.
   instances_.clear();
@@ -172,9 +179,11 @@ void LowEnergyPeripheralFidlImpl::OnActiveAdapterChanged(
 
 void LowEnergyPeripheralFidlImpl::OnConnected(
     std::string advertisement_id,
-    ::btlib::gap::LowEnergyConnectionRefPtr connection) {
-  FXL_DCHECK(connection);
+    ::btlib::hci::ConnectionPtr link) {
+  FXL_DCHECK(link);
 
+  // If the active adapter that was used to start advertising was changed before
+  // we process this connection then the instance will have been removed.
   auto it = instances_.find(advertisement_id);
   if (it == instances_.end()) {
     FXL_VLOG(1) << "Connection received from wrong advertising instance";
@@ -189,13 +198,15 @@ void LowEnergyPeripheralFidlImpl::OnConnected(
     return;
   }
 
-  // A RemoteDevice will have been created for the new connection.
-  auto* device =
-      adapter->device_cache().FindDeviceById(connection->device_identifier());
-  FXL_DCHECK(device);
+  auto conn = adapter->le_connection_manager()->RegisterRemoteInitiatedLink(
+      std::move(link));
+  if (!conn) {
+    FXL_VLOG(1) << "Incoming connection rejected";
+    return;
+  }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  connection->set_closed_callback([self, id = advertisement_id] {
+  conn->set_closed_callback([self, id = advertisement_id] {
     FXL_VLOG(1) << "Central disconnected";
 
     if (!self)
@@ -210,8 +221,13 @@ void LowEnergyPeripheralFidlImpl::OnConnected(
     it->second.ReleaseConnection();
   });
 
+  // A RemoteDevice will have been created for the new connection.
+  auto* device =
+      adapter->device_cache().FindDeviceById(conn->device_identifier());
+  FXL_DCHECK(device);
+
   FXL_VLOG(1) << "Central connected";
-  it->second.RetainConnection(std::move(connection),
+  it->second.RetainConnection(std::move(conn),
                               fidl_helpers::NewLERemoteDevice(*device));
 }
 

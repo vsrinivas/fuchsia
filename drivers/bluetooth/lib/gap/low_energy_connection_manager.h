@@ -24,8 +24,6 @@
 namespace btlib {
 
 namespace hci {
-class Connection;
-class LowEnergyConnector;
 class Transport;
 }  // namespace hci
 
@@ -91,8 +89,8 @@ using LowEnergyConnectionRefPtr = std::unique_ptr<LowEnergyConnectionRef>;
 
 class LowEnergyConnectionManager final {
  public:
-  LowEnergyConnectionManager(Mode mode,
-                             fxl::RefPtr<hci::Transport> hci,
+  LowEnergyConnectionManager(fxl::RefPtr<hci::Transport> hci,
+                             hci::LowEnergyConnector* connector,
                              RemoteDeviceCache* device_cache,
                              l2cap::ChannelManager* l2cap);
   ~LowEnergyConnectionManager();
@@ -127,16 +125,17 @@ class LowEnergyConnectionManager final {
   // not recognized or the corresponding remote device is not connected.
   bool Disconnect(const std::string& device_identifier);
 
-  // A connection listener can be used to be notified when a connection is
-  // established to any remote LE device.
+  // Initializes a new connection over the given |link| and returns a connection
+  // reference. Returns nullptr if the connection was rejected.
   //
-  // |callback| is run on the creation thread's task runner. A previously
-  // registered |callback| is guaranteed not to run if it is unregistered via
-  // RemoveListener().
-  using ListenerId = size_t;
-  using ConnectionCallback = std::function<void(LowEnergyConnectionRefPtr)>;
-  ListenerId AddListener(const ConnectionCallback& callback);
-  void RemoveListener(ListenerId id);
+  // |link| must be the result of a remote initiated connection.
+  //
+  // TODO(armansito): Add an |own_address| parameter for the locally advertised
+  // address that was connected to.
+  //
+  // A link with the given handle should not have been previously registered.
+  LowEnergyConnectionRefPtr RegisterRemoteInitiatedLink(
+      hci::ConnectionPtr link);
 
   // TODO(armansito): Add a RemoteDeviceCache::Observer interface and move these
   // callbacks there.
@@ -211,9 +210,8 @@ class LowEnergyConnectionManager final {
   // Initializes the connection to the peer with the given identifier and
   // returns the initial reference to it. This method is responsible for setting
   // up all data bearers.
-  LowEnergyConnectionRefPtr InitializeConnection(
-      const std::string& device_id,
-      std::unique_ptr<hci::Connection> link);
+  LowEnergyConnectionRefPtr InitializeConnection(const std::string& device_id,
+                                                 hci::ConnectionPtr link);
 
   // Adds a new connection reference to an existing connection to the device
   // with the ID |device_identifier| and returns it. Returns nullptr if
@@ -234,8 +232,22 @@ class LowEnergyConnectionManager final {
   void CleanUpConnection(std::unique_ptr<internal::LowEnergyConnection> conn,
                          bool close_link = true);
 
-  // Called by |connector_| when a new LE connection has been created.
-  void OnConnectionCreated(std::unique_ptr<hci::Connection> connection);
+  // Called by |connector_| when a new locally initiated LE connection has been
+  // created.
+  void RegisterLocalInitiatedLink(hci::ConnectionPtr link);
+
+  // Updates |device_cache_| with the given |link| and returns the corresponding
+  // RemoteDevice.
+  //
+  // Creates a new RemoteDevice if |link| matches a peer that did not
+  // previously exist in the cache. Otherwise this updates and returns an
+  // existing RemoteDevice.
+  //
+  // The returned device is marked as non-temporary and its connection
+  // parameters are updated.
+  //
+  // Called by RegisterRemoteInitiatedLink() and RegisterLocalInitiatedLink().
+  RemoteDevice* UpdateRemoteDeviceWithLink(const hci::Connection& link);
 
   // Called by |connector_| to indicate the result of a connect request.
   void OnConnectResult(const std::string& device_identifier,
@@ -304,7 +316,7 @@ class LowEnergyConnectionManager final {
   RemoteDeviceCache* device_cache_;  // weak
 
   // The L2CAP layer is shared between the BR/EDR and LE connection managers and
-  // it is expected to out-live both. Expected to outlive this instance.
+  // it is expected to outlive both. Expected to outlive this instance.
   l2cap::ChannelManager* l2cap_;  // weak
 
   // Local GATT service registry.
@@ -320,17 +332,15 @@ class LowEnergyConnectionManager final {
   ConnectionParametersCallback test_conn_params_cb_;
   DisconnectCallback test_disconn_cb_;
 
-  ListenerId next_listener_id_;
-  std::unordered_map<ListenerId, ConnectionCallback> listeners_;
-
   // Outstanding connection requests based on remote device ID.
   std::unordered_map<std::string, PendingRequestData> pending_requests_;
 
   // Mapping from device identifiers to currently open LE connections.
   ConnectionMap connections_;
 
-  // Performs the Direct Connection Establishment procedure.
-  std::unique_ptr<hci::LowEnergyConnector> connector_;
+  // Performs the Direct Connection Establishment procedure. |connector_| must
+  // out-live this connection manager.
+  hci::LowEnergyConnector* connector_;  // weak
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

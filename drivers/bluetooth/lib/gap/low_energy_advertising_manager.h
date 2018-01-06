@@ -7,31 +7,23 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_advertiser.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace btlib {
 
 namespace hci {
+class Connection;
 class Transport;
 }  // namespace hci
 
 namespace gap {
 
-namespace internal {
-class ActiveAdvertisement;
-}  // namespace internal
-
 class LowEnergyAdvertisingManager {
  public:
-  // Build an AdvertisingManaer which will use the underlying advertiser
-  // |advertiser| to make advertisements.
-  // |connection_manager| and |device_cache| are expected to outlive this
-  // object.
-  explicit LowEnergyAdvertisingManager(
-      std::unique_ptr<LowEnergyAdvertiser> advertiser);
-
+  explicit LowEnergyAdvertisingManager(LowEnergyAdvertiser* advertiser);
   virtual ~LowEnergyAdvertisingManager();
 
   // Asynchronously attempts to start advertising a set of |data| with
@@ -58,8 +50,10 @@ class LowEnergyAdvertisingManager {
   //    * the actual hci error reported from the controller, otherwise.
   // TODO(jamuraa): Introduce stack error codes that are separate from HCI error
   // codes.
-  using ConnectionCallback = std::function<void(std::string advertisement_id,
-                                                LowEnergyConnectionRefPtr)>;
+  // TODO(armansito): Return integer IDs instead.
+  using ConnectionCallback =
+      std::function<void(std::string advertisement_id,
+                         std::unique_ptr<hci::Connection> link)>;
   using AdvertisingResultCallback =
       std::function<void(std::string advertisement_id, hci::Status status)>;
   void StartAdvertising(const AdvertisingData& data,
@@ -75,16 +69,21 @@ class LowEnergyAdvertisingManager {
   bool StopAdvertising(std::string advertisement_id);
 
  private:
+  class ActiveAdvertisement;
+
   // Active advertisements, indexed by id.
-  std::unordered_map<std::string,
-                     std::unique_ptr<internal::ActiveAdvertisement>>
+  // TODO(armansito): Use fbl::HashMap here (NET-176) or move
+  // ActiveAdvertisement definition here and store by value (it is a small
+  // object).
+  std::unordered_map<std::string, std::unique_ptr<ActiveAdvertisement>>
       advertisements_;
 
   // The task loop that the advertisement requests will run on.
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
-  // The instantiateed advertiser used to communicate with the adapter.
-  std::unique_ptr<LowEnergyAdvertiser> advertiser_;
+  // Used to communicate with the controller. |advertiser_| must outlive this
+  // advertising manager.
+  LowEnergyAdvertiser* advertiser_;  // weak
 
   // Note: Should remain the last member so it'll be destroyed and
   // invalidate it's pointers before other members are destroyed.
