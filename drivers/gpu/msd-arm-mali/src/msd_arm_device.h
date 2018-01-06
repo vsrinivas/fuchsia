@@ -64,7 +64,14 @@ public:
         uint32_t gpu_fault_status;
         uint64_t gpu_fault_address;
 
-        std::vector<uint32_t> job_slot_status;
+        struct JobSlotStatus {
+            uint32_t status;
+            uint64_t head;
+            uint64_t tail;
+            uint32_t config;
+        };
+
+        std::vector<JobSlotStatus> job_slot_status;
         struct AddressSpaceStatus {
             uint32_t status;
             uint32_t fault_status;

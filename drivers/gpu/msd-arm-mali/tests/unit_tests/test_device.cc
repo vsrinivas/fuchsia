@@ -36,7 +36,7 @@ public:
 
         EXPECT_EQ(3u, dump_state.job_slot_status.size());
         for (size_t i = 0; i < dump_state.job_slot_status.size(); i++)
-            EXPECT_EQ(0u, dump_state.job_slot_status[i]);
+            EXPECT_EQ(0u, dump_state.job_slot_status[i].status);
 
         EXPECT_EQ(8u, dump_state.address_space_status.size());
         for (size_t i = 0; i < dump_state.address_space_status.size(); i++)
@@ -46,7 +46,8 @@ public:
         device->FormatDump(dump_state, dump_string);
         EXPECT_NE(nullptr,
                   strstr(dump_string.c_str(), "Core type L2 Cache state Present bitmap: 0x1"));
-        EXPECT_NE(nullptr, strstr(dump_string.c_str(), "Job slot 2 status 0"));
+        EXPECT_NE(nullptr, strstr(dump_string.c_str(),
+                                  "Job slot 2 status 0x0 head 0x0 tail 0x0 config 0x0"));
         EXPECT_NE(nullptr, strstr(dump_string.c_str(),
                                   "AS 7 status 0x0 fault status 0x0 fault address 0x0"));
     }
@@ -68,6 +69,9 @@ public:
         registers::AsRegisters(7).FaultStatus().FromValue(12).WriteTo(reg_io.get());
         registers::AsRegisters(7).FaultAddress().FromValue(kFaultAddress).WriteTo(reg_io.get());
         registers::JobSlotRegisters(2).Status().FromValue(10).WriteTo(reg_io.get());
+        registers::JobSlotRegisters(1).Head().FromValue(9).WriteTo(reg_io.get());
+        registers::JobSlotRegisters(0).Tail().FromValue(8).WriteTo(reg_io.get());
+        registers::JobSlotRegisters(0).Config().FromValue(7).WriteTo(reg_io.get());
 
         MsdArmDevice::DumpState dump_state;
         GpuFeatures features;
@@ -87,7 +91,10 @@ public:
         EXPECT_EQ(5u, dump_state.address_space_status[7].status);
         EXPECT_EQ(12u, dump_state.address_space_status[7].fault_status);
         EXPECT_EQ(kFaultAddress, dump_state.address_space_status[7].fault_address);
-        EXPECT_EQ(10u, dump_state.job_slot_status[2]);
+        EXPECT_EQ(10u, dump_state.job_slot_status[2].status);
+        EXPECT_EQ(9u, dump_state.job_slot_status[1].head);
+        EXPECT_EQ(8u, dump_state.job_slot_status[0].tail);
+        EXPECT_EQ(7u, dump_state.job_slot_status[0].config);
         EXPECT_TRUE(found);
     }
 

@@ -577,8 +577,13 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, RegisterIo* io, Du
     dump_state->gpu_fault_address = registers::GpuFaultAddress::Get().ReadFrom(io).reg_value();
 
     for (size_t i = 0; i < features.job_slot_count; i++) {
-        dump_state->job_slot_status.push_back(
-            registers::JobSlotRegisters(i).Status().ReadFrom(io).reg_value());
+        DumpState::JobSlotStatus status;
+        auto js_regs = registers::JobSlotRegisters(i);
+        status.status = js_regs.Status().ReadFrom(io).reg_value();
+        status.head = js_regs.Head().ReadFrom(io).reg_value();
+        status.tail = js_regs.Tail().ReadFrom(io).reg_value();
+        status.config = js_regs.Config().ReadFrom(io).reg_value();
+        dump_state->job_slot_status.push_back(status);
     }
 
     for (size_t i = 0; i < features.address_space_count; i++) {
@@ -614,8 +619,10 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
     fxl::StringAppendf(&dump_string, "Gpu fault status 0x%x, address 0x%lx\n",
                        dump_state.gpu_fault_status, dump_state.gpu_fault_address);
     for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
-        fxl::StringAppendf(&dump_string, "Job slot %zu status %x\n", i,
-                           dump_state.job_slot_status[i]);
+        auto* status = &dump_state.job_slot_status[i];
+        fxl::StringAppendf(&dump_string,
+                           "Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x\n", i,
+                           status->status, status->head, status->tail, status->config);
     }
     for (size_t i = 0; i < dump_state.address_space_status.size(); i++) {
         auto* status = &dump_state.address_space_status[i];
