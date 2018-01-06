@@ -21,6 +21,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zx/job.h>
+#include <zx/process.h>
 
 #include <map>
 #include <memory>
@@ -32,7 +33,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 
-constexpr zx_rights_t kChildJobRights = ZX_RIGHTS_BASIC | ZX_RIGHTS_IO;
+constexpr zx_rights_t kChildJobRights =
+    ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY;
 
 class Service {
  public:
@@ -132,10 +134,11 @@ class Service {
     // Clone this process' stderr.
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
 
-    zx_handle_t proc = 0;
+    zx::process process;
     const char* errmsg;
 
-    zx_status_t status = launchpad_go(lp, &proc, &errmsg);
+    zx_status_t status =
+        launchpad_go(lp, process.reset_and_get_address(), &errmsg);
     if (status < 0) {
       shutdown(conn, SHUT_RDWR);
       close(conn);
@@ -144,28 +147,32 @@ class Service {
     }
 
     std::unique_ptr<async::AutoWait> waiter = std::make_unique<async::AutoWait>(
-        async_get_default(), proc, ZX_PROCESS_TERMINATED);
-    waiter->set_handler(std::bind(&Service::ProcessTerminated, this, proc));
+        async_get_default(), process.get(), ZX_PROCESS_TERMINATED);
+    waiter->set_handler([
+      this, process = std::move(process), job = std::move(child_job)
+    ](async_t*, zx_status_t status, const zx_packet_signal_t* signal) mutable {
+      ProcessTerminated(std::move(process), std::move(job));
+      return ASYNC_WAIT_FINISHED;
+    });
     waiter->Begin();
     process_waiters_.push_back(std::move(waiter));
   }
 
-  async_wait_result_t ProcessTerminated(zx_handle_t handle) {
-    // Kill the process and close the handle.
-    FXL_CHECK(zx_task_kill(handle) == ZX_OK);
-    FXL_CHECK(zx_handle_close(handle) == ZX_OK);
+  void ProcessTerminated(zx::process process, zx::job job) {
+    // Kill the process and the job.
+    FXL_CHECK(process.kill() == ZX_OK);
+    FXL_CHECK(job.kill() == ZX_OK);
 
     // Find the waiter.
-    auto i = std::find_if(process_waiters_.begin(), process_waiters_.end(),
-                          [handle](const std::unique_ptr<async::AutoWait>& w) {
-                            return w->object() == handle;
-                          });
+    auto i =
+        std::find_if(process_waiters_.begin(), process_waiters_.end(),
+                     [&process](const std::unique_ptr<async::AutoWait>& w) {
+                       return w->object() == process.get();
+                     });
     // And remove it.
     if (i != process_waiters_.end()) {
       process_waiters_.erase(i);
     }
-
-    return ASYNC_WAIT_FINISHED;
   }
 
   int port_;
