@@ -1,0 +1,59 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/guest/guest.gni")
+
+action("kernel") {
+  visibility = [ ":*" ]
+  linux_dir = "$target_out_dir/linux/source"
+  linux_image = "$target_out_dir/linux/Image"
+
+  script = "//garnet/bin/guest/scripts/mklinux.sh"
+  args = [
+    "-l", rebase_path("$linux_dir"),
+    "-o", rebase_path("$linux_image")
+  ]
+
+  if (target_cpu == "arm64") {
+    args += [ "arm64" ]
+  } else if (current_cpu == "x64") {
+    args += [ "x86" ]
+  }
+
+  outputs = ["$linux_image"]
+}
+
+action("initrd") {
+  visibility = [ ":*" ]
+  sysroot_dir = "$target_out_dir/linux/sysroot"
+  initrd_image = "$target_out_dir/linux/initrd.img"
+
+  script = "//garnet/bin/guest/scripts/mksysroot.sh"
+  args = [
+    "-i",
+    "-d", rebase_path("$sysroot_dir/toybox"),
+    "-s", rebase_path("$sysroot_dir/dash"),
+    "-o", rebase_path("$initrd_image")
+  ]
+
+  if (target_cpu == "arm64") {
+    args += [ "arm64" ]
+  } else if (current_cpu == "x64") {
+    args += [ "x86" ]
+  }
+
+  outputs = ["$initrd_image"]
+}
+
+guest_app("linux-guest") {
+  deps = [
+    ":kernel",
+    ":initrd",
+  ]
+
+  kernel_outputs = get_target_outputs(":kernel")
+  initrd_outputs = get_target_outputs(":initrd")
+  kernel = kernel_outputs[0]
+  ramdisk = initrd_outputs[0]
+}

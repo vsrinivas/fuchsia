@@ -14,13 +14,14 @@ GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DASH_SRC_DIR="/tmp/dash"
 
 usage() {
-    echo "usage: ${0} [-rif] [-d toybox_dir] [-s dash_dir] {arm64, x86}"
+    echo "usage: ${0} [options] {arm64, x86}"
     echo ""
     echo "    -r Build ext2 filesystem image."
     echo "    -i Build initrd CPIO archive."
     echo "    -f Force a rebuild even if the artifact already exists."
     echo "    -d Directory to clone toybox into."
     echo "    -s Directory to clone dash into."
+    echo "    -o Initrd output path."
     echo ""
     exit 1
 }
@@ -154,13 +155,14 @@ declare FORCE="${FORCE:-false}"
 declare BUILD_INITRD="${BUILD_INITRD:-false}"
 declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
 
-while getopts "fird:s:" opt; do
+while getopts "fird:s:o:" opt; do
   case "${opt}" in
   f) FORCE="true" ;;
   i) BUILD_INITRD="true" ;;
   r) BUILD_ROOTFS="true" ;;
   d) TOYBOX_SRC_DIR="${OPTARG}" ;;
   s) DASH_SRC_DIR="${OPTARG}" ;;
+  o) INITRD_OUT="${OPTARG}" ;;
   *) usage ;;
   esac
 done
@@ -228,6 +230,9 @@ generate_init "${TOYBOX_SYSROOT}"
 if [[ "${BUILD_INITRD}" = "true" ]]; then
   package_initrd "${TOYBOX_SYSROOT}" "${TOYBOX_INITRD}"
   echo "initrd at ${TOYBOX_INITRD}"
+  if [ -n "${INITRD_OUT}" ]; then
+    mv "${TOYBOX_INITRD}" "${INITRD_OUT}"
+  fi
 fi
 
 if [[ "${BUILD_ROOTFS}" = "true" ]]; then

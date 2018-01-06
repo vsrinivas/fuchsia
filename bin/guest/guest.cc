@@ -200,8 +200,9 @@ zx_status_t setup_scenic_framebuffer(
 
 int main(int argc, char** argv) {
   const char* cmd = basename(argv[0]);
-  const char* block_path = NULL;
-  const char* ramdisk_path = NULL;
+  const char* block_path = nullptr;
+  const char* kernel_path = "/pkg/data/kernel";
+  const char* ramdisk_path = "/pkg/data/ramdisk";
   const char* cmdline = "";
   zx_duration_t balloon_poll_interval = 0;
   bool balloon_deflate_on_demand = false;
@@ -245,14 +246,8 @@ int main(int argc, char** argv) {
         return usage(cmd);
     }
   }
-  const char* kernel_path;
   if (optind < argc) {
     kernel_path = argv[optind];
-  } else {
-    // Default configuration.
-    // TODO(ZX-1487): Avoid hard-coding these.
-    ramdisk_path = "/system/data/bootdata.bin";
-    kernel_path = "/system/data/zircon.bin";
   }
 
   Guest guest;
@@ -288,7 +283,7 @@ int main(int argc, char** argv) {
   // Open the kernel image.
   fbl::unique_fd fd(open(kernel_path, O_RDONLY));
   if (!fd) {
-    fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[optind]);
+    fprintf(stderr, "Failed to open kernel image \"%s\"\n", kernel_path);
     return ZX_ERR_IO;
   }
 

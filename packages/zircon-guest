@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "machina_tests": "//garnet/lib/machina:machina_tests"
+        "zircon-guest": "//garnet/bin/guest/zircon-guest"
     }
 }

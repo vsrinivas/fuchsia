@@ -1,0 +1,69 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# Defines a guest package.
+#
+# Parameters
+#   kernel (string, optional)
+#     Path to the guest kernel.
+#   ramdisk (string, optional)
+#     Path to a ramdisk file to be loaded into the guest.
+#
+template("guest_app") {
+  if (defined(invoker.cli) && invoker.cli) {
+    assert(!defined(invoker.kernel) && !defined(invoker.ramdisk), "")
+  }
+  package(target_name) {
+    deps = [
+      "//garnet/bin/guest:bin",
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    binary = "guest"
+
+    meta = [ {
+          path = rebase_path("//garnet/bin/guest/meta/sandbox")
+          dest = "sandbox"
+        } ]
+
+    if (target_cpu == "arm64") {
+      resources = [ {
+            path = rebase_path("//garnet/lib/machina/arch/arm64/dts/board.dtb")
+            dest = "board.dtb"
+          } ]
+    } else if (current_cpu == "x64") {
+      resources = [
+        {
+          path = rebase_path("//garnet/lib/machina/arch/x86/asl/dsdt.aml")
+          dest = "dsdt.aml"
+        },
+        {
+          path = rebase_path("//garnet/lib/machina/arch/x86/asl/mcfg.aml")
+          dest = "mcfg.aml"
+        },
+      ]
+    }
+
+
+    # Add kernel resource.
+    if (defined(invoker.kernel)) {
+      resources += [ {
+            path = rebase_path(invoker.kernel)
+            dest = "kernel"
+          } ]
+    }
+
+    # Add ramdisk resource.
+    if (defined(invoker.ramdisk)) {
+      resources += [ {
+            path = rebase_path(invoker.ramdisk)
+            dest = "ramdisk"
+          } ]
+    }
+  }
+}

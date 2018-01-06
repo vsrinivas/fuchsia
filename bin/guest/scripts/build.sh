@@ -12,7 +12,15 @@ GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FUCHSIA_DIR="${GUEST_SCRIPTS_DIR}/../../../.."
 cd "${FUCHSIA_DIR}"
 
-DEFAULT_GN_PACKAGES="garnet/packages/guest,garnet/packages/runtime,garnet/packages/runtime_config,garnet/packages/netstack"
+DEFAULT_GN_PACKAGE_LIST=(
+  garnet/packages/guest
+  garnet/packages/zircon-guest
+  garnet/packages/linux-guest
+  garnet/packages/runtime
+  garnet/packages/runtime_config
+  garnet/packages/netstack
+)
+DEFAULT_GN_PACKAGES=$(IFS=, ; echo "${DEFAULT_GN_PACKAGE_LIST[*]}")
 
 usage() {
   echo "usage: ${0} [options] {arm64, x86}"
@@ -20,6 +28,7 @@ usage() {
   echo "  -A            Use ASAN in GN"
   echo "  -g            Use Goma"
   echo "  -p [package]  Set package, defaults to ${DEFAULT_GN_PACKAGES}"
+  echo "  -q            Run in QEMU instead of deploying to device."
   echo
   exit 1
 }
@@ -62,9 +71,6 @@ buildtools/ninja \
   -C out/debug-$ARCH \
   $NINJA_GOMA
 
-garnet/bin/guest/scripts/mkbootfs.sh \
-  "${1}"
-
 case "${1}" in
 arm64)
   if [[ $FLAG_QEMU ]]; then
@@ -72,14 +78,14 @@ arm64)
       -k \
       -V \
       -g \
-      -x out/debug-$ARCH/host-bootdata.bin \
+      -x out/debug-$ARCH/user.bootfs \
       -o out/build-zircon/build-$PLATFORM/
   else
     zircon/scripts/flash-hikey \
       -u \
       -n \
       -b out/build-zircon/build-$PLATFORM \
-      -d out/debug-$ARCH/host-bootdata.bin
+      -d out/debug-$ARCH/user.bootfs
   fi;;
 x86)
   if [[ $FLAG_QEMU ]]; then
@@ -87,12 +93,12 @@ x86)
       -k \
       -V \
       -g \
-      -x out/debug-$ARCH/host-bootdata.bin \
+      -x out/debug-$ARCH/user.bootfs \
       -o out/build-zircon/build-$PLATFORM/
   else
     out/build-zircon/tools/bootserver \
       -1 \
       out/build-zircon/build-$PLATFORM/zircon.bin \
-      out/debug-$ARCH/host-bootdata.bin
+      out/debug-$ARCH/user.bootfs
   fi;;
 esac

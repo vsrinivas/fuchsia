@@ -13,14 +13,16 @@ usage() {
   echo
   echo "  -d [defconfig]  Defconfig to use"
   echo "  -l [linux-dir]  Linux source dir"
+  echo "  -o [image]      Output location for the built kernel"
   echo
   exit 1
 }
 
-while getopts "c:d:" OPT; do
+while getopts "d:l:o:" OPT; do
   case $OPT in
   d) DEFCONFIG="${OPTARG}";;
   l) LINUX_DIR="${OPTARG}";;
+  o) LINUX_OUT="${OPTARG}";;
   *) usage;;
   esac
 done
@@ -29,10 +31,12 @@ shift $((OPTIND - 1))
 case "${1}" in
 arm64)
   declare -x ARCH=arm64;
-  declare -x CROSS_COMPILE=aarch64-linux-gnu-;;
+  declare -x CROSS_COMPILE=aarch64-linux-gnu-
+  declare -r LINUX_IMAGE="${LINUX_DIR}/arch/arm64/boot/Image";;
 x86)
   declare -x ARCH=x86;
-  declare -x CROSS_COMPILE=x86_64-linux-gnu-;;
+  declare -x CROSS_COMPILE=x86_64-linux-gnu-
+  declare -r LINUX_IMAGE="${LINUX_DIR}/arch/x86/boot/bzImage";;
 *)
   usage;;
 esac
@@ -42,14 +46,17 @@ declare -r DEFCONFIG=${DEFCONFIG:-machina_defconfig}
 echo "Building Linux with ${DEFCONFIG} in ${LINUX_DIR}"
 
 # Shallow clone the repository.
-if [ ! -d "${LINUX_DIR}" ]; then
+if [ ! -d "${LINUX_DIR}/.git" ]; then
   git clone --depth 1 https://zircon-guest.googlesource.com/third_party/linux "${LINUX_DIR}"
 fi
 
 # Update the repository.
 cd "${LINUX_DIR}"
 git pull
-
 # Build Linux.
 make "${DEFCONFIG}"
 make -j $(getconf _NPROCESSORS_ONLN)
+
+if [ -n "${LINUX_OUT}" ]; then
+  mv "${LINUX_IMAGE}" "${LINUX_OUT}"
+fi
