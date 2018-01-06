@@ -19,9 +19,9 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/watcher.h>
-#include <fs/mapped-vmo.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <fs/mapped-vmo.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
@@ -31,8 +31,8 @@
 #include <zx/fifo.h>
 #include <zx/vmo.h>
 
-#include "fvm/fvm.h"
 #include "fvm/fvm-sparse.h"
+#include "fvm/fvm.h"
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
@@ -74,8 +74,8 @@ struct partition_info {
 
 inline fvm::extent_descriptor_t* get_extent(fvm::partition_descriptor_t* pd, size_t extent) {
     return reinterpret_cast<fvm::extent_descriptor_t*>(
-            reinterpret_cast<uintptr_t>(pd) + sizeof(fvm::partition_descriptor_t) +
-            extent * sizeof(fvm::extent_descriptor_t));
+        reinterpret_cast<uintptr_t>(pd) + sizeof(fvm::partition_descriptor_t) +
+        extent * sizeof(fvm::extent_descriptor_t));
 }
 
 zx_status_t register_fast_block_io(const fbl::unique_fd& fd, zx_handle_t vmo,
@@ -159,7 +159,7 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
             LOG("%zu bytes written, %zu zeroes left\n", ext->extent_length, bytes_left);
             memset(mvmo->GetData(), 0, vmo_cap);
         }
-        while(bytes_left > 0) {
+        while (bytes_left > 0) {
             request->length = fbl::min(bytes_left, vmo_cap);
             request->vmo_offset = 0;
             request->dev_offset = offset;
@@ -370,9 +370,9 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
                                      hdr.partition_count);
 
     fvm::partition_descriptor_t* part =
-            reinterpret_cast<fvm::partition_descriptor_t*>(
-                    reinterpret_cast<uintptr_t>(metadata.get()) +
-                    sizeof(fvm::sparse_image_t));
+        reinterpret_cast<fvm::partition_descriptor_t*>(
+            reinterpret_cast<uintptr_t>(metadata.get()) +
+            sizeof(fvm::sparse_image_t));
 
     for (size_t p = 0; p < hdr.partition_count; p++) {
         parts[p].pd = part;
@@ -457,7 +457,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             }
         }
         part = reinterpret_cast<fvm::partition_descriptor*>(
-                reinterpret_cast<uintptr_t>(ext) + sizeof(fvm::extent_descriptor_t));
+            reinterpret_cast<uintptr_t>(ext) + sizeof(fvm::extent_descriptor_t));
     }
 
     LOG("Partition space pre-allocated\n");
@@ -749,7 +749,7 @@ zx_status_t partition_find(const block_info_t* info, gpt_device_t* gpt,
 // creating it.
 // Assumes that the partition does not already exist.
 template <PartitionCreateCb createCb>
-zx_status_t partition_add(gpt_device_t* gpt, fbl::unique_fd gpt_fd, fbl::unique_fd *out_fd) {
+zx_status_t partition_add(gpt_device_t* gpt, fbl::unique_fd gpt_fd, fbl::unique_fd* out_fd) {
     const char* name;
     uint8_t type[GPT_GUID_LEN];
     size_t minimumSizeBytes = 0;
@@ -784,7 +784,7 @@ zx_status_t partition_add(gpt_device_t* gpt, fbl::unique_fd gpt_fd, fbl::unique_
     } else if ((r = gpt_device_sync(gpt))) {
         ERROR("Failed to sync GPT\n");
         return r;
-    } else if ((r = (int) ioctl_block_rr_part(gpt_fd.get())) < 0) {
+    } else if ((r = (int)ioctl_block_rr_part(gpt_fd.get())) < 0) {
         ERROR("Failed to rebind GPT\n");
         return r;
     }
@@ -861,7 +861,7 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
     } else if ((r = gpt_device_sync(gpt))) {
         ERROR("Failed to sync GPT\n");
         goto done;
-    } else if ((r = (int) ioctl_block_rr_part(gpt_fd.get())) < 0) {
+    } else if ((r = (int)ioctl_block_rr_part(gpt_fd.get())) < 0) {
         ERROR("Failed to rebind GPT\n");
         goto done;
     }
@@ -931,7 +931,7 @@ const char* efiName = "EFI Gigaboot";
 bool efi_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
     uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
     char cstring_name[GPT_NAME_LEN];
-    utf16_to_cstring(cstring_name, (uint16_t*) part->name, GPT_NAME_LEN);
+    utf16_to_cstring(cstring_name, (uint16_t*)part->name, GPT_NAME_LEN);
     // Old EFI: Installed by the legacy Fuchsia installer, identified by
     // large size and "EFI" label.
     bool oldEfi = strncmp(cstring_name, oldEfiName, strlen(oldEfiName)) == 0 &&
@@ -954,9 +954,9 @@ const char* kerncName = "KERN-C";
 bool kernc_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
     uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
     char cstring_name[GPT_NAME_LEN];
-    utf16_to_cstring(cstring_name, (uint16_t*) part->name, GPT_NAME_LEN);
+    utf16_to_cstring(cstring_name, (uint16_t*)part->name, GPT_NAME_LEN);
     return memcmp(part->type, kernc_type, GPT_GUID_LEN) == 0 &&
-        strncmp(cstring_name, kerncName, strlen(kerncName)) == 0;
+           strncmp(cstring_name, kerncName, strlen(kerncName)) == 0;
 }
 
 bool kernc_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** name_out) {
@@ -1040,7 +1040,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
 
     fbl::unique_fd part_fd;
     if ((status = partition_find<filterCb>(&info, gpt, nullptr, &part_fd)) != ZX_OK) {
-        if (status != ZX_ERR_NOT_FOUND || (void*) createCb == nullptr) {
+        if (status != ZX_ERR_NOT_FOUND || (void*)createCb == nullptr) {
             ERROR("Failure looking for partition: %d\n", status);
             gpt_device_release(gpt);
             return status;
@@ -1086,7 +1086,7 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
         return status;
     }
 
-    if ((void*) finalizeCb != nullptr) {
+    if ((void*)finalizeCb != nullptr) {
         if ((status = initialize_gpt(gpt_path, &gpt_fd, &gpt)) != ZX_OK) {
             ERROR("Cannot re-initialize GPT\n");
             return status;
@@ -1149,7 +1149,7 @@ int fvm_clean() {
 
         char name[GPT_NAME_LEN];
         memset(name, 0, sizeof(name));
-        utf16_to_cstring(name, (uint16_t*) gpt->partitions[i]->name, GPT_NAME_LEN);
+        utf16_to_cstring(name, (uint16_t*)gpt->partitions[i]->name, GPT_NAME_LEN);
 
         if (!memcmp(gpt->partitions[i]->type, system_type, GPT_GUID_LEN)) {
             LOG("Removing system partition\n");
@@ -1200,6 +1200,12 @@ int fvm_clean() {
     return 0;
 }
 
+void drain(fbl::unique_fd fd) {
+    char buf[8192];
+    while (read(fd.get(), &buf, sizeof(buf)) > 0)
+        ;
+}
+
 int usage() {
     ERROR("install-disk-image [command] <options*>\n");
     ERROR("Commands:\n");
@@ -1209,10 +1215,12 @@ int usage() {
     ERROR("  wipe          : Clean up the install disk\n");
     ERROR("Options:\n");
     ERROR("  --file <file>: Read from FILE instead of stdin\n");
+    ERROR("  --force: Install partition even if inappropriate for the device\n");
     return -1;
 }
 
 int main(int argc, char** argv) {
+    auto force = false;
     if (argc < 2) {
         ERROR("install-disk-image needs a command\n");
         return usage();
@@ -1240,16 +1248,52 @@ int main(int argc, char** argv) {
             }
             argc--;
             argv++;
+        } else if (!strcmp(argv[0], "--force")) {
+            argc--;
+            argv++;
+            force = true;
         } else {
             return usage();
         }
     }
 
+    // The following code block computes a heuristic against CROS devices. In
+    // the case where we detect a CROS device, or where we initialized an empty
+    // GPT, we will avoid writing a KERNC partition (essentially, assume EFI
+    // device).
+    bool is_cros_device = false;
+    {
+        char gpt_path[PATH_MAX];
+        if (!find_target_gpt(gpt_path)) {
+            fbl::unique_fd gpt_fd(open(gpt_path, O_RDWR));
+            if (!fd) {
+                ERROR("Failed to open GPT\n");
+                return ZX_ERR_IO;
+            }
+            gpt_device_t* gpt;
+            if (initialize_gpt(gpt_path, &gpt_fd, &gpt)) {
+                return ZX_ERR_IO;
+            }
+            is_cros_device = is_cros(gpt);
+            gpt_device_release(gpt);
+        }
+    }
+
     zx_status_t status;
     if (!strcmp(cmd, "install-efi")) {
+        if (is_cros_device && !force) {
+            LOG("SKIPPING EFI install on CROS device, pass --force if desired.\n");
+            drain(fbl::move(fd));
+            return 0;
+        }
         status = partition_pave<efi_filter_cb, efi_create_cb, nullptr>(fbl::move(fd));
         return status == ZX_OK ? 0 : -1;
     } else if (!strcmp(cmd, "install-kernc")) {
+        if (!is_cros_device && !force) {
+            LOG("SKIPPING KERNC install on non-CROS device, pass --force if desired.\n");
+            drain(fbl::move(fd));
+            return 0;
+        }
         status = partition_pave<kernc_filter_cb, kernc_create_cb, kernc_finalize_cb>(fbl::move(fd));
         return status == ZX_OK ? 0 : -1;
     } else if (!strcmp(cmd, "install-fvm")) {
