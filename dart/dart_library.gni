@@ -1,0 +1,340 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/toolchain.gni")
+
+declare_args() {
+  # Whether to use the analysis server instead of the CLI.
+  use_analysis_server = false
+}
+
+# Defines a Dart library
+#
+# Parameters
+#
+#   package_name (optional)
+#     Name of the Dart package. This is used as an identifier in code that
+#     depends on this library.
+#
+#   package_label (optional)
+#     Label to infer package name from.
+#
+#   infer_package_name (optional)
+#     Infer the package name based on the path to the package.
+#
+#     NOTE: Exactly one of package_name, package_label, or infer_package_name
+#           must be set.
+#
+#   source_dir (optional)
+#     Directory containing the package sources. Defaults to "lib".
+#
+#   deps (optional)
+#     List of labels for Dart libraries this library depends on.
+#
+#   non_dart_deps (optional)
+#     List of labels this library depends on that are not Dart libraries. This
+#     includes things like actions that generate Dart code. It typically doesn't
+#     need to be set.
+#     Note that these labels *must* have an explicit toolchain attached.
+#
+#   disable_analysis (optional)
+#     Prevents analysis from being run on this target.
+#
+#   extra_analyzer_sources (optional)
+#     Additional source paths to pass to the analyzer.
+#
+#   generated_code (optional)
+#     Boolean indicating that this library contains generated code. This option
+#     relaxes some constraints around package structure.
+#     Defaults to false.
+#     TODO(pylaligand): get rid of this option post-FIDL 2.0.
+#
+# Example of usage:
+#
+#   dart_library("baz") {
+#     package_name = "foo.bar.baz"
+#     deps = [
+#       "//foo/bar/owl"
+#     ]
+#   }
+
+if (current_toolchain == dart_toolchain) {
+
+template("dart_library") {
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  } else if (defined(invoker.package_label)) {
+    target_label = invoker.package_label
+  } else if (defined(invoker.infer_package_name) && invoker.infer_package_name) {
+    target_label = get_label_info(":$target_name", "label_no_toolchain")
+  } else {
+    assert(false, "Must specify either a package_name or infer_package_name")
+  }
+
+  dart_deps = []
+  if (defined(invoker.deps)) {
+    foreach(dep, invoker.deps) {
+      dart_deps += [ get_label_info(dep, "label_no_toolchain") ]
+    }
+  }
+
+  dot_packages_file = "$target_gen_dir/$target_name.packages"
+
+  source_dir = "lib"
+  if (defined(invoker.source_dir)) {
+    source_dir = invoker.source_dir
+  }
+
+  # Dependencies of the umbrella group for the targets in this file.
+  group_deps = []
+
+  dot_packages_target_name = "${target_name}_dot_packages"
+  group_deps += [
+    ":$dot_packages_target_name",
+  ]
+
+  action(dot_packages_target_name) {
+    script = "//build/dart/gen_dot_packages.py"
+
+    deps = dart_deps
+    if (defined(invoker.non_dart_deps)) {
+      deps += invoker.non_dart_deps
+    }
+
+    inputs = [
+      # This file contributes to the script and needs to be listed as an input.
+      "//build/dart/label_to_package_name.py",
+    ]
+    if (!defined(invoker.generated_code) || !invoker.generated_code) {
+      # Require a manifest file, allowing the analysis service to identify the
+      # package.
+      inputs += [ "pubspec.yaml" ]
+    }
+
+    outputs = [
+      dot_packages_file,
+    ]
+    depfile = "$dot_packages_file.d"
+
+    args = [
+      "--out",
+      rebase_path(dot_packages_file, root_build_dir),
+      "--source-dir",
+      rebase_path(source_dir),
+      "--root-build-dir",
+      rebase_path(root_build_dir),
+      "--root-gen-dir",
+      rebase_path(root_gen_dir),
+      "--depfile",
+      rebase_path(depfile),
+    ]
+
+    if (defined(package_name)) {
+      args += [
+        "--package-name",
+        package_name,
+      ]
+    } else {
+      args += [
+        "--package-label",
+        target_label,
+      ]
+    }
+
+    args += [ "--deps" ] + dart_deps
+  }
+
+  with_analysis =
+      !defined(invoker.disable_analysis) || !invoker.disable_analysis
+  if (with_analysis) {
+    options_file = "analysis_options.yaml"
+    invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
+    invocation_target_name = "${target_name}_analysis_runner"
+    group_deps += [
+      ":$invocation_target_name",
+    ]
+
+    dart_sdk_label = "//third_party/dart:create_host_sdk"
+    dart_sdk_dir = "$dart_sdk_root_out_dir/dart-sdk"
+    dart_bin = "$dart_sdk_dir/bin"
+    dart_analyzer_binary = "$dart_bin/dartanalyzer"
+
+    extra_sources = []
+    if (defined(invoker.extra_analyzer_sources)) {
+      foreach(source, invoker.extra_analyzer_sources) {
+        extra_sources += [
+          rebase_path(source),
+        ]
+      }
+    }
+
+    action(invocation_target_name) {
+      script = "//build/dart/gen_analyzer_invocation.py"
+
+      deps = [
+        ":$dot_packages_target_name",
+        dart_sdk_label,
+      ]
+
+      inputs = [
+        dot_packages_file,
+        options_file,
+      ]
+
+      outputs = [
+        invocation_file,
+      ]
+
+      args = [
+        "--out",
+        rebase_path(invocation_file),
+        "--source-dir",
+        rebase_path(source_dir),
+        "--dot-packages",
+        rebase_path(dot_packages_file),
+        "--dartanalyzer",
+        rebase_path(dart_analyzer_binary),
+        "--dart-sdk",
+        rebase_path(dart_sdk_dir),
+        "--options",
+        rebase_path(options_file),
+      ]
+
+      if (defined(package_name)) {
+        args += [
+          "--package-name",
+          package_name,
+        ]
+      } else {
+        args += [
+          "--package-label",
+          target_label,
+        ]
+      }
+
+      args += extra_sources
+    }
+
+    analysis_target_name = "${target_name}_analysis"
+    group_deps += [
+      ":$analysis_target_name",
+    ]
+
+    if (use_analysis_server) {
+      action(analysis_target_name) {
+        runner_label = "//build/dart/analyzer($host_toolchain)"
+        runner_out_dir = get_label_info(runner_label, "root_out_dir")
+        script = "$runner_out_dir/dart-tools/analyzer"
+
+        server_snaphost = "$dart_bin/snapshots/analysis_server.dart.snapshot"
+
+        depfile = "$target_gen_dir/$target_name.analysis.d"
+
+        output_file = "$target_gen_dir/$target_name.analyzed"
+
+        log_file = "$target_gen_dir/$target_name.analysis_logs"
+
+        inputs = [
+          options_file,
+        ]
+
+        # TODO(pylaligand): restore this pool.
+        # pool = "//build/dart:analysis_pool($dart_toolchain)"
+
+        outputs = [
+          output_file,
+        ]
+
+        args = [
+          "--package-root",
+          rebase_path("."),
+          "--source-dir",
+          rebase_path(source_dir, "."),
+          "--server-snapshot",
+          rebase_path(server_snaphost),
+          "--stamp",
+          rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
+          "--cache-path",
+          rebase_path("$root_out_dir/analysis-cache"),
+          "--log-file",
+          rebase_path(log_file),
+        ] + extra_sources
+
+        deps = [
+          ":$dot_packages_target_name",
+          dart_sdk_label,
+          runner_label,
+        ]
+      }
+    } else {  # Use the analyzer CLI.
+      action(analysis_target_name) {
+        script = "//build/dart/run_analysis.py"
+
+        depfile = "$target_gen_dir/$target_name.analysis.d"
+
+        output_file = "$target_gen_dir/$target_name.analyzed"
+
+        inputs = [
+          options_file,
+        ]
+
+        outputs = [
+          output_file,
+        ]
+
+        args = [
+          "--source-dir",
+          rebase_path(source_dir),
+          "--dot-packages",
+          rebase_path(dot_packages_file),
+          "--dartanalyzer",
+          rebase_path(dart_analyzer_binary),
+          "--dart-sdk",
+          rebase_path(dart_sdk_dir),
+          "--options",
+          rebase_path(options_file),
+          "--stamp",
+          rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
+          "--extra-sources",
+        ] + extra_sources
+
+        deps = [
+          ":$dot_packages_target_name",
+          dart_sdk_label,
+        ]
+      }
+    }
+  } else {  # !with_analysis
+    not_needed(invoker, [
+      "extra_analyzer_sources",
+    ])
+  }
+
+  group(target_name) {
+    deps = group_deps
+  }
+}
+
+} else {  # Not the Dart toolchain.
+
+template("dart_library") {
+
+  group(target_name) {
+    not_needed(invoker, "*")
+
+    public_deps = [
+      ":$target_name($dart_toolchain)"
+    ]
+  }
+}
+
+}
