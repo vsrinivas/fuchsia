@@ -66,8 +66,9 @@ value is returned.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid operation, *op* is
-*ZX_VMO_LOOPUP* and *buffer* is an invalid pointer, or *size* is zero and *op* is a cache operation.
+**ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid
+operation, *op* is *ZX_VMO_OP_LOOKUP* and *buffer* is an invalid pointer, or
+*size* is zero and *op* is a cache operation.
 
 **ZX_ERR_NOT_SUPPORTED**  *op* was *ZX_VMO_OP_LOCK* or *ZX_VMO_OP_UNLOCK*.
 
