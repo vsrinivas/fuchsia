@@ -14,6 +14,10 @@ import("//build/sdk/sdk_atom.gni")
 #   type (required)
 #     GN template type for the library.
 #
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#     If not specified, the GN target's short name is used.
+#
 #   source_dir (optional)
 #     If set, path to the base directory of the sources.
 #     This is useful if the sources are generated and therefore not hosted
@@ -25,11 +29,17 @@ template("sdk_library") {
   }
   library_type = invoker.type
 
+  atom_name = target_name
+  if (defined(invoker.sdk_name)) {
+    atom_name = invoker.sdk_name
+  }
+
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
   target(library_type, main_target_name) {
     forward_variables_from(invoker, "*", [
+      "sdk_name",
       "source_dir",
       "type",
     ])
@@ -47,7 +57,7 @@ template("sdk_library") {
       "testonly",
     ])
 
-    name = "cpp:$library_type:$main_target_name"
+    name = "cpp:$library_type:$atom_name"
 
     files = []
     if (defined(invoker.sources)) {

@@ -19,12 +19,15 @@ def main():
     parser.add_argument('--deps',
                         help='List of manifest paths for the included elements',
                         nargs='*')
+    parser.add_argument('--is-group',
+                        help='True if the molecule is a grouping of its deps',
+                        action='store_true')
     args = parser.parse_args()
 
-    (_, atoms) = gather_dependencies(args.deps)
+    (direct_deps, atoms) = gather_dependencies(args.deps)
     manifest = {
-        'type': 'molecule',
-        'atoms': map(lambda a: a.json, list(atoms)),
+        'names': sorted(list(direct_deps)) if args.is_group else [],
+        'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(manifest, out, indent=2, sort_keys=True)

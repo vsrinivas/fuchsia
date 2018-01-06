@@ -28,18 +28,20 @@ class Atom(object):
     def __ne__(self, other):
         return not __eq__(self, other)
 
+    def __cmp__(self, other):
+        return cmp(self.name, other.name)
+
 
 def gather_dependencies(manifests):
-    '''Extracts all required atoms from the given manifests, as well as the
-       names of all the direct dependencies.
+    '''Extracts the set of all required atoms from the given manifests, as well
+       as the set of names of all the direct dependencies.
        '''
-    direct_deps = []
+    direct_deps = set()
     atoms = set()
     for dep in manifests:
         with open(dep, 'r') as dep_file:
             dep_manifest = json.load(dep_file)
-            if dep_manifest['type'] == 'atom':
-                direct_deps.append(dep_manifest['name'])
+            direct_deps.update(dep_manifest['names'])
             atoms.update(map(lambda a: Atom(a), dep_manifest['atoms']))
     return (direct_deps, atoms)
 
@@ -97,13 +99,12 @@ def main():
     atoms.update([Atom({
         'name': args.name,
         'tags': args.tags,
-        'deps': deps,
+        'deps': sorted(list(deps)),
         'files': files,
     })])
     manifest = {
-        'type': 'atom',
-        'name': args.name,
-        'atoms': map(lambda a: a.json, list(atoms)),
+        'names': [args.name],
+        'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
 
     with open(os.path.abspath(args.out), 'w') as out:

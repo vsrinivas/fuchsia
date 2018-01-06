@@ -21,7 +21,9 @@ template("sdk_group") {
     }
   }
 
-  sdk_molecule("$sdk_target_name") {
+  sdk_molecule(sdk_target_name) {
+    is_group = true
+
     deps = []
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {

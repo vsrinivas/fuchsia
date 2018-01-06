@@ -11,6 +11,10 @@ import("//build/cpp/sdk_library.gni")
 #
 # Parameters
 #
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#     If not specified, the GN target's short name is used
+#
 #   source_dir (optional)
 #     If set, path to the base directory of the sources.
 #     This is useful if the sources are generated and therefore not hosted

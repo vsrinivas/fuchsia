@@ -12,6 +12,11 @@
 #
 #   non_sdk_deps (optional)
 #     List of GN labels which this target needs built.
+#
+#   is_group (optional)
+#     True if a direct dependency on this molecule should be interpreted as a
+#     direct dependency on its own dependencies.
+#     Useful for group-like templates.
 
 template("sdk_molecule") {
 
@@ -29,6 +34,8 @@ template("sdk_molecule") {
       dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
     }
   }
+
+  is_group = defined(invoker.is_group) && invoker.is_group
 
   # Builds a manifest representing members of the group.
   action(target_name) {
@@ -54,5 +61,11 @@ template("sdk_molecule") {
       rebase_path(manifest),
       "--deps",
     ] + dep_manifests
+
+    if (is_group) {
+      args += [
+        "--is-group",
+      ]
+    }
   }
 }

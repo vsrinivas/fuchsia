@@ -8,6 +8,12 @@ import("//build/cpp/sdk_library.gni")
 #
 # An equivalent to the built-in shared_library which adds an SDK atom
 # declaration to allow the library to be included in an SDK.
+#
+# Parameters
+#
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#     If not specified, the GN target's short name is used.
 
 template("sdk_shared_library") {
 
