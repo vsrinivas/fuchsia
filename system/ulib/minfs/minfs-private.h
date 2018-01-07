@@ -52,6 +52,12 @@
 namespace minfs {
 
 #ifdef __Fuchsia__
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+#else
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
+#endif
+
+#ifdef __Fuchsia__
 // Validate that |vmo| is large enough to access block |blk|,
 // relative to the start of the vmo.
 inline void validate_vmo_size(zx_handle_t vmo, blk_t blk) {
@@ -126,7 +132,7 @@ public:
     }
 
 #ifdef __Fuchsia__
-    // Returns an unique identifier for this instance.
+    // Returns a unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
 
     // Signals the completion object as soon as...
@@ -233,61 +239,49 @@ class VnodeMinfs final : public fs::Vnode,
 public:
     ~VnodeMinfs();
 
-    // Allocates a Vnode and initializes the inode given the type.
+    // Allocates a new Vnode and initializes the in-memory inode structure given the type, where
+    // type is one of:
+    // - kMinfsTypeFile
+    // - kMinfsTypeDir
+    //
+    // Sets create / modify times of the new node.
+    // Does not allocate an inode number for the Vnode.
     static zx_status_t Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out);
 
-    // Allocates a Vnode, but leaves the inode untouched, so it may be overwritten.
-    static zx_status_t AllocateHollow(Minfs* fs, fbl::RefPtr<VnodeMinfs>* out);
+    // Allocates a Vnode, backed by the information stored in |inode|.
+    //
+    // Doesn't update create / modify times of the node.
+    static zx_status_t Recreate(Minfs* fs, ino_t ino, const minfs_inode_t* inode,
+                                fbl::RefPtr<VnodeMinfs>* out);
 
     bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
     bool IsUnlinked() const { return inode_.link_count == 0; }
     zx_status_t CanUnlink() const;
 
+    const minfs_inode_t* GetInode() const { return &inode_; }
+
     ino_t GetKey() const { return ino_; }
+    // Should only be called once for the VnodeMinfs lifecycle.
+    void SetIno(ino_t ino);
     static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
-
-    zx_status_t UnlinkChild(WritebackWork* wb, fbl::RefPtr<VnodeMinfs> child,
-                            minfs_dirent_t* de, DirectoryOffset* offs);
-
-    // Remove the link to a vnode (referring to inodes exclusively).
-    // Has no impact on direntries (or parent inode).
-    void RemoveInodeLink(WriteTxn* txn);
-    zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
-    zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
-    zx_status_t WriteInternal(WriteTxn* txn, const void* data, size_t len,
-                              size_t off, size_t* actual);
-    zx_status_t WriteExactInternal(WriteTxn* txn, const void* data, size_t len,
-                                   size_t off);
-    zx_status_t TruncateInternal(WriteTxn* txn, size_t len);
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                      size_t out_len, size_t* out_actual) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-
-    // Lookup which can traverse '..'
-    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
     // fbl::Recyclable interface.
     void fbl_recycle() final;
 
     // TODO(rvargas): Make private.
     fbl::RefPtr<Minfs> fs_;
-    ino_t ino_{};
-    minfs_inode_t inode_{};
 
 private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
     friend zx_status_t Minfs::InoFree(VnodeMinfs* vn, WriteTxn* txn);
 
-    using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>,
-                                           minfs_dirent_t*, DirArgs*,
-                                           DirectoryOffset*);
-
     VnodeMinfs(Minfs* fs);
 
     // fs::Vnode interface.
     zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Close() final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t len, size_t offset,
@@ -306,6 +300,54 @@ private:
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Truncate(size_t len) final;
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                      size_t out_len, size_t* out_actual) final;
+
+    // Internal functions
+    zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
+    zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
+    zx_status_t WriteInternal(WriteTxn* txn, const void* data, size_t len,
+                              size_t off, size_t* actual);
+    zx_status_t WriteExactInternal(WriteTxn* txn, const void* data, size_t len,
+                                   size_t off);
+    zx_status_t TruncateInternal(WriteTxn* txn, size_t len);
+    // Lookup which can traverse '..'
+    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
+
+    // Verify that the 'newdir' inode is not a subdirectory of this Vnode.
+    // Traces the path from newdir back to the root inode.
+    zx_status_t CheckNotSubdirectory(fbl::RefPtr<VnodeMinfs> newdir);
+
+    using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>,
+                                           minfs_dirent_t*, DirArgs*,
+                                           DirectoryOffset*);
+
+    // Enumerates directories.
+    zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
+
+    // Directory callback functions.
+    //
+    // The following functions are passable to |ForEachDirent|, which reads the parent directory,
+    // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
+    // information passed to the initial call of |ForEachDirent|.
+    static zx_status_t DirentCallbackFind(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
+                                          DirectoryOffset*);
+    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
+                                            DirectoryOffset*);
+    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
+                                                 DirectoryOffset*);
+    static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
+                                                   DirArgs*, DirectoryOffset*);
+    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
+                                                 DirectoryOffset*);
+    static zx_status_t DirentCallbackAppend(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
+                                            DirectoryOffset*);
+
+    zx_status_t UnlinkChild(WritebackWork* wb, fbl::RefPtr<VnodeMinfs> child,
+                            minfs_dirent_t* de, DirectoryOffset* offs);
+    // Remove the link to a vnode (referring to inodes exclusively).
+    // Has no impact on direntries (or parent inode).
+    void RemoveInodeLink(WriteTxn* txn);
 
     // Although file sizes don't need to be block-aligned, the underlying VMO is
     // always kept at a size which is a multiple of |kMinfsBlockSize|.
@@ -408,9 +450,6 @@ private:
     // Update the vnode's inode and write it to disk.
     void InodeSync(WriteTxn* txn, uint32_t flags);
 
-    // Enumerates directories.
-    zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
-
     // Deletes this Vnode from disk, freeing the inode and blocks.
     //
     // Must only be called on Vnodes which
@@ -480,6 +519,9 @@ private:
     fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};
 #endif
+
+    ino_t ino_{};
+    minfs_inode_t inode_{};
 
     // This field tracks the current number of file descriptors with
     // an open reference to this Vnode. Notably, this is distinct from the

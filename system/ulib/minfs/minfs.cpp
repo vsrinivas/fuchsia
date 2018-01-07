@@ -638,10 +638,11 @@ zx_status_t Minfs::VnodeNew(WriteTxn* txn, fbl::RefPtr<VnodeMinfs>* out, uint32_
     }
 
     // Allocate the on-disk inode
-    if ((status = InoNew(txn, &vn->inode_, &vn->ino_)) != ZX_OK) {
+    ino_t ino;
+    if ((status = InoNew(txn, vn->GetInode(), &ino)) != ZX_OK) {
         return status;
     }
-
+    vn->SetIno(ino);
     VnodeInsert(vn.get());
     *out = fbl::move(vn);
     return 0;
@@ -651,7 +652,8 @@ void Minfs::VnodeInsert(VnodeMinfs* vn) {
 #ifdef __Fuchsia__
     fbl::AutoLock lock(&hash_lock_);
 #endif
-    ZX_DEBUG_ASSERT_MSG(!vnode_hash_.find(vn->ino_).IsValid(), "ino %u already in map\n", vn->ino_);
+    ZX_DEBUG_ASSERT_MSG(!vnode_hash_.find(vn->GetKey()).IsValid(), "ino %u already in map\n",
+                        vn->GetKey());
     vnode_hash_.insert(vn);
 }
 
@@ -697,10 +699,6 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
         *out = fbl::move(vn);
         return ZX_OK;
     }
-    zx_status_t status;
-    if ((status = VnodeMinfs::AllocateHollow(this, &vn)) != ZX_OK) {
-        return ZX_ERR_NO_MEMORY;
-    }
 
     // obtain the block of the inode table we need
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
@@ -711,8 +709,13 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
     uint8_t inodata[kMinfsBlockSize];
     bc_->Readblk(info_.ino_block + (ino / kMinfsInodesPerBlock), inodata);
 #endif
-    memcpy(&vn->inode_, (void*)((uintptr_t)inodata + off_of_ino), kMinfsInodeSize);
-    vn->ino_ = ino;
+    const minfs_inode_t* inode = reinterpret_cast<const minfs_inode_t*>((uintptr_t)inodata +
+                                                                        off_of_ino);
+    zx_status_t status;
+    if ((status = VnodeMinfs::Recreate(this, ino, inode, &vn)) != ZX_OK) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     VnodeInsert(vn.get());
 
     *out = fbl::move(vn);

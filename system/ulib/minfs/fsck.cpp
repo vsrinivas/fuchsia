@@ -190,11 +190,9 @@ zx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
 
     zx_status_t status;
     fbl::RefPtr<VnodeMinfs> vn;
-    if ((status = VnodeMinfs::AllocateHollow(fs_.get(), &vn)) != ZX_OK) {
+    if ((status = VnodeMinfs::Recreate(fs_.get(), ino, inode, &vn)) != ZX_OK) {
         return status;
     }
-    memcpy(&vn->inode_, inode, kMinfsInodeSize);
-    vn->ino_ = ino;
 
     size_t off = 0;
     while (true) {

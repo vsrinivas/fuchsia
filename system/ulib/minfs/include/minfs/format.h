@@ -21,14 +21,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef __Fuchsia__
-#include <block-client/client.h>
-using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
-#else
-#include <fbl/vector.h>
-using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
-#endif
-
 // clang-format off
 
 namespace minfs {

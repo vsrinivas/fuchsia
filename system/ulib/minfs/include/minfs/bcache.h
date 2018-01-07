@@ -10,21 +10,22 @@
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
+#include <block-client/client.h>
 #include <fs/fvm.h>
 #include <zx/vmo.h>
+#else
+#include <fbl/vector.h>
 #endif
 
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/unique_fd.h>
-
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-
 #include <minfs/format.h>
 
 namespace minfs {
