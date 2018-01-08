@@ -126,7 +126,7 @@ static zx_status_t check_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start
             fprintf(stderr, "error: read block_fifo_txn error %d\n", st);
             return -1;
         }
-        if (check_block_data(blk_idx, buf, block_size)) {
+        if (check_block_data(blk_idx, buf, len)) {
             return -1;
         }
     }
