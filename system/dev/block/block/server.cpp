@@ -84,9 +84,8 @@ void IotxnQueue(zx_device_t* dev, uint32_t flags, zx_handle_t vmo, uint64_t leng
 
 }  // namespace
 
-BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid, zx_device_t* dev,
-                                   uint32_t max_xfer) :
-    fifo_(fifo), dev_(dev), max_xfer_(max_xfer), flags_(0), goal_(0) {
+BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid) :
+    fifo_(fifo), flags_(0), ctr_(0) {
     memset(&response_, 0, sizeof(response_));
     response_.txnid = txnid;
 }
@@ -98,22 +97,23 @@ zx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
     if (flags_ & kTxnFlagRespond) {
         // Can't get more than one response for a txn
         goto fail;
-    } else if (goal_ == MAX_TXN_MESSAGES - 1) {
+    } else if (ctr_ == MAX_TXN_MESSAGES - 1) {
         // This is the last message! We expect TXN_END, and will append it
         // whether or not it was provided.
         // If it WASN'T provided, then it would not be clear when to
         // clear the current block transaction.
         do_respond = true;
     }
-    ZX_DEBUG_ASSERT(goal_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
-    if (goal_ == 0) {
-        msgs_[goal_].flags = IOTXN_SYNC_BEFORE;
+    ZX_DEBUG_ASSERT(ctr_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
+    if (ctr_ == 0) {
+        msgs_[ctr_].flags = IOTXN_SYNC_BEFORE;
     } else if (do_respond) {
-        msgs_[goal_].flags = IOTXN_SYNC_AFTER;
+        msgs_[ctr_].flags = IOTXN_SYNC_AFTER;
     } else {
-        msgs_[goal_].flags = 0;
+        msgs_[ctr_].flags = 0;
     }
-    *msg_out = &msgs_[goal_++];
+    msgs_[ctr_].sub_txns = 1;
+    *msg_out = &msgs_[ctr_++];
     flags_ |= do_respond ? kTxnFlagRespond : 0;
     return ZX_OK;
 fail:
@@ -124,38 +124,25 @@ fail:
 }
 
 void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
-    if (status == ZX_OK && msg->len_remaining != 0) {
-        // Although this message has "completed", it is actually larger than
-        // the underlying transfer size. Before the "message" completes, ensure
-        // that the rest of it has been communicated with the underlying block
-        // device (in max_xfer_ sized chunks).
-        uint32_t length = fbl::min(msg->len_remaining, max_xfer_);
-        msg->len_remaining -= length;
-        uint64_t vmo_offset = msg->vmo_offset;
-        msg->vmo_offset += length;
-        uint64_t dev_offset = msg->dev_offset;
-        msg->dev_offset += length;
-
-        // If we used SYNC_BEFORE on an earlier sub-message, then there is no
-        // need to retransmit it here.
-        // Additionally, only send IOTXN_SYNC_AFTER on the final message (when
-        // len_remaining is zero).
-        uint32_t flags = msg->flags & ~(IOTXN_SYNC_BEFORE |
-                                        (msg->len_remaining > 0 ? IOTXN_SYNC_AFTER : 0));
-
-        IotxnQueue(dev_, flags, msg->iobuf->vmo(), length, vmo_offset, dev_offset, msg);
-        return;
-    }
     fbl::AutoLock lock(&lock_);
-    response_.count++;
-    ZX_DEBUG_ASSERT(goal_ != 0);
-    ZX_DEBUG_ASSERT(response_.count <= goal_);
-
     if ((status != ZX_OK) && (response_.status == ZX_OK)) {
         response_.status = status;
     }
 
-    if ((flags_ & kTxnFlagRespond) && (response_.count == goal_)) {
+    ZX_DEBUG_ASSERT(msg->sub_txns > 0);
+    msg->sub_txns--;
+    if (msg->sub_txns > 0) {
+        // The are more pending sub-txns to complete before we respond.
+        // This case will only occur for requests larger than the maximum xfer
+        // size.
+        return;
+    }
+
+    response_.count++;
+    ZX_DEBUG_ASSERT(ctr_ != 0);
+    ZX_DEBUG_ASSERT(response_.count <= ctr_);
+
+    if ((flags_ & kTxnFlagRespond) && (response_.count == ctr_)) {
         // Don't block the block device. Respond if we can (and in the absence
         // of an I/O error or closed remote, this should just work).
         uint32_t actual;
@@ -166,7 +153,7 @@ void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
         }
         response_.count = 0;
         response_.status = ZX_OK;
-        goal_ = 0;
+        ctr_ = 0;
         flags_ &= ~kTxnFlagRespond;
     }
     msg->txn.reset();
@@ -251,9 +238,7 @@ zx_status_t BlockServer::AllocateTxn(txnid_t* out) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
             fbl::AllocChecker ac;
-            txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(),
-                                                                txnid, dev_,
-                                                                info_.max_transfer_size));
+            txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -352,26 +337,37 @@ zx_status_t BlockServer::Serve() {
                     break;
                 }
 
-                uint32_t flags = msg->flags;
-                uint64_t length = requests[i].length;
-                const uint32_t max_xfer = info_.max_transfer_size;
-                if (max_xfer != 0 && max_xfer < requests[i].length) {
-                    msg->len_remaining = static_cast<uint32_t>(requests[i].length) - max_xfer;
-                    msg->vmo_offset = requests[i].vmo_offset + max_xfer;
-                    msg->dev_offset = requests[i].dev_offset + max_xfer;
-                    length = max_xfer;
-
-                    // If the final message in this transaction group
-                    // is split across multiple sub-messages, then only sync on
-                    // the final sub-message.
-                    flags &= ~IOTXN_SYNC_AFTER;
-                } else {
-                    msg->len_remaining = 0;
-                }
                 msg->opcode = requests[i].opcode & BLOCKIO_OP_MASK;
 
-                IotxnQueue(dev_, flags, iobuf->vmo(), length, requests[i].vmo_offset,
-                           requests[i].dev_offset, msg);
+                const uint64_t max_xfer = info_.max_transfer_size;
+                if (max_xfer != 0 && max_xfer < requests[i].length) {
+                    uint64_t len_remaining = requests[i].length;
+                    uint64_t vmo_offset = requests[i].vmo_offset;
+                    uint64_t dev_offset = requests[i].dev_offset;
+
+                    size_t sub_txns = fbl::round_up(len_remaining, max_xfer) / max_xfer;
+                    msg->sub_txns = static_cast<uint32_t>(sub_txns);
+                    for (size_t i = 0; i < sub_txns; i++) {
+                        uint64_t length = fbl::min(len_remaining, max_xfer);
+                        len_remaining -= length;
+
+                        uint32_t flags = msg->flags;
+                        // Only allow IOTXN_SYNC_AFTER to be set on the last sub-txn.
+                        flags &= ~(i == sub_txns - 1 ? 0 : IOTXN_SYNC_AFTER);
+                        // Only allow IOTXN_SYNC_BEFORE to be set on the first sub-txn.
+                        flags &= ~(i == 0 ? 0 : IOTXN_SYNC_BEFORE);
+                        IotxnQueue(dev_, flags, iobuf->vmo(), length,
+                                   vmo_offset, dev_offset, msg);
+                        vmo_offset += length;
+                        dev_offset += length;
+                    }
+                    ZX_DEBUG_ASSERT(len_remaining == 0);
+                } else {
+                    IotxnQueue(dev_, msg->flags, iobuf->vmo(), requests[i].length,
+                               requests[i].vmo_offset, requests[i].dev_offset,
+                               msg);
+                }
+
                 break;
             }
             case BLOCKIO_SYNC: {

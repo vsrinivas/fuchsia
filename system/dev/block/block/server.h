@@ -47,7 +47,7 @@ private:
     const vmoid_t vmoid_;
 };
 
-constexpr uint32_t kTxnFlagRespond = 0x00000001; // Should a reponse be sent when we hit goal?
+constexpr uint32_t kTxnFlagRespond = 0x00000001; // Should a reponse be sent when we hit ctr?
 
 class BlockTransaction;
 
@@ -56,20 +56,17 @@ typedef struct {
     fbl::RefPtr<IoBuffer> iobuf;
     uint32_t opcode;
     uint32_t flags;
-    uint32_t len_remaining;
-    uint64_t vmo_offset;
-    uint64_t dev_offset;
+    uint32_t sub_txns;
 } block_msg_t;
 
 class BlockTransaction : public fbl::RefCounted<BlockTransaction> {
 public:
-    BlockTransaction(zx_handle_t fifo, txnid_t txnid, zx_device_t* dev,
-                     uint32_t max_xfer);
+    BlockTransaction(zx_handle_t fifo, txnid_t txnid);
     ~BlockTransaction();
 
     // Verifies that the incoming txn does not break the Block IO fifo protocol.
     // If it is successful, sets up the response_ with the registered cookie,
-    // and adds to the "goal_" counter of number of Completions that must be
+    // and adds to the "ctr_" counter of number of Completions that must be
     // received before the transaction is identified as successful.
     zx_status_t Enqueue(bool do_respond, block_msg_t** msg_out);
 
@@ -79,14 +76,12 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockTransaction);
 
     const zx_handle_t fifo_;
-    zx_device_t* dev_;
-    const uint32_t max_xfer_;
 
     fbl::Mutex lock_;
     block_msg_t msgs_[MAX_TXN_MESSAGES] TA_GUARDED(lock_);
     block_fifo_response_t response_ TA_GUARDED(lock_); // The response to be sent back to the client
     uint32_t flags_ TA_GUARDED(lock_);
-    uint32_t goal_ TA_GUARDED(lock_); // How many ops does the block device need to complete?
+    uint32_t ctr_ TA_GUARDED(lock_); // How many ops does the block device need to complete?
 };
 
 class BlockServer {
