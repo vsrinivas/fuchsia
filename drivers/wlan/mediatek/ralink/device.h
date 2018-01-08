@@ -204,6 +204,8 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     uint8_t antenna_diversity_ = 0;
 
+    // key: 20MHz channel number
+    // val: RF parameters for the channel
     std::map<int, RfVal> rf_vals_;
 
     // cfg_chan_ is what is configured (from higher layers)

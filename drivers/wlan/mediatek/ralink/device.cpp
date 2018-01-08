@@ -3497,25 +3497,25 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     status = StopRxQueue();
     if (status != ZX_OK) {
         // TODO(porce): Recover fully if the RxQueue stopped in a half-way.
-        errorf("could not stop rx queue\n");
+        errorf("could not stop rx queue (status %d)\n", status);
         goto setchan_failure;
     }
 
     status = ConfigureChannel(*chan);
     if (status != ZX_OK) {
-        errorf("failed in channel configuration\n");
+        errorf("failed in channel configuration (status %d)\n", status);
         goto setchan_recover;
     }
 
     status = ConfigureTxPower(*chan);
     if (status != ZX_OK) {
-        errorf("failed in txpower configuration\n");
+        errorf("failed in txpower configuration (status %d)\n", status);
         goto setchan_recover;
     }
 
     status = StartQueues();
     if (status != ZX_OK) {
-        errorf("could not start queues\n");
+        errorf("could not start queues (status %d)\n", status);
         // Try one more time to start queues before returning.
         goto setchan_recover;
     }
@@ -3525,13 +3525,16 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     cfg_chan_ = *chan;
     return ZX_OK;
 
-setchan_recover:
-    StartQueues();
-    if (StartQueues() != ZX_OK) { errorf("could not start queues\n"); }
+setchan_recover : {
+    zx_status_t recover_status = StartQueues();
+    if (recover_status != ZX_OK) {
+        errorf("could not start queues (recover status %d)\n", recover_status);
+    }
+}
     // fall-through to setchan_failure
 
 setchan_failure:
-    errorf("channel change: from %s to %s failed (status %u)\n",
+    errorf("channel change: from %s to %s failed (status %d)\n",
            wlan::common::ChanStr(cfg_chan_).c_str(), wlan::common::ChanStr(*chan).c_str(), status);
 
     return status;
