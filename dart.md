@@ -21,7 +21,7 @@ based on a target's dependency.
 ## Targets
 
 There are five gn targets for building Dart:
-- [`dart_package`][target-package] defines a library that can be used by other
+- [`dart_library`][target-library] defines a library that can be used by other
 Dart targets;
 - [`dart_app`][target-app] defines a Dart executable for Fuchsia;
 - [`dart_tool`][target-tool] defines a Dart tool for the host;
@@ -40,7 +40,7 @@ my_package/
   |-- pubspec.yaml           # Empty, used as a marker [mandatory]
   |-- BUILD.gn               # Contains all targets
   |-- analysis_options.yaml  # Analysis configuration [mandatory]
-  |-- lib/                   # dart_package contents
+  |-- lib/                   # dart_library contents
   |-- bin/                   # dart_binary's (target) or dart_tool's (host)
   |-- test/                  # dart_test contents
 ```
@@ -72,12 +72,15 @@ dependencies:
 
 Analysis is run as part of the Fuchsia build.
 
-For each `dart_package` and `flutter_app` target, an analysis script gets
+For each `dart_library` target, an analysis script gets
 also generated in the output directory under:
 ```sh
 out/<build-type>/gen/path/to/package/package.analyzer.sh
 ```
 Running this script will perform an analysis of the target's sources.
+Note that other templates usually define a Dart library they build upon. For
+example, a `flutter_app` `//foo/bar` will yield a `//foo/bar:bar_dart_library`
+target which can also be analyzed.
 
 As with standard Dart packages, analysis options are defined in an
 `analysis_options.yaml` file, which must be placed at the package root.
@@ -93,7 +96,7 @@ include: path/to/topaz/tools/analysis_options.yaml
 
 Analysis may be disabled altogether for a given target with:
 ```
-dart_package("foo") {
+dart_library("foo") {
   disable_analysis = true
 }
 ```
@@ -261,8 +264,8 @@ If two FIDL targets coexist in a single BUILD file:
 [dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
 [dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/dart/update_3p_packages.py "Dependencies script"
 [package-layout]: https://www.dartlang.org/tools/pub/package-layout "Package layout"
-[target-package]: https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni "dart_package target"
-[target-app]: https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni "dart_package app"
+[target-library]: https://fuchsia.googlesource.com/build/+/master/dart/dart_library.gni "dart_library target"
+[target-app]: https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni "dart_app target"
 [target-tool]: https://fuchsia.googlesource.com/build/+/master/dart/dart_tool.gni "dart_tool target"
 [target-flutter]: https://github.com/flutter/engine/blob/master/build/flutter_app.gni "flutter_app target"
 [target-test]: https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni "dart_test target"
