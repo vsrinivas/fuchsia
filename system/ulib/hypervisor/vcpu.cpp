@@ -129,6 +129,7 @@ static zx_status_t handle_mem(Vcpu* vcpu, const zx_packet_guest_mem_t* mem, uint
     return status;
 }
 
+#if __x86_64__
 static zx_status_t handle_input(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_t trap_key) {
     IoValue value = {};
     value.access_size = io->access_size;
@@ -164,6 +165,7 @@ static zx_status_t handle_output(Vcpu* vcpu, const zx_packet_guest_io_t* io, uin
 static zx_status_t handle_io(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_t trap_key) {
     return io->input ? handle_input(vcpu, io, trap_key) : handle_output(vcpu, io, trap_key);
 }
+#endif // __x86_64__
 
 struct Vcpu::ThreadEntryArgs {
     const Guest* guest;
