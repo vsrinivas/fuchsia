@@ -61,10 +61,6 @@ EptInfo::EptInfo() {
     uint64_t ept_info = read_msr(X86_MSR_IA32_VMX_EPT_VPID_CAP);
     page_walk_4 = BIT_SHIFT(ept_info, 6);
     write_back = BIT_SHIFT(ept_info, 14);
-    pde_2mb_page = BIT_SHIFT(ept_info, 16);
-    pdpe_1gb_page = BIT_SHIFT(ept_info, 17);
-    ept_flags = BIT_SHIFT(ept_info, 21);
-    exit_info = BIT_SHIFT(ept_info, 22);
     invept =
         // INVEPT instruction is supported.
         BIT_SHIFT(ept_info, 20) &&
@@ -132,10 +128,6 @@ static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
 
     // Check use write-back memory for EPT is supported.
     if (!ept_info.write_back)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    // Check that accessed and dirty flags for EPT are supported.
-    if (!ept_info.ept_flags)
         return ZX_ERR_NOT_SUPPORTED;
 
     // Check that the INVEPT instruction is supported.
