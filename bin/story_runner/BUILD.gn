@@ -20,6 +20,8 @@ package("dev_story_shell") {
 
 source_set("story_runner") {
   sources = [
+    "chain_impl.cc",
+    "chain_impl.h",
     "context_handler.cc",
     "context_handler.h",
     "incremental_link.cc",
@@ -95,9 +97,24 @@ executable("dev_story_shell_bin") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
+  deps = [
+    ":chain_impl_unittest",
     ":key_generator_unittest",
     ":link_impl_unittest",
+  ]
+}
+
+source_set("chain_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "chain_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//peridot/lib/gtest",
+    "//third_party/gtest",
   ]
 }
 
