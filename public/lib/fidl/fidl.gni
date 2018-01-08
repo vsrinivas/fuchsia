@@ -21,7 +21,7 @@ declare_args() {
 }
 
 if (generate_fidl_for_dart) {
-  import("//build/dart/dart_package.gni")
+  import("//build/dart/dart_library.gni")
 }
 if (generate_fidl_for_rust) {
   import("//build/rust/rust_library.gni")
@@ -534,11 +534,11 @@ template("fidl") {
   if (generate_fidl_for_dart) {
     # Compute the Dart package name in advance to ensure it does not contain the
     # "_dart" suffix.
-    # See //build/dart/dart_package.gni for more details.
+    # See //build/dart/dart_library.gni for more details.
     target_label = get_label_info(":$target_name", "label_no_toolchain")
 
     # This target is used to generate Dart package information
-    dart_package("${target_name}_dart") {
+    dart_library("${target_name}_dart") {
       generator_label = ":$generator_target_name($target_toolchain)"
 
       package_label = target_label
