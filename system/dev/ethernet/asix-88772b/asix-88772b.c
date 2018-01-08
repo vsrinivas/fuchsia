@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "asix-88772b.h"
+
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -18,8 +21,6 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include "asix-88772b.h"
 
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
@@ -66,19 +67,19 @@ static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
 
     zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
-        printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_SERIAL_MGMT_CTRL failed: %d\n", status);
         return status;
     }
     status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_PHY_READ, eth->phy_id, offset,
                          value, sizeof(*value), ZX_TIME_INFINITE, NULL);
     if (status < 0) {
-        printf("ASIX_REQ_PHY_READ failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_READ failed: %d\n", status);
         return status;
     }
     status = ax88772b_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
-        printf("ASIX_REQ_HW_SERIAL_MGMT_CTRL failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_HW_SERIAL_MGMT_CTRL failed: %d\n", status);
         return status;
     }
 
@@ -89,19 +90,19 @@ static zx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t
 
     zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
-        printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_SERIAL_MGMT_CTRL failed: %d\n", status);
         return status;
     }
     status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
                          &value, sizeof(value), ZX_TIME_INFINITE, NULL);
     if (status < 0) {
-        printf("ASIX_REQ_PHY_READ failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_READ failed: %d\n", status);
         return status;
     }
     status = ax88772b_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
-        printf("ASIX_REQ_HW_SERIAL_MGMT_CTRL failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_HW_SERIAL_MGMT_CTRL failed: %d\n", status);
         return status;
     }
 
@@ -114,7 +115,7 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
         uint16_t bmsr;
         zx_status_t status = ax88772b_mdio_read(eth, ASIX_PHY_BMSR, &bmsr);
         if (status < 0) {
-            printf("ax88772b_mdio_read failed\n");
+            zxlogf(ERROR, "ax88772b: ax88772b_mdio_read failed: %d\n", status);
             return status;
         }
         if (bmsr)
@@ -122,7 +123,7 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
         usleep(50);
     }
 
-    printf("ax88772b_wait_for_phy timeout\n");
+    zxlogf(INFO, "ax88772b: ax88772b_wait_for_phy timeout\n");
     return ZX_ERR_TIMED_OUT;
 }
 
@@ -139,7 +140,7 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
     uint8_t* pkt;
     zx_status_t status = usb_request_mmap(request, (void*)&pkt);
     if (status != ZX_OK) {
-        printf("usb_request_mmap failed: %d\n", status);
+        zxlogf(ERROR, "ax88772b: usb_request_mmap failed: %d\n", status);
         return;
     }
 
@@ -150,7 +151,7 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
         len -= ETH_HEADER_SIZE;
 
         if (length1 != length2) {
-            printf("invalid header: length1: %d length2: %d\n", length1, length2);
+            zxlogf(ERROR, "ax88772b: invalid header: length1: %u length2: %u\n", length1, length2);
             return;
         }
 
@@ -178,7 +179,7 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac
     size_t length = netbuf->len;
 
     if (length + ETH_HEADER_SIZE > USB_BUF_OUT_SIZE) {
-        printf("ax88772b: unsupported packet length %zu\n", length);
+        zxlogf(ERROR, "ax88772b: unsupported packet length %zu\n", length);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -256,11 +257,9 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
 
         usb_request_copyfrom(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
-#if 0
             const uint8_t* b = status;
-            printf("ax88772b status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+            zxlogf(TRACE, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
                    b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
-#endif
             memcpy(eth->status, status, sizeof(eth->status));
             uint8_t bb = eth->status[2];
             bool online = (bb & 1) != 0;
@@ -407,7 +406,7 @@ static int ax88772b_start_thread(void* arg) {
     zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_GPIOS,
                                                 ASIX_GPIO_GPO2EN | ASIX_GPIO_GPO_2 | ASIX_GPIO_RSE);
     if (status < 0) {
-        printf("ASIX_REQ_WRITE_GPIOS failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_WRITE_GPIOS failed: %d\n", status);
         goto fail;
     }
 
@@ -417,37 +416,37 @@ static int ax88772b_start_thread(void* arg) {
                          ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr), ZX_TIME_INFINITE,
                          NULL);
     if (status < 0) {
-        printf("ASIX_REQ_READ_PHY_ADDR failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_READ_PHY_ADDR failed: %d\n", status);
         goto fail;
     }
     eth->phy_id = phy_addr[1];
     int embed_phy = (eth->phy_id & 0x1F) == 0x10 ? 1 : 0;
     status = ax88772b_set_value(eth, ASIX_REQ_SW_PHY_SELECT, embed_phy);
     if (status < 0) {
-        printf("ASIX_REQ_SW_PHY_SELECT failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_PHY_SELECT failed: %d\n", status);
         goto fail;
     }
 
     // Reset
     status = ax88772b_set_value(eth, ASIX_REQ_SW_RESET, ASIX_RESET_PRL | ASIX_RESET_IPPD);
     if (status < 0) {
-        printf("ASIX_REQ_SW_RESET failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_RESET failed: %d\n", status);
         goto fail;
     }
     status = ax88772b_set_value(eth, ASIX_REQ_SW_RESET, 0);
     if (status < 0) {
-        printf("ASIX_REQ_SW_RESET failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_RESET failed: %d\n", status);
         goto fail;
     }
     status = ax88772b_set_value(eth, ASIX_REQ_SW_RESET,
                                     (embed_phy ? ASIX_RESET_IPRL : ASIX_RESET_PRTE));
     if (status < 0) {
-        printf("ASIX_REQ_SW_RESET failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_RESET failed: %d\n", status);
         goto fail;
     }
     status = ax88772b_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, 0);
     if (status < 0) {
-        printf("ASIX_REQ_RX_CONTROL_WRITE failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_RX_CONTROL_WRITE failed: %d\n", status);
         goto fail;
     }
 
@@ -459,7 +458,7 @@ static int ax88772b_start_thread(void* arg) {
     uint16_t medium = ASIX_MEDIUM_MODE_FD | ASIX_MEDIUM_MODE_AC | ASIX_MEDIUM_MODE_RFC | ASIX_MEDIUM_MODE_TFC | ASIX_MEDIUM_MODE_JFE | ASIX_MEDIUM_MODE_RE | ASIX_MEDIUM_MODE_PS;
     status = ax88772b_set_value(eth, ASIX_REQ_MEDIUM_MODE, medium);
     if (status < 0) {
-        printf("ASIX_REQ_MEDIUM_MODE failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_MEDIUM_MODE failed: %d\n", status);
         goto fail;
     }
 
@@ -467,13 +466,13 @@ static int ax88772b_start_thread(void* arg) {
                          ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
                          ASIX_IPG2_DEFAULT, NULL, 0, ZX_TIME_INFINITE, NULL);
     if (status < 0) {
-        printf("ASIX_REQ_IPG_WRITE failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_IPG_WRITE failed: %d\n", status);
         goto fail;
     }
 
     status = ax88772b_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, ASIX_RX_CTRL_AMALL | ASIX_RX_CTRL_AB | ASIX_RX_CTRL_S0);
     if (status < 0) {
-        printf("ASIX_REQ_RX_CONTROL_WRITE failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_RX_CONTROL_WRITE failed: %d\n", status);
         goto fail;
     }
 
@@ -481,10 +480,10 @@ static int ax88772b_start_thread(void* arg) {
                          ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr),
                          ZX_TIME_INFINITE, NULL);
     if (status < 0) {
-        printf("ASIX_REQ_NODE_ID_READ failed\n");
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_NODE_ID_READ failed: %d\n", status);
         goto fail;
     }
-    printf("ax88772b MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+    zxlogf(INFO, "ax88772b: MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
@@ -499,7 +498,7 @@ static int ax88772b_start_thread(void* arg) {
 
     status = device_add(eth->usb_device, &args, &eth->device);
     if (status < 0) {
-        printf("ax8872b: failed to create device: %d\n", status);
+        zxlogf(ERROR, "ax88772b: failed to create device: %d\n", status);
         goto fail;
     }
 
@@ -553,13 +552,13 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     usb_desc_iter_release(&iter);
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
-        printf("ax88772b_bind could not find endpoints\n");
+        zxlogf(ERROR, "ax88772b: ax88772b_bind could not find endpoints\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     ax88772b_t* eth = calloc(1, sizeof(ax88772b_t));
     if (!eth) {
-        printf("Not enough memory for ax88772b_t\n");
+        zxlogf(ERROR, "ax88772b: Not enough memory for ax88772b_t\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -610,7 +609,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     return ZX_OK;
 
 fail:
-    printf("ax88772b_bind failed: %d\n", status);
+    zxlogf(ERROR, "ax88772b: ax88772b_bind failed: %d\n", status);
     ax88772b_free(eth);
     return status;
 }
