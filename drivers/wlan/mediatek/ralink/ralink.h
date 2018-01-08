@@ -244,6 +244,22 @@ class PbfCfg : public Register<0x0408> {
     WLAN_BIT_FIELD(null2_sel, 24, 3);
 };
 
+class BcnOffset0 : public Register<0x042C> {
+   public:
+    WLAN_BIT_FIELD(bcn0_offset, 0, 8);
+    WLAN_BIT_FIELD(bcn1_offset, 8, 8);
+    WLAN_BIT_FIELD(bcn2_offset, 16, 8);
+    WLAN_BIT_FIELD(bcn3_offset, 24, 8);
+};
+
+class BcnOffset1 : public Register<0x0430> {
+   public:
+    WLAN_BIT_FIELD(bcn4_offset, 0, 8);
+    WLAN_BIT_FIELD(bcn5_offset, 8, 8);
+    WLAN_BIT_FIELD(bcn6_offset, 16, 8);
+    WLAN_BIT_FIELD(bcn7_offset, 24, 8);
+};
+
 class RfCsrCfg : public Register<0x0500> {
    public:
     WLAN_BIT_FIELD(rf_csr_data, 0, 8);
