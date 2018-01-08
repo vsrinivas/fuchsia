@@ -80,12 +80,12 @@ bool blkdev_test_bad_requests(void) {
     ASSERT_LE(blk_size, PAGE_SIZE, "Block size is too big");
 
     // Read / write non-multiples of the block size
-    ASSERT_EQ(write(fd, buf, blk_size - 1), 0, "");
-    ASSERT_EQ(write(fd, buf, blk_size / 2), 0, "");
-    ASSERT_EQ(write(fd, buf, blk_size * 2 - 1), (ssize_t)blk_size, "");
-    ASSERT_EQ(read(fd, buf, blk_size - 1), 0, "");
-    ASSERT_EQ(read(fd, buf, blk_size / 2), 0, "");
-    ASSERT_EQ(read(fd, buf, blk_size * 2 - 1), (ssize_t)blk_size, "");
+    ASSERT_EQ(write(fd, buf, blk_size - 1), -1, "");
+    ASSERT_EQ(write(fd, buf, blk_size / 2), -1, "");
+    ASSERT_EQ(write(fd, buf, blk_size * 2 - 1), -1, "");
+    ASSERT_EQ(read(fd, buf, blk_size - 1), -1, "");
+    ASSERT_EQ(read(fd, buf, blk_size / 2), -1, "");
+    ASSERT_EQ(read(fd, buf, blk_size * 2 - 1), -1, "");
 
     // Read / write from unaligned offset
     ASSERT_EQ(lseek(fd, 1, SEEK_SET), 1, "");
